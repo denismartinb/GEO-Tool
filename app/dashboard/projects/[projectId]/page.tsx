@@ -7,15 +7,73 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
+import { Icon } from "@/components/ui/icon";
 import {
   createCompetitor,
   createPrompt,
   deactivateCompetitor,
   deactivatePrompt,
-  startScan,
+  runProjectScan,
   updateCompetitor,
   updatePrompt
 } from "./actions";
+
+const statusLabels: Record<string, string> = {
+  pending: "pendiente",
+  running: "en curso",
+  completed: "completado",
+  failed: "fallido",
+  cancelled: "cancelado"
+};
+
+const confidenceLabels: Record<string, string> = {
+  low: "baja",
+  medium: "media",
+  high: "alta"
+};
+
+const sentimentLabels: Record<string, string> = {
+  positive: "positivo",
+  neutral: "neutral",
+  negative: "negativo",
+  mixed: "mixto",
+  unknown: "desconocido"
+};
+
+function getScoreNumber(value: number | string | null | undefined) {
+  return Number(value ?? 0);
+}
+
+function getRiskLabel(score: number) {
+  if (score >= 70) return "Presión competitiva alta";
+  if (score >= 40) return "Presión competitiva moderada";
+  return "Presión competitiva baja";
+}
+
+function getSummaryText({
+  brand,
+  total,
+  brandMentions,
+  competitorRisk,
+  confidence
+}: {
+  brand: string;
+  total: number;
+  brandMentions: number;
+  competitorRisk: number;
+  confidence: string;
+}) {
+  const riskText = competitorRisk >= 70
+    ? "la presión competitiva es alta"
+    : competitorRisk >= 40
+      ? "existe una presión competitiva moderada"
+      : "la presión competitiva es baja";
+  const confidenceText = confidence === "low" || total < 3
+    ? " Trata este resultado como direccional por el bajo volumen o calidad de la muestra."
+    : "";
+
+  return `${brand} aparece en ${brandMentions} de ${total} prompts analizados y ${riskText}.${confidenceText}`;
+}
 
 export default async function ProjectDetailPage({
   params,
@@ -57,12 +115,59 @@ export default async function ProjectDetailPage({
       .order("created_at", { ascending: false })
   ]);
 
+  const latestRun = runs?.[0];
+  const latestCompletedRun = runs?.find((run) => run.status === "completed");
+  const completedRunsCount = runs?.filter((run) => run.status === "completed").length ?? 0;
+  const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
+  const activeRun = runs?.find((run) => run.status === "pending" || run.status === "running");
+  const successMessage =
+    feedback.success === "scan_completed"
+      ? "Escaneo completado. Los resultados ya están disponibles en esta visión general."
+      : feedback.success;
+  const [{ data: latestScore }, { data: promptInsights }, { data: latestRecommendations }] = latestCompletedRun
+    ? await Promise.all([
+        supabase
+          .from("run_scores")
+          .select("visibility_score, citation_score, competitor_gap_score, confidence, details_json")
+          .eq("project_id", projectId)
+          .eq("run_id", latestCompletedRun.id)
+          .maybeSingle(),
+        supabase
+          .from("scan_prompt_results")
+          .select("id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, sentiment, raw_response_text, extracted_json")
+          .eq("project_id", projectId)
+          .eq("run_id", latestCompletedRun.id)
+          .eq("status", "completed")
+          .order("created_at", { ascending: true })
+          .limit(5),
+        supabase
+          .from("recommendations")
+          .select("id, priority_rank, title, impact, effort, confidence, evidence_json")
+          .eq("project_id", projectId)
+          .eq("run_id", latestCompletedRun.id)
+          .eq("status", "active")
+          .order("priority_rank", { ascending: true })
+          .limit(3)
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+
+  const scoreDetails = latestScore?.details_json && typeof latestScore.details_json === "object"
+    ? (latestScore.details_json as { total_results?: number; brand_mentioned_count?: number })
+    : {};
+  const totalResults = Number(scoreDetails.total_results ?? latestCompletedRun?.successful_prompts ?? 0);
+  const brandMentions = Number(scoreDetails.brand_mentioned_count ?? promptInsights?.filter((result) => result.brand_mentioned).length ?? 0);
+  const visibilityScore = getScoreNumber(latestScore?.visibility_score);
+  const citationScore = getScoreNumber(latestScore?.citation_score);
+  const competitorRiskScore = getScoreNumber(latestScore?.competitor_gap_score);
+  const runConfidence = latestScore?.confidence ?? "low";
+
   return (
-    <div className="space-y-6">
+    <div className="page space-y-6">
       <section className="space-y-2">
-        <h1 className="text-2xl font-semibold">{project.name}</h1>
-        <p className="text-sm text-slate-600">
-          {project.domain} · {project.country}/{project.language} · Brand: {project.brand}
+        <p className="kicker">Visión general</p>
+        <h1 className="title-lg">{project.name}</h1>
+        <p className="sub">
+          {project.domain} · {project.country}/{project.language} · Marca: {project.brand}
         </p>
       </section>
 
@@ -70,24 +175,305 @@ export default async function ProjectDetailPage({
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <h2 className="font-medium">Overview</h2>
-              <form action={startScan}>
+              <h2 className="font-medium">Nuevo análisis</h2>
+              <form action={runProjectScan}>
                 <input type="hidden" name="projectId" value={projectId} />
-                <Button type="submit">Run scan</Button>
+                <Button type="submit" disabled={Boolean(activeRun) || !prompts?.length}>
+                  <Icon name="play" size={14} />
+                  Lanzar escaneo
+                </Button>
               </form>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
-            <p className="text-sm text-slate-600">
-              This phase creates scan runs and jobs only. Prompt execution will be implemented next.
+            <p className="sub">
+              Ejecuta un análisis real con Gemini sobre los prompts activos. Mantén esta ventana abierta durante el escaneo.
             </p>
-            {feedback.error ? <p className="text-sm text-red-600">{feedback.error}</p> : null}
-            {feedback.success ? <p className="text-sm text-green-700">{feedback.success}</p> : null}
+            {activeRun ? <p className="feedback error">Ya hay un escaneo en curso o pendiente para este proyecto.</p> : null}
+            {!prompts?.length ? <p className="feedback error">Añade al menos un prompt activo antes de escanear.</p> : null}
+            {feedback.error ? <p className="feedback error">{feedback.error}</p> : null}
+            {successMessage ? <p className="feedback success">{successMessage}</p> : null}
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      {!competitors?.length ? (
+        <p className="rounded-[10px] border border-[#e8eaef] bg-[#fbfbfd] px-4 py-3 text-sm text-[var(--ink-2)]">
+          Añadir competidores mejora la calidad del análisis, pero no bloquea el primer escaneo.
+        </p>
+      ) : null}
+
+      {latestFailedRun ? (
+        <section className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p className="font-semibold">
+            {latestCompletedRun
+              ? "El último escaneo falló. Se muestran los últimos resultados completados."
+              : "El último escaneo falló. Puedes revisar el detalle técnico y volver a intentarlo."}
+          </p>
+          <Link
+            className="mt-2 inline-flex items-center gap-1 font-semibold underline"
+            href={`/dashboard/projects/${projectId}/runs/${latestFailedRun.id}`}
+          >
+            Ver detalle técnico del escaneo fallido
+            <Icon name="arrRight" size={14} />
+          </Link>
+        </section>
+      ) : null}
+
+      {latestCompletedRun && latestScore ? (
+        <>
+          <section>
+            <Card className="border-[#e6e9fe] bg-gradient-to-br from-white to-[#fbfbff]">
+              <CardContent className="flex flex-col gap-4 py-5 md:flex-row md:items-start">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-[var(--accent-soft)] text-[var(--accent)]">
+                  <Icon name="recs" size={19} />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold text-[var(--accent-ink)]">Resumen del último escaneo completado</p>
+                  <p className="max-w-4xl text-base leading-7 text-[var(--ink)]">
+                    {getSummaryText({
+                      brand: project.brand,
+                      total: totalResults,
+                      brandMentions,
+                      competitorRisk: competitorRiskScore,
+                      confidence: runConfidence
+                    })}
+                  </p>
+                  <p className="text-xs text-[var(--ink-3)]">
+                    {totalResults} prompts analizados · {latestCompletedRun.successful_prompts} correctos · {latestCompletedRun.failed_prompts} fallidos · Confianza {confidenceLabels[runConfidence] ?? runConfidence}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+
+          {totalResults < 3 ? (
+            <p className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Este escaneo usa una muestra pequeña. Interpreta los resultados como direccionales, no concluyentes.
+            </p>
+          ) : null}
+
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--ink)]">Visibilidad de un vistazo</h2>
+              <p className="sub mt-1">Señales reales extraídas del último escaneo completado con Gemini.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {[
+                {
+                  label: "Visibilidad de marca",
+                  value: visibilityScore,
+                  suffix: "%",
+                  description: "Prompts donde aparece tu marca."
+                },
+                {
+                  label: "Tasa de cita",
+                  value: citationScore,
+                  suffix: "%",
+                  description: "Prompts con fuentes citadas."
+                },
+                {
+                  label: "Riesgo competitivo",
+                  value: competitorRiskScore,
+                  suffix: "/100",
+                  description: getRiskLabel(competitorRiskScore)
+                },
+                {
+                  label: "Confianza",
+                  value: confidenceLabels[runConfidence] ?? runConfidence,
+                  suffix: "",
+                  description: "Fiabilidad de la muestra extraída."
+                }
+              ].map((metric) => (
+                <Card key={metric.label}>
+                  <CardContent className="space-y-3 py-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">{metric.label}</p>
+                    <p className="text-3xl font-bold tracking-[-0.03em] text-[var(--ink)]">
+                      {metric.value}<span className="ml-1 text-sm font-semibold text-[var(--ink-3)]">{metric.suffix}</span>
+                    </p>
+                    {typeof metric.value === "number" ? (
+                      <div className="h-1.5 overflow-hidden rounded-full bg-[#f1f3f6]">
+                        <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${Math.min(100, metric.value)}%` }} />
+                      </div>
+                    ) : null}
+                    <p className="text-xs leading-5 text-[var(--ink-3)]">{metric.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <p className="text-xs text-[var(--ink-3)]">
+              En esta métrica, más alto significa mayor presión competitiva.
+            </p>
+            {completedRunsCount < 2 ? (
+              <p className="text-xs text-[var(--ink-4)]">
+                La tendencia estará disponible cuando existan al menos dos escaneos completados.
+              </p>
+            ) : null}
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
+            <Card>
+              <CardHeader>
+                <div>
+                  <h2 className="font-medium">Resultados destacados por prompt</h2>
+                  <p className="sub mt-1">Hasta cinco respuestas del último escaneo completado.</p>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {!promptInsights?.length ? (
+                  <EmptyState title="No hay resultados por prompt" description="No se han encontrado respuestas completadas para este escaneo." />
+                ) : (
+                  <div className="space-y-3">
+                    {promptInsights.map((result) => {
+                      const extracted = result.extracted_json && typeof result.extracted_json === "object"
+                        ? (result.extracted_json as {
+                            brand?: { evidence?: string[] };
+                            competitors?: Array<{ name?: string; mentioned?: boolean }>;
+                            summary?: string;
+                          })
+                        : null;
+                      const mentionedCompetitors = (extracted?.competitors ?? [])
+                        .filter((competitor) => competitor.mentioned && competitor.name)
+                        .map((competitor) => competitor.name as string);
+                      const snippet =
+                        extracted?.brand?.evidence?.[0] ??
+                        extracted?.summary ??
+                        result.raw_response_text ??
+                        "Sin fragmento disponible.";
+
+                      return (
+                        <article key={result.id} className="rounded-[10px] border border-[#e8eaef] p-3">
+                          <p className="text-sm font-semibold leading-6 text-[var(--ink)]">{result.prompt_text_snapshot}</p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            <span className={`rounded-full px-2 py-1 font-semibold ${result.brand_mentioned ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                              Marca: {result.brand_mentioned ? "sí" : "no"}
+                            </span>
+                            <span className={`rounded-full px-2 py-1 font-semibold ${result.citation_found ? "bg-indigo-50 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>
+                              Cita: {result.citation_found ? "sí" : "no"}
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">
+                              Sentimiento: {sentimentLabels[result.sentiment] ?? result.sentiment}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-xs leading-5 text-[var(--ink-3)]">{snippet.slice(0, 220)}</p>
+                          <p className="mt-2 text-xs text-[var(--ink-4)]">
+                            Competidores: {mentionedCompetitors.length ? mentionedCompetitors.join(", ") : result.mentioned_competitors_count || "ninguno"}
+                          </p>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div>
+                  <h2 className="font-medium">Qué hacer primero</h2>
+                  <p className="sub mt-1">Acciones priorizadas y respaldadas por evidencia.</p>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!latestRecommendations?.length ? (
+                  <EmptyState title="No hay recomendaciones activas" description="Ninguna regla se ha activado con la evidencia actual." />
+                ) : (
+                  latestRecommendations.map((recommendation) => {
+                    const evidence = recommendation.evidence_json && typeof recommendation.evidence_json === "object"
+                      ? (recommendation.evidence_json as { why_this_matters?: string })
+                      : {};
+
+                    return (
+                      <article key={recommendation.id} className="rounded-[10px] border border-[#e8eaef] p-3">
+                        <p className="text-sm font-semibold leading-5 text-[var(--ink)]">
+                          #{recommendation.priority_rank} · {recommendation.title}
+                        </p>
+                        <p className="mt-2 text-xs text-[var(--ink-3)]">
+                          Impacto: {recommendation.impact} · Esfuerzo: {recommendation.effort} · Confianza: {recommendation.confidence}
+                        </p>
+                        {evidence.why_this_matters ? (
+                          <p className="mt-2 text-xs leading-5 text-[var(--ink-2)]">
+                            <span className="font-semibold">Por qué importa:</span> {evidence.why_this_matters}
+                          </p>
+                        ) : null}
+                      </article>
+                    );
+                  })
+                )}
+                <Link
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
+                  href={`/dashboard/projects/${projectId}/recommendations`}
+                >
+                  Ver todas las recomendaciones
+                  <Icon name="arrRight" size={14} />
+                </Link>
+              </CardContent>
+            </Card>
+          </section>
+
+          <section className="flex justify-end">
+            <Link
+              className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-3)] hover:text-[var(--accent)]"
+              href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
+            >
+              Ver detalle técnico del escaneo
+              <Icon name="arrRight" size={14} />
+            </Link>
+          </section>
+        </>
+      ) : (
+        <section>
+          <Card>
+            <CardContent className="space-y-4 py-6">
+              <EmptyState
+                title={
+                  latestCompletedRun
+                    ? "No hay puntuaciones disponibles"
+                    : prompts?.length
+                      ? "Lanza tu primer escaneo"
+                      : "Añade tus primeros prompts"
+                }
+                description={
+                  latestCompletedRun
+                    ? "El escaneo terminó, pero no se encontraron métricas calculadas. Revisa el detalle técnico del run."
+                    : prompts?.length
+                      ? "Ejecuta Gemini sobre tus prompts activos para obtener visibilidad, señales competitivas y recomendaciones basadas en evidencia."
+                      : "Necesitas al menos un prompt activo antes de ejecutar el primer análisis."
+                }
+              />
+              {latestCompletedRun ? (
+                <Link
+                  className="inline-flex text-sm font-semibold text-[var(--accent)]"
+                  href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
+                >
+                  Revisar detalle técnico
+                </Link>
+              ) : prompts?.length && !activeRun ? (
+                <form action={runProjectScan}>
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <Button type="submit">
+                    <Icon name="play" size={14} />
+                    Lanzar escaneo
+                  </Button>
+                </form>
+              ) : null}
+              {!prompts?.length ? (
+                <a className="inline-flex text-sm font-semibold text-[var(--accent)]" href="#configuracion-prompts">
+                  Añadir prompts
+                </a>
+              ) : null}
+            </CardContent>
+          </Card>
+        </section>
+      )}
+
+      <section className="space-y-2 pt-3">
+        <p className="kicker">Configuración</p>
+        <h2 className="text-xl font-semibold text-[var(--ink)]">Inputs monitorizados</h2>
+        <p className="sub">Gestiona los prompts y competidores que se utilizarán en el próximo escaneo.</p>
+      </section>
+
+      <section id="configuracion-prompts" className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader><h2 className="font-medium">Prompts</h2></CardHeader>
           <CardContent className="space-y-4">
@@ -98,14 +484,14 @@ export default async function ProjectDetailPage({
                 <Textarea id="promptText" name="promptText" required rows={3} />
               </div>
               <div>
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">Categoría</Label>
                 <Input id="category" name="category" />
               </div>
-              <Button type="submit">Add prompt</Button>
+              <Button type="submit">Añadir prompt</Button>
             </form>
 
             {!prompts?.length ? (
-              <EmptyState title="No active prompts" description="Add 5-10 prompts to prepare future scans." />
+              <EmptyState title="No hay prompts activos" description="Añade entre 5 y 10 prompts para preparar el escaneo." />
             ) : (
               <div className="space-y-3">
                 {prompts.map((prompt) => (
@@ -113,15 +499,15 @@ export default async function ProjectDetailPage({
                     <input type="hidden" name="projectId" value={projectId} />
                     <input type="hidden" name="promptId" value={prompt.id} />
                     <Textarea name="promptText" defaultValue={prompt.prompt_text} rows={3} required />
-                    <Input name="category" defaultValue={prompt.category ?? ""} placeholder="Category" />
+                    <Input name="category" defaultValue={prompt.category ?? ""} placeholder="Categoría" />
                     <div className="flex gap-2">
-                      <Button type="submit" variant="outline">Save</Button>
+                      <Button type="submit" variant="outline">Guardar</Button>
                       <button
                         formAction={deactivatePrompt}
                         className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
                         type="submit"
                       >
-                        Deactivate
+                        Desactivar
                       </button>
                     </div>
                   </form>
@@ -132,23 +518,23 @@ export default async function ProjectDetailPage({
         </Card>
 
         <Card>
-          <CardHeader><h2 className="font-medium">Competitors</h2></CardHeader>
+          <CardHeader><h2 className="font-medium">Competidores</h2></CardHeader>
           <CardContent className="space-y-4">
             <form action={createCompetitor} className="space-y-2 rounded border p-3">
               <input type="hidden" name="projectId" value={projectId} />
               <div>
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="name">Nombre</Label>
                 <Input id="name" name="name" required />
               </div>
               <div>
-                <Label htmlFor="domain">Domain</Label>
+                <Label htmlFor="domain">Dominio</Label>
                 <Input id="domain" name="domain" required />
               </div>
-              <Button type="submit">Add competitor</Button>
+              <Button type="submit">Añadir competidor</Button>
             </form>
 
             {!competitors?.length ? (
-              <EmptyState title="No active competitors" description="Add competitors to prepare comparison context." />
+              <EmptyState title="No hay competidores activos" description="Añade competidores para preparar el contexto comparativo." />
             ) : (
               <div className="space-y-3">
                 {competitors.map((competitor) => (
@@ -158,13 +544,13 @@ export default async function ProjectDetailPage({
                     <Input name="name" defaultValue={competitor.name} required />
                     <Input name="domain" defaultValue={competitor.domain} required />
                     <div className="flex gap-2">
-                      <Button type="submit" variant="outline">Save</Button>
+                      <Button type="submit" variant="outline">Guardar</Button>
                       <button
                         formAction={deactivateCompetitor}
                         className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
                         type="submit"
                       >
-                        Deactivate
+                        Desactivar
                       </button>
                     </div>
                   </form>
@@ -175,43 +561,37 @@ export default async function ProjectDetailPage({
         </Card>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      <section>
         <Card>
-          <CardHeader><h2 className="font-medium">Runs</h2></CardHeader>
+          <CardHeader>
+            <h2 className="font-medium">Historial técnico de escaneos</h2>
+            <p className="sub mt-1">Estado de ejecuciones recientes para diagnóstico y trazabilidad.</p>
+          </CardHeader>
           <CardContent>
             {!runs?.length ? (
-              <EmptyState title="No runs yet" description="Run your first scan to create run and job records." />
+              <EmptyState title="Todavía no hay escaneos" description="Lanza tu primer escaneo para crear el informe." />
             ) : (
               <div className="space-y-3">
                 {runs.map((run) => (
-                  <div key={run.id} className="rounded border p-3 text-sm">
+                  <div key={run.id} className="rounded-[10px] border border-[#e8eaef] p-3 text-sm">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{run.status}</p>
-                      <Link className="underline" href={`/dashboard/projects/${projectId}/runs/${run.id}`}>
-                        View run
+                      <p className="font-medium">{statusLabels[run.status] ?? run.status}</p>
+                      <Link className="inline-flex items-center gap-1 font-semibold text-[var(--accent)]" href={`/dashboard/projects/${projectId}/runs/${run.id}`}>
+                        <Icon name="arrRight" size={14} />
+                        Ver detalle técnico
                       </Link>
                     </div>
-                    <p className="mt-1 text-slate-600">Created: {new Date(run.created_at).toLocaleString()}</p>
-                    <p className="text-slate-600">
-                      Prompts: {run.total_prompts} · Success: {run.successful_prompts} · Failed: {run.failed_prompts}
+                    <p className="mt-1 sub">Creado: {new Date(run.created_at).toLocaleString()}</p>
+                    <p className="sub">
+                      Prompts: {run.total_prompts} · Correctos: {run.successful_prompts} · Fallidos: {run.failed_prompts}
                     </p>
-                    <p className="text-slate-600">
-                      Started: {run.started_at ? new Date(run.started_at).toLocaleString() : "-"} · Finished: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "-"}
+                    <p className="sub">
+                      Inicio: {run.started_at ? new Date(run.started_at).toLocaleString() : "-"} · Fin: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "-"}
                     </p>
                   </div>
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><h2 className="font-medium">Recommendations</h2></CardHeader>
-          <CardContent>
-            <EmptyState
-              title="No recommendations yet"
-              description="Evidence-based recommendations will appear after scan execution phases."
-            />
           </CardContent>
         </Card>
       </section>
