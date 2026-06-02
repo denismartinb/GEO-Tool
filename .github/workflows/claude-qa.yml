@@ -37,7 +37,7 @@ jobs:
           should_run="false"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             should_run="true"
-          elif [ "$label_name" = "agent:qa" ] || [ "$label_name" = "status:ready-for-build" ] || [ "$label_name" = "status:changes-requested" ]; then
+          elif [ "$label_name" = "agent:qa" ] || [ "$label_name" = "status:ready-for-qa" ] || [ "$label_name" = "status:changes-requested" ]; then
             should_run="true"
           fi
           {

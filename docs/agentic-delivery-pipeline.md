@@ -31,6 +31,7 @@ Use these labels consistently:
 - `agent:verify`
 - `agent:human-gate`
 - `status:ready-for-build`
+- `status:ready-for-qa`
 - `status:changes-requested`
 - `status:ready-for-human-review`
 - `status:blocked`
@@ -64,4 +65,3 @@ It must not change:
 - Keep PRs tied to one issue.
 - Keep QA focused on the brief and the checklist.
 - Keep the human gate manual.
-
