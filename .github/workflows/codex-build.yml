@@ -1,0 +1,79 @@
+name: Codex Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: GitHub issue number for the phase brief
+        required: false
+  issues:
+    types:
+      - labeled
+      - opened
+      - reopened
+
+permissions:
+  contents: read
+  issues: read
+
+concurrency:
+  group: codex-build-${{ github.event.issue.number || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Determine trigger context
+        id: context
+        run: |
+          set -euo pipefail
+          issue_number="${{ github.event.inputs.issue_number || github.event.issue.number || '' }}"
+          label_name="${{ github.event.label.name || '' }}"
+          should_run="false"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            should_run="true"
+          elif [ "$label_name" = "status:ready-for-build" ] || [ "$label_name" = "agent:build" ]; then
+            should_run="true"
+          fi
+          {
+            echo "issue_number=$issue_number"
+            echo "label_name=$label_name"
+            echo "should_run=$should_run"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize build preflight
+        run: |
+          {
+            echo "## Codex Build"
+            echo
+            echo "- Trigger: ${{ github.event_name }}"
+            echo "- Issue: ${{ steps.context.outputs.issue_number || 'n/a' }}"
+            echo "- Label: ${{ steps.context.outputs.label_name || 'n/a' }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Skip when not requested
+        if: steps.context.outputs.should_run != 'true'
+        run: |
+          echo "Build workflow skipped because no build trigger label or dispatch input was provided."
+
+      - name: Skip when Codex secret is missing
+        if: steps.context.outputs.should_run == 'true' && secrets.CODEX_AGENT_TOKEN == ''
+        run: |
+          {
+            echo "Codex build placeholder skipped."
+            echo "Missing required secret: CODEX_AGENT_TOKEN."
+            echo "This workflow is intentionally conservative until the agent integration is configured."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Placeholder build guard
+        if: steps.context.outputs.should_run == 'true' && secrets.CODEX_AGENT_TOKEN != ''
+        run: |
+          {
+            echo "Codex build placeholder is enabled."
+            echo "No automatic code changes are performed by this foundation workflow."
+            echo "Use the GitHub issue and PR template as the delivery contract."
+          } >> "$GITHUB_STEP_SUMMARY"

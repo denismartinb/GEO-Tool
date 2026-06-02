@@ -1,0 +1,85 @@
+name: Agentic Phase Brief
+description: Define one narrow implementation unit for the PLAN → BUILD → QA flow.
+title: "[AGENTIC] "
+labels:
+  - agent:plan
+  - status:ready-for-build
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to convert product intent into a precise GitHub issue for Codex.
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: What outcome should this phase achieve?
+      placeholder: Describe the product intent in one or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: What is included in this phase?
+      placeholder: List the exact implementation boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: What must not change?
+      placeholder: List explicit exclusions.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true before the issue can be closed?
+      placeholder: Use clear, testable bullets.
+    validations:
+      required: true
+  - type: textarea
+    id: allowed_files
+    attributes:
+      label: Allowed files
+      description: Which files or folders may Codex change?
+      placeholder: List exact file paths or folders.
+    validations:
+      required: true
+  - type: textarea
+    id: forbidden_files
+    attributes:
+      label: Forbidden files
+      description: Which files or folders must remain untouched?
+      placeholder: List explicit forbidden paths.
+    validations:
+      required: true
+  - type: dropdown
+    id: risk_level
+    attributes:
+      label: Risk level
+      description: Select the highest applicable risk label.
+      options:
+        - risk:ui-only
+        - risk:database
+        - risk:rls
+        - risk:auth
+        - risk:migration
+        - risk:pipeline
+    validations:
+      required: true
+  - type: checkboxes
+    id: qa_checklist
+    attributes:
+      label: QA checklist
+      description: Confirm the review criteria are explicit.
+      options:
+        - label: I listed the exact allowed files.
+        - label: I listed the exact forbidden files.
+        - label: I described what should not change.
+        - label: I wrote testable acceptance criteria.
+        - label: I considered sensitive areas and labeled risk correctly.
+
