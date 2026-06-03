@@ -81,10 +81,13 @@ npm run dev
 Quality checks:
 
 ```bash
+pnpm run build
 pnpm run typecheck
 pnpm run lint
-pnpm run build
+git diff --check
 ```
+
+Next 16 generates `.next/types` during `build` or `dev`. If `.next` has been cleaned, run `pnpm run build` before `pnpm run typecheck`.
 
 ## Apply Migrations
 

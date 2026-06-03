@@ -10,10 +10,13 @@ Use this checklist before inviting beta users. Run it with real project data and
 - Run:
 
 ```bash
+pnpm run build
 pnpm run typecheck
 pnpm run lint
-pnpm run build
+git diff --check
 ```
+
+Next 16 generates `.next/types` during `build` or `dev`. After cleaning `.next`, always run `pnpm run build` before `pnpm run typecheck`.
 
 ## Test Project Data
 
