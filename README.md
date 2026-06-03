@@ -57,6 +57,7 @@ Notes:
 - `Lanzar escaneo` executes Gemini directly. Keep the page open while the synchronous scan runs.
 - Technical run detail remains available for debugging and support.
 - The Prompts screen shows prompt-level signals from the latest completed Gemini scan. Raw responses remain persisted for technical auditing.
+- The Competitors screen shows configured competitors and mentions detected in the latest completed Gemini scan. Discovery is not automatic yet; competitors are managed manually in project configuration.
 - The Recommendations screen shows the full evidence-backed action backlog from the latest completed Gemini scan.
 - Recommendations are directional, rule-based v0 actions grounded in extracted evidence. They are not rewritten by an LLM.
 - Projects can be archived and restored. Archived projects stay hidden from active workspace navigation.
