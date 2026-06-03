@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/sidebar";
+import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 async function signOut() {
   "use server";
@@ -18,17 +20,40 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!user) redirect("/login");
 
+  const [{ data: projects }, { data: runs }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, domain, country, language")
+      .eq("is_archived", false)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("scan_runs")
+      .select("project_id, status, created_at")
+      .order("created_at", { ascending: false })
+  ]);
+
+  const latestScanStatusByProject = (runs ?? []).reduce<Record<string, string>>((statuses, run) => {
+    if (!statuses[run.project_id]) statuses[run.project_id] = run.status;
+    return statuses;
+  }, {});
+
   return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <div className="flex-1">
-        <header className="flex items-center justify-between border-b bg-white px-6 py-3">
-          <p className="text-sm text-slate-600">{user.email}</p>
-          <form action={signOut}>
-            <Button variant="outline" type="submit">Sign out</Button>
-          </form>
+    <div className="shell">
+      <Sidebar projects={projects ?? []} />
+      <div className="dash-main">
+        <header className="dash-header">
+          <WorkspaceTopbar projects={projects ?? []} latestScanStatusByProject={latestScanStatusByProject} />
+          <div className="dash-header-actions">
+            <div className="meta">{user.email}</div>
+            <form action={signOut}>
+              <Button variant="outline" type="submit">
+                <Icon name="settings" size={14} />
+                Cerrar sesión
+              </Button>
+            </form>
+          </div>
         </header>
-        <main className="p-6">{children}</main>
+        <main className="dash-content">{children}</main>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 
 async function login(formData: FormData) {
   "use server";
@@ -26,28 +27,31 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md items-center px-4">
-      <Card className="w-full">
-        <CardHeader>
-          <h1 className="text-lg font-semibold">Login</h1>
+    <main className="auth-bg">
+      <Card className="auth-card">
+        <CardHeader className="card-head border-b-0 !px-0 !pt-0">
+          <div className="brand-name">GEO Studio</div>
+          <h1 className="auth-title mt-3">Bienvenido de nuevo</h1>
+          <p className="sub mt-1">Accede a tu panel GEO.</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="!px-0 !pt-2">
           <form action={login} className="space-y-3">
             <div>
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" type="email" required />
             </div>
             <div>
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input id="password" name="password" type="password" required />
             </div>
-            {params.error ? <p className="text-sm text-red-600">{params.error}</p> : null}
+            {params.error ? <p className="feedback error">{params.error}</p> : null}
             <Button type="submit" className="w-full">
-              Sign in
+              <Icon name="play" size={14} />
+              Iniciar sesión
             </Button>
           </form>
-          <p className="mt-4 text-sm text-slate-600">
-            No account? <Link className="underline" href="/signup">Create one</Link>
+          <p className="mt-4 text-sm text-[var(--ink-3)]">
+            ¿No tienes cuenta? <Link className="underline" href="/signup">Crear cuenta</Link>
           </p>
         </CardContent>
       </Card>
