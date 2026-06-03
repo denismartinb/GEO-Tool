@@ -117,6 +117,8 @@ The authenticated MVP is organized as a project workspace. Its main areas are `V
 
 The Prompts area shows prompt-level results and the Recommendations area shows the full evidence-backed action backlog from the latest completed Gemini scan. The remaining placeholder areas will be implemented in later Phase 10B iterations.
 
+New project creation can include editable initial prompts and competitors. The app does not crawl the website during setup, and competitor discovery is not automatic or verified. Review the configured setup before launching the first scan.
+
 ## Input Data Rules in UI
 
 - Projects are archived (`is_archived = true`) instead of deleted.
