@@ -33,6 +33,25 @@ const scanExecuteSchema = z.object({
 const MAX_REAL_SCAN_PROMPTS = 10;
 const MAX_EXTRACTION_RESULTS = 10;
 const EXTRACTION_VERSION = "gemini-extraction-v1";
+const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
+
+type ProjectActionErrorCode =
+  | "active_run_exists"
+  | "project_archived"
+  | "project_not_found"
+  | "prompts_required"
+  | "scan_failed"
+  | "scan_unavailable"
+  | "too_many_prompts"
+  | "unauthorized"
+  | "unexpected_error";
+
+class ProjectActionError extends Error {
+  constructor(public readonly code: ProjectActionErrorCode) {
+    super(code);
+    this.name = "ProjectActionError";
+  }
+}
 
 type JobRow = {
   id: string;
@@ -76,23 +95,20 @@ async function logJob(
 }
 
 function getSanitizedScanError(error: unknown) {
-  if (!(error instanceof Error)) return "Unexpected Gemini scan execution error.";
+  if (error instanceof ProjectActionError) {
+    switch (error.code) {
+      case "project_not_found":
+        return "No se ha encontrado el proyecto o el escaneo solicitado.";
+      case "project_archived":
+        return "El proyecto está archivado y no puede ejecutarse.";
+      case "too_many_prompts":
+        return "El escaneo pendiente supera el límite de prompts permitido.";
+      default:
+        return "No se pudo completar la ejecución del escaneo.";
+    }
+  }
 
-  const message = error.message;
-  const safePrefixes = [
-    "Missing GEMINI_API_KEY",
-    "Invalid GEMINI_MODEL.",
-    "Gemini API quota or rate limit reached.",
-    "Gemini API rejected the request.",
-    "Gemini API request failed",
-    "Gemini returned an empty response.",
-    "Gemini extraction returned",
-    "Gemini extraction JSON failed"
-  ];
-
-  return safePrefixes.some((prefix) => message.startsWith(prefix))
-    ? message.slice(0, 500)
-    : "Unexpected Gemini scan execution error.";
+  return "No se pudo completar la ejecución del escaneo.";
 }
 
 async function runStructuredExtractionForRun(input: {
@@ -259,8 +275,9 @@ export async function deactivateCompetitor(formData: FormData) {
 
 type AuthenticatedContext = Awaited<ReturnType<typeof requireUser>>;
 
-function getActionErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "No se pudo completar el escaneo.";
+function getActionErrorCode(error: unknown): ProjectActionErrorCode {
+  if (error instanceof ProjectActionError) return error.code;
+  return "unexpected_error";
 }
 
 async function createPendingScanRun({
@@ -274,13 +291,20 @@ async function createPendingScanRun({
 }) {
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id")
+    .select("id, is_archived")
     .eq("id", projectId)
-    .eq("is_archived", false)
-    .single();
+    .maybeSingle();
 
-  if (projectError || !project) {
-    throw new Error("No se ha encontrado el proyecto o no tienes acceso.");
+  if (projectError) {
+    throw new ProjectActionError("unexpected_error");
+  }
+
+  if (!project) {
+    throw new ProjectActionError("project_not_found");
+  }
+
+  if (project.is_archived) {
+    throw new ProjectActionError("project_archived");
   }
 
   const { data: activeRun, error: activeRunError } = await supabase
@@ -292,11 +316,11 @@ async function createPendingScanRun({
     .maybeSingle();
 
   if (activeRunError) {
-    throw new Error("No se ha podido comprobar si ya existe un escaneo activo.");
+    throw new ProjectActionError("unexpected_error");
   }
 
   if (activeRun) {
-    throw new Error("Ya hay un escaneo en curso o pendiente para este proyecto.");
+    throw new ProjectActionError("active_run_exists");
   }
 
   const { data: activePrompts, error: promptError } = await supabase
@@ -307,15 +331,15 @@ async function createPendingScanRun({
     .order("created_at", { ascending: true });
 
   if (promptError) {
-    throw new Error("No se han podido leer los prompts activos.");
+    throw new ProjectActionError("unexpected_error");
   }
 
   if (!activePrompts?.length) {
-    throw new Error("Añade al menos un prompt activo antes de escanear.");
+    throw new ProjectActionError("prompts_required");
   }
 
   if (activePrompts.length > MAX_REAL_SCAN_PROMPTS) {
-    throw new Error("El escaneo real está limitado a 10 prompts. Desactiva algunos prompts antes de lanzar el análisis.");
+    throw new ProjectActionError("too_many_prompts");
   }
 
   const service = createServiceClient();
@@ -337,7 +361,7 @@ async function createPendingScanRun({
     .single();
 
   if (runError || !run) {
-    throw new Error("No se ha podido crear el escaneo.");
+    throw new ProjectActionError("scan_failed");
   }
 
   const jobsPayload = [
@@ -382,7 +406,7 @@ async function createPendingScanRun({
       .eq("id", run.id)
       .eq("project_id", projectId);
 
-    throw new Error("Se ha creado el escaneo, pero no se han podido preparar sus jobs.");
+    throw new ProjectActionError("scan_failed");
   }
 
   return run.id;
@@ -403,11 +427,11 @@ export async function startScan(formData: FormData) {
   try {
     await createPendingScanRun({ projectId, supabase, user });
   } catch (error) {
-    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(getActionErrorMessage(error))}`);
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(getActionErrorCode(error))}`);
   }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  redirect(`/dashboard/projects/${projectId}?success=${encodeURIComponent("Escaneo preparado correctamente.")}`);
+  redirect(`/dashboard/projects/${projectId}?success=scan_pending`);
 }
 
 export async function runProjectScan(formData: FormData) {
@@ -426,14 +450,16 @@ export async function runProjectScan(formData: FormData) {
   try {
     const createdRunId = await createPendingScanRun({ projectId, supabase, user });
     runId = createdRunId;
-    await executePendingScan({ projectId, runId: createdRunId, supabase });
+    if (ENABLE_SYNC_SCAN_EXECUTION) {
+      await executePendingScan({ projectId, runId: createdRunId, supabase });
+    }
   } catch (error) {
-    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(getActionErrorMessage(error))}`);
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(getActionErrorCode(error))}`);
   }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   if (runId) revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
-  redirect(`/dashboard/projects/${projectId}?success=scan_completed`);
+  redirect(`/dashboard/projects/${projectId}?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_completed" : "scan_pending"}`);
 }
 
 async function executePendingScan({
@@ -453,11 +479,11 @@ async function executePendingScan({
     .single();
 
   if (runError || !run) {
-    throw new Error("No se ha encontrado el escaneo o no tienes acceso.");
+    throw new ProjectActionError("project_not_found");
   }
 
   if (run.status !== "pending") {
-    throw new Error("Solo se puede ejecutar un escaneo pendiente.");
+    throw new ProjectActionError("scan_failed");
   }
 
   const service = createServiceClient();
@@ -469,7 +495,7 @@ async function executePendingScan({
     .single();
 
   if (!project) {
-    throw new Error("No se ha encontrado el proyecto.");
+    throw new ProjectActionError("project_not_found");
   }
 
   const [{ data: competitors }, { data: jobsRaw, error: jobsError }] = await Promise.all([
@@ -498,7 +524,7 @@ async function executePendingScan({
       .eq("id", runId)
       .eq("project_id", projectId);
 
-    throw new Error("No se han encontrado jobs para este escaneo.");
+    throw new ProjectActionError("scan_failed");
   }
 
   const jobs = jobsRaw as unknown as (JobRow & { created_at: string })[];
@@ -507,7 +533,7 @@ async function executePendingScan({
   const finalizeJob = jobs.find((job) => job.job_type === "scan_finalize");
 
   if (promptJobs.length > MAX_REAL_SCAN_PROMPTS) {
-    throw new Error("El escaneo real está limitado a 10 prompts. Desactiva algunos prompts antes de lanzar el análisis.");
+    throw new ProjectActionError("too_many_prompts");
   }
 
   const nowIso = new Date().toISOString();
@@ -521,7 +547,7 @@ async function executePendingScan({
     .maybeSingle();
 
   if (runStartError || !runningRun) {
-    throw new Error("No se ha podido iniciar la ejecución del escaneo.");
+    throw new ProjectActionError("scan_failed");
   }
 
   let currentRunningPromptJob: JobRow | null = null;
@@ -945,7 +971,7 @@ async function executePendingScan({
       .eq("id", runId)
       .eq("project_id", projectId);
 
-    throw new Error(`El escaneo de Gemini ha fallado: ${errorSummary}`);
+    throw new ProjectActionError("scan_failed");
   }
 }
 
@@ -962,15 +988,17 @@ export async function executeScan(formData: FormData) {
   const { projectId, runId } = parsed.data;
   const { supabase } = await requireUser();
 
+  if (!ENABLE_SYNC_SCAN_EXECUTION) {
+    redirect(`/dashboard/projects/${projectId}?error=scan_unavailable`);
+  }
+
   try {
     await executePendingScan({ projectId, runId, supabase });
   } catch (error) {
-    redirect(
-      `/dashboard/projects/${projectId}/runs/${runId}?error=${encodeURIComponent(getActionErrorMessage(error))}`
-    );
+    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(getActionErrorCode(error))}`);
   }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
-  redirect(`/dashboard/projects/${projectId}/runs/${runId}?success=${encodeURIComponent("Escaneo de Gemini ejecutado correctamente.")}`);
+  redirect(`/dashboard/projects/${projectId}?success=scan_completed`);
 }

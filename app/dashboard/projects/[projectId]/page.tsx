@@ -40,6 +40,23 @@ const sentimentLabels: Record<string, string> = {
   unknown: "desconocido"
 };
 
+const feedbackErrorMessages: Record<string, string> = {
+  active_run_exists: "Ya hay un escaneo en curso o pendiente para este proyecto.",
+  project_archived: "Este proyecto está archivado. Reactívalo antes de lanzar un escaneo.",
+  project_not_found: "No hemos encontrado el proyecto solicitado.",
+  prompts_required: "Añade al menos un prompt activo antes de escanear.",
+  scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
+  scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
+  too_many_prompts: "El escaneo está limitado a 10 prompts activos. Desactiva algunos antes de continuar.",
+  unauthorized: "No tienes permisos para realizar esta acción.",
+  unexpected_error: "Ha ocurrido un error inesperado. Vuelve a intentarlo."
+};
+
+const feedbackSuccessMessages: Record<string, string> = {
+  scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
+  scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno."
+};
+
 function getScoreNumber(value: number | string | null | undefined) {
   return Number(value ?? 0);
 }
@@ -120,10 +137,10 @@ export default async function ProjectDetailPage({
   const completedRunsCount = runs?.filter((run) => run.status === "completed").length ?? 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
   const activeRun = runs?.find((run) => run.status === "pending" || run.status === "running");
-  const successMessage =
-    feedback.success === "scan_completed"
-      ? "Escaneo completado. Los resultados ya están disponibles en esta visión general."
-      : feedback.success;
+  const feedbackErrorMessage = feedback.error
+    ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
+    : null;
+  const successMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
   const [{ data: latestScore }, { data: promptInsights }, { data: latestRecommendations }] = latestCompletedRun
     ? await Promise.all([
         supabase
@@ -187,11 +204,12 @@ export default async function ProjectDetailPage({
           </CardHeader>
           <CardContent className="space-y-2">
             <p className="sub">
-              Ejecuta un análisis real con Gemini sobre los prompts activos. Mantén esta ventana abierta durante el escaneo.
+              Prepara un escaneo con los prompts activos. Si la ejecución automática está habilitada en este entorno,
+              el análisis se lanzará al momento; si no, quedará pendiente para una ejecución posterior.
             </p>
             {activeRun ? <p className="feedback error">Ya hay un escaneo en curso o pendiente para este proyecto.</p> : null}
             {!prompts?.length ? <p className="feedback error">Añade al menos un prompt activo antes de escanear.</p> : null}
-            {feedback.error ? <p className="feedback error">{feedback.error}</p> : null}
+            {feedbackErrorMessage ? <p className="feedback error">{feedbackErrorMessage}</p> : null}
             {successMessage ? <p className="feedback success">{successMessage}</p> : null}
           </CardContent>
         </Card>
@@ -437,7 +455,7 @@ export default async function ProjectDetailPage({
                   latestCompletedRun
                     ? "El escaneo terminó, pero no se encontraron métricas calculadas. Revisa el detalle técnico del run."
                     : prompts?.length
-                      ? "Ejecuta Gemini sobre tus prompts activos para obtener visibilidad, señales competitivas y recomendaciones basadas en evidencia."
+                      ? "Prepara un escaneo con tus prompts activos para dejar listo el siguiente análisis de visibilidad."
                       : "Necesitas al menos un prompt activo antes de ejecutar el primer análisis."
                 }
               />
