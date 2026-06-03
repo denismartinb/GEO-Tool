@@ -68,6 +68,7 @@ function parseInitialCompetitors(input: string | undefined) {
     const domain = rawDomain?.trim() ?? "";
 
     if (!name) continue;
+    if (!domain || domain.length < 3) continue;
 
     const dedupeKey = domain
       ? `${normalizeCompetitorValue(name)}|${normalizeCompetitorValue(domain)}`

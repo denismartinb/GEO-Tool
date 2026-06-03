@@ -90,7 +90,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
               <div>
                 <Label htmlFor="initial_competitors">Competidores iniciales</Label>
                 <p className="sub mt-1">
-                  Añade hasta 5 competidores. Formato recomendado: Nombre | dominio.com
+                  Añade hasta 5 competidores. Ambos campos son necesarios: Nombre | dominio.com
                 </p>
               </div>
               <Textarea
