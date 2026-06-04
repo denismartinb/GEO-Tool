@@ -49,7 +49,7 @@ AGENTIC-5B posts a stable `<!-- agentic:claude-qa-result -->` comment containing
 
 ## Manual Model Override
 
-The Claude QA workflow defaults to `claude-sonnet-4-6`, the model validated during AGENTIC-5B. Manual `workflow_dispatch` runs may pass an optional `model` input to override it for that run.
+The Claude QA workflow defaults to `claude-sonnet-4-5`. Manual `workflow_dispatch` runs may pass an optional `model` input to override it for that run.
 
 If Anthropic reports that the default model is unavailable for the account, rerun the workflow with an allowed model such as `claude-sonnet-4-5`.
 

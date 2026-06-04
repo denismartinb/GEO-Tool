@@ -66,7 +66,7 @@ If the required secret is missing, the workflow skips gracefully and explains wh
 
 ### Claude QA model configuration
 
-The default Claude QA model is `claude-sonnet-4-6`, which was validated by the AGENTIC-5B workflow. The runner reads `CLAUDE_QA_MODEL` from the workflow environment and falls back to that default when no override is provided.
+The default Claude QA model is `claude-sonnet-4-5`. The runner reads `CLAUDE_QA_MODEL` from the workflow environment and falls back to that default when no override is provided.
 
 Manual `workflow_dispatch` runs can pass an optional `model` input to override the default for a single review. A repository variable named `CLAUDE_QA_MODEL` can also be used to change the default without editing code.
 
