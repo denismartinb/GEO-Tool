@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "validate": "pnpm run build && pnpm run typecheck && pnpm run lint"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",

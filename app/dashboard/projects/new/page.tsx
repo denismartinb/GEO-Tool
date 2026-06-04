@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { createProject } from "../actions";
 
@@ -30,6 +31,9 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
       <Card>
         <CardHeader>
           <h2 className="font-medium">Datos del proyecto</h2>
+          <p className="sub mt-1">
+            Define la base del proyecto antes del primer escaneo. No se lanzará ningún análisis hasta que lo hagas manualmente.
+          </p>
         </CardHeader>
         <CardContent>
           <form action={createProject} className="space-y-3">
@@ -45,6 +49,15 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
               <Label htmlFor="brand">Marca</Label>
               <Input id="brand" name="brand" required />
             </div>
+            <div>
+              <Label htmlFor="business_description">Describe brevemente tu negocio o categoría</Label>
+              <Textarea
+                id="business_description"
+                name="business_description"
+                placeholder="Ej. Operador de fibra y móvil en España"
+                rows={3}
+              />
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <Label htmlFor="country">País</Label>
@@ -55,6 +68,45 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
                 <Input id="language" name="language" placeholder="es" required />
               </div>
             </div>
+            <div className="space-y-2">
+              <div>
+                <Label htmlFor="initial_prompts">Prompts iniciales</Label>
+                <p className="sub mt-1">
+                  Añade hasta 10 prompts iniciales. Podrás editarlos después antes de lanzar el primer escaneo.
+                </p>
+              </div>
+              <Textarea
+                id="initial_prompts"
+                name="initial_prompts"
+                placeholder={`¿Cuáles son las mejores opciones de fibra y móvil en España?
+¿Qué alternativas a Movistar recomiendas?
+¿Qué operador ofrece mejor relación calidad-precio?
+¿Cuál es la opción más barata para contratar fibra?
+¿Qué proveedor tiene mejores opiniones de clientes?`}
+                rows={6}
+              />
+            </div>
+            <div className="space-y-2">
+              <div>
+                <Label htmlFor="initial_competitors">Competidores iniciales</Label>
+                <p className="sub mt-1">
+                  Añade hasta 5 competidores. Ambos campos son necesarios: Nombre | dominio.com
+                </p>
+              </div>
+              <Textarea
+                id="initial_competitors"
+                name="initial_competitors"
+                placeholder={`Digi | digi.es
+O2 | o2online.es
+Lowi | lowi.es
+MásMóvil | masmovil.es
+Orange | orange.es`}
+                rows={5}
+              />
+            </div>
+            <p className="sub">
+              Puedes editar estos datos antes de crear el proyecto. No se lanzará ningún escaneo hasta que lo hagas manualmente.
+            </p>
             {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
             <Button type="submit">Crear proyecto</Button>
           </form>

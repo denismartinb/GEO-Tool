@@ -81,10 +81,11 @@ npm run dev
 Quality checks:
 
 ```bash
-pnpm run typecheck
-pnpm run lint
-pnpm run build
+pnpm run validate
+git diff --check
 ```
+
+Next 16 generates `.next/types` during `build` or `dev`, so `build` must run before `typecheck` when `.next` has been cleaned.
 
 ## Apply Migrations
 
@@ -115,6 +116,8 @@ Use Supabase CLI or SQL editor:
 The authenticated MVP is organized as a project workspace. Its main areas are `Visión general`, `Prompts`, `Competidores`, `Escaneos` and `Recomendaciones`.
 
 The Prompts area shows prompt-level results and the Recommendations area shows the full evidence-backed action backlog from the latest completed Gemini scan. The remaining placeholder areas will be implemented in later Phase 10B iterations.
+
+New project creation can include editable initial prompts and competitors. The app does not crawl the website during setup, and competitor discovery is not automatic or verified. Review the configured setup before launching the first scan.
 
 ## Input Data Rules in UI
 

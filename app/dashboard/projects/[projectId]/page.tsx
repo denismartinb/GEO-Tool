@@ -44,6 +44,7 @@ const feedbackErrorMessages: Record<string, string> = {
   active_run_exists: "Ya hay un escaneo en curso o pendiente para este proyecto.",
   project_archived: "Este proyecto está archivado. Reactívalo antes de lanzar un escaneo.",
   project_not_found: "No hemos encontrado el proyecto solicitado.",
+  project_setup_partial: "El proyecto se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
   prompts_required: "Añade al menos un prompt activo antes de escanear.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
@@ -53,6 +54,7 @@ const feedbackErrorMessages: Record<string, string> = {
 };
 
 const feedbackSuccessMessages: Record<string, string> = {
+  project_created: "Proyecto creado. Revisa los prompts y competidores antes de lanzar el primer escaneo.",
   scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno."
 };

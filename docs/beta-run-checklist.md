@@ -10,10 +10,11 @@ Use this checklist before inviting beta users. Run it with real project data and
 - Run:
 
 ```bash
-pnpm run typecheck
-pnpm run lint
-pnpm run build
+pnpm run validate
+git diff --check
 ```
+
+Next 16 generates `.next/types` during `build` or `dev`, so `build` must run before `typecheck` when `.next` has been cleaned.
 
 ## Test Project Data
 
@@ -38,9 +39,9 @@ Example prompts:
 ## Expected Flow
 
 1. Sign up or log in.
-2. Create the test project.
-3. Add competitors.
-4. Add 5-10 prompts.
+2. Create the test project and preload initial prompts and competitors if useful.
+3. Review or adjust competitors.
+4. Review or adjust the 5-10 prompts before scanning.
 5. Click `Lanzar escaneo` and keep the page open while Gemini executes synchronously.
 6. Confirm the completed scan redirects back to the project overview.
 7. Inspect stored raw responses.
@@ -69,3 +70,4 @@ Example prompts:
 - Common causes: missing Gemini key, more than 10 prompts, missing active prompts, Gemini API quota/rate limit, unapplied migration, or missing RLS/service-role environment configuration.
 - If Gemini reports `GenerateContentRequest.model`, set `GEMINI_MODEL=gemini-2.0-flash`.
 - Use the technical run detail only for debugging and support when a scan fails or needs inspection.
+- Project setup does not crawl the website, and competitor discovery is not automatic or verified.
