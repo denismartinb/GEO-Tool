@@ -115,7 +115,7 @@ Use Supabase CLI or SQL editor:
 
 The authenticated MVP is organized as a project workspace. Its main areas are `Visión general`, `Prompts`, `Competidores`, `Escaneos` and `Recomendaciones`.
 
-The Prompts area shows prompt-level results and the Recommendations area shows the full evidence-backed action backlog from the latest completed Gemini scan. The remaining placeholder areas will be implemented in later Phase 10B iterations.
+The Prompts, Competitors, Recommendations, Runs and technical run-detail areas are all available for private beta validation. Use the overview for the main workflow and the run detail only when you need technical auditing or support.
 
 New project creation can include editable initial prompts and competitors. The app does not crawl the website during setup, and competitor discovery is not automatic or verified. Review the configured setup before launching the first scan.
 

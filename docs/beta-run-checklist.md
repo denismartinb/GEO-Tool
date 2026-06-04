@@ -48,6 +48,7 @@ Example prompts:
 8. Inspect extracted signals and evidence snippets.
 9. Inspect scores and confidence.
 10. Inspect rule-based recommendations and their evidence.
+11. Inspect the Runs screen and at least one technical run detail page.
 
 ## Acceptance Checks
 
@@ -69,5 +70,5 @@ Example prompts:
 - Inspect these Supabase tables: `scan_runs`, `jobs`, `job_logs`, `scan_prompt_results`.
 - Common causes: missing Gemini key, more than 10 prompts, missing active prompts, Gemini API quota/rate limit, unapplied migration, or missing RLS/service-role environment configuration.
 - If Gemini reports `GenerateContentRequest.model`, set `GEMINI_MODEL=gemini-2.0-flash`.
-- Use the technical run detail only for debugging and support when a scan fails or needs inspection.
+- Use the Runs screen for recent history and the technical run detail only for debugging and support when a scan fails or needs inspection.
 - Project setup does not crawl the website, and competitor discovery is not automatic or verified.
