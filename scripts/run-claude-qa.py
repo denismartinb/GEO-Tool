@@ -296,7 +296,22 @@ def main() -> int:
 
   files = paginate(repo, f"/pulls/{pr_number}/files", token)
   prompt = build_prompt(pr, files, handoff)
-  qa_text = call_anthropic(prompt)
+  try:
+    qa_text = call_anthropic(prompt)
+  except QaError as error:
+    body = (
+      f"{RESULT_MARKER}\n"
+      "## Claude QA Result\n\n"
+      "**Verdict:** BLOCKED\n\n"
+      "Claude QA could not complete because the Anthropic API returned an execution error.\n\n"
+      f"Sanitized error: {error}\n\n"
+      "No product code was reviewed by Claude in this run. Human Gate should wait for a successful Claude QA run or perform manual QA.\n"
+    )
+    post_or_update_result(repo, pr_number, token, body)
+    update_labels(repo, pr_number, token, "BLOCKED")
+    print(f"Claude QA blocked for PR #{pr_number}: Anthropic execution error")
+    return 0
+
   verdict = extract_verdict(qa_text)
 
   body = (
