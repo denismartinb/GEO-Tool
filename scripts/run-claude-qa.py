@@ -242,7 +242,13 @@ def update_labels(repo: str, pr_number: str, token: str, verdict: str) -> None:
   current_issue = request_json("GET", github_api(repo, f"/issues/{pr_number}"), token)
   current_labels = {label.get("name", "") for label in current_issue.get("labels", [])}
 
-  remove_candidates = {"status:ready-for-qa"}
+  remove_candidates = {
+    "status:ready-for-qa",
+    "status:qa-blocked",
+    "status:changes-requested",
+    "status:ready-for-human-gate",
+    "status:ready-for-human-review",
+  }
   add_candidates: list[str]
   if verdict == "BLOCKED":
     add_candidates = ["status:qa-blocked", "status:changes-requested"]
