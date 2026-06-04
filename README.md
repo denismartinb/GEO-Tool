@@ -117,7 +117,7 @@ The authenticated MVP is organized as a project workspace. Its main areas are `V
 
 The Prompts, Competitors, Recommendations, Runs and technical run-detail areas are all available for private beta validation. Use the overview for the main workflow and the run detail only when you need technical auditing or support.
 
-New project creation can include editable initial prompts and competitors. The app does not crawl the website during setup, and competitor discovery is not automatic or verified. Review the configured setup before launching the first scan.
+New project creation uses a guided 3-step wizard for domain, competitors and prompts. The app does not crawl the website during setup, and competitor discovery is not automatic or verified. Review the configured setup before launching the first scan.
 
 ## Input Data Rules in UI
 
