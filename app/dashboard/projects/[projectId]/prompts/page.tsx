@@ -86,6 +86,9 @@ export default async function PromptsPage({
   const citedCount = promptResults?.filter((result) => result.citation_found).length ?? 0;
   const competitorCount = promptResults?.filter((result) => result.mentioned_competitors_count > 0).length ?? 0;
   const extractionErrorCount = promptResults?.filter((result) => result.extraction_error).length ?? 0;
+  const latestRunTimestamp = latestCompletedRun
+    ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at).toLocaleString()
+    : null;
 
   return (
     <div className="page space-y-5">
@@ -95,7 +98,7 @@ export default async function PromptsPage({
           <div>
             <h1 className="title-lg">Prompts monitorizados</h1>
             <p className="sub mt-1">
-              Revisa cómo responde Gemini a cada prompt y qué señales se han extraído para tu marca.
+              Define las preguntas que GEO Studio lanza a Gemini para medir si tu marca aparece, si se citan fuentes y qué competidores ganan terreno.
             </p>
           </div>
           <Link
@@ -124,11 +127,7 @@ export default async function PromptsPage({
             <p className="mt-1 font-semibold text-[var(--ink)]">
               {latestCompletedRun ? "Completado" : "Sin datos"}
             </p>
-            <p className="sub">
-              {latestCompletedRun
-                ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at).toLocaleString()
-                : "Lanza un escaneo desde la visión general."}
-            </p>
+            <p className="sub">{latestRunTimestamp ?? "Lanza un escaneo desde la visión general."}</p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">Cobertura analizada</p>
@@ -138,12 +137,96 @@ export default async function PromptsPage({
         </CardContent>
       </Card>
 
+      <section className="grid gap-3 lg:grid-cols-[1.3fr_0.9fr]">
+        <Card>
+          <CardHeader>
+            <div>
+              <h2 className="font-medium">Qué papel juegan los prompts</h2>
+              <p className="sub mt-1">Cada prompt representa un escenario real en el que quieres que tu marca sea visible.</p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-[var(--ink-2)]">
+            <p>
+              Usa prompts claros, comparativos y cercanos a preguntas reales de tus usuarios. Cuanto mejor representen tu mercado,
+              más útil será la lectura de visibilidad y competencia.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[10px] border border-[#e8eaef] p-3">
+                <p className="font-semibold text-[var(--ink)]">Antes del escaneo</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">Revisa prompts repetidos, demasiado genéricos o alejados de tu propuesta real.</p>
+              </div>
+              <div className="rounded-[10px] border border-[#e8eaef] p-3">
+                <p className="font-semibold text-[var(--ink)]">Durante el análisis</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">Gemini responde a cada prompt y GEO Studio extrae menciones, citas y señales competitivas.</p>
+              </div>
+              <div className="rounded-[10px] border border-[#e8eaef] p-3">
+                <p className="font-semibold text-[var(--ink)]">Después</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">Prioriza los prompts donde tu marca no aparece o donde los competidores dominan la respuesta.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div>
+              <h2 className="font-medium">Siguiente paso recomendado</h2>
+              <p className="sub mt-1">Mantén el flujo de trabajo simple y repetible para la beta.</p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-[var(--ink-2)]">
+            {!activePrompts.length ? (
+              <>
+                <p>No hay prompts activos todavía. Empieza por definir de 5 a 10 preguntas que realmente usaría tu cliente ideal.</p>
+                <Link
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
+                  href={`/dashboard/projects/${projectId}#configuracion-prompts`}
+                >
+                  Configurar prompts
+                  <Icon name="arrRight" size={14} />
+                </Link>
+              </>
+            ) : !latestCompletedRun ? (
+              <>
+                <p>Tus prompts ya están listos. Revisa que sigan reflejando la intención de búsqueda correcta y lanza el primer escaneo manual.</p>
+                <Link
+                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
+                  href={`/dashboard/projects/${projectId}`}
+                >
+                  Volver a visión general
+                  <Icon name="arrRight" size={14} />
+                </Link>
+              </>
+            ) : (
+              <>
+                <p>Ya tienes resultados recientes. Usa esta pantalla para detectar preguntas débiles y luego revisa Recomendaciones para priorizar acciones.</p>
+                <div className="flex flex-wrap gap-3">
+                  <Link
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
+                    href={`/dashboard/projects/${projectId}/recommendations`}
+                  >
+                    Ver recomendaciones
+                    <Icon name="arrRight" size={14} />
+                  </Link>
+                  <Link
+                    className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-3)] hover:text-[var(--accent)]"
+                    href={`/dashboard/projects/${projectId}/runs`}
+                  >
+                    Ver historial de escaneos
+                  </Link>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
       {!activePrompts.length ? (
         <Card>
           <CardContent className="space-y-4 py-5">
             <EmptyState
               title="No hay prompts activos"
-              description="Añade prompts monitorizados desde la configuración del proyecto antes de lanzar un análisis."
+              description="Añade prompts monitorizados desde la configuración del proyecto antes de lanzar un análisis. Empieza por preguntas que describan tu categoría, comparen alternativas o busquen una recomendación directa."
             />
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
@@ -161,7 +244,7 @@ export default async function PromptsPage({
           <CardContent className="space-y-4 py-5">
             <EmptyState
               title="Todavía no hay resultados"
-              description="Los resultados por prompt aparecerán después de lanzar el primer escaneo real con Gemini."
+              description="Los resultados por prompt aparecerán después de lanzar el primer escaneo real con Gemini. Antes de hacerlo, confirma que tus prompts cubren casos de marca, comparación y decisión."
             />
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
@@ -177,7 +260,7 @@ export default async function PromptsPage({
           <CardContent className="space-y-4 py-5">
             <EmptyState
               title="No se han encontrado resultados por prompt"
-              description="El escaneo está completado, pero no hay respuestas disponibles. Revisa el detalle técnico del run."
+              description="El escaneo está completado, pero no hay respuestas disponibles para esta vista. Revisa el detalle técnico del run para entender qué ha ocurrido."
             />
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
@@ -193,7 +276,7 @@ export default async function PromptsPage({
           <section className="space-y-3">
             <div>
               <h2 className="text-lg font-semibold text-[var(--ink)]">Señales del último escaneo</h2>
-              <p className="sub mt-1">Prioriza los prompts donde tu marca está ausente o la extracción necesita revisión.</p>
+              <p className="sub mt-1">Prioriza los prompts donde tu marca está ausente, faltan citas o la extracción necesita revisión.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
@@ -218,6 +301,10 @@ export default async function PromptsPage({
           </section>
 
           <section className="space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--ink)]">Lectura prompt a prompt</h2>
+              <p className="sub mt-1">Hasta diez respuestas reales del último escaneo completado, resumidas para ayudarte a decidir qué ajustar primero.</p>
+            </div>
             {promptResults.map((result) => {
               const extracted = result.extracted_json && typeof result.extracted_json === "object"
                 ? (result.extracted_json as {
@@ -248,7 +335,7 @@ export default async function PromptsPage({
                       <p className="max-w-4xl text-sm font-semibold leading-6 text-[var(--ink)]">
                         {result.prompt_text_snapshot}
                       </p>
-                      {requiresReview ? <Badge tone="warn">Revisar</Badge> : null}
+                      {requiresReview ? <Badge tone="warn">Revisar</Badge> : <Badge tone="good">Estable</Badge>}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge tone={result.brand_mentioned ? "good" : "warn"}>
@@ -286,16 +373,16 @@ export default async function PromptsPage({
           <section className="flex flex-wrap gap-4">
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-              href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
+              href={`/dashboard/projects/${projectId}/recommendations`}
             >
-              Ver detalle técnico del escaneo
+              Ver recomendaciones relacionadas
               <Icon name="arrRight" size={14} />
             </Link>
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-3)] hover:text-[var(--accent)]"
-              href={`/dashboard/projects/${projectId}`}
+              href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
             >
-              Volver a visión general
+              Ver detalle técnico del escaneo
             </Link>
           </section>
         </>
@@ -305,7 +392,7 @@ export default async function PromptsPage({
         <div>
           <p className="kicker">Configuración</p>
           <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Prompts configurados</h2>
-          <p className="sub mt-1">Gestiona altas, cambios y desactivaciones desde la configuración central del proyecto.</p>
+          <p className="sub mt-1">Gestiona altas, categorías y desactivaciones desde la configuración central del proyecto.</p>
         </div>
         <Card>
           <CardHeader>
