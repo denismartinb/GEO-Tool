@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GEO Studio — Exploración de marca</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#e9ebee; --card:#fff; --ink:#101728; --ink2:#4a5266; --ink3:#737b8c; --ink4:#9aa1b0;
+    --line:#e4e7ec; --line2:#d9dde3;
+    --font:"Hanken Grotesk",system-ui,sans-serif; --mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1240px;margin:0 auto;padding:54px 32px 120px;}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);}
+  h1{font-size:40px;font-weight:800;letter-spacing:-.025em;margin:10px 0 0;line-height:1.05;}
+  .sub{font-size:16px;line-height:1.65;color:var(--ink2);max-width:680px;margin:16px 0 0;}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin:64px 0 22px;}
+  .sec-h .n{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink4);}
+  .sec-h h2{font-size:22px;font-weight:750;letter-spacing:-.015em;margin:0;}
+  .sec-h .d{font-size:13.5px;color:var(--ink3);}
+  .divider{height:1px;background:var(--line2);margin-top:14px;}
+
+  /* strategy panel */
+  .strategy{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;}
+  .scard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;}
+  .scard h3{font-size:14px;font-weight:750;margin:0 0 12px;display:flex;align-items:center;gap:8px;}
+  .scard ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;}
+  .scard li{font-size:13.5px;line-height:1.5;color:var(--ink2);padding-left:18px;position:relative;}
+  .scard li::before{content:"";position:absolute;left:0;top:7px;width:7px;height:7px;border-radius:2px;background:var(--dot,#4f46e5);}
+  .scard li b{color:var(--ink);font-weight:700;}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;background:#eef2ff;color:#3730a3;}
+
+  /* direction cards */
+  .dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .dir{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.04);display:flex;flex-direction:column;}
+  .dir-hero{padding:26px 24px 22px;display:flex;align-items:center;gap:16px;}
+  .mark-tile{width:60px;height:60px;border-radius:15px;display:grid;place-items:center;flex:0 0 auto;box-shadow:0 6px 18px rgba(16,24,40,.16);}
+  .wm{font-size:25px;font-weight:800;letter-spacing:-.02em;line-height:1;}
+  .dir-tag{font-size:13px;color:var(--ink3);margin-top:5px;font-weight:500;}
+  .dir-body{padding:0 24px 22px;display:flex;flex-direction:column;gap:16px;flex:1;}
+  .swatches{display:flex;gap:0;border-radius:10px;overflow:hidden;border:1px solid var(--line);}
+  .sw{flex:1;height:42px;position:relative;}
+  .hexrow{display:flex;gap:0;}
+  .hex{flex:1;font-family:var(--mono);font-size:9px;color:var(--ink4);text-align:center;padding-top:5px;letter-spacing:-.02em;}
+  .rat{font-size:13px;line-height:1.55;color:var(--ink2);}
+  .rat b{color:var(--ink);font-weight:700;}
+  .metaline{display:flex;gap:7px;flex-wrap:wrap;}
+  .tag{font-size:11px;font-weight:650;padding:3px 9px;border-radius:7px;background:#f1f3f6;color:var(--ink2);}
+  /* in-product preview */
+  .preview{border-radius:12px;padding:11px 12px;display:flex;align-items:center;gap:10px;border:1px solid rgba(0,0,0,.06);}
+  .pv-mark{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;}
+  .pv-wm{font-size:14px;font-weight:750;letter-spacing:-.01em;}
+  .pv-btn{margin-left:auto;font-size:11.5px;font-weight:700;padding:7px 12px;border-radius:8px;color:#fff;white-space:nowrap;}
+  .pv-cap{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink4);margin-bottom:7px;}
+
+  /* name shortlist */
+  .names{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+  .nm{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:16px 17px;}
+  .nm .t{font-size:18px;font-weight:800;letter-spacing:-.02em;}
+  .nm .u{font-family:var(--mono);font-size:10.5px;color:var(--ink4);margin-top:2px;}
+  .nm .d{font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:9px;}
+
+  /* mark gallery */
+  .marks{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;}
+  .mk{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;}
+  .mk .tile{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;margin:0 auto 12px;}
+  .mk .nm2{font-size:13px;font-weight:700;}
+  .mk .ds{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.4;}
+  .mk .pair{display:flex;gap:8px;justify-content:center;margin-top:12px;}
+  .mk .pair > div{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;border:1px solid var(--line);}
+
+  /* palette library */
+  .pals{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .pal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;}
+  .pal .pt{font-size:14px;font-weight:750;}
+  .pal .pd{font-size:12px;color:var(--ink3);margin:4px 0 12px;line-height:1.45;}
+  .pal .bar{display:flex;gap:8px;}
+  .pal .chip{flex:1;text-align:center;}
+  .pal .chip .b{height:46px;border-radius:9px;border:1px solid rgba(0,0,0,.05);}
+  .pal .chip .h{font-family:var(--mono);font-size:9px;color:var(--ink4);margin-top:5px;}
+
+  .note{font-size:12.5px;color:var(--ink3);margin-top:14px;font-style:italic;}
+  @media(max-width:980px){.dirs,.pals{grid-template-columns:1fr 1fr}.names,.marks{grid-template-columns:repeat(3,1fr)}.strategy{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">GEO Studio · Exploración de marca</div>
+  <h1>Definamos la imagen de la herramienta</h1>
+  <p class="sub">El producto convierte la visibilidad en motores de IA en <b>acciones implementables</b> — su gran diferencial frente a herramientas de solo reporting. La marca debe sentirse <b>premium, analítica, fiable y orientada a la acción</b>, para empresas y agencias serias. Aquí tienes la lectura estratégica y varias direcciones completas (nombre + logo + paleta) para decidir.</p>
+
+  <!-- STRATEGY -->
+  <div class="sec-h"><span class="n">00</span><h2>Lectura estratégica</h2><span class="d">en qué territorio jugar</span></div>
+  <div class="strategy">
+    <div class="scard" style="--dot:#15915a">
+      <h3>✦ A qué aspiramos</h3>
+      <ul>
+        <li><b>Confianza analítica</b> — datos consistentes, sensación de herramienta de referencia.</li>
+        <li><b>Acción, no solo datos</b> — “from AI visibility to implementation”.</li>
+        <li><b>Claridad premium</b> — limpio, moderno, legible (Linear / Stripe / Attio).</li>
+        <li><b>Pedagógico</b> — el GEO es nuevo; la marca debe explicar y guiar.</li>
+      </ul>
+    </div>
+    <div class="scard" style="--dot:#d23b48">
+      <h3>✕ Qué evitar</h3>
+      <ul>
+        <li><b>El rosa juguetón de Otterly</b> — simpático, pero poco “enterprise”.</li>
+        <li><b>El naranja saturado de Semrush</b> — denso y muy “SEO clásico”.</li>
+        <li><b>Estética genérica de “AI app”</b> — degradados morados por defecto, chispas en todo.</li>
+        <li><b>Nombres descriptivos largos</b> — difíciles de poseer y de recordar.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Posicionamiento: entre la <b>solidez de Semrush</b> y la <b>cercanía de Otterly</b>, pero con un acabado más sobrio y “de confianza” — más cerca de Stripe/Vercel que de una herramienta SEO tradicional.</p>
+
+  <!-- DIRECTIONS -->
+  <div class="sec-h"><span class="n">01</span><h2>Direcciones de marca</h2><span class="d">nombre + logo + paleta + en producto</span></div>
+  <div class="dirs" id="dirs"></div>
+  <p class="note">Cada dirección es coherente de extremo a extremo. La marca (logo) usa solo geometría simple para escalar bien a favicon. Puedes mezclar el nombre de una con la paleta de otra.</p>
+
+  <!-- NAMES -->
+  <div class="sec-h"><span class="n">02</span><h2>Más nombres candidatos</h2><span class="d">para mezclar y combinar</span></div>
+  <div class="names" id="names"></div>
+
+  <!-- MARKS -->
+  <div class="sec-h"><span class="n">03</span><h2>Conceptos de logo</h2><span class="d">el símbolo, en claro y en negativo</span></div>
+  <div class="marks" id="marks"></div>
+
+  <!-- PALETTES -->
+  <div class="sec-h"><span class="n">04</span><h2>Biblioteca de paletas</h2><span class="d">base neutra + un acento</span></div>
+  <div class="pals" id="pals"></div>
+
+</div>
+
+<script>
+/* ---------- logo marks (geometría simple) ---------- */
+function mark(kind, color, size){
+  const s = size||26, sw = 2;
+  const o = `width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round"`;
+  const P = {
+    cited:`<svg ${o}><path d="M9.5 6H7a1.5 1.5 0 0 0-1.5 1.5v9A1.5 1.5 0 0 0 7 18h2.5"/><path d="M14.5 6H17a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 17 18h-2.5"/><circle cx="12" cy="12" r="1.7" fill="${color}" stroke="none"/></svg>`,
+    grounded:`<svg ${o}><circle cx="12" cy="9" r="4.3"/><line x1="12" y1="13.3" x2="12" y2="18.5"/><line x1="4.5" y1="18.5" x2="19.5" y2="18.5"/></svg>`,
+    lumen:`<svg ${o}><circle cx="12" cy="6.2" r="2.1" fill="${color}" stroke="none"/><path d="M10.1 7.6 5.5 18.5h13L13.9 7.6" fill="${color}" fill-opacity="0.16"/><path d="M10.1 7.6 5.5 18.5h13L13.9 7.6"/></svg>`,
+    echo:`<svg ${o}><circle cx="7" cy="17" r="1.6" fill="${color}" stroke="none"/><path d="M7 12.5A4.5 4.5 0 0 1 11.5 17"/><path d="M7 8.5A8.5 8.5 0 0 1 15.5 17"/><path d="M7 4.5A12.5 12.5 0 0 1 19.5 17"/></svg>`,
+    prism:`<svg ${o}><path d="M12 5 19 18H5z"/><line x1="2.5" y1="12.5" x2="8" y2="12.5"/><line x1="15.5" y1="11.5" x2="21.5" y2="9.5"/><line x1="15.5" y1="14" x2="21.5" y2="16"/></svg>`,
+    halo:`<svg ${o}><circle cx="12" cy="12" r="7.2" stroke-width="2.2"/><circle cx="12" cy="12" r="2.1" fill="${color}" stroke="none"/></svg>`,
+  };
+  return P[kind]||P.halo;
+}
+
+/* ---------- directions ---------- */
+const DIRS = [
+  { name:"Cited", tag:"Sé la fuente que la IA cita.",
+    mark:"cited", tileBg:"#1d4ed8", wm:[["Cit","#101728"],["ed","#1d4ed8"]],
+    pal:["#0b1220","#1d4ed8","#3b82f6","#e7eefb","#f6f9fe"],
+    type:"Hanken Grotesk", typeNote:"Sans geométrica",
+    rat:"Va directo al corazón del GEO: <b>ser citado</b>. Nombre corto, verbo, fácil de poseer. Azul cobalto = confianza tecnológica.",
+    pvBg:"#f6f9fe", pvInk:"#101728", pvAccent:"#1d4ed8" },
+
+  { name:"Grounded", tag:"De donde la IA saca sus respuestas.",
+    mark:"grounded", tileBg:"#0f766e", wm:[["Grounded","#13211d"]],
+    pal:["#13211d","#0f766e","#15915a","#e4ddcd","#faf7f0"],
+    type:"Fraunces + Hanken", typeNote:"Serif editorial + sans",
+    rat:"Juega con el <b>grounding</b> de los LLM (las fuentes reales). Verde + arena = fiable, sólido, editorial. Se diferencia del azul típico.",
+    pvBg:"#faf7f0", pvInk:"#13211d", pvAccent:"#0f766e" },
+
+  { name:"Lumen", tag:"Tu visibilidad en IA, iluminada.",
+    mark:"lumen", tileBg:"#4f46e5", wm:[["Lum","#1e1b3a"],["en","#6d28d9"]],
+    pal:["#1e1b3a","#4f46e5","#7c3aed","#ede9ff","#f8f7fd"],
+    type:"Hanken Grotesk", typeNote:"Sans geométrica",
+    rat:"Visibilidad = luz. Familia índigo→violeta (la actual). Cálido y premium, pero ojo: es el territorio más “AI-app” por defecto.",
+    pvBg:"#f8f7fd", pvInk:"#1e1b3a", pvAccent:"#4f46e5" },
+
+  { name:"Echo", tag:"Tu marca, en cada respuesta de IA.",
+    mark:"echo", tileBg:"#1d4ed8", wm:[["Echo","#0a1a2f"]],
+    pal:["#0a1a2f","#1d4ed8","#06b6d4","#e6f6fb","#f5f8fa"],
+    type:"Space Grotesk", typeNote:"Grotesca con carácter",
+    rat:"La IA <b>repite</b> a quién confía. Concepto de señal/eco (las arcos). Cobalto + cian = dinámico y técnico sin ser frío.",
+    pvBg:"#f5f8fa", pvInk:"#0a1a2f", pvAccent:"#1d4ed8" },
+
+  { name:"Prism", tag:"Una vista sobre cada motor de IA.",
+    mark:"prism", tileBg:"#1f2430", wm:[["Prism","#1f2430"]],
+    pal:["#1f2430","#3b4252","#6366f1","#eef0f4","#ffffff"],
+    type:"Hanken Grotesk", typeNote:"Sans + 1 acento",
+    rat:"Un prisma <b>descompone</b> tu marca por motor. Base grafito muy sobria + un único acento índigo. La opción más “enterprise/Stripe”.",
+    pvBg:"#ffffff", pvInk:"#1f2430", pvAccent:"#6366f1" },
+
+  { name:"Halo", tag:"Domina la respuesta de IA.",
+    mark:"halo", tileBg:"#111014", wm:[["Halo","#111014"]],
+    pal:["#111014","#d99a25","#eab74e","#f1ece1","#faf8f4"],
+    type:"Fraunces + Hanken", typeNote:"Serif + sans",
+    rat:"El <b>halo</b> de visibilidad alrededor de tu marca. Negro + dorado = premium, “de autoridad”. Se aleja por completo de los competidores.",
+    pvBg:"#faf8f4", pvInk:"#111014", pvAccent:"#d99a25" },
+];
+
+const dirsEl = document.getElementById('dirs');
+DIRS.forEach(d=>{
+  const sw = d.pal.map(c=>`<div class="sw" style="background:${c}"></div>`).join('');
+  const hex = d.pal.map(c=>`<div class="hex">${c.replace('#','')}</div>`).join('');
+  const wm = d.wm.map(p=>`<span style="color:${p[1]}">${p[0]}</span>`).join('');
+  const ff = d.type.includes('Fraunces') ? "'Fraunces',serif" : d.type.includes('Space') ? "'Space Grotesk',sans-serif" : "var(--font)";
+  dirsEl.insertAdjacentHTML('beforeend', `
+  <div class="dir">
+    <div class="dir-hero">
+      <div class="mark-tile" style="background:${d.tileBg}">${mark(d.mark,'#fff',30)}</div>
+      <div>
+        <div class="wm" style="font-family:${ff}">${wm}</div>
+        <div class="dir-tag">${d.tag}</div>
+      </div>
+    </div>
+    <div class="dir-body">
+      <div>
+        <div class="swatches">${sw}</div>
+        <div class="hexrow">${hex}</div>
+      </div>
+      <div class="metaline"><span class="tag">Tipo · ${d.typeNote}</span><span class="tag">${d.type}</span></div>
+      <div class="rat">${d.rat}</div>
+      <div>
+        <div class="pv-cap">En producto</div>
+        <div class="preview" style="background:${d.pvBg}">
+          <div class="pv-mark" style="background:${d.tileBg}">${mark(d.mark,'#fff',17)}</div>
+          <div class="pv-wm" style="color:${d.pvInk};font-family:${ff}">${d.name}</div>
+          <div class="pv-btn" style="background:${d.pvAccent}">Lanzar escaneo</div>
+        </div>
+      </div>
+    </div>
+  </div>`);
+});
+
+/* ---------- name shortlist ---------- */
+const NAMES = [
+  ["Sourced","sourced.ai","Eres la fuente. Claro y directo, encaja con “citado/fuente”."],
+  ["Mentio","mentio.com","De “mention”. Inventado, corto, marca-able, suena a producto."],
+  ["Surfaced","surfaced.io","“Salir a la superficie” en las respuestas de IA. Energético."],
+  ["Verbatim","verbatim.ai","Te citan textualmente. Premium, con matiz literario."],
+  ["Relay","relay.ai","La IA retransmite tu marca. Corto y técnico."],
+  ["Anchor","anchor.so","El ancla de cita. Sólido y memorable (ojo: usado en podcasting)."],
+  ["Vantage","vantage.ai","Tu punto de ventaja en la búsqueda de IA. Estratégico."],
+  ["Citely","citely.com","Diminutivo amable de “cite”. Cercano sin ser infantil."],
+  ["Beam","beam.ai","Haz de luz / visibilidad. Minimalista (nombre muy disputado)."],
+  ["Quotient","quotient.ai","De “quote” + métrica. Inteligente, analítico."],
+  ["Oracle","—","Conceptualmente perfecto, pero imposible (marca registrada)."],
+  ["GEO Studio","geostudio.io","El actual: descriptivo y claro, fácil de explicar el “qué”."],
+];
+const namesEl = document.getElementById('names');
+NAMES.forEach(n=>namesEl.insertAdjacentHTML('beforeend',`<div class="nm"><div class="t">${n[0]}</div><div class="u">${n[1]}</div><div class="d">${n[2]}</div></div>`));
+
+/* ---------- mark gallery ---------- */
+const MARKS = [
+  ["cited","Corchetes","Cita / fuente","#1d4ed8"],
+  ["grounded","Nodo + base","Grounding / raíz","#0f766e"],
+  ["lumen","Haz de luz","Visibilidad","#4f46e5"],
+  ["echo","Arcos","Señal / eco","#1d4ed8"],
+  ["prism","Prisma","Por motor","#6366f1"],
+  ["halo","Anillo","Autoridad","#d99a25"],
+];
+const marksEl = document.getElementById('marks');
+MARKS.forEach(m=>{
+  marksEl.insertAdjacentHTML('beforeend',`
+  <div class="mk">
+    <div class="tile" style="background:${m[3]}">${mark(m[0],'#fff',30)}</div>
+    <div class="nm2">${m[1]}</div>
+    <div class="ds">${m[2]}</div>
+    <div class="pair">
+      <div style="background:#fff">${mark(m[0],m[3],17)}</div>
+      <div style="background:${m[3]}">${mark(m[0],'#fff',17)}</div>
+      <div style="background:#101728">${mark(m[0],'#fff',17)}</div>
+    </div>
+  </div>`);
+});
+
+/* ---------- palette library ---------- */
+const PALS = [
+  ["Cobalto confiable","Neutro frío + azul cobalto. Tecnológico y serio.",["#0b1220","#1d4ed8","#3b82f6","#e7eefb","#f6f9fe"]],
+  ["Verde grounding","Base cálida arena + verde. Fiable y editorial.",["#13211d","#0f766e","#15915a","#e4ddcd","#faf7f0"]],
+  ["Índigo aurora","La actual. Índigo→violeta, premium y suave.",["#1e1b3a","#4f46e5","#7c3aed","#ede9ff","#f8f7fd"]],
+  ["Grafito + acento","Mono muy sobrio + un único índigo. Stripe-like.",["#1f2430","#3b4252","#6366f1","#eef0f4","#ffffff"]],
+  ["Negro + oro","Autoridad premium. Máxima diferenciación.",["#111014","#d99a25","#eab74e","#f1ece1","#faf8f4"]],
+  ["Cobalto + cian","Dinámico y técnico, energía sin estridencia.",["#0a1a2f","#1d4ed8","#06b6d4","#e6f6fb","#f5f8fa"]],
+];
+const palsEl = document.getElementById('pals');
+PALS.forEach(p=>{
+  const chips = p[2].map(c=>`<div class="chip"><div class="b" style="background:${c}"></div><div class="h">${c.replace('#','')}</div></div>`).join('');
+  palsEl.insertAdjacentHTML('beforeend',`<div class="pal"><div class="pt">${p[0]}</div><div class="pd">${p[1]}</div><div class="bar">${chips}</div></div>`);
+});
+</script>
+</body>
+</html>
