@@ -6,7 +6,7 @@ Source: GitHub issue #14.
 
 Verified local package:
 
-- `/Users/denismartinb/Downloads/GEO Suite-2.zip`
+- Local design package archive verified and accessible
 
 The archive contains the intended reference materials, including:
 

@@ -37,7 +37,7 @@ SUPABASE_SERVICE_ROLE_KEY=...
 GEMINI_API_KEY=...
 # Optional. Defaults to gemini-2.0-flash.
 GEMINI_MODEL=...
-# Optional. Defaults to enabled. Set to false only to prepare scans without executing Gemini.
+# Optional. Defaults to enabled (synchronous execution). Set to false only for debugging pending runs.
 ENABLE_SYNC_SCAN_EXECUTION=
 # Optional placeholder for a future provider phase. Not active today.
 OPENAI_API_KEY=...
@@ -47,7 +47,7 @@ OPENAI_MODEL=
 
 Notes:
 - Gemini is the active provider in the current scan pipeline.
-- `ENABLE_SYNC_SCAN_EXECUTION` is enabled by default for private beta so `Lanzar escaneo` executes Gemini immediately. Set it to `false` only when you intentionally want pending scan runs for debugging.
+- `ENABLE_SYNC_SCAN_EXECUTION` is enabled by default for private beta so `Lanzar escaneo` executes Gemini immediately. Set it to `false` only when you intentionally want to create pending runs for separate debugging/manual execution.
 - `OPENAI_API_KEY` is optional and setting it does not enable OpenAI today.
 - OpenAI integration will be added in a later provider phase.
 - Keep `.env.local` local. Do not commit environment files or secrets.
