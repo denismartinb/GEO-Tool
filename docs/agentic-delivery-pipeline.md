@@ -9,6 +9,8 @@ This repository uses a GitHub-centered delivery flow for future GEO Tool phases.
 - Reusable prompt templates for Codex build, Claude QA, and Codex fix loops
 - Local safety preflight via `scripts/agentic-handoff-check.sh`
 - Label-based state machine for build, QA, fix, and human gate
+- Claude QA handoff generation from real PR metadata
+- Optional PR comment posting so the QA prompt lives on the PR itself
 - Manual Human Gate before merge
 
 ## Flow
@@ -58,7 +60,7 @@ They can summarize context and enforce conservative reminders, but they do **not
 - autonomous Product Director execution
 - automatic merge approval
 
-AGENTIC-3 delivers a semi-automated handoff model centered on GitHub, shared prompts, validation discipline, and a manual Human Gate.
+AGENTIC-4 delivers a semi-automated handoff model centered on GitHub, shared prompts, PR-based Claude QA dispatch, validation discipline, and a manual Human Gate.
 
 ## Allowed Scope Boundaries
 
@@ -83,3 +85,17 @@ It must not change:
 - Keep QA focused on the brief and the checklist.
 - Keep the human gate manual.
 - Stop when branch, validation, or scope guardrails fail.
+
+## AGENTIC-4 Reality Check
+
+New now:
+
+- Claude QA handoff can be generated directly from PR metadata.
+- The handoff can be posted to the PR as a comment with a stable marker.
+- The PR becomes the source of truth for Claude QA prompts and findings.
+
+Still manual:
+
+- Claude execution itself, unless a separate integration is configured.
+- The Codex fix loop beyond reading Claude findings from PR comments or reviews.
+- Human Gate and merge approval.

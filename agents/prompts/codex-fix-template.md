@@ -6,7 +6,7 @@
 
 ## Claude findings
 
--
+Read the latest Claude QA PR comment or review thread and copy only the actionable blockers here.
 
 ## Blockers to fix
 
@@ -21,10 +21,11 @@
 
 ## Minimal fix instructions
 
-1. Reproduce the finding.
+1. Reproduce the finding from the PR comment or review.
 2. Apply the smallest safe correction.
 3. Re-run validation.
 4. Update the PR summary if needed.
+5. Return the PR to `status:ready-for-qa` when blockers are resolved.
 
 ## Validation
 

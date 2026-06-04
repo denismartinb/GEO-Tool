@@ -6,11 +6,11 @@
 
 ## Context
 
--
+Read the Claude QA handoff comment on the PR first. Treat that comment, the PR template and the changed files as the source of truth.
 
 ## Files to review
 
--
+Use the changed-file list included in the PR handoff comment.
 
 ## Scope boundaries
 
@@ -59,4 +59,5 @@ If blocked, return:
 
 - exact blocker list
 - file references
-- expected Codex fix prompt format
+- minimal Codex fix instructions
+- whether the PR is ready for Human Gate after fixes
