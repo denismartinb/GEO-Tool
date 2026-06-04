@@ -26,6 +26,7 @@ VERDICTS = ("ACCEPT WITH MINOR FIXES", "ACCEPT", "BLOCKED")
 MAX_PATCH_CHARS = 50000
 MAX_HANDOFF_CHARS = 20000
 MAX_BODY_CHARS = 12000
+DEFAULT_CLAUDE_QA_MODEL = "claude-sonnet-4-6"
 
 
 class QaError(RuntimeError):
@@ -165,7 +166,7 @@ Then include:
 
 def call_anthropic(prompt: str) -> str:
   api_key = env("ANTHROPIC_API_KEY")
-  model = os.environ.get("CLAUDE_QA_MODEL", "claude-sonnet-4-6").strip() or "claude-sonnet-4-6"
+  model = os.environ.get("CLAUDE_QA_MODEL", DEFAULT_CLAUDE_QA_MODEL).strip() or DEFAULT_CLAUDE_QA_MODEL
   payload = {
     "model": model,
     "max_tokens": 2200,

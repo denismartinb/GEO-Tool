@@ -6,6 +6,9 @@ on:
       pr_number:
         description: Pull request number to review
         required: true
+      model:
+        description: Optional Claude model override. Defaults to the validated repository model.
+        required: false
   pull_request_target:
     types:
       - labeled
@@ -74,7 +77,7 @@ jobs:
         if: env.ANTHROPIC_API_KEY_PRESENT == 'true'
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          CLAUDE_QA_MODEL: ${{ vars.CLAUDE_QA_MODEL || 'claude-sonnet-4-6' }}
+          CLAUDE_QA_MODEL: ${{ github.event.inputs.model || vars.CLAUDE_QA_MODEL || 'claude-sonnet-4-6' }}
           GH_TOKEN: ${{ github.token }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |

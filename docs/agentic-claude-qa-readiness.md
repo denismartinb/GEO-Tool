@@ -64,6 +64,14 @@ The workflow now:
 
 If the required secret is missing, the workflow skips gracefully and explains which secret name is required.
 
+### Claude QA model configuration
+
+The default Claude QA model is `claude-sonnet-4-6`, which was validated by the AGENTIC-5B workflow. The runner reads `CLAUDE_QA_MODEL` from the workflow environment and falls back to that default when no override is provided.
+
+Manual `workflow_dispatch` runs can pass an optional `model` input to override the default for a single review. A repository variable named `CLAUDE_QA_MODEL` can also be used to change the default without editing code.
+
+If a model is unavailable for the Anthropic account, rerun the workflow with an allowed model such as `claude-sonnet-4-5`.
+
 ## Safe trigger model
 
 Recommended triggers:
