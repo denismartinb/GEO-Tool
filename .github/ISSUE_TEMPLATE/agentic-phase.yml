@@ -2,19 +2,27 @@ name: Agentic Phase Brief
 description: Define one narrow implementation unit for the PLAN → BUILD → QA flow.
 title: "[AGENTIC] "
 labels:
-  - agent:plan
-  - status:ready-for-build
+  - agent:codex
+  - status:planned
 body:
   - type: markdown
     attributes:
       value: |
-        Use this template to convert product intent into a precise GitHub issue for Codex.
-  - type: textarea
-    id: objective
+        Use this template to convert product intent into a precise GitHub issue for Codex, Claude QA, and Human Gate.
+  - type: input
+    id: phase_name
     attributes:
-      label: Objective
-      description: What outcome should this phase achieve?
-      placeholder: Describe the product intent in one or two sentences.
+      label: Phase name
+      description: Short name for the implementation unit.
+      placeholder: AGENTIC-3 / Phase 10B.9 / Fix pass
+    validations:
+      required: true
+  - type: textarea
+    id: product_goal
+    attributes:
+      label: Product goal
+      description: What user or product outcome should this phase achieve?
+      placeholder: Describe the intended outcome in one or two sentences.
     validations:
       required: true
   - type: textarea
@@ -26,9 +34,9 @@ body:
     validations:
       required: true
   - type: textarea
-    id: out_of_scope
+    id: non_goals
     attributes:
-      label: Out of scope
+      label: Non-goals
       description: What must not change?
       placeholder: List explicit exclusions.
     validations:
@@ -57,20 +65,51 @@ body:
       placeholder: List explicit forbidden paths.
     validations:
       required: true
-  - type: dropdown
-    id: risk_level
+  - type: input
+    id: target_branch_strategy
     attributes:
-      label: Risk level
-      description: Select the highest applicable risk label.
-      options:
-        - risk:ui-only
-        - risk:database
-        - risk:rls
-        - risk:auth
-        - risk:migration
-        - risk:pipeline
+      label: Target branch strategy
+      description: Which base branch and naming strategy should be used?
+      placeholder: Base main, fresh feature branch per phase.
     validations:
       required: true
+  - type: textarea
+    id: expected_validation
+    attributes:
+      label: Expected validation
+      description: What commands/checks must pass?
+      placeholder: pnpm run validate, git diff --check, duplicate finder clean
+    validations:
+      required: true
+  - type: input
+    id: assigned_agents
+    attributes:
+      label: Assigned agents
+      description: Who handles Product Director, Codex, Claude QA, and Human Gate?
+      placeholder: GPT Director / Codex / Claude QA / Denis
+    validations:
+      required: true
+  - type: dropdown
+    id: human_gate_required
+    attributes:
+      label: Human gate required
+      description: Should this work stop for explicit human approval before merge?
+      options:
+        - yes
+        - no
+    validations:
+      required: true
+  - type: checkboxes
+    id: risk_flags
+    attributes:
+      label: Risk flags
+      description: Mark all applicable risks.
+      options:
+        - label: schema
+        - label: security
+        - label: provider
+        - label: UX
+        - label: data integrity
   - type: checkboxes
     id: qa_checklist
     attributes:
@@ -81,5 +120,5 @@ body:
         - label: I listed the exact forbidden files.
         - label: I described what should not change.
         - label: I wrote testable acceptance criteria.
-        - label: I considered sensitive areas and labeled risk correctly.
-
+        - label: I defined the validation expectation.
+        - label: I included the human gate requirement.

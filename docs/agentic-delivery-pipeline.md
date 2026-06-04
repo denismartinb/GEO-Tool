@@ -1,13 +1,22 @@
 # Agentic Delivery Pipeline
 
-This repository uses a GitHub-based delivery flow for future GEO Tool phases.
+This repository uses a GitHub-centered delivery flow for future GEO Tool phases.
+
+## Available Now
+
+- GitHub issue as the phase brief and source of truth
+- GitHub pull request as the build / QA / fix handoff unit
+- Reusable prompt templates for Codex build, Claude QA, and Codex fix loops
+- Local safety preflight via `scripts/agentic-handoff-check.sh`
+- Label-based state machine for build, QA, fix, and human gate
+- Manual Human Gate before merge
 
 ## Flow
 
 1. **PLAN** — Product Director turns product intent into a GitHub issue.
 2. **BUILD** — Codex implements only the requested scope in a pull request.
 3. **SELF-CHECK** — Codex documents what changed, what did not change, how to validate, and risks.
-4. **QA** — Claude Code reviews the pull request against the phase checklist.
+4. **QA** — Claude QA reviews the pull request against the phase checklist.
 5. **FIX** — Codex fixes Claude QA findings.
 6. **VERIFY** — Claude verifies the fixes.
 7. **HUMAN GATE** — Denis approves, rejects, or requests another iteration.
@@ -18,30 +27,38 @@ This repository uses a GitHub-based delivery flow for future GEO Tool phases.
 - **Pull Request**: implementation unit for one narrow scope.
 - **PR Template**: self-check record and handoff summary.
 - **Issue Template**: product intent translated into execution-ready form.
+- **PR Comments / Reviews**: structured QA findings and fix loop record.
 
 ## Labels
 
 Use these labels consistently:
 
-- `agent:plan`
-- `agent:build`
-- `agent:self-check`
-- `agent:qa`
-- `agent:fix`
-- `agent:verify`
-- `agent:human-gate`
-- `status:ready-for-build`
+- `agent:codex`
+- `agent:claude-qa`
+- `status:planned`
+- `status:building`
 - `status:ready-for-qa`
-- `status:changes-requested`
-- `status:ready-for-human-review`
-- `status:blocked`
-- `status:approved`
-- `risk:ui-only`
-- `risk:database`
-- `risk:rls`
-- `risk:auth`
-- `risk:migration`
-- `risk:pipeline`
+- `status:qa-blocked`
+- `status:fixing`
+- `status:ready-for-human-gate`
+- `status:merged`
+- `risk:scope`
+- `risk:schema`
+- `risk:security`
+
+## Workflow Reality Check
+
+GitHub Actions in this repository are currently **guardrails and placeholders**, not autonomous agent runners.
+
+They can summarize context and enforce conservative reminders, but they do **not** currently provide:
+
+- fully automated Codex execution from GitHub Actions
+- fully automated Claude review
+- fully automated fix loops
+- autonomous Product Director execution
+- automatic merge approval
+
+AGENTIC-3 delivers a semi-automated handoff model centered on GitHub, shared prompts, validation discipline, and a manual Human Gate.
 
 ## Allowed Scope Boundaries
 
@@ -65,3 +82,4 @@ It must not change:
 - Keep PRs tied to one issue.
 - Keep QA focused on the brief and the checklist.
 - Keep the human gate manual.
+- Stop when branch, validation, or scope guardrails fail.
