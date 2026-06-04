@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GEO Studio — Marca v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#e9ebee;--card:#fff;--ink:#101728;--ink2:#4a5266;--ink3:#737b8c;--ink4:#9aa1b0;
+    --line:#e4e7ec;--line2:#d9dde3;
+    --font:"Hanken Grotesk",system-ui,sans-serif;--mono:"JetBrains Mono",monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1240px;margin:0 auto;padding:54px 32px 120px;}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);}
+  h1{font-size:38px;font-weight:800;letter-spacing:-.025em;margin:10px 0 0;line-height:1.06;}
+  .sub{font-size:16px;line-height:1.65;color:var(--ink2);max-width:700px;margin:16px 0 0;}
+  .sub b{color:var(--ink);font-weight:700;}
+  .sec-h{display:flex;align-items:baseline;gap:12px;margin:62px 0 22px;}
+  .sec-h .n{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink4);}
+  .sec-h h2{font-size:22px;font-weight:750;letter-spacing:-.015em;margin:0;}
+  .sec-h .d{font-size:13.5px;color:var(--ink3);}
+
+  /* vetting */
+  .vet{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+  .vc{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 17px;display:flex;gap:12px;align-items:flex-start;}
+  .vc .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:0 0 auto;font-size:14px;font-weight:800;}
+  .vc.no .ic{background:#fdecee;color:#c0293a;} .vc.maybe .ic{background:#fdf3e0;color:#a06a06;} .vc.ok .ic{background:#e7f6ee;color:#0d6b41;}
+  .vc .t{font-size:14px;font-weight:750;}
+  .vc .d{font-size:12px;color:var(--ink3);line-height:1.45;margin-top:3px;}
+
+  /* names */
+  .names{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:8px;}
+  .nm{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:16px 18px;}
+  .nm .top{display:flex;align-items:baseline;gap:8px;}
+  .nm .t{font-size:20px;font-weight:800;letter-spacing:-.02em;}
+  .nm .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;background:#eef2ff;color:#3730a3;}
+  .nm .u{font-family:var(--mono);font-size:10.5px;color:var(--ink4);margin-top:3px;}
+  .nm .d{font-size:12.5px;color:var(--ink2);line-height:1.5;margin-top:9px;}
+
+  /* logo concepts */
+  .concept{margin-bottom:14px;}
+  .concept-h{display:flex;align-items:center;gap:10px;margin:0 2px 12px;}
+  .concept-h .cn{font-size:16px;font-weight:800;letter-spacing:-.01em;}
+  .concept-h .cd{font-size:13px;color:var(--ink3);}
+  .logo-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;}
+  .lg-card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:18px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .lg-card .cap{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink4);}
+  .tile{width:84px;height:84px;border-radius:20px;display:grid;place-items:center;}
+  .tile.sm{width:30px;height:30px;border-radius:9px;}
+  .lockup{display:flex;align-items:center;gap:11px;}
+  .lockup .wm{font-size:21px;font-weight:800;letter-spacing:-.02em;}
+  .favset{display:flex;gap:10px;align-items:center;}
+  .favset > div{display:grid;place-items:center;}
+
+  /* palettes */
+  .pal-block{margin-bottom:10px;}
+  .pal-block .pbh{font-size:15px;font-weight:750;margin:0 0 4px;}
+  .pal-block .pbd{font-size:13px;color:var(--ink3);margin:0 0 16px;max-width:640px;line-height:1.5;}
+  .opts{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .opt{background:var(--card);border:1px solid var(--line);border-radius:15px;overflow:hidden;}
+  .opt .head{display:flex;align-items:center;gap:10px;padding:14px 16px 12px;}
+  .opt .head .name{font-size:13.5px;font-weight:750;}
+  .opt .head .sw{width:18px;height:18px;border-radius:6px;}
+  .tokens{display:flex;padding:0 16px;gap:0;}
+  .tok{flex:1;}
+  .tok .b{height:38px;}
+  .tok .l{font-family:var(--mono);font-size:8.5px;color:var(--ink4);text-align:center;padding:5px 0 0;letter-spacing:-.03em;}
+  /* mini dark ui preview */
+  .uiprev{margin:14px 16px 16px;border-radius:11px;overflow:hidden;border:1px solid rgba(0,0,0,.06);}
+  .uiprev .bar{display:flex;align-items:center;gap:8px;padding:10px 12px;}
+  .uiprev .b-mk{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;}
+  .uiprev .b-wm{font-size:12.5px;font-weight:750;}
+  .uiprev .b-btn{margin-left:auto;font-size:10.5px;font-weight:700;padding:6px 11px;border-radius:7px;}
+  .uiprev .body{padding:12px;display:flex;gap:9px;}
+  .uiprev .stat{flex:1;border-radius:8px;padding:9px 10px;}
+  .uiprev .stat .v{font-size:17px;font-weight:800;}
+  .uiprev .stat .k{font-size:9px;font-weight:600;opacity:.6;margin-top:1px;}
+
+  .note{font-size:12.5px;color:var(--ink3);margin-top:16px;line-height:1.55;}
+  .note b{color:var(--ink2);}
+  .callout{background:#fff;border:1px solid var(--line);border-left:3px solid #6366f1;border-radius:10px;padding:14px 16px;margin-top:18px;font-size:13.5px;line-height:1.6;color:var(--ink2);}
+  .callout b{color:var(--ink);}
+  @media(max-width:980px){.vet,.names{grid-template-columns:1fr}.logo-row{grid-template-columns:1fr 1fr}.opts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">GEO Studio · Marca v2 · iteración</div>
+  <h1>Nombres ownable, logos más sofisticados y dos paletas</h1>
+  <p class="sub">Partimos de tus favoritas — <b>Cited, Prism y Echo</b> — y de tus paletas preferidas (<b>grafito + acento</b> y <b>negro + un color</b>). Antes, una nota de realidad: el mercado GEO está saturado, así que priorizo nombres <b>acuñados</b> (más fáciles de poseer) sobre palabras genéricas.</p>
+
+  <!-- VETTING -->
+  <div class="sec-h"><span class="n">01</span><h2>Disponibilidad: lo que descarto</h2><span class="d">comprobado en búsqueda</span></div>
+  <div class="vet">
+    <div class="vc no"><div class="ic">✕</div><div><div class="t">Surfaced / Surface</div><div class="d">Ocupado: ya es un competidor GEO directo (getsurfaced.ai, usesurfaced.com). Descartado.</div></div></div>
+    <div class="vc maybe"><div class="ic">!</div><div><div class="t">Salient</div><div class="d">Ocupado en SEO/NLU y performance marketing. Demasiado riesgo.</div></div></div>
+    <div class="vc no"><div class="ic">✕</div><div><div class="t">Mentio · Beam · Relay</div><div class="d">Confirmado por ti: ya existen en el espacio.</div></div></div>
+    <div class="vc maybe"><div class="ic">!</div><div><div class="t">Sourced · Versed</div><div class="d">Sin competidor GEO directo, pero el .ai casi seguro está tomado. Verificar dominio exacto.</div></div></div>
+    <div class="vc maybe"><div class="ic">!</div><div><div class="t">Echo · Prism (palabra suelta)</div><div class="d">Conceptos top, pero muy disputados como marca (Amazon Echo; Prisma/Prism). Mejor una variante propia.</div></div></div>
+    <div class="vc ok"><div class="ic">✓</div><div><div class="t">Vía acuñada</div><div class="d">Nombres inventados/abstractos: poseíbles, registrables y más memorables.</div></div></div>
+  </div>
+
+  <!-- NAMES -->
+  <div class="sec-h"><span class="n">02</span><h2>Nombres candidatos nuevos</h2><span class="d">acuñados · verificar dominio/marca</span></div>
+  <div class="names" id="names"></div>
+  <p class="note"><b>Mi terna:</b> <b style="color:var(--ink)">Citora</b> (territorio Cited — directo y propio), <b style="color:var(--ink)">Spectra</b> (territorio Prism — analítico, multi-motor) y <b style="color:var(--ink)">Resonia</b> (territorio Echo — “resonar” en cada respuesta). Todas dejan un buen wordmark y favicon.</p>
+
+  <!-- LOGOS -->
+  <div class="sec-h"><span class="n">03</span><h2>Logos más sofisticados</h2><span class="d">2 variantes por concepto · sobre fondo oscuro</span></div>
+  <div id="logos"></div>
+  <div class="callout">
+    <b>Sobre “generarlos con una herramienta generativa”:</b> no puedo invocar un generador de imágenes desde aquí, pero estas son direcciones vectoriales refinadas con un <b>motivo propio</b> por concepto (cita, refracción, resonancia), en duotono y listas para favicon. Lo ideal: eliges una y la llevamos a vector final (curvas ópticas, ajustes) — o me dices “más por aquí” y genero más variantes.
+  </div>
+
+  <!-- PALETTES -->
+  <div class="sec-h"><span class="n">04</span><h2>Las dos paletas que te gustan</h2><span class="d">app-ready · con vista en producto</span></div>
+
+  <div class="pal-block">
+    <div class="pbh">A · Grafito + acento</div>
+    <div class="pbd">Base neutra grafito muy sobria (modo claro), con un único color de acento. El acabado más “Stripe/Linear”. Elige el acento:</div>
+    <div class="opts" id="graphite"></div>
+  </div>
+
+  <div class="pal-block" style="margin-top:26px">
+    <div class="pbh">B · Negro + un color</div>
+    <div class="pbd">El extremo audaz: superficies casi negras (modo oscuro) y un acento vívido que “canta”. Máxima personalidad y diferenciación frente a la competencia.</div>
+    <div class="opts" id="black"></div>
+  </div>
+
+  <p class="note">Recomendación: <b>Grafito + índigo</b> como base diaria (claro, fiable) y <b>Negro + cian/lima</b> como modo oscuro y para la marca/landing (impacto). Es un sistema dual coherente.</p>
+
+</div>
+
+<script>
+/* ---------- sophisticated marks (duotono + gradiente) ---------- */
+let UID=0;
+function mark(kind, accent, light, size){
+  const s=size||30, id="g"+(UID++);
+  const o=`width="${s}" height="${s}" viewBox="0 0 32 32" fill="none"`;
+  const grad=`<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${accent}"/></linearGradient></defs>`;
+  const P={
+    // CITED — marco de cita (esquinas) + núcleo
+    citedA:`<svg ${o}>${grad}<path d="M11 7H8.5A1.5 1.5 0 0 0 7 8.5V11M21 7h2.5A1.5 1.5 0 0 1 25 8.5V11M11 25H8.5A1.5 1.5 0 0 1 7 23.5V21M21 25h2.5A1.5 1.5 0 0 0 25 23.5V21" stroke="${light}" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="16" r="4.2" fill="url(#${id})"/></svg>`,
+    // CITED — comillas (dos gotas)
+    citedB:`<svg ${o}>${grad}<path d="M14 10c-3.3 0-6 2.7-6 6 0 3 2 5.4 4.7 5.9.7.1 1.3-.4 1.3-1.1 0-.5-.4-1-.9-1.1A3.2 3.2 0 0 1 11 17c1.7 0 3-1.3 3-3v-3z" fill="${light}"/><path d="M25 10c-3.3 0-6 2.7-6 6 0 3 2 5.4 4.7 5.9.7.1 1.3-.4 1.3-1.1 0-.5-.4-1-.9-1.1A3.2 3.2 0 0 1 22 17c1.7 0 3-1.3 3-3v-3z" fill="url(#${id})"/></svg>`,
+    // PRISM — refracción (triángulo + haz que se separa)
+    prismA:`<svg ${o}>${grad}<path d="M16 7 26 24H6z" stroke="${light}" stroke-width="2.2" stroke-linejoin="round"/><line x1="3" y1="16" x2="11" y2="16" stroke="${light}" stroke-width="2.2" stroke-linecap="round"/><line x1="20" y1="14.5" x2="29" y2="12" stroke="${accent}" stroke-width="2.2" stroke-linecap="round"/><line x1="20.5" y1="17" x2="29" y2="17" stroke="${light}" stroke-width="2.2" stroke-linecap="round" opacity=".85"/><line x1="20" y1="19.5" x2="29" y2="22" stroke="${accent}" stroke-width="2.2" stroke-linecap="round" opacity=".6"/></svg>`,
+    // PRISM — faceta (gema duotono)
+    prismB:`<svg ${o}>${grad}<path d="M16 6 27 13v10L16 30 5 23V13z" fill="url(#${id})" opacity=".22"/><path d="M16 6 27 13 16 17 5 13z" fill="${light}"/><path d="M16 17 27 13v10L16 30z" fill="${accent}"/><path d="M16 17 5 13v10l11 7z" fill="${light}" opacity=".55"/></svg>`,
+    // ECHO — resonancia (núcleo + arcos)
+    echoA:`<svg ${o}>${grad}<circle cx="16" cy="16" r="3.4" fill="url(#${id})"/><path d="M22 10a8.5 8.5 0 0 1 0 12" stroke="${light}" stroke-width="2.2" stroke-linecap="round"/><path d="M25.5 6.5a13 13 0 0 1 0 19" stroke="${accent}" stroke-width="2.2" stroke-linecap="round" opacity=".55"/><path d="M10 22a8.5 8.5 0 0 1 0-12" stroke="${light}" stroke-width="2.2" stroke-linecap="round" opacity=".8"/></svg>`,
+    // ECHO — forma de onda
+    echoB:`<svg ${o}>${grad}<rect x="6" y="14" width="3" height="4" rx="1.5" fill="${light}" opacity=".55"/><rect x="11" y="10" width="3" height="12" rx="1.5" fill="${light}"/><rect x="16" y="5.5" width="3" height="21" rx="1.5" fill="url(#${id})"/><rect x="21" y="10" width="3" height="12" rx="1.5" fill="${accent}"/><rect x="26" y="14" width="3" height="4" rx="1.5" fill="${accent}" opacity=".55"/></svg>`,
+  };
+  return P[kind]||P.citedA;
+}
+
+/* ---------- names ---------- */
+const NAMES=[
+  ["Citora","Cited","de “cite” + -ora (oráculo). Directo al concepto de ser citado; suena a producto."],
+  ["Refero","Cited","latín “referir”. Raíz de referencia/cita; sofisticado y europeo."],
+  ["Citably","Cited","“de forma citable” — el objetivo del GEO hecho nombre. Amable y claro."],
+  ["Spectra","Prism","el espectro que sale del prisma. Analítico, multi-motor, premium."],
+  ["Refract","Prism","“refractar” tu marca por motor. Verbo, técnico, memorable."],
+  ["Veris","—","de “veritas” / verificado. Confianza en una palabra corta y rotunda."],
+  ["Resonia","Echo","“resonar” en cada respuesta de IA. Femenino, marca-able, cálido."],
+  ["Resound","Echo","tu marca “resuena”. Verbo en inglés, fuerte y poseíble."],
+  ["Lumira","—","luz + visibilidad. Elegante para una variante más suave/óptica."],
+];
+const namesEl=document.getElementById('names');
+NAMES.forEach(n=>namesEl.insertAdjacentHTML('beforeend',`<div class="nm"><div class="top"><span class="t">${n[0]}</span>${n[1]!=='—'?`<span class="tag">${n[1]}</span>`:''}</div><div class="u">${n[0].toLowerCase()}.ai · .com — verificar</div><div class="d">${n[2]}</div></div>`));
+
+/* ---------- logo concepts ---------- */
+const CONCEPTS=[
+  { cn:"Cited → Citora", cd:"marco de cita y comillas — “ser la fuente”", accent:"#6366f1", tile:"#15161c",
+    vars:[["citedA","Marco de cita"],["citedB","Comillas"]] },
+  { cn:"Prism → Spectra", cd:"refracción y faceta — “una vista por motor”", accent:"#22d3ee", tile:"#0c1118",
+    vars:[["prismA","Refracción"],["prismB","Faceta"]] },
+  { cn:"Echo → Resonia", cd:"resonancia y onda — “en cada respuesta”", accent:"#a3e635", tile:"#121511",
+    vars:[["echoA","Resonancia"],["echoB","Onda"]] },
+];
+const wmName = {"Cited → Citora":"Citora","Prism → Spectra":"Spectra","Echo → Resonia":"Resonia"};
+const logosEl=document.getElementById('logos');
+CONCEPTS.forEach(c=>{
+  const nm=wmName[c.cn];
+  let cards="";
+  c.vars.forEach(v=>{
+    cards+=`<div class="lg-card"><div class="cap">${v[1]}</div><div class="tile" style="background:${c.tile}">${mark(v[0],c.accent,'#fff',46)}</div></div>`;
+  });
+  // lockup card (primary variant)
+  cards+=`<div class="lg-card"><div class="cap">Lockup</div><div class="tile" style="background:transparent;width:auto;height:84px"><div class="lockup"><div class="tile sm" style="width:46px;height:46px;border-radius:13px;background:${c.tile}">${mark(c.vars[0][0],c.accent,'#fff',26)}</div><span class="wm" style="color:${c.tile}">${nm}</span></div></div></div>`;
+  // favicon / mono row
+  cards+=`<div class="lg-card"><div class="cap">Favicon · mono</div><div class="favset" style="height:84px">
+    <div class="tile" style="width:40px;height:40px;border-radius:11px;background:${c.tile}">${mark(c.vars[0][0],c.accent,'#fff',24)}</div>
+    <div class="tile" style="width:28px;height:28px;border-radius:8px;background:${c.tile}">${mark(c.vars[0][0],c.accent,'#fff',17)}</div>
+    <div class="tile" style="width:40px;height:40px;border-radius:11px;background:#fff;border:1px solid var(--line)">${mark(c.vars[0][0],c.tile,c.tile,24)}</div>
+  </div></div>`;
+  logosEl.insertAdjacentHTML('beforeend',`<div class="concept"><div class="concept-h"><span class="cn">${c.cn}</span><span class="cd">· ${c.cd}</span></div><div class="logo-row">${cards}</div></div>`);
+});
+
+/* ---------- palettes ---------- */
+function tokens(arr){ // arr of [hex,label]
+  return arr.map(t=>`<div class="tok"><div class="b" style="background:${t[0]};${t[0].toLowerCase()==='#ffffff'?'box-shadow:inset 0 0 0 1px #eee':''}"></div><div class="l">${t[1]}</div></div>`).join('');
+}
+function uiPrev(o){ // {bg,surface,ink,muted,accent,accentSoft,mark,markAccent}
+  return `<div class="uiprev" style="background:${o.bg}">
+    <div class="bar" style="border-bottom:1px solid ${o.border}">
+      <div class="b-mk" style="background:${o.accent}">${mark(o.mark,o.markAccent||'#fff', '#fff',16)}</div>
+      <div class="b-wm" style="color:${o.ink}">${o.name}</div>
+      <div class="b-btn" style="background:${o.accent};color:${o.btnInk||'#fff'}">Lanzar escaneo</div>
+    </div>
+    <div class="body">
+      <div class="stat" style="background:${o.surface};border:1px solid ${o.border}"><div class="v" style="color:${o.accent}">41</div><div class="k" style="color:${o.ink}">Puntuación</div></div>
+      <div class="stat" style="background:${o.surface};border:1px solid ${o.border}"><div class="v" style="color:${o.ink}">18%</div><div class="k" style="color:${o.ink}">Mención</div></div>
+      <div class="stat" style="background:${o.accentSoft}"><div class="v" style="color:${o.accent}">9%</div><div class="k" style="color:${o.accent}">Cita</div></div>
+    </div>
+  </div>`;
+}
+
+/* A — grafito + acento (modo claro) */
+const GRAPH=[
+  ["Índigo","#6366f1","#eef0fe"],
+  ["Azul eléctrico","#2f6fed","#e9f0fe"],
+  ["Teal","#0d9488","#e3f4f1"],
+  ["Violeta","#7c3aed","#f1ebfe"],
+];
+const gEl=document.getElementById('graphite');
+GRAPH.forEach(g=>{
+  const toks=[["#f7f8fa","bg"],["#ffffff","surface"],["#e6e8ee","line"],["#1f2430","ink"],["#737b8c","muted"],[g[1],"accent"],[g[2],"soft"]];
+  gEl.insertAdjacentHTML('beforeend',`<div class="opt">
+    <div class="head"><span class="sw" style="background:${g[1]}"></span><span class="name">Grafito + ${g[0]}</span></div>
+    <div class="tokens">${tokens(toks)}</div>
+    ${uiPrev({bg:"#f7f8fa",surface:"#ffffff",border:"#e6e8ee",ink:"#1f2430",accent:g[1],accentSoft:g[2],name:"Spectra",mark:"prismA"})}
+  </div>`);
+});
+
+/* B — negro + un color (modo oscuro) */
+const BLACK=[
+  ["Cian","#22d3ee","#0e2730"],
+  ["Lima","#a3e635","#1c2410"],
+  ["Índigo eléctrico","#6d6afe","#1a1a36"],
+  ["Ámbar","#f5b13d","#2a1f0d"],
+];
+const bEl=document.getElementById('black');
+BLACK.forEach(b=>{
+  const toks=[["#0c0d11","bg"],["#15161c","surface"],["#23252e","line"],["#f3f4f8","ink"],["#8b90a0","muted"],[b[1],"accent"],[b[2],"soft"]];
+  bEl.insertAdjacentHTML('beforeend',`<div class="opt" style="background:#15161c;border-color:#23252e">
+    <div class="head"><span class="sw" style="background:${b[1]}"></span><span class="name" style="color:#f3f4f8">Negro + ${b[0]}</span></div>
+    <div class="tokens">${tokens(toks)}</div>
+    ${uiPrev({bg:"#0c0d11",surface:"#15161c",border:"#23252e",ink:"#f3f4f8",accent:b[1],accentSoft:b[2],name:"Resonia",mark:"echoA",btnInk:(b[0]==='Lima'||b[0]==='Cian'||b[0]==='Ámbar')?'#0c0d11':'#fff',markAccent:(b[0]==='Lima'||b[0]==='Cian'||b[0]==='Ámbar')?'#0c0d11':'#fff'})}
+  </div>`);
+});
+</script>
+</body>
+</html>
