@@ -1,52 +1,47 @@
 # GEO Studio Private Beta Readiness
 
-Use this operational checklist before inviting private beta users.
+Use this checklist before inviting private beta users to test the current MVP.
 
-## Environment
+## Current MVP capabilities
 
-- Supabase project configured.
-- Migrations `0001` through `0004` applied.
-- Supabase Auth enabled.
-- Environment variables configured:
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `GEMINI_API_KEY`
-  - `GEMINI_MODEL`
+- Authenticated project creation and access control
+- Initial prompts and competitors during project setup
+- Manual one-click Gemini scan launch from the overview
+- Structured extraction from real Gemini responses
+- Deterministic scoring
+- Rule-based recommendations backed by evidence
+- Overview, Prompts, Competitors, Recommendations, Runs and technical run-detail screens
+- Archive and restore project UX
 
-## Safety Limits
+## Known limitations
 
-- Maximum 10 prompts per real Gemini scan.
-- Scan execution is sequential.
-- Gemini is the only active provider.
-- No background monitoring yet.
+- Gemini-only provider runtime
+- No OpenAI or Perplexity provider runtime yet
+- No crawler
+- No automatic competitor discovery
+- No background monitoring or scheduled scans
+- No billing or teams
+- Recommendations are rule-based v0
+- Users should review prompts and competitors before scanning
 
-## Smoke Test
+## Private beta smoke checklist
 
-- Sign up and log in.
-- Create one project.
-- Add 3-5 competitors.
-- Add 5 prompts.
-- Execute a Gemini scan.
-- Confirm raw responses exist.
-- Confirm structured extraction exists.
-- Confirm scores exist.
-- Confirm rule-based recommendations exist when evidence triggers rules.
-- Confirm recommendation evidence is visible.
+1. Configure `.env.local`.
+2. Apply migrations through `0004_v0_scan_result_dedup.sql`.
+3. Run `pnpm run validate`.
+4. Start the app.
+5. Create an account or log in.
+6. Create a project with initial prompts and competitors.
+7. Confirm project overview, prompts and competitors load correctly.
+8. Launch one Gemini scan manually.
+9. Review Overview, Prompts, Competitors, Recommendations, Runs and technical detail.
+10. Test archive and restore.
+11. Capture blockers, confusing copy or raw error exposure.
 
-## Beta User Instructions
+## Human Gate checklist
 
-- Start with 1 project.
-- Use 5-10 prompts.
-- Add 3-5 competitors.
-- Treat outputs as directional v0 evidence.
-- Report confusing recommendations or incorrect extraction.
-
-## Known Limitations
-
-- Gemini-only.
-- No OpenAI or Perplexity yet.
-- No crawler yet.
-- No scheduled monitoring yet.
-- No billing or teams.
-- Recommendations are rule-based v0.
+- Validate build and lint health.
+- Validate first project creation.
+- Validate one real Gemini scan.
+- Confirm no raw database or provider errors are shown to the user.
+- Confirm beta user instructions are clear enough to proceed.
