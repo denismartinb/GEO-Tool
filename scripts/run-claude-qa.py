@@ -189,7 +189,13 @@ def call_anthropic(prompt: str) -> str:
       result = json.loads(response.read().decode("utf-8"))
   except urllib.error.HTTPError as error:
     detail = error.read().decode("utf-8", errors="replace")
-    raise QaError(f"Anthropic API request failed with status {error.code}: {detail[:500]}") from error
+    message = detail[:300]
+    try:
+      parsed = json.loads(detail)
+      message = parsed.get("error", {}).get("message") or parsed.get("message") or message
+    except json.JSONDecodeError:
+      pass
+    raise QaError(f"Anthropic API request failed with status {error.code}: {message}") from error
 
   blocks = result.get("content", [])
   text_parts = [block.get("text", "") for block in blocks if block.get("type") == "text"]
