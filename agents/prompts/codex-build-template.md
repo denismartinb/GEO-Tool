@@ -62,6 +62,17 @@ gh pr create \
   --body "<summary, validation, scope guard>"
 ```
 
+## QA handoff after PR creation
+
+- Apply labels if available:
+  - `agent:claude-qa`
+  - `status:ready-for-qa`
+- Run or request:
+
+```bash
+bash scripts/post-claude-qa-handoff.sh <PR_NUMBER>
+```
+
 ## Output required
 
 - Files changed

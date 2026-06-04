@@ -78,3 +78,18 @@ Agents must stop and report when any of the following happens:
 - automatic merge approval
 
 Use AGENTIC-3 as a practical, auditable handoff workflow rather than a fake autonomous platform.
+
+## AGENTIC-4 Update
+
+New now:
+
+- Claude QA handoff can be generated from PR metadata.
+- The handoff can be posted to the PR as a comment.
+- The PR comment becomes the source of truth for Claude QA context.
+- The founder should not need to manually copy and paste the QA prompt.
+
+Still manual:
+
+- Claude execution itself, unless a separate integration exists.
+- Human Gate.
+- Merge approval.
