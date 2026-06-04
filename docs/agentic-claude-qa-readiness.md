@@ -2,7 +2,7 @@
 
 ## Current status
 
-**Classification: `HANDOFF_ONLY`.**
+**Classification after AGENTIC-5B: `REAL_CLAUDE_EXECUTION_CONFIGURED`.**
 
 AGENTIC-4 currently provides a GitHub-centered Claude QA handoff:
 
@@ -11,9 +11,9 @@ AGENTIC-4 currently provides a GitHub-centered Claude QA handoff:
 - `.github/workflows/claude-qa-handoff.yml` can post that handoff from `workflow_dispatch` or PR labels.
 - The handoff comment tells Claude QA what to review and what output format to use.
 
-AGENTIC-4 does **not** currently execute Claude automatically.
+AGENTIC-4 did **not** execute Claude automatically.
 
-`.github/workflows/claude-qa.yml` is a conservative placeholder. It detects QA triggers and checks for a placeholder secret, but it does not call Anthropic, Claude Code, or any real Claude execution action. It also does not post a review verdict back to the PR.
+AGENTIC-5B updates `.github/workflows/claude-qa.yml` to execute real Claude QA through the Anthropic Messages API when `ANTHROPIC_API_KEY` is configured. It reads the existing AGENTIC handoff comment, PR metadata and GitHub-provided file patches, then posts a structured QA result back to the PR.
 
 ## Current GitHub readiness notes
 
@@ -31,7 +31,8 @@ Observed during this audit:
 
 - `gh repo view` resolved `denismartinb/GEO-Tool` with default branch `main`.
 - PR #11 remained open on `feature/ux-align-2a-runs-operational-hub` and was not modified.
-- `gh secret list` returned no visible repository secret names.
+- `gh secret list` originally returned no visible repository secret names during AGENTIC-5A.
+- `ANTHROPIC_API_KEY` was later confirmed as present by name before AGENTIC-5B implementation.
 
 ## Required secrets
 
@@ -45,9 +46,9 @@ The exact secret depends on the chosen Claude execution path. Candidate secret n
 
 ## Required workflow changes
 
-To execute Claude automatically from the handoff comment, AGENTIC-5B should replace the placeholder path in `.github/workflows/claude-qa.yml` with a real, reviewed Claude execution step.
+AGENTIC-5B replaces the placeholder path in `.github/workflows/claude-qa.yml` with a real Claude execution step.
 
-The workflow should:
+The workflow now:
 
 1. Resolve the PR number from `workflow_dispatch` or label event.
 2. Fetch the PR metadata and the latest handoff comment.
@@ -56,12 +57,20 @@ The workflow should:
    - Changed files.
    - Handoff comment.
    - Existing Claude QA template.
-4. Run Claude through the chosen approved integration.
+4. Run Claude through Anthropic's Messages API.
 5. Post a structured QA result as a PR comment or review.
 6. Apply label transitions based on the verdict.
 7. Never merge, push fixes, or mutate product code.
 
-Do not add untested third-party actions or fake Claude execution. If the required secret is missing, the workflow should skip gracefully and explain which secret name is required.
+If the required secret is missing, the workflow skips gracefully and explains which secret name is required.
+
+### Claude QA model configuration
+
+The default Claude QA model is `claude-sonnet-4-5`. The runner reads `CLAUDE_QA_MODEL` from the workflow environment and falls back to that default when no override is provided.
+
+Manual `workflow_dispatch` runs can pass an optional `model` input to override the default for a single review. A repository variable named `CLAUDE_QA_MODEL` can also be used to change the default without editing code.
+
+If a model is unavailable for the Anthropic account, rerun the workflow with an allowed model such as `claude-sonnet-4-5`.
 
 ## Safe trigger model
 
@@ -117,12 +126,12 @@ Keep `risk:*` labels unchanged unless the QA result explicitly identifies incorr
 
 Goals:
 
-- Choose one approved Claude execution integration.
-- Wire `.github/workflows/claude-qa.yml` to execute Claude only when the required secret is present.
-- Read the existing handoff comment as the source of truth.
-- Post a structured QA verdict back to the PR.
-- Apply safe label transitions.
-- Preserve Human Gate as the final merge decision.
+- Implemented direct Anthropic Messages API execution.
+- `.github/workflows/claude-qa.yml` executes Claude only when `ANTHROPIC_API_KEY` is present.
+- The existing handoff comment remains the source of truth.
+- A structured QA verdict is posted back to the PR.
+- Safe label transitions are applied.
+- Human Gate remains the final merge decision.
 
 Non-goals:
 
@@ -132,3 +141,11 @@ Non-goals:
 - No product runtime changes.
 - No schema/RLS/migration/provider/pipeline changes.
 - No execution on untrusted fork code with privileged credentials.
+
+## AGENTIC-5C follow-up
+
+Recommended next hardening phase:
+
+- Add a small test fixture for `scripts/run-claude-qa.py` using mocked GitHub/Anthropic responses.
+- Decide whether `status:ready-for-human-gate` or `status:ready-for-human-review` is the canonical Human Gate label.
+- Add workflow documentation for manually dispatching Claude QA against a PR number.

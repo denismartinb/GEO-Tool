@@ -1,6 +1,8 @@
 # Agentic QA Dispatch
 
-AGENTIC-4 adds a minimal PR-centered Claude QA handoff for this repository.
+AGENTIC-4 added a minimal PR-centered Claude QA handoff for this repository.
+
+AGENTIC-5B adds real Claude QA execution from that handoff when `ANTHROPIC_API_KEY` is configured.
 
 The goal is to remove manual copy and paste when a pull request is ready for QA.
 
@@ -21,12 +23,13 @@ The goal is to remove manual copy and paste when a pull request is ready for QA.
 
 ## Not Available Yet
 
-Unless a separate integration is explicitly configured, AGENTIC-4 does **not** provide:
+Even with AGENTIC-5B, the workflow does **not** provide:
 
-- fully autonomous Claude execution
 - fully autonomous Codex fix loops
 - autonomous GPT Director execution
 - auto-merge
+
+Claude QA execution is automated, but Human Gate remains manual.
 
 ## Dispatch Contract
 
@@ -34,9 +37,21 @@ Unless a separate integration is explicitly configured, AGENTIC-4 does **not** p
 2. Codex applies or requests QA labels.
 3. A local script or GitHub workflow generates the Claude QA handoff from the PR itself.
 4. The handoff is posted as a PR comment with a stable marker.
-5. Claude QA can read the PR comment as the source of truth for review context.
+5. Claude QA reads the PR comment as the source of truth for review context.
 6. Codex uses PR comments or reviews as the source of truth for fixes.
 7. Human Gate remains the final merge decision.
+
+AGENTIC-5B posts a stable `<!-- agentic:claude-qa-result -->` comment containing one of:
+
+- `ACCEPT`
+- `ACCEPT WITH MINOR FIXES`
+- `BLOCKED`
+
+## Manual Model Override
+
+The Claude QA workflow defaults to `claude-sonnet-4-5`. Manual `workflow_dispatch` runs may pass an optional `model` input to override it for that run.
+
+If Anthropic reports that the default model is unavailable for the account, rerun the workflow with an allowed model such as `claude-sonnet-4-5`.
 
 ## Source of Truth
 
