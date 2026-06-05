@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { runProjectScan } from "./actions";
+import { ScanLoadingState } from "@/components/scan-loading-state";
 
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
@@ -179,58 +180,92 @@ export default async function ProjectDetailPage({
         </p>
       </section>
 
-      <section>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="font-medium">Nuevo análisis</h2>
-              <form action={runProjectScan}>
-                <input type="hidden" name="projectId" value={projectId} />
-                <Button type="submit" disabled={Boolean(activeRun) || !prompts?.length}>
-                  <Icon name="play" size={14} />
-                  Lanzar escaneo
-                </Button>
-              </form>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="sub">
-              Prepara un escaneo con los prompts activos. Si la ejecución automática está habilitada en este entorno,
-              el análisis se lanzará al momento; si no, quedará pendiente para una ejecución posterior.
-            </p>
-            {activeRun ? <p className="feedback error">Ya hay un escaneo en curso o pendiente para este proyecto.</p> : null}
-            {!prompts?.length ? <p className="feedback error">Añade al menos un prompt activo antes de escanear.</p> : null}
-            {feedbackErrorMessage ? <p className="feedback error">{feedbackErrorMessage}</p> : null}
-            {successMessage ? <p className="feedback success">{successMessage}</p> : null}
-          </CardContent>
-        </Card>
-      </section>
+      {feedbackErrorMessage ? <p className="feedback error">{feedbackErrorMessage}</p> : null}
+      {successMessage ? <p className="feedback success">{successMessage}</p> : null}
 
-      {!competitors?.length ? (
-        <p className="rounded-[10px] border border-[#e8eaef] bg-[#fbfbfd] px-4 py-3 text-sm text-[var(--ink-2)]">
-          Añadir competidores mejora la calidad del análisis, pero no bloquea el primer escaneo.{" "}
-          <Link className="font-semibold text-[var(--accent)]" href={`/dashboard/projects/${projectId}/competitors`}>
-            Gestionar competidores
-          </Link>
-        </p>
-      ) : null}
-
-      {latestFailedRun ? (
-        <section className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <p className="font-semibold">
-            {latestCompletedRun
-              ? "El último escaneo falló. Se muestran los últimos resultados completados."
-              : "El último escaneo falló. Puedes revisar el detalle técnico y volver a intentarlo."}
-          </p>
-          <Link
-            className="mt-2 inline-flex items-center gap-1 font-semibold underline"
-            href={`/dashboard/projects/${projectId}/runs/${latestFailedRun.id}`}
+      {activeRun ? (
+        <section className="space-y-4">
+          {/* Scan-in-progress banner */}
+          <div
+            className="flex items-center gap-3 rounded-[14px] border px-4 py-3"
+            style={{ borderColor: "var(--accent-soft-2)", backgroundColor: "var(--accent-soft)" }}
           >
-            Ver detalle técnico del escaneo fallido
-            <Icon name="arrRight" size={14} />
-          </Link>
+            <div
+              className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full"
+              style={{ backgroundColor: "var(--accent)" }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold" style={{ color: "var(--accent-ink)" }}>
+                Analizando{" "}
+                <span style={{ fontFamily: "ui-monospace, monospace" }}>{project.domain}</span>{" "}
+                en Gemini
+              </p>
+              <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                Puedes salir de esta página — el escaneo continúa en segundo plano.
+              </p>
+            </div>
+          </div>
+
+          {/* Animated scan steps */}
+          <ScanLoadingState domain={project.domain} />
         </section>
-      ) : null}
+      ) : (
+        <>
+          {/* Launch card */}
+          <section>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="font-medium">Nuevo análisis</h2>
+                  <form action={runProjectScan}>
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <Button type="submit" disabled={!prompts?.length}>
+                      <Icon name="play" size={14} />
+                      Lanzar escaneo
+                    </Button>
+                  </form>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <p className="sub">
+                  Prepara un escaneo con los prompts activos. Si la ejecución automática está habilitada en este
+                  entorno, el análisis se lanzará al momento; si no, quedará pendiente para una ejecución posterior.
+                </p>
+                {!prompts?.length ? (
+                  <p className="feedback error">Añade al menos un prompt activo antes de escanear.</p>
+                ) : null}
+              </CardContent>
+            </Card>
+          </section>
+
+          {!competitors?.length ? (
+            <p className="rounded-[10px] border border-[#e8eaef] bg-[#fbfbfd] px-4 py-3 text-sm text-[var(--ink-2)]">
+              Añadir competidores mejora la calidad del análisis, pero no bloquea el primer escaneo.{" "}
+              <Link
+                className="font-semibold text-[var(--accent)]"
+                href={`/dashboard/projects/${projectId}/competitors`}
+              >
+                Gestionar competidores
+              </Link>
+            </p>
+          ) : null}
+
+          {latestFailedRun ? (
+            <section className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-semibold">
+                {latestCompletedRun
+                  ? "El último escaneo falló. Se muestran los últimos resultados completados."
+                  : "El último escaneo falló. Puedes revisar el detalle técnico y volver a intentarlo."}
+              </p>
+              <Link
+                className="mt-2 inline-flex items-center gap-1 font-semibold underline"
+                href={`/dashboard/projects/${projectId}/runs/${latestFailedRun.id}`}
+              >
+                Ver detalle técnico del escaneo fallido
+                <Icon name="arrRight" size={14} />
+              </Link>
+            </section>
+          ) : null}
 
       {latestCompletedRun && latestScore ? (
         <>
@@ -477,6 +512,8 @@ export default async function ProjectDetailPage({
             </CardContent>
           </Card>
         </section>
+      )}
+        </>
       )}
 
     </div>
