@@ -262,6 +262,7 @@ export async function deleteProject(formData: FormData) {
     .maybeSingle();
 
   if (findError || !project) {
+    console.error("[geo:delete] project not found or not archived:", { projectId, findError });
     redirect("/dashboard/projects?error=project_delete_failed");
   }
 
@@ -273,6 +274,7 @@ export async function deleteProject(formData: FormData) {
     .eq("is_archived", true);
 
   if (error) {
+    console.error("[geo:delete] delete failed:", { projectId, error });
     redirect("/dashboard/projects?error=project_delete_failed");
   }
 

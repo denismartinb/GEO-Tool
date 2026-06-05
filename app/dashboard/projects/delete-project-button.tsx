@@ -1,29 +1,25 @@
 "use client";
 
-import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { deleteProject } from "./actions";
 
 export function DeleteProjectButton({ projectId }: { projectId: string }) {
-  const formRef = useRef<HTMLFormElement>(null);
-
-  function handleClick() {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     if (
-      confirm(
+      !confirm(
         "¿Eliminar este proyecto? Esta acción es irreversible y borrará todos los escaneos, prompts, competidores y datos asociados.",
       )
     ) {
-      formRef.current?.requestSubmit();
+      e.preventDefault();
     }
   }
 
   return (
-    <form ref={formRef} action={deleteProject}>
+    <form action={deleteProject} onSubmit={handleSubmit}>
       <input type="hidden" name="projectId" value={projectId} />
       <Button
-        type="button"
+        type="submit"
         variant="outline"
-        onClick={handleClick}
         className="text-[var(--neg)] hover:border-[var(--neg)] hover:text-[var(--neg-ink)]"
       >
         Eliminar
