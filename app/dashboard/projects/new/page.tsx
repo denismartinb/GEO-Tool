@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { Icon } from "@/components/ui/icon";
-import { createProject } from "../actions";
+import { createProject, suggestProjectSetup } from "../actions";
 
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -27,9 +27,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
         </Link>
       </div>
 
-      <form action={createProject}>
-        <OnboardingWizard errorMessage={errorMessage} />
-      </form>
+      <OnboardingWizard errorMessage={errorMessage} suggestAction={suggestProjectSetup} createAction={createProject} />
     </div>
   );
 }

@@ -6,7 +6,56 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import { getActionErrorCode, launchScan } from "@/lib/scan/scan-runner";
-import { MAX_INITIAL_COMPETITORS, MAX_INITIAL_PROMPTS, parseProjectForm } from "@/lib/projects/project-form";
+import {
+  cleanDomain,
+  deriveBrandFromDomain,
+  isValidDomain,
+  languageForCountry,
+  MAX_INITIAL_COMPETITORS,
+  MAX_INITIAL_PROMPTS,
+  parseProjectForm
+} from "@/lib/projects/project-form";
+
+export type ProjectSetupSuggestion = {
+  ok: boolean;
+  brand: string;
+  language: string;
+  competitors: Array<{ name: string; domain: string }>;
+  prompts: string[];
+};
+
+/**
+ * Generate (real Gemini) the suggested competitors + prompts for a domain so the
+ * onboarding wizard can show them for the user to edit before creating the
+ * project. Returns data to the client; does not persist anything.
+ */
+export async function suggestProjectSetup(input: { domain: string; country: string }): Promise<ProjectSetupSuggestion> {
+  await requireUser();
+
+  const domain = cleanDomain(String(input.domain ?? ""));
+  const country = String(input.country ?? "").trim();
+  const empty: ProjectSetupSuggestion = { ok: false, brand: "", language: "", competitors: [], prompts: [] };
+
+  if (!isValidDomain(domain) || country.length < 2) {
+    return empty;
+  }
+
+  const brand = deriveBrandFromDomain(domain);
+  const language = languageForCountry(country);
+
+  const [competitors, prompts] = await Promise.all([
+    suggestCompetitors({ brand, domain, country, language, limit: MAX_INITIAL_COMPETITORS }).catch(() => []),
+    suggestPrompts({ brand, domain, country, language, limit: MAX_INITIAL_PROMPTS }).catch(() => [])
+  ]);
+
+  return {
+    ok: competitors.length > 0 || prompts.length > 0,
+    brand,
+    language,
+    competitors,
+    prompts
+  };
+}
 
 export async function createProject(formData: FormData) {
   const parsedForm = parseProjectForm(formData);
