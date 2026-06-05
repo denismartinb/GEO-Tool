@@ -6,7 +6,10 @@ function getGeminiEndpoint() {
   const raw = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
   const model = raw.startsWith("models/") ? raw.slice("models/".length) : raw.trim();
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey) {
+    console.error("[geo:suggest] GEMINI_API_KEY is not set in this environment");
+    return null;
+  }
   return `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 }
 
@@ -24,16 +27,30 @@ async function callGeminiJson(prompt: string): Promise<string | null> {
       }),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      const body = await response.text().catch(() => "<no body>");
+      console.error(
+        `[geo:suggest] Gemini HTTP ${response.status} ${response.statusText}: ${body.slice(0, 500)}`,
+      );
+      return null;
+    }
 
     const data = (await response.json()) as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
 
-    return (
-      data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? null
-    );
-  } catch {
+    const text =
+      data.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("").trim() ?? null;
+
+    if (!text) {
+      console.error(
+        `[geo:suggest] Gemini returned no text. Raw: ${JSON.stringify(data).slice(0, 500)}`,
+      );
+    }
+
+    return text;
+  } catch (error) {
+    console.error("[geo:suggest] Gemini fetch threw:", error);
     return null;
   }
 }
