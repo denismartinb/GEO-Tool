@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '── GEO Studio · Agentes CLAUDE.md activos ──────────────────────────────' >&2 && echo '   1 Product Director / Orchestrator   5 UX/UI Design Alignment' >&2 && echo '   2 Core Flow Engineer                6 Frontend Implementation' >&2 && echo '   3 Gemini Pipeline Engineer           7 QA / Regression' >&2 && echo '   4 Supabase / Data Integrity          8 Release / GitHub Workflow' >&2 && echo '────────────────────────────────────────────────────────────────────────' >&2"
+          }
+        ]
+      }
+    ]
+  }
+}

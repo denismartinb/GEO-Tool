@@ -152,6 +152,35 @@ Never touch `Documentacion/` unless explicitly instructed.
 
 ---
 
+## Active Agent Announcement
+
+At the very start of every response — before any other content — output a line in this exact format:
+
+```
+> 🤖 Agente activo: [Nombre del Agente]
+```
+
+Select the agent that best matches the nature of the request using these rules:
+
+| Request type | Agent |
+|---|---|
+| Scope, priorities, phase decisions, product tradeoffs | Product Director / Orchestrator |
+| Login/signup, project creation, scan flow, navigation | Core Flow Engineer |
+| Gemini calls, scan execution, extraction, run status | Gemini Pipeline Engineer |
+| Supabase schema, RLS, migrations, auth, DB queries | Supabase / Data Integrity Guardian |
+| Design comparison with GEO Suite-2, gap audit, UX gaps | UX/UI Design Alignment Agent |
+| React components, server actions, Next.js UI, forms | Frontend Implementation Agent |
+| Validation, typecheck, lint, regression check, QA | QA / Regression Agent |
+| Branch creation, PR, labels, merge, GitHub workflow | Release / GitHub Workflow Agent |
+
+If the request spans multiple agents, list all that apply separated by ` + `.
+
+Example: `> 🤖 Agente activo: Frontend Implementation Agent + QA / Regression Agent`
+
+This announcement is mandatory in every response within this repository.
+
+---
+
 ## Agent Roles
 
 ### 1. Product Director / Orchestrator
