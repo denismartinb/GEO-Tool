@@ -3,21 +3,66 @@
 @tailwind utilities;
 
 :root {
+  /* Neutrals (cool slate) */
   --canvas: #f6f7f9;
   --surface: #ffffff;
   --surface-2: #fbfbfd;
+  --surface-sunk: #f1f3f6;
   --line: #e8eaef;
+  --line-strong: #dde0e7;
   --line-soft: #eef0f4;
   --ink: #0f1729;
   --ink-2: #475067;
   --ink-3: #6b7385;
   --ink-4: #98a0b0;
+
+  /* Accent (indigo) */
   --accent: #4f46e5;
+  --accent-700: #4338ca;
+  --accent-600: #4f46e5;
   --accent-soft: #eef2ff;
+  --accent-soft-2: #e6e9fe;
   --accent-ink: #3730a3;
+  --accent-ring: rgba(79, 70, 229, 0.30);
+
+  /* Semantic */
+  --pos: #15915a;
+  --pos-soft: #e7f6ee;
+  --pos-ink: #0d6b41;
+  --neg: #d23b48;
+  --neg-soft: #fdecee;
+  --neg-ink: #a51f2c;
+  --warn: #c47e12;
+  --warn-soft: #fdf3e0;
+  --warn-ink: #8a5a06;
+  --info: #2f6fde;
+  --info-soft: #eaf1fd;
+
+  /* Priority tones */
+  --p-high: #d23b48;
+  --p-high-soft: #fdecee;
+  --p-med: #c47e12;
+  --p-med-soft: #fdf3e0;
+  --p-low: #5b6477;
+
+  /* Radii */
+  --r-xs: 6px;
   --r-sm: 8px;
   --r-md: 10px;
   --r-lg: 14px;
+  --r-xl: 18px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --sh-1: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 1px rgba(16, 24, 40, 0.03);
+  --sh-2: 0 2px 4px rgba(16, 24, 40, 0.05), 0 4px 12px rgba(16, 24, 40, 0.06);
+  --sh-3: 0 8px 24px rgba(16, 24, 40, 0.10), 0 2px 6px rgba(16, 24, 40, 0.06);
+  --sh-pop: 0 12px 40px rgba(16, 24, 40, 0.16), 0 4px 12px rgba(16, 24, 40, 0.08);
+
+  /* Type — wired to next/font CSS variables (see app/layout.tsx) */
+  --font: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: var(--font-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
   --sidebar-w: 248px;
   --header-h: 61px;
   color-scheme: light;
@@ -25,11 +70,20 @@
 
 body {
   margin: 0;
-  font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font);
   background: var(--canvas);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Tabular numbers for all numeric data (per design handoff) */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: var(--mono);
 }
 
 a {

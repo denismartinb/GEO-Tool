@@ -1,6 +1,6 @@
-# CLAUDE.md — GEO Studio Constitution
+# CLAUDE.md — Lumira Constitution
 
-GEO Studio is a private-beta SaaS that helps brands understand and improve how
+Lumira is a private-beta SaaS that helps brands understand and improve how
 they appear in AI-generated answers.
 
 **Talk to the Director for every request.** The Director is the primary agent:
@@ -188,7 +188,7 @@ bash scripts/agentic-handoff-check.sh
 ## Design Reference
 
 `GEO Suite-2.zip` is the UX/UI source of truth (`docs/design-reference/`).
-Do not rename GEO Studio to Lumira. Do not blindly paste prototype code.
+The product brand is **Lumira**. Do not blindly paste prototype code.
 Do not introduce prototype-only state as real product behavior.
 
 ---
@@ -262,5 +262,5 @@ If the design cannot be matched safely in one PR, split the work.
 If a change requires backend/schema work, stop and ask for an explicit backend
 phase.
 
-The goal is not to produce lots of PRs. The goal is to make GEO Studio actually
+The goal is not to produce lots of PRs. The goal is to make Lumira actually
 work and look like the intended product.

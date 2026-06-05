@@ -32,7 +32,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     <main className="auth-bg">
       <Card className="auth-card">
         <CardHeader className="card-head border-b-0 !px-0 !pt-0">
-          <div className="brand-name">GEO Studio</div>
+          <div className="brand-name">Lumira</div>
           <h1 className="auth-title mt-3">Crea tu cuenta</h1>
           <p className="sub mt-1">Empieza a monitorizar visibilidad en IA.</p>
         </CardHeader>

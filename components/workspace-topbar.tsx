@@ -44,7 +44,7 @@ export function WorkspaceTopbar({
   if (!project) {
     return (
       <div className="hdr-titlewrap">
-        <div className="hdr-crumb">GEO Studio</div>
+        <div className="hdr-crumb">Lumira</div>
         <div className="hdr-title">Espacio de trabajo</div>
       </div>
     );

@@ -1,5 +1,5 @@
 TECHNICAL_BRIEF.md
-GEO Studio
+Lumira
 Technical Brief v0.1
 Status
 Pre-implementation Architecture Phase
@@ -7,7 +7,7 @@ Author
 Denis Martín Barroso
 
 Mission
-Build a SaaS platform called GEO Studio.
+Build a SaaS platform called Lumira.
 The goal is to help companies understand, monitor and improve their visibility inside AI search and answer engines.
 The platform must not behave like a traditional reporting dashboard.
 The primary objective is:
@@ -21,8 +21,8 @@ The product should answer:
 	6	Can the platform generate implementation-ready solutions?
 
 Product Positioning
-GEO Studio is not trying to replicate Semrush.
-GEO Studio is not trying to replicate Otterly.
+Lumira is not trying to replicate Semrush.
+Lumira is not trying to replicate Otterly.
 The first version should focus on:
 	•	GEO Audit
 	•	AI Visibility Monitoring

@@ -70,7 +70,7 @@ Purpose: turn human instructions into safe, executable AGENTIC phases.
 
 ## Example
 
-User says: "Fetch this design and implement GEO Studio.html."
+User says: "Fetch this design and implement Lumira.html."
 
 Answer: "This is a broad UX/UI implementation request. I will not implement
 immediately. First I will audit the current app against the design, classify

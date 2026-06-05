@@ -1,4 +1,4 @@
-# Environment Contract — GEO Studio
+# Environment Contract — Lumira
 
 Single source of truth for every environment variable, where it lives, and what
 value shape is expected. **Never commit actual secret values.** Document names

@@ -1,4 +1,4 @@
-# GEO Studio Beta Run Checklist
+# Lumira Beta Run Checklist
 
 Use this checklist before inviting beta users. Run it with real project data and inspect the stored evidence, not only the UI.
 
@@ -20,7 +20,7 @@ Next 16 generates `.next/types` during `build` or `dev`, so `build` must run bef
 
 Recommended test project:
 
-- Brand: `GEO Studio`
+- Brand: `Lumira`
 - Domain: `example.com`
 - Country: `ES`
 - Language: `es`

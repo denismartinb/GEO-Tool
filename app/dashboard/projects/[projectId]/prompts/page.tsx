@@ -98,7 +98,7 @@ export default async function PromptsPage({
           <div>
             <h1 className="title-lg">Prompts monitorizados</h1>
             <p className="sub mt-1">
-              Define las preguntas que GEO Studio lanza a Gemini para medir si tu marca aparece, si se citan fuentes y qué competidores ganan terreno.
+              Define las preguntas que Lumira lanza a Gemini para medir si tu marca aparece, si se citan fuentes y qué competidores ganan terreno.
             </p>
           </div>
           <Link
@@ -157,7 +157,7 @@ export default async function PromptsPage({
               </div>
               <div className="rounded-[10px] border border-[#e8eaef] p-3">
                 <p className="font-semibold text-[var(--ink)]">Durante el análisis</p>
-                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">Gemini responde a cada prompt y GEO Studio extrae menciones, citas y señales competitivas.</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--ink-3)]">Gemini responde a cada prompt y Lumira extrae menciones, citas y señales competitivas.</p>
               </div>
               <div className="rounded-[10px] border border-[#e8eaef] p-3">
                 <p className="font-semibold text-[var(--ink)]">Después</p>

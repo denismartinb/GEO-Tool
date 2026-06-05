@@ -1,6 +1,6 @@
 # Scan Lifecycle — State Machine
 
-Owned by: `reliability` agent. Every scan run in GEO Studio must conform to
+Owned by: `reliability` agent. Every scan run in Lumira must conform to
 this state machine. Deviations from it are bugs.
 
 ---

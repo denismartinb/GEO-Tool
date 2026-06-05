@@ -33,11 +33,11 @@ export function Sidebar({ projects }: { projects: WorkspaceProject[] }) {
     <aside className="sb">
       <div className="sb-brand">
         <div className="brand-mark">
-          <Icon name="recs" size={16} />
+          <Icon name="resonance" size={16} />
         </div>
         <div className="hide-collapsed">
-          <div className="brand-name">GEO Studio</div>
-          <div className="brand-sub">Visibilidad en IA</div>
+          <div className="brand-name">Lumira</div>
+          <div className="brand-sub">Espacio de visibilidad en IA</div>
         </div>
       </div>
 

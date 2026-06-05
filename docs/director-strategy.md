@@ -1,4 +1,4 @@
-# Director Strategy — GEO Studio Product Roadmap
+# Director Strategy — Lumira Product Roadmap
 
 This file is the Director's long-term memory. Read it at the start of every
 session. Update it when a horizon shifts or a decision changes the roadmap.
@@ -7,7 +7,7 @@ session. Update it when a horizon shifts or a decision changes the roadmap.
 
 ## Product mission
 
-GEO Studio helps brands understand and improve how they appear in AI-generated
+Lumira helps brands understand and improve how they appear in AI-generated
 answers. The product measures visibility in LLM responses (Gemini and others),
 scores it, tracks it over time, and turns the data into actionable
 recommendations.
@@ -126,4 +126,4 @@ and `.github/workflows/claude-qa.yml` are superseded.
 ## Design reference
 
 `GEO Suite-2.zip` is the UX/UI source of truth. Location: `docs/design-reference/`.
-Do not rename GEO Studio to Lumira (prototype name in some reference files).
+The product brand is **Lumira** (this is now the official product name, not just a prototype name).

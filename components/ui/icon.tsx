@@ -21,6 +21,15 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
   };
 
   const icons: Record<string, ReactNode> = {
+    resonance: (
+      <>
+        <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+        <path d="M7.6 8.4a6 6 0 0 0 0 7.2" />
+        <path d="M16.4 8.4a6 6 0 0 1 0 7.2" />
+        <path d="M4.9 5.8a9.6 9.6 0 0 0 0 12.4" opacity=".5" />
+        <path d="M19.1 5.8a9.6 9.6 0 0 1 0 12.4" opacity=".5" />
+      </>
+    ),
     overview: (
       <>
         <rect x="3" y="3" width="7.5" height="9" rx="1.5" />
