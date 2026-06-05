@@ -41,14 +41,119 @@ Task Intake is mandatory if the request:
 
 * says "implementa este diseño" / "implement this design";
 * says "arregla el flujo" / "fix the flow";
+* says "compara las pantallas" / "compare the screens" — even if the word "implement" is not used;
+* says "Sí" or "go ahead" without a specific approved Task Intake Report already on record;
 * touches multiple screens;
+* touches UX/UI design alignment;
+* touches scanning state;
+* touches onboarding flow;
+* touches prompts or competitors flow;
 * touches Gemini, Supabase, the scan pipeline, auth, schema or RLS;
 * asks for broad UX/UI alignment;
 * asks to continue the project without a precise issue;
 * mixes product, backend and design concerns;
 * could produce a large PR.
 
+Additional enforced rules:
+
+* Claude must NOT ask a vague "Which gap should I implement?" after a broad audit. It must produce a full Task Intake Report and recommend the first safe phase explicitly.
+* Claude must NOT interpret a broad "Sí" / "go ahead" as blanket approval for all gaps simultaneously.
+* Claude must NOT collapse multiple concerns (e.g., scan animation + wizard redesign) into one PR without explicit approval of that combined scope.
+* Claude must bias toward fixing P0 functional blockers before P1/P2 visual polish, and must say so explicitly when both exist.
+* Claude must separate audit → planning → implementation → QA → Human Gate as distinct steps. It must never collapse them.
+* If Claude accidentally implements without approval, it must immediately stop, not continue, not merge, not mark ready for review, and follow the Retroactive Regularization Protocol below.
+
 When in doubt, prefer Task Intake. Interpreting and scoping first is always cheaper than building the wrong thing.
+
+---
+
+## Required Behavior Before Implementation
+
+Before editing any file, Claude must produce a Task Intake Report and wait for explicit approval when the task:
+
+* touches multiple screens;
+* touches UX/UI design alignment;
+* touches scanning state;
+* touches onboarding flow;
+* touches prompts or competitors flow;
+* touches Gemini, Supabase, auth, schema, RLS, pipeline or server actions;
+* has unclear scope;
+* could become a large PR.
+
+The Task Intake Report must end with:
+
+> "Do you approve this plan? I will not implement until you confirm."
+
+Claude must not proceed until the founder replies with explicit approval of the specific plan presented. "Sí" in response to a broad audit (not a Task Intake Report) is not explicit approval.
+
+---
+
+## Retroactive Regularization Protocol
+
+If Claude implements before approval:
+
+1. Stop immediately. Do not add more commits.
+2. Do not continue coding.
+3. Do not merge.
+4. Do not mark ready for review.
+5. Report:
+   * branch;
+   * commit hash;
+   * PR URL if any;
+   * files changed;
+   * exact summary of what was implemented;
+   * validation result;
+   * whether any forbidden areas were touched.
+6. Convert the work into a retroactive Task Intake Report following the Mandatory Task Intake Quality Bar format.
+7. Mark PR as Draft if already opened.
+8. Wait for founder decision: approve, reject, or split.
+
+---
+
+## Current Project Next-Step Policy
+
+Default roadmap until explicitly overridden:
+
+1. **PR #15 / core scan flow**: if still open, requires founder smoke test with real Supabase + Gemini credentials before merge. Do not merge without it.
+2. **PR #18**: remains Draft until Claude QA + manual smoke test + explicit Human Gate. Do not continue adding commits without founder approval.
+3. **UX-ALIGN-3A.1**: real scanning state animation may be a good first safe UX phase, but only if implemented from real run status data. Requires Task Intake approval before any code.
+4. **UX-ALIGN-3A**: decontaminate Overview and move management to dedicated pages. Requires Task Intake approval before any code.
+5. **FLOW-INTEL-1**: automatic prompt/competitor suggestions via Gemini require explicit backend/Gemini phase approval. No fake suggestions under any circumstances.
+6. **UX-ALIGN-3B**: executive Overview visual alignment. No fake metrics.
+7. **Further UI polish**: Prompts, Competitors, Recommendations, Sidebar. Lowest priority until P0 flow is verified working.
+
+---
+
+## Required Response When Asked To Implement A Design
+
+When the founder asks to compare screens and implement what is missing, Claude must NOT implement immediately.
+
+Example:
+
+> User: "Compara las pantallas del flujo principal con Claude Design e implementa lo que falte."
+
+Claude must answer:
+
+> "This is a broad UX/UI alignment request. I will not implement immediately. I recommend starting with a Task Intake Report. My recommended first safe phase is `UX-ALIGN-3A.1 — Real scanning state animation`, because it is explicit, visible in the main flow, and can be implemented from real run status without touching backend. Here is the full Task Intake Report…"
+
+Claude must then present the full Task Intake Report and end with the explicit approval gate before touching any file.
+
+---
+
+## Founder Interaction Model
+
+Claude should minimize founder burden:
+
+* Do not ask the founder to paste long outputs if GitHub can be read directly via MCP tools.
+* Use GitHub issues, PRs, comments and labels as source of truth for current state.
+* Ask the founder only for:
+  * product priority decisions;
+  * credentials, billing and secrets setup;
+  * real browser smoke tests;
+  * Human Gate approval;
+  * ambiguous product tradeoffs that cannot be resolved from code or design reference.
+* Do not ask for things Claude can determine itself (current branch, git state, PR status, file contents).
+* Do not present multiple equal options without a recommendation. Be direct.
 
 ---
 
@@ -200,6 +305,17 @@ Behavior:
 * If the task is broad, ambiguous or risky, it must NOT implement yet.
 * It must first return a Task Intake Report and wait for explicit approval.
 
+Decision Style:
+
+* Be direct and opinionated. Do not be passive.
+* Do not simply list options without a recommendation.
+* If one next step is clearly safer, recommend it explicitly.
+* If the user asks for "everything" or says "Sí" to a broad audit, split the work and recommend the first safe phase only.
+* If the task mixes product, backend and design concerns, isolate P0 first and say so.
+* If the task is design-heavy but the core flow is broken, say that flow comes first.
+* If a PR is ready but needs founder smoke, say exactly that and nothing else.
+* If the user asks "can I do X now?", answer with a concrete go/no-go and the safest next step.
+
 Mandatory Task Intake Report format:
 
 1. Interpretation of the request
@@ -213,6 +329,7 @@ Mandatory Task Intake Report format:
 9. Validation commands
 10. Recommended next action
 11. Optimized execution prompt
+12. Explicit approval gate: "Do you approve this plan? I will not implement until you confirm."
 
 Example:
 
@@ -676,6 +793,27 @@ Human Gate asks:
 6. Should this merge now?
 
 Only after Human Gate may a PR be merged.
+
+---
+
+## Mandatory Task Intake Quality Bar
+
+A Task Intake Report is not complete if any of these points is missing:
+
+1. Interpretation of the request
+2. Risk/scope assessment
+3. P0/P1/P2/P3 classification
+4. Proposed phase name
+5. Proposed branch
+6. Allowed files
+7. Forbidden files
+8. Acceptance criteria
+9. Validation commands
+10. Recommended next action
+11. Optimized execution prompt
+12. Explicit approval gate before implementation
+
+A report missing any of these 12 points must not be submitted. Claude must complete all 12 before presenting the report to the founder.
 
 ---
 
