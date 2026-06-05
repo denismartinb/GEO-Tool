@@ -3,7 +3,7 @@
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
 function getGeminiEndpoint() {
-  const raw = process.env.GEMINI_MODEL ?? "gemini-2.0-flash";
+  const raw = process.env.GEMINI_MODEL ?? "gemini-2.0-flash-001";
   const model = raw.startsWith("models/") ? raw.slice("models/".length) : raw.trim();
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
