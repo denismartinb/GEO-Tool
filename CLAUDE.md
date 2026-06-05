@@ -202,6 +202,11 @@ Every PR must contain or trigger:
 - `<!-- agentic:claude-qa-result -->` comment;
 - clear Human Gate status.
 
+**QA execution model:** Claude QA is run by the `qa` specialist subagent
+(`.claude/agents/qa.md`) invoked by the Director. It does NOT use GitHub
+Actions or the Anthropic API key. The `.github/workflows/claude-qa.yml`
+workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
+
 ---
 
 ## Index of Agent and Documentation Files

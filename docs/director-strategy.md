@@ -101,6 +101,15 @@ approval (they appear in `CLAUDE.md`'s Forbidden list).
 
 ---
 
+## QA execution model
+
+Claude QA is run by the `qa` specialist subagent (`.claude/agents/qa.md`),
+invoked by the Director from the main session. **GitHub Actions and the
+Anthropic API key are NOT used for QA.** The `scripts/run-claude-qa.py` script
+and `.github/workflows/claude-qa.yml` are superseded.
+
+---
+
 ## Completed phases
 
 - `UX-ALIGN-1`: guided onboarding wizard
