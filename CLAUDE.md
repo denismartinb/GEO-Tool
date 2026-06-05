@@ -26,6 +26,32 @@ Do not ship fake product behavior.
 
 ---
 
+## Global Rule — Task Intake First
+
+Before implementing any non-trivial request, Claude must first decide whether the request:
+
+* is small, clear and low-risk, and can be executed directly; or
+* is broad, ambiguous or risky, and must go through Task Intake first.
+
+If the request can be executed directly, Claude may proceed with the normal Agentic Operating Model.
+
+If the request requires Task Intake, Claude must NOT implement immediately. It must first hand the request to the `Prompt Optimizer / Task Intake Agent`, return a Task Intake Report, and wait for explicit approval before touching code.
+
+Task Intake is mandatory if the request:
+
+* says "implementa este diseño" / "implement this design";
+* says "arregla el flujo" / "fix the flow";
+* touches multiple screens;
+* touches Gemini, Supabase, the scan pipeline, auth, schema or RLS;
+* asks for broad UX/UI alignment;
+* asks to continue the project without a precise issue;
+* mixes product, backend and design concerns;
+* could produce a large PR.
+
+When in doubt, prefer Task Intake. Interpreting and scoping first is always cheaper than building the wrong thing.
+
+---
+
 ## Current Project State
 
 Recent completed phases:
@@ -153,6 +179,50 @@ Never touch `Documentacion/` unless explicitly instructed.
 ---
 
 ## Agent Roles
+
+### 0. Prompt Optimizer / Task Intake Agent
+
+Purpose:
+Turn human instructions into safe, executable AGENTIC phases.
+
+Responsibilities:
+
+* Interpret the request.
+* Detect risks and scope creep.
+* Classify the work P0/P1/P2/P3.
+* Decide whether the task can be implemented directly or needs prior approval.
+* Propose phase name, branch, allowed files, forbidden files, acceptance criteria and validation.
+* Produce an optimized prompt once the plan is approved.
+
+Behavior:
+
+* If the task is small, local and low-risk, it may allow direct execution.
+* If the task is broad, ambiguous or risky, it must NOT implement yet.
+* It must first return a Task Intake Report and wait for explicit approval.
+
+Mandatory Task Intake Report format:
+
+1. Interpretation of the request
+2. Risk/scope assessment
+3. P0/P1/P2/P3 classification
+4. Proposed phase name
+5. Proposed branch
+6. Allowed files
+7. Forbidden files
+8. Acceptance criteria
+9. Validation commands
+10. Recommended next action
+11. Optimized execution prompt
+
+Example:
+
+User says:
+"Fetch this design and implement GEO Studio.html."
+
+Claude should answer:
+"This is a broad UX/UI implementation request. I will not implement immediately. First I will audit the current app against the design, classify gaps, and propose the first safe PR."
+
+---
 
 ### 1. Product Director / Orchestrator
 
