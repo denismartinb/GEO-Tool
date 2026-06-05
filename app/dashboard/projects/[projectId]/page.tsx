@@ -8,6 +8,9 @@ import { Icon } from "@/components/ui/icon";
 import { runProjectScan } from "./actions";
 import { ScanLoadingState } from "@/components/scan-loading-state";
 
+// Allow the Gemini scan server action up to 60s (Vercel Hobby max)
+export const maxDuration = 60;
+
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
   running: "en curso",

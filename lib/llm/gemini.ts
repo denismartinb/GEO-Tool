@@ -2,8 +2,8 @@ import "server-only";
 import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/schema";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
-const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.0-flash.";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-001";
+const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.0-flash-001.";
 
 function getGeminiModel() {
   const configuredValue = process.env.GEMINI_MODEL;
