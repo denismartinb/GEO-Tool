@@ -135,15 +135,23 @@ function parseInitialCompetitors(input: string | undefined) {
 }
 
 export async function createProject(formData: FormData) {
+  // FormData.get() returns null for absent fields; the onboarding flow only
+  // submits domain + country (+ derived language), so optional fields are
+  // absent. Coerce null -> undefined so the optional zod fields accept them.
+  const field = (key: string) => {
+    const value = formData.get(key);
+    return typeof value === "string" ? value : undefined;
+  };
+
   const parsed = projectSchema.safeParse({
-    name: formData.get("name"),
-    domain: formData.get("domain"),
-    brand: formData.get("brand"),
-    country: formData.get("country"),
-    language: formData.get("language"),
-    businessDescription: formData.get("business_description"),
-    initialPrompts: formData.get("initial_prompts"),
-    initialCompetitors: formData.get("initial_competitors")
+    name: field("name"),
+    domain: field("domain"),
+    brand: field("brand"),
+    country: field("country"),
+    language: field("language"),
+    businessDescription: field("business_description"),
+    initialPrompts: field("initial_prompts"),
+    initialCompetitors: field("initial_competitors")
   });
 
   if (!parsed.success) {
