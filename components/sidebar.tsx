@@ -12,12 +12,15 @@ type WorkspaceProject = {
   language: string;
 };
 
-const links = [
+const analyzeLinks = [
   { segment: "", label: "Visión general", icon: "overview" },
   { segment: "/prompts", label: "Prompts", icon: "prompts" },
   { segment: "/competitors", label: "Competidores", icon: "competitors" },
   { segment: "/runs", label: "Escaneos", icon: "runs" },
-  { segment: "/recommendations", label: "Recomendaciones", icon: "recs" }
+];
+
+const actLinks = [
+  { segment: "/recommendations", label: "Recomendaciones", icon: "recs" },
 ];
 
 function getProjectId(pathname: string) {
@@ -63,13 +66,34 @@ export function Sidebar({ projects }: { projects: WorkspaceProject[] }) {
 
       <div className="sb-scroll">
         <div className="nav-group-label hide-collapsed">Analizar</div>
-        {links.map((link) => {
+        {analyzeLinks.map((link) => {
           const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
           const active = href
             ? link.segment
               ? pathname === href || pathname.startsWith(`${href}/`)
               : pathname === href
             : false;
+
+          if (!href) {
+            return (
+              <span key={link.label} className="nav-item disabled" aria-disabled="true">
+                <Icon name={link.icon} size={17} />
+                <span>{link.label}</span>
+              </span>
+            );
+          }
+
+          return (
+            <Link key={link.label} href={href} className={`nav-item ${active ? "active" : ""}`}>
+              <Icon name={link.icon} size={17} />
+              <span>{link.label}</span>
+            </Link>
+          );
+        })}
+        <div className="nav-group-label hide-collapsed">Actuar</div>
+        {actLinks.map((link) => {
+          const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
+          const active = href ? pathname === href || pathname.startsWith(`${href}/`) : false;
 
           if (!href) {
             return (

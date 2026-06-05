@@ -3,8 +3,12 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { createCompetitor, updateCompetitor, deactivateCompetitor } from "../actions";
 
 const MAX_PROMPT_EXAMPLES = 10;
 
@@ -197,9 +201,9 @@ export default async function CompetitorsPage({
             />
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-              href={`/dashboard/projects/${projectId}#configuracion-prompts`}
+              href="#gestion-competidores"
             >
-              Ir a configuración del proyecto
+              Añadir competidores
               <Icon name="arrRight" size={14} />
             </Link>
           </CardContent>
@@ -317,65 +321,85 @@ export default async function CompetitorsPage({
         </section>
       ) : null}
 
-      <section className="space-y-3 pt-2">
+      <section id="gestion-competidores" className="space-y-3 pt-2">
         <div>
           <p className="kicker">Configuración</p>
-          <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Competidores configurados</h2>
-          <p className="sub mt-1">Gestiona altas, cambios y desactivaciones desde la configuración central del proyecto.</p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Gestionar competidores</h2>
+          <p className="sub mt-1">Añade, edita o desactiva competidores antes del próximo escaneo. Máximo recomendado: 5 activos.</p>
         </div>
-        <Card>
-          <CardHeader>
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <p className="font-medium">Inventario competitivo</p>
-              <Link
-                className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-                href={`/dashboard/projects/${projectId}#configuracion-prompts`}
-              >
-                Gestionar competidores
-                <Icon name="arrRight" size={14} />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!configuredCompetitors.length ? (
-              <EmptyState title="No hay competidores configurados" description="Añade competidores manualmente desde la configuración del proyecto." />
-            ) : (
-              <>
-                <div className="space-y-2">
-                  {activeCompetitors.map((competitor) => {
-                    const mentions = signalMap.get(normalize(competitor.name))?.mentionCount ?? signalMap.get(normalize(competitor.domain))?.mentionCount ?? 0;
 
-                    return (
-                      <div key={competitor.id} className="flex flex-col justify-between gap-2 rounded-[10px] border border-[#e8eaef] p-3 sm:flex-row sm:items-center">
-                        <div>
-                          <p className="text-sm font-medium leading-6 text-[var(--ink)]">{competitor.name}</p>
-                          <p className="sub">{competitor.domain} · activo · creado {new Date(competitor.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge tone={mentions ? "info" : "neutral"}>
-                            {mentions ? `${mentions} menciones` : "Sin menciones"}
-                          </Badge>
-                          <Badge tone="good">Competidor configurado</Badge>
-                        </div>
-                      </div>
-                    );
-                  })}
+        <Card>
+          <CardHeader><h2 className="font-medium">Añadir competidor</h2></CardHeader>
+          <CardContent>
+            <form action={createCompetitor} className="space-y-3">
+              <input type="hidden" name="projectId" value={projectId} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <Label htmlFor="comp-name">Nombre</Label>
+                  <Input id="comp-name" name="name" required placeholder="Ej. Empresa Rival" />
                 </div>
-                {inactiveCompetitors.length ? (
-                  <div className="space-y-2 border-t border-[#e8eaef] pt-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">Inactivos</p>
-                    {inactiveCompetitors.map((competitor) => (
-                      <div key={competitor.id} className="rounded-[10px] border border-[#e8eaef] p-3">
-                        <p className="text-sm font-medium leading-6 text-[var(--ink)]">{competitor.name}</p>
-                        <p className="sub">{competitor.domain} · inactivo</p>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </>
-            )}
+                <div>
+                  <Label htmlFor="comp-domain">Dominio</Label>
+                  <Input id="comp-domain" name="domain" required placeholder="rival.com" />
+                </div>
+              </div>
+              <Button type="submit">Añadir competidor</Button>
+            </form>
           </CardContent>
         </Card>
+
+        {activeCompetitors.length ? (
+          <Card>
+            <CardHeader>
+              <h2 className="font-medium">Competidores activos · {activeCompetitors.length}</h2>
+              <p className="sub mt-1">Edita o desactiva competidores antes del próximo escaneo.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {activeCompetitors.map((competitor) => {
+                const mentions =
+                  signalMap.get(normalize(competitor.name))?.mentionCount ??
+                  signalMap.get(normalize(competitor.domain))?.mentionCount ??
+                  0;
+                return (
+                  <form key={competitor.id} action={updateCompetitor} className="space-y-2 rounded-[10px] border border-[#e8eaef] p-3">
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <input type="hidden" name="competitorId" value={competitor.id} />
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Input name="name" defaultValue={competitor.name} required />
+                      <Input name="domain" defaultValue={competitor.domain} required />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Badge tone={mentions ? "info" : "neutral"}>
+                        {mentions ? `${mentions} menciones` : "Sin menciones"}
+                      </Badge>
+                      <div className="flex gap-2">
+                        <Button type="submit" variant="outline">Guardar</Button>
+                        <button
+                          formAction={deactivateCompetitor}
+                          className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
+                          type="submit"
+                        >
+                          Desactivar
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                );
+              })}
+              {inactiveCompetitors.length ? (
+                <div className="space-y-2 border-t border-[#e8eaef] pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">Inactivos</p>
+                  {inactiveCompetitors.map((competitor) => (
+                    <div key={competitor.id} className="rounded-[10px] border border-[#e8eaef] p-3">
+                      <p className="text-sm font-medium leading-6 text-[var(--ink)]">{competitor.name}</p>
+                      <p className="sub">{competitor.domain} · inactivo</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
       </section>
 
       <section className="flex flex-wrap gap-4">

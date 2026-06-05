@@ -23,7 +23,12 @@ const steps = [
   }
 ];
 
-const emptyCompetitorRows = ["", "", ""];
+type CompetitorRow = { name: string; domain: string };
+const emptyCompetitorRows: CompetitorRow[] = [
+  { name: "", domain: "" },
+  { name: "", domain: "" },
+  { name: "", domain: "" },
+];
 const emptyPromptRows = ["", "", "", "", ""];
 
 function isValidDomain(value: string) {
@@ -54,13 +59,21 @@ export function OnboardingWizard({ errorMessage }: { errorMessage: string | null
   const domainIsValid = isValidDomain(domain);
   const canContinueDomain =
     name.trim().length > 0 && domainIsValid && brand.trim().length > 0 && country.trim().length > 0 && language.trim().length > 0;
-  const competitorsText = useMemo(() => joinRows(competitorRows), [competitorRows]);
+  const competitorsText = useMemo(
+    () =>
+      competitorRows
+        .filter((row) => row.name.trim() && row.domain.trim())
+        .map((row) => `${row.name.trim()} | ${row.domain.trim()}`)
+        .slice(0, 5)
+        .join("\n"),
+    [competitorRows]
+  );
   const promptsText = useMemo(() => joinRows(promptRows), [promptRows]);
-  const competitorCount = competitorRows.filter((row) => row.trim()).length;
+  const competitorCount = competitorRows.filter((row) => row.name.trim() && row.domain.trim()).length;
   const promptCount = promptRows.filter((row) => row.trim()).length;
 
-  function updateCompetitorRow(index: number, value: string) {
-    setCompetitorRows((rows) => rows.map((row, rowIndex) => (rowIndex === index ? value : row)));
+  function updateCompetitorRow(index: number, field: "name" | "domain", value: string) {
+    setCompetitorRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   }
 
   function updatePromptRow(index: number, value: string) {
@@ -143,11 +156,42 @@ export function OnboardingWizard({ errorMessage }: { errorMessage: string | null
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="country">País</Label>
-              <Input id="country" name="country" placeholder="ES" value={country} onChange={(event) => setCountry(event.target.value)} required />
+              <select
+                id="country"
+                name="country"
+                value={country}
+                onChange={(event) => setCountry(event.target.value)}
+                required
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="ES">España</option>
+                <option value="MX">México</option>
+                <option value="AR">Argentina</option>
+                <option value="CO">Colombia</option>
+                <option value="CL">Chile</option>
+                <option value="PE">Perú</option>
+                <option value="US">Estados Unidos</option>
+                <option value="UK">Reino Unido</option>
+                <option value="DE">Alemania</option>
+                <option value="FR">Francia</option>
+              </select>
             </div>
             <div>
               <Label htmlFor="language">Idioma</Label>
-              <Input id="language" name="language" placeholder="es" value={language} onChange={(event) => setLanguage(event.target.value)} required />
+              <select
+                id="language"
+                name="language"
+                value={language}
+                onChange={(event) => setLanguage(event.target.value)}
+                required
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="es">Español</option>
+                <option value="en">Inglés</option>
+                <option value="de">Alemán</option>
+                <option value="fr">Francés</option>
+                <option value="pt">Portugués</option>
+              </select>
             </div>
           </div>
         </section>
@@ -159,18 +203,24 @@ export function OnboardingWizard({ errorMessage }: { errorMessage: string | null
               Competidores iniciales
             </h3>
             <p className="sub mt-1">
-              Añade rivales que quieras vigilar desde el primer escaneo. Usa el formato Nombre | dominio.com; ambos datos son necesarios.
+              Añade rivales que quieras vigilar desde el primer escaneo. Introduce el nombre y el dominio por separado.
             </p>
           </div>
 
           <div className="space-y-2">
             {competitorRows.map((row, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <Input
-                  aria-label={`Competidor ${index + 1}`}
-                  placeholder="Nombre | dominio.com"
-                  value={row}
-                  onChange={(event) => updateCompetitorRow(index, event.target.value)}
+                  aria-label={`Nombre del competidor ${index + 1}`}
+                  placeholder="Nombre"
+                  value={row.name}
+                  onChange={(event) => updateCompetitorRow(index, "name", event.target.value)}
+                />
+                <Input
+                  aria-label={`Dominio del competidor ${index + 1}`}
+                  placeholder="dominio.com"
+                  value={row.domain}
+                  onChange={(event) => updateCompetitorRow(index, "domain", event.target.value)}
                 />
                 <Button type="button" variant="outline" onClick={() => removeCompetitorRow(index)} disabled={competitorRows.length === 1}>
                   Quitar
@@ -183,7 +233,7 @@ export function OnboardingWizard({ errorMessage }: { errorMessage: string | null
             <p className="sub">
               {competitorCount} competidor{competitorCount === 1 ? "" : "es"} preparado{competitorCount === 1 ? "" : "s"} para guardar.
             </p>
-            <Button type="button" variant="outline" onClick={() => setCompetitorRows((rows) => [...rows, ""])}>
+            <Button type="button" variant="outline" onClick={() => setCompetitorRows((rows) => [...rows, { name: "", domain: "" }])}>
               Añadir competidor
             </Button>
           </div>

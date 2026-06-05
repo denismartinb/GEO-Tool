@@ -3,20 +3,9 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
-import {
-  createCompetitor,
-  createPrompt,
-  deactivateCompetitor,
-  deactivatePrompt,
-  runProjectScan,
-  updateCompetitor,
-  updatePrompt
-} from "./actions";
+import { runProjectScan } from "./actions";
 
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
@@ -219,7 +208,10 @@ export default async function ProjectDetailPage({
 
       {!competitors?.length ? (
         <p className="rounded-[10px] border border-[#e8eaef] bg-[#fbfbfd] px-4 py-3 text-sm text-[var(--ink-2)]">
-          Añadir competidores mejora la calidad del análisis, pero no bloquea el primer escaneo.
+          Añadir competidores mejora la calidad del análisis, pero no bloquea el primer escaneo.{" "}
+          <Link className="font-semibold text-[var(--accent)]" href={`/dashboard/projects/${projectId}/competitors`}>
+            Gestionar competidores
+          </Link>
         </p>
       ) : null}
 
@@ -478,143 +470,15 @@ export default async function ProjectDetailPage({
                 </form>
               ) : null}
               {!prompts?.length ? (
-                <a className="inline-flex text-sm font-semibold text-[var(--accent)]" href="#configuracion-prompts">
+                <Link className="inline-flex text-sm font-semibold text-[var(--accent)]" href={`/dashboard/projects/${projectId}/prompts`}>
                   Añadir prompts
-                </a>
+                </Link>
               ) : null}
             </CardContent>
           </Card>
         </section>
       )}
 
-      <section className="space-y-2 pt-3">
-        <p className="kicker">Configuración</p>
-        <h2 className="text-xl font-semibold text-[var(--ink)]">Inputs monitorizados</h2>
-        <p className="sub">Gestiona los prompts y competidores que se utilizarán en el próximo escaneo.</p>
-      </section>
-
-      <section id="configuracion-prompts" className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader><h2 className="font-medium">Prompts</h2></CardHeader>
-          <CardContent className="space-y-4">
-            <form action={createPrompt} className="space-y-2 rounded border p-3">
-              <input type="hidden" name="projectId" value={projectId} />
-              <div>
-                <Label htmlFor="promptText">Prompt</Label>
-                <Textarea id="promptText" name="promptText" required rows={3} />
-              </div>
-              <div>
-                <Label htmlFor="category">Categoría</Label>
-                <Input id="category" name="category" />
-              </div>
-              <Button type="submit">Añadir prompt</Button>
-            </form>
-
-            {!prompts?.length ? (
-              <EmptyState title="No hay prompts activos" description="Añade entre 5 y 10 prompts para preparar el escaneo." />
-            ) : (
-              <div className="space-y-3">
-                {prompts.map((prompt) => (
-                  <form key={prompt.id} action={updatePrompt} className="space-y-2 rounded border p-3">
-                    <input type="hidden" name="projectId" value={projectId} />
-                    <input type="hidden" name="promptId" value={prompt.id} />
-                    <Textarea name="promptText" defaultValue={prompt.prompt_text} rows={3} required />
-                    <Input name="category" defaultValue={prompt.category ?? ""} placeholder="Categoría" />
-                    <div className="flex gap-2">
-                      <Button type="submit" variant="outline">Guardar</Button>
-                      <button
-                        formAction={deactivatePrompt}
-                        className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
-                        type="submit"
-                      >
-                        Desactivar
-                      </button>
-                    </div>
-                  </form>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader><h2 className="font-medium">Competidores</h2></CardHeader>
-          <CardContent className="space-y-4">
-            <form action={createCompetitor} className="space-y-2 rounded border p-3">
-              <input type="hidden" name="projectId" value={projectId} />
-              <div>
-                <Label htmlFor="name">Nombre</Label>
-                <Input id="name" name="name" required />
-              </div>
-              <div>
-                <Label htmlFor="domain">Dominio</Label>
-                <Input id="domain" name="domain" required />
-              </div>
-              <Button type="submit">Añadir competidor</Button>
-            </form>
-
-            {!competitors?.length ? (
-              <EmptyState title="No hay competidores activos" description="Añade competidores para preparar el contexto comparativo." />
-            ) : (
-              <div className="space-y-3">
-                {competitors.map((competitor) => (
-                  <form key={competitor.id} action={updateCompetitor} className="space-y-2 rounded border p-3">
-                    <input type="hidden" name="projectId" value={projectId} />
-                    <input type="hidden" name="competitorId" value={competitor.id} />
-                    <Input name="name" defaultValue={competitor.name} required />
-                    <Input name="domain" defaultValue={competitor.domain} required />
-                    <div className="flex gap-2">
-                      <Button type="submit" variant="outline">Guardar</Button>
-                      <button
-                        formAction={deactivateCompetitor}
-                        className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
-                        type="submit"
-                      >
-                        Desactivar
-                      </button>
-                    </div>
-                  </form>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader>
-            <h2 className="font-medium">Historial técnico de escaneos</h2>
-            <p className="sub mt-1">Estado de ejecuciones recientes para diagnóstico y trazabilidad.</p>
-          </CardHeader>
-          <CardContent>
-            {!runs?.length ? (
-              <EmptyState title="Todavía no hay escaneos" description="Lanza tu primer escaneo para crear el informe." />
-            ) : (
-              <div className="space-y-3">
-                {runs.map((run) => (
-                  <div key={run.id} className="rounded-[10px] border border-[#e8eaef] p-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{statusLabels[run.status] ?? run.status}</p>
-                      <Link className="inline-flex items-center gap-1 font-semibold text-[var(--accent)]" href={`/dashboard/projects/${projectId}/runs/${run.id}`}>
-                        <Icon name="arrRight" size={14} />
-                        Ver detalle técnico
-                      </Link>
-                    </div>
-                    <p className="mt-1 sub">Creado: {new Date(run.created_at).toLocaleString()}</p>
-                    <p className="sub">
-                      Prompts: {run.total_prompts} · Correctos: {run.successful_prompts} · Fallidos: {run.failed_prompts}
-                    </p>
-                    <p className="sub">
-                      Inicio: {run.started_at ? new Date(run.started_at).toLocaleString() : "-"} · Fin: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "-"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
     </div>
   );
 }

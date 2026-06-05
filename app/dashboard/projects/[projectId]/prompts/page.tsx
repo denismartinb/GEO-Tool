@@ -2,8 +2,13 @@ import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { createPrompt, updatePrompt, deactivatePrompt } from "../actions";
 
 const MAX_PROMPT_RESULTS = 10;
 
@@ -180,9 +185,9 @@ export default async function PromptsPage({
                 <p>No hay prompts activos todavía. Empieza por definir de 5 a 10 preguntas que realmente usaría tu cliente ideal.</p>
                 <Link
                   className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-                  href={`/dashboard/projects/${projectId}#configuracion-prompts`}
+                  href="#gestion-prompts"
                 >
-                  Configurar prompts
+                  Añadir prompts
                   <Icon name="arrRight" size={14} />
                 </Link>
               </>
@@ -230,9 +235,9 @@ export default async function PromptsPage({
             />
             <Link
               className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-              href={`/dashboard/projects/${projectId}#configuracion-prompts`}
+              href="#gestion-prompts"
             >
-              Ir a configuración de prompts
+              Añadir prompts
               <Icon name="arrRight" size={14} />
             </Link>
           </CardContent>
@@ -388,47 +393,73 @@ export default async function PromptsPage({
         </>
       ) : null}
 
-      <section className="space-y-3 pt-2">
+      <section id="gestion-prompts" className="space-y-3 pt-2">
         <div>
           <p className="kicker">Configuración</p>
-          <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Prompts configurados</h2>
-          <p className="sub mt-1">Gestiona altas, categorías y desactivaciones desde la configuración central del proyecto.</p>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--ink)]">Gestionar prompts</h2>
+          <p className="sub mt-1">Añade, edita o desactiva prompts antes del próximo escaneo. Máximo recomendado: 10 activos.</p>
         </div>
+
         <Card>
-          <CardHeader>
-            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-              <p className="font-medium">Inventario monitorizado</p>
-              <Link
-                className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-                href={`/dashboard/projects/${projectId}#configuracion-prompts`}
-              >
-                Gestionar prompts
-                <Icon name="arrRight" size={14} />
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!prompts?.length ? (
-              <EmptyState title="No hay prompts configurados" description="Añade tus primeros prompts desde la configuración del proyecto." />
-            ) : (
-              <>
-                <div className="space-y-2">
-                  {activePrompts.map((prompt) => (
-                    <div key={prompt.id} className="rounded-[10px] border border-[#e8eaef] p-3">
-                      <p className="text-sm font-medium leading-6 text-[var(--ink)]">{prompt.prompt_text}</p>
-                      <p className="sub mt-1">{prompt.category || "Sin categoría"} · activo</p>
-                    </div>
-                  ))}
-                </div>
-                {inactivePrompts.length ? (
-                  <p className="text-xs text-[var(--ink-3)]">
-                    {inactivePrompts.length} {inactivePrompts.length === 1 ? "prompt inactivo permanece" : "prompts inactivos permanecen"} fuera de los próximos escaneos.
-                  </p>
-                ) : null}
-              </>
-            )}
+          <CardHeader><h2 className="font-medium">Añadir prompt</h2></CardHeader>
+          <CardContent>
+            <form action={createPrompt} className="space-y-3">
+              <input type="hidden" name="projectId" value={projectId} />
+              <div>
+                <Label htmlFor="promptText">Prompt</Label>
+                <Textarea
+                  id="promptText"
+                  name="promptText"
+                  required
+                  rows={3}
+                  placeholder="Ej. ¿Cuáles son las mejores herramientas para medir visibilidad en IA?"
+                />
+              </div>
+              <div>
+                <Label htmlFor="category">
+                  Categoría <span className="font-normal text-[var(--ink-4)]">(opcional)</span>
+                </Label>
+                <Input id="category" name="category" placeholder="Ej. marca, comparación, intención de compra" />
+              </div>
+              <Button type="submit">Añadir prompt</Button>
+            </form>
           </CardContent>
         </Card>
+
+        {activePrompts.length ? (
+          <Card>
+            <CardHeader>
+              <h2 className="font-medium">Prompts activos · {activePrompts.length}</h2>
+              <p className="sub mt-1">Edita el texto o desactívalos antes del próximo escaneo.</p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {activePrompts.map((prompt) => (
+                <form key={prompt.id} action={updatePrompt} className="space-y-2 rounded-[10px] border border-[#e8eaef] p-3">
+                  <input type="hidden" name="projectId" value={projectId} />
+                  <input type="hidden" name="promptId" value={prompt.id} />
+                  <Textarea name="promptText" defaultValue={prompt.prompt_text} rows={3} required />
+                  <Input name="category" defaultValue={prompt.category ?? ""} placeholder="Categoría" />
+                  <div className="flex gap-2">
+                    <Button type="submit" variant="outline">Guardar</Button>
+                    <button
+                      formAction={deactivatePrompt}
+                      className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
+                      type="submit"
+                    >
+                      Desactivar
+                    </button>
+                  </div>
+                </form>
+              ))}
+              {inactivePrompts.length ? (
+                <p className="text-xs text-[var(--ink-3)]">
+                  {inactivePrompts.length}{" "}
+                  {inactivePrompts.length === 1 ? "prompt inactivo permanece" : "prompts inactivos permanecen"} fuera de los próximos escaneos.
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
       </section>
     </div>
   );
