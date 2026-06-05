@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { archiveProject, restoreProject } from "./actions";
+import { DeleteProjectButton } from "./delete-project-button";
 
 const successMessages: Record<string, string> = {
   project_archived: "Proyecto archivado. Puedes restaurarlo desde Proyectos archivados.",
-  project_restored: "Proyecto restaurado. Ya vuelve a estar disponible en tu espacio de trabajo."
+  project_restored: "Proyecto restaurado. Ya vuelve a estar disponible en tu espacio de trabajo.",
+  project_deleted: "Proyecto eliminado permanentemente."
 };
 
 const errorMessages: Record<string, string> = {
-  invalid_project_id: "No se pudo archivar el proyecto.",
+  invalid_project_id: "No se pudo procesar la solicitud.",
   project_archive_failed: "No se pudo archivar el proyecto.",
   project_restore_failed: "No se pudo restaurar el proyecto.",
+  project_delete_failed: "No se pudo eliminar el proyecto. Solo puedes eliminar proyectos archivados.",
   project_already_archived: "Ya existe un proyecto archivado para ese dominio, país e idioma. Restáuralo para continuar.",
   project_already_active: "Ya existe un proyecto activo para ese dominio, país e idioma."
 };
@@ -44,12 +47,20 @@ function ProjectCard({ project }: { project: Project }) {
             )}
             <p className="sub mt-1">{project.domain} · {project.country}/{project.language}</p>
           </div>
-          <form action={project.is_archived ? restoreProject : archiveProject}>
-            <input type="hidden" name="projectId" value={project.id} />
-            <Button variant="outline" type="submit">
-              {project.is_archived ? "Restaurar" : "Archivar"}
-            </Button>
-          </form>
+          {project.is_archived ? (
+            <div className="flex gap-2">
+              <form action={restoreProject}>
+                <input type="hidden" name="projectId" value={project.id} />
+                <Button variant="outline" type="submit">Restaurar</Button>
+              </form>
+              <DeleteProjectButton projectId={project.id} />
+            </div>
+          ) : (
+            <form action={archiveProject}>
+              <input type="hidden" name="projectId" value={project.id} />
+              <Button variant="outline" type="submit">Archivar</Button>
+            </form>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex items-center justify-between gap-3">

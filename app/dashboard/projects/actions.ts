@@ -242,3 +242,41 @@ export async function restoreProject(formData: FormData) {
   revalidatePath("/dashboard/projects");
   redirect("/dashboard/projects?success=project_restored");
 }
+
+export async function deleteProject(formData: FormData) {
+  const parsedProjectId = z.string().uuid().safeParse(String(formData.get("projectId") ?? ""));
+  if (!parsedProjectId.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const projectId = parsedProjectId.data;
+  const { supabase, user } = await requireUser();
+
+  // Only archived projects can be deleted. Verify ownership + archived state before deleting.
+  const { data: project, error: findError } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", true)
+    .maybeSingle();
+
+  if (findError || !project) {
+    redirect("/dashboard/projects?error=project_delete_failed");
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", true);
+
+  if (error) {
+    redirect("/dashboard/projects?error=project_delete_failed");
+  }
+
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/projects");
+  redirect("/dashboard/projects?success=project_deleted");
+}
