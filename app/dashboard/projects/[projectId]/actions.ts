@@ -33,7 +33,7 @@ const scanExecuteSchema = z.object({
 const MAX_REAL_SCAN_PROMPTS = 10;
 const MAX_EXTRACTION_RESULTS = 10;
 const EXTRACTION_VERSION = "gemini-extraction-v1";
-const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
+const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION !== "false";
 
 type ProjectActionErrorCode =
   | "active_run_exists"
