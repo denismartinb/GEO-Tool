@@ -20,7 +20,27 @@ tests catch only what truly needs a human.
   validation), then server-action behavior tests with mocked Supabase/Gemini,
   then component interaction tests, then manual smoke for the irreducibly visual.
 - Deciding **what must be covered** in the core flow before any smoke.
-- Writing and maintaining Vitest tests under `__tests__/`.
+- Writing and maintaining Vitest tests (co-located `*.test.ts` next to the unit,
+  e.g. `lib/projects/project-form.test.ts`).
+
+## Mandatory coverage: form ↔ server-action input contracts
+
+Every server action reachable from a form must have its input parsing extracted
+into a **pure, exported function** (e.g. `parseProjectForm(formData)`) and
+unit-tested, because typecheck/lint/build never exercise the real submission.
+Each such test must cover:
+
+- the **happy path with only the fields the form actually submits**, with all
+  optional fields **absent** — `FormData.get` returns `null` (not `undefined`),
+  and optional zod fields must accept that. (This is the onboarding regression:
+  `domain+país` broke because absent optionals arrived as `null`.)
+- any still-supported "full" payload, so a simplification doesn't silently drop
+  a path;
+- the rejection cases (missing required field, malformed value).
+
+When a form is simplified or fields are added/removed, update the contract test
+in the same change. A bug fix is not done until a test reproduces the original
+broken **input**.
 
 ## Principles
 
@@ -35,7 +55,8 @@ tests catch only what truly needs a human.
 
 ```bash
 pnpm test            # vitest run
-pnpm run validate    # build + typecheck + lint
+pnpm test:watch      # vitest (watch mode while writing tests)
+pnpm run validate    # typecheck + lint + test + build (test now gates validate)
 ```
 
 ## Coordination

@@ -5,172 +5,17 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
-import { getActionErrorCode, launchScan, MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/scan-runner";
-
-const projectSchema = z.object({
-  domain: z.string().min(3).max(255),
-  country: z.string().min(2).max(10),
-  name: z.string().min(1).max(120).optional(),
-  brand: z.string().min(1).max(120).optional(),
-  language: z.string().min(2).max(20).optional(),
-  businessDescription: z.string().max(500).optional(),
-  initialPrompts: z.string().optional(),
-  initialCompetitors: z.string().optional()
-});
-
-const MAX_INITIAL_PROMPTS = MAX_REAL_SCAN_PROMPTS;
-const MAX_INITIAL_COMPETITORS = 5;
-
-const COUNTRY_LANGUAGE: Record<string, string> = {
-  es: "es",
-  mx: "es",
-  ar: "es",
-  co: "es",
-  cl: "es",
-  pe: "es",
-  us: "en",
-  uk: "en",
-  gb: "en",
-  ca: "en",
-  au: "en",
-  de: "de",
-  fr: "fr",
-  it: "it",
-  pt: "pt",
-  br: "pt"
-};
-
-function cleanDomain(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "")
-    .trim();
-}
-
-function deriveBrandFromDomain(domain: string): string {
-  const label = cleanDomain(domain).split(".")[0] ?? domain;
-  const cleaned = label.replace(/[-_]+/g, " ").trim();
-  if (!cleaned) return domain;
-  return cleaned
-    .split(" ")
-    .map((part) => (part ? part.charAt(0).toUpperCase() + part.slice(1) : part))
-    .join(" ")
-    .slice(0, 120);
-}
-
-function languageForCountry(country: string, fallback = "es"): string {
-  return COUNTRY_LANGUAGE[country.trim().toLowerCase()] ?? fallback;
-}
-
-function normalizePrompt(prompt: string) {
-  return prompt.trim().toLocaleLowerCase();
-}
-
-function normalizeCompetitorValue(value: string) {
-  return value.trim().toLocaleLowerCase();
-}
-
-function parseInitialPrompts(input: string | undefined) {
-  if (!input) return [];
-
-  const seen = new Set<string>();
-  const prompts: Array<{ prompt_text: string; category: null; sort_order: number }> = [];
-
-  for (const rawLine of input.split("\n")) {
-    const promptText = rawLine.trim();
-    if (!promptText) continue;
-
-    const normalized = normalizePrompt(promptText);
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-
-    prompts.push({
-      prompt_text: promptText,
-      category: null,
-      sort_order: prompts.length
-    });
-
-    if (prompts.length >= MAX_INITIAL_PROMPTS) break;
-  }
-
-  return prompts;
-}
-
-function parseInitialCompetitors(input: string | undefined) {
-  if (!input) return [];
-
-  const seen = new Set<string>();
-  const competitors: Array<{ name: string; domain: string }> = [];
-
-  for (const rawLine of input.split("\n")) {
-    const line = rawLine.trim();
-    if (!line) continue;
-
-    const [rawName, rawDomain] = line.split("|", 2);
-    const name = rawName?.trim() ?? "";
-    const domain = rawDomain?.trim() ?? "";
-
-    if (!name) continue;
-    if (!domain || domain.length < 3) continue;
-
-    const dedupeKey = domain
-      ? `${normalizeCompetitorValue(name)}|${normalizeCompetitorValue(domain)}`
-      : normalizeCompetitorValue(name);
-
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
-
-    competitors.push({
-      name,
-      domain
-    });
-
-    if (competitors.length >= MAX_INITIAL_COMPETITORS) break;
-  }
-
-  return competitors;
-}
+import { getActionErrorCode, launchScan } from "@/lib/scan/scan-runner";
+import { MAX_INITIAL_COMPETITORS, MAX_INITIAL_PROMPTS, parseProjectForm } from "@/lib/projects/project-form";
 
 export async function createProject(formData: FormData) {
-  // FormData.get() returns null for absent fields; the onboarding flow only
-  // submits domain + country (+ derived language), so optional fields are
-  // absent. Coerce null -> undefined so the optional zod fields accept them.
-  const field = (key: string) => {
-    const value = formData.get(key);
-    return typeof value === "string" ? value : undefined;
-  };
-
-  const parsed = projectSchema.safeParse({
-    name: field("name"),
-    domain: field("domain"),
-    brand: field("brand"),
-    country: field("country"),
-    language: field("language"),
-    businessDescription: field("business_description"),
-    initialPrompts: field("initial_prompts"),
-    initialCompetitors: field("initial_competitors")
-  });
-
-  if (!parsed.success) {
-    redirect("/dashboard/projects/new?error=invalid_project_data");
+  const parsedForm = parseProjectForm(formData);
+  if (!parsedForm.ok) {
+    redirect(`/dashboard/projects/new?error=${parsedForm.error}`);
   }
 
-  const payload = parsed.data;
+  const { domain, country, brand, name, language } = parsedForm.value;
   const { supabase, user } = await requireUser();
-
-  // Derive the rest of the project from the two fields the user actually
-  // provides in the onboarding flow: domain + country.
-  const domain = cleanDomain(payload.domain);
-  if (domain.length < 3 || !domain.includes(".")) {
-    redirect("/dashboard/projects/new?error=invalid_project_data");
-  }
-  const country = payload.country.trim();
-  const brand = payload.brand?.trim() || deriveBrandFromDomain(domain);
-  const name = payload.name?.trim() || brand;
-  const language = payload.language?.trim() || languageForCountry(country);
 
   const { data: existingProject, error: existingProjectError } = await supabase
     .from("projects")
@@ -196,7 +41,7 @@ export async function createProject(formData: FormData) {
   // Competitors and prompts are suggested by the system (real Gemini) when the
   // user does not provide them explicitly. No fake fallbacks: if Gemini yields
   // nothing, we persist nothing and surface an honest state.
-  let initialCompetitors = parseInitialCompetitors(payload.initialCompetitors);
+  let initialCompetitors = parsedForm.value.initialCompetitors;
   if (!initialCompetitors.length) {
     try {
       const suggested = await suggestCompetitors({ brand, domain, country, language, limit: MAX_INITIAL_COMPETITORS });
@@ -206,7 +51,7 @@ export async function createProject(formData: FormData) {
     }
   }
 
-  let initialPrompts = parseInitialPrompts(payload.initialPrompts);
+  let initialPrompts = parsedForm.value.initialPrompts;
   if (!initialPrompts.length) {
     try {
       const suggested = await suggestPrompts({ brand, domain, country, language, limit: MAX_INITIAL_PROMPTS });
