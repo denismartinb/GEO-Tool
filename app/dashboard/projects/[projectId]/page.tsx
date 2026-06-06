@@ -293,6 +293,15 @@ export default async function ProjectDetailPage({
           </div>
         </div>
         <div className="ov-sticky-right">
+          {latestCompletedRun && (
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          )}
+          <button type="button" className="header-bell" aria-label="Notificaciones" title="Próximamente: notificaciones">
+            <Icon name="bell" size={16} />
+          </button>
           {activeRun ? (
             <span className="scan-status">
               <span className="dot run" />

@@ -977,3 +977,41 @@ a {
 @media (max-width: 720px) {
   .recs-3col { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   LUMIRA-9 — Sidebar multi-proyecto + header improvements
+   ============================================================ */
+.proj-other-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.1s;
+  margin-bottom: 2px;
+}
+.proj-other-item:hover {
+  background: var(--surface-sunk);
+}
+.proj-favicon-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+/* Bell icon button */
+.header-bell {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: default;
+  flex-shrink: 0;
+}
