@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/schema";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -168,4 +169,163 @@ export async function extractGeminiStructuredData(input: {
     data: parsed.data,
     model: data.modelVersion ?? model
   };
+}
+
+async function generateGeminiJson(promptBlock: string): Promise<unknown> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+
+  const model = getGeminiModel();
+  const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: promptBlock }] }],
+      generationConfig: { responseMimeType: "application/json" }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(getGeminiApiError(response.status));
+  }
+
+  const data = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+
+  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+  if (!text) {
+    throw new Error("Gemini suggestion returned empty JSON.");
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error("Gemini suggestion returned invalid JSON.");
+  }
+}
+
+function normalizeDomain(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "")
+    .trim();
+}
+
+export type SuggestedCompetitor = { name: string; domain: string };
+
+const competitorsResponseSchema = z.object({
+  competitors: z
+    .array(
+      z.object({
+        name: z.string(),
+        domain: z.string()
+      })
+    )
+    .default([])
+});
+
+/**
+ * Real Gemini-backed suggestion of direct competitors for a brand/domain.
+ * Returns deduplicated, schema-safe rows ready to persist in project_competitors.
+ * Never throws on partial/garbage items — it filters them out.
+ */
+export async function suggestCompetitors(input: {
+  brand: string;
+  domain: string;
+  country: string;
+  language: string;
+  limit?: number;
+}): Promise<SuggestedCompetitor[]> {
+  const limit = Math.min(Math.max(input.limit ?? 5, 1), 8);
+  const promptBlock = [
+    "You are a GEO market analyst. Identify the most relevant DIRECT competitors of the given brand.",
+    `Return ONLY valid JSON with this exact shape: { "competitors": [{ "name": string, "domain": string }] }.`,
+    `List up to ${limit} real, well-known direct competitors in the same category and market.`,
+    "Use the competitor's real root domain (no https://, no www., no path). Do not include the brand itself.",
+    "",
+    `Brand: ${input.brand}`,
+    `Brand domain: ${input.domain}`,
+    `Market/country: ${input.country}`,
+    `Language: ${input.language}`
+  ].join("\n");
+
+  const raw = await generateGeminiJson(promptBlock);
+  const parsed = competitorsResponseSchema.safeParse(raw);
+  if (!parsed.success) return [];
+
+  const ownDomain = normalizeDomain(input.domain);
+  const seen = new Set<string>();
+  const out: SuggestedCompetitor[] = [];
+
+  for (const item of parsed.data.competitors) {
+    const name = item.name.trim();
+    const domain = normalizeDomain(item.domain);
+    if (!name || name.length > 120) continue;
+    if (!domain || domain.length < 3 || domain.length > 255) continue;
+    if (!domain.includes(".")) continue;
+    if (domain === ownDomain) continue;
+    if (seen.has(domain)) continue;
+    seen.add(domain);
+    out.push({ name, domain });
+    if (out.length >= limit) break;
+  }
+
+  return out;
+}
+
+const promptsResponseSchema = z.object({
+  prompts: z.array(z.string()).default([])
+});
+
+/**
+ * Real Gemini-backed suggestion of high-intent prompts a user would ask an AI
+ * assistant where the brand could plausibly appear. Returns deduplicated,
+ * schema-safe prompt strings (10..300 chars) ready to persist in project_prompts.
+ */
+export async function suggestPrompts(input: {
+  brand: string;
+  domain: string;
+  country: string;
+  language: string;
+  limit?: number;
+}): Promise<string[]> {
+  const limit = Math.min(Math.max(input.limit ?? 10, 1), 15);
+  const promptBlock = [
+    "You are a GEO research analyst. Generate the most relevant questions real potential customers",
+    "would ask an AI assistant (ChatGPT, Gemini, Perplexity) where the given brand could appear in the answer.",
+    `Return ONLY valid JSON with this exact shape: { "prompts": [string] }.`,
+    `Produce exactly ${limit} distinct prompts. Mix informational, commercial and transactional intent.`,
+    `Write each prompt in the target language. Each prompt must be a natural question of 10 to 200 characters.`,
+    "Do NOT mention the brand name in the prompts; they must be brand-neutral discovery questions.",
+    "",
+    `Brand: ${input.brand}`,
+    `Brand domain: ${input.domain}`,
+    `Market/country: ${input.country}`,
+    `Target language: ${input.language}`
+  ].join("\n");
+
+  const raw = await generateGeminiJson(promptBlock);
+  const parsed = promptsResponseSchema.safeParse(raw);
+  if (!parsed.success) return [];
+
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const promptText of parsed.data.prompts) {
+    const text = promptText.trim();
+    if (text.length < 10 || text.length > 300) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(text);
+    if (out.length >= limit) break;
+  }
+
+  return out;
 }

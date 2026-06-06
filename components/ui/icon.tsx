@@ -21,6 +21,15 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
   };
 
   const icons: Record<string, ReactNode> = {
+    resonance: (
+      <>
+        <circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none" />
+        <path d="M7.6 8.4a6 6 0 0 0 0 7.2" />
+        <path d="M16.4 8.4a6 6 0 0 1 0 7.2" />
+        <path d="M4.9 5.8a9.6 9.6 0 0 0 0 12.4" opacity=".5" />
+        <path d="M19.1 5.8a9.6 9.6 0 0 1 0 12.4" opacity=".5" />
+      </>
+    ),
     overview: (
       <>
         <rect x="3" y="3" width="7.5" height="9" rx="1.5" />
@@ -59,8 +68,8 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
     refresh: <path d="M21 12a9 9 0 1 1-2.6-6.4M21 4v4h-4" />,
     bell: (
       <>
-        <path d="M18 9a6 6 0 0 0-12 0c0 6-2.5 7-2.5 7h17S18 15 18 9Z" />
-        <path d="M10 20a2 2 0 0 0 4 0" />
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </>
     ),
     globe: (
@@ -77,7 +86,33 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     arrRight: <path d="M5 12h14M13 6l6 6-6 6" />,
-    chevronLeft: <path d="m15 6-6 6 6 6" />
+    arrUp: <path d="M12 19V5M5 12l7-7 7 7" />,
+    arrDown: <path d="M12 5v14M5 12l7 7 7-7" />,
+    chevronLeft: <path d="m15 6-6 6 6 6" />,
+    chevronDown: <path d="m6 9 6 6 6-6" />,
+    sparkles: (
+      <>
+        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
+        <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z" />
+        <path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z" />
+      </>
+    ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v1M12 11v5" />
+      </>
+    ),
+    trendUp: <path d="M3 17l4-5 4 3 4-6 4 4" />,
+    bolt: <path d="M13 2L4.09 12.96A1 1 0 0 0 5 14.5h6.5L10 22l9.94-10.96A1 1 0 0 0 19 9.5H12.5z" />,
+    link: (
+      <>
+        <path d="M10 13a5 5 0 0 0 7.5.7l2-2a5 5 0 0 0-7-7l-1 1" />
+        <path d="M14 11a5 5 0 0 0-7.5-.7l-2 2a5 5 0 0 0 7 7l1-1" />
+      </>
+    ),
+    check: <path d="M20 6L9 17l-5-5" />,
+    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
