@@ -1282,3 +1282,50 @@ a {
   line-height: 1.65;
   color: var(--ink);
 }
+
+/* ============================================================
+   LUMIRA-6: Recommendations
+   ============================================================ */
+
+/* Two-column grid inside rec detail */
+.rec-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+@media (max-width: 680px) {
+  .rec-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* detail-block override for inner padding */
+.rec-detail-inner .detail-block {
+  display: flex;
+  flex-direction: column;
+}
+.rec-detail-inner .detail-block p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* Suggested action block */
+.rec-action-block {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.rec-action-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
