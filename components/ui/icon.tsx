@@ -86,7 +86,33 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     arrRight: <path d="M5 12h14M13 6l6 6-6 6" />,
-    chevronLeft: <path d="m15 6-6 6 6 6" />
+    arrUp: <path d="M12 19V5M5 12l7-7 7 7" />,
+    arrDown: <path d="M12 5v14M5 12l7 7 7-7" />,
+    chevronLeft: <path d="m15 6-6 6 6 6" />,
+    chevronDown: <path d="m6 9 6 6 6-6" />,
+    sparkles: (
+      <>
+        <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
+        <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z" />
+        <path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z" />
+      </>
+    ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v1M12 11v5" />
+      </>
+    ),
+    trendUp: <path d="M3 17l4-5 4 3 4-6 4 4" />,
+    bolt: <path d="M13 2L4.09 12.96A1 1 0 0 0 5 14.5h6.5L10 22l9.94-10.96A1 1 0 0 0 19 9.5H12.5z" />,
+    link: (
+      <>
+        <path d="M10 13a5 5 0 0 0 7.5.7l2-2a5 5 0 0 0-7-7l-1 1" />
+        <path d="M14 11a5 5 0 0 0-7.5-.7l-2 2a5 5 0 0 0 7 7l1-1" />
+      </>
+    ),
+    check: <path d="M20 6L9 17l-5-5" />,
+    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
