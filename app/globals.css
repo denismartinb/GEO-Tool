@@ -401,3 +401,48 @@ a {
     display: none;
   }
 }
+
+/* LUMIRA-7 */
+
+/* Botón SSO visual */
+.auth-sso-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: default; /* no funcional en beta */
+}
+
+/* Separador "o continúa con" */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--ink-4);
+  margin: 12px 0;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* Pie términos */
+.auth-terms {
+  font-size: 11px;
+  color: var(--ink-4);
+  text-align: center;
+  margin-top: 16px;
+  line-height: 1.5;
+}
