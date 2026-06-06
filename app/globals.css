@@ -1083,3 +1083,202 @@ a {
 
 /* mt8 utility used in design reference */
 .mt8 { margin-top: 8px; }
+
+/* ============================================================
+   LUMIRA-5: Prompts
+   ============================================================ */
+
+/* Drawer scrim */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 41, 0.42);
+  z-index: 300;
+  opacity: 0;
+  animation: scrimIn 0.2s ease forwards;
+}
+@keyframes scrimIn { to { opacity: 1; } }
+
+/* Drawer panel */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(760px, 94vw);
+  background: var(--canvas);
+  z-index: 301;
+  box-shadow: -16px 0 50px rgba(15, 23, 41, 0.22);
+  display: flex;
+  flex-direction: column;
+  animation: drawerIn 0.26s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes drawerIn {
+  from { transform: translateX(40px); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Drawer head */
+.drawer-head {
+  flex: 0 0 auto;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.drawer-head .t {
+  font-size: 14px;
+  font-weight: 750;
+}
+
+/* Drawer body */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px 22px 40px;
+}
+
+/* Prompt box */
+.prompt-box {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.prompt-box .qico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.prompt-box .q {
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.prompt-box-meta {
+  font-size: 11.5px;
+  color: var(--ink-4);
+  margin-top: 5px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Drawer tabs */
+.drawer-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 18px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+.drawer-tabs button {
+  background: none;
+  border: none;
+  padding: 9px 4px;
+  margin-right: 18px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink-3);
+  position: relative;
+  cursor: pointer;
+  font-family: inherit;
+}
+.drawer-tabs button.on {
+  color: var(--accent);
+}
+.drawer-tabs button.on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* Aside cards inside drawer */
+.aside-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 15px;
+}
+.aside-card .ac-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 11px;
+}
+
+/* Brand presence row inside drawer */
+.brand-presence {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+.brand-presence:last-child { margin-bottom: 0; }
+.brand-presence .nm {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Source items inside drawer */
+.src-item {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.src-item:first-of-type { border-top: none; }
+.src-item .si-ico {
+  color: var(--ink-4);
+  margin-top: 1px;
+  flex: 0 0 auto;
+}
+.src-item .si-url {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* AI response full text panel */
+.resp-full {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+}
+.resp-full .eng-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.resp-full .body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink);
+}
