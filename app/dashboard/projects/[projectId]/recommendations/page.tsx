@@ -110,6 +110,23 @@ export default async function RecommendationsPage({
               Último escaneo: {lastScanDate}
             </span>
           )}
+          <button
+            type="button"
+            style={{
+              padding: "7px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              border: "1.5px solid var(--line)",
+              borderRadius: 8,
+              background: "var(--surface)",
+              color: "var(--ink-2)",
+              cursor: "default",
+            }}
+            disabled
+            aria-disabled="true"
+          >
+            Exportar plan
+          </button>
           <Link
             href={`/dashboard/projects/${projectId}`}
             className="btn btn-ghost btn-sm"

@@ -1398,3 +1398,42 @@ a {
   place-items: center;
   flex: 0 0 auto;
 }
+
+/* ============================================================
+   LUMIRA-10: Recommendations — expanded layout
+   ============================================================ */
+
+.rec-evidence-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+@media (max-width: 700px) {
+  .rec-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.rec-evidence-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rec-evidence-col-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-4);
+  margin-bottom: 4px;
+}
+.rec-snippet {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  font-style: italic;
+  padding: 8px 10px 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: #f5f6ff;
+  border-radius: 0 6px 6px 0;
+}

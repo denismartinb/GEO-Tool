@@ -11,6 +11,7 @@ type EvidenceJson = {
   evidence_snippets?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
+  action_suggested?: string;
 };
 
 export type Recommendation = {
@@ -27,7 +28,7 @@ export type Recommendation = {
   evidence_json: EvidenceJson | null;
 };
 
-type FilterMode = "all" | "high" | "quick";
+type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority";
 
 function impactToN(val: string): number {
   if (val === "high") return 5;
@@ -59,6 +60,7 @@ function RecCard({ rec }: { rec: Recommendation }) {
   const snippets = ev.evidence_snippets ?? [];
   const competitors = ev.mentioned_competitors ?? [];
   const domains = ev.citation_domains ?? [];
+  const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
   const rankCls = rankClass(rec.priority_rank);
 
@@ -175,140 +177,95 @@ function RecCard({ rec }: { rec: Recommendation }) {
       {/* Expandable detail */}
       <div className="rec-detail">
         <div className="rec-detail-inner">
-          {/* Two-column grid: why + evidence */}
-          <div className="rec-detail-grid">
-            {/* Why this matters */}
-            <div className="detail-block">
-              <div className="db-label">Por qué importa</div>
+          {/* Two-column evidence grid */}
+          <div className="rec-evidence-grid">
+            {/* Columna izquierda — Por qué importa */}
+            <div className="rec-evidence-col">
+              <div className="rec-evidence-col-label">Por qué importa</div>
               {ev.why_this_matters ? (
-                <p>{ev.why_this_matters}</p>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+                  {ev.why_this_matters}
+                </p>
               ) : (
-                <p style={{ color: "var(--ink-4)", fontStyle: "italic" }}>
+                <p style={{ fontSize: 13, color: "var(--ink-4)", fontStyle: "italic", margin: 0 }}>
                   Sin datos de razonamiento disponibles.
                 </p>
               )}
               {affectedPrompts.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 7,
-                    marginTop: 12,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <span className="badge badge-neutral">
-                    <Icon name="prompts" size={11} />
-                    {affectedPrompts.length} prompt
-                    {affectedPrompts.length !== 1 ? "s" : ""} afectado
-                    {affectedPrompts.length !== 1 ? "s" : ""}
-                  </span>
+                <div>
+                  <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
+                    {affectedPrompts.length} prompt{affectedPrompts.length !== 1 ? "s" : ""} afectado{affectedPrompts.length !== 1 ? "s" : ""}
+                  </div>
+                  <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0 }}>
+                    {affectedPrompts.slice(0, 4).map((p, i) => (
+                      <li key={i}>{p}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
-              {affectedPrompts.length > 0 && (
-                <ul
-                  style={{
-                    margin: "10px 0 0",
-                    paddingLeft: 0,
-                    listStyle: "none",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 4,
-                  }}
-                >
-                  {affectedPrompts.slice(0, 4).map((p) => (
-                    <li
-                      key={p}
-                      style={{
-                        fontSize: 12,
-                        color: "var(--ink-2)",
-                        display: "flex",
-                        gap: 6,
-                        alignItems: "flex-start",
-                      }}
-                    >
-                      <span style={{ color: "var(--ink-4)", flexShrink: 0 }}>
-                        ·
-                      </span>
-                      {p}
-                    </li>
-                  ))}
-                </ul>
+              {assumptions.length > 0 && (
+                <p style={{ fontSize: 11.5, color: "var(--ink-4)", lineHeight: 1.5, margin: 0 }}>
+                  <span style={{ fontWeight: 600 }}>Supuestos: </span>
+                  {assumptions.join(" ")}
+                </p>
               )}
             </div>
 
-            {/* Evidence */}
-            <div className="detail-block">
-              <div className="db-label">Evidencia</div>
+            {/* Columna derecha — Evidencia */}
+            <div className="rec-evidence-col">
+              <div className="rec-evidence-col-label">Evidencia</div>
               {snippets.length > 0 ? (
-                <div className="evidence">
-                  {snippets.slice(0, 2).map((s) => (
-                    <div key={s} className="ev-quote" style={{ marginBottom: 8 }}>
-                      &ldquo;{s}&rdquo;
-                    </div>
-                  ))}
-                </div>
+                snippets.slice(0, 3).map((snippet, i) => (
+                  <div key={i} className="rec-snippet">&ldquo;{snippet}&rdquo;</div>
+                ))
               ) : (
-                <p style={{ color: "var(--ink-4)", fontStyle: "italic" }}>
+                <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>
                   Sin fragmentos de evidencia disponibles.
                 </p>
               )}
-              {domains.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    marginTop: 10,
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <Icon
-                    name="link"
-                    size={12}
-                    className=""
-                  />
-                  {domains.slice(0, 4).map((d) => (
-                    <span
-                      key={d}
-                      className="badge badge-outline"
-                      style={{ fontFamily: "var(--mono)", fontSize: 10 }}
-                    >
-                      {d}
-                    </span>
-                  ))}
-                </div>
-              )}
               {competitors.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "var(--ink-4)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    Competidores:{" "}
-                  </span>
-                  <span style={{ fontSize: 12, color: "var(--ink-2)" }}>
-                    {competitors.join(", ")}
-                  </span>
-                </div>
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  <span style={{ fontWeight: 600 }}>Competidores: </span>
+                  {competitors.join(", ")}
+                </p>
+              )}
+              {domains.length > 0 && (
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  <span style={{ fontWeight: 600 }}>Dominios: </span>
+                  {domains.join(", ")}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Suggested action */}
-          <div className="detail-block">
-            <div className="db-label">Acción sugerida</div>
-            <div className="rec-action-block">
-              <div className="rec-action-ico">
-                <Icon name="target" size={16} />
+          {/* Acción sugerida — solo si existe en evidence_json */}
+          {ev.action_suggested && (
+            <div
+              style={{
+                marginTop: 4,
+                padding: "12px 16px",
+                background: "var(--surface-sunk)",
+                borderRadius: 10,
+                border: "1.5px solid var(--line)",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  color: "var(--ink-4)",
+                  marginBottom: 6,
+                }}
+              >
+                Acción sugerida
               </div>
-              <p style={{ flex: 1, margin: 0 }}>{rec.description}</p>
+              <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: 0 }}>
+                {ev.action_suggested}
+              </p>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
@@ -322,24 +279,35 @@ export function RecommendationsClient({
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
+  // Detect which type filters have data
+  const hasContent = recommendations.some((r) => r.recommendation_type === "content");
+  const hasTechnical = recommendations.some((r) => r.recommendation_type === "technical");
+  const hasAuthority = recommendations.some((r) => r.recommendation_type === "authority");
+
   const filtered = recommendations.filter((r) => {
     if (filter === "high") return r.priority_rank <= 3;
     if (filter === "quick") return isQuickWin(r);
+    if (filter === "content") return r.recommendation_type === "content";
+    if (filter === "technical") return r.recommendation_type === "technical";
+    if (filter === "authority") return r.recommendation_type === "authority";
     return true;
   });
+
+  const tabs: [FilterMode, string][] = [
+    ["all", "Todas"],
+    ["high", "Alta prioridad"],
+    ["quick", "Victorias rápidas"],
+    ...(hasContent ? [["content", "Contenido"] as [FilterMode, string]] : []),
+    ...(hasTechnical ? [["technical", "Técnico"] as [FilterMode, string]] : []),
+    ...(hasAuthority ? [["authority", "Autoridad"] as [FilterMode, string]] : []),
+  ];
 
   return (
     <>
       {/* Filters */}
       <div className="filters">
         <div className="seg">
-          {(
-            [
-              ["all", "Todas"],
-              ["high", "Alta prioridad"],
-              ["quick", "Victorias rápidas"],
-            ] as [FilterMode, string][]
-          ).map(([key, label]) => (
+          {tabs.map(([key, label]) => (
             <button
               key={key}
               className={filter === key ? "on" : ""}
