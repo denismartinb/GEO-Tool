@@ -1,3 +1,4 @@
+import React from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
@@ -336,8 +337,8 @@ export default async function RunsPage({
                   const delta = hasMultipleCompleted ? (scoreDeltas.get(run.id) ?? null) : null;
 
                   return (
-                    <>
-                      <tr key={run.id}>
+                    <React.Fragment key={run.id}>
+                      <tr>
                         {/* # */}
                         <td
                           className="num"
@@ -435,7 +436,7 @@ export default async function RunsPage({
                           </td>
                         </tr>
                       ) : null}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </tbody>
