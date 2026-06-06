@@ -1,257 +1,275 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Icon } from "@/components/ui/icon";
 import { Stepper } from "@/components/stepper";
+import type { ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 
-const steps = [
-  {
-    label: "Dominio",
-    description: "Marca, mercado e idioma"
-  },
-  {
-    label: "Competidores",
-    description: "Rivales a vigilar"
-  },
-  {
-    label: "Prompts",
-    description: "Preguntas iniciales"
-  }
+const COUNTRIES: Array<{ code: string; name: string }> = [
+  { code: "ES", name: "España" },
+  { code: "MX", name: "México" },
+  { code: "AR", name: "Argentina" },
+  { code: "CO", name: "Colombia" },
+  { code: "US", name: "Estados Unidos" },
+  { code: "UK", name: "Reino Unido" },
+  { code: "DE", name: "Alemania" },
+  { code: "FR", name: "Francia" },
+  { code: "IT", name: "Italia" },
+  { code: "PT", name: "Portugal" },
+  { code: "BR", name: "Brasil" }
 ];
 
-const emptyCompetitorRows = ["", "", ""];
-const emptyPromptRows = ["", "", "", "", ""];
+const steps = [
+  { label: "Dominio", description: "Dominio y mercado" },
+  { label: "Competidores", description: "Sugeridos, editables" },
+  { label: "Prompts", description: "Sugeridos, editables" }
+];
+
+type Competitor = { name: string; domain: string };
 
 function isValidDomain(value: string) {
-  const domain = value.trim().toLowerCase();
+  const domain = value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
 
   return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain);
 }
 
-function joinRows(rows: string[]) {
-  return rows
-    .map((row) => row.trim())
-    .filter(Boolean)
-    .join("\n");
-}
+type OnboardingWizardProps = {
+  errorMessage: string | null;
+  suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
+  createAction: (formData: FormData) => void | Promise<void>;
+};
 
-export function OnboardingWizard({ errorMessage }: { errorMessage: string | null }) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [name, setName] = useState("");
+export function OnboardingWizard({ errorMessage, suggestAction, createAction }: OnboardingWizardProps) {
+  const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
-  const [brand, setBrand] = useState("");
-  const [businessDescription, setBusinessDescription] = useState("");
   const [country, setCountry] = useState("ES");
   const [language, setLanguage] = useState("es");
-  const [competitorRows, setCompetitorRows] = useState(emptyCompetitorRows);
-  const [promptRows, setPromptRows] = useState(emptyPromptRows);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [prompts, setPrompts] = useState<string[]>([]);
+  const [suggestError, setSuggestError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
   const domainHasValue = domain.trim().length > 0;
   const domainIsValid = isValidDomain(domain);
-  const canContinueDomain =
-    name.trim().length > 0 && domainIsValid && brand.trim().length > 0 && country.trim().length > 0 && language.trim().length > 0;
-  const competitorsText = useMemo(() => joinRows(competitorRows), [competitorRows]);
-  const promptsText = useMemo(() => joinRows(promptRows), [promptRows]);
-  const competitorCount = competitorRows.filter((row) => row.trim()).length;
-  const promptCount = promptRows.filter((row) => row.trim()).length;
 
-  function updateCompetitorRow(index: number, value: string) {
-    setCompetitorRows((rows) => rows.map((row, rowIndex) => (rowIndex === index ? value : row)));
+  const competitorsText = useMemo(
+    () =>
+      competitors
+        .map((c) => `${c.name.trim()}|${c.domain.trim()}`)
+        .filter((line) => line.length > 1 && !line.startsWith("|") && !line.endsWith("|"))
+        .join("\n"),
+    [competitors]
+  );
+  const promptsText = useMemo(() => prompts.map((p) => p.trim()).filter(Boolean).join("\n"), [prompts]);
+  const validCompetitorCount = competitorsText ? competitorsText.split("\n").length : 0;
+  const validPromptCount = promptsText ? promptsText.split("\n").length : 0;
+
+  function generateSuggestions() {
+    setSuggestError(null);
+    startTransition(async () => {
+      const result = await suggestAction({ domain, country });
+      if (!result.ok) {
+        setSuggestError(
+          "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
+        );
+        setCompetitors([{ name: "", domain: "" }]);
+        setPrompts([""]);
+        setLanguage((current) => result.language || current);
+        setStep(1);
+        return;
+      }
+      setLanguage(result.language || language);
+      setCompetitors(result.competitors.length ? result.competitors : [{ name: "", domain: "" }]);
+      setPrompts(result.prompts.length ? result.prompts : [""]);
+      setStep(1);
+    });
   }
 
-  function updatePromptRow(index: number, value: string) {
-    setPromptRows((rows) => rows.map((row, rowIndex) => (rowIndex === index ? value : row)));
+  function updateCompetitor(index: number, patch: Partial<Competitor>) {
+    setCompetitors((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
-
-  function removeCompetitorRow(index: number) {
-    setCompetitorRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
-  }
-
-  function removePromptRow(index: number) {
-    setPromptRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index));
+  function updatePrompt(index: number, value: string) {
+    setPrompts((rows) => rows.map((row, i) => (i === index ? value : row)));
   }
 
   return (
     <Card className="overflow-hidden">
       <CardHeader className="space-y-4">
         <div>
-          <h2 className="font-medium">Configura tu primer espacio de visibilidad</h2>
+          <h2 className="text-lg font-semibold">Configura tu espacio de visibilidad</h2>
           <p className="sub mt-1">
-            Te guiamos en tres pasos. No se lanzará ningún escaneo ni llamada a Gemini hasta que lo ejecutes manualmente.
+            Indica tu dominio y mercado. Sugerimos competidores y prompts con Gemini; revísalos y edítalos antes de
+            lanzar el primer escaneo.
           </p>
         </div>
-        <Stepper currentStep={currentStep} steps={steps} />
+        <Stepper currentStep={step} steps={steps} />
       </CardHeader>
       <CardContent className="space-y-5">
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
 
-        <section className={currentStep === 0 ? "space-y-4" : "hidden"} aria-labelledby="step-domain-title">
-          <div className="rounded-[16px] border border-[#e8eaef] bg-[#fbfbfd] p-4">
-            <p className="kicker">Paso 1</p>
-            <h3 id="step-domain-title" className="mt-1 text-lg font-semibold">
-              Dominio y contexto del proyecto
-            </h3>
-            <p className="sub mt-1">
-              Define la marca, el dominio y el mercado que quieres medir. Esta base se usará para prompts, escaneos y reporting.
-            </p>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="name">Nombre del proyecto</Label>
-              <Input id="name" name="name" value={name} onChange={(event) => setName(event.target.value)} required />
-            </div>
-            <div>
-              <Label htmlFor="brand">Marca</Label>
-              <Input id="brand" name="brand" value={brand} onChange={(event) => setBrand(event.target.value)} required />
-            </div>
-          </div>
-
+        {/* Step 1 — domain + country */}
+        <section className={step === 0 ? "space-y-4" : "hidden"}>
           <div>
             <Label htmlFor="domain">Dominio</Label>
             <Input
               id="domain"
               name="domain"
-              placeholder="example.com"
+              placeholder="ejemplo.com"
               value={domain}
               onChange={(event) => setDomain(event.target.value)}
-              required
+              autoFocus
               aria-describedby="domain-help"
             />
             <p id="domain-help" className="sub mt-1">
-              Escribe solo el dominio, sin https:// ni rutas. Ejemplo: geostudio.ai
+              Escribe solo el dominio, sin https:// ni rutas. Ejemplo: lumira.ai
             </p>
-            {domainHasValue && !domainIsValid ? <p className="feedback error mt-2">Introduce un dominio válido, por ejemplo example.com.</p> : null}
+            {domainHasValue && !domainIsValid ? (
+              <p className="feedback error mt-2">Introduce un dominio válido, por ejemplo ejemplo.com.</p>
+            ) : null}
           </div>
 
           <div>
-            <Label htmlFor="business_description">Describe brevemente tu negocio o categoría</Label>
-            <Textarea
-              id="business_description"
-              name="business_description"
-              placeholder="Ej. Plataforma SaaS para medir visibilidad de marca en motores de IA"
-              rows={3}
-              value={businessDescription}
-              onChange={(event) => setBusinessDescription(event.target.value)}
-            />
+            <Label htmlFor="country">País / mercado</Label>
+            <select
+              id="country"
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
+              className="mt-1 w-full rounded-[10px] border border-[var(--line)] bg-white px-3 py-2 text-sm text-[var(--ink)]"
+            >
+              {COUNTRIES.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="country">País</Label>
-              <Input id="country" name="country" placeholder="ES" value={country} onChange={(event) => setCountry(event.target.value)} required />
-            </div>
-            <div>
-              <Label htmlFor="language">Idioma</Label>
-              <Input id="language" name="language" placeholder="es" value={language} onChange={(event) => setLanguage(event.target.value)} required />
-            </div>
+          {suggestError ? <p className="feedback error">{suggestError}</p> : null}
+
+          <div className="flex items-center justify-end border-t border-[var(--line-soft)] pt-4">
+            <Button type="button" onClick={generateSuggestions} disabled={!domainIsValid || isPending} className="inline-flex items-center gap-2">
+              {isPending ? "Generando sugerencias…" : "Generar sugerencias"}
+              {!isPending ? <Icon name="arrRight" size={16} /> : null}
+            </Button>
           </div>
         </section>
 
-        <section className={currentStep === 1 ? "space-y-4" : "hidden"} aria-labelledby="step-competitors-title">
-          <div className="rounded-[16px] border border-[#e8eaef] bg-[#fbfbfd] p-4">
-            <p className="kicker">Paso 2</p>
-            <h3 id="step-competitors-title" className="mt-1 text-lg font-semibold">
-              Competidores iniciales
-            </h3>
-            <p className="sub mt-1">
-              Añade rivales que quieras vigilar desde el primer escaneo. Usa el formato Nombre | dominio.com; ambos datos son necesarios.
+        {/* Step 2 — competitors (editable) */}
+        <section className={step === 1 ? "space-y-4" : "hidden"}>
+          <div className="rounded-[14px] border border-[var(--accent-soft-2)] bg-[var(--accent-soft)] p-4">
+            <h4 className="text-sm font-semibold text-[var(--accent-ink)]">Competidores sugeridos</h4>
+            <p className="mt-1 text-sm text-[var(--ink-2)]">
+              Sugeridos por Gemini para {domain || "tu dominio"}. Edítalos, elimínalos o añade los tuyos.
             </p>
           </div>
 
           <div className="space-y-2">
-            {competitorRows.map((row, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+            {competitors.map((row, index) => (
+              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <Input
-                  aria-label={`Competidor ${index + 1}`}
-                  placeholder="Nombre | dominio.com"
-                  value={row}
-                  onChange={(event) => updateCompetitorRow(index, event.target.value)}
+                  aria-label={`Nombre competidor ${index + 1}`}
+                  placeholder="Nombre"
+                  value={row.name}
+                  onChange={(event) => updateCompetitor(index, { name: event.target.value })}
                 />
-                <Button type="button" variant="outline" onClick={() => removeCompetitorRow(index)} disabled={competitorRows.length === 1}>
+                <Input
+                  aria-label={`Dominio competidor ${index + 1}`}
+                  placeholder="dominio.com"
+                  value={row.domain}
+                  onChange={(event) => updateCompetitor(index, { domain: event.target.value })}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
+                >
                   Quitar
                 </Button>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e8eaef] bg-white p-3">
-            <p className="sub">
-              {competitorCount} competidor{competitorCount === 1 ? "" : "es"} preparado{competitorCount === 1 ? "" : "s"} para guardar.
-            </p>
-            <Button type="button" variant="outline" onClick={() => setCompetitorRows((rows) => [...rows, ""])}>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
+            <p className="sub">{validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} listo{validCompetitorCount === 1 ? "" : "s"}.</p>
+            <Button type="button" variant="outline" onClick={() => setCompetitors((rows) => [...rows, { name: "", domain: "" }])}>
               Añadir competidor
             </Button>
           </div>
+
+          <div className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">
+            <Button type="button" variant="outline" onClick={() => setStep(0)}>
+              Atrás
+            </Button>
+            <Button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2">
+              Continuar a prompts
+              <Icon name="arrRight" size={16} />
+            </Button>
+          </div>
         </section>
 
-        <section className={currentStep === 2 ? "space-y-4" : "hidden"} aria-labelledby="step-prompts-title">
-          <div className="rounded-[16px] border border-[#e8eaef] bg-[#fbfbfd] p-4">
-            <p className="kicker">Paso 3</p>
-            <h3 id="step-prompts-title" className="mt-1 text-lg font-semibold">
-              Prompts iniciales
-            </h3>
-            <p className="sub mt-1">
-              Prepara preguntas que una persona real haría a Gemini sobre tu categoría. Podrás editarlas antes de lanzar el primer escaneo.
-            </p>
-          </div>
-
+        {/* Step 3 — prompts (editable) + submit */}
+        <section className={step === 2 ? "space-y-4" : "hidden"}>
           <div className="rounded-[14px] border border-[var(--accent-soft-2)] bg-[var(--accent-soft)] p-4">
-            <h4 className="text-sm font-semibold text-[var(--accent-ink)]">¿Qué es un prompt?</h4>
+            <h4 className="text-sm font-semibold text-[var(--accent-ink)]">Prompts sugeridos</h4>
             <p className="mt-1 text-sm text-[var(--ink-2)]">
-              Es una pregunta o instrucción que enviaremos al motor de IA para observar si menciona tu marca, competidores y fuentes citadas.
+              Preguntas que enviaremos a Gemini para medir tu visibilidad. Edítalas o añade las tuyas (máx. 10).
             </p>
           </div>
 
           <div className="space-y-2">
-            {promptRows.map((row, index) => (
+            {prompts.map((row, index) => (
               <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <Textarea
                   aria-label={`Prompt ${index + 1}`}
-                  placeholder="Ej. ¿Cuáles son las mejores herramientas para medir visibilidad en IA?"
                   rows={2}
+                  placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
                   value={row}
-                  onChange={(event) => updatePromptRow(index, event.target.value)}
+                  onChange={(event) => updatePrompt(index, event.target.value)}
                 />
-                <Button type="button" variant="outline" onClick={() => removePromptRow(index)} disabled={promptRows.length === 1}>
+                <Button type="button" variant="outline" onClick={() => setPrompts((rows) => rows.filter((_, i) => i !== index))}>
                   Quitar
                 </Button>
               </div>
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#e8eaef] bg-white p-3">
-            <p className="sub">
-              {promptCount} prompt{promptCount === 1 ? "" : "s"} creado{promptCount === 1 ? "" : "s"}. Máximo recomendado para beta: 10.
-            </p>
-            <Button type="button" variant="outline" onClick={() => setPromptRows((rows) => [...rows, ""])}>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
+            <p className="sub">{validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} listo{validPromptCount === 1 ? "" : "s"}.</p>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, ""]))}
+              disabled={prompts.length >= 10}
+            >
               Añadir prompt
             </Button>
           </div>
-        </section>
 
-        <textarea id="initial_competitors" name="initial_competitors" value={competitorsText} readOnly className="hidden" />
-        <textarea id="initial_prompts" name="initial_prompts" value={promptsText} readOnly className="hidden" />
-
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#eef0f4] pt-4">
-          <p className="sub">Mantén el setup simple: dominio, rivales y preguntas iniciales. El escaneo se lanza después.</p>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" onClick={() => setCurrentStep((step) => Math.max(step - 1, 0))} disabled={currentStep === 0}>
+          <form action={createAction} className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">
+            <input type="hidden" name="domain" value={domain} />
+            <input type="hidden" name="country" value={country} />
+            <input type="hidden" name="language" value={language} />
+            <input type="hidden" name="initial_competitors" value={competitorsText} />
+            <input type="hidden" name="initial_prompts" value={promptsText} />
+            <Button type="button" variant="outline" onClick={() => setStep(1)}>
               Atrás
             </Button>
-            {currentStep < 2 ? (
-              <Button type="button" onClick={() => setCurrentStep((step) => Math.min(step + 1, 2))} disabled={currentStep === 0 && !canContinueDomain}>
-                Continuar
-              </Button>
-            ) : (
-              <Button type="submit">Crear proyecto</Button>
-            )}
-          </div>
-        </div>
+            <Button type="submit" disabled={validPromptCount === 0} className="inline-flex items-center gap-2">
+              Crear dominio y escanear
+              <Icon name="arrRight" size={16} />
+            </Button>
+          </form>
+        </section>
       </CardContent>
     </Card>
   );

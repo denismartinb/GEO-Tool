@@ -1,22 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
-import {
-  createCompetitor,
-  createPrompt,
-  deactivateCompetitor,
-  deactivatePrompt,
-  runProjectScan,
-  updateCompetitor,
-  updatePrompt
-} from "./actions";
+import { EmptyState } from "@/components/empty-state";
+import { Gauge } from "@/components/ui/gauge";
+import { Sparkline } from "@/components/ui/sparkline";
+import { Delta } from "@/components/ui/delta";
+import { DotMeter } from "@/components/ui/dot-meter";
+import { runProjectScan } from "./actions";
+
+/* ---- constants & helpers ---- */
+
+const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
 
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
@@ -40,11 +36,18 @@ const sentimentLabels: Record<string, string> = {
   unknown: "desconocido"
 };
 
+const priorityLabels: Record<string, string> = {
+  high: "alta",
+  med: "media",
+  low: "baja"
+};
+
 const feedbackErrorMessages: Record<string, string> = {
   active_run_exists: "Ya hay un escaneo en curso o pendiente para este proyecto.",
   project_archived: "Este proyecto está archivado. Reactívalo antes de lanzar un escaneo.",
   project_not_found: "No hemos encontrado el proyecto solicitado.",
-  project_setup_partial: "El proyecto se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
+  project_setup_partial:
+    "El proyecto se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
   prompts_required: "Añade al menos un prompt activo antes de escanear.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
@@ -59,40 +62,39 @@ const feedbackSuccessMessages: Record<string, string> = {
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno."
 };
 
-function getScoreNumber(value: number | string | null | undefined) {
-  return Number(value ?? 0);
+function n(v: unknown): number {
+  return Number(v ?? 0);
 }
 
-function getRiskLabel(score: number) {
-  if (score >= 70) return "Presión competitiva alta";
-  if (score >= 40) return "Presión competitiva moderada";
-  return "Presión competitiva baja";
+function confidenceToPercent(c: string): number {
+  return c === "high" ? 90 : c === "medium" ? 70 : 40;
 }
 
-function getSummaryText({
-  brand,
-  total,
-  brandMentions,
-  competitorRisk,
-  confidence
-}: {
-  brand: string;
-  total: number;
-  brandMentions: number;
-  competitorRisk: number;
-  confidence: string;
-}) {
-  const riskText = competitorRisk >= 70
-    ? "la presión competitiva es alta"
-    : competitorRisk >= 40
-      ? "existe una presión competitiva moderada"
-      : "la presión competitiva es baja";
-  const confidenceText = confidence === "low" || total < 3
-    ? " Trata este resultado como direccional por el bajo volumen o calidad de la muestra."
-    : "";
-
-  return `${brand} aparece en ${brandMentions} de ${total} prompts analizados y ${riskText}.${confidenceText}`;
+function getBandLabel(score: number): string {
+  if (score >= 70) return "Franja «competitivo»";
+  if (score >= 40) return "Franja «emergente»";
+  return "Franja «inicial»";
 }
+
+function getBandTone(score: number): string {
+  if (score >= 70) return "pos";
+  if (score >= 40) return "accent";
+  return "warn";
+}
+
+type ExtractedJsonPartial = {
+  competitors?: Array<{ name?: string; mentioned?: boolean }>;
+  citations?: Array<{ url?: string | null; domain?: string | null }>;
+  brand?: { mentioned?: boolean; evidence?: string[] };
+  summary?: string;
+};
+
+function parseExt(raw: unknown): ExtractedJsonPartial {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as ExtractedJsonPartial;
+}
+
+/* ---- page ---- */
 
 export default async function ProjectDetailPage({
   params,
@@ -135,15 +137,22 @@ export default async function ProjectDetailPage({
   ]);
 
   const latestRun = runs?.[0];
-  const latestCompletedRun = runs?.find((run) => run.status === "completed");
-  const completedRunsCount = runs?.filter((run) => run.status === "completed").length ?? 0;
+  const latestCompletedRun = runs?.find((r) => r.status === "completed");
+  const completedRunsCount = runs?.filter((r) => r.status === "completed").length ?? 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
-  const activeRun = runs?.find((run) => run.status === "pending" || run.status === "running");
+  const activeRun = runs?.find((r) => r.status === "pending" || r.status === "running");
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
   const successMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
-  const [{ data: latestScore }, { data: promptInsights }, { data: latestRecommendations }] = latestCompletedRun
+
+  /* ---- queries that require a completed run ---- */
+  const [
+    { data: latestScore },
+    { data: allPromptResults },
+    { data: latestRecommendations },
+    { data: trendHistory }
+  ] = latestCompletedRun
     ? await Promise.all([
         supabase
           .from("run_scores")
@@ -153,468 +162,814 @@ export default async function ProjectDetailPage({
           .maybeSingle(),
         supabase
           .from("scan_prompt_results")
-          .select("id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, sentiment, raw_response_text, extracted_json")
+          .select("brand_mentioned, citation_found, sentiment, extracted_json")
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
-          .eq("status", "completed")
-          .order("created_at", { ascending: true })
-          .limit(5),
+          .eq("status", "completed"),
         supabase
           .from("recommendations")
-          .select("id, priority_rank, title, impact, effort, confidence, evidence_json")
+          .select("id, priority_rank, title, impact, effort, confidence, category, evidence_json")
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
           .eq("status", "active")
           .order("priority_rank", { ascending: true })
-          .limit(3)
+          .limit(3),
+        supabase
+          .from("run_scores")
+          .select("visibility_score, citation_score, competitor_gap_score, created_at")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: true })
+          .limit(7)
       ])
-    : [{ data: null }, { data: null }, { data: null }];
+    : [{ data: null }, { data: null }, { data: null }, { data: null }];
 
-  const scoreDetails = latestScore?.details_json && typeof latestScore.details_json === "object"
-    ? (latestScore.details_json as { total_results?: number; brand_mentioned_count?: number })
-    : {};
-  const totalResults = Number(scoreDetails.total_results ?? latestCompletedRun?.successful_prompts ?? 0);
-  const brandMentions = Number(scoreDetails.brand_mentioned_count ?? promptInsights?.filter((result) => result.brand_mentioned).length ?? 0);
-  const visibilityScore = getScoreNumber(latestScore?.visibility_score);
-  const citationScore = getScoreNumber(latestScore?.citation_score);
-  const competitorRiskScore = getScoreNumber(latestScore?.competitor_gap_score);
+  /* ---- derived values ---- */
+  const scoreDetails =
+    latestScore?.details_json && typeof latestScore.details_json === "object"
+      ? (latestScore.details_json as { total_results?: number; brand_mentioned_count?: number })
+      : {};
+  const totalResults = n(scoreDetails.total_results ?? latestCompletedRun?.successful_prompts);
+  const brandMentions = n(
+    scoreDetails.brand_mentioned_count ??
+      allPromptResults?.filter((r) => r.brand_mentioned).length
+  );
+  const visibilityScore = n(latestScore?.visibility_score);
+  const citationScore = n(latestScore?.citation_score);
+  const competitorRiskScore = n(latestScore?.competitor_gap_score);
   const runConfidence = latestScore?.confidence ?? "low";
 
+  const computedMentionRate = allPromptResults?.length
+    ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
+    : Math.round((totalResults > 0 ? (brandMentions / totalResults) * 100 : visibilityScore));
+
+  const computedCitationRate = allPromptResults?.length
+    ? Math.round((allPromptResults.filter((r) => r.citation_found).length / allPromptResults.length) * 100)
+    : citationScore;
+
+  /* ---- trend sparklines ---- */
+  const visTrend = (trendHistory ?? []).map((r) => n(r.visibility_score));
+  const citTrend = (trendHistory ?? []).map((r) => n(r.citation_score));
+  const gapTrend = (trendHistory ?? []).map((r) => n(r.competitor_gap_score));
+  const confTrend = (trendHistory ?? []).map(() => confidenceToPercent(runConfidence));
+
+  const prevScore = trendHistory && trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
+  const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
+  const citDelta = prevScore ? computedCitationRate - n(prevScore.citation_score) : 0;
+  const gapDelta = prevScore ? competitorRiskScore - n(prevScore.competitor_gap_score) : 0;
+
+  /* ---- competitor breakdown from extracted_json ---- */
+  const competitorMentionCounts: Record<string, number> = {};
+  const citedUrlCounts: Record<string, { display: string; domain: string; count: number }> = {};
+
+  for (const result of allPromptResults ?? []) {
+    const ext = parseExt(result.extracted_json);
+
+    for (const comp of ext.competitors ?? []) {
+      if (comp.name && comp.mentioned) {
+        const key = comp.name.toLowerCase().trim();
+        competitorMentionCounts[key] = (competitorMentionCounts[key] ?? 0) + 1;
+      }
+    }
+    for (const cit of ext.citations ?? []) {
+      const url = cit.url?.trim() || cit.domain?.trim();
+      if (!url) continue;
+      const domain = cit.domain?.trim() || url.replace(/^https?:\/\//, "").split("/")[0];
+      if (!citedUrlCounts[url]) citedUrlCounts[url] = { display: url, domain, count: 0 };
+      citedUrlCounts[url].count++;
+    }
+  }
+
+  const totalForSov =
+    brandMentions +
+    (competitors ?? []).reduce((sum, c) => sum + (competitorMentionCounts[c.name.toLowerCase().trim()] ?? 0), 0);
+
+  const competitorRows = (competitors ?? []).map((comp, i) => {
+    const key = comp.name.toLowerCase().trim();
+    const mentionCount = competitorMentionCounts[key] ?? 0;
+    const mentionRate = allPromptResults?.length
+      ? Math.round((mentionCount / allPromptResults.length) * 100)
+      : 0;
+    const sov = totalForSov > 0 ? Math.round((mentionCount / totalForSov) * 100) : 0;
+    return {
+      name: comp.name,
+      domain: comp.domain,
+      color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
+      initial: comp.name.slice(0, 1).toUpperCase(),
+      mentionRate,
+      sov,
+      isLeader: false
+    };
+  });
+
+  const brandSov = totalForSov > 0 ? Math.round((brandMentions / totalForSov) * 100) : 0;
+  const maxMentionRate = Math.max(computedMentionRate, ...competitorRows.map((c) => c.mentionRate));
+
+  const citedPages = Object.values(citedUrlCounts)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+    .map((p) => ({
+      ...p,
+      isYours: p.domain.replace(/^www\./, "").includes(project.domain.replace(/^www\./, ""))
+    }));
+
+  const hasData = Boolean(latestCompletedRun && latestScore);
+  const confidencePercent = confidenceToPercent(runConfidence);
+
+  const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
+
+  /* ---- render ---- */
   return (
-    <div className="page space-y-6">
-      <section className="space-y-2">
-        <p className="kicker">Visión general</p>
-        <h1 className="title-lg">{project.name}</h1>
-        <p className="sub">
-          {project.domain} · {project.country}/{project.language} · Marca: {project.brand}
-        </p>
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="font-medium">Nuevo análisis</h2>
-              <form action={runProjectScan}>
-                <input type="hidden" name="projectId" value={projectId} />
-                <Button type="submit" disabled={Boolean(activeRun) || !prompts?.length}>
-                  <Icon name="play" size={14} />
-                  Lanzar escaneo
-                </Button>
-              </form>
+    <div className="page">
+      {/* Sticky page header */}
+      <div className="ov-sticky-header">
+        <div className="ov-sticky-left">
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>Visión general</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>{project.name}</span>
+              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{project.domain}</span>
+              <span className="meta-pill">{project.country}/{project.language}</span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="sub">
-              Prepara un escaneo con los prompts activos. Si la ejecución automática está habilitada en este entorno,
-              el análisis se lanzará al momento; si no, quedará pendiente para una ejecución posterior.
-            </p>
-            {activeRun ? <p className="feedback error">Ya hay un escaneo en curso o pendiente para este proyecto.</p> : null}
-            {!prompts?.length ? <p className="feedback error">Añade al menos un prompt activo antes de escanear.</p> : null}
-            {feedbackErrorMessage ? <p className="feedback error">{feedbackErrorMessage}</p> : null}
-            {successMessage ? <p className="feedback success">{successMessage}</p> : null}
-          </CardContent>
-        </Card>
-      </section>
+          </div>
+        </div>
+        <div className="ov-sticky-right">
+          {latestCompletedRun && (
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          )}
+          <button type="button" className="header-bell" aria-label="Notificaciones" title="Próximamente: notificaciones">
+            <Icon name="bell" size={16} />
+          </button>
+          {activeRun ? (
+            <span className="scan-status">
+              <span className="dot run" />
+              Escaneo en curso
+            </span>
+          ) : null}
+          <form action={runProjectScan}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <Button type="submit" disabled={Boolean(activeRun) || !prompts?.length}>
+              <Icon name="play" size={14} />
+              {latestCompletedRun ? "Repetir escaneo" : "Lanzar escaneo"}
+            </Button>
+          </form>
+        </div>
+      </div>
 
-      {!competitors?.length ? (
-        <p className="rounded-[10px] border border-[#e8eaef] bg-[#fbfbfd] px-4 py-3 text-sm text-[var(--ink-2)]">
-          Añadir competidores mejora la calidad del análisis, pero no bloquea el primer escaneo.
-        </p>
-      ) : null}
-
-      {latestFailedRun ? (
-        <section className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <p className="font-semibold">
+      {/* Feedback */}
+      {feedbackErrorMessage && (
+        <p className="feedback error" style={{ marginBottom: 16 }}>{feedbackErrorMessage}</p>
+      )}
+      {successMessage && (
+        <p className="feedback success" style={{ marginBottom: 16 }}>{successMessage}</p>
+      )}
+      {latestFailedRun && (
+        <div className="feedback" style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16 }}>
+          <p style={{ fontWeight: 650, marginBottom: 4 }}>
             {latestCompletedRun
               ? "El último escaneo falló. Se muestran los últimos resultados completados."
               : "El último escaneo falló. Puedes revisar el detalle técnico y volver a intentarlo."}
           </p>
           <Link
-            className="mt-2 inline-flex items-center gap-1 font-semibold underline"
             href={`/dashboard/projects/${projectId}/runs/${latestFailedRun.id}`}
+            style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 700, textDecoration: "underline" }}
           >
             Ver detalle técnico del escaneo fallido
-            <Icon name="arrRight" size={14} />
+            <Icon name="arrRight" size={13} />
           </Link>
-        </section>
-      ) : null}
-
-      {latestCompletedRun && latestScore ? (
-        <>
-          <section>
-            <Card className="border-[#e6e9fe] bg-gradient-to-br from-white to-[#fbfbff]">
-              <CardContent className="flex flex-col gap-4 py-5 md:flex-row md:items-start">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] bg-[var(--accent-soft)] text-[var(--accent)]">
-                  <Icon name="recs" size={19} />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-[var(--accent-ink)]">Resumen del último escaneo completado</p>
-                  <p className="max-w-4xl text-base leading-7 text-[var(--ink)]">
-                    {getSummaryText({
-                      brand: project.brand,
-                      total: totalResults,
-                      brandMentions,
-                      competitorRisk: competitorRiskScore,
-                      confidence: runConfidence
-                    })}
-                  </p>
-                  <p className="text-xs text-[var(--ink-3)]">
-                    {totalResults} prompts analizados · {latestCompletedRun.successful_prompts} correctos · {latestCompletedRun.failed_prompts} fallidos · Confianza {confidenceLabels[runConfidence] ?? runConfidence}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          {totalResults < 3 ? (
-            <p className="rounded-[10px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Este escaneo usa una muestra pequeña. Interpreta los resultados como direccionales, no concluyentes.
-            </p>
-          ) : null}
-
-          <section className="space-y-3">
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--ink)]">Visibilidad de un vistazo</h2>
-              <p className="sub mt-1">Señales reales extraídas del último escaneo completado con Gemini.</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {[
-                {
-                  label: "Visibilidad de marca",
-                  value: visibilityScore,
-                  suffix: "%",
-                  description: "Prompts donde aparece tu marca."
-                },
-                {
-                  label: "Tasa de cita",
-                  value: citationScore,
-                  suffix: "%",
-                  description: "Prompts con fuentes citadas."
-                },
-                {
-                  label: "Riesgo competitivo",
-                  value: competitorRiskScore,
-                  suffix: "/100",
-                  description: getRiskLabel(competitorRiskScore)
-                },
-                {
-                  label: "Confianza",
-                  value: confidenceLabels[runConfidence] ?? runConfidence,
-                  suffix: "",
-                  description: "Fiabilidad de la muestra extraída."
-                }
-              ].map((metric) => (
-                <Card key={metric.label}>
-                  <CardContent className="space-y-3 py-4">
-                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[var(--ink-4)]">{metric.label}</p>
-                    <p className="text-3xl font-bold tracking-[-0.03em] text-[var(--ink)]">
-                      {metric.value}<span className="ml-1 text-sm font-semibold text-[var(--ink-3)]">{metric.suffix}</span>
-                    </p>
-                    {typeof metric.value === "number" ? (
-                      <div className="h-1.5 overflow-hidden rounded-full bg-[#f1f3f6]">
-                        <div className="h-full rounded-full bg-[var(--accent)]" style={{ width: `${Math.min(100, metric.value)}%` }} />
-                      </div>
-                    ) : null}
-                    <p className="text-xs leading-5 text-[var(--ink-3)]">{metric.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <p className="text-xs text-[var(--ink-3)]">
-              En esta métrica, más alto significa mayor presión competitiva.
-            </p>
-            {completedRunsCount < 2 ? (
-              <p className="text-xs text-[var(--ink-4)]">
-                La tendencia estará disponible cuando existan al menos dos escaneos completados.
-              </p>
-            ) : null}
-          </section>
-
-          <section className="grid gap-4 xl:grid-cols-[1.35fr_1fr]">
-            <Card>
-              <CardHeader>
-                <div>
-                  <h2 className="font-medium">Resultados destacados por prompt</h2>
-                  <p className="sub mt-1">Hasta cinco respuestas del último escaneo completado.</p>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {!promptInsights?.length ? (
-                  <EmptyState title="No hay resultados por prompt" description="No se han encontrado respuestas completadas para este escaneo." />
-                ) : (
-                  <div className="space-y-3">
-                    {promptInsights.map((result) => {
-                      const extracted = result.extracted_json && typeof result.extracted_json === "object"
-                        ? (result.extracted_json as {
-                            brand?: { evidence?: string[] };
-                            competitors?: Array<{ name?: string; mentioned?: boolean }>;
-                            summary?: string;
-                          })
-                        : null;
-                      const mentionedCompetitors = (extracted?.competitors ?? [])
-                        .filter((competitor) => competitor.mentioned && competitor.name)
-                        .map((competitor) => competitor.name as string);
-                      const snippet =
-                        extracted?.brand?.evidence?.[0] ??
-                        extracted?.summary ??
-                        result.raw_response_text ??
-                        "Sin fragmento disponible.";
-
-                      return (
-                        <article key={result.id} className="rounded-[10px] border border-[#e8eaef] p-3">
-                          <p className="text-sm font-semibold leading-6 text-[var(--ink)]">{result.prompt_text_snapshot}</p>
-                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                            <span className={`rounded-full px-2 py-1 font-semibold ${result.brand_mentioned ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
-                              Marca: {result.brand_mentioned ? "sí" : "no"}
-                            </span>
-                            <span className={`rounded-full px-2 py-1 font-semibold ${result.citation_found ? "bg-indigo-50 text-indigo-700" : "bg-slate-100 text-slate-600"}`}>
-                              Cita: {result.citation_found ? "sí" : "no"}
-                            </span>
-                            <span className="rounded-full bg-slate-100 px-2 py-1 font-semibold text-slate-600">
-                              Sentimiento: {sentimentLabels[result.sentiment] ?? result.sentiment}
-                            </span>
-                          </div>
-                          <p className="mt-2 text-xs leading-5 text-[var(--ink-3)]">{snippet.slice(0, 220)}</p>
-                          <p className="mt-2 text-xs text-[var(--ink-4)]">
-                            Competidores: {mentionedCompetitors.length ? mentionedCompetitors.join(", ") : result.mentioned_competitors_count || "ninguno"}
-                          </p>
-                        </article>
-                      );
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div>
-                  <h2 className="font-medium">Qué hacer primero</h2>
-                  <p className="sub mt-1">Acciones priorizadas y respaldadas por evidencia.</p>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {!latestRecommendations?.length ? (
-                  <EmptyState title="No hay recomendaciones activas" description="Ninguna regla se ha activado con la evidencia actual." />
-                ) : (
-                  latestRecommendations.map((recommendation) => {
-                    const evidence = recommendation.evidence_json && typeof recommendation.evidence_json === "object"
-                      ? (recommendation.evidence_json as { why_this_matters?: string })
-                      : {};
-
-                    return (
-                      <article key={recommendation.id} className="rounded-[10px] border border-[#e8eaef] p-3">
-                        <p className="text-sm font-semibold leading-5 text-[var(--ink)]">
-                          #{recommendation.priority_rank} · {recommendation.title}
-                        </p>
-                        <p className="mt-2 text-xs text-[var(--ink-3)]">
-                          Impacto: {recommendation.impact} · Esfuerzo: {recommendation.effort} · Confianza: {recommendation.confidence}
-                        </p>
-                        {evidence.why_this_matters ? (
-                          <p className="mt-2 text-xs leading-5 text-[var(--ink-2)]">
-                            <span className="font-semibold">Por qué importa:</span> {evidence.why_this_matters}
-                          </p>
-                        ) : null}
-                      </article>
-                    );
-                  })
-                )}
-                <Link
-                  className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--accent)]"
-                  href={`/dashboard/projects/${projectId}/recommendations`}
-                >
-                  Ver todas las recomendaciones
-                  <Icon name="arrRight" size={14} />
-                </Link>
-              </CardContent>
-            </Card>
-          </section>
-
-          <section className="flex justify-end">
-            <Link
-              className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-3)] hover:text-[var(--accent)]"
-              href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-            >
-              Ver detalle técnico del escaneo
-              <Icon name="arrRight" size={14} />
-            </Link>
-          </section>
-        </>
-      ) : (
-        <section>
-          <Card>
-            <CardContent className="space-y-4 py-6">
-              <EmptyState
-                title={
-                  latestCompletedRun
-                    ? "No hay puntuaciones disponibles"
-                    : prompts?.length
-                      ? "Lanza tu primer escaneo"
-                      : "Añade tus primeros prompts"
-                }
-                description={
-                  latestCompletedRun
-                    ? "El escaneo terminó, pero no se encontraron métricas calculadas. Revisa el detalle técnico del run."
-                    : prompts?.length
-                      ? "Prepara un escaneo con tus prompts activos para dejar listo el siguiente análisis de visibilidad."
-                      : "Necesitas al menos un prompt activo antes de ejecutar el primer análisis."
-                }
-              />
-              {latestCompletedRun ? (
-                <Link
-                  className="inline-flex text-sm font-semibold text-[var(--accent)]"
-                  href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-                >
-                  Revisar detalle técnico
-                </Link>
-              ) : prompts?.length && !activeRun ? (
-                <form action={runProjectScan}>
-                  <input type="hidden" name="projectId" value={projectId} />
-                  <Button type="submit">
-                    <Icon name="play" size={14} />
-                    Lanzar escaneo
-                  </Button>
-                </form>
-              ) : null}
-              {!prompts?.length ? (
-                <a className="inline-flex text-sm font-semibold text-[var(--accent)]" href="#configuracion-prompts">
-                  Añadir prompts
-                </a>
-              ) : null}
-            </CardContent>
-          </Card>
-        </section>
+        </div>
+      )}
+      {!prompts?.length && (
+        <p className="feedback" style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16 }}>
+          Añade al menos un prompt activo antes de escanear.{" "}
+          <Link href={`/dashboard/projects/${projectId}/prompts`} style={{ fontWeight: 700, textDecoration: "underline" }}>Añadir prompts</Link>
+        </p>
       )}
 
-      <section className="space-y-2 pt-3">
-        <p className="kicker">Configuración</p>
-        <h2 className="text-xl font-semibold text-[var(--ink)]">Inputs monitorizados</h2>
-        <p className="sub">Gestiona los prompts y competidores que se utilizarán en el próximo escaneo.</p>
-      </section>
+      {/* ===== DATA STATE ===== */}
+      {hasData ? (
+        <>
+          {/* 1 · Executive summary banner */}
+          <div className="summary">
+            <div className="summary-ico">
+              <Icon name="sparkles" size={18} />
+            </div>
+            <p className="summary-txt">
+              <b>{project.brand}</b> aparece en{" "}
+              <b>{brandMentions} de {totalResults} prompts</b> analizados.
+              {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
+                <>
+                  {" "}Tu competidor más visible,{" "}
+                  <b>{topCompetitor.name}</b>, aparece en{" "}
+                  <span className="hl-neg">{topCompetitor.mentionRate}% de los prompts</span>.
+                </>
+              ) : null}
+              {latestRecommendations?.length ? (
+                <>
+                  {" "}Lumira encontró{" "}
+                  <b>{latestRecommendations.length} acciones prioritarias</b> para mejorar tu visibilidad.
+                </>
+              ) : null}
+              {completedRunsCount < 2 && (
+                <span style={{ color: "var(--ink-4)", fontStyle: "italic", fontSize: 13 }}>
+                  {" "}(Muestra inicial — la tendencia estará disponible con ≥2 escaneos.)
+                </span>
+              )}
+            </p>
+          </div>
 
-      <section id="configuracion-prompts" className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader><h2 className="font-medium">Prompts</h2></CardHeader>
-          <CardContent className="space-y-4">
-            <form action={createPrompt} className="space-y-2 rounded border p-3">
-              <input type="hidden" name="projectId" value={projectId} />
-              <div>
-                <Label htmlFor="promptText">Prompt</Label>
-                <Textarea id="promptText" name="promptText" required rows={3} />
-              </div>
-              <div>
-                <Label htmlFor="category">Categoría</Label>
-                <Input id="category" name="category" />
-              </div>
-              <Button type="submit">Añadir prompt</Button>
-            </form>
+          {/* 2 · Section: Visibilidad de un vistazo */}
+          <div className="section-head" style={{ marginTop: 28 }}>
+            <div className="section-title">Visibilidad de un vistazo</div>
+            <div className="section-desc">
+              Señales reales · último escaneo{" "}
+              {new Date(latestCompletedRun!.finished_at ?? latestCompletedRun!.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+            </div>
+            <div className="right">
+              <span className={`badge badge-${getBandTone(visibilityScore)}`}>
+                {getBandLabel(visibilityScore)}
+              </span>
+            </div>
+          </div>
 
-            {!prompts?.length ? (
-              <EmptyState title="No hay prompts activos" description="Añade entre 5 y 10 prompts para preparar el escaneo." />
-            ) : (
-              <div className="space-y-3">
-                {prompts.map((prompt) => (
-                  <form key={prompt.id} action={updatePrompt} className="space-y-2 rounded border p-3">
-                    <input type="hidden" name="projectId" value={projectId} />
-                    <input type="hidden" name="promptId" value={prompt.id} />
-                    <Textarea name="promptText" defaultValue={prompt.prompt_text} rows={3} required />
-                    <Input name="category" defaultValue={prompt.category ?? ""} placeholder="Categoría" />
-                    <div className="flex gap-2">
-                      <Button type="submit" variant="outline">Guardar</Button>
-                      <button
-                        formAction={deactivatePrompt}
-                        className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
-                        type="submit"
-                      >
-                        Desactivar
-                      </button>
-                    </div>
-                  </form>
-                ))}
+          {/* Hero card */}
+          <div className="hero-v2">
+            {/* Gauge */}
+            <div className="hv-gauge">
+              <Gauge value={visibilityScore} size={140} stroke={14} />
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-4)", marginBottom: 6 }}>
+                  Puntuación GEO
+                </div>
+                <span className={`badge badge-${getBandTone(visibilityScore)}`}>
+                  {getBandLabel(visibilityScore)}
+                </span>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
 
-        <Card>
-          <CardHeader><h2 className="font-medium">Competidores</h2></CardHeader>
-          <CardContent className="space-y-4">
-            <form action={createCompetitor} className="space-y-2 rounded border p-3">
-              <input type="hidden" name="projectId" value={projectId} />
-              <div>
-                <Label htmlFor="name">Nombre</Label>
-                <Input id="name" name="name" required />
-              </div>
-              <div>
-                <Label htmlFor="domain">Dominio</Label>
-                <Input id="domain" name="domain" required />
-              </div>
-              <Button type="submit">Añadir competidor</Button>
-            </form>
+            <div className="hv-divider" />
 
-            {!competitors?.length ? (
-              <EmptyState title="No hay competidores activos" description="Añade competidores para preparar el contexto comparativo." />
-            ) : (
-              <div className="space-y-3">
-                {competitors.map((competitor) => (
-                  <form key={competitor.id} action={updateCompetitor} className="space-y-2 rounded border p-3">
-                    <input type="hidden" name="projectId" value={projectId} />
-                    <input type="hidden" name="competitorId" value={competitor.id} />
-                    <Input name="name" defaultValue={competitor.name} required />
-                    <Input name="domain" defaultValue={competitor.domain} required />
-                    <div className="flex gap-2">
-                      <Button type="submit" variant="outline">Guardar</Button>
-                      <button
-                        formAction={deactivateCompetitor}
-                        className="inline-flex h-9 items-center rounded-md border border-slate-300 px-3 text-sm hover:bg-slate-100"
-                        type="submit"
-                      >
-                        Desactivar
-                      </button>
-                    </div>
-                  </form>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader>
-            <h2 className="font-medium">Historial técnico de escaneos</h2>
-            <p className="sub mt-1">Estado de ejecuciones recientes para diagnóstico y trazabilidad.</p>
-          </CardHeader>
-          <CardContent>
-            {!runs?.length ? (
-              <EmptyState title="Todavía no hay escaneos" description="Lanza tu primer escaneo para crear el informe." />
-            ) : (
-              <div className="space-y-3">
-                {runs.map((run) => (
-                  <div key={run.id} className="rounded-[10px] border border-[#e8eaef] p-3 text-sm">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium">{statusLabels[run.status] ?? run.status}</p>
-                      <Link className="inline-flex items-center gap-1 font-semibold text-[var(--accent)]" href={`/dashboard/projects/${projectId}/runs/${run.id}`}>
-                        <Icon name="arrRight" size={14} />
-                        Ver detalle técnico
-                      </Link>
-                    </div>
-                    <p className="mt-1 sub">Creado: {new Date(run.created_at).toLocaleString()}</p>
-                    <p className="sub">
-                      Prompts: {run.total_prompts} · Correctos: {run.successful_prompts} · Fallidos: {run.failed_prompts}
-                    </p>
-                    <p className="sub">
-                      Inicio: {run.started_at ? new Date(run.started_at).toLocaleString() : "-"} · Fin: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "-"}
-                    </p>
+            {/* Composition */}
+            <div className="hv-compose">
+              <div className="hv-block-label">Cómo se compone tu puntuación</div>
+              {[
+                { l: "Tasa de mención", v: computedMentionRate, color: "var(--accent)" },
+                { l: "Tasa de cita", v: computedCitationRate, color: "#7c3aed" },
+                { l: "Riesgo competitivo", v: Math.min(100, competitorRiskScore), color: "#0d9488" }
+              ].map((c) => (
+                <div className="compose-row" key={c.l}>
+                  <div className="compose-top">
+                    <span className="compose-l">{c.l}</span>
+                    <span className="compose-v tnum">{c.v}%</span>
                   </div>
-                ))}
+                  <div className="sov-bar" style={{ height: 7 }}>
+                    <div className="sov-fill" style={{ width: `${Math.min(100, c.v)}%`, background: c.color }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="hv-divider" />
+
+            {/* Trend */}
+            <div className="hv-trend">
+              <div className="hv-block-label">Tendencia · {visTrend.length} escaneos</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 2 }}>
+                <span className="tnum" style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-.03em" }}>
+                  {visibilityScore}
+                </span>
+                {visDelta !== 0 && <Delta value={visDelta} suffix=" pt" />}
+                <span className="stat-hint">{visTrend.length > 1 ? "vs. anterior" : "primer escaneo"}</span>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+              <div style={{ marginTop: 10 }}>
+                {visTrend.length >= 2 ? (
+                  <Sparkline data={visTrend} w={220} h={80} />
+                ) : (
+                  <div className="section-empty" style={{ padding: "14px 12px" }}>
+                    <div className="section-empty-desc">La tendencia estará disponible con ≥2 escaneos</div>
+                  </div>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8, lineHeight: 1.5 }}>
+                Por encima de <b style={{ color: "var(--ink-2)" }}>70</b> es competitivo para tu categoría.
+              </div>
+            </div>
+          </div>
+
+          {/* 3 · 4 wide metric cards */}
+          <div className="metrics-2col" style={{ marginTop: 12 }}>
+            {[
+              {
+                key: "mention",
+                label: "Tasa de mención",
+                value: computedMentionRate,
+                unit: "%",
+                trend: visTrend,
+                delta: visDelta,
+                color: "var(--accent)",
+                hint: "Prompts donde aparece tu marca."
+              },
+              {
+                key: "citation",
+                label: "Tasa de cita",
+                value: computedCitationRate,
+                unit: "%",
+                trend: citTrend,
+                delta: citDelta,
+                color: "#7c3aed",
+                hint: "Prompts donde tu dominio es fuente citada."
+              },
+              {
+                key: "gap",
+                label: "Riesgo competitivo",
+                value: competitorRiskScore,
+                unit: "/100",
+                trend: gapTrend,
+                delta: gapDelta,
+                color: "#e54563",
+                hint: "Presión del competidor más fuerte. Más alto = más presión.",
+                invert: true
+              },
+              {
+                key: "confidence",
+                label: "Confianza",
+                value: confidencePercent,
+                unit: "%",
+                trend: confTrend,
+                delta: 0,
+                color: "#0d9488",
+                hint: `Fiabilidad de la muestra: ${confidenceLabels[runConfidence] ?? runConfidence}.`
+              }
+            ].map((m) => (
+              <div key={m.key} className="wide-stat">
+                <div className="ws-left">
+                  <div className="stat-label">{m.label}</div>
+                  <div className="stat-value tnum">
+                    {m.value}<span className="unit">{m.unit}</span>
+                  </div>
+                  <div className="ws-delta">
+                    {m.delta !== 0 ? (
+                      <Delta value={m.delta} suffix=" pt" invert={m.invert} />
+                    ) : (
+                      <span className="delta flat">— sin cambio</span>
+                    )}
+                    <span className="stat-hint">vs. escaneo anterior</span>
+                  </div>
+                  <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                </div>
+                <div className="ws-spark">
+                  {m.trend.length >= 2 ? (
+                    <Sparkline data={m.trend} w={160} h={64} color={m.color} />
+                  ) : (
+                    <div style={{ width: 160, height: 64, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <span style={{ fontSize: 11, color: "var(--ink-4)" }}>Sin tendencia aún</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 4 · Dónde estás */}
+          <div className="section-head">
+            <div className="section-title">Dónde estás</div>
+            <div className="section-desc">Cuota de voz en IA en tus prompts monitorizados</div>
+          </div>
+
+          <div className="grid-2-1">
+            {/* Competitive table */}
+            <div className="card">
+              <div className="card-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div className="card-title">Panorámica competitiva</div>
+                {competitors?.length ? (
+                  <span className="badge badge-neutral">{competitors.length} competidores</span>
+                ) : null}
+              </div>
+              {competitorRows.length > 0 ? (
+                <div style={{ padding: "4px 6px 6px" }}>
+                  <table className="tbl">
+                    <thead>
+                      <tr>
+                        <th>Marca</th>
+                        <th className="num">Mención</th>
+                        <th>Cuota de voz en IA</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Brand row */}
+                      <tr className="you">
+                        <td>
+                          <div className="ent">
+                            <span
+                              className="fav"
+                              style={{ background: "var(--accent)", fontSize: 11, fontWeight: 800 }}
+                            >
+                              {project.brand.slice(0, 1).toUpperCase()}
+                            </span>
+                            <div>
+                              <div className="nm">
+                                {project.brand}
+                                <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700, marginLeft: 6 }}>Tú</span>
+                              </div>
+                              <div className="dm">{project.domain}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="num">
+                          <b className="tnum">{computedMentionRate}%</b>
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <div className="sov-bar">
+                              <div
+                                className="sov-fill"
+                                style={{
+                                  width: maxMentionRate > 0 ? `${(computedMentionRate / maxMentionRate) * 100}%` : "0%",
+                                  background: "var(--accent)"
+                                }}
+                              />
+                            </div>
+                            <span className="tnum" style={{ fontSize: 12, fontWeight: 700, width: 32, textAlign: "right" }}>
+                              {brandSov}%
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {/* Competitor rows */}
+                      {competitorRows.map((c) => (
+                        <tr key={c.name} className="hoverable">
+                          <td>
+                            <div className="ent">
+                              <span className="fav" style={{ background: c.color }}>
+                                {c.initial}
+                              </span>
+                              <div>
+                                <div className="nm">{c.name}</div>
+                                <div className="dm">{c.domain}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="num">
+                            <b className="tnum">{c.mentionRate}%</b>
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                              <div className="sov-bar">
+                                <div
+                                  className="sov-fill"
+                                  style={{
+                                    width: maxMentionRate > 0 ? `${(c.mentionRate / maxMentionRate) * 100}%` : "0%",
+                                    background: c.color
+                                  }}
+                                />
+                              </div>
+                              <span className="tnum" style={{ fontSize: 12, fontWeight: 700, width: 32, textAlign: "right" }}>
+                                {c.sov}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div style={{ padding: "16px 18px" }}>
+                  <EmptyState
+                    title="Sin datos de competidores"
+                    description="Añade competidores para ver cómo se compara tu visibilidad en IA."
+                  />
+                  <Link
+                    href={`/dashboard/projects/${projectId}/competitors`}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
+                  >
+                    Añadir competidores <Icon name="arrRight" size={13} />
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* LLM distribution — placeholder */}
+            <div className="card">
+              <div className="card-head">
+                <div className="card-title">Distribución por motor de IA</div>
+              </div>
+              <div style={{ padding: "24px 18px" }}>
+                <div className="section-empty">
+                  <div className="section-empty-title">Próximamente</div>
+                  <div className="section-empty-desc">
+                    La distribución por motor de IA (ChatGPT, Google AI Overviews, Perplexity…) estará disponible en una próxima actualización.
+                  </div>
+                </div>
+                <div className="why-callout">
+                  <Icon name="bolt" size={15} />
+                  <div>
+                    <div className="why-t">Por qué importa</div>
+                    <div className="why-b">Diferentes motores citan fuentes distintas. Saber dónde estás más débil es el punto de partida para actuar.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5 · Oportunidades */}
+          <div className="section-head">
+            <div className="section-title">Oportunidades</div>
+            <div className="section-desc">Prompts donde ganan los competidores y puedes mejorar</div>
+          </div>
+
+          <div className="grid-2-1">
+            {/* Prompt opportunities */}
+            <div className="card">
+              <div className="card-head">
+                <div className="card-title">Oportunidades de prompts</div>
+              </div>
+              <div style={{ padding: "16px 18px" }}>
+                <div className="section-empty">
+                  <div className="section-empty-title">Detección de oportunidades en desarrollo</div>
+                  <div className="section-empty-desc">
+                    Las oportunidades de prompts (prompts donde los competidores ganan y tu marca no aparece) se calcularán automáticamente en la próxima actualización.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cited pages */}
+            <div className="card">
+              <div className="card-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="card-title">Páginas fuente más citadas</div>
+                {citedPages.length > 0 && (
+                  <span className="badge badge-neutral">{citedPages.length}</span>
+                )}
+              </div>
+              {citedPages.length > 0 ? (
+                <div style={{ padding: "4px 0" }}>
+                  {citedPages.map((p, i) => (
+                    <div
+                      key={p.display}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "11px 18px",
+                        borderBottom: i < citedPages.length - 1 ? "1px solid var(--line-soft)" : "none"
+                      }}
+                    >
+                      <span style={{ color: p.isYours ? "var(--accent)" : "var(--ink-4)", flexShrink: 0, display: "flex" }}>
+                        <Icon name={p.isYours ? "link" : "globe"} size={14} />
+                      </span>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontFamily: "var(--mono)",
+                            fontSize: 11.5,
+                            fontWeight: 600,
+                            color: p.isYours ? "var(--accent-ink)" : "var(--ink-2)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis"
+                          }}
+                        >
+                          {p.display}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>
+                          citada {p.count} {p.count === 1 ? "vez" : "veces"}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <div className="tnum" style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>{p.count}</div>
+                        <div style={{ fontSize: 10, color: "var(--ink-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>citas</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "16px 18px" }}>
+                  <div className="section-empty">
+                    <div className="section-empty-title">Sin fuentes detectadas</div>
+                    <div className="section-empty-desc">
+                      Las páginas citadas por los motores de IA aparecerán aquí cuando el escaneo las extraiga.
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 6 · Qué hacer primero */}
+          <div className="section-head">
+            <div className="section-title">Qué hacer primero</div>
+            <div className="section-desc">Acciones ordenadas por impacto en la visibilidad en IA</div>
+            <div className="right">
+              <Link
+                href={`/dashboard/projects/${projectId}/recommendations`}
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
+              >
+                Abrir todas las recomendaciones <Icon name="arrRight" size={13} />
+              </Link>
+            </div>
+          </div>
+
+          {latestRecommendations?.length ? (
+            <div className="recs-3col">
+              {latestRecommendations.map((rec) => {
+                const evidence = rec.evidence_json && typeof rec.evidence_json === "object"
+                  ? (rec.evidence_json as { why_this_matters?: string })
+                  : {};
+                const priority = (rec.priority_rank ?? 1) <= 2 ? "high" : (rec.priority_rank ?? 1) <= 4 ? "med" : "low";
+                return (
+                  <Link
+                    key={rec.id}
+                    href={`/dashboard/projects/${projectId}/recommendations`}
+                    className="rec-card-preview"
+                  >
+                    <div className="rec-meta">
+                      <span className={`rec-rank ${priority}`}>{rec.priority_rank}</span>
+                      <span className={`badge badge-${priority === "high" ? "neg" : priority === "med" ? "warn" : "neutral"}`}>
+                        Prioridad {priorityLabels[priority] ?? priority}
+                      </span>
+                      {rec.category && (
+                        <span className="badge badge-outline">{rec.category}</span>
+                      )}
+                    </div>
+                    <div className="rec-title">{rec.title}</div>
+                    {evidence.why_this_matters && (
+                      <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.55, flexGrow: 1 }}>
+                        {String(evidence.why_this_matters).slice(0, 140)}{String(evidence.why_this_matters).length > 140 ? "…" : ""}
+                      </p>
+                    )}
+                    <div className="rec-metrics">
+                      <div className="rmetric">
+                        <div className="l">Impacto</div>
+                        <div className="v"><DotMeter n={rec.impact ?? 1} tone="h" /></div>
+                      </div>
+                      <div className="rmetric">
+                        <div className="l">Esfuerzo</div>
+                        <div className="v"><DotMeter n={rec.effort ?? 1} tone="m" /></div>
+                      </div>
+                      <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                        <div className="l" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+                          Confianza
+                        </div>
+                        <div className="tnum" style={{ fontSize: 13, fontWeight: 750, marginTop: 4 }}>
+                          {rec.confidence ?? "—"}%
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="section-empty">
+              <div className="section-empty-title">Sin recomendaciones activas</div>
+              <div className="section-empty-desc">Las recomendaciones se generan al completar un escaneo con suficiente evidencia.</div>
+            </div>
+          )}
+
+          {/* Link to scan detail */}
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+            <Link
+              href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun!.id}`}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+            >
+              Ver detalle técnico del escaneo
+              <Icon name="arrRight" size={13} />
+            </Link>
+          </div>
+        </>
+      ) : (
+        /* ===== EMPTY STATE ===== */
+        activeRun ? (
+          /* Estado A — Escaneo en curso */
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
+              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
+              boxShadow: "var(--sh-2)"
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
+                background: "linear-gradient(150deg, var(--accent) 0%, #6d63f0 100%)",
+                display: "grid", placeItems: "center", color: "#fff",
+                boxShadow: "0 4px 16px var(--accent-ring)"
+              }}>
+                <Icon name="resonance" size={24} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
+                Tu primer escaneo está en curso
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24, maxWidth: 380, margin: "0 auto 24px" }}>
+                Estamos analizando tus prompts con Gemini. Cuando termine, aquí verás tu puntuación GEO, tus competidores y tus oportunidades.
+              </p>
+              <div style={{ height: 4, background: "var(--surface-sunk)", borderRadius: 99, overflow: "hidden", marginBottom: 20 }}>
+                <div style={{
+                  height: "100%", width: "60%", borderRadius: 99,
+                  background: "linear-gradient(90deg, var(--accent), #6d63f0)",
+                  animation: "progress-pulse 2s ease-in-out infinite"
+                }} />
+              </div>
+              <Link href={`/dashboard/projects/${projectId}/runs/${activeRun.id}`}>
+                <Button>
+                  <Icon name="play" size={14} />
+                  Ver progreso del escaneo
+                </Button>
+              </Link>
+              <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <Icon name="info" size={13} />
+                Suele tardar unos minutos
+              </p>
+            </div>
+          </div>
+        ) : prompts?.length ? (
+          /* Estado B — Listo para lanzar */
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
+              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
+              boxShadow: "var(--sh-2)"
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
+                background: "var(--accent-soft)", display: "grid", placeItems: "center", color: "var(--accent)"
+              }}>
+                <Icon name="overview" size={24} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
+                Lanza tu primer escaneo de visibilidad en IA
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
+                Analiza cómo aparece <b style={{ color: "var(--ink-2)" }}>{project.brand}</b> en los motores de IA con tus <b style={{ color: "var(--ink-2)" }}>{prompts.length} prompts</b> activos.
+              </p>
+              <form action={runProjectScan} style={{ display: "inline-block" }}>
+                <input type="hidden" name="projectId" value={projectId} />
+                <Button type="submit">
+                  <Icon name="play" size={14} />
+                  Lanzar escaneo
+                </Button>
+              </form>
+              <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
+                Primer escaneo · {prompts.length} prompts · Gemini
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Estado C — Sin prompts */
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
+              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
+              boxShadow: "var(--sh-2)"
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
+                background: "var(--surface-sunk)", display: "grid", placeItems: "center", color: "var(--ink-3)"
+              }}>
+                <Icon name="prompts" size={24} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
+                Configura tus primeros prompts
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
+                Añade entre 5 y 10 preguntas de alta intención que tus potenciales clientes hacen a la IA. Son la base de tu análisis de visibilidad.
+              </p>
+              <Link href={`/dashboard/projects/${projectId}/prompts`}>
+                <Button variant="outline">
+                  <Icon name="prompts" size={14} />
+                  Ir a Prompts
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* ===== QUICK LINKS ===== */}
+      <div style={{ display: "flex", gap: 16, marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line-soft)" }}>
+        <Link
+          href={`/dashboard/projects/${projectId}/prompts`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+        >
+          <Icon name="prompts" size={14} />
+          Gestionar prompts ({prompts?.length ?? 0} activos)
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/competitors`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+        >
+          <Icon name="competitors" size={14} />
+          Gestionar competidores ({competitors?.length ?? 0} activos)
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/runs`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+        >
+          <Icon name="runs" size={14} />
+          Ver escaneos ({runs?.length ?? 0})
+        </Link>
+      </div>
     </div>
   );
 }

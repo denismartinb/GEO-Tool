@@ -446,3 +446,1141 @@ a {
   margin-top: 16px;
   line-height: 1.5;
 }
+
+/* ============================================================
+   Overview — badge system
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  line-height: 1.8;
+}
+.badge-pos    { background: var(--pos-soft);  color: var(--pos-ink); }
+.badge-neg    { background: var(--neg-soft);  color: var(--neg-ink); }
+.badge-warn   { background: var(--warn-soft); color: var(--warn-ink); }
+.badge-info   { background: var(--info-soft); color: var(--info); }
+.badge-accent { background: var(--accent-soft); color: var(--accent-ink); }
+.badge-neutral { background: var(--surface-sunk); color: var(--ink-2); }
+.badge-outline { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
+
+/* ============================================================
+   Overview — executive summary banner
+   ============================================================ */
+.summary {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-lg);
+}
+.summary-ico {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.summary-txt {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+.summary-txt b { color: var(--ink); font-weight: 700; }
+.hl-pos { color: var(--pos-ink); font-weight: 700; }
+.hl-neg { color: var(--neg-ink); font-weight: 700; }
+
+/* ============================================================
+   Overview — section header
+   ============================================================ */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 30px 0 14px;
+  flex-wrap: wrap;
+}
+.section-title {
+  font-size: 15px;
+  font-weight: 750;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+.section-desc {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.section-head .right { margin-left: auto; }
+
+/* ============================================================
+   Overview — gauge
+   ============================================================ */
+.gauge-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+.gauge-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding-top: 10px;
+}
+.gauge-num {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+}
+.gauge-cap {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ============================================================
+   Overview — hero-v2 card
+   ============================================================ */
+.hero-v2 {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.hv-gauge {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px;
+  gap: 14px;
+}
+.hv-divider {
+  width: 1px;
+  background: var(--line-soft);
+  margin: 18px 0;
+  flex-shrink: 0;
+}
+.hv-compose {
+  flex: 1;
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+.hv-trend {
+  flex: 0 0 auto;
+  padding: 28px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 200px;
+}
+.hv-block-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-4);
+  margin-bottom: 14px;
+}
+.compose-row {
+  margin-bottom: 12px;
+}
+.compose-row:last-child { margin-bottom: 0; }
+.compose-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 5px;
+}
+.compose-l { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.compose-v { font-size: 12.5px; font-weight: 750; color: var(--ink); }
+
+/* ============================================================
+   Overview — 4 wide metric cards
+   ============================================================ */
+.metrics-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.wide-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+}
+.ws-left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.ws-delta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.stat-value {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--ink);
+}
+.stat-value .unit {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-3);
+  margin-left: 2px;
+}
+.stat-hint {
+  font-size: 11px;
+  color: var(--ink-4);
+  font-weight: 500;
+}
+.ws-spark { flex-shrink: 0; }
+
+/* ============================================================
+   Overview — delta chip
+   ============================================================ */
+.delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  border-radius: 99px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+.delta.up   { background: var(--pos-soft);      color: var(--pos-ink); }
+.delta.down { background: var(--neg-soft);      color: var(--neg-ink); }
+.delta.flat { background: var(--surface-sunk);  color: var(--ink-3); }
+
+/* ============================================================
+   Overview — dot meter (impact / effort)
+   ============================================================ */
+.ie-dots {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+.ie-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 99px;
+  background: var(--line);
+}
+.ie-dot.on-h { background: var(--p-high); }
+.ie-dot.on-m { background: var(--p-med); }
+.ie-dot.on-l { background: var(--accent); }
+
+/* ============================================================
+   Overview — share-of-voice bar
+   ============================================================ */
+.sov-bar {
+  flex: 1;
+  min-width: 48px;
+  height: 6px;
+  background: var(--surface-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.sov-fill {
+  height: 100%;
+  border-radius: 99px;
+}
+
+/* ============================================================
+   Overview — 2/1 grid
+   ============================================================ */
+.grid-2-1 {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 12px;
+}
+
+/* ============================================================
+   Overview — table
+   ============================================================ */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.tbl th {
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-4);
+  border-bottom: 1px solid var(--line-soft);
+}
+.tbl th.num { text-align: right; }
+.tbl td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.tbl td.num { text-align: right; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl .you { background: var(--accent-soft); }
+.tbl .hoverable:hover { background: var(--surface-2); cursor: pointer; }
+
+/* entity cell */
+.ent { display: flex; align-items: center; gap: 9px; }
+.ent .nm { font-size: 13px; font-weight: 650; color: var(--ink); }
+.ent .dm { font-size: 11px; color: var(--ink-4); font-family: var(--mono); }
+.fav {
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+}
+
+/* ============================================================
+   Overview — recommendation preview cards
+   ============================================================ */
+.recs-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.rec-card-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.rec-card-preview:hover {
+  border-color: var(--accent-soft-2);
+  box-shadow: var(--sh-2);
+}
+.rec-rank {
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  font-weight: 800;
+  color: #fff;
+  font-size: 12px;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.rec-rank.high { background: var(--p-high); }
+.rec-rank.med  { background: var(--p-med); }
+.rec-rank.low  { background: var(--p-low); }
+.rec-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.rec-title { font-size: 13.5px; font-weight: 700; line-height: 1.35; color: var(--ink); flex: 1; }
+.rec-metrics {
+  display: flex;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  margin-top: auto;
+}
+.rmetric { display: flex; flex-direction: column; gap: 4px; }
+.rmetric .l {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.rmetric .v { display: flex; align-items: center; }
+
+/* ============================================================
+   Overview — section empty state
+   ============================================================ */
+.section-empty {
+  padding: 28px 20px;
+  text-align: center;
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line);
+}
+.section-empty-title {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+.section-empty-desc {
+  font-size: 12px;
+  color: var(--ink-4);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   Overview — "why this matters" callout
+   ============================================================ */
+.why-callout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: var(--accent-soft);
+  border-radius: var(--r-md);
+  margin-top: 16px;
+}
+.why-t { font-size: 12px; font-weight: 700; color: var(--accent-ink); margin-bottom: 3px; }
+.why-b { font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
+
+/* ============================================================
+   Overview — page header (title + scan action row)
+   ============================================================ */
+.ov-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.ov-header-left { min-width: 0; }
+.ov-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+/* sticky project header inside the page scroll area */
+.ov-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line-soft);
+  margin: -26px -34px 24px;
+  padding: 12px 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ov-sticky-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ov-sticky-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Overview — progress animation (scan in progress state)
+   ============================================================ */
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ============================================================
+   Sidebar — nav count badge & locked item & user chip
+   ============================================================ */
+.nav-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--surface-sunk);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.nav-item.active .nav-count { background: #fff; color: var(--accent-ink); }
+.nav-lock { margin-left: auto; color: var(--ink-4); }
+.nav-item.locked { color: var(--ink-4); cursor: default; }
+.nav-item.locked:hover { background: transparent; color: var(--ink-4); }
+
+.user-chip { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; }
+.user-chip:hover { background: var(--surface-2); }
+.avatar { width: 28px; height: 28px; border-radius: 999px; background: linear-gradient(135deg, #8b8df5, var(--accent)); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+
+/* ============================================================
+   Overview — responsive tweaks
+   ============================================================ */
+@media (max-width: 1100px) {
+  .grid-2-1 { grid-template-columns: 1fr; }
+  .metrics-2col { grid-template-columns: 1fr; }
+  .recs-3col { grid-template-columns: 1fr 1fr; }
+  .hero-v2 { flex-direction: column; }
+  .hv-divider { width: auto; height: 1px; margin: 0 18px; }
+}
+@media (max-width: 720px) {
+  .recs-3col { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   LUMIRA-4: Escaneos + Competidores
+   ============================================================ */
+
+/* Run history table */
+.run-tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.run-tbl th {
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-4);
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+.run-tbl th.num { text-align: right; }
+.run-tbl td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: middle;
+}
+.run-tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.run-tbl tr:last-child td { border-bottom: none; }
+
+/* Prompt progress bar inside run table */
+.run-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.run-bar {
+  flex: 1;
+  min-width: 48px;
+  height: 5px;
+  background: var(--surface-sunk);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.run-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.3s ease;
+}
+
+/* Error detail row inside run table */
+.run-error-row td {
+  padding: 0 14px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.run-error-row:last-child td { border-bottom: none; }
+.run-error-pill {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--warn-soft);
+  border: 1px solid #f3d086;
+  border-radius: var(--r-md);
+  font-size: 12.5px;
+  color: var(--warn-ink);
+  line-height: 1.5;
+}
+
+/* Stats row for runs page */
+.run-stats-row {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.run-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.run-stat-value {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.run-stat-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-4);
+  margin-top: 3px;
+}
+
+/* Competitors page — SoV table columns */
+.comp-tbl-sov {
+  min-width: 120px;
+}
+
+/* mt8 utility used in design reference */
+.mt8 { margin-top: 8px; }
+
+/* ============================================================
+   LUMIRA-5: Prompts
+   ============================================================ */
+
+/* Drawer scrim */
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 41, 0.42);
+  z-index: 300;
+  opacity: 0;
+  animation: scrimIn 0.2s ease forwards;
+}
+@keyframes scrimIn { to { opacity: 1; } }
+
+/* Drawer panel */
+.drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(760px, 94vw);
+  background: var(--canvas);
+  z-index: 301;
+  box-shadow: -16px 0 50px rgba(15, 23, 41, 0.22);
+  display: flex;
+  flex-direction: column;
+  animation: drawerIn 0.26s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+@keyframes drawerIn {
+  from { transform: translateX(40px); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* Drawer head */
+.drawer-head {
+  flex: 0 0 auto;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.drawer-head .t {
+  font-size: 14px;
+  font-weight: 750;
+}
+
+/* Drawer body */
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px 22px 40px;
+}
+
+/* Prompt box */
+.prompt-box {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.prompt-box .qico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.prompt-box .q {
+  font-size: 14.5px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+.prompt-box-meta {
+  font-size: 11.5px;
+  color: var(--ink-4);
+  margin-top: 5px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Drawer tabs */
+.drawer-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 18px 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+.drawer-tabs button {
+  background: none;
+  border: none;
+  padding: 9px 4px;
+  margin-right: 18px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--ink-3);
+  position: relative;
+  cursor: pointer;
+  font-family: inherit;
+}
+.drawer-tabs button.on {
+  color: var(--accent);
+}
+.drawer-tabs button.on::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 2px;
+}
+
+/* Aside cards inside drawer */
+.aside-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 15px;
+}
+.aside-card .ac-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 11px;
+}
+
+/* Brand presence row inside drawer */
+.brand-presence {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+.brand-presence:last-child { margin-bottom: 0; }
+.brand-presence .nm {
+  font-size: 13px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Source items inside drawer */
+.src-item {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.src-item:first-of-type { border-top: none; }
+.src-item .si-ico {
+  color: var(--ink-4);
+  margin-top: 1px;
+  flex: 0 0 auto;
+}
+.src-item .si-url {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* AI response full text panel */
+.resp-full {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+}
+.resp-full .eng-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.resp-full .body {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+/* ============================================================
+   LUMIRA-6: Recommendations
+   ============================================================ */
+
+/* Rec card — base layout */
+.rec-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  margin-bottom: 12px;
+  transition: box-shadow .15s, border-color .15s;
+  overflow: hidden;
+}
+.rec-card:hover { box-shadow: var(--sh-2); border-color: var(--line-strong); }
+
+.rec-main {
+  display: grid;
+  grid-template-columns: 40px 1fr auto;
+  gap: 16px;
+  padding: 16px 18px;
+  cursor: pointer;
+  align-items: start;
+}
+
+.rec-rank {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-sm);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+.rec-rank.high { background: var(--neg-soft, #fef2f2); color: var(--neg-ink, #b91c1c); }
+.rec-rank.med  { background: var(--warn-soft, #fffbeb); color: var(--warn-ink, #92400e); }
+.rec-rank.low  { background: var(--surface-sunk); color: var(--ink-2); }
+
+.rec-title { font-size: 14.5px; font-weight: 700; letter-spacing: -.005em; line-height: 1.3; }
+.rec-problem { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin-top: 5px; }
+.rec-tags { display: flex; gap: 7px; margin-top: 11px; flex-wrap: wrap; }
+
+.rec-metrics { display: flex; gap: 20px; align-items: center; }
+.rmetric { text-align: center; }
+.rmetric .l { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.rmetric .v { font-size: 13px; font-weight: 750; margin-top: 4px; display: flex; align-items: center; gap: 4px; justify-content: center; }
+
+/* Expandable detail panel */
+.rec-detail {
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .28s ease;
+}
+.rec-card.open .rec-detail { max-height: 1200px; }
+.rec-detail-inner { padding: 20px 22px 22px; display: grid; grid-template-columns: 1fr; gap: 18px; }
+
+/* Detail blocks */
+.detail-block { display: flex; flex-direction: column; }
+.detail-block .db-label,
+.db-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 7px;
+}
+.detail-block p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+
+/* Two-column grid inside rec detail */
+.rec-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+@media (max-width: 680px) {
+  .rec-detail-grid { grid-template-columns: 1fr; }
+}
+
+/* detail-block override for inner padding */
+.rec-detail-inner .detail-block {
+  display: flex;
+  flex-direction: column;
+}
+.rec-detail-inner .detail-block p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+/* Suggested action block */
+.rec-action-block {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+}
+.rec-action-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+/* ============================================================
+   LUMIRA-10: Recommendations — expanded layout
+   ============================================================ */
+
+.rec-evidence-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 4px;
+}
+@media (max-width: 700px) {
+  .rec-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.rec-evidence-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rec-evidence-col-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-4);
+  margin-bottom: 4px;
+}
+.rec-snippet {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  line-height: 1.55;
+  font-style: italic;
+  padding: 8px 10px 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: #f5f6ff;
+  border-radius: 0 6px 6px 0;
+}
+
+/* ============================================================
+   LUMIRA-8: Prompts Topics + enriched drawer
+   ============================================================ */
+
+/* CSS tokens needed by LUMIRA-8 */
+:root {
+  --surface-sunk: #f6f7f9;
+  --line-strong: #c8ccd6;
+  --pos-ink: #0d6b41;
+  --neg-ink: #a51f2c;
+}
+
+/* Badge system (LUMIRA-8 variant — overrides/supplements earlier definition) */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge-pos    { background: #e7f6ee; color: #0d6b41; }
+.badge-neg    { background: #fdecee; color: #a51f2c; }
+.badge-neutral { background: #f1f3f6; color: var(--ink-3); }
+.badge-warn   { background: #fff8e6; color: #92600a; }
+
+/* Topics table rows */
+.topic-row { background: var(--surface-sunk); }
+.topic-row td {
+  padding: 10px 8px;
+  font-weight: 650;
+  color: var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+.topic-row:hover { background: #f0f1f5; }
+.topic-label { font-size: 13px; font-weight: 650; color: var(--ink); }
+.prompt-row td { padding: 9px 8px; border-bottom: 1px solid var(--line); }
+.topic-chevron { font-size: 11px; color: var(--ink-4); width: 14px; display: inline-block; }
+
+/* Prompt drawer */
+.prompt-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(15, 23, 41, 0.35);
+  backdrop-filter: blur(2px);
+}
+.prompt-drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  z-index: 50;
+  width: 520px;
+  max-width: 95vw;
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.drawer-header {
+  flex-shrink: 0;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.drawer-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 20px;
+  flex-shrink: 0;
+}
+.drawer-tab {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-3);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  background: none;
+  border-top: none; border-left: none; border-right: none;
+  transition: color 0.12s;
+}
+.drawer-tab:hover { color: var(--ink); }
+.drawer-tab.active { color: var(--accent-ink); border-bottom-color: var(--accent); }
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+.aside-card {
+  background: var(--surface-sunk);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+.ac-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin-bottom: 8px;
+}
+.resp-full {
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+.resp-full .body {
+  padding: 14px 16px;
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.65;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ============================================================
+   LUMIRA-9: Sidebar multi-proyecto + header improvements
+   ============================================================ */
+.proj-other-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.1s;
+  margin-bottom: 2px;
+}
+.proj-other-item:hover { background: var(--surface-sunk); }
+.proj-favicon-sm {
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+/* Bell icon button */
+.header-bell {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-3);
+  cursor: default;
+  flex-shrink: 0;
+}
