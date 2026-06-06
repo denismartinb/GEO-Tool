@@ -111,7 +111,8 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <path d="M14 11a5 5 0 0 0-7.5-.7l-2 2a5 5 0 0 0 7 7l1-1" />
       </>
     ),
-    check: <path d="M20 6L9 17l-5-5" />
+    check: <path d="M20 6L9 17l-5-5" />,
+    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;

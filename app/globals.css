@@ -905,6 +905,65 @@ a {
   padding-top: 4px;
 }
 
+/* sticky project header inside the page scroll area */
+.ov-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line-soft);
+  margin: -26px -34px 24px;
+  padding: 12px 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ov-sticky-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.ov-sticky-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Overview — progress animation (scan in progress state)
+   ============================================================ */
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ============================================================
+   Sidebar — nav count badge & locked item & user chip
+   ============================================================ */
+.nav-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  background: var(--surface-sunk);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+.nav-item.active .nav-count { background: #fff; color: var(--accent-ink); }
+.nav-lock { margin-left: auto; color: var(--ink-4); }
+.nav-item.locked { color: var(--ink-4); cursor: default; }
+.nav-item.locked:hover { background: transparent; color: var(--ink-4); }
+
+.user-chip { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; }
+.user-chip:hover { background: var(--surface-2); }
+.avatar { width: 28px; height: 28px; border-radius: 999px; background: linear-gradient(135deg, #8b8df5, var(--accent)); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 11px; flex-shrink: 0; }
+
 /* ============================================================
    Overview — responsive tweaks
    ============================================================ */

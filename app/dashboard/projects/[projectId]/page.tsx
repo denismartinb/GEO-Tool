@@ -4,23 +4,11 @@ import { requireUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/empty-state";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
-import {
-  createCompetitor,
-  createPrompt,
-  deactivateCompetitor,
-  deactivatePrompt,
-  runProjectScan,
-  updateCompetitor,
-  updatePrompt
-} from "./actions";
+import { runProjectScan } from "./actions";
 
 /* ---- constants & helpers ---- */
 
@@ -292,18 +280,19 @@ export default async function ProjectDetailPage({
   /* ---- render ---- */
   return (
     <div className="page">
-      {/* Page header */}
-      <div className="ov-header">
-        <div className="ov-header-left">
-          <p className="kicker">Visión general</p>
-          <h1 className="title-lg">{project.name}</h1>
-          <p className="sub" style={{ marginTop: 4 }}>
-            <span className="mono" style={{ fontSize: 12 }}>{project.domain}</span>
-            {" · "}{project.country}/{project.language}
-            {" · "}marca: <b style={{ color: "var(--ink-2)" }}>{project.brand}</b>
-          </p>
+      {/* Sticky page header */}
+      <div className="ov-sticky-header">
+        <div className="ov-sticky-left">
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>Visión general</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>{project.name}</span>
+              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{project.domain}</span>
+              <span className="meta-pill">{project.country}/{project.language}</span>
+            </div>
+          </div>
         </div>
-        <div className="ov-header-right">
+        <div className="ov-sticky-right">
           {activeRun ? (
             <span className="scan-status">
               <span className="dot run" />
@@ -346,7 +335,7 @@ export default async function ProjectDetailPage({
       {!prompts?.length && (
         <p className="feedback" style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16 }}>
           Añade al menos un prompt activo antes de escanear.{" "}
-          <a href="#gestion-prompts" style={{ fontWeight: 700, textDecoration: "underline" }}>Añadir prompts</a>
+          <Link href={`/dashboard/projects/${projectId}/prompts`} style={{ fontWeight: 700, textDecoration: "underline" }}>Añadir prompts</Link>
         </p>
       )}
 
@@ -643,12 +632,12 @@ export default async function ProjectDetailPage({
                     title="Sin datos de competidores"
                     description="Añade competidores para ver cómo se compara tu visibilidad en IA."
                   />
-                  <a
-                    href="#gestion-competidores"
+                  <Link
+                    href={`/dashboard/projects/${projectId}/competitors`}
                     style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
                   >
                     Añadir competidores <Icon name="arrRight" size={13} />
-                  </a>
+                  </Link>
                 </div>
               )}
             </div>
@@ -844,209 +833,133 @@ export default async function ProjectDetailPage({
         </>
       ) : (
         /* ===== EMPTY STATE ===== */
-        <Card style={{ marginTop: 8 }}>
-          <CardContent style={{ padding: "40px 24px" }}>
-            <EmptyState
-              title={
-                activeRun
-                  ? "Escaneo en curso"
-                  : prompts?.length
-                    ? "Lanza tu primer escaneo"
-                    : "Añade tus primeros prompts"
-              }
-              description={
-                activeRun
-                  ? "El escaneo está procesando tus prompts. Los resultados aparecerán aquí cuando termine."
-                  : prompts?.length
-                    ? `${prompts.length} prompt${prompts.length > 1 ? "s" : ""} listos. Lanza el escaneo para obtener tu primer análisis de visibilidad en IA.`
-                    : "Necesitas al menos un prompt activo antes de ejecutar el primer análisis."
-              }
-            />
-            {!activeRun && prompts?.length ? (
-              <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
-                <form action={runProjectScan}>
-                  <input type="hidden" name="projectId" value={projectId} />
-                  <Button type="submit">
-                    <Icon name="play" size={14} />
-                    Lanzar escaneo
-                  </Button>
-                </form>
+        activeRun ? (
+          /* Estado A — Escaneo en curso */
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
+              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
+              boxShadow: "var(--sh-2)"
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
+                background: "linear-gradient(150deg, var(--accent) 0%, #6d63f0 100%)",
+                display: "grid", placeItems: "center", color: "#fff",
+                boxShadow: "0 4px 16px var(--accent-ring)"
+              }}>
+                <Icon name="resonance" size={24} />
               </div>
-            ) : !prompts?.length ? (
-              <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
-                <a
-                  href="#gestion-prompts"
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
-                >
-                  <Icon name="arrDown" size={14} />
-                  Ir a Añadir prompts
-                </a>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ===== GESTIÓN (config section — always shown at bottom) ===== */}
-      <div
-        style={{
-          borderTop: "1px solid var(--line-soft)",
-          marginTop: 48,
-          paddingTop: 32
-        }}
-      >
-        <div style={{ marginBottom: 20 }}>
-          <p className="kicker">Configuración de escaneo</p>
-          <h2 style={{ fontSize: 18, fontWeight: 650, color: "var(--ink)", marginTop: 4 }}>Inputs monitorizados</h2>
-          <p className="sub" style={{ marginTop: 4 }}>
-            Gestiona los prompts y competidores que se utilizarán en el próximo escaneo.
-          </p>
-        </div>
-
-        <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
-          {/* Prompts */}
-          <Card id="gestion-prompts">
-            <CardHeader><h2 className="font-medium">Prompts activos ({prompts?.length ?? 0})</h2></CardHeader>
-            <CardContent className="space-y-4">
-              <form action={createPrompt} className="space-y-2 rounded border p-3">
-                <input type="hidden" name="projectId" value={projectId} />
-                <div>
-                  <Label htmlFor="promptText">Nuevo prompt</Label>
-                  <Textarea id="promptText" name="promptText" required rows={2} placeholder="¿Cuál es la mejor herramienta de...?" />
-                </div>
-                <div>
-                  <Label htmlFor="category">Categoría (opcional)</Label>
-                  <Input id="category" name="category" placeholder="p.ej. Comparación" />
-                </div>
-                <Button type="submit" variant="outline">Añadir prompt</Button>
-              </form>
-              {!prompts?.length ? (
-                <EmptyState title="Sin prompts activos" description="Añade entre 5 y 10 prompts para preparar el escaneo." />
-              ) : (
-                <div className="space-y-2">
-                  {prompts.map((prompt) => (
-                    <form key={prompt.id} action={updatePrompt} className="space-y-2 rounded border p-3">
-                      <input type="hidden" name="projectId" value={projectId} />
-                      <input type="hidden" name="promptId" value={prompt.id} />
-                      <Textarea name="promptText" defaultValue={prompt.prompt_text} rows={2} required />
-                      <Input name="category" defaultValue={prompt.category ?? ""} placeholder="Categoría" />
-                      <div className="flex gap-2">
-                        <Button type="submit" variant="outline">Guardar</Button>
-                        <button
-                          formAction={deactivatePrompt}
-                          className="inline-flex h-8 items-center rounded-md border border-slate-300 px-3 text-xs hover:bg-slate-100"
-                          type="submit"
-                        >
-                          Desactivar
-                        </button>
-                      </div>
-                    </form>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Competitors */}
-          <Card id="gestion-competidores">
-            <CardHeader><h2 className="font-medium">Competidores activos ({competitors?.length ?? 0})</h2></CardHeader>
-            <CardContent className="space-y-4">
-              <form action={createCompetitor} className="space-y-2 rounded border p-3">
-                <input type="hidden" name="projectId" value={projectId} />
-                <div>
-                  <Label htmlFor="name">Nombre</Label>
-                  <Input id="name" name="name" required placeholder="Competidor S.A." />
-                </div>
-                <div>
-                  <Label htmlFor="domain">Dominio</Label>
-                  <Input id="domain" name="domain" required placeholder="competidor.com" />
-                </div>
-                <Button type="submit" variant="outline">Añadir competidor</Button>
-              </form>
-              {!competitors?.length ? (
-                <EmptyState title="Sin competidores activos" description="Añade competidores para el contexto comparativo." />
-              ) : (
-                <div className="space-y-2">
-                  {competitors.map((comp) => (
-                    <form key={comp.id} action={updateCompetitor} className="space-y-2 rounded border p-3">
-                      <input type="hidden" name="projectId" value={projectId} />
-                      <input type="hidden" name="competitorId" value={comp.id} />
-                      <Input name="name" defaultValue={comp.name} required />
-                      <Input name="domain" defaultValue={comp.domain} required />
-                      <div className="flex gap-2">
-                        <Button type="submit" variant="outline">Guardar</Button>
-                        <button
-                          formAction={deactivateCompetitor}
-                          className="inline-flex h-8 items-center rounded-md border border-slate-300 px-3 text-xs hover:bg-slate-100"
-                          type="submit"
-                        >
-                          Desactivar
-                        </button>
-                      </div>
-                    </form>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Scan history (compact) */}
-        {runs?.length ? (
-          <div style={{ marginTop: 24 }}>
-            <div style={{ marginBottom: 12 }}>
-              <h2 style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
-                Historial de escaneos ({completedRunsCount} completados)
+              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
+                Tu primer escaneo está en curso
               </h2>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {runs.slice(0, 5).map((run) => (
-                <div
-                  key={run.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    padding: "10px 14px",
-                    background: "var(--surface)",
-                    border: "1px solid var(--line)",
-                    borderRadius: "var(--r-md)",
-                    fontSize: 12.5
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span
-                      className={`dot ${run.status === "completed" ? "ok" : run.status === "failed" ? "err" : "run"}`}
-                    />
-                    <span style={{ fontWeight: 650, color: "var(--ink)" }}>{statusLabels[run.status] ?? run.status}</span>
-                    <span style={{ color: "var(--ink-4)" }}>
-                      · {new Date(run.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
-                    </span>
-                    <span style={{ color: "var(--ink-4)" }}>
-                      · {run.successful_prompts}/{run.total_prompts} prompts
-                    </span>
-                  </div>
-                  <Link
-                    href={`/dashboard/projects/${projectId}/runs/${run.id}`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "var(--accent)", fontWeight: 650 }}
-                  >
-                    <Icon name="arrRight" size={13} />
-                    Ver detalle
-                  </Link>
-                </div>
-              ))}
-              {(runs?.length ?? 0) > 5 && (
-                <Link
-                  href={`/dashboard/projects/${projectId}/runs`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600, marginTop: 4 }}
-                >
-                  Ver todos los escaneos ({runs?.length}) <Icon name="arrRight" size={13} />
-                </Link>
-              )}
+              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24, maxWidth: 380, margin: "0 auto 24px" }}>
+                Estamos analizando tus prompts con Gemini. Cuando termine, aquí verás tu puntuación GEO, tus competidores y tus oportunidades.
+              </p>
+              <div style={{ height: 4, background: "var(--surface-sunk)", borderRadius: 99, overflow: "hidden", marginBottom: 20 }}>
+                <div style={{
+                  height: "100%", width: "60%", borderRadius: 99,
+                  background: "linear-gradient(90deg, var(--accent), #6d63f0)",
+                  animation: "progress-pulse 2s ease-in-out infinite"
+                }} />
+              </div>
+              <Link href={`/dashboard/projects/${projectId}/runs/${activeRun.id}`}>
+                <Button>
+                  <Icon name="play" size={14} />
+                  Ver progreso del escaneo
+                </Button>
+              </Link>
+              <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                <Icon name="info" size={13} />
+                Suele tardar unos minutos
+              </p>
             </div>
           </div>
-        ) : null}
+        ) : prompts?.length ? (
+          /* Estado B — Listo para lanzar */
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
+              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
+              boxShadow: "var(--sh-2)"
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
+                background: "var(--accent-soft)", display: "grid", placeItems: "center", color: "var(--accent)"
+              }}>
+                <Icon name="overview" size={24} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
+                Lanza tu primer escaneo de visibilidad en IA
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
+                Analiza cómo aparece <b style={{ color: "var(--ink-2)" }}>{project.brand}</b> en los motores de IA con tus <b style={{ color: "var(--ink-2)" }}>{prompts.length} prompts</b> activos.
+              </p>
+              <form action={runProjectScan} style={{ display: "inline-block" }}>
+                <input type="hidden" name="projectId" value={projectId} />
+                <Button type="submit">
+                  <Icon name="play" size={14} />
+                  Lanzar escaneo
+                </Button>
+              </form>
+              <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
+                Primer escaneo · {prompts.length} prompts · Gemini
+              </p>
+            </div>
+          </div>
+        ) : (
+          /* Estado C — Sin prompts */
+          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
+            <div style={{
+              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
+              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
+              boxShadow: "var(--sh-2)"
+            }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
+                background: "var(--surface-sunk)", display: "grid", placeItems: "center", color: "var(--ink-3)"
+              }}>
+                <Icon name="prompts" size={24} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
+                Configura tus primeros prompts
+              </h2>
+              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
+                Añade entre 5 y 10 preguntas de alta intención que tus potenciales clientes hacen a la IA. Son la base de tu análisis de visibilidad.
+              </p>
+              <Link href={`/dashboard/projects/${projectId}/prompts`}>
+                <Button variant="outline">
+                  <Icon name="prompts" size={14} />
+                  Ir a Prompts
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )
+      )}
+
+      {/* ===== QUICK LINKS ===== */}
+      <div style={{ display: "flex", gap: 16, marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line-soft)" }}>
+        <Link
+          href={`/dashboard/projects/${projectId}/prompts`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+        >
+          <Icon name="prompts" size={14} />
+          Gestionar prompts ({prompts?.length ?? 0} activos)
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/competitors`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+        >
+          <Icon name="competitors" size={14} />
+          Gestionar competidores ({competitors?.length ?? 0} activos)
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/runs`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
+        >
+          <Icon name="runs" size={14} />
+          Ver escaneos ({runs?.length ?? 0})
+        </Link>
       </div>
     </div>
   );
