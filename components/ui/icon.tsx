@@ -112,7 +112,16 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     check: <path d="M20 6L9 17l-5-5" />,
-    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />
+    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />,
+    target: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="12" cy="12" r="5" />
+        <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+      </>
+    ),
+    chevDown: <path d="m6 9 6 6 6-6" />,
+    chevRight: <path d="m9 6 6 6-6 6" />
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
