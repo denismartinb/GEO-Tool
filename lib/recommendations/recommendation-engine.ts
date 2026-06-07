@@ -115,8 +115,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   if (runScore.visibility_score < 60) {
     const impact: "high" | "medium" = runScore.visibility_score < 30 ? "high" : "medium";
     candidates.push({
-      title: "Improve brand visibility across high-intent prompts",
-      description: "Your brand is missing in a significant share of AI answers. Strengthen explicit brand/context coverage on core pages.",
+      title: "Mejora la visibilidad de tu marca en los prompts de alta intención",
+      description: "Tu marca no aparece en una parte significativa de las respuestas de IA. Refuerza la presencia explícita de marca y contexto en tus páginas principales.",
       rule_id: "rule_visibility_001",
       recommendation_type: "increase_brand_visibility",
       impact,
@@ -137,8 +137,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         mentioned_competitors: base.mentionedCompetitors,
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
-        assumptions: ["Brand visibility should be present on most target prompts."],
-        why_this_matters: "Low brand presence reduces discoverability in AI-generated answers."
+        assumptions: ["La marca debería estar presente en la mayoría de los prompts objetivo."],
+        why_this_matters: "Una presencia de marca baja reduce su visibilidad en las respuestas generadas por IA."
       }
     });
   }
@@ -146,8 +146,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   if (runScore.citation_score < 50) {
     const impact: "high" | "medium" = runScore.citation_score < 20 ? "high" : "medium";
     candidates.push({
-      title: "Make your content more citation-ready",
-      description: "AI answers rarely cite your brand/domain context. Add verifiable facts, structured references and clearer sourceable sections.",
+      title: "Haz que tu contenido sea más citable",
+      description: "Las respuestas de IA rara vez citan tu marca o tu dominio. Añade datos verificables, referencias estructuradas y secciones más fáciles de citar como fuente.",
       rule_id: "rule_citations_001",
       recommendation_type: "improve_citation_readiness",
       impact,
@@ -168,8 +168,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         mentioned_competitors: base.mentionedCompetitors,
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
-        assumptions: ["Citation presence indicates source-readiness for AI engines."],
-        why_this_matters: "Low citation presence limits authority and reference frequency."
+        assumptions: ["La presencia de citas indica que el contenido es apto como fuente para los motores de IA."],
+        why_this_matters: "Una presencia de citas baja limita tu autoridad y la frecuencia con la que se te referencia."
       }
     });
   }
@@ -178,8 +178,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     const impact: "high" | "medium" = runScore.competitor_gap_score >= 70 ? "high" : "medium";
     const effort: "high" | "medium" = competitorNoBrand.length >= 3 ? "high" : "medium";
     candidates.push({
-      title: "Close the gap against competitors mentioned by AI engines",
-      description: "Competitors appear in AI answers while your brand is absent in key prompts. Strengthen differentiators and comparison positioning.",
+      title: "Reduce la brecha frente a los competidores que mencionan los motores de IA",
+      description: "Los competidores aparecen en las respuestas de IA mientras que tu marca está ausente en prompts clave. Refuerza tus diferenciadores y tu posicionamiento comparativo.",
       rule_id: "rule_competitor_gap_001",
       recommendation_type: "close_competitor_gap",
       impact,
@@ -200,16 +200,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         mentioned_competitors: base.mentionedCompetitors,
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
-        assumptions: ["Higher competitor mentions with absent brand indicates competitive visibility risk."],
-        why_this_matters: "Competitor-dominant AI answers can shift buyer consideration away from your brand."
+        assumptions: ["Un mayor número de menciones de competidores con la marca ausente indica un riesgo de visibilidad competitiva."],
+        why_this_matters: "Las respuestas de IA dominadas por la competencia pueden desviar la decisión de compra fuera de tu marca."
       }
     });
   }
 
   if (comparativePrompts.length >= 2) {
     candidates.push({
-      title: "Add comparison content for competitive prompts",
-      description: "Several comparative/commercial prompts mention competitors while your brand is missing. Publish targeted comparison pages.",
+      title: "Añade contenido comparativo para los prompts competitivos",
+      description: "Varios prompts comparativos o comerciales mencionan a competidores mientras que tu marca no aparece. Publica páginas de comparativa específicas.",
       rule_id: "rule_comparison_content_001",
       recommendation_type: "add_comparison_content",
       impact: comparativePrompts.length >= 3 ? "high" : "medium",
@@ -230,16 +230,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         mentioned_competitors: base.mentionedCompetitors,
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
-        assumptions: ["Comparative prompt intent often rewards explicit competitor-vs-brand coverage."],
-        why_this_matters: "Comparison-focused pages help recover visibility on decision-stage prompts."
+        assumptions: ["Los prompts con intención comparativa suelen premiar el contenido explícito de comparación entre competidores y tu marca."],
+        why_this_matters: "Las páginas centradas en comparativas ayudan a recuperar visibilidad en los prompts de la fase de decisión."
       }
     });
   }
 
   if (runScore.visibility_score < 60 && runScore.citation_score < 50 && informationalPrompts.length > 0) {
     candidates.push({
-      title: "Create FAQ and answer-ready informational content",
-      description: "Informational prompts are underperforming in visibility and citations. Add concise FAQ/answer blocks aligned to those questions.",
+      title: "Crea contenido informativo y FAQ listo para responder",
+      description: "Los prompts informativos rinden por debajo de lo esperado en visibilidad y citas. Añade bloques de FAQ o de respuesta concisos y alineados con esas preguntas.",
       rule_id: "rule_faq_001",
       recommendation_type: "create_faq_section",
       impact: "medium",
@@ -260,16 +260,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         mentioned_competitors: base.mentionedCompetitors,
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
-        assumptions: ["Question-like prompts benefit from concise answer-ready structures."],
-        why_this_matters: "Answer-ready content increases AI pickup for informational demand."
+        assumptions: ["Los prompts en forma de pregunta se benefician de estructuras concisas y fáciles de responder."],
+        why_this_matters: "El contenido listo para responder aumenta su captación por la IA ante la demanda informativa."
       }
     });
   }
 
   if (candidates.length < 3 && runScore.visibility_score < 50 && totalCompetitorMentions === 0) {
     candidates.push({
-      title: "Strengthen brand entity clarity and category signals",
-      description: "Brand mentions are low while competitor signals are also weak. Clarify brand-category associations and core entity descriptors.",
+      title: "Refuerza la claridad de tu marca como entidad y sus señales de categoría",
+      description: "Las menciones de marca son bajas y las señales de los competidores también son débiles. Aclara las asociaciones entre tu marca y su categoría, y los descriptores principales de la entidad.",
       rule_id: "rule_entity_clarity_001",
       recommendation_type: "strengthen_brand_entity_clarity",
       impact: "medium",
@@ -290,8 +290,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         mentioned_competitors: base.mentionedCompetitors,
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
-        assumptions: ["Low brand + low competitor signals can indicate weak entity/category grounding."],
-        why_this_matters: "Entity clarity helps models map your brand to relevant topical intents."
+        assumptions: ["Señales bajas tanto de marca como de competidores pueden indicar una vinculación débil con la entidad o la categoría."],
+        why_this_matters: "La claridad de la entidad ayuda a los modelos a asociar tu marca con las intenciones temáticas relevantes."
       }
     });
   }
