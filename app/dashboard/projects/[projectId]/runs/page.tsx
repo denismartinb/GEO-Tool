@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { requireUser } from "@/lib/auth";
-import { requireActiveProject } from "@/lib/project-workspace";
+import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
 
 /* ---- Status helpers ---- */
 
@@ -44,6 +44,88 @@ function formatDateShort(value: string | null | undefined): string {
   });
 }
 
+/* ---- Domain grid (Escaneos · dominios monitorizados) ---- */
+
+const DOMAIN_FAVICON_COLORS = ["#6366f1", "#0d9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
+
+function domainFaviconColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  return DOMAIN_FAVICON_COLORS[hash % DOMAIN_FAVICON_COLORS.length];
+}
+
+type DomainCardData = {
+  id: string;
+  name: string;
+  domain: string;
+  country: string;
+  language: string;
+  score: number | null;
+  scoreDelta: number | null;
+  promptCount: number;
+  runCount: number;
+  lastScanLabel: string;
+  isScanning: boolean;
+};
+
+function DomainCard({ d, active }: { d: DomainCardData; active: boolean }) {
+  return (
+    <Link
+      href={`/dashboard/projects/${d.id}/runs`}
+      className={`dom-card${active ? " sel" : ""}`}
+    >
+      <div className="dom-top">
+        <span className="dom-fav" style={{ background: domainFaviconColor(d.domain || d.name) }}>
+          {d.name.slice(0, 1).toUpperCase()}
+        </span>
+        <div className="dom-id">
+          <div className="dom-name">{d.name}</div>
+          <div className="dom-domain">{d.domain}</div>
+        </div>
+        {d.isScanning ? (
+          <span className="scan-status">
+            <span className="dot run" />
+            Escaneando
+          </span>
+        ) : null}
+      </div>
+      <div className="dom-meta">
+        <div className="dom-stat">
+          {d.score === null ? (
+            <div className="v" style={{ color: "var(--ink-4)", fontSize: 14 }}>—</div>
+          ) : (
+            <div className="v">
+              {d.score}
+              {d.scoreDelta !== null ? <Delta value={d.scoreDelta} /> : null}
+            </div>
+          )}
+          <div className="l">Puntuación GEO</div>
+        </div>
+        <div className="dom-stat">
+          <div className="v">{d.promptCount}</div>
+          <div className="l">Prompts</div>
+        </div>
+        <div className="dom-stat">
+          <div className="v">{d.runCount}</div>
+          <div className="l">Escaneos</div>
+        </div>
+        <div className="spacer" />
+        <div style={{ textAlign: "right" }}>
+          <div className="dom-scan" style={{ justifyContent: "flex-end" }}>
+            {d.country} · {d.language}
+          </div>
+          <div className="dom-scan" style={{ justifyContent: "flex-end", marginTop: 5 }}>
+            <Icon name="info" size={12} />
+            {d.lastScanLabel}
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 /* ---- Page ---- */
 
 export default async function RunsPage({
@@ -54,6 +136,36 @@ export default async function RunsPage({
   const { projectId } = await params;
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
+
+  /* Domains grid — reuses the same counters/queries as the dashboard sidebar */
+  const {
+    projects: workspaceProjects,
+    promptCountByProject,
+    completedRunCountByProject,
+    latestScanStatusByProject,
+    latestScanDateByProject,
+    latestScoreByProject,
+    scoreDeltaByProject
+  } = await getWorkspaceCounters();
+
+  const domainCards: DomainCardData[] = workspaceProjects.map((p) => {
+    const status = latestScanStatusByProject[p.id];
+    const isScanning = status === "pending" || status === "running" || status === "retrying";
+    const lastScanDate = latestScanDateByProject[p.id] ?? null;
+    return {
+      id: p.id,
+      name: p.name,
+      domain: p.domain,
+      country: p.country,
+      language: p.language,
+      score: latestScoreByProject[p.id] ?? null,
+      scoreDelta: scoreDeltaByProject[p.id] ?? null,
+      promptCount: promptCountByProject[p.id] ?? 0,
+      runCount: completedRunCountByProject[p.id] ?? 0,
+      lastScanLabel: isScanning ? "Escaneando…" : formatDateShort(lastScanDate),
+      isScanning
+    };
+  });
 
   /* Fetch all runs */
   const { data: runs } = await supabase
@@ -205,6 +317,25 @@ export default async function RunsPage({
           )}
         </p>
       </div>
+
+      {/* Domains grid */}
+      {domainCards.length > 0 ? (
+        <>
+          <div className="section-head">
+            <div className="section-title">Dominios monitorizados</div>
+            <div className="section-desc">
+              {domainCards.length === 1
+                ? "Tu dominio activo"
+                : `${domainCards.length} dominios · el activo es el que estás viendo`}
+            </div>
+          </div>
+          <div className="dom-grid">
+            {domainCards.map((d) => (
+              <DomainCard key={d.id} d={d} active={d.id === projectId} />
+            ))}
+          </div>
+        </>
+      ) : null}
 
       {/* Section header */}
       <div className="section-head">

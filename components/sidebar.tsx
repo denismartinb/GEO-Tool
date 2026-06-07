@@ -71,7 +71,11 @@ export function Sidebar({
       </div>
 
       {project ? (
-        <Link className="proj-switch" href="/dashboard/projects" title="Cambiar de proyecto">
+        <Link
+          className="proj-switch"
+          href={`/dashboard/projects/${project.id}/runs`}
+          title="Ver escaneos de este dominio"
+        >
           <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
           <div className="proj-meta">
             <div className="proj-name">{project.name}</div>
@@ -81,11 +85,10 @@ export function Sidebar({
         </Link>
       ) : (
         <div className="proj-empty">
-          <p className="proj-empty-title">Sin proyecto seleccionado</p>
-          <p className="proj-empty-body">Elige un proyecto o crea el primero.</p>
+          <p className="proj-empty-title">Sin dominio todavía</p>
+          <p className="proj-empty-body">Crea tu primer dominio para empezar a escanear.</p>
           <div className="proj-empty-actions">
-            <Link href="/dashboard/projects">Ver proyectos</Link>
-            <Link href="/dashboard/projects/new">Crear proyecto</Link>
+            <Link href="/dashboard/projects/new">Crear dominio</Link>
           </div>
         </div>
       )}
@@ -159,16 +162,16 @@ export function Sidebar({
           );
         })}
 
-        {/* Otros proyectos */}
+        {/* Otros dominios */}
         {projects.length > 1 && (
           <div style={{ marginTop: 12 }}>
-            <div className="nav-group-label hide-collapsed">Otros proyectos</div>
+            <div className="nav-group-label hide-collapsed">Otros dominios</div>
             {projects
               .filter((p) => p.id !== activeProjectId)
               .map((p) => (
                 <Link
                   key={p.id}
-                  href={`/dashboard/projects/${p.id}`}
+                  href={`/dashboard/projects/${p.id}/runs`}
                   className="proj-other-item"
                 >
                   <div className="proj-favicon proj-favicon-sm">
