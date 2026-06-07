@@ -15,13 +15,13 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
 
   return (
     <div className="page mx-auto max-w-4xl space-y-4">
-      <p className="kicker">Proyectos</p>
+      <p className="kicker">Dominios</p>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="title-lg">Nuevo proyecto</h1>
+          <h1 className="title-lg">Nuevo dominio</h1>
           <p className="sub mt-1">Configura un dominio, sus competidores y los primeros prompts en un flujo guiado.</p>
         </div>
-        <Link href="/dashboard/projects" className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-2)]">
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-2)]">
           <Icon name="chevronLeft" size={14} />
           Volver
         </Link>
