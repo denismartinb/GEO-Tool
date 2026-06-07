@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { ScanInProgress } from "@/components/scan-in-progress";
 
 /* ---- Helpers ---- */
 
@@ -37,8 +38,8 @@ export default async function CompetitorsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  /* 1. Configured competitors + all completed runs */
-  const [{ data: competitors }, { data: allRuns }] = await Promise.all([
+  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) */
+  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }] = await Promise.all([
     supabase
       .from("project_competitors")
       .select("id, name, domain, is_active, created_at")
@@ -50,12 +51,19 @@ export default async function CompetitorsPage({
       .select("id, status, created_at")
       .eq("project_id", projectId)
       .eq("status", "completed")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("scan_runs")
+      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+      .eq("project_id", projectId)
       .order("created_at", { ascending: false })
+      .limit(5)
   ]);
 
   const configuredCompetitors = competitors ?? [];
   const completedRuns = allRuns ?? [];
   const completedRunIds = completedRuns.map((r) => r.id);
+  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
 
   /* 2. Prompt results across ALL completed runs */
   const { data: allResults } =
@@ -209,6 +217,10 @@ export default async function CompetitorsPage({
         </div>
       </div>
 
+      {activeRun ? (
+        <ScanInProgress activeRun={activeRun} />
+      ) : (
+      <>
       {/* Summary banner */}
       <div className="summary mt8">
         <div className="summary-ico">
@@ -584,6 +596,8 @@ export default async function CompetitorsPage({
           Prompts
         </Link>
       </div>
+      </>
+      )}
     </div>
   );
 }

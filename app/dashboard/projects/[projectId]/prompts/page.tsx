@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { ScanInProgress } from "@/components/scan-in-progress";
 import { PromptsClient } from "./prompts-client";
 
 export type ResultRow = {
@@ -44,6 +45,16 @@ export default async function PromptsPage({
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // 1b. Escaneo en curso (pending|running) — si existe, sustituye el contenido normal
+  const { data: recentRuns } = await supabase
+    .from("scan_runs")
+    .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
 
   // 2. Prompts configurados (para category + is_active)
   const { data: projectPrompts } = await supabase
@@ -153,7 +164,9 @@ export default async function PromptsPage({
       </header>
 
       <div style={{ paddingTop: 20 }}>
-        {!hasActivePrompts ? (
+        {activeRun ? (
+          <ScanInProgress activeRun={activeRun} />
+        ) : !hasActivePrompts ? (
           <div
             className="card"
             style={{ padding: "32px 24px", textAlign: "center" }}
