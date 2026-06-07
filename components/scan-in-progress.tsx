@@ -26,7 +26,7 @@ export function ScanInProgress({ activeRun }: { activeRun: ActiveScanRun }) {
   const pct = hasProgress ? Math.min(100, Math.round((completed / total) * 100)) : null;
 
   return (
-    <div className="state-wrap">
+    <div className="state-wrap fade-in">
       <div className="state-card">
         <div className="state-ico">
           <div className="spinner" style={{ width: 26, height: 26, borderWidth: 3 }} />
