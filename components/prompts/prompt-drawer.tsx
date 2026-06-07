@@ -21,7 +21,6 @@ type ExtractedJson = {
   citations?: Array<{ url?: string; domain?: string; label?: string; evidence?: string }>;
   sentiment?: string;
   summary?: string;
-  confidence?: string;
 };
 
 const sentimentLabels: Record<string, string> = {
