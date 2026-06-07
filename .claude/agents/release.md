@@ -32,6 +32,21 @@ Purpose: operate the GitHub workflow safely.
 - No secrets in logs.
 - No editing protected branches directly.
 
+## Reporting to the founder for Human Gate
+
+Every time a PR reaches the point where the founder needs to review/test it
+(QA done, ready for Human Gate, or any update that requires the founder to look
+at it), the report to the founder MUST include:
+
+- The **Vercel preview URL** for that PR (not just the PR URL).
+- A short, plain-language summary of **what to test** — concrete steps/screens,
+  not a recap of the implementation. Written so a non-technical reviewer can
+  follow it without reading the diff.
+
+Never report "ready for Human Gate" without both of these. If the Vercel
+preview hasn't finished building yet, say so explicitly and follow up once it
+has — don't ask the founder to wait on a link that isn't ready.
+
 ## Merge checklist
 
 - PR accepted by QA.
