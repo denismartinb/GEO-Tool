@@ -138,7 +138,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         citation_domains: base.citationDomains,
         evidence_snippets: base.snippets,
         assumptions: ["La marca debería estar presente en la mayoría de los prompts objetivo."],
-        why_this_matters: "Una presencia de marca baja reduce su descubribilidad en las respuestas generadas por IA."
+        why_this_matters: "Una presencia de marca baja reduce su visibilidad en las respuestas generadas por IA."
       }
     });
   }
