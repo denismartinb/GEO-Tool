@@ -8,6 +8,7 @@ import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { ScanInProgress } from "@/components/scan-in-progress";
 import { runProjectScan } from "./actions";
 
 /* ---- constants & helpers ---- */
@@ -843,46 +844,8 @@ export default async function ProjectDetailPage({
       ) : (
         /* ===== EMPTY STATE ===== */
         activeRun ? (
-          /* Estado A — Escaneo en curso */
-          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
-            <div style={{
-              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
-              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
-              boxShadow: "var(--sh-2)"
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
-                background: "linear-gradient(150deg, var(--accent) 0%, #6d63f0 100%)",
-                display: "grid", placeItems: "center", color: "#fff",
-                boxShadow: "0 4px 16px var(--accent-ring)"
-              }}>
-                <Icon name="resonance" size={24} />
-              </div>
-              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
-                Tu primer escaneo está en curso
-              </h2>
-              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24, maxWidth: 380, margin: "0 auto 24px" }}>
-                Estamos analizando tus prompts con Gemini. Cuando termine, aquí verás tu puntuación GEO, tus competidores y tus oportunidades.
-              </p>
-              <div style={{ height: 4, background: "var(--surface-sunk)", borderRadius: 99, overflow: "hidden", marginBottom: 20 }}>
-                <div style={{
-                  height: "100%", width: "60%", borderRadius: 99,
-                  background: "linear-gradient(90deg, var(--accent), #6d63f0)",
-                  animation: "progress-pulse 2s ease-in-out infinite"
-                }} />
-              </div>
-              <Link href={`/dashboard/projects/${projectId}/runs/${activeRun.id}`}>
-                <Button>
-                  <Icon name="play" size={14} />
-                  Ver progreso del escaneo
-                </Button>
-              </Link>
-              <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
-                <Icon name="info" size={13} />
-                Suele tardar unos minutos
-              </p>
-            </div>
-          </div>
+          /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
+          <ScanInProgress activeRun={activeRun} />
         ) : prompts?.length ? (
           /* Estado B — Listo para lanzar */
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>

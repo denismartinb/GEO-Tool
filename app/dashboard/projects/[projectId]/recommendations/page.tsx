@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { ScanInProgress } from "@/components/scan-in-progress";
 import {
   RecommendationsClient,
   type Recommendation,
@@ -34,6 +35,16 @@ export default async function RecommendationsPage({
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // Recent runs to detect an in-progress scan (pending|running)
+  const { data: recentRuns } = await supabase
+    .from("scan_runs")
+    .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
 
   const [{ data: recommendations }] = latestCompletedRun
     ? await Promise.all([
@@ -137,6 +148,10 @@ export default async function RecommendationsPage({
         </div>
       </div>
 
+      {activeRun ? (
+        <ScanInProgress activeRun={activeRun} />
+      ) : (
+      <>
       {/* Failed run notice */}
       {latestRunFailed && latestCompletedRun && (
         <div
@@ -348,6 +363,8 @@ export default async function RecommendationsPage({
             <Icon name="arrRight" size={13} />
           </Link>
         </div>
+      )}
+      </>
       )}
     </div>
   );

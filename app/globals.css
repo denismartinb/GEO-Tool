@@ -926,14 +926,6 @@ a {
 }
 
 /* ============================================================
-   Overview — progress animation (scan in progress state)
-   ============================================================ */
-@keyframes progress-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-
-/* ============================================================
    Sidebar — nav count badge & locked item & user chip
    ============================================================ */
 .nav-count {
@@ -1535,6 +1527,15 @@ a {
   --neg-ink: #a51f2c;
 }
 
+/* CSS tokens needed by scan-in-progress state (copied literally from design
+   reference styles.css :root — see /tmp/geo_design/geo-suite/project/styles.css) */
+:root {
+  --pos-soft: #e7f6ee;
+  --neg-soft: #fdecee;
+  --accent-soft-2: #e6e9fe;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
 /* Badge system (LUMIRA-8 variant — overrides/supplements earlier definition) */
 .badge {
   display: inline-flex;
@@ -1678,3 +1679,22 @@ a {
   cursor: default;
   flex-shrink: 0;
 }
+
+/* ============================================================
+   Scan in progress — pixel-perfect "LoadingState" container
+   (copied literally from design reference styles.css lines 471-490,
+   /tmp/geo_design/geo-suite/project/styles.css — see components/scan-in-progress.tsx)
+   ============================================================ */
+.state-wrap { display: grid; place-items: center; min-height: 70vh; padding: 40px; }
+.state-card { max-width: 460px; text-align: center; }
+.state-ico { width: 64px; height: 64px; border-radius: 16px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin: 0 auto 20px; }
+.state-title { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+.state-body { font-size: 14px; line-height: 1.6; color: var(--ink-3); margin-top: 10px; }
+.state-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; }
+.fade-in { animation: fadeIn .32s ease; }
+@keyframes fadeIn { from { transform: translateY(7px); } to { transform: none; } }
+.spinner { width: 14px; height: 14px; border: 2px solid var(--accent-soft-2); border-top-color: var(--accent); border-radius: 999px; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.progress-track { height: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; margin: 24px auto 0; max-width: 380px; }
+.progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .5s ease; }
+
