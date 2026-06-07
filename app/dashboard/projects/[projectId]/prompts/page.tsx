@@ -12,7 +12,6 @@ export type ResultRow = {
   mentioned_competitors_count: number | null;
   citations_count: number | null;
   sentiment: string | null;
-  confidence: string | null;
   raw_response_text: string | null;
   extracted_json: unknown;
   extraction_error: string | null;
@@ -53,15 +52,22 @@ export default async function PromptsPage({
     .eq("is_active", true);
 
   // 3. Resultados del último run
-  const { data: rawResults } = latestRun
+  const { data: rawResults, error: rawResultsError } = latestRun
     ? await supabase
         .from("scan_prompt_results")
         .select(
-          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, confidence, raw_response_text, extracted_json, extraction_error"
+          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error"
         )
         .eq("project_id", projectId)
         .eq("run_id", latestRun.id)
-    : { data: [] };
+    : { data: [], error: null };
+
+  if (rawResultsError) {
+    console.error(
+      "[prompts] Error al cargar scan_prompt_results:",
+      rawResultsError.message
+    );
+  }
 
   // 4. Competidores configurados
   const { data: configuredCompetitors } = await supabase

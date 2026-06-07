@@ -85,7 +85,6 @@ export function PromptsClient({
                   <th className="num">Competidores</th>
                   <th className="num">Citas</th>
                   <th>Sentimiento</th>
-                  <th>Confianza</th>
                 </tr>
               </thead>
               <tbody>
@@ -136,19 +135,6 @@ export function PromptsClient({
                           }`}
                         >
                           {sentimentLabel(r.sentiment)}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      {r.confidence ? (
-                        <span className="badge badge-neutral">
-                          {r.confidence === "high"
-                            ? "Alta"
-                            : r.confidence === "medium"
-                              ? "Media"
-                              : "Baja"}
                         </span>
                       ) : (
                         <span style={{ color: "var(--ink-4)" }}>—</span>
