@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -166,6 +167,29 @@ function WizardSteps({ currentStep }: { currentStep: number }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Estado de carga del envío final. `useFormStatus` solo funciona en un
+// componente hijo del <form> — por eso vive aparte de OnboardingWizard.
+// Sin barra de progreso falsa: en este punto el proyecto/scan aún no existen
+// en el cliente, así que no hay datos reales que mostrar (ver scan-in-progress.tsx).
+function CreateProjectOverlay() {
+  const { pending } = useFormStatus();
+  if (!pending) return null;
+  return (
+    <div className="state-wrap fade-in" style={{ position: "fixed", inset: 0, zIndex: 80, background: "var(--canvas)" }}>
+      <div className="state-card">
+        <div className="state-ico">
+          <div className="spinner" style={{ width: 26, height: 26, borderWidth: 3 }} />
+        </div>
+        <div className="state-title">Creando tu dominio y lanzando el primer escaneo…</div>
+        <div className="state-body">
+          Estamos consultando varios motores de IA por cada prompt. Esto puede tardar hasta
+          un minuto — no cierres ni recargues esta pestaña.
+        </div>
+      </div>
     </div>
   );
 }
@@ -507,6 +531,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
             <input type="hidden" name="language" value={language} />
             <input type="hidden" name="initial_competitors" value={competitorsText} />
             <input type="hidden" name="initial_prompts" value={promptsText} />
+            <CreateProjectOverlay />
             <Button type="button" variant="outline" onClick={() => setStep(1)}>
               Atrás
             </Button>
