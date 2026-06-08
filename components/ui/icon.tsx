@@ -90,6 +90,15 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
     arrDown: <path d="M12 5v14M5 12l7 7 7-7" />,
     chevronLeft: <path d="m15 6-6 6 6 6" />,
     chevronDown: <path d="m6 9 6 6 6-6" />,
+    chevLeft: <path d="m15 6-6 6 6 6" />,
+    chevDown: <path d="m6 9 6 6 6-6" />,
+    plus: <path d="M12 5v14M5 12h14" />,
+    alertCircle: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 8v5M12 16.5h.01" />
+      </>
+    ),
     sparkles: (
       <>
         <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" />
