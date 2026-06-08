@@ -328,6 +328,12 @@ export default async function RunsPage({
                 ? "Tu dominio activo"
                 : `${domainCards.length} dominios · el activo es el que estás viendo`}
             </div>
+            <div className="right">
+              <Link href="/dashboard/projects/new" className="btn btn-primary btn-sm">
+                <Icon name="plus" size={14} />
+                Añadir dominio
+              </Link>
+            </div>
           </div>
           <div className="dom-grid">
             {domainCards.map((d) => (
