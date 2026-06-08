@@ -79,6 +79,40 @@ approval (they appear in `CLAUDE.md`'s Forbidden list).
 
 ---
 
+## Planned phase — ASYNC-SCAN-1 (not started, not approved)
+
+**Origin:** while testing the redesigned add-domain wizard (PR #41), the
+founder asked whether scan launch could be made asynchronous so the user lands
+immediately on Escaneos and gets a bell notification when the scan finishes,
+instead of waiting through the synchronous 30-90s scan inside `createProject`
+(current mitigation: a loading overlay, shipped in PR #41).
+
+**Why this is a phase, not a patch:** async execution means reopening
+ADR-0003 (which currently mandates sync execution + `maxDuration=60` for the
+private beta and explicitly marks async as "forbidden without explicit phase
+approval"), plus a notifications system — new schema, new RLS policies, a
+background-execution mechanism (`CLAUDE.md` lists "background scheduler" as
+forbidden without approval). None of this should be implemented piecemeal.
+
+**Why it is also necessary, not optional:** the founder confirmed that
+**daily/scheduled scans** are on the roadmap. Scheduled scans are async by
+definition — there is no user request to hang a synchronous call off of, so
+the system needs a scheduler, background scan execution, and a way to tell the
+user something finished without them asking. That is the *same*
+infrastructure this phase would build for the manual "create domain" flow,
+just with a different trigger (cron vs. user click).
+
+**Recommendation:** design once for both triggers (manual launch +
+scheduled/daily) rather than building the async pipeline twice. Before any
+code: a Task Intake Report consulting `reliability` (async scan lifecycle,
+retries, timeout handling without a synchronous request to anchor to) and
+`platform-deploy` (which background-execution mechanism is viable on Vercel
+without adding paid infra — `waitUntil`, Vercel Cron, external queue, etc.).
+This phase is **gated on explicit founder approval** before any implementation
+starts (schema + RLS + background scheduler are all in the Forbidden list).
+
+---
+
 ## Product principles
 
 1. **No fake progress.** Every metric, suggestion, and recommendation must trace
