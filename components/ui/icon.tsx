@@ -121,7 +121,26 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     check: <path d="M20 6L9 17l-5-5" />,
-    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />
+    lock: <path d="M18 11H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM15 11V7a3 3 0 0 0-6 0v4" />,
+    quote: (
+      <>
+        <path d="M9 7c-2.5 0-4 2-4 4.5S6.5 16 9 16M9 7v9M19 7c-2.5 0-4 2-4 4.5S16.5 16 19 16M19 7v9" />
+      </>
+    ),
+    layers: (
+      <>
+        <path d="m12 3 9 5-9 5-9-5z" />
+        <path d="m3 13 9 5 9-5" />
+      </>
+    ),
+    cite: (
+      <>
+        <circle cx="6" cy="12" r="2.5" />
+        <circle cx="18" cy="6" r="2.5" />
+        <circle cx="18" cy="18" r="2.5" />
+        <path d="M8.2 11 15.8 7M8.2 13l7.6 4" />
+      </>
+    )
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
