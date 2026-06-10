@@ -38,6 +38,9 @@ export function PromptsClient({
   totalTopics,
 }: PromptsClientProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<"topics" | "prompts">(
+    hasTopics ? "topics" : "prompts"
+  );
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(
     () => new Set(topicGroups.map((g) => g.category))
   );
@@ -59,22 +62,60 @@ export function PromptsClient({
 
   return (
     <>
-      {/* Modo flat sin topics */}
-      {!hasTopics && (
+      {hasTopics && (
+        <div
+          style={{
+            display: "inline-flex",
+            background: "var(--surface-sunk)",
+            borderRadius: 8,
+            padding: 3,
+            gap: 2,
+            marginBottom: 16,
+          }}
+        >
+          {(["topics", "prompts"] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setView(mode)}
+              style={{
+                height: 28,
+                padding: "0 12px",
+                borderRadius: 6,
+                border: "none",
+                fontSize: 12.5,
+                fontWeight: 600,
+                cursor: "pointer",
+                background: view === mode ? "var(--surface)" : "transparent",
+                color: view === mode ? "var(--ink)" : "var(--ink-3)",
+                boxShadow: view === mode ? "var(--sh-1)" : "none",
+              }}
+            >
+              {mode === "topics"
+                ? `Topics ${totalTopics}`
+                : `Prompts ${totalPrompts}`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Modo flat */}
+      {(!hasTopics || view === "prompts") && (
         <>
-          <div
-            style={{
-              border: "1.5px dashed var(--line-strong)",
-              borderRadius: 10,
-              padding: "12px 16px",
-              fontSize: 13,
-              color: "var(--ink-3)",
-              marginBottom: 16,
-            }}
-          >
-            Tus prompts no tienen topics asignados todavía. Cuando Lumira genere
-            topics automáticamente, aparecerán agrupados aquí.
-          </div>
+          {!hasTopics && (
+            <div
+              style={{
+                border: "1.5px dashed var(--line-strong)",
+                borderRadius: 10,
+                padding: "12px 16px",
+                fontSize: 13,
+                color: "var(--ink-3)",
+                marginBottom: 16,
+              }}
+            >
+              Tus prompts no tienen topics asignados todavía. Cuando Lumira
+              genere topics automáticamente, aparecerán agrupados aquí.
+            </div>
+          )}
 
           <div className="card">
             <table className="tbl">
@@ -149,7 +190,7 @@ export function PromptsClient({
       )}
 
       {/* Modo Topics */}
-      {hasTopics && (
+      {hasTopics && view === "topics" && (
         <>
           <p
             style={{

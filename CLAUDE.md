@@ -188,8 +188,11 @@ bash scripts/agentic-handoff-check.sh
 ## Design Reference
 
 `GEO Suite-2.zip` is the UX/UI source of truth (`docs/design-reference/`).
-Do not rename GEO Studio to Lumira. Do not blindly paste prototype code.
-Do not introduce prototype-only state as real product behavior.
+**Lumira is the definitive consumer-facing product name** (used in the app UI:
+sidebar, login, signup, layout). "GEO Studio" remains the internal
+codebase/project identifier used in this constitution and the agent docs — do
+not rename the repo or agent docs to Lumira. Do not blindly paste prototype
+code. Do not introduce prototype-only state as real product behavior.
 
 ---
 
