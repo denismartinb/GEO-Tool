@@ -185,10 +185,10 @@ function CreateProjectOverlay() {
         <div className="state-ico">
           <div className="spinner" style={{ width: 26, height: 26, borderWidth: 3 }} />
         </div>
-        <div className="state-title">Creando tu dominio y lanzando el primer escaneo…</div>
+        <div className="state-title">Creando tu dominio…</div>
         <div className="state-body">
-          Estamos consultando varios motores de IA por cada prompt. Esto puede tardar hasta
-          un minuto — no cierres ni recargues esta pestaña.
+          Guardando tus prompts y competidores. En unos segundos te llevamos a Escaneos para
+          ver el primer escaneo en curso.
         </div>
       </div>
     </div>

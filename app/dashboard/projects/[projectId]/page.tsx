@@ -9,6 +9,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { runProjectScan } from "./actions";
 
 /* ---- constants & helpers ---- */
@@ -41,26 +42,6 @@ const priorityLabels: Record<string, string> = {
   high: "alta",
   med: "media",
   low: "baja"
-};
-
-const feedbackErrorMessages: Record<string, string> = {
-  active_run_exists: "Ya hay un escaneo en curso o pendiente para este proyecto.",
-  project_archived: "Este proyecto está archivado. Reactívalo antes de lanzar un escaneo.",
-  project_not_found: "No hemos encontrado el proyecto solicitado.",
-  project_setup_partial:
-    "El proyecto se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
-  prompts_required: "Añade al menos un prompt activo antes de escanear.",
-  scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
-  scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
-  too_many_prompts: "El escaneo está limitado a 10 prompts activos. Desactiva algunos antes de continuar.",
-  unauthorized: "No tienes permisos para realizar esta acción.",
-  unexpected_error: "Ha ocurrido un error inesperado. Vuelve a intentarlo."
-};
-
-const feedbackSuccessMessages: Record<string, string> = {
-  project_created: "Proyecto creado. Revisa los prompts y competidores antes de lanzar el primer escaneo.",
-  scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
-  scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno."
 };
 
 function n(v: unknown): number {

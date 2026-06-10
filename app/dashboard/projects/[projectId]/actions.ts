@@ -183,3 +183,31 @@ export async function executeScan(formData: FormData) {
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
   redirect(`/dashboard/projects/${projectId}?success=scan_completed`);
 }
+
+/**
+ * Executes a pending scan run that was created without sync execution
+ * (e.g. right after onboarding). Called from a client component on the
+ * Escaneos page so the user lands there immediately and the heavy Gemini
+ * work happens in this follow-up request while they watch the real
+ * "scan in progress" UI. Does not redirect — the caller refreshes the page.
+ */
+export async function autoExecutePendingScan(input: { projectId: string; runId: string }): Promise<void> {
+  const parsed = scanExecuteSchema.safeParse(input);
+  if (!parsed.success || !ENABLE_SYNC_SCAN_EXECUTION) {
+    return;
+  }
+
+  const { projectId, runId } = parsed.data;
+  const { supabase } = await requireUser();
+
+  try {
+    await executePendingScan({ projectId, runId, supabase });
+  } catch {
+    // Another request may already be executing or have finished this run;
+    // executePendingScan persists any real failure state itself.
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  revalidatePath(`/dashboard/projects/${projectId}/runs`);
+  revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
+}
