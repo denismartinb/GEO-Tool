@@ -62,6 +62,15 @@ export function PromptsClient({
 
   return (
     <>
+      <div className="section-head">
+        <div className="section-title">Prompts y topics</div>
+        <div className="section-desc">
+          {hasTopics
+            ? "Agrupados por tema · ordenados por visibilidad"
+            : "Resultados del último escaneo · prompts sin marca primero"}
+        </div>
+      </div>
+
       {hasTopics && (
         <div
           style={{
