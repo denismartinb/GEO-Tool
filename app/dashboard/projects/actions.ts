@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { getActionErrorCode, launchScan } from "@/lib/scan/scan-runner";
+import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
 import {
   cleanDomain,
   deriveBrandFromDomain,
@@ -172,23 +172,24 @@ export async function createProject(formData: FormData) {
     redirect(`/dashboard/projects/${data.id}?success=project_created&error=suggestions_unavailable`);
   }
 
-  // Auto-launch the first scan for the new domain (sync when enabled).
-  let scanExecuted = false;
+  // Create the pending scan run (fast, no Gemini calls) and land the user on
+  // Escaneos immediately. Execution itself is triggered from that page so the
+  // user sees the real "scan in progress" UI instead of waiting on this request.
   try {
-    const result = await launchScan({ projectId: data.id, supabase, user });
-    scanExecuted = result.executed;
+    await createPendingScanRun({ projectId: data.id, supabase, user });
   } catch (scanError) {
     revalidatePath(`/dashboard/projects/${data.id}`);
     redirect(`/dashboard/projects/${data.id}?success=project_created&error=${encodeURIComponent(getActionErrorCode(scanError))}`);
   }
 
   revalidatePath(`/dashboard/projects/${data.id}`);
+  revalidatePath(`/dashboard/projects/${data.id}/runs`);
 
   if (setupError) {
-    redirect(`/dashboard/projects/${data.id}?success=project_created&error=project_setup_partial`);
+    redirect(`/dashboard/projects/${data.id}/runs?success=project_created&error=project_setup_partial`);
   }
 
-  redirect(`/dashboard/projects/${data.id}?success=${scanExecuted ? "scan_completed" : "scan_pending"}`);
+  redirect(`/dashboard/projects/${data.id}/runs?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_started" : "scan_pending"}`);
 }
 
 export async function archiveProject(formData: FormData) {

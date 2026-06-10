@@ -2,8 +2,11 @@ import React from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
+import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
+import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { DeleteDomainButton } from "./delete-domain-button";
 
 /* ---- Status helpers ---- */
@@ -134,13 +137,21 @@ function DomainCard({ d, active, currentProjectId }: { d: DomainCardData; active
 /* ---- Page ---- */
 
 export default async function RunsPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ error?: string; success?: string }>;
 }) {
   const { projectId } = await params;
+  const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
+
+  const feedbackErrorMessage = feedback.error
+    ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
+    : null;
+  const feedbackSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
 
   /* Domains grid — reuses the same counters/queries as the dashboard sidebar */
   const {
@@ -242,6 +253,11 @@ export default async function RunsPage({
     (r) => r.status === "pending" || r.status === "running" || r.status === "retrying"
   );
 
+  // A run created without sync execution (e.g. right after onboarding) is
+  // still `pending` here. Trigger its execution now that the user has landed
+  // on this page, so they see real progress instead of waiting on creation.
+  const shouldAutoExecute = ENABLE_SYNC_SCAN_EXECUTION && activeRun?.status === "pending";
+
   const hasMultipleCompleted = completedRuns.length >= 2;
 
   /* First-scan / scan-in-progress banner state */
@@ -258,6 +274,17 @@ export default async function RunsPage({
 
   return (
     <div className="page">
+      {shouldAutoExecute && activeRun ? (
+        <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
+      ) : null}
+
+      {feedbackErrorMessage && (
+        <p className="feedback error" style={{ marginBottom: 16 }}>{feedbackErrorMessage}</p>
+      )}
+      {feedbackSuccessMessage && (
+        <p className="feedback success" style={{ marginBottom: 16 }}>{feedbackSuccessMessage}</p>
+      )}
+
       {/* First-scan / scan-in-progress banner */}
       {anyScanning ? (
         <div className="firstscan-banner">
