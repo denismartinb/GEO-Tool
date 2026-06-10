@@ -239,8 +239,55 @@ export default async function RunsPage({
 
   const hasMultipleCompleted = completedRuns.length >= 2;
 
+  /* First-scan / scan-in-progress banner state */
+  const otherScanningDomains = domainCards.filter((d) => d.id !== projectId && d.isScanning);
+  const isThisProjectScanning = Boolean(activeRun);
+  const isFirstRunForThisProject = isThisProjectScanning && allRuns.length === 1;
+  const anyScanning = isThisProjectScanning || otherScanningDomains.length > 0;
+  const isFirstScanMode = isFirstRunForThisProject && otherScanningDomains.length === 0;
+
+  const scanningNames = [
+    ...(isThisProjectScanning ? [project.domain] : []),
+    ...otherScanningDomains.map((d) => d.domain)
+  ];
+
   return (
     <div className="page">
+      {/* First-scan / scan-in-progress banner */}
+      {anyScanning ? (
+        <div className="firstscan-banner">
+          <div className="fb-ico">
+            <Icon name="resonance" size={18} />
+            <span className="fb-spin"></span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="fb-t">
+              {isFirstScanMode ? "Tu primer escaneo está en curso" : "Escaneo en curso"}
+            </div>
+            <div className="fb-d">
+              {isFirstScanMode ? (
+                <>
+                  Estamos analizando <b>{project.domain}</b> en 4 motores de IA. Te avisaremos
+                  cuando termine — puedes seguir el progreso aquí.
+                </>
+              ) : (
+                <>
+                  {scanningNames.length}{" "}
+                  {scanningNames.length === 1
+                    ? "dominio se está escaneando"
+                    : "dominios se están escaneando"}{" "}
+                  ahora mismo: <b>{scanningNames.join(", ")}</b>.
+                </>
+              )}
+            </div>
+          </div>
+          <span className="st-chip st-scanning">
+            <span className="d" />
+            Escaneando
+          </span>
+        </div>
+      ) : null}
+
       {/* Sticky header */}
       <div className="ov-sticky-header">
         <div className="ov-sticky-left">
