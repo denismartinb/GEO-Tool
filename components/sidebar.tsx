@@ -20,8 +20,7 @@ const analyzeLinks = [
 ];
 
 const actLinks = [
-  { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs", locked: false },
-  { segment: "/solutions", label: "Soluciones generadas", icon: "recs", countKey: null as null | string, locked: true },
+  { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" as null | string },
 ];
 
 function getProjectId(pathname: string) {
@@ -126,16 +125,6 @@ export function Sidebar({
 
         <div className="nav-group-label hide-collapsed">Actuar</div>
         {actLinks.map((link) => {
-          if (link.locked) {
-            return (
-              <span key={link.label} className="nav-item locked" aria-disabled="true">
-                <Icon name={link.icon} size={17} />
-                <span className="hide-collapsed">{link.label}</span>
-                <Icon name="lock" size={13} className="nav-lock hide-collapsed" />
-              </span>
-            );
-          }
-
           const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
           const active = href
             ? pathname === href || pathname.startsWith(`${href}/`)

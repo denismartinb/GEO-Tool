@@ -71,6 +71,10 @@ function confidenceToPercent(c: string): number {
   return c === "high" ? 90 : c === "medium" ? 70 : 40;
 }
 
+function impactEffortToN(v: string): number {
+  return v === "high" ? 5 : v === "medium" || v === "med" ? 3 : 1;
+}
+
 function getBandLabel(score: number): string {
   if (score >= 70) return "Franja «competitivo»";
   if (score >= 40) return "Franja «emergente»";
@@ -169,7 +173,7 @@ export default async function ProjectDetailPage({
           .eq("status", "completed"),
         supabase
           .from("recommendations")
-          .select("id, priority_rank, title, impact, effort, confidence, category, evidence_json")
+          .select("id, priority_rank, title, impact, effort, confidence, recommendation_type, evidence_json")
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
           .eq("status", "active")
@@ -791,8 +795,8 @@ export default async function ProjectDetailPage({
                       <span className={`badge badge-${priority === "high" ? "neg" : priority === "med" ? "warn" : "neutral"}`}>
                         Prioridad {priorityLabels[priority] ?? priority}
                       </span>
-                      {rec.category && (
-                        <span className="badge badge-outline">{rec.category}</span>
+                      {rec.recommendation_type && (
+                        <span className="badge badge-outline">{rec.recommendation_type.replaceAll("_", " ")}</span>
                       )}
                     </div>
                     <div className="rec-title">{rec.title}</div>
@@ -804,18 +808,18 @@ export default async function ProjectDetailPage({
                     <div className="rec-metrics">
                       <div className="rmetric">
                         <div className="l">Impacto</div>
-                        <div className="v"><DotMeter n={rec.impact ?? 1} tone="h" /></div>
+                        <div className="v"><DotMeter n={impactEffortToN(rec.impact ?? "low")} tone="h" /></div>
                       </div>
                       <div className="rmetric">
                         <div className="l">Esfuerzo</div>
-                        <div className="v"><DotMeter n={rec.effort ?? 1} tone="m" /></div>
+                        <div className="v"><DotMeter n={impactEffortToN(rec.effort ?? "low")} tone="m" /></div>
                       </div>
                       <div style={{ marginLeft: "auto", textAlign: "right" }}>
                         <div className="l" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
                           Confianza
                         </div>
                         <div className="tnum" style={{ fontSize: 13, fontWeight: 750, marginTop: 4 }}>
-                          {rec.confidence ?? "—"}%
+                          {confidenceToPercent(rec.confidence ?? "low")}%
                         </div>
                       </div>
                     </div>
