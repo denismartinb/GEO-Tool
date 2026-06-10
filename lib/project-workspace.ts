@@ -7,7 +7,7 @@ export async function requireActiveProject(projectId: string) {
   const { supabase } = await requireUser();
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, brand, domain, country, language")
+    .select("id, name, brand, domain, country, language, recurring_scans_enabled")
     .eq("id", projectId)
     .eq("is_archived", false)
     .single();
