@@ -135,6 +135,74 @@ starts (schema + RLS + background scheduler are all in the Forbidden list).
 
 ---
 
+## Detected gaps — pending triage (reported by founder, 2026-06-08)
+
+Raw founder observations from a live walkthrough of Lumira (with screenshots).
+Not yet triaged into Task Intake Reports — listed here so nothing gets lost.
+Classification below is a first pass against the P0–P3 framework in
+`CLAUDE.md`; needs confirmation by the relevant specialist before any PR.
+
+**Possible P0 — core flow blockers (verify first, before anything else):**
+- **"Añadir dominio" is reportedly non-functional from Escaneos** — founder
+  states it is currently *not possible* to add a new domain from that screen.
+  If confirmed, this is a core-flow blocker (`project creation broken`,
+  CLAUDE.md P0 definition). → `core-flow` to reproduce and root-cause first.
+- **Domain deletion from Escaneos cards is reportedly missing/non-functional**
+  — founder states it is currently *not possible* to delete a domain from the
+  domain cards (distinct from `DATA-MGMT-1`, which covered hard-delete of
+  *archived* projects only). → `core-flow` + `data-guardian` to confirm scope
+  and whether this is "missing feature" vs. "broken existing feature".
+- **Recommendations count mismatch: sidebar badge says 8, only 2 render** —
+  this is either a real data/query bug or a sign that recommendations are not
+  fully real yet ("quedaba una fase para hacerlas reales"). A badge that shows
+  a number the UI cannot back up is a direct violation of the "No fake
+  progress" principle. → `geo-strategy` + `data-guardian` to root-cause before
+  any UI fix; do not silently change the badge to hide the mismatch.
+
+**P1 — structural UX gaps:**
+- No loading/progress animation while the system calculates suggested
+  competitors and prompts right after the user enters a domain (gap in the
+  onboarding flow, screenshot attached by founder).
+- Escaneos: missing the "scanning in progress" animation treatment for a
+  domain (or the very first domain) being scanned — likely the same
+  `ScanInProgress` component from PR #35 needs to be extended here.
+- Overview: no "resumen de recomendaciones" / "Qué hacer primero" summary card
+  surfacing top recommendations (founder attached a design-reference
+  screenshot showing this card with Impacto/Esfuerzo/Confianza).
+- Notifications: the bell icon currently does nothing. Founder wants a
+  contextual popup (not a full page) listing async events — first scan
+  finished, prompt analysis available, etc. Directly overlaps with the
+  notifications system already scoped (but gated) in **ASYNC-SCAN-1** below —
+  should be designed together, not as a separate parallel effort.
+
+**P2 — UI/structure mismatches vs. design reference:**
+- Prompts screen doesn't match the reference: founder says there's no clear
+  visual separation between prompts and no grouping by Topics in the rendered
+  UI (note: current build *does* render a Topics tab and topic rows — likely
+  a finer-grained layout/grouping mismatch than a missing feature; needs
+  `ux-alignment` to produce an exact gap list against `states.jsx`).
+- Possible page-structure question: founder says "la página de Recomendaciones
+  generadas no tiene que estar" — needs clarification, since the sidebar
+  currently shows a separate (locked) "Soluciones generadas" entry. Could be
+  the founder flagging that this page shouldn't exist as a standalone nav item,
+  or scoping confusion between "Recomendaciones" and "Soluciones generadas".
+  → clarify with founder before treating as a gap to fix.
+
+**Already tracked — do not duplicate:**
+- Item "activar lógica de primer escaneo asíncrono y escaneos diarios" is the
+  **ASYNC-SCAN-1** phase documented above (planned, not started, gated on
+  explicit founder approval — touches ADR-0003, schema, RLS, and a background
+  scheduler, all in the Forbidden list). The notifications gap above should be
+  designed as part of this same phase, per the existing recommendation to
+  "design once for both triggers."
+
+**Suggested next step:** before opening any Task Intake Report, `core-flow`
+should reproduce and confirm/deny the three "possible P0" items above — if
+either "add domain" or "delete domain" is genuinely broken, that supersedes
+all P1/P2 UX work per the "Core flow first" principle.
+
+---
+
 ## QA execution model
 
 Claude QA is run by the `qa` specialist subagent (`.claude/agents/qa.md`),
