@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { getActionErrorCode, launchScan } from "@/lib/scan/scan-runner";
 import {
   cleanDomain,
@@ -21,7 +22,7 @@ export type ProjectSetupSuggestion = {
   brand: string;
   language: string;
   competitors: Array<{ name: string; domain: string }>;
-  prompts: string[];
+  prompts: Array<{ text: string; category: PromptCategory }>;
 };
 
 /**
@@ -104,9 +105,9 @@ export async function createProject(formData: FormData) {
   if (!initialPrompts.length) {
     try {
       const suggested = await suggestPrompts({ brand, domain, country, language, limit: MAX_INITIAL_PROMPTS });
-      initialPrompts = suggested.slice(0, MAX_INITIAL_PROMPTS).map((prompt_text, index) => ({
-        prompt_text,
-        category: null,
+      initialPrompts = suggested.slice(0, MAX_INITIAL_PROMPTS).map((prompt, index) => ({
+        prompt_text: prompt.text,
+        category: prompt.category,
         sort_order: index
       }));
     } catch {

@@ -73,6 +73,30 @@ describe("parseProjectForm — onboarding input contract", () => {
     expect(result.value.initialCompetitors).toHaveLength(2);
   });
 
+  it("parses initial_prompts with aligned initial_prompt_categories end-to-end", () => {
+    const result = parseProjectForm(
+      form({
+        domain: "acme.com",
+        country: "ES",
+        initial_prompts: "best widgets in spain\ntop widget brands",
+        initial_prompt_categories: "Comparación\nCasos de uso"
+      })
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.initialPrompts).toHaveLength(2);
+    expect(result.value.initialPrompts[0]).toMatchObject({
+      prompt_text: "best widgets in spain",
+      category: "Comparación",
+      sort_order: 0
+    });
+    expect(result.value.initialPrompts[1]).toMatchObject({
+      prompt_text: "top widget brands",
+      category: "Casos de uso",
+      sort_order: 1
+    });
+  });
+
   it("rejects when domain is missing", () => {
     const result = parseProjectForm(form({ country: "ES" }));
     expect(result).toEqual({ ok: false, error: "invalid_project_data" });
@@ -112,6 +136,33 @@ describe("project-form pure helpers", () => {
     const out = parseInitialPrompts("a prompt\nA Prompt\nother prompt");
     expect(out).toHaveLength(2);
     expect(out[0].sort_order).toBe(0);
+  });
+
+  it("parseInitialPrompts assigns categories aligned by line index", () => {
+    const out = parseInitialPrompts(
+      "best widgets in spain\ntop widget brands",
+      "Comparación\nAlternativas"
+    );
+    expect(out).toHaveLength(2);
+    expect(out[0].category).toBe("Comparación");
+    expect(out[1].category).toBe("Alternativas");
+  });
+
+  it("parseInitialPrompts falls back to null for an off-taxonomy category", () => {
+    const out = parseInitialPrompts(
+      "best widgets in spain\ntop widget brands",
+      "Not A Real Category\nAlternativas"
+    );
+    expect(out).toHaveLength(2);
+    expect(out[0].category).toBeNull();
+    expect(out[1].category).toBe("Alternativas");
+  });
+
+  it("parseInitialPrompts defaults all categories to null when categoriesInput is omitted", () => {
+    const out = parseInitialPrompts("a prompt\nanother prompt");
+    expect(out).toHaveLength(2);
+    expect(out[0].category).toBeNull();
+    expect(out[1].category).toBeNull();
   });
 
   it("parseInitialCompetitors requires name|domain and dedupes", () => {

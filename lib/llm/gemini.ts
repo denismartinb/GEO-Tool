@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/schema";
+import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
@@ -280,13 +281,21 @@ export async function suggestCompetitors(input: {
 }
 
 const promptsResponseSchema = z.object({
-  prompts: z.array(z.string()).default([])
+  prompts: z
+    .array(
+      z.object({
+        text: z.string(),
+        category: z.enum(PROMPT_CATEGORIES)
+      })
+    )
+    .default([])
 });
 
 /**
  * Real Gemini-backed suggestion of high-intent prompts a user would ask an AI
  * assistant where the brand could plausibly appear. Returns deduplicated,
- * schema-safe prompt strings (10..300 chars) ready to persist in project_prompts.
+ * schema-safe prompts (text 10..300 chars) with a topic category from the
+ * fixed taxonomy, ready to persist in project_prompts.
  */
 export async function suggestPrompts(input: {
   brand: string;
@@ -294,15 +303,27 @@ export async function suggestPrompts(input: {
   country: string;
   language: string;
   limit?: number;
-}): Promise<string[]> {
+}): Promise<Array<{ text: string; category: PromptCategory }>> {
   const limit = Math.min(Math.max(input.limit ?? 10, 1), 15);
+  const categoryList = PROMPT_CATEGORIES.map((category) => `"${category}"`).join(", ");
   const promptBlock = [
     "You are a GEO research analyst. Generate the most relevant questions real potential customers",
     "would ask an AI assistant (ChatGPT, Gemini, Perplexity) where the given brand could appear in the answer.",
-    `Return ONLY valid JSON with this exact shape: { "prompts": [string] }.`,
+    `Return ONLY valid JSON with this exact shape: { "prompts": [{ "text": string, "category": string }] }.`,
     `Produce exactly ${limit} distinct prompts. Mix informational, commercial and transactional intent.`,
-    `Write each prompt in the target language. Each prompt must be a natural question of 10 to 200 characters.`,
+    `Write each "text" in the target language. Each "text" must be a natural question of 10 to 200 characters.`,
     "Do NOT mention the brand name in the prompts; they must be brand-neutral discovery questions.",
+    "",
+    `For "category", choose EXACTLY one of these fixed Spanish labels (verbatim, do NOT translate or alter them,`,
+    `regardless of the target language): ${categoryList}.`,
+    "Pick the label that best matches the prompt's dominant intent:",
+    `- "Comparación": comparing the brand/product against alternatives or competitors.`,
+    `- "Alternativas": looking for alternatives or substitutes.`,
+    `- "Cómo hacer / guía": how-to, tutorial, or guidance questions.`,
+    `- "Precio y planes": pricing, plans, cost, or value questions.`,
+    `- "Reseñas y opiniones": reviews, opinions, ratings, or trustworthiness questions.`,
+    `- "Casos de uso": use cases, scenarios, or "best for X" questions.`,
+    `Use at least 3 different categories across the full set of prompts; do not put everything in one bucket.`,
     "",
     `Brand: ${input.brand}`,
     `Brand domain: ${input.domain}`,
@@ -315,15 +336,15 @@ export async function suggestPrompts(input: {
   if (!parsed.success) return [];
 
   const seen = new Set<string>();
-  const out: string[] = [];
+  const out: Array<{ text: string; category: PromptCategory }> = [];
 
-  for (const promptText of parsed.data.prompts) {
-    const text = promptText.trim();
+  for (const item of parsed.data.prompts) {
+    const text = item.text.trim();
     if (text.length < 10 || text.length > 300) continue;
     const key = text.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(text);
+    out.push({ text, category: item.category });
     if (out.length >= limit) break;
   }
 
