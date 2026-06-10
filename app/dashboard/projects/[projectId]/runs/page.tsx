@@ -267,8 +267,8 @@ export default async function RunsPage({
             <div className="fb-d">
               {isFirstScanMode ? (
                 <>
-                  Estamos analizando <b>{project.domain}</b> en 4 motores de IA. Te avisaremos
-                  cuando termine — puedes seguir el progreso aquí.
+                  Estamos analizando <b>{project.domain}</b> con tus prompts en Gemini.
+                  Suele tardar un par de minutos — puedes seguir el progreso aquí.
                 </>
               ) : (
                 <>
