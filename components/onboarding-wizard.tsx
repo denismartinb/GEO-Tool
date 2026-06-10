@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import type { ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
+import type { PromptCategory } from "@/lib/projects/prompt-categories";
 
 const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "ES", name: "España" },
@@ -226,7 +227,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
   const [country, setCountry] = useState("ES");
   const [language, setLanguage] = useState("es");
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [prompts, setPrompts] = useState<string[]>([]);
+  const [prompts, setPrompts] = useState<Array<{ text: string; category: PromptCategory | null }>>([]);
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
@@ -248,7 +249,15 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
         .join("\n"),
     [competitors]
   );
-  const promptsText = useMemo(() => prompts.map((p) => p.trim()).filter(Boolean).join("\n"), [prompts]);
+  const promptsText = useMemo(() => prompts.map((p) => p.text.trim()).filter(Boolean).join("\n"), [prompts]);
+  const categoriesText = useMemo(
+    () =>
+      prompts
+        .filter((p) => p.text.trim().length > 0)
+        .map((p) => p.category ?? "")
+        .join("\n"),
+    [prompts]
+  );
   const validCompetitorCount = competitorsText ? competitorsText.split("\n").length : 0;
   const validPromptCount = promptsText ? promptsText.split("\n").length : 0;
 
@@ -266,14 +275,14 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
         setCompetitors([{ name: "", domain: "" }]);
-        setPrompts([""]);
+        setPrompts([{ text: "", category: null }]);
         setLanguage((current) => result.language || current);
         setStep(1);
         return;
       }
       setLanguage(result.language || language);
       setCompetitors(result.competitors.length ? result.competitors : [{ name: "", domain: "" }]);
-      setPrompts(result.prompts.length ? result.prompts : [""]);
+      setPrompts(result.prompts.length ? result.prompts : [{ text: "", category: null }]);
       setStep(1);
     });
   }
@@ -282,7 +291,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
     setCompetitors((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   }
   function updatePrompt(index: number, value: string) {
-    setPrompts((rows) => rows.map((row, i) => (i === index ? value : row)));
+    setPrompts((rows) => rows.map((row, i) => (i === index ? { ...row, text: value } : row)));
   }
 
   if (step === 0) {
@@ -520,13 +529,16 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
           <div className="space-y-2">
             {prompts.map((row, index) => (
               <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <Textarea
-                  aria-label={`Prompt ${index + 1}`}
-                  rows={2}
-                  placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
-                  value={row}
-                  onChange={(event) => updatePrompt(index, event.target.value)}
-                />
+                <div className="space-y-1">
+                  <Textarea
+                    aria-label={`Prompt ${index + 1}`}
+                    rows={2}
+                    placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
+                    value={row.text}
+                    onChange={(event) => updatePrompt(index, event.target.value)}
+                  />
+                  {row.category ? <span className="text-xs text-[var(--ink-3)]">{row.category}</span> : null}
+                </div>
                 <Button type="button" variant="outline" onClick={() => setPrompts((rows) => rows.filter((_, i) => i !== index))}>
                   Quitar
                 </Button>
@@ -539,7 +551,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
             <Button
               type="button"
               variant="outline"
-              onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, ""]))}
+              onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, { text: "", category: null }]))}
               disabled={prompts.length >= 10}
             >
               Añadir prompt
@@ -552,6 +564,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
             <input type="hidden" name="language" value={language} />
             <input type="hidden" name="initial_competitors" value={competitorsText} />
             <input type="hidden" name="initial_prompts" value={promptsText} />
+            <input type="hidden" name="initial_prompt_categories" value={categoriesText} />
             <CreateProjectOverlay />
             <Button type="button" variant="outline" onClick={() => setStep(1)}>
               Atrás

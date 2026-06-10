@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PROMPT_CATEGORIES } from "@/lib/projects/prompt-categories";
 
 /**
  * Pure, dependency-free parsing & normalization for the "new project" form.
@@ -40,6 +41,7 @@ export const projectFormSchema = z.object({
   language: z.string().min(2).max(20).optional(),
   businessDescription: z.string().max(500).optional(),
   initialPrompts: z.string().optional(),
+  initialPromptCategories: z.string().optional(),
   initialCompetitors: z.string().optional()
 });
 
@@ -72,21 +74,29 @@ export function isValidDomain(domain: string): boolean {
   return domain.length >= 3 && domain.length <= 255 && domain.includes(".");
 }
 
-export function parseInitialPrompts(input: string | undefined) {
-  if (!input) return [];
+export function parseInitialPrompts(promptsInput: string | undefined, categoriesInput?: string | undefined) {
+  if (!promptsInput) return [];
+
+  // Split BEFORE dedup so category lines align 1:1 with prompt lines by index.
+  const promptLines = promptsInput.split("\n");
+  const categoryLines = categoriesInput !== undefined ? categoriesInput.split("\n") : undefined;
+  const categorySet: ReadonlySet<string> = new Set(PROMPT_CATEGORIES);
 
   const seen = new Set<string>();
-  const prompts: Array<{ prompt_text: string; category: null; sort_order: number }> = [];
+  const prompts: Array<{ prompt_text: string; category: string | null; sort_order: number }> = [];
 
-  for (const rawLine of input.split("\n")) {
-    const promptText = rawLine.trim();
+  for (let i = 0; i < promptLines.length; i++) {
+    const promptText = promptLines[i].trim();
     if (!promptText) continue;
 
     const normalized = promptText.toLocaleLowerCase();
     if (seen.has(normalized)) continue;
     seen.add(normalized);
 
-    prompts.push({ prompt_text: promptText, category: null, sort_order: prompts.length });
+    const rawCategory = categoryLines?.[i]?.trim();
+    const category = rawCategory && categorySet.has(rawCategory) ? rawCategory : null;
+
+    prompts.push({ prompt_text: promptText, category, sort_order: prompts.length });
 
     if (prompts.length >= MAX_INITIAL_PROMPTS) break;
   }
@@ -130,7 +140,7 @@ export type NormalizedProjectInput = {
   name: string;
   language: string;
   businessDescription?: string;
-  initialPrompts: Array<{ prompt_text: string; category: null; sort_order: number }>;
+  initialPrompts: Array<{ prompt_text: string; category: string | null; sort_order: number }>;
   initialCompetitors: Array<{ name: string; domain: string }>;
 };
 
@@ -158,6 +168,7 @@ export function parseProjectForm(formData: FormData): ParseProjectResult {
     language: field("language"),
     businessDescription: field("business_description"),
     initialPrompts: field("initial_prompts"),
+    initialPromptCategories: field("initial_prompt_categories"),
     initialCompetitors: field("initial_competitors")
   });
 
@@ -185,7 +196,7 @@ export function parseProjectForm(formData: FormData): ParseProjectResult {
       name,
       language,
       businessDescription: payload.businessDescription?.trim() || undefined,
-      initialPrompts: parseInitialPrompts(payload.initialPrompts),
+      initialPrompts: parseInitialPrompts(payload.initialPrompts, payload.initialPromptCategories),
       initialCompetitors: parseInitialCompetitors(payload.initialCompetitors)
     }
   };
