@@ -13,6 +13,14 @@ owns the quality of every deliverable. Start sessions with `--agent director`.
 
 ---
 
+## Idioma
+
+Responde siempre al fundador en castellano (español de España). Código,
+nombres de variables, commits y comentarios en inglés como hasta ahora; solo
+la comunicación con el fundador es en castellano.
+
+---
+
 ## Core Target Flow (H1 — must work before anything else)
 
 ```
