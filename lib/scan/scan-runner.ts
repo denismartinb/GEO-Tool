@@ -681,6 +681,27 @@ export async function executePendingScan({
       }))
     });
 
+    // Close out any still-"active" recommendations from prior runs of this
+    // project so the sidebar badge (which counts active recommendations
+    // project-wide) stays in sync with the latest run's recommendations
+    // page (which scopes to run_id). History is preserved via status change,
+    // not deletion. Fail soft: a failure here must not prevent the current
+    // run's recommendations from being persisted or the run from completing.
+    const { error: supersedeError } = await service
+      .from("recommendations")
+      .update({ status: "superseded" })
+      .eq("project_id", projectId)
+      .eq("status", "active")
+      .neq("run_id", runId);
+
+    if (supersedeError) {
+      console.error("[scan-runner] failed to supersede prior recommendations", {
+        projectId,
+        runId,
+        message: supersedeError.message
+      });
+    }
+
     await service.from("recommendations").delete().eq("project_id", projectId).eq("run_id", runId);
     if (recommendationRows.length) {
       await service.from("recommendations").insert(
