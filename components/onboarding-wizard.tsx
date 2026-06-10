@@ -194,6 +194,26 @@ function CreateProjectOverlay() {
   );
 }
 
+// Estado de carga al sugerir competidores y prompts con Gemini (paso 0 → 1).
+// Mismo patrón visual que CreateProjectOverlay: overlay fijo con spinner y
+// copy honesto, sin progreso falso (la llamada es opaca).
+function SuggestionsLoadingOverlay() {
+  return (
+    <div className="state-wrap fade-in" style={{ position: "fixed", inset: 0, zIndex: 80, background: "var(--canvas)" }}>
+      <div className="state-card">
+        <div className="state-ico">
+          <div className="spinner" style={{ width: 26, height: 26, borderWidth: 3 }} />
+        </div>
+        <div className="state-title">Analizando tu dominio…</div>
+        <div className="state-body">
+          Estamos sugiriendo competidores y prompts relevantes con IA. Esto puede tardar
+          hasta 15 segundos — no cierres ni recargues esta pestaña.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type OnboardingWizardProps = {
   errorMessage: string | null;
   suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
@@ -268,6 +288,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
   if (step === 0) {
     return (
       <div className="page add-domain fade-in">
+        {isPending ? <SuggestionsLoadingOverlay /> : null}
         <Link href="/dashboard" className="add-back">
           <Icon name="chevLeft" size={15} />
           Volver a Escaneos
