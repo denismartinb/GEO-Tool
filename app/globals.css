@@ -1539,6 +1539,7 @@ a {
   --neg-soft: #fdecee;
   --accent-soft-2: #e6e9fe;
   --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r-pill: 999px;
 }
 
 /* Badge system (LUMIRA-8 variant — overrides/supplements earlier definition) */
@@ -1702,6 +1703,25 @@ a {
 @keyframes spin { to { transform: rotate(360deg); } }
 .progress-track { height: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; margin: 24px auto 0; max-width: 380px; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .5s ease; }
+
+/* ============================================================
+   Escaneos — first-scan / scan-in-progress banner
+   (copied literally from design reference styles.css lines
+   734-739, 909-916 — see docs/design-reference/geo-suite-2/styles.css)
+   ============================================================ */
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+.st-chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: var(--r-pill);
+  font-size: 11.5px; font-weight: 700; border: 1px solid transparent; white-space: nowrap; }
+.st-chip .d { width: 7px; height: 7px; border-radius: 999px; flex: 0 0 auto; }
+.st-scanning { background: var(--accent-soft); color: var(--accent-ink); } .st-scanning .d { background: var(--accent); animation: pulse 1.4s infinite; }
+.firstscan-banner { display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: var(--r-lg);
+  background: linear-gradient(120deg, var(--accent-soft), #fbfbff); border: 1px solid var(--accent-soft-2); margin-bottom: 14px; }
+.firstscan-banner .fb-ico { width: 42px; height: 42px; border-radius: 11px; background: var(--surface); border: 1px solid var(--accent-soft-2);
+  display: grid; place-items: center; color: var(--accent); flex: 0 0 auto; position: relative; }
+.firstscan-banner .fb-spin { position: absolute; inset: -1px; border-radius: 11px; border: 2px solid transparent; border-top-color: var(--accent); animation: spin .9s linear infinite; }
+.firstscan-banner .fb-t { font-size: 14px; font-weight: 750; }
+.firstscan-banner .fb-d { font-size: 12.5px; color: var(--ink-2); margin-top: 2px; }
+.firstscan-banner .fb-d b { font-family: var(--mono); font-weight: 600; }
 
 /* ============================================================
    Add-domain wizard shell (D1 — copied literally from design
