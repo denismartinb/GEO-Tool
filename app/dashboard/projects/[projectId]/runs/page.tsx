@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
+import { DeleteDomainButton } from "./delete-domain-button";
 
 /* ---- Status helpers ---- */
 
@@ -70,59 +71,63 @@ type DomainCardData = {
   isScanning: boolean;
 };
 
-function DomainCard({ d, active }: { d: DomainCardData; active: boolean }) {
+function DomainCard({ d, active, currentProjectId }: { d: DomainCardData; active: boolean; currentProjectId: string }) {
   return (
-    <Link
-      href={`/dashboard/projects/${d.id}/runs`}
-      className={`dom-card${active ? " sel" : ""}`}
-    >
-      <div className="dom-top">
-        <span className="dom-fav" style={{ background: domainFaviconColor(d.domain || d.name) }}>
-          {d.name.slice(0, 1).toUpperCase()}
-        </span>
-        <div className="dom-id">
-          <div className="dom-name">{d.name}</div>
-          <div className="dom-domain">{d.domain}</div>
-        </div>
-        {d.isScanning ? (
-          <span className="scan-status">
-            <span className="dot run" />
-            Escaneando
+    <div className={`dom-card${active ? " sel" : ""}`} style={{ padding: 0 }}>
+      <Link
+        href={`/dashboard/projects/${d.id}/runs`}
+        className="dom-card-link"
+        style={{ display: "block", padding: "16px 17px" }}
+      >
+        <div className="dom-top">
+          <span className="dom-fav" style={{ background: domainFaviconColor(d.domain || d.name) }}>
+            {d.name.slice(0, 1).toUpperCase()}
           </span>
-        ) : null}
-      </div>
-      <div className="dom-meta">
-        <div className="dom-stat">
-          {d.score === null ? (
-            <div className="v" style={{ color: "var(--ink-4)", fontSize: 14 }}>—</div>
-          ) : (
-            <div className="v">
-              {d.score}
-              {d.scoreDelta !== null ? <Delta value={d.scoreDelta} /> : null}
+          <div className="dom-id">
+            <div className="dom-name">{d.name}</div>
+            <div className="dom-domain">{d.domain}</div>
+          </div>
+          {d.isScanning ? (
+            <span className="scan-status">
+              <span className="dot run" />
+              Escaneando
+            </span>
+          ) : null}
+        </div>
+        <div className="dom-meta">
+          <div className="dom-stat">
+            {d.score === null ? (
+              <div className="v" style={{ color: "var(--ink-4)", fontSize: 14 }}>—</div>
+            ) : (
+              <div className="v">
+                {d.score}
+                {d.scoreDelta !== null ? <Delta value={d.scoreDelta} /> : null}
+              </div>
+            )}
+            <div className="l">Puntuación GEO</div>
+          </div>
+          <div className="dom-stat">
+            <div className="v">{d.promptCount}</div>
+            <div className="l">Prompts</div>
+          </div>
+          <div className="dom-stat">
+            <div className="v">{d.runCount}</div>
+            <div className="l">Escaneos</div>
+          </div>
+          <div className="spacer" />
+          <div style={{ textAlign: "right" }}>
+            <div className="dom-scan" style={{ justifyContent: "flex-end" }}>
+              {d.country} · {d.language}
             </div>
-          )}
-          <div className="l">Puntuación GEO</div>
-        </div>
-        <div className="dom-stat">
-          <div className="v">{d.promptCount}</div>
-          <div className="l">Prompts</div>
-        </div>
-        <div className="dom-stat">
-          <div className="v">{d.runCount}</div>
-          <div className="l">Escaneos</div>
-        </div>
-        <div className="spacer" />
-        <div style={{ textAlign: "right" }}>
-          <div className="dom-scan" style={{ justifyContent: "flex-end" }}>
-            {d.country} · {d.language}
-          </div>
-          <div className="dom-scan" style={{ justifyContent: "flex-end", marginTop: 5 }}>
-            <Icon name="info" size={12} />
-            {d.lastScanLabel}
+            <div className="dom-scan" style={{ justifyContent: "flex-end", marginTop: 5 }}>
+              <Icon name="info" size={12} />
+              {d.lastScanLabel}
+            </div>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+      <DeleteDomainButton projectId={d.id} domainName={d.domain || d.name} isCurrentProject={d.id === currentProjectId} />
+    </div>
   );
 }
 
@@ -384,7 +389,7 @@ export default async function RunsPage({
           </div>
           <div className="dom-grid">
             {domainCards.map((d) => (
-              <DomainCard key={d.id} d={d} active={d.id === projectId} />
+              <DomainCard key={d.id} d={d} active={d.id === projectId} currentProjectId={projectId} />
             ))}
           </div>
         </>

@@ -143,21 +143,24 @@ Classification below is a first pass against the P0–P3 framework in
 `CLAUDE.md`; needs confirmation by the relevant specialist before any PR.
 
 **Possible P0 — core flow blockers (verify first, before anything else):**
-- **"Añadir dominio" is reportedly non-functional from Escaneos** — founder
-  states it is currently *not possible* to add a new domain from that screen.
-  If confirmed, this is a core-flow blocker (`project creation broken`,
-  CLAUDE.md P0 definition). → `core-flow` to reproduce and root-cause first.
+- **"Añadir dominio" is reportedly non-functional from Escaneos** — DONE.
+  Fixed via PR #44 (added "Añadir dominio" CTA on the Escaneos domain list,
+  linking to `/dashboard/projects/new`). Merged.
 - **Domain deletion from Escaneos cards is reportedly missing/non-functional**
-  — founder states it is currently *not possible* to delete a domain from the
-  domain cards (distinct from `DATA-MGMT-1`, which covered hard-delete of
-  *archived* projects only). → `core-flow` + `data-guardian` to confirm scope
-  and whether this is "missing feature" vs. "broken existing feature".
+  — decision: hard delete, definitively (founder, 2026-06-10). DB groundwork
+  done: migrations 0005 (`generated_solutions` table — was committed but never
+  applied to live DB until now), 0006 (FK cascades from `projects` +
+  `projects_delete_owner` RLS policy), 0007 (recommendations `superseded`
+  status) all applied successfully to the live Supabase DB on 2026-06-10.
+  **Next: DATA-MGMT-2 app phase** — "Eliminar dominio" button on Escaneos
+  domain cards + confirmation UX + `deleteProject` server action (hard delete,
+  owner-scoped). In progress.
 - **Recommendations count mismatch: sidebar badge says 8, only 2 render** —
-  this is either a real data/query bug or a sign that recommendations are not
-  fully real yet ("quedaba una fase para hacerlas reales"). A badge that shows
-  a number the UI cannot back up is a direct violation of the "No fake
-  progress" principle. → `geo-strategy` + `data-guardian` to root-cause before
-  any UI fix; do not silently change the badge to hide the mismatch.
+  root-caused: prior-run recommendations stayed `status='active'` forever
+  (no supersede logic), inflating the badge. Fixed via PR #45 (scan-runner now
+  marks prior-run active recommendations as `superseded` on each new run) +
+  migration 0007 (extends `rec_status_chk` to allow `superseded`). Merged and
+  migration applied.
 
 **P1 — structural UX gaps:**
 - No loading/progress animation while the system calculates suggested
