@@ -140,6 +140,12 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <circle cx="18" cy="18" r="2.5" />
         <path d="M8.2 11 15.8 7M8.2 13l7.6 4" />
       </>
+    ),
+    trash: (
+      <>
+        <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m3 0-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6h14z" />
+        <path d="M10 11v6M14 11v6" />
+      </>
     )
   };
 

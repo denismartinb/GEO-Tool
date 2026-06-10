@@ -217,6 +217,39 @@ export async function archiveProject(formData: FormData) {
   redirect("/dashboard/projects?success=project_archived");
 }
 
+export type DeleteProjectResult = { success: true } | { success: false; error: string };
+
+/**
+ * Permanently deletes a project (domain) and all of its associated data
+ * (scans, prompts, competitors, recommendations, generated solutions, jobs)
+ * via the `on delete cascade` foreign keys added in migration 0006. This is
+ * irreversible — there is no soft-delete or archive fallback here.
+ */
+export async function deleteProject(projectId: string): Promise<DeleteProjectResult> {
+  const parsedProjectId = z.string().uuid().safeParse(projectId);
+  if (!parsedProjectId.success) {
+    return { success: false, error: "No se pudo eliminar el dominio." };
+  }
+
+  const { supabase, user } = await requireUser();
+
+  const { error, count } = await supabase
+    .from("projects")
+    .delete({ count: "exact" })
+    .eq("id", parsedProjectId.data)
+    .eq("owner_user_id", user.id);
+
+  if (error || !count) {
+    return { success: false, error: "No se pudo eliminar el dominio. Inténtalo de nuevo." };
+  }
+
+  revalidatePath("/dashboard", "layout");
+  revalidatePath("/dashboard/projects");
+  revalidatePath(`/dashboard/projects/${parsedProjectId.data}`);
+
+  return { success: true };
+}
+
 export async function restoreProject(formData: FormData) {
   const parsedProjectId = z.string().uuid().safeParse(String(formData.get("projectId") ?? ""));
   if (!parsedProjectId.success) {
