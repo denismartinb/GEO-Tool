@@ -9,6 +9,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { runProjectScan } from "./actions";
 
@@ -296,10 +297,10 @@ export default async function ProjectDetailPage({
           ) : null}
           <form action={runProjectScan}>
             <input type="hidden" name="projectId" value={projectId} />
-            <Button type="submit" disabled={Boolean(activeRun) || !prompts?.length}>
-              <Icon name="play" size={14} />
-              {latestCompletedRun ? "Repetir escaneo" : "Lanzar escaneo"}
-            </Button>
+            <ScanTriggerButton
+              disabled={Boolean(activeRun) || !prompts?.length}
+              label={latestCompletedRun ? "Repetir escaneo" : "Lanzar escaneo"}
+            />
           </form>
         </div>
       </div>
@@ -853,10 +854,7 @@ export default async function ProjectDetailPage({
               </p>
               <form action={runProjectScan} style={{ display: "inline-block" }}>
                 <input type="hidden" name="projectId" value={projectId} />
-                <Button type="submit">
-                  <Icon name="play" size={14} />
-                  Lanzar escaneo
-                </Button>
+                <ScanTriggerButton label="Lanzar escaneo" />
               </form>
               <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
                 Primer escaneo · {prompts.length} prompts · Gemini

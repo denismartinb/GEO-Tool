@@ -151,30 +151,6 @@ export function Sidebar({
           );
         })}
 
-        {/* Otros dominios */}
-        {projects.length > 1 && (
-          <div style={{ marginTop: 12 }}>
-            <div className="nav-group-label hide-collapsed">Otros dominios</div>
-            {projects
-              .filter((p) => p.id !== activeProjectId)
-              .map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/dashboard/projects/${p.id}/runs`}
-                  className="proj-other-item"
-                >
-                  <div className="proj-favicon proj-favicon-sm">
-                    {p.name.slice(0, 1).toUpperCase()}
-                  </div>
-                  <div className="proj-meta hide-collapsed" style={{ flex: 1, minWidth: 0 }}>
-                    <div className="proj-name" style={{ fontSize: 12.5 }}>{p.name}</div>
-                    <div className="proj-dom">{p.domain}</div>
-                  </div>
-                  <Icon name="arrRight" size={12} className="hide-collapsed" />
-                </Link>
-              ))}
-          </div>
-        )}
       </div>
 
       <div className="sb-foot">

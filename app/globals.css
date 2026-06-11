@@ -1773,6 +1773,7 @@ a {
 @keyframes fadeIn { from { transform: translateY(7px); } to { transform: none; } }
 .spinner { width: 14px; height: 14px; border: 2px solid var(--accent-soft-2); border-top-color: var(--accent); border-radius: 999px; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 999px; animation: spin .7s linear infinite; flex-shrink: 0; }
 .progress-track { height: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; margin: 24px auto 0; max-width: 380px; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .5s ease; }
 
