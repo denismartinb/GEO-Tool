@@ -181,7 +181,7 @@ export default async function RecommendationsPage({
             <Icon name="recs" size={20} />
           </div>
           <div className="summary-txt" style={{ flex: 1 }}>
-            Lumira encontró{" "}
+            GEO Studio encontró{" "}
             <b>{total} acciones</b> para{" "}
             <b>{project.domain}</b>.
           </div>

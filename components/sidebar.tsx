@@ -64,7 +64,7 @@ export function Sidebar({
           <Icon name="resonance" size={16} />
         </div>
         <div className="hide-collapsed">
-          <div className="brand-name">Lumira</div>
+          <div className="brand-name">GEO Studio</div>
           <div className="brand-sub">Espacio de visibilidad en IA</div>
         </div>
       </div>
@@ -179,7 +179,7 @@ export function Sidebar({
 
       <div className="sb-foot">
         <a
-          href="https://lumira.ai/geo"
+          href="https://geostudio.io/geo"
           target="_blank"
           rel="noopener noreferrer"
           className="nav-item"

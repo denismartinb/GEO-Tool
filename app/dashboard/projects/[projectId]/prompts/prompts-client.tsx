@@ -72,7 +72,7 @@ export function PromptsClient({
               marginBottom: 16,
             }}
           >
-            Tus prompts no tienen topics asignados todavía. Cuando Lumira genere
+            Tus prompts no tienen topics asignados todavía. Cuando GEO Studio genere
             topics automáticamente, aparecerán agrupados aquí.
           </div>
 

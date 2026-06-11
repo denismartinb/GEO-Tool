@@ -450,7 +450,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                   marginBottom: 12,
                 }}
               >
-                Actualmente Lumira analiza con Gemini.
+                Actualmente GEO Studio analiza con Gemini.
               </p>
 
               <table

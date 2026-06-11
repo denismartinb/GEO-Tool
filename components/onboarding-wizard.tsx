@@ -387,7 +387,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
                 </Button>
               </div>
               <p id="domain-help" className="sr-only">
-                Escribe solo el dominio, sin https:// ni rutas. Ejemplo: lumira.ai
+                Escribe solo el dominio, sin https:// ni rutas. Ejemplo: ejemplo.com
               </p>
               {showDomainErr && domainHasValue && !domainIsValid ? (
                 <div className="field-err" style={{ justifyContent: "flex-start" }}>

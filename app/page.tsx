@@ -59,7 +59,7 @@ export default function HomePage() {
         <nav className="lp-nav">
           <div className="lp-logo">
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GEO Studio</div>
           </div>
           <div className="lp-nav-links">
             <a href="#producto">Producto</a>
@@ -115,7 +115,7 @@ export default function HomePage() {
               <span className="bf-dot" style={{ background: "#f06360" }} />
               <span className="bf-dot" style={{ background: "#f6be4f" }} />
               <span className="bf-dot" style={{ background: "#5ac15a" }} />
-              <span className="bf-url"><Icon name="lock" size={11} className="mr-1.5" />app.lumira.ai/overview</span>
+              <span className="bf-url"><Icon name="lock" size={11} className="mr-1.5" />app.geostudio.io/overview</span>
             </div>
             <div className="lp-shot-ph">[ vista del panel ]</div>
           </div>
@@ -125,7 +125,7 @@ export default function HomePage() {
       {/* TRUST */}
       <div className="lp-trust">
         <div className="lp-inner">
-          <div className="cap">Equipos de marketing y agencias que confían en Lumira</div>
+          <div className="cap">Equipos de marketing y agencias que confían en GEO Studio</div>
           <div className="lp-logos">
             <span className="lg">Northwind</span><span className="lg">Quantix</span><span className="lg">Beltway</span>
             <span className="lg">Nuve</span><span className="lg">Aurora&nbsp;Labs</span>
@@ -139,7 +139,7 @@ export default function HomePage() {
           <div className="lp-sec-head">
             <div className="lp-kicker">Cómo funciona</div>
             <h2 className="lp-h2">De cero a un plan de acción en tres pasos</h2>
-            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que Lumira haga el análisis.</p>
+            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que GEO Studio haga el análisis.</p>
           </div>
           <div className="lp-steps">
             {STEPS.map((s) => (
@@ -274,7 +274,7 @@ export default function HomePage() {
           <div className="row1">
             <div className="lp-logo">
               <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">Lumira</div>
+              <div className="brand-name">GEO Studio</div>
             </div>
             <div className="links">
               <a href="#producto">Producto</a>
@@ -284,7 +284,7 @@ export default function HomePage() {
               <span>Términos</span>
             </div>
           </div>
-          <div className="copy">© 2026 Lumira · Generative Engine Optimization para empresas y agencias.</div>
+          <div className="copy">© 2026 GEO Studio · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
     </div>
