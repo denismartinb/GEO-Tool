@@ -1,6 +1,6 @@
 import "server-only";
 
-import { extractGeminiStructuredData, generateGeminiVisibilityAnswer } from "@/lib/llm/gemini";
+import { extractGeminiStructuredData, generateGeminiVisibilityAnswer, GeminiConfigError } from "@/lib/llm/gemini";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -547,15 +547,52 @@ export async function executePendingScan({
         continue;
       }
 
-      const llmStart = Date.now();
-      const llmResult = await generateGeminiVisibilityAnswer({
-        prompt: promptText,
-        brand: project.brand,
-        competitors: (competitors ?? []).map((c) => c.name),
-        country: project.country,
-        language: project.language
-      });
-      const latency = Date.now() - llmStart;
+      let llmResult: Awaited<ReturnType<typeof generateGeminiVisibilityAnswer>>;
+      let latency: number;
+
+      try {
+        const llmStart = Date.now();
+        llmResult = await generateGeminiVisibilityAnswer({
+          prompt: promptText,
+          brand: project.brand,
+          competitors: (competitors ?? []).map((c) => c.name),
+          country: project.country,
+          language: project.language
+        });
+        latency = Date.now() - llmStart;
+      } catch (error) {
+        if (error instanceof GeminiConfigError) {
+          throw error;
+        }
+
+        const errorSummary = getSanitizedScanError(error);
+
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "error",
+          message: "Gemini prompt execution failed.",
+          context: { prompt_id: promptId, error: error instanceof Error ? error.message : String(error) }
+        });
+
+        await service
+          .from("jobs")
+          .update({
+            status: "failed",
+            locked_at: null,
+            locked_by: null,
+            last_error: errorSummary
+          })
+          .eq("id", job.id)
+          .eq("project_id", projectId)
+          .eq("run_id", runId);
+
+        promptFailed += 1;
+        currentRunningPromptJob = null;
+        continue;
+      }
+
       const responseLower = llmResult.text.toLowerCase();
       const brandMentioned = responseLower.includes(project.brand.toLowerCase());
       const mentionedCompetitorsCount = (competitors ?? []).reduce(
@@ -653,6 +690,10 @@ export async function executePendingScan({
 
       promptSuccess += 1;
       currentRunningPromptJob = null;
+    }
+
+    if (promptSuccess === 0) {
+      throw new ProjectActionError("scan_failed");
     }
 
     await runStructuredExtractionForRun({

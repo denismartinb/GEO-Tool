@@ -6,6 +6,14 @@ import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-ca
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
 const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.0-flash.";
+const RATE_LIMIT_RETRY_DELAY_MS = 1500;
+
+/**
+ * Thrown for misconfiguration (missing API key, invalid model id) that
+ * affects every request equally — retrying or skipping to the next prompt
+ * cannot help, so callers should treat this as fatal for the whole run.
+ */
+export class GeminiConfigError extends Error {}
 
 function getGeminiModel() {
   const configuredValue = process.env.GEMINI_MODEL;
@@ -13,7 +21,7 @@ function getGeminiModel() {
   const model = configuredModel.startsWith("models/") ? configuredModel.slice("models/".length) : configuredModel;
 
   if (!/^gemini-[a-z0-9][a-z0-9._-]*$/i.test(model)) {
-    throw new Error(GEMINI_MODEL_ERROR);
+    throw new GeminiConfigError(GEMINI_MODEL_ERROR);
   }
 
   return model;
@@ -23,6 +31,10 @@ function getGeminiApiError(status: number) {
   if (status === 429) return "Gemini API quota or rate limit reached.";
   if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";
   return `Gemini API request failed with status ${status}.`;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export type GeminiVisibilityResponse = {
@@ -46,7 +58,7 @@ export async function generateGeminiVisibilityAnswer(input: {
   language: string;
 }): Promise<GeminiVisibilityResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+  if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
 
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
@@ -61,14 +73,25 @@ export async function generateGeminiVisibilityAnswer(input: {
     `Language: ${input.language}`
   ].join("\n");
 
-  const response = await fetch(endpoint, {
+  const requestBody = JSON.stringify({
+    contents: [{ parts: [{ text: promptBlock }] }],
+    systemInstruction: { parts: [{ text: instruction }] }
+  });
+
+  let response = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      systemInstruction: { parts: [{ text: instruction }] }
-    })
+    body: requestBody
   });
+
+  if (response.status === 429) {
+    await delay(RATE_LIMIT_RETRY_DELAY_MS);
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: requestBody
+    });
+  }
 
   if (!response.ok) {
     throw new Error(getGeminiApiError(response.status));

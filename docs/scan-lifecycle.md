@@ -37,7 +37,18 @@ pending → running → done
 - Set `completed_at`.
 
 ### running → failed
-- On any unrecoverable error (Gemini API error, timeout, extraction failure).
+- On any **unrecoverable** error: a Gemini configuration error (missing API
+  key, invalid `GEMINI_MODEL`), a timeout, or an extraction-stage failure.
+  Configuration errors affect every prompt equally, so they abort the whole
+  run immediately.
+- A **per-prompt** Gemini error (HTTP failure, empty response, rate limit
+  after one retry) is **recoverable**: that prompt is recorded as failed
+  (`failed_prompts` incremented, its job marked `failed` with a sanitized
+  `last_error`) and the run continues with the next prompt. It does not by
+  itself transition the run to `failed`.
+- If the run finishes the prompt loop with **zero successful prompts**
+  (`successful_prompts === 0`), the run is still marked `failed` rather than
+  `completed`, to avoid a misleading "completed with no data" state.
 - Set `failed_at` and a **sanitized** `error_message` (no raw secrets, no stack
   traces, no raw Gemini error objects).
 - A run that exceeds `maxDuration` must be moved to `failed` during the next
