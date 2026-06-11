@@ -24,6 +24,8 @@ export type TopicGroup = {
   results: ResultRow[];
   visibilidad: number;
   menciones: number;
+  citasTotal: number;
+  sentimentDominant: string | null;
 };
 
 export default async function PromptsPage({
@@ -123,7 +125,31 @@ export default async function PromptsPage({
             catResults.length > 0
               ? Math.round((menciones / catResults.length) * 100)
               : 0;
-          return { category: cat, results: catResults, visibilidad, menciones };
+          const citasTotal = catResults.reduce(
+            (sum, r) => sum + (r.citations_count ?? 0),
+            0
+          );
+          const sentimentCounts = new Map<string, number>();
+          for (const r of catResults) {
+            if (!r.sentiment) continue;
+            sentimentCounts.set(r.sentiment, (sentimentCounts.get(r.sentiment) ?? 0) + 1);
+          }
+          let sentimentDominant: string | null = null;
+          let topCount = 0;
+          for (const [sentiment, count] of sentimentCounts) {
+            if (count > topCount) {
+              topCount = count;
+              sentimentDominant = sentiment;
+            }
+          }
+          return {
+            category: cat,
+            results: catResults,
+            visibilidad,
+            menciones,
+            citasTotal,
+            sentimentDominant,
+          };
         })
         .sort((a, b) => b.visibilidad - a.visibilidad)
     : [];

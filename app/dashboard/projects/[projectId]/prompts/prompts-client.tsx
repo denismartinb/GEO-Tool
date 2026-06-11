@@ -213,13 +213,33 @@ export function PromptsClient({
                         </span>
                       </td>
                       <td>
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
+                        <span style={{ fontSize: 12.5, color: "var(--ink-2)" }}>
+                          {group.menciones}/{group.results.length}
+                        </span>
                       </td>
                       <td className="num">
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
+                        {group.citasTotal > 0 ? (
+                          <span style={{ fontWeight: 700, fontSize: 13 }}>{group.citasTotal}</span>
+                        ) : (
+                          <span style={{ color: "var(--ink-4)" }}>0</span>
+                        )}
                       </td>
                       <td>
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
+                        {group.sentimentDominant ? (
+                          <span
+                            className={`badge ${
+                              group.sentimentDominant === "positive"
+                                ? "badge-pos"
+                                : group.sentimentDominant === "negative"
+                                  ? "badge-neg"
+                                  : "badge-neutral"
+                            }`}
+                          >
+                            {sentimentLabel(group.sentimentDominant)}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--ink-4)" }}>—</span>
+                        )}
                       </td>
                     </tr>
                     {expandedTopics.has(group.category) &&
