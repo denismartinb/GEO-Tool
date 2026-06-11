@@ -166,16 +166,20 @@ async function runStructuredExtractionForRun(input: {
   }
 }
 
-export async function createPendingScanRun({
+async function createPendingScanRunCore({
   projectId,
-  supabase,
-  user
+  readClient,
+  service,
+  triggeredByUserId,
+  triggerSource
 }: {
   projectId: string;
-  supabase: AuthenticatedContext["supabase"];
-  user: AuthenticatedContext["user"];
-}) {
-  const { data: project, error: projectError } = await supabase
+  readClient: AuthenticatedContext["supabase"];
+  service: ReturnType<typeof createServiceClient>;
+  triggeredByUserId: string | null;
+  triggerSource: "user" | "cron";
+}): Promise<string> {
+  const { data: project, error: projectError } = await readClient
     .from("projects")
     .select("id, is_archived")
     .eq("id", projectId)
@@ -193,7 +197,7 @@ export async function createPendingScanRun({
     throw new ProjectActionError("project_archived");
   }
 
-  const { data: activeRun, error: activeRunError } = await supabase
+  const { data: activeRun, error: activeRunError } = await readClient
     .from("scan_runs")
     .select("id")
     .eq("project_id", projectId)
@@ -209,7 +213,7 @@ export async function createPendingScanRun({
     throw new ProjectActionError("active_run_exists");
   }
 
-  const { data: activePrompts, error: promptError } = await supabase
+  const { data: activePrompts, error: promptError } = await readClient
     .from("project_prompts")
     .select("id, prompt_text")
     .eq("project_id", projectId)
@@ -228,14 +232,14 @@ export async function createPendingScanRun({
     throw new ProjectActionError("too_many_prompts");
   }
 
-  const service = createServiceClient();
   const promptCount = activePrompts.length;
 
   const { data: run, error: runError } = await service
     .from("scan_runs")
     .insert({
       project_id: projectId,
-      triggered_by_user_id: user.id,
+      triggered_by_user_id: triggeredByUserId,
+      trigger_source: triggerSource,
       status: "pending",
       total_prompts: promptCount,
       successful_prompts: 0,
@@ -296,6 +300,46 @@ export async function createPendingScanRun({
   }
 
   return run.id;
+}
+
+export async function createPendingScanRun({
+  projectId,
+  supabase,
+  user
+}: {
+  projectId: string;
+  supabase: AuthenticatedContext["supabase"];
+  user: AuthenticatedContext["user"];
+}): Promise<string> {
+  return createPendingScanRunCore({
+    projectId,
+    readClient: supabase,
+    service: createServiceClient(),
+    triggeredByUserId: user.id,
+    triggerSource: "user"
+  });
+}
+
+/**
+ * Cron-triggered variant of createPendingScanRun: no authenticated user, all
+ * reads and writes go through the service client, and the run is recorded
+ * with trigger_source='cron' and triggered_by_user_id=null (see migration
+ * 0008_recurring_scans.sql).
+ */
+export async function createPendingScanRunForCron({
+  projectId,
+  service
+}: {
+  projectId: string;
+  service: ReturnType<typeof createServiceClient>;
+}): Promise<string> {
+  return createPendingScanRunCore({
+    projectId,
+    readClient: service,
+    service,
+    triggeredByUserId: null,
+    triggerSource: "cron"
+  });
 }
 
 export async function executePendingScan({
