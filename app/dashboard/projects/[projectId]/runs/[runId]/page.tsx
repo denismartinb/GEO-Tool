@@ -37,19 +37,12 @@ export default async function RunDetailPage({
 
   const { data: run } = await supabase
     .from("scan_runs")
-    .select("id, project_id, status, error_summary, total_prompts, successful_prompts, failed_prompts, extraction_version, scoring_version, created_at, started_at, finished_at")
+    .select("id, project_id, status, total_prompts, successful_prompts, created_at")
     .eq("id", runId)
     .eq("project_id", projectId)
     .single();
 
   if (!run) notFound();
-
-  const { data: jobs } = await supabase
-    .from("jobs")
-    .select("id, job_type, status, attempt_count, max_attempts, created_at")
-    .eq("run_id", runId)
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: true });
 
   const [{ data: promptResults }, { data: score }, { data: recommendations }] = await Promise.all([
     supabase
@@ -77,7 +70,7 @@ export default async function RunDetailPage({
     <div className="page space-y-4">
       <p className="kicker">Escaneos</p>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="title-lg">Detalle técnico del escaneo</h1>
+        <h1 className="title-lg">Detalle del escaneo</h1>
         <Link href={`/dashboard/projects/${projectId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-2)]">
           <Icon name="chevronLeft" size={14} />
           Volver al proyecto
@@ -85,48 +78,23 @@ export default async function RunDetailPage({
       </div>
       {feedback.error ? <p className="feedback error">{feedback.error}</p> : null}
       {feedback.success ? <p className="feedback success">{feedback.success}</p> : null}
-      {run.status === "failed" && run.error_summary ? (
-        <p className="feedback error">El escaneo de Gemini ha fallado: {run.error_summary}</p>
+      {run.status === "failed" ? (
+        <p className="feedback error">Este escaneo no se pudo completar. Los prompts ya analizados conservan sus resultados.</p>
       ) : null}
 
       <Card>
-        <CardHeader><h2 className="font-medium">Metadatos del escaneo</h2></CardHeader>
+        <CardHeader><h2 className="font-medium">Resumen del escaneo</h2></CardHeader>
         <CardContent className="space-y-1 text-sm text-[var(--ink-2)]">
           <p>Estado: {formatStatus(run.status)}</p>
-          <p>Prompts totales: {run.total_prompts}</p>
-          <p>Prompts correctos: {run.successful_prompts}</p>
-          <p>Prompts fallidos: {run.failed_prompts}</p>
-          <p>Versión de extracción: {run.extraction_version}</p>
-          <p>Versión de puntuación: {run.scoring_version}</p>
-          <p>Creado: {new Date(run.created_at).toLocaleString()}</p>
-          <p>Inicio: {run.started_at ? new Date(run.started_at).toLocaleString() : "-"}</p>
-          <p>Fin: {run.finished_at ? new Date(run.finished_at).toLocaleString() : "-"}</p>
+          <p>Prompts analizados: {run.successful_prompts} de {run.total_prompts}</p>
+          <p>Fecha: {new Date(run.created_at).toLocaleString()}</p>
           {run.status === "pending" ? (
             <form action={executeScan} className="pt-2">
               <input type="hidden" name="projectId" value={projectId} />
               <input type="hidden" name="runId" value={runId} />
-              <Button type="submit">Ejecutar manualmente este escaneo</Button>
+              <Button type="submit">Ejecutar este escaneo</Button>
             </form>
           ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><h2 className="font-medium">Jobs técnicos</h2></CardHeader>
-        <CardContent>
-          {!jobs?.length ? (
-            <EmptyState title="No se han encontrado jobs" description="Los jobs se crean al preparar un escaneo." />
-          ) : (
-            <div className="space-y-2">
-              {jobs.map((job) => (
-                <div key={job.id} className="rounded border p-3 text-sm text-[var(--ink-2)]">
-                  <p className="font-medium">{job.job_type} · {formatStatus(job.status)}</p>
-                  <p>Intentos: {job.attempt_count}/{job.max_attempts}</p>
-                  <p>Creado: {new Date(job.created_at).toLocaleString()}</p>
-                </div>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
 
