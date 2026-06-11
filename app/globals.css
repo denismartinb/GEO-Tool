@@ -2038,3 +2038,61 @@ a {
   .lp-nav-links { display: none; }
 }
 
+/* ============================================================
+   Citations page (Páginas citadas) — adapted from design reference
+   styles.css .cit-* / .pr-* rules. Multi-engine columns and the
+   reviews/community/media source taxonomy from the prototype were
+   dropped: we only run Gemini and have no crawler to verify source
+   types, so sources are classified as brand / competitor / other.
+   ============================================================ */
+.pr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.pr-search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: #fff; flex: 1; max-width: 320px; }
+.pr-search input { border: none; outline: none; background: transparent; font-size: 13px; width: 100%; color: var(--ink); }
+.pr-search .ico { color: var(--ink-4); }
+
+.cit-select { height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.cit-select:hover { border-color: var(--ink-4); }
+
+.cit-head { display: grid; grid-template-columns: minmax(220px,2.2fr) 130px 1fr 130px 64px; gap: 14px; align-items: center; padding: 11px 18px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); border-bottom: 1px solid var(--line-soft); }
+.cit-head .c { text-align: center; }
+.cit-head .num { text-align: right; }
+
+.cit-card { border-bottom: 1px solid var(--line-soft); }
+.cit-card:last-child { border-bottom: none; }
+.cit-card.open { background: var(--surface-2); }
+
+.cit-row { display: grid; grid-template-columns: minmax(220px,2.2fr) 130px 1fr 130px 64px; gap: 14px; align-items: center; padding: 13px 18px; cursor: pointer; }
+.cit-row:hover { background: var(--surface-2); }
+.cit-row .c { text-align: center; }
+.cit-row .num { text-align: right; }
+
+.cit-urlcell { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
+.cit-exp { background: none; border: none; color: var(--ink-4); padding: 2px 0 0; flex: 0 0 auto; cursor: pointer; }
+.cit-title { font-size: 13.5px; font-weight: 650; color: var(--ink); line-height: 1.35; }
+.cit-url { font-family: var(--mono); font-size: 11px; color: var(--ink-4); margin-top: 3px; display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cit-url .ico { flex: 0 0 auto; }
+.cit-comps { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+
+.cit-detail { padding: 4px 18px 16px 40px; }
+.cit-detail-head { display: grid; grid-template-columns: 1fr 160px; gap: 14px; padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
+.cit-detail-head .c { text-align: center; }
+.cit-prow { display: grid; grid-template-columns: 1fr 160px; gap: 14px; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); margin-bottom: 7px; }
+.cit-prow .c { text-align: center; }
+.cit-pq { font-size: 12.5px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 8px; line-height: 1.35; }
+.cit-pq .ico { flex: 0 0 auto; }
+
+.cit-guide { background: linear-gradient(120deg, var(--accent-soft), #fbfbff); border: 1px solid var(--accent-soft-2); border-radius: var(--r-lg); padding: 16px 18px; margin-top: 14px; }
+.cit-guide-head { display: flex; align-items: flex-start; gap: 13px; }
+.cit-guide-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--surface); border: 1px solid var(--accent-soft-2); color: var(--accent); display: grid; place-items: center; flex: 0 0 auto; }
+.cit-guide-t { font-size: 14px; font-weight: 750; color: var(--accent-ink); }
+.cit-guide-d { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.5; }
+.cit-guide-d b { color: var(--ink); }
+.cit-guide-x { background: none; border: none; color: var(--ink-4); padding: 4px; border-radius: 6px; flex: 0 0 auto; cursor: pointer; }
+.cit-guide-x:hover { background: var(--surface); color: var(--ink); }
+.cit-tactics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+.cit-tactic { display: flex; gap: 11px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 13px 14px; }
+.cit-tactic .ct-num { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: 0 0 auto; }
+.cit-tactic .ct-t { font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+.cit-tactic .ct-d { font-size: 11.5px; color: var(--ink-3); line-height: 1.45; margin-top: 4px; }
+@media (max-width: 1000px) { .cit-tactics { grid-template-columns: 1fr; } }
+

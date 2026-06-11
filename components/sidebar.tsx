@@ -16,6 +16,7 @@ const analyzeLinks = [
   { segment: "", label: "Visión general", icon: "overview", countKey: null as null | string },
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
   { segment: "/competitors", label: "Competidores", icon: "competitors", countKey: "competitors" },
+  { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null as null | string },
   { segment: "/runs", label: "Escaneos", icon: "runs", countKey: "runs" },
 ];
 
