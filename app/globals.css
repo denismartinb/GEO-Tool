@@ -777,10 +777,6 @@ a {
 .ent { display: flex; align-items: center; gap: 9px; }
 .ent .nm { font-size: 13px; font-weight: 650; color: var(--ink); }
 .ent .dm { font-size: 11px; color: var(--ink-4); font-family: var(--mono); }
-.ent-link {
-  text-decoration: none;
-  color: inherit;
-}
 .ent-link svg {
   margin-left: auto;
   opacity: 0;

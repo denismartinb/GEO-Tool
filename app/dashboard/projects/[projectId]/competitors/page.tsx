@@ -3,10 +3,24 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { CompetitorRow } from "./competitor-row";
 
 /* ---- Helpers ---- */
 
 const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563", "#c47e12"];
+
+export type CompetitorRowData = {
+  id: string;
+  name: string;
+  domain: string;
+  color: string;
+  initial: string;
+  mentions: number;
+  sov: number;
+  mentionRate: number;
+  citationRate: number;
+  promptCount: number; // unique runs where seen
+};
 
 type ExtractedJson = {
   brand?: { mentioned?: boolean };
@@ -169,20 +183,7 @@ export default async function CompetitorsPage({
     totalResultsCount > 0 ? Math.round((brandCitations / totalResultsCount) * 100) : 0;
 
   // Build competitor rows
-  type CompetitorRow = {
-    id: string;
-    name: string;
-    domain: string;
-    color: string;
-    initial: string;
-    mentions: number;
-    sov: number;
-    mentionRate: number;
-    citationRate: number;
-    promptCount: number; // unique runs where seen
-  };
-
-  const competitorRows: CompetitorRow[] = configuredCompetitors
+  const competitorRows: CompetitorRowData[] = configuredCompetitors
     .filter((c) => c.is_active)
     .map((c, i) => {
       const key = normKey(c.name);
@@ -486,54 +487,7 @@ export default async function CompetitorsPage({
 
                   {/* Competitor rows */}
                   {competitorRows.map((c) => (
-                    <tr key={c.id} className="hoverable">
-                      <td>
-                        <Link
-                          href={`/dashboard/projects/${projectId}/prompts?competitor=${encodeURIComponent(c.name)}`}
-                          className="ent ent-link"
-                          title={`Ver prompts donde aparece ${c.name}`}
-                        >
-                          <span className="fav" style={{ background: c.color }}>
-                            {c.initial}
-                          </span>
-                          <div>
-                            <div className="nm">{c.name}</div>
-                            <div className="dm">{c.domain}</div>
-                          </div>
-                          <Icon name="arrRight" size={13} />
-                        </Link>
-                      </td>
-                      <td className="num">
-                        <b className="tnum">{c.mentionRate}%</b>
-                      </td>
-                      <td className="num">
-                        <b className="tnum">{c.citationRate}%</b>
-                      </td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div className="sov-bar comp-tbl-sov">
-                            <div
-                              className="sov-fill"
-                              style={{
-                                width: `${(c.sov / maxSov) * 100}%`,
-                                background: c.color
-                              }}
-                            />
-                          </div>
-                          <span
-                            className="tnum"
-                            style={{ fontSize: 12, fontWeight: 700, width: 34, textAlign: "right" }}
-                          >
-                            {c.sov}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="num">
-                        <span className="tnum" style={{ color: "var(--ink-2)" }}>
-                          {c.mentions}
-                        </span>
-                      </td>
-                    </tr>
+                    <CompetitorRow key={c.id} projectId={projectId} row={c} maxSov={maxSov} />
                   ))}
 
                   {/* If no active competitors */}
