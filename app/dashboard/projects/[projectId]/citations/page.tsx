@@ -168,9 +168,10 @@ export default async function CitationsPage({
   const totalUrls = citationRows.length;
   const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
   const yours = citationRows.filter((r) => r.category === "brand").length;
-  const opportunities = citationRows.filter(
+  const opportunityRows = citationRows.filter(
     (r) => r.category !== "brand" && r.brandMentioned === "no"
-  ).length;
+  );
+  const opportunities = opportunityRows.length;
 
   const lastScanDate = latestRun
     ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
@@ -269,6 +270,7 @@ export default async function CitationsPage({
           totalCited={totalCited}
           yours={yours}
           opportunities={opportunities}
+          opportunityRows={opportunityRows.slice(0, 5)}
           citationScore={score?.citation_score ?? null}
           brandLabel={project.brand}
         />

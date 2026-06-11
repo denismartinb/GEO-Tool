@@ -139,6 +139,7 @@ export function CitationsClient({
   totalCited,
   yours,
   opportunities,
+  opportunityRows,
   citationScore,
   brandLabel
 }: {
@@ -147,6 +148,7 @@ export function CitationsClient({
   totalCited: number;
   yours: number;
   opportunities: number;
+  opportunityRows: CitationRow[];
   citationScore: number | null;
   brandLabel: string;
 }) {
@@ -222,12 +224,32 @@ export function CitationsClient({
               <div className="ct-num">
                 <Icon name="competitors" size={15} />
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div className="ct-t">Consigue menciones donde ya citan a tus rivales</div>
-                <div className="ct-d">
-                  Las fuentes que citan a competidores y no a ti son tu lista de outreach:
-                  contacta para aparecer también en su contenido.
-                </div>
+                {opportunityRows.length > 0 ? (
+                  <>
+                    <div className="ct-d">
+                      Estas fuentes citan a un competidor y no a {brandLabel} — tu lista de
+                      outreach:
+                    </div>
+                    <ul className="cit-opp-list">
+                      {opportunityRows.map((r) => (
+                        <li key={r.id} className="cit-opp-item">
+                          <span className="cit-opp-domain">{r.domain}</span>
+                          <span className="cit-opp-meta">
+                            {r.cited} {r.cited === 1 ? "cita" : "citas"}
+                            {r.competitors.length > 0 && <> · cita a {r.competitors.join(", ")}</>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <div className="ct-d">
+                    En este escaneo no hay fuentes que citen a un competidor sin mencionar a{" "}
+                    {brandLabel}.
+                  </div>
+                )}
               </div>
             </div>
             <div className="cit-tactic">
