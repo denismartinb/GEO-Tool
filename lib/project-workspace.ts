@@ -31,6 +31,7 @@ export type RecentCompletedRun = {
   projectName: string;
   projectDomain: string;
   finishedAt: string;
+  totalPrompts: number;
 };
 
 export type WorkspaceCounters = {
@@ -96,7 +97,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       .order("created_at", { ascending: false }),
     supabase
       .from("scan_runs")
-      .select("id, project_id, finished_at, created_at")
+      .select("id, project_id, finished_at, created_at, total_prompts")
       .eq("status", "completed")
       .order("finished_at", { ascending: false })
       .limit(10)
@@ -165,7 +166,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
         projectId: run.project_id,
         projectName: project.name,
         projectDomain: project.domain,
-        finishedAt
+        finishedAt,
+        totalPrompts: run.total_prompts ?? 0
       };
     })
     .filter((run): run is RecentCompletedRun => run !== null);

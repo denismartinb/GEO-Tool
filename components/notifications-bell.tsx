@@ -37,19 +37,16 @@ export function NotificationsBell({ notifications }: { notifications: RecentComp
     };
   }, [open]);
 
-  const hasUnread =
-    hydrated && notifications.some((n) => !seenAt || new Date(n.finishedAt) > new Date(seenAt));
+  function isUnread(n: RecentCompletedRun) {
+    return !seenAt || new Date(n.finishedAt) > new Date(seenAt);
+  }
 
-  function toggleOpen() {
-    setOpen((wasOpen) => {
-      const next = !wasOpen;
-      if (next) {
-        const now = new Date().toISOString();
-        localStorage.setItem(SEEN_KEY, now);
-        setSeenAt(now);
-      }
-      return next;
-    });
+  const hasUnread = hydrated && notifications.some(isUnread);
+
+  function markAllRead() {
+    const now = new Date().toISOString();
+    localStorage.setItem(SEEN_KEY, now);
+    setSeenAt(now);
   }
 
   function handleSelect(projectId: string) {
@@ -63,25 +60,41 @@ export function NotificationsBell({ notifications }: { notifications: RecentComp
         type="button"
         className={`header-bell${hasUnread ? " has-unread" : ""}`}
         aria-label="Notificaciones"
-        onClick={toggleOpen}
+        onClick={() => setOpen((wasOpen) => !wasOpen)}
       >
         <Icon name="bell" size={16} />
       </button>
       {open ? (
         <div className="notif-panel">
-          <div className="notif-panel-head">Notificaciones</div>
+          <div className="notif-panel-head">
+            <span>Notificaciones</span>
+            {hasUnread ? (
+              <button type="button" className="notif-mark-read" onClick={markAllRead}>
+                Marcar todas como leídas
+              </button>
+            ) : null}
+          </div>
           {notifications.length ? (
             <div className="notif-list">
               {notifications.map((n) => (
                 <button
                   key={n.runId}
                   type="button"
-                  className="notif-item"
+                  className={`notif-item${isUnread(n) ? " unread" : ""}`}
                   onClick={() => handleSelect(n.projectId)}
                 >
-                  <span className="notif-item-title">Escaneo completado · {n.projectName}</span>
-                  <span className="notif-item-meta">
-                    {n.projectDomain} · {formatRelative(n.finishedAt)}
+                  <span className="notif-item-icon ok">
+                    <Icon name="check" size={12} />
+                  </span>
+                  <span className="notif-item-body">
+                    <span className="notif-item-row">
+                      {isUnread(n) ? <span className="notif-dot" /> : null}
+                      <span className="notif-item-title">Escaneo completado</span>
+                      <span className="notif-item-time">{formatRelative(n.finishedAt)}</span>
+                    </span>
+                    <span className="notif-item-desc">
+                      El escaneo de <code>{n.projectDomain}</code> ha terminado · {n.totalPrompts} prompts
+                    </span>
                   </span>
                 </button>
               ))}
