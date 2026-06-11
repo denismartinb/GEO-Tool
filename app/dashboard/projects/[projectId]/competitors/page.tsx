@@ -27,6 +27,20 @@ function normKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
+function normalizeDomain(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
+
+function isSameOrSubdomain(domain: string, root: string): boolean {
+  if (!domain || !root) return false;
+  return domain === root || domain.endsWith(`.${root}`);
+}
+
 /* ---- Page ---- */
 
 export default async function CompetitorsPage({
@@ -84,10 +98,18 @@ export default async function CompetitorsPage({
   let brandMentions = 0;
   const competitorMentionMap = new Map<string, number>();
   const competitorPromptSet = new Map<string, Set<string>>(); // key → Set<run_id>
+  const competitorCitationMap = new Map<string, number>(); // key → count of results citing that competitor's domain
   let brandCitations = 0; // prompts where project domain appears in citations
   let totalResultsCount = results.length;
 
-  const projectDomainNorm = (project.domain ?? "").replace(/^www\./, "").toLowerCase();
+  const projectDomainNorm = normalizeDomain(project.domain ?? "");
+
+  // Map of normalized competitor key → normalized domain, for citation matching
+  const competitorDomainMap = new Map<string, string>();
+  for (const c of configuredCompetitors) {
+    const domain = normalizeDomain(c.domain ?? "");
+    if (domain) competitorDomainMap.set(normKey(c.name), domain);
+  }
 
   for (const result of results) {
     const ext = parseExt(result.extracted_json);
@@ -106,12 +128,21 @@ export default async function CompetitorsPage({
       competitorPromptSet.get(key)!.add(result.run_id as string);
     }
 
+    // Citation domains for this result
+    const citDomains = (ext.citations ?? [])
+      .map((c) => normalizeDomain(c.domain ?? c.url ?? ""))
+      .filter((d) => d.length > 0);
+
     // Brand citation rate
-    const citDomains = (ext.citations ?? []).map(
-      (c) => (c.domain ?? c.url ?? "").replace(/^https?:\/\//, "").replace(/^www\./, "").toLowerCase()
-    );
-    if (citDomains.some((d) => d === projectDomainNorm || d.endsWith(`.${projectDomainNorm}`))) {
+    if (citDomains.some((d) => isSameOrSubdomain(d, projectDomainNorm))) {
       brandCitations += 1;
+    }
+
+    // Competitor citation rate
+    for (const [key, domain] of competitorDomainMap) {
+      if (citDomains.some((d) => isSameOrSubdomain(d, domain))) {
+        competitorCitationMap.set(key, (competitorCitationMap.get(key) ?? 0) + 1);
+      }
     }
   }
 
@@ -161,8 +192,10 @@ export default async function CompetitorsPage({
       const mentionRate =
         totalResultsCount > 0 ? Math.round((mentions / totalResultsCount) * 100) : 0;
       const promptCount = competitorPromptSet.get(key)?.size ?? 0;
+      const citations = competitorCitationMap.get(key) ?? 0;
+      const citationRate =
+        totalResultsCount > 0 ? Math.round((citations / totalResultsCount) * 100) : 0;
 
-      // Competitor citation rate not directly available — omit / show 0
       return {
         id: c.id,
         name: c.name,
@@ -172,7 +205,7 @@ export default async function CompetitorsPage({
         mentions,
         sov,
         mentionRate,
-        citationRate: 0, // not computable without domain mapping per competitor
+        citationRate,
         promptCount
       };
     })
@@ -455,7 +488,11 @@ export default async function CompetitorsPage({
                   {competitorRows.map((c) => (
                     <tr key={c.id} className="hoverable">
                       <td>
-                        <div className="ent">
+                        <Link
+                          href={`/dashboard/projects/${projectId}/prompts?competitor=${encodeURIComponent(c.name)}`}
+                          className="ent ent-link"
+                          title={`Ver prompts donde aparece ${c.name}`}
+                        >
                           <span className="fav" style={{ background: c.color }}>
                             {c.initial}
                           </span>
@@ -463,13 +500,14 @@ export default async function CompetitorsPage({
                             <div className="nm">{c.name}</div>
                             <div className="dm">{c.domain}</div>
                           </div>
-                        </div>
+                          <Icon name="arrRight" size={13} />
+                        </Link>
                       </td>
                       <td className="num">
                         <b className="tnum">{c.mentionRate}%</b>
                       </td>
                       <td className="num">
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
+                        <b className="tnum">{c.citationRate}%</b>
                       </td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

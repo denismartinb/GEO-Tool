@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
@@ -26,12 +27,29 @@ export type TopicGroup = {
   menciones: number;
 };
 
+type ExtractedJson = {
+  competitors?: Array<{ name?: string; mentioned?: boolean }>;
+};
+
+function parseExt(raw: unknown): ExtractedJson {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as ExtractedJson;
+}
+
+function normKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 export default async function PromptsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ competitor?: string }>;
 }) {
   const { projectId } = await params;
+  const { competitor } = await searchParams;
+  const competitorFilter = competitor?.trim() || null;
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
@@ -92,10 +110,20 @@ export default async function PromptsPage({
     (projectPrompts ?? []).map((p) => [p.id, p.category as string | null])
   );
 
-  const results: ResultRow[] = (rawResults ?? []).map((r) => ({
+  const allResults: ResultRow[] = (rawResults ?? []).map((r) => ({
     ...r,
     category: promptCategoryMap.get(r.prompt_id ?? "") ?? null,
   }));
+
+  // Filtro opcional por competidor (drilldown desde la página de Competidores)
+  const results: ResultRow[] = competitorFilter
+    ? allResults.filter((r) => {
+        const ext = parseExt(r.extracted_json);
+        return (ext.competitors ?? []).some(
+          (c) => c.mentioned && c.name && normKey(c.name) === normKey(competitorFilter)
+        );
+      })
+    : allResults;
 
   // Lógica de Topics
   const distinctCategories = [
@@ -176,6 +204,34 @@ export default async function PromptsPage({
       </header>
 
       <div style={{ paddingTop: 20 }}>
+        {competitorFilter && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 16,
+              padding: "10px 14px",
+              borderRadius: 10,
+              border: "1px solid var(--line-strong)",
+              background: "var(--surface-2)",
+              fontSize: 13,
+            }}
+          >
+            <Icon name="competitors" size={15} />
+            <span style={{ color: "var(--ink-3)" }}>
+              Mostrando solo prompts donde aparece{" "}
+              <b style={{ color: "var(--ink)" }}>{competitorFilter}</b> en el último escaneo.
+            </span>
+            <Link
+              href={`/dashboard/projects/${projectId}/prompts`}
+              className="btn btn-ghost btn-sm"
+              style={{ marginLeft: "auto" }}
+            >
+              Quitar filtro
+            </Link>
+          </div>
+        )}
         {activeRun && !hasCompletedRun ? (
           <ScanInProgress activeRun={activeRun} />
         ) : !hasActivePrompts ? (
@@ -261,15 +317,23 @@ export default async function PromptsPage({
                 marginBottom: 8,
               }}
             >
-              Sin resultados disponibles
+              {competitorFilter
+                ? `${competitorFilter} no aparece mencionado en el último escaneo`
+                : "Sin resultados disponibles"}
             </p>
             <p
               style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 16 }}
             >
-              El escaneo está completado pero no hay respuestas disponibles.
+              {competitorFilter
+                ? "Quita el filtro para ver todos los prompts del último escaneo."
+                : "El escaneo está completado pero no hay respuestas disponibles."}
             </p>
             <Link
-              href={`/dashboard/projects/${projectId}`}
+              href={
+                competitorFilter
+                  ? `/dashboard/projects/${projectId}/prompts`
+                  : `/dashboard/projects/${projectId}`
+              }
               style={{
                 fontSize: 13,
                 fontWeight: 600,
@@ -279,7 +343,7 @@ export default async function PromptsPage({
                 gap: 4,
               }}
             >
-              Volver a visión general →
+              {competitorFilter ? "Quitar filtro →" : "Volver a visión general →"}
             </Link>
           </div>
         ) : (
