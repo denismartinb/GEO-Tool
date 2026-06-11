@@ -32,6 +32,11 @@ const scanExecuteSchema = z.object({
   runId: z.string().uuid()
 });
 
+const recurringScansSchema = z.object({
+  projectId: z.string().uuid(),
+  enabled: z.enum(["true", "false"])
+});
+
 export async function createPrompt(formData: FormData) {
   const payload = promptCreateSchema.parse({
     projectId: formData.get("projectId"),
@@ -182,6 +187,61 @@ export async function executeScan(formData: FormData) {
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
   redirect(`/dashboard/projects/${projectId}?success=scan_completed`);
+}
+
+/**
+ * Enables/disables the weekly automatic scan for a project. Opt-in only:
+ * enabling requires at least one completed scan run, so the recurring cadence
+ * always starts from a known-good baseline (geo-strategy guardrail).
+ */
+export async function setRecurringScans(formData: FormData) {
+  const parsed = recurringScansSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  if (enabled) {
+    const { data: completedRun, error: completedRunError } = await supabase
+      .from("scan_runs")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .limit(1)
+      .maybeSingle();
+
+    if (completedRunError) {
+      redirect(`/dashboard/projects/${projectId}/runs?error=unexpected_error`);
+    }
+
+    if (!completedRun) {
+      redirect(`/dashboard/projects/${projectId}/runs?error=recurring_requires_completed_scan`);
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ recurring_scans_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    redirect(`/dashboard/projects/${projectId}/runs?error=recurring_update_failed`);
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}`);
+  revalidatePath(`/dashboard/projects/${projectId}/runs`);
+  redirect(`/dashboard/projects/${projectId}/runs?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
 }
 
 /**
