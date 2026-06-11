@@ -7,8 +7,7 @@ import { requireUser } from "@/lib/auth";
 import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
-  getActionErrorCode,
-  launchScan
+  getActionErrorCode
 } from "@/lib/scan/scan-runner";
 
 const promptCreateSchema = z.object({
@@ -21,10 +20,6 @@ const competitorCreateSchema = z.object({
   projectId: z.string().uuid(),
   name: z.string().min(1).max(120),
   domain: z.string().min(3).max(255)
-});
-
-const scanStartSchema = z.object({
-  projectId: z.string().uuid()
 });
 
 const scanExecuteSchema = z.object({
@@ -125,40 +120,6 @@ export async function deactivateCompetitor(formData: FormData) {
     .eq("project_id", projectId);
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-}
-
-export async function startScan(formData: FormData) {
-  const parsed = scanStartSchema.safeParse({
-    projectId: formData.get("projectId")
-  });
-
-  if (!parsed.success) {
-    redirect("/dashboard/projects?error=invalid_project_id");
-  }
-
-  const { projectId } = parsed.data;
-  const { supabase, user } = await requireUser();
-  let runId: string | null = null;
-  let executed = false;
-
-  try {
-    const result = await launchScan({ projectId, supabase, user });
-    runId = result.runId;
-    executed = result.executed;
-  } catch (error) {
-    redirect(`/dashboard/projects/${projectId}?error=${encodeURIComponent(getActionErrorCode(error))}`);
-  }
-
-  revalidatePath(`/dashboard/projects/${projectId}`);
-  if (runId) revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
-  redirect(`/dashboard/projects/${projectId}?success=${executed ? "scan_completed" : "scan_pending"}`);
-}
-
-// Backwards-compatible action used by the workspace "Lanzar/Repetir escaneo"
-// forms. Same behavior as startScan: create a run and execute it synchronously
-// when sync execution is enabled.
-export async function runProjectScan(formData: FormData) {
-  return startScan(formData);
 }
 
 export async function executeScan(formData: FormData) {

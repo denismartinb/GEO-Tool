@@ -11,7 +11,6 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
-import { runProjectScan } from "./actions";
 
 /* ---- constants & helpers ---- */
 
@@ -295,13 +294,11 @@ export default async function ProjectDetailPage({
               Escaneo en curso
             </span>
           ) : null}
-          <form action={runProjectScan}>
-            <input type="hidden" name="projectId" value={projectId} />
-            <ScanTriggerButton
-              disabled={Boolean(activeRun) || !prompts?.length}
-              label={latestCompletedRun ? "Repetir escaneo" : "Lanzar escaneo"}
-            />
-          </form>
+          <ScanTriggerButton
+            projectId={projectId}
+            disabled={Boolean(activeRun) || !prompts?.length}
+            label={latestCompletedRun ? "Repetir escaneo" : "Lanzar escaneo"}
+          />
         </div>
       </div>
 
@@ -852,10 +849,9 @@ export default async function ProjectDetailPage({
               <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
                 Analiza cómo aparece <b style={{ color: "var(--ink-2)" }}>{project.brand}</b> en los motores de IA con tus <b style={{ color: "var(--ink-2)" }}>{prompts.length} prompts</b> activos.
               </p>
-              <form action={runProjectScan} style={{ display: "inline-block" }}>
-                <input type="hidden" name="projectId" value={projectId} />
-                <ScanTriggerButton label="Lanzar escaneo" />
-              </form>
+              <div style={{ display: "inline-block" }}>
+                <ScanTriggerButton projectId={projectId} label="Lanzar escaneo" />
+              </div>
               <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
                 Primer escaneo · {prompts.length} prompts · Gemini
               </p>
