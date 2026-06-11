@@ -285,9 +285,6 @@ export default async function ProjectDetailPage({
                 .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
             </span>
           )}
-          <button type="button" className="header-bell" aria-label="Notificaciones" title="Próximamente: notificaciones">
-            <Icon name="bell" size={16} />
-          </button>
           {activeRun ? (
             <span className="scan-status">
               <span className="dot run" />

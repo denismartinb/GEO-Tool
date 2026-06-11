@@ -25,6 +25,14 @@ export type WorkspaceProjectSummary = {
   language: string;
 };
 
+export type RecentCompletedRun = {
+  runId: string;
+  projectId: string;
+  projectName: string;
+  projectDomain: string;
+  finishedAt: string;
+};
+
 export type WorkspaceCounters = {
   projects: WorkspaceProjectSummary[];
   promptCountByProject: Record<string, number>;
@@ -35,6 +43,7 @@ export type WorkspaceCounters = {
   latestScanDateByProject: Record<string, string | null>;
   latestScoreByProject: Record<string, number | null>;
   scoreDeltaByProject: Record<string, number | null>;
+  recentCompletedRuns: RecentCompletedRun[];
 };
 
 /**
@@ -53,7 +62,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     { data: allCompetitors },
     { data: completedRuns },
     { data: allRecs },
-    { data: scores }
+    { data: scores },
+    { data: recentCompleted }
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -83,7 +93,13 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     supabase
       .from("run_scores")
       .select("project_id, run_id, visibility_score, created_at")
-      .order("created_at", { ascending: false })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("scan_runs")
+      .select("id, project_id, finished_at, created_at")
+      .eq("status", "completed")
+      .order("finished_at", { ascending: false })
+      .limit(10)
   ]);
 
   const latestScanStatusByProject = (runs ?? []).reduce<Record<string, string>>((statuses, run) => {
@@ -137,6 +153,23 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     scoreDeltaByProject[projectId] = seen.length >= 2 ? seen[0] - seen[1] : null;
   }
 
+  const projectById = new Map((projects ?? []).map((p) => [p.id, p]));
+
+  const recentCompletedRuns: RecentCompletedRun[] = (recentCompleted ?? [])
+    .map((run) => {
+      const project = projectById.get(run.project_id);
+      const finishedAt = run.finished_at ?? run.created_at;
+      if (!project || !finishedAt) return null;
+      return {
+        runId: run.id,
+        projectId: run.project_id,
+        projectName: project.name,
+        projectDomain: project.domain,
+        finishedAt
+      };
+    })
+    .filter((run): run is RecentCompletedRun => run !== null);
+
   return {
     projects: projects ?? [],
     promptCountByProject,
@@ -146,6 +179,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     latestScanStatusByProject,
     latestScanDateByProject,
     latestScoreByProject,
-    scoreDeltaByProject
+    scoreDeltaByProject,
+    recentCompletedRuns
   };
 }
