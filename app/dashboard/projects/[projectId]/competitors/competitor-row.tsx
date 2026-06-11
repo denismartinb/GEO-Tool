@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import type { CompetitorRowData } from "./page";
 
@@ -13,10 +12,10 @@ export function CompetitorRow({
   row: CompetitorRowData;
   maxSov: number;
 }) {
-  const router = useRouter();
-
   function goToPrompts() {
-    router.push(`/dashboard/projects/${projectId}/prompts?competitor=${encodeURIComponent(row.name)}`);
+    // Full navigation: client-side router.push to the same route with only
+    // different searchParams does not reliably re-run the server component.
+    window.location.href = `/dashboard/projects/${projectId}/prompts?competitor=${encodeURIComponent(row.name)}`;
   }
 
   return (
