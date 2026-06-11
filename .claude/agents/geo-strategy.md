@@ -12,7 +12,7 @@ permissionMode: plan
 
 # GEO Strategy / Domain Expert
 
-Purpose: own the GEO (Generative Engine Optimization) methodology. GEO Studio
+Purpose: own the GEO (Generative Engine Optimization) methodology. Lumira
 measures and improves how a brand appears in AI-generated answers. You define
 the science; other agents implement the plumbing.
 

@@ -1,10 +1,10 @@
 UX_BRIEF.md
-GEO Studio
+Lumira
 UX Brief v0.1
-Status: MVP Design Direction Product: GEO Studio Audience: Claude Design / Product Design Author: Denis Martín Barroso
+Status: MVP Design Direction Product: Lumira Audience: Claude Design / Product Design Author: Denis Martín Barroso
 
 1. Product Summary
-GEO Studio is a SaaS platform for Generative Engine Optimization.
+Lumira is a SaaS platform for Generative Engine Optimization.
 It helps companies, SEO agencies and marketing teams understand, monitor and improve their visibility inside AI-generated answers.
 The product analyzes:
 	•	Whether a brand appears in AI answers.
@@ -15,11 +15,11 @@ The product analyzes:
 	•	What actions the user should implement first.
 The core product idea is:
 From AI Visibility to Implementation
-GEO Studio should not feel like a passive reporting dashboard.
+Lumira should not feel like a passive reporting dashboard.
 It should feel like an actionable command center for improving AI visibility.
 
 2. Product Positioning
-GEO Studio is not trying to copy Semrush or Otterly.
+Lumira is not trying to copy Semrush or Otterly.
 It should be inspired by the clarity and analytical structure of enterprise SEO tools, but the key differentiator is actionability.
 The product should help the user move from:
 “I do not know if AI engines mention my brand”
@@ -216,7 +216,7 @@ The Project Overview is the main executive screen.
 It should include:
 Top Summary
 A short natural language summary:
-Your brand appears in 18% of selected AI prompts. Your strongest competitor appears in 43%. GEO Studio found 5 high-impact actions to improve citation readiness.
+Your brand appears in 18% of selected AI prompts. Your strongest competitor appears in 43%. Lumira found 5 high-impact actions to improve citation readiness.
 Main Score Cards
 Suggested cards:
 	1	GEO Visibility Score.
@@ -344,7 +344,7 @@ No Competitors
 Message:
 Add your main competitors
 Supporting copy:
-GEO Studio compares your brand against competitors to detect where they are winning visibility.
+Lumira compares your brand against competitors to detect where they are winning visibility.
 CTA:
 Add competitor
 
@@ -352,7 +352,7 @@ No Runs
 Message:
 Run your first AI visibility scan
 Supporting copy:
-GEO Studio will analyze selected prompts, detect mentions, citations and competitive gaps.
+Lumira will analyze selected prompts, detect mentions, citations and competitive gaps.
 CTA:
 Run scan
 
@@ -445,7 +445,7 @@ For the first design iteration, produce:
 	10	UX rationale.
 Focus on a premium, credible, actionable SaaS experience.
 Do not create a generic dashboard.
-Make GEO Studio feel like a real product that agencies and B2B marketing teams would pay for.
+Make Lumira feel like a real product that agencies and B2B marketing teams would pay for.
 
 22. Final Design Principle
 Every screen should answer:

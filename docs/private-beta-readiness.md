@@ -1,4 +1,4 @@
-# GEO Studio Private Beta Readiness
+# Lumira Private Beta Readiness
 
 Use this checklist before inviting private beta users to test the current MVP.
 

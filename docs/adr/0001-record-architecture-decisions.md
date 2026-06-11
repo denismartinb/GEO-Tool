@@ -8,7 +8,7 @@
 
 ## Context
 
-GEO Studio is a private-beta SaaS tool being built iteratively. We have already
+Lumira is a private-beta SaaS tool being built iteratively. We have already
 made several non-obvious technical decisions (model pinning, sync vs async scan
 execution, Vercel timeout configuration) that caused confusion and rework when
 they were not documented.
