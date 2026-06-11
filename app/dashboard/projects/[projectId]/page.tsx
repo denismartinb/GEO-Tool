@@ -311,18 +311,11 @@ export default async function ProjectDetailPage({
       )}
       {latestFailedRun && (
         <div className="feedback" style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16 }}>
-          <p style={{ fontWeight: 650, marginBottom: 4 }}>
+          <p style={{ fontWeight: 650 }}>
             {latestCompletedRun
-              ? "El último escaneo falló. Se muestran los últimos resultados completados."
-              : "El último escaneo falló. Puedes revisar el detalle técnico y volver a intentarlo."}
+              ? "El último escaneo no se pudo completar. Se muestran los últimos resultados completados."
+              : "El último escaneo no se pudo completar. Vuelve a intentarlo con el botón de arriba."}
           </p>
-          <Link
-            href={`/dashboard/projects/${projectId}/runs/${latestFailedRun.id}`}
-            style={{ display: "inline-flex", alignItems: "center", gap: 4, fontWeight: 700, textDecoration: "underline" }}
-          >
-            Ver detalle técnico del escaneo fallido
-            <Icon name="arrRight" size={13} />
-          </Link>
         </div>
       )}
       {!prompts?.length && (
@@ -819,7 +812,7 @@ export default async function ProjectDetailPage({
               href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun!.id}`}
               style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
             >
-              Ver detalle técnico del escaneo
+              Ver detalle del escaneo
               <Icon name="arrRight" size={13} />
             </Link>
           </div>

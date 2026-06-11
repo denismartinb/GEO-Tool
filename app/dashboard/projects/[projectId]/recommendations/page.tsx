@@ -298,14 +298,14 @@ export default async function RecommendationsPage({
           <div className="section-empty-title">No hay recomendaciones activas</div>
           <div className="section-empty-desc">
             Ninguna regla generó acciones para este escaneo. Puedes revisar el
-            detalle técnico para auditar la evidencia.
+            detalle del escaneo para ver la evidencia.
           </div>
           <Link
             href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
             className="btn btn-ghost btn-sm"
             style={{ marginTop: 14, display: "inline-flex" }}
           >
-            Ver detalle técnico
+            Ver detalle del escaneo
             <Icon name="arrRight" size={14} />
           </Link>
         </div>
@@ -359,7 +359,7 @@ export default async function RecommendationsPage({
               gap: 4,
             }}
           >
-            Ver detalle técnico del escaneo
+            Ver detalle del escaneo
             <Icon name="arrRight" size={13} />
           </Link>
         </div>
