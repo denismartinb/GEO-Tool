@@ -206,6 +206,12 @@ export default async function CompetitorsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
+          {activeRun && completedRuns.length > 0 ? (
+            <span className="scan-status">
+              <span className="dot run" />
+              Escaneo en curso
+            </span>
+          ) : null}
           <Link
             href={`/dashboard/projects/${projectId}`}
             className="badge badge-outline"
@@ -217,7 +223,7 @@ export default async function CompetitorsPage({
         </div>
       </div>
 
-      {activeRun ? (
+      {activeRun && completedRuns.length === 0 ? (
         <ScanInProgress activeRun={activeRun} />
       ) : (
       <>
