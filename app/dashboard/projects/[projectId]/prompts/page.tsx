@@ -166,11 +166,17 @@ export default async function PromptsPage({
               })}
             </span>
           )}
+          {activeRun && latestRun ? (
+            <span className="scan-status">
+              <span className="dot run" />
+              Escaneo en curso
+            </span>
+          ) : null}
         </div>
       </header>
 
       <div style={{ paddingTop: 20 }}>
-        {activeRun ? (
+        {activeRun && !hasCompletedRun ? (
           <ScanInProgress activeRun={activeRun} />
         ) : !hasActivePrompts ? (
           <div
