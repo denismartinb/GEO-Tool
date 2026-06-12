@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
@@ -28,7 +29,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     competitorCountByProject,
     completedRunCountByProject,
     recommendationCountByProject,
-    latestScanStatusByProject
+    latestScanStatusByProject,
+    recentCompletedRuns
   } = await getWorkspaceCounters();
 
   return (
@@ -46,6 +48,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <header className="dash-header">
           <WorkspaceTopbar projects={projects ?? []} latestScanStatusByProject={latestScanStatusByProject} />
           <div className="dash-header-actions">
+            <NotificationsBell notifications={recentCompletedRuns} />
             <div className="meta">{user.email}</div>
             <form action={signOut}>
               <Button variant="outline" type="submit">
