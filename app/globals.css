@@ -2381,6 +2381,11 @@ a {
   .onb-cta .ico {
     display: none;
   }
+
+  /* --- Onboarding: show full prompt text on mobile --- */
+  .onb-prompt-input {
+    min-height: 96px;
+  }
 }
 
 @keyframes scrimIn {
