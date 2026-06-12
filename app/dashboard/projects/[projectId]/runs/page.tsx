@@ -279,6 +279,44 @@ export default async function RunsPage({
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
 
+      {/* Sticky header */}
+      <div className="ov-sticky-header">
+        <div className="ov-sticky-left">
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>Escaneos</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span
+                style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
+              >
+                {project.name}
+              </span>
+              <span
+                className="badge badge-neutral"
+                style={{ fontFamily: "var(--mono)", fontSize: 11 }}
+              >
+                {project.domain}
+              </span>
+              {activeRun ? (
+                <span className="scan-status">
+                  <span className="dot run" />
+                  Escaneo en curso
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        <div className="ov-sticky-right">
+          <Link
+            href={`/dashboard/projects/${projectId}`}
+            className="badge badge-outline"
+            style={{ fontSize: 12, fontWeight: 650, padding: "5px 10px" }}
+          >
+            <Icon name="chevronLeft" size={12} />
+            Visión general
+          </Link>
+        </div>
+      </div>
+
       {feedbackErrorMessage && (
         <p className="feedback error" style={{ marginBottom: 16 }}>{feedbackErrorMessage}</p>
       )}
@@ -321,86 +359,46 @@ export default async function RunsPage({
         </div>
       ) : null}
 
-      {/* Sticky header */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Escaneos</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
-              >
-                {project.name}
-              </span>
-              <span
-                className="badge badge-neutral"
-                style={{ fontFamily: "var(--mono)", fontSize: 11 }}
-              >
-                {project.domain}
-              </span>
-              {activeRun ? (
-                <span className="scan-status">
-                  <span className="dot run" />
-                  Escaneo en curso
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        <div className="ov-sticky-right">
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            className="badge badge-outline"
-            style={{ fontSize: 12, fontWeight: 650, padding: "5px 10px" }}
-          >
-            <Icon name="chevronLeft" size={12} />
-            Visión general
-          </Link>
-        </div>
-      </div>
-
       {/* Summary banner */}
-      <div className="summary mt8">
-        <div className="summary-ico">
-          <Icon name="runs" size={20} />
+      {!(totalCompletedRuns === 0 && isThisProjectScanning) && (
+        <div className="summary mt8">
+          <div className="summary-ico">
+            <Icon name="runs" size={20} />
+          </div>
+          <p className="summary-txt">
+            {totalCompletedRuns === 0 ? (
+              <>
+                Este dominio todavía no tiene escaneos completados.{" "}
+                <b>Lanza el primer escaneo</b> desde la{" "}
+                <Link
+                  href={`/dashboard/projects/${projectId}`}
+                  style={{ color: "var(--accent)", fontWeight: 700 }}
+                >
+                  visión general
+                </Link>
+                .
+              </>
+            ) : (
+              <>
+                <b>{totalCompletedRuns} {totalCompletedRuns === 1 ? "escaneo completado" : "escaneos completados"}</b>
+                {" · "}
+                <b>{totalSuccessfulPrompts} {totalSuccessfulPrompts === 1 ? "prompt procesado" : "prompts procesados"}</b>
+                {lastCompletedRun ? (
+                  <>
+                    {" · "}Último:{" "}
+                    <b>{formatDateShort(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)}</b>
+                  </>
+                ) : null}
+                {!hasMultipleCompleted && totalCompletedRuns > 0 && (
+                  <span style={{ color: "var(--ink-4)", fontStyle: "italic", fontSize: 13 }}>
+                    {" "}— La tendencia de score estará disponible con ≥2 escaneos completados.
+                  </span>
+                )}
+              </>
+            )}
+          </p>
         </div>
-        <p className="summary-txt">
-          {totalCompletedRuns === 0 && isThisProjectScanning ? (
-            <>
-              Tu primer escaneo está en curso. Los resultados aparecerán aquí en cuanto termine.
-            </>
-          ) : totalCompletedRuns === 0 ? (
-            <>
-              Este dominio todavía no tiene escaneos completados.{" "}
-              <b>Lanza el primer escaneo</b> desde la{" "}
-              <Link
-                href={`/dashboard/projects/${projectId}`}
-                style={{ color: "var(--accent)", fontWeight: 700 }}
-              >
-                visión general
-              </Link>
-              .
-            </>
-          ) : (
-            <>
-              <b>{totalCompletedRuns} {totalCompletedRuns === 1 ? "escaneo completado" : "escaneos completados"}</b>
-              {" · "}
-              <b>{totalSuccessfulPrompts} {totalSuccessfulPrompts === 1 ? "prompt procesado" : "prompts procesados"}</b>
-              {lastCompletedRun ? (
-                <>
-                  {" · "}Último:{" "}
-                  <b>{formatDateShort(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)}</b>
-                </>
-              ) : null}
-              {!hasMultipleCompleted && totalCompletedRuns > 0 && (
-                <span style={{ color: "var(--ink-4)", fontStyle: "italic", fontSize: 13 }}>
-                  {" "}— La tendencia de score estará disponible con ≥2 escaneos completados.
-                </span>
-              )}
-            </>
-          )}
-        </p>
-      </div>
+      )}
 
       {/* Weekly automatic scan (opt-in) */}
       <div
