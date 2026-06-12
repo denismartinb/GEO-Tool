@@ -1890,6 +1890,10 @@ a {
 .add-back:hover { background: var(--surface-2); color: var(--ink); }
 .add-wrap { }
 .add-hero { text-align: center; max-width: 540px; margin: 8px auto 24px; }
+.add-domain.cs-page, .cs-page { max-width: 1040px; }
+.cs-headwrap { margin-bottom: 22px; max-width: 640px; }
+.cs-headwrap .add-h1 { font-size: 30px; }
+.add-back { cursor: pointer; font-family: inherit; }
 .add-h1 { font-size: 32px; font-weight: 800; letter-spacing: -.025em; line-height: 1.08; margin: 16px 0 0; }
 .add-h1 .grad { background: linear-gradient(100deg, #4f46e5, #7c3aed 55%, #0d9488); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
 .add-sub { font-size: 15px; line-height: 1.6; color: var(--ink-2); margin: 12px auto 0; max-width: 460px; }
