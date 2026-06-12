@@ -11,7 +11,7 @@ import { PROMPT_CATEGORIES } from "@/lib/projects/prompt-categories";
  * optional zod fields must accept that (null -> undefined).
  */
 
-export const MAX_INITIAL_PROMPTS = 10;
+export const MAX_INITIAL_PROMPTS = 15;
 export const MAX_INITIAL_COMPETITORS = 5;
 
 const COUNTRY_LANGUAGE: Record<string, string> = {
