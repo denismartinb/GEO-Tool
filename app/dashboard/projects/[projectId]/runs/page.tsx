@@ -344,8 +344,7 @@ export default async function RunsPage({
             <div className="fb-d">
               {isFirstScanMode ? (
                 <>
-                  Estamos analizando <b>{project.domain}</b> con tus prompts en Gemini.
-                  Suele tardar un par de minutos — puedes seguir el progreso aquí.
+                  Estamos analizando <b>{project.domain}</b>
                 </>
               ) : (
                 <>
@@ -407,67 +406,67 @@ export default async function RunsPage({
       )}
 
       {/* Weekly automatic scan (opt-in) */}
-      <div
-        className="card"
-        style={{
-          marginTop: 14,
-          padding: "14px 17px",
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          flexWrap: "wrap"
-        }}
-      >
+      {totalCompletedRuns > 0 && (
         <div
+          className="card"
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: "var(--surface-sunk)",
-            display: "grid",
-            placeItems: "center",
-            color: project.recurring_scans_enabled ? "var(--accent)" : "var(--ink-3)",
-            flexShrink: 0
+            marginTop: 14,
+            padding: "14px 17px",
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            flexWrap: "wrap"
           }}
         >
-          <Icon name="runs" size={17} />
-        </div>
-        <div style={{ flex: 1, minWidth: 220 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 13.5, fontWeight: 750, color: "var(--ink)" }}>
-              Escaneo automático semanal
-            </span>
-            {project.recurring_scans_enabled ? (
-              <span className="badge badge-pos">Activado</span>
-            ) : (
-              <span className="badge badge-neutral">Desactivado</span>
-            )}
+          <div
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              background: "var(--surface-sunk)",
+              display: "grid",
+              placeItems: "center",
+              color: project.recurring_scans_enabled ? "var(--accent)" : "var(--ink-3)",
+              flexShrink: 0
+            }}
+          >
+            <Icon name="runs" size={17} />
           </div>
-          <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2, lineHeight: 1.5 }}>
-            {project.recurring_scans_enabled
-              ? "Este dominio se escanea automáticamente cada semana con tus prompts actuales."
-              : totalCompletedRuns > 0
-              ? "Escanea este dominio automáticamente cada semana con tus prompts actuales."
-              : "Disponible cuando este dominio tenga al menos un escaneo completado."}
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 750, color: "var(--ink)" }}>
+                Escaneo automático semanal
+              </span>
+              {project.recurring_scans_enabled ? (
+                <span className="badge badge-pos">Activado</span>
+              ) : (
+                <span className="badge badge-neutral">Desactivado</span>
+              )}
+            </div>
+            <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2, lineHeight: 1.5 }}>
+              {project.recurring_scans_enabled
+                ? "Este dominio se escanea automáticamente cada semana con tus prompts actuales."
+                : "Escanea este dominio automáticamente cada semana con tus prompts actuales."}
+            </div>
           </div>
+          {project.recurring_scans_enabled || totalCompletedRuns > 0 ? (
+            <form action={setRecurringScans}>
+              <input type="hidden" name="projectId" value={projectId} />
+              <input
+                type="hidden"
+                name="enabled"
+                value={project.recurring_scans_enabled ? "false" : "true"}
+              />
+              <button
+                type="submit"
+                className={project.recurring_scans_enabled ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}
+              >
+                {project.recurring_scans_enabled ? "Desactivar" : "Activar"}
+              </button>
+            </form>
+          ) : null}
         </div>
-        {project.recurring_scans_enabled || totalCompletedRuns > 0 ? (
-          <form action={setRecurringScans}>
-            <input type="hidden" name="projectId" value={projectId} />
-            <input
-              type="hidden"
-              name="enabled"
-              value={project.recurring_scans_enabled ? "false" : "true"}
-            />
-            <button
-              type="submit"
-              className={project.recurring_scans_enabled ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}
-            >
-              {project.recurring_scans_enabled ? "Desactivar" : "Activar"}
-            </button>
-          </form>
-        ) : null}
-      </div>
+      )}
 
       {/* Domains grid */}
       {domainCards.length > 0 ? (
