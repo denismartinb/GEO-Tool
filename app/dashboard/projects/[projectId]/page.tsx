@@ -11,6 +11,8 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import { createServiceClient } from "@/lib/supabase/service";
 
 /* ---- constants & helpers ---- */
 
@@ -101,6 +103,11 @@ export default async function ProjectDetailPage({
     .single();
 
   if (!project) notFound();
+
+  // Reconcile any stuck pending/running runs before reading scan_runs, so the
+  // Overview reflects a `failed` status promptly instead of showing an
+  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
+  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
 
   const [{ data: prompts }, { data: competitors }, { data: runs }] = await Promise.all([
     supabase

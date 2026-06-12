@@ -5,8 +5,9 @@ import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
-import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+import { ENABLE_SYNC_SCAN_EXECUTION, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
@@ -153,6 +154,11 @@ export default async function RunsPage({
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
   const feedbackSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+
+  // Reconcile any stuck pending/running runs before reading scan_runs, so the
+  // Escaneos table reflects a `failed` status promptly instead of showing an
+  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
+  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
 
   /* Domains grid — reuses the same counters/queries as the dashboard sidebar */
   const {

@@ -11,6 +11,24 @@ const MAX_EXTRACTION_RESULTS = 10;
 const EXTRACTION_VERSION = "gemini-extraction-v1";
 export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
 
+/**
+ * Timeout thresholds for the scan lifecycle reconciliation pass, per
+ * docs/scan-lifecycle.md ("Timeout detection") and
+ * docs/adr/0003-sync-scan-execution-and-maxduration.md. A `running` row older
+ * than this is presumed to have been killed by the Vercel function timeout
+ * without updating its status; a `pending` row older than this never got
+ * picked up and is considered stale.
+ */
+export const SCAN_RUNNING_TIMEOUT_SECONDS = 90;
+export const SCAN_PENDING_TIMEOUT_SECONDS = 300;
+
+const SCAN_TIMEOUT_ERROR_SUMMARY =
+  "El escaneo no respondió a tiempo y se ha marcado como fallido automáticamente. Puedes lanzar un nuevo escaneo.";
+const SCAN_PENDING_TIMEOUT_ERROR_SUMMARY =
+  "El escaneo quedó pendiente demasiado tiempo sin iniciarse y se ha marcado como fallido automáticamente. Puedes lanzar un nuevo escaneo.";
+
+const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
+
 export type ProjectActionErrorCode =
   | "active_run_exists"
   | "project_archived"
@@ -166,6 +184,126 @@ async function runStructuredExtractionForRun(input: {
   }
 }
 
+/**
+ * Timeout-detection pass for the scan lifecycle (docs/scan-lifecycle.md,
+ * "Timeout detection"). Finds `running` rows whose `started_at` is older than
+ * SCAN_RUNNING_TIMEOUT_SECONDS and `pending` rows whose `created_at` is older
+ * than SCAN_PENDING_TIMEOUT_SECONDS, and transitions them to `failed` with a
+ * sanitized, user-facing `error_summary`.
+ *
+ * This is what unblocks `active_run_exists`: a stuck run no longer permanently
+ * blocks new scans for the project, because it becomes terminal (`failed`) on
+ * the next reconciliation pass instead of remaining `pending`/`running`
+ * forever.
+ *
+ * Scoped to a single project to respect the same project_id scoping used
+ * elsewhere in this module; uses the service client because the transition is
+ * a system-level correction, not a user-initiated write, but the query is
+ * always filtered by `project_id`.
+ */
+export async function reconcileStuckScanRuns({
+  projectId,
+  service
+}: {
+  projectId: string;
+  service: ReturnType<typeof createServiceClient>;
+}): Promise<{ reconciledCount: number }> {
+  const now = Date.now();
+  const runningCutoffIso = new Date(now - SCAN_RUNNING_TIMEOUT_SECONDS * 1000).toISOString();
+  const pendingCutoffIso = new Date(now - SCAN_PENDING_TIMEOUT_SECONDS * 1000).toISOString();
+  const nowIso = new Date(now).toISOString();
+
+  let reconciledCount = 0;
+
+  const { data: staleRunningRuns, error: staleRunningError } = await service
+    .from("scan_runs")
+    .select("id, started_at, created_at")
+    .eq("project_id", projectId)
+    .eq("status", "running")
+    .lt("started_at", runningCutoffIso);
+
+  if (staleRunningError) {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to query stale running runs`, {
+      projectId,
+      message: staleRunningError.message
+    });
+  } else if (staleRunningRuns?.length) {
+    for (const run of staleRunningRuns) {
+      const { error: updateError } = await service
+        .from("scan_runs")
+        .update({
+          status: "failed",
+          error_summary: SCAN_TIMEOUT_ERROR_SUMMARY,
+          finished_at: nowIso
+        })
+        .eq("id", run.id)
+        .eq("project_id", projectId)
+        .eq("status", "running");
+
+      if (updateError) {
+        console.error(`${RECONCILE_LOG_PREFIX} failed to mark stale running run as failed`, {
+          projectId,
+          runId: run.id,
+          message: updateError.message
+        });
+        continue;
+      }
+
+      reconciledCount += 1;
+      console.info(`${RECONCILE_LOG_PREFIX} marked stale running run as failed (scan_timeout)`, {
+        projectId,
+        runId: run.id,
+        startedAt: run.started_at
+      });
+    }
+  }
+
+  const { data: stalePendingRuns, error: stalePendingError } = await service
+    .from("scan_runs")
+    .select("id, created_at")
+    .eq("project_id", projectId)
+    .eq("status", "pending")
+    .lt("created_at", pendingCutoffIso);
+
+  if (stalePendingError) {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to query stale pending runs`, {
+      projectId,
+      message: stalePendingError.message
+    });
+  } else if (stalePendingRuns?.length) {
+    for (const run of stalePendingRuns) {
+      const { error: updateError } = await service
+        .from("scan_runs")
+        .update({
+          status: "failed",
+          error_summary: SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
+          finished_at: nowIso
+        })
+        .eq("id", run.id)
+        .eq("project_id", projectId)
+        .eq("status", "pending");
+
+      if (updateError) {
+        console.error(`${RECONCILE_LOG_PREFIX} failed to mark stale pending run as failed`, {
+          projectId,
+          runId: run.id,
+          message: updateError.message
+        });
+        continue;
+      }
+
+      reconciledCount += 1;
+      console.info(`${RECONCILE_LOG_PREFIX} marked stale pending run as failed (scan_pending_timeout)`, {
+        projectId,
+        runId: run.id,
+        createdAt: run.created_at
+      });
+    }
+  }
+
+  return { reconciledCount };
+}
+
 async function createPendingScanRunCore({
   projectId,
   readClient,
@@ -196,6 +334,11 @@ async function createPendingScanRunCore({
   if (project.is_archived) {
     throw new ProjectActionError("project_archived");
   }
+
+  // Reconcile any stuck pending/running runs before checking for an active
+  // run, so a previously-stuck scan does not permanently block a new one
+  // (docs/scan-lifecycle.md, "Timeout detection" / invariant 3).
+  await reconcileStuckScanRuns({ projectId, service });
 
   const { data: activeRun, error: activeRunError } = await readClient
     .from("scan_runs")
