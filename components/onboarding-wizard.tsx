@@ -10,6 +10,35 @@ import { Icon } from "@/components/ui/icon";
 import type { ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 
+// Recomendación de volumen del set de prompts (Fase D) — coincide con el
+// límite máximo de sugerencias iniciales (MAX_INITIAL_PROMPTS en
+// lib/projects/project-form.ts) y con el copy "recomendamos al menos 15".
+const RECOMMENDED_PROMPT_COUNT = 15;
+
+// Tono de badge por categoría de prompt (lib/projects/prompt-categories.ts),
+// adaptando el INTENT_TONE del diseño (Comercial/Informacional/Transaccional)
+// a la taxonomía real del producto.
+const CATEGORY_TONE: Record<PromptCategory, "accent" | "neutral" | "warn"> = {
+  Comparación: "accent",
+  Alternativas: "accent",
+  "Cómo hacer / guía": "neutral",
+  "Precio y planes": "warn",
+  "Reseñas y opiniones": "neutral",
+  "Casos de uso": "neutral"
+};
+
+// Colores de avatar (cs-fav) para competidores, ciclando como en el diseño
+// (COMP_COLORS de competitor-setup.jsx).
+const COMPETITOR_COLORS = ["#6366f1", "#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#0891b2", "#15915a", "#c026d3"];
+
+function brandFromDomain(domain: string): string {
+  const base = (domain || "tu-marca")
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .split(".")[0];
+  return base ? base.charAt(0).toUpperCase() + base.slice(1) : "Tú";
+}
+
 const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "ES", name: "España" },
   { code: "MX", name: "México" },
@@ -228,7 +257,8 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
   const [country, setCountry] = useState("ES");
   const [language, setLanguage] = useState("es");
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [prompts, setPrompts] = useState<Array<{ text: string; category: PromptCategory | null }>>([]);
+  const [prompts, setPrompts] = useState<Array<{ text: string; category: PromptCategory | null; selected: boolean }>>([]);
+  const [promptDraft, setPromptDraft] = useState("");
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
@@ -250,17 +280,17 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
         .join("\n"),
     [competitors]
   );
-  const promptsText = useMemo(() => prompts.map((p) => p.text.trim()).filter(Boolean).join("\n"), [prompts]);
-  const categoriesText = useMemo(
-    () =>
-      prompts
-        .filter((p) => p.text.trim().length > 0)
-        .map((p) => p.category ?? "")
-        .join("\n"),
+  // Solo los prompts seleccionados (y con texto) se envían al servidor.
+  const selectedPrompts = useMemo(
+    () => prompts.filter((p) => p.selected && p.text.trim().length > 0),
     [prompts]
   );
-  const validCompetitorCount = competitorsText ? competitorsText.split("\n").length : 0;
-  const validPromptCount = promptsText ? promptsText.split("\n").length : 0;
+  const promptsText = useMemo(() => selectedPrompts.map((p) => p.text.trim()).join("\n"), [selectedPrompts]);
+  const categoriesText = useMemo(
+    () => selectedPrompts.map((p) => p.category ?? "").join("\n"),
+    [selectedPrompts]
+  );
+  const selectedPromptCount = selectedPrompts.length;
 
   function generateSuggestions() {
     if (!domainIsValid) {
@@ -276,14 +306,18 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
         setCompetitors([{ name: "", domain: "" }]);
-        setPrompts([{ text: "", category: null }]);
+        setPrompts([{ text: "", category: null, selected: true }]);
         setLanguage((current) => result.language || current);
         setStep(1);
         return;
       }
       setLanguage(result.language || language);
       setCompetitors(result.competitors.length ? result.competitors : [{ name: "", domain: "" }]);
-      setPrompts(result.prompts.length ? result.prompts : [{ text: "", category: null }]);
+      setPrompts(
+        result.prompts.length
+          ? result.prompts.map((p) => ({ ...p, selected: true }))
+          : [{ text: "", category: null, selected: true }]
+      );
       setStep(1);
     });
   }
@@ -293,6 +327,19 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
   }
   function updatePrompt(index: number, value: string) {
     setPrompts((rows) => rows.map((row, i) => (i === index ? { ...row, text: value } : row)));
+  }
+  function togglePrompt(index: number) {
+    setPrompts((rows) => rows.map((row, i) => (i === index ? { ...row, selected: !row.selected } : row)));
+  }
+  const allPromptsSelected = prompts.length > 0 && prompts.every((row) => row.selected);
+  function toggleAllPrompts() {
+    setPrompts((rows) => rows.map((row) => ({ ...row, selected: !allPromptsSelected })));
+  }
+  function addPromptDraft() {
+    const value = promptDraft.trim();
+    if (!value) return;
+    setPrompts((rows) => (rows.length >= 15 ? rows : [{ text: value, category: null, selected: true }, ...rows]));
+    setPromptDraft("");
   }
 
   if (step === 0) {
@@ -463,42 +510,136 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
 
           {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
 
-          <div className="space-y-2">
-            {competitors.map((row, index) => (
-              <div key={index} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                <Input
-                  aria-label={`Nombre competidor ${index + 1}`}
-                  placeholder="Nombre"
-                  value={row.name}
-                  onChange={(event) => updateCompetitor(index, { name: event.target.value })}
-                />
-                <Input
-                  aria-label={`Dominio competidor ${index + 1}`}
-                  placeholder="dominio.com"
-                  value={row.domain}
-                  onChange={(event) => updateCompetitor(index, { domain: event.target.value })}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
-                  className="col-span-2 sm:col-auto"
-                >
-                  Quitar
-                </Button>
+          <div className="cs-layout">
+            {/* editor */}
+            <div>
+              <div className="cs-list-head">
+                <span></span>
+                <span>Marca</span>
+                <span>Dominio</span>
+                <span></span>
               </div>
-            ))}
+              <div className="cs-list">
+                {competitors.map((row, index) => {
+                  const initial = (row.name.trim()[0] || "?").toUpperCase();
+                  const color = COMPETITOR_COLORS[index % COMPETITOR_COLORS.length];
+                  return (
+                    <div key={index} className="cs-row grid grid-cols-2 gap-2 sm:grid-cols-[34px_1fr_190px_36px]">
+                      <span
+                        className="cs-fav col-span-2 sm:col-auto"
+                        style={{
+                          background: row.name.trim() ? color : "var(--surface-sunk)",
+                          color: row.name.trim() ? "#fff" : "var(--ink-4)"
+                        }}
+                      >
+                        {initial}
+                      </span>
+                      <Input
+                        aria-label={`Nombre competidor ${index + 1}`}
+                        placeholder="Nombre de la marca"
+                        value={row.name}
+                        onChange={(event) => updateCompetitor(index, { name: event.target.value })}
+                      />
+                      <Input
+                        aria-label={`Dominio competidor ${index + 1}`}
+                        placeholder="dominio.com"
+                        className="font-mono"
+                        value={row.domain}
+                        onChange={(event) => updateCompetitor(index, { domain: event.target.value })}
+                      />
+                      <button
+                        type="button"
+                        className="cs-del col-span-2 sm:col-auto"
+                        title="Eliminar competidor"
+                        aria-label={`Eliminar competidor ${index + 1}`}
+                        onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
+                      >
+                        <Icon name="x" size={15} />
+                      </button>
+                    </div>
+                  );
+                })}
+                {competitors.length === 0 ? (
+                  <div className="cs-empty">No hay competidores. Añade al menos uno para comparar tu visibilidad.</div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 12 }}
+                onClick={() => setCompetitors((rows) => [...rows, { name: "", domain: "" }])}
+              >
+                <Icon name="plus" size={14} />
+                Añadir competidor
+              </button>
+              <div className="cs-tip">
+                <Icon name="info" size={13} />
+                Monitorizaremos cada competidor en los mismos prompts y motores que tu marca.
+              </div>
+            </div>
+
+            {/* ranking preview */}
+            <div className="cs-rank card">
+              <div className="card-head">
+                <div className="card-title">Ranking de marcas</div>
+                <span className="badge badge-neutral">Vista previa</span>
+              </div>
+              <div className="rank-head">
+                <span className="c">#</span>
+                <span>Marca</span>
+                <span className="c">Sentim.</span>
+                <span className="c">Menciones</span>
+                <span className="c">Cobert.</span>
+              </div>
+              <div className="rank-body">
+                {(() => {
+                  const brandName = brandFromDomain(domain);
+                  const ranking = [
+                    { name: brandName, you: true, color: "#6366f1", initial: (brandName[0] || "T").toUpperCase() },
+                    ...competitors
+                      .filter((c) => c.name.trim())
+                      .map((c, index) => ({
+                        name: c.name.trim(),
+                        you: false,
+                        color: COMPETITOR_COLORS[index % COMPETITOR_COLORS.length],
+                        initial: (c.name.trim()[0] || "?").toUpperCase()
+                      }))
+                  ];
+                  return ranking.map((r, i) => (
+                    <div className={`rank-row${r.you ? " you" : ""}`} key={i}>
+                      <span className="c rk-n">{i + 1}</span>
+                      <span className="rk-ent">
+                        <span className="cs-fav sm" style={{ background: r.color }}>
+                          {r.initial}
+                        </span>
+                        <span className="rk-nm">
+                          {r.name}
+                          {r.you ? <span className="rk-you">Tú</span> : null}
+                        </span>
+                      </span>
+                      <span className="c">
+                        <i className="rk-ph" />
+                      </span>
+                      <span className="c">
+                        <i className="rk-ph" />
+                      </span>
+                      <span className="c">
+                        <i className="rk-ph" />
+                      </span>
+                    </div>
+                  ));
+                })()}
+              </div>
+              <div className="cs-rank-foot">
+                <Icon name="clock" size={13} />
+                Las métricas se calcularán tras el primer escaneo.
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
-            <p className="sub">{validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} listo{validCompetitorCount === 1 ? "" : "s"}.</p>
-            <Button type="button" variant="outline" onClick={() => setCompetitors((rows) => [...rows, { name: "", domain: "" }])}>
-              Añadir competidor
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">
+          <div className="cs-foot">
             <Button type="button" variant="outline" onClick={() => setStep(0)}>
+              <Icon name="chevLeft" size={16} />
               Atrás
             </Button>
             <Button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2">
@@ -538,40 +679,170 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
 
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
 
-        <div className="space-y-2">
-          {prompts.map((row, index) => (
-            <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <div className="space-y-1">
-                <Textarea
-                  aria-label={`Prompt ${index + 1}`}
-                  rows={2}
-                  className="onb-prompt-input"
-                  placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
-                  value={row.text}
-                  onChange={(event) => updatePrompt(index, event.target.value)}
-                />
-                {row.category ? <span className="text-xs text-[var(--ink-3)]">{row.category}</span> : null}
-              </div>
-              <Button type="button" variant="outline" onClick={() => setPrompts((rows) => rows.filter((_, i) => i !== index))}>
-                Quitar
-              </Button>
+        <div className="cs-layout">
+          {/* lista */}
+          <div>
+            {/* añadir */}
+            <div className="ps-add">
+              <Icon name="plus" size={16} className="text-[var(--ink-4)]" />
+              <input
+                className="ps-add-input"
+                value={promptDraft}
+                onChange={(event) => setPromptDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addPromptDraft();
+                  }
+                }}
+                placeholder="Añade tu propio prompt…"
+                aria-label="Añadir nuevo prompt"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                className="btn btn-soft btn-sm"
+                onClick={addPromptDraft}
+                disabled={!promptDraft.trim() || prompts.length >= 15}
+              >
+                Añadir
+              </button>
             </div>
-          ))}
+
+            <div className="ps-listhead">
+              <button type="button" className="ps-selall" onClick={toggleAllPrompts}>
+                <span className={`ps-check${allPromptsSelected ? " on" : ""}`}>
+                  {allPromptsSelected ? <Icon name="check" size={12} /> : null}
+                </span>
+                Seleccionar todo
+              </button>
+              <span className="ps-count">
+                <b>{selectedPromptCount}</b>/{prompts.length} seleccionados
+              </span>
+            </div>
+
+            <div className="ps-list">
+              {prompts.map((row, index) => (
+                <div
+                  key={index}
+                  className={`ps-row${row.selected ? " on" : ""}`}
+                  onClick={() => togglePrompt(index)}
+                  role="checkbox"
+                  aria-checked={row.selected}
+                  tabIndex={0}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      togglePrompt(index);
+                    }
+                  }}
+                >
+                  <span className={`ps-check${row.selected ? " on" : ""}`}>
+                    {row.selected ? <Icon name="check" size={12} /> : null}
+                  </span>
+                  <div className="space-y-1" onClick={(event) => event.stopPropagation()}>
+                    <Textarea
+                      aria-label={`Prompt ${index + 1}`}
+                      rows={2}
+                      className="onb-prompt-input"
+                      placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
+                      value={row.text}
+                      onChange={(event) => updatePrompt(index, event.target.value)}
+                    />
+                  </div>
+                  <span className={`badge badge-${row.category ? CATEGORY_TONE[row.category] : "neutral"}`}>
+                    {row.category ?? "Personalizado"}
+                  </span>
+                  <button
+                    type="button"
+                    className="ps-del"
+                    title="Eliminar prompt"
+                    aria-label={`Eliminar prompt ${index + 1}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setPrompts((rows) => rows.filter((_, i) => i !== index));
+                    }}
+                  >
+                    <Icon name="x" size={14} />
+                  </button>
+                </div>
+              ))}
+              {prompts.length === 0 ? (
+                <div className="cs-empty">No hay prompts. Añade al menos uno para empezar.</div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* resumen */}
+          <div className="cs-rank card" style={{ position: "sticky", top: 8 }}>
+            <div className="card-head">
+              <div className="card-title">Resumen del set</div>
+            </div>
+            <div className="card-pad">
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <span className="tnum" style={{ fontSize: 34, fontWeight: 800, letterSpacing: "-.02em", color: "var(--accent)" }}>
+                  {selectedPromptCount}
+                </span>
+                <span style={{ fontSize: 14, color: "var(--ink-3)", fontWeight: 600 }}>prompts seleccionados</span>
+              </div>
+              <div className="ps-prog">
+                <div className="ps-prog-track">
+                  <div
+                    className="ps-prog-fill"
+                    style={{
+                      width: `${Math.min(100, Math.round((selectedPromptCount / RECOMMENDED_PROMPT_COUNT) * 100))}%`,
+                      background: selectedPromptCount >= RECOMMENDED_PROMPT_COUNT ? "var(--pos)" : "var(--accent)"
+                    }}
+                  />
+                </div>
+                <div className="ps-prog-l">
+                  {selectedPromptCount >= RECOMMENDED_PROMPT_COUNT ? (
+                    <span style={{ color: "var(--pos-ink)", fontWeight: 650 }}>
+                      <Icon name="check" size={12} /> Listo — buen volumen para datos fiables
+                    </span>
+                  ) : (
+                    <span>
+                      Añade {RECOMMENDED_PROMPT_COUNT - selectedPromptCount} más para alcanzar el mínimo recomendado (
+                      {RECOMMENDED_PROMPT_COUNT})
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="ps-sum-row">
+                <Icon name="layers" size={15} />
+                <span>
+                  Se consultarán en <b>4 motores</b> de IA
+                </span>
+              </div>
+              <div className="ps-sum-row">
+                <Icon name="competitors" size={15} />
+                <span>
+                  Comparados con tus <b>competidores</b>
+                </span>
+              </div>
+              <div className="ps-sum-row">
+                <Icon name="clock" size={15} />
+                <span>
+                  Re-escaneo <b>semanal</b> automático disponible (activable después)
+                </span>
+              </div>
+
+              <div className="why" style={{ marginTop: 16 }}>
+                <Icon name="help" size={16} />
+                <div>
+                  <div className="why-t">¿Qué es un prompt?</div>
+                  <div className="why-b">
+                    Es una pregunta que tus clientes podrían hacer a una IA. Monitorizamos si tu marca aparece en la
+                    respuesta.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
-          <p className="sub">{validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} listo{validPromptCount === 1 ? "" : "s"}.</p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, { text: "", category: null }]))}
-            disabled={prompts.length >= 10}
-          >
-            Añadir prompt
-          </Button>
-        </div>
-
-        <form action={createAction} className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">
+        <form action={createAction} className="cs-foot">
           <input type="hidden" name="domain" value={domain} />
           <input type="hidden" name="country" value={country} />
           <input type="hidden" name="language" value={language} />
@@ -580,10 +851,11 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
           <input type="hidden" name="initial_prompt_categories" value={categoriesText} />
           <CreateProjectOverlay />
           <Button type="button" variant="outline" onClick={() => setStep(1)}>
+            <Icon name="chevLeft" size={16} />
             Atrás
           </Button>
-          <Button type="submit" disabled={validPromptCount === 0} className="inline-flex items-center gap-2">
-            Crear dominio y escanear
+          <Button type="submit" disabled={selectedPromptCount === 0} className="inline-flex items-center gap-2">
+            Empezar a monitorizar
             <Icon name="arrRight" size={16} />
           </Button>
         </form>

@@ -148,7 +148,20 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     menu: <path d="M3 6h18M3 12h18M3 18h18" />,
-    x: <path d="M18 6 6 18M6 6l12 12" />
+    x: <path d="M18 6 6 18M6 6l12 12" />,
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    help: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9a2.5 2.5 0 0 1 4.6 1.4c0 1.6-2.1 2-2.1 3.6" />
+        <path d="M12 17.5h.01" />
+      </>
+    )
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
