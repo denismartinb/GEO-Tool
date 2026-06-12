@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { MobileShellProvider } from "@/components/mobile-shell";
 
 async function signOut() {
   "use server";
@@ -31,7 +32,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   } = await getWorkspaceCounters();
 
   return (
-    <div className="shell">
+    <MobileShellProvider>
       <Sidebar
         projects={projects ?? []}
         promptCountByProject={promptCountByProject}
@@ -39,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         completedRunCountByProject={completedRunCountByProject}
         recommendationCountByProject={recommendationCountByProject}
         userEmail={user.email ?? ""}
+        signOutAction={signOut}
       />
       <div className="dash-main">
         <header className="dash-header">
@@ -55,6 +57,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </header>
         <main className="dash-content">{children}</main>
       </div>
-    </div>
+    </MobileShellProvider>
   );
 }

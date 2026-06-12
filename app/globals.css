@@ -23,6 +23,7 @@
   --r-xl: 18px;
   --sh-1: 0 1px 2px rgba(16,24,40,.05), 0 1px 1px rgba(16,24,40,.03);
   --sh-2: 0 2px 4px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.06);
+  --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
   --sidebar-w: 248px;
   --header-h: 61px;
   color-scheme: light;
@@ -35,6 +36,7 @@ body {
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
 }
 
 a {
@@ -47,6 +49,7 @@ a {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -218,6 +221,10 @@ a {
   border-top: 1px solid var(--line-soft);
 }
 
+.sb-signout {
+  display: none;
+}
+
 .dash-main {
   display: flex;
   flex-direction: column;
@@ -226,6 +233,7 @@ a {
 }
 
 .dash-header {
+  position: relative;
   height: var(--header-h);
   border-bottom: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.85);
@@ -234,6 +242,14 @@ a {
   justify-content: space-between;
   gap: 14px;
   padding: 0 22px;
+}
+
+/* Mobile-only header controls, hidden on desktop */
+.hdr-burger,
+.hdr-title-mobile,
+.hdr-meta-wrap,
+.sb-close {
+  display: none;
 }
 
 .workspace-context,
@@ -2110,4 +2126,262 @@ a {
 .cit-opp-item { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11.5px; line-height: 1.4; }
 .cit-opp-domain { font-family: var(--mono); color: var(--ink-2); font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cit-opp-meta { color: var(--ink-4); white-space: nowrap; flex: 0 0 auto; }
+
+/* ============================================================
+   MOBILE-1 — Shell, drawer sidebar, compact header (≤760px)
+   and tablet content padding (≤1000px)
+   ============================================================ */
+
+@media (max-width: 1000px) {
+  .page {
+    padding: 22px 20px 80px;
+  }
+}
+
+@media (max-width: 760px) {
+  /* --- Shell becomes single column --- */
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  /* --- Sidebar as overlay drawer --- */
+  .sb {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 290px;
+    max-width: 86vw;
+    z-index: 320;
+    transform: translateX(-100%);
+    transition: transform 0.26s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 20px 0 60px rgba(15, 23, 41, 0.20);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .shell.mobnav-open .sb {
+    transform: none;
+  }
+
+  .sb-collapse {
+    display: none;
+  }
+
+  .sb-close {
+    display: grid;
+    place-items: center;
+    margin-left: auto;
+    width: 34px;
+    height: 34px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 9px;
+    background: none;
+    border: 1px solid transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+
+  .sb-close:hover {
+    background: var(--surface-2);
+    border-color: var(--line);
+  }
+
+  .nav-item {
+    min-height: 44px;
+  }
+
+  .sb-signout {
+    display: block;
+    margin-top: 6px;
+  }
+
+  /* --- Scrim --- */
+  .mob-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 41, 0.44);
+    z-index: 310;
+    animation: scrimIn 0.2s ease forwards;
+  }
+
+  /* --- Compact header --- */
+  .dash-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    height: calc(var(--header-h) + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 10px 0;
+    gap: 6px;
+    background: var(--surface);
+  }
+
+  .hdr-burger {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: none;
+    border: 1px solid transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .hdr-burger:active {
+    background: var(--surface-2);
+  }
+
+  .workspace-context {
+    min-width: 0;
+    flex: 1;
+    gap: 0;
+  }
+
+  .hdr-titlewrap {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .hdr-crumb,
+  .hdr-title {
+    display: none;
+  }
+
+  .hdr-title-mobile {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .hdr-meta,
+  .scan-status,
+  .hdr-scan {
+    display: none;
+  }
+
+  .dash-header-actions {
+    display: none;
+  }
+
+  /* --- Header "globe" meta button + popover --- */
+  .hdr-meta-wrap {
+    display: block;
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .hdr-metabtn {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: none;
+    border: 1px solid transparent;
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .hdr-metabtn:hover {
+    background: var(--surface-2);
+  }
+
+  .hdr-metabtn.on {
+    background: var(--surface-2);
+    border-color: var(--ink-4);
+    color: var(--ink);
+  }
+
+  .hdr-meta-panel {
+    position: absolute;
+    top: calc(100% + 7px);
+    right: 8px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-pop);
+    padding: 8px;
+    min-width: 210px;
+    z-index: 210;
+    animation: menuIn 0.14s ease;
+  }
+
+  .hmp-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 10px;
+    border-radius: var(--r-sm);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+
+  /* --- Grid reflow to single column --- */
+  .dom-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .wide-stat,
+  .dom-card {
+    min-width: 0;
+  }
+
+  /* --- Safe-area continuity at the bottom edge --- */
+  .page {
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+
+  /* --- Per-page sticky header (project name + scan status/CTA) --- */
+  .ov-sticky-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin: -22px -20px 16px;
+    padding: 12px 20px;
+  }
+
+  .ov-sticky-left {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .ov-sticky-right {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    margin-top: 4px;
+  }
+}
+
+@keyframes scrimIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes menuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sb {
+    transition: none;
+  }
+
+  .mob-scrim,
+  .hdr-meta-panel {
+    animation: none;
+  }
+}
 

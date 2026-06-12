@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 
 const sans = Hanken_Grotesk({
@@ -19,6 +19,12 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Lumira",
   description: "Espacio de visibilidad de marca en motores de IA"
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
