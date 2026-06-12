@@ -2343,6 +2343,25 @@ a {
   .page {
     padding-bottom: calc(28px + env(safe-area-inset-bottom));
   }
+
+  /* --- Per-page sticky header (project name + scan status/CTA) --- */
+  .ov-sticky-header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin: -22px -20px 16px;
+    padding: 12px 20px;
+  }
+
+  .ov-sticky-left {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+
+  .ov-sticky-right {
+    flex-basis: 100%;
+    justify-content: flex-start;
+    margin-top: 4px;
+  }
 }
 
 @keyframes scrimIn {
