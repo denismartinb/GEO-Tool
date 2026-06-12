@@ -2362,6 +2362,25 @@ a {
     justify-content: flex-start;
     margin-top: 4px;
   }
+
+  /* --- Onboarding: domain bar (input + country + continue) --- */
+  .country-sel {
+    gap: 0;
+    padding: 0 8px;
+  }
+
+  .country-sel span,
+  .country-sel .ico {
+    display: none;
+  }
+
+  .onb-cta {
+    padding: 0 14px;
+  }
+
+  .onb-cta .ico {
+    display: none;
+  }
 }
 
 @keyframes scrimIn {
