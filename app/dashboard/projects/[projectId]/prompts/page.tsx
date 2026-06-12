@@ -135,7 +135,7 @@ export default async function PromptsPage({
         .filter((c): c is string => c !== null && c.trim() !== "")
     ),
   ];
-  const hasTopics = distinctCategories.length >= 2;
+  const hasTopics = distinctCategories.length >= 1;
 
   // Sort: brand-absent first en modo flat
   const sortedResults = [...results].sort((a, b) => {
