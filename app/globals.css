@@ -2369,7 +2369,7 @@ a {
     padding: 0 8px;
   }
 
-  .country-sel span,
+  .country-sel-name,
   .country-sel .ico {
     display: none;
   }

@@ -364,7 +364,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
                 ) : null}
                 <div className="country-sel" title="País de análisis">
                   <Flag code={selectedCountry.code.toLowerCase()} />
-                  <span style={{ maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span className="country-sel-name" style={{ maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {selectedCountry.name}
                   </span>
                   <Icon name="chevDown" size={14} className="text-[var(--ink-4)]" />
