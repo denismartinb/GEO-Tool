@@ -39,6 +39,28 @@ const ADD_STEPS = [
   { icon: "recs", t: "Recomendamos", d: "Recibes un plan de acciones priorizadas por impacto." }
 ];
 
+// Checklist cosmético mostrado mientras `suggestAction` (Gemini) resuelve.
+// Cada paso describe trabajo real que ocurre dentro de suggestProjectSetup
+// (lib/llm/gemini.ts): lee el dominio, busca competidores y genera prompts.
+function suggestionsSteps(domain: string): string[] {
+  const cleanDomain = domain.trim() || "tu dominio";
+  return [
+    `Leyendo el contenido de ${cleanDomain}`,
+    "Buscando competidores relevantes",
+    "Generando prompts de monitorización con IA"
+  ];
+}
+
+// Checklist cosmético mostrado mientras `createAction` resuelve. Cada paso
+// describe trabajo real que ocurre dentro de createProject
+// (app/dashboard/projects/actions.ts): crea el proyecto, persiste prompts y
+// competidores, y lanza el primer escaneo (createPendingScanRun).
+const CREATE_PROJECT_STEPS = [
+  "Guardando tu dominio y configuración",
+  "Creando tus prompts y competidores",
+  "Lanzando tu primer escaneo"
+];
+
 const wizardSteps = [
   { label: "Dominio", description: "Dominio y mercado" },
   { label: "Competidores", description: "Sugeridos, editables" },
@@ -173,12 +195,71 @@ function WizardSteps({ currentStep }: { currentStep: number }) {
   );
 }
 
+// Avanza un índice de "paso activo" en un timer fijo, puramente cosmético:
+// no representa progreso real medido del backend (la llamada es una única
+// promesa opaca). Se detiene en el último paso (nunca lo marca "hecho") hasta
+// que `done` sea true, momento en el que el componente que lo usa se
+// desmonta — por eso no hace falta un estado "todo completado".
+function useStepCycle(stepCount: number, done: boolean, intervalMs = 1400) {
+  const [active, setActive] = useState(0);
+  useEffect(() => {
+    if (done) return;
+    if (active >= stepCount - 1) return;
+    const timer = setTimeout(() => setActive((value) => Math.min(value + 1, stepCount - 1)), intervalMs);
+    return () => clearTimeout(timer);
+  }, [active, done, stepCount, intervalMs]);
+  return active;
+}
+
+// Checklist cosmético "esto es lo que estamos haciendo" para los overlays de
+// carga. Visualmente inspirado en LoadingState de
+// docs/design-reference/geo-suite-2/states.jsx (load-steps / ls-ico /
+// progress-track), pero a propósito SIN porcentaje ni "X de Y pasos": la
+// llamada real es una única promesa opaca, así que no hay progreso medido que
+// mostrar. Los pasos previos al activo se marcan "done" solo como parte de la
+// animación cosmética (no representan trabajo confirmado por el backend); el
+// paso activo se queda en estado "trabajando…" hasta que la promesa real
+// resuelve y el overlay se desmonta.
+function LoadingChecklist({ steps, activeIndex }: { steps: string[]; activeIndex: number }) {
+  return (
+    <>
+      <div className="load-steps">
+        {steps.map((label, index) => {
+          const isDone = index < activeIndex;
+          const isActive = index === activeIndex;
+          return (
+            <div key={label} className={"load-step " + (isDone ? "done" : isActive ? "active" : "")}>
+              <span className="ls-ico">
+                {isDone ? (
+                  <Icon name="check" size={13} />
+                ) : isActive ? (
+                  <div className="spinner" />
+                ) : (
+                  <span className="ls-num">{index + 1}</span>
+                )}
+              </span>
+              {label}
+              {isActive ? <span className="ls-working">trabajando…</span> : null}
+            </div>
+          );
+        })}
+      </div>
+      <div className="progress-track indeterminate" aria-hidden="true">
+        <div className="progress-fill" />
+      </div>
+    </>
+  );
+}
+
 // Estado de carga del envío final. `useFormStatus` solo funciona en un
 // componente hijo del <form> — por eso vive aparte de OnboardingWizard.
-// Sin barra de progreso falsa: en este punto el proyecto/scan aún no existen
-// en el cliente, así que no hay datos reales que mostrar (ver scan-in-progress.tsx).
+// Sin progreso falso: createAction es una única llamada de servidor opaca
+// (guarda dominio/config, crea prompts/competidores y lanza el primer
+// escaneo). El checklist de abajo es solo orientativo — el último paso que se
+// muestre como "activo" se queda así hasta que la promesa real resuelve.
 function CreateProjectOverlay() {
   const { pending } = useFormStatus();
+  const activeIndex = useStepCycle(CREATE_PROJECT_STEPS.length, !pending);
   if (!pending) return null;
   return (
     <div className="state-wrap fade-in" style={{ position: "fixed", inset: 0, zIndex: 80, background: "var(--canvas)" }}>
@@ -191,15 +272,19 @@ function CreateProjectOverlay() {
           Guardando tus prompts y competidores. En unos segundos te llevamos a Escaneos para
           ver el primer escaneo en curso.
         </div>
+        <LoadingChecklist steps={CREATE_PROJECT_STEPS} activeIndex={activeIndex} />
       </div>
     </div>
   );
 }
 
 // Estado de carga al sugerir competidores y prompts con Gemini (paso 0 → 1).
-// Mismo patrón visual que CreateProjectOverlay: overlay fijo con spinner y
-// copy honesto, sin progreso falso (la llamada es opaca).
-function SuggestionsLoadingOverlay() {
+// Mismo patrón visual que CreateProjectOverlay: overlay fijo con spinner,
+// copy honesto y checklist orientativo, sin progreso falso (suggestAction es
+// una única llamada opaca a Gemini).
+function SuggestionsLoadingOverlay({ domain }: { domain: string }) {
+  const steps = useMemo(() => suggestionsSteps(domain), [domain]);
+  const activeIndex = useStepCycle(steps.length, false);
   return (
     <div className="state-wrap fade-in" style={{ position: "fixed", inset: 0, zIndex: 80, background: "var(--canvas)" }}>
       <div className="state-card">
@@ -211,6 +296,7 @@ function SuggestionsLoadingOverlay() {
           Estamos sugiriendo competidores y prompts relevantes con IA. Esto puede tardar
           hasta 15 segundos — no cierres ni recargues esta pestaña.
         </div>
+        <LoadingChecklist steps={steps} activeIndex={activeIndex} />
       </div>
     </div>
   );
@@ -298,7 +384,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
   if (step === 0) {
     return (
       <div className="page add-domain fade-in">
-        {isPending ? <SuggestionsLoadingOverlay /> : null}
+        {isPending ? <SuggestionsLoadingOverlay domain={domain} /> : null}
         <Link href="/dashboard" className="add-back">
           <Icon name="chevLeft" size={15} />
           Volver a Escaneos

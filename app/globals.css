@@ -1802,6 +1802,29 @@ a {
 .btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.35); border-top-color: #fff; border-radius: 999px; animation: spin .7s linear infinite; flex-shrink: 0; }
 .progress-track { height: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; margin: 24px auto 0; max-width: 380px; }
 .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .5s ease; }
+/* Indeterminate variant: no measured completion, so the fill is an animated
+   stripe instead of a width tied to a real percentage (see onboarding-wizard.tsx). */
+.progress-track.indeterminate .progress-fill { width: 40%; animation: progress-indeterminate 1.4s ease-in-out infinite; }
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* Checklist used by onboarding loading overlays (onboarding-wizard.tsx).
+   Visual language ported from docs/design-reference/geo-suite-2/styles.css
+   .load-step* — but unlike the reference, the "active" step here is driven by
+   a cosmetic local timer and is capped before the last step until the real
+   async call resolves (never shows a fake "done" on the final step). */
+.load-steps { text-align: left; margin: 26px auto 0; max-width: 380px; display: flex; flex-direction: column; gap: 2px; }
+.load-step { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: var(--r-md); font-size: 13.5px; font-weight: 600; color: var(--ink-4); }
+.load-step.active { background: var(--accent-soft); color: var(--accent-ink); }
+.load-step.done { color: var(--ink-2); }
+.ls-ico { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; flex: 0 0 auto; border: 2px solid var(--line-strong); }
+.load-step.done .ls-ico { background: var(--pos); border-color: var(--pos); color: #fff; }
+.load-step.active .ls-ico { border-color: var(--accent); }
+.load-step.active .ls-ico .spinner { width: 12px; height: 12px; border-width: 2px; }
+.ls-num { font-size: 11px; font-weight: 700; color: var(--ink-4); }
+.ls-working { margin-left: auto; font-size: 11.5px; color: var(--accent-ink); font-weight: 600; }
 
 /* ============================================================
    Escaneos — first-scan / scan-in-progress banner
