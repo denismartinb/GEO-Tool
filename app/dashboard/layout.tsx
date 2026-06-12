@@ -40,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         completedRunCountByProject={completedRunCountByProject}
         recommendationCountByProject={recommendationCountByProject}
         userEmail={user.email ?? ""}
+        signOutAction={signOut}
       />
       <div className="dash-main">
         <header className="dash-header">

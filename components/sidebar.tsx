@@ -36,7 +36,8 @@ export function Sidebar({
   competitorCountByProject,
   completedRunCountByProject,
   recommendationCountByProject,
-  userEmail
+  userEmail,
+  signOutAction
 }: {
   projects: WorkspaceProject[];
   promptCountByProject: Record<string, number>;
@@ -44,6 +45,7 @@ export function Sidebar({
   completedRunCountByProject: Record<string, number>;
   recommendationCountByProject: Record<string, number>;
   userEmail: string;
+  signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
   const activeProjectId = getProjectId(pathname);
@@ -221,6 +223,12 @@ export function Sidebar({
             </div>
           </div>
         </div>
+        <form action={signOutAction} className="sb-signout">
+          <button type="submit" className="nav-item" style={{ width: "100%" }}>
+            <Icon name="settings" size={15} />
+            <span>Cerrar sesión</span>
+          </button>
+        </form>
       </div>
       </aside>
     </>

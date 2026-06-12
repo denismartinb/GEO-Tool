@@ -219,6 +219,10 @@ a {
   border-top: 1px solid var(--line-soft);
 }
 
+.sb-signout {
+  display: none;
+}
+
 .dash-main {
   display: flex;
   flex-direction: column;
@@ -2182,6 +2186,11 @@ a {
 
   .nav-item {
     min-height: 44px;
+  }
+
+  .sb-signout {
+    display: block;
+    margin-top: 6px;
   }
 
   /* --- Scrim --- */
