@@ -364,7 +364,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
                 ) : null}
                 <div className="country-sel" title="País de análisis">
                   <Flag code={selectedCountry.code.toLowerCase()} />
-                  <span style={{ maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span className="country-sel-name" style={{ maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {selectedCountry.name}
                   </span>
                   <Icon name="chevDown" size={14} className="text-[var(--ink-4)]" />
@@ -475,7 +475,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
 
           <div className="space-y-2">
             {competitors.map((row, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+              <div key={index} className="grid grid-cols-2 gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <Input
                   aria-label={`Nombre competidor ${index + 1}`}
                   placeholder="Nombre"
@@ -492,6 +492,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
                   type="button"
                   variant="outline"
                   onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
+                  className="col-span-2 sm:col-auto"
                 >
                   Quitar
                 </Button>
@@ -533,6 +534,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
                   <Textarea
                     aria-label={`Prompt ${index + 1}`}
                     rows={2}
+                    className="onb-prompt-input"
                     placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
                     value={row.text}
                     onChange={(event) => updatePrompt(index, event.target.value)}
