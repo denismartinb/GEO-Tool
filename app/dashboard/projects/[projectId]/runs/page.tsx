@@ -365,7 +365,11 @@ export default async function RunsPage({
           <Icon name="runs" size={20} />
         </div>
         <p className="summary-txt">
-          {totalCompletedRuns === 0 ? (
+          {totalCompletedRuns === 0 && isThisProjectScanning ? (
+            <>
+              Tu primer escaneo está en curso. Los resultados aparecerán aquí en cuanto termine.
+            </>
+          ) : totalCompletedRuns === 0 ? (
             <>
               Este dominio todavía no tiene escaneos completados.{" "}
               <b>Lanza el primer escaneo</b> desde la{" "}
