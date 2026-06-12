@@ -5,8 +5,9 @@ import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
-import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+import { ENABLE_SYNC_SCAN_EXECUTION, getRunErrorDisplay, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
@@ -153,6 +154,11 @@ export default async function RunsPage({
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
   const feedbackSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+
+  // Reconcile any stuck pending/running runs before reading scan_runs, so the
+  // Escaneos table reflects a `failed` status promptly instead of showing an
+  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
+  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
 
   /* Domains grid — reuses the same counters/queries as the dashboard sidebar */
   const {
@@ -617,6 +623,8 @@ export default async function RunsPage({
                   const geoScore =
                     run.status === "completed" ? (scoreByRunId.get(run.id) ?? null) : null;
                   const delta = hasMultipleCompleted ? (scoreDeltas.get(run.id) ?? null) : null;
+                  const errorDisplay =
+                    run.status === "failed" ? getRunErrorDisplay(run.error_summary) : null;
 
                   return (
                     <React.Fragment key={run.id}>
@@ -705,14 +713,20 @@ export default async function RunsPage({
                         ) : null}
                       </tr>
 
-                      {/* Error detail sub-row */}
-                      {run.status === "failed" && run.error_summary ? (
+                      {/* Error / notice detail sub-row. Raw `error_summary` values
+                          (e.g. internal timeout reasons) are never rendered
+                          directly — getRunErrorDisplay maps them to a
+                          user-facing message and a "notice" (neutral, e.g.
+                          "auto-retrying") vs "error" (genuine terminal
+                          failure) treatment. See PR #78. */}
+                      {errorDisplay ? (
                         <tr key={`${run.id}-err`} className="run-error-row">
                           <td colSpan={hasMultipleCompleted ? 6 : 5}>
-                            <div className="run-error-pill">
-                              <Icon name="info" size={14} />
+                            <div className={errorDisplay.kind === "notice" ? "run-notice-pill" : "run-error-pill"}>
+                              <Icon name={errorDisplay.kind === "notice" ? "refresh" : "info"} size={14} />
                               <span>
-                                <b>Error:</b> {run.error_summary}
+                                {errorDisplay.kind === "error" ? <b>Error: </b> : null}
+                                {errorDisplay.message}
                               </span>
                             </div>
                           </td>

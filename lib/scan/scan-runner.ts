@@ -11,6 +11,89 @@ const MAX_EXTRACTION_RESULTS = 10;
 const EXTRACTION_VERSION = "gemini-extraction-v1";
 export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
 
+/**
+ * Timeout thresholds for the scan lifecycle reconciliation pass, per
+ * docs/scan-lifecycle.md ("Timeout detection") and
+ * docs/adr/0003-sync-scan-execution-and-maxduration.md. A `running` row older
+ * than this is presumed to have been killed by the Vercel function timeout
+ * without updating its status; a `pending` row older than this never got
+ * picked up and is considered stale.
+ */
+export const SCAN_RUNNING_TIMEOUT_SECONDS = 90;
+export const SCAN_PENDING_TIMEOUT_SECONDS = 300;
+
+/**
+ * Internal-only `error_summary` values stored on `scan_runs` rows when the
+ * reconciliation pass (`reconcileStuckScanRuns`) detects a stuck `running` or
+ * `pending` row. These values are never shown verbatim to the user — see
+ * `getDisplayErrorSummary` for the user-facing mapping — but are kept
+ * descriptive in the DB for diagnostics (sanitized: no raw provider errors,
+ * no secrets).
+ *
+ * The `_retry_exhausted` variants are used when the auto-retry cap
+ * (`SCAN_TIMEOUT_AUTO_RETRY_CAP`) has already been reached for this project,
+ * so this occurrence will NOT trigger another auto-retry.
+ */
+export const SCAN_TIMEOUT_ERROR_SUMMARY = "scan_timeout";
+export const SCAN_PENDING_TIMEOUT_ERROR_SUMMARY = "scan_pending_timeout";
+export const SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY = "scan_timeout_retry_exhausted";
+export const SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY = "scan_pending_timeout_retry_exhausted";
+
+/**
+ * The set of internal `error_summary` values that mean "this run failed
+ * because the reconciliation pass detected it was stuck (timed out)", used
+ * both to count prior timeout-failures for the auto-retry cap and to decide
+ * how to render the run in the UI (`getDisplayErrorSummary`).
+ */
+const TIMEOUT_ERROR_SUMMARIES = new Set<string>([
+  SCAN_TIMEOUT_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
+  SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
+]);
+
+const RETRY_EXHAUSTED_ERROR_SUMMARIES = new Set<string>([
+  SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
+]);
+
+/**
+ * Auto-retry cap for timeout-caused failures (docs/scan-lifecycle.md,
+ * "Timeout detection"; reliability ADR — see PR #78).
+ *
+ * Rationale: a single timeout could be transient (e.g. a slow Gemini call
+ * that happened to land near the maxDuration boundary), so the FIRST time a
+ * project's scan times out, `reconcileStuckScanRuns` automatically launches a
+ * fresh `pending` run for that project — the user doesn't have to click
+ * "Lanzar escaneo" again.
+ *
+ * If a project's scans STRUCTURALLY cannot finish within
+ * SCAN_RUNNING_TIMEOUT_SECONDS (too many prompts, persistent Gemini latency,
+ * etc.), every retry would also time out, so auto-retrying forever would
+ * burn Gemini quota in an infinite loop. The cap stops this: once a project
+ * has `SCAN_TIMEOUT_AUTO_RETRY_CAP` timeout-failed runs within the lookback
+ * window, the next timeout is recorded as terminal `failed`
+ * (`*_retry_exhausted`) with NO further auto-retry, and the user must launch
+ * manually (which surfaces a calmer "couldn't complete" message, not the raw
+ * timeout wording).
+ *
+ * Cap = 1 (one free auto-retry per lookback window). Enforced in
+ * `reconcileStuckScanRuns` by counting prior `failed` rows for the same
+ * `project_id` whose `error_summary` is in TIMEOUT_ERROR_SUMMARIES and whose
+ * `created_at` falls within SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS.
+ */
+export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
+
+/**
+ * Lookback window for counting prior timeout-failures when enforcing
+ * SCAN_TIMEOUT_AUTO_RETRY_CAP. 24h is long enough to catch a same-day retry
+ * storm but short enough that a project which had a one-off timeout
+ * yesterday gets a fresh auto-retry budget today.
+ */
+export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 24;
+
+const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
+
 export type ProjectActionErrorCode =
   | "active_run_exists"
   | "project_archived"
@@ -49,6 +132,73 @@ export function getSanitizedScanError(error: unknown) {
   }
 
   return "No se pudo completar la ejecución del escaneo.";
+}
+
+/**
+ * Maps a stored `scan_runs.error_summary` value to what the user actually
+ * sees on the Escaneos / Overview pages.
+ *
+ * The raw timeout reasons (`scan_timeout`, `scan_pending_timeout`, and their
+ * `_retry_exhausted` variants) are internal diagnostic strings written by
+ * `reconcileStuckScanRuns` and must never be shown verbatim — per the
+ * founder's review, the technical "no respondió a tiempo" wording is too
+ * alarming for end users.
+ *
+ * - First-time timeout (auto-retry just triggered, cap not reached): return
+ *   a neutral, non-alarming message — a new scan is already starting.
+ * - Retry-exhausted timeout (cap reached, no further auto-retry): return a
+ *   calmer "couldn't complete" message that still doesn't expose internal
+ *   terms, and points the user at manual relaunch.
+ * - Any other `error_summary` (non-timeout failures) is already a sanitized,
+ *   user-facing string from `getSanitizedScanError` or a job-level message —
+ *   returned as-is.
+ * - `null`/`undefined` is returned as `null` so callers can decide whether to
+ *   render an error row at all.
+ */
+export function getDisplayErrorSummary(errorSummary: string | null | undefined): string | null {
+  if (!errorSummary) return null;
+
+  if (RETRY_EXHAUSTED_ERROR_SUMMARIES.has(errorSummary)) {
+    return "No hemos podido completar este escaneo. Puedes lanzar uno nuevo.";
+  }
+
+  if (TIMEOUT_ERROR_SUMMARIES.has(errorSummary)) {
+    return "Reintentando tu escaneo automáticamente…";
+  }
+
+  return errorSummary;
+}
+
+export type RunErrorDisplayKind = "notice" | "error";
+
+export type RunErrorDisplay = {
+  message: string;
+  /**
+   * "notice" — a neutral, non-alarming message (e.g. a timeout that is being
+   * auto-retried). Callers should render this with a calmer visual treatment
+   * (no warning colors/icon).
+   * "error" — a genuine terminal failure (retry-exhausted timeout, or any
+   * other non-timeout failure). Callers should render this with the existing
+   * error styling.
+   */
+  kind: RunErrorDisplayKind;
+};
+
+/**
+ * Like `getDisplayErrorSummary`, but also classifies the message so the UI
+ * can pick a non-alarming visual treatment for a timeout that is currently
+ * being auto-retried (PR #78), vs. a genuine terminal error.
+ *
+ * Returns `null` when there is nothing to render (no `error_summary`).
+ */
+export function getRunErrorDisplay(errorSummary: string | null | undefined): RunErrorDisplay | null {
+  if (!errorSummary) return null;
+
+  if (TIMEOUT_ERROR_SUMMARIES.has(errorSummary) && !RETRY_EXHAUSTED_ERROR_SUMMARIES.has(errorSummary)) {
+    return { message: getDisplayErrorSummary(errorSummary) as string, kind: "notice" };
+  }
+
+  return { message: getDisplayErrorSummary(errorSummary) as string, kind: "error" };
 }
 
 export type AuthenticatedContext = Awaited<ReturnType<typeof requireUser>>;
@@ -166,6 +316,251 @@ async function runStructuredExtractionForRun(input: {
   }
 }
 
+/**
+ * Counts how many `scan_runs` rows for this project are already terminal
+ * `failed` with a timeout-related `error_summary` (TIMEOUT_ERROR_SUMMARIES)
+ * within the last SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS. Used to enforce
+ * SCAN_TIMEOUT_AUTO_RETRY_CAP — see its doc comment for the full rationale.
+ */
+async function countRecentTimeoutFailures({
+  projectId,
+  service
+}: {
+  projectId: string;
+  service: ReturnType<typeof createServiceClient>;
+}): Promise<number> {
+  const lookbackCutoffIso = new Date(Date.now() - SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString();
+
+  const { count, error } = await service
+    .from("scan_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", projectId)
+    .eq("status", "failed")
+    .in("error_summary", Array.from(TIMEOUT_ERROR_SUMMARIES))
+    .gte("created_at", lookbackCutoffIso);
+
+  if (error) {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to count recent timeout failures`, {
+      projectId,
+      message: error.message
+    });
+    // Fail closed: if we can't determine the prior count, assume the cap is
+    // already reached so we don't risk an unbounded retry loop.
+    return SCAN_TIMEOUT_AUTO_RETRY_CAP;
+  }
+
+  return count ?? 0;
+}
+
+/**
+ * Attempts an internal auto-retry for a project whose scan was just marked
+ * `failed` due to a timeout, by creating a fresh `pending` run via
+ * `createPendingScanRunCore` with the service client (no authenticated user
+ * — trigger_source='cron', same as the recurring-scan path). Failures here
+ * are logged but non-fatal: the run was already correctly marked `failed`,
+ * so the user can always retry manually even if the auto-retry itself fails
+ * (e.g. transient DB error, or prompts_required if prompts were deleted
+ * concurrently).
+ */
+async function attemptAutoRetry({
+  projectId,
+  service,
+  reason
+}: {
+  projectId: string;
+  service: ReturnType<typeof createServiceClient>;
+  reason: string;
+}): Promise<void> {
+  try {
+    const newRunId = await createPendingScanRunCore({
+      projectId,
+      readClient: service,
+      service,
+      triggeredByUserId: null,
+      triggerSource: "cron"
+    });
+
+    console.info(`${RECONCILE_LOG_PREFIX} auto-retried timed-out scan`, {
+      projectId,
+      reason,
+      newRunId
+    });
+  } catch (retryError) {
+    console.error(`${RECONCILE_LOG_PREFIX} auto-retry failed, leaving run as failed for manual retry`, {
+      projectId,
+      reason,
+      message: retryError instanceof Error ? retryError.message : String(retryError)
+    });
+  }
+}
+
+/**
+ * Timeout-detection pass for the scan lifecycle (docs/scan-lifecycle.md,
+ * "Timeout detection"). Finds `running` rows whose `started_at` is older than
+ * SCAN_RUNNING_TIMEOUT_SECONDS and `pending` rows whose `created_at` is older
+ * than SCAN_PENDING_TIMEOUT_SECONDS, and transitions them to `failed` with an
+ * internal-only `error_summary` (see TIMEOUT_ERROR_SUMMARIES /
+ * getDisplayErrorSummary for the user-facing mapping).
+ *
+ * This is what unblocks `active_run_exists`: a stuck run no longer permanently
+ * blocks new scans for the project, because it becomes terminal (`failed`) on
+ * the next reconciliation pass instead of remaining `pending`/`running`
+ * forever.
+ *
+ * Auto-retry with cap (PR #78): when a row is marked `failed` due to timeout,
+ * this also counts prior timeout-failures for the same project within
+ * SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS. If that count is below
+ * SCAN_TIMEOUT_AUTO_RETRY_CAP, a fresh `pending` run is created automatically
+ * for the project (the user doesn't need to click "Lanzar escaneo" again). If
+ * the cap is reached, no auto-retry is triggered and the row is marked with a
+ * `_retry_exhausted` reason instead, so the user can still retry manually
+ * (with a calmer message — see getDisplayErrorSummary) without entering an
+ * infinite auto-retry loop.
+ *
+ * Scoped to a single project to respect the same project_id scoping used
+ * elsewhere in this module; uses the service client because the transition is
+ * a system-level correction, not a user-initiated write, but the query is
+ * always filtered by `project_id`.
+ */
+export async function reconcileStuckScanRuns({
+  projectId,
+  service
+}: {
+  projectId: string;
+  service: ReturnType<typeof createServiceClient>;
+}): Promise<{ reconciledCount: number }> {
+  const now = Date.now();
+  const runningCutoffIso = new Date(now - SCAN_RUNNING_TIMEOUT_SECONDS * 1000).toISOString();
+  const pendingCutoffIso = new Date(now - SCAN_PENDING_TIMEOUT_SECONDS * 1000).toISOString();
+  const nowIso = new Date(now).toISOString();
+
+  let reconciledCount = 0;
+
+  const { data: staleRunningRuns, error: staleRunningError } = await service
+    .from("scan_runs")
+    .select("id, started_at, created_at")
+    .eq("project_id", projectId)
+    .eq("status", "running")
+    .lt("started_at", runningCutoffIso);
+
+  const { data: stalePendingRuns, error: stalePendingError } = await service
+    .from("scan_runs")
+    .select("id, created_at")
+    .eq("project_id", projectId)
+    .eq("status", "pending")
+    .lt("created_at", pendingCutoffIso);
+
+  const hasStaleRows = Boolean(staleRunningRuns?.length || stalePendingRuns?.length);
+
+  // Count prior timeout-failures once up front, then track how many
+  // additional timeout-failures this pass is about to record, so multiple
+  // stale rows reconciled in the same pass cannot each independently trigger
+  // their own auto-retry (which would otherwise create several new pending
+  // runs at once).
+  let priorTimeoutFailureCount = hasStaleRows
+    ? await countRecentTimeoutFailures({ projectId, service })
+    : 0;
+  let autoRetryTriggered = false;
+
+  if (staleRunningError) {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to query stale running runs`, {
+      projectId,
+      message: staleRunningError.message
+    });
+  } else if (staleRunningRuns?.length) {
+    for (const run of staleRunningRuns) {
+      const capReached = priorTimeoutFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+      const errorSummary = capReached
+        ? SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
+        : SCAN_TIMEOUT_ERROR_SUMMARY;
+
+      const { error: updateError } = await service
+        .from("scan_runs")
+        .update({
+          status: "failed",
+          error_summary: errorSummary,
+          finished_at: nowIso
+        })
+        .eq("id", run.id)
+        .eq("project_id", projectId)
+        .eq("status", "running");
+
+      if (updateError) {
+        console.error(`${RECONCILE_LOG_PREFIX} failed to mark stale running run as failed`, {
+          projectId,
+          runId: run.id,
+          message: updateError.message
+        });
+        continue;
+      }
+
+      reconciledCount += 1;
+      priorTimeoutFailureCount += 1;
+      console.info(`${RECONCILE_LOG_PREFIX} marked stale running run as failed (${errorSummary})`, {
+        projectId,
+        runId: run.id,
+        startedAt: run.started_at,
+        capReached
+      });
+
+      if (!capReached && !autoRetryTriggered) {
+        autoRetryTriggered = true;
+        await attemptAutoRetry({ projectId, service, reason: errorSummary });
+      }
+    }
+  }
+
+  if (stalePendingError) {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to query stale pending runs`, {
+      projectId,
+      message: stalePendingError.message
+    });
+  } else if (stalePendingRuns?.length) {
+    for (const run of stalePendingRuns) {
+      const capReached = priorTimeoutFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+      const errorSummary = capReached
+        ? SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
+        : SCAN_PENDING_TIMEOUT_ERROR_SUMMARY;
+
+      const { error: updateError } = await service
+        .from("scan_runs")
+        .update({
+          status: "failed",
+          error_summary: errorSummary,
+          finished_at: nowIso
+        })
+        .eq("id", run.id)
+        .eq("project_id", projectId)
+        .eq("status", "pending");
+
+      if (updateError) {
+        console.error(`${RECONCILE_LOG_PREFIX} failed to mark stale pending run as failed`, {
+          projectId,
+          runId: run.id,
+          message: updateError.message
+        });
+        continue;
+      }
+
+      reconciledCount += 1;
+      priorTimeoutFailureCount += 1;
+      console.info(`${RECONCILE_LOG_PREFIX} marked stale pending run as failed (${errorSummary})`, {
+        projectId,
+        runId: run.id,
+        createdAt: run.created_at,
+        capReached
+      });
+
+      if (!capReached && !autoRetryTriggered) {
+        autoRetryTriggered = true;
+        await attemptAutoRetry({ projectId, service, reason: errorSummary });
+      }
+    }
+  }
+
+  return { reconciledCount };
+}
+
 async function createPendingScanRunCore({
   projectId,
   readClient,
@@ -196,6 +591,11 @@ async function createPendingScanRunCore({
   if (project.is_archived) {
     throw new ProjectActionError("project_archived");
   }
+
+  // Reconcile any stuck pending/running runs before checking for an active
+  // run, so a previously-stuck scan does not permanently block a new one
+  // (docs/scan-lifecycle.md, "Timeout detection" / invariant 3).
+  await reconcileStuckScanRuns({ projectId, service });
 
   const { data: activeRun, error: activeRunError } = await readClient
     .from("scan_runs")
