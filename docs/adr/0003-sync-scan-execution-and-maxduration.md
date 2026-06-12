@@ -8,7 +8,7 @@
 
 ## Context
 
-GEO Studio scans run Gemini for each prompt in a project (can be 10+ calls).
+Lumira scans run Gemini for each prompt in a project (can be 10+ calls).
 A single Gemini call takes 5–15s; a full scan takes 30–90s.
 
 Vercel's Hobby plan has a **10-second default function timeout**. Without

@@ -1,12 +1,12 @@
 PRD.md
-GEO Studio
+Lumira
 Product Requirements Document
 Version: 0.1
 Status: MVP Definition
 Author: Denis Martín Barroso
 
 1. Product Vision
-GEO Studio es una plataforma SaaS de Generative Engine Optimization (GEO) diseñada para ayudar a empresas, agencias y equipos de marketing a comprender, monitorizar y mejorar su visibilidad en motores de IA.
+Lumira es una plataforma SaaS de Generative Engine Optimization (GEO) diseñada para ayudar a empresas, agencias y equipos de marketing a comprender, monitorizar y mejorar su visibilidad en motores de IA.
 El producto no pretende ser una copia de Semrush ni de Otterly.
 Su principal diferenciador es transformar datos de visibilidad en acciones implementables.
 Principio central:

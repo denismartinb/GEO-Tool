@@ -21,7 +21,7 @@ lists; the `frontend` agent implements.
 - Identify missing components.
 - Identify extra/confusing components.
 - Align hierarchy, spacing, typography, cards, badges, buttons, and empty states.
-- Preserve GEO Studio brand unless instructed otherwise.
+- Preserve Lumira brand unless instructed otherwise.
 
 ## Must inspect
 

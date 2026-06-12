@@ -1,6 +1,6 @@
-# GEO Studio v0 - Gemini-only Private Beta MVP
+# Lumira v0 - Gemini-only Private Beta MVP
 
-Private beta MVP for GEO Studio using Next.js App Router + Supabase Auth + Supabase Postgres.
+Private beta MVP for Lumira using Next.js App Router + Supabase Auth + Supabase Postgres.
 
 ## Includes
 
