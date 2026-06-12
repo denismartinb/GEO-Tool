@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
+import { useMobileShell } from "@/components/mobile-shell";
 
 type WorkspaceProject = {
   id: string;
@@ -46,6 +48,23 @@ export function Sidebar({
   const pathname = usePathname();
   const activeProjectId = getProjectId(pathname);
   const project = projects.find((item) => item.id === activeProjectId) ?? null;
+  const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
+  const asideRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (mobileNavOpen) {
+      asideRef.current?.focus();
+    }
+  }, [mobileNavOpen]);
+
+  function handleNavSelect() {
+    closeAll();
+  }
+
+  function handleClose() {
+    closeAll();
+    navTriggerRef.current?.focus();
+  }
 
   function getCount(projectId: string, key: string | null): number {
     if (!key) return 0;
@@ -59,22 +78,30 @@ export function Sidebar({
   const avatarInitials = userEmail.slice(0, 2).toUpperCase();
 
   return (
-    <aside className="sb">
-      <div className="sb-brand">
-        <div className="brand-mark">
-          <Icon name="resonance" size={16} />
+    <>
+      {mobileNavOpen && (
+        <div className="mob-scrim" onClick={handleClose} aria-hidden="true" />
+      )}
+      <aside className="sb" ref={asideRef} tabIndex={-1}>
+        <div className="sb-brand">
+          <div className="brand-mark">
+            <Icon name="resonance" size={16} />
+          </div>
+          <div className="hide-collapsed">
+            <div className="brand-name">Lumira</div>
+            <div className="brand-sub">Espacio de visibilidad en IA</div>
+          </div>
+          <button type="button" className="sb-close" onClick={handleClose} aria-label="Cerrar menú">
+            <Icon name="x" size={18} />
+          </button>
         </div>
-        <div className="hide-collapsed">
-          <div className="brand-name">Lumira</div>
-          <div className="brand-sub">Espacio de visibilidad en IA</div>
-        </div>
-      </div>
 
       {project ? (
         <Link
           className="proj-switch"
           href={`/dashboard/projects/${project.id}/runs`}
           title="Ver escaneos de este dominio"
+          onClick={handleNavSelect}
         >
           <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
           <div className="proj-meta">
@@ -88,7 +115,7 @@ export function Sidebar({
           <p className="proj-empty-title">Sin dominio todavía</p>
           <p className="proj-empty-body">Crea tu primer dominio para empezar a escanear.</p>
           <div className="proj-empty-actions">
-            <Link href="/dashboard/projects/new">Crear dominio</Link>
+            <Link href="/dashboard/projects/new" onClick={handleNavSelect}>Crear dominio</Link>
           </div>
         </div>
       )}
@@ -114,7 +141,13 @@ export function Sidebar({
           }
 
           return (
-            <Link key={link.label} href={href} className={`nav-item ${active ? "active" : ""}`}>
+            <Link
+              key={link.label}
+              href={href}
+              className={`nav-item ${active ? "active" : ""}`}
+              onClick={handleNavSelect}
+              aria-current={active ? "page" : undefined}
+            >
               <Icon name={link.icon} size={17} />
               <span className="hide-collapsed">{link.label}</span>
               {count > 0 && (
@@ -142,7 +175,13 @@ export function Sidebar({
           }
 
           return (
-            <Link key={link.label} href={href} className={`nav-item ${active ? "active" : ""}`}>
+            <Link
+              key={link.label}
+              href={href}
+              className={`nav-item ${active ? "active" : ""}`}
+              onClick={handleNavSelect}
+              aria-current={active ? "page" : undefined}
+            >
               <Icon name={link.icon} size={17} />
               <span className="hide-collapsed">{link.label}</span>
               {count > 0 && (
@@ -183,6 +222,7 @@ export function Sidebar({
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
