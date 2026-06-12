@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
@@ -163,7 +162,9 @@ function WizardSteps({ currentStep }: { currentStep: number }) {
         <div key={s.label} style={{ display: "contents" }}>
           {index > 0 ? <span className="wiz-sep" /> : null}
           <div className={index === currentStep ? "wiz-step on" : index < currentStep ? "wiz-step done" : "wiz-step"}>
-            <span className="ws-dot">{index + 1}</span>
+            <span className="ws-dot">
+              {index < currentStep ? <Icon name="check" size={12} /> : index + 1}
+            </span>
             <span className="ws-l">{s.label}</span>
           </div>
         </div>
@@ -434,44 +435,33 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
     );
   }
 
-  return (
-    <div className="page mx-auto max-w-4xl space-y-4">
-      <p className="kicker">Dominios</p>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="title-lg">Nuevo dominio</h1>
-          <p className="sub mt-1">Configura un dominio, sus competidores y los primeros prompts en un flujo guiado.</p>
-        </div>
-        <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-2)]">
-          <Icon name="chevronLeft" size={14} />
-          Volver
-        </Link>
-      </div>
+  if (step === 1) {
+    return (
+      <div className="page add-domain fade-in">
+        <button type="button" className="add-back" onClick={() => setStep(0)}>
+          <Icon name="chevLeft" size={15} />
+          Volver al dominio
+        </button>
 
-    <Card className="overflow-hidden">
-      <CardHeader className="space-y-4">
-        <div>
-          <h2 className="text-lg font-semibold">Configura tu espacio de visibilidad</h2>
-          <p className="sub mt-1">
-            Indica tu dominio y mercado. Sugerimos competidores y prompts con Gemini; revísalos y edítalos antes de
-            lanzar el primer escaneo.
-          </p>
-        </div>
-        <div style={{ display: "flex", justifyContent: "center" }}>
-          <WizardSteps currentStep={step} />
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
-
-        {/* Step 2 — competitors (editable) */}
-        <section className={step === 1 ? "space-y-4" : "hidden"}>
-          <div className="rounded-[14px] border border-[var(--accent-soft-2)] bg-[var(--accent-soft)] p-4">
-            <h4 className="text-sm font-semibold text-[var(--accent-ink)]">Competidores sugeridos</h4>
-            <p className="mt-1 text-sm text-[var(--ink-2)]">
-              Sugeridos por Gemini para {domain || "tu dominio"}. Edítalos, elimínalos o añade los tuyos.
+        <div className="add-wrap">
+          <div className="cs-headwrap">
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <WizardSteps currentStep={step} />
+            </div>
+            <h1 className="add-h1" style={{ marginTop: 18 }}>
+              Tus competidores
+            </h1>
+            <p className="add-sub" style={{ margin: "10px 0 0" }}>
+              Analizamos{" "}
+              <b style={{ color: "var(--ink-2)", fontFamily: "var(--mono)", fontWeight: 600 }}>
+                {domain || "tu dominio"}
+              </b>{" "}
+              e identificamos tus principales competidores para monitorizar cómo te comparas en las respuestas de
+              IA. Si algo no encaja, edítalo o elimínalo.
             </p>
           </div>
+
+          {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
 
           <div className="space-y-2">
             {competitors.map((row, index) => (
@@ -516,69 +506,88 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
               <Icon name="arrRight" size={16} />
             </Button>
           </div>
-        </section>
+        </div>
+      </div>
+    );
+  }
 
-        {/* Step 3 — prompts (editable) + submit */}
-        <section className={step === 2 ? "space-y-4" : "hidden"}>
-          <div className="rounded-[14px] border border-[var(--accent-soft-2)] bg-[var(--accent-soft)] p-4">
-            <h4 className="text-sm font-semibold text-[var(--accent-ink)]">Prompts sugeridos</h4>
-            <p className="mt-1 text-sm text-[var(--ink-2)]">
-              Preguntas que enviaremos a Gemini para medir tu visibilidad. Edítalas o añade las tuyas (máx. 10).
-            </p>
+  return (
+    <div className="page add-domain cs-page fade-in">
+      <button type="button" className="add-back" onClick={() => setStep(1)}>
+        <Icon name="chevLeft" size={15} />
+        Volver a competidores
+      </button>
+
+      <div className="add-wrap">
+        <div className="cs-headwrap" style={{ textAlign: "center", margin: "0 auto 22px" }}>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <WizardSteps currentStep={step} />
           </div>
+          <h1 className="add-h1" style={{ marginTop: 18, fontSize: 30 }}>
+            Revisa y selecciona tus prompts
+          </h1>
+          <p className="add-sub" style={{ margin: "10px auto 0" }}>
+            Estos son los prompts que hemos generado para{" "}
+            <b style={{ color: "var(--ink-2)", fontFamily: "var(--mono)", fontWeight: 600 }}>
+              {domain || "tu dominio"}
+            </b>
+            . Selecciona los que quieras monitorizar — recomendamos al menos{" "}
+            <b style={{ color: "var(--ink-2)" }}>15</b> para obtener mejores datos.
+          </p>
+        </div>
 
-          <div className="space-y-2">
-            {prompts.map((row, index) => (
-              <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
-                <div className="space-y-1">
-                  <Textarea
-                    aria-label={`Prompt ${index + 1}`}
-                    rows={2}
-                    className="onb-prompt-input"
-                    placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
-                    value={row.text}
-                    onChange={(event) => updatePrompt(index, event.target.value)}
-                  />
-                  {row.category ? <span className="text-xs text-[var(--ink-3)]">{row.category}</span> : null}
-                </div>
-                <Button type="button" variant="outline" onClick={() => setPrompts((rows) => rows.filter((_, i) => i !== index))}>
-                  Quitar
-                </Button>
+        {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
+
+        <div className="space-y-2">
+          {prompts.map((row, index) => (
+            <div key={index} className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <div className="space-y-1">
+                <Textarea
+                  aria-label={`Prompt ${index + 1}`}
+                  rows={2}
+                  className="onb-prompt-input"
+                  placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
+                  value={row.text}
+                  onChange={(event) => updatePrompt(index, event.target.value)}
+                />
+                {row.category ? <span className="text-xs text-[var(--ink-3)]">{row.category}</span> : null}
               </div>
-            ))}
-          </div>
+              <Button type="button" variant="outline" onClick={() => setPrompts((rows) => rows.filter((_, i) => i !== index))}>
+                Quitar
+              </Button>
+            </div>
+          ))}
+        </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
-            <p className="sub">{validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} listo{validPromptCount === 1 ? "" : "s"}.</p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, { text: "", category: null }]))}
-              disabled={prompts.length >= 10}
-            >
-              Añadir prompt
-            </Button>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
+          <p className="sub">{validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} listo{validPromptCount === 1 ? "" : "s"}.</p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, { text: "", category: null }]))}
+            disabled={prompts.length >= 10}
+          >
+            Añadir prompt
+          </Button>
+        </div>
 
-          <form action={createAction} className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">
-            <input type="hidden" name="domain" value={domain} />
-            <input type="hidden" name="country" value={country} />
-            <input type="hidden" name="language" value={language} />
-            <input type="hidden" name="initial_competitors" value={competitorsText} />
-            <input type="hidden" name="initial_prompts" value={promptsText} />
-            <input type="hidden" name="initial_prompt_categories" value={categoriesText} />
-            <CreateProjectOverlay />
-            <Button type="button" variant="outline" onClick={() => setStep(1)}>
-              Atrás
-            </Button>
-            <Button type="submit" disabled={validPromptCount === 0} className="inline-flex items-center gap-2">
-              Crear dominio y escanear
-              <Icon name="arrRight" size={16} />
-            </Button>
-          </form>
-        </section>
-      </CardContent>
-    </Card>
+        <form action={createAction} className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">
+          <input type="hidden" name="domain" value={domain} />
+          <input type="hidden" name="country" value={country} />
+          <input type="hidden" name="language" value={language} />
+          <input type="hidden" name="initial_competitors" value={competitorsText} />
+          <input type="hidden" name="initial_prompts" value={promptsText} />
+          <input type="hidden" name="initial_prompt_categories" value={categoriesText} />
+          <CreateProjectOverlay />
+          <Button type="button" variant="outline" onClick={() => setStep(1)}>
+            Atrás
+          </Button>
+          <Button type="submit" disabled={validPromptCount === 0} className="inline-flex items-center gap-2">
+            Crear dominio y escanear
+            <Icon name="arrRight" size={16} />
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }
