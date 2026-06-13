@@ -47,6 +47,9 @@ export type JobRow = {
 export type ScanPromptResultRow = {
   id: string;
   raw_response_text: string | null;
+  raw_response_json: {
+    grounding_chunks?: Array<{ uri?: string; title?: string }>;
+  } | null;
   prompt_text_snapshot: string;
   brand_snapshot: string;
   competitors_snapshot: Array<{ name?: string }> | null;
