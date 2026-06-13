@@ -66,7 +66,7 @@ becomes terminal (`failed` or `completed`).
 ## Timeout detection and auto-retry (`reconcileStuckScanRuns`)
 
 A run in `running` state for longer than `SCAN_RUNNING_TIMEOUT_SECONDS`
-(90s) is presumed to have timed out (e.g. Vercel function killed without
+(120s) is presumed to have timed out (e.g. Vercel function killed without
 updating state). A run in `pending` state for longer than
 `SCAN_PENDING_TIMEOUT_SECONDS` (300s) is stale. On the next reconciliation
 pass (triggered by UI load or the weekly-scans cron), both are transitioned
