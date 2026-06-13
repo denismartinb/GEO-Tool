@@ -34,7 +34,20 @@ export const PROMPT_RETRY_DELAY_MS = 500;
  * without updating its status; a `pending` row older than this never got
  * picked up and is considered stale.
  */
-export const SCAN_RUNNING_TIMEOUT_SECONDS = 120;
+/**
+ * 180s (raised from 120s). Worst case under SCAN-ROBUST-1's per-prompt retry
+ * (PROMPT_RETRY_MAX_TOTAL_ATTEMPTS=2, each attempt up to the Gemini call
+ * timeout, plus PROMPT_RETRY_DELAY_MS between attempts), MAX_REAL_SCAN_PROMPTS=6
+ * sequential prompts can legitimately take close to or over 120s without any
+ * single call failing outright (~6 * (2 * 20s + 0.5s) ~= 243s worst case).
+ * 120s was too tight and caused reconcileStuckScanRuns to mark genuinely
+ * in-flight runs as "failed" mid-execution, which (before the idempotency
+ * guards above) produced orphaned duplicate auto-retry runs. 180s comfortably
+ * covers realistic multi-retry runs while still catching genuinely hung runs
+ * (e.g. a request that never returns and isn't caught by the per-call
+ * timeout).
+ */
+export const SCAN_RUNNING_TIMEOUT_SECONDS = 180;
 export const SCAN_PENDING_TIMEOUT_SECONDS = 300;
 
 /**

@@ -149,19 +149,40 @@ function noopTable() {
   return builder;
 }
 
-function makeScanRunsTable() {
+/**
+ * Fake `scan_runs` table.
+ *
+ * `executePendingScan` issues two `.update(...).eq(...)...` chains against
+ * this table:
+ *   - pending -> running transition: `.select("id").maybeSingle()`
+ *   - completion: `.select("id")` awaited directly (no `.maybeSingle()`),
+ *     resolving via `.then(...)`.
+ *
+ * By default both report a successful match (one row), matching the
+ * "happy path" assumed by the other tests in this file. Pass
+ * `completionSelectRows: []` to simulate the completion UPDATE finding 0
+ * matching rows (the run was already terminalized by reconciliation), which
+ * is what the idempotency-guard test below exercises.
+ */
+function makeScanRunsTable({ completionSelectRows = [{ id: RUN_ID }] }: { completionSelectRows?: unknown[] } = {}) {
   const builder: Record<string, unknown> = {
     eq: () => builder,
     update: () => builder,
     select: () => builder,
     maybeSingle: () => Promise.resolve({ data: { id: RUN_ID }, error: null }),
     then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
-      Promise.resolve({ data: [], error: null }).then(resolve)
+      Promise.resolve({ data: completionSelectRows, error: null }).then(resolve)
   };
   return builder;
 }
 
-function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }) {
+function buildClients({
+  promptJobMaxAttempts,
+  completionSelectRows
+}: {
+  promptJobMaxAttempts: number;
+  completionSelectRows?: unknown[];
+}) {
   const jobsTable = makeJobsTable([
     {
       id: "start-job",
@@ -195,7 +216,7 @@ function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }
     }
   ]);
 
-  const scanRunsTable = makeScanRunsTable();
+  const scanRunsTable = makeScanRunsTable({ completionSelectRows });
 
   const service = {
     from(table: string) {
@@ -337,6 +358,30 @@ describe("executePendingScan — per-prompt retry (SCAN-ROBUST-1)", () => {
     const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
     expect(promptJob.attempt_count).toBe(1);
     expect(promptJob.status).toBe("failed");
+  });
+
+  it("does not throw and logs a warning when the completion update finds 0 matching rows (run already terminalized)", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+
+    // Simulate `reconcileStuckScanRuns` having already marked this run
+    // "failed" (timeout) between the start of this execution and the final
+    // completion UPDATE: the `.eq("status", "running")` guard on that UPDATE
+    // matches 0 rows.
+    const { service, supabase } = buildClients({ promptJobMaxAttempts: 3, completionSelectRows: [] });
+    serviceClientHolder.current = service;
+
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const { executePendingScan } = await import("./executor");
+
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).resolves.toBeUndefined();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[geo:scan] run already terminalized before completion update, skipping",
+      expect.objectContaining({ projectId: PROJECT_ID, runId: RUN_ID })
+    );
+
+    warnSpy.mockRestore();
   });
 
   it("does not retry on GeminiConfigError (terminal, run-level failure)", async () => {

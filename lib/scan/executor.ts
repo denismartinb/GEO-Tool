@@ -571,7 +571,7 @@ export async function executePendingScan({
         .eq("run_id", runId);
     }
 
-    await service
+    const { data: completedRun } = await service
       .from("scan_runs")
       .update({
         status: "completed",
@@ -582,7 +582,25 @@ export async function executePendingScan({
         scoring_version: SCORING_VERSION
       })
       .eq("id", runId)
-      .eq("project_id", projectId);
+      .eq("project_id", projectId)
+      .eq("status", "running")
+      .select("id");
+
+    if (!completedRun?.length) {
+      // The run was already terminalized (e.g. marked `failed` by
+      // reconcileStuckScanRuns due to a timeout) between this execution
+      // starting and finishing. Do not overwrite that terminal status back
+      // to "completed" - that would hide the reconciliation outcome and can
+      // lead to a duplicate auto-retry run being orphaned (the run that
+      // triggered the retry would silently look "completed"). All
+      // extraction/scoring/recommendation side effects above already
+      // persisted against this runId, so nothing further to do here.
+      console.warn("[geo:scan] run already terminalized before completion update, skipping", {
+        projectId,
+        runId
+      });
+      return;
+    }
   } catch (error) {
     const errorSummary = getSanitizedScanError(error);
 

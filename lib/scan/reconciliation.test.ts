@@ -41,7 +41,21 @@ vi.mock("@/lib/scan/run-creation", () => ({
  *   - select(...).eq(...).order(...).limit(...).maybeSingle()    -> single | null
  *   - update(...).eq(...).eq(...).eq(...)                        -> { error: null }
  */
-function fakeServiceClient(initialRows: ScanRunRow[]) {
+function fakeServiceClient(
+  initialRows: ScanRunRow[],
+  options: {
+    /**
+     * Called synchronously right after the stale-running `.lt("started_at",
+     * ...)` SELECT computes its matched rows (a snapshot, cloned), before
+     * that promise resolves. Lets a test simulate a concurrent transition
+     * (e.g. the executor marking the row "completed") that happens between
+     * the SELECT and reconciliation's follow-up UPDATE — mutating `rows`
+     * here changes what the UPDATE's `.eq("status","running")` filter sees,
+     * without affecting the already-cloned SELECT snapshot.
+     */
+    onStaleRunningSelected?: (rows: ScanRunRow[]) => void;
+  } = {}
+) {
   const rows: ScanRunRow[] = initialRows.map((row) => ({ ...row }));
 
   function applyEq(data: ScanRunRow[], column: keyof ScanRunRow, value: unknown) {
@@ -50,9 +64,13 @@ function fakeServiceClient(initialRows: ScanRunRow[]) {
 
   function selectBuilder(initialRows: ScanRunRow[]) {
     let data = [...initialRows];
+    let isStaleRunningQuery = false;
     const builder = {
       eq(column: keyof ScanRunRow, value: unknown) {
         data = applyEq(data, column, value);
+        if (column === "status" && value === "running") {
+          isStaleRunningQuery = true;
+        }
         return builder;
       },
       neq(column: keyof ScanRunRow, value: unknown) {
@@ -64,7 +82,14 @@ function fakeServiceClient(initialRows: ScanRunRow[]) {
           const fieldValue = row[column];
           return fieldValue !== null && fieldValue < value;
         });
-        return Promise.resolve({ data, error: null });
+        // Snapshot (clone) before invoking the race-simulation hook, so the
+        // returned data reflects the pre-race state even if the hook mutates
+        // the live `rows` array.
+        const snapshot = data.map((row) => ({ ...row }));
+        if (isStaleRunningQuery) {
+          options.onStaleRunningSelected?.(rows);
+        }
+        return Promise.resolve({ data: snapshot, error: null });
       },
       gte(column: "created_at", value: string) {
         data = data.filter((row) => row[column] >= value);
@@ -103,7 +128,12 @@ function fakeServiceClient(initialRows: ScanRunRow[]) {
       eq(column: keyof ScanRunRow, value: unknown) {
         filters.push([column, value]);
         // Resolve once all filters are applied — reconciliation always calls
-        // .eq() exactly 3 times after .update(), so apply on the 3rd.
+        // .eq() exactly 3 times after .update(), so apply on the 3rd. The
+        // result is both awaitable directly (plain `await ....eq(...)`) and
+        // chainable via `.select("id")` (the idempotency-guard updates),
+        // which returns the matched rows so callers can detect "0 rows
+        // affected" (the row already transitioned away from the expected
+        // status between the SELECT and this UPDATE).
         if (filters.length >= 3) {
           let matches = [...rows];
           for (const [col, val] of filters) {
@@ -112,7 +142,13 @@ function fakeServiceClient(initialRows: ScanRunRow[]) {
           for (const match of matches) {
             Object.assign(match, patch);
           }
-          return Promise.resolve({ error: null });
+          const matchedRows = matches.map((row) => ({ id: row.id }));
+          return {
+            select: (_columns: string) => Promise.resolve({ data: matchedRows, error: null }),
+            then(resolve: (value: { error: null }) => unknown) {
+              return Promise.resolve({ error: null }).then(resolve);
+            }
+          };
         }
         return builder;
       }
@@ -263,7 +299,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         project_id: PROJECT_ID,
         status: "running",
         error_summary: null,
-        started_at: "2026-06-13T11:00:00.000Z", // > SCAN_RUNNING_TIMEOUT_SECONDS (120s) ago
+        started_at: "2026-06-13T11:00:00.000Z", // > SCAN_RUNNING_TIMEOUT_SECONDS (180s) ago
         created_at: "2026-06-13T11:00:00.000Z",
         finished_at: null
       }
@@ -276,6 +312,43 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     expect(rows[0].status).toBe("failed");
     expect(rows[0].error_summary).toBe(SCAN_TIMEOUT_ERROR_SUMMARY);
     expect(createPendingScanRunCore).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips attemptAutoRetry when the stale-running failure UPDATE finds 0 matching rows (already transitioned)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-13T12:00:00.000Z"));
+
+    const { service, rows } = fakeServiceClient(
+      [
+        {
+          id: "run-1",
+          project_id: PROJECT_ID,
+          status: "running",
+          error_summary: null,
+          started_at: "2026-06-13T11:00:00.000Z", // > SCAN_RUNNING_TIMEOUT_SECONDS (180s) ago
+          created_at: "2026-06-13T11:00:00.000Z",
+          finished_at: null
+        }
+      ],
+      {
+        // Simulate `executePendingScan` finishing and marking the run
+        // "completed" between reconciliation's stale-running SELECT and its
+        // follow-up "mark as failed" UPDATE.
+        onStaleRunningSelected: (liveRows) => {
+          liveRows[0].status = "completed";
+        }
+      }
+    );
+
+    const { reconcileStuckScanRuns } = await import("./reconciliation");
+    const result = await reconcileStuckScanRuns({ projectId: PROJECT_ID, service });
+
+    // The UPDATE's `.eq("status", "running")` no longer matches (row is now
+    // "completed"), so reconciliation must not count this as reconciled and
+    // must not trigger an auto-retry for it.
+    expect(result.reconciledCount).toBe(0);
+    expect(rows[0].status).toBe("completed");
+    expect(createPendingScanRunCore).not.toHaveBeenCalled();
   });
 
   it("a single reconciliation pass triggers at most one auto-retry across stale-run and zero-results passes", async () => {

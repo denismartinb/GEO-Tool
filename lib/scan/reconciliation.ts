@@ -209,7 +209,7 @@ export async function reconcileStuckScanRuns({
         ? SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
         : SCAN_TIMEOUT_ERROR_SUMMARY;
 
-      const { error: updateError } = await service
+      const { data: failedRun, error: updateError } = await service
         .from("scan_runs")
         .update({
           status: "failed",
@@ -218,13 +218,27 @@ export async function reconcileStuckScanRuns({
         })
         .eq("id", run.id)
         .eq("project_id", projectId)
-        .eq("status", "running");
+        .eq("status", "running")
+        .select("id");
 
       if (updateError) {
         console.error(`${RECONCILE_LOG_PREFIX} failed to mark stale running run as failed`, {
           projectId,
           runId: run.id,
           message: updateError.message
+        });
+        continue;
+      }
+
+      if (!failedRun?.length) {
+        // The run transitioned away from "running" (e.g. the original
+        // executor finished and marked it "completed") between the SELECT
+        // above and this UPDATE. Do not treat it as a timeout and do not
+        // trigger an auto-retry - that would create an orphaned duplicate
+        // run for a scan that actually finished successfully.
+        console.info(`${RECONCILE_LOG_PREFIX} stale running run already transitioned, skipping`, {
+          projectId,
+          runId: run.id
         });
         continue;
       }

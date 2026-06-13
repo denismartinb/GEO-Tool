@@ -86,7 +86,7 @@ becomes terminal (`failed` or `completed`).
   (`docs/adr/0003-sync-scan-execution-and-maxduration.md`) is a *typical-case*
   target with `MAX_REAL_SCAN_PROMPTS=6`, not a hard guarantee. A pathological
   run where every prompt times out and retries once
-  (6 × (2 × 20s + 500ms) ≈ 243s) can exceed both 60s and
+  (6 × (2 × 20s + 500ms) ≈ 243s) can exceed both 60s and the *old*
   `SCAN_RUNNING_TIMEOUT_SECONDS` (120s). That worst case is bounded by the
   running-timeout + reconciliation auto-retry below, not by the per-call
   timeout alone.
@@ -96,12 +96,12 @@ becomes terminal (`failed` or `completed`).
 ## Timeout detection and auto-retry (`reconcileStuckScanRuns`)
 
 A run in `running` state for longer than `SCAN_RUNNING_TIMEOUT_SECONDS`
-(120s) is presumed to have timed out (e.g. Vercel function killed without
-updating state). A run in `pending` state for longer than
-`SCAN_PENDING_TIMEOUT_SECONDS` (300s) is stale. On the next reconciliation
-pass (triggered by UI load or the weekly-scans cron), both are transitioned
-to `failed` with an internal `error_summary` of `"scan_timeout"` /
-`"scan_pending_timeout"`.
+(180s, raised from 120s — see "Idempotency guards" below) is presumed to have
+timed out (e.g. Vercel function killed without updating state). A run in
+`pending` state for longer than `SCAN_PENDING_TIMEOUT_SECONDS` (300s) is
+stale. On the next reconciliation pass (triggered by UI load or the
+weekly-scans cron), both are transitioned to `failed` with an internal
+`error_summary` of `"scan_timeout"` / `"scan_pending_timeout"`.
 
 This reconciliation is what unblocks the "one active scan per project"
 invariant: a stuck run no longer permanently blocks new scans, because it
@@ -145,6 +145,48 @@ A `GeminiConfigError`-caused `failed` run (generic `"scan_failed"`
 `error_summary`, not in `ALL_RECOVERABLE_ERROR_SUMMARIES`) is never matched by
 this pass and is never auto-retried — it remains terminal until the user fixes
 the underlying configuration and launches a new scan manually.
+
+---
+
+## Idempotency guards (duplicate-run race)
+
+There is an inherent race between `executePendingScan` (running synchronously
+for run N) and `reconcileStuckScanRuns` (triggered by a concurrent page
+load/navigation), since both can act on the same `scan_runs` row near the
+`SCAN_RUNNING_TIMEOUT_SECONDS` boundary. Two guards close this race so neither
+side can silently create or hide a duplicate run:
+
+1. **`executePendingScan` final completion update is conditional**
+   (`lib/scan/executor.ts`): the `UPDATE scan_runs SET status='completed', ...`
+   at the end of a successful run includes `.eq("status", "running")` and
+   `.select("id")`. If it affects 0 rows, the run was already terminalized
+   (e.g. marked `failed` by `reconcileStuckScanRuns` due to a timeout) while
+   this execution was still in flight. The executor logs a sanitized
+   `[geo:scan]` warning and returns without overwriting the terminal status —
+   it never resurrects a `failed` row back to `completed`. All
+   extraction/scoring/recommendation side effects have already been persisted
+   against this `runId` regardless.
+
+2. **`reconcileStuckScanRuns` stale-running failure update is conditional**
+   (`lib/scan/reconciliation.ts`): the
+   `UPDATE scan_runs SET status='failed' ... WHERE status='running' AND id=...`
+   for a stale-running row includes `.select("id")`. If it affects 0 rows, the
+   run transitioned away from `running` (e.g. to `completed` via guard #1
+   above, or a manual cancellation) between the SELECT that found it and this
+   UPDATE. Reconciliation skips `attemptAutoRetry` for that run entirely — it
+   does not create a new `pending` run for a scan that actually finished.
+
+Together these guards make the two writers commute: whichever transition
+"wins" the race is the only one that is persisted, and the loser is a no-op
+rather than an overwrite or a spurious retry.
+
+### `SCAN_RUNNING_TIMEOUT_SECONDS` raised to 180s
+
+Previously 120s. Reduces (but does not eliminate — hence the guards above) how
+often a genuinely in-flight run with multiple per-prompt retries
+(`PROMPT_RETRY_MAX_TOTAL_ATTEMPTS=2`) is mistaken for a stuck run. See the
+comment on `SCAN_RUNNING_TIMEOUT_SECONDS` in `lib/scan/constants.ts` for the
+worst-case math.
 
 ---
 
