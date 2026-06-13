@@ -4,11 +4,20 @@ import { generateGeminiVisibilityAnswer, GeminiConfigError } from "@/lib/llm/gem
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { createServiceClient } from "@/lib/supabase/service";
-import { EXTRACTION_VERSION, MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
+import {
+  EXTRACTION_VERSION,
+  MAX_REAL_SCAN_PROMPTS,
+  PROMPT_RETRY_DELAY_MS,
+  PROMPT_RETRY_MAX_TOTAL_ATTEMPTS
+} from "@/lib/scan/constants";
 import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export async function executePendingScan({
   projectId,
@@ -139,6 +148,11 @@ export async function executePendingScan({
 
     for (let i = 0; i < promptJobs.length; i += 1) {
       const job = promptJobs[i];
+      // Captured before any update mutates `job.attempt_count` (some fake
+      // Supabase clients in tests mutate the row object referenced by `job`
+      // in place), so the per-prompt retry loop below can compute each
+      // attempt's persisted attempt_count relative to a stable baseline.
+      const baseAttemptCount = job.attempt_count;
 
       await service
         .from("jobs")
@@ -146,7 +160,7 @@ export async function executePendingScan({
           status: "running",
           locked_at: new Date().toISOString(),
           locked_by: "gemini-executor",
-          attempt_count: job.attempt_count + 1,
+          attempt_count: baseAttemptCount + 1,
           last_error: null
         })
         .eq("id", job.id)
@@ -215,34 +229,74 @@ export async function executePendingScan({
         continue;
       }
 
-      let llmResult: Awaited<ReturnType<typeof generateGeminiVisibilityAnswer>>;
-      let latency: number;
+      let llmResult: Awaited<ReturnType<typeof generateGeminiVisibilityAnswer>> | null = null;
+      let latency = 0;
+      let lastError: unknown = null;
 
-      try {
-        const llmStart = Date.now();
-        llmResult = await generateGeminiVisibilityAnswer({
-          prompt: promptText,
-          brand: project.brand,
-          competitors: (competitors ?? []).map((c) => c.name),
-          country: project.country,
-          language: project.language
-        });
-        latency = Date.now() - llmStart;
-      } catch (error) {
-        if (error instanceof GeminiConfigError) {
-          throw error;
+      // Per-prompt retry (SCAN-ROBUST-1): total attempts for this prompt are
+      // bounded by both `job.max_attempts` (jobs table, default 3) and
+      // PROMPT_RETRY_MAX_TOTAL_ATTEMPTS (2 — one retry), whichever is lower.
+      // `attempt_count` already reflects attempt 1 from the update above this
+      // loop; subsequent iterations bump it again before retrying.
+      const totalAttempts = Math.max(1, Math.min(job.max_attempts, PROMPT_RETRY_MAX_TOTAL_ATTEMPTS));
+
+      for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+        if (attempt > 1) {
+          await delay(PROMPT_RETRY_DELAY_MS);
+          await service
+            .from("jobs")
+            .update({
+              status: "running",
+              locked_at: new Date().toISOString(),
+              locked_by: "gemini-executor",
+              attempt_count: baseAttemptCount + attempt,
+              last_error: null
+            })
+            .eq("id", job.id)
+            .eq("project_id", projectId)
+            .eq("run_id", runId);
         }
 
-        const errorSummary = getSanitizedScanError(error);
+        try {
+          const llmStart = Date.now();
+          llmResult = await generateGeminiVisibilityAnswer({
+            prompt: promptText,
+            brand: project.brand,
+            competitors: (competitors ?? []).map((c) => c.name),
+            country: project.country,
+            language: project.language
+          });
+          latency = Date.now() - llmStart;
+          lastError = null;
+          break;
+        } catch (error) {
+          if (error instanceof GeminiConfigError) {
+            throw error;
+          }
 
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: "error",
-          message: "Gemini prompt execution failed.",
-          context: { prompt_id: promptId, error: error instanceof Error ? error.message : String(error) }
-        });
+          lastError = error;
+
+          await logJob(service, {
+            jobId: job.id,
+            projectId,
+            runId,
+            level: attempt < totalAttempts ? "warn" : "error",
+            message:
+              attempt < totalAttempts
+                ? "Gemini prompt execution failed, retrying."
+                : "Gemini prompt execution failed.",
+            context: {
+              prompt_id: promptId,
+              attempt,
+              total_attempts: totalAttempts,
+              error: error instanceof Error ? error.message : String(error)
+            }
+          });
+        }
+      }
+
+      if (lastError || !llmResult) {
+        const errorSummary = getSanitizedScanError(lastError);
 
         await service
           .from("jobs")
@@ -361,7 +415,14 @@ export async function executePendingScan({
     }
 
     if (promptSuccess === 0) {
-      throw new ProjectActionError("scan_failed");
+      // Distinct from the generic "scan_failed": zero successful prompts is a
+      // recoverable, run-level outcome (every individual prompt failed, but
+      // there is no reason to believe a retry would fail identically — e.g.
+      // a transient Gemini outage affecting all 6 calls). reconcileStuckScanRuns
+      // treats this error_summary as eligible for the same bounded auto-retry
+      // as a timeout (SCAN-ROBUST-1). GeminiConfigError (missing API key,
+      // invalid model) is NOT this code — it remains terminal.
+      throw new ProjectActionError("scan_failed_no_results");
     }
 
     await runStructuredExtractionForRun({

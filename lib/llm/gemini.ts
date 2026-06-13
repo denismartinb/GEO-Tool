@@ -9,6 +9,64 @@ const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id su
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
 /**
+ * Hard per-call timeout for `generateGeminiVisibilityAnswer`, the call made
+ * once per prompt inside the sequential scan loop (`lib/scan/executor.ts`).
+ * With `MAX_REAL_SCAN_PROMPTS=6` sequential calls inside the ~60s Vercel
+ * `maxDuration` (docs/adr/0003-sync-scan-execution-and-maxduration.md), a
+ * single slow call must not be allowed to consume the entire run budget —
+ * that would starve the remaining prompts and risk tripping
+ * `SCAN_RUNNING_TIMEOUT_SECONDS`, failing the whole run instead of just one
+ * prompt.
+ *
+ * 20s ceiling: generous enough that normal Gemini latency (typically a few
+ * seconds) never hits it, while bounding how long a single stuck call can
+ * block progress. The 60s budget is a *typical-case* target, not a guarantee:
+ * a pathological run where every prompt times out (and retries once, see
+ * PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can still exceed 60s. That worst case is
+ * bounded instead by `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's
+ * auto-retry (docs/scan-lifecycle.md), not by this per-call timeout alone.
+ * A timeout here surfaces as `GeminiTimeoutError`, which the executor treats
+ * as a normal recoverable per-prompt error: the prompt's job is recorded as
+ * failed with a sanitized `last_error` and the run continues with the next
+ * prompt — it must never crash the run.
+ */
+const GEMINI_CALL_TIMEOUT_MS = 20_000;
+
+/**
+ * Thrown when a Gemini API call is aborted after `GEMINI_CALL_TIMEOUT_MS`.
+ * Treated as a recoverable per-prompt error by the scan executor — same
+ * handling as an HTTP failure or empty response.
+ */
+export class GeminiTimeoutError extends Error {
+  constructor(message = "Gemini API request timed out.") {
+    super(message);
+    this.name = "GeminiTimeoutError";
+  }
+}
+
+/**
+ * `fetch` wrapped with a hard AbortController-based timeout. Throws
+ * `GeminiTimeoutError` if the request does not complete within `timeoutMs`,
+ * instead of letting the call hang for the rest of the run budget or
+ * surfacing a raw `AbortError`.
+ */
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new GeminiTimeoutError();
+    }
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Thrown for misconfiguration (missing API key, invalid model id) that
  * affects every request equally — retrying or skipping to the next prompt
  * cannot help, so callers should treat this as fatal for the whole run.
@@ -78,19 +136,27 @@ export async function generateGeminiVisibilityAnswer(input: {
     systemInstruction: { parts: [{ text: instruction }] }
   });
 
-  let response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: requestBody
-  });
-
-  if (response.status === 429) {
-    await delay(RATE_LIMIT_RETRY_DELAY_MS);
-    response = await fetch(endpoint, {
+  let response = await fetchWithTimeout(
+    endpoint,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: requestBody
-    });
+    },
+    GEMINI_CALL_TIMEOUT_MS
+  );
+
+  if (response.status === 429) {
+    await delay(RATE_LIMIT_RETRY_DELAY_MS);
+    response = await fetchWithTimeout(
+      endpoint,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody
+      },
+      GEMINI_CALL_TIMEOUT_MS
+    );
   }
 
   if (!response.ok) {
