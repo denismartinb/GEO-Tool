@@ -4,8 +4,8 @@ import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/
 import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
-const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.0-flash.";
+const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-001";
+const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.0-flash-001.";
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
 /**
@@ -43,6 +43,13 @@ export type GeminiVisibilityResponse = {
   tokensIn: number | null;
   tokensOut: number | null;
   totalTokens: number | null;
+  /**
+   * Google Search grounding sources returned by Gemini when the
+   * `google_search` tool is enabled, per
+   * docs/adr/0004-gemini-search-grounding.md. Absent/empty when the model
+   * did not ground its answer in a search result.
+   */
+  groundingChunks?: Array<{ uri: string; title?: string }>;
 };
 
 export type GeminiStructuredExtractionResponse = {
@@ -75,7 +82,8 @@ export async function generateGeminiVisibilityAnswer(input: {
 
   const requestBody = JSON.stringify({
     contents: [{ parts: [{ text: promptBlock }] }],
-    systemInstruction: { parts: [{ text: instruction }] }
+    systemInstruction: { parts: [{ text: instruction }] },
+    tools: [{ google_search: {} }]
   });
 
   let response = await fetch(endpoint, {
@@ -98,7 +106,12 @@ export async function generateGeminiVisibilityAnswer(input: {
   }
 
   const data = (await response.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    candidates?: Array<{
+      content?: { parts?: Array<{ text?: string }> };
+      groundingMetadata?: {
+        groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
+      };
+    }>;
     usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
     modelVersion?: string;
   };
@@ -111,12 +124,18 @@ export async function generateGeminiVisibilityAnswer(input: {
     throw new Error("Gemini returned an empty response.");
   }
 
+  const groundingChunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks
+    ?.map((chunk) => chunk.web)
+    .filter((web): web is { uri: string; title?: string } => Boolean(web?.uri))
+    .map((web) => ({ uri: web.uri, title: web.title }));
+
   return {
     text,
     model: data.modelVersion ?? model,
     tokensIn: data.usageMetadata?.promptTokenCount ?? null,
     tokensOut: data.usageMetadata?.candidatesTokenCount ?? null,
-    totalTokens: data.usageMetadata?.totalTokenCount ?? null
+    totalTokens: data.usageMetadata?.totalTokenCount ?? null,
+    ...(groundingChunks?.length ? { groundingChunks } : {})
   };
 }
 

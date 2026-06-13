@@ -267,18 +267,12 @@ export async function executePendingScan({
         (acc, competitor) => (responseLower.includes(competitor.name.toLowerCase()) ? acc + 1 : acc),
         0
       );
-      const citationRegex = /(https?:\/\/[^\s)]+|www\.[^\s)]+)/gi;
-      const citations = llmResult.text.match(citationRegex) ?? [];
-      const citationFound = citations.length > 0;
-      const citationsCount = citations.length;
       const sentiment: "positive" | "neutral" | "negative" | "mixed" | "unknown" = "unknown";
 
-      const extractedJson = {
-        phase: "phase4-basic",
-        notes: "Basic extraction placeholders from raw Gemini response.",
-        citations
-      };
-
+      // Real citation extraction (grounding chunks + structured extraction)
+      // happens later in runStructuredExtractionForRun. citation_found /
+      // citations_count / extracted_json start unset here and are filled in
+      // by that step — see docs/adr/0004-gemini-search-grounding.md.
       const { error: resultError } = await service.from("scan_prompt_results").insert({
         run_id: runId,
         project_id: projectId,
@@ -294,19 +288,20 @@ export async function executePendingScan({
         raw_response_text: llmResult.text,
         raw_response_json: {
           text: llmResult.text,
-          total_tokens: llmResult.totalTokens
+          total_tokens: llmResult.totalTokens,
+          grounding_chunks: llmResult.groundingChunks ?? []
         },
         tokens_in: llmResult.tokensIn,
         tokens_out: llmResult.tokensOut,
         cost_usd: null,
         llm_latency_ms: latency,
         brand_mentioned: brandMentioned,
-        citation_found: citationFound,
+        citation_found: false,
         mentioned_competitors_count: mentionedCompetitorsCount,
-        citations_count: citationsCount,
+        citations_count: 0,
         sentiment,
         extraction_version: "phase4-basic-v1",
-        extracted_json: extractedJson
+        extracted_json: null
       });
 
       if (resultError) {
@@ -342,7 +337,7 @@ export async function executePendingScan({
         runId,
         level: "info",
         message: "Prompt job completed with Gemini response.",
-        context: { prompt_id: promptId, brand_mentioned: brandMentioned, citation_found: citationFound }
+        context: { prompt_id: promptId, brand_mentioned: brandMentioned }
       });
 
       await service
