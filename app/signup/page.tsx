@@ -1,27 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-
-async function signup(formData: FormData) {
-  "use server";
-
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({ email, password });
-
-  if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
-  }
-
-  // Profiles are created by the database trigger in 0003_v0_profile_trigger.sql.
-
-  redirect("/dashboard");
-}
+import { signup } from "./actions";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
