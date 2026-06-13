@@ -35,20 +35,31 @@ Registro / Login
 → Prompts / Competitors / Recommendations / Escaneos (all with real data)
 ```
 
-**Current H1 status (updated 2026-06-05):**
+**Current H1 status (updated 2026-06-13):** H1 is working end to end and the
+founder has confirmed the core flow is OK. The stuck-pending-scan issue
+flagged below is resolved at the reliability layer (PR #78), not by a
+user-facing cancel action.
 - Wizard UX (2-column, auto-suggestions): working
 - Competitor suggestions via Gemini: working (after model pin fix)
 - Prompt suggestions via Gemini: working
-- Scan stuck in pending: BLOCKER — stuck scans from before the `maxDuration=60`
-  fix remain unresolvable without a cancel-scan action
-- Overview with real data: unverified — depends on scan completing
+- Scan stuck in pending/running: handled by `reconcileStuckScanRuns`
+  (PR #78) — a stuck run is detected by timeout, transitioned to `failed`,
+  and auto-retried once per project within 24h (see
+  `docs/scan-lifecycle.md`). This unblocks "one active scan per project"
+  without requiring a cancel button. A true user-initiated cancel action is
+  **not implemented** and is now P1, not a launch blocker (see "Next H1
+  actions" below).
+- Overview with real data: working — confirmed by founder.
 - Gemini model pinned: `gemini-2.0-flash-001` (see ADR 0002)
 - Vercel `maxDuration=60` on scan route (see ADR 0003)
 
 **Next H1 actions (in priority order):**
-1. Cancel-scan action for stuck runs (P0 blocker for launch)
-2. Verify full scan → Overview data flow end to end
-3. UX baseline pass aligned to GEO Suite design reference
+1. Stabilization pass now in progress (see "Active work" below): test runner
+   (`pnpm test`) was silently broken (vitest never installed, no `test`
+   script) — being fixed as part of `claude/architecture-review-refactor`.
+2. Cancel-scan action for stuck/running runs (P1 — UX nicety, not a
+   correctness blocker; auto-retry already keeps the system unstuck).
+3. UX baseline pass aligned to GEO Suite design reference.
 
 ### H2 — Next: GEO product differentiators
 
@@ -124,14 +135,15 @@ starts (schema + RLS + background scheduler are all in the Forbidden list).
 
 ---
 
-## Active work (2026-06-05)
+## Active work (2026-06-13)
 
 | Branch | Status | Next action |
 |---|---|---|
-| `claude/geo-studio-ux-audit-VHGBS` | Active (PR #18) | Smoke test pending |
-| `feature/data-mgmt-1-delete-archived-projects` | Ready for PR | Claude QA + Human Gate |
-| `feature/test-1-core-unit-tests` | Ready for PR | Merge with data-mgmt branch or separately |
-| `chore/agents-restructure-1a` | In progress | This PR |
+| `claude/architecture-review-refactor-o6n977` | In progress (Fase 0 of stabilization plan) | Resurrect `pnpm test` (vitest infra + tests for scoring/error helpers — done); reconcile `scan-lifecycle.md`/this doc with real code (this PR). Fase 1+ (split `scan-runner.ts`, migration tooling, cancel-scan UI, extraction cost review) each need their own Task Intake. |
+
+All work listed under "Active work (2026-06-05)" (UX audit PR #18,
+DATA-MGMT-1, TEST-1, agents restructure) has shipped — see "Completed
+phases" below and git history up to PR #79.
 
 ---
 
@@ -165,7 +177,8 @@ Classification below is a first pass against the P0–P3 framework in
 **P1 — structural UX gaps:**
 - No loading/progress animation while the system calculates suggested
   competitors and prompts right after the user enters a domain (gap in the
-  onboarding flow, screenshot attached by founder).
+  onboarding flow, screenshot attached by founder) — DONE. Addressed by
+  PR #76 ("Onboarding: checklist-style loading overlays").
 - Escaneos: missing the "scanning in progress" animation treatment for a
   domain (or the very first domain) being scanned — likely the same
   `ScanInProgress` component from PR #35 needs to be extended here.
