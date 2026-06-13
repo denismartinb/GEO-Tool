@@ -76,14 +76,20 @@ becomes terminal (`failed` or `completed`).
 ### Per-call timeout (Gemini)
 - `generateGeminiVisibilityAnswer` (the per-prompt scan call in
   `lib/llm/gemini.ts`) enforces a hard `GEMINI_CALL_TIMEOUT_MS` (20s) timeout
-  via `AbortController`. With `MAX_REAL_SCAN_PROMPTS=6` sequential calls inside
-  the ~60s Vercel `maxDuration`
-  (`docs/adr/0003-sync-scan-execution-and-maxduration.md`), a single stuck call
-  must not consume the entire run budget.
+  via `AbortController`, so a single stuck call cannot block progress
+  indefinitely.
 - On timeout, the call throws `GeminiTimeoutError`, which the executor treats
   as a normal recoverable per-prompt error (see above) — it triggers the
   per-prompt retry, then (if exhausted) marks that prompt's job `failed` with a
   sanitized `last_error`. It never crashes the whole run.
+- **Worst-case budget note**: the ~60s Vercel `maxDuration`
+  (`docs/adr/0003-sync-scan-execution-and-maxduration.md`) is a *typical-case*
+  target with `MAX_REAL_SCAN_PROMPTS=6`, not a hard guarantee. A pathological
+  run where every prompt times out and retries once
+  (6 × (2 × 20s + 500ms) ≈ 243s) can exceed both 60s and
+  `SCAN_RUNNING_TIMEOUT_SECONDS` (120s). That worst case is bounded by the
+  running-timeout + reconciliation auto-retry below, not by the per-call
+  timeout alone.
 
 ---
 

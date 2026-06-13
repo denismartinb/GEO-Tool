@@ -18,13 +18,17 @@ const RATE_LIMIT_RETRY_DELAY_MS = 1500;
  * `SCAN_RUNNING_TIMEOUT_SECONDS`, failing the whole run instead of just one
  * prompt.
  *
- * 20s ceiling: chosen so a single stuck call leaves enough of the ~60s budget
- * for the other prompts plus extraction/scoring overhead, while still being
- * generous enough that normal Gemini latency (typically a few seconds) never
- * hits it. A timeout here surfaces as `GeminiTimeoutError`, which the executor
- * treats as a normal recoverable per-prompt error (docs/scan-lifecycle.md):
- * the prompt's job is recorded as failed with a sanitized `last_error` and
- * the run continues with the next prompt — it must never crash the run.
+ * 20s ceiling: generous enough that normal Gemini latency (typically a few
+ * seconds) never hits it, while bounding how long a single stuck call can
+ * block progress. The 60s budget is a *typical-case* target, not a guarantee:
+ * a pathological run where every prompt times out (and retries once, see
+ * PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can still exceed 60s. That worst case is
+ * bounded instead by `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's
+ * auto-retry (docs/scan-lifecycle.md), not by this per-call timeout alone.
+ * A timeout here surfaces as `GeminiTimeoutError`, which the executor treats
+ * as a normal recoverable per-prompt error: the prompt's job is recorded as
+ * failed with a sanitized `last_error` and the run continues with the next
+ * prompt — it must never crash the run.
  */
 const GEMINI_CALL_TIMEOUT_MS = 20_000;
 
