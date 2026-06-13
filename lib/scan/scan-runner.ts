@@ -4,113 +4,62 @@ import { extractGeminiStructuredData, generateGeminiVisibilityAnswer, GeminiConf
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { createServiceClient } from "@/lib/supabase/service";
-import type { requireUser } from "@/lib/auth";
-
-export const MAX_REAL_SCAN_PROMPTS = 10;
-const MAX_EXTRACTION_RESULTS = 10;
-const EXTRACTION_VERSION = "gemini-extraction-v1";
-export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
-
-/**
- * Timeout thresholds for the scan lifecycle reconciliation pass, per
- * docs/scan-lifecycle.md ("Timeout detection") and
- * docs/adr/0003-sync-scan-execution-and-maxduration.md. A `running` row older
- * than this is presumed to have been killed by the Vercel function timeout
- * without updating its status; a `pending` row older than this never got
- * picked up and is considered stale.
- */
-export const SCAN_RUNNING_TIMEOUT_SECONDS = 90;
-export const SCAN_PENDING_TIMEOUT_SECONDS = 300;
-
-/**
- * Internal-only `error_summary` values stored on `scan_runs` rows when the
- * reconciliation pass (`reconcileStuckScanRuns`) detects a stuck `running` or
- * `pending` row. These values are never shown verbatim to the user — see
- * `getDisplayErrorSummary` for the user-facing mapping — but are kept
- * descriptive in the DB for diagnostics (sanitized: no raw provider errors,
- * no secrets).
- *
- * The `_retry_exhausted` variants are used when the auto-retry cap
- * (`SCAN_TIMEOUT_AUTO_RETRY_CAP`) has already been reached for this project,
- * so this occurrence will NOT trigger another auto-retry.
- */
-export const SCAN_TIMEOUT_ERROR_SUMMARY = "scan_timeout";
-export const SCAN_PENDING_TIMEOUT_ERROR_SUMMARY = "scan_pending_timeout";
-export const SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY = "scan_timeout_retry_exhausted";
-export const SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY = "scan_pending_timeout_retry_exhausted";
-
-/**
- * The set of internal `error_summary` values that mean "this run failed
- * because the reconciliation pass detected it was stuck (timed out)", used
- * both to count prior timeout-failures for the auto-retry cap and to decide
- * how to render the run in the UI (`getDisplayErrorSummary`).
- */
-const TIMEOUT_ERROR_SUMMARIES = new Set<string>([
-  SCAN_TIMEOUT_ERROR_SUMMARY,
+import {
+  ENABLE_SYNC_SCAN_EXECUTION,
+  EXTRACTION_VERSION,
+  MAX_EXTRACTION_RESULTS,
+  MAX_REAL_SCAN_PROMPTS,
+  RECONCILE_LOG_PREFIX,
+  RETRY_EXHAUSTED_ERROR_SUMMARIES,
   SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_SECONDS,
+  SCAN_RUNNING_TIMEOUT_SECONDS,
+  SCAN_TIMEOUT_AUTO_RETRY_CAP,
+  SCAN_TIMEOUT_ERROR_SUMMARY,
   SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
-  SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
-]);
+  SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS,
+  TIMEOUT_ERROR_SUMMARIES
+} from "@/lib/scan/constants";
+import {
+  ProjectActionError,
+  type AuthenticatedContext,
+  type JobRow,
+  type ProjectActionErrorCode,
+  type RunErrorDisplay,
+  type ScanPromptResultRow
+} from "@/lib/scan/types";
 
-const RETRY_EXHAUSTED_ERROR_SUMMARIES = new Set<string>([
+// Barrel re-exports: keep the public surface of `@/lib/scan/scan-runner`
+// unchanged after extracting constants and types into their own leaf modules
+// (PR 1 of the scan-runner modular split). External call sites must continue
+// to import everything from here.
+export {
+  ENABLE_SYNC_SCAN_EXECUTION,
+  EXTRACTION_VERSION,
+  MAX_EXTRACTION_RESULTS,
+  MAX_REAL_SCAN_PROMPTS,
+  RECONCILE_LOG_PREFIX,
+  RETRY_EXHAUSTED_ERROR_SUMMARIES,
+  SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
+  SCAN_PENDING_TIMEOUT_SECONDS,
+  SCAN_RUNNING_TIMEOUT_SECONDS,
+  SCAN_TIMEOUT_AUTO_RETRY_CAP,
+  SCAN_TIMEOUT_ERROR_SUMMARY,
   SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
-  SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
-]);
-
-/**
- * Auto-retry cap for timeout-caused failures (docs/scan-lifecycle.md,
- * "Timeout detection"; reliability ADR — see PR #78).
- *
- * Rationale: a single timeout could be transient (e.g. a slow Gemini call
- * that happened to land near the maxDuration boundary), so the FIRST time a
- * project's scan times out, `reconcileStuckScanRuns` automatically launches a
- * fresh `pending` run for that project — the user doesn't have to click
- * "Lanzar escaneo" again.
- *
- * If a project's scans STRUCTURALLY cannot finish within
- * SCAN_RUNNING_TIMEOUT_SECONDS (too many prompts, persistent Gemini latency,
- * etc.), every retry would also time out, so auto-retrying forever would
- * burn Gemini quota in an infinite loop. The cap stops this: once a project
- * has `SCAN_TIMEOUT_AUTO_RETRY_CAP` timeout-failed runs within the lookback
- * window, the next timeout is recorded as terminal `failed`
- * (`*_retry_exhausted`) with NO further auto-retry, and the user must launch
- * manually (which surfaces a calmer "couldn't complete" message, not the raw
- * timeout wording).
- *
- * Cap = 1 (one free auto-retry per lookback window). Enforced in
- * `reconcileStuckScanRuns` by counting prior `failed` rows for the same
- * `project_id` whose `error_summary` is in TIMEOUT_ERROR_SUMMARIES and whose
- * `created_at` falls within SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS.
- */
-export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
-
-/**
- * Lookback window for counting prior timeout-failures when enforcing
- * SCAN_TIMEOUT_AUTO_RETRY_CAP. 24h is long enough to catch a same-day retry
- * storm but short enough that a project which had a one-off timeout
- * yesterday gets a fresh auto-retry budget today.
- */
-export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 24;
-
-const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
-
-export type ProjectActionErrorCode =
-  | "active_run_exists"
-  | "project_archived"
-  | "project_not_found"
-  | "prompts_required"
-  | "scan_failed"
-  | "scan_unavailable"
-  | "too_many_prompts"
-  | "unauthorized"
-  | "unexpected_error";
-
-export class ProjectActionError extends Error {
-  constructor(public readonly code: ProjectActionErrorCode) {
-    super(code);
-    this.name = "ProjectActionError";
-  }
-}
+  SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS,
+  TIMEOUT_ERROR_SUMMARIES
+} from "@/lib/scan/constants";
+export {
+  ProjectActionError,
+  type AuthenticatedContext,
+  type JobRow,
+  type ProjectActionErrorCode,
+  type RunErrorDisplay,
+  type RunErrorDisplayKind,
+  type ScanPromptResultRow
+} from "@/lib/scan/types";
 
 export function getActionErrorCode(error: unknown): ProjectActionErrorCode {
   if (error instanceof ProjectActionError) return error.code;
@@ -169,21 +118,6 @@ export function getDisplayErrorSummary(errorSummary: string | null | undefined):
   return errorSummary;
 }
 
-export type RunErrorDisplayKind = "notice" | "error";
-
-export type RunErrorDisplay = {
-  message: string;
-  /**
-   * "notice" — a neutral, non-alarming message (e.g. a timeout that is being
-   * auto-retried). Callers should render this with a calmer visual treatment
-   * (no warning colors/icon).
-   * "error" — a genuine terminal failure (retry-exhausted timeout, or any
-   * other non-timeout failure). Callers should render this with the existing
-   * error styling.
-   */
-  kind: RunErrorDisplayKind;
-};
-
 /**
  * Like `getDisplayErrorSummary`, but also classifies the message so the UI
  * can pick a non-alarming visual treatment for a timeout that is currently
@@ -200,28 +134,6 @@ export function getRunErrorDisplay(errorSummary: string | null | undefined): Run
 
   return { message: getDisplayErrorSummary(errorSummary) as string, kind: "error" };
 }
-
-export type AuthenticatedContext = Awaited<ReturnType<typeof requireUser>>;
-
-type JobRow = {
-  id: string;
-  job_type: "scan_start" | "scan_prompt" | "scan_finalize";
-  status: "pending" | "running" | "retrying" | "completed" | "failed" | "cancelled";
-  attempt_count: number;
-  max_attempts: number;
-  payload_json: Record<string, unknown>;
-};
-
-type ScanPromptResultRow = {
-  id: string;
-  raw_response_text: string | null;
-  prompt_text_snapshot: string;
-  brand_snapshot: string;
-  competitors_snapshot: Array<{ name?: string }> | null;
-  provider: string;
-  status: string;
-  extraction_version: string;
-};
 
 async function logJob(
   service: ReturnType<typeof createServiceClient>,
