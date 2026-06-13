@@ -27,6 +27,7 @@ import {
   type ScanPromptResultRow
 } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
+import { logJob } from "@/lib/scan/job-logging";
 
 // Barrel re-exports: keep the public surface of `@/lib/scan/scan-runner`
 // unchanged after extracting constants and types into their own leaf modules
@@ -69,27 +70,6 @@ export {
   getDisplayErrorSummary,
   getRunErrorDisplay
 } from "@/lib/scan/errors";
-
-async function logJob(
-  service: ReturnType<typeof createServiceClient>,
-  row: {
-    jobId: string;
-    projectId: string;
-    runId: string;
-    level: "debug" | "info" | "warn" | "error";
-    message: string;
-    context?: Record<string, unknown>;
-  }
-) {
-  await service.from("job_logs").insert({
-    job_id: row.jobId,
-    project_id: row.projectId,
-    run_id: row.runId,
-    level: row.level,
-    message: row.message,
-    context_json: row.context ?? {}
-  });
-}
 
 async function runStructuredExtractionForRun(input: {
   service: ReturnType<typeof createServiceClient>;
