@@ -1,6 +1,6 @@
 import "server-only";
 
-export const MAX_REAL_SCAN_PROMPTS = 10;
+export const MAX_REAL_SCAN_PROMPTS = 6;
 export const MAX_EXTRACTION_RESULTS = 10;
 export const EXTRACTION_VERSION = "gemini-extraction-v1";
 export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
@@ -13,7 +13,7 @@ export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION
  * without updating its status; a `pending` row older than this never got
  * picked up and is considered stale.
  */
-export const SCAN_RUNNING_TIMEOUT_SECONDS = 90;
+export const SCAN_RUNNING_TIMEOUT_SECONDS = 120;
 export const SCAN_PENDING_TIMEOUT_SECONDS = 300;
 
 /**
