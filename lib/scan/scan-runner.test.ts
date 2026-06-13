@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  ALL_RECOVERABLE_ERROR_SUMMARIES,
   getActionErrorCode,
   getDisplayErrorSummary,
   getRunErrorDisplay,
   getSanitizedScanError,
+  PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
   ProjectActionError,
+  RECOVERABLE_ERROR_SUMMARIES,
+  SCAN_NO_RESULTS_ERROR_SUMMARY,
+  SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
   SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_TIMEOUT_ERROR_SUMMARY,
@@ -71,6 +76,17 @@ describe("getSanitizedScanError", () => {
     expect(getSanitizedScanError(null)).toBe(generic);
     expect(getSanitizedScanError(undefined)).toBe(generic);
   });
+
+  it("returns a distinct message for scan_failed_no_results (SCAN-ROBUST-1)", () => {
+    const noResults = getSanitizedScanError(new ProjectActionError("scan_failed_no_results"));
+    const generic = "No se pudo completar la ejecución del escaneo.";
+
+    expect(noResults).toBe(SCAN_NO_RESULTS_ERROR_SUMMARY);
+    // Must be distinguishable from the generic config-error message so
+    // reconcileStuckScanRuns can tell "zero successful prompts" (recoverable)
+    // apart from a GeminiConfigError (terminal, never retried).
+    expect(noResults).not.toBe(generic);
+  });
 });
 
 describe("getDisplayErrorSummary", () => {
@@ -95,6 +111,18 @@ describe("getDisplayErrorSummary", () => {
   it("passes through an arbitrary, already-sanitized error_summary unchanged", () => {
     const sanitized = "No se pudo completar la ejecución del escaneo.";
     expect(getDisplayErrorSummary(sanitized)).toBe(sanitized);
+  });
+
+  it("returns the retrying message for SCAN_NO_RESULTS_ERROR_SUMMARY (auto-retry just triggered)", () => {
+    expect(getDisplayErrorSummary(SCAN_NO_RESULTS_ERROR_SUMMARY)).toBe(
+      "Reintentando tu escaneo automáticamente…"
+    );
+  });
+
+  it("returns the could-not-complete message for SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY", () => {
+    expect(getDisplayErrorSummary(SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY)).toBe(
+      "No hemos podido completar este escaneo. Puedes lanzar uno nuevo."
+    );
   });
 });
 
@@ -135,5 +163,46 @@ describe("getRunErrorDisplay", () => {
     expect(display?.kind).toBe("error");
     expect(display?.message).toBe(getDisplayErrorSummary(arbitrary));
     expect(display?.message).toBe(arbitrary);
+  });
+
+  it("returns kind 'notice' for SCAN_NO_RESULTS_ERROR_SUMMARY (auto-retry just triggered)", () => {
+    const display = getRunErrorDisplay(SCAN_NO_RESULTS_ERROR_SUMMARY);
+
+    expect(display).not.toBeNull();
+    expect(display?.kind).toBe("notice");
+    expect(display?.message).toBe("Reintentando tu escaneo automáticamente…");
+  });
+
+  it("returns kind 'error' for SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY", () => {
+    const display = getRunErrorDisplay(SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY);
+
+    expect(display).not.toBeNull();
+    expect(display?.kind).toBe("error");
+    expect(display?.message).toBe("No hemos podido completar este escaneo. Puedes lanzar uno nuevo.");
+  });
+});
+
+describe("SCAN-ROBUST-1 constants", () => {
+  it("PROMPT_RETRY_MAX_TOTAL_ATTEMPTS allows exactly one retry", () => {
+    expect(PROMPT_RETRY_MAX_TOTAL_ATTEMPTS).toBe(2);
+  });
+
+  it("RECOVERABLE_ERROR_SUMMARIES includes both timeout summaries and the zero-results summary", () => {
+    expect(RECOVERABLE_ERROR_SUMMARIES.has(SCAN_TIMEOUT_ERROR_SUMMARY)).toBe(true);
+    expect(RECOVERABLE_ERROR_SUMMARIES.has(SCAN_PENDING_TIMEOUT_ERROR_SUMMARY)).toBe(true);
+    expect(RECOVERABLE_ERROR_SUMMARIES.has(SCAN_NO_RESULTS_ERROR_SUMMARY)).toBe(true);
+
+    // Exhausted variants are terminal, not "currently recoverable".
+    expect(RECOVERABLE_ERROR_SUMMARIES.has(SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY)).toBe(false);
+    expect(RECOVERABLE_ERROR_SUMMARIES.has(SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY)).toBe(false);
+  });
+
+  it("ALL_RECOVERABLE_ERROR_SUMMARIES is the union of recoverable and exhausted summaries", () => {
+    for (const summary of RECOVERABLE_ERROR_SUMMARIES) {
+      expect(ALL_RECOVERABLE_ERROR_SUMMARIES.has(summary)).toBe(true);
+    }
+    expect(ALL_RECOVERABLE_ERROR_SUMMARIES.has(SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY)).toBe(true);
+    expect(ALL_RECOVERABLE_ERROR_SUMMARIES.has(SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY)).toBe(true);
+    expect(ALL_RECOVERABLE_ERROR_SUMMARIES.has(SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY)).toBe(true);
   });
 });

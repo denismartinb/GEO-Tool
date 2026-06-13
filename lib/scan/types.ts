@@ -6,6 +6,7 @@ export type ProjectActionErrorCode =
   | "project_not_found"
   | "prompts_required"
   | "scan_failed"
+  | "scan_failed_no_results"
   | "scan_unavailable"
   | "too_many_prompts"
   | "unauthorized"
