@@ -81,11 +81,13 @@ export async function createPendingScanRunCore({
     throw new ProjectActionError("prompts_required");
   }
 
-  if (activePrompts.length > MAX_REAL_SCAN_PROMPTS) {
-    throw new ProjectActionError("too_many_prompts");
-  }
-
-  const promptCount = activePrompts.length;
+  // Cap the prompts processed by this run to MAX_REAL_SCAN_PROMPTS rather than
+  // rejecting the scan outright. Projects that predate a lower cap (or that
+  // simply have more active prompts than the per-run budget) still get a
+  // real scan of their oldest active prompts instead of being permanently
+  // blocked from scanning.
+  const scannedPrompts = activePrompts.slice(0, MAX_REAL_SCAN_PROMPTS);
+  const promptCount = scannedPrompts.length;
 
   const { data: run, error: runError } = await service
     .from("scan_runs")
@@ -115,7 +117,7 @@ export async function createPendingScanRunCore({
       status: "pending",
       payload_json: { run_id: run.id, project_id: projectId }
     },
-    ...activePrompts.map((prompt) => ({
+    ...scannedPrompts.map((prompt) => ({
       project_id: projectId,
       run_id: run.id,
       job_type: "scan_prompt",

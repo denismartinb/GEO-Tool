@@ -25,7 +25,7 @@ Recommended test project:
 - Country: `ES`
 - Language: `es`
 - Competitors: add 3-5 real tools relevant to the tested category.
-- Prompts: add 5-10 prompts. Real Gemini scans currently stop above 10 prompts.
+- Prompts: add up to 6 prompts. Real Gemini scans currently stop above 6 prompts.
 
 Example prompts:
 
@@ -68,7 +68,7 @@ Example prompts:
 - Confirm `.env.local` contains `GEMINI_API_KEY`.
 - Verify migrations are applied through `0004_v0_scan_result_dedup.sql`.
 - Inspect these Supabase tables: `scan_runs`, `jobs`, `job_logs`, `scan_prompt_results`.
-- Common causes: missing Gemini key, more than 10 prompts, missing active prompts, Gemini API quota/rate limit, unapplied migration, or missing RLS/service-role environment configuration.
+- Common causes: missing Gemini key, more than 6 prompts, missing active prompts, Gemini API quota/rate limit, unapplied migration, or missing RLS/service-role environment configuration.
 - If Gemini reports `GenerateContentRequest.model`, set `GEMINI_MODEL=gemini-2.0-flash`.
 - Use the Runs screen for recent history and the technical run detail only for debugging and support when a scan fails or needs inspection.
 - Project setup does not crawl the website, and competitor discovery is not automatic or verified.
