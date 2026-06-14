@@ -379,3 +379,179 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     ).toBe(true);
   });
 });
+
+describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", () => {
+  function positionRow(overrides: {
+    id: string;
+    brand_snapshot?: string | null;
+    brand?: { mentioned: boolean; position: number | null };
+    competitors?: Array<{ name: string; mentioned: boolean; position: number | null }>;
+    extracted_json?: unknown;
+    brand_mentioned?: boolean;
+    citation_found?: boolean;
+    mentioned_competitors_count?: number;
+    extraction_error?: string | null;
+  }): ScoreInputRow {
+    const {
+      id,
+      brand_snapshot = "MiMarca",
+      brand,
+      competitors,
+      extracted_json,
+      brand_mentioned = false,
+      citation_found = false,
+      mentioned_competitors_count = 0,
+      extraction_error = null
+    } = overrides;
+    return row({
+      id,
+      brand_snapshot,
+      brand_mentioned,
+      citation_found,
+      mentioned_competitors_count,
+      extraction_error,
+      extracted_json:
+        extracted_json !== undefined
+          ? extracted_json
+          : {
+              brand: brand ?? { mentioned: false, position: null },
+              competitors: (competitors ?? []).map((c) => ({
+                name: c.name,
+                mentioned: c.mentioned,
+                position: c.position
+              }))
+            }
+    });
+  }
+
+  it("is omitted entirely when totalResults === 0", () => {
+    const result = computeRunScoresFromResults([]);
+
+    expect(result.details_json.geo_score).toBeUndefined();
+  });
+
+  it("computes the full-data case with all 4 components present", () => {
+    // 5 rows, all valid extraction, brand mentioned + cited in all 5 -> high confidence.
+    // visibility_score = 100, citation_score = 100.
+    // mentioned_competitors_count = 0 in all rows -> competitorPresencePerPrompt = 0
+    // brandProtection = 100*0.6 = 60 -> competitor_gap_score = clamp(0,100, 0 + (100-60)*0.4) = 16
+    // standing = 100 - 16 = 84
+    // brand_position: N = 1 (brand) + 1 (competitor) = 2; brand mentioned at position 1 in every prompt
+    // -> brand_avg_position = 1; prominence = (1 - (1-1)/2)*100 = 100
+    const results = Array.from({ length: 5 }, (_, i) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: true,
+        citation_found: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }]
+      })
+    );
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.visibility_score).toBe(100);
+    expect(result.citation_score).toBe(100);
+    expect(result.competitor_gap_score).toBe(16);
+    expect(result.confidence).toBe("high");
+
+    const geoScore = result.details_json.geo_score as {
+      score: number;
+      composite_version: string;
+      confidence: string;
+      inputs_used: string[];
+      components: Record<string, { value: number | null; weight: number }>;
+      formula: string;
+    };
+
+    expect(geoScore).toBeDefined();
+    expect(geoScore.composite_version).toBe("geo-score-v1");
+    expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
+    expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
+    expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
+    expect(geoScore.components.standing).toMatchObject({ value: 84, weight: 0.2 });
+    expect(geoScore.components.authority).toMatchObject({ value: 100, weight: 0.15 });
+
+    // weighted sum = 100*.40 + 100*.25 + 84*.20 + 100*.15 = 40 + 25 + 16.8 + 15 = 96.8
+    expect(geoScore.score).toBe(96.8);
+    expect(geoScore.confidence).toBe("high");
+    expect(geoScore.formula).toContain("geo_score = Σ(component_value * normalized_weight)");
+  });
+
+  it("degraded case: drops prominence and renormalizes weights when brand_position is absent", () => {
+    // No valid extracted_json -> brand_position is null -> prominence dropped.
+    // visibility_score = 100, citation_score = 100, competitor_gap_score = 16 -> standing = 84.
+    const results = Array.from({ length: 5 }, (_, i) =>
+      row({ id: String(i), brand_mentioned: true, citation_found: true, extracted_json: { phase: "phase4-basic" } })
+    );
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.details_json.brand_position).toBeUndefined();
+    expect(result.confidence).toBe("high");
+
+    const geoScore = result.details_json.geo_score as {
+      score: number;
+      confidence: string;
+      inputs_used: string[];
+      components: Record<string, { value: number | null; weight: number; reason?: string }>;
+    };
+
+    expect(geoScore).toBeDefined();
+    expect(geoScore.inputs_used).toEqual(["presence", "standing", "authority"]);
+    expect(geoScore.inputs_used).not.toContain("prominence");
+
+    // remaining weight sum = 0.40 + 0.20 + 0.15 = 0.75
+    // renormalized: presence 0.40/0.75 = 0.5333..., standing 0.20/0.75 = 0.2666..., authority 0.15/0.75 = 0.20
+    expect(geoScore.components.presence.weight).toBeCloseTo(0.53, 2);
+    expect(geoScore.components.standing.weight).toBeCloseTo(0.27, 2);
+    expect(geoScore.components.authority.weight).toBeCloseTo(0.2, 2);
+    expect(geoScore.components.prominence).toMatchObject({ value: null, weight: 0 });
+    expect(geoScore.components.prominence.reason).toContain("brand_position absent");
+
+    // confidence was "high" but prominence dropped -> capped at "medium"
+    expect(geoScore.confidence).toBe("medium");
+
+    // sanity-check the weighted sum with renormalized weights
+    // presence=100, standing=84, authority=100
+    // score = 100*(0.4/0.75) + 84*(0.2/0.75) + 100*(0.15/0.75)
+    const expected = 100 * (0.4 / 0.75) + 84 * (0.2 / 0.75) + 100 * (0.15 / 0.75);
+    expect(geoScore.score).toBeCloseTo(expected, 2);
+  });
+
+  it("does not cap confidence further when it is already low/medium and prominence is dropped", () => {
+    // Single row -> confidence "low" (below medium threshold of 2 results).
+    const results = [row({ id: "1", brand_mentioned: true, citation_found: true })];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.confidence).toBe("low");
+    const geoScore = result.details_json.geo_score as { confidence: string };
+    expect(geoScore.confidence).toBe("low");
+  });
+
+  it("is omitted entirely when totalResults === 0 (empty input)", () => {
+    const result = computeRunScoresFromResults([]);
+
+    expect(result.details_json.geo_score).toBeUndefined();
+    expect("geo_score" in result.details_json).toBe(false);
+  });
+
+  it("includes the geo_score formula and composite_version in formulas_used / details_json", () => {
+    const results = [row({ id: "1", brand_mentioned: true, citation_found: true })];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.details_json.formulas_used).toMatchObject({
+      geo_score: expect.stringContaining("geo_score = Σ(component_value * normalized_weight)")
+    });
+    expect(
+      (result.details_json.assumptions as string[]).some((a) => a.includes("geo_score"))
+    ).toBe(true);
+
+    const geoScore = result.details_json.geo_score as { composite_version: string; formula: string };
+    expect(geoScore.composite_version).toBe("geo-score-v1");
+    expect(geoScore.formula).toContain("standing = 100 - competitor_gap_score");
+    expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position-1)/total_entities)*100");
+  });
+});
