@@ -20,6 +20,293 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+type PromptJobOutcome =
+  | { kind: "success" }
+  | { kind: "failed" }
+  | { kind: "config_error"; error: GeminiConfigError };
+
+// Processes a single scan_prompt job end-to-end (status transitions, Gemini
+// call with retry, scan_prompt_results insert, job logging). Run concurrently
+// for all prompt jobs in a run (SCAN-ROBUST-2) so the total Gemini latency for
+// a 6-prompt run stays within the Hobby plaintext maxDuration=60s budget
+// (docs/adr/0003-sync-scan-execution-and-maxduration.md). A GeminiConfigError
+// (missing API key / invalid model) is reported back via `config_error`
+// instead of being thrown directly, so the caller can abort the whole run
+// after all concurrent jobs have settled.
+async function processPromptJob({
+  service,
+  projectId,
+  runId,
+  job,
+  project,
+  competitors
+}: {
+  service: ReturnType<typeof createServiceClient>;
+  projectId: string;
+  runId: string;
+  job: JobRow;
+  project: { brand: string; country: string; language: string };
+  competitors: { name: string; domain: string }[];
+}): Promise<PromptJobOutcome> {
+  const baseAttemptCount = job.attempt_count;
+
+  await service
+    .from("jobs")
+    .update({
+      status: "running",
+      locked_at: new Date().toISOString(),
+      locked_by: "gemini-executor",
+      attempt_count: baseAttemptCount + 1,
+      last_error: null
+    })
+    .eq("id", job.id)
+    .eq("project_id", projectId)
+    .eq("run_id", runId);
+
+  const promptId = String(job.payload_json.prompt_id ?? "");
+  const promptText = String(job.payload_json.prompt_text ?? "").trim();
+
+  if (!promptId || !promptText) {
+    await logJob(service, {
+      jobId: job.id,
+      projectId,
+      runId,
+      level: "error",
+      message: "Missing prompt payload for scan_prompt job."
+    });
+
+    await service
+      .from("jobs")
+      .update({
+        status: "failed",
+        locked_at: null,
+        locked_by: null,
+        last_error: "Missing prompt payload."
+      })
+      .eq("id", job.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
+
+    return { kind: "failed" };
+  }
+
+  const { data: existingResult } = await service
+    .from("scan_prompt_results")
+    .select("id")
+    .eq("run_id", runId)
+    .eq("project_id", projectId)
+    .eq("prompt_id", promptId)
+    .maybeSingle();
+
+  if (existingResult) {
+    await logJob(service, {
+      jobId: job.id,
+      projectId,
+      runId,
+      level: "warn",
+      message: "Skipping prompt job because result already exists.",
+      context: { prompt_id: promptId }
+    });
+    await service
+      .from("jobs")
+      .update({
+        status: "completed",
+        locked_at: null,
+        locked_by: null
+      })
+      .eq("id", job.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
+
+    return { kind: "success" };
+  }
+
+  let llmResult: Awaited<ReturnType<typeof generateGeminiVisibilityAnswer>> | null = null;
+  let latency = 0;
+  let lastError: unknown = null;
+
+  // Per-prompt retry (SCAN-ROBUST-1): total attempts for this prompt are
+  // bounded by both `job.max_attempts` (jobs table, default 3) and
+  // PROMPT_RETRY_MAX_TOTAL_ATTEMPTS (2 — one retry), whichever is lower.
+  // `attempt_count` already reflects attempt 1 from the update above;
+  // subsequent iterations bump it again before retrying.
+  const totalAttempts = Math.max(1, Math.min(job.max_attempts, PROMPT_RETRY_MAX_TOTAL_ATTEMPTS));
+
+  for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
+    if (attempt > 1) {
+      await delay(PROMPT_RETRY_DELAY_MS);
+      await service
+        .from("jobs")
+        .update({
+          status: "running",
+          locked_at: new Date().toISOString(),
+          locked_by: "gemini-executor",
+          attempt_count: baseAttemptCount + attempt,
+          last_error: null
+        })
+        .eq("id", job.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId);
+    }
+
+    try {
+      const llmStart = Date.now();
+      llmResult = await generateGeminiVisibilityAnswer({
+        prompt: promptText,
+        country: project.country,
+        language: project.language
+      });
+      latency = Date.now() - llmStart;
+      lastError = null;
+      break;
+    } catch (error) {
+      if (error instanceof GeminiConfigError) {
+        // Job is left in "running" status: the caller aborts the whole run
+        // on a config_error and the outer catch bulk-fails any job still
+        // "running" for this run, matching the pre-concurrency behavior.
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "error",
+          message: "Gemini prompt execution failed.",
+          context: { prompt_id: promptId, error: error.message }
+        });
+
+        return { kind: "config_error", error };
+      }
+
+      lastError = error;
+
+      await logJob(service, {
+        jobId: job.id,
+        projectId,
+        runId,
+        level: attempt < totalAttempts ? "warn" : "error",
+        message:
+          attempt < totalAttempts
+            ? "Gemini prompt execution failed, retrying."
+            : "Gemini prompt execution failed.",
+        context: {
+          prompt_id: promptId,
+          attempt,
+          total_attempts: totalAttempts,
+          error: error instanceof Error ? error.message : String(error)
+        }
+      });
+    }
+  }
+
+  if (lastError || !llmResult) {
+    const errorSummary = getSanitizedScanError(lastError);
+
+    await service
+      .from("jobs")
+      .update({
+        status: "failed",
+        locked_at: null,
+        locked_by: null,
+        last_error: errorSummary
+      })
+      .eq("id", job.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
+
+    return { kind: "failed" };
+  }
+
+  const responseLower = llmResult.text.toLowerCase();
+  const brandMentioned = responseLower.includes(project.brand.toLowerCase());
+  const mentionedCompetitorsCount = competitors.reduce(
+    (acc, competitor) => (responseLower.includes(competitor.name.toLowerCase()) ? acc + 1 : acc),
+    0
+  );
+  const sentiment: "positive" | "neutral" | "negative" | "mixed" | "unknown" = "unknown";
+
+  // Real citation extraction (grounding chunks + structured extraction)
+  // happens later in runStructuredExtractionForRun. citation_found /
+  // citations_count / extracted_json start unset here and are filled in
+  // by that step — see docs/adr/0004-gemini-search-grounding.md.
+  const { error: resultError } = await service.from("scan_prompt_results").insert({
+    run_id: runId,
+    project_id: projectId,
+    prompt_id: promptId,
+    prompt_text_snapshot: promptText,
+    brand_snapshot: project.brand,
+    competitors_snapshot: competitors.map((c) => ({ name: c.name, domain: c.domain })),
+    country_snapshot: project.country,
+    language_snapshot: project.language,
+    provider: "gemini",
+    model: llmResult.model,
+    status: "completed",
+    raw_response_text: llmResult.text,
+    raw_response_json: {
+      text: llmResult.text,
+      total_tokens: llmResult.totalTokens,
+      grounding_chunks: llmResult.groundingChunks ?? [],
+      prompt_version: PROMPT_VERSION
+    },
+    tokens_in: llmResult.tokensIn,
+    tokens_out: llmResult.tokensOut,
+    cost_usd: null,
+    llm_latency_ms: latency,
+    brand_mentioned: brandMentioned,
+    citation_found: false,
+    mentioned_competitors_count: mentionedCompetitorsCount,
+    citations_count: 0,
+    sentiment,
+    extraction_version: "phase4-basic-v1",
+    extracted_json: null
+  });
+
+  if (resultError) {
+    await logJob(service, {
+      jobId: job.id,
+      projectId,
+      runId,
+      level: "error",
+      message: "Failed to insert prompt result.",
+      context: { reason: resultError.message }
+    });
+
+    await service
+      .from("jobs")
+      .update({
+        status: "failed",
+        locked_at: null,
+        locked_by: null,
+        last_error: "Failed to insert prompt result."
+      })
+      .eq("id", job.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
+
+    return { kind: "failed" };
+  }
+
+  await logJob(service, {
+    jobId: job.id,
+    projectId,
+    runId,
+    level: "info",
+    message: "Prompt job completed with Gemini response.",
+    context: { prompt_id: promptId, brand_mentioned: brandMentioned }
+  });
+
+  await service
+    .from("jobs")
+    .update({
+      status: "completed",
+      locked_at: null,
+      locked_by: null
+    })
+    .eq("id", job.id)
+    .eq("project_id", projectId)
+    .eq("run_id", runId);
+
+  return { kind: "success" };
+}
+
 export async function executePendingScan({
   projectId,
   runId,
@@ -108,7 +395,6 @@ export async function executePendingScan({
     throw new ProjectActionError("scan_failed");
   }
 
-  let currentRunningPromptJob: JobRow | null = null;
   let promptSuccess = 0;
   let promptFailed = 0;
 
@@ -147,266 +433,45 @@ export async function executePendingScan({
         .eq("run_id", runId);
     }
 
-    for (let i = 0; i < promptJobs.length; i += 1) {
-      const job = promptJobs[i];
-      // Captured before any update mutates `job.attempt_count` (some fake
-      // Supabase clients in tests mutate the row object referenced by `job`
-      // in place), so the per-prompt retry loop below can compute each
-      // attempt's persisted attempt_count relative to a stable baseline.
-      const baseAttemptCount = job.attempt_count;
-
-      await service
-        .from("jobs")
-        .update({
-          status: "running",
-          locked_at: new Date().toISOString(),
-          locked_by: "gemini-executor",
-          attempt_count: baseAttemptCount + 1,
-          last_error: null
+    // Run all prompt jobs concurrently (SCAN-ROBUST-2) so the 6 Gemini calls
+    // overlap instead of summing — keeping the run within the Hobby plan's
+    // hard maxDuration=60s budget (docs/adr/0003-sync-scan-execution-and-maxduration.md).
+    const promptJobResults = await Promise.allSettled(
+      promptJobs.map((job) =>
+        processPromptJob({
+          service,
+          projectId,
+          runId,
+          job,
+          project,
+          competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain }))
         })
-        .eq("id", job.id)
-        .eq("project_id", projectId)
-        .eq("run_id", runId);
-      currentRunningPromptJob = job;
+      )
+    );
 
-      const promptId = String(job.payload_json.prompt_id ?? "");
-      const promptText = String(job.payload_json.prompt_text ?? "").trim();
+    let configError: GeminiConfigError | null = null;
 
-      if (!promptId || !promptText) {
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: "error",
-          message: "Missing prompt payload for scan_prompt job."
-        });
-
-        await service
-          .from("jobs")
-          .update({
-            status: "failed",
-            locked_at: null,
-            locked_by: null,
-            last_error: "Missing prompt payload."
-          })
-          .eq("id", job.id)
-          .eq("project_id", projectId)
-          .eq("run_id", runId);
-
+    for (const settled of promptJobResults) {
+      if (settled.status === "rejected") {
         promptFailed += 1;
-        currentRunningPromptJob = null;
         continue;
       }
 
-      const { data: existingResult } = await service
-        .from("scan_prompt_results")
-        .select("id")
-        .eq("run_id", runId)
-        .eq("project_id", projectId)
-        .eq("prompt_id", promptId)
-        .maybeSingle();
-
-      if (existingResult) {
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: "warn",
-          message: "Skipping prompt job because result already exists.",
-          context: { prompt_id: promptId }
-        });
-        await service
-          .from("jobs")
-          .update({
-            status: "completed",
-            locked_at: null,
-            locked_by: null
-          })
-          .eq("id", job.id)
-          .eq("project_id", projectId)
-          .eq("run_id", runId);
-        promptSuccess += 1;
-        currentRunningPromptJob = null;
-        continue;
-      }
-
-      let llmResult: Awaited<ReturnType<typeof generateGeminiVisibilityAnswer>> | null = null;
-      let latency = 0;
-      let lastError: unknown = null;
-
-      // Per-prompt retry (SCAN-ROBUST-1): total attempts for this prompt are
-      // bounded by both `job.max_attempts` (jobs table, default 3) and
-      // PROMPT_RETRY_MAX_TOTAL_ATTEMPTS (2 — one retry), whichever is lower.
-      // `attempt_count` already reflects attempt 1 from the update above this
-      // loop; subsequent iterations bump it again before retrying.
-      const totalAttempts = Math.max(1, Math.min(job.max_attempts, PROMPT_RETRY_MAX_TOTAL_ATTEMPTS));
-
-      for (let attempt = 1; attempt <= totalAttempts; attempt += 1) {
-        if (attempt > 1) {
-          await delay(PROMPT_RETRY_DELAY_MS);
-          await service
-            .from("jobs")
-            .update({
-              status: "running",
-              locked_at: new Date().toISOString(),
-              locked_by: "gemini-executor",
-              attempt_count: baseAttemptCount + attempt,
-              last_error: null
-            })
-            .eq("id", job.id)
-            .eq("project_id", projectId)
-            .eq("run_id", runId);
-        }
-
-        try {
-          const llmStart = Date.now();
-          llmResult = await generateGeminiVisibilityAnswer({
-            prompt: promptText,
-            country: project.country,
-            language: project.language
-          });
-          latency = Date.now() - llmStart;
-          lastError = null;
+      switch (settled.value.kind) {
+        case "success":
+          promptSuccess += 1;
           break;
-        } catch (error) {
-          if (error instanceof GeminiConfigError) {
-            throw error;
-          }
-
-          lastError = error;
-
-          await logJob(service, {
-            jobId: job.id,
-            projectId,
-            runId,
-            level: attempt < totalAttempts ? "warn" : "error",
-            message:
-              attempt < totalAttempts
-                ? "Gemini prompt execution failed, retrying."
-                : "Gemini prompt execution failed.",
-            context: {
-              prompt_id: promptId,
-              attempt,
-              total_attempts: totalAttempts,
-              error: error instanceof Error ? error.message : String(error)
-            }
-          });
-        }
+        case "failed":
+          promptFailed += 1;
+          break;
+        case "config_error":
+          configError = settled.value.error;
+          break;
       }
+    }
 
-      if (lastError || !llmResult) {
-        const errorSummary = getSanitizedScanError(lastError);
-
-        await service
-          .from("jobs")
-          .update({
-            status: "failed",
-            locked_at: null,
-            locked_by: null,
-            last_error: errorSummary
-          })
-          .eq("id", job.id)
-          .eq("project_id", projectId)
-          .eq("run_id", runId);
-
-        promptFailed += 1;
-        currentRunningPromptJob = null;
-        continue;
-      }
-
-      const responseLower = llmResult.text.toLowerCase();
-      const brandMentioned = responseLower.includes(project.brand.toLowerCase());
-      const mentionedCompetitorsCount = (competitors ?? []).reduce(
-        (acc, competitor) => (responseLower.includes(competitor.name.toLowerCase()) ? acc + 1 : acc),
-        0
-      );
-      const sentiment: "positive" | "neutral" | "negative" | "mixed" | "unknown" = "unknown";
-
-      // Real citation extraction (grounding chunks + structured extraction)
-      // happens later in runStructuredExtractionForRun. citation_found /
-      // citations_count / extracted_json start unset here and are filled in
-      // by that step — see docs/adr/0004-gemini-search-grounding.md.
-      const { error: resultError } = await service.from("scan_prompt_results").insert({
-        run_id: runId,
-        project_id: projectId,
-        prompt_id: promptId,
-        prompt_text_snapshot: promptText,
-        brand_snapshot: project.brand,
-        competitors_snapshot: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
-        country_snapshot: project.country,
-        language_snapshot: project.language,
-        provider: "gemini",
-        model: llmResult.model,
-        status: "completed",
-        raw_response_text: llmResult.text,
-        raw_response_json: {
-          text: llmResult.text,
-          total_tokens: llmResult.totalTokens,
-          grounding_chunks: llmResult.groundingChunks ?? [],
-          prompt_version: PROMPT_VERSION
-        },
-        tokens_in: llmResult.tokensIn,
-        tokens_out: llmResult.tokensOut,
-        cost_usd: null,
-        llm_latency_ms: latency,
-        brand_mentioned: brandMentioned,
-        citation_found: false,
-        mentioned_competitors_count: mentionedCompetitorsCount,
-        citations_count: 0,
-        sentiment,
-        extraction_version: "phase4-basic-v1",
-        extracted_json: null
-      });
-
-      if (resultError) {
-        await logJob(service, {
-          jobId: job.id,
-          projectId,
-          runId,
-          level: "error",
-          message: "Failed to insert prompt result.",
-          context: { reason: resultError.message }
-        });
-
-        await service
-          .from("jobs")
-          .update({
-            status: "failed",
-            locked_at: null,
-            locked_by: null,
-            last_error: "Failed to insert prompt result."
-          })
-          .eq("id", job.id)
-          .eq("project_id", projectId)
-          .eq("run_id", runId);
-
-        promptFailed += 1;
-        currentRunningPromptJob = null;
-        continue;
-      }
-
-      await logJob(service, {
-        jobId: job.id,
-        projectId,
-        runId,
-        level: "info",
-        message: "Prompt job completed with Gemini response.",
-        context: { prompt_id: promptId, brand_mentioned: brandMentioned }
-      });
-
-      await service
-        .from("jobs")
-        .update({
-          status: "completed",
-          locked_at: null,
-          locked_by: null
-        })
-        .eq("id", job.id)
-        .eq("project_id", projectId)
-        .eq("run_id", runId);
-
-      promptSuccess += 1;
-      currentRunningPromptJob = null;
+    if (configError) {
+      throw configError;
     }
 
     if (promptSuccess === 0) {
@@ -582,29 +647,10 @@ export async function executePendingScan({
   } catch (error) {
     const errorSummary = getSanitizedScanError(error);
 
-    if (currentRunningPromptJob) {
-      await service
-        .from("jobs")
-        .update({
-          status: "failed",
-          locked_at: null,
-          locked_by: null,
-          last_error: errorSummary
-        })
-        .eq("id", currentRunningPromptJob.id)
-        .eq("project_id", projectId)
-        .eq("run_id", runId);
-
-      await logJob(service, {
-        jobId: currentRunningPromptJob.id,
-        projectId,
-        runId,
-        level: "error",
-        message: "Gemini prompt execution failed.",
-        context: { error: errorSummary }
-      });
-    }
-
+    // Any prompt job still "running" here was either mid-flight when a
+    // config_error aborted the run, or never started (shouldn't happen with
+    // Promise.allSettled, but defensive). Bulk-fail them; processPromptJob
+    // already logged the GeminiConfigError for the job that triggered this.
     await service
       .from("jobs")
       .update({
