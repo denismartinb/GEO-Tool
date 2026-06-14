@@ -16,7 +16,7 @@ export const feedbackErrorMessages: Record<string, string> = {
   recurring_update_failed: "No se ha podido actualizar el escaneo automático. Vuelve a intentarlo.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
-  too_many_prompts: "El escaneo está limitado a 10 prompts activos. Desactiva algunos antes de continuar.",
+  too_many_prompts: "El escaneo está limitado a 6 prompts activos. Desactiva algunos antes de continuar.",
   unauthorized: "No tienes permisos para realizar esta acción.",
   unexpected_error: "Ha ocurrido un error inesperado. Vuelve a intentarlo."
 };

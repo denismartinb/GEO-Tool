@@ -53,6 +53,18 @@ user-facing cancel action.
 - Gemini model pinned: `gemini-2.0-flash-001` (see ADR 0002)
 - Vercel `maxDuration=60` on scan route (see ADR 0003)
 
+**Closed investigation (2026-06-13):** Reported "cross-tab session" bug
+(second incognito tab shows `/login` after login in another tab) was
+diagnosed via a temporary `/api/debug/session` endpoint (PR #93, removed in
+PR #94). Tab A: cookie `sb-*-auth-token` present, `getUser()` authenticated.
+Tab B (new private tab): zero cookies of any kind sent. This matches iOS
+Safari 17+ Private Browsing tab isolation (each new private tab gets an
+isolated storage context unless duplicated from an existing one) — not an
+app defect. PRs #91/#92 (server action extraction, cookie handling review)
+were harmless and remain merged, but were not the actual fix because there
+was no server-side bug. No further action unless the founder reproduces the
+symptom in normal (non-private) browsing with two tabs.
+
 **Next H1 actions (in priority order):**
 1. Stabilization pass now in progress (see "Active work" below): test runner
    (`pnpm test`) was silently broken (vitest never installed, no `test`

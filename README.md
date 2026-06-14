@@ -53,7 +53,7 @@ Notes:
 
 - The current MVP is Gemini-only. OpenAI is documented but not active.
 - Use `docs/beta-run-checklist.md` for real-data beta validation.
-- Real scans are limited to 10 prompts per run.
+- Real scans are limited to 6 prompts per run.
 - `Lanzar escaneo` executes Gemini directly. Keep the page open while the synchronous scan runs.
 - Technical run detail remains available for debugging and support.
 - The Prompts screen shows prompt-level signals from the latest completed Gemini scan. Raw responses remain persisted for technical auditing.

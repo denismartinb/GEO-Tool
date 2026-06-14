@@ -1,7 +1,10 @@
 import "server-only";
 
 import {
+  ALL_RECOVERABLE_ERROR_SUMMARIES,
   RECONCILE_LOG_PREFIX,
+  SCAN_NO_RESULTS_ERROR_SUMMARY,
+  SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_PENDING_TIMEOUT_ERROR_SUMMARY,
   SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_PENDING_TIMEOUT_SECONDS,
@@ -9,36 +12,52 @@ import {
   SCAN_TIMEOUT_AUTO_RETRY_CAP,
   SCAN_TIMEOUT_ERROR_SUMMARY,
   SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
-  SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS,
-  TIMEOUT_ERROR_SUMMARIES
+  SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS
 } from "@/lib/scan/constants";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
  * Counts how many `scan_runs` rows for this project are already terminal
- * `failed` with a timeout-related `error_summary` (TIMEOUT_ERROR_SUMMARIES)
- * within the last SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS. Used to enforce
- * SCAN_TIMEOUT_AUTO_RETRY_CAP — see its doc comment for the full rationale.
+ * `failed` with a recoverable `error_summary` (ALL_RECOVERABLE_ERROR_SUMMARIES
+ * — timeouts AND "zero successful prompts", SCAN-ROBUST-1) within the last
+ * SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS. Used to enforce SCAN_TIMEOUT_AUTO_RETRY_CAP
+ * — see its doc comment for the full rationale. A single shared cap/lookback
+ * covers all recoverable failure types for a project, so a project that hits
+ * one timeout and then one zero-results failure in the same window does not
+ * get two separate auto-retry budgets.
  */
-async function countRecentTimeoutFailures({
+async function countRecentRecoverableFailures({
   projectId,
-  service
+  service,
+  excludeRunId
 }: {
   projectId: string;
   service: ReturnType<typeof createServiceClient>;
+  /**
+   * Exclude this run's own id from the count. Needed by the zero-results
+   * pass: the run being evaluated is itself already a `failed` row with a
+   * recoverable `error_summary`, so without exclusion it would always count
+   * against its own cap and never get a first auto-retry.
+   */
+  excludeRunId?: string;
 }): Promise<number> {
   const lookbackCutoffIso = new Date(Date.now() - SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS * 60 * 60 * 1000).toISOString();
 
-  const { count, error } = await service
+  let query = service
     .from("scan_runs")
     .select("id", { count: "exact", head: true })
     .eq("project_id", projectId)
     .eq("status", "failed")
-    .in("error_summary", Array.from(TIMEOUT_ERROR_SUMMARIES))
-    .gte("created_at", lookbackCutoffIso);
+    .in("error_summary", Array.from(ALL_RECOVERABLE_ERROR_SUMMARIES));
+
+  if (excludeRunId) {
+    query = query.neq("id", excludeRunId);
+  }
+
+  const { count, error } = await query.gte("created_at", lookbackCutoffIso);
 
   if (error) {
-    console.error(`${RECONCILE_LOG_PREFIX} failed to count recent timeout failures`, {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to count recent recoverable failures`, {
       projectId,
       message: error.message
     });
@@ -114,15 +133,24 @@ async function attemptAutoRetry({
  * the next reconciliation pass instead of remaining `pending`/`running`
  * forever.
  *
- * Auto-retry with cap (PR #78): when a row is marked `failed` due to timeout,
- * this also counts prior timeout-failures for the same project within
- * SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS. If that count is below
- * SCAN_TIMEOUT_AUTO_RETRY_CAP, a fresh `pending` run is created automatically
- * for the project (the user doesn't need to click "Lanzar escaneo" again). If
- * the cap is reached, no auto-retry is triggered and the row is marked with a
- * `_retry_exhausted` reason instead, so the user can still retry manually
- * (with a calmer message — see getDisplayErrorSummary) without entering an
- * infinite auto-retry loop.
+ * Auto-retry with cap (PR #78, generalized by SCAN-ROBUST-1): when a row is
+ * marked `failed` due to timeout, this also counts prior recoverable failures
+ * for the same project within SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS
+ * (ALL_RECOVERABLE_ERROR_SUMMARIES — timeouts AND "zero successful prompts").
+ * If that count is below SCAN_TIMEOUT_AUTO_RETRY_CAP, a fresh `pending` run is
+ * created automatically for the project (the user doesn't need to click
+ * "Lanzar escaneo" again). If the cap is reached, no auto-retry is triggered
+ * and the row is marked with a `_retry_exhausted` reason instead, so the user
+ * can still retry manually (with a calmer message — see
+ * getDisplayErrorSummary) without entering an infinite auto-retry loop.
+ *
+ * SCAN-ROBUST-1 also adds a second pass (after the timeout passes) over
+ * already-`failed` runs whose `error_summary` is SCAN_NO_RESULTS_ERROR_SUMMARY
+ * ("zero successful prompts" — every prompt in the run individually failed
+ * but recoverably, per docs/scan-lifecycle.md). These runs are already
+ * terminal `failed` when this function runs, so that pass only decides
+ * whether to auto-retry (same cap/lookback) or mark the row
+ * SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY.
  *
  * Scoped to a single project to respect the same project_id scoping used
  * elsewhere in this module; uses the service client because the transition is
@@ -164,8 +192,8 @@ export async function reconcileStuckScanRuns({
   // stale rows reconciled in the same pass cannot each independently trigger
   // their own auto-retry (which would otherwise create several new pending
   // runs at once).
-  let priorTimeoutFailureCount = hasStaleRows
-    ? await countRecentTimeoutFailures({ projectId, service })
+  let priorRecoverableFailureCount = hasStaleRows
+    ? await countRecentRecoverableFailures({ projectId, service })
     : 0;
   let autoRetryTriggered = false;
 
@@ -176,7 +204,7 @@ export async function reconcileStuckScanRuns({
     });
   } else if (staleRunningRuns?.length) {
     for (const run of staleRunningRuns) {
-      const capReached = priorTimeoutFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+      const capReached = priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
       const errorSummary = capReached
         ? SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
         : SCAN_TIMEOUT_ERROR_SUMMARY;
@@ -202,7 +230,7 @@ export async function reconcileStuckScanRuns({
       }
 
       reconciledCount += 1;
-      priorTimeoutFailureCount += 1;
+      priorRecoverableFailureCount += 1;
       console.info(`${RECONCILE_LOG_PREFIX} marked stale running run as failed (${errorSummary})`, {
         projectId,
         runId: run.id,
@@ -224,7 +252,7 @@ export async function reconcileStuckScanRuns({
     });
   } else if (stalePendingRuns?.length) {
     for (const run of stalePendingRuns) {
-      const capReached = priorTimeoutFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+      const capReached = priorRecoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
       const errorSummary = capReached
         ? SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY
         : SCAN_PENDING_TIMEOUT_ERROR_SUMMARY;
@@ -250,7 +278,7 @@ export async function reconcileStuckScanRuns({
       }
 
       reconciledCount += 1;
-      priorTimeoutFailureCount += 1;
+      priorRecoverableFailureCount += 1;
       console.info(`${RECONCILE_LOG_PREFIX} marked stale pending run as failed (${errorSummary})`, {
         projectId,
         runId: run.id,
@@ -261,6 +289,112 @@ export async function reconcileStuckScanRuns({
       if (!capReached && !autoRetryTriggered) {
         autoRetryTriggered = true;
         await attemptAutoRetry({ projectId, service, reason: errorSummary });
+      }
+    }
+  }
+
+  // SCAN-ROBUST-1: generalize auto-retry to runs that already finished
+  // `failed` with zero successful prompts (executor.ts,
+  // ProjectActionError "scan_failed_no_results" ->
+  // SCAN_NO_RESULTS_ERROR_SUMMARY). Unlike the timeout passes above, these
+  // rows are already terminal `failed` by the time this reconciliation pass
+  // runs — there is nothing to "mark as failed" here, only a decision about
+  // whether to auto-retry or mark retry-exhausted.
+  //
+  // A row only needs to be considered once: if a newer scan_runs row already
+  // exists for this project (created after this failed run), either a manual
+  // relaunch or a prior reconciliation pass's auto-retry has already
+  // superseded it, so it is skipped here to avoid retrying the same failure
+  // repeatedly.
+  const { data: noResultsFailedRuns, error: noResultsError } = await service
+    .from("scan_runs")
+    .select("id, created_at")
+    .eq("project_id", projectId)
+    .eq("status", "failed")
+    .eq("error_summary", SCAN_NO_RESULTS_ERROR_SUMMARY)
+    .order("created_at", { ascending: true });
+
+  if (noResultsError) {
+    console.error(`${RECONCILE_LOG_PREFIX} failed to query zero-result failed runs`, {
+      projectId,
+      message: noResultsError.message
+    });
+  } else if (noResultsFailedRuns?.length) {
+    const { data: latestRun, error: latestRunError } = await service
+      .from("scan_runs")
+      .select("id, created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestRunError) {
+      console.error(`${RECONCILE_LOG_PREFIX} failed to query latest run for project`, {
+        projectId,
+        message: latestRunError.message
+      });
+    } else {
+      for (const run of noResultsFailedRuns) {
+        // Skip if a newer run already exists for this project — this failure
+        // was already superseded (auto-retried or manually relaunched).
+        if (latestRun && latestRun.id !== run.id && latestRun.created_at > run.created_at) {
+          continue;
+        }
+
+        // This run is itself a `failed` row with a recoverable
+        // error_summary, so exclude it from its own cap count — otherwise it
+        // would always count against itself and never get a first retry.
+        const recoverableFailureCount = await countRecentRecoverableFailures({
+          projectId,
+          service,
+          excludeRunId: run.id
+        });
+
+        const capReached = recoverableFailureCount >= SCAN_TIMEOUT_AUTO_RETRY_CAP;
+
+        // If an earlier pass in this same reconciliation call already
+        // triggered the one allowed auto-retry, leave this row's
+        // error_summary as-is (still the non-exhausted "Reintentando…"
+        // value) rather than marking it exhausted — the freshly-created
+        // pending run will make this row "superseded by a newer run" on the
+        // next pass, so it will be skipped (not re-evaluated) then.
+        if (capReached && autoRetryTriggered) {
+          continue;
+        }
+
+        if (capReached) {
+          const { error: updateError } = await service
+            .from("scan_runs")
+            .update({ error_summary: SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY })
+            .eq("id", run.id)
+            .eq("project_id", projectId)
+            .eq("status", "failed");
+
+          if (updateError) {
+            console.error(`${RECONCILE_LOG_PREFIX} failed to mark zero-result run as retry-exhausted`, {
+              projectId,
+              runId: run.id,
+              message: updateError.message
+            });
+            continue;
+          }
+
+          console.info(
+            `${RECONCILE_LOG_PREFIX} zero-result run retry cap reached, marked retry-exhausted`,
+            { projectId, runId: run.id }
+          );
+          continue;
+        }
+
+        if (!autoRetryTriggered) {
+          autoRetryTriggered = true;
+          priorRecoverableFailureCount += 1;
+          console.info(`${RECONCILE_LOG_PREFIX} auto-retrying zero-result run`, {
+            projectId,
+            runId: run.id
+          });
+          await attemptAutoRetry({ projectId, service, reason: SCAN_NO_RESULTS_ERROR_SUMMARY });
+        }
       }
     }
   }

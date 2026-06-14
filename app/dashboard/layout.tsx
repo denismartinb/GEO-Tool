@@ -6,13 +6,7 @@ import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
-
-async function signOut() {
-  "use server";
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login");
-}
+import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();

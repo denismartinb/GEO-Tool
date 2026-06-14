@@ -1,5 +1,6 @@
 import {
   RETRY_EXHAUSTED_ERROR_SUMMARIES,
+  SCAN_NO_RESULTS_ERROR_SUMMARY,
   TIMEOUT_ERROR_SUMMARIES
 } from "@/lib/scan/constants";
 import {
@@ -22,6 +23,8 @@ export function getSanitizedScanError(error: unknown) {
         return "El proyecto está archivado y no puede ejecutarse.";
       case "too_many_prompts":
         return "El escaneo pendiente supera el límite de prompts permitido.";
+      case "scan_failed_no_results":
+        return SCAN_NO_RESULTS_ERROR_SUMMARY;
       default:
         return "No se pudo completar la ejecución del escaneo.";
     }
@@ -58,7 +61,7 @@ export function getDisplayErrorSummary(errorSummary: string | null | undefined):
     return "No hemos podido completar este escaneo. Puedes lanzar uno nuevo.";
   }
 
-  if (TIMEOUT_ERROR_SUMMARIES.has(errorSummary)) {
+  if (TIMEOUT_ERROR_SUMMARIES.has(errorSummary) || errorSummary === SCAN_NO_RESULTS_ERROR_SUMMARY) {
     return "Reintentando tu escaneo automáticamente…";
   }
 
@@ -75,7 +78,10 @@ export function getDisplayErrorSummary(errorSummary: string | null | undefined):
 export function getRunErrorDisplay(errorSummary: string | null | undefined): RunErrorDisplay | null {
   if (!errorSummary) return null;
 
-  if (TIMEOUT_ERROR_SUMMARIES.has(errorSummary) && !RETRY_EXHAUSTED_ERROR_SUMMARIES.has(errorSummary)) {
+  const isNonExhaustedTimeout = TIMEOUT_ERROR_SUMMARIES.has(errorSummary) && !RETRY_EXHAUSTED_ERROR_SUMMARIES.has(errorSummary);
+  const isNoResultsRetrying = errorSummary === SCAN_NO_RESULTS_ERROR_SUMMARY;
+
+  if (isNonExhaustedTimeout || isNoResultsRetrying) {
     return { message: getDisplayErrorSummary(errorSummary) as string, kind: "notice" };
   }
 
