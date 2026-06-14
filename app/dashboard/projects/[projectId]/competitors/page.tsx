@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { CompetitorRow } from "./competitor-row";
+import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
 
 /* ---- Helpers ---- */
 
@@ -31,6 +32,21 @@ type ExtractedJson = {
 function parseExt(raw: unknown): ExtractedJson {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as ExtractedJson;
+}
+
+type BrandPositionRankingEntry = {
+  name: string;
+  is_brand: boolean;
+  avg_position: number;
+  mention_count: number;
+};
+
+function parseBrandPositionRanking(raw: unknown): BrandPositionRankingEntry[] {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+  const bp = (raw as { brand_position?: unknown }).brand_position;
+  if (!bp || typeof bp !== "object") return [];
+  const ranking = (bp as { ranking?: unknown }).ranking;
+  return Array.isArray(ranking) ? (ranking as BrandPositionRankingEntry[]) : [];
 }
 
 function getInitial(name: string): string {
@@ -94,16 +110,23 @@ export default async function CompetitorsPage({
   const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
   const latestCompletedRun = completedRuns[0] ?? null;
 
-  /* 2. Prompt results across ALL completed runs */
-  const { data: allResults } =
+  /* 2. Prompt results across ALL completed runs + per-run brand position scores */
+  const [{ data: allResults }, { data: runScores }] =
     completedRunIds.length > 0
-      ? await supabase
-          .from("scan_prompt_results")
-          .select("extracted_json, run_id")
-          .eq("project_id", projectId)
-          .eq("status", "completed")
-          .in("run_id", completedRunIds)
-      : { data: [] };
+      ? await Promise.all([
+          supabase
+            .from("scan_prompt_results")
+            .select("extracted_json, run_id")
+            .eq("project_id", projectId)
+            .eq("status", "completed")
+            .in("run_id", completedRunIds),
+          supabase
+            .from("run_scores")
+            .select("run_id, details_json")
+            .eq("project_id", projectId)
+            .in("run_id", completedRunIds)
+        ])
+      : [{ data: [] }, { data: [] }];
 
   const results = allResults ?? [];
 
@@ -220,6 +243,41 @@ export default async function CompetitorsPage({
   /* Summary text */
   const topCompetitor = competitorRows[0];
   const hasData = completedRuns.length > 0 && totalResultsCount > 0;
+
+  /* Position trend: brand + active competitors' avg_position across completed runs */
+  const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
+  for (const rs of runScores ?? []) {
+    rankingByRun.set(rs.run_id as string, parseBrandPositionRanking(rs.details_json));
+  }
+
+  const runsAsc = [...completedRuns].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+  const trendSeries: TrendSeries[] = [
+    { key: "brand", label: project.brand, color: "var(--accent)", isBrand: true },
+    ...competitorRows.map((c) => ({ key: c.id, label: c.name, color: c.color }))
+  ];
+
+  const trendData: TrendPoint[] = runsAsc.map((run) => {
+    const ranking = rankingByRun.get(run.id) ?? [];
+    const values: Record<string, number | null> = {};
+    const brandEntry = ranking.find((r) => r.is_brand);
+    values.brand = brandEntry ? brandEntry.avg_position : null;
+    for (const c of competitorRows) {
+      const entry = ranking.find((r) => !r.is_brand && normKey(r.name) === normKey(c.name));
+      values[c.id] = entry ? entry.avg_position : null;
+    }
+    return { date: run.finished_at ?? run.created_at, values };
+  });
+
+  const validTrendPoints = trendData.filter((d) => d.values.brand != null).length;
+  const hasTrendData = validTrendPoints >= 2;
+
+  const trendPositionValues = trendData
+    .flatMap((d) => Object.values(d.values))
+    .filter((v): v is number => v != null);
+  const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
   return (
     <div className="page">
@@ -537,6 +595,30 @@ export default async function CompetitorsPage({
             </div>
           )}
         </>
+      ) : null}
+
+      {/* Evolución de la posición media */}
+      {configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
+        <div style={{ marginTop: 24 }}>
+          <div className="section-head">
+            <div className="section-title">Evolución de la posición media</div>
+            <div className="section-desc">
+              Posición media en el ranking de marcas mencionadas por escaneo · #1 es la mejor posición
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: "16px 16px 8px" }}>
+            {hasTrendData ? (
+              <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
+            ) : (
+              <div style={{ padding: "32px 20px", textAlign: "center" }}>
+                <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
+                  Disponible a partir de 2 escaneos completados con datos de posición.
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       ) : null}
 
       {/* Footer links */}
