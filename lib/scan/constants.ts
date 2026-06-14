@@ -1,6 +1,6 @@
 import "server-only";
 
-export const MAX_REAL_SCAN_PROMPTS = 6;
+export const MAX_REAL_SCAN_PROMPTS = 10;
 export const MAX_EXTRACTION_RESULTS = 10;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
@@ -36,9 +36,10 @@ export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION
 /**
  * Bound on per-prompt retry attempts within a single scan run (SCAN-ROBUST-1).
  * `jobs.max_attempts` defaults to 3 (supabase/migrations/0001_v0_schema.sql),
- * but with `MAX_REAL_SCAN_PROMPTS=6` sequential Gemini calls inside the ~60s
- * `maxDuration` budget (docs/adr/0003), retrying every failed prompt up to 3
- * times could exhaust the whole run on a handful of unlucky prompts. Cap the
+ * but with `MAX_REAL_SCAN_PROMPTS=10` concurrent Gemini calls (SCAN-ROBUST-2,
+ * `lib/scan/executor.ts`) inside the ~60s `maxDuration` budget (docs/adr/0003),
+ * retrying every failed prompt up to 3 times could exhaust the whole run on a
+ * handful of unlucky prompts. Cap the
  * TOTAL attempts (first try + retries) per prompt at 2 — i.e. exactly one
  * retry — regardless of `max_attempts`, while still honoring a lower
  * `max_attempts` if a job ever has one. The retry is only taken for

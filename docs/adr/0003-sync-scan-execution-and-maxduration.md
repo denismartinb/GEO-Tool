@@ -74,3 +74,23 @@ still aborted as fatal once all concurrent calls have settled. Structured
 extraction (`runStructuredExtractionForRun`) remains sequential for now; if
 this alone does not bring total run time safely under 60s, parallelizing
 extraction is a candidate follow-up (separate Task Intake).
+
+---
+
+## Addendum (2026-06-14) — structured extraction parallelized (SCAN-ROBUST-2 phase 2)
+
+`runStructuredExtractionForRun` now also runs concurrently across scan
+results (mirroring the prompt-generation parallelization above), bringing a
+6-prompt scan from ~50s down to ~20s total. This removed the original
+motivation (PR #89) for capping `MAX_REAL_SCAN_PROMPTS` at 6: that cap existed
+specifically because sequential execution of more prompts risked exceeding the
+60s `maxDuration`.
+
+**Superseded decision:** `MAX_REAL_SCAN_PROMPTS` has been restored from `6` to
+`10` (see `lib/scan/constants.ts`). With both Gemini calls and extraction
+running in parallel, a 10-prompt scan is expected to complete well within the
+60s budget under normal latency. The "Worst-case budget note" in
+`docs/scan-lifecycle.md` has been updated accordingly. This addendum preserves
+the original context (why 6 was chosen in PR #89) rather than erasing it —
+the cap was a real, justified decision for the sequential-execution era, not a
+fake constraint.
