@@ -77,6 +77,40 @@ a {
   background: var(--surface-2);
 }
 
+.switch-toggle {
+  position: relative;
+  width: 40px;
+  height: 23px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-sunk);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.switch-toggle::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 17px;
+  height: 17px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease;
+}
+
+.switch-toggle.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.switch-toggle.on::after {
+  transform: translateX(17px);
+}
+
 .proj-favicon {
   width: 26px;
   height: 26px;
