@@ -51,3 +51,26 @@ Implementation:
 - **Future trigger to revisit:** user count grows, concurrent scans, or average
   scan duration exceeds 50s consistently → reopen as a new ADR for async
   background execution (which is **forbidden without explicit phase approval**).
+
+---
+
+## Addendum (2026-06-14) — parallelize per-prompt Gemini calls (SCAN-ROBUST-2)
+
+`gemini-2.5-flash` (ADR 0009) has higher per-call latency (~7.5s) than the
+previously pinned `gemini-2.0-flash-001` (~1-3s). Running the 6 `scan_prompt`
+jobs sequentially in `lib/scan/executor.ts` took ~45s, leaving little margin
+within the 60s `maxDuration` once the structured-extraction step ran
+afterward — the function was killed mid-run, leaving `scan_runs` stuck in
+`running` with all 6 prompt results already persisted, and later marked
+terminal "Fallido · 0/6" by `reconcileStuckScanRuns`'s retry-exhausted path
+despite every prompt having actually succeeded.
+
+`executePendingScan` now dispatches all `scan_prompt` jobs concurrently via
+`Promise.allSettled` (`processPromptJob`), bringing the prompt-generation
+phase down to roughly one Gemini call's latency (~7.5-10s) instead of the sum
+of all 6. `GeminiConfigError` (missing API key / invalid model) is reported
+back per-job as `config_error` instead of thrown immediately, so the run is
+still aborted as fatal once all concurrent calls have settled. Structured
+extraction (`runStructuredExtractionForRun`) remains sequential for now; if
+this alone does not bring total run time safely under 60s, parallelizing
+extraction is a candidate follow-up (separate Task Intake).
