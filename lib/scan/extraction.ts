@@ -1,7 +1,12 @@
 import "server-only";
 
 import { extractGeminiStructuredData } from "@/lib/llm/gemini";
-import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants";
+import {
+  EXTRACTION_RETRY_DELAY_MS,
+  EXTRACTION_RETRY_MAX_ATTEMPTS,
+  EXTRACTION_VERSION,
+  MAX_EXTRACTION_RESULTS
+} from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
@@ -11,6 +16,10 @@ import type { GroundedCitation } from "@/lib/extraction/schema";
  * Best-effort domain extraction from a URL. Never throws — returns null on
  * malformed URLs.
  */
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function extractDomain(uri: string): string | null {
   try {
     const hostname = new URL(uri).hostname.toLowerCase();
@@ -125,12 +134,25 @@ export async function runStructuredExtractionForRun(input: {
             .filter((name) => name.length > 0)
         : [];
 
-      const extracted = await extractGeminiStructuredData({
-        brand: row.brand_snapshot,
-        competitors,
-        rawResponseText,
-        promptText: row.prompt_text_snapshot
-      });
+      let extracted: Awaited<ReturnType<typeof extractGeminiStructuredData>> | null = null;
+      let lastError: unknown = null;
+      for (let attempt = 1; attempt <= EXTRACTION_RETRY_MAX_ATTEMPTS; attempt++) {
+        try {
+          extracted = await extractGeminiStructuredData({
+            brand: row.brand_snapshot,
+            competitors,
+            rawResponseText,
+            promptText: row.prompt_text_snapshot
+          });
+          break;
+        } catch (attemptError) {
+          lastError = attemptError;
+          if (attempt < EXTRACTION_RETRY_MAX_ATTEMPTS) {
+            await delay(EXTRACTION_RETRY_DELAY_MS);
+          }
+        }
+      }
+      if (!extracted) throw lastError;
 
       const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
 

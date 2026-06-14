@@ -276,4 +276,34 @@ describe("runStructuredExtractionForRun", () => {
     expect(update.extraction_version).toBeUndefined();
     expect(update.citations_count).toBeUndefined();
   });
+
+  it("retries once after a transient failure and persists a successful extraction", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [baseRow()],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData)
+      .mockRejectedValueOnce(new Error("Gemini rate limited."))
+      .mockResolvedValueOnce({
+        data: baseExtractionOutput(),
+        model: "gemini-2.0-flash-001"
+      });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledTimes(2);
+    expect(updateCalls).toHaveLength(1);
+    const update = updateCalls[0];
+    expect(update.extraction_error).toBeNull();
+    expect(update.extraction_version).toBe(EXTRACTION_VERSION);
+  });
 });

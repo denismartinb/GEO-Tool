@@ -55,6 +55,26 @@ export const PROMPT_RETRY_MAX_TOTAL_ATTEMPTS = 2;
 export const PROMPT_RETRY_DELAY_MS = 500;
 
 /**
+ * Bound on per-row retry attempts for the structured-extraction pass
+ * (`runStructuredExtractionForRun`), mirroring `PROMPT_RETRY_MAX_TOTAL_ATTEMPTS`.
+ * A transient failure of `extractGeminiStructuredData` (rate limit, malformed
+ * JSON from a flaky response, HTTP error) gets one extra attempt before the
+ * row is permanently marked `extraction_error`. Any single unrecovered
+ * extraction error forces the run's `confidence` to "low"
+ * (lib/scoring/run-scoring.ts), so reducing transient failures here directly
+ * improves confidence stability across consecutive scans.
+ */
+export const EXTRACTION_RETRY_MAX_ATTEMPTS = 2;
+
+/**
+ * Delay before retrying a failed structured-extraction call within the same
+ * run. Kept short — with `MAX_REAL_SCAN_PROMPTS = 6`, a worst case of 6 rows
+ * each needing one retry must still fit inside the ~60s run budget
+ * (docs/adr/0003) alongside the prompt-execution calls already made.
+ */
+export const EXTRACTION_RETRY_DELAY_MS = 750;
+
+/**
  * Timeout thresholds for the scan lifecycle reconciliation pass, per
  * docs/scan-lifecycle.md ("Timeout detection") and
  * docs/adr/0003-sync-scan-execution-and-maxduration.md. A `running` row older
