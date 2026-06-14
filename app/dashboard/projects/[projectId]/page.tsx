@@ -8,6 +8,7 @@ import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { InfoTip } from "@/components/ui/info-tip";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -342,7 +343,6 @@ export default async function ProjectDetailPage({
     }));
 
   const hasData = Boolean(latestCompletedRun && latestScore);
-  const confidencePercent = confidenceToPercent(runConfidence);
 
   /* ---- brand position (Phase A) ---- */
   const brandPosition = scoreDetails.brand_position;
@@ -579,7 +579,8 @@ export default async function ProjectDetailPage({
                 trend: visTrend,
                 delta: visDelta,
                 color: "var(--accent)",
-                hint: "Prompts donde aparece tu marca."
+                hint: "Prompts donde aparece tu marca.",
+                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo."
               },
               {
                 key: "citation",
@@ -589,7 +590,8 @@ export default async function ProjectDetailPage({
                 trend: citTrend,
                 delta: citDelta,
                 color: "#7c3aed",
-                hint: "Prompts donde tu dominio es fuente citada."
+                hint: "Prompts donde tu dominio es fuente citada.",
+                tip: "Porcentaje de prompts en los que tu dominio aparece como fuente citada por la IA (grounding de Google Search)."
               },
               {
                 key: "gap",
@@ -600,22 +602,29 @@ export default async function ProjectDetailPage({
                 delta: gapDelta,
                 color: "#e54563",
                 hint: "Presión del competidor más fuerte. Más alto = más presión.",
-                invert: true
+                invert: true,
+                tip: "Combina cuántas veces se mencionan tus competidores por prompt y tu propia tasa de mención. 0 = sin presión competitiva, 100 = presión máxima."
               },
               {
                 key: "confidence",
                 label: "Confianza",
-                value: confidencePercent,
-                unit: "%",
+                value: confidenceLabels[runConfidence]
+                  ? confidenceLabels[runConfidence].charAt(0).toUpperCase() + confidenceLabels[runConfidence].slice(1)
+                  : runConfidence,
+                unit: "",
                 trend: confTrend,
                 delta: 0,
                 color: "#0d9488",
-                hint: `Fiabilidad de la muestra: ${confidenceLabels[runConfidence] ?? runConfidence}.`
+                hint: "Fiabilidad de la muestra de este escaneo.",
+                tip: "Indica cuán fiable es la muestra de este escaneo, según la cobertura de extracción de datos (porcentaje de prompts procesados correctamente). Alta = cobertura completa; media/baja = datos parciales o errores de extracción."
               }
             ].map((m) => (
               <div key={m.key} className="wide-stat">
                 <div className="ws-left">
-                  <div className="stat-label">{m.label}</div>
+                  <div className="stat-label">
+                    {m.label}
+                    <InfoTip text={m.tip} />
+                  </div>
                   <div className="stat-value tnum">
                     {m.value}<span className="unit">{m.unit}</span>
                   </div>
@@ -645,7 +654,10 @@ export default async function ProjectDetailPage({
           {/* 3b · Posición media de marca */}
           <div className="wide-stat wide-stat--position" style={{ marginTop: 12 }}>
             <div className="ws-left" style={{ width: "100%" }}>
-              <div className="stat-label">Posición media de marca</div>
+              <div className="stat-label">
+                Posición media de marca
+                <InfoTip text="Posición media en la que aparece tu marca respecto a los competidores mencionados en las respuestas de la IA, según el orden de aparición (1 = mencionada primero/más prominente). Las marcas no mencionadas en un prompt penalizan con la última posición posible." />
+              </div>
               {brandPositionAvailable ? (
                 <>
                   <div className="stat-value tnum">
