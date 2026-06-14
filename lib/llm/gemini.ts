@@ -150,7 +150,14 @@ export async function generateGeminiVisibilityAnswer(input: {
   const requestBody = JSON.stringify({
     contents: [{ parts: [{ text: promptBlock }] }],
     systemInstruction: { parts: [{ text: instruction }] },
-    tools: [{ google_search: {} }]
+    tools: [{ google_search: {} }],
+    // gemini-2.5-flash "thinking" is on by default and, combined with
+    // google_search grounding, regularly pushes latency past
+    // GEMINI_CALL_TIMEOUT_MS — causing GeminiTimeoutError on most/all
+    // prompts in a run (docs/adr/0009-gemini-2.5-flash-model-pin.md).
+    // Disabling thinking restores latency comparable to the previously
+    // pinned gemini-2.0-flash-001.
+    generationConfig: { thinkingConfig: { thinkingBudget: 0 } }
   });
 
   let response = await fetchWithTimeout(
@@ -254,7 +261,8 @@ For "position": the 1-based rank of the entity's FIRST mention in the response t
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
       generationConfig: {
-        responseMimeType: "application/json"
+        responseMimeType: "application/json",
+        thinkingConfig: { thinkingBudget: 0 }
       }
     })
   });
@@ -303,7 +311,7 @@ async function generateGeminiJson(promptBlock: string): Promise<unknown> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
-      generationConfig: { responseMimeType: "application/json" }
+      generationConfig: { responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
     })
   });
 
