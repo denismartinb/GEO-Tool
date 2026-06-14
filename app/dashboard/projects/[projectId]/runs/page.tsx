@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
+import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
 import { ENABLE_SYNC_SCAN_EXECUTION, getRunErrorDisplay, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
@@ -392,11 +393,6 @@ export default async function RunsPage({
                     <b>{formatDateShort(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)}</b>
                   </>
                 ) : null}
-                {!hasMultipleCompleted && totalCompletedRuns > 0 && (
-                  <span style={{ color: "var(--ink-4)", fontStyle: "italic", fontSize: 13 }}>
-                    {" "}— La tendencia de score estará disponible con ≥2 escaneos completados.
-                  </span>
-                )}
               </>
             )}
           </p>
@@ -435,16 +431,6 @@ export default async function RunsPage({
               <span style={{ fontSize: 13.5, fontWeight: 750, color: "var(--ink)" }}>
                 Escaneo automático diario
               </span>
-              {project.recurring_scans_enabled ? (
-                <span className="badge badge-pos">Activado</span>
-              ) : (
-                <span className="badge badge-neutral">Desactivado</span>
-              )}
-            </div>
-            <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2, lineHeight: 1.5 }}>
-              {project.recurring_scans_enabled
-                ? "Este dominio se escanea automáticamente cada día con tus prompts actuales."
-                : "Escanea este dominio automáticamente cada día con tus prompts actuales."}
             </div>
           </div>
           {project.recurring_scans_enabled || totalCompletedRuns > 0 ? (
@@ -457,10 +443,11 @@ export default async function RunsPage({
               />
               <button
                 type="submit"
-                className={project.recurring_scans_enabled ? "btn btn-ghost btn-sm" : "btn btn-primary btn-sm"}
-              >
-                {project.recurring_scans_enabled ? "Desactivar" : "Activar"}
-              </button>
+                className={`switch-toggle ${project.recurring_scans_enabled ? "on" : ""}`}
+                role="switch"
+                aria-checked={project.recurring_scans_enabled}
+                aria-label="Escaneo automático diario"
+              />
             </form>
           ) : null}
         </div>
@@ -500,20 +487,7 @@ export default async function RunsPage({
             : "Sin escaneos todavía"}
         </div>
         <div className="right">
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-              fontSize: 12.5,
-              fontWeight: 650,
-              color: "var(--accent)"
-            }}
-          >
-            <Icon name="play" size={13} />
-            Lanzar escaneo
-          </Link>
+          <ScanTriggerButton projectId={projectId} disabled={Boolean(activeRun)} label="Repetir escaneo" />
         </div>
       </div>
 
