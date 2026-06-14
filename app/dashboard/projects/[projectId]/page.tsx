@@ -92,6 +92,26 @@ type BrandPositionDetails = {
   confidence?: string;
 };
 
+type GeoScoreComponent = {
+  value?: number | null;
+  weight?: number;
+  reason?: string;
+};
+
+type GeoScoreDetails = {
+  score?: number;
+  composite_version?: string;
+  confidence?: string;
+  inputs_used?: string[];
+  components?: {
+    presence?: GeoScoreComponent;
+    prominence?: GeoScoreComponent;
+    standing?: GeoScoreComponent;
+    authority?: GeoScoreComponent;
+  };
+  formula?: string;
+};
+
 function parseExt(raw: unknown): ExtractedJsonPartial {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as ExtractedJsonPartial;
@@ -198,6 +218,7 @@ export default async function ProjectDetailPage({
           total_results?: number;
           brand_mentioned_count?: number;
           brand_position?: BrandPositionDetails;
+          geo_score?: GeoScoreDetails;
         })
       : {};
   const totalResults = n(scoreDetails.total_results ?? latestCompletedRun?.successful_prompts);
@@ -209,6 +230,15 @@ export default async function ProjectDetailPage({
   const citationScore = n(latestScore?.citation_score);
   const competitorRiskScore = n(latestScore?.competitor_gap_score);
   const runConfidence = latestScore?.confidence ?? "low";
+
+  /* ---- composite GEO score (ADR 0008) ---- */
+  const geoScore = scoreDetails.geo_score;
+  // Fallback to legacy visibility_score for runs scored before geo-score-v1
+  // existed (no backfill, per ADR 0008).
+  const gaugeScore = Math.round(geoScore?.score ?? visibilityScore);
+  const geoScoreLowConfidence = Boolean(geoScore) && geoScore?.confidence !== "high";
+  const prominenceComponent = geoScore?.components?.prominence;
+  const prominenceUnavailable = Boolean(geoScore) && (prominenceComponent?.value === null || prominenceComponent?.value === undefined);
 
   const computedMentionRate = allPromptResults?.length
     ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
@@ -428,8 +458,8 @@ export default async function ProjectDetailPage({
               {new Date(latestCompletedRun!.finished_at ?? latestCompletedRun!.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
             </div>
             <div className="right">
-              <span className={`badge badge-${getBandTone(visibilityScore)}`}>
-                {getBandLabel(visibilityScore)}
+              <span className={`badge badge-${getBandTone(gaugeScore)}`}>
+                {getBandLabel(gaugeScore)}
               </span>
             </div>
           </div>
@@ -438,14 +468,23 @@ export default async function ProjectDetailPage({
           <div className="hero-v2">
             {/* Gauge */}
             <div className="hv-gauge">
-              <Gauge value={visibilityScore} size={140} stroke={14} />
+              <Gauge value={gaugeScore} size={140} stroke={14} />
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-4)", marginBottom: 6 }}>
                   Puntuación GEO
                 </div>
-                <span className={`badge badge-${getBandTone(visibilityScore)}`}>
-                  {getBandLabel(visibilityScore)}
+                <span className={`badge badge-${getBandTone(gaugeScore)}`}>
+                  {getBandLabel(gaugeScore)}
                 </span>
+                {geoScoreLowConfidence && (
+                  <div style={{ marginTop: 8 }}>
+                    <span className="badge badge-warn" style={{ fontSize: 10.5 }}>
+                      {prominenceUnavailable
+                        ? "Confianza media: posición no disponible para este escaneo"
+                        : `Confianza ${confidenceLabels[geoScore?.confidence ?? "medium"] ?? geoScore?.confidence}`}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -454,21 +493,52 @@ export default async function ProjectDetailPage({
             {/* Composition */}
             <div className="hv-compose">
               <div className="hv-block-label">Cómo se compone tu puntuación</div>
-              {[
-                { l: "Tasa de mención", v: computedMentionRate, color: "var(--accent)" },
-                { l: "Tasa de cita", v: computedCitationRate, color: "#7c3aed" },
-                { l: "Riesgo competitivo", v: Math.min(100, competitorRiskScore), color: "#0d9488" }
-              ].map((c) => (
-                <div className="compose-row" key={c.l}>
-                  <div className="compose-top">
-                    <span className="compose-l">{c.l}</span>
-                    <span className="compose-v tnum">{c.v}%</span>
+              {geoScore?.components ? (
+                [
+                  { l: "Presencia (mención)", c: geoScore.components.presence, color: "var(--accent)" },
+                  { l: "Prominencia (posición)", c: geoScore.components.prominence, color: "#7c3aed" },
+                  { l: "Posición competitiva", c: geoScore.components.standing, color: "#0d9488" },
+                  { l: "Autoridad (citas)", c: geoScore.components.authority, color: "#e54563" }
+                ].map((row) => {
+                  const unavailable = row.c?.value === null || row.c?.value === undefined;
+                  const v = Math.min(100, Math.round(n(row.c?.value)));
+                  return (
+                    <div className="compose-row" key={row.l}>
+                      <div className="compose-top">
+                        <span className="compose-l">{row.l}</span>
+                        <span className="compose-v tnum">
+                          {unavailable ? "—" : `${v}%`}
+                        </span>
+                      </div>
+                      {unavailable ? (
+                        <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>
+                          No disponible para este escaneo
+                        </div>
+                      ) : (
+                        <div className="sov-bar" style={{ height: 7 }}>
+                          <div className="sov-fill" style={{ width: `${v}%`, background: row.color }} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                [
+                  { l: "Tasa de mención", v: computedMentionRate, color: "var(--accent)" },
+                  { l: "Tasa de cita", v: computedCitationRate, color: "#7c3aed" },
+                  { l: "Riesgo competitivo", v: Math.min(100, competitorRiskScore), color: "#0d9488" }
+                ].map((c) => (
+                  <div className="compose-row" key={c.l}>
+                    <div className="compose-top">
+                      <span className="compose-l">{c.l}</span>
+                      <span className="compose-v tnum">{c.v}%</span>
+                    </div>
+                    <div className="sov-bar" style={{ height: 7 }}>
+                      <div className="sov-fill" style={{ width: `${Math.min(100, c.v)}%`, background: c.color }} />
+                    </div>
                   </div>
-                  <div className="sov-bar" style={{ height: 7 }}>
-                    <div className="sov-fill" style={{ width: `${Math.min(100, c.v)}%`, background: c.color }} />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className="hv-divider" />

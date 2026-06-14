@@ -90,6 +90,10 @@ function round2(n: number) {
   return Number(n.toFixed(2));
 }
 
+function clamp(min: number, max: number, x: number) {
+  return Math.max(min, Math.min(max, x));
+}
+
 type BrandPositionRankingEntry = {
   name: string;
   is_brand: boolean;
@@ -192,7 +196,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
   // Higher score means larger competitor pressure/risk versus brand visibility.
   const competitorPresencePerPrompt = (totalCompetitorMentions / safeTotal) * 50;
   const brandProtection = visibilityScore * 0.6;
-  const competitorGapScore = round2(Math.max(0, Math.min(100, competitorPresencePerPrompt + (100 - brandProtection) * 0.4)));
+  const competitorGapScore = round2(clamp(0, 100, competitorPresencePerPrompt + (100 - brandProtection) * 0.4));
 
   let confidence: "low" | "medium" | "high" = "low";
   if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
@@ -210,6 +214,61 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
 
   const brandPosition = computeBrandPosition(results, totalResults);
 
+  // --- GEO Score composite (ADR 0008) ---
+  const COMPOSITE_VERSION = "geo-score-v1";
+
+  const presenceScore = visibilityScore; // 0..100, higher better
+  const authorityScore = citationScore; // 0..100, higher better
+  const standingScore = clamp(0, 100, 100 - competitorGapScore); // invert: higher = better
+
+  let prominenceScore: number | null = null;
+  if (brandPosition && brandPosition.brand_avg_position !== null && brandPosition.total_entities > 0) {
+    const p = brandPosition.brand_avg_position; // 1..N+1, lower better
+    const n = brandPosition.total_entities;
+    prominenceScore = clamp(0, 100, (1 - (p - 1) / n) * 100);
+  }
+
+  const geoScoreComponents = [
+    { key: "presence", value: presenceScore, weight: 0.4 },
+    { key: "prominence", value: prominenceScore, weight: 0.25 },
+    { key: "standing", value: standingScore, weight: 0.2 },
+    { key: "authority", value: authorityScore, weight: 0.15 }
+  ];
+
+  const availableGeoScoreComponents = geoScoreComponents.filter((c) => c.value !== null);
+  const geoScoreWeightSum = availableGeoScoreComponents.reduce((s, c) => s + c.weight, 0);
+
+  let geoScore: Record<string, unknown> | undefined;
+  if (totalResults > 0 && geoScoreWeightSum > 0) {
+    const score = availableGeoScoreComponents.reduce(
+      (s, c) => s + (c.value as number) * (c.weight / geoScoreWeightSum),
+      0
+    );
+
+    const droppedProminence = prominenceScore === null;
+    const compositeConfidence = droppedProminence && confidence === "high" ? "medium" : confidence;
+
+    geoScore = {
+      score: round2(score),
+      composite_version: COMPOSITE_VERSION,
+      confidence: compositeConfidence,
+      inputs_used: availableGeoScoreComponents.map((c) => c.key),
+      components: {
+        presence: { value: presenceScore, weight: round2(0.4 / geoScoreWeightSum) },
+        prominence:
+          prominenceScore === null
+            ? { value: null, weight: 0, reason: "brand_position absent (pre-grounded-position-v1 run)" }
+            : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
+        standing: { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
+        authority: { value: authorityScore, weight: round2(0.15 / geoScoreWeightSum) }
+      },
+      formula:
+        "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
+        "standing = 100 - competitor_gap_score; prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
+        "absent components dropped and remaining weights renormalized."
+    };
+  }
+
   const assumptions = [
     "visibility_score = % prompts with brand_mentioned",
     "citation_score = % prompts with citation_found",
@@ -217,7 +276,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
     extractionCoverage < 1
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
       : "Extraction coverage is complete.",
-    "brand_position: position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). Not-mentioned entities are penalized with position N+1 (N = total tracked entities for that prompt). avg_position = mean(effective_position) across prompts with valid extraction; lower is better."
+    "brand_position: position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). Not-mentioned entities are penalized with position N+1 (N = total tracked entities for that prompt). avg_position = mean(effective_position) across prompts with valid extraction; lower is better.",
+    "geo_score: composite of presence (visibility_score), prominence (derived from brand_position), standing (100 - competitor_gap_score) and authority (citation_score), weighted .40/.25/.20/.15. If brand_position is unavailable, prominence is dropped and the remaining weights are renormalized; confidence is capped at medium in that case."
   ];
 
   const perPromptSummary = results.slice(0, 10).map((row) => ({
@@ -252,11 +312,16 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
         competitor_gap_score:
           "clamp(0,100, (total_competitor_mentions/total_results)*50 + (100 - visibility_score*0.6)*0.4 )",
         brand_position:
-          "avg_position(entity) = mean(position if mentioned else N+1, over prompts with valid extraction); N = total tracked entities for that prompt"
+          "avg_position(entity) = mean(position if mentioned else N+1, over prompts with valid extraction); N = total tracked entities for that prompt",
+        geo_score:
+          "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
+          "standing = 100 - competitor_gap_score; prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
+          "absent components dropped and remaining weights renormalized."
       },
       assumptions,
       per_prompt_summary: perPromptSummary,
-      ...(brandPosition ? { brand_position: brandPosition } : {})
+      ...(brandPosition ? { brand_position: brandPosition } : {}),
+      ...(geoScore ? { geo_score: geoScore } : {})
     }
   };
 }
