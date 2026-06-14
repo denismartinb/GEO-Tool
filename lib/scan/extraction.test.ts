@@ -54,8 +54,8 @@ function baseRow(overrides: Record<string, unknown> = {}) {
 
 function baseExtractionOutput(overrides: Record<string, unknown> = {}) {
   return {
-    brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is great"] },
-    competitors: [{ name: "Globex", mentioned: false, evidence: [] }],
+    brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is great"], position: 1 },
+    competitors: [{ name: "Globex", mentioned: false, evidence: [], position: null }],
     citations: [],
     sentiment: "positive" as const,
     summary: "Acme looks great.",

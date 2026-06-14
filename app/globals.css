@@ -700,6 +700,59 @@ a {
 .ws-spark { flex-shrink: 0; }
 
 /* ============================================================
+   Overview — brand position card (Phase A)
+   ============================================================ */
+.wide-stat--position {
+  flex-direction: column;
+  align-items: stretch;
+}
+.bp-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+}
+.bp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--r-md, 8px);
+}
+.bp-row.you {
+  background: var(--accent-soft);
+}
+.bp-rank {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-4);
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.bp-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+}
+.bp-row.you .bp-name {
+  font-weight: 750;
+}
+.bp-you-tag {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 700;
+  margin-left: 6px;
+}
+.bp-pos {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ============================================================
    Overview — delta chip
    ============================================================ */
 .delta {

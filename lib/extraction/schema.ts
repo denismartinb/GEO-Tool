@@ -37,17 +37,26 @@ export const groundedCitationSchema = z.object({
 
 export type GroundedCitation = z.infer<typeof groundedCitationSchema>;
 
+/**
+ * 1-based rank of this entity's FIRST mention in the raw response text
+ * (1 = mentioned first / most prominent). `null` when `mentioned: false` —
+ * see docs/adr/0005-average-brand-position.md.
+ */
+const positionSchema = z.number().int().positive().nullable();
+
 export const extractionCompetitorSchema = z.object({
   name: z.string(),
   mentioned: z.boolean(),
-  evidence: z.array(z.string())
+  evidence: z.array(z.string()),
+  position: positionSchema
 });
 
 export const extractionOutputSchema = z.object({
   brand: z.object({
     mentioned: z.boolean(),
     display_name_found: z.string().nullable(),
-    evidence: z.array(z.string())
+    evidence: z.array(z.string()),
+    position: positionSchema
   }),
   competitors: z.array(extractionCompetitorSchema),
   citations: z.array(extractionCitationSchema),
