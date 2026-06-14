@@ -8,7 +8,7 @@ import { CitationsClient, type CitationRow } from "./citations-client";
 type ExtractedJson = {
   brand?: { mentioned?: boolean };
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
-  citations?: Array<{ url?: string | null; domain?: string | null; label?: string | null }>;
+  citations?: Array<{ url?: string | null; domain?: string | null; label?: string | null; title?: string | null }>;
 };
 
 function parseExt(raw: unknown): ExtractedJson {
@@ -126,7 +126,7 @@ export default async function CitationsPage({
       if (!row) {
         row = {
           id: key,
-          title: citation.label?.trim() || domain,
+          title: citation.title?.trim() || citation.label?.trim() || domain,
           url: citation.url ?? domain,
           domain,
           category,
