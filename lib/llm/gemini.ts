@@ -4,8 +4,11 @@ import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/
 import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash-001";
-const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.0-flash-001.";
+// Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
+// was shut down by Google on 2026-06-01. gemini-2.5-flash is the recommended
+// replacement and has its own cutover date of 2026-10-16 to watch.
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.5-flash.";
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
 /**

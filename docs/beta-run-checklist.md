@@ -69,6 +69,6 @@ Example prompts:
 - Verify migrations are applied through `0004_v0_scan_result_dedup.sql`.
 - Inspect these Supabase tables: `scan_runs`, `jobs`, `job_logs`, `scan_prompt_results`.
 - Common causes: missing Gemini key, more than 6 prompts, missing active prompts, Gemini API quota/rate limit, unapplied migration, or missing RLS/service-role environment configuration.
-- If Gemini reports `GenerateContentRequest.model`, set `GEMINI_MODEL=gemini-2.0-flash`.
+- If Gemini reports `GenerateContentRequest.model`, set `GEMINI_MODEL=gemini-2.5-flash`.
 - Use the Runs screen for recent history and the technical run detail only for debugging and support when a scan fails or needs inspection.
 - Project setup does not crawl the website, and competitor discovery is not automatic or verified.

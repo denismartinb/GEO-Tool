@@ -58,7 +58,7 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(endpoint).toContain("gemini-2.0-flash-001");
+    expect(endpoint).toContain("gemini-2.5-flash");
 
     const body = JSON.parse(init.body as string);
     expect(body.tools).toEqual([{ google_search: {} }]);

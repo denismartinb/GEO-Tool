@@ -24,10 +24,12 @@ added, renamed, or removed.
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `GEMINI_API_KEY` | Yes | Vercel + local `.env.local` | `AIza...` |
-| `GEMINI_MODEL` | No (defaults to `gemini-2.0-flash-001`) | Vercel optional | Valid model id matching `/^gemini-[a-z0-9][a-z0-9._-]*$/i` |
+| `GEMINI_MODEL` | No (defaults to `gemini-2.5-flash`) | Vercel optional | Valid model id matching `/^gemini-[a-z0-9][a-z0-9._-]*$/i` |
 
-See `docs/adr/0002-gemini-model-pinning.md` — model is pinned to
-`gemini-2.0-flash-001`. Do not change without an ADR.
+See `docs/adr/0002-gemini-model-pinning.md` and
+`docs/adr/0009-gemini-2.5-flash-model-pin.md` — model is pinned to
+`gemini-2.5-flash`. Do not change without an ADR. If a `GEMINI_MODEL`
+override is set in Vercel, it must also be updated to a served model id.
 
 ### Scan execution
 
