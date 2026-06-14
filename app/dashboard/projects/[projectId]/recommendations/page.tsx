@@ -117,8 +117,8 @@ export default async function RecommendationsPage({
         </div>
         <div className="ov-sticky-right">
           {lastScanDate && (
-            <span style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 500 }}>
-              Último escaneo: {lastScanDate}
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+              Escaneado {lastScanDate}
             </span>
           )}
           <button
@@ -138,13 +138,6 @@ export default async function RecommendationsPage({
           >
             Exportar plan
           </button>
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            className="btn btn-ghost btn-sm"
-          >
-            <Icon name="chevronLeft" size={14} />
-            Visión general
-          </Link>
         </div>
       </div>
 

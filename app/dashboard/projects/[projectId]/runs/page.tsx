@@ -312,14 +312,12 @@ export default async function RunsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            className="badge badge-outline"
-            style={{ fontSize: 12, fontWeight: 650, padding: "5px 10px" }}
-          >
-            <Icon name="chevronLeft" size={12} />
-            Visión general
-          </Link>
+          {lastCompletedRun && (
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+              Escaneado {new Date(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          )}
         </div>
       </div>
 

@@ -76,7 +76,7 @@ export default async function CompetitorsPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("scan_runs")
-      .select("id, status, created_at")
+      .select("id, status, created_at, finished_at")
       .eq("project_id", projectId)
       .eq("status", "completed")
       .order("created_at", { ascending: false }),
@@ -92,6 +92,7 @@ export default async function CompetitorsPage({
   const completedRuns = allRuns ?? [];
   const completedRunIds = completedRuns.map((r) => r.id);
   const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const latestCompletedRun = completedRuns[0] ?? null;
 
   /* 2. Prompt results across ALL completed runs */
   const { data: allResults } =
@@ -240,20 +241,18 @@ export default async function CompetitorsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
+          {latestCompletedRun && (
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+            </span>
+          )}
           {activeRun && completedRuns.length > 0 ? (
             <span className="scan-status">
               <span className="dot run" />
               Escaneo en curso
             </span>
           ) : null}
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            className="badge badge-outline"
-            style={{ fontSize: 12, fontWeight: 650, padding: "5px 10px" }}
-          >
-            <Icon name="chevronLeft" size={12} />
-            Visión general
-          </Link>
         </div>
       </div>
 
