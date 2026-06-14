@@ -532,32 +532,6 @@ export default async function ProjectDetailPage({
                 ))
               )}
             </div>
-
-            <div className="hv-divider" />
-
-            {/* Trend */}
-            <div className="hv-trend">
-              <div className="hv-block-label">Tendencia · {visTrend.length} escaneos</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginTop: 2 }}>
-                <span className="tnum" style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-.03em" }}>
-                  {visibilityScore}
-                </span>
-                {visDelta !== 0 && <Delta value={visDelta} suffix=" pt" />}
-                <span className="stat-hint">{visTrend.length > 1 ? "vs. anterior" : "primer escaneo"}</span>
-              </div>
-              <div style={{ marginTop: 10 }}>
-                {visTrend.length >= 2 ? (
-                  <Sparkline data={visTrend} w={220} h={80} />
-                ) : (
-                  <div className="section-empty" style={{ padding: "14px 12px" }}>
-                    <div className="section-empty-desc">La tendencia estará disponible con ≥2 escaneos</div>
-                  </div>
-                )}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8, lineHeight: 1.5 }}>
-                Por encima de <b style={{ color: "var(--ink-2)" }}>70</b> es competitivo para tu categoría.
-              </div>
-            </div>
           </div>
 
           {/* 3 · 4 wide metric cards */}
