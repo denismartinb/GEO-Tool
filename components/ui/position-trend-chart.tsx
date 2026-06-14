@@ -75,7 +75,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
               strokeWidth="1"
             />
             <text x={PAD_LEFT - 8} y={yFor(t)} textAnchor="end" dominantBaseline="middle" fontSize="10" fill="var(--ink-4)">
-              #{t % 1 === 0 ? t : t.toFixed(1)}
+              {t % 1 === 0 ? t : t.toFixed(1)}
             </text>
           </g>
         ))}
@@ -184,7 +184,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
               <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--ink-2)" }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", background: s.color, display: "inline-block" }} />
                 <span>{s.label}:</span>
-                <b className="tnum">{v != null ? `#${v.toFixed(1)}` : "—"}</b>
+                <b className="tnum">{v != null ? v.toFixed(1) : "—"}</b>
               </div>
             );
           })}
