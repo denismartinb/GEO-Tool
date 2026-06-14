@@ -22,7 +22,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     competitorCountByProject,
     completedRunCountByProject,
     recommendationCountByProject,
-    latestScanStatusByProject
+    latestScanStatusByProject,
+    recentCompletedRuns
   } = await getWorkspaceCounters();
 
   return (
@@ -38,7 +39,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
       />
       <div className="dash-main">
         <header className="dash-header">
-          <WorkspaceTopbar projects={projects ?? []} latestScanStatusByProject={latestScanStatusByProject} />
+          <WorkspaceTopbar
+            projects={projects ?? []}
+            latestScanStatusByProject={latestScanStatusByProject}
+            recentCompletedRuns={recentCompletedRuns}
+          />
           <div className="dash-header-actions">
             <div className="meta">{user.email}</div>
             <form action={signOut}>
