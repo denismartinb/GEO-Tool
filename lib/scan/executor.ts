@@ -8,7 +8,8 @@ import {
   EXTRACTION_VERSION,
   MAX_REAL_SCAN_PROMPTS,
   PROMPT_RETRY_DELAY_MS,
-  PROMPT_RETRY_MAX_TOTAL_ATTEMPTS
+  PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
+  PROMPT_VERSION
 } from "@/lib/scan/constants";
 import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
@@ -261,8 +262,6 @@ export async function executePendingScan({
           const llmStart = Date.now();
           llmResult = await generateGeminiVisibilityAnswer({
             prompt: promptText,
-            brand: project.brand,
-            competitors: (competitors ?? []).map((c) => c.name),
             country: project.country,
             language: project.language
           });
@@ -343,7 +342,8 @@ export async function executePendingScan({
         raw_response_json: {
           text: llmResult.text,
           total_tokens: llmResult.totalTokens,
-          grounding_chunks: llmResult.groundingChunks ?? []
+          grounding_chunks: llmResult.groundingChunks ?? [],
+          prompt_version: PROMPT_VERSION
         },
         tokens_in: llmResult.tokensIn,
         tokens_out: llmResult.tokensOut,

@@ -161,6 +161,29 @@ function makeScanRunsTable() {
   return builder;
 }
 
+/**
+ * Captures every row inserted into `scan_prompt_results`, so tests can assert
+ * on the persisted `raw_response_json` (e.g. `prompt_version`) without caring
+ * about the rest of the no-op table plumbing.
+ */
+function makeScanPromptResultsTable() {
+  const inserted: Array<Record<string, unknown>> = [];
+  const builder: Record<string, unknown> = {
+    insert: (row: Record<string, unknown>) => {
+      inserted.push(row);
+      return Promise.resolve({ error: null });
+    },
+    eq: () => builder,
+    select: () => builder,
+    order: () => builder,
+    maybeSingle: () => Promise.resolve({ data: null, error: null }),
+    single: () => Promise.resolve({ data: null, error: null }),
+    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
+      Promise.resolve({ data: [], error: null }).then(resolve)
+  };
+  return { inserted, table: builder };
+}
+
 function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }) {
   const jobsTable = makeJobsTable([
     {
@@ -196,11 +219,13 @@ function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }
   ]);
 
   const scanRunsTable = makeScanRunsTable();
+  const scanPromptResultsTable = makeScanPromptResultsTable();
 
   const service = {
     from(table: string) {
       if (table === "jobs") return jobsTable.table;
       if (table === "scan_runs") return scanRunsTable;
+      if (table === "scan_prompt_results") return scanPromptResultsTable.table;
       return noopTable();
     }
   } as unknown as ServiceClient;
@@ -250,7 +275,7 @@ function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }
     }
   } as unknown as SupabaseClient;
 
-  return { service, supabase, jobsTable, scanRunsTable };
+  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable };
 }
 
 const SUCCESS_RESPONSE = {
@@ -337,6 +362,36 @@ describe("executePendingScan — per-prompt retry (SCAN-ROBUST-1)", () => {
     const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
     expect(promptJob.attempt_count).toBe(1);
     expect(promptJob.status).toBe("failed");
+  });
+
+  it("calls generateGeminiVisibilityAnswer without brand/competitors and persists PROMPT_VERSION (docs/adr/0007)", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    const { PROMPT_VERSION } = await import("./constants");
+
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    const [callArgs] = generateGeminiVisibilityAnswer.mock.calls[0];
+    expect(callArgs).not.toHaveProperty("brand");
+    expect(callArgs).not.toHaveProperty("competitors");
+    expect(callArgs).toEqual({
+      prompt: "What is the best CRM?",
+      country: "ES",
+      language: "es"
+    });
+
+    expect(scanPromptResultsTable.inserted).toHaveLength(1);
+    const insertedRow = scanPromptResultsTable.inserted[0];
+    expect((insertedRow.raw_response_json as Record<string, unknown>).prompt_version).toBe(PROMPT_VERSION);
+    // The extraction pass (runStructuredExtractionForRun, mocked above) is the
+    // one that receives brand/competitors via brand_snapshot/competitors_snapshot.
+    expect(insertedRow.brand_snapshot).toBe("Acme");
+    expect(insertedRow.competitors_snapshot).toEqual([]);
   });
 
   it("does not retry on GeminiConfigError (terminal, run-level failure)", async () => {
