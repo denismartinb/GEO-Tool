@@ -14,8 +14,6 @@ function mockFetchOnce(body: unknown, status = 200) {
 function visibilityInput() {
   return {
     prompt: "What is the best CRM?",
-    brand: "Acme",
-    competitors: ["Beta", "Gamma"],
     country: "ES",
     language: "es"
   };
@@ -38,8 +36,6 @@ describe("generateGeminiVisibilityAnswer", () => {
     await expect(
       generateGeminiVisibilityAnswer({
         prompt: "best widgets",
-        brand: "Acme",
-        competitors: [],
         country: "ES",
         language: "es"
       })
@@ -56,8 +52,6 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     await generateGeminiVisibilityAnswer({
       prompt: "best widgets",
-      brand: "Acme",
-      competitors: ["Globex"],
       country: "ES",
       language: "es"
     });
@@ -68,6 +62,42 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     const body = JSON.parse(init.body as string);
     expect(body.tools).toEqual([{ google_search: {} }]);
+  });
+
+  it("sends a brand-blind, neutral generation prompt (docs/adr/0007)", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: "Here are some good options." }] } }],
+      modelVersion: "gemini-2.0-flash-001",
+      usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5, totalTokenCount: 15 }
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateGeminiVisibilityAnswer({
+      prompt: "best widgets",
+      country: "ES",
+      language: "es"
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+
+    const systemInstructionText = body.systemInstruction.parts[0].text as string;
+    const contentText = body.contents[0].parts[0].text as string;
+
+    // The neutral instruction legitimately mentions "brand(s)" in a
+    // non-favoring sense ("recommend ... brands ..."), so assert it doesn't
+    // single out *the* brand being measured rather than asserting the word
+    // never appears.
+    expect(systemInstructionText).not.toContain("Brand:");
+    expect(systemInstructionText).not.toContain("Competitors:");
+    expect(systemInstructionText).not.toMatch(/mention the brand/i);
+    expect(systemInstructionText).toMatch(/not favour or avoid any particular brand/i);
+    expect(systemInstructionText).toContain("helpful AI assistant");
+
+    expect(contentText).toContain("Question: best widgets");
+    expect(contentText).not.toContain("Brand:");
+    expect(contentText).not.toContain("Competitors:");
+    expect(contentText).not.toMatch(/\bAcme\b/);
   });
 
   it("parses groundingMetadata.groundingChunks into groundingChunks", async () => {
@@ -91,8 +121,6 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     const result = await generateGeminiVisibilityAnswer({
       prompt: "best widgets",
-      brand: "Acme",
-      competitors: [],
       country: "ES",
       language: "es"
     });
@@ -113,8 +141,6 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     const result = await generateGeminiVisibilityAnswer({
       prompt: "best widgets",
-      brand: "Acme",
-      competitors: [],
       country: "ES",
       language: "es"
     });
@@ -128,8 +154,6 @@ describe("generateGeminiVisibilityAnswer", () => {
     await expect(
       generateGeminiVisibilityAnswer({
         prompt: "best widgets",
-        brand: "Acme",
-        competitors: [],
         country: "ES",
         language: "es"
       })

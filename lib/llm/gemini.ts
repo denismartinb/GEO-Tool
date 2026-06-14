@@ -117,8 +117,6 @@ export type GeminiStructuredExtractionResponse = {
 
 export async function generateGeminiVisibilityAnswer(input: {
   prompt: string;
-  brand: string;
-  competitors: string[];
   country: string;
   language: string;
 }): Promise<GeminiVisibilityResponse> {
@@ -128,14 +126,22 @@ export async function generateGeminiVisibilityAnswer(input: {
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
-  const instruction =
-    "You are a GEO visibility analyst. Answer naturally in plain text. Mention the brand and relevant competitors when useful.";
+  // Brand-blind, neutral simulation prompt (docs/adr/0007-neutral-visibility-simulation.md).
+  // This call must NOT know which brand/competitors are being measured —
+  // mentions are detected afterwards from this neutral answer by
+  // extractGeminiStructuredData, which is given the brand/competitors.
+  const instruction = [
+    "You are a helpful AI assistant answering a real user's question. Answer",
+    "naturally and concisely in plain text, as you normally would for an end user.",
+    "Recommend specific products, brands, services or providers by name when that",
+    "genuinely helps answer the question, exactly as you would for any user. Do",
+    "not favour or avoid any particular brand. Do not mention that this is an",
+    "analysis."
+  ].join("\n");
   const promptBlock = [
-    `Prompt: ${input.prompt}`,
-    `Brand: ${input.brand}`,
-    `Competitors: ${input.competitors.join(", ") || "none"}`,
-    `Country: ${input.country}`,
-    `Language: ${input.language}`
+    `Question: ${input.prompt}`,
+    `Answer for a user in this market/country: ${input.country}`,
+    `Respond in this language: ${input.language}`
   ].join("\n");
 
   const requestBody = JSON.stringify({

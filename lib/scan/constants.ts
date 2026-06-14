@@ -15,6 +15,22 @@ export const MAX_EXTRACTION_RESULTS = 10;
  * for runs scored from "grounded-position-v1" extractions — see the ADR.
  */
 export const EXTRACTION_VERSION = "grounded-position-v1";
+
+/**
+ * "neutral-sim-v1" — marks scan_prompt_results whose
+ * raw_response_json.prompt_version was generated with the brand-blind
+ * `generateGeminiVisibilityAnswer` prompt (docs/adr/0007-neutral-visibility-simulation.md).
+ * Earlier runs sent `Brand:`/`Competitors:` in the generation prompt and a
+ * systemInstruction telling Gemini to mention the brand, which made the
+ * simulated answer circular (the brand was nearly always mentioned),
+ * inflating `visibility_score` toward 100 and pinning `brand.position` to 1.
+ * From this version onward, generation is brand-blind; only the separate
+ * extraction pass (extractGeminiStructuredData, unchanged) is given the
+ * brand/competitors to detect real mentions/position/sentiment in the
+ * neutral answer. There is no backfill: old runs simply lack
+ * raw_response_json.prompt_version (or have an older value).
+ */
+export const PROMPT_VERSION = "neutral-sim-v1";
 export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
 
 /**
