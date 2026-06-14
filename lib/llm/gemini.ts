@@ -219,14 +219,16 @@ export async function extractGeminiStructuredData(input: {
 
   const schemaInstruction = `Return ONLY valid JSON with this exact shape:
 {
-  "brand": { "mentioned": boolean, "display_name_found": string|null, "evidence": string[] },
-  "competitors": [{ "name": string, "mentioned": boolean, "evidence": string[] }],
+  "brand": { "mentioned": boolean, "display_name_found": string|null, "evidence": string[], "position": number|null },
+  "competitors": [{ "name": string, "mentioned": boolean, "evidence": string[], "position": number|null }],
   "citations": [{ "url": string|null, "domain": string|null, "label": string|null, "evidence": string|null }],
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
   "summary": string,
   "confidence": "low"|"medium"|"high",
   "notes": string[]
-}`;
+}
+
+For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if the entity is not mentioned (mentioned: false). Rank only entities that are actually mentioned, with no gaps in the ranking (1, 2, 3, ...), ordered by where each entity first appears in the text. The brand and all competitors share a single ranking.`;
 
   const promptBlock = [
     schemaInstruction,

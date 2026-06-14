@@ -237,3 +237,145 @@ describe("computeRunScoresFromResults — details_json contents", () => {
     expect(result.details_json.total_results).toBe(15);
   });
 });
+
+describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () => {
+  /**
+   * Builds a row with a valid extracted_json shape for brand_position
+   * (brand + competitors, each with mentioned/position), plus a
+   * brand_snapshot identifying the brand entity.
+   */
+  function positionRow(overrides: {
+    id: string;
+    brand_snapshot?: string | null;
+    brand?: { mentioned: boolean; position: number | null };
+    competitors?: Array<{ name: string; mentioned: boolean; position: number | null }>;
+    extracted_json?: unknown;
+  }): ScoreInputRow {
+    const { id, brand_snapshot = "MiMarca", brand, competitors, extracted_json } = overrides;
+    return row({
+      id,
+      brand_snapshot,
+      extracted_json:
+        extracted_json !== undefined
+          ? extracted_json
+          : {
+              brand: brand ?? { mentioned: false, position: null },
+              competitors: (competitors ?? []).map((c) => ({
+                name: c.name,
+                mentioned: c.mentioned,
+                position: c.position
+              }))
+            }
+    });
+  }
+
+  it("is omitted when no row has a valid extracted_json shape", () => {
+    const results = [row({ id: "1" }), row({ id: "2" })];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.details_json.brand_position).toBeUndefined();
+  });
+
+  it("computes avg_position with dense ranking and penalizes not-mentioned entities with N+1", () => {
+    // N = 1 brand + 1 competitor = 2 tracked entities -> penalized position = 3
+    // Prompt 1: brand mentioned at 1, competitor not mentioned -> competitor gets 3
+    // Prompt 2: competitor mentioned at 1, brand not mentioned -> brand gets 3
+    const results = [
+      positionRow({
+        id: "1",
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }]
+      }),
+      positionRow({
+        id: "2",
+        brand: { mentioned: false, position: null },
+        competitors: [{ name: "Competitor", mentioned: true, position: 1 }]
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+    const brandPosition = result.details_json.brand_position as {
+      prompts_with_position_data: number;
+      total_entities: number;
+      ranking: Array<{ name: string; is_brand: boolean; avg_position: number; mention_count: number }>;
+      brand_avg_position: number | null;
+      confidence: "low" | "high";
+    };
+
+    expect(brandPosition.prompts_with_position_data).toBe(2);
+    expect(brandPosition.total_entities).toBe(2);
+    // brand: (1 + 3) / 2 = 2; competitor: (3 + 1) / 2 = 2 -> tied, both 2
+    expect(brandPosition.brand_avg_position).toBe(2);
+    const brandEntry = brandPosition.ranking.find((e) => e.is_brand);
+    const competitorEntry = brandPosition.ranking.find((e) => !e.is_brand);
+    expect(brandEntry).toMatchObject({ name: "MiMarca", avg_position: 2, mention_count: 1 });
+    expect(competitorEntry).toMatchObject({ name: "Competitor", avg_position: 2, mention_count: 1 });
+    // confidence is high: prompts_with_position_data (2) >= total_results (2)
+    expect(brandPosition.confidence).toBe("high");
+  });
+
+  it("treats a non-null position with mentioned: false as not-mentioned (defensive normalization)", () => {
+    // Gemini contradiction: mentioned: false but position: 1. Must be ignored
+    // and treated as not-mentioned (penalized position N+1 = 2).
+    const results = [
+      positionRow({
+        id: "1",
+        brand: { mentioned: false, position: 1 },
+        competitors: []
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+    const brandPosition = result.details_json.brand_position as {
+      ranking: Array<{ name: string; avg_position: number; mention_count: number }>;
+      brand_avg_position: number | null;
+    };
+
+    // total_entities = 1 (brand only) -> penalized position = 2
+    expect(brandPosition.brand_avg_position).toBe(2);
+    expect(brandPosition.ranking[0]).toMatchObject({ avg_position: 2, mention_count: 0 });
+  });
+
+  it("returns confidence: low when prompts_with_position_data < total_results", () => {
+    const results = [
+      positionRow({ id: "1", brand: { mentioned: true, position: 1 }, competitors: [] }),
+      // Row 2 has no valid extracted_json shape (extraction_error case).
+      row({ id: "2", extracted_json: null, brand_snapshot: "MiMarca" })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+    const brandPosition = result.details_json.brand_position as { prompts_with_position_data: number; confidence: string };
+
+    expect(brandPosition.prompts_with_position_data).toBe(1);
+    expect(brandPosition.confidence).toBe("low");
+  });
+
+  it("is omitted when extracted_json is valid but brand_snapshot is missing", () => {
+    const results = [
+      positionRow({
+        id: "1",
+        brand_snapshot: null,
+        brand: { mentioned: true, position: 1 },
+        competitors: []
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.details_json.brand_position).toBeUndefined();
+  });
+
+  it("includes the brand_position formula in formulas_used and assumptions", () => {
+    const results = [positionRow({ id: "1", brand: { mentioned: true, position: 1 }, competitors: [] })];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.details_json.formulas_used).toMatchObject({
+      brand_position: expect.stringContaining("avg_position(entity)")
+    });
+    expect(
+      (result.details_json.assumptions as string[]).some((a) => a.includes("brand_position"))
+    ).toBe(true);
+  });
+});

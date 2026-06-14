@@ -3,14 +3,18 @@ import "server-only";
 export const MAX_REAL_SCAN_PROMPTS = 6;
 export const MAX_EXTRACTION_RESULTS = 10;
 /**
- * "grounded-v1" — extraction runs with Google Search grounding enabled on
- * the Gemini visibility call (docs/adr/0004-gemini-search-grounding.md).
- * citations_count / citation_found now reflect real grounding sources only.
- * Bumping this version means prior non-grounded runs ("gemini-extraction-v1")
- * are not directly comparable in time-series metrics — see the ADR for the
- * methodology note.
+ * "grounded-position-v1" — extraction runs with Google Search grounding
+ * enabled on the Gemini visibility call
+ * (docs/adr/0004-gemini-search-grounding.md) AND per-entity `position` data
+ * (docs/adr/0005-average-brand-position.md). citations_count /
+ * citation_found reflect real grounding sources only, and
+ * extracted_json.brand.position / extracted_json.competitors[].position are
+ * populated for the "Average Brand Position" metric. Bumping this version
+ * from "grounded-v1" means prior runs (without position data) are
+ * distinguishable: run_scores.details_json.brand_position is only present
+ * for runs scored from "grounded-position-v1" extractions — see the ADR.
  */
-export const EXTRACTION_VERSION = "grounded-v1";
+export const EXTRACTION_VERSION = "grounded-position-v1";
 export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION === "true";
 
 /**

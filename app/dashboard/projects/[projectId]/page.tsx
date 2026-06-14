@@ -77,6 +77,21 @@ type ExtractedJsonPartial = {
   summary?: string;
 };
 
+type BrandPositionEntry = {
+  name?: string;
+  is_brand?: boolean;
+  avg_position?: number;
+  mention_count?: number;
+};
+
+type BrandPositionDetails = {
+  prompts_with_position_data?: number;
+  total_entities?: number;
+  ranking?: BrandPositionEntry[];
+  brand_avg_position?: number;
+  confidence?: string;
+};
+
 function parseExt(raw: unknown): ExtractedJsonPartial {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as ExtractedJsonPartial;
@@ -179,7 +194,11 @@ export default async function ProjectDetailPage({
   /* ---- derived values ---- */
   const scoreDetails =
     latestScore?.details_json && typeof latestScore.details_json === "object"
-      ? (latestScore.details_json as { total_results?: number; brand_mentioned_count?: number })
+      ? (latestScore.details_json as {
+          total_results?: number;
+          brand_mentioned_count?: number;
+          brand_position?: BrandPositionDetails;
+        })
       : {};
   const totalResults = n(scoreDetails.total_results ?? latestCompletedRun?.successful_prompts);
   const brandMentions = n(
@@ -267,6 +286,16 @@ export default async function ProjectDetailPage({
 
   const hasData = Boolean(latestCompletedRun && latestScore);
   const confidencePercent = confidenceToPercent(runConfidence);
+
+  /* ---- brand position (Phase A) ---- */
+  const brandPosition = scoreDetails.brand_position;
+  const brandPositionPromptsWithData = n(brandPosition?.prompts_with_position_data);
+  const brandPositionAvailable = Boolean(brandPosition) && brandPositionPromptsWithData > 0;
+  const brandPositionRanking = [...(brandPosition?.ranking ?? [])].sort(
+    (a, b) => n(a.avg_position) - n(b.avg_position)
+  );
+  const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
+  const ownBrandPosition = brandPositionRanking.find((e) => e.is_brand);
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
 
@@ -514,6 +543,58 @@ export default async function ProjectDetailPage({
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* 3b · Posición media de marca */}
+          <div className="wide-stat wide-stat--position" style={{ marginTop: 12 }}>
+            <div className="ws-left" style={{ width: "100%" }}>
+              <div className="stat-label">Posición media de marca</div>
+              {brandPositionAvailable ? (
+                <>
+                  <div className="stat-value tnum">
+                    {ownBrandPosition ? ownBrandPosition.avg_position?.toFixed(2) : brandPosition?.brand_avg_position?.toFixed(2)}
+                    <span className="unit">pos. media</span>
+                  </div>
+                  <p className="stat-hint" style={{ marginTop: -2 }}>
+                    Tu posición media entre las marcas mencionadas en las respuestas de IA.
+                  </p>
+                  {brandPositionLowConfidence && (
+                    <span className="badge badge-warn" style={{ marginTop: 4, width: "fit-content" }}>
+                      Pocos datos — basado en {brandPositionPromptsWithData} prompt{brandPositionPromptsWithData === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  <div className="bp-ranking">
+                    {brandPositionRanking.map((entry, i) => (
+                      <div key={entry.name ?? i} className={`bp-row ${entry.is_brand ? "you" : ""}`}>
+                        <span className="bp-rank">{i + 1}</span>
+                        <span
+                          className="fav"
+                          style={{
+                            background: entry.is_brand ? "var(--accent)" : COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
+                            width: 22,
+                            height: 22,
+                            fontSize: 10
+                          }}
+                        >
+                          {(entry.name ?? "?").slice(0, 1).toUpperCase()}
+                        </span>
+                        <span className="bp-name">
+                          {entry.name}
+                          {entry.is_brand && <span className="bp-you-tag">Tú</span>}
+                        </span>
+                        <span className="bp-pos tnum">{n(entry.avg_position).toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="section-empty" style={{ padding: "14px 12px", marginTop: 4 }}>
+                  <div className="section-empty-desc">
+                    Posición media no disponible para este escaneo — disponible a partir del próximo escaneo.
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 4 · Dónde estás */}
