@@ -44,3 +44,20 @@ Vercel dashboard — not changeable from the codebase).
   add this to `docs/director-strategy.md` as a tracked item.
 - Per ADR 0002 rule 3, the `platform-deploy` agent must validate the pinned
   model id is still served before any smoke test going forward.
+
+---
+
+## Addendum (2026-06-14) — disable "thinking" for latency
+
+`GEMINI_MODEL=gemini-2.5-flash` was already set as a Vercel env override
+since 2026-06-11 (independent of this ADR's default-constant change), yet
+scans continued to intermittently fail with `scan_failed_no_results` after
+that date. Root cause: `gemini-2.5-flash` has "thinking" enabled by default,
+which combined with `google_search` grounding regularly pushes per-call
+latency past `GEMINI_CALL_TIMEOUT_MS` (20s), producing `GeminiTimeoutError`
+on most/all of the 6 prompts in a run.
+
+Fix: all three Gemini calls (`generateGeminiVisibilityAnswer`,
+`extractGeminiStructuredData`, `generateGeminiJson`) now set
+`generationConfig.thinkingConfig.thinkingBudget = 0` to restore latency
+comparable to the previously pinned `gemini-2.0-flash-001`.
