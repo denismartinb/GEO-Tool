@@ -6,7 +6,12 @@ vi.mock("@/lib/llm/gemini", () => ({
   extractGeminiStructuredData: vi.fn()
 }));
 
+vi.mock("@/lib/scan/citation-resolution", () => ({
+  resolveGroundingRedirects: vi.fn().mockResolvedValue(new Map())
+}));
+
 import { extractGeminiStructuredData } from "@/lib/llm/gemini";
+import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 
 /**
  * Minimal chainable query-builder mock. Every method returns `this` so any
@@ -68,6 +73,10 @@ function baseExtractionOutput(overrides: Record<string, unknown> = {}) {
 describe("runStructuredExtractionForRun", () => {
   afterEach(() => {
     vi.mocked(extractGeminiStructuredData).mockReset();
+    vi.mocked(resolveGroundingRedirects).mockReset();
+    // Restore the default no-op resolution (empty map) for tests that don't
+    // exercise grounding-chunk resolution explicitly.
+    vi.mocked(resolveGroundingRedirects).mockResolvedValue(new Map());
   });
 
   it("derives citations_count/citation_found from grounding chunks only, ignoring inline matches", async () => {
@@ -98,6 +107,13 @@ describe("runStructuredExtractionForRun", () => {
       model: "gemini-2.0-flash-001"
     });
 
+    vi.mocked(resolveGroundingRedirects).mockResolvedValue(
+      new Map([
+        ["https://www.acme.com/products", { resolvedUrl: "https://www.acme.com/products" }],
+        ["https://reviews.example.org/acme", { resolvedUrl: "https://reviews.example.org/acme" }]
+      ])
+    );
+
     await runStructuredExtractionForRun({
       service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
       projectId: "project-1",
@@ -120,6 +136,69 @@ describe("runStructuredExtractionForRun", () => {
     expect(groundingCitations.map((c) => c.domain)).toEqual(["acme.com", "reviews.example.org"]);
     expect(inlineCitations).toHaveLength(1);
     expect(inlineCitations[0].domain).toBe("inline-example.com");
+  });
+
+  it("falls back to domain: null and confidence: 'low' when grounding redirect resolution fails or times out", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          baseRow({
+            raw_response_json: {
+              grounding_chunks: [
+                {
+                  uri: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc123",
+                  title: "Movistar - Fibra y Móvil"
+                }
+              ]
+            }
+          })
+        ],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    // Resolution failed/timed out: resolveGroundingRedirects reports no
+    // resolved URL for this URI.
+    vi.mocked(resolveGroundingRedirects).mockResolvedValue(
+      new Map([
+        ["https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc123", { resolvedUrl: null }]
+      ])
+    );
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(updateCalls).toHaveLength(1);
+    const update = updateCalls[0];
+
+    // The citation still counts toward citations_count / citation_found —
+    // it's a real grounding source, we just couldn't resolve its display
+    // domain.
+    expect(update.citations_count).toBe(1);
+    expect(update.citation_found).toBe(true);
+
+    const extractedJson = update.extracted_json as {
+      citations: Array<{ url: string | null; domain: string | null; title: string | null; source: string; confidence: string }>;
+    };
+    const [citation] = extractedJson.citations;
+
+    expect(citation.source).toBe("grounding");
+    expect(citation.domain).toBeNull();
+    expect(citation.confidence).toBe("low");
+    expect(citation.title).toBe("Movistar - Fibra y Móvil");
+    // Original URL retained for traceability, but never surfaced as the
+    // display domain.
+    expect(citation.url).toBe("https://vertexaisearch.cloud.google.com/grounding-api-redirect/abc123");
   });
 
   it("marks a real zero-grounding result with EXTRACTION_VERSION and citations_count 0, distinguishable from unprocessed rows", async () => {

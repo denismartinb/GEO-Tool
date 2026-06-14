@@ -2,14 +2,14 @@ import "server-only";
 
 import { extractGeminiStructuredData } from "@/lib/llm/gemini";
 import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants";
+import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
 import type { GroundedCitation } from "@/lib/extraction/schema";
 
 /**
- * Best-effort domain extraction from a grounding chunk URI. Grounding URIs
- * are full URLs (sometimes via a Google redirect wrapper); we only need the
- * hostname for display/dedup. Never throws — returns null on malformed URIs.
+ * Best-effort domain extraction from a URL. Never throws — returns null on
+ * malformed URLs.
  */
 function extractDomain(uri: string): string | null {
   try {
@@ -30,22 +30,51 @@ function extractDomain(uri: string): string | null {
  *   verified by grounding.
  *
  * Only "grounding" citations count toward citations_count / citation_found.
+ *
+ * Grounding chunk URIs are Google's redirect wrapper
+ * (`vertexaisearch.cloud.google.com/grounding-api-redirect/...`), not the
+ * real cited page. We resolve them to their final destination so `domain`
+ * reflects the actual source (e.g. `www.movistar.es`) — see
+ * docs/adr/0006-grounding-redirect-resolution.md. If resolution fails or
+ * times out, `domain` is set to `null` and `confidence` is downgraded to
+ * "low" rather than showing the Google redirect host.
  */
-function buildGroundedCitations(input: {
+async function buildGroundedCitations(input: {
   groundingChunks: Array<{ uri?: string; title?: string }> | undefined;
   inlineCitations: Array<{ url: string | null; domain: string | null; label: string | null }>;
-}): GroundedCitation[] {
+}): Promise<GroundedCitation[]> {
   const citations: GroundedCitation[] = [];
 
-  for (const chunk of input.groundingChunks ?? []) {
-    if (!chunk.uri) continue;
-    citations.push({
-      url: chunk.uri,
-      domain: extractDomain(chunk.uri),
-      title: chunk.title ?? null,
-      source: "grounding",
-      confidence: "high"
-    });
+  const groundingChunks = (input.groundingChunks ?? []).filter(
+    (chunk): chunk is { uri: string; title?: string } => Boolean(chunk.uri)
+  );
+
+  const resolvedByUri = await resolveGroundingRedirects(groundingChunks.map((chunk) => chunk.uri));
+
+  for (const chunk of groundingChunks) {
+    const resolution = resolvedByUri.get(chunk.uri);
+    const resolvedUrl = resolution?.resolvedUrl ?? null;
+
+    if (resolvedUrl) {
+      citations.push({
+        url: chunk.uri,
+        domain: extractDomain(resolvedUrl),
+        title: chunk.title ?? null,
+        source: "grounding",
+        confidence: "high"
+      });
+    } else {
+      // Redirect resolution failed or timed out: never surface the Google
+      // redirect host as a domain. Keep the original URL for traceability,
+      // drop the domain, and downgrade confidence.
+      citations.push({
+        url: chunk.uri,
+        domain: null,
+        title: chunk.title ?? null,
+        source: "grounding",
+        confidence: "low"
+      });
+    }
   }
 
   for (const citation of input.inlineCitations) {
@@ -106,7 +135,7 @@ export async function runStructuredExtractionForRun(input: {
       const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
 
       const groundingChunks = row.raw_response_json?.grounding_chunks ?? [];
-      const citations = buildGroundedCitations({
+      const citations = await buildGroundedCitations({
         groundingChunks,
         inlineCitations: extracted.data.citations.map((c) => ({
           url: c.url,

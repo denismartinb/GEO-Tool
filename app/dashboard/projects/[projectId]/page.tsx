@@ -72,7 +72,7 @@ function getBandTone(score: number): string {
 
 type ExtractedJsonPartial = {
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
-  citations?: Array<{ url?: string | null; domain?: string | null }>;
+  citations?: Array<{ url?: string | null; domain?: string | null; title?: string | null; source?: string }>;
   brand?: { mentioned?: boolean; evidence?: string[] };
   summary?: string;
 };
@@ -231,7 +231,12 @@ export default async function ProjectDetailPage({
 
   /* ---- competitor breakdown from extracted_json ---- */
   const competitorMentionCounts: Record<string, number> = {};
-  const citedUrlCounts: Record<string, { display: string; domain: string; count: number }> = {};
+  // Keyed by `domain` when known, or by `title`/fallback label when the
+  // grounding redirect could not be resolved (see
+  // docs/adr/0006-grounding-redirect-resolution.md). Unresolved entries are
+  // never grouped under the same key as resolved ones — display falls back
+  // to `title`, never the raw Google redirect URL.
+  const citedUrlCounts: Record<string, { display: string; domain: string | null; count: number }> = {};
 
   for (const result of allPromptResults ?? []) {
     const ext = parseExt(result.extracted_json);
@@ -243,10 +248,30 @@ export default async function ProjectDetailPage({
       }
     }
     for (const cit of ext.citations ?? []) {
-      const url = cit.url?.trim() || cit.domain?.trim();
+      const domain = cit.domain?.trim() || null;
+
+      if (domain) {
+        if (!citedUrlCounts[domain]) citedUrlCounts[domain] = { display: domain, domain, count: 0 };
+        citedUrlCounts[domain].count++;
+        continue;
+      }
+
+      // Unresolved grounding redirect: never display the raw
+      // vertexaisearch.cloud.google.com URL. Group by title instead, or a
+      // generic label if even the title is missing.
+      if (cit.source === "grounding") {
+        const label = cit.title?.trim() || "Fuente sin resolver";
+        const key = `unresolved:${label.toLowerCase()}`;
+        if (!citedUrlCounts[key]) citedUrlCounts[key] = { display: label, domain: null, count: 0 };
+        citedUrlCounts[key].count++;
+        continue;
+      }
+
+      // Inline citations without a domain: fall back to the raw URL as
+      // before (these are not grounding redirects).
+      const url = cit.url?.trim();
       if (!url) continue;
-      const domain = cit.domain?.trim() || url.replace(/^https?:\/\//, "").split("/")[0];
-      if (!citedUrlCounts[url]) citedUrlCounts[url] = { display: url, domain, count: 0 };
+      if (!citedUrlCounts[url]) citedUrlCounts[url] = { display: url, domain: null, count: 0 };
       citedUrlCounts[url].count++;
     }
   }
@@ -281,7 +306,9 @@ export default async function ProjectDetailPage({
     .slice(0, 5)
     .map((p) => ({
       ...p,
-      isYours: p.domain.replace(/^www\./, "").includes(project.domain.replace(/^www\./, ""))
+      isYours: Boolean(
+        p.domain && p.domain.replace(/^www\./, "").includes(project.domain.replace(/^www\./, ""))
+      )
     }));
 
   const hasData = Boolean(latestCompletedRun && latestScore);
