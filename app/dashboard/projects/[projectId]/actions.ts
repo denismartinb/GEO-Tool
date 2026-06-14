@@ -151,7 +151,7 @@ export async function executeScan(formData: FormData) {
 }
 
 /**
- * Enables/disables the weekly automatic scan for a project. Opt-in only:
+ * Enables/disables the daily automatic scan for a project. Opt-in only:
  * enabling requires at least one completed scan run, so the recurring cadence
  * always starts from a known-good baseline (geo-strategy guardrail).
  */

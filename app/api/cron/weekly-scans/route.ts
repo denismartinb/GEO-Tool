@@ -7,7 +7,7 @@ import { createPendingScanRunForCron, executePendingScan } from "@/lib/scan/scan
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-const RECURRING_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+const RECURRING_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const TIME_BUDGET_MS = 45_000;
 const FAILURE_STREAK_LIMIT = 3;
 const DEFAULT_MAX_PROJECTS_PER_RUN = 5;
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
     }
   }
 
-  console.info("[geo:scan:cron] weekly scan run summary", {
+  console.info("[geo:scan:cron] daily scan run summary", {
     elapsedMs: Date.now() - startedAt,
     candidates: candidateProjects?.length ?? 0,
     scanned: scannedCount,
