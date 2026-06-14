@@ -47,7 +47,7 @@ See `docs/adr/0003-sync-scan-execution-and-maxduration.md`.
 
 The cron only ever processes projects with `projects.recurring_scans_enabled = true`
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
-`vercel.json` schedules the route weekly (`0 6 * * 1`).
+`vercel.json` schedules the route daily (`0 6 * * *`).
 
 ---
 

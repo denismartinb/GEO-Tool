@@ -435,7 +435,7 @@ export default async function RunsPage({
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 13.5, fontWeight: 750, color: "var(--ink)" }}>
-                Escaneo automático semanal
+                Escaneo automático diario
               </span>
               {project.recurring_scans_enabled ? (
                 <span className="badge badge-pos">Activado</span>
@@ -445,8 +445,8 @@ export default async function RunsPage({
             </div>
             <div style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 2, lineHeight: 1.5 }}>
               {project.recurring_scans_enabled
-                ? "Este dominio se escanea automáticamente cada semana con tus prompts actuales."
-                : "Escanea este dominio automáticamente cada semana con tus prompts actuales."}
+                ? "Este dominio se escanea automáticamente cada día con tus prompts actuales."
+                : "Escanea este dominio automáticamente cada día con tus prompts actuales."}
             </div>
           </div>
           {project.recurring_scans_enabled || totalCompletedRuns > 0 ? (
