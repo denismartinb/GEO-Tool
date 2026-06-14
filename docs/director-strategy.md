@@ -50,7 +50,7 @@ user-facing cancel action.
   **not implemented** and is now P1, not a launch blocker (see "Next H1
   actions" below).
 - Overview with real data: working — confirmed by founder.
-- Gemini model pinned: `gemini-2.0-flash-001` (see ADR 0002)
+- Gemini model pinned: `gemini-2.5-flash` (see ADR 0002, ADR 0009 — gemini-2.0-flash-001 was shut down by Google on 2026-06-01)
 - Vercel `maxDuration=60` on scan route (see ADR 0003)
 
 **Closed investigation (2026-06-13):** Reported "cross-tab session" bug
@@ -72,6 +72,10 @@ symptom in normal (non-private) browsing with two tabs.
 2. Cancel-scan action for stuck/running runs (P1 — UX nicety, not a
    correctness blocker; auto-retry already keeps the system unstuck).
 3. UX baseline pass aligned to GEO Suite design reference.
+4. **Tracked deadline**: `gemini-2.5-flash` (pinned by ADR 0009) has an
+   announced cutover date of 2026-10-16. Revisit the model pin before then —
+   otherwise all scans will fail with `scan_failed_no_results` again, as
+   happened with `gemini-2.0-flash-001` on 2026-06-01.
 
 ### H2 — Next: GEO product differentiators
 
