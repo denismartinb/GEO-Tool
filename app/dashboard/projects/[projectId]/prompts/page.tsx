@@ -193,19 +193,17 @@ export default async function PromptsPage({
     <div className="page" style={{ paddingTop: 0 }}>
       <header className="ov-sticky-header">
         <div className="ov-sticky-left">
-          <p style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600 }}>
-            {project.name} · {project.domain}
-          </p>
-          <h1
-            style={{
-              fontSize: 18,
-              fontWeight: 760,
-              color: "var(--ink)",
-              marginTop: 2,
-            }}
-          >
-            Prompts
-          </h1>
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>Prompts</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                {project.name}
+              </span>
+              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
+                {project.domain}
+              </span>
+            </div>
+          </div>
         </div>
         <div className="ov-sticky-right">
           {latestRun && (
