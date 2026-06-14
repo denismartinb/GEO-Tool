@@ -2631,7 +2631,7 @@ a {
   /* --- Per-page sticky header (project name + scan status/CTA) --- */
   .ov-sticky-header {
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: flex-end;
     margin: -22px -20px 16px;
     padding: 12px 20px;
   }
@@ -2642,9 +2642,7 @@ a {
   }
 
   .ov-sticky-right {
-    flex-basis: 100%;
-    justify-content: flex-start;
-    margin-top: 4px;
+    justify-content: flex-end;
   }
 
   /* --- Onboarding: domain bar (input + country + continue) --- */

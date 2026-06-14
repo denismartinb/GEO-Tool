@@ -384,11 +384,6 @@ export default async function ProjectDetailPage({
               Escaneo en curso
             </span>
           ) : null}
-          <ScanTriggerButton
-            projectId={projectId}
-            disabled={Boolean(activeRun) || !prompts?.length}
-            label={latestCompletedRun ? "Repetir escaneo" : "Lanzar escaneo"}
-          />
         </div>
       </div>
 

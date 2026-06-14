@@ -211,20 +211,17 @@ export default async function CitationsPage({
           </span>
         </div>
         <div className="ov-sticky-right">
+          {lastScanDate && (
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+              Escaneado {lastScanDate}
+            </span>
+          )}
           {activeRun && latestRun ? (
             <span className="scan-status">
               <span className="dot run" />
               Escaneo en curso
             </span>
-          ) : lastScanDate ? (
-            <span style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 500 }}>
-              Último escaneo: {lastScanDate}
-            </span>
           ) : null}
-          <Link href={`/dashboard/projects/${projectId}`} className="btn btn-ghost btn-sm">
-            <Icon name="chevronLeft" size={14} />
-            Visión general
-          </Link>
         </div>
       </div>
 
