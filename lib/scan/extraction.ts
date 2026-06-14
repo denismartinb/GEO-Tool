@@ -91,6 +91,83 @@ async function buildGroundedCitations(input: {
   return citations;
 }
 
+/**
+ * Runs structured extraction for a single eligible row and persists the
+ * result (or a sanitized extraction_error) via `update()`. Scoped to
+ * `row.id` (plus project/run), so concurrent invocations across different
+ * rows never collide.
+ */
+async function extractAndPersistRow(input: {
+  service: ReturnType<typeof createServiceClient>;
+  projectId: string;
+  runId: string;
+  row: ScanPromptResultRow;
+}): Promise<void> {
+  const { service, projectId, runId, row } = input;
+  const rawResponseText = row.raw_response_text;
+  if (!rawResponseText) return;
+
+  try {
+    const competitors = Array.isArray(row.competitors_snapshot)
+      ? row.competitors_snapshot
+          .map((item) => (item?.name ? String(item.name) : ""))
+          .filter((name) => name.length > 0)
+      : [];
+
+    const extracted = await extractGeminiStructuredData({
+      brand: row.brand_snapshot,
+      competitors,
+      rawResponseText,
+      promptText: row.prompt_text_snapshot
+    });
+
+    const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
+
+    const groundingChunks = row.raw_response_json?.grounding_chunks ?? [];
+    const citations = await buildGroundedCitations({
+      groundingChunks,
+      inlineCitations: extracted.data.citations.map((c) => ({
+        url: c.url,
+        domain: c.domain,
+        label: c.label
+      }))
+    });
+
+    // Anti-fake invariant: citations_count / citation_found only reflect
+    // real grounding sources. Inline-only citations never flip
+    // citation_found to true, and a real zero-grounding result is still
+    // marked with EXTRACTION_VERSION ("grounded-v1"), distinguishing it
+    // from an unprocessed row (extraction_version !== EXTRACTION_VERSION).
+    const groundingCitations = citations.filter((c) => c.source === "grounding");
+    const citationsCount = groundingCitations.length;
+
+    await service
+      .from("scan_prompt_results")
+      .update({
+        brand_mentioned: extracted.data.brand.mentioned,
+        citation_found: citationsCount > 0,
+        mentioned_competitors_count: mentionedCompetitorsCount,
+        citations_count: citationsCount,
+        sentiment: extracted.data.sentiment,
+        extracted_json: { ...extracted.data, citations },
+        extraction_version: EXTRACTION_VERSION,
+        extraction_error: null
+      })
+      .eq("id", row.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
+  } catch (extractError) {
+    await service
+      .from("scan_prompt_results")
+      .update({
+        extraction_error: extractError instanceof Error ? extractError.message : "Extraction failed."
+      })
+      .eq("id", row.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
+  }
+}
+
 export async function runStructuredExtractionForRun(input: {
   service: ReturnType<typeof createServiceClient>;
   projectId: string;
@@ -114,68 +191,23 @@ export async function runStructuredExtractionForRun(input: {
   );
   const rowsToProcess = eligibleRows.slice(0, MAX_EXTRACTION_RESULTS);
 
-  for (const row of rowsToProcess) {
-    const rawResponseText = row.raw_response_text;
-    if (!rawResponseText) continue;
-
-    try {
-      const competitors = Array.isArray(row.competitors_snapshot)
-        ? row.competitors_snapshot
-            .map((item) => (item?.name ? String(item.name) : ""))
-            .filter((name) => name.length > 0)
-        : [];
-
-      const extracted = await extractGeminiStructuredData({
-        brand: row.brand_snapshot,
-        competitors,
-        rawResponseText,
-        promptText: row.prompt_text_snapshot
-      });
-
-      const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
-
-      const groundingChunks = row.raw_response_json?.grounding_chunks ?? [];
-      const citations = await buildGroundedCitations({
-        groundingChunks,
-        inlineCitations: extracted.data.citations.map((c) => ({
-          url: c.url,
-          domain: c.domain,
-          label: c.label
-        }))
-      });
-
-      // Anti-fake invariant: citations_count / citation_found only reflect
-      // real grounding sources. Inline-only citations never flip
-      // citation_found to true, and a real zero-grounding result is still
-      // marked with EXTRACTION_VERSION ("grounded-v1"), distinguishing it
-      // from an unprocessed row (extraction_version !== EXTRACTION_VERSION).
-      const groundingCitations = citations.filter((c) => c.source === "grounding");
-      const citationsCount = groundingCitations.length;
-
-      await input.service
-        .from("scan_prompt_results")
-        .update({
-          brand_mentioned: extracted.data.brand.mentioned,
-          citation_found: citationsCount > 0,
-          mentioned_competitors_count: mentionedCompetitorsCount,
-          citations_count: citationsCount,
-          sentiment: extracted.data.sentiment,
-          extracted_json: { ...extracted.data, citations },
-          extraction_version: EXTRACTION_VERSION,
-          extraction_error: null
-        })
-        .eq("id", row.id)
-        .eq("project_id", input.projectId)
-        .eq("run_id", input.runId);
-    } catch (extractError) {
-      await input.service
-        .from("scan_prompt_results")
-        .update({
-          extraction_error: extractError instanceof Error ? extractError.message : "Extraction failed."
-        })
-        .eq("id", row.id)
-        .eq("project_id", input.projectId)
-        .eq("run_id", input.runId);
-    }
-  }
+  // Each row's extraction (Gemini structured-extraction call + grounding
+  // redirect resolution + a single update() scoped to row.id) is independent
+  // of every other row, so run them concurrently (same Promise.allSettled
+  // pattern as the per-prompt Gemini calls in executor.ts, SCAN-ROBUST-2
+  // phase 1). extractAndPersistRow never throws and never returns a value —
+  // it persists either the extracted data or a sanitized extraction_error
+  // for its own row — so a failure in one row can never prevent the others
+  // from being processed and persisted. allSettled (rather than all) is kept
+  // as defense-in-depth in case that invariant is ever broken.
+  await Promise.allSettled(
+    rowsToProcess.map((row) =>
+      extractAndPersistRow({
+        service: input.service,
+        projectId: input.projectId,
+        runId: input.runId,
+        row
+      })
+    )
+  );
 }
