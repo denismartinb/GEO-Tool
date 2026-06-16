@@ -18,6 +18,7 @@ export type ResultRow = {
   extracted_json: unknown;
   extraction_error: string | null;
   category: string | null;
+  provider: string | null;
 };
 
 export type TopicGroup = {
@@ -87,7 +88,7 @@ export default async function PromptsPage({
     ? await supabase
         .from("scan_prompt_results")
         .select(
-          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error"
+          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider"
         )
         .eq("project_id", projectId)
         .eq("run_id", latestRun.id)
