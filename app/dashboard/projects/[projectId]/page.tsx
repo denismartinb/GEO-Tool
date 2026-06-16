@@ -249,6 +249,40 @@ export default async function ProjectDetailPage({
     ? Math.round((allPromptResults.filter((r) => r.citation_found).length / allPromptResults.length) * 100)
     : citationScore;
 
+  /* ---- citation share (computed at read time — no persisted column) ----
+   * own_citation_share = own_citations / total_resolved_citations × 100
+   * Only grounding citations with a non-null domain are counted.
+   * If total_resolved_citations === 0 → null ("Sin datos").
+   */
+  const citationShareResult: { share: number | null; ownCitations: number; totalCitations: number } = (() => {
+    if (!allPromptResults?.length) return { share: null, ownCitations: 0, totalCitations: 0 };
+
+    const projectDomain = project.domain.replace(/^www\./, "").toLowerCase();
+
+    let totalResolved = 0;
+    let ownCitations = 0;
+
+    for (const result of allPromptResults) {
+      const ext = parseExt(result.extracted_json);
+      for (const cit of ext.citations ?? []) {
+        if (cit.source !== "grounding") continue;
+        if (!cit.domain) continue;
+        totalResolved += 1;
+        const citDomain = cit.domain.replace(/^www\./, "").toLowerCase();
+        if (citDomain === projectDomain || citDomain.endsWith(`.${projectDomain}`)) {
+          ownCitations += 1;
+        }
+      }
+    }
+
+    if (totalResolved === 0) return { share: null, ownCitations: 0, totalCitations: 0 };
+    return {
+      share: Math.round((ownCitations / totalResolved) * 100),
+      ownCitations,
+      totalCitations: totalResolved
+    };
+  })();
+
   /* ---- trend sparklines ---- */
   const visTrend = (trendHistory ?? []).map((r) => n(r.visibility_score));
   const citTrend = (trendHistory ?? []).map((r) => n(r.citation_score));
@@ -617,7 +651,33 @@ export default async function ProjectDetailPage({
             ))}
           </div>
 
-          {/* 3b · Posición media de marca */}
+          {/* 3b · Cuota de Citas */}
+          <div className="wide-stat" style={{ marginTop: 12 }}>
+            <div className="ws-left" style={{ width: "100%" }}>
+              <div className="stat-label">
+                Cuota de Citas
+                <InfoTip text="Porcentaje de citas grounding totales del escaneo que corresponden a tu dominio. Mide dominancia real en las fuentes citadas, no solo presencia binaria. Si ninguna cita fue resuelta, se muestra «Sin datos»." />
+              </div>
+              {citationShareResult.share !== null ? (
+                <>
+                  <div className="stat-value tnum">
+                    {citationShareResult.share}<span className="unit">%</span>
+                  </div>
+                  <p className="stat-hint" style={{ marginTop: -2 }}>
+                    {citationShareResult.ownCitations} de {citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.
+                  </p>
+                </>
+              ) : (
+                <div className="section-empty" style={{ padding: "14px 12px", marginTop: 4 }}>
+                  <div className="section-empty-desc">
+                    Sin datos — ninguna cita grounding fue resuelta en este escaneo.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3c · Posición media de marca */}
           <div className="wide-stat wide-stat--position" style={{ marginTop: 12 }}>
             <div className="ws-left" style={{ width: "100%" }}>
               <div className="stat-label">
