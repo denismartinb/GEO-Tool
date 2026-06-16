@@ -580,18 +580,22 @@ export default async function ProjectDetailPage({
                 delta: visDelta,
                 color: "var(--accent)",
                 hint: "Prompts donde aparece tu marca.",
-                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo."
+                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
+                isShare: false as const
               },
               {
-                key: "citation",
-                label: "Tasa de cita",
-                value: computedCitationRate,
+                key: "citation-share",
+                label: "Cuota de Citas",
+                value: citationShareResult.share,
                 unit: "%",
-                trend: citTrend,
-                delta: citDelta,
+                trend: [] as number[],
+                delta: 0,
                 color: "#7c3aed",
-                hint: "Prompts donde tu dominio es fuente citada.",
-                tip: "Porcentaje de prompts en los que tu dominio aparece como fuente citada por la IA (grounding de Google Search)."
+                hint: citationShareResult.share !== null
+                  ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
+                  : "Sin citas grounding resueltas en este escaneo.",
+                tip: "Mide qué porcentaje del total de URLs que la IA cita en sus respuestas pertenecen a tu dominio. Cuanto mayor sea este ratio, más presente está tu contenido como fuente de referencia para la IA.",
+                isShare: true as const
               },
               {
                 key: "gap",
@@ -603,7 +607,8 @@ export default async function ProjectDetailPage({
                 color: "#e54563",
                 hint: "Presión del competidor más fuerte. Más alto = más presión.",
                 invert: true,
-                tip: "Combina cuántas veces se mencionan tus competidores por prompt y tu propia tasa de mención. 0 = sin presión competitiva, 100 = presión máxima."
+                tip: "Combina cuántas veces se mencionan tus competidores por prompt y tu propia tasa de mención. 0 = sin presión competitiva, 100 = presión máxima.",
+                isShare: false as const
               },
               {
                 key: "confidence",
@@ -616,7 +621,8 @@ export default async function ProjectDetailPage({
                 delta: 0,
                 color: "#0d9488",
                 hint: "Fiabilidad de la muestra de este escaneo.",
-                tip: "Indica cuán fiable es la muestra de este escaneo, según la cobertura de extracción de datos (porcentaje de prompts procesados correctamente). Alta = cobertura completa; media/baja = datos parciales o errores de extracción."
+                tip: "Indica cuán fiable es la muestra de este escaneo, según la cobertura de extracción de datos (porcentaje de prompts procesados correctamente). Alta = cobertura completa; media/baja = datos parciales o errores de extracción.",
+                isShare: false as const
               }
             ].map((m) => (
               <div key={m.key} className="wide-stat">
@@ -625,18 +631,53 @@ export default async function ProjectDetailPage({
                     {m.label}
                     <InfoTip text={m.tip} />
                   </div>
-                  <div className="stat-value tnum">
-                    {m.value}<span className="unit">{m.unit}</span>
-                  </div>
-                  <div className="ws-delta">
-                    {m.delta !== 0 ? (
-                      <Delta value={m.delta} suffix=" pt" invert={m.invert} />
+                  {m.isShare ? (
+                    /* Citation share: special rendering — may be null */
+                    m.value !== null ? (
+                      <>
+                        <div className="stat-value tnum">
+                          {m.value}<span className="unit">%</span>
+                        </div>
+                        <div style={{ marginTop: 4 }}>
+                          <span className={`badge ${
+                            m.value > 50 ? "badge-pos" :
+                            m.value >= 30 ? "badge-accent" :
+                            m.value >= 15 ? "badge-neutral" :
+                            m.value >= 5  ? "badge-warn" :
+                            "badge-neg"
+                          }`} style={{ fontSize: 11 }}>
+                            {m.value > 50 ? "Muy alto" :
+                             m.value >= 30 ? "Alto" :
+                             m.value >= 15 ? "Medio" :
+                             m.value >= 5  ? "Bajo" :
+                             "Muy bajo"}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 6 }}>{m.hint}</p>
+                      </>
                     ) : (
-                      <span className="delta flat">— sin cambio</span>
-                    )}
-                    <span className="stat-hint">vs. escaneo anterior</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                      <>
+                        <div className="stat-value tnum" style={{ color: "var(--ink-4)", fontSize: 20 }}>Sin datos</div>
+                        <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                      </>
+                    )
+                  ) : (
+                    /* Standard metric rendering */
+                    <>
+                      <div className="stat-value tnum">
+                        {m.value}<span className="unit">{m.unit}</span>
+                      </div>
+                      <div className="ws-delta">
+                        {m.delta !== 0 ? (
+                          <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                        ) : (
+                          <span className="delta flat">— sin cambio</span>
+                        )}
+                        <span className="stat-hint">vs. escaneo anterior</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                    </>
+                  )}
                 </div>
                 <div className="ws-spark">
                   {m.trend.length >= 2 ? (
@@ -649,32 +690,6 @@ export default async function ProjectDetailPage({
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* 3b · Cuota de Citas */}
-          <div className="wide-stat" style={{ marginTop: 12 }}>
-            <div className="ws-left" style={{ width: "100%" }}>
-              <div className="stat-label">
-                Cuota de Citas
-                <InfoTip text="Porcentaje de citas grounding totales del escaneo que corresponden a tu dominio. Mide dominancia real en las fuentes citadas, no solo presencia binaria. Si ninguna cita fue resuelta, se muestra «Sin datos»." />
-              </div>
-              {citationShareResult.share !== null ? (
-                <>
-                  <div className="stat-value tnum">
-                    {citationShareResult.share}<span className="unit">%</span>
-                  </div>
-                  <p className="stat-hint" style={{ marginTop: -2 }}>
-                    {citationShareResult.ownCitations} de {citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.
-                  </p>
-                </>
-              ) : (
-                <div className="section-empty" style={{ padding: "14px 12px", marginTop: 4 }}>
-                  <div className="section-empty-desc">
-                    Sin datos — ninguna cita grounding fue resuelta en este escaneo.
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* 3c · Posición media de marca */}
