@@ -1,6 +1,7 @@
 import "server-only";
 
-import { generateGeminiVisibilityAnswer, GeminiConfigError } from "@/lib/llm/gemini";
+import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
+import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -20,10 +21,16 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+type LLMScanProvider = "gemini" | "claude";
+
+function getLLMScanProvider(): LLMScanProvider {
+  return process.env.LLM_SCAN_PROVIDER?.trim().toLowerCase() === "claude" ? "claude" : "gemini";
+}
+
 type PromptJobOutcome =
   | { kind: "success" }
   | { kind: "failed" }
-  | { kind: "config_error"; error: GeminiConfigError };
+  | { kind: "config_error"; error: Error };
 
 // Processes a single scan_prompt job end-to-end (status transitions, Gemini
 // call with retry, scan_prompt_results insert, job logging). Run concurrently
@@ -39,7 +46,8 @@ async function processPromptJob({
   runId,
   job,
   project,
-  competitors
+  competitors,
+  provider
 }: {
   service: ReturnType<typeof createServiceClient>;
   projectId: string;
@@ -47,6 +55,7 @@ async function processPromptJob({
   job: JobRow;
   project: { brand: string; country: string; language: string };
   competitors: { name: string; domain: string }[];
+  provider: LLMScanProvider;
 }): Promise<PromptJobOutcome> {
   const baseAttemptCount = job.attempt_count;
 
@@ -121,7 +130,7 @@ async function processPromptJob({
     return { kind: "success" };
   }
 
-  let llmResult: Awaited<ReturnType<typeof generateGeminiVisibilityAnswer>> | null = null;
+  let llmResult: GeminiVisibilityResponse | null = null;
   let latency = 0;
   let lastError: unknown = null;
 
@@ -151,26 +160,33 @@ async function processPromptJob({
 
     try {
       const llmStart = Date.now();
-      llmResult = await generateGeminiVisibilityAnswer({
-        prompt: promptText,
-        country: project.country,
-        language: project.language
-      });
+      llmResult =
+        provider === "claude"
+          ? await generateClaudeVisibilityAnswer({
+              prompt: promptText,
+              country: project.country,
+              language: project.language
+            })
+          : await generateGeminiVisibilityAnswer({
+              prompt: promptText,
+              country: project.country,
+              language: project.language
+            });
       latency = Date.now() - llmStart;
       lastError = null;
       break;
     } catch (error) {
-      if (error instanceof GeminiConfigError) {
+      if (error instanceof GeminiConfigError || error instanceof ClaudeConfigError) {
         // Job is left in "running" status: the caller aborts the whole run
         // on a config_error and the outer catch bulk-fails any job still
-        // "running" for this run, matching the pre-concurrency behavior.
+        // "running" for this run.
         await logJob(service, {
           jobId: job.id,
           projectId,
           runId,
           level: "error",
-          message: "Gemini prompt execution failed.",
-          context: { prompt_id: promptId, error: error.message }
+          message: "LLM prompt execution failed (config error).",
+          context: { prompt_id: promptId, provider, error: (error as Error).message }
         });
 
         return { kind: "config_error", error };
@@ -185,10 +201,11 @@ async function processPromptJob({
         level: attempt < totalAttempts ? "warn" : "error",
         message:
           attempt < totalAttempts
-            ? "Gemini prompt execution failed, retrying."
-            : "Gemini prompt execution failed.",
+            ? "LLM prompt execution failed, retrying."
+            : "LLM prompt execution failed.",
         context: {
           prompt_id: promptId,
+          provider,
           attempt,
           total_attempts: totalAttempts,
           error: error instanceof Error ? error.message : String(error)
@@ -236,7 +253,7 @@ async function processPromptJob({
     competitors_snapshot: competitors.map((c) => ({ name: c.name, domain: c.domain })),
     country_snapshot: project.country,
     language_snapshot: project.language,
-    provider: "gemini",
+    provider,
     model: llmResult.model,
     status: "completed",
     raw_response_text: llmResult.text,
@@ -289,8 +306,8 @@ async function processPromptJob({
     projectId,
     runId,
     level: "info",
-    message: "Prompt job completed with Gemini response.",
-    context: { prompt_id: promptId, brand_mentioned: brandMentioned }
+    message: "Prompt job completed.",
+    context: { prompt_id: promptId, provider, brand_mentioned: brandMentioned }
   });
 
   await service
@@ -395,6 +412,7 @@ export async function executePendingScan({
     throw new ProjectActionError("scan_failed");
   }
 
+  const provider = getLLMScanProvider();
   let promptSuccess = 0;
   let promptFailed = 0;
 
@@ -418,7 +436,8 @@ export async function executePendingScan({
         projectId,
         runId,
         level: "info",
-        message: "Gemini scan started."
+        message: "LLM scan started.",
+        context: { provider }
       });
 
       await service
@@ -433,7 +452,7 @@ export async function executePendingScan({
         .eq("run_id", runId);
     }
 
-    // Run all prompt jobs concurrently (SCAN-ROBUST-2) so the 6 Gemini calls
+    // Run all prompt jobs concurrently (SCAN-ROBUST-2) so the LLM calls
     // overlap instead of summing — keeping the run within the Hobby plan's
     // hard maxDuration=60s budget (docs/adr/0003-sync-scan-execution-and-maxduration.md).
     const promptJobResults = await Promise.allSettled(
@@ -444,12 +463,13 @@ export async function executePendingScan({
           runId,
           job,
           project,
-          competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain }))
+          competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
+          provider
         })
       )
     );
 
-    let configError: GeminiConfigError | null = null;
+    let configError: Error | null = null;
 
     for (const settled of promptJobResults) {
       if (settled.status === "rejected") {
@@ -617,7 +637,8 @@ export async function executePendingScan({
         projectId,
         runId,
         level: "info",
-        message: "Finalizing Gemini run."
+        message: "Finalizing LLM scan run.",
+        context: { provider }
       });
 
       await service

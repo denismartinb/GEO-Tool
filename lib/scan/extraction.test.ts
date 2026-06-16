@@ -6,6 +6,10 @@ vi.mock("@/lib/llm/gemini", () => ({
   extractGeminiStructuredData: vi.fn()
 }));
 
+vi.mock("@/lib/llm/claude", () => ({
+  extractClaudeStructuredData: vi.fn()
+}));
+
 vi.mock("@/lib/scan/citation-resolution", () => ({
   resolveGroundingRedirects: vi.fn().mockResolvedValue(new Map())
 }));
@@ -24,7 +28,7 @@ function createServiceMock(options: {
   updateCalls: Array<Record<string, unknown>>;
 }) {
   const builder: Record<string, unknown> = {};
-  const methods = ["select", "eq", "not", "update"];
+  const methods = ["select", "eq", "not", "update", "in"];
 
   for (const method of methods) {
     builder[method] = vi.fn((...args: unknown[]) => {
