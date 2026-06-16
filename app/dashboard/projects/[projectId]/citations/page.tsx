@@ -168,8 +168,11 @@ export default async function CitationsPage({
   const totalUrls = citationRows.length;
   const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
   const yours = citationRows.filter((r) => r.category === "brand").length;
+  // Only neutral/third-party domains are actionable outreach targets.
+  // Competitor domains (already tracked in project_competitors) are excluded:
+  // a brand will never earn a citation on a rival's own site.
   const opportunityRows = citationRows.filter(
-    (r) => r.category !== "brand" && r.brandMentioned === "no"
+    (r) => r.category === "third_party" && r.brandMentioned === "no"
   );
   const opportunities = opportunityRows.length;
 
