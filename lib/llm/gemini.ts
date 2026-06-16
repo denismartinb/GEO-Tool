@@ -13,13 +13,13 @@ const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
 /**
  * Hard per-call timeout for `generateGeminiVisibilityAnswer`, the call made
- * once per prompt inside the sequential scan loop (`lib/scan/executor.ts`).
- * With `MAX_REAL_SCAN_PROMPTS=6` sequential calls inside the ~60s Vercel
- * `maxDuration` (docs/adr/0003-sync-scan-execution-and-maxduration.md), a
- * single slow call must not be allowed to consume the entire run budget —
- * that would starve the remaining prompts and risk tripping
- * `SCAN_RUNNING_TIMEOUT_SECONDS`, failing the whole run instead of just one
- * prompt.
+ * once per prompt by the scan executor (`lib/scan/executor.ts`), which since
+ * SCAN-ROBUST-2 dispatches all `MAX_REAL_SCAN_PROMPTS=10` calls concurrently
+ * inside the ~60s Vercel `maxDuration`
+ * (docs/adr/0003-sync-scan-execution-and-maxduration.md). A single slow call
+ * must not be allowed to consume the entire run budget — that would starve
+ * the remaining prompts and risk tripping `SCAN_RUNNING_TIMEOUT_SECONDS`,
+ * failing the whole run instead of just one prompt.
  *
  * 20s ceiling: generous enough that normal Gemini latency (typically a few
  * seconds) never hits it, while bounding how long a single stuck call can
