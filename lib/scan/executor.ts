@@ -21,7 +21,7 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-type LLMScanProvider = "gemini" | "claude";
+export type LLMScanProvider = "gemini" | "claude";
 const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude"];
 
 function parseProviderList(raw: string): LLMScanProvider[] {
@@ -41,7 +41,7 @@ function parseProviderList(raw: string): LLMScanProvider[] {
  * and defaults to Gemini-only if neither is set, so deployments that never
  * configured either var keep their existing single-engine behavior.
  */
-function getLLMScanProviders(): LLMScanProvider[] {
+export function getLLMScanProviders(): LLMScanProvider[] {
   const multi = process.env.LLM_SCAN_PROVIDERS?.trim();
   if (multi) {
     const parsed = parseProviderList(multi);

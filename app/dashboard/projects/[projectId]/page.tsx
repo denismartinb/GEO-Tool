@@ -13,6 +13,7 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import { getLLMScanProviders } from "@/lib/scan/executor";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /* ---- constants & helpers ---- */
@@ -1146,7 +1147,7 @@ export default async function ProjectDetailPage({
                 <ScanTriggerButton projectId={projectId} label="Lanzar escaneo" />
               </div>
               <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
-                Primer escaneo · {prompts.length} prompts · Gemini
+                Primer escaneo · {prompts.length} prompts · {getLLMScanProviders().map((p) => ENGINE_LABELS[p]?.label ?? p).join(" y ")}
               </p>
             </div>
           </div>
