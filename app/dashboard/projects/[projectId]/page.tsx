@@ -71,6 +71,19 @@ function getBandTone(score: number): string {
   return "warn";
 }
 
+/**
+ * Classification bands for "Presión Competitiva" (docs/adr/0011).
+ * Higher score = worse (the brand is more displaced by competitors), so the
+ * tone scale is inverted relative to getBandTone: low score = green/positive,
+ * high score = red/negative.
+ */
+function getCompetitivePressureBand(score: number): { label: string; tone: string } {
+  if (score > 80) return { label: "Crítica", tone: "neg" };
+  if (score >= 50) return { label: "Alta", tone: "warn" };
+  if (score >= 20) return { label: "Media", tone: "accent" };
+  return { label: "Baja", tone: "pos" };
+}
+
 type ExtractedJsonPartial = {
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
   citations?: Array<{ url?: string | null; domain?: string | null; title?: string | null; source?: string }>;
@@ -229,7 +242,7 @@ export default async function ProjectDetailPage({
   );
   const visibilityScore = n(latestScore?.visibility_score);
   const citationScore = n(latestScore?.citation_score);
-  const competitorRiskScore = n(latestScore?.competitor_gap_score);
+  const competitorPressureScore = n(latestScore?.competitor_gap_score);
   const runConfidence = latestScore?.confidence ?? "low";
 
   /* ---- composite GEO score (ADR 0008) ---- */
@@ -292,7 +305,7 @@ export default async function ProjectDetailPage({
   const prevScore = trendHistory && trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
   const citDelta = prevScore ? computedCitationRate - n(prevScore.citation_score) : 0;
-  const gapDelta = prevScore ? competitorRiskScore - n(prevScore.competitor_gap_score) : 0;
+  const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
 
   /* ---- competitor breakdown from extracted_json ---- */
   const competitorMentionCounts: Record<string, number> = {};
@@ -552,7 +565,7 @@ export default async function ProjectDetailPage({
                 [
                   { l: "Tasa de mención", v: computedMentionRate, color: "var(--accent)" },
                   { l: "Tasa de cita", v: computedCitationRate, color: "#7c3aed" },
-                  { l: "Riesgo competitivo", v: Math.min(100, competitorRiskScore), color: "#0d9488" }
+                  { l: "Presión competitiva", v: Math.min(100, competitorPressureScore), color: "#0d9488" }
                 ].map((c) => (
                   <div className="compose-row" key={c.l}>
                     <div className="compose-top">
@@ -599,16 +612,17 @@ export default async function ProjectDetailPage({
               },
               {
                 key: "gap",
-                label: "Riesgo competitivo",
-                value: competitorRiskScore,
-                unit: "/100",
+                label: "Presión competitiva",
+                value: competitorPressureScore,
+                unit: "%",
                 trend: gapTrend,
                 delta: gapDelta,
                 color: "#e54563",
-                hint: "Presión del competidor más fuerte. Más alto = más presión.",
+                hint: "Prompts donde aparece un competidor pero tu marca no.",
                 invert: true,
-                tip: "Combina cuántas veces se mencionan tus competidores por prompt y tu propia tasa de mención. 0 = sin presión competitiva, 100 = presión máxima.",
-                isShare: false as const
+                tip: "Mide en qué porcentaje de tus prompts aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
+                isShare: false as const,
+                band: getCompetitivePressureBand(competitorPressureScore)
               },
               {
                 key: "confidence",
@@ -667,6 +681,13 @@ export default async function ProjectDetailPage({
                       <div className="stat-value tnum">
                         {m.value}<span className="unit">{m.unit}</span>
                       </div>
+                      {"band" in m && m.band ? (
+                        <div style={{ marginTop: 4 }}>
+                          <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 11 }}>
+                            {m.band.label}
+                          </span>
+                        </div>
+                      ) : null}
                       <div className="ws-delta">
                         {m.delta !== 0 ? (
                           <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
