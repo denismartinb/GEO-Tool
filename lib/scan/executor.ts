@@ -668,6 +668,18 @@ export async function executePendingScan({
   } catch (error) {
     const errorSummary = getSanitizedScanError(error);
 
+    // Surface the real (secret-free) failure reason in Vercel function logs.
+    // error.message for our provider errors (ClaudeConfigError, Gemini/Claude
+    // API error strings) never contains the API key itself, only var names —
+    // see lib/llm/claude.ts and lib/llm/gemini.ts error constructors.
+    console.error("[scan-runner] scan run failed", {
+      projectId,
+      runId,
+      provider,
+      errorName: error instanceof Error ? error.name : typeof error,
+      errorMessage: error instanceof Error ? error.message : String(error)
+    });
+
     // Any prompt job still "running" here was either mid-flight when a
     // config_error aborted the run, or never started (shouldn't happen with
     // Promise.allSettled, but defensive). Bulk-fail them; processPromptJob
