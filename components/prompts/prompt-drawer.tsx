@@ -532,7 +532,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                             width: 20,
                             height: 20,
                             borderRadius: 5,
-                            background: "#1a73e8",
+                            background: result.provider === "claude" ? "#cc785c" : "#1a73e8",
                             display: "grid",
                             placeItems: "center",
                             color: "#fff",
@@ -540,9 +540,11 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                             fontWeight: 800,
                           }}
                         >
-                          G
+                          {result.provider === "claude" ? "C" : "G"}
                         </div>
-                        <span style={{ fontWeight: 600 }}>Gemini</span>
+                        <span style={{ fontWeight: 600 }}>
+                          {result.provider === "claude" ? "Claude" : "Gemini"}
+                        </span>
                       </div>
                     </td>
                     <td style={{ padding: "8px" }}>
