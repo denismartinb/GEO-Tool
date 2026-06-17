@@ -28,8 +28,8 @@ describe("computeRunScoresFromResults — empty input", () => {
     // safeTotal = max(0, 1) = 1, so every percentage-based score is 0.
     expect(result.visibility_score).toBe(0);
     expect(result.citation_score).toBe(0);
-    // competitor_gap_score = clamp(0,100, (0/1)*50 + (100 - 0*0.6)*0.4) = 0 + 40 = 40
-    expect(result.competitor_gap_score).toBe(40);
+    // competitor_gap_score (Competitive Pressure) = displaced_prompts_count / safeTotal * 100 = 0/1*100 = 0
+    expect(result.competitor_gap_score).toBe(0);
     expect(result.confidence).toBe("low");
     expect(result.details_json.total_results).toBe(0);
     expect(result.details_json.extracted_results_count).toBe(0);
@@ -82,11 +82,13 @@ describe("computeRunScoresFromResults — visibility and citation percentages", 
   });
 });
 
-describe("computeRunScoresFromResults — competitor_gap_score formula and clamping", () => {
-  it("computes competitor_gap_score using the documented formula", () => {
-    // 4 rows, total_competitor_mentions = 4 -> competitorPresencePerPrompt = (4/4)*50 = 50
-    // brand_mentioned_count = 2 -> visibility_score = 50 -> brandProtection = 30
-    // competitor_gap_score = 50 + (100 - 30) * 0.4 = 50 + 28 = 78
+describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pressure, docs/adr/0011)", () => {
+  it("computes competitor_gap_score as % of prompts where a competitor is mentioned but the brand is not", () => {
+    // Row 1: brand mentioned, competitor mentioned -> NOT displaced (brand present).
+    // Row 2: brand mentioned, competitor mentioned -> NOT displaced.
+    // Row 3: brand absent, competitor mentioned -> displaced.
+    // Row 4: brand absent, competitor mentioned -> displaced.
+    // displaced_prompts_count = 2 -> competitor_gap_score = 2/4*100 = 50
     const results = [
       row({ id: "1", brand_mentioned: true, mentioned_competitors_count: 1 }),
       row({ id: "2", brand_mentioned: true, mentioned_competitors_count: 1 }),
@@ -97,16 +99,28 @@ describe("computeRunScoresFromResults — competitor_gap_score formula and clamp
     const result = computeRunScoresFromResults(results);
 
     expect(result.visibility_score).toBe(50);
-    expect(result.competitor_gap_score).toBe(78);
+    expect(result.competitor_gap_score).toBe(50);
+    expect(result.details_json.displaced_prompts_count).toBe(2);
   });
 
-  it("clamps competitor_gap_score to a maximum of 100 when competitor presence is extreme", () => {
-    // total_competitor_mentions = 40 across 2 rows -> competitorPresencePerPrompt = (40/2)*50 = 1000
-    // visibility_score = 0 -> brandProtection = 0 -> + (100-0)*0.4 = 40
-    // raw = 1000 + 40 = 1040, clamped to 100
+  it("does not saturate to 100 just because many competitors are mentioned per prompt (the old formula's bug)", () => {
+    // 20 competitor mentions per row, but the brand is also mentioned in
+    // every row -> zero displacement, despite a huge raw mention count.
     const results = [
-      row({ id: "1", mentioned_competitors_count: 20 }),
-      row({ id: "2", mentioned_competitors_count: 20 })
+      row({ id: "1", brand_mentioned: true, mentioned_competitors_count: 20 }),
+      row({ id: "2", brand_mentioned: true, mentioned_competitors_count: 20 })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.details_json.total_competitor_mentions).toBe(40);
+    expect(result.competitor_gap_score).toBe(0);
+  });
+
+  it("is 100 when every prompt with a competitor mention has the brand absent (maximum displacement)", () => {
+    const results = [
+      row({ id: "1", brand_mentioned: false, mentioned_competitors_count: 3 }),
+      row({ id: "2", brand_mentioned: false, mentioned_competitors_count: 1 })
     ];
 
     const result = computeRunScoresFromResults(results);
@@ -114,18 +128,35 @@ describe("computeRunScoresFromResults — competitor_gap_score formula and clamp
     expect(result.competitor_gap_score).toBe(100);
   });
 
-  it("stays within the [0,100] clamp even at the low end (visibility 100, no competitor mentions)", () => {
-    // totalCompetitorMentions = 0, visibility_score = 100 -> brandProtection = 60
-    // raw = 0 + (100-60)*0.4 = 16
+  it("is 0 when no prompt has a competitor mention, regardless of visibility", () => {
     const results = [
       row({ id: "1", brand_mentioned: true, mentioned_competitors_count: 0 }),
+      row({ id: "2", brand_mentioned: false, mentioned_competitors_count: 0 })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.competitor_gap_score).toBe(0);
+  });
+
+  it("does not count a prompt as displaced when a competitor is mentioned alongside the brand", () => {
+    // Brand mentioned AND competitor mentioned in the same prompt -> brand
+    // is not displaced, even though a competitor is present.
+    const results = [row({ id: "1", brand_mentioned: true, mentioned_competitors_count: 5 })];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.competitor_gap_score).toBe(0);
+  });
+
+  it("stays within the [0,100] range by construction", () => {
+    const results = [
+      row({ id: "1", brand_mentioned: false, mentioned_competitors_count: 1 }),
       row({ id: "2", brand_mentioned: true, mentioned_competitors_count: 0 })
     ];
 
     const result = computeRunScoresFromResults(results);
 
-    expect(result.visibility_score).toBe(100);
-    expect(result.competitor_gap_score).toBe(16);
     expect(result.competitor_gap_score).toBeGreaterThanOrEqual(0);
     expect(result.competitor_gap_score).toBeLessThanOrEqual(100);
   });
@@ -209,7 +240,7 @@ describe("computeRunScoresFromResults — details_json contents", () => {
       visibility_score: "brand_mentioned_count / total_results * 100",
       citation_score: "citation_found_count / total_results * 100",
       competitor_gap_score:
-        "clamp(0,100, (total_competitor_mentions/total_results)*50 + (100 - visibility_score*0.6)*0.4 )"
+        "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)"
     });
     expect(Array.isArray(result.details_json.assumptions)).toBe(true);
     expect(Array.isArray(result.details_json.per_prompt_summary)).toBe(true);
@@ -433,9 +464,8 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
   it("computes the full-data case with all 4 components present", () => {
     // 5 rows, all valid extraction, brand mentioned + cited in all 5 -> high confidence.
     // visibility_score = 100, citation_score = 100.
-    // mentioned_competitors_count = 0 in all rows -> competitorPresencePerPrompt = 0
-    // brandProtection = 100*0.6 = 60 -> competitor_gap_score = clamp(0,100, 0 + (100-60)*0.4) = 16
-    // standing = 100 - 16 = 84
+    // mentioned_competitors_count = 0 in all rows -> displaced_prompts_count = 0
+    // -> competitor_gap_score = 0/5*100 = 0 -> standing = 100 - 0 = 100
     // brand_position: N = 1 (brand) + 1 (competitor) = 2; brand mentioned at position 1 in every prompt
     // -> brand_avg_position = 1; prominence = (1 - (1-1)/2)*100 = 100
     const results = Array.from({ length: 5 }, (_, i) =>
@@ -452,7 +482,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
 
     expect(result.visibility_score).toBe(100);
     expect(result.citation_score).toBe(100);
-    expect(result.competitor_gap_score).toBe(16);
+    expect(result.competitor_gap_score).toBe(0);
     expect(result.confidence).toBe("high");
 
     const geoScore = result.details_json.geo_score as {
@@ -469,18 +499,18 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
     expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
     expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
-    expect(geoScore.components.standing).toMatchObject({ value: 84, weight: 0.2 });
+    expect(geoScore.components.standing).toMatchObject({ value: 100, weight: 0.2 });
     expect(geoScore.components.authority).toMatchObject({ value: 100, weight: 0.15 });
 
-    // weighted sum = 100*.40 + 100*.25 + 84*.20 + 100*.15 = 40 + 25 + 16.8 + 15 = 96.8
-    expect(geoScore.score).toBe(96.8);
+    // weighted sum = 100*.40 + 100*.25 + 100*.20 + 100*.15 = 100
+    expect(geoScore.score).toBe(100);
     expect(geoScore.confidence).toBe("high");
     expect(geoScore.formula).toContain("geo_score = Σ(component_value * normalized_weight)");
   });
 
   it("degraded case: drops prominence and renormalizes weights when brand_position is absent", () => {
     // No valid extracted_json -> brand_position is null -> prominence dropped.
-    // visibility_score = 100, citation_score = 100, competitor_gap_score = 16 -> standing = 84.
+    // visibility_score = 100, citation_score = 100, competitor_gap_score = 0 -> standing = 100.
     const results = Array.from({ length: 5 }, (_, i) =>
       row({ id: String(i), brand_mentioned: true, citation_found: true, extracted_json: { phase: "phase4-basic" } })
     );
@@ -513,9 +543,8 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     expect(geoScore.confidence).toBe("medium");
 
     // sanity-check the weighted sum with renormalized weights
-    // presence=100, standing=84, authority=100
-    // score = 100*(0.4/0.75) + 84*(0.2/0.75) + 100*(0.15/0.75)
-    const expected = 100 * (0.4 / 0.75) + 84 * (0.2 / 0.75) + 100 * (0.15 / 0.75);
+    // presence=100, standing=100, authority=100 -> score = 100
+    const expected = 100 * (0.4 / 0.75) + 100 * (0.2 / 0.75) + 100 * (0.15 / 0.75);
     expect(geoScore.score).toBeCloseTo(expected, 2);
   });
 

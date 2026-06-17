@@ -193,10 +193,18 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
   const visibilityScore = round2((brandMentionedCount / safeTotal) * 100);
   const citationScore = round2((citationFoundCount / safeTotal) * 100);
 
-  // Higher score means larger competitor pressure/risk versus brand visibility.
-  const competitorPresencePerPrompt = (totalCompetitorMentions / safeTotal) * 50;
-  const brandProtection = visibilityScore * 0.6;
-  const competitorGapScore = round2(clamp(0, 100, competitorPresencePerPrompt + (100 - brandProtection) * 0.4));
+  // --- Competitive Pressure (docs/adr/0011) ---
+  // Counts prompts where the brand was displaced: at least one competitor
+  // was mentioned AND the brand itself was NOT mentioned in that same
+  // prompt. This replaces the old "competitor gap" formula, which summed
+  // total competitor mentions across all prompts (a count that saturates
+  // past total_results with just 2-3 competitors per prompt) without ever
+  // checking co-occurrence with the brand. Field name (competitor_gap_score)
+  // is kept unchanged to avoid a migration — only the computation changes.
+  const displacedPromptsCount = results.filter(
+    (row) => !row.brand_mentioned && Math.max(0, row.mentioned_competitors_count ?? 0) > 0
+  ).length;
+  const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeTotal) * 100));
 
   let confidence: "low" | "medium" | "high" = "low";
   if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
@@ -272,7 +280,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
   const assumptions = [
     "visibility_score = % prompts with brand_mentioned",
     "citation_score = % prompts with citation_found",
-    "competitor_gap_score higher = worse competitor pressure/risk",
+    "competitor_gap_score (Competitive Pressure, docs/adr/0011) higher = worse: % of prompts where a competitor was mentioned but the brand was not (brand displacement), not raw competitor mention volume",
     extractionCoverage < 1
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
       : "Extraction coverage is complete.",
@@ -305,12 +313,13 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
       citation_found_count: citationFoundCount,
       total_citations_count: totalCitationsCount,
       total_competitor_mentions: totalCompetitorMentions,
+      displaced_prompts_count: displacedPromptsCount,
       sentiment_distribution: sentimentDistribution,
       formulas_used: {
         visibility_score: "brand_mentioned_count / total_results * 100",
         citation_score: "citation_found_count / total_results * 100",
         competitor_gap_score:
-          "clamp(0,100, (total_competitor_mentions/total_results)*50 + (100 - visibility_score*0.6)*0.4 )",
+          "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)",
         brand_position:
           "avg_position(entity) = mean(position if mentioned else N+1, over prompts with valid extraction); N = total tracked entities for that prompt",
         geo_score:
