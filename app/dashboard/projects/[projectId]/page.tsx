@@ -13,11 +13,17 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import { getLLMScanProviders } from "@/lib/scan/executor";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /* ---- constants & helpers ---- */
 
 const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
+
+const ENGINE_LABELS: Record<string, { label: string; color: string }> = {
+  gemini: { label: "Gemini", color: "#4285f4" },
+  claude: { label: "Claude", color: "#d97757" }
+};
 
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
@@ -204,7 +210,7 @@ export default async function ProjectDetailPage({
           .maybeSingle(),
         supabase
           .from("scan_prompt_results")
-          .select("brand_mentioned, citation_found, sentiment, extracted_json")
+          .select("brand_mentioned, citation_found, sentiment, extracted_json, provider")
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
           .eq("status", "completed"),
@@ -261,6 +267,26 @@ export default async function ProjectDetailPage({
   const computedCitationRate = allPromptResults?.length
     ? Math.round((allPromptResults.filter((r) => r.citation_found).length / allPromptResults.length) * 100)
     : citationScore;
+
+  /* ---- distribución por motor de IA: mention rate real de cada engine activo ---- */
+  const engineDistribution = (() => {
+    const byProvider = new Map<string, { total: number; mentioned: number }>();
+    for (const r of allPromptResults ?? []) {
+      const provider = (r.provider as string | null) ?? "gemini";
+      const entry = byProvider.get(provider) ?? { total: 0, mentioned: 0 };
+      entry.total += 1;
+      if (r.brand_mentioned) entry.mentioned += 1;
+      byProvider.set(provider, entry);
+    }
+    return Array.from(byProvider.entries())
+      .map(([provider, { total, mentioned }]) => ({
+        provider,
+        label: ENGINE_LABELS[provider]?.label ?? provider,
+        color: ENGINE_LABELS[provider]?.color ?? "#9333a8",
+        mentionRate: total > 0 ? Math.round((mentioned / total) * 100) : 0
+      }))
+      .sort((a, b) => b.mentionRate - a.mentionRate);
+  })();
 
   /* ---- citation share (computed at read time — no persisted column) ----
    * own_citation_share = own_citations / total_resolved_citations × 100
@@ -887,26 +913,42 @@ export default async function ProjectDetailPage({
               )}
             </div>
 
-            {/* LLM distribution — placeholder */}
+            {/* LLM distribution */}
             <div className="card">
               <div className="card-head">
                 <div className="card-title">Distribución por motor de IA</div>
+                <InfoTip text="Tasa de mención de tu marca en cada motor de IA ejecutado en el último escaneo. Cada motor responde distinto — las brechas de cobertura en uno son una oportunidad." />
               </div>
-              <div style={{ padding: "24px 18px" }}>
-                <div className="section-empty">
-                  <div className="section-empty-title">Próximamente</div>
-                  <div className="section-empty-desc">
-                    La distribución por motor de IA (ChatGPT, Google AI Overviews, Perplexity…) estará disponible en una próxima actualización.
+              {engineDistribution.length > 0 ? (
+                <div style={{ padding: "18px" }}>
+                  {engineDistribution.map((e) => (
+                    <div key={e.provider} style={{ marginBottom: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                        <span style={{ width: 9, height: 9, borderRadius: 3, background: e.color }} />
+                        <span style={{ fontSize: 13, fontWeight: 650 }}>{e.label}</span>
+                        <span
+                          className="tnum"
+                          style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-3)", fontWeight: 600 }}
+                        >
+                          {e.mentionRate}% mención
+                        </span>
+                      </div>
+                      <div className="sov-bar" style={{ height: 9 }}>
+                        <div className="sov-fill" style={{ width: `${e.mentionRate}%`, background: e.color }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ padding: "24px 18px" }}>
+                  <div className="section-empty">
+                    <div className="section-empty-title">Sin datos todavía</div>
+                    <div className="section-empty-desc">
+                      La distribución por motor de IA aparecerá aquí después de completar un escaneo.
+                    </div>
                   </div>
                 </div>
-                <div className="why-callout">
-                  <Icon name="bolt" size={15} />
-                  <div>
-                    <div className="why-t">Por qué importa</div>
-                    <div className="why-b">Diferentes motores citan fuentes distintas. Saber dónde estás más débil es el punto de partida para actuar.</div>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -1105,7 +1147,7 @@ export default async function ProjectDetailPage({
                 <ScanTriggerButton projectId={projectId} label="Lanzar escaneo" />
               </div>
               <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
-                Primer escaneo · {prompts.length} prompts · Gemini
+                Primer escaneo · {prompts.length} prompts · {getLLMScanProviders().map((p) => ENGINE_LABELS[p]?.label ?? p).join(" y ")}
               </p>
             </div>
           </div>

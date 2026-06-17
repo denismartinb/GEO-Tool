@@ -1,7 +1,16 @@
 import "server-only";
 
-export const MAX_REAL_SCAN_PROMPTS = 10;
-export const MAX_EXTRACTION_RESULTS = 10;
+// Kept at 6 (not the 10 restored by #113) because multi-engine execution
+// (migration 0009) fans each prompt out to one concurrent call per active
+// engine — currently up to 2 (Gemini, Claude) — so 6 prompts already means up
+// to 12 concurrent outbound calls inside the ~60s maxDuration budget. Bumping
+// to 10 here would mean up to 20 concurrent calls, re-introducing the
+// Gemini-timeout-under-load risk documented in the ADR 0009 addendum.
+export const MAX_REAL_SCAN_PROMPTS = 6;
+// One row per prompt per active engine (multi-engine execution, migration
+// 0009) — currently up to 2 engines (Gemini, Claude), so size for
+// MAX_REAL_SCAN_PROMPTS * 2 rather than MAX_REAL_SCAN_PROMPTS alone.
+export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call

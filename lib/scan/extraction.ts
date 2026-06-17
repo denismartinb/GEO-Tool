@@ -1,6 +1,7 @@
 import "server-only";
 
 import { extractGeminiStructuredData } from "@/lib/llm/gemini";
+import { extractClaudeStructuredData } from "@/lib/llm/claude";
 import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -114,12 +115,20 @@ async function extractAndPersistRow(input: {
           .filter((name) => name.length > 0)
       : [];
 
-    const extracted = await extractGeminiStructuredData({
-      brand: row.brand_snapshot,
-      competitors,
-      rawResponseText,
-      promptText: row.prompt_text_snapshot
-    });
+    const extracted =
+      row.provider === "claude"
+        ? await extractClaudeStructuredData({
+            brand: row.brand_snapshot,
+            competitors,
+            rawResponseText,
+            promptText: row.prompt_text_snapshot
+          })
+        : await extractGeminiStructuredData({
+            brand: row.brand_snapshot,
+            competitors,
+            rawResponseText,
+            promptText: row.prompt_text_snapshot
+          });
 
     const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
 
@@ -181,7 +190,7 @@ export async function runStructuredExtractionForRun(input: {
     .eq("project_id", input.projectId)
     .eq("run_id", input.runId)
     .eq("status", "completed")
-    .eq("provider", "gemini")
+    .in("provider", ["gemini", "claude"])
     .not("raw_response_text", "is", null);
 
   if (error || !rows?.length) return;

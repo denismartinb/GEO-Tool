@@ -19,6 +19,19 @@ type PromptsClientProps = {
   totalTopics: number;
 };
 
+type ExtractedCompetitor = { name?: string; mentioned?: boolean };
+type ExtractedJsonShape = { competitors?: ExtractedCompetitor[] };
+
+type PromptGroup = {
+  key: string;
+  promptText: string | null;
+  engines: ResultRow[];
+  brandMentioned: boolean;
+  citationsTotal: number;
+  competitorsCount: number;
+  sentimentDominant: string | null;
+};
+
 function sentimentLabel(s: string | null): string {
   const map: Record<string, string> = {
     positive: "Positivo",
@@ -29,6 +42,73 @@ function sentimentLabel(s: string | null): string {
   return s ? (map[s] ?? s) : "—";
 }
 
+function parseExtracted(raw: unknown): ExtractedJsonShape {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return raw as ExtractedJsonShape;
+}
+
+// Mirrors the sentiment-mode aggregation already used server-side for topic
+// groups (page.tsx) — same logic, applied across an individual prompt's
+// per-engine rows instead of a whole category's rows.
+function dominantSentiment(rows: ResultRow[]): string | null {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.sentiment) continue;
+    counts.set(r.sentiment, (counts.get(r.sentiment) ?? 0) + 1);
+  }
+  let dominant: string | null = null;
+  let topCount = 0;
+  for (const [sentiment, count] of counts) {
+    if (count > topCount) {
+      topCount = count;
+      dominant = sentiment;
+    }
+  }
+  return dominant;
+}
+
+// Union (not sum) across engines: the same competitor mentioned by both
+// Gemini and Claude must count once, not twice.
+function mentionedCompetitorsUnion(rows: ResultRow[]): number {
+  const names = new Set<string>();
+  for (const r of rows) {
+    const ext = parseExtracted(r.extracted_json);
+    for (const c of ext.competitors ?? []) {
+      if (c.mentioned && c.name) names.add(c.name.trim().toLowerCase());
+    }
+  }
+  return names.size;
+}
+
+// Multi-engine execution means a prompt can have up to one
+// scan_prompt_results row per active engine (Gemini, Claude). Group them
+// back into one row per prompt for list display; the full per-engine array
+// is still passed to the drawer for drill-down.
+function groupByPrompt(rows: ResultRow[]): PromptGroup[] {
+  const order: string[] = [];
+  const groups = new Map<string, ResultRow[]>();
+  for (const r of rows) {
+    const key = r.prompt_id ?? r.id;
+    if (!groups.has(key)) {
+      groups.set(key, []);
+      order.push(key);
+    }
+    groups.get(key)!.push(r);
+  }
+  return order.map((key) => {
+    const engines = groups.get(key)!;
+    return {
+      key,
+      promptText: engines[0].prompt_text_snapshot,
+      engines,
+      brandMentioned: engines.some((r) => r.brand_mentioned),
+      citationsTotal: engines.reduce((sum, r) => sum + (r.citations_count ?? 0), 0),
+      competitorsCount: mentionedCompetitorsUnion(engines),
+      sentimentDominant: dominantSentiment(engines),
+    };
+  });
+}
+
 export function PromptsClient({
   results,
   hasTopics,
@@ -37,13 +117,20 @@ export function PromptsClient({
   totalPrompts,
   totalTopics,
 }: PromptsClientProps) {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [expandedTopics, setExpandedTopics] = useState<Set<string>>(
     () => new Set(topicGroups.map((g) => g.category))
   );
 
-  const selectedResult =
-    selectedId !== null ? results.find((r) => r.id === selectedId) ?? null : null;
+  const selectedEngineResults =
+    selectedPromptId !== null
+      ? results.filter((r) => (r.prompt_id ?? r.id) === selectedPromptId)
+      : [];
+
+  const flatGroups = groupByPrompt(results).sort((a, b) => {
+    if (a.brandMentioned === b.brandMentioned) return 0;
+    return a.brandMentioned ? 1 : -1;
+  });
 
   function toggleTopic(cat: string) {
     setExpandedTopics((prev) => {
@@ -88,11 +175,11 @@ export function PromptsClient({
                 </tr>
               </thead>
               <tbody>
-                {results.map((r) => (
+                {flatGroups.map((g) => (
                   <tr
-                    key={r.id}
+                    key={g.key}
                     className="hoverable"
-                    onClick={() => setSelectedId(r.id)}
+                    onClick={() => setSelectedPromptId(g.key)}
                     style={{ cursor: "pointer" }}
                   >
                     <td style={{ paddingLeft: 16, maxWidth: 360 }}>
@@ -107,34 +194,30 @@ export function PromptsClient({
                           lineHeight: 1.45,
                         }}
                       >
-                        {r.prompt_text_snapshot ?? "—"}
+                        {g.promptText ?? "—"}
                       </span>
                     </td>
                     <td>
                       <span
-                        className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neg"}`}
+                        className={`badge ${g.brandMentioned ? "badge-pos" : "badge-neg"}`}
                       >
-                        {r.brand_mentioned ? "Mencionada" : "Ausente"}
+                        {g.brandMentioned ? "Mencionada" : "Ausente"}
                       </span>
                     </td>
-                    <td className="num">
-                      {r.mentioned_competitors_count ?? 0}
-                    </td>
-                    <td className="num">
-                      {r.citations_count ?? 0}
-                    </td>
+                    <td className="num">{g.competitorsCount}</td>
+                    <td className="num">{g.citationsTotal}</td>
                     <td>
-                      {r.sentiment ? (
+                      {g.sentimentDominant ? (
                         <span
                           className={`badge ${
-                            r.sentiment === "positive"
+                            g.sentimentDominant === "positive"
                               ? "badge-pos"
-                              : r.sentiment === "negative"
+                              : g.sentimentDominant === "negative"
                                 ? "badge-neg"
                                 : "badge-neutral"
                           }`}
                         >
-                          {sentimentLabel(r.sentiment)}
+                          {sentimentLabel(g.sentimentDominant)}
                         </span>
                       ) : (
                         <span style={{ color: "var(--ink-4)" }}>—</span>
@@ -243,11 +326,11 @@ export function PromptsClient({
                       </td>
                     </tr>
                     {expandedTopics.has(group.category) &&
-                      group.results.map((r) => (
+                      groupByPrompt(group.results).map((g) => (
                         <tr
-                          key={r.id}
+                          key={g.key}
                           className="prompt-row hoverable"
-                          onClick={() => setSelectedId(r.id)}
+                          onClick={() => setSelectedPromptId(g.key)}
                           style={{ cursor: "pointer" }}
                         >
                           <td style={{ paddingLeft: 36 }}>
@@ -262,7 +345,7 @@ export function PromptsClient({
                                 lineHeight: 1.45,
                               }}
                             >
-                              {r.prompt_text_snapshot ?? "—"}
+                              {g.promptText ?? "—"}
                             </span>
                           </td>
                           <td className="num">
@@ -273,30 +356,30 @@ export function PromptsClient({
                           </td>
                           <td>
                             <span
-                              className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neg"}`}
+                              className={`badge ${g.brandMentioned ? "badge-pos" : "badge-neg"}`}
                             >
-                              {r.brand_mentioned ? "Mencionada" : "Ausente"}
+                              {g.brandMentioned ? "Mencionada" : "Ausente"}
                             </span>
                           </td>
                           <td className="num">
-                            {(r.citations_count ?? 0) > 0 ? (
-                              r.citations_count
+                            {g.citationsTotal > 0 ? (
+                              g.citationsTotal
                             ) : (
                               <span style={{ color: "var(--ink-4)" }}>0</span>
                             )}
                           </td>
                           <td>
-                            {r.sentiment ? (
+                            {g.sentimentDominant ? (
                               <span
                                 className={`badge ${
-                                  r.sentiment === "positive"
+                                  g.sentimentDominant === "positive"
                                     ? "badge-pos"
-                                    : r.sentiment === "negative"
+                                    : g.sentimentDominant === "negative"
                                       ? "badge-neg"
                                       : "badge-neutral"
                                 }`}
                               >
-                                {sentimentLabel(r.sentiment)}
+                                {sentimentLabel(g.sentimentDominant)}
                               </span>
                             ) : (
                               <span style={{ color: "var(--ink-4)" }}>—</span>
@@ -313,9 +396,9 @@ export function PromptsClient({
       )}
 
       <PromptDrawer
-        result={selectedResult}
+        results={selectedEngineResults}
         competitors={competitors}
-        onClose={() => setSelectedId(null)}
+        onClose={() => setSelectedPromptId(null)}
       />
     </>
   );
