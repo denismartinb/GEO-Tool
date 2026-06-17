@@ -1,7 +1,10 @@
 import "server-only";
 
 export const MAX_REAL_SCAN_PROMPTS = 6;
-export const MAX_EXTRACTION_RESULTS = 10;
+// One row per prompt per active engine (multi-engine execution, migration
+// 0009) — currently up to 2 engines (Gemini, Claude), so size for
+// MAX_REAL_SCAN_PROMPTS * 2 rather than MAX_REAL_SCAN_PROMPTS alone.
+export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call

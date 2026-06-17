@@ -31,6 +31,26 @@ See `docs/adr/0002-gemini-model-pinning.md` and
 `gemini-2.5-flash`. Do not change without an ADR. If a `GEMINI_MODEL`
 override is set in Vercel, it must also be updated to a served model id.
 
+### Claude (Anthropic)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `ANTHROPIC_API_KEY` | Only if Claude is an active scan engine | Vercel + local `.env.local` | Anthropic API key |
+| `ANTHROPIC_MODEL` | No (defaults to `claude-haiku-4-5-20251001`) | Vercel optional | Valid Claude model id |
+
+### Scan engines
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `LLM_SCAN_PROVIDERS` | No (defaults to Gemini-only) | Vercel | Comma-separated engine list, e.g. `gemini,claude` — each listed engine runs concurrently for every prompt in a scan |
+| `LLM_SCAN_PROVIDER` | No — legacy, only read when `LLM_SCAN_PROVIDERS` is unset | Vercel | `gemini` \| `claude` |
+
+Setting `LLM_SCAN_PROVIDERS=gemini,claude` requires both `GEMINI_API_KEY` and
+`ANTHROPIC_API_KEY` to be configured — a misconfigured engine does not abort
+the run as long as at least one other listed engine is configured (see
+`lib/scan/executor.ts`), but if every listed engine is misconfigured the run
+fails fast.
+
 ### Scan execution
 
 | Variable | Required | Where | Expected shape |

@@ -10,7 +10,7 @@ type Competitor = {
 };
 
 type Props = {
-  result: ResultRow | null;
+  results: ResultRow[];
   competitors: Competitor[];
   onClose: () => void;
 };
@@ -32,32 +32,79 @@ const sentimentLabels: Record<string, string> = {
 
 type Tab = "resumen" | "respuestas";
 
-export function PromptDrawer({ result, competitors, onClose }: Props) {
+function providerLabel(provider: string | null): string {
+  return provider === "claude" ? "Claude" : "Gemini";
+}
+
+function parseExtracted(raw: unknown): ExtractedJson | null {
+  return raw && typeof raw === "object" && !Array.isArray(raw)
+    ? (raw as ExtractedJson)
+    : null;
+}
+
+// Mirrors the sentiment-mode aggregation used in prompts-client.tsx and
+// page.tsx's topic groups: the most frequent non-null sentiment across this
+// prompt's per-engine rows.
+function dominantSentiment(rows: ResultRow[]): string | null {
+  const counts = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.sentiment) continue;
+    counts.set(r.sentiment, (counts.get(r.sentiment) ?? 0) + 1);
+  }
+  let dominant: string | null = null;
+  let topCount = 0;
+  for (const [sentiment, count] of counts) {
+    if (count > topCount) {
+      topCount = count;
+      dominant = sentiment;
+    }
+  }
+  return dominant;
+}
+
+export function PromptDrawer({ results, competitors, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumen");
 
-  if (!result) return null;
+  if (!results.length) return null;
 
-  const extracted =
-    result.extracted_json &&
-    typeof result.extracted_json === "object" &&
-    !Array.isArray(result.extracted_json)
-      ? (result.extracted_json as ExtractedJson)
-      : null;
+  const extractedList = results.map((r) => parseExtracted(r.extracted_json));
 
-  const extractedCompetitors = extracted?.competitors ?? [];
-
-  const mentionedMap = new Map(
-    extractedCompetitors
-      .filter((c) => c.name)
-      .map((c) => [c.name!.toLowerCase(), c])
+  const brandMentioned = results.some((r) => r.brand_mentioned);
+  const citationFound = results.some((r) => r.citation_found);
+  const brandEvidence = Array.from(
+    new Set(extractedList.flatMap((e) => e?.brand?.evidence ?? []))
   );
+
+  const mentionedMap = new Map<string, { mentioned: boolean; evidence: string[] }>();
+  for (const ext of extractedList) {
+    for (const c of ext?.competitors ?? []) {
+      if (!c.name) continue;
+      const key = c.name.toLowerCase();
+      const prev = mentionedMap.get(key) ?? { mentioned: false, evidence: [] };
+      mentionedMap.set(key, {
+        mentioned: prev.mentioned || !!c.mentioned,
+        evidence: Array.from(new Set([...prev.evidence, ...(c.evidence ?? [])])),
+      });
+    }
+  }
+
+  const combinedCitations: Array<{ url?: string; domain?: string; label?: string }> = [];
+  const seenCitationKeys = new Set<string>();
+  for (const ext of extractedList) {
+    for (const cite of ext?.citations ?? []) {
+      const key = (cite.domain ?? cite.url ?? "").toLowerCase();
+      if (!key || seenCitationKeys.has(key)) continue;
+      seenCitationKeys.add(key);
+      combinedCitations.push(cite);
+    }
+  }
 
   const brandRow = {
     name: "Tu marca",
     isOwn: true,
-    mentioned: result.brand_mentioned ?? false,
-    evidence: extracted?.brand?.evidence ?? [],
-    sentiment: result.sentiment,
+    mentioned: brandMentioned,
+    evidence: brandEvidence,
+    sentiment: dominantSentiment(results),
   };
 
   const competitorRows = competitors.map((comp) => {
@@ -67,7 +114,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
       isOwn: false,
       mentioned: match?.mentioned ?? false,
       evidence: match?.evidence ?? [],
-      sentiment: null,
+      sentiment: null as string | null,
     };
   });
 
@@ -79,6 +126,10 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
       return b.evidence.length - a.evidence.length;
     return a.name.localeCompare(b.name);
   });
+
+  const uniqueProviderLabels = Array.from(
+    new Set(results.map((r) => providerLabel(r.provider)))
+  );
 
   return (
     <>
@@ -110,7 +161,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                 flex: 1,
               }}
             >
-              {result.prompt_text_snapshot ?? "Prompt"}
+              {results[0].prompt_text_snapshot ?? "Prompt"}
             </p>
             <button
               onClick={onClose}
@@ -160,12 +211,12 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                       style={{
                         fontSize: 22,
                         fontWeight: 800,
-                        color: result.brand_mentioned
+                        color: brandMentioned
                           ? "var(--pos-ink)"
                           : "var(--neg-ink)",
                       }}
                     >
-                      {result.brand_mentioned ? "Sí" : "No"}
+                      {brandMentioned ? "Sí" : "No"}
                     </div>
                     <div
                       style={{
@@ -183,12 +234,12 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                       style={{
                         fontSize: 22,
                         fontWeight: 800,
-                        color: result.citation_found
+                        color: citationFound
                           ? "var(--accent-ink)"
                           : "var(--ink-4)",
                       }}
                     >
-                      {result.citation_found ? "Sí" : "No"}
+                      {citationFound ? "Sí" : "No"}
                     </div>
                     <div
                       style={{
@@ -385,7 +436,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
               </table>
 
               {/* Evidencias de la marca */}
-              {(extracted?.brand?.evidence ?? []).length > 0 && (
+              {brandEvidence.length > 0 && (
                 <div className="aside-card">
                   <div className="ac-title">Evidencias de mención</div>
                   <ul
@@ -397,7 +448,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                       lineHeight: 1.6,
                     }}
                   >
-                    {(extracted?.brand?.evidence ?? []).map((ev, i) => (
+                    {brandEvidence.map((ev, i) => (
                       <li key={i}>{ev}</li>
                     ))}
                   </ul>
@@ -405,10 +456,10 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
               )}
 
               {/* Citas */}
-              {(extracted?.citations ?? []).length > 0 && (
+              {combinedCitations.length > 0 && (
                 <div className="aside-card">
                   <div className="ac-title">
-                    Citas ({(extracted?.citations ?? []).length})
+                    Citas ({combinedCitations.length})
                   </div>
                   <ul
                     style={{
@@ -419,7 +470,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                       color: "var(--ink-3)",
                     }}
                   >
-                    {(extracted?.citations ?? []).map((cite, i) => (
+                    {combinedCitations.map((cite, i) => (
                       <li
                         key={i}
                         style={{
@@ -450,7 +501,7 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                   marginBottom: 12,
                 }}
               >
-                Analizado con {result.provider === "claude" ? "Claude" : "Gemini"}.
+                Analizado con {uniqueProviderLabels.join(" y ")}.
               </p>
 
               <table
@@ -518,78 +569,95 @@ export function PromptDrawer({ result, competitors, onClose }: Props) {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                    <td style={{ padding: "8px" }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6,
-                        }}
-                      >
+                  {results.map((r) => (
+                    <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                      <td style={{ padding: "8px" }}>
                         <div
                           style={{
-                            width: 20,
-                            height: 20,
-                            borderRadius: 5,
-                            background: result.provider === "claude" ? "#cc785c" : "#1a73e8",
-                            display: "grid",
-                            placeItems: "center",
-                            color: "#fff",
-                            fontSize: 9,
-                            fontWeight: 800,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
                           }}
                         >
-                          {result.provider === "claude" ? "C" : "G"}
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: 5,
+                              background: r.provider === "claude" ? "#cc785c" : "#1a73e8",
+                              display: "grid",
+                              placeItems: "center",
+                              color: "#fff",
+                              fontSize: 9,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {r.provider === "claude" ? "C" : "G"}
+                          </div>
+                          <span style={{ fontWeight: 600 }}>
+                            {providerLabel(r.provider)}
+                          </span>
                         </div>
-                        <span style={{ fontWeight: 600 }}>
-                          {result.provider === "claude" ? "Claude" : "Gemini"}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      <span
-                        className={`badge ${result.brand_mentioned ? "badge-pos" : "badge-neutral"}`}
-                      >
-                        {result.brand_mentioned ? "Sí" : "No"}
-                      </span>
-                    </td>
-                    <td style={{ padding: "8px" }}>
-                      {result.sentiment ? (
+                      </td>
+                      <td style={{ padding: "8px" }}>
                         <span
-                          className={`badge ${
-                            result.sentiment === "positive"
-                              ? "badge-pos"
-                              : result.sentiment === "negative"
-                                ? "badge-neg"
-                                : "badge-neutral"
-                          }`}
+                          className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}
                         >
-                          {sentimentLabels[result.sentiment] ?? result.sentiment}
+                          {r.brand_mentioned ? "Sí" : "No"}
                         </span>
-                      ) : (
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        padding: "8px",
-                        color: "var(--ink-3)",
-                        fontSize: 12,
-                      }}
-                    >
-                      Hoy
-                    </td>
-                  </tr>
+                      </td>
+                      <td style={{ padding: "8px" }}>
+                        {r.sentiment ? (
+                          <span
+                            className={`badge ${
+                              r.sentiment === "positive"
+                                ? "badge-pos"
+                                : r.sentiment === "negative"
+                                  ? "badge-neg"
+                                  : "badge-neutral"
+                            }`}
+                          >
+                            {sentimentLabels[r.sentiment] ?? r.sentiment}
+                          </span>
+                        ) : (
+                          <span style={{ color: "var(--ink-4)" }}>—</span>
+                        )}
+                      </td>
+                      <td
+                        style={{
+                          padding: "8px",
+                          color: "var(--ink-3)",
+                          fontSize: 12,
+                        }}
+                      >
+                        Hoy
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
 
-              {result.raw_response_text && (
-                <div className="resp-full">
-                  <div className="body" style={{ whiteSpace: "pre-wrap" }}>
-                    {result.raw_response_text}
-                  </div>
-                </div>
+              {results.map(
+                (r) =>
+                  r.raw_response_text && (
+                    <div key={r.id} className="resp-full" style={{ marginBottom: 12 }}>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--ink-4)",
+                          marginBottom: 6,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        {providerLabel(r.provider)}
+                      </div>
+                      <div className="body" style={{ whiteSpace: "pre-wrap" }}>
+                        {r.raw_response_text}
+                      </div>
+                    </div>
+                  )
               )}
             </div>
           )}

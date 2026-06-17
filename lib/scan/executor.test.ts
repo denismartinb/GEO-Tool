@@ -12,6 +12,15 @@ vi.mock("@/lib/llm/gemini", async () => {
   };
 });
 
+const generateClaudeVisibilityAnswer = vi.fn();
+vi.mock("@/lib/llm/claude", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/llm/claude")>("@/lib/llm/claude");
+  return {
+    ...actual,
+    generateClaudeVisibilityAnswer: (...args: unknown[]) => generateClaudeVisibilityAnswer(...args)
+  };
+});
+
 vi.mock("@/lib/scan/extraction", () => ({
   runStructuredExtractionForRun: vi.fn().mockResolvedValue(undefined)
 }));
@@ -165,26 +174,42 @@ function makeScanRunsTable() {
  * Captures every row inserted into `scan_prompt_results`, so tests can assert
  * on the persisted `raw_response_json` (e.g. `prompt_version`) without caring
  * about the rest of the no-op table plumbing.
+ *
+ * `existingProviders` seeds the response for processPromptJob's per-engine
+ * idempotency check (the only `select` in this table filtered by
+ * `prompt_id`); the later run-level results aggregation `select` (filtered
+ * only by `run_id`/`project_id`) always sees `[]`, matching every other test
+ * in this file.
  */
-function makeScanPromptResultsTable() {
+function makeScanPromptResultsTable(existingProviders: string[] = []) {
   const inserted: Array<Record<string, unknown>> = [];
+  let hasPromptIdFilter = false;
   const builder: Record<string, unknown> = {
     insert: (row: Record<string, unknown>) => {
       inserted.push(row);
       return Promise.resolve({ error: null });
     },
-    eq: () => builder,
+    eq: (column: string) => {
+      if (column === "prompt_id") hasPromptIdFilter = true;
+      return builder;
+    },
     select: () => builder,
     order: () => builder,
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
     single: () => Promise.resolve({ data: null, error: null }),
-    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
-      Promise.resolve({ data: [], error: null }).then(resolve)
+    then: (resolve: (value: { data: unknown[]; error: null }) => unknown) => {
+      const data = hasPromptIdFilter ? existingProviders.map((provider) => ({ provider })) : [];
+      hasPromptIdFilter = false;
+      return Promise.resolve({ data, error: null }).then(resolve);
+    }
   };
   return { inserted, table: builder };
 }
 
-function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }) {
+function buildClients(
+  { promptJobMaxAttempts }: { promptJobMaxAttempts: number },
+  existingProviders: string[] = []
+) {
   const jobsTable = makeJobsTable([
     {
       id: "start-job",
@@ -219,7 +244,7 @@ function buildClients({ promptJobMaxAttempts }: { promptJobMaxAttempts: number }
   ]);
 
   const scanRunsTable = makeScanRunsTable();
-  const scanPromptResultsTable = makeScanPromptResultsTable();
+  const scanPromptResultsTable = makeScanPromptResultsTable(existingProviders);
 
   const service = {
     from(table: string) {
@@ -406,5 +431,97 @@ describe("executePendingScan — per-prompt retry (SCAN-ROBUST-1)", () => {
     await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).rejects.toThrow();
 
     expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("executePendingScan — multi-engine execution", () => {
+  const ORIGINAL_LLM_SCAN_PROVIDERS = process.env.LLM_SCAN_PROVIDERS;
+
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateClaudeVisibilityAnswer.mockReset();
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_LLM_SCAN_PROVIDERS === undefined) {
+      delete process.env.LLM_SCAN_PROVIDERS;
+    } else {
+      process.env.LLM_SCAN_PROVIDERS = ORIGINAL_LLM_SCAN_PROVIDERS;
+    }
+  });
+
+  const CLAUDE_SUCCESS_RESPONSE = {
+    text: "Acme is also a great CRM.",
+    model: "claude-haiku-4-5-20251001",
+    tokensIn: 12,
+    tokensOut: 22,
+    totalTokens: 34
+  };
+
+  it("inserts one result row per engine when both succeed, and completes the job", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(2);
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini"]);
+
+    const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
+    expect(promptJob.status).toBe("completed");
+  });
+
+  it("does not abort the run when only one engine is config-errored", async () => {
+    const { ClaudeConfigError } = await vi.importActual<typeof import("@/lib/llm/claude")>("@/lib/llm/claude");
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockRejectedValue(new ClaudeConfigError("Missing ANTHROPIC_API_KEY"));
+
+    const { service, supabase, scanPromptResultsTable, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(scanPromptResultsTable.inserted).toHaveLength(1);
+    expect(scanPromptResultsTable.inserted[0].provider).toBe("gemini");
+
+    const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
+    expect(promptJob.status).toBe("completed");
+  });
+
+  it("aborts the run when every active engine is config-errored", async () => {
+    const { GeminiConfigError } = await vi.importActual<typeof import("@/lib/llm/gemini")>("@/lib/llm/gemini");
+    const { ClaudeConfigError } = await vi.importActual<typeof import("@/lib/llm/claude")>("@/lib/llm/claude");
+    generateGeminiVisibilityAnswer.mockRejectedValue(new GeminiConfigError("Missing GEMINI_API_KEY"));
+    generateClaudeVisibilityAnswer.mockRejectedValue(new ClaudeConfigError("Missing ANTHROPIC_API_KEY"));
+
+    const { service, supabase } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).rejects.toThrow();
+  });
+
+  it("skips engines that already have a result for this prompt (idempotent retry)", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 }, ["gemini"]);
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(1);
+    expect(scanPromptResultsTable.inserted[0].provider).toBe("claude");
   });
 });
