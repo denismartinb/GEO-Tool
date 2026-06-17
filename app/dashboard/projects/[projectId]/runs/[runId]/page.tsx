@@ -140,8 +140,8 @@ export default async function RunDetailPage({
                 <p>Respuestas de IA con fuentes citadas o referenciadas.</p>
               </div>
               <div className="rounded border p-3 text-sm text-[var(--ink-2)]">
-                <p className="font-medium">Brecha competitiva: {score.competitor_gap_score}</p>
-                <p>Presencia de competidores frente a la marca: cuanto mayor, peor.</p>
+                <p className="font-medium">Presión competitiva: {score.competitor_gap_score}</p>
+                <p>% de prompts donde aparece un competidor pero tu marca no: cuanto mayor, peor.</p>
               </div>
               <div className="rounded border p-3 text-sm text-[var(--ink-2)]">
                 <p className="font-medium">Confianza: {score.confidence}</p>
