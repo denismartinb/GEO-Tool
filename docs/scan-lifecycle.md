@@ -84,10 +84,12 @@ becomes terminal (`failed` or `completed`).
   sanitized `last_error`. It never crashes the whole run.
 - **Worst-case budget note**: the ~60s Vercel `maxDuration`
   (`docs/adr/0003-sync-scan-execution-and-maxduration.md`) is a *typical-case*
-  target with `MAX_REAL_SCAN_PROMPTS=6`, not a hard guarantee. A pathological
-  run where every prompt times out and retries once
-  (6 × (2 × 20s + 500ms) ≈ 243s) can exceed both 60s and
-  `SCAN_RUNNING_TIMEOUT_SECONDS` (120s). That worst case is bounded by the
+  target with `MAX_REAL_SCAN_PROMPTS=10`, not a hard guarantee. Since
+  SCAN-ROBUST-2 (`docs/adr/0003`, "Addendum (2026-06-14)"), `scan_prompt` jobs
+  run concurrently via `Promise.allSettled`, so the per-prompt retry costs
+  (`2 × 20s + 500ms` each) overlap rather than sum — a pathological run where
+  every prompt times out and retries once still takes roughly one prompt's
+  worst case (~40.5s), not 10 × that. That worst case is bounded by the
   running-timeout + reconciliation auto-retry below, not by the per-call
   timeout alone.
 

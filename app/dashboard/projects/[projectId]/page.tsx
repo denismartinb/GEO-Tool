@@ -76,6 +76,19 @@ function getBandTone(score: number): string {
   return "warn";
 }
 
+/**
+ * Classification bands for "Presión Competitiva" (docs/adr/0011).
+ * Higher score = worse (the brand is more displaced by competitors), so the
+ * tone scale is inverted relative to getBandTone: low score = green/positive,
+ * high score = red/negative.
+ */
+function getCompetitivePressureBand(score: number): { label: string; tone: string } {
+  if (score > 80) return { label: "Crítica", tone: "neg" };
+  if (score >= 50) return { label: "Alta", tone: "warn" };
+  if (score >= 20) return { label: "Media", tone: "accent" };
+  return { label: "Baja", tone: "pos" };
+}
+
 type ExtractedJsonPartial = {
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
   citations?: Array<{ url?: string | null; domain?: string | null; title?: string | null; source?: string }>;
@@ -234,7 +247,7 @@ export default async function ProjectDetailPage({
   );
   const visibilityScore = n(latestScore?.visibility_score);
   const citationScore = n(latestScore?.citation_score);
-  const competitorRiskScore = n(latestScore?.competitor_gap_score);
+  const competitorPressureScore = n(latestScore?.competitor_gap_score);
   const runConfidence = latestScore?.confidence ?? "low";
 
   /* ---- composite GEO score (ADR 0008) ---- */
@@ -274,6 +287,40 @@ export default async function ProjectDetailPage({
       .sort((a, b) => b.mentionRate - a.mentionRate);
   })();
 
+  /* ---- citation share (computed at read time — no persisted column) ----
+   * own_citation_share = own_citations / total_resolved_citations × 100
+   * Only grounding citations with a non-null domain are counted.
+   * If total_resolved_citations === 0 → null ("Sin datos").
+   */
+  const citationShareResult: { share: number | null; ownCitations: number; totalCitations: number } = (() => {
+    if (!allPromptResults?.length) return { share: null, ownCitations: 0, totalCitations: 0 };
+
+    const projectDomain = project.domain.replace(/^www\./, "").toLowerCase();
+
+    let totalResolved = 0;
+    let ownCitations = 0;
+
+    for (const result of allPromptResults) {
+      const ext = parseExt(result.extracted_json);
+      for (const cit of ext.citations ?? []) {
+        if (cit.source !== "grounding") continue;
+        if (!cit.domain) continue;
+        totalResolved += 1;
+        const citDomain = cit.domain.replace(/^www\./, "").toLowerCase();
+        if (citDomain === projectDomain || citDomain.endsWith(`.${projectDomain}`)) {
+          ownCitations += 1;
+        }
+      }
+    }
+
+    if (totalResolved === 0) return { share: null, ownCitations: 0, totalCitations: 0 };
+    return {
+      share: Math.round((ownCitations / totalResolved) * 100),
+      ownCitations,
+      totalCitations: totalResolved
+    };
+  })();
+
   /* ---- trend sparklines ---- */
   const visTrend = (trendHistory ?? []).map((r) => n(r.visibility_score));
   const citTrend = (trendHistory ?? []).map((r) => n(r.citation_score));
@@ -283,7 +330,7 @@ export default async function ProjectDetailPage({
   const prevScore = trendHistory && trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
   const citDelta = prevScore ? computedCitationRate - n(prevScore.citation_score) : 0;
-  const gapDelta = prevScore ? competitorRiskScore - n(prevScore.competitor_gap_score) : 0;
+  const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
 
   /* ---- competitor breakdown from extracted_json ---- */
   const competitorMentionCounts: Record<string, number> = {};
@@ -543,7 +590,7 @@ export default async function ProjectDetailPage({
                 [
                   { l: "Tasa de mención", v: computedMentionRate, color: "var(--accent)" },
                   { l: "Tasa de cita", v: computedCitationRate, color: "#7c3aed" },
-                  { l: "Riesgo competitivo", v: Math.min(100, competitorRiskScore), color: "#0d9488" }
+                  { l: "Presión competitiva", v: Math.min(100, competitorPressureScore), color: "#0d9488" }
                 ].map((c) => (
                   <div className="compose-row" key={c.l}>
                     <div className="compose-top">
@@ -571,30 +618,36 @@ export default async function ProjectDetailPage({
                 delta: visDelta,
                 color: "var(--accent)",
                 hint: "Prompts donde aparece tu marca.",
-                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo."
+                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
+                isShare: false as const
               },
               {
-                key: "citation",
-                label: "Tasa de cita",
-                value: computedCitationRate,
+                key: "citation-share",
+                label: "Cuota de Citas",
+                value: citationShareResult.share,
                 unit: "%",
-                trend: citTrend,
-                delta: citDelta,
+                trend: [] as number[],
+                delta: 0,
                 color: "#7c3aed",
-                hint: "Prompts donde tu dominio es fuente citada.",
-                tip: "Porcentaje de prompts en los que tu dominio aparece como fuente citada por la IA (grounding de Google Search)."
+                hint: citationShareResult.share !== null
+                  ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
+                  : "Sin citas grounding resueltas en este escaneo.",
+                tip: "Mide qué porcentaje del total de URLs que la IA cita en sus respuestas pertenecen a tu dominio. Cuanto mayor sea este ratio, más presente está tu contenido como fuente de referencia para la IA.",
+                isShare: true as const
               },
               {
                 key: "gap",
-                label: "Riesgo competitivo",
-                value: competitorRiskScore,
-                unit: "/100",
+                label: "Presión competitiva",
+                value: competitorPressureScore,
+                unit: "%",
                 trend: gapTrend,
                 delta: gapDelta,
                 color: "#e54563",
-                hint: "Presión del competidor más fuerte. Más alto = más presión.",
+                hint: "Prompts donde aparece un competidor pero tu marca no.",
                 invert: true,
-                tip: "Combina cuántas veces se mencionan tus competidores por prompt y tu propia tasa de mención. 0 = sin presión competitiva, 100 = presión máxima."
+                tip: "Mide en qué porcentaje de tus prompts aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
+                isShare: false as const,
+                band: getCompetitivePressureBand(competitorPressureScore)
               },
               {
                 key: "confidence",
@@ -607,7 +660,8 @@ export default async function ProjectDetailPage({
                 delta: 0,
                 color: "#0d9488",
                 hint: "Fiabilidad de la muestra de este escaneo.",
-                tip: "Indica cuán fiable es la muestra de este escaneo, según la cobertura de extracción de datos (porcentaje de prompts procesados correctamente). Alta = cobertura completa; media/baja = datos parciales o errores de extracción."
+                tip: "Indica cuán fiable es la muestra de este escaneo, según la cobertura de extracción de datos (porcentaje de prompts procesados correctamente). Alta = cobertura completa; media/baja = datos parciales o errores de extracción.",
+                isShare: false as const
               }
             ].map((m) => (
               <div key={m.key} className="wide-stat">
@@ -616,18 +670,60 @@ export default async function ProjectDetailPage({
                     {m.label}
                     <InfoTip text={m.tip} />
                   </div>
-                  <div className="stat-value tnum">
-                    {m.value}<span className="unit">{m.unit}</span>
-                  </div>
-                  <div className="ws-delta">
-                    {m.delta !== 0 ? (
-                      <Delta value={m.delta} suffix=" pt" invert={m.invert} />
+                  {m.isShare ? (
+                    /* Citation share: special rendering — may be null */
+                    m.value !== null ? (
+                      <>
+                        <div className="stat-value tnum">
+                          {m.value}<span className="unit">%</span>
+                        </div>
+                        <div style={{ marginTop: 4 }}>
+                          <span className={`badge ${
+                            m.value > 50 ? "badge-pos" :
+                            m.value >= 30 ? "badge-accent" :
+                            m.value >= 15 ? "badge-neutral" :
+                            m.value >= 5  ? "badge-warn" :
+                            "badge-neg"
+                          }`} style={{ fontSize: 11 }}>
+                            {m.value > 50 ? "Muy alto" :
+                             m.value >= 30 ? "Alto" :
+                             m.value >= 15 ? "Medio" :
+                             m.value >= 5  ? "Bajo" :
+                             "Muy bajo"}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 6 }}>{m.hint}</p>
+                      </>
                     ) : (
-                      <span className="delta flat">— sin cambio</span>
-                    )}
-                    <span className="stat-hint">vs. escaneo anterior</span>
-                  </div>
-                  <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                      <>
+                        <div className="stat-value tnum" style={{ color: "var(--ink-4)", fontSize: 20 }}>Sin datos</div>
+                        <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                      </>
+                    )
+                  ) : (
+                    /* Standard metric rendering */
+                    <>
+                      <div className="stat-value tnum">
+                        {m.value}<span className="unit">{m.unit}</span>
+                      </div>
+                      {"band" in m && m.band ? (
+                        <div style={{ marginTop: 4 }}>
+                          <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 11 }}>
+                            {m.band.label}
+                          </span>
+                        </div>
+                      ) : null}
+                      <div className="ws-delta">
+                        {m.delta !== 0 ? (
+                          <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                        ) : (
+                          <span className="delta flat">— sin cambio</span>
+                        )}
+                        <span className="stat-hint">vs. escaneo anterior</span>
+                      </div>
+                      <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                    </>
+                  )}
                 </div>
                 <div className="ws-spark">
                   {m.trend.length >= 2 ? (
@@ -642,7 +738,7 @@ export default async function ProjectDetailPage({
             ))}
           </div>
 
-          {/* 3b · Posición media de marca */}
+          {/* 3c · Posición media de marca */}
           <div className="wide-stat wide-stat--position" style={{ marginTop: 12 }}>
             <div className="ws-left" style={{ width: "100%" }}>
               <div className="stat-label">

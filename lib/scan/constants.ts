@@ -1,5 +1,11 @@
 import "server-only";
 
+// Kept at 6 (not the 10 restored by #113) because multi-engine execution
+// (migration 0009) fans each prompt out to one concurrent call per active
+// engine — currently up to 2 (Gemini, Claude) — so 6 prompts already means up
+// to 12 concurrent outbound calls inside the ~60s maxDuration budget. Bumping
+// to 10 here would mean up to 20 concurrent calls, re-introducing the
+// Gemini-timeout-under-load risk documented in the ADR 0009 addendum.
 export const MAX_REAL_SCAN_PROMPTS = 6;
 // One row per prompt per active engine (multi-engine execution, migration
 // 0009) — currently up to 2 engines (Gemini, Claude), so size for
@@ -39,9 +45,10 @@ export const ENABLE_SYNC_SCAN_EXECUTION = process.env.ENABLE_SYNC_SCAN_EXECUTION
 /**
  * Bound on per-prompt retry attempts within a single scan run (SCAN-ROBUST-1).
  * `jobs.max_attempts` defaults to 3 (supabase/migrations/0001_v0_schema.sql),
- * but with `MAX_REAL_SCAN_PROMPTS=6` sequential Gemini calls inside the ~60s
- * `maxDuration` budget (docs/adr/0003), retrying every failed prompt up to 3
- * times could exhaust the whole run on a handful of unlucky prompts. Cap the
+ * but with `MAX_REAL_SCAN_PROMPTS=10` concurrent Gemini calls (SCAN-ROBUST-2,
+ * `lib/scan/executor.ts`) inside the ~60s `maxDuration` budget (docs/adr/0003),
+ * retrying every failed prompt up to 3 times could exhaust the whole run on a
+ * handful of unlucky prompts. Cap the
  * TOTAL attempts (first try + retries) per prompt at 2 — i.e. exactly one
  * retry — regardless of `max_attempts`, while still honoring a lower
  * `max_attempts` if a job ever has one. The retry is only taken for
