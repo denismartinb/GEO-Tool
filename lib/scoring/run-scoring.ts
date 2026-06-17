@@ -1,4 +1,4 @@
-export const SCORING_VERSION = "phase6-extraction-scoring-v1";
+export const SCORING_VERSION = "phase7-grounded-citation-score-v1";
 
 type ScoreInputRow = {
   id: string;
@@ -18,7 +18,32 @@ type ScoreInputRow = {
    * don't pass it; brand_position is simply omitted when absent.
    */
   brand_snapshot?: string | null;
+  /**
+   * LLM provider for this row (e.g. "gemini", "claude"). Optional for
+   * backward compatibility with single-engine-era data and existing call
+   * sites/tests that don't pass it — a missing provider is treated as
+   * grounded (see isGroundedRow), matching that historical Gemini-only
+   * (always-grounded) behavior.
+   */
+  provider?: string | null;
 };
+
+/**
+ * Providers whose generation call includes real grounding (Google Search,
+ * docs/adr/0004-gemini-search-grounding.md) and can therefore produce
+ * genuine citation evidence. citation_score and the authority component of
+ * geo_score are computed only over rows from these providers — see
+ * docs/adr/0012-grounding-aware-citation-score.md. An ungrounded provider's
+ * citation_found is always false by construction (lib/llm/claude.ts), so
+ * pooling it into the denominator only ever imposes a structural ceiling on
+ * citation_score, never reflecting genuine citation performance. Add a
+ * provider here only once it has real grounding wired up.
+ */
+const GROUNDED_PROVIDERS = new Set<string>(["gemini"]);
+
+function isGroundedRow(row: ScoreInputRow): boolean {
+  return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
+}
 
 /**
  * Minimal shape of a single entity (brand or competitor) extracted from
@@ -186,12 +211,35 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
   const extractionCoverage = extractedResultsCount / safeTotal;
 
   const brandMentionedCount = results.filter((row) => row.brand_mentioned).length;
-  const citationFoundCount = results.filter((row) => row.citation_found).length;
   const totalCitationsCount = results.reduce((acc, row) => acc + Math.max(0, row.citations_count ?? 0), 0);
   const totalCompetitorMentions = results.reduce((acc, row) => acc + Math.max(0, row.mentioned_competitors_count ?? 0), 0);
 
   const visibilityScore = round2((brandMentionedCount / safeTotal) * 100);
-  const citationScore = round2((citationFoundCount / safeTotal) * 100);
+
+  // --- Grounding-aware citation_score (docs/adr/0012) ---
+  // citation_score (and the authority component of geo_score) is computed
+  // only over rows from grounded providers — pooling in an ungrounded
+  // provider (always citation_found: false) would impose a structural
+  // ceiling on the metric regardless of real citation performance. The old
+  // all-providers-pooled formula is kept as citation_score_blended for
+  // comparison, not as the official KPI.
+  const groundedResults = results.filter(isGroundedRow);
+  const groundedTotal = groundedResults.length;
+  const citationScoreDataAvailable = groundedTotal > 0;
+  const citationFoundCount = groundedResults.filter((row) => row.citation_found).length;
+  const citationScore = citationScoreDataAvailable ? round2((citationFoundCount / groundedTotal) * 100) : 0;
+
+  const citationFoundCountBlended = results.filter((row) => row.citation_found).length;
+  const citationScoreBlended = round2((citationFoundCountBlended / safeTotal) * 100);
+
+  const citationByProvider: Record<string, { total: number; citation_found_count: number }> = {};
+  for (const row of results) {
+    const key = row.provider ?? "unknown";
+    const entry = citationByProvider[key] ?? { total: 0, citation_found_count: 0 };
+    entry.total += 1;
+    if (row.citation_found) entry.citation_found_count += 1;
+    citationByProvider[key] = entry;
+  }
 
   // --- Competitive Pressure (docs/adr/0011) ---
   // Counts prompts where the brand was displaced: at least one competitor
@@ -226,7 +274,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
   const COMPOSITE_VERSION = "geo-score-v1";
 
   const presenceScore = visibilityScore; // 0..100, higher better
-  const authorityScore = citationScore; // 0..100, higher better
+  const authorityScore: number | null = citationScoreDataAvailable ? citationScore : null; // 0..100, higher better
   const standingScore = clamp(0, 100, 100 - competitorGapScore); // invert: higher = better
 
   let prominenceScore: number | null = null;
@@ -254,7 +302,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
     );
 
     const droppedProminence = prominenceScore === null;
-    const compositeConfidence = droppedProminence && confidence === "high" ? "medium" : confidence;
+    const droppedAuthority = authorityScore === null;
+    const compositeConfidence = (droppedProminence || droppedAuthority) && confidence === "high" ? "medium" : confidence;
 
     geoScore = {
       score: round2(score),
@@ -268,7 +317,10 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
             ? { value: null, weight: 0, reason: "brand_position absent (pre-grounded-position-v1 run)" }
             : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
         standing: { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
-        authority: { value: authorityScore, weight: round2(0.15 / geoScoreWeightSum) }
+        authority:
+          authorityScore === null
+            ? { value: null, weight: 0, reason: "no grounded (citation-capable) provider rows in this run (docs/adr/0012)" }
+            : { value: authorityScore, weight: round2(0.15 / geoScoreWeightSum) }
       },
       formula:
         "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
@@ -279,7 +331,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
 
   const assumptions = [
     "visibility_score = % prompts with brand_mentioned",
-    "citation_score = % prompts with citation_found",
+    "citation_score = % of GROUNDED-provider prompts with citation_found (docs/adr/0012). Ungrounded providers (e.g. Claude, no web search grounding) always have citation_found=false by construction, so pooling them would impose a structural ceiling unrelated to real citation performance; they are excluded from this metric and the authority component of geo_score, but still count toward visibility_score/standing. citation_score_blended (old all-providers formula) is kept in details_json for comparison.",
     "competitor_gap_score (Competitive Pressure, docs/adr/0011) higher = worse: % of prompts where a competitor was mentioned but the brand was not (brand displacement), not raw competitor mention volume",
     extractionCoverage < 1
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
@@ -311,13 +363,18 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
       extraction_error_count: extractionErrorCount,
       brand_mentioned_count: brandMentionedCount,
       citation_found_count: citationFoundCount,
+      citation_score_blended: citationScoreBlended,
+      citation_score_data_available: citationScoreDataAvailable,
+      grounded_results_count: groundedTotal,
+      citation_by_provider: citationByProvider,
       total_citations_count: totalCitationsCount,
       total_competitor_mentions: totalCompetitorMentions,
       displaced_prompts_count: displacedPromptsCount,
       sentiment_distribution: sentimentDistribution,
       formulas_used: {
         visibility_score: "brand_mentioned_count / total_results * 100",
-        citation_score: "citation_found_count / total_results * 100",
+        citation_score:
+          "citation_found_count / grounded_results_count * 100, computed only over rows from grounded providers (docs/adr/0012); 0 with citation_score_data_available=false when no grounded rows exist in this run. citation_score_blended (all-providers pooled) retained in details_json for comparison only.",
         competitor_gap_score:
           "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)",
         brand_position:
