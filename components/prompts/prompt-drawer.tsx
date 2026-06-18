@@ -18,7 +18,12 @@ type Props = {
 type ExtractedJson = {
   brand?: { mentioned?: boolean; evidence?: string[] };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[] }>;
-  citations?: Array<{ url?: string; domain?: string; label?: string; evidence?: string }>;
+  citations?: Array<{
+    url?: string | null;
+    domain?: string | null;
+    title?: string | null;
+    source?: "grounding" | "inline";
+  }>;
   sentiment?: string;
   summary?: string;
 };
@@ -34,6 +39,24 @@ type Tab = "resumen" | "respuestas";
 
 function providerLabel(provider: string | null): string {
   return provider === "claude" ? "Claude" : "Gemini";
+}
+
+/**
+ * Mirrors the frontend display rule from docs/adr/0006: the raw Google
+ * grounding-redirect URL (vertexaisearch.cloud.google.com/...) must never be
+ * rendered. Unresolved grounding citations (domain: null) fall back to
+ * title, then a generic label. Inline citations without a domain keep
+ * showing their raw url, since those are not Google redirect wrappers.
+ */
+function citationDisplayLabel(cite: {
+  url?: string | null;
+  domain?: string | null;
+  title?: string | null;
+  source?: "grounding" | "inline";
+}): string {
+  if (cite.domain) return cite.domain;
+  if (cite.source === "grounding") return cite.title?.trim() || "Fuente sin resolver";
+  return cite.url ?? "—";
 }
 
 function parseExtracted(raw: unknown): ExtractedJson | null {
@@ -88,11 +111,16 @@ export function PromptDrawer({ results, competitors, onClose }: Props) {
     }
   }
 
-  const combinedCitations: Array<{ url?: string; domain?: string; label?: string }> = [];
+  const combinedCitations: Array<{
+    url?: string | null;
+    domain?: string | null;
+    title?: string | null;
+    source?: "grounding" | "inline";
+  }> = [];
   const seenCitationKeys = new Set<string>();
   for (const ext of extractedList) {
     for (const cite of ext?.citations ?? []) {
-      const key = (cite.domain ?? cite.url ?? "").toLowerCase();
+      const key = (cite.domain ?? cite.title ?? cite.url ?? "").toLowerCase();
       if (!key || seenCitationKeys.has(key)) continue;
       seenCitationKeys.add(key);
       combinedCitations.push(cite);
@@ -479,11 +507,8 @@ export function PromptDrawer({ results, competitors, onClose }: Props) {
                         }}
                       >
                         <span style={{ fontWeight: 600, color: "var(--ink-2)" }}>
-                          {cite.domain ?? cite.url ?? "—"}
+                          {citationDisplayLabel(cite)}
                         </span>
-                        {cite.label && (
-                          <span style={{ marginLeft: 6 }}>{cite.label}</span>
-                        )}
                       </li>
                     ))}
                   </ul>

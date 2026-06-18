@@ -166,9 +166,12 @@ export default async function CompetitorsPage({
       competitorPromptSet.get(key)!.add(result.run_id as string);
     }
 
-    // Citation domains for this result
+    // Citation domains for this result. Only `domain` is used: an
+    // unresolved grounding citation's `url` is a Google redirect wrapper
+    // (vertexaisearch.cloud.google.com/...), not a real domain, and must
+    // never be treated as one (docs/adr/0006).
     const citDomains = (ext.citations ?? [])
-      .map((c) => normalizeDomain(c.domain ?? c.url ?? ""))
+      .map((c) => normalizeDomain(c.domain ?? ""))
       .filter((d) => d.length > 0);
 
     // Brand citation rate
