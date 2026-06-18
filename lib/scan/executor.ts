@@ -588,7 +588,8 @@ export async function executePendingScan({
         extraction_error: row.extraction_error,
         brand_snapshot: row.brand_snapshot,
         provider: row.provider
-      }))
+      })),
+      project.domain
     );
 
     await service.from("run_scores").upsert(
