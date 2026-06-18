@@ -1,4 +1,4 @@
-export const SCORING_VERSION = "phase7-grounded-citation-score-v1";
+export const SCORING_VERSION = "phase8-own-domain-citation-score-v1";
 
 type ScoreInputRow = {
   id: string;
@@ -43,6 +43,50 @@ const GROUNDED_PROVIDERS = new Set<string>(["gemini"]);
 
 function isGroundedRow(row: ScoreInputRow): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
+}
+
+function normalizeDomain(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
+
+function isSameOrSubdomain(domain: string, root: string): boolean {
+  if (!domain || !root) return false;
+  return domain === root || domain.endsWith(`.${root}`);
+}
+
+type ExtractedCitation = {
+  domain?: string | null;
+  source?: "grounding" | "inline";
+};
+
+function readCitations(value: unknown): ExtractedCitation[] {
+  if (!value || typeof value !== "object") return [];
+  const citations = (value as Record<string, unknown>).citations;
+  if (!Array.isArray(citations)) return [];
+  return citations as ExtractedCitation[];
+}
+
+/**
+ * True when a row's extracted_json contains at least one real grounding
+ * citation (docs/adr/0004) whose domain exactly matches, or is a subdomain
+ * of, the project's own domain. Mirrors the own_citation_share domain-match
+ * logic (docs/adr/0010) — see docs/adr/0013-own-domain-citation-score.md for
+ * why citation_score now requires this instead of "any citation present".
+ */
+function hasOwnDomainCitation(row: ScoreInputRow, projectDomainNormalized: string): boolean {
+  if (!projectDomainNormalized) return false;
+  for (const citation of readCitations(row.extracted_json)) {
+    if (citation.source !== "grounding") continue;
+    const rawDomain = citation.domain?.trim();
+    if (!rawDomain) continue;
+    if (isSameOrSubdomain(normalizeDomain(rawDomain), projectDomainNormalized)) return true;
+  }
+  return false;
 }
 
 /**
@@ -202,8 +246,9 @@ function computeBrandPosition(results: ScoreInputRow[], totalResults: number): B
   };
 }
 
-export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreOutput {
+export function computeRunScoresFromResults(results: ScoreInputRow[], projectDomain: string): RunScoreOutput {
   const totalResults = results.length;
+  const projectDomainNormalized = projectDomain ? normalizeDomain(projectDomain) : "";
   const safeTotal = Math.max(totalResults, 1);
 
   const extractedResultsCount = results.filter((row) => row.extracted_json && typeof row.extracted_json === "object").length;
@@ -216,18 +261,31 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
 
   const visibilityScore = round2((brandMentionedCount / safeTotal) * 100);
 
-  // --- Grounding-aware citation_score (docs/adr/0012) ---
-  // citation_score (and the authority component of geo_score) is computed
-  // only over rows from grounded providers — pooling in an ungrounded
-  // provider (always citation_found: false) would impose a structural
-  // ceiling on the metric regardless of real citation performance. The old
-  // all-providers-pooled formula is kept as citation_score_blended for
-  // comparison, not as the official KPI.
+  // --- Own-domain citation_score (docs/adr/0013) ---
+  // citation_score (and the authority component of geo_score) requires a
+  // grounding citation whose domain actually matches the project's own
+  // domain — "any source cited, regardless of whose" inflates the metric to
+  // 100% as soon as the AI cites anything at all, even a competitor or an
+  // unrelated third party (see docs/adr/0013 for the real Ikea case that
+  // surfaced this). Domain-matching mirrors own_citation_share (docs/adr/0010).
+  // Only rows from grounded providers (docs/adr/0012) are eligible, since an
+  // ungrounded provider can never have a real grounding citation.
   const groundedResults = results.filter(isGroundedRow);
   const groundedTotal = groundedResults.length;
-  const citationScoreDataAvailable = groundedTotal > 0;
+  const citationScoreDataAvailable = groundedTotal > 0 && projectDomainNormalized.length > 0;
+  const ownDomainCitationCount = groundedResults.filter((row) =>
+    hasOwnDomainCitation(row, projectDomainNormalized)
+  ).length;
+  const citationScore = citationScoreDataAvailable ? round2((ownDomainCitationCount / groundedTotal) * 100) : 0;
+
+  // Secondary/comparison formulas, demoted from "official KPI" by docs/adr/0013:
+  // - citation_score_any_domain: grounded-provider rows with ANY grounding
+  //   citation present, regardless of domain (the official formula from
+  //   docs/adr/0012, before this phase).
+  // - citation_score_blended: all rows (including ungrounded providers) with
+  //   ANY citation present (the original pre-0012 formula).
   const citationFoundCount = groundedResults.filter((row) => row.citation_found).length;
-  const citationScore = citationScoreDataAvailable ? round2((citationFoundCount / groundedTotal) * 100) : 0;
+  const citationScoreAnyDomain = groundedTotal > 0 ? round2((citationFoundCount / groundedTotal) * 100) : 0;
 
   const citationFoundCountBlended = results.filter((row) => row.citation_found).length;
   const citationScoreBlended = round2((citationFoundCountBlended / safeTotal) * 100);
@@ -319,7 +377,12 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
         standing: { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
         authority:
           authorityScore === null
-            ? { value: null, weight: 0, reason: "no grounded (citation-capable) provider rows in this run (docs/adr/0012)" }
+            ? {
+                value: null,
+                weight: 0,
+                reason:
+                  "no grounded (citation-capable) provider rows in this run, or no project domain to match citations against (docs/adr/0012, docs/adr/0013)"
+              }
             : { value: authorityScore, weight: round2(0.15 / geoScoreWeightSum) }
       },
       formula:
@@ -331,7 +394,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
 
   const assumptions = [
     "visibility_score = % prompts with brand_mentioned",
-    "citation_score = % of GROUNDED-provider prompts with citation_found (docs/adr/0012). Ungrounded providers (e.g. Claude, no web search grounding) always have citation_found=false by construction, so pooling them would impose a structural ceiling unrelated to real citation performance; they are excluded from this metric and the authority component of geo_score, but still count toward visibility_score/standing. citation_score_blended (old all-providers formula) is kept in details_json for comparison.",
+    "citation_score = % of GROUNDED-provider prompts citing the brand's OWN domain (docs/adr/0013), not just any source. Ungrounded providers (e.g. Claude, no web search grounding) are excluded, same as docs/adr/0012, but still count toward visibility_score/standing. citation_score_any_domain (any grounding citation, regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are kept in details_json for comparison only.",
     "competitor_gap_score (Competitive Pressure, docs/adr/0011) higher = worse: % of prompts where a competitor was mentioned but the brand was not (brand displacement), not raw competitor mention volume",
     extractionCoverage < 1
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
@@ -362,7 +425,9 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
       extracted_results_count: extractedResultsCount,
       extraction_error_count: extractionErrorCount,
       brand_mentioned_count: brandMentionedCount,
+      own_domain_citation_count: ownDomainCitationCount,
       citation_found_count: citationFoundCount,
+      citation_score_any_domain: citationScoreAnyDomain,
       citation_score_blended: citationScoreBlended,
       citation_score_data_available: citationScoreDataAvailable,
       grounded_results_count: groundedTotal,
@@ -374,7 +439,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[]): RunScoreO
       formulas_used: {
         visibility_score: "brand_mentioned_count / total_results * 100",
         citation_score:
-          "citation_found_count / grounded_results_count * 100, computed only over rows from grounded providers (docs/adr/0012); 0 with citation_score_data_available=false when no grounded rows exist in this run. citation_score_blended (all-providers pooled) retained in details_json for comparison only.",
+          "own_domain_citation_count / grounded_results_count * 100, computed only over rows from grounded providers (docs/adr/0012) with a grounding citation whose domain matches the project's own domain (docs/adr/0013); 0 with citation_score_data_available=false when no grounded rows exist in this run or no project domain was provided. citation_score_any_domain (grounded rows, any citation regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are retained in details_json for comparison only.",
         competitor_gap_score:
           "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)",
         brand_position:

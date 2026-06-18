@@ -3,6 +3,8 @@ import { computeRunScoresFromResults, SCORING_VERSION } from "./run-scoring";
 
 type ScoreInputRow = Parameters<typeof computeRunScoresFromResults>[0][number];
 
+const PROJECT_DOMAIN = "miempresa.com";
+
 /**
  * Builds a minimal valid result row, overridable per test.
  */
@@ -21,9 +23,19 @@ function row(overrides: Partial<ScoreInputRow> = {}): ScoreInputRow {
   };
 }
 
+/** A real grounding citation pointing at the project's own domain (docs/adr/0013). */
+function ownDomainCitation(domain: string = PROJECT_DOMAIN) {
+  return { url: `https://${domain}/page`, domain, title: "Page", source: "grounding" as const, confidence: "high" as const };
+}
+
+/** A real grounding citation pointing at an unrelated third-party domain. */
+function thirdPartyCitation(domain: string = "otrofabricante.com") {
+  return { url: `https://${domain}/page`, domain, title: "Page", source: "grounding" as const, confidence: "high" as const };
+}
+
 describe("computeRunScoresFromResults — empty input", () => {
   it("handles an empty list without dividing by zero", () => {
-    const result = computeRunScoresFromResults([]);
+    const result = computeRunScoresFromResults([], PROJECT_DOMAIN);
 
     // safeTotal = max(0, 1) = 1, so every percentage-based score is 0.
     expect(result.visibility_score).toBe(0);
@@ -39,18 +51,24 @@ describe("computeRunScoresFromResults — empty input", () => {
 describe("computeRunScoresFromResults — visibility and citation percentages", () => {
   it("computes visibility_score and citation_score as percentages of total_results", () => {
     const results = [
-      row({ id: "1", brand_mentioned: true, citation_found: true }),
+      row({
+        id: "1",
+        brand_mentioned: true,
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      }),
       row({ id: "2", brand_mentioned: true, citation_found: false }),
       row({ id: "3", brand_mentioned: false, citation_found: false }),
       row({ id: "4", brand_mentioned: false, citation_found: false })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
-    // 2/4 brand_mentioned -> 50%, 1/4 citation_found -> 25%
+    // 2/4 brand_mentioned -> 50%, 1/4 cites its own domain -> 25%
     expect(result.visibility_score).toBe(50);
     expect(result.citation_score).toBe(25);
     expect(result.details_json.brand_mentioned_count).toBe(2);
+    expect(result.details_json.own_domain_citation_count).toBe(1);
     expect(result.details_json.citation_found_count).toBe(1);
   });
 
@@ -61,7 +79,7 @@ describe("computeRunScoresFromResults — visibility and citation percentages", 
       row({ id: "3", citations_count: 2, mentioned_competitors_count: 1 })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     // Math.max(0, x) clamps the negative contributions to 0.
     expect(result.details_json.total_citations_count).toBe(5);
@@ -76,7 +94,7 @@ describe("computeRunScoresFromResults — visibility and citation percentages", 
       row({ id: "3", brand_mentioned: false })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.visibility_score).toBe(33.33);
   });
@@ -85,30 +103,42 @@ describe("computeRunScoresFromResults — visibility and citation percentages", 
 describe("computeRunScoresFromResults — grounding-aware citation_score (docs/adr/0012)", () => {
   it("treats a row with no provider set as grounded (backward compatibility)", () => {
     const results = [
-      row({ id: "1", citation_found: true }),
+      row({
+        id: "1",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      }),
       row({ id: "2", citation_found: false })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.citation_score).toBe(50);
+    expect(result.details_json.own_domain_citation_count).toBe(1);
     expect(result.details_json.citation_score_data_available).toBe(true);
     expect(result.details_json.grounded_results_count).toBe(2);
   });
 
   it("excludes ungrounded provider rows (e.g. claude) from citation_score, but keeps them in citation_score_blended", () => {
-    // 2 gemini rows (1 cited), 2 claude rows (never cited, no grounding) ->
-    // citation_score must be 1/2 = 50 (gemini-only), NOT 1/4 = 25 (pooled).
+    // 2 gemini rows (1 cited, pointing at the brand's own domain), 2 claude
+    // rows (never cited, no grounding) -> citation_score must be 1/2 = 50
+    // (gemini-only), NOT 1/4 = 25 (pooled).
     const results = [
-      row({ id: "1", provider: "gemini", citation_found: true }),
+      row({
+        id: "1",
+        provider: "gemini",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      }),
       row({ id: "2", provider: "gemini", citation_found: false }),
       row({ id: "3", provider: "claude", citation_found: false }),
       row({ id: "4", provider: "claude", citation_found: false })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.citation_score).toBe(50);
+    expect(result.details_json.citation_score_any_domain).toBe(50);
     expect(result.details_json.citation_score_blended).toBe(25);
     expect(result.details_json.citation_score_data_available).toBe(true);
     expect(result.details_json.grounded_results_count).toBe(2);
@@ -124,11 +154,27 @@ describe("computeRunScoresFromResults — grounding-aware citation_score (docs/a
       row({ id: "2", provider: "claude", citation_found: false })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.citation_score).toBe(0);
     expect(result.details_json.citation_score_data_available).toBe(false);
     expect(result.details_json.grounded_results_count).toBe(0);
+  });
+
+  it("falls back to citation_score = 0 with citation_score_data_available: false when no project domain is provided, even with grounded rows present", () => {
+    const results = [
+      row({
+        id: "1",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, "");
+
+    expect(result.citation_score).toBe(0);
+    expect(result.details_json.citation_score_data_available).toBe(false);
+    expect(result.details_json.grounded_results_count).toBe(1);
   });
 
   it("drops the authority component of geo_score and caps confidence at medium when no grounded rows exist", () => {
@@ -136,7 +182,7 @@ describe("computeRunScoresFromResults — grounding-aware citation_score (docs/a
       row({ id: String(i), provider: "claude", brand_mentioned: true })
     );
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     expect(result.confidence).toBe("high");
 
     const geoScore = result.details_json.geo_score as {
@@ -149,6 +195,95 @@ describe("computeRunScoresFromResults — grounding-aware citation_score (docs/a
     expect(geoScore.components.authority).toMatchObject({ value: null, weight: 0 });
     expect(geoScore.components.authority.reason).toContain("docs/adr/0012");
     expect(geoScore.confidence).toBe("medium");
+  });
+});
+
+describe("computeRunScoresFromResults — own-domain citation_score (docs/adr/0013)", () => {
+  it("does not count a grounding citation to a third-party domain toward citation_score, even though citation_found is true", () => {
+    // The AI cited a source while answering, but that source is not the
+    // brand's own domain (e.g. a competitor or an unrelated third party).
+    // citation_found is true (a real grounding citation exists), but
+    // citation_score (own-domain) must stay 0 — this is the exact
+    // "Authority 100% / Cuota de Citas 0%" contradiction this ADR fixes.
+    const results = [
+      row({
+        id: "1",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [thirdPartyCitation()] }
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.citation_score).toBe(0);
+    expect(result.details_json.own_domain_citation_count).toBe(0);
+    // The demoted "any domain" formula still reflects the real citation.
+    expect(result.details_json.citation_score_any_domain).toBe(100);
+  });
+
+  it("counts a grounding citation to the project's own domain toward citation_score", () => {
+    const results = [
+      row({
+        id: "1",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.citation_score).toBe(100);
+    expect(result.details_json.own_domain_citation_count).toBe(1);
+  });
+
+  it("matches a subdomain of the project's own domain", () => {
+    const results = [
+      row({
+        id: "1",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation(`blog.${PROJECT_DOMAIN}`)] }
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.citation_score).toBe(100);
+  });
+
+  it("does not count an inline (non-grounding) citation to the own domain, mirroring own_citation_share's grounding-only scope (docs/adr/0010)", () => {
+    const results = [
+      row({
+        id: "1",
+        citation_found: false,
+        extracted_json: {
+          phase: "phase4-basic",
+          citations: [{ url: `https://${PROJECT_DOMAIN}/page`, domain: PROJECT_DOMAIN, title: "Page", source: "inline" as const, confidence: "low" as const }]
+        }
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.citation_score).toBe(0);
+    expect(result.details_json.own_domain_citation_count).toBe(0);
+  });
+
+  it("counts a row as own-domain-cited when at least one of several citations matches, even if others don't", () => {
+    const results = [
+      row({
+        id: "1",
+        citation_found: true,
+        extracted_json: {
+          phase: "phase4-basic",
+          citations: [thirdPartyCitation(), ownDomainCitation(), thirdPartyCitation("otraweb.com")]
+        }
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.citation_score).toBe(100);
+    expect(result.details_json.own_domain_citation_count).toBe(1);
   });
 });
 
@@ -166,7 +301,7 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
       row({ id: "4", brand_mentioned: false, mentioned_competitors_count: 1 })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.visibility_score).toBe(50);
     expect(result.competitor_gap_score).toBe(50);
@@ -181,7 +316,7 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
       row({ id: "2", brand_mentioned: true, mentioned_competitors_count: 20 })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.total_competitor_mentions).toBe(40);
     expect(result.competitor_gap_score).toBe(0);
@@ -193,7 +328,7 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
       row({ id: "2", brand_mentioned: false, mentioned_competitors_count: 1 })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.competitor_gap_score).toBe(100);
   });
@@ -204,7 +339,7 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
       row({ id: "2", brand_mentioned: false, mentioned_competitors_count: 0 })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.competitor_gap_score).toBe(0);
   });
@@ -214,7 +349,7 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
     // is not displaced, even though a competitor is present.
     const results = [row({ id: "1", brand_mentioned: true, mentioned_competitors_count: 5 })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.competitor_gap_score).toBe(0);
   });
@@ -225,7 +360,7 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
       row({ id: "2", brand_mentioned: true, mentioned_competitors_count: 0 })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.competitor_gap_score).toBeGreaterThanOrEqual(0);
     expect(result.competitor_gap_score).toBeLessThanOrEqual(100);
@@ -242,7 +377,7 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
       row({ id: "5", extracted_json: { phase: "phase4-basic" } })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("low");
     expect(result.details_json.extracted_results_count).toBe(4);
@@ -258,7 +393,7 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
       row({ id: "5" })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("low");
     expect(result.details_json.extraction_error_count).toBe(1);
@@ -270,7 +405,7 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
   it("is high with >=5 results and full extraction coverage (>=0.8)", () => {
     const results = Array.from({ length: 5 }, (_, i) => row({ id: String(i) }));
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("high");
     expect(result.details_json.total_results).toBe(5);
@@ -279,7 +414,7 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
   it("is medium with >=2 and <5 fully-extracted results", () => {
     const results = [row({ id: "1" }), row({ id: "2" })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("medium");
   });
@@ -287,7 +422,7 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
   it("is low with a single fully-extracted result (below the medium threshold of 2)", () => {
     const results = [row({ id: "1" })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("low");
   });
@@ -301,7 +436,7 @@ describe("computeRunScoresFromResults — details_json contents", () => {
       row({ id: "3", sentiment: "negative" })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.scoring_version).toBe(SCORING_VERSION);
     expect(result.details_json.total_results).toBe(3);
@@ -318,12 +453,15 @@ describe("computeRunScoresFromResults — details_json contents", () => {
   });
 
   it("notes incomplete extraction coverage in assumptions, and complete coverage otherwise", () => {
-    const incomplete = computeRunScoresFromResults([row({ id: "1" }), row({ id: "2", extracted_json: null })]);
+    const incomplete = computeRunScoresFromResults(
+      [row({ id: "1" }), row({ id: "2", extracted_json: null })],
+      PROJECT_DOMAIN
+    );
     expect(
       (incomplete.details_json.assumptions as string[]).some((a) => a.includes("partial extraction coverage"))
     ).toBe(true);
 
-    const complete = computeRunScoresFromResults([row({ id: "1" }), row({ id: "2" })]);
+    const complete = computeRunScoresFromResults([row({ id: "1" }), row({ id: "2" })], PROJECT_DOMAIN);
     expect(
       (complete.details_json.assumptions as string[]).some((a) => a.includes("Extraction coverage is complete"))
     ).toBe(true);
@@ -332,7 +470,7 @@ describe("computeRunScoresFromResults — details_json contents", () => {
   it("caps per_prompt_summary at 10 entries even with more results", () => {
     const results = Array.from({ length: 15 }, (_, i) => row({ id: String(i) }));
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect((result.details_json.per_prompt_summary as unknown[]).length).toBe(10);
     expect(result.details_json.total_results).toBe(15);
@@ -373,7 +511,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
   it("is omitted when no row has a valid extracted_json shape", () => {
     const results = [row({ id: "1" }), row({ id: "2" })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.brand_position).toBeUndefined();
   });
@@ -395,7 +533,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
       })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const brandPosition = result.details_json.brand_position as {
       prompts_with_position_data: number;
       total_entities: number;
@@ -427,7 +565,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
       })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const brandPosition = result.details_json.brand_position as {
       ranking: Array<{ name: string; avg_position: number; mention_count: number }>;
       brand_avg_position: number | null;
@@ -445,7 +583,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
       row({ id: "2", extracted_json: null, brand_snapshot: "MiMarca" })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const brandPosition = result.details_json.brand_position as { prompts_with_position_data: number; confidence: string };
 
     expect(brandPosition.prompts_with_position_data).toBe(1);
@@ -462,7 +600,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
       })
     ];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.brand_position).toBeUndefined();
   });
@@ -470,7 +608,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
   it("includes the brand_position formula in formulas_used and assumptions", () => {
     const results = [positionRow({ id: "1", brand: { mentioned: true, position: 1 }, competitors: [] })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.formulas_used).toMatchObject({
       brand_position: expect.stringContaining("avg_position(entity)")
@@ -492,6 +630,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     citation_found?: boolean;
     mentioned_competitors_count?: number;
     extraction_error?: string | null;
+    citations?: unknown[];
   }): ScoreInputRow {
     const {
       id,
@@ -502,7 +641,8 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
       brand_mentioned = false,
       citation_found = false,
       mentioned_competitors_count = 0,
-      extraction_error = null
+      extraction_error = null,
+      citations = []
     } = overrides;
     return row({
       id,
@@ -520,19 +660,20 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
                 name: c.name,
                 mentioned: c.mentioned,
                 position: c.position
-              }))
+              })),
+              citations
             }
     });
   }
 
   it("is omitted entirely when totalResults === 0", () => {
-    const result = computeRunScoresFromResults([]);
+    const result = computeRunScoresFromResults([], PROJECT_DOMAIN);
 
     expect(result.details_json.geo_score).toBeUndefined();
   });
 
   it("computes the full-data case with all 4 components present", () => {
-    // 5 rows, all valid extraction, brand mentioned + cited in all 5 -> high confidence.
+    // 5 rows, all valid extraction, brand mentioned + cited (own domain) in all 5 -> high confidence.
     // visibility_score = 100, citation_score = 100.
     // mentioned_competitors_count = 0 in all rows -> displaced_prompts_count = 0
     // -> competitor_gap_score = 0/5*100 = 0 -> standing = 100 - 0 = 100
@@ -544,11 +685,12 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
         brand_mentioned: true,
         citation_found: true,
         brand: { mentioned: true, position: 1 },
-        competitors: [{ name: "Competitor", mentioned: false, position: null }]
+        competitors: [{ name: "Competitor", mentioned: false, position: null }],
+        citations: [ownDomainCitation()]
       })
     );
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.visibility_score).toBe(100);
     expect(result.citation_score).toBe(100);
@@ -579,13 +721,18 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
   });
 
   it("degraded case: drops prominence and renormalizes weights when brand_position is absent", () => {
-    // No valid extracted_json -> brand_position is null -> prominence dropped.
-    // visibility_score = 100, citation_score = 100, competitor_gap_score = 0 -> standing = 100.
+    // No valid brand/competitors shape -> brand_position is null -> prominence dropped.
+    // visibility_score = 100, citation_score = 100 (own-domain cited), competitor_gap_score = 0 -> standing = 100.
     const results = Array.from({ length: 5 }, (_, i) =>
-      row({ id: String(i), brand_mentioned: true, citation_found: true, extracted_json: { phase: "phase4-basic" } })
+      row({
+        id: String(i),
+        brand_mentioned: true,
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      })
     );
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.brand_position).toBeUndefined();
     expect(result.confidence).toBe("high");
@@ -622,7 +769,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     // Single row -> confidence "low" (below medium threshold of 2 results).
     const results = [row({ id: "1", brand_mentioned: true, citation_found: true })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("low");
     const geoScore = result.details_json.geo_score as { confidence: string };
@@ -630,7 +777,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
   });
 
   it("is omitted entirely when totalResults === 0 (empty input)", () => {
-    const result = computeRunScoresFromResults([]);
+    const result = computeRunScoresFromResults([], PROJECT_DOMAIN);
 
     expect(result.details_json.geo_score).toBeUndefined();
     expect("geo_score" in result.details_json).toBe(false);
@@ -639,7 +786,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
   it("includes the geo_score formula and composite_version in formulas_used / details_json", () => {
     const results = [row({ id: "1", brand_mentioned: true, citation_found: true })];
 
-    const result = computeRunScoresFromResults(results);
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.formulas_used).toMatchObject({
       geo_score: expect.stringContaining("geo_score = Σ(component_value * normalized_weight)")
