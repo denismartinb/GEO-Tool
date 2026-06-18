@@ -8,7 +8,12 @@ import { CitationsClient, type CitationRow } from "./citations-client";
 type ExtractedJson = {
   brand?: { mentioned?: boolean };
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
-  citations?: Array<{ url?: string | null; domain?: string | null; label?: string | null; title?: string | null }>;
+  citations?: Array<{
+    url?: string | null;
+    domain?: string | null;
+    title?: string | null;
+    source?: "grounding" | "inline";
+  }>;
 };
 
 function parseExt(raw: unknown): ExtractedJson {
@@ -110,24 +115,51 @@ export default async function CitationsPage({
       .map((c) => c.name as string);
 
     for (const citation of ext.citations ?? []) {
-      const domain = normalizeDomain(citation.domain ?? citation.url ?? "");
-      if (!domain) continue;
+      const rawDomain = citation.domain?.trim();
+      let domain = "";
+      let key: string;
+      let title: string;
+      let url: string;
+
+      if (rawDomain) {
+        domain = normalizeDomain(rawDomain);
+        key = (citation.url ?? domain).trim().toLowerCase();
+        title = citation.title?.trim() || domain;
+        url = citation.url ?? domain;
+      } else if (citation.source === "grounding") {
+        // Unresolved Google grounding redirect (docs/adr/0006): never
+        // display the raw vertexaisearch.cloud.google.com URL. Group all
+        // unresolved citations by title (or a generic label) since the
+        // redirect URL gives us no way to tell distinct pages apart.
+        const label = citation.title?.trim() || "Fuente sin resolver";
+        key = `unresolved:${label.toLowerCase()}`;
+        title = label;
+        url = "";
+      } else {
+        const inlineUrl = citation.url?.trim();
+        if (!inlineUrl) continue;
+        key = inlineUrl.toLowerCase();
+        title = inlineUrl;
+        url = inlineUrl;
+      }
+
       hasStructuredCitations = true;
 
-      const key = (citation.url ?? domain).trim().toLowerCase();
       let category: Agg["category"] = "third_party";
-      if (isSameOrSubdomain(domain, projectDomain)) {
-        category = "brand";
-      } else if (competitorDomains.some((c) => isSameOrSubdomain(domain, c.domain))) {
-        category = "competitor";
+      if (domain) {
+        if (isSameOrSubdomain(domain, projectDomain)) {
+          category = "brand";
+        } else if (competitorDomains.some((c) => isSameOrSubdomain(domain, c.domain))) {
+          category = "competitor";
+        }
       }
 
       let row = agg.get(key);
       if (!row) {
         row = {
           id: key,
-          title: citation.title?.trim() || citation.label?.trim() || domain,
-          url: citation.url ?? domain,
+          title,
+          url,
           domain,
           category,
           cited: 0,
@@ -170,9 +202,11 @@ export default async function CitationsPage({
   const yours = citationRows.filter((r) => r.category === "brand").length;
   // Only neutral/third-party domains are actionable outreach targets.
   // Competitor domains (already tracked in project_competitors) are excluded:
-  // a brand will never earn a citation on a rival's own site.
+  // a brand will never earn a citation on a rival's own site. Unresolved
+  // grounding citations (no domain) are excluded too: there's no address to
+  // reach out to.
   const opportunityRows = citationRows.filter(
-    (r) => r.category === "third_party" && r.brandMentioned === "no"
+    (r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain
   );
   const opportunities = opportunityRows.length;
 

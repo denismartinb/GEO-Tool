@@ -71,10 +71,12 @@ function CitationCard({
           </button>
           <div style={{ minWidth: 0 }}>
             <div className="cit-title">{row.title}</div>
-            <div className="cit-url">
-              <Icon name="link" size={11} />
-              {row.url}
-            </div>
+            {row.url && (
+              <div className="cit-url">
+                <Icon name="link" size={11} />
+                {row.url}
+              </div>
+            )}
           </div>
         </div>
         <div className="c">
