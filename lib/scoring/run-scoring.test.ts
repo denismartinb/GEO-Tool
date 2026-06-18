@@ -82,6 +82,76 @@ describe("computeRunScoresFromResults — visibility and citation percentages", 
   });
 });
 
+describe("computeRunScoresFromResults — grounding-aware citation_score (docs/adr/0012)", () => {
+  it("treats a row with no provider set as grounded (backward compatibility)", () => {
+    const results = [
+      row({ id: "1", citation_found: true }),
+      row({ id: "2", citation_found: false })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.citation_score).toBe(50);
+    expect(result.details_json.citation_score_data_available).toBe(true);
+    expect(result.details_json.grounded_results_count).toBe(2);
+  });
+
+  it("excludes ungrounded provider rows (e.g. claude) from citation_score, but keeps them in citation_score_blended", () => {
+    // 2 gemini rows (1 cited), 2 claude rows (never cited, no grounding) ->
+    // citation_score must be 1/2 = 50 (gemini-only), NOT 1/4 = 25 (pooled).
+    const results = [
+      row({ id: "1", provider: "gemini", citation_found: true }),
+      row({ id: "2", provider: "gemini", citation_found: false }),
+      row({ id: "3", provider: "claude", citation_found: false }),
+      row({ id: "4", provider: "claude", citation_found: false })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.citation_score).toBe(50);
+    expect(result.details_json.citation_score_blended).toBe(25);
+    expect(result.details_json.citation_score_data_available).toBe(true);
+    expect(result.details_json.grounded_results_count).toBe(2);
+    expect(result.details_json.citation_by_provider).toEqual({
+      gemini: { total: 2, citation_found_count: 1 },
+      claude: { total: 2, citation_found_count: 0 }
+    });
+  });
+
+  it("falls back to citation_score = 0 with citation_score_data_available: false when no grounded provider rows exist", () => {
+    const results = [
+      row({ id: "1", provider: "claude", citation_found: false }),
+      row({ id: "2", provider: "claude", citation_found: false })
+    ];
+
+    const result = computeRunScoresFromResults(results);
+
+    expect(result.citation_score).toBe(0);
+    expect(result.details_json.citation_score_data_available).toBe(false);
+    expect(result.details_json.grounded_results_count).toBe(0);
+  });
+
+  it("drops the authority component of geo_score and caps confidence at medium when no grounded rows exist", () => {
+    const results = Array.from({ length: 5 }, (_, i) =>
+      row({ id: String(i), provider: "claude", brand_mentioned: true })
+    );
+
+    const result = computeRunScoresFromResults(results);
+    expect(result.confidence).toBe("high");
+
+    const geoScore = result.details_json.geo_score as {
+      confidence: string;
+      inputs_used: string[];
+      components: Record<string, { value: number | null; weight: number; reason?: string }>;
+    };
+
+    expect(geoScore.inputs_used).not.toContain("authority");
+    expect(geoScore.components.authority).toMatchObject({ value: null, weight: 0 });
+    expect(geoScore.components.authority.reason).toContain("docs/adr/0012");
+    expect(geoScore.confidence).toBe("medium");
+  });
+});
+
 describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pressure, docs/adr/0011)", () => {
   it("computes competitor_gap_score as % of prompts where a competitor is mentioned but the brand is not", () => {
     // Row 1: brand mentioned, competitor mentioned -> NOT displaced (brand present).
@@ -238,7 +308,7 @@ describe("computeRunScoresFromResults — details_json contents", () => {
     expect(result.details_json.sentiment_distribution).toEqual({ positive: 2, negative: 1 });
     expect(result.details_json.formulas_used).toMatchObject({
       visibility_score: "brand_mentioned_count / total_results * 100",
-      citation_score: "citation_found_count / total_results * 100",
+      citation_score: expect.stringContaining("grounded providers"),
       competitor_gap_score:
         "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)"
     });
