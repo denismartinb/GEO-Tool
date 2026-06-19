@@ -166,9 +166,12 @@ export default async function CompetitorsPage({
       competitorPromptSet.get(key)!.add(result.run_id as string);
     }
 
-    // Citation domains for this result
+    // Citation domains for this result. Only `domain` is used: an
+    // unresolved grounding citation's `url` is a Google redirect wrapper
+    // (vertexaisearch.cloud.google.com/...), not a real domain, and must
+    // never be treated as one (docs/adr/0006).
     const citDomains = (ext.citations ?? [])
-      .map((c) => normalizeDomain(c.domain ?? c.url ?? ""))
+      .map((c) => normalizeDomain(c.domain ?? ""))
       .filter((d) => d.length > 0);
 
     // Brand citation rate
@@ -278,6 +281,176 @@ export default async function CompetitorsPage({
     .flatMap((d) => Object.values(d.values))
     .filter((v): v is number => v != null);
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
+
+  // With more than 3 completed scans there's enough trend history to be worth
+  // surfacing before the static table.
+  const chartAboveTable = completedRuns.length > 3;
+
+  const competitorTableSection =
+    configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
+      <>
+        <div className="section-head">
+          <div className="section-title">Panorámica competitiva · cuota de voz en IA</div>
+          <div className="section-desc">
+            Basado en{" "}
+            <b style={{ color: "var(--ink-2)" }}>
+              {completedRuns.length} {completedRuns.length === 1 ? "escaneo completado" : "escaneos completados"}
+            </b>{" "}
+            · {totalResultsCount} prompts analizados
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ padding: "6px 6px 4px", overflowX: "auto" }}>
+            <table className="tbl">
+              <thead>
+                <tr>
+                  <th>Marca</th>
+                  <th className="num">Mención</th>
+                  <th className="num">Cita</th>
+                  <th>Cuota de voz en IA</th>
+                  <th className="num">Prompts</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Brand (you) row — always first */}
+                <tr className="you">
+                  <td>
+                    <div className="ent">
+                      <span
+                        className="fav"
+                        style={{ background: "var(--accent)" }}
+                      >
+                        {getInitial(project.brand)}
+                      </span>
+                      <div>
+                        <div className="nm">
+                          {project.brand}
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "var(--accent)",
+                              fontWeight: 700,
+                              marginLeft: 6
+                            }}
+                          >
+                            Tú
+                          </span>
+                        </div>
+                        <div className="dm">{project.domain}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="num">
+                    <b className="tnum">{brandMentionRate}%</b>
+                  </td>
+                  <td className="num">
+                    <b className="tnum">{brandCitationRate}%</b>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="sov-bar comp-tbl-sov">
+                        <div
+                          className="sov-fill"
+                          style={{
+                            width: `${(brandSov / maxSov) * 100}%`,
+                            background: "var(--accent)"
+                          }}
+                        />
+                      </div>
+                      <span
+                        className="tnum"
+                        style={{ fontSize: 12, fontWeight: 700, width: 34, textAlign: "right" }}
+                      >
+                        {brandSov}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="num">
+                    <span className="tnum" style={{ color: "var(--ink-2)" }}>
+                      {brandMentions}
+                    </span>
+                  </td>
+                </tr>
+
+                {/* Competitor rows */}
+                {competitorRows.map((c) => (
+                  <CompetitorRow key={c.id} projectId={projectId} row={c} maxSov={maxSov} />
+                ))}
+
+                {/* If no active competitors */}
+                {competitorRows.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      style={{ textAlign: "center", padding: "28px 20px", color: "var(--ink-4)", fontSize: 13 }}
+                    >
+                      No hay competidores activos configurados.
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footnote */}
+          <div
+            style={{
+              padding: "10px 16px",
+              borderTop: "1px solid var(--line-soft)",
+              fontSize: 11.5,
+              color: "var(--ink-4)",
+              lineHeight: 1.5
+            }}
+          >
+            <b>Mención</b>: % de prompts donde aparece la marca.{" "}
+            <b>Cita</b>: % de prompts donde el dominio es fuente citada.{" "}
+            <b>Cuota de voz</b>: menciones propias / (menciones marca + Σ menciones competidores).{" "}
+            <b>Prompts</b>: total de respuestas donde se menciona al competidor.
+          </div>
+        </div>
+
+        {/* No detections */}
+        {competitorRows.every((c) => c.mentions === 0) && (
+          <div
+            className="section-empty"
+            style={{ marginTop: 14 }}
+          >
+            <div className="section-empty-title">
+              Ningún competidor fue mencionado en los escaneos analizados
+            </div>
+            <div className="section-empty-desc">
+              Revisa si los prompts son suficientemente comparativos o ajusta la lista de
+              competidores en el onboarding.
+            </div>
+          </div>
+        )}
+      </>
+    ) : null;
+
+  const positionTrendSection =
+    configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
+      <div style={{ marginTop: chartAboveTable ? 0 : 24 }}>
+        <div className="section-head">
+          <div className="section-title">Evolución de la posición media</div>
+          <div className="section-desc">
+            Posición media en el ranking de marcas mencionadas por escaneo · #1 es la mejor posición
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: "16px 16px 8px" }}>
+          {hasTrendData ? (
+            <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
+          ) : (
+            <div style={{ padding: "32px 20px", textAlign: "center" }}>
+              <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
+                Disponible a partir de 2 escaneos completados con datos de posición.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null;
 
   return (
     <div className="page">
@@ -455,171 +628,19 @@ export default async function CompetitorsPage({
         </div>
       ) : null}
 
-      {/* Main competitive table */}
-      {configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
+      {/* Competitive table + position trend chart — chart leads once there's
+          enough scan history (>3 completed scans), table leads otherwise */}
+      {chartAboveTable ? (
         <>
-          <div className="section-head">
-            <div className="section-title">Panorámica competitiva · cuota de voz en IA</div>
-            <div className="section-desc">
-              Basado en{" "}
-              <b style={{ color: "var(--ink-2)" }}>
-                {completedRuns.length} {completedRuns.length === 1 ? "escaneo completado" : "escaneos completados"}
-              </b>{" "}
-              · {totalResultsCount} prompts analizados
-            </div>
-          </div>
-
-          <div className="card">
-            <div style={{ padding: "6px 6px 4px", overflowX: "auto" }}>
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>Marca</th>
-                    <th className="num">Mención</th>
-                    <th className="num">Cita</th>
-                    <th>Cuota de voz en IA</th>
-                    <th className="num">Prompts</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Brand (you) row — always first */}
-                  <tr className="you">
-                    <td>
-                      <div className="ent">
-                        <span
-                          className="fav"
-                          style={{ background: "var(--accent)" }}
-                        >
-                          {getInitial(project.brand)}
-                        </span>
-                        <div>
-                          <div className="nm">
-                            {project.brand}
-                            <span
-                              style={{
-                                fontSize: 11,
-                                color: "var(--accent)",
-                                fontWeight: 700,
-                                marginLeft: 6
-                              }}
-                            >
-                              Tú
-                            </span>
-                          </div>
-                          <div className="dm">{project.domain}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="num">
-                      <b className="tnum">{brandMentionRate}%</b>
-                    </td>
-                    <td className="num">
-                      <b className="tnum">{brandCitationRate}%</b>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <div className="sov-bar comp-tbl-sov">
-                          <div
-                            className="sov-fill"
-                            style={{
-                              width: `${(brandSov / maxSov) * 100}%`,
-                              background: "var(--accent)"
-                            }}
-                          />
-                        </div>
-                        <span
-                          className="tnum"
-                          style={{ fontSize: 12, fontWeight: 700, width: 34, textAlign: "right" }}
-                        >
-                          {brandSov}%
-                        </span>
-                      </div>
-                    </td>
-                    <td className="num">
-                      <span className="tnum" style={{ color: "var(--ink-2)" }}>
-                        {brandMentions}
-                      </span>
-                    </td>
-                  </tr>
-
-                  {/* Competitor rows */}
-                  {competitorRows.map((c) => (
-                    <CompetitorRow key={c.id} projectId={projectId} row={c} maxSov={maxSov} />
-                  ))}
-
-                  {/* If no active competitors */}
-                  {competitorRows.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={5}
-                        style={{ textAlign: "center", padding: "28px 20px", color: "var(--ink-4)", fontSize: 13 }}
-                      >
-                        No hay competidores activos configurados.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footnote */}
-            <div
-              style={{
-                padding: "10px 16px",
-                borderTop: "1px solid var(--line-soft)",
-                fontSize: 11.5,
-                color: "var(--ink-4)",
-                lineHeight: 1.5
-              }}
-            >
-              <b>Mención</b>: % de prompts donde aparece la marca.{" "}
-              <b>Cita</b>: % de prompts donde el dominio es fuente citada.{" "}
-              <b>Cuota de voz</b>: menciones propias / (menciones marca + Σ menciones competidores).{" "}
-              <b>Prompts</b>: total de respuestas donde se menciona al competidor.
-            </div>
-          </div>
-
-          {/* No detections */}
-          {competitorRows.every((c) => c.mentions === 0) && (
-            <div
-              className="section-empty"
-              style={{ marginTop: 14 }}
-            >
-              <div className="section-empty-title">
-                Ningún competidor fue mencionado en los escaneos analizados
-              </div>
-              <div className="section-empty-desc">
-                Revisa si los prompts son suficientemente comparativos o ajusta la lista de
-                competidores en el onboarding.
-              </div>
-            </div>
-          )}
+          {positionTrendSection}
+          <div style={{ marginTop: 24 }}>{competitorTableSection}</div>
         </>
-      ) : null}
-
-      {/* Evolución de la posición media */}
-      {configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
-        <div style={{ marginTop: 24 }}>
-          <div className="section-head">
-            <div className="section-title">Evolución de la posición media</div>
-            <div className="section-desc">
-              Posición media en el ranking de marcas mencionadas por escaneo · #1 es la mejor posición
-            </div>
-          </div>
-
-          <div className="card" style={{ padding: "16px 16px 8px" }}>
-            {hasTrendData ? (
-              <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
-            ) : (
-              <div style={{ padding: "32px 20px", textAlign: "center" }}>
-                <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                  Disponible a partir de 2 escaneos completados con datos de posición.
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : null}
+      ) : (
+        <>
+          {competitorTableSection}
+          {positionTrendSection}
+        </>
+      )}
 
       {/* Footer links */}
       <div

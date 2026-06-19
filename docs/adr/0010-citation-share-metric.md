@@ -8,10 +8,17 @@
 
 ## Context
 
-`citation_score` (stored in `run_scores`) measures **binary citation presence**:
-the percentage of prompts in which the brand domain appeared as at least one
-grounding citation. A brand with 10/10 prompts cited scores 100%, even if it
-holds only 3 of 130 total grounding URLs in the run.
+`citation_score` (stored in `run_scores`) measures **binary citation
+presence**: the percentage of prompts where a grounding citation exists. At
+the time this ADR was written, that presence check did not look at *whose*
+domain was cited — any grounding citation counted, including a competitor's
+or an unrelated third party's. A brand with 10/10 prompts grounded could
+score 100% on `citation_score` while holding 0 of the cited domains, which is
+exactly the contradiction this ADR's Citation Share metric was designed to
+expose (see "Why two separate metrics" below). `citation_score` was later
+redefined to require the same own-domain match described here — see
+docs/adr/0013-own-domain-citation-score.md — so this historical accuracy note
+is preserved for context, not because the gap still exists.
 
 This is correct and useful as a coverage signal, but it does not reflect how
 dominant the brand is among all cited sources in a run.
@@ -79,8 +86,14 @@ Both signals are useful; neither supersedes the other.
 
 ## Consequences
 
-- `citation_score` in `run_scores` is unchanged in meaning, formula, and
-  persistence.
+- `citation_score` in `run_scores` was unchanged in meaning, formula, and
+  persistence **at the time of this ADR**. It was later redefined to require
+  an own-domain match (docs/adr/0013-own-domain-citation-score.md), making it
+  conceptually closer to (but numerically distinct from) `own_citation_share`:
+  `citation_score` is "% of grounded prompts citing my domain" (a presence
+  rate), `own_citation_share` is "what fraction of all cited URLs are mine"
+  (a share of total). Both metrics remain independently useful and neither
+  supersedes the other.
 - `own_citation_share` is not persisted; trend history is not available for
   this metric.
 - The "Sin datos" state (null share) is surfaced explicitly so users
