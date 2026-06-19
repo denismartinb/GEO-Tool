@@ -157,7 +157,10 @@ export async function generateGeminiVisibilityAnswer(input: {
     // prompts in a run (docs/adr/0009-gemini-2.5-flash-model-pin.md).
     // Disabling thinking restores latency comparable to the previously
     // pinned gemini-2.0-flash-001.
-    generationConfig: { thinkingConfig: { thinkingBudget: 0 } }
+    // temperature: 0 — see ADR 0009 addendum (2026-06-19): pins the LLM's own
+    // sampling to remove one of two sources of run-to-run score variance.
+    // Google Search grounding results can still vary independently.
+    generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
   });
 
   let response = await fetchWithTimeout(
@@ -260,7 +263,9 @@ For "position": the 1-based rank of the entity's FIRST mention in the response t
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
+      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
       generationConfig: {
+        temperature: 0,
         responseMimeType: "application/json",
         thinkingConfig: { thinkingBudget: 0 }
       }
@@ -311,7 +316,8 @@ async function generateGeminiJson(promptBlock: string): Promise<unknown> {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
-      generationConfig: { responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
+      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
     })
   });
 
