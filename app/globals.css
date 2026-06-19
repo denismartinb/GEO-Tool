@@ -273,7 +273,6 @@ a {
   background: rgba(255, 255, 255, 0.85);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
   padding: 0 22px;
 }
@@ -293,6 +292,16 @@ a {
 .scan-status {
   display: flex;
   align-items: center;
+}
+
+/* Grows to consume all leftover header width so the bell + actions that
+   follow it stay packed together on the right, instead of `space-between`
+   spreading them apart with the bell stranded mid-header (see PR #126).
+   Scoped to a direct child of .dash-header — .hdr-titlewrap also nests
+   inside .workspace-context, where it must stay sized to its content. */
+.workspace-context,
+.dash-header > .hdr-titlewrap {
+  flex: 1;
 }
 
 .workspace-context {
@@ -1950,11 +1959,6 @@ a {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  /* .dash-header uses justify-content: space-between with 3 flex children on
-     desktop (workspace context, bell, header actions); without this, the two
-     equal gaps push the bell toward the header's visual center whenever the
-     left content is short. Anchor it to the right-hand actions group instead. */
-  margin-left: auto;
 }
 
 .notif-dot {
