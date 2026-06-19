@@ -74,6 +74,18 @@ export function isValidDomain(domain: string): boolean {
   return domain.length >= 3 && domain.length <= 255 && domain.includes(".");
 }
 
+/**
+ * Collapses any embedded line breaks in free-text prompt input to a single
+ * space. Prompts are transported to the server as newline-joined lines
+ * (see parseInitialPrompts below); a prompt whose own text contains a "\n"
+ * (e.g. pasted multi-line text, or an occasional Gemini suggestion with a
+ * stray line break) would otherwise shift every subsequent line out of
+ * alignment with its corresponding category line.
+ */
+export function sanitizePromptLineText(text: string): string {
+  return text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
 export function parseInitialPrompts(promptsInput: string | undefined, categoriesInput?: string | undefined) {
   if (!promptsInput) return [];
 

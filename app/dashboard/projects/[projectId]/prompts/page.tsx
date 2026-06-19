@@ -129,6 +129,7 @@ export default async function PromptsPage({
     : allResults;
 
   // Lógica de Topics
+  const UNCATEGORIZED_LABEL = "Sin categoría";
   const distinctCategories = [
     ...new Set(
       results
@@ -137,6 +138,13 @@ export default async function PromptsPage({
     ),
   ];
   const hasTopics = distinctCategories.length >= 2;
+  // Prompts without a category (e.g. a categorization gap) must still appear
+  // somewhere in Topics mode rather than silently vanishing — give them their
+  // own grouping bucket instead of dropping them from distinctCategories.
+  const hasUncategorized = hasTopics && results.some((r) => !r.category || r.category.trim() === "");
+  const categoriesForGrouping = hasTopics
+    ? [...distinctCategories, ...(hasUncategorized ? [UNCATEGORIZED_LABEL] : [])]
+    : [];
 
   // Sort: brand-absent first en modo flat
   const sortedResults = [...results].sort((a, b) => {
@@ -146,9 +154,12 @@ export default async function PromptsPage({
 
   // Topics con agregados
   const topicGroups: TopicGroup[] = hasTopics
-    ? distinctCategories
+    ? categoriesForGrouping
         .map((cat) => {
-          const catResults = results.filter((r) => r.category === cat);
+          const catResults =
+            cat === UNCATEGORIZED_LABEL
+              ? results.filter((r) => !r.category || r.category.trim() === "")
+              : results.filter((r) => r.category === cat);
           const menciones = catResults.filter((r) => r.brand_mentioned).length;
           const visibilidad =
             catResults.length > 0
@@ -184,7 +195,7 @@ export default async function PromptsPage({
     : [];
 
   const totalPrompts = projectPrompts?.length ?? 0;
-  const totalTopics = distinctCategories.length;
+  const totalTopics = topicGroups.length;
 
   const hasActivePrompts = (projectPrompts?.length ?? 0) > 0;
   const hasCompletedRun = latestRun !== null;
