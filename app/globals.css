@@ -1950,6 +1950,11 @@ a {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
+  /* .dash-header uses justify-content: space-between with 3 flex children on
+     desktop (workspace context, bell, header actions); without this, the two
+     equal gaps push the bell toward the header's visual center whenever the
+     left content is short. Anchor it to the right-hand actions group instead. */
+  margin-left: auto;
 }
 
 .notif-dot {
