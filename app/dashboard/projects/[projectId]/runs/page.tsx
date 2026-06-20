@@ -51,6 +51,22 @@ function formatDateShort(value: string | null | undefined): string {
   });
 }
 
+/**
+ * Real wall-clock duration of a run (`finished_at - started_at`), shown so
+ * the founder can see how close a scan ran to the 60s Vercel maxDuration
+ * ceiling (docs/adr/0003) — especially relevant while MAX_REAL_SCAN_PROMPTS
+ * is being monitored at 10 (docs/adr/0009 addendum, 2026-06-17).
+ */
+function formatDurationSeconds(
+  startedAt: string | null | undefined,
+  finishedAt: string | null | undefined
+): string | null {
+  if (!startedAt || !finishedAt) return null;
+  const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
 /* ---- Domain grid (Escaneos · dominios monitorizados) ---- */
 
 const DOMAIN_FAVICON_COLORS = ["#6366f1", "#0d9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
@@ -596,6 +612,7 @@ export default async function RunsPage({
                   const delta = hasMultipleCompleted ? (scoreDeltas.get(run.id) ?? null) : null;
                   const errorDisplay =
                     run.status === "failed" ? getRunErrorDisplay(run.error_summary) : null;
+                  const durationLabel = formatDurationSeconds(run.started_at, run.finished_at);
 
                   return (
                     <React.Fragment key={run.id}>
@@ -621,6 +638,7 @@ export default async function RunsPage({
                               : run.started_at
                               ? `Inicio: ${formatDate(run.started_at)}`
                               : "Pendiente de inicio"}
+                            {durationLabel ? ` · Duración: ${durationLabel}` : null}
                           </div>
                         </td>
 
