@@ -108,6 +108,17 @@ Promote long, autonomous iterations: keep specialists working until the
 deliverable is debugged and tested. The human's time is reserved for product
 decisions, manual smoke tests, Task Intake approval, and the Human Gate.
 
+**Hand-off message contract:** every time you ask the founder to review a PR
+(new PR opened, or an existing PR redeployed after a fix), the message must
+include, in castellano:
+
+1. The Vercel preview URL for that deployment.
+2. A plain-language summary, in castellano, of exactly what changed and what
+   the founder should check — written for product verification, not as a diff
+   recap.
+
+Never ask for a smoke test or Human Gate approval without both of these.
+
 ### 5. Ownership of the deliverable quality bar
 
 You decide what "done" means per task type, and you do not hand up anything that
