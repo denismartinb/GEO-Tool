@@ -174,7 +174,7 @@ export function CitationsClient({
   brandLabel: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [guide, setGuide] = useState(true);
+  const [guide, setGuide] = useState(false);
   const [q, setQ] = useState("");
   const [topicFilter, setTopicFilter] = useState("all");
 
@@ -201,17 +201,32 @@ export function CitationsClient({
           <Icon name="cite" size={20} />
         </div>
         <div className="summary-txt" style={{ flex: 1 }}>
-          La IA cita <b>{totalUrls}</b> {totalUrls === 1 ? "URL" : "URLs"} al responder tus
-          prompts, con <b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en total.
+          La IA citó <b>{totalUrls}</b> {totalUrls === 1 ? "URL distinta" : "URLs distintas"} al
+          responder tus prompts, con <b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en
+          total.
           {totalUrls > 0 && (
             <>
               {" "}
-              Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>
-              {" "}— el resto alimentan a competidores o terceros.
+              {yours === 0 ? (
+                <>
+                  <span className="hl-neg">Ninguna es tuya</span> — todas alimentan a competidores
+                  o a otras fuentes.
+                </>
+              ) : yours === totalUrls ? (
+                <>
+                  <span className="hl-pos">Todas son tuyas</span> — buen dominio de tus propias
+                  páginas en las respuestas.
+                </>
+              ) : (
+                <>
+                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>
+                  {" "}— el resto alimentan a competidores o a otras fuentes.
+                </>
+              )}
             </>
           )}
           {citationScore !== null && (
-            <> Puntuación de citas del último escaneo: <b>{citationScore}</b>.</>
+            <> Tu puntuación de citas en el último escaneo es <b>{citationScore}/100</b>.</>
           )}
         </div>
         <button type="button" className="btn btn-soft btn-sm" onClick={() => setGuide((g) => !g)}>

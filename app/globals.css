@@ -2444,6 +2444,45 @@ a {
 .cit-opp-domain { font-family: var(--mono); color: var(--ink-2); font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cit-opp-meta { color: var(--ink-4); white-space: nowrap; flex: 0 0 auto; }
 
+/* The 4-/3-column grids below only fit comfortably on wide viewports —
+   below 760px the fixed track widths (150+140+70px) force a horizontal
+   scroll on the prompt table. Collapse to a stacked flex layout instead. */
+@media (max-width: 760px) {
+  .cit-head,
+  .cit-detail-head {
+    display: none;
+  }
+
+  .cit-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 8px 16px;
+  }
+
+  .cit-row .cit-urlcell {
+    flex: 1 1 100%;
+  }
+
+  .cit-row .c,
+  .cit-row .num {
+    text-align: left;
+  }
+
+  .cit-detail {
+    padding: 4px 16px 16px;
+  }
+
+  .cit-prow {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .cit-prow .num {
+    text-align: left;
+  }
+}
+
 /* ============================================================
    MOBILE-1 — Shell, drawer sidebar, compact header (≤760px)
    and tablet content padding (≤1000px)
