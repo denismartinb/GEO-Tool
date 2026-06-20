@@ -116,6 +116,34 @@ describe("runDailyCronScan", () => {
     expect(executePendingScan).toHaveBeenCalledTimes(2);
   });
 
+  it("orders candidates oldest-last-scan-first, never-scanned before any prior scan", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const order: string[] = [];
+    executePendingScan.mockImplementation(async ({ projectId }: { projectId: string }) => {
+      order.push(projectId);
+    });
+
+    const service = fakeServiceClient({
+      projects: [{ id: "scanned-recently-ish" }, { id: "never-scanned" }, { id: "scanned-2-days-ago" }],
+      scanRuns: [
+        {
+          project_id: "scanned-recently-ish",
+          status: "completed",
+          created_at: new Date(nowMs - 30 * HOUR_MS).toISOString()
+        },
+        {
+          project_id: "scanned-2-days-ago",
+          status: "completed",
+          created_at: new Date(nowMs - 48 * HOUR_MS).toISOString()
+        }
+      ]
+    });
+
+    await runDailyCronScan({ service, maxProjects: 10 });
+
+    expect(order).toEqual(["never-scanned", "scanned-2-days-ago", "scanned-recently-ish"]);
+  });
+
   it("skips a project scanned within the last 24h", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
     const service = fakeServiceClient({
@@ -146,9 +174,20 @@ describe("runDailyCronScan", () => {
     expect(createPendingScanRunForCron).not.toHaveBeenCalled();
   });
 
-  it("marks a project as failed if scan execution throws, without counting it as scanned", async () => {
+  it("marks a project as failed if run creation throws, without counting it as scanned", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
     createPendingScanRunForCron.mockRejectedValueOnce(new ProjectActionError("prompts_required"));
+    const service = fakeServiceClient({ projects: [{ id: "p1" }], scanRuns: [] });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.scanned).toBe(0);
+    expect(result.results).toEqual([{ projectId: "p1", status: "failed" }]);
+  });
+
+  it("marks a project as failed if scan execution throws, without counting it as scanned", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    executePendingScan.mockRejectedValueOnce(new Error("boom"));
     const service = fakeServiceClient({ projects: [{ id: "p1" }], scanRuns: [] });
 
     const result = await runDailyCronScan({ service });
@@ -173,24 +212,24 @@ describe("runDailyCronScan", () => {
 
   it("marks remaining candidates as skipped_budget once the time budget is exceeded", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
-    // Simulate the first scan taking 50s (over the 45s soft budget), by
-    // advancing the mocked clock inside executePendingScan itself.
+    // Simulate the first batch's scans taking 50s each (over the 45s soft
+    // budget), by advancing the mocked clock inside executePendingScan
+    // itself.
     executePendingScan.mockImplementation(async () => {
       nowMs += 50_000;
     });
 
     const service = fakeServiceClient({
-      projects: [{ id: "p1" }, { id: "p2" }],
+      projects: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }],
       scanRuns: []
     });
 
     const result = await runDailyCronScan({ service, maxProjects: 10 });
 
-    expect(result.scanned).toBe(1);
-    expect(result.results).toEqual([
-      { projectId: "p1", status: "scanned" },
-      { projectId: "p2", status: "skipped_budget" }
-    ]);
+    expect(result.scanned).toBe(2);
+    const statuses = result.results.map((r) => r.status);
+    expect(statuses.filter((s) => s === "scanned")).toHaveLength(2);
+    expect(statuses.filter((s) => s === "skipped_budget")).toHaveLength(2);
   });
 
   it("reconciles a stuck run instead of skipping outright: a stale pending/running latest run that createPendingScanRunForCron clears results in a real scan", async () => {
