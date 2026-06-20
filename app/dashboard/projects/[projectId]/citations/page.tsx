@@ -3,7 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
-import { CitationsClient, type CitationRow } from "./citations-client";
+import { CitationsClient, type CitationRow, type PromptGroup } from "./citations-client";
 
 type ExtractedJson = {
   brand?: { mentioned?: boolean };
@@ -15,6 +15,8 @@ type ExtractedJson = {
     source?: "grounding" | "inline";
   }>;
 };
+
+type Citation = NonNullable<ExtractedJson["citations"]>[number];
 
 function parseExt(raw: unknown): ExtractedJson {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
@@ -35,6 +37,36 @@ function isSameOrSubdomain(domain: string, root: string): boolean {
   return domain === root || domain.endsWith(`.${root}`);
 }
 
+/**
+ * Resolves a single raw citation into its display/dedup identity.
+ *
+ * Per docs/adr/0006-grounding-redirect-resolution.md, the raw
+ * vertexaisearch.cloud.google.com redirect (`citation.url` for
+ * source: "grounding") must never be shown or used as a dedup key — multiple
+ * grounding chunks resolving to the same domain are the same cited page and
+ * must aggregate into one entry, not one per ephemeral redirect. Inline
+ * citations keep their real URL as both display and key since each one is a
+ * distinct, genuine page link.
+ */
+function resolveCitation(citation: Citation): { key: string; title: string; url: string; domain: string } | null {
+  const rawDomain = citation.domain?.trim();
+
+  if (citation.source === "grounding") {
+    if (rawDomain) {
+      const domain = normalizeDomain(rawDomain);
+      return { key: domain, title: citation.title?.trim() || domain, url: "", domain };
+    }
+    const label = citation.title?.trim() || "Fuente sin resolver";
+    return { key: `unresolved:${label.toLowerCase()}`, title: label, url: "", domain: "" };
+  }
+
+  const inlineUrl = citation.url?.trim();
+  const domain = rawDomain ? normalizeDomain(rawDomain) : "";
+  if (!inlineUrl && !domain) return null;
+  const key = (inlineUrl ?? domain).toLowerCase();
+  return { key, title: citation.title?.trim() || inlineUrl || domain, url: inlineUrl ?? "", domain };
+}
+
 export default async function CitationsPage({
   params
 }: {
@@ -44,27 +76,33 @@ export default async function CitationsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  const [{ data: latestRun }, { data: recentRuns }, { data: competitors }] = await Promise.all([
-    supabase
-      .from("scan_runs")
-      .select("id, status, created_at, finished_at")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("scan_runs")
-      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-  ]);
+  const [{ data: latestRun }, { data: recentRuns }, { data: competitors }, { data: projectPrompts }] =
+    await Promise.all([
+      supabase
+        .from("scan_runs")
+        .select("id, status, created_at, finished_at")
+        .eq("project_id", projectId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("scan_runs")
+        .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain")
+        .eq("project_id", projectId)
+        .eq("is_active", true),
+      supabase
+        .from("project_prompts")
+        .select("id, category")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+    ]);
 
   const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
 
@@ -72,7 +110,7 @@ export default async function CitationsPage({
     ? await Promise.all([
         supabase
           .from("scan_prompt_results")
-          .select("prompt_text_snapshot, brand_mentioned, extracted_json")
+          .select("id, prompt_id, prompt_text_snapshot, brand_mentioned, extracted_json")
           .eq("project_id", projectId)
           .eq("run_id", latestRun.id)
           .eq("status", "completed"),
@@ -84,6 +122,10 @@ export default async function CitationsPage({
           .maybeSingle()
       ])
     : [{ data: [] }, { data: null }];
+
+  const promptCategoryMap = new Map(
+    (projectPrompts ?? []).map((p) => [p.id, p.category as string | null])
+  );
 
   const projectDomain = normalizeDomain(project.domain ?? "");
   const competitorDomains = (competitors ?? [])
@@ -103,7 +145,16 @@ export default async function CitationsPage({
     prompts: Array<{ text: string; brandMentioned: boolean }>;
   };
 
+  type PromptGroupAgg = {
+    promptId: string;
+    promptText: string;
+    topic: string | null;
+    brandMentioned: boolean;
+    citations: Map<string, { title: string; url: string; domain: string; category: Agg["category"]; cited: number }>;
+  };
+
   const agg = new Map<string, Agg>();
+  const promptGroupsAgg = new Map<string, PromptGroupAgg>();
   let hasStructuredCitations = false;
 
   for (const result of results ?? []) {
@@ -114,34 +165,24 @@ export default async function CitationsPage({
       .filter((c) => c.mentioned && c.name)
       .map((c) => c.name as string);
 
-    for (const citation of ext.citations ?? []) {
-      const rawDomain = citation.domain?.trim();
-      let domain = "";
-      let key: string;
-      let title: string;
-      let url: string;
+    const groupKey = result.prompt_id ?? `text:${promptText.toLowerCase()}`;
+    let group = promptGroupsAgg.get(groupKey);
+    if (!group) {
+      group = {
+        promptId: groupKey,
+        promptText,
+        topic: result.prompt_id ? promptCategoryMap.get(result.prompt_id) ?? null : null,
+        brandMentioned: false,
+        citations: new Map()
+      };
+      promptGroupsAgg.set(groupKey, group);
+    }
+    if (brandMentioned) group.brandMentioned = true;
 
-      if (rawDomain) {
-        domain = normalizeDomain(rawDomain);
-        key = (citation.url ?? domain).trim().toLowerCase();
-        title = citation.title?.trim() || domain;
-        url = citation.url ?? domain;
-      } else if (citation.source === "grounding") {
-        // Unresolved Google grounding redirect (docs/adr/0006): never
-        // display the raw vertexaisearch.cloud.google.com URL. Group all
-        // unresolved citations by title (or a generic label) since the
-        // redirect URL gives us no way to tell distinct pages apart.
-        const label = citation.title?.trim() || "Fuente sin resolver";
-        key = `unresolved:${label.toLowerCase()}`;
-        title = label;
-        url = "";
-      } else {
-        const inlineUrl = citation.url?.trim();
-        if (!inlineUrl) continue;
-        key = inlineUrl.toLowerCase();
-        title = inlineUrl;
-        url = inlineUrl;
-      }
+    for (const citation of ext.citations ?? []) {
+      const resolved = resolveCitation(citation);
+      if (!resolved) continue;
+      const { key, title, url, domain } = resolved;
 
       hasStructuredCitations = true;
 
@@ -176,6 +217,13 @@ export default async function CitationsPage({
       else row.brandMentionedNo += 1;
       for (const name of mentionedCompetitors) row.competitors.add(name);
       row.prompts.push({ text: promptText, brandMentioned });
+
+      let groupCitation = group.citations.get(key);
+      if (!groupCitation) {
+        groupCitation = { title, url, domain, category, cited: 0 };
+        group.citations.set(key, groupCitation);
+      }
+      groupCitation.cited += 1;
     }
   }
 
@@ -196,6 +244,21 @@ export default async function CitationsPage({
       prompts: row.prompts
     }))
     .sort((a, b) => b.cited - a.cited);
+
+  const promptGroups: PromptGroup[] = Array.from(promptGroupsAgg.values())
+    .map((group) => {
+      const citations = Array.from(group.citations.values()).sort((a, b) => b.cited - a.cited);
+      return {
+        id: group.promptId,
+        promptText: group.promptText,
+        topic: group.topic,
+        brandMentioned: group.brandMentioned,
+        citations,
+        citedUrls: citations.length,
+        totalCites: citations.reduce((sum, c) => sum + c.cited, 0)
+      };
+    })
+    .sort((a, b) => b.totalCites - a.totalCites);
 
   const totalUrls = citationRows.length;
   const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
@@ -299,7 +362,7 @@ export default async function CitationsPage({
         </div>
       ) : (
         <CitationsClient
-          rows={citationRows}
+          promptGroups={promptGroups}
           totalUrls={totalUrls}
           totalCited={totalCited}
           yours={yours}
