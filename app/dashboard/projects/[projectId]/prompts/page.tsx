@@ -49,11 +49,21 @@ export default async function PromptsPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ competitor?: string }>;
+  searchParams: Promise<{ competitor?: string; promptsAdded?: string; scanLaunched?: string; scanWarning?: string }>;
 }) {
   const { projectId } = await params;
-  const { competitor } = await searchParams;
+  const { competitor, promptsAdded, scanLaunched, scanWarning } = await searchParams;
   const competitorFilter = competitor?.trim() || null;
+
+  const promptsAddedCount = promptsAdded ? Number(promptsAdded) : null;
+  const promptsAddedMessage =
+    promptsAddedCount && promptsAddedCount > 0
+      ? `Se ${promptsAddedCount === 1 ? "ha añadido 1 prompt nuevo" : `han añadido ${promptsAddedCount} prompts nuevos`}. ${
+          scanLaunched === "true"
+            ? "Se ha lanzado un escaneo restringido a estos prompts nuevos."
+            : scanWarning ?? ""
+        }`.trim()
+      : null;
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
@@ -245,7 +255,13 @@ export default async function PromptsPage({
         </div>
       </header>
 
-      <div style={{ paddingTop: 20 }}>
+      {promptsAddedMessage ? (
+        <p className="feedback success" style={{ marginTop: 20 }}>
+          {promptsAddedMessage}
+        </p>
+      ) : null}
+
+      <div style={{ paddingTop: promptsAddedMessage ? 16 : 20 }}>
         {competitorFilter && (
           <div
             style={{
@@ -380,6 +396,7 @@ export default async function PromptsPage({
           </div>
         ) : (
           <PromptsClient
+            projectId={projectId}
             results={sortedResults}
             hasTopics={hasTopics}
             topicGroups={topicGroups}

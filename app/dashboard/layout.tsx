@@ -24,7 +24,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     completedRunCountByProject,
     recommendationCountByProject,
     latestScanStatusByProject,
-    recentCompletedRuns
+    recentCompletedRuns,
+    recentPromptsAdded
   } = await getWorkspaceCounters();
 
   return (
@@ -46,7 +47,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
           />
           <div className="dash-header-actions">
             <div className="meta">{user.email}</div>
-            <NotificationBell recentCompletedRuns={recentCompletedRuns} />
+            <NotificationBell
+              recentCompletedRuns={recentCompletedRuns}
+              recentPromptsAdded={recentPromptsAdded}
+            />
             <form action={signOut}>
               <Button variant="outline" type="submit">
                 <Icon name="settings" size={14} />

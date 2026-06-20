@@ -33,6 +33,21 @@ export type RecentCompletedRun = {
   promptsProcessed: number;
 };
 
+/**
+ * One notification entry per distinct `project_prompts.created_at` timestamp
+ * (i.e. per insert statement) — `now()` is stable for the whole statement in
+ * a single Postgres transaction, so every row from one batched insert (the
+ * "Añadir prompts" flow, or the plain single-prompt form) shares the exact
+ * same value, letting us recover "N prompts added at once" without a schema
+ * change or a dedicated notifications table.
+ */
+export type RecentPromptsAdded = {
+  projectId: string;
+  domain: string;
+  addedAt: string;
+  count: number;
+};
+
 export type WorkspaceCounters = {
   projects: WorkspaceProjectSummary[];
   promptCountByProject: Record<string, number>;
@@ -44,6 +59,7 @@ export type WorkspaceCounters = {
   latestScoreByProject: Record<string, number | null>;
   scoreDeltaByProject: Record<string, number | null>;
   recentCompletedRuns: RecentCompletedRun[];
+  recentPromptsAdded: RecentPromptsAdded[];
 };
 
 /**
@@ -63,7 +79,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     { data: completedRuns },
     { data: allRecs },
     { data: scores },
-    { data: recentRuns }
+    { data: recentRuns },
+    { data: recentPromptRows }
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -99,7 +116,13 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       .select("id, project_id, finished_at, successful_prompts")
       .eq("status", "completed")
       .order("finished_at", { ascending: false })
-      .limit(5)
+      .limit(5),
+    supabase
+      .from("project_prompts")
+      .select("project_id, created_at")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(50)
   ]);
 
   const latestScanStatusByProject = (runs ?? []).reduce<Record<string, string>>((statuses, run) => {
@@ -168,6 +191,23 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       promptsProcessed: r.successful_prompts ?? 0
     }));
 
+  const promptBatchCounts = new Map<string, number>();
+  for (const p of recentPromptRows ?? []) {
+    const key = `${p.project_id}|${p.created_at}`;
+    promptBatchCounts.set(key, (promptBatchCounts.get(key) ?? 0) + 1);
+  }
+
+  const recentPromptsAdded: RecentPromptsAdded[] = Array.from(promptBatchCounts.entries())
+    .map(([key, count]) => {
+      const separatorIndex = key.indexOf("|");
+      const projectId = key.slice(0, separatorIndex);
+      const addedAt = key.slice(separatorIndex + 1);
+      return { projectId, domain: domainByProject[projectId], addedAt, count };
+    })
+    .filter((p) => p.domain)
+    .sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1))
+    .slice(0, 5);
+
   return {
     projects: projects ?? [],
     promptCountByProject,
@@ -178,6 +218,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     latestScanDateByProject,
     latestScoreByProject,
     scoreDeltaByProject,
-    recentCompletedRuns
+    recentCompletedRuns,
+    recentPromptsAdded
   };
 }

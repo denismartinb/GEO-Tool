@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import type { RecentCompletedRun } from "@/lib/project-workspace";
+import type { RecentCompletedRun, RecentPromptsAdded } from "@/lib/project-workspace";
 
 const LAST_SEEN_KEY = "geo-studio:notifications:last_seen_at";
 
@@ -17,10 +17,45 @@ function relativeTime(iso: string): string {
   return `hace ${diffD} d`;
 }
 
-export function NotificationBell({ recentCompletedRuns }: { recentCompletedRuns: RecentCompletedRun[] }) {
+type NotificationItem =
+  | { kind: "scan_completed"; id: string; at: string; domain: string; promptsProcessed: number }
+  | { kind: "prompts_added"; id: string; at: string; domain: string; count: number };
+
+function buildItems(
+  recentCompletedRuns: RecentCompletedRun[],
+  recentPromptsAdded: RecentPromptsAdded[]
+): NotificationItem[] {
+  const scanItems: NotificationItem[] = recentCompletedRuns.map((run) => ({
+    kind: "scan_completed",
+    id: run.runId,
+    at: run.finishedAt,
+    domain: run.domain,
+    promptsProcessed: run.promptsProcessed
+  }));
+
+  const promptItems: NotificationItem[] = recentPromptsAdded.map((batch) => ({
+    kind: "prompts_added",
+    id: `${batch.projectId}-${batch.addedAt}`,
+    at: batch.addedAt,
+    domain: batch.domain,
+    count: batch.count
+  }));
+
+  return [...scanItems, ...promptItems].sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 5);
+}
+
+export function NotificationBell({
+  recentCompletedRuns,
+  recentPromptsAdded
+}: {
+  recentCompletedRuns: RecentCompletedRun[];
+  recentPromptsAdded: RecentPromptsAdded[];
+}) {
   const [open, setOpen] = useState(false);
   const [lastSeenAt, setLastSeenAt] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
+
+  const items = buildItems(recentCompletedRuns, recentPromptsAdded);
 
   useEffect(() => {
     setLastSeenAt(localStorage.getItem(LAST_SEEN_KEY));
@@ -37,11 +72,11 @@ export function NotificationBell({ recentCompletedRuns }: { recentCompletedRuns:
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open]);
 
-  const isUnread = (run: RecentCompletedRun) => !lastSeenAt || run.finishedAt > lastSeenAt;
-  const hasUnread = recentCompletedRuns.some(isUnread);
+  const isUnread = (item: NotificationItem) => !lastSeenAt || item.at > lastSeenAt;
+  const hasUnread = items.some(isUnread);
 
   function markAllRead() {
-    const newest = recentCompletedRuns[0]?.finishedAt ?? new Date().toISOString();
+    const newest = items[0]?.at ?? new Date().toISOString();
     localStorage.setItem(LAST_SEEN_KEY, newest);
     setLastSeenAt(newest);
   }
@@ -68,23 +103,25 @@ export function NotificationBell({ recentCompletedRuns }: { recentCompletedRuns:
               </button>
             )}
           </div>
-          {recentCompletedRuns.length === 0 ? (
+          {items.length === 0 ? (
             <div className="notif-empty">Sin notificaciones todavía.</div>
           ) : (
             <div className="notif-list">
-              {recentCompletedRuns.map((run) => (
-                <div className="notif-item" key={run.runId}>
+              {items.map((item) => (
+                <div className="notif-item" key={item.id}>
                   <span className="notif-item-icon">
-                    <Icon name="check" size={13} />
+                    <Icon name={item.kind === "scan_completed" ? "check" : "plus"} size={13} />
                   </span>
                   <div className="notif-item-body">
                     <div className="notif-item-title">
-                      {isUnread(run) && <span className="notif-unread-dot" aria-hidden="true" />}
-                      Escaneo completado
-                      <span className="notif-item-time">{relativeTime(run.finishedAt)}</span>
+                      {isUnread(item) && <span className="notif-unread-dot" aria-hidden="true" />}
+                      {item.kind === "scan_completed" ? "Escaneo completado" : "Prompts añadidos"}
+                      <span className="notif-item-time">{relativeTime(item.at)}</span>
                     </div>
                     <p className="notif-item-desc">
-                      El escaneo de {run.domain} ha terminado · {run.promptsProcessed} prompts procesados.
+                      {item.kind === "scan_completed"
+                        ? `El escaneo de ${item.domain} ha terminado · ${item.promptsProcessed} prompts procesados.`
+                        : `Se ${item.count === 1 ? "ha añadido 1 prompt nuevo" : `han añadido ${item.count} prompts nuevos`} en ${item.domain}.`}
                     </p>
                   </div>
                 </div>

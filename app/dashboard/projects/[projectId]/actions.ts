@@ -74,6 +74,7 @@ export async function deactivatePrompt(formData: FormData) {
   await supabase.from("project_prompts").update({ is_active: false }).eq("id", promptId).eq("project_id", projectId);
 
   revalidatePath(`/dashboard/projects/${projectId}`);
+  revalidatePath(`/dashboard/projects/${projectId}/prompts`);
 }
 
 export async function createCompetitor(formData: FormData) {
