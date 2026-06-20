@@ -2593,7 +2593,11 @@ a {
     display: none;
   }
 
-  .dash-header-actions {
+  /* Email + sign-out move into the mobile sidebar drawer; the bell
+     (now nested inside .dash-header-actions to sit next to "Cerrar
+     sesión" on desktop) must stay visible here. */
+  .dash-header-actions .meta,
+  .dash-header-actions form {
     display: none;
   }
 
