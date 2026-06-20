@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
@@ -231,4 +232,36 @@ export async function autoExecutePendingScan(input: { projectId: string; runId: 
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath(`/dashboard/projects/${projectId}/runs`);
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
+}
+
+/**
+ * "Añadir prompts" (ADD-PROMPTS-BACKEND-1/UI-1): generates/categorizes new
+ * prompts with Gemini (auto/keywords/manual — see lib/projects/add-prompts.ts)
+ * and launches a scan restricted to just the new prompts. Called directly
+ * from the client modal via `useTransition` (not a `<form action>`), so the
+ * input is a typed object rather than `FormData` — still re-validated here
+ * with zod since this is a real server-action endpoint reachable with an
+ * arbitrary payload.
+ */
+export async function addPrompts(input: {
+  projectId: string;
+  mode: "auto" | "keywords" | "manual";
+  keywords?: string[];
+  manualPrompts?: string[];
+}): Promise<AddPromptsResult> {
+  const parsed = addPromptsInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await addPromptsCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+  }
+
+  return result;
 }

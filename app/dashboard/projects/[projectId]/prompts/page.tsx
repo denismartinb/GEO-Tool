@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { PromptsClient } from "./prompts-client";
+import { AddPromptsButton } from "./add-prompts-button";
 
 export type ResultRow = {
   id: string;
@@ -225,6 +226,11 @@ export default async function PromptsPage({
               Escaneo en curso
             </span>
           ) : null}
+          <AddPromptsButton
+            projectId={projectId}
+            disabled={Boolean(activeRun)}
+            disabledReason={activeRun ? "Espera a que termine el escaneo en curso." : undefined}
+          />
         </div>
       </header>
 
@@ -277,22 +283,12 @@ export default async function PromptsPage({
             <p
               style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 16 }}
             >
-              Añade prompts desde la configuración del proyecto antes de lanzar
-              un análisis.
+              Añade tus primeros prompts para empezar a analizar la
+              visibilidad de tu marca.
             </p>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--accent)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              Volver a visión general →
-            </Link>
+            <div style={{ display: "inline-block" }}>
+              <AddPromptsButton projectId={projectId} disabled={Boolean(activeRun)} />
+            </div>
           </div>
         ) : !hasCompletedRun ? (
           <div
