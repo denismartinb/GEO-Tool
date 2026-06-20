@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { generateGeminiVisibilityAnswer, GeminiConfigError, GeminiTimeoutError } from "./gemini";
+import { generateAddedPrompts, generateGeminiVisibilityAnswer, GeminiConfigError, GeminiTimeoutError } from "./gemini";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -228,5 +228,161 @@ describe("generateGeminiVisibilityAnswer — hard per-call timeout (SCAN-ROBUST-
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(generateGeminiVisibilityAnswer(visibilityInput())).rejects.toThrow("network unreachable");
+  });
+});
+
+function mockGeminiJson(payload: unknown) {
+  return mockFetchOnce({
+    candidates: [{ content: { parts: [{ text: JSON.stringify(payload) }] } }],
+    modelVersion: "gemini-2.5-flash"
+  });
+}
+
+function addPromptsInput(overrides: Partial<Parameters<typeof generateAddedPrompts>[0]> = {}) {
+  return {
+    mode: "auto" as const,
+    brand: "Acme",
+    domain: "acme.com",
+    country: "ES",
+    language: "es",
+    existingPromptTexts: [],
+    existingCategories: [],
+    ...overrides
+  };
+}
+
+describe("generateAddedPrompts", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  it("auto mode: returns invented prompts with categories, capped at the requested limit", async () => {
+    const fetchMock = mockGeminiJson({
+      prompts: [
+        { text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" },
+        { text: "¿Qué alternativas hay a los CRM tradicionales?", category: "Alternativas" },
+        { text: "¿Cómo elegir un CRM en 2026?", category: "Cómo hacer / guía" }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(addPromptsInput({ limit: 2 }));
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" });
+  });
+
+  it("auto mode: deduplicates against existingPromptTexts case-insensitively", async () => {
+    const fetchMock = mockGeminiJson({
+      prompts: [
+        { text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" },
+        { text: "¿Qué alternativas hay a los CRM tradicionales?", category: "Alternativas" }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(
+      addPromptsInput({ existingPromptTexts: ["¿cuál es el mejor crm para pymes?"] })
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe("¿Qué alternativas hay a los CRM tradicionales?");
+  });
+
+  it("auto mode: falls back to a default category when Gemini omits one", async () => {
+    const fetchMock = mockGeminiJson({ prompts: [{ text: "¿Cuál es el mejor CRM para pymes?", category: "" }] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(addPromptsInput());
+
+    expect(result[0].category).toBe("General");
+  });
+
+  it("auto mode: returns [] when Gemini's response fails schema validation", async () => {
+    const fetchMock = mockGeminiJson({ prompts: "not-an-array" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(addPromptsInput());
+
+    expect(result).toEqual([]);
+  });
+
+  it("keywords mode: includes the user's keywords in the request sent to Gemini", async () => {
+    const fetchMock = mockGeminiJson({ prompts: [{ text: "¿Qué CRM ofrece automatización de marketing?", category: "Casos de uso" }] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateAddedPrompts(addPromptsInput({ mode: "keywords", keywords: ["automatización", "marketing"] }));
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).toContain("automatización, marketing");
+  });
+
+  it("manual mode: preserves user text verbatim and applies Gemini's per-index category", async () => {
+    const fetchMock = mockGeminiJson({
+      items: [
+        { index: 0, category: "Precio y planes" },
+        { index: 1, category: "Casos de uso" }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(
+      addPromptsInput({
+        mode: "manual",
+        manualPrompts: ["¿Cuánto cuesta el plan Pro?", "¿Sirve para equipos de ventas?"]
+      })
+    );
+
+    expect(result).toEqual([
+      { text: "¿Cuánto cuesta el plan Pro?", category: "Precio y planes" },
+      { text: "¿Sirve para equipos de ventas?", category: "Casos de uso" }
+    ]);
+  });
+
+  it("manual mode: never invents new prompts, even if Gemini returns extra items", async () => {
+    const fetchMock = mockGeminiJson({
+      items: [
+        { index: 0, category: "Precio y planes" },
+        { index: 1, category: "Casos de uso" }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(
+      addPromptsInput({ mode: "manual", manualPrompts: ["¿Cuánto cuesta el plan Pro?"] })
+    );
+
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe("¿Cuánto cuesta el plan Pro?");
+  });
+
+  it("manual mode: falls back to the default category when Gemini's categorization fails", async () => {
+    const fetchMock = mockGeminiJson({ items: "not-an-array" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(
+      addPromptsInput({ mode: "manual", manualPrompts: ["¿Cuánto cuesta el plan Pro?"] })
+    );
+
+    expect(result).toEqual([{ text: "¿Cuánto cuesta el plan Pro?", category: "General" }]);
+  });
+
+  it("manual mode: returns [] when there are no non-empty prompts to categorize", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateAddedPrompts(addPromptsInput({ mode: "manual", manualPrompts: ["   ", ""] }));
+
+    expect(result).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

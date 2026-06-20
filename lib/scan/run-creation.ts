@@ -5,6 +5,117 @@ import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { ProjectActionError, type AuthenticatedContext } from "@/lib/scan/types";
 import { createServiceClient } from "@/lib/supabase/service";
 
+type CopyForwardResultRow = {
+  prompt_id: string;
+  prompt_text_snapshot: string;
+  brand_snapshot: string;
+  competitors_snapshot: unknown;
+  country_snapshot: string;
+  language_snapshot: string;
+  provider: string;
+  model: string;
+  status: string;
+  raw_response_text: string | null;
+  raw_response_json: unknown;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  cost_usd: number | null;
+  llm_latency_ms: number | null;
+  brand_mentioned: boolean;
+  citation_found: boolean;
+  mentioned_competitors_count: number;
+  citations_count: number;
+  sentiment: string;
+  extraction_version: string;
+  extracted_json: unknown;
+  extraction_error: string | null;
+};
+
+/**
+ * For a "partial rescan" (`onlyPromptIds` on `createPendingScanRunCore`), every
+ * active prompt NOT being rescanned still needs a row under the new run_id so
+ * the new run remains a full per-prompt snapshot — every other screen
+ * (Overview, Competitors, Citations, Recommendations, cron) reads only the
+ * single latest *completed* run (docs/scan-lifecycle.md). Rather than
+ * re-running the LLM for prompts the caller explicitly did not ask to
+ * rescan, copy forward each prompt's most recent result per provider from
+ * the project's latest completed run.
+ *
+ * Skips silently (no row copied) for a `carryForwardPromptIds` entry that has
+ * no row in that source run — e.g. a prompt created after the last completed
+ * scan that has never been scanned. It simply stays absent from this run's
+ * snapshot too, same as it already is from the latest completed one.
+ */
+async function copyForwardLatestResults({
+  service,
+  projectId,
+  newRunId,
+  carryForwardPromptIds
+}: {
+  service: ReturnType<typeof createServiceClient>;
+  projectId: string;
+  newRunId: string;
+  carryForwardPromptIds: string[];
+}): Promise<void> {
+  if (!carryForwardPromptIds.length) return;
+
+  const { data: latestCompletedRun } = await service
+    .from("scan_runs")
+    .select("id")
+    .eq("project_id", projectId)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // No prior completed run to copy from (e.g. first scan ever): nothing to
+  // carry forward. The caller's onlyPromptIds is effectively moot in this
+  // case since there is no existing snapshot to preserve.
+  if (!latestCompletedRun) return;
+
+  const { data: sourceRows } = await service
+    .from("scan_prompt_results")
+    .select(
+      "prompt_id, prompt_text_snapshot, brand_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
+    )
+    .eq("project_id", projectId)
+    .eq("run_id", latestCompletedRun.id)
+    .in("prompt_id", carryForwardPromptIds);
+
+  const rows = (sourceRows ?? []) as unknown as CopyForwardResultRow[];
+  if (!rows.length) return;
+
+  await service.from("scan_prompt_results").insert(
+    rows.map((row) => ({
+      run_id: newRunId,
+      project_id: projectId,
+      prompt_id: row.prompt_id,
+      prompt_text_snapshot: row.prompt_text_snapshot,
+      brand_snapshot: row.brand_snapshot,
+      competitors_snapshot: row.competitors_snapshot,
+      country_snapshot: row.country_snapshot,
+      language_snapshot: row.language_snapshot,
+      provider: row.provider,
+      model: row.model,
+      status: row.status,
+      raw_response_text: row.raw_response_text,
+      raw_response_json: row.raw_response_json,
+      tokens_in: row.tokens_in,
+      tokens_out: row.tokens_out,
+      cost_usd: row.cost_usd,
+      llm_latency_ms: row.llm_latency_ms,
+      brand_mentioned: row.brand_mentioned,
+      citation_found: row.citation_found,
+      mentioned_competitors_count: row.mentioned_competitors_count,
+      citations_count: row.citations_count,
+      sentiment: row.sentiment,
+      extraction_version: row.extraction_version,
+      extracted_json: row.extracted_json,
+      extraction_error: row.extraction_error
+    }))
+  );
+}
+
 /**
  * Shared core of the scan-run creation flow. `readClient` performs the
  * ownership/eligibility reads (the RLS-scoped client in the user path, the
@@ -13,19 +124,30 @@ import { createServiceClient } from "@/lib/supabase/service";
  * run via a dynamic import (see the cycle note there); it is intentionally
  * NOT re-exported from the `scan-runner` barrel — only the higher-level
  * `createPendingScanRun` / `createPendingScanRunForCron` wrappers are public.
+ *
+ * `onlyPromptIds` (ADD-PROMPTS-BACKEND-1): when provided, only these active
+ * prompt ids get a real `scan_prompt` job (i.e. an actual LLM call) in this
+ * run. Every other active prompt is carried forward into the new run via
+ * `copyForwardLatestResults` instead of being rescanned, so the run still
+ * satisfies the "full snapshot per completed run" invariant relied on by
+ * every other screen. Omitted (the default), this scans every active prompt
+ * exactly as before — existing callers (cron, the manual "launch scan"
+ * button) are unaffected.
  */
 export async function createPendingScanRunCore({
   projectId,
   readClient,
   service,
   triggeredByUserId,
-  triggerSource
+  triggerSource,
+  onlyPromptIds
 }: {
   projectId: string;
   readClient: AuthenticatedContext["supabase"];
   service: ReturnType<typeof createServiceClient>;
   triggeredByUserId: string | null;
   triggerSource: "user" | "cron";
+  onlyPromptIds?: string[];
 }): Promise<string> {
   const { data: project, error: projectError } = await readClient
     .from("projects")
@@ -81,12 +203,26 @@ export async function createPendingScanRunCore({
     throw new ProjectActionError("prompts_required");
   }
 
+  const onlyIdSet = onlyPromptIds?.length ? new Set(onlyPromptIds) : null;
+
+  // When onlyIdSet is set, restrict the candidate pool to those ids (still in
+  // is_active, created_at-ascending order) before applying the same cap below
+  // — every other active prompt is carried forward, not scanned, by
+  // copyForwardLatestResults further down.
+  const eligibleForJobs = onlyIdSet
+    ? activePrompts.filter((prompt) => onlyIdSet.has(prompt.id))
+    : activePrompts;
+
+  if (onlyIdSet && !eligibleForJobs.length) {
+    throw new ProjectActionError("prompts_required");
+  }
+
   // Cap the prompts processed by this run to MAX_REAL_SCAN_PROMPTS rather than
   // rejecting the scan outright. Projects that predate a lower cap (or that
   // simply have more active prompts than the per-run budget) still get a
   // real scan of their oldest active prompts instead of being permanently
   // blocked from scanning.
-  const scannedPrompts = activePrompts.slice(0, MAX_REAL_SCAN_PROMPTS);
+  const scannedPrompts = eligibleForJobs.slice(0, MAX_REAL_SCAN_PROMPTS);
   const promptCount = scannedPrompts.length;
 
   const { data: run, error: runError } = await service
@@ -154,24 +290,42 @@ export async function createPendingScanRunCore({
     throw new ProjectActionError("scan_failed");
   }
 
+  if (onlyIdSet) {
+    const scannedPromptIdSet = new Set(scannedPrompts.map((prompt) => prompt.id));
+    const carryForwardPromptIds = activePrompts
+      .filter((prompt) => !scannedPromptIdSet.has(prompt.id))
+      .map((prompt) => prompt.id);
+
+    await copyForwardLatestResults({
+      service,
+      projectId,
+      newRunId: run.id,
+      carryForwardPromptIds
+    });
+  }
+
   return run.id;
 }
 
 export async function createPendingScanRun({
   projectId,
   supabase,
-  user
+  user,
+  onlyPromptIds
 }: {
   projectId: string;
   supabase: AuthenticatedContext["supabase"];
   user: AuthenticatedContext["user"];
+  /** See `createPendingScanRunCore`'s `onlyPromptIds` (ADD-PROMPTS-BACKEND-1). */
+  onlyPromptIds?: string[];
 }): Promise<string> {
   return createPendingScanRunCore({
     projectId,
     readClient: supabase,
     service: createServiceClient(),
     triggeredByUserId: user.id,
-    triggerSource: "user"
+    triggerSource: "user",
+    onlyPromptIds
   });
 }
 

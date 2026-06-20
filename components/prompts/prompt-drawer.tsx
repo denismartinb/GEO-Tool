@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
+import { DeletePromptButton } from "@/app/dashboard/projects/[projectId]/prompts/delete-prompt-button";
 
 type Competitor = {
   id: string;
@@ -10,6 +11,7 @@ type Competitor = {
 };
 
 type Props = {
+  projectId: string;
   results: ResultRow[];
   competitors: Competitor[];
   onClose: () => void;
@@ -85,7 +87,7 @@ function dominantSentiment(rows: ResultRow[]): string | null {
   return dominant;
 }
 
-export function PromptDrawer({ results, competitors, onClose }: Props) {
+export function PromptDrawer({ projectId, results, competitors, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumen");
 
   if (!results.length) return null;
@@ -191,22 +193,26 @@ export function PromptDrawer({ results, competitors, onClose }: Props) {
             >
               {results[0].prompt_text_snapshot ?? "Prompt"}
             </p>
-            <button
-              onClick={onClose}
-              style={{
-                flexShrink: 0,
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                fontSize: 18,
-                color: "var(--ink-4)",
-                lineHeight: 1,
-                padding: "2px 4px",
-              }}
-              aria-label="Cerrar"
-            >
-              ×
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+              {results[0].prompt_id ? (
+                <DeletePromptButton projectId={projectId} promptId={results[0].prompt_id} onDeleted={onClose} />
+              ) : null}
+              <button
+                onClick={onClose}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: 18,
+                  color: "var(--ink-4)",
+                  lineHeight: 1,
+                  padding: "2px 4px",
+                }}
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
           </div>
         </div>
 

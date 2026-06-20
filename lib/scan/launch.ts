@@ -14,13 +14,16 @@ import { executePendingScan } from "@/lib/scan/executor";
 export async function launchScan({
   projectId,
   supabase,
-  user
+  user,
+  onlyPromptIds
 }: {
   projectId: string;
   supabase: AuthenticatedContext["supabase"];
   user: AuthenticatedContext["user"];
+  /** See `createPendingScanRunCore`'s `onlyPromptIds` (ADD-PROMPTS-BACKEND-1). */
+  onlyPromptIds?: string[];
 }): Promise<{ runId: string; executed: boolean }> {
-  const runId = await createPendingScanRun({ projectId, supabase, user });
+  const runId = await createPendingScanRun({ projectId, supabase, user, onlyPromptIds });
 
   if (ENABLE_SYNC_SCAN_EXECUTION) {
     await executePendingScan({ projectId, runId, supabase });

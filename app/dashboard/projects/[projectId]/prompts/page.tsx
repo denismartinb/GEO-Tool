@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { PromptsClient } from "./prompts-client";
+import { AddPromptsButton } from "./add-prompts-button";
 
 export type ResultRow = {
   id: string;
@@ -48,11 +49,21 @@ export default async function PromptsPage({
   searchParams,
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ competitor?: string }>;
+  searchParams: Promise<{ competitor?: string; promptsAdded?: string; scanLaunched?: string; scanWarning?: string }>;
 }) {
   const { projectId } = await params;
-  const { competitor } = await searchParams;
+  const { competitor, promptsAdded, scanLaunched, scanWarning } = await searchParams;
   const competitorFilter = competitor?.trim() || null;
+
+  const promptsAddedCount = promptsAdded ? Number(promptsAdded) : null;
+  const promptsAddedMessage =
+    promptsAddedCount && promptsAddedCount > 0
+      ? `Se ${promptsAddedCount === 1 ? "ha añadido 1 prompt nuevo" : `han añadido ${promptsAddedCount} prompts nuevos`}. ${
+          scanLaunched === "true"
+            ? "Se ha lanzado un escaneo restringido a estos prompts nuevos."
+            : scanWarning ?? ""
+        }`.trim()
+      : null;
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
@@ -236,10 +247,21 @@ export default async function PromptsPage({
               Escaneo en curso
             </span>
           ) : null}
+          <AddPromptsButton
+            projectId={projectId}
+            disabled={Boolean(activeRun)}
+            disabledReason={activeRun ? "Espera a que termine el escaneo en curso." : undefined}
+          />
         </div>
       </header>
 
-      <div style={{ paddingTop: 20 }}>
+      {promptsAddedMessage ? (
+        <p className="feedback success" style={{ marginTop: 20 }}>
+          {promptsAddedMessage}
+        </p>
+      ) : null}
+
+      <div style={{ paddingTop: promptsAddedMessage ? 16 : 20 }}>
         {competitorFilter && (
           <div
             style={{
@@ -288,22 +310,12 @@ export default async function PromptsPage({
             <p
               style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 16 }}
             >
-              Añade prompts desde la configuración del proyecto antes de lanzar
-              un análisis.
+              Añade tus primeros prompts para empezar a analizar la
+              visibilidad de tu marca.
             </p>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--accent)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              Volver a visión general →
-            </Link>
+            <div style={{ display: "inline-block" }}>
+              <AddPromptsButton projectId={projectId} disabled={Boolean(activeRun)} />
+            </div>
           </div>
         ) : !hasCompletedRun ? (
           <div
@@ -384,6 +396,7 @@ export default async function PromptsPage({
           </div>
         ) : (
           <PromptsClient
+            projectId={projectId}
             results={sortedResults}
             hasTopics={hasTopics}
             topicGroups={topicGroups}

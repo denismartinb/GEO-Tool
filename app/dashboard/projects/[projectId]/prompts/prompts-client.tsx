@@ -11,6 +11,7 @@ type Competitor = {
 };
 
 type PromptsClientProps = {
+  projectId: string;
   results: ResultRow[];
   hasTopics: boolean;
   topicGroups: TopicGroup[];
@@ -110,6 +111,7 @@ function groupByPrompt(rows: ResultRow[]): PromptGroup[] {
 }
 
 export function PromptsClient({
+  projectId,
   results,
   hasTopics,
   topicGroups,
@@ -396,6 +398,7 @@ export function PromptsClient({
       )}
 
       <PromptDrawer
+        projectId={projectId}
         results={selectedEngineResults}
         competitors={competitors}
         onClose={() => setSelectedPromptId(null)}
