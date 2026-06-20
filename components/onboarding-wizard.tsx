@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import type { ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
+import { sanitizePromptLineText } from "@/lib/projects/project-form";
 
 const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "ES", name: "España" },
@@ -336,7 +337,10 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
         .join("\n"),
     [competitors]
   );
-  const promptsText = useMemo(() => prompts.map((p) => p.text.trim()).filter(Boolean).join("\n"), [prompts]);
+  const promptsText = useMemo(
+    () => prompts.map((p) => sanitizePromptLineText(p.text)).filter(Boolean).join("\n"),
+    [prompts]
+  );
   const categoriesText = useMemo(
     () =>
       prompts

@@ -6,7 +6,8 @@ import {
   languageForCountry,
   parseInitialCompetitors,
   parseInitialPrompts,
-  parseProjectForm
+  parseProjectForm,
+  sanitizePromptLineText
 } from "./project-form";
 
 /**
@@ -163,6 +164,38 @@ describe("project-form pure helpers", () => {
     expect(out).toHaveLength(2);
     expect(out[0].category).toBeNull();
     expect(out[1].category).toBeNull();
+  });
+
+  it("sanitizePromptLineText collapses embedded line breaks to a single space", () => {
+    expect(sanitizePromptLineText("best widgets\nfor small business")).toBe(
+      "best widgets for small business"
+    );
+    expect(sanitizePromptLineText("a\r\n\nprompt")).toBe("a prompt");
+    expect(sanitizePromptLineText("  spaced   out  ")).toBe("spaced out");
+  });
+
+  it("sanitizePromptLineText reduces a whitespace-only string to empty, same as trim()", () => {
+    expect(sanitizePromptLineText("   \n  ")).toBe("");
+  });
+
+  it("an unsanitized embedded newline desyncs category alignment for every later prompt (the bug this fix prevents)", () => {
+    // Without sanitizing first, a single "\n" inside one prompt's own text
+    // splits into an extra line, shifting every following category off by one.
+    const out = parseInitialPrompts(
+      "best widgets\nin spain\ntop widget brands",
+      "Comparación\nAlternativas"
+    );
+    expect(out).toHaveLength(3);
+    expect(out[2].category).toBeNull(); // "top widget brands" lost its category
+  });
+
+  it("sanitizing prompt text before transport keeps categories aligned for the same input", () => {
+    const rawPrompts = ["best widgets\nin spain", "top widget brands"];
+    const promptsInput = rawPrompts.map(sanitizePromptLineText).join("\n");
+    const out = parseInitialPrompts(promptsInput, "Comparación\nAlternativas");
+    expect(out).toHaveLength(2);
+    expect(out[0].category).toBe("Comparación");
+    expect(out[1].category).toBe("Alternativas");
   });
 
   it("parseInitialCompetitors requires name|domain and dedupes", () => {
