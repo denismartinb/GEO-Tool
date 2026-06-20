@@ -122,6 +122,17 @@ Human Gate is always manual. It asks:
 
 Only after Human Gate may a PR be merged.
 
+**Every time a PR is opened or updated and ready for the founder to review,**
+the message to the founder must always include, in castellano:
+
+1. **La URL de Vercel del preview** para probar el cambio.
+2. **Un resumen en castellano de qué probar** — qué cambió y qué comportamiento
+   concreto debe verificar el fundador (no un resumen técnico del diff).
+
+This applies before every Human Gate request, not only the first time a PR is
+opened — repeat the preview URL and a fresh "qué probar" summary whenever a new
+commit lands on the PR and the preview redeploys.
+
 ---
 
 ## Task Classification

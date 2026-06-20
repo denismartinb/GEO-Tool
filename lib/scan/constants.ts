@@ -1,12 +1,18 @@
 import "server-only";
 
-// Kept at 6 (not the 10 restored by #113) because multi-engine execution
-// (migration 0009) fans each prompt out to one concurrent call per active
-// engine — currently up to 2 (Gemini, Claude) — so 6 prompts already means up
-// to 12 concurrent outbound calls inside the ~60s maxDuration budget. Bumping
-// to 10 here would mean up to 20 concurrent calls, re-introducing the
-// Gemini-timeout-under-load risk documented in the ADR 0009 addendum.
-export const MAX_REAL_SCAN_PROMPTS = 6;
+// Raised back to 10 (matching #113) as a deliberate, monitored experiment:
+// multi-engine execution (migration 0009) fans each prompt out to one
+// concurrent call per active engine — currently up to 2 (Gemini, Claude) — so
+// 10 prompts means up to 20 concurrent outbound calls inside the ~60s
+// maxDuration budget (Vercel Hobby plan, no headroom to raise maxDuration
+// itself — docs/environment-contract.md). This reintroduces the
+// Gemini-timeout-under-load risk documented in the ADR 0009 addendum; the
+// founder explicitly chose to test 10 in production and measure real-world
+// timeout/failure rates via job_logs rather than stage through an
+// intermediate value. If GeminiTimeoutError rates rise materially, drop this
+// back down (8 was the conservative fallback considered) rather than adding
+// execution-side mitigations speculatively.
+export const MAX_REAL_SCAN_PROMPTS = 10;
 // One row per prompt per active engine (multi-engine execution, migration
 // 0009) — currently up to 2 engines (Gemini, Claude), so size for
 // MAX_REAL_SCAN_PROMPTS * 2 rather than MAX_REAL_SCAN_PROMPTS alone.

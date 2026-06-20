@@ -15,6 +15,24 @@ export type CitationRow = {
   prompts: Array<{ text: string; brandMentioned: boolean }>;
 };
 
+export type PromptCitation = {
+  title: string;
+  url: string;
+  domain: string;
+  category: CitationRow["category"];
+  cited: number;
+};
+
+export type PromptGroup = {
+  id: string;
+  promptText: string;
+  topic: string | null;
+  brandMentioned: boolean;
+  citations: PromptCitation[];
+  citedUrls: number;
+  totalCites: number;
+};
+
 const CATEGORY_LABEL: Record<CitationRow["category"], string> = {
   brand: "Tu marca",
   competitor: "Competidor",
@@ -27,8 +45,8 @@ const CATEGORY_BADGE: Record<CitationRow["category"], string> = {
   third_party: "badge badge-neutral"
 };
 
-function BrandMentioned({ value }: { value: CitationRow["brandMentioned"] }) {
-  if (value === "yes") {
+function BrandMentioned({ value }: { value: boolean }) {
+  if (value) {
     return (
       <span className="badge badge-pos">
         <Icon name="check" size={11} />
@@ -36,23 +54,20 @@ function BrandMentioned({ value }: { value: CitationRow["brandMentioned"] }) {
       </span>
     );
   }
-  if (value === "no") {
-    return (
-      <span className="badge badge-neg">
-        <Icon name="info" size={11} />
-        No
-      </span>
-    );
-  }
-  return <span style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600 }}>N/A</span>;
+  return (
+    <span className="badge badge-neg">
+      <Icon name="info" size={11} />
+      No
+    </span>
+  );
 }
 
-function CitationCard({
-  row,
+function PromptGroupCard({
+  group,
   open,
   onToggle
 }: {
-  row: CitationRow;
+  group: PromptGroup;
   open: boolean;
   onToggle: () => void;
 }) {
@@ -70,65 +85,69 @@ function CitationCard({
             )}
           </button>
           <div style={{ minWidth: 0 }}>
-            <div className="cit-title">{row.title}</div>
-            {row.url && (
-              <div className="cit-url">
-                <Icon name="link" size={11} />
-                {row.url}
-              </div>
-            )}
+            <div className="cit-title">{group.promptText}</div>
+            <div className="cit-url" style={{ gap: 6 }}>
+              <Icon name="layers" size={11} />
+              {group.topic ?? "Sin topic asignado"}
+            </div>
           </div>
         </div>
         <div className="c">
-          <BrandMentioned value={row.brandMentioned} />
-        </div>
-        <div className="cit-comps">
-          {row.competitors.length ? (
-            row.competitors.map((name) => (
-              <span key={name} className="badge badge-outline" style={{ fontSize: 11 }}>
-                {name}
-              </span>
-            ))
-          ) : (
-            <span style={{ fontSize: 12, color: "var(--ink-4)" }}>—</span>
-          )}
+          <BrandMentioned value={group.brandMentioned} />
         </div>
         <div>
-          <span className={CATEGORY_BADGE[row.category]}>{CATEGORY_LABEL[row.category]}</span>
+          {group.citedUrls > 0 ? (
+            <span style={{ fontSize: 12.5, color: "var(--ink-3)", fontWeight: 600 }}>
+              {group.citedUrls} {group.citedUrls === 1 ? "URL" : "URLs"}
+            </span>
+          ) : (
+            <span style={{ fontSize: 12, color: "var(--ink-4)" }}>Sin citas</span>
+          )}
         </div>
         <div className="num">
           <span className="tnum" style={{ fontWeight: 800, fontSize: 15 }}>
-            {row.cited}
+            {group.totalCites}
           </span>
         </div>
       </div>
       {open && (
         <div className="cit-detail">
-          <div className="cit-detail-head">
-            <span>Prompt</span>
-            <span className="c">Tu marca en la respuesta</span>
-          </div>
-          {row.prompts.map((p, i) => (
-            <div className="cit-prow" key={i}>
-              <div className="cit-pq">
-                <Icon name="search" size={13} />
-                {p.text}
+          {group.citations.length > 0 ? (
+            <>
+              <div className="cit-detail-head">
+                <span>URL</span>
+                <span>Categoría</span>
+                <span className="num">Citas</span>
               </div>
-              <div className="c">
-                {p.brandMentioned ? (
-                  <span className="badge badge-pos">
-                    <Icon name="check" size={11} />
-                    Sí
+              {group.citations.map((c, i) => (
+                <div className="cit-prow" key={i}>
+                  <div className="cit-pq" style={{ minWidth: 0 }}>
+                    <Icon name="link" size={13} />
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap"
+                      }}
+                    >
+                      {c.title}
+                      {c.url && c.url !== c.title && (
+                        <span style={{ color: "var(--ink-4)", marginLeft: 6 }}>{c.url}</span>
+                      )}
+                    </span>
+                  </div>
+                  <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
+                  <span className="num tnum" style={{ fontWeight: 700 }}>
+                    {c.cited}
                   </span>
-                ) : (
-                  <span className="badge badge-neg">
-                    <Icon name="info" size={11} />
-                    No
-                  </span>
-                )}
-              </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div style={{ padding: "14px 4px", color: "var(--ink-4)", fontSize: 12.5 }}>
+              La IA no citó ninguna fuente al responder este prompt.
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
@@ -136,7 +155,7 @@ function CitationCard({
 }
 
 export function CitationsClient({
-  rows,
+  promptGroups,
   totalUrls,
   totalCited,
   yours,
@@ -145,7 +164,7 @@ export function CitationsClient({
   citationScore,
   brandLabel
 }: {
-  rows: CitationRow[];
+  promptGroups: PromptGroup[];
   totalUrls: number;
   totalCited: number;
   yours: number;
@@ -155,17 +174,21 @@ export function CitationsClient({
   brandLabel: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [guide, setGuide] = useState(true);
+  const [guide, setGuide] = useState(false);
   const [q, setQ] = useState("");
-  const [catFilter, setCatFilter] = useState<"all" | CitationRow["category"]>("all");
+  const [topicFilter, setTopicFilter] = useState("all");
 
-  const filtered = rows.filter((r) => {
-    if (catFilter !== "all" && r.category !== catFilter) return false;
+  const topics = Array.from(new Set(promptGroups.map((g) => g.topic).filter((t): t is string => Boolean(t))));
+
+  const filtered = promptGroups.filter((g) => {
+    if (topicFilter !== "all" && g.topic !== topicFilter) return false;
     if (q) {
       const needle = q.toLowerCase();
-      if (!r.title.toLowerCase().includes(needle) && !r.url.toLowerCase().includes(needle)) {
-        return false;
-      }
+      const matchesPrompt = g.promptText.toLowerCase().includes(needle);
+      const matchesCitation = g.citations.some(
+        (c) => c.title.toLowerCase().includes(needle) || c.domain.toLowerCase().includes(needle)
+      );
+      if (!matchesPrompt && !matchesCitation) return false;
     }
     return true;
   });
@@ -178,17 +201,32 @@ export function CitationsClient({
           <Icon name="cite" size={20} />
         </div>
         <div className="summary-txt" style={{ flex: 1 }}>
-          La IA cita <b>{totalUrls}</b> {totalUrls === 1 ? "URL" : "URLs"} al responder tus
-          prompts, con <b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en total.
+          La IA citó <b>{totalUrls}</b> {totalUrls === 1 ? "URL distinta" : "URLs distintas"} al
+          responder tus prompts, con <b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en
+          total.
           {totalUrls > 0 && (
             <>
               {" "}
-              Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>
-              {" "}— el resto alimentan a competidores o terceros.
+              {yours === 0 ? (
+                <>
+                  <span className="hl-neg">Ninguna es tuya</span> — todas alimentan a competidores
+                  o a otras fuentes.
+                </>
+              ) : yours === totalUrls ? (
+                <>
+                  <span className="hl-pos">Todas son tuyas</span> — buen dominio de tus propias
+                  páginas en las respuestas.
+                </>
+              ) : (
+                <>
+                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>
+                  {" "}— el resto alimentan a competidores o a otras fuentes.
+                </>
+              )}
             </>
           )}
           {citationScore !== null && (
-            <> Puntuación de citas del último escaneo: <b>{citationScore}</b>.</>
+            <> Tu puntuación de citas en el último escaneo es <b>{citationScore}/100</b>.</>
           )}
         </div>
         <button type="button" className="btn btn-soft btn-sm" onClick={() => setGuide((g) => !g)}>
@@ -289,45 +327,46 @@ export function CitationsClient({
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por dominio o URL…"
+            placeholder="Buscar por prompt, dominio o URL…"
           />
         </div>
         <select
           className="cit-select"
-          value={catFilter}
-          onChange={(e) => setCatFilter(e.target.value as typeof catFilter)}
+          value={topicFilter}
+          onChange={(e) => setTopicFilter(e.target.value)}
         >
-          <option value="all">Todas las categorías</option>
-          <option value="brand">Tu marca</option>
-          <option value="competitor">Competidor</option>
-          <option value="third_party">Otras fuentes</option>
+          <option value="all">Todos los topics</option>
+          {topics.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
         </select>
         <div style={{ marginLeft: "auto" }} />
         <span style={{ fontSize: 12.5, color: "var(--ink-4)", fontWeight: 600 }}>
-          {filtered.length} {filtered.length === 1 ? "URL" : "URLs"}
+          {filtered.length} {filtered.length === 1 ? "prompt" : "prompts"}
         </span>
       </div>
 
       {/* Table */}
       <div className="card">
         <div className="cit-head">
-          <span>URL</span>
+          <span>Prompt</span>
           <span className="c">Marca mencionada</span>
-          <span>Competidores</span>
-          <span>Categoría</span>
+          <span>URLs citadas</span>
           <span className="num">Citas</span>
         </div>
-        {filtered.map((row) => (
-          <CitationCard
-            key={row.id}
-            row={row}
-            open={open === row.id}
-            onToggle={() => setOpen((o) => (o === row.id ? null : row.id))}
+        {filtered.map((group) => (
+          <PromptGroupCard
+            key={group.id}
+            group={group}
+            open={open === group.id}
+            onToggle={() => setOpen((o) => (o === group.id ? null : group.id))}
           />
         ))}
         {filtered.length === 0 && (
           <div style={{ padding: 36, textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-            No hay URLs con estos filtros.
+            No hay prompts con estos filtros.
           </div>
         )}
       </div>

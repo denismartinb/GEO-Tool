@@ -4,8 +4,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { useMobileShell } from "@/components/mobile-shell";
-import { NotificationBell } from "@/components/notification-bell";
-import type { RecentCompletedRun } from "@/lib/project-workspace";
 
 type WorkspaceProject = {
   id: string;
@@ -36,12 +34,10 @@ function getProjectId(pathname: string) {
 
 export function WorkspaceTopbar({
   projects,
-  latestScanStatusByProject,
-  recentCompletedRuns
+  latestScanStatusByProject
 }: {
   projects: WorkspaceProject[];
   latestScanStatusByProject: Record<string, string>;
-  recentCompletedRuns: RecentCompletedRun[];
 }) {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
@@ -142,8 +138,6 @@ export function WorkspaceTopbar({
           ) : null}
         </div>
       ) : null}
-
-      <NotificationBell recentCompletedRuns={recentCompletedRuns} />
     </>
   );
 }

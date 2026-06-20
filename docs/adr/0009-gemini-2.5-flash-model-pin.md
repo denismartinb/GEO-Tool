@@ -61,3 +61,46 @@ Fix: all three Gemini calls (`generateGeminiVisibilityAnswer`,
 `extractGeminiStructuredData`, `generateGeminiJson`) now set
 `generationConfig.thinkingConfig.thinkingBudget = 0` to restore latency
 comparable to the previously pinned `gemini-2.0-flash-001`.
+
+---
+
+## Addendum (2026-06-17) — `MAX_REAL_SCAN_PROMPTS` raised to 10 under multi-engine load, as a monitored experiment
+
+Multi-engine execution (migration `0009_scan_result_multi_provider.sql`, PR
+#114) fans each prompt out to one concurrent call per active engine
+(currently up to 2: Gemini, Claude). When PR #114 merged,
+`MAX_REAL_SCAN_PROMPTS` was deliberately kept at `6` (not the `10` restored
+by #113 per this ADR's first addendum) specifically because 6 × 2 = 12
+concurrent calls was the last validated-safe ceiling, while 10 × 2 = 20
+would re-risk the `GeminiTimeoutError`-under-load failure mode described
+above.
+
+The founder explicitly chose to raise it back to `10` anyway and measure
+real-world timeout/failure rates in production via `job_logs`, rather than
+stage through an intermediate value first. Vercel is on the **Hobby** plan,
+so `maxDuration` cannot be raised past 60s as a mitigation if timeouts
+reappear — the only code-level lever in that case is lowering
+`MAX_REAL_SCAN_PROMPTS` again (8 was the conservative fallback considered
+but not yet tried).
+
+---
+
+## Addendum (2026-06-19) — pin temperature to 0 for score consistency
+
+Two completed scans on the same project, ~17 minutes apart, produced
+`geo_score` values 8 points apart (67 vs. 75) with no real change in the
+brand's AI visibility. Root cause: with `MAX_REAL_SCAN_PROMPTS = 6`
+(`lib/scan/constants.ts`), each prompt is ~17pp of the `presence` component
+alone (docs/adr/0008), and neither `generateGeminiVisibilityAnswer` nor
+`extractGeminiStructuredData` pinned `temperature`, so Gemini's default
+sampling temperature (non-zero) made the same prompt eligible to produce a
+different answer — and therefore a different mention/position/citation
+extraction — on every run.
+
+Fix: all three Gemini calls now also set `generationConfig.temperature = 0`,
+in addition to the existing `thinkingConfig.thinkingBudget = 0`. This removes
+sampling-driven variance from a given prompt/search-result pair. It does
+**not** remove variance from Google Search grounding itself — the same query
+run minutes apart can still return different live search results, which is a
+separate, unaddressed source of run-to-run noise (tracked alongside the
+prompt-count and score-smoothing follow-ups in `docs/director-strategy.md`).
