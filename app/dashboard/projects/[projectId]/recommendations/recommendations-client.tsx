@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
+import { rewriteRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
 type EvidenceJson = {
   why_this_matters?: string;
@@ -54,8 +56,25 @@ function isQuickWin(rec: Recommendation): boolean {
   return rec.impact === "high" && rec.effort === "low";
 }
 
-function RecCard({ rec }: { rec: Recommendation }) {
+function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
   const [open, setOpen] = useState(false);
+  const [isRewriting, startRewrite] = useTransition();
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const router = useRouter();
+
+  function handleRewrite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setRewriteError(null);
+    startRewrite(async () => {
+      const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
+      if (!result.success) {
+        setRewriteError(result.error);
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   const ev: EvidenceJson = rec.evidence_json ?? {};
   const promptDetails = ev.affected_prompt_details ?? [];
@@ -261,6 +280,36 @@ function RecCard({ rec }: { rec: Recommendation }) {
             </div>
           </div>
 
+          {/* Mejorar redacción con IA — solo para recomendaciones aún no reescritas */}
+          <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {rec.source_type === "rule" ? (
+              <>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
+                  {isRewriting ? (
+                    <>
+                      <span className="btn-spinner" /> Mejorando redacción…
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="sparkles" size={13} />
+                      Mejorar redacción con IA
+                    </>
+                  )}
+                </button>
+                {rewriteError && (
+                  <p className="feedback error" style={{ margin: 0 }}>
+                    {rewriteError}
+                  </p>
+                )}
+              </>
+            ) : (
+              <span className="badge badge-outline">
+                <Icon name="sparkles" size={11} />
+                Redactado con IA
+              </span>
+            )}
+          </div>
+
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (
             <div
@@ -297,8 +346,10 @@ function RecCard({ rec }: { rec: Recommendation }) {
 
 export function RecommendationsClient({
   recommendations,
+  projectId,
 }: {
   recommendations: Recommendation[];
+  projectId: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
@@ -344,7 +395,7 @@ export function RecommendationsClient({
 
       {/* Cards */}
       {filtered.map((rec) => (
-        <RecCard key={rec.id} rec={rec} />
+        <RecCard key={rec.id} rec={rec} projectId={projectId} />
       ))}
 
       {filtered.length === 0 && (

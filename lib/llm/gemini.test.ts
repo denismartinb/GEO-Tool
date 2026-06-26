@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { generateAddedPrompts, generateGeminiVisibilityAnswer, GeminiConfigError, GeminiTimeoutError } from "./gemini";
+import {
+  generateAddedPrompts,
+  generateGeminiVisibilityAnswer,
+  rewriteRecommendation,
+  GeminiConfigError,
+  GeminiTimeoutError
+} from "./gemini";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -384,5 +390,99 @@ describe("generateAddedPrompts", () => {
 
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+function rewriteInput(overrides: Partial<Parameters<typeof rewriteRecommendation>[0]> = {}) {
+  return {
+    brand: "Acme",
+    domain: "acme.com",
+    language: "es",
+    recommendationType: "improve_citation_readiness",
+    ruleTitle: "Haz que tu contenido sea más citable",
+    ruleDescription: "Las respuestas de IA rara vez citan tu marca.",
+    whyThisMatters: "Una presencia de citas baja limita tu autoridad.",
+    affectedPrompts: ["¿Cuál es la mejor marca de muebles?"],
+    mentionedCompetitors: ["Conforama"],
+    citationDomains: ["example.com"],
+    evidenceSnippets: ["Acme no aparece citada en esta respuesta."],
+    ...overrides
+  };
+}
+
+describe("rewriteRecommendation", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  it("returns the rewritten title/description on valid Gemini output", async () => {
+    const fetchMock = mockGeminiJson({
+      title: "Refuerza tu contenido citable frente a Conforama",
+      description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles; añade datos verificables."
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await rewriteRecommendation(rewriteInput());
+
+    expect(result).toEqual({
+      title: "Refuerza tu contenido citable frente a Conforama",
+      description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles; añade datos verificables."
+    });
+  });
+
+  it("includes only the anchored competitors/domains in the prompt sent to Gemini", async () => {
+    const fetchMock = mockGeminiJson({ title: "Título", description: "Descripción" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rewriteRecommendation(rewriteInput({ mentionedCompetitors: ["Conforama"], citationDomains: ["example.com"] }));
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).toContain("Conforama");
+    expect(promptText).toContain("example.com");
+    expect(promptText).toContain("Do NOT mention any competitor");
+    expect(promptText).toContain("Do NOT mention any domain");
+  });
+
+  it("returns null when Gemini's response fails schema validation", async () => {
+    const fetchMock = mockGeminiJson({ title: "Solo título sin descripción" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await rewriteRecommendation(rewriteInput());
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when the title or description is empty after trimming", async () => {
+    const fetchMock = mockGeminiJson({ title: "   ", description: "Algo" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await rewriteRecommendation(rewriteInput());
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when Gemini's output exceeds the safety length caps", async () => {
+    const fetchMock = mockGeminiJson({ title: "x".repeat(201), description: "Algo" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await rewriteRecommendation(rewriteInput());
+
+    expect(result).toBeNull();
+  });
+
+  it("propagates a Gemini API failure instead of swallowing it", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(rewriteRecommendation(rewriteInput())).rejects.toThrow();
   });
 });

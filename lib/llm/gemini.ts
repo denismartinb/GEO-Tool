@@ -632,3 +632,90 @@ export async function generateAddedPrompts(input: {
 
   return out;
 }
+
+export type RecommendationRewriteInput = {
+  brand: string;
+  domain: string;
+  language: string;
+  recommendationType: string;
+  ruleTitle: string;
+  ruleDescription: string;
+  whyThisMatters: string;
+  affectedPrompts: string[];
+  mentionedCompetitors: string[];
+  citationDomains: string[];
+  dominantCompetitor?: string;
+  evidenceSnippets: string[];
+};
+
+export type RecommendationRewrite = { title: string; description: string };
+
+const recommendationRewriteSchema = z.object({
+  title: z.string(),
+  description: z.string()
+});
+
+/**
+ * Rewrites a rule-based recommendation's title/description into more specific,
+ * natural prose — using ONLY the facts passed in (Slice 2 of the hybrid
+ * recommendation architecture; Slice 1, in lib/recommendations/recommendation-engine.ts,
+ * owns "what gap + what evidence"). The caller (lib/recommendations/
+ * rewrite-recommendation.ts) is responsible for anchoring that evidence and for
+ * re-validating the result against it before persisting — this function only
+ * builds the prompt and parses Gemini's JSON response.
+ *
+ * Fail-soft on schema-invalid output (returns null), matching this file's
+ * suggestCompetitors/generateAddedPrompts convention. A network/API failure
+ * still throws, also matching that convention — the caller is expected to
+ * catch it and fall back safely (no fake success, no raw error surfaced).
+ */
+export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+  const promptBlock = [
+    "You are a senior GEO (Generative Engine Optimization) consultant rewriting one action item on a brand's dashboard.",
+    "Rewrite the TITLE and DESCRIPTION below to be more specific, concrete and natural for this exact brand and situation.",
+    "You MUST use ONLY the facts listed below. Do NOT invent any fact, statistic, competitor name, domain, page or detail not explicitly given.",
+    "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
+    "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
+    "If no competitors or domains are listed below, do not invent or imply any.",
+    `Write entirely in this language: ${input.language}.`,
+    `Return ONLY valid JSON with this exact shape: { "title": string, "description": string }.`,
+    `"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.`,
+    `"description": 1-3 sentences, max 400 characters, concrete and actionable given the facts below.`,
+    "",
+    `Brand: ${input.brand}`,
+    `Brand domain: ${input.domain}`,
+    `Recommendation type: ${input.recommendationType}`,
+    "",
+    "Generic title to improve:",
+    input.ruleTitle,
+    "Generic description to improve:",
+    input.ruleDescription,
+    "",
+    "Why this matters (real reasoning from the scan):",
+    input.whyThisMatters || "(none given)",
+    ...(input.dominantCompetitor ? ["", `Dominant competitor in this specific gap: ${input.dominantCompetitor}`] : []),
+    "",
+    "Real prompts (from this project's actual last scan) affected by this gap:",
+    input.affectedPrompts.length ? input.affectedPrompts.map((p) => `- ${p}`).join("\n") : "(none given)",
+    "",
+    "Real evidence snippets extracted from actual AI answers:",
+    input.evidenceSnippets.length ? input.evidenceSnippets.map((s) => `- ${s}`).join("\n") : "(none given)",
+    "",
+    "Competitors you may mention (do not mention any other competitor):",
+    input.mentionedCompetitors.length ? input.mentionedCompetitors.join(", ") : "(none — do not name any competitor)",
+    "",
+    "Domains you may mention (do not mention any other domain):",
+    input.citationDomains.length ? input.citationDomains.join(", ") : "(none — do not name any domain)"
+  ].join("\n");
+
+  const raw = await generateGeminiJson(promptBlock);
+  const parsed = recommendationRewriteSchema.safeParse(raw);
+  if (!parsed.success) return null;
+
+  const title = parsed.data.title.trim();
+  const description = parsed.data.description.trim();
+  if (!title || !description) return null;
+  if (title.length > 200 || description.length > 600) return null;
+
+  return { title, description };
+}

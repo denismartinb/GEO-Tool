@@ -313,7 +313,7 @@ export default async function RecommendationsPage({
           </div>
 
           {/* Client component handles filters + cards */}
-          <RecommendationsClient recommendations={recs} />
+          <RecommendationsClient recommendations={recs} projectId={projectId} />
         </>
       )}
 

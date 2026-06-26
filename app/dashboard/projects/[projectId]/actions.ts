@@ -6,6 +6,11 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
+  rewriteRecommendationCore,
+  rewriteRecommendationInputSchema,
+  type RewriteRecommendationResult
+} from "@/lib/recommendations/rewrite-recommendation";
+import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
   getActionErrorCode
@@ -262,6 +267,31 @@ export async function addPrompts(input: {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+  }
+
+  return result;
+}
+
+/**
+ * "Mejorar redacción con IA" (Slice 2): on-demand LLM rewrite of one rule-based
+ * recommendation's title/description, strictly anchored to its own
+ * evidence_json (see lib/recommendations/rewrite-recommendation.ts). Called
+ * directly from the client via `useTransition`, same pattern as `addPrompts`.
+ */
+export async function rewriteRecommendationAction(input: {
+  projectId: string;
+  recommendationId: string;
+}): Promise<RewriteRecommendationResult> {
+  const parsed = rewriteRecommendationInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await rewriteRecommendationCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
   }
 
   return result;
