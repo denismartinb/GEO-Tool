@@ -77,20 +77,20 @@ export default async function BillingPage() {
       <p className="kicker">Cuenta</p>
       <h1 className="title-lg">Plan y facturación</h1>
 
-      <div className="flex items-center gap-4 rounded-[14px] border border-[var(--line)] bg-[var(--accent-soft)] p-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--accent)]">
+      <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--accent-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
+        <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--accent)]">
           <Icon name="card" size={18} />
         </div>
-        <p className="flex-1 text-sm text-[var(--accent-ink)]">
-          Has usado <strong>{usage.promptCount} de {usage.promptCap}</strong> prompts incluidos en tu plan.
-          Subir a {agencyPlan.name} desbloquea workspaces multi-cliente e informes white-label.
-        </p>
-        <Link href="/pricing" className="shrink-0">
-          <Button type="button" variant="outline">
+        <Link href="/pricing" className="order-2 shrink-0 sm:order-3">
+          <Button type="button" variant="outline" className="w-full justify-center sm:w-auto">
             <Icon name="grid" size={14} />
             Ver todos los planes
           </Button>
         </Link>
+        <p className="order-3 text-sm text-[var(--accent-ink)] sm:order-2 sm:flex-1">
+          Has usado <strong>{usage.promptCount} de {usage.promptCap}</strong> prompts incluidos en tu plan.
+          Subir a {agencyPlan.name} desbloquea workspaces multi-cliente e informes white-label.
+        </p>
       </div>
 
       <section className="space-y-2">
