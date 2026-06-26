@@ -475,7 +475,7 @@ export default async function CompetitorsPage({
           {latestCompletedRun && (
             <span className="badge badge-pos" style={{ fontSize: 11 }}>
               Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
             </span>
           )}
           {activeRun && completedRuns.length > 0 ? (

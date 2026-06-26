@@ -238,6 +238,7 @@ export default async function PromptsPage({
                 day: "numeric",
                 month: "short",
                 year: "numeric",
+                timeZone: "Europe/Madrid",
               })}
             </span>
           )}

@@ -448,7 +448,7 @@ export default async function ProjectDetailPage({
           {latestCompletedRun && (
             <span className="badge badge-pos" style={{ fontSize: 11 }}>
               Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
             </span>
           )}
           {activeRun ? (
@@ -520,7 +520,7 @@ export default async function ProjectDetailPage({
             <div className="section-title">Visibilidad de un vistazo</div>
             <div className="section-desc">
               Señales reales · último escaneo{" "}
-              {new Date(latestCompletedRun!.finished_at ?? latestCompletedRun!.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+              {new Date(latestCompletedRun!.finished_at ?? latestCompletedRun!.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" })}
             </div>
             <div className="right">
               <span className={`badge badge-${getBandTone(gaugeScore)}`}>

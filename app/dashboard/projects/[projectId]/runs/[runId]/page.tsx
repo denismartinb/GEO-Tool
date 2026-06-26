@@ -87,7 +87,7 @@ export default async function RunDetailPage({
         <CardContent className="space-y-1 text-sm text-[var(--ink-2)]">
           <p>Estado: {formatStatus(run.status)}</p>
           <p>Prompts analizados: {run.successful_prompts} de {run.total_prompts}</p>
-          <p>Fecha: {new Date(run.created_at).toLocaleString()}</p>
+          <p>Fecha: {new Date(run.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid" })}</p>
           {run.status === "pending" ? (
             <form action={executeScan} className="pt-2">
               <input type="hidden" name="projectId" value={projectId} />
