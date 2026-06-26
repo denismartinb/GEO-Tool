@@ -70,6 +70,38 @@ const GENERIC_REWRITE_FAILURE =
 
 const LOG_PREFIX = "[geo:recommendation-rewrite]";
 
+// The only call ever bounded against a hang was the Gemini fetch
+// (GEMINI_CALL_TIMEOUT_MS, lib/llm/gemini.ts). The Supabase reads/writes below
+// have no library-level timeout, so a stalled connection hangs the whole
+// action forever with nothing past a "start" log line — indistinguishable
+// from the button silently doing nothing. Every I/O step here is now bounded
+// so a stall surfaces a sanitized error within seconds, tagged with exactly
+// which stage stalled, instead of running out the Vercel maxDuration clock.
+const SUPABASE_CALL_TIMEOUT_MS = 8_000;
+
+class OperationTimeoutError extends Error {
+  constructor(stage: string) {
+    super(`Operation timed out: ${stage}`);
+    this.name = "OperationTimeoutError";
+  }
+}
+
+function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new OperationTimeoutError(stage)), SUPABASE_CALL_TIMEOUT_MS);
+    Promise.resolve(promise).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 export async function rewriteRecommendationCore({
   projectId,
   recommendationId,
@@ -81,138 +113,176 @@ export async function rewriteRecommendationCore({
   supabase: AuthenticatedContext["supabase"];
   user: AuthenticatedContext["user"];
 }): Promise<RewriteRecommendationResult> {
-  const { data: projectRaw, error: projectError } = await supabase
-    .from("projects")
-    .select("id, brand, domain, language, is_archived")
-    .eq("id", projectId)
-    .eq("owner_user_id", user.id)
-    .maybeSingle();
-
-  const project = projectRaw as unknown as ProjectRow | null;
-
-  if (projectError || !project) {
-    return { success: false, error: feedbackErrorMessages.project_not_found };
-  }
-
-  if (project.is_archived) {
-    return { success: false, error: feedbackErrorMessages.project_archived };
-  }
-
-  const { data: recommendationRaw, error: recommendationError } = await supabase
-    .from("recommendations")
-    .select("id, title, description, recommendation_type, source_type, evidence_json")
-    .eq("id", recommendationId)
-    .eq("project_id", projectId)
-    .maybeSingle();
-
-  const recommendation = recommendationRaw as unknown as RecommendationRow | null;
-
-  if (recommendationError || !recommendation) {
-    return { success: false, error: "No se ha encontrado la recomendación solicitada." };
-  }
-
-  const evidence: EvidenceJson = recommendation.evidence_json ?? {};
-
-  if (recommendation.source_type === "llm_rewrite") {
-    return {
-      success: true,
-      solutionTitle: evidence.solution_title ?? recommendation.title,
-      solutionDescription: evidence.solution_description ?? recommendation.description
-    };
-  }
-
-  console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
-
-  const mentionedCompetitors = evidence.mentioned_competitors ?? [];
-  const citationDomains = evidence.citation_domains ?? [];
-  const allowedCompetitors = evidence.dominant_competitor
-    ? [...mentionedCompetitors, evidence.dominant_competitor]
-    : mentionedCompetitors;
-
-  const { data: trackedCompetitorRowsRaw } = await supabase
-    .from("project_competitors")
-    .select("name")
-    .eq("project_id", projectId);
-
-  const trackedCompetitors = ((trackedCompetitorRowsRaw ?? []) as unknown as Array<{ name: string }>).map(
-    (row) => row.name
-  );
-
-  let rewrite: { title: string; description: string } | null;
-  const geminiCallStartedAt = Date.now();
+  let stage = "load_project";
   try {
-    rewrite = await rewriteRecommendation({
-      brand: project.brand,
-      domain: project.domain,
-      language: project.language,
-      recommendationType: recommendation.recommendation_type,
-      ruleTitle: recommendation.title,
-      ruleDescription: recommendation.description,
-      whyThisMatters: evidence.why_this_matters ?? "",
-      affectedPrompts: evidence.affected_prompts ?? [],
-      mentionedCompetitors,
-      citationDomains,
-      dominantCompetitor: evidence.dominant_competitor,
-      evidenceSnippets: evidence.evidence_snippets ?? []
+    const { data: projectRaw, error: projectError } = await withTimeout(
+      supabase
+        .from("projects")
+        .select("id, brand, domain, language, is_archived")
+        .eq("id", projectId)
+        .eq("owner_user_id", user.id)
+        .maybeSingle(),
+      stage
+    );
+
+    const project = projectRaw as unknown as ProjectRow | null;
+
+    if (projectError || !project) {
+      return { success: false, error: feedbackErrorMessages.project_not_found };
+    }
+
+    if (project.is_archived) {
+      return { success: false, error: feedbackErrorMessages.project_archived };
+    }
+
+    stage = "load_recommendation";
+    const { data: recommendationRaw, error: recommendationError } = await withTimeout(
+      supabase
+        .from("recommendations")
+        .select("id, title, description, recommendation_type, source_type, evidence_json")
+        .eq("id", recommendationId)
+        .eq("project_id", projectId)
+        .maybeSingle(),
+      stage
+    );
+
+    const recommendation = recommendationRaw as unknown as RecommendationRow | null;
+
+    if (recommendationError || !recommendation) {
+      return { success: false, error: "No se ha encontrado la recomendación solicitada." };
+    }
+
+    const evidence: EvidenceJson = recommendation.evidence_json ?? {};
+
+    if (recommendation.source_type === "llm_rewrite") {
+      return {
+        success: true,
+        solutionTitle: evidence.solution_title ?? recommendation.title,
+        solutionDescription: evidence.solution_description ?? recommendation.description
+      };
+    }
+
+    console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
+
+    const mentionedCompetitors = evidence.mentioned_competitors ?? [];
+    const citationDomains = evidence.citation_domains ?? [];
+    const allowedCompetitors = evidence.dominant_competitor
+      ? [...mentionedCompetitors, evidence.dominant_competitor]
+      : mentionedCompetitors;
+
+    stage = "load_competitors";
+    const { data: trackedCompetitorRowsRaw } = await withTimeout(
+      supabase.from("project_competitors").select("name").eq("project_id", projectId),
+      stage
+    );
+
+    const trackedCompetitors = ((trackedCompetitorRowsRaw ?? []) as unknown as Array<{ name: string }>).map(
+      (row) => row.name
+    );
+
+    console.info(`${LOG_PREFIX} evidence_loaded`, {
+      project_id: projectId,
+      recommendation_id: recommendationId,
+      tracked_competitors_count: trackedCompetitors.length
     });
-  } catch (error) {
-    console.error(`${LOG_PREFIX} gemini_call_failed`, {
+
+    stage = "gemini_call";
+    let rewrite: { title: string; description: string } | null;
+    const geminiCallStartedAt = Date.now();
+    try {
+      rewrite = await rewriteRecommendation({
+        brand: project.brand,
+        domain: project.domain,
+        language: project.language,
+        recommendationType: recommendation.recommendation_type,
+        ruleTitle: recommendation.title,
+        ruleDescription: recommendation.description,
+        whyThisMatters: evidence.why_this_matters ?? "",
+        affectedPrompts: evidence.affected_prompts ?? [],
+        mentionedCompetitors,
+        citationDomains,
+        dominantCompetitor: evidence.dominant_competitor,
+        evidenceSnippets: evidence.evidence_snippets ?? []
+      });
+    } catch (error) {
+      console.error(`${LOG_PREFIX} gemini_call_failed`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        duration_ms: Date.now() - geminiCallStartedAt,
+        error_name: error instanceof Error ? error.name : "unknown"
+      });
+      return { success: false, error: GENERIC_REWRITE_FAILURE };
+    }
+
+    console.info(`${LOG_PREFIX} gemini_call_succeeded`, {
       project_id: projectId,
       recommendation_id: recommendationId,
       duration_ms: Date.now() - geminiCallStartedAt,
-      error_name: error instanceof Error ? error.name : "unknown"
+      rewrite_returned: rewrite !== null
     });
-    return { success: false, error: GENERIC_REWRITE_FAILURE };
-  }
 
-  console.info(`${LOG_PREFIX} gemini_call_succeeded`, {
-    project_id: projectId,
-    recommendation_id: recommendationId,
-    duration_ms: Date.now() - geminiCallStartedAt,
-    rewrite_returned: rewrite !== null
-  });
+    if (!rewrite) {
+      return { success: false, error: GENERIC_REWRITE_FAILURE };
+    }
 
-  if (!rewrite) {
-    return { success: false, error: GENERIC_REWRITE_FAILURE };
-  }
-
-  const validation = validateRewriteAgainstEvidence({
-    title: rewrite.title,
-    description: rewrite.description,
-    allowedCompetitors,
-    allowedDomains: citationDomains,
-    trackedCompetitors,
-    brandDomain: project.domain
-  });
-
-  if (!validation.valid) {
-    console.warn(`${LOG_PREFIX} rejected`, {
-      project_id: projectId,
-      recommendation_id: recommendationId,
-      reason: validation.reason
+    const validation = validateRewriteAgainstEvidence({
+      title: rewrite.title,
+      description: rewrite.description,
+      allowedCompetitors,
+      allowedDomains: citationDomains,
+      trackedCompetitors,
+      brandDomain: project.domain
     });
+
+    if (!validation.valid) {
+      console.warn(`${LOG_PREFIX} rejected`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        reason: validation.reason
+      });
+      return { success: false, error: GENERIC_REWRITE_FAILURE };
+    }
+
+    stage = "persist_solution";
+    const { error: updateError } = await withTimeout(
+      supabase
+        .from("recommendations")
+        .update({
+          source_type: "llm_rewrite",
+          evidence_json: {
+            ...evidence,
+            solution_title: rewrite.title,
+            solution_description: rewrite.description
+          }
+        })
+        .eq("id", recommendationId)
+        .eq("project_id", projectId),
+      stage
+    );
+
+    if (updateError) {
+      console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId, recommendation_id: recommendationId });
+      return { success: false, error: GENERIC_REWRITE_FAILURE };
+    }
+
+    console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });
+
+    return { success: true, solutionTitle: rewrite.title, solutionDescription: rewrite.description };
+  } catch (error) {
+    if (error instanceof OperationTimeoutError) {
+      console.error(`${LOG_PREFIX} stage_timed_out`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        stage
+      });
+    } else {
+      console.error(`${LOG_PREFIX} unexpected_error`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        stage,
+        error_name: error instanceof Error ? error.name : "unknown"
+      });
+    }
     return { success: false, error: GENERIC_REWRITE_FAILURE };
   }
-
-  const { error: updateError } = await supabase
-    .from("recommendations")
-    .update({
-      source_type: "llm_rewrite",
-      evidence_json: {
-        ...evidence,
-        solution_title: rewrite.title,
-        solution_description: rewrite.description
-      }
-    })
-    .eq("id", recommendationId)
-    .eq("project_id", projectId);
-
-  if (updateError) {
-    console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId, recommendation_id: recommendationId });
-    return { success: false, error: GENERIC_REWRITE_FAILURE };
-  }
-
-  console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });
-
-  return { success: true, solutionTitle: rewrite.title, solutionDescription: rewrite.description };
 }

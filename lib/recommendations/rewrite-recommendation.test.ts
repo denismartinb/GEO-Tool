@@ -25,12 +25,14 @@ function makeFakeSupabase({
   project,
   recommendation,
   competitors,
-  forceUpdateError = false
+  forceUpdateError = false,
+  hangOnCompetitors = false
 }: {
   project: Row | null;
   recommendation: Row | null;
   competitors: Row[];
   forceUpdateError?: boolean;
+  hangOnCompetitors?: boolean;
 }) {
   let updatedRow: Row | null = null;
   let updateCalled = false;
@@ -101,6 +103,12 @@ function makeFakeSupabase({
             const builder = {
               eq(col: string, val: unknown) {
                 filters.push([col, val]);
+                if (hangOnCompetitors) {
+                  // Simulates a stalled Postgres connection: a promise that
+                  // never settles, to exercise rewriteRecommendationCore's
+                  // per-stage timeout instead of waiting on real I/O.
+                  return new Promise(() => {});
+                }
                 return Promise.resolve({
                   data: competitors.filter((row) => filters.every(([c, v]) => row[c] === v) && row[col] === val),
                   error: null
@@ -324,6 +332,40 @@ describe("rewriteRecommendationCore", () => {
     expect(wasUpdateCalled()).toBe(false);
 
     warnSpy.mockRestore();
+  });
+
+  it("bounds a stalled Supabase read with a sanitized timeout instead of hanging forever", async () => {
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = makeFakeSupabase({
+      project: PROJECT,
+      recommendation: RULE_RECOMMENDATION,
+      competitors: [],
+      hangOnCompetitors: true
+    });
+
+    vi.useFakeTimers();
+    const resultPromise = rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      user: USER
+    });
+
+    await vi.advanceTimersByTimeAsync(8_000);
+    const result = await resultPromise;
+    vi.useRealTimers();
+
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).not.toContain("project_competitors");
+    expect(rewriteRecommendationMock).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("stage_timed_out"),
+      expect.objectContaining({ stage: "load_competitors" })
+    );
+
+    errorSpy.mockRestore();
   });
 
   it("returns success:false when persisting the validated rewrite fails", async () => {
