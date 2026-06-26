@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 
 type EvidenceJson = {
   why_this_matters?: string;
   assumptions?: string[];
   affected_prompts?: string[];
+  affected_prompt_details?: AffectedPromptDetail[];
   evidence_snippets?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
@@ -56,6 +58,7 @@ function RecCard({ rec }: { rec: Recommendation }) {
   const [open, setOpen] = useState(false);
 
   const ev: EvidenceJson = rec.evidence_json ?? {};
+  const promptDetails = ev.affected_prompt_details ?? [];
   const affectedPrompts = ev.affected_prompts ?? [];
   const snippets = ev.evidence_snippets ?? [];
   const competitors = ev.mentioned_competitors ?? [];
@@ -191,7 +194,27 @@ function RecCard({ rec }: { rec: Recommendation }) {
                   Sin datos de razonamiento disponibles.
                 </p>
               )}
-              {affectedPrompts.length > 0 && (
+              {promptDetails.length > 0 ? (
+                <div>
+                  <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
+                    {promptDetails.length} prompt{promptDetails.length !== 1 ? "s" : ""} afectado{promptDetails.length !== 1 ? "s" : ""}
+                  </div>
+                  <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0, listStyle: "none" }}>
+                    {promptDetails.slice(0, 4).map((p) => (
+                      <li key={p.id} style={{ marginBottom: 6 }}>
+                        <div>{p.prompt}</div>
+                        {(p.competitors.length > 0 || p.domains.length > 0) && (
+                          <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                            {p.competitors.length > 0 && <span>Gana: {p.competitors.join(", ")}</span>}
+                            {p.competitors.length > 0 && p.domains.length > 0 && <span> · </span>}
+                            {p.domains.length > 0 && <span>Cita: {p.domains.join(", ")}</span>}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : affectedPrompts.length > 0 && (
                 <div>
                   <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
                     {affectedPrompts.length} prompt{affectedPrompts.length !== 1 ? "s" : ""} afectado{affectedPrompts.length !== 1 ? "s" : ""}
@@ -280,16 +303,16 @@ export function RecommendationsClient({
   const [filter, setFilter] = useState<FilterMode>("all");
 
   // Detect which type filters have data
-  const hasContent = recommendations.some((r) => r.recommendation_type === "content");
-  const hasTechnical = recommendations.some((r) => r.recommendation_type === "technical");
-  const hasAuthority = recommendations.some((r) => r.recommendation_type === "authority");
+  const hasContent = recommendations.some((r) => categoryForType(r.recommendation_type) === "content");
+  const hasTechnical = recommendations.some((r) => categoryForType(r.recommendation_type) === "technical");
+  const hasAuthority = recommendations.some((r) => categoryForType(r.recommendation_type) === "authority");
 
   const filtered = recommendations.filter((r) => {
     if (filter === "high") return r.priority_rank <= 3;
     if (filter === "quick") return isQuickWin(r);
-    if (filter === "content") return r.recommendation_type === "content";
-    if (filter === "technical") return r.recommendation_type === "technical";
-    if (filter === "authority") return r.recommendation_type === "authority";
+    if (filter === "content") return categoryForType(r.recommendation_type) === "content";
+    if (filter === "technical") return categoryForType(r.recommendation_type) === "technical";
+    if (filter === "authority") return categoryForType(r.recommendation_type) === "authority";
     return true;
   });
 
