@@ -8,6 +8,14 @@ import {
   type Recommendation,
 } from "./recommendations-client";
 
+// Server Actions inherit the maxDuration of the page they're invoked from.
+// Without this, "Mejorar redaccion con IA" (a Gemini call, see
+// rewriteRecommendationAction) is bound by Vercel's default function
+// duration instead of the 20s in-app Gemini timeout in lib/llm/gemini.ts,
+// so a slow call gets killed by the platform before that timeout can ever
+// surface a clean, user-visible error.
+export const maxDuration = 60;
+
 export default async function RecommendationsPage({
   params,
 }: {

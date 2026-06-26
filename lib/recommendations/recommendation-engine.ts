@@ -149,9 +149,14 @@ function toAffectedPromptDetails(prompts: PromptResultInput[]): AffectedPromptDe
  * brand's own gap must never be "supported" by a competitor's quote instead.
  * "competitor" is for rules whose entire point IS the competitor's presence
  * (close_competitor_gap, add_comparison_content), where a competitor's quote
- * is the actual evidence.
+ * is the actual evidence. "none" is for rules about citation/grounding
+ * rarity (improve_citation_readiness): a brand-mention quote proves the
+ * brand was *mentioned* in the answer, not that its *domain* was cited as a
+ * source, so showing it as "evidence" for a citation-rarity claim is a
+ * category mismatch regardless of whose name is in the quote — there is no
+ * valid text snippet that proves an absence of citation.
  */
-function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" | "competitor" = "brand") {
+function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" | "competitor" | "none" = "brand") {
   const competitors = new Set<string>();
   const domains = new Set<string>();
   const snippets: string[] = [];
@@ -159,6 +164,7 @@ function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" 
     const ev = promptEvidence(p);
     ev.competitors.forEach((c) => competitors.add(c));
     ev.domains.forEach((d) => domains.add(d));
+    if (snippetSource === "none") continue;
     const snippet = snippetSource === "competitor" ? ev.brandSnippet ?? ev.competitorSnippet : ev.brandSnippet;
     if (snippet) snippets.push(snippet);
   }
@@ -177,7 +183,7 @@ function buildEvidenceJson(opts: {
   assumptions: string[];
   whyThisMatters: string;
   extra?: Record<string, unknown>;
-  snippetSource?: "brand" | "competitor";
+  snippetSource?: "brand" | "competitor" | "none";
 }): Record<string, unknown> {
   const agg = aggregateEvidence(opts.affected, opts.snippetSource);
   return {
@@ -298,7 +304,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: noCitation,
         assumptions: ["La presencia de citas indica que el contenido es apto como fuente para los motores de IA."],
-        whyThisMatters: "Una presencia de citas baja limita tu autoridad y la frecuencia con la que se te referencia."
+        whyThisMatters: "Una presencia de citas baja limita tu autoridad y la frecuencia con la que se te referencia.",
+        snippetSource: "none"
       })
     });
   }

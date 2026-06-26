@@ -133,6 +133,28 @@ describe("generateRecommendationsForRun", () => {
     expect(citationRec!.evidence_json.evidence_snippets).toEqual([]);
   });
 
+  it("never shows a brand-mention quote as evidence for citation readiness, even when the brand has evidence text", () => {
+    // The brand itself (e.g. "Ikea" for an ikea.es project) can be mentioned
+    // by name in an answer without its domain ever being cited as a grounded
+    // source — brand-mention text proves mention, not citation, so it must
+    // never back a claim that the brand is rarely cited.
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "best furniture brand",
+          citation_found: false,
+          extracted_json: extractedWith({ brandEvidence: ["Ikea es una marca conocida de muebles."] })
+        })
+      ],
+      { citation_score: 20 }
+    );
+
+    const citationRec = recs.find((r) => r.recommendation_type === "improve_citation_readiness");
+    expect(citationRec).toBeDefined();
+    expect(citationRec!.evidence_json.evidence_snippets).toEqual([]);
+  });
+
   it("never substitutes a competitor quote as evidence for a brand-gap rule (visibility)", () => {
     const recs = run(
       [
