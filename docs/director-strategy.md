@@ -35,9 +35,10 @@ Registro / Login
 → Prompts / Competitors / Recommendations / Escaneos (all with real data)
 ```
 
-**Current H1 status (updated 2026-06-13):** H1 is working end to end and the
+**Current H1 status (updated 2026-06-26):** H1 is working end to end and the
 founder has confirmed the core flow is OK. The stuck-pending-scan issue
-flagged below is resolved at the reliability layer (PR #78), not by a
+flagged below is resolved at the reliability layer (PR #78, hardened further
+by the cron fairness/rotation + reconciliation fix in PR #130/#131), not by a
 user-facing cancel action.
 - Wizard UX (2-column, auto-suggestions): working
 - Competitor suggestions via Gemini: working (after model pin fix)
@@ -66,12 +67,18 @@ was no server-side bug. No further action unless the founder reproduces the
 symptom in normal (non-private) browsing with two tabs.
 
 **Next H1 actions (in priority order):**
-1. Stabilization pass now in progress (see "Active work" below): test runner
-   (`pnpm test`) was silently broken (vitest never installed, no `test`
-   script) — being fixed as part of `claude/architecture-review-refactor`.
-2. Cancel-scan action for stuck/running runs (P1 — UX nicety, not a
-   correctness blocker; auto-retry already keeps the system unstuck).
-3. UX baseline pass aligned to GEO Suite design reference.
+1. ~~Stabilization pass~~ — DONE. `pnpm test` resurrected (#80), and the
+   `lib/scan/scan-runner.ts` monolith fully split into focused modules
+   (constants/types/errors/job-logging/extraction/reconciliation/run-creation/
+   executor/launch, PRs #81-87); `scan-runner.ts` is now a thin barrel.
+2. Cancel-scan action for stuck/running runs — still **NOT IMPLEMENTED** (P1 —
+   UX nicety, not a correctness blocker; auto-retry via
+   `reconcileStuckScanRuns` plus the cron fairness fix already keep the
+   system unstuck without it). Verified 2026-06-26: no cancel button/action
+   exists in `runs/page.tsx`, `runs/[runId]/page.tsx`, or `actions.ts` — only
+   "Repetir escaneo" (retry) and the existing toggle for recurring scans.
+3. UX baseline pass aligned to GEO Suite design reference — still open, no
+   full `ux-alignment` audit has been run since 2026-06-13.
 4. **Tracked deadline**: `gemini-2.5-flash` (pinned by ADR 0009) has an
    announced cutover date of 2026-10-16. Revisit the model pin before then —
    otherwise all scans will fail with `scan_failed_no_results` again, as
@@ -103,6 +110,14 @@ Work here only after H2 has real data and a validated scoring model.
 
 These are explicitly **forbidden** to implement without a dedicated phase
 approval (they appear in `CLAUDE.md`'s Forbidden list).
+
+**Note (2026-06-26):** a narrowly-scoped, founder-approved "phase 1" shipped
+on top of this gate: a standalone `/pricing` marketing page (#133) and a
+`/dashboard/billing` display page showing the fixed Pro plan + real usage
+meters (#134) — both explicitly no Stripe integration, no schema/RLS
+changes, and inert "Cambiar de plan"/"Cancelar suscripción"/"Hablar con
+ventas" buttons. Actual billing (Stripe, plan changes, invoices) remains
+forbidden without its own dedicated phase approval.
 
 ---
 
@@ -151,11 +166,14 @@ starts (schema + RLS + background scheduler are all in the Forbidden list).
 
 ---
 
-## Active work (2026-06-13)
+## Active work (2026-06-26)
 
-| Branch | Status | Next action |
-|---|---|---|
-| `claude/architecture-review-refactor-o6n977` | In progress (Fase 0 of stabilization plan) | Resurrect `pnpm test` (vitest infra + tests for scoring/error helpers — done); reconcile `scan-lifecycle.md`/this doc with real code (this PR). Fase 1+ (split `scan-runner.ts`, migration tooling, cancel-scan UI, extraction cost review) each need their own Task Intake. |
+No branch currently in flight. `claude/architecture-review-refactor-o6n977`
+(Fase 0-1 of the stabilization plan: `pnpm test` resurrection + full
+`scan-runner.ts` split) shipped via PRs #80-87 and is complete. Most recent
+merges: #133 (`/pricing`), #135 (Europe/Madrid timezone fix), #134
+(`/dashboard/billing` display page) — the latter two from concurrent Claude
+Code sessions working the same repo.
 
 All work listed under "Active work (2026-06-05)" (UX audit PR #18,
 DATA-MGMT-1, TEST-1, agents restructure) has shipped — see "Completed
@@ -163,7 +181,7 @@ phases" below and git history up to PR #79.
 
 ---
 
-## Detected gaps — pending triage (reported by founder, 2026-06-08)
+## Detected gaps — pending triage (reported by founder, 2026-06-08; re-verified against code 2026-06-26)
 
 Raw founder observations from a live walkthrough of Lumira (with screenshots).
 Not yet triaged into Task Intake Reports — listed here so nothing gets lost.
@@ -180,9 +198,10 @@ Classification below is a first pass against the P0–P3 framework in
   applied to live DB until now), 0006 (FK cascades from `projects` +
   `projects_delete_owner` RLS policy), 0007 (recommendations `superseded`
   status) all applied successfully to the live Supabase DB on 2026-06-10.
-  **Next: DATA-MGMT-2 app phase** — "Eliminar dominio" button on Escaneos
-  domain cards + confirmation UX + `deleteProject` server action (hard delete,
-  owner-scoped). In progress.
+  **DATA-MGMT-2 app phase — DONE.** `DeleteDomainButton`
+  (`runs/delete-domain-button.tsx`) renders on Escaneos domain cards with a
+  confirmation modal, wired to the `deleteProject` server action (hard
+  delete, owner-scoped).
 - **Recommendations count mismatch: sidebar badge says 8, only 2 render** —
   root-caused: prior-run recommendations stayed `status='active'` forever
   (no supersede logic), inflating the badge. Fixed via PR #45 (scan-runner now
@@ -196,29 +215,36 @@ Classification below is a first pass against the P0–P3 framework in
   onboarding flow, screenshot attached by founder) — DONE. Addressed by
   PR #76 ("Onboarding: checklist-style loading overlays").
 - Escaneos: missing the "scanning in progress" animation treatment for a
-  domain (or the very first domain) being scanned — likely the same
-  `ScanInProgress` component from PR #35 needs to be extended here.
+  domain being scanned — DONE. `runs/page.tsx` now renders `AutoExecuteScan`
+  plus an inline "Escaneando" banner with spinner, and domain cards show an
+  "Escaneando" status badge (not the shared `ScanInProgress` component, but
+  an equivalent inline treatment).
 - Overview: no "resumen de recomendaciones" / "Qué hacer primero" summary card
-  surfacing top recommendations (founder attached a design-reference
-  screenshot showing this card with Impacto/Esfuerzo/Confianza).
-- Notifications: the bell icon currently does nothing. Founder wants a
-  contextual popup (not a full page) listing async events — first scan
-  finished, prompt analysis available, etc. Directly overlaps with the
-  notifications system already scoped (but gated) in **ASYNC-SCAN-1** below —
-  should be designed together, not as a separate parallel effort.
+  surfacing top recommendations — DONE. `page.tsx` now renders a "Qué hacer
+  primero" section showing the top 3 recommendations with Impacto/Esfuerzo as
+  dot meters and Confianza as a percentage.
+- Notifications: the bell icon currently does nothing — DONE. PR #102 + #126
+  shipped a functional dropdown (`components/notification-bell.tsx`) showing
+  up to 5 contextual events (scan completed, prompts added), with
+  localStorage-tracked read state and a "Marcar todas como leídas" action.
+  Note: this is a client-side event log, not the full server-side
+  notifications schema scoped under **ASYNC-SCAN-1** below — revisit if the
+  founder wants server-persisted/cross-device notifications as part of that
+  phase.
 
 **P2 — UI/structure mismatches vs. design reference:**
 - Prompts screen doesn't match the reference: founder says there's no clear
   visual separation between prompts and no grouping by Topics in the rendered
-  UI (note: current build *does* render a Topics tab and topic rows — likely
-  a finer-grained layout/grouping mismatch than a missing feature; needs
-  `ux-alignment` to produce an exact gap list against `states.jsx`).
-- Possible page-structure question: founder says "la página de Recomendaciones
-  generadas no tiene que estar" — needs clarification, since the sidebar
-  currently shows a separate (locked) "Soluciones generadas" entry. Could be
-  the founder flagging that this page shouldn't exist as a standalone nav item,
-  or scoping confusion between "Recomendaciones" and "Soluciones generadas".
-  → clarify with founder before treating as a gap to fix.
+  UI. Topics grouping logic is implemented in code (`hasTopics`,
+  `topicGroups`, `UNCATEGORIZED_LABEL` fallback in `prompts/page.tsx`) — still
+  needs `ux-alignment` to confirm the rendered layout actually matches
+  `states.jsx` pixel-for-pixel, since the original complaint was about visual
+  presentation, not missing logic.
+- Possible page-structure question: founder said "la página de Recomendaciones
+  generadas no tiene que estar" — RESOLVED. The sidebar no longer has a
+  separate "Soluciones generadas" entry; current nav is Visión general,
+  Prompts, Competidores, Páginas citadas, Escaneos (Analizar) and
+  Recomendaciones (Actuar) only. No further action needed.
 
 **Already tracked — do not duplicate:**
 - Item "activar lógica de primer escaneo asíncrono y escaneos diarios" is the
@@ -228,10 +254,10 @@ Classification below is a first pass against the P0–P3 framework in
   designed as part of this same phase, per the existing recommendation to
   "design once for both triggers."
 
-**Suggested next step:** before opening any Task Intake Report, `core-flow`
-should reproduce and confirm/deny the three "possible P0" items above — if
-either "add domain" or "delete domain" is genuinely broken, that supersedes
-all P1/P2 UX work per the "Core flow first" principle.
+**Status as of 2026-06-26:** all "possible P0" and P1 items above are
+confirmed resolved in code. The only open item from this 2026-06-08 batch is
+the P2 Prompts/Topics visual-layout question, which needs a `ux-alignment`
+pass against `states.jsx` before it's worth a Task Intake.
 
 ---
 
@@ -252,8 +278,30 @@ and `.github/workflows/claude-qa.yml` are superseded.
 - `AGENTIC-4`: PR handoff comments
 - `AGENTIC-5B`: real Claude QA execution from PR handoff
 - `DATA-MGMT-1`: hard delete of archived projects
+- `DATA-MGMT-2`: domain delete UI (`DeleteDomainButton` + `deleteProject`)
 - `TEST-1`: Vitest unit tests for parsers + delete action + delete button
 - `AGENTS-RESTRUCTURE-1A`: this document (multi-file agent architecture)
+- `STABILIZATION-0/1`: resurrected `pnpm test`; split the `scan-runner.ts`
+  monolith into focused modules (PRs #80-87)
+- `SCAN-ROBUST-1/2`: hard Gemini call timeout + per-prompt retry (#90);
+  parallelized Gemini calls and structured extraction (#111, #112)
+- `GEMINI-GROUNDING-1`: real citations via Gemini Search grounding (#88)
+- GEO Score composite metric (presence/prominence/standing/authority, #100);
+  Citation Share (#116); Competitive Pressure replacing Competitive Risk
+  (#117); Average Brand Position (#97); position trend chart (#105, #123)
+- Functional notification bell (#102, fixed #126)
+- "Qué hacer primero" recommendations summary card on Overview
+- Daily (was weekly) recurring scan cadence (#96); cron fairness/rotation +
+  reconciliation-aware active-run handling so starved/stuck projects recover
+  on their own (#130/#131)
+- "Añadir prompts" feature: auto/keywords/manual generation with partial
+  rescan (#129)
+- `AGENTIC-6`: require Vercel preview URL + Spanish test summary on every
+  Human Gate handoff (#128)
+- `TIMEZONE-1`: render all app dates in Europe/Madrid instead of
+  server-local UTC (#135)
+- `/pricing` marketing page, phase 1 (#133); `/dashboard/billing` display
+  page with real usage meters, phase 1, no Stripe (#134)
 
 ---
 
