@@ -163,7 +163,41 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     chevRight: <path d="m9 6 6 6-6 6" />,
-    spark: <path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
+    spark: <path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />,
+    grid: (
+      <>
+        <rect x="3" y="3" width="8" height="8" rx="1.5" />
+        <rect x="13" y="3" width="8" height="8" rx="1.5" />
+        <rect x="3" y="13" width="8" height="8" rx="1.5" />
+        <rect x="13" y="13" width="8" height="8" rx="1.5" />
+      </>
+    ),
+    fileText: (
+      <>
+        <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+        <path d="M14 3v4h4" />
+        <path d="M8.5 12h7M8.5 15.5h7" />
+      </>
+    ),
+    edit: (
+      <>
+        <path d="M4 20h4L19.5 8.5a2 2 0 0 0 0-2.8L18.3 4.5a2 2 0 0 0-2.8 0L4 16v4Z" />
+        <path d="M14.5 6.5 17.5 9.5" />
+      </>
+    ),
+    mail: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="m4 7 8 6 8-6" />
+      </>
+    ),
+    download: (
+      <>
+        <path d="M12 4v11" />
+        <path d="m7.5 11.5 4.5 4.5 4.5-4.5" />
+        <path d="M5 20h14" />
+      </>
+    )
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
