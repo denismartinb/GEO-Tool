@@ -8,18 +8,23 @@ import { type AuthenticatedContext } from "@/lib/scan/types";
 
 /**
  * Core business logic for "Mejorar redacción con IA" (Slice 2 of the hybrid
- * recommendation architecture): rewrites a single rule-based recommendation's
- * title/description into more specific, natural prose via Gemini, strictly
- * anchored to that recommendation's own evidence_json (Slice 1 —
+ * recommendation architecture): generates a proposed solution (title +
+ * description) for a rule-based recommendation via Gemini, strictly anchored
+ * to that recommendation's own evidence_json (Slice 1 —
  * lib/recommendations/recommendation-engine.ts) and re-validated against it
  * (lib/recommendations/rewrite-validation.ts) before being persisted.
+ *
+ * The rule-based title/description are the problem statement and are never
+ * overwritten — the generated solution is stored alongside them in
+ * evidence_json (solution_title/solution_description) so the UI can show both
+ * ("Solución propuesta" renders under the original card content).
  *
  * On-demand only, never eager during a scan (ADR-0003: scans are sync and
  * maxDuration-bounded). Idempotent: re-running on an already `llm_rewrite` row
  * is a no-op success, not a second Gemini call. Any Gemini failure or
- * validation rejection leaves the original rule-based row untouched and
- * returns a sanitized error — never a raw provider error, never a fake
- * success (.claude/rules/gemini.md, .claude/rules/server-actions.md).
+ * validation rejection leaves the row untouched and returns a sanitized
+ * error — never a raw provider error, never a fake success
+ * (.claude/rules/gemini.md, .claude/rules/server-actions.md).
  */
 
 export const rewriteRecommendationInputSchema = z.object({
@@ -28,7 +33,7 @@ export const rewriteRecommendationInputSchema = z.object({
 });
 
 export type RewriteRecommendationResult =
-  | { success: true; title: string; description: string }
+  | { success: true; solutionTitle: string; solutionDescription: string }
   | { success: false; error: string };
 
 type EvidenceJson = {
@@ -38,6 +43,8 @@ type EvidenceJson = {
   citation_domains?: string[];
   evidence_snippets?: string[];
   dominant_competitor?: string;
+  solution_title?: string;
+  solution_description?: string;
   [key: string]: unknown;
 };
 
@@ -104,11 +111,18 @@ export async function rewriteRecommendationCore({
     return { success: false, error: "No se ha encontrado la recomendación solicitada." };
   }
 
+  const evidence: EvidenceJson = recommendation.evidence_json ?? {};
+
   if (recommendation.source_type === "llm_rewrite") {
-    return { success: true, title: recommendation.title, description: recommendation.description };
+    return {
+      success: true,
+      solutionTitle: evidence.solution_title ?? recommendation.title,
+      solutionDescription: evidence.solution_description ?? recommendation.description
+    };
   }
 
-  const evidence: EvidenceJson = recommendation.evidence_json ?? {};
+  console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
+
   const mentionedCompetitors = evidence.mentioned_competitors ?? [];
   const citationDomains = evidence.citation_domains ?? [];
   const allowedCompetitors = evidence.dominant_competitor
@@ -125,6 +139,7 @@ export async function rewriteRecommendationCore({
   );
 
   let rewrite: { title: string; description: string } | null;
+  const geminiCallStartedAt = Date.now();
   try {
     rewrite = await rewriteRecommendation({
       brand: project.brand,
@@ -140,10 +155,22 @@ export async function rewriteRecommendationCore({
       dominantCompetitor: evidence.dominant_competitor,
       evidenceSnippets: evidence.evidence_snippets ?? []
     });
-  } catch {
-    console.error(`${LOG_PREFIX} gemini_call_failed`, { project_id: projectId, recommendation_id: recommendationId });
+  } catch (error) {
+    console.error(`${LOG_PREFIX} gemini_call_failed`, {
+      project_id: projectId,
+      recommendation_id: recommendationId,
+      duration_ms: Date.now() - geminiCallStartedAt,
+      error_name: error instanceof Error ? error.name : "unknown"
+    });
     return { success: false, error: GENERIC_REWRITE_FAILURE };
   }
+
+  console.info(`${LOG_PREFIX} gemini_call_succeeded`, {
+    project_id: projectId,
+    recommendation_id: recommendationId,
+    duration_ms: Date.now() - geminiCallStartedAt,
+    rewrite_returned: rewrite !== null
+  });
 
   if (!rewrite) {
     return { success: false, error: GENERIC_REWRITE_FAILURE };
@@ -170,21 +197,22 @@ export async function rewriteRecommendationCore({
   const { error: updateError } = await supabase
     .from("recommendations")
     .update({
-      title: rewrite.title,
-      description: rewrite.description,
       source_type: "llm_rewrite",
       evidence_json: {
         ...evidence,
-        rule_title: recommendation.title,
-        rule_description: recommendation.description
+        solution_title: rewrite.title,
+        solution_description: rewrite.description
       }
     })
     .eq("id", recommendationId)
     .eq("project_id", projectId);
 
   if (updateError) {
+    console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId, recommendation_id: recommendationId });
     return { success: false, error: GENERIC_REWRITE_FAILURE };
   }
 
-  return { success: true, title: rewrite.title, description: rewrite.description };
+  console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });
+
+  return { success: true, solutionTitle: rewrite.title, solutionDescription: rewrite.description };
 }

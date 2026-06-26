@@ -208,7 +208,35 @@ describe("rewriteRecommendationCore", () => {
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
   });
 
-  it("is idempotent: returns the existing text with no Gemini call when already llm_rewrite", async () => {
+  it("is idempotent: returns the stored solution with no Gemini call when already llm_rewrite", async () => {
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    const alreadyRewritten = {
+      ...RULE_RECOMMENDATION,
+      source_type: "llm_rewrite",
+      evidence_json: {
+        ...EVIDENCE,
+        solution_title: "Refuerza tu contenido citable frente a Conforama",
+        solution_description: "Publica comparativas que respondan directamente a estas búsquedas."
+      }
+    };
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: alreadyRewritten, competitors: [] });
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      user: USER
+    });
+
+    expect(result).toEqual({
+      success: true,
+      solutionTitle: alreadyRewritten.evidence_json.solution_title,
+      solutionDescription: alreadyRewritten.evidence_json.solution_description
+    });
+    expect(rewriteRecommendationMock).not.toHaveBeenCalled();
+  });
+
+  it("is idempotent and falls back to the row's own title/description for a legacy llm_rewrite row with no stored solution fields", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     const alreadyRewritten = { ...RULE_RECOMMENDATION, source_type: "llm_rewrite" };
     const { client } = makeFakeSupabase({ project: PROJECT, recommendation: alreadyRewritten, competitors: [] });
@@ -222,8 +250,8 @@ describe("rewriteRecommendationCore", () => {
 
     expect(result).toEqual({
       success: true,
-      title: alreadyRewritten.title,
-      description: alreadyRewritten.description
+      solutionTitle: alreadyRewritten.title,
+      solutionDescription: alreadyRewritten.description
     });
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
   });
@@ -346,7 +374,7 @@ describe("rewriteRecommendationCore", () => {
       user: USER
     });
 
-    expect(result).toEqual({ success: true, title: rewrite.title, description: rewrite.description });
+    expect(result).toEqual({ success: true, solutionTitle: rewrite.title, solutionDescription: rewrite.description });
 
     const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
     expect(geminiArgs).toMatchObject({
@@ -375,12 +403,12 @@ describe("rewriteRecommendationCore", () => {
     });
 
     const updated = getUpdatedRow();
-    expect(updated).toMatchObject({
-      title: rewrite.title,
-      description: rewrite.description,
-      source_type: "llm_rewrite"
-    });
-    expect((updated?.evidence_json as Record<string, unknown>).rule_title).toBe(RULE_RECOMMENDATION.title);
-    expect((updated?.evidence_json as Record<string, unknown>).rule_description).toBe(RULE_RECOMMENDATION.description);
+    expect(updated).toMatchObject({ source_type: "llm_rewrite" });
+    // The rule-based title/description are the problem statement and must
+    // never be overwritten — the generated solution lives in evidence_json.
+    expect(updated?.title).toBe(RULE_RECOMMENDATION.title);
+    expect(updated?.description).toBe(RULE_RECOMMENDATION.description);
+    expect((updated?.evidence_json as Record<string, unknown>).solution_title).toBe(rewrite.title);
+    expect((updated?.evidence_json as Record<string, unknown>).solution_description).toBe(rewrite.description);
   });
 });

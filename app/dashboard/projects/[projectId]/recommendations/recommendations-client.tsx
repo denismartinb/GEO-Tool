@@ -16,6 +16,8 @@ type EvidenceJson = {
   mentioned_competitors?: string[];
   citation_domains?: string[];
   action_suggested?: string;
+  solution_title?: string;
+  solution_description?: string;
 };
 
 export type Recommendation = {
@@ -313,6 +315,44 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
               </span>
             )}
           </div>
+
+          {/* Solución propuesta — texto generado por IA, aditivo: no sustituye
+              el título/descripción de la regla, que sigue siendo el
+              planteamiento del problema. */}
+          {rec.source_type === "llm_rewrite" && ev.solution_title && ev.solution_description && (
+            <div
+              style={{
+                marginTop: 4,
+                padding: "12px 16px",
+                background: "var(--surface-sunk)",
+                borderRadius: 10,
+                border: "1.5px solid var(--line)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  color: "var(--ink-4)",
+                  marginBottom: 6,
+                }}
+              >
+                <Icon name="sparkles" size={12} />
+                Solución propuesta
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
+                {ev.solution_title}
+              </div>
+              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+                {ev.solution_description}
+              </p>
+            </div>
+          )}
 
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (
