@@ -2575,6 +2575,7 @@ textarea.add-prompts-text-input {
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
 .lp-nav-links a { padding: 7px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .lp-nav-links a:hover { background: var(--surface-2); color: var(--ink); }
+.lp-nav-links a.active { background: var(--accent-soft); color: var(--accent-ink); }
 .lp-nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
 .lp-hero { position: relative; overflow: hidden; padding: 76px 0 64px; text-align: center; }
@@ -2664,6 +2665,105 @@ textarea.add-prompts-text-input {
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }
+}
+
+/* ============================================================
+   Pricing page (/pricing) — reuses the .lp-* marketing system.
+   Classes use a .price- prefix (rather than the mockup's .pr-
+   prefix or bare .rec) to avoid colliding with the existing
+   Citations toolbar (.pr-toolbar, .pr-search) and Recommendations
+   (.rec-*).
+   ============================================================ */
+.price-hero { padding: 70px 0 30px; }
+
+.price-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; align-items: stretch; }
+.price-card {
+  position: relative; display: flex; flex-direction: column;
+  background: #fff; border: 1px solid var(--line); border-radius: var(--r-xl);
+  padding: 26px 22px 24px; box-shadow: var(--sh-1); transition: box-shadow .16s, border-color .16s, transform .16s;
+}
+.price-card:hover { box-shadow: var(--sh-2); border-color: var(--line-strong); transform: translateY(-3px); }
+.price-card.price-rec {
+  border-color: var(--accent); box-shadow: 0 18px 50px rgba(79,70,229,.18), var(--sh-2);
+  background: linear-gradient(180deg, var(--accent-soft) 0%, #fff 120px);
+}
+.price-card.price-rec:hover { transform: translateY(-5px); }
+
+.price-ribbon {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  display: inline-flex; align-items: center; gap: 5px; height: 25px; padding: 0 13px;
+  border-radius: 999px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
+  box-shadow: 0 4px 12px var(--accent-ring); white-space: nowrap;
+}
+.price-card-head { min-height: 50px; }
+.price-name { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.price-tag { font-size: 13px; color: var(--ink-3); font-weight: 550; margin-top: 3px; }
+.price-price { display: flex; align-items: baseline; gap: 4px; margin: 16px 0 0; }
+.price-amount { font-size: 40px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.price-per { font-size: 15px; font-weight: 650; color: var(--ink-4); }
+.price-who { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; font-weight: 550; min-height: 34px; }
+.price-cta { width: 100%; margin-top: 14px; }
+.price-card.price-rec .price-cta.btn-ghost { border-color: var(--accent-ring); }
+
+.price-feats { list-style: none; margin: 20px 0 0; padding: 18px 0 0; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 11px; }
+.price-feats li { display: flex; gap: 10px; font-size: 13px; line-height: 1.45; color: var(--ink-2); font-weight: 500; }
+.price-chk { width: 18px; height: 18px; border-radius: 999px; background: var(--pos-soft); color: var(--pos); display: grid; place-items: center; flex: 0 0 auto; margin-top: 1px; }
+
+.price-meter-head { text-align: center; max-width: 620px; margin: 0 auto 38px; }
+.price-meter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.price-meter-card { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 24px; box-shadow: var(--sh-1); }
+.price-meter-ic { width: 42px; height: 42px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.price-meter-t { font-size: 17px; font-weight: 750; margin-top: 15px; letter-spacing: -.01em; }
+.price-meter-d { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin-top: 7px; }
+.price-meter-scale { display: flex; align-items: center; gap: 6px; margin-top: 18px; flex-wrap: wrap; }
+.price-meter-scale span { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; padding: 4px 9px; border-radius: 999px; background: var(--surface-sunk); color: var(--ink-3); }
+.price-meter-scale span.top { background: var(--accent); color: #fff; }
+
+.price-matrix-wrap { border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--sh-1); background: #fff; }
+.price-matrix { width: 100%; border-collapse: separate; border-spacing: 0; }
+.price-matrix thead th { padding: 18px 16px 16px; vertical-align: bottom; border-bottom: 1px solid var(--line); text-align: center; background: var(--surface-2); }
+.price-matrix thead th.price-mx-rowhead { text-align: left; width: 34%; }
+.price-matrix thead th.price-rec { background: var(--accent-soft); }
+.price-mx-planname { font-size: 15px; font-weight: 800; letter-spacing: -.01em; color: var(--ink); }
+.price-mx-planprice { font-size: 13px; font-weight: 650; color: var(--ink-3); margin-top: 2px; }
+.price-mx-planprice span { color: var(--ink-4); font-weight: 550; }
+
+.price-mx-grouprow td { padding: 13px 16px 9px; font-size: 11.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--accent); background: #fff; border-bottom: 1px solid var(--line-soft); }
+.price-matrix tbody td { padding: 12px 16px; border-bottom: 1px solid var(--line-soft); font-size: 13.5px; }
+.price-matrix tbody tr:last-child td { border-bottom: none; }
+.price-matrix tbody tr.hoverable:hover td { background: var(--surface-2); }
+.price-mx-rowhead { text-align: left; color: var(--ink-2); font-weight: 600; }
+.price-mx-cell { text-align: center; }
+.price-mx-cell.price-rec { background: rgba(79,70,229,.045); }
+.price-matrix tbody tr.hoverable:hover td.price-mx-cell.price-rec { background: rgba(79,70,229,.08); }
+.price-mx-yes { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--pos-soft); color: var(--pos); }
+.price-mx-no { color: var(--ink-4); font-weight: 600; }
+.price-mx-txt { font-size: 13px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+.price-anchor { display: flex; gap: 20px; align-items: flex-start; max-width: 860px; margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px 30px; box-shadow: var(--sh-1); }
+.price-anchor-ic { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: 0 0 auto; }
+.price-anchor-t { font-size: 19px; font-weight: 780; letter-spacing: -.015em; }
+.price-anchor-d { font-size: 14.5px; line-height: 1.62; color: var(--ink-2); margin: 8px 0 0; }
+
+.price-faq-inner { max-width: 800px; }
+.price-faq { display: flex; flex-direction: column; gap: 10px; }
+.price-faq-item { border: 1px solid var(--line); border-radius: var(--r-md); background: #fff; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.price-faq-item.open { border-color: var(--line-strong); box-shadow: var(--sh-1); }
+.price-faq-q { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 17px 20px; background: none; border: none; font-family: inherit; font-size: 15.5px; font-weight: 700; color: var(--ink); text-align: left; letter-spacing: -.01em; cursor: pointer; }
+.price-faq-chev { color: var(--ink-4); flex: 0 0 auto; }
+.price-faq-a { max-height: 0; overflow: hidden; transition: max-height .26s ease; }
+.price-faq-item.open .price-faq-a { max-height: 240px; }
+.price-faq-a p { margin: 0; padding: 0 20px 18px; font-size: 14px; line-height: 1.62; color: var(--ink-2); }
+
+@media (max-width: 1000px) {
+  .price-cards { grid-template-columns: repeat(2, 1fr); }
+  .price-meter-grid { grid-template-columns: 1fr; }
+  .price-matrix-wrap { overflow-x: auto; }
+  .price-matrix { min-width: 680px; }
+}
+@media (max-width: 620px) {
+  .price-cards { grid-template-columns: 1fr; }
+  .price-anchor { flex-direction: column; }
 }
 
 /* ============================================================
