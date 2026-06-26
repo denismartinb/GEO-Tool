@@ -148,7 +148,22 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     menu: <path d="M3 6h18M3 12h18M3 18h18" />,
-    x: <path d="M18 6 6 18M6 6l12 12" />
+    x: <path d="M18 6 6 18M6 6l12 12" />,
+    card: (
+      <>
+        <rect x="2.5" y="5" width="19" height="14" rx="2.5" />
+        <path d="M2.5 9.5h19M6 15h3" />
+      </>
+    ),
+    target: (
+      <>
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="4.5" />
+        <circle cx="12" cy="12" r=".6" fill="currentColor" stroke="none" />
+      </>
+    ),
+    chevRight: <path d="m9 6 6 6-6 6" />,
+    spark: <path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />
   };
 
   return <svg {...props}>{icons[name] ?? icons.overview}</svg>;
