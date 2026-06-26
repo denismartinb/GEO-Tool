@@ -12,26 +12,27 @@ const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id su
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
 /**
- * Hard per-call timeout for `generateGeminiVisibilityAnswer`, the call made
- * once per prompt by the scan executor (`lib/scan/executor.ts`), which since
- * SCAN-ROBUST-2 dispatches all `MAX_REAL_SCAN_PROMPTS=10` calls concurrently
- * inside the ~60s Vercel `maxDuration`
- * (docs/adr/0003-sync-scan-execution-and-maxduration.md). A single slow call
- * must not be allowed to consume the entire run budget — that would starve
- * the remaining prompts and risk tripping `SCAN_RUNNING_TIMEOUT_SECONDS`,
- * failing the whole run instead of just one prompt.
+ * Hard per-call timeout shared by every direct Gemini `fetch` in this file:
+ * `generateGeminiVisibilityAnswer` (one call per prompt in the scan executor,
+ * `lib/scan/executor.ts`, dispatched concurrently inside the ~60s Vercel
+ * `maxDuration` per docs/adr/0003-sync-scan-execution-and-maxduration.md) and
+ * `generateGeminiJson` (the on-demand helper behind add-prompts generation,
+ * competitor suggestions and the recommendation rewrite action). None of the
+ * on-demand callers' routes set an explicit `maxDuration`, so without this
+ * AbortController-based bound a stalled Gemini response hangs the calling
+ * server action forever instead of surfacing as an error — exactly the "Mejorar
+ * redaccion con IA" button getting stuck with no feedback.
  *
  * 20s ceiling: generous enough that normal Gemini latency (typically a few
  * seconds) never hits it, while bounding how long a single stuck call can
- * block progress. The 60s budget is a *typical-case* target, not a guarantee:
- * a pathological run where every prompt times out (and retries once, see
- * PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can still exceed 60s. That worst case is
- * bounded instead by `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's
- * auto-retry (docs/scan-lifecycle.md), not by this per-call timeout alone.
- * A timeout here surfaces as `GeminiTimeoutError`, which the executor treats
- * as a normal recoverable per-prompt error: the prompt's job is recorded as
- * failed with a sanitized `last_error` and the run continues with the next
- * prompt — it must never crash the run.
+ * block progress. For the scan executor specifically, the 60s budget is a
+ * *typical-case* target, not a guarantee: a pathological run where every
+ * prompt times out (and retries once, see PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can
+ * still exceed 60s. That worst case is bounded instead by
+ * `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's auto-retry
+ * (docs/scan-lifecycle.md), not by this per-call timeout alone. A timeout here
+ * surfaces as `GeminiTimeoutError`, which every caller treats as a normal
+ * recoverable failure (never a crash, never a fake success).
  */
 const GEMINI_CALL_TIMEOUT_MS = 20_000;
 
@@ -311,15 +312,19 @@ async function generateGeminiJson(promptBlock: string): Promise<unknown> {
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
-    })
-  });
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptBlock }] }],
+        // temperature: 0 — see ADR 0009 addendum (2026-06-19).
+        generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+      })
+    },
+    GEMINI_CALL_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     throw new Error(getGeminiApiError(response.status));
