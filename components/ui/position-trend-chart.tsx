@@ -89,7 +89,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
             fontSize="10"
             fill="var(--ink-4)"
           >
-            {new Date(data[i].date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+            {new Date(data[i].date).toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" })}
           </text>
         ))}
 
@@ -176,6 +176,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
               day: "numeric",
               month: "short",
               year: "numeric",
+              timeZone: "Europe/Madrid",
             })}
           </div>
           {series.map((s) => {

@@ -277,7 +277,8 @@ export default async function CitationsPage({
     ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
         day: "numeric",
         month: "short",
-        year: "numeric"
+        year: "numeric",
+        timeZone: "Europe/Madrid"
       })
     : null;
 

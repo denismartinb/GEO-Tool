@@ -38,7 +38,8 @@ function formatDate(value: string | null | undefined): string {
     month: "short",
     year: "numeric",
     hour: "2-digit",
-    minute: "2-digit"
+    minute: "2-digit",
+    timeZone: "Europe/Madrid"
   });
 }
 
@@ -47,7 +48,8 @@ function formatDateShort(value: string | null | undefined): string {
   return new Date(value).toLocaleDateString("es-ES", {
     day: "numeric",
     month: "short",
-    year: "numeric"
+    year: "numeric",
+    timeZone: "Europe/Madrid"
   });
 }
 
@@ -332,7 +334,7 @@ export default async function RunsPage({
           {lastCompletedRun && (
             <span className="badge badge-pos" style={{ fontSize: 11 }}>
               Escaneado {new Date(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" })}
+                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
             </span>
           )}
         </div>

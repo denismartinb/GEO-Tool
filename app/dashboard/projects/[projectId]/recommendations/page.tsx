@@ -78,6 +78,7 @@ export default async function RecommendationsPage({
         day: "numeric",
         month: "short",
         year: "numeric",
+        timeZone: "Europe/Madrid",
       })
     : null;
 
