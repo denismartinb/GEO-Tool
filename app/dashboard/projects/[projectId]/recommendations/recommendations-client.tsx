@@ -67,12 +67,16 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
     e.stopPropagation();
     setRewriteError(null);
     startRewrite(async () => {
-      const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
-      if (!result.success) {
-        setRewriteError(result.error);
-        return;
+      try {
+        const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
+        if (!result.success) {
+          setRewriteError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setRewriteError("No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.");
       }
-      router.refresh();
     });
   }
 

@@ -95,8 +95,18 @@ function confWeight(conf: "low" | "medium" | "high") {
  * mentioned in THIS response and which domains were actually grounded-cited
  * in THIS response (inline-only citations are excluded — see
  * docs/adr/0004-gemini-search-grounding.md anti-fake invariant).
+ *
+ * brandSnippet and competitorSnippet are kept separate (not pre-merged with a
+ * fallback) so callers can choose which one actually supports their rule's
+ * claim — a rule about the brand's own absence must not silently substitute a
+ * competitor's quote just because the brand has no evidence text.
  */
-function promptEvidence(result: PromptResultInput): { competitors: string[]; domains: string[]; snippet: string | null } {
+function promptEvidence(result: PromptResultInput): {
+  competitors: string[];
+  domains: string[];
+  brandSnippet: string | null;
+  competitorSnippet: string | null;
+} {
   const extracted = getExtracted(result);
   const competitors = (extracted?.competitors ?? [])
     .filter((c) => c.mentioned && c.name)
@@ -108,24 +118,40 @@ function promptEvidence(result: PromptResultInput): { competitors: string[]; dom
         .map((c) => c.domain as string)
     )
   );
-  const snippet =
-    extracted?.brand?.evidence?.[0] ??
-    extracted?.competitors?.find((c) => c.evidence?.length)?.evidence?.[0] ??
-    null;
-  return { competitors, domains, snippet };
+  return {
+    competitors,
+    domains,
+    brandSnippet: extracted?.brand?.evidence?.[0] ?? null,
+    competitorSnippet: extracted?.competitors?.find((c) => c.evidence?.length)?.evidence?.[0] ?? null
+  };
 }
 
 function toAffectedPromptDetails(prompts: PromptResultInput[]): AffectedPromptDetail[] {
   return prompts.slice(0, 8).map((p) => {
     const ev = promptEvidence(p);
-    return { id: p.id, prompt: p.prompt_text_snapshot, competitors: ev.competitors, domains: ev.domains, snippet: ev.snippet };
+    return {
+      id: p.id,
+      prompt: p.prompt_text_snapshot,
+      competitors: ev.competitors,
+      domains: ev.domains,
+      snippet: ev.brandSnippet ?? ev.competitorSnippet
+    };
   });
 }
 
-/** Aggregates evidence across only the prompts affected by a given rule — each
+/**
+ * Aggregates evidence across only the prompts affected by a given rule — each
  * recommendation gets its own evidence, instead of every rule sharing the
- * same run-wide competitor/domain lists. */
-function aggregateEvidence(prompts: PromptResultInput[]) {
+ * same run-wide competitor/domain lists.
+ *
+ * `snippetSource` controls which quotes actually back the claim: "brand"
+ * (the default) only ever quotes the brand's own evidence — a rule about the
+ * brand's own gap must never be "supported" by a competitor's quote instead.
+ * "competitor" is for rules whose entire point IS the competitor's presence
+ * (close_competitor_gap, add_comparison_content), where a competitor's quote
+ * is the actual evidence.
+ */
+function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" | "competitor" = "brand") {
   const competitors = new Set<string>();
   const domains = new Set<string>();
   const snippets: string[] = [];
@@ -133,7 +159,8 @@ function aggregateEvidence(prompts: PromptResultInput[]) {
     const ev = promptEvidence(p);
     ev.competitors.forEach((c) => competitors.add(c));
     ev.domains.forEach((d) => domains.add(d));
-    if (ev.snippet) snippets.push(ev.snippet);
+    const snippet = snippetSource === "competitor" ? ev.brandSnippet ?? ev.competitorSnippet : ev.brandSnippet;
+    if (snippet) snippets.push(snippet);
   }
   return {
     mentionedCompetitors: Array.from(competitors).slice(0, 8),
@@ -150,8 +177,9 @@ function buildEvidenceJson(opts: {
   assumptions: string[];
   whyThisMatters: string;
   extra?: Record<string, unknown>;
+  snippetSource?: "brand" | "competitor";
 }): Record<string, unknown> {
-  const agg = aggregateEvidence(opts.affected);
+  const agg = aggregateEvidence(opts.affected, opts.snippetSource);
   return {
     rule_id: opts.ruleId,
     scoring_version: opts.scoreDetails.scoring_version ?? "unknown",
@@ -299,7 +327,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           affected: entry.prompts,
           assumptions: [`${entry.competitor} aparece de forma recurrente en prompts donde tu marca no se menciona.`],
           whyThisMatters: `Las respuestas de IA dominadas por ${entry.competitor} pueden desviar la decisión de compra fuera de tu marca.`,
-          extra: { dominant_competitor: entry.competitor }
+          extra: { dominant_competitor: entry.competitor },
+          snippetSource: "competitor"
         })
       });
     }
@@ -324,7 +353,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: competitorNoBrand,
         assumptions: ["Un mayor número de menciones de competidores con la marca ausente indica un riesgo de visibilidad competitiva."],
-        whyThisMatters: "Las respuestas de IA dominadas por la competencia pueden desviar la decisión de compra fuera de tu marca."
+        whyThisMatters: "Las respuestas de IA dominadas por la competencia pueden desviar la decisión de compra fuera de tu marca.",
+        snippetSource: "competitor"
       })
     });
   }
@@ -348,7 +378,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         runScore,
         affected: comparativePrompts,
         assumptions: ["Los prompts con intención comparativa suelen premiar el contenido explícito de comparación entre competidores y tu marca."],
-        whyThisMatters: "Las páginas centradas en comparativas ayudan a recuperar visibilidad en los prompts de la fase de decisión."
+        whyThisMatters: "Las páginas centradas en comparativas ayudan a recuperar visibilidad en los prompts de la fase de decisión.",
+        snippetSource: "competitor"
       })
     });
   }

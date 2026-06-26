@@ -110,6 +110,76 @@ describe("generateRecommendationsForRun", () => {
     expect(details[0].domains).toEqual(["grounded.com"]);
   });
 
+  it("never substitutes a competitor quote as evidence for a brand-gap rule (citation readiness)", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "best furniture brand",
+          citation_found: false,
+          extracted_json: extractedWith({
+            competitors: [{ name: "Ikea", mentioned: true, evidence: ["IKEA es la más popular."] }]
+          })
+        })
+      ],
+      { citation_score: 20 }
+    );
+
+    const citationRec = recs.find((r) => r.recommendation_type === "improve_citation_readiness");
+    expect(citationRec).toBeDefined();
+    // The brand has no evidence text in p1 — the rule must show no snippet
+    // rather than silently quoting a competitor as if it supported the claim
+    // that the brand itself is rarely cited.
+    expect(citationRec!.evidence_json.evidence_snippets).toEqual([]);
+  });
+
+  it("never substitutes a competitor quote as evidence for a brand-gap rule (visibility)", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "best furniture brand",
+          brand_mentioned: false,
+          extracted_json: extractedWith({
+            competitors: [{ name: "Ikea", mentioned: true, evidence: ["IKEA es la más popular."] }]
+          })
+        })
+      ],
+      { visibility_score: 40 }
+    );
+
+    const visibilityRec = recs.find((r) => r.recommendation_type === "increase_brand_visibility");
+    expect(visibilityRec).toBeDefined();
+    expect(visibilityRec!.evidence_json.evidence_snippets).toEqual([]);
+  });
+
+  it("does quote the dominant competitor as evidence for close_competitor_gap, where that quote IS the point", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "best running shoes",
+          brand_mentioned: false,
+          mentioned_competitors_count: 1,
+          extracted_json: extractedWith({ competitors: [{ name: "Adidas", mentioned: true, evidence: ["Adidas es líder del mercado."] }] })
+        }),
+        prompt({
+          id: "p2",
+          prompt_text_snapshot: "top sportswear brands",
+          brand_mentioned: false,
+          mentioned_competitors_count: 1,
+          extracted_json: extractedWith({ competitors: [{ name: "Adidas", mentioned: true, evidence: ["Adidas tiene la mejor reputación."] }] })
+        })
+      ],
+      {},
+      ["Adidas", "Puma"]
+    );
+
+    const rec = recs.find((r) => r.recommendation_type === "close_competitor_gap");
+    expect(rec).toBeDefined();
+    expect(rec!.evidence_json.evidence_snippets).toEqual(["Adidas es líder del mercado.", "Adidas tiene la mejor reputación."]);
+  });
+
   it("names a specific dominant competitor when it wins 2+ prompts where the brand is absent", () => {
     const recs = run(
       [
