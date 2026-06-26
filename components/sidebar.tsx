@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { useMobileShell } from "@/components/mobile-shell";
+
+const LAST_PROJECT_KEY = "lumira:lastProjectId";
 
 type WorkspaceProject = {
   id: string;
@@ -52,10 +54,22 @@ export function Sidebar({
   signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
-  const activeProjectId = getProjectId(pathname);
-  const project = projects.find((item) => item.id === activeProjectId) ?? null;
+  const pathProjectId = getProjectId(pathname);
+  const [lastProjectId, setLastProjectId] = useState<string | null>(null);
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
   const asideRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (pathProjectId) {
+      window.localStorage.setItem(LAST_PROJECT_KEY, pathProjectId);
+      setLastProjectId(pathProjectId);
+    } else {
+      setLastProjectId(window.localStorage.getItem(LAST_PROJECT_KEY));
+    }
+  }, [pathProjectId]);
+
+  const activeProjectId = pathProjectId ?? lastProjectId;
+  const project = projects.find((item) => item.id === activeProjectId) ?? null;
 
   useEffect(() => {
     if (mobileNavOpen) {
