@@ -68,7 +68,47 @@ export default async function RecommendationsPage({
       ])
     : [{ data: null }];
 
-  const recs: Recommendation[] = (recommendations ?? []) as Recommendation[];
+  const baseRecs = (recommendations ?? []) as Recommendation[];
+
+  // Attach the latest sanitized AI-generated solution (if any) for each
+  // recommendation. These live in `generated_solutions` (never on the
+  // recommendation row); the owner SELECT policy on that table makes this a
+  // plain user-context read. Only completed + sanitized rows are renderable.
+  const solutionByRecId = new Map<string, { title: string; description: string }>();
+  if (baseRecs.length > 0) {
+    const { data: solutionRows } = await supabase
+      .from("generated_solutions")
+      .select("recommendation_id, sanitized_content, created_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .eq("is_sanitized", true)
+      .in(
+        "recommendation_id",
+        baseRecs.map((r) => r.id),
+      )
+      .order("created_at", { ascending: false });
+
+    for (const row of (solutionRows ?? []) as Array<{
+      recommendation_id: string;
+      sanitized_content: string | null;
+    }>) {
+      // Newest-first order means the first row seen per recommendation wins.
+      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
+      try {
+        const parsed = JSON.parse(row.sanitized_content) as { title?: unknown; description?: unknown };
+        if (typeof parsed.title === "string" && typeof parsed.description === "string") {
+          solutionByRecId.set(row.recommendation_id, { title: parsed.title, description: parsed.description });
+        }
+      } catch {
+        // Skip unparseable stored content rather than crash the page.
+      }
+    }
+  }
+
+  const recs: Recommendation[] = baseRecs.map((r) => ({
+    ...r,
+    solution: solutionByRecId.get(r.id) ?? null,
+  }));
 
   // Computed stats
   const highPriority = recs.filter((r) => r.priority_rank <= 3).length;

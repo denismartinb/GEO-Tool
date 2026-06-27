@@ -3,27 +3,34 @@ import "server-only";
 import { z } from "zod";
 import { rewriteRecommendation } from "@/lib/llm/gemini";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
+import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
+import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 
 /**
- * Core business logic for "Mejorar redacción con IA" (Slice 2 of the hybrid
- * recommendation architecture): generates a proposed solution (title +
- * description) for a rule-based recommendation via Gemini, strictly anchored
- * to that recommendation's own evidence_json (Slice 1 —
- * lib/recommendations/recommendation-engine.ts) and re-validated against it
- * (lib/recommendations/rewrite-validation.ts) before being persisted.
+ * Core business logic for "Mejorar redacción con IA" (the on-demand AI rewrite
+ * of one rule-based recommendation, anchored to its own evidence_json).
  *
- * The rule-based title/description are the problem statement and are never
- * overwritten — the generated solution is stored alongside them in
- * evidence_json (solution_title/solution_description) so the UI can show both
- * ("Solución propuesta" renders under the original card content).
+ * Persistence model (Fase A — the corrected architecture): the rule-based
+ * recommendation row is NEVER mutated. RLS on `recommendations` is select-only
+ * for the browser/user context (0002_v0_rls.sql), so a user-context UPDATE
+ * matches zero rows and silently reports success — which is exactly why the
+ * earlier evidence_json-mutation approach never actually persisted anything.
  *
- * On-demand only, never eager during a scan (ADR-0003: scans are sync and
- * maxDuration-bounded). Idempotent: re-running on an already `llm_rewrite` row
- * is a no-op success, not a second Gemini call. Any Gemini failure or
- * validation rejection leaves the row untouched and returns a sanitized
- * error — never a raw provider error, never a fake success
+ * Instead the generated solution is written to `generated_solutions`
+ * (0005_generated_solutions.sql, founder-approved): untrusted LLM output goes
+ * to `raw_content`, is sanitized server-side here, and only the sanitized copy
+ * is ever marked renderable (`is_sanitized`/`status='completed'`). The write
+ * goes through the service-role client — the trusted-server path the RLS design
+ * explicitly prescribes for this table — after the user-context client has
+ * already proven ownership of the project and recommendation.
+ *
+ * Idempotent: a recommendation that already has a completed, sanitized solution
+ * returns it without a second Gemini call. Rate-limited per project
+ * (checkGenerationRateLimit) before any Gemini spend. Any Gemini failure,
+ * validation rejection, or empty-after-sanitization result persists nothing and
+ * returns a sanitized error — never a raw provider error, never a fake success
  * (.claude/rules/gemini.md, .claude/rules/server-actions.md).
  */
 
@@ -43,8 +50,6 @@ type EvidenceJson = {
   citation_domains?: string[];
   evidence_snippets?: string[];
   dominant_competitor?: string;
-  solution_title?: string;
-  solution_description?: string;
   [key: string]: unknown;
 };
 
@@ -65,18 +70,29 @@ type ProjectRow = {
   is_archived: boolean;
 };
 
+type SolutionContent = { title: string; description: string };
+
 const GENERIC_REWRITE_FAILURE =
   "No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.";
 
+const RATE_LIMIT_FAILURE =
+  "Has alcanzado el límite de mejoras con IA para este proyecto por hoy. Vuelve a intentarlo más tarde.";
+
 const LOG_PREFIX = "[geo:recommendation-rewrite]";
 
-// The only call ever bounded against a hang was the Gemini fetch
-// (GEMINI_CALL_TIMEOUT_MS, lib/llm/gemini.ts). The Supabase reads/writes below
-// have no library-level timeout, so a stalled connection hangs the whole
-// action forever with nothing past a "start" log line — indistinguishable
-// from the button silently doing nothing. Every I/O step here is now bounded
-// so a stall surfaces a sanitized error within seconds, tagged with exactly
-// which stage stalled, instead of running out the Vercel maxDuration clock.
+// generated_solutions.generation_type for a recommendation-copy rewrite
+// (gensol_generation_type_chk allows brand_copy_suggestion).
+const GENERATION_TYPE = "brand_copy_suggestion";
+
+// Mirrors the length bounds the Gemini prompt itself asks for, enforced again
+// server-side so sanitized content can never exceed what the UI expects.
+const TITLE_MAX = 140;
+const DESCRIPTION_MAX = 400;
+
+// Only the Gemini fetch is bounded inside lib/llm/gemini.ts; the Supabase
+// reads/writes below have no library-level timeout, so each is bounded here and
+// tagged with its stage. A stall surfaces a sanitized error within seconds
+// instead of hanging the whole action with nothing past a "start" log.
 const SUPABASE_CALL_TIMEOUT_MS = 8_000;
 
 class OperationTimeoutError extends Error {
@@ -102,15 +118,61 @@ function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
   });
 }
 
+/**
+ * Server-side sanitization gate for untrusted LLM output (0005 invariant: this
+ * content can be copied/exported to the user's own site, so it is only ever
+ * marked renderable after trusted code cleans it). Strips HTML tags and control
+ * characters, collapses whitespace, and caps length. Returns null if either
+ * field is empty after cleaning, so an empty rewrite is never persisted as a
+ * "completed" solution.
+ */
+function sanitizeField(input: string, maxLen: number): string {
+  let stripped = "";
+  for (const ch of input) {
+    const code = ch.codePointAt(0) ?? 0;
+    // Replace C0 control chars and DEL with a space; keep everything else.
+    stripped += code < 0x20 || code === 0x7f ? " " : ch;
+  }
+  return stripped
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLen);
+}
+
+function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
+  const title = sanitizeField(raw.title, TITLE_MAX);
+  const description = sanitizeField(raw.description, DESCRIPTION_MAX);
+  if (!title || !description) {
+    return null;
+  }
+  return { title, description };
+}
+
+function parseSolutionContent(raw: string | null): SolutionContent | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<SolutionContent>;
+    if (typeof parsed?.title === "string" && typeof parsed?.description === "string") {
+      return { title: parsed.title, description: parsed.description };
+    }
+  } catch {
+    // Stored content unexpectedly unparseable — treat as no usable solution.
+  }
+  return null;
+}
+
 export async function rewriteRecommendationCore({
   projectId,
   recommendationId,
   supabase,
+  service,
   user
 }: {
   projectId: string;
   recommendationId: string;
   supabase: AuthenticatedContext["supabase"];
+  service: ReturnType<typeof createServiceClient>;
   user: AuthenticatedContext["user"];
 }): Promise<RewriteRecommendationResult> {
   let stage = "load_project";
@@ -152,18 +214,49 @@ export async function rewriteRecommendationCore({
       return { success: false, error: "No se ha encontrado la recomendación solicitada." };
     }
 
-    const evidence: EvidenceJson = recommendation.evidence_json ?? {};
+    // Idempotency: a completed, sanitized solution already exists -> return it,
+    // no second Gemini call. Read via the service client (the same trusted path
+    // that writes it).
+    stage = "load_existing_solution";
+    const { data: existingRaw } = await withTimeout(
+      service
+        .from("generated_solutions")
+        .select("sanitized_content")
+        .eq("project_id", projectId)
+        .eq("recommendation_id", recommendationId)
+        .eq("status", "completed")
+        .eq("is_sanitized", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      stage
+    );
 
-    if (recommendation.source_type === "llm_rewrite") {
-      return {
-        success: true,
-        solutionTitle: evidence.solution_title ?? recommendation.title,
-        solutionDescription: evidence.solution_description ?? recommendation.description
-      };
+    const existing = parseSolutionContent(
+      (existingRaw as unknown as { sanitized_content: string | null } | null)?.sanitized_content ?? null
+    );
+    if (existing) {
+      return { success: true, solutionTitle: existing.title, solutionDescription: existing.description };
     }
 
     console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
 
+    // Bound Gemini cost/abuse per project before spending an LLM call.
+    stage = "rate_limit";
+    const rateLimit = await checkGenerationRateLimit(service, projectId);
+    if (!rateLimit.allowed) {
+      console.warn(`${LOG_PREFIX} rate_limited`, {
+        project_id: projectId,
+        recommendation_id: recommendationId,
+        reason: rateLimit.reason
+      });
+      return {
+        success: false,
+        error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_REWRITE_FAILURE
+      };
+    }
+
+    const evidence: EvidenceJson = recommendation.evidence_json ?? {};
     const mentionedCompetitors = evidence.mentioned_competitors ?? [];
     const citationDomains = evidence.citation_domains ?? [];
     const allowedCompetitors = evidence.dominant_competitor
@@ -187,7 +280,7 @@ export async function rewriteRecommendationCore({
     });
 
     stage = "gemini_call";
-    let rewrite: { title: string; description: string } | null;
+    let rewrite: SolutionContent | null;
     const geminiCallStartedAt = Date.now();
     try {
       rewrite = await rewriteRecommendation({
@@ -243,31 +336,53 @@ export async function rewriteRecommendationCore({
       return { success: false, error: GENERIC_REWRITE_FAILURE };
     }
 
+    const sanitized = sanitizeSolution(rewrite);
+    if (!sanitized) {
+      console.warn(`${LOG_PREFIX} empty_after_sanitize`, {
+        project_id: projectId,
+        recommendation_id: recommendationId
+      });
+      return { success: false, error: GENERIC_REWRITE_FAILURE };
+    }
+
+    const sanitizedAt = new Date().toISOString();
     stage = "persist_solution";
-    const { error: updateError } = await withTimeout(
-      supabase
-        .from("recommendations")
-        .update({
-          source_type: "llm_rewrite",
+    const { data: insertedRaw, error: insertError } = await withTimeout(
+      service
+        .from("generated_solutions")
+        .insert({
+          recommendation_id: recommendationId,
+          project_id: projectId,
+          rule_id: recommendation.recommendation_type,
+          generation_type: GENERATION_TYPE,
+          status: "completed",
+          raw_content: JSON.stringify(rewrite),
+          sanitized_content: JSON.stringify(sanitized),
+          is_sanitized: true,
+          sanitized_at: sanitizedAt,
+          provider: "gemini",
           evidence_json: {
-            ...evidence,
-            solution_title: rewrite.title,
-            solution_description: rewrite.description
+            rule_title: recommendation.title,
+            rule_description: recommendation.description,
+            mentioned_competitors: mentionedCompetitors,
+            citation_domains: citationDomains,
+            dominant_competitor: evidence.dominant_competitor ?? null,
+            affected_prompts: evidence.affected_prompts ?? []
           }
         })
-        .eq("id", recommendationId)
-        .eq("project_id", projectId),
+        .select("id")
+        .maybeSingle(),
       stage
     );
 
-    if (updateError) {
+    if (insertError || !insertedRaw) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId, recommendation_id: recommendationId });
       return { success: false, error: GENERIC_REWRITE_FAILURE };
     }
 
     console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });
 
-    return { success: true, solutionTitle: rewrite.title, solutionDescription: rewrite.description };
+    return { success: true, solutionTitle: sanitized.title, solutionDescription: sanitized.description };
   } catch (error) {
     if (error instanceof OperationTimeoutError) {
       console.error(`${LOG_PREFIX} stage_timed_out`, {

@@ -16,8 +16,6 @@ type EvidenceJson = {
   mentioned_competitors?: string[];
   citation_domains?: string[];
   action_suggested?: string;
-  solution_title?: string;
-  solution_description?: string;
 };
 
 export type Recommendation = {
@@ -32,6 +30,12 @@ export type Recommendation = {
   status: string;
   source_type: string;
   evidence_json: EvidenceJson | null;
+  /**
+   * The latest sanitized AI-generated solution for this recommendation, loaded
+   * from `generated_solutions` server-side (null until the user generates one).
+   * Drives both the button state and the "Solución propuesta" block.
+   */
+  solution: { title: string; description: string } | null;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority";
@@ -286,9 +290,10 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             </div>
           </div>
 
-          {/* Mejorar redacción con IA — solo para recomendaciones aún no reescritas */}
+          {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
+              una solución generada; una vez generada, se muestra la insignia. */}
           <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            {rec.source_type === "rule" ? (
+            {!rec.solution ? (
               <>
                 <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
                   {isRewriting ? (
@@ -316,10 +321,10 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             )}
           </div>
 
-          {/* Solución propuesta — texto generado por IA, aditivo: no sustituye
-              el título/descripción de la regla, que sigue siendo el
+          {/* Solución propuesta — texto saneado generado por IA, aditivo: no
+              sustituye el título/descripción de la regla, que sigue siendo el
               planteamiento del problema. */}
-          {rec.source_type === "llm_rewrite" && ev.solution_title && ev.solution_description && (
+          {rec.solution && (
             <div
               style={{
                 marginTop: 4,
@@ -346,10 +351,10 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 Solución propuesta
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
-                {ev.solution_title}
+                {rec.solution.title}
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                {ev.solution_description}
+                {rec.solution.description}
               </p>
             </div>
           )}

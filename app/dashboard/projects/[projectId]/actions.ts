@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
   rewriteRecommendationCore,
@@ -273,9 +274,11 @@ export async function addPrompts(input: {
 }
 
 /**
- * "Mejorar redacción con IA" (Slice 2): on-demand LLM rewrite of one rule-based
- * recommendation's title/description, strictly anchored to its own
- * evidence_json (see lib/recommendations/rewrite-recommendation.ts). Called
+ * "Mejorar redacción con IA": on-demand LLM rewrite of one rule-based
+ * recommendation, strictly anchored to its own evidence_json and persisted as a
+ * sanitized `generated_solutions` row (the recommendation row itself is never
+ * mutated — see lib/recommendations/rewrite-recommendation.ts). The service
+ * client is the trusted-server write path that table's RLS prescribes. Called
  * directly from the client via `useTransition`, same pattern as `addPrompts`.
  */
 export async function rewriteRecommendationAction(input: {
@@ -288,7 +291,8 @@ export async function rewriteRecommendationAction(input: {
   }
 
   const { supabase, user } = await requireUser();
-  const result = await rewriteRecommendationCore({ ...parsed.data, supabase, user });
+  const service = createServiceClient();
+  const result = await rewriteRecommendationCore({ ...parsed.data, supabase, service, user });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);

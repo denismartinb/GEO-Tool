@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AuthenticatedContext } from "@/lib/scan/types";
+import type { createServiceClient } from "@/lib/supabase/service";
 
 const rewriteRecommendationMock = vi.fn();
 const validateRewriteAgainstEvidenceMock = vi.fn();
@@ -13,30 +14,27 @@ vi.mock("@/lib/recommendations/rewrite-validation", () => ({
 }));
 
 type SupabaseClient = AuthenticatedContext["supabase"];
+type ServiceClient = ReturnType<typeof createServiceClient>;
 type Row = Record<string, unknown>;
 
 /**
- * Minimal in-memory fake covering exactly the query shapes
- * `rewriteRecommendationCore` issues: an ownership-scoped single-row read on
- * "projects", a project-scoped single-row read + update on "recommendations",
- * and a project-scoped list read on "project_competitors".
+ * User-context fake: only the read shapes `rewriteRecommendationCore` issues —
+ * an ownership-scoped single-row read on "projects", a project-scoped single-row
+ * read on "recommendations", and a project-scoped list read on
+ * "project_competitors". The recommendation row is never written here anymore
+ * (writes go to generated_solutions via the service client).
  */
 function makeFakeSupabase({
   project,
   recommendation,
   competitors,
-  forceUpdateError = false,
   hangOnCompetitors = false
 }: {
   project: Row | null;
   recommendation: Row | null;
   competitors: Row[];
-  forceUpdateError?: boolean;
   hangOnCompetitors?: boolean;
 }) {
-  let updatedRow: Row | null = null;
-  let updateCalled = false;
-
   const client = {
     from(table: string) {
       if (table === "projects") {
@@ -74,24 +72,6 @@ function makeFakeSupabase({
               }
             };
             return builder;
-          },
-          update(payload: Row) {
-            const filters: Array<[string, unknown]> = [];
-            const builder = {
-              eq(col: string, val: unknown) {
-                filters.push([col, val]);
-                return builder;
-              },
-              then(resolve: (value: { error: { message: string } | null }) => unknown) {
-                updateCalled = true;
-                if (forceUpdateError) {
-                  return Promise.resolve({ error: { message: "update failed" } }).then(resolve);
-                }
-                updatedRow = { ...recommendation, ...payload };
-                return Promise.resolve({ error: null }).then(resolve);
-              }
-            };
-            return builder;
           }
         };
       }
@@ -105,8 +85,8 @@ function makeFakeSupabase({
                 filters.push([col, val]);
                 if (hangOnCompetitors) {
                   // Simulates a stalled Postgres connection: a promise that
-                  // never settles, to exercise rewriteRecommendationCore's
-                  // per-stage timeout instead of waiting on real I/O.
+                  // never settles, to exercise the per-stage timeout instead
+                  // of waiting on real I/O.
                   return new Promise(() => {});
                 }
                 return Promise.resolve({
@@ -124,11 +104,87 @@ function makeFakeSupabase({
     }
   };
 
-  return {
-    client: client as unknown as SupabaseClient,
-    getUpdatedRow: () => updatedRow,
-    wasUpdateCalled: () => updateCalled
+  return { client: client as unknown as SupabaseClient };
+}
+
+/**
+ * Service-role fake: only the "generated_solutions" shapes the core issues —
+ * the idempotency read (select sanitized_content … maybeSingle), the rate-limit
+ * count (select id {count, head} … gte), and the insert (insert … select id …
+ * maybeSingle). Records inserted payloads for assertion.
+ */
+function makeFakeService({
+  existingSolution = null,
+  rateCount = 0,
+  rateError = null,
+  insertError = false
+}: {
+  existingSolution?: { title: string; description: string } | null;
+  rateCount?: number;
+  rateError?: { message: string } | null;
+  insertError?: boolean;
+} = {}) {
+  const inserted: Row[] = [];
+
+  const client = {
+    from(table: string) {
+      if (table !== "generated_solutions") {
+        throw new Error(`Unexpected table in fake service client: ${table}`);
+      }
+      return {
+        select(_cols: string, options?: { count?: string; head?: boolean }) {
+          if (options?.head) {
+            // Rate-limit count branch: .eq(...).gte(...) is awaited directly.
+            const builder = {
+              eq() {
+                return builder;
+              },
+              gte() {
+                return Promise.resolve({ count: rateCount, error: rateError });
+              }
+            };
+            return builder;
+          }
+          // Idempotency read branch: .eq×N.order.limit.maybeSingle().
+          const builder = {
+            eq() {
+              return builder;
+            },
+            order() {
+              return builder;
+            },
+            limit() {
+              return builder;
+            },
+            maybeSingle() {
+              return Promise.resolve({
+                data: existingSolution ? { sanitized_content: JSON.stringify(existingSolution) } : null,
+                error: null
+              });
+            }
+          };
+          return builder;
+        },
+        insert(payload: Row) {
+          inserted.push(payload);
+          return {
+            select(_cols: string) {
+              return {
+                maybeSingle() {
+                  return Promise.resolve({
+                    data: insertError ? null : { id: "gensol-1" },
+                    error: insertError ? { message: "insert failed" } : null
+                  });
+                }
+              };
+            }
+          };
+        }
+      };
+    }
   };
+
+  return { service: client as unknown as ServiceClient, getInserted: () => inserted };
 }
 
 const PROJECT = {
@@ -170,11 +226,13 @@ describe("rewriteRecommendationCore", () => {
   it("returns success:false when the project does not exist or is not owned by this user", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     const { client } = makeFakeSupabase({ project: null, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: "missing-project",
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
@@ -189,11 +247,13 @@ describe("rewriteRecommendationCore", () => {
       recommendation: RULE_RECOMMENDATION,
       competitors: []
     });
+    const { service } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
@@ -204,11 +264,13 @@ describe("rewriteRecommendationCore", () => {
   it("returns success:false when the recommendation does not exist for this project", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     const { client } = makeFakeSupabase({ project: PROJECT, recommendation: null, competitors: [] });
+    const { service } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: "missing-rec",
       supabase: client,
+      service,
       user: USER
     });
 
@@ -216,120 +278,119 @@ describe("rewriteRecommendationCore", () => {
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
   });
 
-  it("is idempotent: returns the stored solution with no Gemini call when already llm_rewrite", async () => {
+  it("is idempotent: returns the stored sanitized solution with no Gemini call when one already exists", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
-    const alreadyRewritten = {
-      ...RULE_RECOMMENDATION,
-      source_type: "llm_rewrite",
-      evidence_json: {
-        ...EVIDENCE,
-        solution_title: "Refuerza tu contenido citable frente a Conforama",
-        solution_description: "Publica comparativas que respondan directamente a estas búsquedas."
-      }
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const existingSolution = {
+      title: "Refuerza tu contenido citable frente a Conforama",
+      description: "Publica comparativas que respondan directamente a estas búsquedas."
     };
-    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: alreadyRewritten, competitors: [] });
+    const { service, getInserted } = makeFakeService({ existingSolution });
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
     expect(result).toEqual({
       success: true,
-      solutionTitle: alreadyRewritten.evidence_json.solution_title,
-      solutionDescription: alreadyRewritten.evidence_json.solution_description
+      solutionTitle: existingSolution.title,
+      solutionDescription: existingSolution.description
     });
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
+    expect(getInserted()).toHaveLength(0);
   });
 
-  it("is idempotent and falls back to the row's own title/description for a legacy llm_rewrite row with no stored solution fields", async () => {
+  it("returns a sanitized rate-limit message and never calls Gemini when the project is over its daily quota", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
-    const alreadyRewritten = { ...RULE_RECOMMENDATION, source_type: "llm_rewrite" };
-    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: alreadyRewritten, competitors: [] });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService({ rateCount: 9999 });
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
-    expect(result).toEqual({
-      success: true,
-      solutionTitle: alreadyRewritten.title,
-      solutionDescription: alreadyRewritten.description
-    });
+    expect(result.success).toBe(false);
+    if (result.success) throw new Error("expected failure");
+    expect(result.error).toContain("límite");
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
+    expect(getInserted()).toHaveLength(0);
+
+    warnSpy.mockRestore();
   });
 
-  it("falls back to a sanitized error, leaving the row untouched, when Gemini throws", async () => {
+  it("falls back to a sanitized error, inserting nothing, when Gemini throws", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     rewriteRecommendationMock.mockRejectedValue(new Error("raw provider failure with secrets"));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const { client, wasUpdateCalled } = makeFakeSupabase({
-      project: PROJECT,
-      recommendation: RULE_RECOMMENDATION,
-      competitors: []
-    });
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
     expect(result.success).toBe(false);
     if (result.success) throw new Error("expected failure");
     expect(result.error).not.toContain("raw provider failure with secrets");
-    expect(wasUpdateCalled()).toBe(false);
+    expect(getInserted()).toHaveLength(0);
 
     errorSpy.mockRestore();
   });
 
-  it("falls back to a sanitized error, leaving the row untouched, when Gemini returns null", async () => {
+  it("falls back to a sanitized error, inserting nothing, when Gemini returns null", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     rewriteRecommendationMock.mockResolvedValue(null);
-    const { client, wasUpdateCalled } = makeFakeSupabase({
-      project: PROJECT,
-      recommendation: RULE_RECOMMENDATION,
-      competitors: []
-    });
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
     expect(result.success).toBe(false);
-    expect(wasUpdateCalled()).toBe(false);
+    expect(getInserted()).toHaveLength(0);
     expect(validateRewriteAgainstEvidenceMock).not.toHaveBeenCalled();
   });
 
-  it("falls back to a sanitized error, leaving the row untouched, when validation rejects the rewrite", async () => {
+  it("falls back to a sanitized error, inserting nothing, when validation rejects the rewrite", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     rewriteRecommendationMock.mockResolvedValue({ title: "Título con Ikea", description: "Descripción inventada" });
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: false, reason: "untracked_competitor_mentioned" });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const { client, wasUpdateCalled } = makeFakeSupabase({
+    const { client } = makeFakeSupabase({
       project: PROJECT,
       recommendation: RULE_RECOMMENDATION,
       competitors: [{ project_id: PROJECT.id, name: "Ikea" }]
     });
+    const { service, getInserted } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
     expect(result.success).toBe(false);
-    expect(wasUpdateCalled()).toBe(false);
+    expect(getInserted()).toHaveLength(0);
 
     warnSpy.mockRestore();
   });
@@ -343,12 +404,14 @@ describe("rewriteRecommendationCore", () => {
       competitors: [],
       hangOnCompetitors: true
     });
+    const { service } = makeFakeService();
 
     vi.useFakeTimers();
     const resultPromise = rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
@@ -368,31 +431,63 @@ describe("rewriteRecommendationCore", () => {
     errorSpy.mockRestore();
   });
 
-  it("returns success:false when persisting the validated rewrite fails", async () => {
+  it("returns success:false when persisting the generated solution fails", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     rewriteRecommendationMock.mockResolvedValue({
       title: "Refuerza tu contenido citable frente a Conforama",
       description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles."
     });
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
-    const { client } = makeFakeSupabase({
-      project: PROJECT,
-      recommendation: RULE_RECOMMENDATION,
-      competitors: [],
-      forceUpdateError: true
-    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service } = makeFakeService({ insertError: true });
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
     expect(result.success).toBe(false);
+
+    errorSpy.mockRestore();
   });
 
-  it("happy path: calls Gemini with the recommendation's own evidence, validates, and persists the rewrite", async () => {
+  it("sanitizes untrusted LLM output (strips HTML/control chars) before persisting and returning it", async () => {
+    const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+    rewriteRecommendationMock.mockResolvedValue({
+      title: "Refuerza <b>tu</b> contenido",
+      description: "Línea uno.\n\tLínea <script>alert(1)</script> dos."
+    });
+    validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+    const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
+    const { service, getInserted } = makeFakeService();
+
+    const result = await rewriteRecommendationCore({
+      projectId: PROJECT.id,
+      recommendationId: RULE_RECOMMENDATION.id,
+      supabase: client,
+      service,
+      user: USER
+    });
+
+    expect(result.success).toBe(true);
+    if (!result.success) throw new Error("expected success");
+    expect(result.solutionTitle).toBe("Refuerza tu contenido");
+    expect(result.solutionTitle).not.toContain("<");
+    expect(result.solutionDescription).not.toContain("<script>");
+    // No C0 control characters survive sanitization.
+    expect([...result.solutionDescription].every((c) => (c.codePointAt(0) ?? 0) >= 0x20)).toBe(true);
+
+    const payload = getInserted()[0];
+    const sanitized = JSON.parse(payload.sanitized_content as string) as { title: string; description: string };
+    expect(sanitized.title).toBe("Refuerza tu contenido");
+    expect(sanitized.description).not.toContain("<script>");
+  });
+
+  it("happy path: calls Gemini with the recommendation's own evidence, validates, and inserts a sanitized generated_solutions row", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     const rewrite = {
       title: "Refuerza tu contenido citable frente a Conforama",
@@ -400,7 +495,7 @@ describe("rewriteRecommendationCore", () => {
     };
     rewriteRecommendationMock.mockResolvedValue(rewrite);
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
-    const { client, getUpdatedRow } = makeFakeSupabase({
+    const { client } = makeFakeSupabase({
       project: PROJECT,
       recommendation: RULE_RECOMMENDATION,
       competitors: [
@@ -408,15 +503,21 @@ describe("rewriteRecommendationCore", () => {
         { project_id: PROJECT.id, name: "Ikea" }
       ]
     });
+    const { service, getInserted } = makeFakeService();
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
       recommendationId: RULE_RECOMMENDATION.id,
       supabase: client,
+      service,
       user: USER
     });
 
-    expect(result).toEqual({ success: true, solutionTitle: rewrite.title, solutionDescription: rewrite.description });
+    expect(result).toEqual({
+      success: true,
+      solutionTitle: rewrite.title,
+      solutionDescription: rewrite.description
+    });
 
     const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
     expect(geminiArgs).toMatchObject({
@@ -444,13 +545,22 @@ describe("rewriteRecommendationCore", () => {
       brandDomain: PROJECT.domain
     });
 
-    const updated = getUpdatedRow();
-    expect(updated).toMatchObject({ source_type: "llm_rewrite" });
-    // The rule-based title/description are the problem statement and must
-    // never be overwritten — the generated solution lives in evidence_json.
-    expect(updated?.title).toBe(RULE_RECOMMENDATION.title);
-    expect(updated?.description).toBe(RULE_RECOMMENDATION.description);
-    expect((updated?.evidence_json as Record<string, unknown>).solution_title).toBe(rewrite.title);
-    expect((updated?.evidence_json as Record<string, unknown>).solution_description).toBe(rewrite.description);
+    // The solution is written to generated_solutions, sanitized and renderable,
+    // anchored to the recommendation. The recommendation row is never mutated.
+    const payload = getInserted()[0];
+    expect(payload).toMatchObject({
+      recommendation_id: RULE_RECOMMENDATION.id,
+      project_id: PROJECT.id,
+      rule_id: RULE_RECOMMENDATION.recommendation_type,
+      generation_type: "brand_copy_suggestion",
+      status: "completed",
+      is_sanitized: true,
+      provider: "gemini"
+    });
+    expect(payload.sanitized_at).toBeTruthy();
+    const sanitized = JSON.parse(payload.sanitized_content as string) as { title: string; description: string };
+    expect(sanitized).toEqual({ title: rewrite.title, description: rewrite.description });
+    const raw = JSON.parse(payload.raw_content as string) as { title: string; description: string };
+    expect(raw).toEqual(rewrite);
   });
 });
