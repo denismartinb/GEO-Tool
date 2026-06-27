@@ -380,47 +380,6 @@ export default async function RecommendationsPage({
           <RecommendationsClient recommendations={recs} projectId={projectId} />
         </>
       )}
-
-      {/* Footer links */}
-      {latestCompletedRun && (
-        <div
-          style={{
-            display: "flex",
-            gap: 20,
-            marginTop: 28,
-            flexWrap: "wrap",
-          }}
-        >
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--ink-3)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Icon name="chevronLeft" size={13} />
-            Visión general
-          </Link>
-          <Link
-            href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--ink-3)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            Ver detalle del escaneo
-            <Icon name="arrRight" size={13} />
-          </Link>
-        </div>
-      )}
       </>
       )}
     </div>

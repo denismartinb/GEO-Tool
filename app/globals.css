@@ -1939,7 +1939,11 @@ textarea.add-prompts-text-input {
   overflow: hidden;
   transition: max-height .28s ease;
 }
-.rec-card.open .rec-detail { max-height: 1200px; }
+/* Generous cap so the (now much taller) "Plan de acción" asset — summary,
+   numbered steps and a pasteable example — is never clipped on open. The
+   max-height only bounds the expand/collapse transition; real content is
+   shorter than this. */
+.rec-card.open .rec-detail { max-height: 4000px; }
 .rec-detail-inner { padding: 20px 22px 22px; display: grid; grid-template-columns: 1fr; gap: 18px; }
 
 /* Detail blocks */
