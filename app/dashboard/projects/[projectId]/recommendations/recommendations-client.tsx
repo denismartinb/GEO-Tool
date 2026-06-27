@@ -18,6 +18,18 @@ type EvidenceJson = {
   action_suggested?: string;
 };
 
+/**
+ * Sanitized, copy-paste-ready AI solution for a recommendation, loaded from
+ * `generated_solutions`. Defined here (not in the server-only rewrite module)
+ * so both the server page and this client component can share the shape.
+ */
+export type GeneratedSolution = {
+  title: string;
+  summary: string;
+  steps: string[];
+  example: { label: string; content: string } | null;
+};
+
 export type Recommendation = {
   id: string;
   priority_rank: number;
@@ -31,11 +43,11 @@ export type Recommendation = {
   source_type: string;
   evidence_json: EvidenceJson | null;
   /**
-   * The latest sanitized AI-generated solution for this recommendation, loaded
-   * from `generated_solutions` server-side (null until the user generates one).
-   * Drives both the button state and the "Solución propuesta" block.
+   * The latest AI-generated solution for this recommendation (null until the
+   * user generates one). Drives both the button state and the "Plan de acción"
+   * block.
    */
-  solution: { title: string; description: string } | null;
+  solution: GeneratedSolution | null;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority";
@@ -60,6 +72,128 @@ function rankClass(rank: number): string {
 
 function isQuickWin(rec: Recommendation): boolean {
   return rec.impact === "high" && rec.effort === "low";
+}
+
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard unavailable (e.g. insecure context) — fail silently.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="btn btn-ghost btn-sm"
+      onClick={handleCopy}
+      style={{ fontSize: 12, padding: "4px 10px" }}
+    >
+      <Icon name={copied ? "check" : "copy"} size={12} />
+      {copied ? "Copiado" : label ?? "Copiar"}
+    </button>
+  );
+}
+
+/**
+ * Renders the structured, copy-paste-ready AI action plan beneath a
+ * recommendation: a specific title, a summary, concrete steps, and an optional
+ * ready-to-paste example artifact with its own copy button. All content is
+ * already sanitized server-side; it is rendered as plain React text.
+ */
+function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+  return (
+    <div
+      style={{
+        marginTop: 4,
+        padding: "12px 16px",
+        background: "var(--surface-sunk)",
+        borderRadius: 10,
+        border: "1.5px solid var(--line)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+          color: "var(--ink-4)",
+          marginBottom: 6,
+        }}
+      >
+        <Icon name="sparkles" size={12} />
+        Plan de acción
+      </div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>{solution.title}</div>
+      <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>{solution.summary}</p>
+
+      {solution.steps.length > 0 && (
+        <ol
+          style={{
+            margin: "10px 0 0",
+            paddingLeft: 18,
+            fontSize: 13,
+            color: "var(--ink-2)",
+            lineHeight: 1.6,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          {solution.steps.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+        </ol>
+      )}
+
+      {solution.example && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: "var(--surface)",
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              marginBottom: 6,
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-3)" }}>{solution.example.label}</span>
+            <CopyButton text={solution.example.content} />
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              fontSize: 12.5,
+              color: "var(--ink-2)",
+              lineHeight: 1.55,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              fontFamily: "inherit",
+            }}
+          >
+            {solution.example.content}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
@@ -321,43 +455,10 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             )}
           </div>
 
-          {/* Solución propuesta — texto saneado generado por IA, aditivo: no
+          {/* Plan de acción — asset saneado generado por IA, aditivo: no
               sustituye el título/descripción de la regla, que sigue siendo el
               planteamiento del problema. */}
-          {rec.solution && (
-            <div
-              style={{
-                marginTop: 4,
-                padding: "12px 16px",
-                background: "var(--surface-sunk)",
-                borderRadius: 10,
-                border: "1.5px solid var(--line)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.07em",
-                  color: "var(--ink-4)",
-                  marginBottom: 6,
-                }}
-              >
-                <Icon name="sparkles" size={12} />
-                Solución propuesta
-              </div>
-              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
-                {rec.solution.title}
-              </div>
-              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                {rec.solution.description}
-              </p>
-            </div>
-          )}
+          {rec.solution && <SolutionPanel solution={rec.solution} />}
 
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (

@@ -421,19 +421,19 @@ describe("rewriteRecommendation", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns the rewritten title/description on valid Gemini output", async () => {
-    const fetchMock = mockGeminiJson({
+  it("returns the structured action plan on valid Gemini output", async () => {
+    const out = {
       title: "Refuerza tu contenido citable frente a Conforama",
-      description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles; añade datos verificables."
-    });
+      summary: "Acme no aparece citada frente a Conforama en respuestas sobre muebles; añade datos verificables.",
+      steps: ["Publica una comparativa directa.", "Añade un bloque factual citable."],
+      example: { label: "Párrafo citable", content: "Acme fabrica sofás cama con [tu dato aquí] de garantía." }
+    };
+    const fetchMock = mockGeminiJson(out);
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await rewriteRecommendation(rewriteInput());
 
-    expect(result).toEqual({
-      title: "Refuerza tu contenido citable frente a Conforama",
-      description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles; añade datos verificables."
-    });
+    expect(result).toEqual(out);
   });
 
   it("includes only the anchored competitors/domains in the prompt sent to Gemini", async () => {
@@ -461,8 +461,8 @@ describe("rewriteRecommendation", () => {
     expect(result).toBeNull();
   });
 
-  it("returns null when the title or description is empty after trimming", async () => {
-    const fetchMock = mockGeminiJson({ title: "   ", description: "Algo" });
+  it("returns null when the title or summary is empty after trimming", async () => {
+    const fetchMock = mockGeminiJson({ title: "   ", summary: "Algo", steps: [], example: null });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await rewriteRecommendation(rewriteInput());
@@ -471,7 +471,7 @@ describe("rewriteRecommendation", () => {
   });
 
   it("returns null when Gemini's output exceeds the safety length caps", async () => {
-    const fetchMock = mockGeminiJson({ title: "x".repeat(201), description: "Algo" });
+    const fetchMock = mockGeminiJson({ title: "x".repeat(201), summary: "Algo", steps: [], example: null });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await rewriteRecommendation(rewriteInput());

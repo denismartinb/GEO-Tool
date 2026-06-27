@@ -16,6 +16,12 @@ vi.mock("@/lib/recommendations/rewrite-validation", () => ({
 type SupabaseClient = AuthenticatedContext["supabase"];
 type ServiceClient = ReturnType<typeof createServiceClient>;
 type Row = Record<string, unknown>;
+type GeneratedSolution = {
+  title: string;
+  summary: string;
+  steps: string[];
+  example: { label: string; content: string } | null;
+};
 
 /**
  * User-context fake: only the read shapes `rewriteRecommendationCore` issues —
@@ -119,7 +125,7 @@ function makeFakeService({
   rateError = null,
   insertError = false
 }: {
-  existingSolution?: { title: string; description: string } | null;
+  existingSolution?: GeneratedSolution | null;
   rateCount?: number;
   rateError?: { message: string } | null;
   insertError?: boolean;
@@ -215,6 +221,20 @@ const RULE_RECOMMENDATION = {
   evidence_json: EVIDENCE
 };
 
+const REWRITE: GeneratedSolution = {
+  title: "Refuerza tu contenido citable frente a Conforama",
+  summary: "Acme no aparece citada frente a Conforama en respuestas sobre muebles.",
+  steps: [
+    "Publica una comparativa directa que responda a las búsquedas afectadas.",
+    "Añade un bloque factual citable en tu página de sofás cama.",
+    "Incluye datos verificables sobre materiales y garantía."
+  ],
+  example: {
+    label: "Párrafo citable para tu página",
+    content: "Acme fabrica sofás cama con [tu dato aquí] de garantía y materiales certificados."
+  }
+};
+
 const USER = { id: "user-1" } as unknown as AuthenticatedContext["user"];
 
 describe("rewriteRecommendationCore", () => {
@@ -278,14 +298,10 @@ describe("rewriteRecommendationCore", () => {
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
   });
 
-  it("is idempotent: returns the stored sanitized solution with no Gemini call when one already exists", async () => {
+  it("is idempotent: returns the stored structured solution with no Gemini call when one already exists", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
-    const existingSolution = {
-      title: "Refuerza tu contenido citable frente a Conforama",
-      description: "Publica comparativas que respondan directamente a estas búsquedas."
-    };
-    const { service, getInserted } = makeFakeService({ existingSolution });
+    const { service, getInserted } = makeFakeService({ existingSolution: REWRITE });
 
     const result = await rewriteRecommendationCore({
       projectId: PROJECT.id,
@@ -295,11 +311,7 @@ describe("rewriteRecommendationCore", () => {
       user: USER
     });
 
-    expect(result).toEqual({
-      success: true,
-      solutionTitle: existingSolution.title,
-      solutionDescription: existingSolution.description
-    });
+    expect(result).toEqual({ success: true, solution: REWRITE });
     expect(rewriteRecommendationMock).not.toHaveBeenCalled();
     expect(getInserted()).toHaveLength(0);
   });
@@ -371,7 +383,12 @@ describe("rewriteRecommendationCore", () => {
 
   it("falls back to a sanitized error, inserting nothing, when validation rejects the rewrite", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
-    rewriteRecommendationMock.mockResolvedValue({ title: "Título con Ikea", description: "Descripción inventada" });
+    rewriteRecommendationMock.mockResolvedValue({
+      title: "Título con Ikea",
+      summary: "Descripción inventada",
+      steps: ["Menciona a Ikea sin permiso"],
+      example: null
+    });
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: false, reason: "untracked_competitor_mentioned" });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { client } = makeFakeSupabase({
@@ -433,10 +450,7 @@ describe("rewriteRecommendationCore", () => {
 
   it("returns success:false when persisting the generated solution fails", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
-    rewriteRecommendationMock.mockResolvedValue({
-      title: "Refuerza tu contenido citable frente a Conforama",
-      description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles."
-    });
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
@@ -455,11 +469,16 @@ describe("rewriteRecommendationCore", () => {
     errorSpy.mockRestore();
   });
 
-  it("sanitizes untrusted LLM output (strips HTML/control chars) before persisting and returning it", async () => {
+  it("sanitizes untrusted LLM output (strips HTML/control chars) across every field before persisting", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
     rewriteRecommendationMock.mockResolvedValue({
       title: "Refuerza <b>tu</b> contenido",
-      description: "Línea uno.\n\tLínea <script>alert(1)</script> dos."
+      summary: "Resumen con <i>énfasis</i>.",
+      steps: ["Paso uno.\n\tcon salto", "Paso <script>alert(1)</script> dos"],
+      example: {
+        label: "Bloque <b>citable</b>",
+        content: "Texto <script>alert(2)</script> pegable."
+      }
     });
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
     const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
@@ -475,25 +494,22 @@ describe("rewriteRecommendationCore", () => {
 
     expect(result.success).toBe(true);
     if (!result.success) throw new Error("expected success");
-    expect(result.solutionTitle).toBe("Refuerza tu contenido");
-    expect(result.solutionTitle).not.toContain("<");
-    expect(result.solutionDescription).not.toContain("<script>");
-    // No C0 control characters survive sanitization.
-    expect([...result.solutionDescription].every((c) => (c.codePointAt(0) ?? 0) >= 0x20)).toBe(true);
+    expect(result.solution.title).toBe("Refuerza tu contenido");
+    expect(result.solution.summary).not.toContain("<");
+    expect(result.solution.steps.join(" ")).not.toContain("<script>");
+    // No C0 control characters survive sanitization in any step.
+    expect(result.solution.steps.join(" ").split("").every((c) => (c.codePointAt(0) ?? 0) >= 0x20)).toBe(true);
+    expect(result.solution.example?.content).not.toContain("<script>");
 
     const payload = getInserted()[0];
-    const sanitized = JSON.parse(payload.sanitized_content as string) as { title: string; description: string };
+    const sanitized = JSON.parse(payload.sanitized_content as string) as GeneratedSolution;
     expect(sanitized.title).toBe("Refuerza tu contenido");
-    expect(sanitized.description).not.toContain("<script>");
+    expect(sanitized.example?.label).not.toContain("<");
   });
 
-  it("happy path: calls Gemini with the recommendation's own evidence, validates, and inserts a sanitized generated_solutions row", async () => {
+  it("happy path: calls Gemini with the recommendation's own evidence, validates every field, and inserts a sanitized structured solution", async () => {
     const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
-    const rewrite = {
-      title: "Refuerza tu contenido citable frente a Conforama",
-      description: "Acme no aparece citada frente a Conforama en respuestas sobre muebles."
-    };
-    rewriteRecommendationMock.mockResolvedValue(rewrite);
+    rewriteRecommendationMock.mockResolvedValue(REWRITE);
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
     const { client } = makeFakeSupabase({
       project: PROJECT,
@@ -513,11 +529,7 @@ describe("rewriteRecommendationCore", () => {
       user: USER
     });
 
-    expect(result).toEqual({
-      success: true,
-      solutionTitle: rewrite.title,
-      solutionDescription: rewrite.description
-    });
+    expect(result).toEqual({ success: true, solution: REWRITE });
 
     const geminiArgs = rewriteRecommendationMock.mock.calls[0][0];
     expect(geminiArgs).toMatchObject({
@@ -535,10 +547,14 @@ describe("rewriteRecommendationCore", () => {
       evidenceSnippets: EVIDENCE.evidence_snippets
     });
 
+    // Validation runs over ALL generated text (summary + steps + example), not
+    // just the title, so a fabricated mention anywhere is caught.
     const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
+    expect(validationArgs.title).toBe(REWRITE.title);
+    expect(validationArgs.description).toContain(REWRITE.summary);
+    expect(validationArgs.description).toContain(REWRITE.steps[0]);
+    expect(validationArgs.description).toContain(REWRITE.example!.content);
     expect(validationArgs).toMatchObject({
-      title: rewrite.title,
-      description: rewrite.description,
       allowedCompetitors: ["Conforama", "Conforama"],
       allowedDomains: EVIDENCE.citation_domains,
       trackedCompetitors: ["Conforama", "Ikea"],
@@ -558,9 +574,7 @@ describe("rewriteRecommendationCore", () => {
       provider: "gemini"
     });
     expect(payload.sanitized_at).toBeTruthy();
-    const sanitized = JSON.parse(payload.sanitized_content as string) as { title: string; description: string };
-    expect(sanitized).toEqual({ title: rewrite.title, description: rewrite.description });
-    const raw = JSON.parse(payload.raw_content as string) as { title: string; description: string };
-    expect(raw).toEqual(rewrite);
+    const sanitized = JSON.parse(payload.sanitized_content as string) as GeneratedSolution;
+    expect(sanitized).toEqual(REWRITE);
   });
 });

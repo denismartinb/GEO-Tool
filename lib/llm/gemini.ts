@@ -653,21 +653,36 @@ export type RecommendationRewriteInput = {
   evidenceSnippets: string[];
 };
 
-export type RecommendationRewrite = { title: string; description: string };
+export type RecommendationRewrite = {
+  title: string;
+  summary: string;
+  steps: string[];
+  example: { label: string; content: string } | null;
+};
 
 const recommendationRewriteSchema = z.object({
   title: z.string(),
-  description: z.string()
+  summary: z.string(),
+  steps: z.array(z.string()).default([]),
+  example: z
+    .object({ label: z.string(), content: z.string() })
+    .nullable()
+    .optional()
+    .default(null)
 });
 
 /**
- * Rewrites a rule-based recommendation's title/description into more specific,
- * natural prose — using ONLY the facts passed in (Slice 2 of the hybrid
- * recommendation architecture; Slice 1, in lib/recommendations/recommendation-engine.ts,
- * owns "what gap + what evidence"). The caller (lib/recommendations/
- * rewrite-recommendation.ts) is responsible for anchoring that evidence and for
- * re-validating the result against it before persisting — this function only
- * builds the prompt and parses Gemini's JSON response.
+ * Turns a rule-based recommendation into a structured, copy-paste-ready action
+ * plan — using ONLY the facts passed in (the recommendation engine owns "what
+ * gap + what evidence"; the caller in lib/recommendations/rewrite-recommendation.ts
+ * anchors that evidence and re-validates + sanitizes the result before
+ * persisting). This function only builds the prompt and parses Gemini's JSON.
+ *
+ * Output shape: a specific `title`, a 1-2 sentence `summary`, 3-6 concrete
+ * `steps`, and an optional ready-to-paste `example` artifact (e.g. a citable
+ * paragraph or FAQ block) the user can drop onto their site. Real examples must
+ * stay anchored to the given facts — a placeholder like "[tu dato aquí]" is
+ * required where a specific value isn't in the evidence, never an invented one.
  *
  * Fail-soft on schema-invalid output (returns null), matching this file's
  * suggestCompetitors/generateAddedPrompts convention. A network/API failure
@@ -676,16 +691,19 @@ const recommendationRewriteSchema = z.object({
  */
 export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
   const promptBlock = [
-    "You are a senior GEO (Generative Engine Optimization) consultant rewriting one action item on a brand's dashboard.",
-    "Rewrite the TITLE and DESCRIPTION below to be more specific, concrete and natural for this exact brand and situation.",
+    "You are a senior GEO (Generative Engine Optimization) consultant writing one concrete, copy-paste-ready action plan on a brand's dashboard.",
+    "Turn the generic recommendation below into a specific, complete plan this exact brand can act on immediately.",
     "You MUST use ONLY the facts listed below. Do NOT invent any fact, statistic, competitor name, domain, page or detail not explicitly given.",
+    "Where a specific value (a number, a price, a date) would be needed but is not in the facts, write a clearly-marked placeholder like [tu dato aquí]. NEVER invent the value.",
     "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
     "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
     "If no competitors or domains are listed below, do not invent or imply any.",
     `Write entirely in this language: ${input.language}.`,
-    `Return ONLY valid JSON with this exact shape: { "title": string, "description": string }.`,
-    `"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.`,
-    `"description": 1-3 sentences, max 400 characters, concrete and actionable given the facts below.`,
+    'Return ONLY valid JSON with this exact shape: { "title": string, "summary": string, "steps": string[], "example": { "label": string, "content": string } | null }.',
+    '"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.',
+    '"summary": 1-2 sentences, max 400 characters, why this matters for this brand given the facts.',
+    '"steps": 3 to 6 concrete, specific actions (each max 200 characters) the brand should take, grounded in the real prompts/competitors below.',
+    '"example": a ready-to-paste artifact the user can put on their own site (e.g. a citable factual paragraph, or a short FAQ). "label" names it (max 80 chars); "content" is the pasteable text (max 1200 chars). Use null only if no useful artifact can be grounded in the facts.',
     "",
     `Brand: ${input.brand}`,
     `Brand domain: ${input.domain}`,
@@ -718,9 +736,20 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
   if (!parsed.success) return null;
 
   const title = parsed.data.title.trim();
-  const description = parsed.data.description.trim();
-  if (!title || !description) return null;
-  if (title.length > 200 || description.length > 600) return null;
+  const summary = parsed.data.summary.trim();
+  if (!title || !summary) return null;
+  if (title.length > 200 || summary.length > 600) return null;
 
-  return { title, description };
+  const steps = parsed.data.steps.map((step) => step.trim()).filter((step) => step.length > 0 && step.length <= 400);
+
+  let example: RecommendationRewrite["example"] = null;
+  if (parsed.data.example) {
+    const label = parsed.data.example.label.trim();
+    const content = parsed.data.example.content.trim();
+    if (label && content && content.length <= 2000) {
+      example = { label, content };
+    }
+  }
+
+  return { title, summary, steps, example };
 }

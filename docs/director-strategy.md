@@ -235,6 +235,56 @@ all P1/P2 UX work per the "Core flow first" principle.
 
 ---
 
+## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
+
+Founder direction (verbatim intent): recommendations must become **more
+explicit, more complete, with real examples, almost copy-paste ready** — turn
+each detected gap into a "masticated asset" the user can drop straight onto
+their site. The 10-gap catalog (founder-provided) is the target surface; rows
+1–8 are buildable from data already captured today, rows 9–10 need new scan
+extraction (Fase 2).
+
+| Gap | Real scan evidence (the "why") | Copy-paste asset |
+|---|---|---|
+| 1 Total absence | Prompt where ≥1 competitor appears and the brand does not | Content brief (H1/H2, entities, intent, draft intro) |
+| 2 Mention without citation | `brand_mentioned ∧ ¬citation_found` | Citation block: factual extractable paragraph + JSON-LD |
+| 3 Citation-share gap | Your domain cited < competitor domains | On-page optimization for the specific URL + `Article` schema |
+| 4 Competitor dominance | One competitor wins a cluster of prompts | "Brand vs {comp}" / "alternative to {comp}" page outline |
+| 5 Comparative-content gap | Comparative prompts without the brand | Comparison table + `FAQPage` |
+| 6 Informational/FAQ gap | Informational prompts answered by third parties | FAQ block with `FAQPage` JSON-LD |
+| 7 Entity clarity | Low visibility without competitive pressure | `Organization` schema + About/entity page |
+| 8 Source gap (digital PR) | Sources Gemini cites don't include the brand | Prioritized PR-target list + pitch template |
+| 9 Sentiment/narrative (Fase 2) | Recurring negative narrative drivers | Counter-narrative content brief |
+| 10 Freshness/recency (Fase 2) | Cites outdated data about the brand | Update checklist + re-indexing note |
+
+**Phasing (each phase is its own Task Intake + PR; biased to value-first,
+no schema work until a gap genuinely needs it):**
+
+- **Fase A — DONE (PR #132):** corrected the persistence architecture. The
+  on-demand AI rewrite writes a sanitized row to `generated_solutions` via the
+  service role (the recommendation row is never mutated; RLS makes a user-context
+  update a silent no-op), rate-limited and idempotent. This unblocked everything
+  below.
+- **Fase B — IN PROGRESS:** upgrade the generated solution from a short
+  title+description into a structured, copy-paste-ready **action plan** (title,
+  summary, concrete steps, and a ready-to-paste example artifact), anchored to
+  the recommendation's real evidence. B1 = the structured asset itself (no
+  engine change). B2 = engine emits gaps 1–3 as distinct recommendations
+  instead of collapsing into one generic row.
+- **Fase C:** gaps 4–8 (comparison pages, FAQ/entity schema, PR targets).
+- **Fase D (Fase 2):** gaps 9–10 — need new sentiment/freshness extraction in
+  the scan, so a dedicated backend/schema phase, explicitly separate.
+
+**Honesty guardrails (non-negotiable, CLAUDE.md):** every asset is anchored to
+real captured evidence; no fabricated stats, competitors, domains or URLs. Where
+a specific value isn't in the evidence, the asset uses a clearly-marked
+placeholder (`[tu dato aquí]`) instead of inventing one. All generated content
+passes the `generated_solutions` server-side sanitization gate before it is ever
+rendered. `generation_type` stays within the existing CHECK values for now;
+adding granular per-asset types would be a schema migration (separate approval).
+
+---
+
 ## QA execution model
 
 Claude QA is run by the `qa` specialist subagent (`.claude/agents/qa.md`),

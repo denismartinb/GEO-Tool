@@ -39,8 +39,15 @@ export const rewriteRecommendationInputSchema = z.object({
   recommendationId: z.string().uuid()
 });
 
+export type GeneratedSolution = {
+  title: string;
+  summary: string;
+  steps: string[];
+  example: { label: string; content: string } | null;
+};
+
 export type RewriteRecommendationResult =
-  | { success: true; solutionTitle: string; solutionDescription: string }
+  | { success: true; solution: GeneratedSolution }
   | { success: false; error: string };
 
 type EvidenceJson = {
@@ -70,7 +77,7 @@ type ProjectRow = {
   is_archived: boolean;
 };
 
-type SolutionContent = { title: string; description: string };
+type SolutionContent = GeneratedSolution;
 
 const GENERIC_REWRITE_FAILURE =
   "No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.";
@@ -87,7 +94,11 @@ const GENERATION_TYPE = "brand_copy_suggestion";
 // Mirrors the length bounds the Gemini prompt itself asks for, enforced again
 // server-side so sanitized content can never exceed what the UI expects.
 const TITLE_MAX = 140;
-const DESCRIPTION_MAX = 400;
+const SUMMARY_MAX = 400;
+const STEP_MAX = 200;
+const MAX_STEPS = 6;
+const EXAMPLE_LABEL_MAX = 80;
+const EXAMPLE_CONTENT_MAX = 1200;
 
 // Only the Gemini fetch is bounded inside lib/llm/gemini.ts; the Supabase
 // reads/writes below have no library-level timeout, so each is bounded here and
@@ -142,20 +153,46 @@ function sanitizeField(input: string, maxLen: number): string {
 
 function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
   const title = sanitizeField(raw.title, TITLE_MAX);
-  const description = sanitizeField(raw.description, DESCRIPTION_MAX);
-  if (!title || !description) {
+  const summary = sanitizeField(raw.summary, SUMMARY_MAX);
+  if (!title || !summary) {
     return null;
   }
-  return { title, description };
+
+  const steps = (raw.steps ?? [])
+    .map((step) => sanitizeField(step, STEP_MAX))
+    .filter((step) => step.length > 0)
+    .slice(0, MAX_STEPS);
+
+  let example: SolutionContent["example"] = null;
+  if (raw.example) {
+    const label = sanitizeField(raw.example.label, EXAMPLE_LABEL_MAX);
+    const content = sanitizeField(raw.example.content, EXAMPLE_CONTENT_MAX);
+    if (label && content) {
+      example = { label, content };
+    }
+  }
+
+  return { title, summary, steps, example };
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
 function parseSolutionContent(raw: string | null): SolutionContent | null {
   if (!raw) return null;
   try {
-    const parsed = JSON.parse(raw) as Partial<SolutionContent>;
-    if (typeof parsed?.title === "string" && typeof parsed?.description === "string") {
-      return { title: parsed.title, description: parsed.description };
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed?.title !== "string" || typeof parsed?.summary !== "string") {
+      return null;
     }
+    const steps = isStringArray(parsed.steps) ? parsed.steps : [];
+    let example: SolutionContent["example"] = null;
+    const rawExample = parsed.example as { label?: unknown; content?: unknown } | null | undefined;
+    if (rawExample && typeof rawExample.label === "string" && typeof rawExample.content === "string") {
+      example = { label: rawExample.label, content: rawExample.content };
+    }
+    return { title: parsed.title, summary: parsed.summary, steps, example };
   } catch {
     // Stored content unexpectedly unparseable — treat as no usable solution.
   }
@@ -236,7 +273,7 @@ export async function rewriteRecommendationCore({
       (existingRaw as unknown as { sanitized_content: string | null } | null)?.sanitized_content ?? null
     );
     if (existing) {
-      return { success: true, solutionTitle: existing.title, solutionDescription: existing.description };
+      return { success: true, solution: existing };
     }
 
     console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
@@ -318,9 +355,12 @@ export async function rewriteRecommendationCore({
       return { success: false, error: GENERIC_REWRITE_FAILURE };
     }
 
+    // Validate ALL generated text (title + summary + every step + the pasteable
+    // example) against the evidence, so a fabricated competitor/domain anywhere
+    // in the asset — not just the title — is caught before persisting.
     const validation = validateRewriteAgainstEvidence({
       title: rewrite.title,
-      description: rewrite.description,
+      description: [rewrite.summary, ...rewrite.steps, rewrite.example?.content ?? ""].join(" "),
       allowedCompetitors,
       allowedDomains: citationDomains,
       trackedCompetitors,
@@ -382,7 +422,7 @@ export async function rewriteRecommendationCore({
 
     console.info(`${LOG_PREFIX} persisted`, { project_id: projectId, recommendation_id: recommendationId });
 
-    return { success: true, solutionTitle: sanitized.title, solutionDescription: sanitized.description };
+    return { success: true, solution: sanitized };
   } catch (error) {
     if (error instanceof OperationTimeoutError) {
       console.error(`${LOG_PREFIX} stage_timed_out`, {

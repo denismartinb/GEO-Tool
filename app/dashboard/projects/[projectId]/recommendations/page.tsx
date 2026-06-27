@@ -5,8 +5,30 @@ import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import {
   RecommendationsClient,
+  type GeneratedSolution,
   type Recommendation,
 } from "./recommendations-client";
+
+/**
+ * Parses a sanitized `generated_solutions.sanitized_content` JSON string into a
+ * structured solution. Defensive: returns null on any unexpected shape rather
+ * than crashing the page (the content was sanitized server-side at write time).
+ */
+function parseGeneratedSolution(raw: string): GeneratedSolution | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.title !== "string" || typeof parsed.summary !== "string") return null;
+    const steps = Array.isArray(parsed.steps) ? parsed.steps.filter((s): s is string => typeof s === "string") : [];
+    let example: GeneratedSolution["example"] = null;
+    const ex = parsed.example as { label?: unknown; content?: unknown } | null | undefined;
+    if (ex && typeof ex.label === "string" && typeof ex.content === "string") {
+      example = { label: ex.label, content: ex.content };
+    }
+    return { title: parsed.title, summary: parsed.summary, steps, example };
+  } catch {
+    return null;
+  }
+}
 
 // Server Actions inherit the maxDuration of the page they're invoked from.
 // Without this, "Mejorar redaccion con IA" (a Gemini call, see
@@ -74,7 +96,7 @@ export default async function RecommendationsPage({
   // recommendation. These live in `generated_solutions` (never on the
   // recommendation row); the owner SELECT policy on that table makes this a
   // plain user-context read. Only completed + sanitized rows are renderable.
-  const solutionByRecId = new Map<string, { title: string; description: string }>();
+  const solutionByRecId = new Map<string, GeneratedSolution>();
   if (baseRecs.length > 0) {
     const { data: solutionRows } = await supabase
       .from("generated_solutions")
@@ -94,14 +116,8 @@ export default async function RecommendationsPage({
     }>) {
       // Newest-first order means the first row seen per recommendation wins.
       if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
-      try {
-        const parsed = JSON.parse(row.sanitized_content) as { title?: unknown; description?: unknown };
-        if (typeof parsed.title === "string" && typeof parsed.description === "string") {
-          solutionByRecId.set(row.recommendation_id, { title: parsed.title, description: parsed.description });
-        }
-      } catch {
-        // Skip unparseable stored content rather than crash the page.
-      }
+      const parsed = parseGeneratedSolution(row.sanitized_content);
+      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
     }
   }
 
