@@ -171,11 +171,30 @@ function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
               alignItems: "center",
               justifyContent: "space-between",
               gap: 8,
-              marginBottom: 6,
+              marginBottom: 2,
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-3)" }}>{solution.example.label}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+              <span className="badge badge-outline" style={{ fontSize: 10, flexShrink: 0 }}>
+                Ejemplo
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--ink-3)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {solution.example.label}
+              </span>
+            </div>
             <CopyButton text={solution.example.content} />
+          </div>
+          <div style={{ fontSize: 11, color: "var(--ink-4)", marginBottom: 8 }}>
+            Plantilla generada por IA — revísala y adáptala a tu web antes de publicarla.
           </div>
           <pre
             style={{
