@@ -1944,7 +1944,10 @@ textarea.add-prompts-text-input {
    max-height only bounds the expand/collapse transition; real content is
    shorter than this. */
 .rec-card.open .rec-detail { max-height: 4000px; }
-.rec-detail-inner { padding: 20px 22px 22px; display: grid; grid-template-columns: 1fr; gap: 18px; }
+/* minmax(0, 1fr) (not 1fr) so a long child — e.g. an example label or a
+   pasteable block — wraps instead of forcing the whole card wider than the
+   mobile viewport (default grid item min-width is auto, which overflows). */
+.rec-detail-inner { padding: 20px 22px 22px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
 
 /* Detail blocks */
 .detail-block { display: flex; flex-direction: column; }

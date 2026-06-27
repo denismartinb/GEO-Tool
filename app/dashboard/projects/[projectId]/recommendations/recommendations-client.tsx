@@ -174,7 +174,7 @@ function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
               marginBottom: 2,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
               <span className="badge badge-outline" style={{ fontSize: 10, flexShrink: 0 }}>
                 Ejemplo
               </span>
@@ -183,9 +183,8 @@ function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
                   fontSize: 12,
                   fontWeight: 700,
                   color: "var(--ink-3)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  minWidth: 0,
+                  overflowWrap: "anywhere",
                 }}
               >
                 {solution.example.label}
