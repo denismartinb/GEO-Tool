@@ -68,6 +68,7 @@ export type RecommendationCategory = "content" | "technical" | "authority";
 
 const categoryByType: Record<string, RecommendationCategory> = {
   improve_citation_readiness: "authority",
+  add_citation_block: "authority",
   strengthen_brand_entity_clarity: "technical"
 };
 
@@ -241,12 +242,104 @@ function computeCompetitorDominance(promptResults: PromptResultInput[], namedCom
     .slice(0, 3);
 }
 
+function shortPrompt(text: string): string {
+  const trimmed = text.trim();
+  return trimmed.length > 70 ? `${trimmed.slice(0, 67)}…` : trimmed;
+}
+
+/**
+ * Per-prompt gap cards (Fase B2): instead of one broad card bundling every
+ * brand-missing or uncited prompt — which mixes unrelated topics into a single
+ * recommendation whose generated solution can only address one of them — emit
+ * one focused card per affected prompt, so each card (and its later AI action
+ * plan) stays about a single, coherent query.
+ *
+ * Two non-overlapping gaps are produced here; "brand absent while a competitor
+ * is present" is deliberately left to the competitor-dominance / comparison
+ * rules below, to avoid two cards for the same prompt:
+ *  - visibility ("increase_brand_visibility"): brand absent AND no competitor
+ *    named in that prompt — a pure presence gap.
+ *  - citation ("add_citation_block", catalog gap "mention without citation"):
+ *    brand IS mentioned but its domain was not grounded-cited.
+ *
+ * Each gap keeps the run-score gate the old aggregate rules used, so this only
+ * changes the shape of the output (N specific cards vs 1 bundled), not when the
+ * gap is considered open.
+ */
+function perPromptGapCards(opts: {
+  promptResults: PromptResultInput[];
+  runScore: RunScoreInput;
+  scoreDetails: Record<string, unknown>;
+}): CandidateRec[] {
+  const { promptResults, runScore, scoreDetails } = opts;
+  const visibilityOpen = runScore.visibility_score < 60;
+  const citationOpen = runScore.citation_score < 50;
+  const cards: CandidateRec[] = [];
+
+  for (const result of promptResults) {
+    const ev = promptEvidence(result);
+    const hasCompetitor = ev.competitors.length > 0;
+    const label = shortPrompt(result.prompt_text_snapshot);
+
+    if (!result.brand_mentioned && !hasCompetitor && visibilityOpen) {
+      cards.push({
+        title: `Consigue aparecer en "${label}"`,
+        description:
+          "Tu marca no aparece en la respuesta de IA a esta consulta y ningún competidor concreto la domina todavía. Refuerza el contenido y las señales de marca específicas para esta búsqueda.",
+        rule_id: "rule_visibility_001",
+        recommendation_type: "increase_brand_visibility",
+        dedupeKey: `increase_brand_visibility:${result.id}`,
+        impact: "medium",
+        effort: "medium",
+        confidence: runScore.confidence,
+        source_type: "rule",
+        affectedCount: 1,
+        severityScore: 48 + confWeight(runScore.confidence) * 4,
+        evidence_json: buildEvidenceJson({
+          ruleId: "rule_visibility_001",
+          scoreDetails,
+          runScore,
+          affected: [result],
+          assumptions: ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
+          whyThisMatters: "No aparecer en esta consulta reduce tu visibilidad ante una intención de búsqueda concreta.",
+          snippetSource: "brand"
+        })
+      });
+    } else if (result.brand_mentioned && !result.citation_found && citationOpen) {
+      cards.push({
+        title: `Te mencionan pero no citan tu dominio en "${label}"`,
+        description:
+          "La IA menciona tu marca en esta consulta pero no cita tu dominio como fuente. Añade un bloque factual y citable que la IA pueda referenciar directamente.",
+        rule_id: "rule_citations_001",
+        recommendation_type: "add_citation_block",
+        dedupeKey: `add_citation_block:${result.id}`,
+        impact: "medium",
+        effort: "low",
+        confidence: runScore.confidence,
+        source_type: "rule",
+        affectedCount: 1,
+        severityScore: 44 + confWeight(runScore.confidence) * 4,
+        evidence_json: buildEvidenceJson({
+          ruleId: "rule_citations_001",
+          scoreDetails,
+          runScore,
+          affected: [result],
+          assumptions: ["Una mención sin cita indica contenido que la IA conoce pero no referencia como fuente."],
+          whyThisMatters: "Que te mencionen sin citar tu dominio limita tu autoridad como fuente en esta consulta.",
+          snippetSource: "none"
+        })
+      });
+    }
+  }
+
+  return cards;
+}
+
 export function generateRecommendationsForRun(input: GenerateInput): RecommendationRow[] {
   const { runScore, promptResults } = input;
   if (!promptResults.length) return [];
 
   const brandMissing = promptResults.filter((p) => !p.brand_mentioned);
-  const noCitation = promptResults.filter((p) => !p.citation_found);
   const competitorNoBrand = promptResults.filter((p) => p.mentioned_competitors_count > 0 && !p.brand_mentioned);
   const comparativePrompts = competitorNoBrand.filter((p) =>
     comparativeKeywords.some((k) => p.prompt_text_snapshot.toLowerCase().includes(k))
@@ -259,56 +352,10 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   const totalCompetitorMentions = Number(scoreDetails.total_competitor_mentions ?? 0);
   const candidates: CandidateRec[] = [];
 
-  if (runScore.visibility_score < 60) {
-    const impact: "high" | "medium" = runScore.visibility_score < 30 ? "high" : "medium";
-    candidates.push({
-      title: "Mejora la visibilidad de tu marca en los prompts de alta intención",
-      description: "Tu marca no aparece en una parte significativa de las respuestas de IA. Refuerza la presencia explícita de marca y contexto en tus páginas principales.",
-      rule_id: "rule_visibility_001",
-      recommendation_type: "increase_brand_visibility",
-      dedupeKey: "increase_brand_visibility",
-      impact,
-      effort: "medium",
-      confidence: runScore.confidence,
-      source_type: "rule",
-      affectedCount: brandMissing.length,
-      severityScore: (100 - runScore.visibility_score) + confWeight(runScore.confidence) * 5,
-      evidence_json: buildEvidenceJson({
-        ruleId: "rule_visibility_001",
-        scoreDetails,
-        runScore,
-        affected: brandMissing,
-        assumptions: ["La marca debería estar presente en la mayoría de los prompts objetivo."],
-        whyThisMatters: "Una presencia de marca baja reduce su visibilidad en las respuestas generadas por IA."
-      })
-    });
-  }
-
-  if (runScore.citation_score < 50) {
-    const impact: "high" | "medium" = runScore.citation_score < 20 ? "high" : "medium";
-    candidates.push({
-      title: "Haz que tu contenido sea más citable",
-      description: "Las respuestas de IA rara vez citan tu marca o tu dominio. Añade datos verificables, referencias estructuradas y secciones más fáciles de citar como fuente.",
-      rule_id: "rule_citations_001",
-      recommendation_type: "improve_citation_readiness",
-      dedupeKey: "improve_citation_readiness",
-      impact,
-      effort: "medium",
-      confidence: runScore.confidence,
-      source_type: "rule",
-      affectedCount: noCitation.length,
-      severityScore: (100 - runScore.citation_score) + confWeight(runScore.confidence) * 4,
-      evidence_json: buildEvidenceJson({
-        ruleId: "rule_citations_001",
-        scoreDetails,
-        runScore,
-        affected: noCitation,
-        assumptions: ["La presencia de citas indica que el contenido es apto como fuente para los motores de IA."],
-        whyThisMatters: "Una presencia de citas baja limita tu autoridad y la frecuencia con la que se te referencia.",
-        snippetSource: "none"
-      })
-    });
-  }
+  // Per-prompt visibility ("increase_brand_visibility") and citation
+  // ("add_citation_block") gaps — one focused card per affected query instead
+  // of one bundled card mixing unrelated topics (Fase B2).
+  candidates.push(...perPromptGapCards({ promptResults, runScore, scoreDetails }));
 
   const dominantCompetitors = computeCompetitorDominance(promptResults, input.competitors);
   if (dominantCompetitors.length > 0) {

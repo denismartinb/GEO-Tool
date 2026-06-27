@@ -79,7 +79,7 @@ describe("generateRecommendationsForRun", () => {
       { citation_score: 20 }
     );
 
-    const citationRec = recs.find((r) => r.recommendation_type === "improve_citation_readiness");
+    const citationRec = recs.find((r) => r.recommendation_type === "add_citation_block");
     expect(citationRec).toBeDefined();
     // p2 is cited and not part of this rule's affected set, so its domain must not leak in.
     expect(citationRec!.evidence_json.citation_domains).toEqual([]);
@@ -125,7 +125,7 @@ describe("generateRecommendationsForRun", () => {
       { citation_score: 20 }
     );
 
-    const citationRec = recs.find((r) => r.recommendation_type === "improve_citation_readiness");
+    const citationRec = recs.find((r) => r.recommendation_type === "add_citation_block");
     expect(citationRec).toBeDefined();
     // The brand has no evidence text in p1 — the rule must show no snippet
     // rather than silently quoting a competitor as if it supported the claim
@@ -150,21 +150,18 @@ describe("generateRecommendationsForRun", () => {
       { citation_score: 20 }
     );
 
-    const citationRec = recs.find((r) => r.recommendation_type === "improve_citation_readiness");
+    const citationRec = recs.find((r) => r.recommendation_type === "add_citation_block");
     expect(citationRec).toBeDefined();
     expect(citationRec!.evidence_json.evidence_snippets).toEqual([]);
   });
 
-  it("never substitutes a competitor quote as evidence for a brand-gap rule (visibility)", () => {
+  it("never shows a fabricated snippet for a per-prompt visibility gap (brand absent, no competitor)", () => {
     const recs = run(
       [
         prompt({
           id: "p1",
           prompt_text_snapshot: "best furniture brand",
-          brand_mentioned: false,
-          extracted_json: extractedWith({
-            competitors: [{ name: "Ikea", mentioned: true, evidence: ["IKEA es la más popular."] }]
-          })
+          brand_mentioned: false
         })
       ],
       { visibility_score: 40 }
@@ -172,7 +169,31 @@ describe("generateRecommendationsForRun", () => {
 
     const visibilityRec = recs.find((r) => r.recommendation_type === "increase_brand_visibility");
     expect(visibilityRec).toBeDefined();
+    expect(visibilityRec!.evidence_json.affected_prompt_ids).toEqual(["p1"]);
+    // Brand has no evidence text and there is no competitor to borrow from.
     expect(visibilityRec!.evidence_json.evidence_snippets).toEqual([]);
+  });
+
+  it("leaves a brand-absent prompt that names a competitor to the competitor rules, not a standalone visibility card", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "best furniture brand",
+          brand_mentioned: false,
+          mentioned_competitors_count: 1,
+          extracted_json: extractedWith({
+            competitors: [{ name: "Ikea", mentioned: true, evidence: ["IKEA es la más popular."] }]
+          })
+        })
+      ],
+      { visibility_score: 40, competitor_gap_score: 60, details_json: { total_competitor_mentions: 2 } }
+    );
+
+    // No per-prompt visibility card for a prompt where a competitor is present
+    // (avoids two cards for the same prompt); the competitor-gap rule owns it.
+    expect(recs.some((r) => r.recommendation_type === "increase_brand_visibility")).toBe(false);
+    expect(recs.some((r) => r.recommendation_type === "close_competitor_gap")).toBe(true);
   });
 
   it("does quote the dominant competitor as evidence for close_competitor_gap, where that quote IS the point", () => {
@@ -273,6 +294,38 @@ describe("generateRecommendationsForRun", () => {
     expect(gapRec!.evidence_json.dominant_competitor).toBeUndefined();
   });
 
+  it("splits the citation gap into one focused card per affected prompt (no bundling)", () => {
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "precio de sofás cama", brand_mentioned: true, citation_found: false }),
+        prompt({ id: "p2", prompt_text_snapshot: "muebles sostenibles", brand_mentioned: true, citation_found: false })
+      ],
+      { citation_score: 20 }
+    );
+
+    const citationRecs = recs.filter((r) => r.recommendation_type === "add_citation_block");
+    expect(citationRecs).toHaveLength(2);
+    // Each card is scoped to exactly one prompt and names it in the title.
+    const affected = citationRecs.map((r) => (r.evidence_json.affected_prompt_ids as string[])[0]).sort();
+    expect(affected).toEqual(["p1", "p2"]);
+    expect(citationRecs.every((r) => (r.evidence_json.affected_prompt_ids as string[]).length === 1)).toBe(true);
+    expect(citationRecs.some((r) => r.title.includes("sofás cama"))).toBe(true);
+  });
+
+  it("emits a per-prompt visibility card only for a brand-absent prompt with no competitor", () => {
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "tiendas de muebles modernas", brand_mentioned: false })
+      ],
+      { visibility_score: 40 }
+    );
+
+    const visRecs = recs.filter((r) => r.recommendation_type === "increase_brand_visibility");
+    expect(visRecs).toHaveLength(1);
+    expect((visRecs[0].evidence_json.affected_prompt_ids as string[])).toEqual(["p1"]);
+    expect(visRecs[0].title).toContain("tiendas de muebles modernas");
+  });
+
   it("triggers comparison content rule once 2+ comparative prompts lack the brand", () => {
     const recs = run(
       [
@@ -304,6 +357,7 @@ describe("generateRecommendationsForRun", () => {
 
   it("maps recommendation types to the right UI category", () => {
     expect(categoryForType("improve_citation_readiness")).toBe("authority");
+    expect(categoryForType("add_citation_block")).toBe("authority");
     expect(categoryForType("strengthen_brand_entity_clarity")).toBe("technical");
     expect(categoryForType("increase_brand_visibility")).toBe("content");
     expect(categoryForType("close_competitor_gap")).toBe("content");
