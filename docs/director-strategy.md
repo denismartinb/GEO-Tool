@@ -303,8 +303,11 @@ no schema work until a gap genuinely needs it):**
     right deliverable (comparison page for a competitor gap, FAQ for an
     informational gap, Organization schema for entity clarity, etc.). No engine
     change.
-  - **C2 — next:** new gap-8 rule (digital PR / source gap) from the grounded
-    `citation_domains` already captured + its PR-target/pitch asset.
+  - **C2 — DONE:** new gap-8 rule `pursue_citation_sources` (digital PR /
+    source gap) — third-party domains Gemini grounds on in prompts where the
+    brand is absent, surfaced as PR targets, built from the grounded
+    `citation_domains` already captured (no crawler/extraction) + its
+    PR-target/pitch asset focus.
   - **C3 — optional:** split bundled comparison/FAQ cards per prompt.
 - **Fase D (Fase 2):** gaps 9–10 — need new sentiment/freshness extraction in
   the scan, so a dedicated backend/schema phase, explicitly separate.

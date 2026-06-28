@@ -711,6 +711,8 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
       return `ASSET FOCUS — entity clarity: provide as examples an Organization JSON-LD snippet (name "${input.brand}", url the brand domain, a short description, its category) and a brief "Acerca de" page outline stating the brand's category and key descriptors.`;
     case "add_citation_block":
       return "ASSET FOCUS — citable block: provide as examples a factual, directly-extractable paragraph answering the affected query, and an Article or FAQPage JSON-LD snippet.";
+    case "pursue_citation_sources":
+      return "ASSET FOCUS — digital PR: provide as examples (1) a prioritized target list of the cited source domains given below, each with a one-line reason to pursue it, and (2) a short, adaptable outreach/pitch email (subject + body) the brand can send those publications. Use ONLY the source domains given; use placeholders for names, links and any metric — never invent one.";
     case "increase_brand_visibility":
       return "ASSET FOCUS — content brief: provide as examples a content brief (target query, search intent, H1 + H2 outline, key entities) and a concise citable intro paragraph for the page.";
     default:

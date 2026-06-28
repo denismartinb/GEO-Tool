@@ -69,6 +69,7 @@ export type RecommendationCategory = "content" | "technical" | "authority";
 const categoryByType: Record<string, RecommendationCategory> = {
   improve_citation_readiness: "authority",
   add_citation_block: "authority",
+  pursue_citation_sources: "authority",
   strengthen_brand_entity_clarity: "technical"
 };
 
@@ -335,6 +336,55 @@ function perPromptGapCards(opts: {
   return cards;
 }
 
+type CitationSource = {
+  domain: string;
+  prompts: PromptResultInput[];
+};
+
+function normalizeDomainValue(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
+
+/**
+ * Gap 8 (digital PR / source gap): third-party domains that Gemini GROUNDS its
+ * answers on in prompts where the brand's own domain is NOT among the cited
+ * sources. These are the publications to pursue so the model starts citing the
+ * brand too. Only grounded citations count (promptEvidence already filters to
+ * source="grounding"), the brand's own domain is excluded, and a source must
+ * recur in >=2 brand-absent prompts to qualify — avoiding one-off citations.
+ * Built entirely from data already captured (no crawler, no new extraction).
+ */
+function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomain: string): CitationSource[] {
+  const normalizedBrand = normalizeDomainValue(brandDomain);
+  const bySource = new Map<string, CitationSource>();
+
+  for (const result of promptResults) {
+    const ev = promptEvidence(result);
+    const normalizedDomains = ev.domains.map(normalizeDomainValue);
+    if (normalizedBrand && normalizedDomains.includes(normalizedBrand)) continue; // brand already cited here
+
+    const seenInThisPrompt = new Set<string>();
+    for (const domain of ev.domains) {
+      const key = normalizeDomainValue(domain);
+      if (!key || key === normalizedBrand || seenInThisPrompt.has(key)) continue;
+      seenInThisPrompt.add(key);
+      const entry = bySource.get(key) ?? { domain, prompts: [] };
+      entry.prompts.push(result);
+      bySource.set(key, entry);
+    }
+  }
+
+  return Array.from(bySource.values())
+    .filter((entry) => entry.prompts.length >= 2)
+    .sort((a, b) => b.prompts.length - a.prompts.length)
+    .slice(0, 6);
+}
+
 export function generateRecommendationsForRun(input: GenerateInput): RecommendationRow[] {
   const { runScore, promptResults } = input;
   if (!promptResults.length) return [];
@@ -482,6 +532,45 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         affected: brandMissing,
         assumptions: ["Señales bajas tanto de marca como de competidores pueden indicar una vinculación débil con la entidad o la categoría."],
         whyThisMatters: "La claridad de la entidad ayuda a los modelos a asociar tu marca con las intenciones temáticas relevantes."
+      })
+    });
+  }
+
+  // Gap 8 (digital PR): the third-party sources Gemini already cites where the
+  // brand is absent — the publications worth pursuing so the model cites you too.
+  const citationSources = computeCitationSourceGap(promptResults, input.project.domain);
+  if (citationSources.length > 0) {
+    const affectedIds = new Set<string>();
+    for (const source of citationSources) {
+      for (const p of source.prompts) affectedIds.add(p.id);
+    }
+    const affected = promptResults.filter((p) => affectedIds.has(p.id));
+    const sourceDomains = citationSources.map((source) => source.domain);
+    const impact: "high" | "medium" = affected.length >= 4 ? "high" : "medium";
+    candidates.push({
+      title: "Consigue que las fuentes que cita la IA también te citen a ti",
+      description: `La IA se apoya en fuentes de terceros (${sourceDomains.slice(0, 3).join(", ")}${sourceDomains.length > 3 ? "…" : ""}) en consultas donde tu dominio no aparece. Trabaja esas fuentes (relaciones públicas digitales) para que te incluyan y empieces a ser citado.`,
+      rule_id: "rule_source_gap_001",
+      recommendation_type: "pursue_citation_sources",
+      dedupeKey: "pursue_citation_sources",
+      impact,
+      effort: "high",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: affected.length,
+      severityScore: affected.length * 12 + confWeight(runScore.confidence) * 3,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_source_gap_001",
+        scoreDetails,
+        runScore,
+        affected,
+        assumptions: [
+          "Las fuentes que la IA cita de forma recurrente sin incluir tu marca son objetivos de relaciones públicas digitales."
+        ],
+        whyThisMatters:
+          "Entrar en las fuentes que los motores de IA ya citan aumenta directamente tu probabilidad de ser referenciado.",
+        extra: { source_domains: sourceDomains },
+        snippetSource: "none"
       })
     });
   }
