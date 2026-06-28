@@ -39,11 +39,13 @@ export const rewriteRecommendationInputSchema = z.object({
   recommendationId: z.string().uuid()
 });
 
+export type GeneratedSolutionExample = { label: string; content: string };
+
 export type GeneratedSolution = {
   title: string;
   summary: string;
   steps: string[];
-  example: { label: string; content: string } | null;
+  examples: GeneratedSolutionExample[];
 };
 
 export type RewriteRecommendationResult =
@@ -99,6 +101,7 @@ const STEP_MAX = 200;
 const MAX_STEPS = 6;
 const EXAMPLE_LABEL_MAX = 80;
 const EXAMPLE_CONTENT_MAX = 1200;
+const MAX_EXAMPLES = 3;
 
 // Only the Gemini fetch is bounded inside lib/llm/gemini.ts; the Supabase
 // reads/writes below have no library-level timeout, so each is bounded here and
@@ -151,6 +154,32 @@ function sanitizeField(input: string, maxLen: number): string {
     .slice(0, maxLen);
 }
 
+/**
+ * Sanitizer for a pasteable example's content. Unlike sanitizeField, it
+ * PRESERVES newlines, tabs and angle brackets, because an example may be a code
+ * artifact (an HTML snippet or a JSON-LD schema block) whose formatting and tags
+ * are the whole point. It is safe to keep them: the UI renders this as escaped
+ * React text in a <pre>, so nothing executes. Only non-newline/tab C0 control
+ * characters are stripped, trailing per-line spaces and 3+ blank lines are
+ * collapsed, and the length is capped.
+ */
+function sanitizeExampleContent(input: string, maxLen: number): string {
+  let out = "";
+  for (const ch of input) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (ch === "\n" || ch === "\t") {
+      out += ch;
+    } else {
+      out += code < 0x20 || code === 0x7f ? " " : ch;
+    }
+  }
+  return out
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxLen);
+}
+
 function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
   const title = sanitizeField(raw.title, TITLE_MAX);
   const summary = sanitizeField(raw.summary, SUMMARY_MAX);
@@ -163,20 +192,27 @@ function sanitizeSolution(raw: SolutionContent): SolutionContent | null {
     .filter((step) => step.length > 0)
     .slice(0, MAX_STEPS);
 
-  let example: SolutionContent["example"] = null;
-  if (raw.example) {
-    const label = sanitizeField(raw.example.label, EXAMPLE_LABEL_MAX);
-    const content = sanitizeField(raw.example.content, EXAMPLE_CONTENT_MAX);
-    if (label && content) {
-      example = { label, content };
-    }
-  }
+  const examples = (raw.examples ?? [])
+    .map((example) => ({
+      label: sanitizeField(example.label, EXAMPLE_LABEL_MAX),
+      content: sanitizeExampleContent(example.content, EXAMPLE_CONTENT_MAX)
+    }))
+    .filter((example) => example.label.length > 0 && example.content.length > 0)
+    .slice(0, MAX_EXAMPLES);
 
-  return { title, summary, steps, example };
+  return { title, summary, steps, examples };
 }
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function toExample(value: unknown): GeneratedSolutionExample | null {
+  const candidate = value as { label?: unknown; content?: unknown } | null | undefined;
+  if (candidate && typeof candidate.label === "string" && typeof candidate.content === "string") {
+    return { label: candidate.label, content: candidate.content };
+  }
+  return null;
 }
 
 function parseSolutionContent(raw: string | null): SolutionContent | null {
@@ -187,12 +223,12 @@ function parseSolutionContent(raw: string | null): SolutionContent | null {
       return null;
     }
     const steps = isStringArray(parsed.steps) ? parsed.steps : [];
-    let example: SolutionContent["example"] = null;
-    const rawExample = parsed.example as { label?: unknown; content?: unknown } | null | undefined;
-    if (rawExample && typeof rawExample.label === "string" && typeof rawExample.content === "string") {
-      example = { label: rawExample.label, content: rawExample.content };
-    }
-    return { title: parsed.title, summary: parsed.summary, steps, example };
+    // Back-compat: read the new `examples` array, falling back to a legacy
+    // single `example` object persisted by the first copy-paste version.
+    const examples = Array.isArray(parsed.examples)
+      ? parsed.examples.map(toExample).filter((item): item is GeneratedSolutionExample => item !== null)
+      : [toExample(parsed.example)].filter((item): item is GeneratedSolutionExample => item !== null);
+    return { title: parsed.title, summary: parsed.summary, steps, examples };
   } catch {
     // Stored content unexpectedly unparseable — treat as no usable solution.
   }
@@ -355,12 +391,14 @@ export async function rewriteRecommendationCore({
       return { success: false, error: GENERIC_REWRITE_FAILURE };
     }
 
-    // Validate ALL generated text (title + summary + every step + the pasteable
-    // example) against the evidence, so a fabricated competitor/domain anywhere
-    // in the asset — not just the title — is caught before persisting.
+    // Validate ALL generated text (title + summary + every step + every
+    // pasteable example, label and content) against the evidence, so a
+    // fabricated competitor/domain anywhere in the asset — not just the title —
+    // is caught before persisting.
+    const exampleText = rewrite.examples.flatMap((example) => [example.label, example.content]);
     const validation = validateRewriteAgainstEvidence({
       title: rewrite.title,
-      description: [rewrite.summary, ...rewrite.steps, rewrite.example?.content ?? ""].join(" "),
+      description: [rewrite.summary, ...rewrite.steps, ...exampleText].join(" "),
       allowedCompetitors,
       allowedDomains: citationDomains,
       trackedCompetitors,

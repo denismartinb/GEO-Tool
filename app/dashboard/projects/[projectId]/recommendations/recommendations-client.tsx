@@ -23,11 +23,13 @@ type EvidenceJson = {
  * `generated_solutions`. Defined here (not in the server-only rewrite module)
  * so both the server page and this client component can share the shape.
  */
+export type GeneratedSolutionExample = { label: string; content: string };
+
 export type GeneratedSolution = {
   title: string;
   summary: string;
   steps: string[];
-  example: { label: string; content: string } | null;
+  examples: GeneratedSolutionExample[];
 };
 
 export type Recommendation = {
@@ -155,61 +157,78 @@ function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
         </ol>
       )}
 
-      {solution.example && (
-        <div
-          style={{
-            marginTop: 12,
-            padding: "10px 12px",
-            background: "var(--surface)",
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 8,
-              marginBottom: 2,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
-              <span className="badge badge-outline" style={{ fontSize: 10, flexShrink: 0 }}>
-                Ejemplo
-              </span>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--ink-3)",
-                  minWidth: 0,
-                  overflowWrap: "anywhere",
-                }}
-              >
-                {solution.example.label}
-              </span>
+      {solution.examples.length > 0 && (
+        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+          {solution.examples.length > 1 && (
+            <div style={{ fontSize: 11, color: "var(--ink-4)" }}>
+              {solution.examples.length} plantillas generadas por IA — revísalas y adáptalas a tu web antes de
+              publicarlas.
             </div>
-            <CopyButton text={solution.example.content} />
-          </div>
-          <div style={{ fontSize: 11, color: "var(--ink-4)", marginBottom: 8 }}>
-            Plantilla generada por IA — revísala y adáptala a tu web antes de publicarla.
-          </div>
-          <pre
-            style={{
-              margin: 0,
-              fontSize: 12.5,
-              color: "var(--ink-2)",
-              lineHeight: 1.55,
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-              fontFamily: "inherit",
-            }}
-          >
-            {solution.example.content}
-          </pre>
+          )}
+          {solution.examples.map((example, i) => (
+            <ExampleBlock key={i} example={example} showCaption={solution.examples.length === 1} />
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ExampleBlock({ example, showCaption }: { example: GeneratedSolutionExample; showCaption: boolean }) {
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        background: "var(--surface)",
+        borderRadius: 8,
+        border: "1px solid var(--line)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          marginBottom: showCaption ? 2 : 8,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
+          <span className="badge badge-outline" style={{ fontSize: 10, flexShrink: 0 }}>
+            Ejemplo
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: "var(--ink-3)",
+              minWidth: 0,
+              overflowWrap: "anywhere",
+            }}
+          >
+            {example.label}
+          </span>
+        </div>
+        <CopyButton text={example.content} />
+      </div>
+      {showCaption && (
+        <div style={{ fontSize: 11, color: "var(--ink-4)", marginBottom: 8 }}>
+          Plantilla generada por IA — revísala y adáptala a tu web antes de publicarla.
+        </div>
+      )}
+      <pre
+        style={{
+          margin: 0,
+          fontSize: 12.5,
+          color: "var(--ink-2)",
+          lineHeight: 1.55,
+          whiteSpace: "pre-wrap",
+          wordBreak: "break-word",
+          fontFamily: "inherit",
+        }}
+      >
+        {example.content}
+      </pre>
     </div>
   );
 }

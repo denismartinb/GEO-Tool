@@ -30,6 +30,11 @@ const COMMON_TLDS = new Set([
 
 const DOMAIN_TOKEN_PATTERN = /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\b/gi;
 
+// Structured-data vocabulary domains that legitimately appear in any JSON-LD
+// example (e.g. `"@context": "https://schema.org"`). They are not citation or
+// competitor domains, so they must never trip the anti-fabrication guard.
+const ALWAYS_ALLOWED_DOMAINS = ["schema.org", "www.w3.org"];
+
 function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -86,7 +91,9 @@ export function validateRewriteAgainstEvidence(input: RewriteValidationInput): R
     }
   }
 
-  const allowedDomains = new Set([...input.allowedDomains, input.brandDomain].map(normalizeDomain).filter(Boolean));
+  const allowedDomains = new Set(
+    [...input.allowedDomains, input.brandDomain, ...ALWAYS_ALLOWED_DOMAINS].map(normalizeDomain).filter(Boolean)
+  );
   const domainMatches = rawText.match(DOMAIN_TOKEN_PATTERN) ?? [];
   for (const match of domainMatches) {
     if (!looksLikeDomain(match)) continue;

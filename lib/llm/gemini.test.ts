@@ -426,7 +426,10 @@ describe("rewriteRecommendation", () => {
       title: "Refuerza tu contenido citable frente a Conforama",
       summary: "Acme no aparece citada frente a Conforama en respuestas sobre muebles; añade datos verificables.",
       steps: ["Publica una comparativa directa.", "Añade un bloque factual citable."],
-      example: { label: "Párrafo citable", content: "Acme fabrica sofás cama con [tu dato aquí] de garantía." }
+      examples: [
+        { label: "Párrafo citable", content: "Acme fabrica sofás cama con [tu dato aquí] de garantía." },
+        { label: "FAQ schema (JSON-LD)", content: '{ "@type": "FAQPage" }' }
+      ]
     };
     const fetchMock = mockGeminiJson(out);
     vi.stubGlobal("fetch", fetchMock);
@@ -434,6 +437,39 @@ describe("rewriteRecommendation", () => {
     const result = await rewriteRecommendation(rewriteInput());
 
     expect(result).toEqual(out);
+  });
+
+  it("accepts a legacy single `example` object and normalizes it to the examples array", async () => {
+    const fetchMock = mockGeminiJson({
+      title: "Título",
+      summary: "Resumen",
+      steps: [],
+      example: { label: "Bloque", content: "Contenido pegable" }
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await rewriteRecommendation(rewriteInput());
+
+    expect(result?.examples).toEqual([{ label: "Bloque", content: "Contenido pegable" }]);
+  });
+
+  it("caps the generated examples at three", async () => {
+    const fetchMock = mockGeminiJson({
+      title: "Título",
+      summary: "Resumen",
+      steps: [],
+      examples: [
+        { label: "a", content: "1" },
+        { label: "b", content: "2" },
+        { label: "c", content: "3" },
+        { label: "d", content: "4" }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await rewriteRecommendation(rewriteInput());
+
+    expect(result?.examples).toHaveLength(3);
   });
 
   it("includes only the anchored competitors/domains in the prompt sent to Gemini", async () => {
