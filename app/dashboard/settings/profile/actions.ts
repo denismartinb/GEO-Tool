@@ -4,19 +4,20 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 
 const nameSchema = z.string().trim().min(1).max(80);
+const optionalNameSchema = z.string().trim().max(80);
 const newPasswordSchema = z.string().min(8, "La nueva contraseña debe tener al menos 8 caracteres.");
 
 export type UpdateProfileNameResult = { success: true } | { success: false; error: string };
 
 export async function updateProfileName(firstName: string, lastName: string): Promise<UpdateProfileNameResult> {
   const parsedFirst = nameSchema.safeParse(firstName);
-  const parsedLast = nameSchema.safeParse(lastName);
+  const parsedLast = optionalNameSchema.safeParse(lastName);
 
   if (!parsedFirst.success) {
     return { success: false, error: "Introduce un nombre válido." };
   }
   if (!parsedLast.success) {
-    return { success: false, error: "Introduce unos apellidos válidos." };
+    return { success: false, error: "Los apellidos son demasiado largos." };
   }
 
   const { supabase } = await requireUser();
