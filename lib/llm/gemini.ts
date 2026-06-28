@@ -657,19 +657,20 @@ export type RecommendationRewrite = {
   title: string;
   summary: string;
   steps: string[];
-  example: { label: string; content: string } | null;
+  examples: { label: string; content: string }[];
 };
 
 const recommendationRewriteSchema = z.object({
   title: z.string(),
   summary: z.string(),
   steps: z.array(z.string()).default([]),
-  example: z
-    .object({ label: z.string(), content: z.string() })
-    .nullable()
-    .optional()
-    .default(null)
+  // Back-compat: accept either the new `examples` array or a legacy single
+  // `example` object, so an older-style model response still parses.
+  examples: z.array(z.object({ label: z.string(), content: z.string() })).optional(),
+  example: z.object({ label: z.string(), content: z.string() }).nullable().optional()
 });
+
+const MAX_GENERATED_EXAMPLES = 3;
 
 /**
  * Turns a rule-based recommendation into a structured, copy-paste-ready action
@@ -699,12 +700,12 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
     "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
     "If no competitors or domains are listed below, do not invent or imply any.",
     `Write entirely in this language: ${input.language}.`,
-    'Return ONLY valid JSON with this exact shape: { "title": string, "summary": string, "steps": string[], "example": { "label": string, "content": string } | null }.',
+    'Return ONLY valid JSON with this exact shape: { "title": string, "summary": string, "steps": string[], "examples": { "label": string, "content": string }[] }.',
     '"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.',
     '"summary": 1-2 sentences, max 400 characters, why this matters for this brand given the facts.',
     '"steps": 3 to 6 concrete, specific actions (each max 200 characters) the brand should take, grounded in the real prompts/competitors below.',
     "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'.",
-    '"example": a ready-to-paste TEMPLATE the user adapts before publishing (e.g. a citable factual paragraph, or a short FAQ) — it is an example to review and fill in, never a verified fact. "label" names it (max 80 chars); "content" is the pasteable text (max 1200 chars). Use null only if no useful artifact can be grounded in the facts.',
+    '"examples": 1 to 3 ready-to-paste TEMPLATE artifacts the user adapts before publishing — one per distinct deliverable the steps call for (e.g. a citable factual paragraph, a short FAQ, a JSON-LD schema snippet). Each is an example to review and fill in, never a verified fact. Each item: "label" names it (max 80 chars); "content" is the pasteable text (max 1200 chars). Return [] only if no useful artifact can be grounded in the facts.',
     "",
     `Brand: ${input.brand}`,
     `Brand domain: ${input.domain}`,
@@ -743,14 +744,11 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
 
   const steps = parsed.data.steps.map((step) => step.trim()).filter((step) => step.length > 0 && step.length <= 400);
 
-  let example: RecommendationRewrite["example"] = null;
-  if (parsed.data.example) {
-    const label = parsed.data.example.label.trim();
-    const content = parsed.data.example.content.trim();
-    if (label && content && content.length <= 2000) {
-      example = { label, content };
-    }
-  }
+  const rawExamples = parsed.data.examples ?? (parsed.data.example ? [parsed.data.example] : []);
+  const examples = rawExamples
+    .map((item) => ({ label: item.label.trim(), content: item.content.trim() }))
+    .filter((item) => item.label.length > 0 && item.content.length > 0 && item.content.length <= 2000)
+    .slice(0, MAX_GENERATED_EXAMPLES);
 
-  return { title, summary, steps, example };
+  return { title, summary, steps, examples };
 }

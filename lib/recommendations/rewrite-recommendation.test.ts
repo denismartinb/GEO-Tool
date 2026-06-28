@@ -20,7 +20,7 @@ type GeneratedSolution = {
   title: string;
   summary: string;
   steps: string[];
-  example: { label: string; content: string } | null;
+  examples: { label: string; content: string }[];
 };
 
 /**
@@ -229,10 +229,16 @@ const REWRITE: GeneratedSolution = {
     "Añade un bloque factual citable en tu página de sofás cama.",
     "Incluye datos verificables sobre materiales y garantía."
   ],
-  example: {
-    label: "Párrafo citable para tu página",
-    content: "Acme fabrica sofás cama con [tu dato aquí] de garantía y materiales certificados."
-  }
+  examples: [
+    {
+      label: "Párrafo citable para tu página",
+      content: "Acme fabrica sofás cama con [tu dato aquí] de garantía y materiales certificados."
+    },
+    {
+      label: "FAQ schema (JSON-LD)",
+      content: '{\n  "@context": "https://schema.org",\n  "@type": "FAQPage"\n}'
+    }
+  ]
 };
 
 const USER = { id: "user-1" } as unknown as AuthenticatedContext["user"];
@@ -387,7 +393,7 @@ describe("rewriteRecommendationCore", () => {
       title: "Título con Ikea",
       summary: "Descripción inventada",
       steps: ["Menciona a Ikea sin permiso"],
-      example: null
+      examples: []
     });
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: false, reason: "untracked_competitor_mentioned" });
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
@@ -475,10 +481,12 @@ describe("rewriteRecommendationCore", () => {
       title: "Refuerza <b>tu</b> contenido",
       summary: "Resumen con <i>énfasis</i>.",
       steps: ["Paso uno.\n\tcon salto", "Paso <script>alert(1)</script> dos"],
-      example: {
-        label: "Bloque <b>citable</b>",
-        content: "Texto <script>alert(2)</script> pegable."
-      }
+      examples: [
+        {
+          label: "Bloque <b>citable</b>",
+          content: "Texto pegable con\nsalto de línea preservado."
+        }
+      ]
     });
     validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
     const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [] });
@@ -497,14 +505,18 @@ describe("rewriteRecommendationCore", () => {
     expect(result.solution.title).toBe("Refuerza tu contenido");
     expect(result.solution.summary).not.toContain("<");
     expect(result.solution.steps.join(" ")).not.toContain("<script>");
-    // No C0 control characters survive sanitization in any step.
+    // No C0 control characters survive sanitization in a step (steps collapse
+    // whitespace, so the injected newline/tab become a single space).
     expect(result.solution.steps.join(" ").split("").every((c) => (c.codePointAt(0) ?? 0) >= 0x20)).toBe(true);
-    expect(result.solution.example?.content).not.toContain("<script>");
+    // The example label is strictly sanitized (tags stripped), but example
+    // CONTENT preserves newlines so code/schema artifacts stay intact.
+    expect(result.solution.examples[0].label).not.toContain("<");
+    expect(result.solution.examples[0].content).toContain("\n");
 
     const payload = getInserted()[0];
     const sanitized = JSON.parse(payload.sanitized_content as string) as GeneratedSolution;
     expect(sanitized.title).toBe("Refuerza tu contenido");
-    expect(sanitized.example?.label).not.toContain("<");
+    expect(sanitized.examples[0]?.label).not.toContain("<");
   });
 
   it("happy path: calls Gemini with the recommendation's own evidence, validates every field, and inserts a sanitized structured solution", async () => {
@@ -547,13 +559,15 @@ describe("rewriteRecommendationCore", () => {
       evidenceSnippets: EVIDENCE.evidence_snippets
     });
 
-    // Validation runs over ALL generated text (summary + steps + example), not
-    // just the title, so a fabricated mention anywhere is caught.
+    // Validation runs over ALL generated text (summary + steps + every example
+    // label and content), not just the title, so a fabricated mention anywhere
+    // is caught.
     const validationArgs = validateRewriteAgainstEvidenceMock.mock.calls[0][0];
     expect(validationArgs.title).toBe(REWRITE.title);
     expect(validationArgs.description).toContain(REWRITE.summary);
     expect(validationArgs.description).toContain(REWRITE.steps[0]);
-    expect(validationArgs.description).toContain(REWRITE.example!.content);
+    expect(validationArgs.description).toContain(REWRITE.examples[0].content);
+    expect(validationArgs.description).toContain(REWRITE.examples[1].label);
     expect(validationArgs).toMatchObject({
       allowedCompetitors: ["Conforama", "Conforama"],
       allowedDomains: EVIDENCE.citation_domains,
