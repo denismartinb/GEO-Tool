@@ -64,6 +64,28 @@ describe("validateRewriteAgainstEvidence", () => {
     expect(result).toEqual({ valid: false, reason: "unanchored_domain_mentioned" });
   });
 
+  it("passes a JSON-LD example that references schema.org and the brand's own domain", () => {
+    const result = validateRewriteAgainstEvidence(
+      baseInput({
+        title: "Añade datos estructurados para tu página",
+        description:
+          'Ejemplo: { "@context": "https://schema.org", "@type": "FAQPage", "url": "https://acme.com/faq" }',
+        allowedDomains: []
+      })
+    );
+    expect(result).toEqual({ valid: true });
+  });
+
+  it("still rejects a third-party domain even inside a JSON-LD-looking example", () => {
+    const result = validateRewriteAgainstEvidence(
+      baseInput({
+        title: "Añade datos estructurados",
+        description: '{ "@context": "https://schema.org", "sameAs": "https://bylmo.com/acme" }'
+      })
+    );
+    expect(result).toEqual({ valid: false, reason: "unanchored_domain_mentioned" });
+  });
+
   it("does not false-positive on a Spanish abbreviation like 'p.ej.'", () => {
     const result = validateRewriteAgainstEvidence(
       baseInput({
