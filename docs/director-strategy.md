@@ -298,6 +298,14 @@ no schema work until a gap genuinely needs it):**
   engine change). B2 = engine emits gaps 1–3 as distinct recommendations
   instead of collapsing into one generic row.
 - **Fase C:** gaps 4–8 (comparison pages, FAQ/entity schema, PR targets).
+  - **C1 — DONE:** `rewriteRecommendation` is now type-aware — per
+    `recommendation_type` it steers the steps and example artifacts toward the
+    right deliverable (comparison page for a competitor gap, FAQ for an
+    informational gap, Organization schema for entity clarity, etc.). No engine
+    change.
+  - **C2 — next:** new gap-8 rule (digital PR / source gap) from the grounded
+    `citation_domains` already captured + its PR-target/pitch asset.
+  - **C3 — optional:** split bundled comparison/FAQ cards per prompt.
 - **Fase D (Fase 2):** gaps 9–10 — need new sentiment/freshness extraction in
   the scan, so a dedicated backend/schema phase, explicitly separate.
 
