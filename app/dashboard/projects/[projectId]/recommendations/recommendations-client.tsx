@@ -66,9 +66,17 @@ function effortToN(val: string): number {
   return 1;
 }
 
-function rankClass(rank: number): string {
-  if (rank <= 2) return "high";
-  if (rank <= 5) return "med";
+/**
+ * Absolute priority of a recommendation, from its own impact and confidence —
+ * NOT its position in the list. The old rank-based mapping labelled the top 2
+ * cards "Alta" even in a backlog of only mild gaps; this makes "Alta" mean a
+ * genuinely high-impact action (with non-low confidence), so a weak backlog no
+ * longer shows false "Alta". Cards stay ordered by priority_rank; only the
+ * badge/colour reflect absolute importance.
+ */
+function priorityLevel(rec: Recommendation): "high" | "med" | "low" {
+  if (rec.impact === "high" && rec.confidence !== "low") return "high";
+  if (rec.impact === "high" || rec.impact === "medium") return "med";
   return "low";
 }
 
@@ -265,7 +273,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
   const domains = ev.citation_domains ?? [];
   const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
-  const rankCls = rankClass(rec.priority_rank);
+  const rankCls = priorityLevel(rec);
 
   const priorityLabel =
     rankCls === "high" ? "Alta" : rankCls === "med" ? "Media" : "Baja";
