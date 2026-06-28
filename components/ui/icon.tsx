@@ -203,6 +203,44 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <path d="m7.5 11.5 4.5 4.5 4.5-4.5" />
         <path d="M5 20h14" />
       </>
+    ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="3.6" />
+        <path d="M5 20a7 7 0 0 1 14 0" />
+      </>
+    ),
+    building: (
+      <>
+        <rect x="5" y="3" width="14" height="18" rx="1.5" />
+        <path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2M10 21v-3h4v3" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3.2" />
+        <path d="M3 20a6 6 0 0 1 12 0" />
+        <path d="M16 5.2a3.2 3.2 0 0 1 0 6M18 14.5a6 6 0 0 1 3 5.5" />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 3 5 5.5v5c0 4.3 2.9 7.5 7 9 4.1-1.5 7-4.7 7-9v-5z" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
+    eye: (
+      <>
+        <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+        <circle cx="12" cy="12" r="2.8" />
+      </>
+    ),
+    image: (
+      <>
+        <rect x="3" y="4.5" width="18" height="15" rx="2.5" />
+        <circle cx="8.5" cy="10" r="1.8" />
+        <path d="m4 18 5-4.5 4 3.5 3-2.5 5 4" />
+      </>
     )
   };
 
