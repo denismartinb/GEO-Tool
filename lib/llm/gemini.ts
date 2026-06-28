@@ -690,7 +690,36 @@ const MAX_GENERATED_EXAMPLES = 3;
  * still throws, also matching that convention — the caller is expected to
  * catch it and fall back safely (no fake success, no raw error surfaced).
  */
+/**
+ * Type-specific asset guidance (Fase C1). The base prompt produces a generic
+ * action plan; this steers the steps and example artifacts toward the
+ * deliverable that actually fits each gap type — a comparison page for a
+ * competitor gap, a FAQ for an informational gap, an Organization schema for an
+ * entity-clarity gap, etc. Returns null for unknown types (generic plan). All
+ * anti-fabrication rules in the base prompt still apply.
+ */
+function assetPlaybook(input: RecommendationRewriteInput): string | null {
+  const competitor = input.dominantCompetitor ?? input.mentionedCompetitors[0] ?? "el competidor";
+  switch (input.recommendationType) {
+    case "close_competitor_gap":
+      return `ASSET FOCUS — comparison page: build the plan around a "${input.brand} vs ${competitor}" or "alternativa a ${competitor}" page. Provide as examples a page outline (H1 + H2/H3 sections) and a short comparison table (rows = criteria; columns = ${input.brand} and ${competitor} only), using only the given facts and [tu dato aquí] placeholders.`;
+    case "add_comparison_content":
+      return `ASSET FOCUS — comparison: provide as examples a concise comparison table (rows = criteria; one column for ${input.brand} and one per named competitor only) and a FAQPage JSON-LD snippet answering the comparative query.`;
+    case "create_faq_section":
+      return "ASSET FOCUS — FAQ: provide as examples 2-4 concise question/answer pairs matching the affected prompts, plus a FAQPage JSON-LD snippet wrapping them.";
+    case "strengthen_brand_entity_clarity":
+      return `ASSET FOCUS — entity clarity: provide as examples an Organization JSON-LD snippet (name "${input.brand}", url the brand domain, a short description, its category) and a brief "Acerca de" page outline stating the brand's category and key descriptors.`;
+    case "add_citation_block":
+      return "ASSET FOCUS — citable block: provide as examples a factual, directly-extractable paragraph answering the affected query, and an Article or FAQPage JSON-LD snippet.";
+    case "increase_brand_visibility":
+      return "ASSET FOCUS — content brief: provide as examples a content brief (target query, search intent, H1 + H2 outline, key entities) and a concise citable intro paragraph for the page.";
+    default:
+      return null;
+  }
+}
+
 export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+  const playbook = assetPlaybook(input);
   const promptBlock = [
     "You are a senior GEO (Generative Engine Optimization) consultant writing one concrete, copy-paste-ready action plan on a brand's dashboard.",
     "Turn the generic recommendation below into a specific, complete plan this exact brand can act on immediately.",
@@ -707,6 +736,7 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
     "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'.",
     '"examples": 1 to 3 ready-to-paste TEMPLATE artifacts the user adapts before publishing — one per distinct deliverable the steps call for (e.g. a citable factual paragraph, a short FAQ, a JSON-LD schema snippet). Each is an example to review and fill in, never a verified fact. Each item: "label" names it (max 80 chars); "content" is the pasteable text (max 1200 chars). Return [] only if no useful artifact can be grounded in the facts.',
     "In any example (especially JSON-LD), the ONLY URLs/domains you may use are the brand domain above and schema.org (for @context). For any other URL — social profiles, third-party pages — use a placeholder like https://[tu-dominio]/pagina; NEVER write a real third-party or competitor domain.",
+    ...(playbook ? ["", playbook] : []),
     "",
     `Brand: ${input.brand}`,
     `Brand domain: ${input.domain}`,

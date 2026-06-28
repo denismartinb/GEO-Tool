@@ -472,6 +472,33 @@ describe("rewriteRecommendation", () => {
     expect(result?.examples).toHaveLength(3);
   });
 
+  it("injects a competitor comparison-page asset focus for close_competitor_gap", async () => {
+    const fetchMock = mockGeminiJson({ title: "t", summary: "s", steps: [], examples: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rewriteRecommendation(
+      rewriteInput({ recommendationType: "close_competitor_gap", dominantCompetitor: "Conforama" })
+    );
+
+    const promptText = JSON.parse(fetchMock.mock.calls[0][1].body as string).contents[0].parts[0].text as string;
+    expect(promptText).toContain("ASSET FOCUS — comparison page");
+    expect(promptText).toContain("Acme vs Conforama");
+  });
+
+  it("injects a FAQ asset focus for create_faq_section and an entity-schema focus for entity clarity", async () => {
+    const fetchMock = mockGeminiJson({ title: "t", summary: "s", steps: [], examples: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rewriteRecommendation(rewriteInput({ recommendationType: "create_faq_section" }));
+    const faqPrompt = JSON.parse(fetchMock.mock.calls[0][1].body as string).contents[0].parts[0].text as string;
+    expect(faqPrompt).toContain("ASSET FOCUS — FAQ");
+
+    await rewriteRecommendation(rewriteInput({ recommendationType: "strengthen_brand_entity_clarity" }));
+    const entityPrompt = JSON.parse(fetchMock.mock.calls[1][1].body as string).contents[0].parts[0].text as string;
+    expect(entityPrompt).toContain("ASSET FOCUS — entity clarity");
+    expect(entityPrompt).toContain("Organization JSON-LD");
+  });
+
   it("includes only the anchored competitors/domains in the prompt sent to Gemini", async () => {
     const fetchMock = mockGeminiJson({ title: "Título", description: "Descripción" });
     vi.stubGlobal("fetch", fetchMock);
