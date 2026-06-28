@@ -1,25 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { SettingRow } from "@/components/settings/setting-row";
 import type { AccountRole } from "@/lib/account-role";
-import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
+import { updateProfileName, changePassword } from "@/app/dashboard/settings/profile/actions";
+
+type Feedback = { type: "ok" | "err"; text: string };
 
 export function ProfileTab({
   email,
   role,
-  initials
+  initials,
+  firstName,
+  lastName
 }: {
   email: string;
   role: AccountRole;
   initials: string;
+  firstName: string;
+  lastName: string;
 }) {
-  const [name, setName] = useState(deriveNameFromEmail(email));
+  const [first, setFirst] = useState(firstName);
+  const [last, setLast] = useState(lastName);
   const [lang, setLang] = useState("Español");
   const [tz, setTz] = useState("(GMT+1) Madrid");
+
+  const [isSavingName, startSavingName] = useTransition();
+  const [nameFeedback, setNameFeedback] = useState<Feedback | null>(null);
+
+  const saveName = () => {
+    setNameFeedback(null);
+    startSavingName(async () => {
+      const result = await updateProfileName(first, last);
+      setNameFeedback(
+        result.success ? { type: "ok", text: "Cambios guardados." } : { type: "err", text: result.error }
+      );
+    });
+  };
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isSavingPassword, startSavingPassword] = useTransition();
+  const [passwordFeedback, setPasswordFeedback] = useState<Feedback | null>(null);
+
+  const openPasswordForm = () => {
+    setPasswordFeedback(null);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPasswordForm(true);
+  };
+
+  const cancelPasswordForm = () => {
+    if (isSavingPassword) return;
+    setShowPasswordForm(false);
+    setPasswordFeedback(null);
+  };
+
+  const submitPassword = () => {
+    if (newPassword.length < 8) {
+      setPasswordFeedback({ type: "err", text: "La nueva contraseña debe tener al menos 8 caracteres." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: "err", text: "Las contraseñas no coinciden." });
+      return;
+    }
+    setPasswordFeedback(null);
+    startSavingPassword(async () => {
+      const result = await changePassword(currentPassword, newPassword);
+      if (!result.success) {
+        setPasswordFeedback({ type: "err", text: result.error });
+        return;
+      }
+      setShowPasswordForm(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordFeedback({ type: "ok", text: "Contraseña actualizada." });
+    });
+  };
 
   return (
     <div className="set-pane">
@@ -43,14 +108,25 @@ export function ProfileTab({
 
           <div className="set-form-grid">
             <div>
-              <label className="field-label" htmlFor="profile-name">
-                Nombre completo
+              <label className="field-label" htmlFor="profile-first-name">
+                Nombre
               </label>
               <input
-                id="profile-name"
+                id="profile-first-name"
                 className="set-field"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
+                value={first}
+                onChange={(event) => setFirst(event.target.value)}
+              />
+            </div>
+            <div>
+              <label className="field-label" htmlFor="profile-last-name">
+                Apellidos
+              </label>
+              <input
+                id="profile-last-name"
+                className="set-field"
+                value={last}
+                onChange={(event) => setLast(event.target.value)}
               />
             </div>
             <div>
@@ -96,12 +172,23 @@ export function ProfileTab({
           </div>
 
           <div className="set-actions">
-            <Button type="button">Guardar cambios</Button>
+            <Button type="button" onClick={saveName} disabled={isSavingName}>
+              {isSavingName ? "Guardando…" : "Guardar cambios"}
+            </Button>
             <span className="set-role-pill">
               <Icon name={role === "admin" ? "shield" : "user"} size={13} />
               {role === "admin" ? "Administrador" : "Miembro"}
             </span>
           </div>
+          {nameFeedback && (
+            <div
+              className={nameFeedback.type === "err" ? "field-err" : "field-ok"}
+              style={{ justifyContent: "flex-start", marginTop: 8 }}
+            >
+              {nameFeedback.type === "err" && <Icon name="alertCircle" size={13} />}
+              {nameFeedback.text}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -110,11 +197,86 @@ export function ProfileTab({
           <p className="card-title">Seguridad</p>
         </CardHeader>
         <CardContent>
-          <SettingRow title="Contraseña" desc="Última actualización hace 3 meses">
-            <Button type="button" variant="outline">
-              Cambiar contraseña
-            </Button>
-          </SettingRow>
+          <div className="set-row" style={showPasswordForm ? { borderBottom: "none" } : undefined}>
+            <div className="set-row-txt">
+              <div className="set-row-t">Contraseña</div>
+              <div className="set-row-d">Actualízala cuando quieras</div>
+            </div>
+            {!showPasswordForm && (
+              <div className="set-row-ctrl">
+                <Button type="button" variant="outline" onClick={openPasswordForm}>
+                  Cambiar contraseña
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {showPasswordForm && (
+            <div className="set-password-form">
+              <div className="set-form-grid" style={{ gridTemplateColumns: "1fr", maxWidth: 360 }}>
+                <div>
+                  <label className="field-label" htmlFor="current-password">
+                    Contraseña actual
+                  </label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    autoComplete="current-password"
+                    className="set-field"
+                    value={currentPassword}
+                    onChange={(event) => setCurrentPassword(event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="new-password">
+                    Nueva contraseña
+                  </label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    autoComplete="new-password"
+                    className="set-field"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="confirm-password">
+                    Confirmar nueva contraseña
+                  </label>
+                  <input
+                    id="confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    className="set-field"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    onKeyDown={(event) => event.key === "Enter" && submitPassword()}
+                  />
+                </div>
+              </div>
+
+              {passwordFeedback && (
+                <div
+                  className={passwordFeedback.type === "err" ? "field-err" : "field-ok"}
+                  style={{ justifyContent: "flex-start" }}
+                >
+                  {passwordFeedback.type === "err" && <Icon name="alertCircle" size={13} />}
+                  {passwordFeedback.text}
+                </div>
+              )}
+
+              <div className="set-password-actions">
+                <Button type="button" onClick={submitPassword} disabled={isSavingPassword}>
+                  {isSavingPassword ? "Guardando…" : "Guardar contraseña"}
+                </Button>
+                <Button type="button" variant="ghost" onClick={cancelPasswordForm} disabled={isSavingPassword}>
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
           <SettingRow
             title="Verificación en dos pasos"
             desc="Añade una capa extra de seguridad al iniciar sesión"
