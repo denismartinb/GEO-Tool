@@ -27,7 +27,8 @@ const actLinks = [
 ];
 
 const accountLinks = [
-  { href: "/dashboard/billing", label: "Plan y facturación", icon: "card" },
+  { href: "/dashboard/settings/profile", label: "Ajustes de cuenta", icon: "settings" },
+  { href: "/dashboard/settings/billing", label: "Plan y facturación", icon: "card" },
 ];
 
 function getProjectId(pathname: string) {
@@ -228,7 +229,7 @@ export function Sidebar({
           <Icon name="info" size={15} />
           <span className="hide-collapsed">¿Qué es el GEO?</span>
         </a>
-        <div className="user-chip">
+        <Link href="/dashboard/settings/profile" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>
           <div className="hide-collapsed" style={{ minWidth: 0 }}>
             <div
@@ -244,7 +245,7 @@ export function Sidebar({
               {userEmail}
             </div>
           </div>
-        </div>
+        </Link>
         <form action={signOutAction} className="sb-signout">
           <button type="submit" className="nav-item" style={{ width: "100%" }}>
             <Icon name="settings" size={15} />
