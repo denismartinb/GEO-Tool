@@ -1,0 +1,99 @@
+/**
+ * Anti-hallucination guard for Slice 2's LLM-rewrite layer
+ * (lib/recommendations/rewrite-recommendation.ts). Gemini is instructed in the
+ * prompt to use only the given facts, but a prompt instruction is not a safety
+ * boundary by itself — this is the server-side check that actually enforces
+ * it before a rewrite is ever persisted or shown to the user.
+ *
+ * Two closed-set checks, both fail-closed (reject on any doubt):
+ * - Competitors: rejects if the rewritten text names ANY competitor from the
+ *   project's full tracked roster (`project_competitors`) that isn't part of
+ *   THIS recommendation's already-anchored allowlist. This catches Gemini
+ *   swapping in a real-but-wrong-for-this-card competitor, not just a fully
+ *   invented one.
+ * - Domains: rejects if the rewritten text contains a domain-like token
+ *   (matched against a common-TLD list to avoid false positives on
+ *   abbreviations like "p.ej.") that isn't the brand's own domain or one of
+ *   this recommendation's already-anchored citation domains.
+ *
+ * Deliberately not exhaustive (no full NLP/entity-recognition) — a pragmatic
+ * safety net consistent with CLAUDE.md's "no fake recommendations" given a
+ * closed, known competitor roster and a closed, known domain list. Pure logic,
+ * no I/O — importable from Vitest with no server-only shim needed.
+ */
+
+const COMMON_TLDS = new Set([
+  "com", "es", "org", "net", "io", "co", "info", "app", "ai", "biz", "shop",
+  "store", "dev", "mx", "fr", "de", "it", "uk", "eu", "cat", "pt", "nl", "be",
+  "ar", "cl", "pe", "us", "ca", "br", "gov", "edu", "me", "tv", "online"
+]);
+
+const DOMAIN_TOKEN_PATTERN = /\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}\b/gi;
+
+function normalize(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function normalizeDomain(value: string): string {
+  return normalize(value)
+    .replace(/^https?:\/\//, "")
+    .replace(/^www\./, "")
+    .replace(/\/.*$/, "");
+}
+
+function looksLikeDomain(token: string): boolean {
+  const parts = normalizeDomain(token).split(".");
+  if (parts.length < 2) return false;
+  return COMMON_TLDS.has(parts[parts.length - 1]);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function mentionsTerm(normalizedText: string, normalizedTerm: string): boolean {
+  if (!normalizedTerm) return false;
+  const pattern = new RegExp(`(?:^|[^a-z0-9áéíóúñ])${escapeRegExp(normalizedTerm)}(?:[^a-z0-9áéíóúñ]|$)`, "i");
+  return pattern.test(normalizedText);
+}
+
+export type RewriteValidationInput = {
+  title: string;
+  description: string;
+  /** Competitor names already anchored to THIS recommendation's evidence (mentioned_competitors + dominant_competitor, if any). */
+  allowedCompetitors: string[];
+  /** Domains already anchored to THIS recommendation's evidence (citation_domains). */
+  allowedDomains: string[];
+  /** The project's FULL tracked-competitor roster — used to catch a swap to a real-but-unanchored competitor, not just a fully invented name. */
+  trackedCompetitors: string[];
+  brandDomain: string;
+};
+
+export type RewriteValidationResult =
+  | { valid: true }
+  | { valid: false; reason: "untracked_competitor_mentioned" | "unanchored_domain_mentioned" };
+
+export function validateRewriteAgainstEvidence(input: RewriteValidationInput): RewriteValidationResult {
+  const rawText = `${input.title} ${input.description}`;
+  const normalizedText = normalize(rawText);
+  const allowedCompetitors = new Set(input.allowedCompetitors.map(normalize).filter(Boolean));
+
+  for (const competitor of input.trackedCompetitors) {
+    const normalizedCompetitor = normalize(competitor);
+    if (!normalizedCompetitor || allowedCompetitors.has(normalizedCompetitor)) continue;
+    if (mentionsTerm(normalizedText, normalizedCompetitor)) {
+      return { valid: false, reason: "untracked_competitor_mentioned" };
+    }
+  }
+
+  const allowedDomains = new Set([...input.allowedDomains, input.brandDomain].map(normalizeDomain).filter(Boolean));
+  const domainMatches = rawText.match(DOMAIN_TOKEN_PATTERN) ?? [];
+  for (const match of domainMatches) {
+    if (!looksLikeDomain(match)) continue;
+    if (!allowedDomains.has(normalizeDomain(match))) {
+      return { valid: false, reason: "unanchored_domain_mentioned" };
+    }
+  }
+
+  return { valid: true };
+}

@@ -1,17 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
+import { rewriteRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
 type EvidenceJson = {
   why_this_matters?: string;
   assumptions?: string[];
   affected_prompts?: string[];
+  affected_prompt_details?: AffectedPromptDetail[];
   evidence_snippets?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
   action_suggested?: string;
+};
+
+/**
+ * Sanitized, copy-paste-ready AI solution for a recommendation, loaded from
+ * `generated_solutions`. Defined here (not in the server-only rewrite module)
+ * so both the server page and this client component can share the shape.
+ */
+export type GeneratedSolution = {
+  title: string;
+  summary: string;
+  steps: string[];
+  example: { label: string; content: string } | null;
 };
 
 export type Recommendation = {
@@ -26,6 +42,12 @@ export type Recommendation = {
   status: string;
   source_type: string;
   evidence_json: EvidenceJson | null;
+  /**
+   * The latest AI-generated solution for this recommendation (null until the
+   * user generates one). Drives both the button state and the "Plan de acción"
+   * block.
+   */
+  solution: GeneratedSolution | null;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority";
@@ -52,10 +74,172 @@ function isQuickWin(rec: Recommendation): boolean {
   return rec.impact === "high" && rec.effort === "low";
 }
 
-function RecCard({ rec }: { rec: Recommendation }) {
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard unavailable (e.g. insecure context) — fail silently.
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="btn btn-ghost btn-sm"
+      onClick={handleCopy}
+      style={{ fontSize: 12, padding: "4px 10px" }}
+    >
+      <Icon name={copied ? "check" : "copy"} size={12} />
+      {copied ? "Copiado" : label ?? "Copiar"}
+    </button>
+  );
+}
+
+/**
+ * Renders the structured, copy-paste-ready AI action plan beneath a
+ * recommendation: a specific title, a summary, concrete steps, and an optional
+ * ready-to-paste example artifact with its own copy button. All content is
+ * already sanitized server-side; it is rendered as plain React text.
+ */
+function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+  return (
+    <div
+      style={{
+        marginTop: 4,
+        padding: "12px 16px",
+        background: "var(--surface-sunk)",
+        borderRadius: 10,
+        border: "1.5px solid var(--line)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+          color: "var(--ink-4)",
+          marginBottom: 6,
+        }}
+      >
+        <Icon name="sparkles" size={12} />
+        Plan de acción
+      </div>
+      <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>{solution.title}</div>
+      <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>{solution.summary}</p>
+
+      {solution.steps.length > 0 && (
+        <ol
+          style={{
+            margin: "10px 0 0",
+            paddingLeft: 18,
+            fontSize: 13,
+            color: "var(--ink-2)",
+            lineHeight: 1.6,
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+          }}
+        >
+          {solution.steps.map((step, i) => (
+            <li key={i}>{step}</li>
+          ))}
+        </ol>
+      )}
+
+      {solution.example && (
+        <div
+          style={{
+            marginTop: 12,
+            padding: "10px 12px",
+            background: "var(--surface)",
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 8,
+              marginBottom: 2,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0, flexWrap: "wrap" }}>
+              <span className="badge badge-outline" style={{ fontSize: 10, flexShrink: 0 }}>
+                Ejemplo
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--ink-3)",
+                  minWidth: 0,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {solution.example.label}
+              </span>
+            </div>
+            <CopyButton text={solution.example.content} />
+          </div>
+          <div style={{ fontSize: 11, color: "var(--ink-4)", marginBottom: 8 }}>
+            Plantilla generada por IA — revísala y adáptala a tu web antes de publicarla.
+          </div>
+          <pre
+            style={{
+              margin: 0,
+              fontSize: 12.5,
+              color: "var(--ink-2)",
+              lineHeight: 1.55,
+              whiteSpace: "pre-wrap",
+              wordBreak: "break-word",
+              fontFamily: "inherit",
+            }}
+          >
+            {solution.example.content}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
   const [open, setOpen] = useState(false);
+  const [isRewriting, startRewrite] = useTransition();
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const router = useRouter();
+
+  function handleRewrite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setRewriteError(null);
+    startRewrite(async () => {
+      try {
+        const result = await rewriteRecommendationAction({ projectId, recommendationId: rec.id });
+        if (!result.success) {
+          setRewriteError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setRewriteError("No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.");
+      }
+    });
+  }
 
   const ev: EvidenceJson = rec.evidence_json ?? {};
+  const promptDetails = ev.affected_prompt_details ?? [];
   const affectedPrompts = ev.affected_prompts ?? [];
   const snippets = ev.evidence_snippets ?? [];
   const competitors = ev.mentioned_competitors ?? [];
@@ -191,7 +375,27 @@ function RecCard({ rec }: { rec: Recommendation }) {
                   Sin datos de razonamiento disponibles.
                 </p>
               )}
-              {affectedPrompts.length > 0 && (
+              {promptDetails.length > 0 ? (
+                <div>
+                  <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
+                    {promptDetails.length} prompt{promptDetails.length !== 1 ? "s" : ""} afectado{promptDetails.length !== 1 ? "s" : ""}
+                  </div>
+                  <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0, listStyle: "none" }}>
+                    {promptDetails.slice(0, 4).map((p) => (
+                      <li key={p.id} style={{ marginBottom: 6 }}>
+                        <div>{p.prompt}</div>
+                        {(p.competitors.length > 0 || p.domains.length > 0) && (
+                          <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                            {p.competitors.length > 0 && <span>Gana: {p.competitors.join(", ")}</span>}
+                            {p.competitors.length > 0 && p.domains.length > 0 && <span> · </span>}
+                            {p.domains.length > 0 && <span>Cita: {p.domains.join(", ")}</span>}
+                          </div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : affectedPrompts.length > 0 && (
                 <div>
                   <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
                     {affectedPrompts.length} prompt{affectedPrompts.length !== 1 ? "s" : ""} afectado{affectedPrompts.length !== 1 ? "s" : ""}
@@ -238,6 +442,42 @@ function RecCard({ rec }: { rec: Recommendation }) {
             </div>
           </div>
 
+          {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
+              una solución generada; una vez generada, se muestra la insignia. */}
+          <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {!rec.solution ? (
+              <>
+                <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
+                  {isRewriting ? (
+                    <>
+                      <span className="btn-spinner" /> Mejorando redacción…
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="sparkles" size={13} />
+                      Mejorar redacción con IA
+                    </>
+                  )}
+                </button>
+                {rewriteError && (
+                  <p className="feedback error" style={{ margin: 0 }}>
+                    {rewriteError}
+                  </p>
+                )}
+              </>
+            ) : (
+              <span className="badge badge-outline">
+                <Icon name="sparkles" size={11} />
+                Redactado con IA
+              </span>
+            )}
+          </div>
+
+          {/* Plan de acción — asset saneado generado por IA, aditivo: no
+              sustituye el título/descripción de la regla, que sigue siendo el
+              planteamiento del problema. */}
+          {rec.solution && <SolutionPanel solution={rec.solution} />}
+
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (
             <div
@@ -274,22 +514,24 @@ function RecCard({ rec }: { rec: Recommendation }) {
 
 export function RecommendationsClient({
   recommendations,
+  projectId,
 }: {
   recommendations: Recommendation[];
+  projectId: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
   // Detect which type filters have data
-  const hasContent = recommendations.some((r) => r.recommendation_type === "content");
-  const hasTechnical = recommendations.some((r) => r.recommendation_type === "technical");
-  const hasAuthority = recommendations.some((r) => r.recommendation_type === "authority");
+  const hasContent = recommendations.some((r) => categoryForType(r.recommendation_type) === "content");
+  const hasTechnical = recommendations.some((r) => categoryForType(r.recommendation_type) === "technical");
+  const hasAuthority = recommendations.some((r) => categoryForType(r.recommendation_type) === "authority");
 
   const filtered = recommendations.filter((r) => {
     if (filter === "high") return r.priority_rank <= 3;
     if (filter === "quick") return isQuickWin(r);
-    if (filter === "content") return r.recommendation_type === "content";
-    if (filter === "technical") return r.recommendation_type === "technical";
-    if (filter === "authority") return r.recommendation_type === "authority";
+    if (filter === "content") return categoryForType(r.recommendation_type) === "content";
+    if (filter === "technical") return categoryForType(r.recommendation_type) === "technical";
+    if (filter === "authority") return categoryForType(r.recommendation_type) === "authority";
     return true;
   });
 
@@ -321,7 +563,7 @@ export function RecommendationsClient({
 
       {/* Cards */}
       {filtered.map((rec) => (
-        <RecCard key={rec.id} rec={rec} />
+        <RecCard key={rec.id} rec={rec} projectId={projectId} />
       ))}
 
       {filtered.length === 0 && (

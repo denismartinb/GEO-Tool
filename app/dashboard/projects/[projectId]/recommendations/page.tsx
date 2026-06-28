@@ -5,8 +5,38 @@ import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import {
   RecommendationsClient,
+  type GeneratedSolution,
   type Recommendation,
 } from "./recommendations-client";
+
+/**
+ * Parses a sanitized `generated_solutions.sanitized_content` JSON string into a
+ * structured solution. Defensive: returns null on any unexpected shape rather
+ * than crashing the page (the content was sanitized server-side at write time).
+ */
+function parseGeneratedSolution(raw: string): GeneratedSolution | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.title !== "string" || typeof parsed.summary !== "string") return null;
+    const steps = Array.isArray(parsed.steps) ? parsed.steps.filter((s): s is string => typeof s === "string") : [];
+    let example: GeneratedSolution["example"] = null;
+    const ex = parsed.example as { label?: unknown; content?: unknown } | null | undefined;
+    if (ex && typeof ex.label === "string" && typeof ex.content === "string") {
+      example = { label: ex.label, content: ex.content };
+    }
+    return { title: parsed.title, summary: parsed.summary, steps, example };
+  } catch {
+    return null;
+  }
+}
+
+// Server Actions inherit the maxDuration of the page they're invoked from.
+// Without this, "Mejorar redaccion con IA" (a Gemini call, see
+// rewriteRecommendationAction) is bound by Vercel's default function
+// duration instead of the 20s in-app Gemini timeout in lib/llm/gemini.ts,
+// so a slow call gets killed by the platform before that timeout can ever
+// surface a clean, user-visible error.
+export const maxDuration = 60;
 
 export default async function RecommendationsPage({
   params,
@@ -60,7 +90,41 @@ export default async function RecommendationsPage({
       ])
     : [{ data: null }];
 
-  const recs: Recommendation[] = (recommendations ?? []) as Recommendation[];
+  const baseRecs = (recommendations ?? []) as Recommendation[];
+
+  // Attach the latest sanitized AI-generated solution (if any) for each
+  // recommendation. These live in `generated_solutions` (never on the
+  // recommendation row); the owner SELECT policy on that table makes this a
+  // plain user-context read. Only completed + sanitized rows are renderable.
+  const solutionByRecId = new Map<string, GeneratedSolution>();
+  if (baseRecs.length > 0) {
+    const { data: solutionRows } = await supabase
+      .from("generated_solutions")
+      .select("recommendation_id, sanitized_content, created_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .eq("is_sanitized", true)
+      .in(
+        "recommendation_id",
+        baseRecs.map((r) => r.id),
+      )
+      .order("created_at", { ascending: false });
+
+    for (const row of (solutionRows ?? []) as Array<{
+      recommendation_id: string;
+      sanitized_content: string | null;
+    }>) {
+      // Newest-first order means the first row seen per recommendation wins.
+      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
+      const parsed = parseGeneratedSolution(row.sanitized_content);
+      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
+    }
+  }
+
+  const recs: Recommendation[] = baseRecs.map((r) => ({
+    ...r,
+    solution: solutionByRecId.get(r.id) ?? null,
+  }));
 
   // Computed stats
   const highPriority = recs.filter((r) => r.priority_rank <= 3).length;
@@ -314,49 +378,8 @@ export default async function RecommendationsPage({
           </div>
 
           {/* Client component handles filters + cards */}
-          <RecommendationsClient recommendations={recs} />
+          <RecommendationsClient recommendations={recs} projectId={projectId} />
         </>
-      )}
-
-      {/* Footer links */}
-      {latestCompletedRun && (
-        <div
-          style={{
-            display: "flex",
-            gap: 20,
-            marginTop: 28,
-            flexWrap: "wrap",
-          }}
-        >
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--ink-3)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            <Icon name="chevronLeft" size={13} />
-            Visión general
-          </Link>
-          <Link
-            href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--ink-3)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 4,
-            }}
-          >
-            Ver detalle del escaneo
-            <Icon name="arrRight" size={13} />
-          </Link>
-        </div>
       )}
       </>
       )}

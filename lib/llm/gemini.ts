@@ -12,26 +12,27 @@ const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id su
 const RATE_LIMIT_RETRY_DELAY_MS = 1500;
 
 /**
- * Hard per-call timeout for `generateGeminiVisibilityAnswer`, the call made
- * once per prompt by the scan executor (`lib/scan/executor.ts`), which since
- * SCAN-ROBUST-2 dispatches all `MAX_REAL_SCAN_PROMPTS=10` calls concurrently
- * inside the ~60s Vercel `maxDuration`
- * (docs/adr/0003-sync-scan-execution-and-maxduration.md). A single slow call
- * must not be allowed to consume the entire run budget — that would starve
- * the remaining prompts and risk tripping `SCAN_RUNNING_TIMEOUT_SECONDS`,
- * failing the whole run instead of just one prompt.
+ * Hard per-call timeout shared by every direct Gemini `fetch` in this file:
+ * `generateGeminiVisibilityAnswer` (one call per prompt in the scan executor,
+ * `lib/scan/executor.ts`, dispatched concurrently inside the ~60s Vercel
+ * `maxDuration` per docs/adr/0003-sync-scan-execution-and-maxduration.md) and
+ * `generateGeminiJson` (the on-demand helper behind add-prompts generation,
+ * competitor suggestions and the recommendation rewrite action). None of the
+ * on-demand callers' routes set an explicit `maxDuration`, so without this
+ * AbortController-based bound a stalled Gemini response hangs the calling
+ * server action forever instead of surfacing as an error — exactly the "Mejorar
+ * redaccion con IA" button getting stuck with no feedback.
  *
  * 20s ceiling: generous enough that normal Gemini latency (typically a few
  * seconds) never hits it, while bounding how long a single stuck call can
- * block progress. The 60s budget is a *typical-case* target, not a guarantee:
- * a pathological run where every prompt times out (and retries once, see
- * PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can still exceed 60s. That worst case is
- * bounded instead by `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's
- * auto-retry (docs/scan-lifecycle.md), not by this per-call timeout alone.
- * A timeout here surfaces as `GeminiTimeoutError`, which the executor treats
- * as a normal recoverable per-prompt error: the prompt's job is recorded as
- * failed with a sanitized `last_error` and the run continues with the next
- * prompt — it must never crash the run.
+ * block progress. For the scan executor specifically, the 60s budget is a
+ * *typical-case* target, not a guarantee: a pathological run where every
+ * prompt times out (and retries once, see PROMPT_RETRY_MAX_TOTAL_ATTEMPTS) can
+ * still exceed 60s. That worst case is bounded instead by
+ * `SCAN_RUNNING_TIMEOUT_SECONDS` + reconciliation's auto-retry
+ * (docs/scan-lifecycle.md), not by this per-call timeout alone. A timeout here
+ * surfaces as `GeminiTimeoutError`, which every caller treats as a normal
+ * recoverable failure (never a crash, never a fake success).
  */
 const GEMINI_CALL_TIMEOUT_MS = 20_000;
 
@@ -311,15 +312,19 @@ async function generateGeminiJson(promptBlock: string): Promise<unknown> {
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
-    })
-  });
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptBlock }] }],
+        // temperature: 0 — see ADR 0009 addendum (2026-06-19).
+        generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+      })
+    },
+    GEMINI_CALL_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     throw new Error(getGeminiApiError(response.status));
@@ -631,4 +636,121 @@ export async function generateAddedPrompts(input: {
   }
 
   return out;
+}
+
+export type RecommendationRewriteInput = {
+  brand: string;
+  domain: string;
+  language: string;
+  recommendationType: string;
+  ruleTitle: string;
+  ruleDescription: string;
+  whyThisMatters: string;
+  affectedPrompts: string[];
+  mentionedCompetitors: string[];
+  citationDomains: string[];
+  dominantCompetitor?: string;
+  evidenceSnippets: string[];
+};
+
+export type RecommendationRewrite = {
+  title: string;
+  summary: string;
+  steps: string[];
+  example: { label: string; content: string } | null;
+};
+
+const recommendationRewriteSchema = z.object({
+  title: z.string(),
+  summary: z.string(),
+  steps: z.array(z.string()).default([]),
+  example: z
+    .object({ label: z.string(), content: z.string() })
+    .nullable()
+    .optional()
+    .default(null)
+});
+
+/**
+ * Turns a rule-based recommendation into a structured, copy-paste-ready action
+ * plan — using ONLY the facts passed in (the recommendation engine owns "what
+ * gap + what evidence"; the caller in lib/recommendations/rewrite-recommendation.ts
+ * anchors that evidence and re-validates + sanitizes the result before
+ * persisting). This function only builds the prompt and parses Gemini's JSON.
+ *
+ * Output shape: a specific `title`, a 1-2 sentence `summary`, 3-6 concrete
+ * `steps`, and an optional ready-to-paste `example` artifact (e.g. a citable
+ * paragraph or FAQ block) the user can drop onto their site. Real examples must
+ * stay anchored to the given facts — a placeholder like "[tu dato aquí]" is
+ * required where a specific value isn't in the evidence, never an invented one.
+ *
+ * Fail-soft on schema-invalid output (returns null), matching this file's
+ * suggestCompetitors/generateAddedPrompts convention. A network/API failure
+ * still throws, also matching that convention — the caller is expected to
+ * catch it and fall back safely (no fake success, no raw error surfaced).
+ */
+export async function rewriteRecommendation(input: RecommendationRewriteInput): Promise<RecommendationRewrite | null> {
+  const promptBlock = [
+    "You are a senior GEO (Generative Engine Optimization) consultant writing one concrete, copy-paste-ready action plan on a brand's dashboard.",
+    "Turn the generic recommendation below into a specific, complete plan this exact brand can act on immediately.",
+    "You MUST use ONLY the facts listed below. Do NOT invent any fact, statistic, competitor name, domain, page or detail not explicitly given.",
+    "Where a specific value (a number, a price, a date) would be needed but is not in the facts, write a clearly-marked placeholder like [tu dato aquí]. NEVER invent the value.",
+    "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
+    "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
+    "If no competitors or domains are listed below, do not invent or imply any.",
+    `Write entirely in this language: ${input.language}.`,
+    'Return ONLY valid JSON with this exact shape: { "title": string, "summary": string, "steps": string[], "example": { "label": string, "content": string } | null }.',
+    '"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.',
+    '"summary": 1-2 sentences, max 400 characters, why this matters for this brand given the facts.',
+    '"steps": 3 to 6 concrete, specific actions (each max 200 characters) the brand should take, grounded in the real prompts/competitors below.',
+    "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'.",
+    '"example": a ready-to-paste TEMPLATE the user adapts before publishing (e.g. a citable factual paragraph, or a short FAQ) — it is an example to review and fill in, never a verified fact. "label" names it (max 80 chars); "content" is the pasteable text (max 1200 chars). Use null only if no useful artifact can be grounded in the facts.',
+    "",
+    `Brand: ${input.brand}`,
+    `Brand domain: ${input.domain}`,
+    `Recommendation type: ${input.recommendationType}`,
+    "",
+    "Generic title to improve:",
+    input.ruleTitle,
+    "Generic description to improve:",
+    input.ruleDescription,
+    "",
+    "Why this matters (real reasoning from the scan):",
+    input.whyThisMatters || "(none given)",
+    ...(input.dominantCompetitor ? ["", `Dominant competitor in this specific gap: ${input.dominantCompetitor}`] : []),
+    "",
+    "Real prompts (from this project's actual last scan) affected by this gap:",
+    input.affectedPrompts.length ? input.affectedPrompts.map((p) => `- ${p}`).join("\n") : "(none given)",
+    "",
+    "Real evidence snippets extracted from actual AI answers:",
+    input.evidenceSnippets.length ? input.evidenceSnippets.map((s) => `- ${s}`).join("\n") : "(none given)",
+    "",
+    "Competitors you may mention (do not mention any other competitor):",
+    input.mentionedCompetitors.length ? input.mentionedCompetitors.join(", ") : "(none — do not name any competitor)",
+    "",
+    "Domains you may mention (do not mention any other domain):",
+    input.citationDomains.length ? input.citationDomains.join(", ") : "(none — do not name any domain)"
+  ].join("\n");
+
+  const raw = await generateGeminiJson(promptBlock);
+  const parsed = recommendationRewriteSchema.safeParse(raw);
+  if (!parsed.success) return null;
+
+  const title = parsed.data.title.trim();
+  const summary = parsed.data.summary.trim();
+  if (!title || !summary) return null;
+  if (title.length > 200 || summary.length > 600) return null;
+
+  const steps = parsed.data.steps.map((step) => step.trim()).filter((step) => step.length > 0 && step.length <= 400);
+
+  let example: RecommendationRewrite["example"] = null;
+  if (parsed.data.example) {
+    const label = parsed.data.example.label.trim();
+    const content = parsed.data.example.content.trim();
+    if (label && content && content.length <= 2000) {
+      example = { label, content };
+    }
+  }
+
+  return { title, summary, steps, example };
 }

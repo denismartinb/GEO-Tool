@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
+import {
+  rewriteRecommendationCore,
+  rewriteRecommendationInputSchema,
+  type RewriteRecommendationResult
+} from "@/lib/recommendations/rewrite-recommendation";
 import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
@@ -262,6 +268,34 @@ export async function addPrompts(input: {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+  }
+
+  return result;
+}
+
+/**
+ * "Mejorar redacción con IA": on-demand LLM rewrite of one rule-based
+ * recommendation, strictly anchored to its own evidence_json and persisted as a
+ * sanitized `generated_solutions` row (the recommendation row itself is never
+ * mutated — see lib/recommendations/rewrite-recommendation.ts). The service
+ * client is the trusted-server write path that table's RLS prescribes. Called
+ * directly from the client via `useTransition`, same pattern as `addPrompts`.
+ */
+export async function rewriteRecommendationAction(input: {
+  projectId: string;
+  recommendationId: string;
+}): Promise<RewriteRecommendationResult> {
+  const parsed = rewriteRecommendationInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  const result = await rewriteRecommendationCore({ ...parsed.data, supabase, service, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
   }
 
   return result;
