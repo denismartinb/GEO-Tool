@@ -606,73 +606,88 @@ export async function executePendingScan({
       { onConflict: "run_id" }
     );
 
-    const recommendationRows = generateRecommendationsForRun({
-      project: {
-        brand: project.brand,
-        domain: project.domain,
-        country: project.country,
-        language: project.language
-      },
-      competitors: (competitors ?? []).map((c) => c.name),
-      runScore: {
-        visibility_score: scores.visibility_score,
-        citation_score: scores.citation_score,
-        competitor_gap_score: scores.competitor_gap_score,
-        confidence: scores.confidence,
-        details_json: scores.details_json
-      },
-      promptResults: completedPromptResults.map((row) => ({
-        id: row.id,
-        prompt_text_snapshot: row.prompt_text_snapshot,
-        brand_mentioned: row.brand_mentioned,
-        citation_found: row.citation_found,
-        mentioned_competitors_count: row.mentioned_competitors_count,
-        citations_count: row.citations_count,
-        sentiment: row.sentiment,
-        extracted_json: row.extracted_json
-      }))
-    });
+    // Fail-soft: derived recommendations must never sink an otherwise-successful
+    // scan. The real scan work (answers + scores) is already persisted above; if
+    // recommendation generation or persistence throws, log it and still complete
+    // the run (the prior run's recommendations stay until the next successful run).
+    try {
+      const recommendationRows = generateRecommendationsForRun({
+        project: {
+          brand: project.brand,
+          domain: project.domain,
+          country: project.country,
+          language: project.language
+        },
+        competitors: (competitors ?? []).map((c) => c.name),
+        runScore: {
+          visibility_score: scores.visibility_score,
+          citation_score: scores.citation_score,
+          competitor_gap_score: scores.competitor_gap_score,
+          confidence: scores.confidence,
+          details_json: scores.details_json
+        },
+        promptResults: completedPromptResults.map((row) => ({
+          id: row.id,
+          prompt_text_snapshot: row.prompt_text_snapshot,
+          brand_mentioned: row.brand_mentioned,
+          citation_found: row.citation_found,
+          mentioned_competitors_count: row.mentioned_competitors_count,
+          citations_count: row.citations_count,
+          sentiment: row.sentiment,
+          extracted_json: row.extracted_json
+        }))
+      });
 
-    // Close out any still-"active" recommendations from prior runs of this
-    // project so the sidebar badge (which counts active recommendations
-    // project-wide) stays in sync with the latest run's recommendations
-    // page (which scopes to run_id). History is preserved via status change,
-    // not deletion. Fail soft: a failure here must not prevent the current
-    // run's recommendations from being persisted or the run from completing.
-    const { error: supersedeError } = await service
-      .from("recommendations")
-      .update({ status: "superseded" })
-      .eq("project_id", projectId)
-      .eq("status", "active")
-      .neq("run_id", runId);
+      // Close out any still-"active" recommendations from prior runs of this
+      // project so the sidebar badge (which counts active recommendations
+      // project-wide) stays in sync with the latest run's recommendations
+      // page (which scopes to run_id). History is preserved via status change,
+      // not deletion. Fail soft: a failure here must not prevent the current
+      // run's recommendations from being persisted or the run from completing.
+      const { error: supersedeError } = await service
+        .from("recommendations")
+        .update({ status: "superseded" })
+        .eq("project_id", projectId)
+        .eq("status", "active")
+        .neq("run_id", runId);
 
-    if (supersedeError) {
-      console.error("[scan-runner] failed to supersede prior recommendations", {
+      if (supersedeError) {
+        console.error("[scan-runner] failed to supersede prior recommendations", {
+          projectId,
+          runId,
+          message: supersedeError.message
+        });
+      }
+
+      await service.from("recommendations").delete().eq("project_id", projectId).eq("run_id", runId);
+      if (recommendationRows.length) {
+        await service.from("recommendations").insert(
+          recommendationRows.map((rec) => ({
+            run_id: runId,
+            project_id: projectId,
+            status: "active",
+            priority_rank: rec.priority_rank,
+            title: rec.title,
+            description: rec.description,
+            rule_id: rec.rule_id,
+            recommendation_type: rec.recommendation_type,
+            impact: rec.impact,
+            effort: rec.effort,
+            confidence: rec.confidence,
+            source_type: "rule",
+            evidence_json: rec.evidence_json
+          }))
+        );
+      }
+    } catch (recommendationError) {
+      // The scan itself succeeded; only the derived recommendations failed.
+      // Log and continue so the run still completes instead of surfacing as
+      // "No se pudo lanzar el escaneo".
+      console.error("[scan-runner] recommendation generation/persistence failed; completing run without it", {
         projectId,
         runId,
-        message: supersedeError.message
+        message: recommendationError instanceof Error ? recommendationError.message : "unknown"
       });
-    }
-
-    await service.from("recommendations").delete().eq("project_id", projectId).eq("run_id", runId);
-    if (recommendationRows.length) {
-      await service.from("recommendations").insert(
-        recommendationRows.map((rec) => ({
-          run_id: runId,
-          project_id: projectId,
-          status: "active",
-          priority_rank: rec.priority_rank,
-          title: rec.title,
-          description: rec.description,
-          rule_id: rec.rule_id,
-          recommendation_type: rec.recommendation_type,
-          impact: rec.impact,
-          effort: rec.effort,
-          confidence: rec.confidence,
-          source_type: "rule",
-          evidence_json: rec.evidence_json
-        }))
-      );
     }
 
     if (finalizeJob) {

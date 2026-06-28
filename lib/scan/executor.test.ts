@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
 import { PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
+import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 
 const generateGeminiVisibilityAnswer = vi.fn();
 vi.mock("@/lib/llm/gemini", async () => {
@@ -476,6 +477,28 @@ describe("executePendingScan — multi-engine execution", () => {
 
     const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
     expect(promptJob.status).toBe("completed");
+  });
+
+  it("completes the run even when recommendation generation throws (fail-soft)", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockImplementationOnce(() => {
+      throw new Error("recommendation engine boom");
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    // The derived recommendations failing must NOT sink the scan — otherwise the
+    // launch surfaces as "No se pudo lanzar el escaneo".
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).resolves.toBeUndefined();
+
+    const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
+    expect(promptJob.status).toBe("completed");
+
+    errorSpy.mockRestore();
   });
 
   it("does not abort the run when only one engine is config-errored", async () => {
