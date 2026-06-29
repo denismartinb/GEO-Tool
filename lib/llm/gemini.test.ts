@@ -485,6 +485,16 @@ describe("rewriteRecommendation", () => {
     expect(promptText).toContain("Acme vs Conforama");
   });
 
+  it("injects a digital-PR asset focus for pursue_citation_sources", async () => {
+    const fetchMock = mockGeminiJson({ title: "t", summary: "s", steps: [], examples: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rewriteRecommendation(rewriteInput({ recommendationType: "pursue_citation_sources" }));
+
+    const promptText = JSON.parse(fetchMock.mock.calls[0][1].body as string).contents[0].parts[0].text as string;
+    expect(promptText).toContain("ASSET FOCUS — digital PR");
+  });
+
   it("injects a FAQ asset focus for create_faq_section and an entity-schema focus for entity clarity", async () => {
     const fetchMock = mockGeminiJson({ title: "t", summary: "s", steps: [], examples: [] });
     vi.stubGlobal("fetch", fetchMock);

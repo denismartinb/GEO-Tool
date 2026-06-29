@@ -337,6 +337,51 @@ describe("generateRecommendationsForRun", () => {
     expect(recs.some((r) => r.recommendation_type === "add_comparison_content")).toBe(true);
   });
 
+  it("surfaces a digital-PR source gap from third-party domains cited where the brand is absent (gap 8)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "reddit.com", source: "grounding" }] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "reddit.com", source: "grounding" }] })
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "pursue_citation_sources");
+    expect(rec).toBeDefined();
+    expect(rec!.evidence_json.source_domains as string[]).toContain("reddit.com");
+    expect(rec!.evidence_json.citation_domains as string[]).toContain("reddit.com");
+  });
+
+  it("ignores the brand's own cited domain and one-off sources for the PR gap (gap 8)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "reddit.com", source: "grounding" }] })
+      })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "pursue_citation_sources")).toBe(false);
+  });
+
   it("caps the backlog at 10 recommendations and assigns priority_rank within [1,10]", () => {
     const prompts: PromptResultFixture[] = [];
     const competitors = ["C1", "C2", "C3", "C4", "C5"];
@@ -358,6 +403,7 @@ describe("generateRecommendationsForRun", () => {
   it("maps recommendation types to the right UI category", () => {
     expect(categoryForType("improve_citation_readiness")).toBe("authority");
     expect(categoryForType("add_citation_block")).toBe("authority");
+    expect(categoryForType("pursue_citation_sources")).toBe("authority");
     expect(categoryForType("strengthen_brand_entity_clarity")).toBe("technical");
     expect(categoryForType("increase_brand_visibility")).toBe("content");
     expect(categoryForType("close_competitor_gap")).toBe("content");
