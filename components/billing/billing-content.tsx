@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { InfoTip } from "@/components/ui/info-tip";
 import { getUsageSummary } from "@/lib/billing";
 import { PLANS } from "@/app/pricing/plans-data";
 
@@ -21,49 +22,79 @@ const FAKE_PAYMENT_METHOD = {
 };
 
 const FAKE_INVOICES = [
-  { number: "INV-2026-006", date: "1 jun 2026", amount: 179 },
-  { number: "INV-2026-005", date: "1 may 2026", amount: 179 },
-  { number: "INV-2026-004", date: "1 abr 2026", amount: 179 }
+  { number: "INV-2026-006", date: "1 jun 2026", amount: "179,00 €" },
+  { number: "INV-2026-005", date: "1 may 2026", amount: "179,00 €" },
+  { number: "INV-2026-004", date: "1 abr 2026", amount: "179,00 €" },
+  { number: "INV-2026-003", date: "1 mar 2026", amount: "45,00 €" }
 ];
 
-function UsageRow({
-  icon,
-  label,
-  value,
-  cap
-}: {
+function formatMadrid(date: Date) {
+  return date.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Madrid"
+  });
+}
+
+type UsageBarProps = {
   icon: string;
   label: string;
-  value: number;
-  cap: number;
-}) {
-  const pct = cap > 0 ? Math.min(100, Math.round((value / cap) * 100)) : 0;
-  const atCap = cap > 0 && value >= cap;
+  /** Numeric usage row: current value out of `limit`. */
+  used?: number;
+  limit?: number;
+  /** Non-metered row (e.g. "Diario", "Ilimitados") — full positive bar. */
+  text?: string;
+};
 
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm font-medium text-[var(--ink-2)]">
-          <Icon name={icon} size={15} />
-          {label}
-        </span>
-        <span className="text-sm font-semibold tabular-nums text-[var(--ink)]">
-          {value}/{cap}
-        </span>
-      </div>
-      <div className="run-bar-wrap">
-        <div className="run-bar">
-          <div
-            className="run-bar-fill"
-            style={{ width: `${pct}%`, background: atCap ? "#f59e0b" : "var(--accent)" }}
-          />
+function UsageBar({ icon, label, used, limit, text }: UsageBarProps) {
+  // Non-metered rows render a full positive bar with their textual value.
+  if (text != null) {
+    return (
+      <div className="bill-usage">
+        <div className="bill-usage-top">
+          <span className="bill-usage-l">
+            <Icon name={icon} size={14} />
+            {label}
+          </span>
+          <span className="bill-usage-v">
+            <b>{text}</b>
+          </span>
+        </div>
+        <div className="bill-track">
+          <div className="bill-fill" style={{ width: "100%", background: "var(--pos)" }} />
         </div>
       </div>
-      {atCap && (
-        <p className="flex items-center gap-1.5 text-xs font-medium text-[#92600a]">
-          <Icon name="alertCircle" size={13} />
+    );
+  }
+
+  const cap = limit ?? 0;
+  const pct = cap > 0 ? Math.min(100, Math.round(((used ?? 0) / cap) * 100)) : 0;
+  const near = pct >= 80;
+
+  return (
+    <div className="bill-usage">
+      <div className="bill-usage-top">
+        <span className="bill-usage-l">
+          <Icon name={icon} size={14} />
+          {label}
+        </span>
+        <span className="bill-usage-v tnum">
+          <b>{used}</b>
+          <span className="bill-usage-lim"> / {cap}</span>
+        </span>
+      </div>
+      <div className="bill-track">
+        <div
+          className="bill-fill"
+          style={{ width: `${pct}%`, background: near ? "var(--warn)" : "var(--accent)" }}
+        />
+      </div>
+      {near && (
+        <div className="bill-usage-hint">
+          <Icon name="alertCircle" size={12} />
           Cerca del límite del plan
-        </p>
+        </div>
       )}
     </div>
   );
@@ -72,180 +103,221 @@ function UsageRow({
 export async function BillingContent({ embedded = false }: { embedded?: boolean }) {
   const usage = await getUsageSummary();
 
+  // The billing cycle renews on the first day of each month. There is no
+  // subscription record yet, so this is computed (not a frozen fake date).
+  const now = new Date();
+  const renewal = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const renewalLabel = formatMadrid(renewal);
+  const daysUntilRenewal = Math.max(
+    0,
+    Math.ceil((renewal.getTime() - now.getTime()) / 86_400_000)
+  );
+
   const sections = (
     <>
-      <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--accent-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
-        <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--accent)]">
-          <Icon name="card" size={18} />
+      {/* Resumen */}
+      <div className="summary" style={{ alignItems: "center" }}>
+        <div className="summary-ico">
+          <Icon name="card" size={20} />
         </div>
-        <Link href="/pricing" className="order-2 shrink-0 sm:order-3">
-          <Button type="button" variant="outline" className="w-full justify-center sm:w-auto">
-            <Icon name="grid" size={14} />
+        <div className="summary-txt" style={{ flex: 1 }}>
+          Estás en el plan <b>{currentPlan.name}</b> · <b>{currentPlan.price}&nbsp;€/{currentPlan.period}</b>.
+          Has usado <b>{usage.promptCount} de {usage.promptCap} prompts</b> este ciclo, que se renueva el{" "}
+          <b>{renewalLabel}</b>. Subir a <b>{agencyPlan.name}</b> desbloquea workspaces multi-cliente e informes
+          white-label.
+        </div>
+        <Link href="/pricing">
+          <Button type="button" variant="outline">
+            <Icon name="grid" size={15} />
             Ver todos los planes
           </Button>
         </Link>
-        <p className="order-3 text-sm text-[var(--accent-ink)] sm:order-2 sm:flex-1">
-          Has usado <strong>{usage.promptCount} de {usage.promptCap}</strong> prompts incluidos en tu plan.
-          Subir a {agencyPlan.name} desbloquea workspaces multi-cliente e informes white-label.
-        </p>
       </div>
 
-      <section className="space-y-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Tu plan</h2>
-          <p className="sub">Facturación mensual</p>
+      {/* Plan actual + uso */}
+      <div className="section-head">
+        <div className="section-title">Tu plan</div>
+        <div className="section-desc">Facturación mensual · próxima renovación {renewalLabel}</div>
+        <div className="right">
+          <span className="badge badge-pos">
+            <Icon name="check" size={12} />
+            Activo
+          </span>
         </div>
-        <span className="badge badge-pos">
-          <Icon name="check" size={11} />
-          Activo
-        </span>
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <p className="text-base font-semibold text-[var(--ink)]">{currentPlan.name}</p>
+      </div>
+
+      <div className="bill-grid">
+        {/* Tarjeta de plan */}
+        <Card className="bill-plan">
+          <div className="bill-plan-top">
+            <div>
+              <div className="bill-plan-name">
+                {currentPlan.name}
                 <span className="badge badge-accent">Plan actual</span>
               </div>
-              <p className="text-lg font-bold text-[var(--ink)]">
-                {currentPlan.price}&nbsp;€/{currentPlan.period}
-              </p>
+              <div className="bill-plan-tag">{currentPlan.tagline}</div>
             </div>
-            <p className="sub mt-1">{currentPlan.tagline}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-2 text-sm text-[var(--ink-2)]">
-              {currentPlan.highlights.map((highlight) => (
-                <li key={highlight} className="flex items-start gap-2">
-                  <Icon name="check" size={15} className="mt-0.5 shrink-0 text-[var(--pos)]" />
-                  {highlight}
-                </li>
-              ))}
-            </ul>
-            <div className="flex gap-2 border-t border-[var(--line-soft)] pt-4">
+            <div className="bill-plan-price">
+              <span className="tnum">{currentPlan.price}&nbsp;€</span>
+              <span className="per">/{currentPlan.period}</span>
+            </div>
+          </div>
+          <ul className="bill-plan-feats">
+            {currentPlan.highlights.map((highlight) => (
+              <li key={highlight}>
+                <span className="pr-chk">
+                  <Icon name="check" size={11} />
+                </span>
+                {highlight}
+              </li>
+            ))}
+          </ul>
+          <div className="bill-plan-actions">
+            <Link href="/pricing">
               <Button type="button">
-                <Icon name="arrUp" size={14} />
+                <Icon name="arrUp" size={15} />
                 Cambiar de plan
               </Button>
-              <Button type="button" variant="outline">
-                Cancelar suscripción
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--ink)]">Uso de este ciclo</h2>
-        <Card>
-          <CardContent className="space-y-4">
-            <UsageRow icon="prompts" label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
-            <UsageRow icon="globe" label="Proyectos / dominios" value={usage.projectCount} cap={usage.projectCap} />
-            <UsageRow icon="layers" label="Motores de IA" value={usage.engineCount} cap={usage.engineCap} />
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[var(--surface-2)]">
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Icon name="fileText" size={16} className="text-[var(--accent)]" />
-              <p className="font-semibold text-[var(--ink)]">
-                ¿Gestionas varios clientes? El plan {agencyPlan.name} es para ti
-              </p>
-            </div>
-            <p className="sub">
-              Workspaces multi-cliente, ~300 prompts, todos los motores, informes white-label, alertas por email y
-              Slack, y roles. Desde {agencyPlan.price}&nbsp;€/{agencyPlan.period}.
-            </p>
-            <Link href="/pricing">
-              <Button type="button" className="w-full justify-center">
-                Comparar planes
-                <Icon name="arrRight" size={14} />
-              </Button>
             </Link>
+            <Button type="button" variant="outline">
+              Cancelar suscripción
+            </Button>
+          </div>
+        </Card>
+
+        {/* Uso del ciclo */}
+        <Card>
+          <CardHeader className="flex items-center gap-2.5">
+            <span className="card-title">Uso de este ciclo</span>
+            <InfoTip text="Tu plan se mide por prompts × motores × frecuencia de refresco. Los usuarios son ilimitados y no cuentan para la factura." />
+            <span className="ml-auto badge badge-neutral">
+              <Icon name="clock" size={12} />
+              Renueva en {daysUntilRenewal} {daysUntilRenewal === 1 ? "día" : "días"}
+            </span>
+          </CardHeader>
+          <CardContent>
+            <UsageBar icon="prompts" label="Prompts monitorizados" used={usage.promptCount} limit={usage.promptCap} />
+            <UsageBar icon="globe" label="Proyectos / dominios" used={usage.projectCount} limit={usage.projectCap} />
+            <UsageBar icon="layers" label="Motores de IA" used={usage.engineCount} limit={usage.engineCap} />
+            <UsageBar icon="refresh" label="Frecuencia de refresco" text="Diario" />
+            <div className="[&_.bill-usage]:!mb-0">
+              <UsageBar icon="users" label="Usuarios del equipo" text="Ilimitados" />
+            </div>
           </CardContent>
         </Card>
-      </section>
+      </div>
 
-      <section className="space-y-2">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Pago y facturas</h2>
-          <p className="sub mt-1">
-            Método de pago y tu historial de facturación. Datos de ejemplo — disponibles cuando activemos la
-            facturación real.
-          </p>
+      {/* Upsell a Agencia */}
+      <div className="bill-upsell">
+        <div className="bill-upsell-ic">
+          <Icon name="building" size={22} />
         </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="bill-upsell-t">¿Gestionas varios clientes? El plan {agencyPlan.name} es para ti</div>
+          <div className="bill-upsell-d">
+            Workspaces multi-cliente, ~300 prompts, todos los motores, informes white-label, alertas por email y
+            Slack, y roles. Desde <b>{agencyPlan.price}&nbsp;€/{agencyPlan.period}</b>.
+          </div>
+        </div>
+        <Link href="/pricing">
+          <Button type="button">
+            Comparar planes
+            <Icon name="arrRight" size={15} />
+          </Button>
+        </Link>
+      </div>
 
+      {/* Método de pago + facturas */}
+      <div className="section-head">
+        <div className="section-title">Pago y facturas</div>
+        <div className="section-desc">
+          Método de pago y tu historial de facturación. Datos de ejemplo — disponibles cuando activemos la
+          facturación real.
+        </div>
+      </div>
+
+      <div className="bill-grid">
+        {/* Método de pago */}
         <Card>
           <CardHeader>
-            <p className="sub">Método de pago</p>
+            <span className="card-title">Método de pago</span>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[var(--accent-soft)] text-[var(--accent)]">
-                  <Icon name="card" size={18} />
+          <CardContent>
+            <div className="bill-pay">
+              <div className="bill-card-chip">
+                <Icon name="card" size={20} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="bill-card-num">
+                  {FAKE_PAYMENT_METHOD.brand} ···· {FAKE_PAYMENT_METHOD.last4}
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-[var(--ink)]">
-                    {FAKE_PAYMENT_METHOD.brand} •••• {FAKE_PAYMENT_METHOD.last4}
-                  </p>
-                  <p className="sub">Caduca {FAKE_PAYMENT_METHOD.expiry}</p>
-                </div>
+                <div className="bill-card-exp">Caduca {FAKE_PAYMENT_METHOD.expiry}</div>
               </div>
               <Button type="button" variant="outline">
                 <Icon name="edit" size={13} />
                 Editar
               </Button>
             </div>
-            <div className="space-y-2 border-t border-[var(--line-soft)] pt-4 text-sm">
-              <div className="flex items-center gap-2 text-[var(--ink-2)]">
+            <div className="bill-pay-row">
+              <span className="bill-pay-k">
                 <Icon name="mail" size={14} />
                 Email de facturación
-                <span className="ml-auto font-medium text-[var(--ink)]">{FAKE_PAYMENT_METHOD.billingEmail}</span>
-              </div>
-              <div className="flex items-center gap-2 text-[var(--ink-2)]">
+              </span>
+              <span className="bill-pay-v">{FAKE_PAYMENT_METHOD.billingEmail}</span>
+            </div>
+            <div className="bill-pay-row">
+              <span className="bill-pay-k">
                 <Icon name="fileText" size={14} />
                 Datos fiscales
-                <span className="ml-auto font-medium text-[var(--ink)]">
-                  {FAKE_PAYMENT_METHOD.legalName} · {FAKE_PAYMENT_METHOD.taxId}
-                </span>
-              </div>
+              </span>
+              <span className="bill-pay-v">
+                {FAKE_PAYMENT_METHOD.legalName} · {FAKE_PAYMENT_METHOD.taxId}
+              </span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Historial de facturas */}
         <Card>
-          <CardHeader className="flex items-center justify-between gap-3">
-            <p className="sub">Historial de facturas</p>
-            <Button type="button" variant="outline">
-              <Icon name="download" size={13} />
-              Exportar todo
-            </Button>
+          <CardHeader className="flex items-center gap-2.5">
+            <span className="card-title">Historial de facturas</span>
+            <span className="ml-auto">
+              <Button type="button" variant="outline">
+                <Icon name="download" size={13} />
+                Exportar todo
+              </Button>
+            </span>
           </CardHeader>
-          <CardContent className="divide-y divide-[var(--line-soft)]">
-            {FAKE_INVOICES.map((invoice) => (
-              <div key={invoice.number} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <Icon name="fileText" size={16} className="text-[var(--ink-3)]" />
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--ink)]">{invoice.number}</p>
-                    <p className="sub">{invoice.date}</p>
-                  </div>
+          <div style={{ padding: "4px 0" }}>
+            {FAKE_INVOICES.map((invoice, i) => (
+              <div
+                key={invoice.number}
+                className="bill-inv"
+                style={{
+                  borderBottom: i < FAKE_INVOICES.length - 1 ? "1px solid var(--line-soft)" : "none"
+                }}
+              >
+                <div className="bill-inv-ic">
+                  <Icon name="fileText" size={15} />
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold tabular-nums text-[var(--ink)]">
-                    {invoice.amount.toFixed(2).replace(".", ",")}&nbsp;€
-                  </span>
-                  <span className="badge badge-pos">Pagada</span>
-                  <Button type="button" variant="outline" aria-label={`Descargar factura ${invoice.number}`}>
-                    <Icon name="download" size={13} />
-                  </Button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="bill-inv-id">{invoice.number}</div>
+                  <div className="bill-inv-date">{invoice.date}</div>
                 </div>
+                <span className="tnum bill-inv-amt">{invoice.amount}</span>
+                <span className="badge badge-pos">Pagada</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-label={`Descargar factura ${invoice.number}`}
+                >
+                  <Icon name="download" size={13} />
+                </Button>
               </div>
             ))}
-          </CardContent>
+          </div>
         </Card>
-      </section>
+      </div>
     </>
   );
 

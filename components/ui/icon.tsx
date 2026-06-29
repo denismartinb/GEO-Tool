@@ -161,6 +161,12 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <path d="M2.5 9.5h19M6 15h3" />
       </>
     ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3.5 2" />
+      </>
+    ),
     target: (
       <>
         <circle cx="12" cy="12" r="8.5" />
