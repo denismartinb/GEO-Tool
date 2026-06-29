@@ -13,5 +13,11 @@ export default async function OrganizationSettingsPage() {
 
   const role = await getAccountRole();
 
-  return <OrganizationTab role={role} />;
+  const metadata = user.user_metadata ?? {};
+  const name = typeof metadata.org_name === "string" ? metadata.org_name : "";
+  const website = typeof metadata.org_website === "string" ? metadata.org_website : "";
+  const sector = typeof metadata.org_sector === "string" ? metadata.org_sector : "";
+  const taxInfo = typeof metadata.org_tax_info === "string" ? metadata.org_tax_info : "";
+
+  return <OrganizationTab role={role} name={name} website={website} sector={sector} taxInfo={taxInfo} />;
 }

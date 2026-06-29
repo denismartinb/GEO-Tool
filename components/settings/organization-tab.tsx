@@ -1,17 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import type { AccountRole } from "@/lib/account-role";
+import { updateOrganization } from "@/app/dashboard/settings/organization/actions";
 
-export function OrganizationTab({ role }: { role: AccountRole }) {
+type Feedback = { type: "ok" | "err"; text: string };
+
+export function OrganizationTab({
+  role,
+  name,
+  website,
+  sector,
+  taxInfo
+}: {
+  role: AccountRole;
+  name: string;
+  website: string;
+  sector: string;
+  taxInfo: string;
+}) {
   const ro = role !== "admin";
-  const [name, setName] = useState("Agencia Acme");
-  const [website, setWebsite] = useState("agenciaacme.com");
-  const [sector, setSector] = useState("Agencia de marketing");
-  const [taxInfo, setTaxInfo] = useState("Agencia Acme S.L. · ESB12345678");
+  const [orgName, setOrgName] = useState(name);
+  const [orgWebsite, setOrgWebsite] = useState(website);
+  const [orgSector, setOrgSector] = useState(sector);
+  const [orgTaxInfo, setOrgTaxInfo] = useState(taxInfo);
+
+  const [isSaving, startSaving] = useTransition();
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
+
+  const save = () => {
+    setFeedback(null);
+    startSaving(async () => {
+      const result = await updateOrganization(orgName, orgWebsite, orgSector, orgTaxInfo);
+      setFeedback(result.success ? { type: "ok", text: "Cambios guardados." } : { type: "err", text: result.error });
+    });
+  };
 
   return (
     <div className="set-pane">
@@ -27,7 +53,7 @@ export function OrganizationTab({ role }: { role: AccountRole }) {
         </CardHeader>
         <CardContent>
           <div className="set-profile-head">
-            <div className="set-org-logo">A</div>
+            <div className="set-org-logo">{orgName.trim().slice(0, 1).toUpperCase() || "?"}</div>
             <div>
               <Button type="button" variant="outline" disabled={ro}>
                 <Icon name="image" size={14} />
@@ -47,9 +73,9 @@ export function OrganizationTab({ role }: { role: AccountRole }) {
               <input
                 id="org-name"
                 className="set-field"
-                value={name}
+                value={orgName}
                 disabled={ro}
-                onChange={(event) => setName(event.target.value)}
+                onChange={(event) => setOrgName(event.target.value)}
               />
             </div>
             <div>
@@ -59,9 +85,9 @@ export function OrganizationTab({ role }: { role: AccountRole }) {
               <input
                 id="org-website"
                 className="set-field"
-                value={website}
+                value={orgWebsite}
                 disabled={ro}
-                onChange={(event) => setWebsite(event.target.value)}
+                onChange={(event) => setOrgWebsite(event.target.value)}
               />
             </div>
             <div>
@@ -71,9 +97,9 @@ export function OrganizationTab({ role }: { role: AccountRole }) {
               <input
                 id="org-sector"
                 className="set-field"
-                value={sector}
+                value={orgSector}
                 disabled={ro}
-                onChange={(event) => setSector(event.target.value)}
+                onChange={(event) => setOrgSector(event.target.value)}
               />
             </div>
             <div>
@@ -83,16 +109,27 @@ export function OrganizationTab({ role }: { role: AccountRole }) {
               <input
                 id="org-tax"
                 className="set-field"
-                value={taxInfo}
+                value={orgTaxInfo}
                 disabled={ro}
-                onChange={(event) => setTaxInfo(event.target.value)}
+                onChange={(event) => setOrgTaxInfo(event.target.value)}
               />
             </div>
           </div>
 
           {!ro && (
             <div className="set-actions">
-              <Button type="button">Guardar cambios</Button>
+              <Button type="button" onClick={save} disabled={isSaving}>
+                {isSaving ? "Guardando…" : "Guardar cambios"}
+              </Button>
+            </div>
+          )}
+          {feedback && (
+            <div
+              className={feedback.type === "err" ? "field-err" : "field-ok"}
+              style={{ justifyContent: "flex-start", marginTop: 8 }}
+            >
+              {feedback.type === "err" && <Icon name="alertCircle" size={13} />}
+              {feedback.text}
             </div>
           )}
         </CardContent>
