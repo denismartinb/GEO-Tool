@@ -61,6 +61,14 @@ export const extractionOutputSchema = z.object({
   competitors: z.array(extractionCompetitorSchema),
   citations: z.array(extractionCitationSchema),
   sentiment: extractionSentimentSchema,
+  /**
+   * Short noun-phrase themes driving any NEGATIVE/mixed sentiment ABOUT THE
+   * BRAND (e.g. "atención al cliente", "plazos de entrega"). Empty when
+   * sentiment is positive/neutral or no clear driver is stated. Powers gap 9
+   * (address_negative_narrative). Optional with a default so older extracted
+   * JSON without the field still parses.
+   */
+  sentiment_drivers: z.array(z.string()).default([]),
   summary: z.string(),
   confidence: extractionConfidenceSchema,
   notes: z.array(z.string())

@@ -15,11 +15,12 @@ function prompt(overrides: Partial<PromptResultFixture> & { id: string; prompt_t
   };
 }
 
-function extractedWith(opts: { brandEvidence?: string[]; competitors?: Array<{ name: string; mentioned: boolean; evidence?: string[] }>; citations?: Array<{ domain: string; source: "grounding" | "inline" }> }) {
+function extractedWith(opts: { brandEvidence?: string[]; competitors?: Array<{ name: string; mentioned: boolean; evidence?: string[] }>; citations?: Array<{ domain: string; source: "grounding" | "inline" }>; sentimentDrivers?: string[] }) {
   return {
     brand: { evidence: opts.brandEvidence ?? [] },
     competitors: opts.competitors ?? [],
-    citations: opts.citations ?? []
+    citations: opts.citations ?? [],
+    sentiment_drivers: opts.sentimentDrivers ?? []
   };
 }
 
@@ -382,6 +383,50 @@ describe("generateRecommendationsForRun", () => {
     expect(recs.some((r) => r.recommendation_type === "pursue_citation_sources")).toBe(false);
   });
 
+  it("names a recurring negative-narrative driver as a recommendation (gap 9)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        extracted_json: extractedWith({ brandEvidence: ["Acme tiene mala atención al cliente."], sentimentDrivers: ["atención al cliente"] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "experiencias con Acme",
+        sentiment: "mixed",
+        extracted_json: extractedWith({ brandEvidence: ["La atención al cliente de Acme deja que desear."], sentimentDrivers: ["atención al cliente"] })
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative");
+    expect(rec).toBeDefined();
+    expect(rec!.title).toContain("atención al cliente");
+    expect(rec!.evidence_json.negative_driver).toBe("atención al cliente");
+    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("ignores a one-off criticism and positive sentiment for the negative-narrative gap (gap 9)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        extracted_json: extractedWith({ sentimentDrivers: ["plazos de entrega"] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "Acme review",
+        sentiment: "positive",
+        extracted_json: extractedWith({ sentimentDrivers: ["plazos de entrega"] })
+      })
+    ]);
+
+    // "plazos de entrega" appears negative in only one prompt (the positive one
+    // doesn't count), so it's below the >=2 threshold.
+    expect(recs.some((r) => r.recommendation_type === "address_negative_narrative")).toBe(false);
+  });
+
   it("caps the backlog at 10 recommendations and assigns priority_rank within [1,10]", () => {
     const prompts: PromptResultFixture[] = [];
     const competitors = ["C1", "C2", "C3", "C4", "C5"];
@@ -404,6 +449,7 @@ describe("generateRecommendationsForRun", () => {
     expect(categoryForType("improve_citation_readiness")).toBe("authority");
     expect(categoryForType("add_citation_block")).toBe("authority");
     expect(categoryForType("pursue_citation_sources")).toBe("authority");
+    expect(categoryForType("address_negative_narrative")).toBe("content");
     expect(categoryForType("strengthen_brand_entity_clarity")).toBe("technical");
     expect(categoryForType("increase_brand_visibility")).toBe("content");
     expect(categoryForType("close_competitor_gap")).toBe("content");

@@ -485,6 +485,16 @@ describe("rewriteRecommendation", () => {
     expect(promptText).toContain("Acme vs Conforama");
   });
 
+  it("injects a counter-narrative asset focus for address_negative_narrative", async () => {
+    const fetchMock = mockGeminiJson({ title: "t", summary: "s", steps: [], examples: [] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await rewriteRecommendation(rewriteInput({ recommendationType: "address_negative_narrative" }));
+
+    const promptText = JSON.parse(fetchMock.mock.calls[0][1].body as string).contents[0].parts[0].text as string;
+    expect(promptText).toContain("ASSET FOCUS — counter-narrative");
+  });
+
   it("injects a digital-PR asset focus for pursue_citation_sources", async () => {
     const fetchMock = mockGeminiJson({ title: "t", summary: "s", steps: [], examples: [] });
     vi.stubGlobal("fetch", fetchMock);

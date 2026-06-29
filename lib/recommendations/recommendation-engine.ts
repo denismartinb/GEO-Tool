@@ -70,6 +70,7 @@ const categoryByType: Record<string, RecommendationCategory> = {
   improve_citation_readiness: "authority",
   add_citation_block: "authority",
   pursue_citation_sources: "authority",
+  address_negative_narrative: "content",
   strengthen_brand_entity_clarity: "technical"
 };
 
@@ -81,6 +82,7 @@ type ExtractedShape = {
   brand?: { evidence?: string[] };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[] }>;
   citations?: Array<{ domain?: string | null; source?: string | null }>;
+  sentiment_drivers?: string[];
 };
 
 function getExtracted(result: PromptResultInput): ExtractedShape | null {
@@ -385,6 +387,42 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
     .slice(0, 6);
 }
 
+type NegativeDriver = {
+  driver: string;
+  prompts: PromptResultInput[];
+};
+
+/**
+ * Gap 9 (negative narrative, Fase D1): the short themes the AI states as the
+ * reason for negative/mixed sentiment about the brand (`sentiment_drivers`,
+ * extracted into extracted_json). Groups by driver across prompts; a driver
+ * must recur in >=2 negative prompts to qualify, so a single off-hand criticism
+ * doesn't become a recommendation. Built from data already captured in the scan
+ * (no crawler). Only the themes the response actually states are used — the
+ * extraction is instructed never to invent a criticism.
+ */
+function computeNegativeNarrative(promptResults: PromptResultInput[]): NegativeDriver[] {
+  const byDriver = new Map<string, NegativeDriver>();
+  for (const result of promptResults) {
+    if (result.sentiment !== "negative" && result.sentiment !== "mixed") continue;
+    const drivers = getExtracted(result)?.sentiment_drivers ?? [];
+    const seenInThisPrompt = new Set<string>();
+    for (const raw of drivers) {
+      const driver = raw.trim();
+      const key = driver.toLowerCase();
+      if (!driver || seenInThisPrompt.has(key)) continue;
+      seenInThisPrompt.add(key);
+      const entry = byDriver.get(key) ?? { driver, prompts: [] };
+      entry.prompts.push(result);
+      byDriver.set(key, entry);
+    }
+  }
+  return Array.from(byDriver.values())
+    .filter((entry) => entry.prompts.length >= 2)
+    .sort((a, b) => b.prompts.length - a.prompts.length)
+    .slice(0, 3);
+}
+
 export function generateRecommendationsForRun(input: GenerateInput): RecommendationRow[] {
   const { runScore, promptResults } = input;
   if (!promptResults.length) return [];
@@ -571,6 +609,37 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           "Entrar en las fuentes que los motores de IA ya citan aumenta directamente tu probabilidad de ser referenciado.",
         extra: { source_domains: sourceDomains },
         snippetSource: "none"
+      })
+    });
+  }
+
+  // Gap 9 (negative narrative): recurring negative-sentiment themes about the
+  // brand — name the specific perception to counter.
+  const negativeDrivers = computeNegativeNarrative(promptResults);
+  for (const entry of negativeDrivers) {
+    const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
+    candidates.push({
+      title: `Contrarresta la percepción negativa sobre «${entry.driver}»`,
+      description: `Las respuestas de IA asocian a tu marca con una percepción negativa en torno a «${entry.driver}» en ${entry.prompts.length} consultas. Publica contenido con datos y casos que corrijan esa narrativa.`,
+      rule_id: "rule_negative_narrative_001",
+      recommendation_type: "address_negative_narrative",
+      dedupeKey: `address_negative_narrative:${entry.driver.trim().toLowerCase()}`,
+      impact,
+      effort: "medium",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: entry.prompts.length,
+      severityScore: entry.prompts.length * 15 + confWeight(runScore.confidence) * 3,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_negative_narrative_001",
+        scoreDetails,
+        runScore,
+        affected: entry.prompts,
+        assumptions: [`La IA repite una crítica sobre «${entry.driver}» en varias respuestas sobre tu marca.`],
+        whyThisMatters:
+          "Una narrativa negativa recurrente en las respuestas de IA erosiona la percepción de marca en la fase de decisión.",
+        extra: { negative_driver: entry.driver },
+        snippetSource: "brand"
       })
     });
   }
