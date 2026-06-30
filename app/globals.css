@@ -441,6 +441,7 @@ a {
   min-height: 100vh;
   overflow-y: auto;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   place-items: start center;
   padding: 40px 24px;
   background: radial-gradient(120% 120% at 50% -10%, #ede9ff 0%, #f6f7fb 46%, #eef0f8 100%);
@@ -451,6 +452,7 @@ a {
   position: relative;
   z-index: 2;
   width: 100%;
+  min-width: 0;
   max-width: 440px;
   background: #fff;
   border: 1px solid var(--line);
