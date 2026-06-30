@@ -243,12 +243,15 @@ export async function extractGeminiStructuredData(input: {
   "competitors": [{ "name": string, "mentioned": boolean, "evidence": string[], "position": number|null }],
   "citations": [{ "url": string|null, "domain": string|null, "label": string|null, "evidence": string|null }],
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
+  "sentiment_drivers": string[],
   "summary": string,
   "confidence": "low"|"medium"|"high",
   "notes": string[]
 }
 
-For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if the entity is not mentioned (mentioned: false). Rank only entities that are actually mentioned, with no gaps in the ranking (1, 2, 3, ...), ordered by where each entity first appears in the text. The brand and all competitors share a single ranking.`;
+For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if the entity is not mentioned (mentioned: false). Rank only entities that are actually mentioned, with no gaps in the ranking (1, 2, 3, ...), ordered by where each entity first appears in the text. The brand and all competitors share a single ranking.
+
+For "sentiment_drivers": ONLY when "sentiment" is "negative" or "mixed", list up to 3 short noun-phrase themes (2-4 words each) that are visible in or evidenced by the response as reasons for the negative perception OF THE BRAND (e.g. "atención al cliente", "plazos de entrega", "precios altos", "equipaje de mano"). Include themes that are clearly implied by the response text, not just ones listed explicitly — for example, if the response says "passengers often report problems with checked baggage fees", extract "checked baggage fees" even though it wasn't presented as a bullet point. Do NOT invent a criticism that has no basis in the response text. Empty array [] for positive/neutral sentiment or when the response gives no indication of any specific negative theme about the brand.`;
 
   const promptBlock = [
     schemaInstruction,
@@ -711,6 +714,8 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
       return `ASSET FOCUS — entity clarity: provide as examples an Organization JSON-LD snippet (name "${input.brand}", url the brand domain, a short description, its category) and a brief "Acerca de" page outline stating the brand's category and key descriptors.`;
     case "add_citation_block":
       return "ASSET FOCUS — citable block: provide as examples a factual, directly-extractable paragraph answering the affected query, and an Article or FAQPage JSON-LD snippet.";
+    case "address_negative_narrative":
+      return "ASSET FOCUS — counter-narrative: AI answers carry a recurring negative perception of the brand around the theme in the facts below. Provide as examples (1) a content brief to counter it — target page, angle, and the factual points/proof to publish (use only given facts; [tu dato aquí] for any specific metric), and (2) a short, citable factual paragraph that directly addresses that theme. Stay factual and respectful: correct with evidence, never deny, attack, or invent figures.";
     case "pursue_citation_sources":
       return "ASSET FOCUS — digital PR / get cited by your sources: the domains below are sources the AI already trusts in this space that do not mention the brand. Do NOT assume they are all press to email — infer each one's likely type from the domain and give the RIGHT play: publication/blog/listicle/media -> pitch a contribution or request inclusion; marketplace/comparator/directory -> get listed or claim a profile; community/forum (e.g. reddit, quora) -> participate helpfully, never a cold email; an apparent company/provider or a competitor of the brand, or a clearly out-of-market site (a country TLD that does not match the brand's market) -> mark it 'no es un objetivo de outreach' and exclude it from the plan. Examples to provide: (1) a prioritized list of ONLY the relevant sources, each tagged with its type and its specific play; (2) ONE adaptable outreach template ONLY for the sources where outreach actually applies (publications) — placeholders for names/links, never invent metrics. Use ONLY the domains given.";
     case "increase_brand_visibility":

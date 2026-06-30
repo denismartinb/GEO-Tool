@@ -70,6 +70,7 @@ const categoryByType: Record<string, RecommendationCategory> = {
   improve_citation_readiness: "authority",
   add_citation_block: "authority",
   pursue_citation_sources: "authority",
+  address_negative_narrative: "content",
   strengthen_brand_entity_clarity: "technical"
 };
 
@@ -81,6 +82,7 @@ type ExtractedShape = {
   brand?: { evidence?: string[] };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[] }>;
   citations?: Array<{ domain?: string | null; source?: string | null }>;
+  sentiment_drivers?: string[];
 };
 
 function getExtracted(result: PromptResultInput): ExtractedShape | null {
@@ -385,6 +387,20 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
     .slice(0, 6);
 }
 
+/**
+ * Gap 9 (negative narrative, Fase D1): collects all prompts where the AI
+ * expresses negative or mixed sentiment about the brand. Fires on ≥1 such
+ * prompt — no secondary driver-extraction needed. The Gemini rewrite asset
+ * uses the brand evidence quotes from those prompts to identify the theme and
+ * draft a counter-narrative, so we don't need to extract a specific topic
+ * string here.
+ */
+function computeNegativeNarrative(promptResults: PromptResultInput[]): PromptResultInput[] {
+  return promptResults.filter(
+    (r) => r.sentiment === "negative" || r.sentiment === "mixed"
+  );
+}
+
 export function generateRecommendationsForRun(input: GenerateInput): RecommendationRow[] {
   const { runScore, promptResults } = input;
   if (!promptResults.length) return [];
@@ -571,6 +587,37 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           "Entrar en las fuentes que los motores de IA ya citan aumenta directamente tu probabilidad de ser referenciado.",
         extra: { source_domains: sourceDomains },
         snippetSource: "none"
+      })
+    });
+  }
+
+  // Gap 9 (negative narrative): one card summarising all prompts where the AI
+  // expresses negative or mixed sentiment about the brand. The Gemini rewrite
+  // asset extracts the specific theme from the evidence quotes.
+  const negativePrompts = computeNegativeNarrative(promptResults);
+  if (negativePrompts.length >= 1) {
+    const impact: "high" | "medium" = negativePrompts.length >= 3 ? "high" : "medium";
+    candidates.push({
+      title: `Contrarresta la percepción negativa de tu marca en las respuestas de IA`,
+      description: `Las respuestas de IA expresan sentimiento negativo o mixto sobre tu marca en ${negativePrompts.length} ${negativePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido con datos y casos reales que corrijan esa narrativa.`,
+      rule_id: "rule_negative_narrative_001",
+      recommendation_type: "address_negative_narrative",
+      dedupeKey: "address_negative_narrative",
+      impact,
+      effort: "medium",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: negativePrompts.length,
+      severityScore: negativePrompts.length * 15 + confWeight(runScore.confidence) * 3,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_negative_narrative_001",
+        scoreDetails,
+        runScore,
+        affected: negativePrompts,
+        assumptions: [`La IA expresa sentimiento negativo o mixto sobre la marca en ${negativePrompts.length} respuestas.`],
+        whyThisMatters:
+          "Una percepción negativa recurrente en las respuestas de IA erosiona la credibilidad de la marca en la fase de decisión.",
+        snippetSource: "brand"
       })
     });
   }

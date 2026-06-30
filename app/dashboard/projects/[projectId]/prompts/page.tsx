@@ -206,6 +206,7 @@ export default async function PromptsPage({
     : [];
 
   const totalPrompts = projectPrompts?.length ?? 0;
+  const scannedPrompts = results.length;
   const totalTopics = topicGroups.length;
 
   const hasActivePrompts = (projectPrompts?.length ?? 0) > 0;
@@ -403,6 +404,7 @@ export default async function PromptsPage({
             topicGroups={topicGroups}
             competitors={configuredCompetitors ?? []}
             totalPrompts={totalPrompts}
+            scannedPrompts={scannedPrompts}
             totalTopics={totalTopics}
           />
         )}

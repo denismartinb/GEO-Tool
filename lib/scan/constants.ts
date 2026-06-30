@@ -29,7 +29,7 @@ export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
  * distinguishable: run_scores.details_json.brand_position is only present
  * for runs scored from "grounded-position-v1" extractions — see the ADR.
  */
-export const EXTRACTION_VERSION = "grounded-position-v1";
+export const EXTRACTION_VERSION = "negative-drivers-v1";
 
 /**
  * "neutral-sim-v1" — marks scan_prompt_results whose
