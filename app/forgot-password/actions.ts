@@ -12,9 +12,14 @@ export async function sendOtpAction(email: string): Promise<{ error?: string }> 
   if (!parsed.success) return { error: "Introduce un email válido." };
 
   const supabase = await createClient();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+    ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   await supabase.auth.signInWithOtp({
     email: parsed.data,
-    options: { shouldCreateUser: false },
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: `${siteUrl}/auth/callback`,
+    },
   });
 
   // Always return success to avoid email enumeration

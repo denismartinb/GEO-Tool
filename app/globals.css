@@ -439,11 +439,12 @@ a {
 .auth-bg {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  place-items: start center;
+  padding: 40px 24px;
   background: radial-gradient(120% 120% at 50% -10%, #ede9ff 0%, #f6f7fb 46%, #eef0f8 100%);
+  background-attachment: fixed;
 }
 
 .auth-card {
