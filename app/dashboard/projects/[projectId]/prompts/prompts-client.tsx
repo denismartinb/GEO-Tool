@@ -17,6 +17,7 @@ type PromptsClientProps = {
   topicGroups: TopicGroup[];
   competitors: Competitor[];
   totalPrompts: number;
+  scannedPrompts: number;
   totalTopics: number;
 };
 
@@ -117,6 +118,7 @@ export function PromptsClient({
   topicGroups,
   competitors,
   totalPrompts,
+  scannedPrompts,
   totalTopics,
 }: PromptsClientProps) {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
@@ -244,8 +246,13 @@ export function PromptsClient({
             }}
           >
             Monitorizas{" "}
-            <b style={{ color: "var(--ink)" }}>{totalPrompts} prompts</b>{" "}
-            agrupados en{" "}
+            <b style={{ color: "var(--ink)" }}>{totalPrompts} prompts</b>
+            {scannedPrompts < totalPrompts ? (
+              <span style={{ color: "var(--ink-3)" }}>
+                {" "}({scannedPrompts} escaneados en el último run)
+              </span>
+            ) : null}
+            {" "}agrupados en{" "}
             <b style={{ color: "var(--ink)" }}>{totalTopics} topics</b>. Pulsa
             un prompt para ver la respuesta de cada motor de IA.
           </p>
