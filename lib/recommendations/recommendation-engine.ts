@@ -387,39 +387,18 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
     .slice(0, 6);
 }
 
-type NegativeDriver = {
-  driver: string;
-  prompts: PromptResultInput[];
-};
-
 /**
- * Gap 9 (negative narrative, Fase D1): the short themes the AI states as the
- * reason for negative/mixed sentiment about the brand (`sentiment_drivers`,
- * extracted into extracted_json). Groups by driver across prompts; a driver
- * must appear in at least 1 negative/mixed prompt with an explicit driver to qualify. Built from data already captured in the scan
- * (no crawler). Only the themes the response actually states are used — the
- * extraction is instructed never to invent a criticism.
+ * Gap 9 (negative narrative, Fase D1): collects all prompts where the AI
+ * expresses negative or mixed sentiment about the brand. Fires on ≥1 such
+ * prompt — no secondary driver-extraction needed. The Gemini rewrite asset
+ * uses the brand evidence quotes from those prompts to identify the theme and
+ * draft a counter-narrative, so we don't need to extract a specific topic
+ * string here.
  */
-function computeNegativeNarrative(promptResults: PromptResultInput[]): NegativeDriver[] {
-  const byDriver = new Map<string, NegativeDriver>();
-  for (const result of promptResults) {
-    if (result.sentiment !== "negative" && result.sentiment !== "mixed") continue;
-    const drivers = getExtracted(result)?.sentiment_drivers ?? [];
-    const seenInThisPrompt = new Set<string>();
-    for (const raw of drivers) {
-      const driver = raw.trim();
-      const key = driver.toLowerCase();
-      if (!driver || seenInThisPrompt.has(key)) continue;
-      seenInThisPrompt.add(key);
-      const entry = byDriver.get(key) ?? { driver, prompts: [] };
-      entry.prompts.push(result);
-      byDriver.set(key, entry);
-    }
-  }
-  return Array.from(byDriver.values())
-    .filter((entry) => entry.prompts.length >= 1)
-    .sort((a, b) => b.prompts.length - a.prompts.length)
-    .slice(0, 3);
+function computeNegativeNarrative(promptResults: PromptResultInput[]): PromptResultInput[] {
+  return promptResults.filter(
+    (r) => r.sentiment === "negative" || r.sentiment === "mixed"
+  );
 }
 
 export function generateRecommendationsForRun(input: GenerateInput): RecommendationRow[] {
@@ -612,32 +591,32 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     });
   }
 
-  // Gap 9 (negative narrative): recurring negative-sentiment themes about the
-  // brand — name the specific perception to counter.
-  const negativeDrivers = computeNegativeNarrative(promptResults);
-  for (const entry of negativeDrivers) {
-    const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
+  // Gap 9 (negative narrative): one card summarising all prompts where the AI
+  // expresses negative or mixed sentiment about the brand. The Gemini rewrite
+  // asset extracts the specific theme from the evidence quotes.
+  const negativePrompts = computeNegativeNarrative(promptResults);
+  if (negativePrompts.length >= 1) {
+    const impact: "high" | "medium" = negativePrompts.length >= 3 ? "high" : "medium";
     candidates.push({
-      title: `Contrarresta la percepción negativa sobre «${entry.driver}»`,
-      description: `Las respuestas de IA asocian a tu marca con una percepción negativa en torno a «${entry.driver}» en ${entry.prompts.length} consultas. Publica contenido con datos y casos que corrijan esa narrativa.`,
+      title: `Contrarresta la percepción negativa de tu marca en las respuestas de IA`,
+      description: `Las respuestas de IA expresan sentimiento negativo o mixto sobre tu marca en ${negativePrompts.length} ${negativePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido con datos y casos reales que corrijan esa narrativa.`,
       rule_id: "rule_negative_narrative_001",
       recommendation_type: "address_negative_narrative",
-      dedupeKey: `address_negative_narrative:${entry.driver.trim().toLowerCase()}`,
+      dedupeKey: "address_negative_narrative",
       impact,
       effort: "medium",
       confidence: runScore.confidence,
       source_type: "rule",
-      affectedCount: entry.prompts.length,
-      severityScore: entry.prompts.length * 15 + confWeight(runScore.confidence) * 3,
+      affectedCount: negativePrompts.length,
+      severityScore: negativePrompts.length * 15 + confWeight(runScore.confidence) * 3,
       evidence_json: buildEvidenceJson({
         ruleId: "rule_negative_narrative_001",
         scoreDetails,
         runScore,
-        affected: entry.prompts,
-        assumptions: [`La IA repite una crítica sobre «${entry.driver}» en varias respuestas sobre tu marca.`],
+        affected: negativePrompts,
+        assumptions: [`La IA expresa sentimiento negativo o mixto sobre la marca en ${negativePrompts.length} respuestas.`],
         whyThisMatters:
-          "Una narrativa negativa recurrente en las respuestas de IA erosiona la percepción de marca en la fase de decisión.",
-        extra: { negative_driver: entry.driver },
+          "Una percepción negativa recurrente en las respuestas de IA erosiona la credibilidad de la marca en la fase de decisión.",
         snippetSource: "brand"
       })
     });

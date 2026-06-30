@@ -383,26 +383,25 @@ describe("generateRecommendationsForRun", () => {
     expect(recs.some((r) => r.recommendation_type === "pursue_citation_sources")).toBe(false);
   });
 
-  it("names a recurring negative-narrative driver as a recommendation (gap 9)", () => {
+  it("generates an address_negative_narrative recommendation when prompts have negative/mixed sentiment (gap 9)", () => {
     const recs = run([
       prompt({
         id: "p1",
         prompt_text_snapshot: "opiniones sobre Acme",
         sentiment: "negative",
-        extracted_json: extractedWith({ brandEvidence: ["Acme tiene mala atención al cliente."], sentimentDrivers: ["atención al cliente"] })
+        extracted_json: extractedWith({ brandEvidence: ["Acme tiene mala atención al cliente."] })
       }),
       prompt({
         id: "p2",
         prompt_text_snapshot: "experiencias con Acme",
         sentiment: "mixed",
-        extracted_json: extractedWith({ brandEvidence: ["La atención al cliente de Acme deja que desear."], sentimentDrivers: ["atención al cliente"] })
+        extracted_json: extractedWith({ brandEvidence: ["La atención al cliente de Acme deja que desear."] })
       })
     ]);
 
     const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative");
     expect(rec).toBeDefined();
-    expect(rec!.title).toContain("atención al cliente");
-    expect(rec!.evidence_json.negative_driver).toBe("atención al cliente");
+    expect(rec!.title).toContain("percepción negativa");
     expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
   });
 
