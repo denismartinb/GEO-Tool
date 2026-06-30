@@ -396,8 +396,7 @@ type NegativeDriver = {
  * Gap 9 (negative narrative, Fase D1): the short themes the AI states as the
  * reason for negative/mixed sentiment about the brand (`sentiment_drivers`,
  * extracted into extracted_json). Groups by driver across prompts; a driver
- * must recur in >=2 negative prompts to qualify, so a single off-hand criticism
- * doesn't become a recommendation. Built from data already captured in the scan
+ * must appear in at least 1 negative/mixed prompt with an explicit driver to qualify. Built from data already captured in the scan
  * (no crawler). Only the themes the response actually states are used — the
  * extraction is instructed never to invent a criticism.
  */
@@ -418,7 +417,7 @@ function computeNegativeNarrative(promptResults: PromptResultInput[]): NegativeD
     }
   }
   return Array.from(byDriver.values())
-    .filter((entry) => entry.prompts.length >= 2)
+    .filter((entry) => entry.prompts.length >= 1)
     .sort((a, b) => b.prompts.length - a.prompts.length)
     .slice(0, 3);
 }

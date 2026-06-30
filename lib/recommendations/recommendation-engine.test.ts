@@ -406,24 +406,23 @@ describe("generateRecommendationsForRun", () => {
     expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
   });
 
-  it("ignores a one-off criticism and positive sentiment for the negative-narrative gap (gap 9)", () => {
+  it("ignores positive/neutral-only prompts for the negative-narrative gap (gap 9)", () => {
     const recs = run([
       prompt({
         id: "p1",
-        prompt_text_snapshot: "opiniones sobre Acme",
-        sentiment: "negative",
+        prompt_text_snapshot: "reseña de Acme",
+        sentiment: "positive",
         extracted_json: extractedWith({ sentimentDrivers: ["plazos de entrega"] })
       }),
       prompt({
         id: "p2",
         prompt_text_snapshot: "Acme review",
-        sentiment: "positive",
+        sentiment: "neutral",
         extracted_json: extractedWith({ sentimentDrivers: ["plazos de entrega"] })
       })
     ]);
 
-    // "plazos de entrega" appears negative in only one prompt (the positive one
-    // doesn't count), so it's below the >=2 threshold.
+    // Positive and neutral sentiment never contribute regardless of drivers present.
     expect(recs.some((r) => r.recommendation_type === "address_negative_narrative")).toBe(false);
   });
 
