@@ -425,6 +425,67 @@ describe("generateRecommendationsForRun", () => {
     expect(recs.some((r) => r.recommendation_type === "address_negative_narrative")).toBe(false);
   });
 
+  it("generates an update_stale_content recommendation when an AI response contains a staleness phrase (gap 10)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "tarifas de Acme",
+        brand_mentioned: true,
+        raw_response_text: "Acme solía ofrecer este servicio pero ya no está disponible desde 2022.",
+        sentiment: "neutral"
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "update_stale_content");
+    expect(rec).toBeDefined();
+    expect(rec!.title).toContain("desactualizada");
+    expect((rec!.evidence_json.affected_prompt_ids as string[])).toEqual(["p1"]);
+  });
+
+  it("generates an update_stale_content recommendation when an AI response cites a year ≥3 years old (gap 10)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "historia de Acme",
+        brand_mentioned: true,
+        raw_response_text: "Acme fue fundada en 2019 y en 2020 lanzó su plataforma principal.",
+        sentiment: "positive"
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "update_stale_content");
+    expect(rec).toBeDefined();
+    expect((rec!.evidence_json.affected_prompt_ids as string[])).toEqual(["p1"]);
+  });
+
+  it("does not generate update_stale_content when the brand is not mentioned even if stale phrase present (gap 10)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "servicios de telecomunicaciones",
+        brand_mentioned: false,
+        raw_response_text: "Este servicio ya no está disponible en muchas operadoras.",
+        sentiment: "neutral"
+      })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "update_stale_content")).toBe(false);
+  });
+
+  it("does not generate update_stale_content when raw_response_text is absent (gap 10)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "servicios de Acme",
+        brand_mentioned: true,
+        raw_response_text: undefined,
+        sentiment: "neutral"
+      })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "update_stale_content")).toBe(false);
+  });
+
   it("caps the backlog at 10 recommendations and assigns priority_rank within [1,10]", () => {
     const prompts: PromptResultFixture[] = [];
     const competitors = ["C1", "C2", "C3", "C4", "C5"];
@@ -448,6 +509,7 @@ describe("generateRecommendationsForRun", () => {
     expect(categoryForType("add_citation_block")).toBe("authority");
     expect(categoryForType("pursue_citation_sources")).toBe("authority");
     expect(categoryForType("address_negative_narrative")).toBe("content");
+    expect(categoryForType("update_stale_content")).toBe("content");
     expect(categoryForType("strengthen_brand_entity_clarity")).toBe("technical");
     expect(categoryForType("increase_brand_visibility")).toBe("content");
     expect(categoryForType("close_competitor_gap")).toBe("content");

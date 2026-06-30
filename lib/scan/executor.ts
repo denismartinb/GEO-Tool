@@ -569,7 +569,7 @@ export async function executePendingScan({
     const { data: promptResults } = await service
       .from("scan_prompt_results")
       .select(
-        "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider"
+        "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text"
       )
       .eq("project_id", projectId)
       .eq("run_id", runId);
@@ -634,7 +634,8 @@ export async function executePendingScan({
           mentioned_competitors_count: row.mentioned_competitors_count,
           citations_count: row.citations_count,
           sentiment: row.sentiment,
-          extracted_json: row.extracted_json
+          extracted_json: row.extracted_json,
+          raw_response_text: row.raw_response_text
         }))
       });
 
