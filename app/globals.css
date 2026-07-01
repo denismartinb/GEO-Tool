@@ -2057,6 +2057,14 @@ textarea.add-prompts-text-input {
   .rec-detail-grid { grid-template-columns: 1fr; }
 }
 
+/* On mobile the right column (metrics + action button) drops below the title
+   and spans the full content width so the title/description get the whole row. */
+@media (max-width: 640px) {
+  .rec-main { grid-template-columns: 40px 1fr; }
+  .rec-side { grid-column: 2; flex-direction: row !important; align-items: center !important; justify-content: space-between; width: 100%; gap: 10px !important; }
+  .rec-metrics { gap: 12px; }
+}
+
 /* detail-block override for inner padding */
 .rec-detail-inner .detail-block {
   display: flex;

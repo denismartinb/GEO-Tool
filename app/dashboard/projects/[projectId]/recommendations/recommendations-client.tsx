@@ -253,7 +253,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         }
         router.refresh();
       } catch {
-        setRewriteError("No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.");
+        setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
       }
     });
   }
@@ -336,6 +336,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
 
         {/* Right column */}
         <div
+          className="rec-side"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -477,12 +478,12 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
                   {isRewriting ? (
                     <>
-                      <span className="btn-spinner" /> Mejorando redacción…
+                      <span className="btn-spinner" /> Generando propuesta…
                     </>
                   ) : (
                     <>
                       <Icon name="sparkles" size={13} />
-                      Mejorar redacción con IA
+                      Generar propuesta con IA
                     </>
                   )}
                 </button>
@@ -495,7 +496,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             ) : (
               <span className="badge badge-outline">
                 <Icon name="sparkles" size={11} />
-                Redactado con IA
+                Propuesta generada
               </span>
             )}
           </div>
