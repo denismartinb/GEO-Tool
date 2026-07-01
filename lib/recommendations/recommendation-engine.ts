@@ -426,20 +426,47 @@ const STALE_PHRASES = [
 ];
 
 // Years old enough to indicate the AI is citing significantly stale data
-// (3+ years before current year). Anchored to a constant so tests are stable.
+// (3+ years before current year).
 const STALE_YEAR_CUTOFF = new Date().getFullYear() - 3;
-const STALE_YEAR_RE = new RegExp(
-  `\\b(19\\d{2}|20[0-${Math.floor(STALE_YEAR_CUTOFF / 10) % 10}]\\d|${Math.floor(STALE_YEAR_CUTOFF / 10) * 10}[0-${STALE_YEAR_CUTOFF % 10}])\\b`
-);
+// Simple 4-digit year pattern; the actual cutoff check uses parseInt so the
+// regex stays readable and correct (the previous character-class approach
+// produced 20[0-2]\d which matched years up to 2029, causing false positives).
+const YEAR_RE = /\b(19\d{2}|20\d{2})\b/g;
+
+/**
+ * Extracts ~150 chars of context around the first stale signal found in the
+ * raw response text. Used to populate stale_signals evidence so the UI can
+ * show WHY each prompt was flagged rather than showing unrelated brand quotes.
+ */
+function extractStaleContext(raw: string, cutoff: number): string | null {
+  const lower = raw.toLowerCase();
+  for (const phrase of STALE_PHRASES) {
+    const idx = lower.indexOf(phrase.toLowerCase());
+    if (idx !== -1) {
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(raw.length, idx + phrase.length + 100);
+      return `…${raw.slice(start, end).trim()}…`;
+    }
+  }
+  const yearMatches = [...raw.matchAll(YEAR_RE)];
+  for (const m of yearMatches) {
+    if (parseInt(m[0], 10) <= cutoff) {
+      const idx = m.index!;
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(raw.length, idx + m[0].length + 100);
+      return `…${raw.slice(start, end).trim()}…`;
+    }
+  }
+  return null;
+}
 
 /**
  * Gap 10 (freshness/recency, Fase D2): detects prompts where the AI response
  * explicitly signals that the brand's information may be stale — either via
  * staleness phrases ("ya no está disponible", "was discontinued") or by citing
- * a year ≥3 years before the current year in context with the brand. Only
- * fires for prompts where the brand is actually mentioned, so we're talking
- * about stale brand info, not general background context. Uses raw_response_text
- * directly with regex — no secondary LLM extraction needed.
+ * a year ≥3 years before the current year. Only fires for prompts where the
+ * brand is actually mentioned. Uses raw_response_text directly — no secondary
+ * LLM extraction needed.
  */
 function computeFreshnessGap(promptResults: PromptResultInput[]): PromptResultInput[] {
   return promptResults.filter((r) => {
@@ -447,7 +474,8 @@ function computeFreshnessGap(promptResults: PromptResultInput[]): PromptResultIn
     const text = (r.raw_response_text ?? "").toLowerCase();
     if (!text) return false;
     if (STALE_PHRASES.some((phrase) => text.includes(phrase.toLowerCase()))) return true;
-    if (STALE_YEAR_RE.test(text)) return true;
+    const years = text.match(YEAR_RE);
+    if (years?.some((y) => parseInt(y, 10) <= STALE_YEAR_CUTOFF)) return true;
     return false;
   });
 }
@@ -680,6 +708,12 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   const stalePrompts = computeFreshnessGap(promptResults);
   if (stalePrompts.length >= 1) {
     const impact: "high" | "medium" = stalePrompts.length >= 3 ? "high" : "medium";
+    // Collect the actual stale signals (phrase/year context from raw text) so
+    // the UI can show WHY each prompt was flagged instead of unrelated brand quotes.
+    const staleSignals = stalePrompts
+      .map((p) => extractStaleContext(p.raw_response_text ?? "", STALE_YEAR_CUTOFF))
+      .filter((s): s is string => s !== null)
+      .slice(0, 4);
     candidates.push({
       title: `Actualiza la información de tu marca que la IA cita como desactualizada`,
       description: `La IA señala información desactualizada sobre tu marca en ${stalePrompts.length} ${stalePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido actualizado con datos actuales para que los modelos reflejen la situación real.`,
@@ -700,7 +734,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         assumptions: [`La IA cita información desactualizada sobre la marca en ${stalePrompts.length} respuestas.`],
         whyThisMatters:
           "La información desactualizada en las respuestas de IA genera desconfianza y puede costar conversiones cuando el usuario contrasta los datos.",
-        snippetSource: "brand"
+        snippetSource: "brand",
+        extra: { stale_signals: staleSignals }
       })
     });
   }
