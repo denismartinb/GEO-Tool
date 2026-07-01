@@ -242,11 +242,11 @@ export default async function RecommendationsPage({
 
       {/* Summary banner — only if there are recs */}
       {latestCompletedRun && recs.length > 0 && (
-        <div className="summary mt8">
+        <div className="summary mt8" style={{ flexWrap: "wrap", rowGap: 10 }}>
           <div className="summary-ico">
             <Icon name="recs" size={20} />
           </div>
-          <div className="summary-txt" style={{ flex: 1 }}>
+          <div className="summary-txt" style={{ flex: "1 1 150px" }}>
             Lumira encontró{" "}
             <b>{total} acciones</b> para{" "}
             <b>{project.domain}</b>.
@@ -254,11 +254,11 @@ export default async function RecommendationsPage({
           <div
             style={{
               display: "flex",
-              gap: 20,
-              paddingLeft: 20,
+              gap: 16,
+              paddingLeft: 16,
               borderLeft: "1px solid var(--line)",
               alignItems: "center",
-              flexShrink: 0,
+              flex: "0 0 auto",
             }}
           >
             <div style={{ textAlign: "center" }}>
