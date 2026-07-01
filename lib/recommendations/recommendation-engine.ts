@@ -22,6 +22,7 @@ type PromptResultInput = {
   citations_count: number;
   sentiment: "positive" | "neutral" | "negative" | "mixed" | "unknown";
   extracted_json: unknown;
+  raw_response_text?: string | null;
 };
 
 export type AffectedPromptDetail = {
@@ -71,6 +72,7 @@ const categoryByType: Record<string, RecommendationCategory> = {
   add_citation_block: "authority",
   pursue_citation_sources: "authority",
   address_negative_narrative: "content",
+  update_stale_content: "content",
   strengthen_brand_entity_clarity: "technical"
 };
 
@@ -401,6 +403,83 @@ function computeNegativeNarrative(promptResults: PromptResultInput[]): PromptRes
   );
 }
 
+// Phrases in the AI response that explicitly signal stale or outdated content
+// about the brand. Conservative list — only unambiguous staleness statements.
+const STALE_PHRASES = [
+  "ya no está disponible",
+  "ya no se ofrece",
+  "ya no opera",
+  "ya no existe",
+  "ha dejado de",
+  "fue discontinuado",
+  "fue descontinuado",
+  "no longer available",
+  "no longer offered",
+  "no longer operates",
+  "was discontinued",
+  "has been discontinued",
+  "is no longer",
+  "información puede no estar actualizada",
+  "información desactualizada",
+  "verify the latest",
+  "verificar la información más reciente"
+];
+
+// Years old enough to indicate the AI is citing significantly stale data
+// (3+ years before current year).
+const STALE_YEAR_CUTOFF = new Date().getFullYear() - 3;
+// Simple 4-digit year pattern; the actual cutoff check uses parseInt so the
+// regex stays readable and correct (the previous character-class approach
+// produced 20[0-2]\d which matched years up to 2029, causing false positives).
+const YEAR_RE = /\b(19\d{2}|20\d{2})\b/g;
+
+/**
+ * Extracts ~150 chars of context around the first stale signal found in the
+ * raw response text. Used to populate stale_signals evidence so the UI can
+ * show WHY each prompt was flagged rather than showing unrelated brand quotes.
+ */
+function extractStaleContext(raw: string, cutoff: number): string | null {
+  const lower = raw.toLowerCase();
+  for (const phrase of STALE_PHRASES) {
+    const idx = lower.indexOf(phrase.toLowerCase());
+    if (idx !== -1) {
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(raw.length, idx + phrase.length + 100);
+      return `…${raw.slice(start, end).trim()}…`;
+    }
+  }
+  const yearMatches = [...raw.matchAll(YEAR_RE)];
+  for (const m of yearMatches) {
+    if (parseInt(m[0], 10) <= cutoff) {
+      const idx = m.index!;
+      const start = Math.max(0, idx - 60);
+      const end = Math.min(raw.length, idx + m[0].length + 100);
+      return `…${raw.slice(start, end).trim()}…`;
+    }
+  }
+  return null;
+}
+
+/**
+ * Gap 10 (freshness/recency, Fase D2): detects prompts where the AI response
+ * explicitly signals that the brand's information may be stale — either via
+ * staleness phrases ("ya no está disponible", "was discontinued") or by citing
+ * a year ≥3 years before the current year. Only fires for prompts where the
+ * brand is actually mentioned. Uses raw_response_text directly — no secondary
+ * LLM extraction needed.
+ */
+function computeFreshnessGap(promptResults: PromptResultInput[]): PromptResultInput[] {
+  return promptResults.filter((r) => {
+    if (!r.brand_mentioned) return false;
+    const text = (r.raw_response_text ?? "").toLowerCase();
+    if (!text) return false;
+    if (STALE_PHRASES.some((phrase) => text.includes(phrase.toLowerCase()))) return true;
+    const years = text.match(YEAR_RE);
+    if (years?.some((y) => parseInt(y, 10) <= STALE_YEAR_CUTOFF)) return true;
+    return false;
+  });
+}
+
 export function generateRecommendationsForRun(input: GenerateInput): RecommendationRow[] {
   const { runScore, promptResults } = input;
   if (!promptResults.length) return [];
@@ -618,6 +697,45 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         whyThisMatters:
           "Una percepción negativa recurrente en las respuestas de IA erosiona la credibilidad de la marca en la fase de decisión.",
         snippetSource: "brand"
+      })
+    });
+  }
+
+  // Gap 10 (freshness/recency, Fase D2): one card when the AI signals stale or
+  // outdated information about the brand — either via explicit staleness phrases
+  // or by citing a year ≥3 years old. Fires only when the brand is mentioned
+  // (stale brand info, not general background context).
+  const stalePrompts = computeFreshnessGap(promptResults);
+  if (stalePrompts.length >= 1) {
+    const impact: "high" | "medium" = stalePrompts.length >= 3 ? "high" : "medium";
+    // Collect the actual stale signals (phrase/year context from raw text) so
+    // the UI can show WHY each prompt was flagged instead of unrelated brand quotes.
+    const staleSignals = stalePrompts
+      .map((p) => extractStaleContext(p.raw_response_text ?? "", STALE_YEAR_CUTOFF))
+      .filter((s): s is string => s !== null)
+      .slice(0, 4);
+    candidates.push({
+      title: `Actualiza la información de tu marca que la IA cita como desactualizada`,
+      description: `La IA señala información desactualizada sobre tu marca en ${stalePrompts.length} ${stalePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido actualizado con datos actuales para que los modelos reflejen la situación real.`,
+      rule_id: "rule_freshness_001",
+      recommendation_type: "update_stale_content",
+      dedupeKey: "update_stale_content",
+      impact,
+      effort: "low",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: stalePrompts.length,
+      severityScore: stalePrompts.length * 14 + confWeight(runScore.confidence) * 3,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_freshness_001",
+        scoreDetails,
+        runScore,
+        affected: stalePrompts,
+        assumptions: [`La IA cita información desactualizada sobre la marca en ${stalePrompts.length} respuestas.`],
+        whyThisMatters:
+          "La información desactualizada en las respuestas de IA genera desconfianza y puede costar conversiones cuando el usuario contrasta los datos.",
+        snippetSource: "brand",
+        extra: { stale_signals: staleSignals }
       })
     });
   }

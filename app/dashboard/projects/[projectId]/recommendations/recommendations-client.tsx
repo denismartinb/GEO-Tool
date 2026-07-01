@@ -13,6 +13,7 @@ type EvidenceJson = {
   affected_prompts?: string[];
   affected_prompt_details?: AffectedPromptDetail[];
   evidence_snippets?: string[];
+  stale_signals?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
   action_suggested?: string;
@@ -252,7 +253,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         }
         router.refresh();
       } catch {
-        setRewriteError("No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.");
+        setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
       }
     });
   }
@@ -261,6 +262,13 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
   const promptDetails = ev.affected_prompt_details ?? [];
   const affectedPrompts = ev.affected_prompts ?? [];
   const snippets = ev.evidence_snippets ?? [];
+  const staleSignals = ev.stale_signals ?? [];
+  // For the stale-content rec, show the actual stale text that triggered the
+  // flag rather than unrelated brand-mention quotes.
+  const displaySnippets =
+    rec.recommendation_type === "update_stale_content" && staleSignals.length > 0
+      ? staleSignals
+      : snippets;
   const competitors = ev.mentioned_competitors ?? [];
   const domains = ev.citation_domains ?? [];
   const assumptions = ev.assumptions ?? [];
@@ -328,6 +336,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
 
         {/* Right column */}
         <div
+          className="rec-side"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -437,8 +446,8 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             {/* Columna derecha — Evidencia */}
             <div className="rec-evidence-col">
               <div className="rec-evidence-col-label">Evidencia</div>
-              {snippets.length > 0 ? (
-                snippets.slice(0, 3).map((snippet, i) => (
+              {displaySnippets.length > 0 ? (
+                displaySnippets.slice(0, 3).map((snippet, i) => (
                   <div key={i} className="rec-snippet">&ldquo;{snippet}&rdquo;</div>
                 ))
               ) : (
@@ -469,12 +478,12 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 <button type="button" className="btn btn-ghost btn-sm" onClick={handleRewrite} disabled={isRewriting}>
                   {isRewriting ? (
                     <>
-                      <span className="btn-spinner" /> Mejorando redacción…
+                      <span className="btn-spinner" /> Generando propuesta…
                     </>
                   ) : (
                     <>
                       <Icon name="sparkles" size={13} />
-                      Mejorar redacción con IA
+                      Generar propuesta con IA
                     </>
                   )}
                 </button>
@@ -487,7 +496,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             ) : (
               <span className="badge badge-outline">
                 <Icon name="sparkles" size={11} />
-                Redactado con IA
+                Propuesta generada
               </span>
             )}
           </div>
