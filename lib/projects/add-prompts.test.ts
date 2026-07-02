@@ -301,6 +301,27 @@ describe("addPromptsCore", () => {
     expect(generateAddedPromptsMock).not.toHaveBeenCalled();
   });
 
+  it("returns a sanitized fail-soft error (no insert, no scan) when generateAddedPrompts throws", async () => {
+    const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockRejectedValue(new Error("Missing GEMINI_API_KEY"));
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts: [] });
+
+    const result = await addPromptsCore({
+      projectId: PROJECT.id,
+      mode: "manual",
+      manualPrompts: ["¿Cuánto cuesta el plan Pro para diez usuarios?"],
+      supabase: client,
+      user: USER
+    });
+
+    // The raw provider error must never propagate as an unhandled exception
+    // (which Next.js would otherwise surface as a generic "server error" page)
+    // — it is caught and mapped to the existing sanitized message.
+    expect(result).toEqual({ success: false, error: "No se han podido generar nuevos prompts en este momento. Inténtalo de nuevo en unos minutos." });
+    expect(insertedRows).toHaveLength(0);
+    expect(launchScanMock).not.toHaveBeenCalled();
+  });
+
   it("returns a fail-soft error (no insert, no scan) when Gemini yields no candidates", async () => {
     const { addPromptsCore } = await import("@/lib/projects/add-prompts");
     generateAddedPromptsMock.mockResolvedValue([]);
