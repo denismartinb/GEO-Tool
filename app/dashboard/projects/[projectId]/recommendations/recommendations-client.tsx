@@ -14,6 +14,7 @@ type EvidenceJson = {
   affected_prompt_details?: AffectedPromptDetail[];
   evidence_snippets?: string[];
   stale_signals?: string[];
+  sentiment_drivers?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
   action_suggested?: string;
@@ -279,6 +280,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
       : snippets;
   const competitors = ev.mentioned_competitors ?? [];
   const domains = ev.citation_domains ?? [];
+  const sentimentDrivers = ev.sentiment_drivers ?? [];
   const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
   const rankCls = priorityLevel(rec);
@@ -461,6 +463,12 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
               ) : (
                 <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>
                   Sin fragmentos de evidencia disponibles.
+                </p>
+              )}
+              {sentimentDrivers.length > 0 && (
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  <span style={{ fontWeight: 600 }}>Temas recurrentes: </span>
+                  {sentimentDrivers.join(", ")}
                 </p>
               )}
               {competitors.length > 0 && (

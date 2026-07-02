@@ -569,7 +569,7 @@ export async function executePendingScan({
     const { data: promptResults } = await service
       .from("scan_prompt_results")
       .select(
-        "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text"
+        "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, status, brand_snapshot, provider, raw_response_text"
       )
       .eq("project_id", projectId)
       .eq("run_id", runId);
@@ -611,6 +611,19 @@ export async function executePendingScan({
     // recommendation generation or persistence throws, log it and still complete
     // the run (the prior run's recommendations stay until the next successful run).
     try {
+      // Real topic category per prompt (project_prompts.category), joined by
+      // prompt_id, so the engine can classify comparative/informational intent
+      // from the product's own taxonomy instead of guessing from keywords
+      // (Fase RECS-2A). Best-effort: a failed/empty fetch just leaves every
+      // row's category undefined, falling back to the old keyword heuristic.
+      const { data: promptCategoryRows } = await service
+        .from("project_prompts")
+        .select("id, category")
+        .eq("project_id", projectId);
+      const categoryByPromptId = new Map(
+        (promptCategoryRows ?? []).map((row) => [row.id as string, row.category as string | null])
+      );
+
       const recommendationRows = generateRecommendationsForRun({
         project: {
           brand: project.brand,
@@ -635,7 +648,8 @@ export async function executePendingScan({
           citations_count: row.citations_count,
           sentiment: row.sentiment,
           extracted_json: row.extracted_json,
-          raw_response_text: row.raw_response_text
+          raw_response_text: row.raw_response_text,
+          category: row.prompt_id ? categoryByPromptId.get(row.prompt_id) ?? null : null
         }))
       });
 

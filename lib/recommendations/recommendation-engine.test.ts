@@ -327,6 +327,26 @@ describe("generateRecommendationsForRun", () => {
     expect(visRecs[0].title).toContain("tiendas de muebles modernas");
   });
 
+  it("emits a per-prompt visibility card even when the run's overall visibility_score is strong (no global gate, RECS-2A)", () => {
+    // baseRunScore.visibility_score is 80 (strong) — a per-prompt gap is real
+    // regardless of how well the run scored overall; the old run-wide gate
+    // used to hide this card entirely once the brand did well enough.
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "tiendas de muebles para oficina", brand_mentioned: false })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "increase_brand_visibility")).toBe(true);
+  });
+
+  it("emits a per-prompt citation card even when the run's overall citation_score is strong (no global gate, RECS-2A)", () => {
+    // baseRunScore.citation_score is 80 (strong).
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "precio de un sofá cama", brand_mentioned: true, citation_found: false })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "add_citation_block")).toBe(true);
+  });
+
   it("triggers comparison content rule once 2+ comparative prompts lack the brand", () => {
     const recs = run(
       [
@@ -336,6 +356,43 @@ describe("generateRecommendationsForRun", () => {
     );
 
     expect(recs.some((r) => r.recommendation_type === "add_comparison_content")).toBe(true);
+  });
+
+  it("classifies a comparative prompt by its real category even without comparative keywords (RECS-2A)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "¿Merece la pena Ikea frente a Conforama para amueblar un piso?",
+        brand_mentioned: false,
+        mentioned_competitors_count: 1,
+        category: "Comparación"
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "¿Qué tienda recomiendas, Ikea o Conforama?",
+        brand_mentioned: false,
+        mentioned_competitors_count: 1,
+        category: "Comparación"
+      })
+    ]);
+
+    // Neither prompt text contains an English/Spanish comparative keyword —
+    // only the real "Comparación" category makes this rule fire.
+    expect(recs.some((r) => r.recommendation_type === "add_comparison_content")).toBe(true);
+  });
+
+  it("lets a real non-comparative category override a stray comparative keyword in the text", () => {
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "cuáles son las mejores valoraciones de Ikea", brand_mentioned: false, mentioned_competitors_count: 1, category: "Reseñas y opiniones" }),
+        prompt({ id: "p2", prompt_text_snapshot: "qué opinan los mejores clientes de Ikea", brand_mentioned: false, mentioned_competitors_count: 1, category: "Reseñas y opiniones" })
+      ]
+    );
+
+    // Both prompts contain "mejores" (a comparative keyword), but their real
+    // category is "Reseñas y opiniones" — the category must win over the
+    // keyword fallback, which only applies when no category is set.
+    expect(recs.some((r) => r.recommendation_type === "add_comparison_content")).toBe(false);
   });
 
   it("surfaces a digital-PR source gap from third-party domains cited where the brand is absent (gap 8)", () => {
@@ -423,6 +480,45 @@ describe("generateRecommendationsForRun", () => {
 
     // Positive and neutral sentiment never contribute regardless of drivers present.
     expect(recs.some((r) => r.recommendation_type === "address_negative_narrative")).toBe(false);
+  });
+
+  it("names the top recurring sentiment_driver in the negative-narrative title and evidence (RECS-2A)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        extracted_json: extractedWith({ sentimentDrivers: ["atención al cliente"] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "experiencias con Acme",
+        sentiment: "mixed",
+        extracted_json: extractedWith({ sentimentDrivers: ["atención al cliente", "plazos de entrega"] })
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative");
+    expect(rec).toBeDefined();
+    // "atención al cliente" recurs in both prompts (2x) vs "plazos de entrega" (1x) -> ranked first.
+    expect(rec!.title).toContain("atención al cliente");
+    expect(rec!.evidence_json.sentiment_drivers as string[]).toEqual(["atención al cliente", "plazos de entrega"]);
+  });
+
+  it("falls back to a generic negative-narrative title when no sentiment_drivers were extracted", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        extracted_json: extractedWith({ brandEvidence: ["Acme tiene mala atención al cliente."] })
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative");
+    expect(rec).toBeDefined();
+    expect(rec!.title).toBe("Contrarresta la percepción negativa de tu marca en las respuestas de IA");
+    expect(rec!.evidence_json.sentiment_drivers).toEqual([]);
   });
 
   it("generates an update_stale_content recommendation when an AI response contains a staleness phrase (gap 10)", () => {
