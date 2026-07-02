@@ -154,10 +154,16 @@ export async function addPromptsCore({
       limit: ADD_PROMPTS_GENERATION_LIMIT
     });
   } catch (error) {
+    // error.message here is always one of the fixed, pre-sanitized strings
+    // thrown by generateGeminiJson/generateAddedPrompts (lib/llm/gemini.ts) —
+    // e.g. "Gemini API request timed out.", "Gemini API quota or rate limit
+    // reached." — never a raw provider payload or secret, so it is safe to
+    // log for diagnosis.
     console.error("[add-prompts] generation failed", {
       project_id: projectId,
       mode,
-      error_name: error instanceof Error ? error.name : "unknown"
+      error_name: error instanceof Error ? error.name : "unknown",
+      error_message: error instanceof Error ? error.message : "unknown"
     });
     return { success: false, error: GENERIC_GENERATION_FAILURE };
   }
