@@ -1,7 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
-import { generateAddedPrompts, type AddPromptsMode } from "@/lib/llm/gemini";
+import { generateAddedPrompts, type AddPromptsMode, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 import { getActionErrorCode } from "@/lib/scan/errors";
@@ -135,18 +135,32 @@ export async function addPromptsCore({
     )
   ];
 
-  const candidates = await generateAddedPrompts({
-    mode,
-    brand: project.brand,
-    domain: project.domain,
-    country: project.country,
-    language: project.language,
-    existingPromptTexts,
-    existingCategories,
-    keywords: mode === "keywords" ? normalizedKeywords : undefined,
-    manualPrompts: mode === "manual" ? normalizedManualPrompts : undefined,
-    limit: ADD_PROMPTS_GENERATION_LIMIT
-  });
+  // Any Gemini failure (timeout, rate limit, malformed response, missing API
+  // key) must never surface as a raw, unhandled server-action exception —
+  // .claude/rules/server-actions.md. Mirrors the try/catch already used
+  // around the Gemini call in lib/recommendations/rewrite-recommendation.ts.
+  let candidates: GeneratedPromptCandidate[];
+  try {
+    candidates = await generateAddedPrompts({
+      mode,
+      brand: project.brand,
+      domain: project.domain,
+      country: project.country,
+      language: project.language,
+      existingPromptTexts,
+      existingCategories,
+      keywords: mode === "keywords" ? normalizedKeywords : undefined,
+      manualPrompts: mode === "manual" ? normalizedManualPrompts : undefined,
+      limit: ADD_PROMPTS_GENERATION_LIMIT
+    });
+  } catch (error) {
+    console.error("[add-prompts] generation failed", {
+      project_id: projectId,
+      mode,
+      error_name: error instanceof Error ? error.name : "unknown"
+    });
+    return { success: false, error: GENERIC_GENERATION_FAILURE };
+  }
 
   if (!candidates.length) {
     return { success: false, error: GENERIC_GENERATION_FAILURE };
