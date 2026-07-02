@@ -23,6 +23,14 @@ type PromptResultInput = {
   sentiment: "positive" | "neutral" | "negative" | "mixed" | "unknown";
   extracted_json: unknown;
   raw_response_text?: string | null;
+  /**
+   * The prompt's real topic category (project_prompts.category, joined by
+   * prompt_id — see lib/scan/executor.ts), one of PROMPT_CATEGORIES
+   * (lib/projects/prompt-categories.ts) or null. Null for prompts created
+   * before category assignment existed, or custom prompts without one — those
+   * fall back to keyword matching (see isComparativePrompt/isInformationalPrompt).
+   */
+  category?: string | null;
 };
 
 export type AffectedPromptDetail = {
@@ -64,6 +72,32 @@ const comparativeKeywords = [
   "herramientas", "mejores", "comparar", "alternativas"
 ];
 const informationalKeywords = ["how", "what", "why", "when", "where", "cómo", "qué", "por qué", "cuándo", "dónde"];
+
+// Real product taxonomy (lib/projects/prompt-categories.ts) mapped to the
+// comparative/informational intents the recommendation rules care about.
+const COMPARATIVE_CATEGORIES = new Set(["Comparación", "Alternativas"]);
+const INFORMATIONAL_CATEGORIES = new Set(["Cómo hacer / guía"]);
+
+/**
+ * Comparative-intent check (debilidad 1 fix). Prefers the prompt's real,
+ * user-assigned category over guessing from keywords — a comparative prompt
+ * phrased without any of the English/Spanish comparative keywords (e.g.
+ * "¿Merece la pena Conforama frente a otras tiendas?") was previously
+ * invisible to the comparison-content rule. Keyword matching is kept as the
+ * fallback only for prompts with no category (legacy snapshots, custom
+ * prompts added without one).
+ */
+function isComparativePrompt(p: PromptResultInput): boolean {
+  if (p.category) return COMPARATIVE_CATEGORIES.has(p.category);
+  const text = p.prompt_text_snapshot.toLowerCase();
+  return comparativeKeywords.some((k) => text.includes(k));
+}
+
+function isInformationalPrompt(p: PromptResultInput): boolean {
+  if (p.category) return INFORMATIONAL_CATEGORIES.has(p.category);
+  const text = p.prompt_text_snapshot.toLowerCase();
+  return informationalKeywords.some((k) => text.includes(k));
+}
 
 export type RecommendationCategory = "content" | "technical" | "authority";
 
@@ -267,9 +301,13 @@ function shortPrompt(text: string): string {
  *  - citation ("add_citation_block", catalog gap "mention without citation"):
  *    brand IS mentioned but its domain was not grounded-cited.
  *
- * Each gap keeps the run-score gate the old aggregate rules used, so this only
- * changes the shape of the output (N specific cards vs 1 bundled), not when the
- * gap is considered open.
+ * No run-wide score gate: a per-prompt gap is real regardless of how well the
+ * overall run scored — a strong brand (visibility_score 85) still has the
+ * exact prompts where it's absent, and those are the most actionable
+ * recommendations it can get. Gating on the aggregate score used to hide them
+ * entirely once the brand did well enough, which is backwards. Volume is
+ * still bounded by the dedup + top-10-by-severity cutoff at the end of
+ * generateRecommendationsForRun, same as before.
  */
 function perPromptGapCards(opts: {
   promptResults: PromptResultInput[];
@@ -277,8 +315,6 @@ function perPromptGapCards(opts: {
   scoreDetails: Record<string, unknown>;
 }): CandidateRec[] {
   const { promptResults, runScore, scoreDetails } = opts;
-  const visibilityOpen = runScore.visibility_score < 60;
-  const citationOpen = runScore.citation_score < 50;
   const cards: CandidateRec[] = [];
 
   for (const result of promptResults) {
@@ -286,7 +322,7 @@ function perPromptGapCards(opts: {
     const hasCompetitor = ev.competitors.length > 0;
     const label = shortPrompt(result.prompt_text_snapshot);
 
-    if (!result.brand_mentioned && !hasCompetitor && visibilityOpen) {
+    if (!result.brand_mentioned && !hasCompetitor) {
       cards.push({
         title: `Consigue aparecer en "${label}"`,
         description:
@@ -310,7 +346,7 @@ function perPromptGapCards(opts: {
           snippetSource: "brand"
         })
       });
-    } else if (result.brand_mentioned && !result.citation_found && citationOpen) {
+    } else if (result.brand_mentioned && !result.citation_found) {
       cards.push({
         title: `Te mencionan pero no citan tu dominio en "${label}"`,
         description:
@@ -391,16 +427,35 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
 
 /**
  * Gap 9 (negative narrative, Fase D1): collects all prompts where the AI
- * expresses negative or mixed sentiment about the brand. Fires on ≥1 such
- * prompt — no secondary driver-extraction needed. The Gemini rewrite asset
- * uses the brand evidence quotes from those prompts to identify the theme and
- * draft a counter-narrative, so we don't need to extract a specific topic
- * string here.
+ * expresses negative or mixed sentiment about the brand.
  */
 function computeNegativeNarrative(promptResults: PromptResultInput[]): PromptResultInput[] {
   return promptResults.filter(
     (r) => r.sentiment === "negative" || r.sentiment === "mixed"
   );
+}
+
+/**
+ * Aggregates the recurring sentiment_drivers (short noun-phrase themes, e.g.
+ * "atención al cliente") across the given prompts' extracted_json, ranked by
+ * frequency (Fase RECS-2A / debilidad 3). Lets the negative-narrative card
+ * name the actual theme instead of a generic "percepción negativa" — the data
+ * was already captured by extraction but previously unused by the engine.
+ */
+function topSentimentDrivers(promptResults: PromptResultInput[], limit = 3): string[] {
+  const counts = new Map<string, number>();
+  for (const result of promptResults) {
+    const extracted = getExtracted(result);
+    for (const raw of extracted?.sentiment_drivers ?? []) {
+      const driver = raw.trim();
+      if (!driver) continue;
+      counts.set(driver, (counts.get(driver) ?? 0) + 1);
+    }
+  }
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([driver]) => driver)
+    .slice(0, limit);
 }
 
 // Phrases in the AI response that explicitly signal stale or outdated content
@@ -486,12 +541,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
 
   const brandMissing = promptResults.filter((p) => !p.brand_mentioned);
   const competitorNoBrand = promptResults.filter((p) => p.mentioned_competitors_count > 0 && !p.brand_mentioned);
-  const comparativePrompts = competitorNoBrand.filter((p) =>
-    comparativeKeywords.some((k) => p.prompt_text_snapshot.toLowerCase().includes(k))
-  );
-  const informationalPrompts = promptResults.filter((p) =>
-    informationalKeywords.some((k) => p.prompt_text_snapshot.toLowerCase().includes(k))
-  );
+  const comparativePrompts = competitorNoBrand.filter(isComparativePrompt);
+  const informationalPrompts = promptResults.filter(isInformationalPrompt);
 
   const scoreDetails = runScore.details_json ?? {};
   const totalCompetitorMentions = Number(scoreDetails.total_competitor_mentions ?? 0);
@@ -671,14 +722,21 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   }
 
   // Gap 9 (negative narrative): one card summarising all prompts where the AI
-  // expresses negative or mixed sentiment about the brand. The Gemini rewrite
-  // asset extracts the specific theme from the evidence quotes.
+  // expresses negative or mixed sentiment about the brand. Names the actual
+  // recurring theme(s) from sentiment_drivers when available (debilidad 3
+  // fix) instead of a fully generic "percepción negativa" — the driver
+  // extraction already ran and was previously unused by the engine.
   const negativePrompts = computeNegativeNarrative(promptResults);
   if (negativePrompts.length >= 1) {
     const impact: "high" | "medium" = negativePrompts.length >= 3 ? "high" : "medium";
+    const drivers = topSentimentDrivers(negativePrompts);
+    const themeSuffix = drivers.length > 0 ? ` sobre ${drivers.join(", ")}` : "";
     candidates.push({
-      title: `Contrarresta la percepción negativa de tu marca en las respuestas de IA`,
-      description: `Las respuestas de IA expresan sentimiento negativo o mixto sobre tu marca en ${negativePrompts.length} ${negativePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido con datos y casos reales que corrijan esa narrativa.`,
+      title:
+        drivers.length > 0
+          ? `Contrarresta la percepción negativa sobre ${drivers[0]} en las respuestas de IA`
+          : `Contrarresta la percepción negativa de tu marca en las respuestas de IA`,
+      description: `Las respuestas de IA expresan sentimiento negativo o mixto sobre tu marca${themeSuffix} en ${negativePrompts.length} ${negativePrompts.length === 1 ? "consulta" : "consultas"}. Publica contenido con datos y casos reales que corrijan esa narrativa.`,
       rule_id: "rule_negative_narrative_001",
       recommendation_type: "address_negative_narrative",
       dedupeKey: "address_negative_narrative",
@@ -693,10 +751,15 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         scoreDetails,
         runScore,
         affected: negativePrompts,
-        assumptions: [`La IA expresa sentimiento negativo o mixto sobre la marca en ${negativePrompts.length} respuestas.`],
+        assumptions: [
+          drivers.length > 0
+            ? `La IA expresa sentimiento negativo o mixto sobre la marca en ${negativePrompts.length} respuestas, recurrentemente en torno a: ${drivers.join(", ")}.`
+            : `La IA expresa sentimiento negativo o mixto sobre la marca en ${negativePrompts.length} respuestas.`
+        ],
         whyThisMatters:
           "Una percepción negativa recurrente en las respuestas de IA erosiona la credibilidad de la marca en la fase de decisión.",
-        snippetSource: "brand"
+        snippetSource: "brand",
+        extra: { sentiment_drivers: drivers }
       })
     });
   }
