@@ -654,6 +654,14 @@ export type RecommendationRewriteInput = {
   citationDomains: string[];
   dominantCompetitor?: string;
   evidenceSnippets: string[];
+  /**
+   * Specific pages (title + url) the AI already cites among citationDomains
+   * (RECS-2B / N2, pursue_citation_sources only) — lets the digital-PR asset
+   * target a named article instead of only a bare domain. Every url here is
+   * already one of citationDomains, so it needs no separate anti-fabrication
+   * check beyond the existing domain allowlist.
+   */
+  citationPages?: { domain: string; title: string; url: string }[];
 };
 
 export type RecommendationRewrite = {
@@ -719,9 +727,13 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
     case "update_stale_content":
       return "ASSET FOCUS — freshness update: the AI is citing outdated information about the brand. Provide as examples (1) a list of the specific facts or figures that appear stale based on the evidence snippets (use only what is given; [tu dato aquí] for any updated value to fill in), and (2) a concise, up-to-date factual paragraph the brand can publish so models start citing current information. Never invent dates or numbers — mark every unknown value with a clearly-labelled placeholder.";
     case "pursue_citation_sources":
-      return "ASSET FOCUS — digital PR / get cited by your sources: the domains below are sources the AI already trusts in this space that do not mention the brand. Do NOT assume they are all press to email — infer each one's likely type from the domain and give the RIGHT play: publication/blog/listicle/media -> pitch a contribution or request inclusion; marketplace/comparator/directory -> get listed or claim a profile; community/forum (e.g. reddit, quora) -> participate helpfully, never a cold email; an apparent company/provider or a competitor of the brand, or a clearly out-of-market site (a country TLD that does not match the brand's market) -> mark it 'no es un objetivo de outreach' and exclude it from the plan. Examples to provide: (1) a prioritized list of ONLY the relevant sources, each tagged with its type and its specific play; (2) ONE adaptable outreach template ONLY for the sources where outreach actually applies (publications) — placeholders for names/links, never invent metrics. Use ONLY the domains given.";
+      return `ASSET FOCUS — digital PR / get cited by your sources: the domains below are sources the AI already trusts in this space that do not mention the brand. Do NOT assume they are all press to email — infer each one's likely type from the domain and give the RIGHT play: publication/blog/listicle/media -> pitch a contribution or request inclusion; marketplace/comparator/directory -> get listed or claim a profile; community/forum (e.g. reddit, quora) -> participate helpfully, never a cold email; an apparent company/provider or a competitor of the brand, or a clearly out-of-market site (a country TLD that does not match the brand's market) -> mark it 'no es un objetivo de outreach' and exclude it from the plan.${input.citationPages?.length ? " When a source has a specific example page listed under 'Example pages already cited', name that exact page/article in the plan instead of only the bare domain — it is a stronger, more concrete PR target." : ""} Examples to provide: (1) a prioritized list of ONLY the relevant sources, each tagged with its type and its specific play (name the specific cited page when one is given for that domain); (2) ONE adaptable outreach template ONLY for the sources where outreach actually applies (publications) — placeholders for names/links, never invent metrics. Use ONLY the domains and pages given.`;
     case "increase_brand_visibility":
       return "ASSET FOCUS — content brief: provide as examples a content brief (target query, search intent, H1 + H2 outline, key entities) and a concise citable intro paragraph for the page.";
+    case "increase_brand_prominence":
+      return `ASSET FOCUS — prominence: the brand is mentioned but ${input.dominantCompetitor ?? "a competitor"} consistently appears first or more prominently in the same answers. Provide as examples (1) a revised opening/lead paragraph structure for the relevant page that leads with the brand's strongest differentiator and direct answer first (front-load the key fact, don't bury it), and (2) a short outline of what to add so the brand reads as the primary, most complete answer rather than a secondary mention. Use only the given facts; [tu dato aquí] for any missing specific value.`;
+    case "amplify_positive_pattern":
+      return "ASSET FOCUS — replicate a winning pattern: the evidence snippets below are from queries where the AI ALREADY cites the brand positively — this is not a gap to fix, it's a pattern to copy elsewhere. Provide as examples (1) a short analysis of the common structural/content traits across those winning snippets (e.g. what makes them directly quotable/citable), and (2) a checklist the brand can apply to its weaker pages to replicate that same pattern. Do not propose brand-new unrelated content — the point is replication, not invention.";
     default:
       return null;
   }
@@ -770,7 +782,14 @@ export async function rewriteRecommendation(input: RecommendationRewriteInput): 
     input.mentionedCompetitors.length ? input.mentionedCompetitors.join(", ") : "(none — do not name any competitor)",
     "",
     "Domains you may mention (do not mention any other domain):",
-    input.citationDomains.length ? input.citationDomains.join(", ") : "(none — do not name any domain)"
+    input.citationDomains.length ? input.citationDomains.join(", ") : "(none — do not name any domain)",
+    ...(input.citationPages?.length
+      ? [
+          "",
+          "Example pages already cited by the AI for some of the domains above (domain — title):",
+          input.citationPages.map((p) => `- ${p.domain} — "${p.title}"`).join("\n")
+        ]
+      : [])
   ].join("\n");
 
   const raw = await generateGeminiJson(promptBlock);

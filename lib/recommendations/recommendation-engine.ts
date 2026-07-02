@@ -107,7 +107,9 @@ const categoryByType: Record<string, RecommendationCategory> = {
   pursue_citation_sources: "authority",
   address_negative_narrative: "content",
   update_stale_content: "content",
-  strengthen_brand_entity_clarity: "technical"
+  strengthen_brand_entity_clarity: "technical",
+  increase_brand_prominence: "content",
+  amplify_positive_pattern: "content"
 };
 
 export function categoryForType(type: string): RecommendationCategory {
@@ -115,9 +117,9 @@ export function categoryForType(type: string): RecommendationCategory {
 }
 
 type ExtractedShape = {
-  brand?: { evidence?: string[] };
-  competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[] }>;
-  citations?: Array<{ domain?: string | null; source?: string | null }>;
+  brand?: { evidence?: string[]; position?: number | null };
+  competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[]; position?: number | null }>;
+  citations?: Array<{ domain?: string | null; source?: string | null; title?: string | null; url?: string | null }>;
   sentiment_drivers?: string[];
 };
 
@@ -281,6 +283,58 @@ function computeCompetitorDominance(promptResults: PromptResultInput[], namedCom
     .slice(0, 3);
 }
 
+/**
+ * Gap: prominence (RECS-2B / N1). Distinct from close_competitor_gap (brand
+ * ABSENT while a competitor appears): this is for prompts where the brand IS
+ * mentioned but a specific named competitor consistently ranks ahead of it —
+ * a lower 1-based first-mention position, per
+ * docs/adr/0005-average-brand-position.md. Being present but always second
+ * is a different problem than not appearing at all, and needs a different
+ * fix (become the primary answer, not just any mention). Mutually exclusive
+ * with the visibility/citation per-prompt cards (both require
+ * brand_mentioned=true here vs. false there), so no prompt can double up
+ * into both a presence gap and a prominence gap.
+ */
+function computeProminenceGap(promptResults: PromptResultInput[], namedCompetitors: string[]): CompetitorDominance[] {
+  const normalizedNamed = new Set(namedCompetitors.map((c) => c.trim().toLowerCase()).filter(Boolean));
+  const byCompetitor = new Map<string, CompetitorDominance>();
+
+  for (const result of promptResults) {
+    if (!result.brand_mentioned) continue;
+    const extracted = getExtracted(result);
+    const brandPosition = extracted?.brand?.position;
+    if (typeof brandPosition !== "number") continue;
+
+    for (const comp of extracted?.competitors ?? []) {
+      if (!comp.mentioned || !comp.name || typeof comp.position !== "number") continue;
+      if (comp.position >= brandPosition) continue; // must rank strictly ahead of the brand
+      const key = comp.name.trim().toLowerCase();
+      if (normalizedNamed.size > 0 && !normalizedNamed.has(key)) continue;
+      const entry = byCompetitor.get(key) ?? { competitor: comp.name, prompts: [] };
+      entry.prompts.push(result);
+      byCompetitor.set(key, entry);
+    }
+  }
+
+  return Array.from(byCompetitor.values())
+    .filter((entry) => entry.prompts.length >= 2)
+    .sort((a, b) => b.prompts.length - a.prompts.length)
+    .slice(0, 3);
+}
+
+/**
+ * "Amplify what works" (RECS-2B / N4): prompts where the brand is mentioned,
+ * grounded-cited, AND the AI's sentiment is positive — a working
+ * content/positioning pattern worth replicating. Callers must additionally
+ * gate this on the run actually having an open gap elsewhere (see
+ * generateRecommendationsForRun) — "replicate this pattern" is only useful
+ * advice when there's somewhere left to apply it; on an already-perfect run
+ * it would just be noise.
+ */
+function computeWinningPattern(promptResults: PromptResultInput[]): PromptResultInput[] {
+  return promptResults.filter((r) => r.brand_mentioned && r.citation_found && r.sentiment === "positive");
+}
+
 function shortPrompt(text: string): string {
   const trimmed = text.trim();
   return trimmed.length > 70 ? `${trimmed.slice(0, 67)}…` : trimmed;
@@ -376,9 +430,12 @@ function perPromptGapCards(opts: {
   return cards;
 }
 
+type CitationExamplePage = { title: string; url: string };
+
 type CitationSource = {
   domain: string;
   prompts: PromptResultInput[];
+  examplePage: CitationExamplePage | null;
 };
 
 function normalizeDomainValue(value: string): string {
@@ -391,6 +448,20 @@ function normalizeDomainValue(value: string): string {
 }
 
 /**
+ * Grounded citations for one prompt, including the page title/url (not just
+ * the domain) — RECS-2B / N2. Lets the digital-PR gap name the specific
+ * article the AI already cites ("this exact page") instead of only the
+ * domain, both fields already persisted on extracted_json.citations
+ * (lib/scan/extraction.ts's buildGroundedCitations), no new extraction.
+ */
+function promptCitationPages(result: PromptResultInput): Array<{ domain: string; title: string | null; url: string | null }> {
+  const extracted = getExtracted(result);
+  return (extracted?.citations ?? [])
+    .filter((c) => c.source === "grounding" && c.domain)
+    .map((c) => ({ domain: c.domain as string, title: c.title ?? null, url: c.url ?? null }));
+}
+
+/**
  * Gap 8 (digital PR / source gap): third-party domains that Gemini GROUNDS its
  * answers on in prompts where the brand's own domain is NOT among the cited
  * sources. These are the publications to pursue so the model starts citing the
@@ -398,6 +469,9 @@ function normalizeDomainValue(value: string): string {
  * source="grounding"), the brand's own domain is excluded, and a source must
  * recur in >=2 brand-absent prompts to qualify — avoiding one-off citations.
  * Built entirely from data already captured (no crawler, no new extraction).
+ * Each source also carries one example page (title + url, first one seen with
+ * both fields present) so the asset can target a specific article, not just a
+ * bare domain name.
  */
 function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomain: string): CitationSource[] {
   const normalizedBrand = normalizeDomainValue(brandDomain);
@@ -409,12 +483,15 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
     if (normalizedBrand && normalizedDomains.includes(normalizedBrand)) continue; // brand already cited here
 
     const seenInThisPrompt = new Set<string>();
-    for (const domain of ev.domains) {
-      const key = normalizeDomainValue(domain);
+    for (const page of promptCitationPages(result)) {
+      const key = normalizeDomainValue(page.domain);
       if (!key || key === normalizedBrand || seenInThisPrompt.has(key)) continue;
       seenInThisPrompt.add(key);
-      const entry = bySource.get(key) ?? { domain, prompts: [] };
+      const entry = bySource.get(key) ?? { domain: page.domain, prompts: [], examplePage: null };
       entry.prompts.push(result);
+      if (!entry.examplePage && page.title && page.url) {
+        entry.examplePage = { title: page.title, url: page.url };
+      }
       bySource.set(key, entry);
     }
   }
@@ -609,6 +686,41 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     });
   }
 
+  // RECS-2B / N1 (prominence gap): the brand IS mentioned, but a specific
+  // named competitor consistently ranks ahead of it. Independent of the
+  // close_competitor_gap block above — that one only fires when the brand is
+  // ABSENT, this one only when it's present but overshadowed — so a prompt
+  // can never generate both cards.
+  const prominenceGaps = computeProminenceGap(promptResults, input.competitors);
+  for (const entry of prominenceGaps) {
+    const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
+    candidates.push({
+      title: `${entry.competitor} aparece antes que tú en ${entry.prompts.length} respuestas donde sí te mencionan`,
+      description: `La IA te menciona, pero cita a ${entry.competitor} primero o con más prominencia en estas consultas. Refuerza tu contenido para convertirte en la referencia principal, no solo en una mención secundaria.`,
+      rule_id: "rule_prominence_001",
+      recommendation_type: "increase_brand_prominence",
+      dedupeKey: `increase_brand_prominence:${entry.competitor.trim().toLowerCase()}`,
+      impact,
+      effort: "medium",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: entry.prompts.length,
+      severityScore: entry.prompts.length * 16 + confWeight(runScore.confidence) * 3,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_prominence_001",
+        scoreDetails,
+        runScore,
+        affected: entry.prompts,
+        assumptions: [
+          `${entry.competitor} aparece con mayor prominencia que tu marca en ${entry.prompts.length} respuestas donde ambos se mencionan.`
+        ],
+        whyThisMatters: `Ser mencionado en segundo plano frente a ${entry.competitor} reduce tus probabilidades de ser la opción elegida, aunque aparezcas en la respuesta.`,
+        extra: { dominant_competitor: entry.competitor },
+        snippetSource: "brand"
+      })
+    });
+  }
+
   if (comparativePrompts.length >= 2) {
     candidates.push({
       title: "Añade contenido comparativo para los prompts competitivos",
@@ -692,10 +804,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     }
     const affected = promptResults.filter((p) => affectedIds.has(p.id));
     const sourceDomains = citationSources.map((source) => source.domain);
+    // RECS-2B / N2: example pages (title + url) for the sources that have one,
+    // so the asset can target a specific article instead of only a bare domain.
+    const citationPages = citationSources
+      .filter((source): source is CitationSource & { examplePage: CitationExamplePage } => source.examplePage !== null)
+      .map((source) => ({ domain: source.domain, title: source.examplePage.title, url: source.examplePage.url }));
     const impact: "high" | "medium" = affected.length >= 4 ? "high" : "medium";
+    const topPage = citationPages[0];
     candidates.push({
       title: "Consigue que las fuentes que cita la IA también te citen a ti",
-      description: `La IA se apoya en fuentes de terceros (${sourceDomains.slice(0, 3).join(", ")}${sourceDomains.length > 3 ? "…" : ""}) en consultas donde tu dominio no aparece. Trabaja esas fuentes (relaciones públicas digitales) para que te incluyan y empieces a ser citado.`,
+      description: `La IA se apoya en fuentes de terceros (${sourceDomains.slice(0, 3).join(", ")}${sourceDomains.length > 3 ? "…" : ""}) en consultas donde tu dominio no aparece.${topPage ? ` Por ejemplo, cita "${topPage.title}" (${topPage.domain}).` : ""} Trabaja esas fuentes (relaciones públicas digitales) para que te incluyan y empieces a ser citado.`,
       rule_id: "rule_source_gap_001",
       recommendation_type: "pursue_citation_sources",
       dedupeKey: "pursue_citation_sources",
@@ -715,7 +833,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ],
         whyThisMatters:
           "Entrar en las fuentes que los motores de IA ya citan aumenta directamente tu probabilidad de ser referenciado.",
-        extra: { source_domains: sourceDomains },
+        extra: { source_domains: sourceDomains, citation_pages: citationPages },
         snippetSource: "none"
       })
     });
@@ -799,6 +917,39 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           "La información desactualizada en las respuestas de IA genera desconfianza y puede costar conversiones cuando el usuario contrasta los datos.",
         snippetSource: "brand",
         extra: { stale_signals: staleSignals }
+      })
+    });
+  }
+
+  // RECS-2B / N4 ("amplify what works"): only worth surfacing when there's
+  // still an open gap elsewhere to apply the pattern to — on an
+  // already-perfect run "replicate this" has nothing left to replicate
+  // toward. severityScore is deliberately low so this never crowds out a
+  // real gap-fix card, only fills the backlog when there's room.
+  const winningPrompts = computeWinningPattern(promptResults);
+  const hasOpenGap = brandMissing.length > 0 || promptResults.some((p) => p.brand_mentioned && !p.citation_found);
+  if (winningPrompts.length >= 2 && hasOpenGap) {
+    candidates.push({
+      title: `Replica el patrón que ya funciona en ${winningPrompts.length} consultas`,
+      description: `La IA ya te cita con buena valoración en ${winningPrompts.length} consultas. Identifica qué tienen en común esas respuestas y aplica el mismo enfoque de contenido a las consultas donde todavía no apareces.`,
+      rule_id: "rule_amplify_positive_001",
+      recommendation_type: "amplify_positive_pattern",
+      dedupeKey: "amplify_positive_pattern",
+      impact: "medium",
+      effort: "low",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: winningPrompts.length,
+      severityScore: winningPrompts.length * 6 + confWeight(runScore.confidence) * 2,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_amplify_positive_001",
+        scoreDetails,
+        runScore,
+        affected: winningPrompts,
+        assumptions: [`La IA cita tu marca con sentimiento positivo y con cita real en ${winningPrompts.length} consultas.`],
+        whyThisMatters:
+          "Entender por qué estas respuestas ya funcionan permite replicar ese mismo patrón de contenido en las consultas donde todavía no apareces.",
+        snippetSource: "brand"
       })
     });
   }

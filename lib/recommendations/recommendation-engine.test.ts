@@ -15,9 +15,15 @@ function prompt(overrides: Partial<PromptResultFixture> & { id: string; prompt_t
   };
 }
 
-function extractedWith(opts: { brandEvidence?: string[]; competitors?: Array<{ name: string; mentioned: boolean; evidence?: string[] }>; citations?: Array<{ domain: string; source: "grounding" | "inline" }>; sentimentDrivers?: string[] }) {
+function extractedWith(opts: {
+  brandEvidence?: string[];
+  brandPosition?: number | null;
+  competitors?: Array<{ name: string; mentioned: boolean; evidence?: string[]; position?: number | null }>;
+  citations?: Array<{ domain: string; source: "grounding" | "inline"; title?: string; url?: string }>;
+  sentimentDrivers?: string[];
+}) {
   return {
-    brand: { evidence: opts.brandEvidence ?? [] },
+    brand: { evidence: opts.brandEvidence ?? [], position: opts.brandPosition ?? null },
     competitors: opts.competitors ?? [],
     citations: opts.citations ?? [],
     sentiment_drivers: opts.sentimentDrivers ?? []
@@ -609,6 +615,143 @@ describe("generateRecommendationsForRun", () => {
     expect(categoryForType("strengthen_brand_entity_clarity")).toBe("technical");
     expect(categoryForType("increase_brand_visibility")).toBe("content");
     expect(categoryForType("close_competitor_gap")).toBe("content");
+    expect(categoryForType("increase_brand_prominence")).toBe("content");
+    expect(categoryForType("amplify_positive_pattern")).toBe("content");
     expect(categoryForType("unknown_future_type")).toBe("content");
+  });
+
+  // --- RECS-2B ---
+
+  it("surfaces a prominence gap when a named competitor consistently ranks ahead of the brand (N1)", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "mejores tiendas de muebles",
+          brand_mentioned: true,
+          extracted_json: extractedWith({ brandPosition: 2, competitors: [{ name: "Ikea", mentioned: true, position: 1 }] })
+        }),
+        prompt({
+          id: "p2",
+          prompt_text_snapshot: "dónde comprar muebles baratos",
+          brand_mentioned: true,
+          extracted_json: extractedWith({ brandPosition: 3, competitors: [{ name: "Ikea", mentioned: true, position: 1 }] })
+        })
+      ],
+      {},
+      ["Ikea"]
+    );
+
+    const rec = recs.find((r) => r.recommendation_type === "increase_brand_prominence");
+    expect(rec).toBeDefined();
+    expect(rec!.title).toContain("Ikea");
+    expect(rec!.evidence_json.dominant_competitor).toBe("Ikea");
+    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("does not surface a prominence gap when the brand ranks ahead of or level with the competitor (N1)", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "q1",
+          brand_mentioned: true,
+          extracted_json: extractedWith({ brandPosition: 1, competitors: [{ name: "Ikea", mentioned: true, position: 2 }] })
+        }),
+        prompt({
+          id: "p2",
+          prompt_text_snapshot: "q2",
+          brand_mentioned: true,
+          extracted_json: extractedWith({ brandPosition: 1, competitors: [{ name: "Ikea", mentioned: true, position: 1 }] })
+        })
+      ],
+      {},
+      ["Ikea"]
+    );
+
+    expect(recs.some((r) => r.recommendation_type === "increase_brand_prominence")).toBe(false);
+  });
+
+  it("does not surface a prominence gap from a single occurrence (N1)", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "q1",
+          brand_mentioned: true,
+          extracted_json: extractedWith({ brandPosition: 2, competitors: [{ name: "Ikea", mentioned: true, position: 1 }] })
+        })
+      ],
+      {},
+      ["Ikea"]
+    );
+
+    expect(recs.some((r) => r.recommendation_type === "increase_brand_prominence")).toBe(false);
+  });
+
+  it("includes the specific example page (title/url) in the digital-PR gap evidence when the citation carries one (N2)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({
+          citations: [
+            {
+              domain: "reddit.com",
+              source: "grounding",
+              title: "Best furniture brands 2026",
+              url: "https://reddit.com/r/furniture/best"
+            }
+          ]
+        })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "reddit.com", source: "grounding" }] })
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "pursue_citation_sources");
+    expect(rec).toBeDefined();
+    expect(rec!.evidence_json.citation_pages).toEqual([
+      { domain: "reddit.com", title: "Best furniture brands 2026", url: "https://reddit.com/r/furniture/best" }
+    ]);
+    expect(rec!.description).toContain("Best furniture brands 2026");
+  });
+
+  it("surfaces amplify_positive_pattern when the brand has winning prompts and an open gap elsewhere (N4)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
+      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
+      prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "amplify_positive_pattern");
+    expect(rec).toBeDefined();
+    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("does not surface amplify_positive_pattern when there is no open gap elsewhere (N4)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
+      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" })
+    ]);
+
+    // Both prompts already mention+cite the brand — nothing left to amplify toward.
+    expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
+  });
+
+  it("does not surface amplify_positive_pattern from a single winning prompt (N4)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
+      prompt({ id: "p2", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
   });
 });
