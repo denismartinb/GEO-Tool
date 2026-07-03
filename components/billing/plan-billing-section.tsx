@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import { ChangePlanModal } from "@/components/billing/change-plan-modal";
+import { changePlan, type ChangePlanResult } from "@/app/dashboard/settings/billing/actions";
 import type { UsageSummary } from "@/lib/billing";
 
 function UsageRow({
@@ -61,20 +62,17 @@ export function PlanBillingSection({
   usage: UsageSummary;
 }) {
   const [planId, setPlanId] = useState<Plan["id"]>(currentPlanId);
-  const [scheduled, setScheduled] = useState<Plan["id"] | null>(null);
   const [modal, setModal] = useState<{ initialTargetId?: Plan["id"] } | null>(null);
 
   const current = PLANS.find((p) => p.id === planId)!;
   const agencyPlan = PLANS.find((p) => p.id === agencyPlanId)!;
-  const scheduledPlan = scheduled ? PLANS.find((p) => p.id === scheduled) : null;
 
-  const applyChange = (id: Plan["id"], kind: "upgrade" | "downgrade") => {
-    if (kind === "upgrade") {
+  const applyChange = async (id: Plan["id"]): Promise<ChangePlanResult> => {
+    const result = await changePlan(id);
+    if (result.success) {
       setPlanId(id);
-      setScheduled(null);
-    } else {
-      setScheduled(id);
     }
+    return result;
   };
 
   return (
@@ -121,18 +119,6 @@ export function PlanBillingSection({
             </div>
           </CardContent>
         </Card>
-        {scheduledPlan && (
-          <div className="bill-scheduled">
-            <Icon name="clock" size={18} />
-            <p className="bill-scheduled-t">
-              Cambio programado: bajarás a <b>{scheduledPlan.name}</b> el <b>1 jul 2026</b>. Hasta entonces
-              mantienes {current.name}.
-            </p>
-            <Button type="button" variant="outline" onClick={() => setScheduled(null)}>
-              Deshacer
-            </Button>
-          </div>
-        )}
       </section>
 
       <section className="space-y-3">

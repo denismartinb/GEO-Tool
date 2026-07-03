@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
@@ -41,19 +41,26 @@ export function ChangePlanModal({
   currentId: Plan["id"];
   initialTargetId?: Plan["id"];
   onClose: () => void;
-  onApply: (targetId: Plan["id"], kind: "upgrade" | "downgrade") => void;
+  onApply: (targetId: Plan["id"]) => Promise<{ success: boolean; error?: string }>;
 }) {
   const current = PLANS.find((p) => p.id === currentId)!;
   const [sel, setSel] = useState<Plan["id"]>(initialTargetId ?? currentId);
   const [step, setStep] = useState<"select" | "confirm" | "done">("select");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const close = () => {
+    if (isPending) return;
+    onClose();
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [isPending]);
 
   const target = PLANS.find((p) => p.id === sel)!;
   const isSame = sel === currentId;
@@ -67,18 +74,26 @@ export function ChangePlanModal({
 
   const footNote = isSame ? (
     "Selecciona un plan distinto al actual."
-  ) : isUpgrade ? (
-    <>
-      Se aplica <b>de inmediato</b> · pago prorrateado hoy
-    </>
   ) : (
     <>
-      Se aplica el <b>{CYCLE_END}</b> · sin cargo hoy
+      Se aplica <b>de inmediato</b> al confirmar.
     </>
   );
 
+  const handleConfirm = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onApply(sel);
+      if (result.success) {
+        setStep("done");
+      } else {
+        setError(result.error ?? "No se pudo guardar el cambio de plan.");
+      }
+    });
+  };
+
   return (
-    <div className="cp-scrim" onClick={onClose}>
+    <div className="cp-scrim" onClick={close}>
       <div
         className="cp-modal"
         role="dialog"
@@ -95,15 +110,14 @@ export function ChangePlanModal({
             <p>
               {step === "select" && (
                 <>
-                  Estás en <b style={{ color: "var(--ink-2)" }}>{current.name}</b> · {money(current.price, 0)}/mes ·
-                  renueva el {CYCLE_END}
+                  Estás en <b style={{ color: "var(--ink-2)" }}>{current.name}</b> · {money(current.price, 0)}/mes
                 </>
               )}
               {step === "confirm" && (isUpgrade ? "Revisa el prorrateo antes de confirmar" : "Revisa qué cambia antes de confirmar")}
               {step === "done" && "Todo listo"}
             </p>
           </div>
-          <button type="button" className="cp-close" onClick={onClose} aria-label="Cerrar">
+          <button type="button" className="cp-close" onClick={close} aria-label="Cerrar" disabled={isPending}>
             <Icon name="x" size={18} />
           </button>
         </div>
@@ -154,7 +168,7 @@ export function ChangePlanModal({
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">{footNote}</div>
-              <Button type="button" variant="ghost" onClick={onClose}>
+              <Button type="button" variant="ghost" onClick={close}>
                 Cancelar
               </Button>
               <Button type="button" disabled={isSame} onClick={() => setStep("confirm")}>
@@ -218,12 +232,9 @@ export function ChangePlanModal({
               ) : (
                 <>
                   <div className="cp-pror-note" style={{ marginTop: 16 }}>
-                    <Icon name="clock" size={14} />
+                    <Icon name="info" size={14} />
                     <span>
-                      Mantienes todo lo de <b>{current.name}</b> hasta el <b>{CYCLE_END}</b>. Ese día pasas a{" "}
-                      {target.name}
-                      {target.price > 0 ? <> por {money(target.price)}/mes</> : " (gratuito)"} y{" "}
-                      <b>no se te cobra nada hoy</b>.
+                      El cambio a <b>{target.name}</b> se aplica de inmediato. Todavía no hay cobro real activado.
                     </span>
                   </div>
                   {diffs.length > 0 && (
@@ -247,6 +258,11 @@ export function ChangePlanModal({
                   )}
                 </>
               )}
+              {error && (
+                <p className="feedback error" style={{ marginTop: 14 }}>
+                  {error}
+                </p>
+              )}
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">
@@ -256,22 +272,16 @@ export function ChangePlanModal({
                   </>
                 ) : (
                   <>
-                    Efectivo el <b>{CYCLE_END}</b>
+                    Efectivo <b>de inmediato</b>
                   </>
                 )}
               </div>
-              <Button type="button" variant="ghost" onClick={() => setStep("select")}>
+              <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
                 <Icon name="chevLeft" size={15} />
                 Atrás
               </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  onApply(sel, isUpgrade ? "upgrade" : "downgrade");
-                  setStep("done");
-                }}
-              >
-                {isUpgrade ? "Confirmar y pagar " + money(dueToday) : "Confirmar cambio"}
+              <Button type="button" disabled={isPending} onClick={handleConfirm}>
+                {isPending ? "Guardando…" : isUpgrade ? "Confirmar y pagar " + money(dueToday) : "Confirmar cambio"}
               </Button>
             </div>
           </>
@@ -294,12 +304,10 @@ export function ChangePlanModal({
                 </>
               ) : (
                 <>
-                  <h3>Cambio programado</h3>
+                  <h3>Ya estás en {target.name}</h3>
                   <p>
-                    Seguirás en <b>{current.name}</b> hasta el <b>{CYCLE_END}</b>. Ese día pasarás a{" "}
-                    <b>{target.name}</b>
-                    {target.price > 0 ? <> por {money(target.price)}/mes</> : ""}. Puedes deshacerlo cuando quieras
-                    desde Plan y facturación.
+                    Tu plan <b>{target.name}</b> está activo desde ahora. Puedes cambiarlo cuando quieras desde Plan y
+                    facturación.
                   </p>
                 </>
               )}

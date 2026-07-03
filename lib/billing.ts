@@ -1,12 +1,12 @@
 import "server-only";
 
 import { requireUser } from "@/lib/auth";
+import { PLANS, type Plan } from "@/app/pricing/plans-data";
 
-const PROMPT_CAP = 100;
-const PROJECT_CAP = 5;
-const ENGINE_CAP = 4;
+const DEFAULT_PLAN_ID: Plan["id"] = "pro";
 
 export type UsageSummary = {
+  planId: Plan["id"];
   promptCount: number;
   promptCap: number;
   projectCount: number;
@@ -16,15 +16,16 @@ export type UsageSummary = {
 };
 
 /**
- * Real usage counters for the "Plan y facturación" page. Mirrors the
- * RLS-scoped, no-explicit-owner-filter query style used by
+ * Real usage counters and current plan for the "Plan y facturación" page.
+ * Mirrors the RLS-scoped, no-explicit-owner-filter query style used by
  * getWorkspaceCounters(): every query below relies on RLS to limit rows to
- * the current user's own projects.
+ * the current user's own data.
  */
 export async function getUsageSummary(): Promise<UsageSummary> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
-  const [{ data: projects }, { data: prompts }, { data: results }] = await Promise.all([
+  const [{ data: profile }, { data: projects }, { data: prompts }, { data: results }] = await Promise.all([
+    supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
     supabase.from("projects").select("id").eq("is_archived", false),
     supabase.from("project_prompts").select("id").eq("is_active", true),
     supabase
@@ -34,14 +35,18 @@ export async function getUsageSummary(): Promise<UsageSummary> {
       .limit(500)
   ]);
 
+  const planId = (profile?.current_plan as Plan["id"] | undefined) ?? DEFAULT_PLAN_ID;
+  const plan = PLANS.find((p) => p.id === planId) ?? PLANS.find((p) => p.id === DEFAULT_PLAN_ID)!;
+
   const engineSet = new Set((results ?? []).map((r) => r.provider).filter(Boolean));
 
   return {
+    planId: plan.id,
     promptCount: prompts?.length ?? 0,
-    promptCap: PROMPT_CAP,
+    promptCap: plan.caps.prompts,
     projectCount: projects?.length ?? 0,
-    projectCap: PROJECT_CAP,
+    projectCap: plan.caps.projects,
     engineCount: engineSet.size,
-    engineCap: ENGINE_CAP
+    engineCap: plan.caps.engines
   };
 }

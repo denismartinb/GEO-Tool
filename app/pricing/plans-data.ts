@@ -10,6 +10,14 @@ export type PlanMeter = {
   refresh: string;
 };
 
+// Exact numeric caps enforced by lib/billing.ts usage bars — distinct from
+// `meter`, which holds display strings/ranges ("3–5", "∞") for marketing copy.
+export type PlanCaps = {
+  projects: number;
+  prompts: number;
+  engines: number;
+};
+
 export type Plan = {
   id: "free" | "starter" | "pro" | "agency";
   name: string;
@@ -22,6 +30,7 @@ export type Plan = {
   recommended?: boolean;
   highlights: string[];
   meter: PlanMeter;
+  caps: PlanCaps;
 };
 
 export const PLANS: Plan[] = [
@@ -40,7 +49,8 @@ export const PLANS: Plan[] = [
       "GEO Score creíble + 3 acciones",
       "Sin tendencia ni monitorización"
     ],
-    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Puntual" }
+    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Puntual" },
+    caps: { projects: 1, prompts: 10, engines: 1 }
   },
   {
     id: "starter",
@@ -58,7 +68,8 @@ export const PLANS: Plan[] = [
       "Bucle de acción básico",
       "Credibilidad de medición visible"
     ],
-    meter: { projects: "1", prompts: 25, engines: 2, refresh: "Semanal" }
+    meter: { projects: "1", prompts: 25, engines: 2, refresh: "Semanal" },
+    caps: { projects: 1, prompts: 25, engines: 2 }
   },
   {
     id: "pro",
@@ -77,7 +88,8 @@ export const PLANS: Plan[] = [
       "Generador de soluciones (FAQ, schema, briefs)",
       "Sentimiento, temas y citas profundas"
     ],
-    meter: { projects: "3–5", prompts: 100, engines: 4, refresh: "Diario" }
+    meter: { projects: "3–5", prompts: 100, engines: 4, refresh: "Diario" },
+    caps: { projects: 5, prompts: 100, engines: 4 }
   },
   {
     id: "agency",
@@ -95,7 +107,8 @@ export const PLANS: Plan[] = [
       "Alertas por email y Slack",
       "Acceso API e integraciones"
     ],
-    meter: { projects: "∞", prompts: 300, engines: "Todos", refresh: "Diario" }
+    meter: { projects: "∞", prompts: 300, engines: "Todos", refresh: "Diario" },
+    caps: { projects: 999, prompts: 300, engines: 999 }
   }
 ];
 
