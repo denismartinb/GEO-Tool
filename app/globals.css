@@ -3436,7 +3436,7 @@ select.set-field {
 .cp-plan:hover { border-color: var(--accent-ring); background: var(--surface-2); }
 .cp-plan.sel { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); background: #fff; }
 .cp-plan.cur { background: var(--surface-2); }
-.cp-plan-top { display: flex; align-items: center; gap: 8px; }
+.cp-plan-top { display: flex; align-items: center; gap: 8px; padding-right: 26px; }
 .cp-plan-name { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
 .cp-plan-price { margin-left: auto; font-size: 15px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
 .cp-plan-price .per { font-size: 11px; color: var(--ink-4); font-weight: 650; }
