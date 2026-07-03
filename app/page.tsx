@@ -2,8 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
@@ -57,6 +59,14 @@ export default function HomePage() {
       {/* NAV */}
       <div className="lp-nav-wrap">
         <nav className="lp-nav">
+          <MarketingMobileNav
+            links={[
+              { href: "#producto", label: "Producto" },
+              { href: "#como", label: "Cómo funciona" },
+              { href: "#recomendaciones", label: "Recomendaciones" },
+              { href: "/pricing", label: "Precios" }
+            ]}
+          />
           <div className="lp-logo">
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
             <div className="brand-name">Lumira</div>
@@ -65,6 +75,7 @@ export default function HomePage() {
             <a href="#producto">Producto</a>
             <a href="#como">Cómo funciona</a>
             <a href="#recomendaciones">Recomendaciones</a>
+            <Link href="/pricing">Precios</Link>
           </div>
           <div className="lp-nav-right">
             <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>

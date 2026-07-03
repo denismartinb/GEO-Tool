@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { PLANS, PLAN_MATRIX, PLAN_FAQ, type Plan, type PlanCell } from "./plans-data";
 
 const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }> = [
@@ -124,6 +125,13 @@ export default function PricingPage() {
       {/* NAV */}
       <div className="lp-nav-wrap">
         <nav className="lp-nav">
+          <MarketingMobileNav
+            links={[
+              { href: "/#producto", label: "Producto" },
+              { href: "/#como", label: "Cómo funciona" },
+              { href: "/pricing", label: "Precios" }
+            ]}
+          />
           <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
             <div className="brand-name">Lumira</div>
