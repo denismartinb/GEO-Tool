@@ -118,7 +118,8 @@ const categoryByType: Record<string, RecommendationCategory> = {
   update_stale_content: "content",
   strengthen_brand_entity_clarity: "technical",
   increase_brand_prominence: "content",
-  amplify_positive_pattern: "content"
+  amplify_positive_pattern: "content",
+  track_emerging_competitor: "technical"
 };
 
 export function categoryForType(type: string): RecommendationCategory {
@@ -130,6 +131,8 @@ type ExtractedShape = {
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[]; position?: number | null }>;
   citations?: Array<{ domain?: string | null; source?: string | null; title?: string | null; url?: string | null }>;
   sentiment_drivers?: string[];
+  /** RECS-4A / N6 — real brand names the AI mentions that aren't tracked. */
+  other_brands_mentioned?: string[];
 };
 
 function getExtracted(result: PromptResultInput): ExtractedShape | null {
@@ -287,6 +290,45 @@ function computeCompetitorDominance(promptResults: PromptResultInput[], namedCom
   }
 
   return Array.from(byCompetitor.values())
+    .filter((entry) => entry.prompts.length >= 2)
+    .sort((a, b) => b.prompts.length - a.prompts.length)
+    .slice(0, 3);
+}
+
+/**
+ * Gap: emerging competitors (RECS-4A / N6). Aggregates other_brands_mentioned
+ * (already extracted by the structured-extraction Gemini call, previously
+ * unused by the engine) to find a brand NOT currently tracked as a
+ * competitor that the AI surfaces on its own, recurringly. Independent of
+ * brand_mentioned/competitor status on those prompts — this isn't a
+ * presence/absence gap, it's "the AI already treats this brand as relevant
+ * in your space and you aren't watching it".
+ */
+function computeEmergingCompetitors(
+  promptResults: PromptResultInput[],
+  trackedCompetitors: string[],
+  projectBrand: string
+): CompetitorDominance[] {
+  const trackedNormalized = new Set(trackedCompetitors.map((c) => c.trim().toLowerCase()).filter(Boolean));
+  const brandNormalized = projectBrand.trim().toLowerCase();
+  const byName = new Map<string, CompetitorDominance>();
+
+  for (const result of promptResults) {
+    const extracted = getExtracted(result);
+    const seenInThisPrompt = new Set<string>();
+    for (const raw of extracted?.other_brands_mentioned ?? []) {
+      const name = raw.trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (key === brandNormalized || trackedNormalized.has(key) || seenInThisPrompt.has(key)) continue;
+      seenInThisPrompt.add(key);
+      const entry = byName.get(key) ?? { competitor: name, prompts: [] };
+      entry.prompts.push(result);
+      byName.set(key, entry);
+    }
+  }
+
+  return Array.from(byName.values())
     .filter((entry) => entry.prompts.length >= 2)
     .sort((a, b) => b.prompts.length - a.prompts.length)
     .slice(0, 3);
@@ -735,6 +777,39 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         whyThisMatters: `Ser mencionado en segundo plano frente a ${entry.competitor} reduce tus probabilidades de ser la opción elegida, aunque aparezcas en la respuesta.`,
         extra: { dominant_competitor: entry.competitor },
         snippetSource: "brand"
+      })
+    });
+  }
+
+  // RECS-4A / N6 (emerging competitors): a real brand the AI surfaces
+  // recurringly that isn't in the project's tracked competitor list.
+  // Informational/setup suggestion, not a content gap — kept at low
+  // severity so it never crowds out an actual gap-fix card.
+  const emergingCompetitors = computeEmergingCompetitors(promptResults, input.competitors, input.project.brand);
+  for (const entry of emergingCompetitors) {
+    candidates.push({
+      title: `La IA menciona recurrentemente a ${entry.competitor}, que no monitorizas`,
+      description: `${entry.competitor} aparece de forma recurrente en las respuestas de IA (${entry.prompts.length} consultas) sin que la tengas añadida como competidor. Añádela para monitorizar tu posición frente a ella.`,
+      rule_id: "rule_emerging_competitor_001",
+      recommendation_type: "track_emerging_competitor",
+      dedupeKey: `track_emerging_competitor:${entry.competitor.trim().toLowerCase()}`,
+      impact: "low",
+      effort: "low",
+      confidence: runScore.confidence,
+      source_type: "rule",
+      affectedCount: entry.prompts.length,
+      severityScore: entry.prompts.length * 8 + confWeight(runScore.confidence) * 2,
+      evidence_json: buildEvidenceJson({
+        ruleId: "rule_emerging_competitor_001",
+        scoreDetails,
+        runScore,
+        affected: entry.prompts,
+        assumptions: [
+          `${entry.competitor} aparece mencionada por la IA en ${entry.prompts.length} respuestas sin estar trackeada como competidor.`
+        ],
+        whyThisMatters: `Monitorizar a ${entry.competitor} te permite medir tu posición frente a un competidor real que la IA ya está citando.`,
+        extra: { emerging_competitor: entry.competitor },
+        snippetSource: "none"
       })
     });
   }

@@ -179,12 +179,15 @@ export async function extractClaudeStructuredData(input: {
   "competitors": [{ "name": string, "mentioned": boolean, "evidence": string[], "position": number|null }],
   "citations": [{ "url": string|null, "domain": string|null, "label": string|null, "evidence": string|null }],
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
+  "other_brands_mentioned": string[],
   "summary": string,
   "confidence": "low"|"medium"|"high",
   "notes": string[]
 }
 
-For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.`;
+For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.
+
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories. Up to 5 entries, each a short canonical name. Empty array [] if none.`;
 
   const userContent = [
     schemaInstruction,
