@@ -12,6 +12,11 @@ import {
   type RewriteRecommendationResult
 } from "@/lib/recommendations/rewrite-recommendation";
 import {
+  dismissRecommendationCore,
+  dismissRecommendationInputSchema,
+  type DismissRecommendationResult
+} from "@/lib/recommendations/dismiss-recommendation";
+import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
   getActionErrorCode
@@ -293,6 +298,31 @@ export async function rewriteRecommendationAction(input: {
   const { supabase, user } = await requireUser();
   const service = createServiceClient();
   const result = await rewriteRecommendationCore({ ...parsed.data, supabase, service, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
+  }
+
+  return result;
+}
+
+/**
+ * "Marcar como hecho / descartar" (RECS-3): the user manually marks a
+ * recommendation as dismissed. Called directly from the client via
+ * `useTransition`, same pattern as `rewriteRecommendationAction`.
+ */
+export async function dismissRecommendationAction(input: {
+  projectId: string;
+  recommendationId: string;
+}): Promise<DismissRecommendationResult> {
+  const parsed = dismissRecommendationInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  const result = await dismissRecommendationCore({ ...parsed.data, supabase, service, user });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);

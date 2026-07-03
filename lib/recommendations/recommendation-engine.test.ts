@@ -606,6 +606,29 @@ describe("generateRecommendationsForRun", () => {
     }
   });
 
+  it("persists a non-empty, unique dedupe_key per recommendation (RECS-3)", () => {
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "tiendas de muebles modernas", brand_mentioned: false }),
+        prompt({
+          id: "p2",
+          prompt_text_snapshot: "precio de sofás cama",
+          brand_mentioned: true,
+          citation_found: false
+        })
+      ],
+      { visibility_score: 40, citation_score: 20 }
+    );
+
+    expect(recs.length).toBeGreaterThan(0);
+    for (const rec of recs) {
+      expect(typeof rec.dedupe_key).toBe("string");
+      expect(rec.dedupe_key.length).toBeGreaterThan(0);
+    }
+    const keys = recs.map((r) => r.dedupe_key);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
   it("maps recommendation types to the right UI category", () => {
     expect(categoryForType("improve_citation_readiness")).toBe("authority");
     expect(categoryForType("add_citation_block")).toBe("authority");

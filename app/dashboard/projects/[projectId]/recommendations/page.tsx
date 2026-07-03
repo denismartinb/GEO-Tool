@@ -84,21 +84,81 @@ export default async function RecommendationsPage({
 
   const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
 
-  const [{ data: recommendations }] = latestCompletedRun
+  const [{ data: recommendations }, { data: resolvedRecommendations }, { data: history }] = latestCompletedRun
     ? await Promise.all([
         supabase
           .from("recommendations")
           .select(
-            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json",
+            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open",
           )
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
           .eq("status", "active")
           .order("priority_rank", { ascending: true }),
+        // RECS-3 "Victorias recientes": gaps that were open last run and were
+        // confirmed gone by this run's scan — resolved_in_run_id (not run_id,
+        // which stays the run where the gap still existed) scopes this to the
+        // latest completed run specifically.
+        supabase
+          .from("recommendations")
+          .select("id, title, recommendation_type")
+          .eq("project_id", projectId)
+          .eq("status", "resolved")
+          .eq("resolved_in_run_id", latestCompletedRun.id)
+          .order("title", { ascending: true }),
+        // "Resueltas" tab: full history (any run), both auto-resolved and
+        // manually dismissed, so there's a persistent place to browse past
+        // wins/actions instead of only the latest-run-scoped banner above.
+        // Capped — these rows accumulate indefinitely (accepted for beta,
+        // cleaned up via project hard-delete).
+        supabase
+          .from("recommendations")
+          .select("id, title, description, recommendation_type, status, updated_at")
+          .eq("project_id", projectId)
+          .in("status", ["resolved", "dismissed"])
+          .order("updated_at", { ascending: false })
+          .limit(30),
       ])
-    : [{ data: null }];
+    : [{ data: null }, { data: null }, { data: null }];
 
   const baseRecs = (recommendations ?? []) as Recommendation[];
+
+  // A single logical prompt scanned by multiple LLM engines (Gemini + Claude)
+  // produces one scan_prompt_results row per engine, so per-prompt gap cards
+  // (increase_brand_visibility/add_citation_block) can generate two
+  // near-identical titles for the same underlying query. The active backlog
+  // hides this behind the top-10-by-severity cutoff, but these two
+  // unbounded, no-cap lists would show the duplicates raw — dedupe by
+  // normalized title, keeping the first (most relevant/most recent) row.
+  function dedupeByTitle<T extends { title: string }>(rows: T[]): T[] {
+    const seen = new Set<string>();
+    const out: T[] = [];
+    for (const row of rows) {
+      const key = row.title.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(row);
+    }
+    return out;
+  }
+
+  const recentWins = dedupeByTitle(
+    (resolvedRecommendations ?? []) as Array<{
+      id: string;
+      title: string;
+      recommendation_type: string;
+    }>,
+  );
+  const resolvedHistory = dedupeByTitle(
+    (history ?? []) as Array<{
+      id: string;
+      title: string;
+      description: string;
+      recommendation_type: string;
+      status: "resolved" | "dismissed";
+      updated_at: string;
+    }>,
+  );
 
   // Attach the latest sanitized AI-generated solution (if any) for each
   // recommendation. These live in `generated_solutions` (never on the
@@ -386,7 +446,12 @@ export default async function RecommendationsPage({
           </div>
 
           {/* Client component handles filters + cards */}
-          <RecommendationsClient recommendations={recs} projectId={projectId} />
+          <RecommendationsClient
+            recommendations={recs}
+            resolvedHistory={resolvedHistory}
+            recentWinsCount={recentWins.length}
+            projectId={projectId}
+          />
         </>
       )}
       </>

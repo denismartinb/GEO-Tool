@@ -159,16 +159,112 @@ function noopTable() {
   return builder;
 }
 
-function makeScanRunsTable() {
+function makeScanRunsTable(previousRunId: string | null = null) {
+  // Distinguishes the pre-existing "update(...).select('id').maybeSingle()"
+  // pattern (confirms a status transition applied, keyed by .eq("id", runId))
+  // from RECS-3's new read-only "find the immediately preceding completed
+  // run" lookup, which always includes a .neq("id", runId) in its chain.
+  // Most tests in this file seed only a single run (RUN_ID) -> no previous
+  // run to find; tests exercising RECS-3 pass a previousRunId explicitly.
+  let sawNeq = false;
   const builder: Record<string, unknown> = {
     eq: () => builder,
+    neq: () => {
+      sawNeq = true;
+      return builder;
+    },
+    order: () => builder,
+    limit: () => builder,
     update: () => builder,
     select: () => builder,
-    maybeSingle: () => Promise.resolve({ data: { id: RUN_ID }, error: null }),
+    maybeSingle: () => {
+      const wasNeq = sawNeq;
+      sawNeq = false;
+      if (wasNeq) {
+        return Promise.resolve(previousRunId ? { data: { id: previousRunId }, error: null } : { data: null, error: null });
+      }
+      return Promise.resolve({ data: { id: RUN_ID }, error: null });
+    },
     then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
       Promise.resolve({ data: [], error: null }).then(resolve)
   };
   return builder;
+}
+
+type RecRow = {
+  id: string;
+  run_id: string;
+  project_id: string;
+  status: string;
+  dedupe_key: string;
+  consecutive_runs_open: number;
+  resolved_in_run_id: string | null;
+  [key: string]: unknown;
+};
+
+type RecFilter =
+  | { type: "eq"; col: string; val: unknown }
+  | { type: "neq"; col: string; val: unknown }
+  | { type: "in"; col: string; vals: unknown[] };
+
+/**
+ * Minimal in-memory fake for the `recommendations` table covering exactly
+ * the select/update/delete/insert shapes lib/scan/executor.ts issues for
+ * RECS-3 (previous-run lookup, resolve, supersede, delete+insert of the
+ * current run's rows) — real filtering (not just chain-shape passthrough),
+ * so tests can assert on actual row transitions.
+ */
+function makeRecommendationsTable(seed: RecRow[] = []) {
+  const rows: RecRow[] = seed.map((r) => ({ ...r }));
+  const insertedRows: RecRow[] = [];
+  let nextId = 1;
+
+  function matches(row: RecRow, filters: RecFilter[]): boolean {
+    return filters.every((f) => {
+      const val = row[f.col];
+      if (f.type === "eq") return val === f.val;
+      if (f.type === "neq") return val !== f.val;
+      return f.vals.includes(val);
+    });
+  }
+
+  function chain(mode: "select" | "update" | "delete", patch: Partial<RecRow> | null, filters: RecFilter[]): Record<string, unknown> {
+    const builder: Record<string, unknown> = {
+      eq: (col: string, val: unknown) => chain(mode, patch, [...filters, { type: "eq", col, val }]),
+      neq: (col: string, val: unknown) => chain(mode, patch, [...filters, { type: "neq", col, val }]),
+      in: (col: string, vals: unknown[]) => chain(mode, patch, [...filters, { type: "in", col, vals }]),
+      then: (resolve: (value: { data: RecRow[] | null; error: null }) => unknown) => {
+        if (mode === "select") {
+          const data = rows.filter((r) => matches(r, filters));
+          return Promise.resolve({ data, error: null }).then(resolve);
+        }
+        if (mode === "update") {
+          for (const row of rows) if (matches(row, filters)) Object.assign(row, patch);
+          return Promise.resolve({ data: null, error: null }).then(resolve);
+        }
+        for (let i = rows.length - 1; i >= 0; i -= 1) if (matches(rows[i], filters)) rows.splice(i, 1);
+        return Promise.resolve({ data: null, error: null }).then(resolve);
+      }
+    };
+    return builder;
+  }
+
+  const table = {
+    select: () => chain("select", null, []),
+    update: (patch: Partial<RecRow>) => chain("update", patch, []),
+    delete: () => chain("delete", null, []),
+    insert: (payload: Partial<RecRow> | Partial<RecRow>[]) => {
+      const toInsert = (Array.isArray(payload) ? payload : [payload]).map((r) => ({
+        id: `rec-${nextId++}`,
+        ...r
+      })) as RecRow[];
+      insertedRows.push(...toInsert);
+      rows.push(...toInsert);
+      return Promise.resolve({ error: null });
+    }
+  };
+
+  return { rows, insertedRows, table };
 }
 
 /**
@@ -208,7 +304,11 @@ function makeScanPromptResultsTable(existingProviders: string[] = []) {
 }
 
 function buildClients(
-  { promptJobMaxAttempts }: { promptJobMaxAttempts: number },
+  {
+    promptJobMaxAttempts,
+    previousRunId = null,
+    previousRecommendationRows = []
+  }: { promptJobMaxAttempts: number; previousRunId?: string | null; previousRecommendationRows?: RecRow[] },
   existingProviders: string[] = []
 ) {
   const jobsTable = makeJobsTable([
@@ -244,14 +344,16 @@ function buildClients(
     }
   ]);
 
-  const scanRunsTable = makeScanRunsTable();
+  const scanRunsTable = makeScanRunsTable(previousRunId);
   const scanPromptResultsTable = makeScanPromptResultsTable(existingProviders);
+  const recommendationsTable = makeRecommendationsTable(previousRecommendationRows);
 
   const service = {
     from(table: string) {
       if (table === "jobs") return jobsTable.table;
       if (table === "scan_runs") return scanRunsTable;
       if (table === "scan_prompt_results") return scanPromptResultsTable.table;
+      if (table === "recommendations") return recommendationsTable.table;
       return noopTable();
     }
   } as unknown as ServiceClient;
@@ -301,7 +403,7 @@ function buildClients(
     }
   } as unknown as SupabaseClient;
 
-  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable };
+  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable, recommendationsTable };
 }
 
 const SUCCESS_RESPONSE = {
@@ -546,5 +648,103 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted).toHaveLength(1);
     expect(scanPromptResultsTable.inserted[0].provider).toBe("claude");
+  });
+});
+
+describe("executePendingScan — recommendation history across runs (RECS-3)", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+  });
+
+  const PREVIOUS_RUN_ID = "55555555-5555-5555-5555-555555555555";
+
+  it("marks a gap that did not recur as 'resolved' (not 'superseded'), and carries forward + increments consecutive_runs_open for a recurring gap", async () => {
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Te mencionan pero no citan tu dominio",
+        description: "desc",
+        rule_id: "rule_citations_001",
+        recommendation_type: "add_citation_block",
+        impact: "medium",
+        effort: "low",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "add_citation_block:p1"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+
+    const { service, supabase, recommendationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      previousRunId: PREVIOUS_RUN_ID,
+      previousRecommendationRows: [
+        {
+          id: "old-recurring",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "add_citation_block:p1",
+          consecutive_runs_open: 2,
+          resolved_in_run_id: null
+        },
+        {
+          id: "old-resolved",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "increase_brand_visibility:p2",
+          consecutive_runs_open: 1,
+          resolved_in_run_id: null
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const resolvedRow = recommendationsTable.rows.find((r) => r.id === "old-resolved")!;
+    expect(resolvedRow.status).toBe("resolved");
+    expect(resolvedRow.resolved_in_run_id).toBe(RUN_ID);
+
+    const supersededRow = recommendationsTable.rows.find((r) => r.id === "old-recurring")!;
+    expect(supersededRow.status).toBe("superseded");
+
+    expect(recommendationsTable.insertedRows).toHaveLength(1);
+    const newRow = recommendationsTable.insertedRows[0];
+    expect(newRow.dedupe_key).toBe("add_citation_block:p1");
+    expect(newRow.run_id).toBe(RUN_ID);
+    expect(newRow.status).toBe("active");
+    expect(newRow.consecutive_runs_open).toBe(3);
+  });
+
+  it("starts a brand-new gap (no previous run) at consecutive_runs_open = 1 and resolves nothing", async () => {
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Nuevo gap",
+        description: "desc",
+        rule_id: "rule_visibility_001",
+        recommendation_type: "increase_brand_visibility",
+        impact: "medium",
+        effort: "medium",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "increase_brand_visibility:p1"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+
+    const { service, supabase, recommendationsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(recommendationsTable.rows.filter((r) => r.status === "resolved")).toHaveLength(0);
+    expect(recommendationsTable.insertedRows).toHaveLength(1);
+    expect(recommendationsTable.insertedRows[0].consecutive_runs_open).toBe(1);
   });
 });

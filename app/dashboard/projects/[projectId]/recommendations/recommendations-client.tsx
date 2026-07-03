@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
-import { rewriteRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
 type CitationPage = { domain: string; title: string; url: string };
 
@@ -55,9 +55,24 @@ export type Recommendation = {
    * block.
    */
   solution: GeneratedSolution | null;
+  /**
+   * How many scans in a row (including this one) this exact gap
+   * (dedupe_key) has been open — RECS-3. 1 for a brand-new gap; only shown
+   * to the user once it has persisted across at least one prior scan.
+   */
+  consecutive_runs_open?: number;
 };
 
-type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority";
+type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
+
+export type ResolvedHistoryItem = {
+  id: string;
+  title: string;
+  description: string;
+  recommendation_type: string;
+  status: "resolved" | "dismissed";
+  updated_at: string;
+};
 
 function impactToN(val: string): number {
   if (val === "high") return 5;
@@ -246,10 +261,52 @@ function ExampleBlock({ example, showCaption }: { example: GeneratedSolutionExam
   );
 }
 
+/**
+ * Read-only row for the "Resueltas" tab (RECS-3) — no expand, no evidence, no
+ * action buttons; this is history, not the active backlog. Covers both
+ * automatically-resolved (the gap stopped recurring in a later scan) and
+ * manually-dismissed (the user marked it done/not applicable) items.
+ */
+function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
+  const dateLabel = new Date(item.updated_at).toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Madrid",
+  });
+
+  return (
+    <div className="rec-card">
+      <div className="rec-main" style={{ cursor: "default" }}>
+        <div
+          className="rec-rank low"
+          style={{ background: "var(--pos-soft, #f0faf3)", color: "var(--pos-ink, #1a7a49)" }}
+        >
+          <Icon name="check" size={16} />
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 7, flexWrap: "wrap" }}>
+            <span className="badge badge-pos">
+              {item.status === "resolved" ? "Resuelta automáticamente" : "Marcada como hecha"}
+            </span>
+            <span className="badge badge-outline">{item.recommendation_type.replaceAll("_", " ")}</span>
+          </div>
+          <div className="rec-title" style={{ textDecoration: "line-through", color: "var(--ink-3)" }}>
+            {item.title}
+          </div>
+          <div className="rec-problem">{dateLabel}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
   const [open, setOpen] = useState(false);
   const [isRewriting, startRewrite] = useTransition();
   const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const [isDismissing, startDismiss] = useTransition();
+  const [dismissError, setDismissError] = useState<string | null>(null);
   const router = useRouter();
 
   function handleRewrite(e: React.MouseEvent) {
@@ -266,6 +323,24 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         router.refresh();
       } catch {
         setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
+      }
+    });
+  }
+
+  function handleDismiss(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDismissError(null);
+    startDismiss(async () => {
+      try {
+        const result = await dismissRecommendationAction({ projectId, recommendationId: rec.id });
+        if (!result.success) {
+          setDismissError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setDismissError("No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos.");
       }
     });
   }
@@ -341,6 +416,11 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
               <span className="badge badge-warn">
                 <Icon name="info" size={11} />
                 Baja confianza
+              </span>
+            )}
+            {(rec.consecutive_runs_open ?? 1) > 1 && (
+              <span className="badge badge-outline">
+                Abierto desde hace {rec.consecutive_runs_open} escaneos
               </span>
             )}
           </div>
@@ -531,6 +611,27 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 Propuesta generada
               </span>
             )}
+
+            {/* Marcar como hecho (RECS-3) — dismisses the recommendation;
+                router.refresh() removes it from view since the page only
+                fetches status='active' rows. */}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss} disabled={isDismissing}>
+              {isDismissing ? (
+                <>
+                  <span className="btn-spinner" /> Actualizando…
+                </>
+              ) : (
+                <>
+                  <Icon name="check" size={13} />
+                  Marcar como hecho
+                </>
+              )}
+            </button>
+            {dismissError && (
+              <p className="feedback error" style={{ margin: 0 }}>
+                {dismissError}
+              </p>
+            )}
           </div>
 
           {/* Plan de acción — asset saneado generado por IA, aditivo: no
@@ -574,9 +675,13 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
 
 export function RecommendationsClient({
   recommendations,
+  resolvedHistory = [],
+  recentWinsCount = 0,
   projectId,
 }: {
   recommendations: Recommendation[];
+  resolvedHistory?: ResolvedHistoryItem[];
+  recentWinsCount?: number;
   projectId: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -602,10 +707,44 @@ export function RecommendationsClient({
     ...(hasContent ? [["content", "Contenido"] as [FilterMode, string]] : []),
     ...(hasTechnical ? [["technical", "Técnico"] as [FilterMode, string]] : []),
     ...(hasAuthority ? [["authority", "Autoridad"] as [FilterMode, string]] : []),
+    ...(resolvedHistory.length > 0 ? [["resolved", "Resueltas"] as [FilterMode, string]] : []),
   ];
 
   return (
     <>
+      {/* Victorias recientes (RECS-3) — compact, clickable summary that jumps
+          straight to the "Resueltas" tab instead of listing every title inline. */}
+      {recentWinsCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setFilter("resolved")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            width: "100%",
+            marginBottom: 16,
+            padding: "10px 16px",
+            background: "var(--pos-soft, #f0faf3)",
+            border: "1px solid var(--pos, #1a9c5c)",
+            borderRadius: "var(--r-md)",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "var(--pos-ink, #1a7a49)",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+        >
+          <Icon name="check" size={14} />
+          {recentWinsCount === 1
+            ? "1 recomendación resuelta recientemente"
+            : `${recentWinsCount} recomendaciones resueltas recientemente`}
+          <span style={{ marginLeft: "auto", display: "flex" }}>
+            <Icon name="arrRight" size={14} />
+          </span>
+        </button>
+      )}
+
       {/* Filters */}
       <div className="filters">
         <div className="seg">
@@ -622,20 +761,29 @@ export function RecommendationsClient({
       </div>
 
       {/* Cards */}
-      {filtered.map((rec) => (
-        <RecCard key={rec.id} rec={rec} projectId={projectId} />
-      ))}
+      {filter === "resolved"
+        ? resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
+        : filtered.map((rec) => <RecCard key={rec.id} rec={rec} projectId={projectId} />)}
 
-      {filtered.length === 0 && (
-        <div className="section-empty">
-          <div className="section-empty-title">
-            No hay recomendaciones con este filtro
-          </div>
-          <div className="section-empty-desc">
-            Prueba con &ldquo;Todas&rdquo; para ver el backlog completo.
-          </div>
-        </div>
-      )}
+      {filter === "resolved"
+        ? resolvedHistory.length === 0 && (
+            <div className="section-empty">
+              <div className="section-empty-title">Todavía no hay recomendaciones resueltas</div>
+              <div className="section-empty-desc">
+                Aquí aparecerán las que se resuelvan solas en un escaneo futuro o que marques como hechas.
+              </div>
+            </div>
+          )
+        : filtered.length === 0 && (
+            <div className="section-empty">
+              <div className="section-empty-title">
+                No hay recomendaciones con este filtro
+              </div>
+              <div className="section-empty-desc">
+                Prueba con &ldquo;Todas&rdquo; para ver el backlog completo.
+              </div>
+            </div>
+          )}
     </>
   );
 }
