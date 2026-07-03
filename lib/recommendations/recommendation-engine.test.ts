@@ -754,4 +754,26 @@ describe("generateRecommendationsForRun", () => {
 
     expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
   });
+
+  it("counts neutral (not just positive) sentiment as a winning prompt, since most factual citations land neutral (N4)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "horarios de vuelos de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral" }),
+      prompt({ id: "p2", prompt_text_snapshot: "tarifas de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral" }),
+      prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "amplify_positive_pattern");
+    expect(rec).toBeDefined();
+    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("still excludes negative/mixed sentiment prompts from the winning pattern (N4)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "opiniones sobre Acme", brand_mentioned: true, citation_found: true, sentiment: "negative" }),
+      prompt({ id: "p2", prompt_text_snapshot: "experiencias con Acme", brand_mentioned: true, citation_found: true, sentiment: "mixed" }),
+      prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
+  });
 });

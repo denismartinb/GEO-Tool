@@ -324,15 +324,24 @@ function computeProminenceGap(promptResults: PromptResultInput[], namedCompetito
 
 /**
  * "Amplify what works" (RECS-2B / N4): prompts where the brand is mentioned,
- * grounded-cited, AND the AI's sentiment is positive — a working
- * content/positioning pattern worth replicating. Callers must additionally
- * gate this on the run actually having an open gap elsewhere (see
- * generateRecommendationsForRun) — "replicate this pattern" is only useful
- * advice when there's somewhere left to apply it; on an already-perfect run
- * it would just be noise.
+ * grounded-cited, and NOT carrying a negative/mixed narrative — a working
+ * content/positioning pattern worth replicating. Deliberately includes
+ * "neutral" sentiment, not just "positive": most factual AI answers land as
+ * neutral even when they cite the brand cleanly, so requiring an explicit
+ * positive judgment made this gate almost never fire in practice (confirmed
+ * against real scan data) — being mentioned+cited without any negative frame
+ * is already the "working" outcome worth replicating. Excludes
+ * negative/mixed (that's gap 9's job) and "unknown" (failed/missing
+ * sentiment extraction is not a validated signal either way). Callers must
+ * additionally gate this on the run actually having an open gap elsewhere
+ * (see generateRecommendationsForRun) — "replicate this pattern" is only
+ * useful advice when there's somewhere left to apply it; on an
+ * already-perfect run it would just be noise.
  */
 function computeWinningPattern(promptResults: PromptResultInput[]): PromptResultInput[] {
-  return promptResults.filter((r) => r.brand_mentioned && r.citation_found && r.sentiment === "positive");
+  return promptResults.filter(
+    (r) => r.brand_mentioned && r.citation_found && (r.sentiment === "positive" || r.sentiment === "neutral")
+  );
 }
 
 function shortPrompt(text: string): string {
@@ -931,7 +940,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   if (winningPrompts.length >= 2 && hasOpenGap) {
     candidates.push({
       title: `Replica el patrón que ya funciona en ${winningPrompts.length} consultas`,
-      description: `La IA ya te cita con buena valoración en ${winningPrompts.length} consultas. Identifica qué tienen en común esas respuestas y aplica el mismo enfoque de contenido a las consultas donde todavía no apareces.`,
+      description: `La IA ya te menciona y te cita, sin narrativa negativa, en ${winningPrompts.length} consultas. Identifica qué tienen en común esas respuestas y aplica el mismo enfoque de contenido a las consultas donde todavía no apareces.`,
       rule_id: "rule_amplify_positive_001",
       recommendation_type: "amplify_positive_pattern",
       dedupeKey: "amplify_positive_pattern",
@@ -946,7 +955,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         scoreDetails,
         runScore,
         affected: winningPrompts,
-        assumptions: [`La IA cita tu marca con sentimiento positivo y con cita real en ${winningPrompts.length} consultas.`],
+        assumptions: [`La IA te menciona y cita, sin narrativa negativa, en ${winningPrompts.length} consultas.`],
         whyThisMatters:
           "Entender por qué estas respuestas ya funcionan permite replicar ese mismo patrón de contenido en las consultas donde todavía no apareces.",
         snippetSource: "brand"
