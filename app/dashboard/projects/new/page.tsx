@@ -1,4 +1,5 @@
 import { OnboardingWizard } from "@/components/onboarding-wizard";
+import { getUsageSummary } from "@/lib/billing";
 import { createProject, suggestProjectSetup } from "../actions";
 
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
@@ -10,7 +11,22 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
     project_already_active: "Ya existe un proyecto activo para ese dominio, país e idioma.",
     project_limit_reached: "Has alcanzado el límite de dominios de tu plan actual. Sube de plan para añadir más."
   };
-  const errorMessage = params.error ? errorMessages[params.error] : null;
 
-  return <OnboardingWizard errorMessage={errorMessage} suggestAction={suggestProjectSetup} createAction={createProject} />;
+  // Checked up front (not just on final submit) so a user already at their
+  // plan's project cap never triggers the Gemini competitor/prompt
+  // suggestion calls (lib/llm/gemini.ts) for a domain that createProject
+  // would reject anyway.
+  const usage = await getUsageSummary();
+  const atProjectLimit = usage.projectCount >= usage.projectCap;
+
+  const errorMessage = params.error ? errorMessages[params.error] : atProjectLimit ? errorMessages.project_limit_reached : null;
+
+  return (
+    <OnboardingWizard
+      errorMessage={errorMessage}
+      atLimit={atProjectLimit}
+      suggestAction={suggestProjectSetup}
+      createAction={createProject}
+    />
+  );
 }

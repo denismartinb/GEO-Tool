@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
+import { getPlanForUser } from "@/lib/billing";
+import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { PromptsClient } from "./prompts-client";
@@ -65,7 +67,18 @@ export default async function PromptsPage({
         }`.trim()
       : null;
   const project = await requireActiveProject(projectId);
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+
+  // Checked up front (not just inside addPromptsCore on submit) so the
+  // "Añadir prompts" button never opens the generation flow — and never
+  // triggers the Gemini call — for an account already at its plan's prompt
+  // cap. Account-wide count, same scope as getUsageSummary()/addPromptsCore
+  // (RLS limits this to the owner's prompts across all their projects).
+  const [{ count: activePromptCount }, plan] = await Promise.all([
+    supabase.from("project_prompts").select("id", { count: "exact", head: true }).eq("is_active", true),
+    getPlanForUser(supabase, user.id)
+  ]);
+  const atPromptLimit = (activePromptCount ?? 0) >= plan.caps.prompts;
 
   // 1. Último run completado
   const { data: latestRun } = await supabase
@@ -251,8 +264,14 @@ export default async function PromptsPage({
           ) : null}
           <AddPromptsButton
             projectId={projectId}
-            disabled={Boolean(activeRun)}
-            disabledReason={activeRun ? "Espera a que termine el escaneo en curso." : undefined}
+            disabled={Boolean(activeRun) || atPromptLimit}
+            disabledReason={
+              activeRun
+                ? "Espera a que termine el escaneo en curso."
+                : atPromptLimit
+                  ? feedbackErrorMessages.prompt_limit_reached
+                  : undefined
+            }
           />
         </div>
       </header>
@@ -316,7 +335,17 @@ export default async function PromptsPage({
               visibilidad de tu marca.
             </p>
             <div style={{ display: "inline-block" }}>
-              <AddPromptsButton projectId={projectId} disabled={Boolean(activeRun)} />
+              <AddPromptsButton
+                projectId={projectId}
+                disabled={Boolean(activeRun) || atPromptLimit}
+                disabledReason={
+                  activeRun
+                    ? "Espera a que termine el escaneo en curso."
+                    : atPromptLimit
+                      ? feedbackErrorMessages.prompt_limit_reached
+                      : undefined
+                }
+              />
             </div>
           </div>
         ) : !hasCompletedRun ? (
