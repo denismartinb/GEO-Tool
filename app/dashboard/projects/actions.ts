@@ -173,6 +173,12 @@ export async function createProject(formData: FormData) {
     }
   }
 
+  // Revalidates the shared dashboard layout (Sidebar's project list, driven
+  // by getWorkspaceCounters()) — without this, a newly created project stays
+  // invisible in navigation until something else (archive/restore/delete)
+  // happens to trigger a layout revalidation, even though the project itself
+  // is correctly persisted and visible on /dashboard/projects.
+  revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/projects");
   revalidatePath(`/dashboard/projects/${data.id}`);
 
