@@ -52,6 +52,15 @@ type RecommendationRow = {
   confidence: "low" | "medium" | "high";
   source_type: "rule";
   evidence_json: Record<string, unknown>;
+  /**
+   * Stable identity key for this specific gap (e.g.
+   * "increase_brand_visibility:<prompt_id>", "close_competitor_gap:<competitor>"),
+   * already computed internally for in-run dedup (CandidateRec.dedupeKey) but
+   * now also returned so the caller (lib/scan/executor.ts) can persist it and
+   * recognize "same gap as last run" across runs — see RECS-3 /
+   * supabase/migrations/0010_recommendations_history.sql.
+   */
+  dedupe_key: string;
 };
 
 type GenerateInput = {
@@ -61,7 +70,7 @@ type GenerateInput = {
   promptResults: PromptResultInput[];
 };
 
-type CandidateRec = Omit<RecommendationRow, "priority_rank"> & {
+type CandidateRec = Omit<RecommendationRow, "priority_rank" | "dedupe_key"> & {
   severityScore: number;
   affectedCount: number;
   dedupeKey: string;
@@ -988,6 +997,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     effort: rec.effort,
     confidence: rec.confidence,
     source_type: "rule",
-    evidence_json: rec.evidence_json
+    evidence_json: rec.evidence_json,
+    dedupe_key: rec.dedupeKey
   }));
 }

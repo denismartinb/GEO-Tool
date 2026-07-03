@@ -84,21 +84,37 @@ export default async function RecommendationsPage({
 
   const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
 
-  const [{ data: recommendations }] = latestCompletedRun
+  const [{ data: recommendations }, { data: resolvedRecommendations }] = latestCompletedRun
     ? await Promise.all([
         supabase
           .from("recommendations")
           .select(
-            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json",
+            "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open",
           )
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
           .eq("status", "active")
           .order("priority_rank", { ascending: true }),
+        // RECS-3 "Victorias recientes": gaps that were open last run and were
+        // confirmed gone by this run's scan — resolved_in_run_id (not run_id,
+        // which stays the run where the gap still existed) scopes this to the
+        // latest completed run specifically.
+        supabase
+          .from("recommendations")
+          .select("id, title, recommendation_type")
+          .eq("project_id", projectId)
+          .eq("status", "resolved")
+          .eq("resolved_in_run_id", latestCompletedRun.id)
+          .order("title", { ascending: true }),
       ])
-    : [{ data: null }];
+    : [{ data: null }, { data: null }];
 
   const baseRecs = (recommendations ?? []) as Recommendation[];
+  const recentWins = (resolvedRecommendations ?? []) as Array<{
+    id: string;
+    title: string;
+    recommendation_type: string;
+  }>;
 
   // Attach the latest sanitized AI-generated solution (if any) for each
   // recommendation. These live in `generated_solutions` (never on the
@@ -334,6 +350,43 @@ export default async function RecommendationsPage({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Victorias recientes (RECS-3) — gaps confirmed gone by this run's scan */}
+      {recentWins.length > 0 && (
+        <div
+          style={{
+            marginTop: 16,
+            padding: "12px 16px",
+            background: "var(--pos-soft, #f0faf3)",
+            border: "1px solid var(--pos, #1a9c5c)",
+            borderRadius: "var(--r-md)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 700,
+              color: "var(--pos-ink, #1a7a49)",
+              marginBottom: 8,
+            }}
+          >
+            <Icon name="check" size={14} />
+            {recentWins.length === 1
+              ? "1 victoria reciente"
+              : `${recentWins.length} victorias recientes`}
+          </div>
+          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
+            {recentWins.map((win) => (
+              <li key={win.id} style={{ fontSize: 13, color: "var(--ink-2)" }}>
+                Ya no aparece: &ldquo;{win.title}&rdquo;
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

@@ -3,6 +3,10 @@ import "server-only";
 import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
 import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
+import {
+  computeRecommendationTransition,
+  type PreviousRecommendationRow
+} from "@/lib/recommendations/recommendation-history";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
@@ -653,6 +657,61 @@ export async function executePendingScan({
         }))
       });
 
+      // RECS-3 ("memory" between scans): identify the immediately preceding
+      // COMPLETED run of this project via scan_runs (not by filtering
+      // recommendations.status='active' — that status gets consumed by this
+      // very block below, so a retry of this finalize step would see nothing
+      // left "active" and silently recompute a different, wrong result). Read
+      // that fixed prior run's rows by their own run_id, regardless of
+      // status, so the diff below is deterministic across retries. See
+      // supabase/migrations/0010_recommendations_history.sql.
+      const { data: previousRunRow } = await service
+        .from("scan_runs")
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("status", "completed")
+        .neq("id", runId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let previousRows: PreviousRecommendationRow[] = [];
+      if (previousRunRow?.id) {
+        const { data: previousRowsRaw } = await service
+          .from("recommendations")
+          .select("dedupe_key, status, consecutive_runs_open")
+          .eq("project_id", projectId)
+          .eq("run_id", previousRunRow.id as string);
+        previousRows = (previousRowsRaw ?? []) as PreviousRecommendationRow[];
+      }
+
+      const { resolvedDedupeKeys, consecutiveRunsByDedupeKey } = computeRecommendationTransition({
+        previousRows,
+        currentDedupeKeys: recommendationRows.map((rec) => rec.dedupe_key)
+      });
+
+      // Gaps that were open last run and did not recur this run are a real
+      // win — mark them 'resolved' (not 'superseded') so the Recommendations
+      // page can surface them as a recent win, scoped by resolved_in_run_id
+      // (their own run_id stays whatever run they were last open in).
+      if (resolvedDedupeKeys.length > 0) {
+        const { error: resolveError } = await service
+          .from("recommendations")
+          .update({ status: "resolved", resolved_in_run_id: runId })
+          .eq("project_id", projectId)
+          .eq("status", "active")
+          .neq("run_id", runId)
+          .in("dedupe_key", resolvedDedupeKeys);
+
+        if (resolveError) {
+          console.error("[scan-runner] failed to mark resolved recommendations", {
+            projectId,
+            runId,
+            message: resolveError.message
+          });
+        }
+      }
+
       // Close out any still-"active" recommendations from prior runs of this
       // project so the sidebar badge (which counts active recommendations
       // project-wide) stays in sync with the latest run's recommendations
@@ -690,7 +749,9 @@ export async function executePendingScan({
             effort: rec.effort,
             confidence: rec.confidence,
             source_type: "rule",
-            evidence_json: rec.evidence_json
+            evidence_json: rec.evidence_json,
+            dedupe_key: rec.dedupe_key,
+            consecutive_runs_open: consecutiveRunsByDedupeKey.get(rec.dedupe_key) ?? 1
           }))
         );
       }

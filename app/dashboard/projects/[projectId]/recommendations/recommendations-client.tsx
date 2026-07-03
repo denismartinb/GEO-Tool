@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
-import { rewriteRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
 type CitationPage = { domain: string; title: string; url: string };
 
@@ -55,6 +55,12 @@ export type Recommendation = {
    * block.
    */
   solution: GeneratedSolution | null;
+  /**
+   * How many scans in a row (including this one) this exact gap
+   * (dedupe_key) has been open — RECS-3. 1 for a brand-new gap; only shown
+   * to the user once it has persisted across at least one prior scan.
+   */
+  consecutive_runs_open?: number;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority";
@@ -250,6 +256,8 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
   const [open, setOpen] = useState(false);
   const [isRewriting, startRewrite] = useTransition();
   const [rewriteError, setRewriteError] = useState<string | null>(null);
+  const [isDismissing, startDismiss] = useTransition();
+  const [dismissError, setDismissError] = useState<string | null>(null);
   const router = useRouter();
 
   function handleRewrite(e: React.MouseEvent) {
@@ -266,6 +274,24 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         router.refresh();
       } catch {
         setRewriteError("No se ha podido generar la propuesta en este momento. Inténtalo de nuevo en unos minutos.");
+      }
+    });
+  }
+
+  function handleDismiss(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDismissError(null);
+    startDismiss(async () => {
+      try {
+        const result = await dismissRecommendationAction({ projectId, recommendationId: rec.id });
+        if (!result.success) {
+          setDismissError(result.error);
+          return;
+        }
+        router.refresh();
+      } catch {
+        setDismissError("No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos.");
       }
     });
   }
@@ -341,6 +367,11 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
               <span className="badge badge-warn">
                 <Icon name="info" size={11} />
                 Baja confianza
+              </span>
+            )}
+            {(rec.consecutive_runs_open ?? 1) > 1 && (
+              <span className="badge badge-outline">
+                Abierto desde hace {rec.consecutive_runs_open} escaneos
               </span>
             )}
           </div>
@@ -530,6 +561,27 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 <Icon name="sparkles" size={11} />
                 Propuesta generada
               </span>
+            )}
+
+            {/* Marcar como hecho (RECS-3) — dismisses the recommendation;
+                router.refresh() removes it from view since the page only
+                fetches status='active' rows. */}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={handleDismiss} disabled={isDismissing}>
+              {isDismissing ? (
+                <>
+                  <span className="btn-spinner" /> Actualizando…
+                </>
+              ) : (
+                <>
+                  <Icon name="check" size={13} />
+                  Marcar como hecho
+                </>
+              )}
+            </button>
+            {dismissError && (
+              <p className="feedback error" style={{ margin: 0 }}>
+                {dismissError}
+              </p>
             )}
           </div>
 
