@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 
@@ -65,6 +66,7 @@ export default function HomePage() {
             <a href="#producto">Producto</a>
             <a href="#como">Cómo funciona</a>
             <a href="#recomendaciones">Recomendaciones</a>
+            <Link href="/pricing">Precios</Link>
           </div>
           <div className="lp-nav-right">
             <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
