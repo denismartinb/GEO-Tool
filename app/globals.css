@@ -3414,6 +3414,15 @@ select.set-field {
   .set-invite-bar { width: 100%; }
 }
 
+/* --- Chip de plan elegido en el registro --- */
+.signup-plan-chip { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 8px 8px 8px 12px;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 600; }
+.signup-plan-chip .ico { color: var(--accent); flex: 0 0 auto; }
+.signup-plan-chip b { font-weight: 800; }
+.signup-plan-chip a { margin-left: 4px; padding: 3px 9px; border-radius: 999px; background: #fff; color: var(--accent);
+  font-size: 12px; font-weight: 700; }
+.signup-plan-chip a:hover { background: var(--accent); color: #fff; }
+
 /* --- Change-plan modal ("Cambiar de plan") --- */
 .cp-scrim { position: fixed; inset: 0; background: rgba(15,23,41,.46); z-index: 400; display: grid; place-items: center;
   padding: 24px; animation: scrimIn .16s ease forwards; }

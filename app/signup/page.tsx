@@ -3,10 +3,12 @@ import { redirect } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { createClient } from "@/lib/supabase/server";
+import { PLANS } from "@/app/pricing/plans-data";
 import { signup } from "./actions";
 
-export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; plan?: string }> }) {
   const params = await searchParams;
 
   const supabase = await createClient();
@@ -14,6 +16,10 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     data: { user }
   } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");
+
+  // Only self-serve plans can arrive here from /pricing — Agencia is
+  // sales-assisted, never routed to signup with ?plan=agency.
+  const selectedPlan = PLANS.find((p) => p.id === params.plan && p.id !== "agency") ?? null;
 
   return (
     <main className="auth-bg">
@@ -31,12 +37,20 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
 
         {/* Título */}
         <h1 className="auth-title">Crea tu cuenta</h1>
-        <p className="sub" style={{ marginTop: 4, marginBottom: 20 }}>
+        <p className="sub" style={{ marginTop: 4, marginBottom: selectedPlan ? 0 : 20 }}>
           Empieza a mejorar tu visibilidad en IA.
         </p>
+        {selectedPlan ? (
+          <div className="signup-plan-chip">
+            <Icon name="check" size={14} className="ico" />
+            Plan elegido: <b>{selectedPlan.name}</b>
+            <Link href="/pricing">Cambiar</Link>
+          </div>
+        ) : null}
 
         {/* Form */}
-        <form action={signup} className="space-y-3">
+        <form action={signup} className="space-y-3" style={{ marginTop: selectedPlan ? 20 : 0 }}>
+          {selectedPlan ? <input type="hidden" name="plan" value={selectedPlan.id} /> : null}
           <div>
             <Label htmlFor="email">Email de trabajo</Label>
             <Input id="email" name="email" type="email" required placeholder="nombre@empresa.com" />

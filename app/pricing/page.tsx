@@ -12,7 +12,7 @@ const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }
   { icon: "refresh", t: "Frecuencia", d: "De un escaneo puntual a refresco diario con tendencia y alertas.", scale: ["Puntual", "Semanal", "Diario", "Diario"] }
 ];
 
-function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: () => void }) {
+function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: (planId: string) => void }) {
   const isRec = !!plan.recommended;
   const ctaClass = "btn btn-" + (plan.ctaStyle === "primary" ? "primary" : "ghost") + " btn-lg price-cta";
 
@@ -44,7 +44,7 @@ function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: () => void }) {
           {plan.cta}
         </button>
       ) : (
-        <button type="button" className={ctaClass} onClick={onSignup}>
+        <button type="button" className={ctaClass} onClick={() => onSignup(plan.id)}>
           {plan.cta}
           {plan.ctaStyle === "primary" ? <Icon name="arrRight" size={15} /> : null}
         </button>
@@ -115,7 +115,7 @@ export default function PricingPage() {
   const router = useRouter();
   const [openFaq, setOpenFaq] = useState(0);
 
-  const goToSignup = () => router.push("/signup");
+  const goToSignup = (planId?: string) => router.push(planId ? `/signup?plan=${planId}` : "/signup");
   const goToLogin = () => router.push("/login");
   const goToHome = () => router.push("/");
 
@@ -135,7 +135,7 @@ export default function PricingPage() {
           </div>
           <div className="lp-nav-right">
             <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
-            <button className="btn btn-primary btn-sm" onClick={goToSignup}>Prueba gratis</button>
+            <button className="btn btn-primary btn-sm" onClick={() => goToSignup("free")}>Prueba gratis</button>
           </div>
         </nav>
       </div>
@@ -261,7 +261,7 @@ export default function PricingPage() {
               <h2>Empieza con un escaneo gratis</h2>
               <p>Mira tu GEO Score y tus 3 primeras acciones en minutos. Sin tarjeta.</p>
               <div className="row">
-                <button className="btn btn-white btn-lg" onClick={goToSignup}>
+                <button className="btn btn-white btn-lg" onClick={() => goToSignup("free")}>
                   Escanear gratis <Icon name="arrRight" size={16} />
                 </button>
                 <button type="button" className="btn btn-onaccent btn-lg">Hablar con ventas</button>
