@@ -244,6 +244,7 @@ export async function extractGeminiStructuredData(input: {
   "citations": [{ "url": string|null, "domain": string|null, "label": string|null, "evidence": string|null }],
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
   "sentiment_drivers": string[],
+  "other_brands_mentioned": string[],
   "summary": string,
   "confidence": "low"|"medium"|"high",
   "notes": string[]
@@ -251,7 +252,9 @@ export async function extractGeminiStructuredData(input: {
 
 For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if the entity is not mentioned (mentioned: false). Rank only entities that are actually mentioned, with no gaps in the ranking (1, 2, 3, ...), ordered by where each entity first appears in the text. The brand and all competitors share a single ranking.
 
-For "sentiment_drivers": ONLY when "sentiment" is "negative" or "mixed", list up to 3 short noun-phrase themes (2-4 words each) that are visible in or evidenced by the response as reasons for the negative perception OF THE BRAND (e.g. "atención al cliente", "plazos de entrega", "precios altos", "equipaje de mano"). Include themes that are clearly implied by the response text, not just ones listed explicitly — for example, if the response says "passengers often report problems with checked baggage fees", extract "checked baggage fees" even though it wasn't presented as a bullet point. Do NOT invent a criticism that has no basis in the response text. Empty array [] for positive/neutral sentiment or when the response gives no indication of any specific negative theme about the brand.`;
+For "sentiment_drivers": ONLY when "sentiment" is "negative" or "mixed", list up to 3 short noun-phrase themes (2-4 words each) that are visible in or evidenced by the response as reasons for the negative perception OF THE BRAND (e.g. "atención al cliente", "plazos de entrega", "precios altos", "equipaje de mano"). Include themes that are clearly implied by the response text, not just ones listed explicitly — for example, if the response says "passengers often report problems with checked baggage fees", extract "checked baggage fees" even though it wasn't presented as a bullet point. Do NOT invent a criticism that has no basis in the response text. Empty array [] for positive/neutral sentiment or when the response gives no indication of any specific negative theme about the brand.
+
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. This surfaces brands the AI mentions that are not currently being tracked. Only include names that are genuinely present in the response text — never invent one. Exclude generic terms, product categories, or descriptive phrases (e.g. "aerolíneas low-cost" is not a brand name). Up to 5 entries, each a short canonical name (e.g. "IKEA", not "la marca IKEA" or "la empresa sueca IKEA"). Empty array [] if none.`;
 
   const promptBlock = [
     schemaInstruction,
@@ -734,6 +737,8 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
       return `ASSET FOCUS — prominence: the brand is mentioned but ${input.dominantCompetitor ?? "a competitor"} consistently appears first or more prominently in the same answers. Provide as examples (1) a revised opening/lead paragraph structure for the relevant page that leads with the brand's strongest differentiator and direct answer first (front-load the key fact, don't bury it), and (2) a short outline of what to add so the brand reads as the primary, most complete answer rather than a secondary mention. Use only the given facts; [tu dato aquí] for any missing specific value.`;
     case "amplify_positive_pattern":
       return "ASSET FOCUS — replicate a winning pattern: the evidence snippets below are from queries where the AI ALREADY mentions and cites the brand favorably (no negative framing) — this is not a gap to fix, it's a pattern to copy elsewhere. Provide as examples (1) a short analysis of the common structural/content traits across those winning snippets (e.g. what makes them directly quotable/citable), and (2) a checklist the brand can apply to its weaker pages to replicate that same pattern. Do not propose brand-new unrelated content — the point is replication, not invention.";
+    case "track_emerging_competitor":
+      return "ASSET FOCUS — competitor tracking suggestion: this is NOT a content gap to fix by publishing something on the brand's site; it's a suggestion to start monitoring a brand inside this tool. Provide as examples (1) a short one-paragraph rationale for why this brand is worth tracking, grounded only in the given facts (how many queries it recurs in), and (2) a brief checklist of what to watch once it is tracked (e.g. compare visibility across the affected prompt categories, watch its position vs. the brand's). Do NOT produce a webpage template, FAQ, or JSON-LD snippet for this recommendation type — there is no page to publish.";
     default:
       return null;
   }

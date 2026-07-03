@@ -68,6 +68,7 @@ function baseExtractionOutput(overrides: Record<string, unknown> = {}) {
     citations: [],
     sentiment: "positive" as const,
     sentiment_drivers: [],
+    other_brands_mentioned: [],
     summary: "Acme looks great.",
     confidence: "high" as const,
     notes: [],

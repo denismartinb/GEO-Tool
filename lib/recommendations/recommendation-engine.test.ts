@@ -21,12 +21,14 @@ function extractedWith(opts: {
   competitors?: Array<{ name: string; mentioned: boolean; evidence?: string[]; position?: number | null }>;
   citations?: Array<{ domain: string; source: "grounding" | "inline"; title?: string; url?: string }>;
   sentimentDrivers?: string[];
+  otherBrandsMentioned?: string[];
 }) {
   return {
     brand: { evidence: opts.brandEvidence ?? [], position: opts.brandPosition ?? null },
     competitors: opts.competitors ?? [],
     citations: opts.citations ?? [],
-    sentiment_drivers: opts.sentimentDrivers ?? []
+    sentiment_drivers: opts.sentimentDrivers ?? [],
+    other_brands_mentioned: opts.otherBrandsMentioned ?? []
   };
 }
 
@@ -640,6 +642,7 @@ describe("generateRecommendationsForRun", () => {
     expect(categoryForType("close_competitor_gap")).toBe("content");
     expect(categoryForType("increase_brand_prominence")).toBe("content");
     expect(categoryForType("amplify_positive_pattern")).toBe("content");
+    expect(categoryForType("track_emerging_competitor")).toBe("technical");
     expect(categoryForType("unknown_future_type")).toBe("content");
   });
 
@@ -798,5 +801,60 @@ describe("generateRecommendationsForRun", () => {
     ]);
 
     expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
+  });
+
+  it("surfaces a recurring untracked brand as an emerging competitor (N6)", () => {
+    const recs = run(
+      [
+        prompt({
+          id: "p1",
+          prompt_text_snapshot: "mejores tiendas de muebles",
+          extracted_json: extractedWith({ otherBrandsMentioned: ["Conforama"] })
+        }),
+        prompt({
+          id: "p2",
+          prompt_text_snapshot: "dónde comprar sofás baratos",
+          extracted_json: extractedWith({ otherBrandsMentioned: ["Conforama"] })
+        })
+      ],
+      {},
+      ["Ikea"]
+    );
+
+    const rec = recs.find((r) => r.recommendation_type === "track_emerging_competitor");
+    expect(rec).toBeDefined();
+    expect(rec!.title).toContain("Conforama");
+    expect(rec!.evidence_json.emerging_competitor).toBe("Conforama");
+    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+  });
+
+  it("does not surface an already-tracked competitor as emerging, case-insensitively (N6)", () => {
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "q1", extracted_json: extractedWith({ otherBrandsMentioned: ["ikea"] }) }),
+        prompt({ id: "p2", prompt_text_snapshot: "q2", extracted_json: extractedWith({ otherBrandsMentioned: ["ikea"] }) })
+      ],
+      {},
+      ["Ikea"]
+    );
+
+    expect(recs.some((r) => r.recommendation_type === "track_emerging_competitor")).toBe(false);
+  });
+
+  it("does not surface the project's own brand as an emerging competitor (N6)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "q1", extracted_json: extractedWith({ otherBrandsMentioned: ["Acme"] }) }),
+      prompt({ id: "p2", prompt_text_snapshot: "q2", extracted_json: extractedWith({ otherBrandsMentioned: ["Acme"] }) })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "track_emerging_competitor")).toBe(false);
+  });
+
+  it("does not surface an emerging competitor from a single occurrence (N6)", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "q1", extracted_json: extractedWith({ otherBrandsMentioned: ["Conforama"] }) })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "track_emerging_competitor")).toBe(false);
   });
 });

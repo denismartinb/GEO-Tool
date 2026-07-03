@@ -69,6 +69,14 @@ export const extractionOutputSchema = z.object({
    * JSON without the field still parses.
    */
   sentiment_drivers: z.array(z.string()).default([]),
+  /**
+   * Brand/company names mentioned in the response that are NEITHER the
+   * project's own brand NOR one of the tracked competitors passed in — i.e.
+   * genuinely unmonitored brands the AI is surfacing on its own. Powers
+   * RECS-4A (N6, "competidores emergentes"). Optional with a default so
+   * older extracted JSON without the field still parses.
+   */
+  other_brands_mentioned: z.array(z.string()).default([]),
   summary: z.string(),
   confidence: extractionConfidenceSchema,
   notes: z.array(z.string())
