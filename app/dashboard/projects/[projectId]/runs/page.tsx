@@ -532,7 +532,7 @@ export default async function RunsPage({
           <div
             style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
           >
-            El proyecto ya está configurado. Revisa los prompts y competidores, y lanza el primer
+            El dominio ya está configurado. Revisa los prompts y competidores, y lanza el primer
             escaneo desde la visión general.
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>

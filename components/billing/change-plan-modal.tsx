@@ -13,7 +13,7 @@ const money = (n: number, dec = 2) =>
   n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + " €";
 
 const METER_ROWS: Array<{ label: string; icon: string; get: (p: Plan) => string }> = [
-  { label: "Proyectos / dominios", icon: "globe", get: (p) => p.meter.projects },
+  { label: "Dominios", icon: "globe", get: (p) => p.meter.projects },
   { label: "Prompts monitorizados", icon: "prompts", get: (p) => "~" + p.meter.prompts },
   { label: "Motores de IA", icon: "layers", get: (p) => String(p.meter.engines) },
   { label: "Frecuencia de refresco", icon: "refresh", get: (p) => p.meter.refresh }

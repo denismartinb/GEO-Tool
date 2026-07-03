@@ -73,7 +73,7 @@ export default async function RunDetailPage({
         <h1 className="title-lg">Detalle del escaneo</h1>
         <Link href={`/dashboard/projects/${projectId}`} className="inline-flex items-center gap-1 text-sm font-semibold text-[var(--ink-2)]">
           <Icon name="chevronLeft" size={14} />
-          Volver al proyecto
+          Volver al dominio
         </Link>
       </div>
       {feedback.error ? <p className="feedback error">{feedback.error}</p> : null}

@@ -347,7 +347,7 @@ export default async function RecommendationsPage({
           </div>
           <div className="section-empty-desc">
             {latestRunFailed
-              ? "No hay un escaneo completado del que extraer recomendaciones. Revisa el proyecto y vuelve a lanzar el análisis."
+              ? "No hay un escaneo completado del que extraer recomendaciones. Revisa el dominio y vuelve a lanzar el análisis."
               : "Las recomendaciones aparecerán después de completar el primer escaneo real con Gemini."}
           </div>
           <Link

@@ -62,7 +62,7 @@ export const PLANS: Plan[] = [
     cta: "Empezar con Starter",
     ctaStyle: "ghost",
     highlights: [
-      "1 proyecto · ~25 prompts",
+      "1 dominio · ~25 prompts",
       "2 motores de IA",
       "Refresco semanal + tendencia",
       "Bucle de acción básico",
@@ -82,7 +82,7 @@ export const PLANS: Plan[] = [
     cta: "Probar Pro · 14 días",
     ctaStyle: "primary",
     highlights: [
-      "3–5 proyectos · ~100 prompts",
+      "3–5 dominios · ~100 prompts",
       "4 motores de IA · refresco diario",
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)",
@@ -119,7 +119,7 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
   {
     group: "Medición",
     rows: [
-      { label: "Proyectos / dominios", vals: ["1", "1", "3–5", "Ilimitados"] },
+      { label: "Dominios", vals: ["1", "1", "3–5", "Ilimitados"] },
       { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
       { label: "Motores de IA", vals: ["1", "2", "4", "Todos"] },
       { label: "Frecuencia de refresco", vals: ["Puntual", "Semanal", "Diario", "Diario"] },

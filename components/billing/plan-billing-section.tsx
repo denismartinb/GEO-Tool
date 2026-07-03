@@ -126,7 +126,7 @@ export function PlanBillingSection({
         <Card>
           <CardContent className="space-y-4">
             <UsageRow icon="prompts" label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
-            <UsageRow icon="globe" label="Proyectos / dominios" value={usage.projectCount} cap={usage.projectCap} />
+            <UsageRow icon="globe" label="Dominios" value={usage.projectCount} cap={usage.projectCap} />
             <UsageRow icon="layers" label="Motores de IA" value={usage.engineCount} cap={usage.engineCap} />
           </CardContent>
         </Card>

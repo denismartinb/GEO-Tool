@@ -422,7 +422,7 @@ export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction,
             </div>
             <div className="add-card-inner">
               <label className="field-label" htmlFor="domain">
-                Dominio del proyecto
+                Dominio
               </label>
               <div className="domain-bar">
                 <Icon name="globe" size={18} className="domain-globe" />

@@ -434,7 +434,7 @@ describe("addPromptsCore", () => {
       success: true,
       addedCount: 1,
       scanLaunched: false,
-      scanWarning: "Ya hay un escaneo en curso o pendiente para este proyecto."
+      scanWarning: "Ya hay un escaneo en curso o pendiente para este dominio."
     });
   });
 });

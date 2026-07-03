@@ -5,11 +5,11 @@
  * duplicating copy.
  */
 export const feedbackErrorMessages: Record<string, string> = {
-  active_run_exists: "Ya hay un escaneo en curso o pendiente para este proyecto.",
-  project_archived: "Este proyecto está archivado. Reactívalo antes de lanzar un escaneo.",
-  project_not_found: "No hemos encontrado el proyecto solicitado.",
+  active_run_exists: "Ya hay un escaneo en curso o pendiente para este dominio.",
+  project_archived: "Este dominio está archivado. Reactívalo antes de lanzar un escaneo.",
+  project_not_found: "No hemos encontrado el dominio solicitado.",
   project_setup_partial:
-    "El proyecto se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
+    "El dominio se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
   prompt_limit_reached: "Has alcanzado el límite de prompts monitorizados de tu plan actual. Sube de plan para añadir más.",
   prompts_required: "Añade al menos un prompt activo antes de escanear.",
   recurring_requires_completed_scan:
@@ -23,7 +23,7 @@ export const feedbackErrorMessages: Record<string, string> = {
 };
 
 export const feedbackSuccessMessages: Record<string, string> = {
-  project_created: "Proyecto creado. Revisa los prompts y competidores antes de lanzar el primer escaneo.",
+  project_created: "Dominio creado. Revisa los prompts y competidores antes de lanzar el primer escaneo.",
   scan_started: "Dominio creado. Tu primer escaneo se está ejecutando — sigue el progreso aquí.",
   scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno.",

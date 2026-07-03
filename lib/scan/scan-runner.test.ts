@@ -36,13 +36,13 @@ describe("getActionErrorCode", () => {
 describe("getSanitizedScanError", () => {
   it("returns a specific message for project_not_found", () => {
     expect(getSanitizedScanError(new ProjectActionError("project_not_found"))).toBe(
-      "No se ha encontrado el proyecto o el escaneo solicitado."
+      "No se ha encontrado el dominio o el escaneo solicitado."
     );
   });
 
   it("returns a specific message for project_archived", () => {
     expect(getSanitizedScanError(new ProjectActionError("project_archived"))).toBe(
-      "El proyecto está archivado y no puede ejecutarse."
+      "El dominio está archivado y no puede ejecutarse."
     );
   });
 
