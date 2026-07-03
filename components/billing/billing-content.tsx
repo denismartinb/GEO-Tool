@@ -47,7 +47,12 @@ export async function BillingContent({ embedded = false }: { embedded?: boolean 
         </p>
       </div>
 
-      <PlanBillingSection currentPlanId={usage.planId} agencyPlanId="agency" usage={usage} />
+      <PlanBillingSection
+        currentPlanId={usage.planId}
+        agencyPlanId="agency"
+        usage={usage}
+        activeProjects={usage.activeProjects}
+      />
 
       <section className="space-y-2">
         <div>

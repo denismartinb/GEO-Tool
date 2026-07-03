@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
+import type { ActiveProjectSummary } from "@/lib/billing";
 
 const CYCLE_DAYS = 30;
 const DAYS_LEFT = 5;
@@ -35,18 +36,21 @@ function PlanMeterChips({ plan }: { plan: Plan }) {
 export function ChangePlanModal({
   currentId,
   initialTargetId,
+  activeProjects,
   onClose,
   onApply
 }: {
   currentId: Plan["id"];
   initialTargetId?: Plan["id"];
+  activeProjects: ActiveProjectSummary[];
   onClose: () => void;
-  onApply: (targetId: Plan["id"]) => Promise<{ success: boolean; error?: string }>;
+  onApply: (targetId: Plan["id"], archiveProjectIds: string[]) => Promise<{ success: boolean; error?: string }>;
 }) {
   const current = PLANS.find((p) => p.id === currentId)!;
   const [sel, setSel] = useState<Plan["id"]>(initialTargetId ?? currentId);
   const [step, setStep] = useState<"select" | "confirm" | "done">("select");
   const [error, setError] = useState<string | null>(null);
+  const [archiveIds, setArchiveIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
 
   const close = () => {
@@ -72,6 +76,26 @@ export function ChangePlanModal({
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
+  const requiredArchiveCount = Math.max(0, activeProjects.length - target.caps.projects);
+  const hasProjectOverage = !isUpgrade && !isSame && requiredArchiveCount > 0;
+  const archiveSelectionComplete = archiveIds.size === requiredArchiveCount;
+
+  useEffect(() => {
+    setArchiveIds(new Set());
+  }, [sel]);
+
+  function toggleArchiveId(id: string) {
+    setArchiveIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else if (next.size < requiredArchiveCount) {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   const footNote = isSame ? (
     "Selecciona un plan distinto al actual."
   ) : (
@@ -83,7 +107,7 @@ export function ChangePlanModal({
   const handleConfirm = () => {
     setError(null);
     startTransition(async () => {
-      const result = await onApply(sel);
+      const result = await onApply(sel, Array.from(archiveIds));
       if (result.success) {
         setStep("done");
       } else {
@@ -256,6 +280,42 @@ export function ChangePlanModal({
                       </ul>
                     </div>
                   )}
+                  {hasProjectOverage && (
+                    <div className="cp-diff">
+                      <div className="cp-diff-h">
+                        <Icon name="alertCircle" size={14} />
+                        Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar
+                        (tienes {activeProjects.length}, {target.name} permite {target.caps.projects})
+                      </div>
+                      <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                        {activeProjects.map((project) => {
+                          const checked = archiveIds.has(project.id);
+                          const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
+                          return (
+                            <li key={project.id}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", cursor: disableUnchecked ? "not-allowed" : "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  disabled={disableUnchecked}
+                                  onChange={() => toggleArchiveId(project.id)}
+                                />
+                                <span className="k">{project.name}</span>
+                                <span className="from" style={{ textDecoration: "none" }}>{project.domain}</span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                      <p className="cp-pror-note" style={{ marginTop: 10 }}>
+                        <Icon name="info" size={14} />
+                        <span>
+                          Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
+                          configuración ni sus escaneos.
+                        </span>
+                      </p>
+                    </div>
+                  )}
                 </>
               )}
               {error && (
@@ -280,7 +340,11 @@ export function ChangePlanModal({
                 <Icon name="chevLeft" size={15} />
                 Atrás
               </Button>
-              <Button type="button" disabled={isPending} onClick={handleConfirm}>
+              <Button
+                type="button"
+                disabled={isPending || (hasProjectOverage && !archiveSelectionComplete)}
+                onClick={handleConfirm}
+              >
                 {isPending ? "Guardando…" : isUpgrade ? "Confirmar y pagar " + money(dueToday) : "Confirmar cambio"}
               </Button>
             </div>

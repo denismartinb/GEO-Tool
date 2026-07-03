@@ -6,6 +6,8 @@ import type { AuthenticatedContext } from "@/lib/scan/types";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
 
+export type ActiveProjectSummary = { id: string; name: string; domain: string };
+
 export type UsageSummary = {
   planId: Plan["id"];
   promptCount: number;
@@ -14,6 +16,7 @@ export type UsageSummary = {
   projectCap: number;
   engineCount: number;
   engineCap: number;
+  activeProjects: ActiveProjectSummary[];
 };
 
 function resolvePlan(planId: string | null | undefined): Plan {
@@ -44,7 +47,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
 
   const [{ data: profile }, { data: projects }, { data: prompts }, { data: results }] = await Promise.all([
     supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
-    supabase.from("projects").select("id").eq("is_archived", false),
+    supabase.from("projects").select("id, name, domain").eq("is_archived", false),
     supabase.from("project_prompts").select("id").eq("is_active", true),
     supabase
       .from("scan_prompt_results")
@@ -64,6 +67,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     projectCount: projects?.length ?? 0,
     projectCap: plan.caps.projects,
     engineCount: engineSet.size,
-    engineCap: plan.caps.engines
+    engineCap: plan.caps.engines,
+    activeProjects: projects ?? []
   };
 }
