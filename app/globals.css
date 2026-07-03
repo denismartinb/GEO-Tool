@@ -2789,9 +2789,11 @@ textarea.add-prompts-text-input {
   .lp-h1 { font-size: 42px; }
   .lp-h2 { font-size: 30px; }
   .lp-nav-links { display: none; }
+  .lp-nav { padding-left: 14px; gap: 6px; }
   .lp-burger {
     display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; min-width: 44px; min-height: 44px;
     border-radius: 9px; background: none; border: 1px solid transparent; color: var(--ink-2); cursor: pointer;
+    margin-left: -6px;
   }
   .lp-burger:hover { background: var(--surface-2); }
 }
