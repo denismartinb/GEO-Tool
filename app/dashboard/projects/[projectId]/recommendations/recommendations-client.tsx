@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
-import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import {
+  rewriteRecommendationAction,
+  dismissRecommendationAction,
+  auditDomainContentAction,
+} from "@/app/dashboard/projects/[projectId]/actions";
 
 type CitationPage = { domain: string; title: string; url: string };
 
@@ -62,6 +66,22 @@ export type Recommendation = {
    */
   consecutive_runs_open?: number;
 };
+
+/**
+ * Result of "Auditar mi web" (RECS-4B), loaded from `generated_solutions`
+ * (generation_type = "domain_audit"). Defined here (not imported from the
+ * server-only lib/recommendations/domain-audit.ts) for the same reason
+ * GeneratedSolution is defined locally instead of imported.
+ */
+export type DomainAuditSolution = {
+  found: boolean;
+  pages: { url: string; title: string }[];
+  note: string;
+};
+
+// RECS-4B pilot: "Auditar mi web" is only offered on this recommendation
+// type for now, not the whole backlog.
+const DOMAIN_AUDIT_TYPE = "strengthen_brand_entity_clarity";
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
 
@@ -301,12 +321,80 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
   );
 }
 
-function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
+/**
+ * Renders the result of "Auditar mi web" (RECS-4B). Only the `pages` list is
+ * presented as verified fact (each one resolved, via grounding, to the
+ * project's own domain); `note` is always rendered as an AI interpretation to
+ * review, never as a claim about the site itself — same framing as
+ * SolutionPanel's examples.
+ */
+function DomainAuditPanel({ audit }: { audit: DomainAuditSolution }) {
+  return (
+    <div
+      style={{
+        marginTop: 4,
+        padding: "12px 16px",
+        background: "var(--surface-sunk)",
+        borderRadius: 10,
+        border: "1.5px solid var(--line)",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 11,
+          fontWeight: 700,
+          textTransform: "uppercase",
+          letterSpacing: "0.07em",
+          color: "var(--ink-4)",
+          marginBottom: 6,
+        }}
+      >
+        <Icon name="search" size={12} />
+        Auditoría de tu web
+      </div>
+      {audit.found ? (
+        <>
+          <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
+            Páginas de tu dominio encontradas por Google sobre este tema
+          </div>
+          <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: "0 0 8px" }}>
+            {audit.pages.map((page, i) => (
+              <li key={i}>
+                <a href={page.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                  {page.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      <p style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.6, margin: 0, fontStyle: "italic" }}>
+        {audit.note} <span style={{ color: "var(--ink-4)" }}>(interpretación de la IA, revísala antes de confiar en ella)</span>
+      </p>
+    </div>
+  );
+}
+
+function RecCard({
+  rec,
+  projectId,
+  canAuditDomain = false,
+}: {
+  rec: Recommendation;
+  projectId: string;
+  canAuditDomain?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [isRewriting, startRewrite] = useTransition();
   const [rewriteError, setRewriteError] = useState<string | null>(null);
   const [isDismissing, startDismiss] = useTransition();
   const [dismissError, setDismissError] = useState<string | null>(null);
+  const [isAuditing, startAudit] = useTransition();
+  const [auditError, setAuditError] = useState<string | null>(null);
+  const [audit, setAudit] = useState<DomainAuditSolution | null>(null);
   const router = useRouter();
 
   function handleRewrite(e: React.MouseEvent) {
@@ -341,6 +429,24 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         router.refresh();
       } catch {
         setDismissError("No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos.");
+      }
+    });
+  }
+
+  function handleAudit(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setAuditError(null);
+    startAudit(async () => {
+      try {
+        const result = await auditDomainContentAction({ projectId, recommendationId: rec.id });
+        if (!result.success) {
+          setAuditError(result.error);
+          return;
+        }
+        setAudit(result.solution);
+      } catch {
+        setAuditError("No se ha podido auditar tu dominio en este momento. Inténtalo de nuevo en unos minutos.");
       }
     });
   }
@@ -632,12 +738,44 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 {dismissError}
               </p>
             )}
+
+            {/* Auditar mi web (RECS-4B) — pilot: only offered on this
+                recommendation type, gated to Pro+ plans. */}
+            {rec.recommendation_type === DOMAIN_AUDIT_TYPE && !audit && (
+              <>
+                {canAuditDomain ? (
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={handleAudit} disabled={isAuditing}>
+                    {isAuditing ? (
+                      <>
+                        <span className="btn-spinner" /> Auditando tu web…
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="search" size={13} />
+                        Auditar mi web
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <span className="badge badge-outline">
+                    <Icon name="search" size={11} />
+                    Auditar mi web — disponible en plan Pro
+                  </span>
+                )}
+                {auditError && (
+                  <p className="feedback error" style={{ margin: 0 }}>
+                    {auditError}
+                  </p>
+                )}
+              </>
+            )}
           </div>
 
           {/* Plan de acción — asset saneado generado por IA, aditivo: no
               sustituye el título/descripción de la regla, que sigue siendo el
               planteamiento del problema. */}
           {rec.solution && <SolutionPanel solution={rec.solution} />}
+          {audit && <DomainAuditPanel audit={audit} />}
 
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (
@@ -678,11 +816,13 @@ export function RecommendationsClient({
   resolvedHistory = [],
   recentWinsCount = 0,
   projectId,
+  canAuditDomain = false,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
   recentWinsCount?: number;
   projectId: string;
+  canAuditDomain?: boolean;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
@@ -763,7 +903,9 @@ export function RecommendationsClient({
       {/* Cards */}
       {filter === "resolved"
         ? resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
-        : filtered.map((rec) => <RecCard key={rec.id} rec={rec} projectId={projectId} />)}
+        : filtered.map((rec) => (
+            <RecCard key={rec.id} rec={rec} projectId={projectId} canAuditDomain={canAuditDomain} />
+          ))}
 
       {filter === "resolved"
         ? resolvedHistory.length === 0 && (

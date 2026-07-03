@@ -17,6 +17,11 @@ import {
   type DismissRecommendationResult
 } from "@/lib/recommendations/dismiss-recommendation";
 import {
+  auditDomainContentCore,
+  domainAuditInputSchema,
+  type DomainAuditResult
+} from "@/lib/recommendations/domain-audit";
+import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
   getActionErrorCode
@@ -323,6 +328,33 @@ export async function dismissRecommendationAction(input: {
   const { supabase, user } = await requireUser();
   const service = createServiceClient();
   const result = await dismissRecommendationCore({ ...parsed.data, supabase, service, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
+  }
+
+  return result;
+}
+
+/**
+ * "Auditar mi web" (RECS-4B): on-demand, Pro+-gated Gemini call with Google
+ * Search grounding restricted to the project's own domain. Called directly
+ * from the client via `useTransition`, same pattern as
+ * `rewriteRecommendationAction`. See lib/recommendations/domain-audit.ts for
+ * the plan gate, verified-citation filtering, and rate-limit invariants.
+ */
+export async function auditDomainContentAction(input: {
+  projectId: string;
+  recommendationId: string;
+}): Promise<DomainAuditResult> {
+  const parsed = domainAuditInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  const result = await auditDomainContentCore({ ...parsed.data, supabase, service, user });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);

@@ -24,6 +24,21 @@ function resolvePlan(planId: string | null | undefined): Plan {
 }
 
 /**
+ * Raw Pro-tier check for feature gates (as opposed to the numeric-caps UI,
+ * which uses `resolvePlan`/`getPlanForUser`). Deliberately does NOT go
+ * through `resolvePlan`: that function defaults a missing/unrecognized value
+ * to "pro" (`DEFAULT_PLAN_ID`), which is a safe, generous default for a usage
+ * bar but would silently grant a paid-only ACTION to any account whose
+ * profile row is missing or hasn't loaded — never trust a gate to a fallback
+ * that resolves toward "yes". Fails closed: only an exact "pro" or "agency"
+ * value passes; anything else (free, starter, null, undefined, unrecognized)
+ * is denied.
+ */
+export function isProOrAbove(rawCurrentPlan: string | null | undefined): boolean {
+  return rawCurrentPlan === "pro" || rawCurrentPlan === "agency";
+}
+
+/**
  * Fetches the caller's real plan (for limit-enforcement checks in server
  * actions that already hold an authenticated `supabase`/`user` from
  * `requireUser()` — avoids a second auth round trip).

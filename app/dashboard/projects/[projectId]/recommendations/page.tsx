@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { isProOrAbove } from "@/lib/billing";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import {
   RecommendationsClient,
@@ -53,7 +54,17 @@ export default async function RecommendationsPage({
 }) {
   const { projectId } = await params;
   const project = await requireActiveProject(projectId);
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+
+  // "Auditar mi web" (RECS-4B) is Pro+-gated — read the raw plan column
+  // directly via isProOrAbove, never via getPlanForUser/resolvePlan (see
+  // lib/billing.ts for why that fallback is unsafe for a feature gate).
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("current_plan")
+    .eq("id", user.id)
+    .maybeSingle();
+  const canAuditDomain = isProOrAbove(profileRow?.current_plan as string | undefined);
 
   // Latest completed run
   const { data: latestCompletedRun } = await supabase
@@ -451,6 +462,7 @@ export default async function RecommendationsPage({
             resolvedHistory={resolvedHistory}
             recentWinsCount={recentWins.length}
             projectId={projectId}
+            canAuditDomain={canAuditDomain}
           />
         </>
       )}

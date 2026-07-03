@@ -301,6 +301,13 @@ export async function rewriteRecommendationCore({
         .select("sanitized_content")
         .eq("project_id", projectId)
         .eq("recommendation_id", recommendationId)
+        // Scoped to this generation_type: RECS-4B added a second type
+        // ("domain_audit") that can share the same recommendation_id, so an
+        // unscoped "most recent completed row" lookup could pick up the
+        // wrong type's content (parseSolutionContent then safely returns
+        // null for it, but only after a wasted read — this filter avoids
+        // that cross-type interference outright).
+        .eq("generation_type", GENERATION_TYPE)
         .eq("status", "completed")
         .eq("is_sanitized", true)
         .order("created_at", { ascending: false })

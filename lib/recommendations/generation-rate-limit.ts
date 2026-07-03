@@ -114,6 +114,17 @@ export type GenerationRateLimitDeps = {
   now?: () => number;
   /** Injectable for tests; defaults to `DEFAULT_GENERATION_RATE_LIMIT`. */
   config?: GenerationRateLimitConfig;
+  /**
+   * When set, scopes the count to this `generated_solutions.generation_type`
+   * only, giving that type its own separate budget instead of sharing the
+   * project-wide pool every other type draws from. Added for RECS-4B's
+   * domain-audit call, which is materially more expensive (a live grounding
+   * search plus several redirect-resolution fetches) than a plain JSON
+   * generation — data-guardian review flagged that it should not silently
+   * eat into (or be eaten by) the general rewrite budget. Existing callers
+   * that omit this keep counting every type together, unchanged.
+   */
+  generationType?: string;
 };
 
 const LOG_PREFIX = "[geo:gensol-rate-limit]";
@@ -138,11 +149,17 @@ export async function checkGenerationRateLimit(
   const windowStartMs = nowMs - WINDOW_MS[config.window];
   const windowStart = new Date(windowStartMs).toISOString();
 
-  const { count, error } = await service
+  let query = service
     .from("generated_solutions")
     .select("id", { count: "exact", head: true })
     .eq("project_id", projectId)
     .gte("created_at", windowStart);
+
+  if (deps.generationType) {
+    query = query.eq("generation_type", deps.generationType);
+  }
+
+  const { count, error } = await query;
 
   if (error) {
     console.error(`${LOG_PREFIX} lookup_failed`, {

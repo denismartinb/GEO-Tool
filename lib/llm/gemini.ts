@@ -225,6 +225,95 @@ export async function generateGeminiVisibilityAnswer(input: {
   };
 }
 
+export type DomainAuditInput = {
+  brand: string;
+  domain: string;
+  language: string;
+  topic: string;
+};
+
+export type DomainAuditRawResponse = {
+  text: string;
+  groundingChunks: Array<{ uri: string; title?: string }>;
+  model: string;
+};
+
+/**
+ * RECS-4B ("Auditar mi web"): asks Gemini to search Google, restricted (in
+ * the prompt — the API has no hard domain filter) to the brand's own domain,
+ * for content related to a specific topic. This is the ONLY place besides
+ * generateGeminiVisibilityAnswer that enables `google_search` grounding.
+ *
+ * Returns the raw text + raw groundingChunks unfiltered — this function does
+ * NOT decide what counts as "verified own-domain content". That filtering
+ * (resolve each chunk's redirect, keep only ones matching the project's own
+ * domain, fail-closed on any that can't be resolved) is the caller's
+ * responsibility (lib/recommendations/domain-audit.ts), mirroring how
+ * lib/scan/extraction.ts owns the equivalent decision for the main scan
+ * pipeline. Never treat this function's `text` as a verified fact on its
+ * own — the model is not hard-restricted to the given domain and may ground
+ * on other sites too.
+ */
+export async function auditDomainContent(input: DomainAuditInput): Promise<DomainAuditRawResponse> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
+
+  const model = getGeminiModel();
+  const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+  const instruction = [
+    `You are auditing what "${input.brand}" (domain: ${input.domain}) has ALREADY published on its own website about a specific topic, using web search restricted to that domain.`,
+    `Search specifically within site:${input.domain} for content related to the topic given. Do not consider or describe content from any other domain as if it belonged to this site.`,
+    "If you find relevant pages on this exact domain, briefly describe what each one covers, at most one short sentence per page.",
+    "If you do NOT find anything relevant on this domain via search, say so directly in one short sentence — do not guess, and do not describe content from any other site as if it were this brand's own.",
+    `Respond in this language: ${input.language}.`,
+    "Keep the entire response under 500 characters."
+  ].join("\n");
+
+  const promptBlock = [`Topic to audit: ${input.topic}`, `Search query: site:${input.domain} ${input.topic}`].join("\n\n");
+
+  const requestBody = JSON.stringify({
+    contents: [{ parts: [{ text: promptBlock }] }],
+    systemInstruction: { parts: [{ text: instruction }] },
+    tools: [{ google_search: {} }],
+    generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+  });
+
+  const response = await fetchWithTimeout(
+    endpoint,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: requestBody },
+    GEMINI_CALL_TIMEOUT_MS
+  );
+
+  if (!response.ok) {
+    throw new Error(getGeminiApiError(response.status));
+  }
+
+  const data = (await response.json()) as {
+    candidates?: Array<{
+      content?: { parts?: Array<{ text?: string }> };
+      groundingMetadata?: { groundingChunks?: Array<{ web?: { uri?: string; title?: string } }> };
+    }>;
+    modelVersion?: string;
+  };
+
+  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+  if (!text) {
+    throw new Error("Gemini returned an empty response.");
+  }
+
+  const groundingChunks = (data.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
+    .map((chunk) => chunk.web)
+    .filter((web): web is { uri: string; title?: string } => Boolean(web?.uri))
+    .map((web) => ({ uri: web.uri, title: web.title }));
+
+  return {
+    text,
+    groundingChunks,
+    model: data.modelVersion ?? model
+  };
+}
+
 export async function extractGeminiStructuredData(input: {
   brand: string;
   competitors: string[];
