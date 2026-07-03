@@ -3,6 +3,13 @@
 
 export type PlanCell = boolean | string;
 
+export type PlanMeter = {
+  projects: string;
+  prompts: number;
+  engines: number | string;
+  refresh: string;
+};
+
 export type Plan = {
   id: "free" | "starter" | "pro" | "agency";
   name: string;
@@ -14,6 +21,7 @@ export type Plan = {
   ctaStyle: "primary" | "ghost";
   recommended?: boolean;
   highlights: string[];
+  meter: PlanMeter;
 };
 
 export const PLANS: Plan[] = [
@@ -31,7 +39,8 @@ export const PLANS: Plan[] = [
       "~10 prompts · 1 motor de IA",
       "GEO Score creíble + 3 acciones",
       "Sin tendencia ni monitorización"
-    ]
+    ],
+    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Puntual" }
   },
   {
     id: "starter",
@@ -48,7 +57,8 @@ export const PLANS: Plan[] = [
       "Refresco semanal + tendencia",
       "Bucle de acción básico",
       "Credibilidad de medición visible"
-    ]
+    ],
+    meter: { projects: "1", prompts: 25, engines: 2, refresh: "Semanal" }
   },
   {
     id: "pro",
@@ -66,7 +76,8 @@ export const PLANS: Plan[] = [
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)",
       "Sentimiento, temas y citas profundas"
-    ]
+    ],
+    meter: { projects: "3–5", prompts: 100, engines: 4, refresh: "Diario" }
   },
   {
     id: "agency",
@@ -83,7 +94,8 @@ export const PLANS: Plan[] = [
       "Informes white-label exportables",
       "Alertas por email y Slack",
       "Acceso API e integraciones"
-    ]
+    ],
+    meter: { projects: "∞", prompts: 300, engines: "Todos", refresh: "Diario" }
   }
 ];
 
