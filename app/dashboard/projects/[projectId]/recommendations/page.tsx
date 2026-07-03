@@ -397,43 +397,6 @@ export default async function RecommendationsPage({
         </div>
       )}
 
-      {/* Victorias recientes (RECS-3) — gaps confirmed gone by this run's scan */}
-      {recentWins.length > 0 && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: "12px 16px",
-            background: "var(--pos-soft, #f0faf3)",
-            border: "1px solid var(--pos, #1a9c5c)",
-            borderRadius: "var(--r-md)",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 12,
-              fontWeight: 700,
-              color: "var(--pos-ink, #1a7a49)",
-              marginBottom: 8,
-            }}
-          >
-            <Icon name="check" size={14} />
-            {recentWins.length === 1
-              ? "1 victoria reciente"
-              : `${recentWins.length} victorias recientes`}
-          </div>
-          <ul style={{ margin: 0, paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
-            {recentWins.map((win) => (
-              <li key={win.id} style={{ fontSize: 13, color: "var(--ink-2)" }}>
-                Ya no aparece: &ldquo;{win.title}&rdquo;
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* Empty states */}
       {!latestCompletedRun ? (
         <div className="section-empty" style={{ marginTop: 20 }}>
@@ -483,7 +446,12 @@ export default async function RecommendationsPage({
           </div>
 
           {/* Client component handles filters + cards */}
-          <RecommendationsClient recommendations={recs} resolvedHistory={resolvedHistory} projectId={projectId} />
+          <RecommendationsClient
+            recommendations={recs}
+            resolvedHistory={resolvedHistory}
+            recentWinsCount={recentWins.length}
+            projectId={projectId}
+          />
         </>
       )}
       </>

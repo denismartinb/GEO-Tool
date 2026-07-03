@@ -676,10 +676,12 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
 export function RecommendationsClient({
   recommendations,
   resolvedHistory = [],
+  recentWinsCount = 0,
   projectId,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
+  recentWinsCount?: number;
   projectId: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -710,6 +712,39 @@ export function RecommendationsClient({
 
   return (
     <>
+      {/* Victorias recientes (RECS-3) — compact, clickable summary that jumps
+          straight to the "Resueltas" tab instead of listing every title inline. */}
+      {recentWinsCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setFilter("resolved")}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            width: "100%",
+            marginBottom: 16,
+            padding: "10px 16px",
+            background: "var(--pos-soft, #f0faf3)",
+            border: "1px solid var(--pos, #1a9c5c)",
+            borderRadius: "var(--r-md)",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "var(--pos-ink, #1a7a49)",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+        >
+          <Icon name="check" size={14} />
+          {recentWinsCount === 1
+            ? "1 recomendación resuelta recientemente"
+            : `${recentWinsCount} recomendaciones resueltas recientemente`}
+          <span style={{ marginLeft: "auto", display: "flex" }}>
+            <Icon name="arrRight" size={14} />
+          </span>
+        </button>
+      )}
+
       {/* Filters */}
       <div className="filters">
         <div className="seg">
