@@ -7,6 +7,8 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
+type CitationPage = { domain: string; title: string; url: string };
+
 type EvidenceJson = {
   why_this_matters?: string;
   assumptions?: string[];
@@ -17,6 +19,7 @@ type EvidenceJson = {
   sentiment_drivers?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
+  citation_pages?: CitationPage[];
   action_suggested?: string;
 };
 
@@ -280,6 +283,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
       : snippets;
   const competitors = ev.mentioned_competitors ?? [];
   const domains = ev.citation_domains ?? [];
+  const citationPages = ev.citation_pages ?? [];
   const sentimentDrivers = ev.sentiment_drivers ?? [];
   const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
@@ -482,6 +486,18 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                   <span style={{ fontWeight: 600 }}>Dominios: </span>
                   {domains.join(", ")}
                 </p>
+              )}
+              {citationPages.length > 0 && (
+                <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+                  <span style={{ fontWeight: 600 }}>Páginas citadas: </span>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                    {citationPages.slice(0, 4).map((page, i) => (
+                      <li key={i}>
+                        &ldquo;{page.title}&rdquo; <span style={{ color: "var(--ink-4)" }}>({page.domain})</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           </div>

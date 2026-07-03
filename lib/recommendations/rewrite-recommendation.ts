@@ -59,6 +59,10 @@ type EvidenceJson = {
   citation_domains?: string[];
   evidence_snippets?: string[];
   dominant_competitor?: string;
+  // RECS-2B / N2 (pursue_citation_sources only) — specific pages the AI
+  // already cites among citation_domains, so the digital-PR asset can name
+  // an exact article instead of only a bare domain.
+  citation_pages?: { domain: string; title: string; url: string }[];
   [key: string]: unknown;
 };
 
@@ -368,7 +372,8 @@ export async function rewriteRecommendationCore({
         mentionedCompetitors,
         citationDomains,
         dominantCompetitor: evidence.dominant_competitor,
-        evidenceSnippets: evidence.evidence_snippets ?? []
+        evidenceSnippets: evidence.evidence_snippets ?? [],
+        citationPages: evidence.citation_pages
       });
     } catch (error) {
       console.error(`${LOG_PREFIX} gemini_call_failed`, {
