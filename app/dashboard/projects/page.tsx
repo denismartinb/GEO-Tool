@@ -7,16 +7,16 @@ import { Icon } from "@/components/ui/icon";
 import { archiveProject, restoreProject } from "./actions";
 
 const successMessages: Record<string, string> = {
-  project_archived: "Proyecto archivado. Puedes restaurarlo desde Proyectos archivados.",
-  project_restored: "Proyecto restaurado. Ya vuelve a estar disponible en tu espacio de trabajo."
+  project_archived: "Dominio archivado. Puedes restaurarlo desde Dominios archivados.",
+  project_restored: "Dominio restaurado. Ya vuelve a estar disponible en tu espacio de trabajo."
 };
 
 const errorMessages: Record<string, string> = {
-  invalid_project_id: "No se pudo archivar el proyecto.",
-  project_archive_failed: "No se pudo archivar el proyecto.",
-  project_restore_failed: "No se pudo restaurar el proyecto.",
-  project_already_archived: "Ya existe un proyecto archivado para ese dominio, país e idioma. Restáuralo para continuar.",
-  project_already_active: "Ya existe un proyecto activo para ese dominio, país e idioma."
+  invalid_project_id: "No se pudo archivar el dominio.",
+  project_archive_failed: "No se pudo archivar el dominio.",
+  project_restore_failed: "No se pudo restaurar el dominio.",
+  project_already_archived: "Ya tienes este dominio archivado para ese país e idioma. Restáuralo para continuar.",
+  project_already_active: "Ya tienes este dominio activo para ese país e idioma."
 };
 
 type Project = {
@@ -86,9 +86,9 @@ export default async function ProjectsPage({
     <div className="page space-y-5">
       <p className="kicker">Espacio de trabajo</p>
       <div className="flex items-center justify-between gap-3">
-        <h1 className="title-lg">Proyectos</h1>
+        <h1 className="title-lg">Dominios</h1>
         <Link href="/dashboard/projects/new">
-          <Button><Icon name="play" size={14} />Nuevo proyecto</Button>
+          <Button><Icon name="play" size={14} />Nuevo dominio</Button>
         </Link>
       </div>
 
@@ -97,14 +97,14 @@ export default async function ProjectsPage({
 
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Proyectos activos</h2>
-          <p className="sub mt-1">Proyectos disponibles en tu navegación de trabajo.</p>
+          <h2 className="text-lg font-semibold text-[var(--ink)]">Dominios activos</h2>
+          <p className="sub mt-1">Dominios disponibles en tu navegación de trabajo.</p>
         </div>
         {!activeProjects.length ? (
           <div className="space-y-3">
-            <EmptyState title="Todavía no hay proyectos activos" description="Crea un nuevo proyecto GEO para empezar." />
+            <EmptyState title="Todavía no hay dominios activos" description="Crea un nuevo dominio GEO para empezar." />
             {archivedProjects.length ? (
-              <p className="text-sm text-[var(--ink-2)]">Tienes proyectos archivados que puedes restaurar.</p>
+              <p className="text-sm text-[var(--ink-2)]">Tienes dominios archivados que puedes restaurar.</p>
             ) : null}
           </div>
         ) : (
@@ -116,11 +116,11 @@ export default async function ProjectsPage({
 
       <section className="space-y-3 pt-2">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Proyectos archivados</h2>
+          <h2 className="text-lg font-semibold text-[var(--ink)]">Dominios archivados</h2>
           <p className="sub mt-1">Puedes restaurarlos sin perder su configuración ni sus escaneos.</p>
         </div>
         {!archivedProjects.length ? (
-          <EmptyState title="No hay proyectos archivados" description="Los proyectos que archives aparecerán aquí para poder restaurarlos." />
+          <EmptyState title="No hay dominios archivados" description="Los dominios que archives aparecerán aquí para poder restaurarlos." />
         ) : (
           <div className="grid gap-3">
             {archivedProjects.map((project) => <ProjectCard key={project.id} project={project} />)}

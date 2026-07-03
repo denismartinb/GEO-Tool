@@ -114,7 +114,7 @@ export function WorkspaceTopbar({
           <button
             type="button"
             className={`hdr-metabtn ${metaOpen ? "on" : ""}`}
-            aria-label="Ver detalles del proyecto"
+            aria-label="Ver detalles del dominio"
             aria-expanded={metaOpen}
             onClick={() => setMetaOpen(!metaOpen)}
           >

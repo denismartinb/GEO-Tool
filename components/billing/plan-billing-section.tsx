@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import { ChangePlanModal } from "@/components/billing/change-plan-modal";
 import { changePlan, type ChangePlanResult } from "@/app/dashboard/settings/billing/actions";
-import type { UsageSummary } from "@/lib/billing";
+import type { ActiveProjectSummary, UsageSummary } from "@/lib/billing";
 
 function UsageRow({
   icon,
@@ -55,22 +55,28 @@ function UsageRow({
 export function PlanBillingSection({
   currentPlanId,
   agencyPlanId,
-  usage
+  usage,
+  activeProjects
 }: {
   currentPlanId: Plan["id"];
   agencyPlanId: Plan["id"];
   usage: UsageSummary;
+  activeProjects: ActiveProjectSummary[];
 }) {
   const [planId, setPlanId] = useState<Plan["id"]>(currentPlanId);
+  const [projects, setProjects] = useState<ActiveProjectSummary[]>(activeProjects);
   const [modal, setModal] = useState<{ initialTargetId?: Plan["id"] } | null>(null);
 
   const current = PLANS.find((p) => p.id === planId)!;
   const agencyPlan = PLANS.find((p) => p.id === agencyPlanId)!;
 
-  const applyChange = async (id: Plan["id"]): Promise<ChangePlanResult> => {
-    const result = await changePlan(id);
+  const applyChange = async (id: Plan["id"], archiveProjectIds: string[]): Promise<ChangePlanResult> => {
+    const result = await changePlan(id, archiveProjectIds);
     if (result.success) {
       setPlanId(id);
+      if (archiveProjectIds.length) {
+        setProjects((rows) => rows.filter((row) => !archiveProjectIds.includes(row.id)));
+      }
     }
     return result;
   };
@@ -126,7 +132,7 @@ export function PlanBillingSection({
         <Card>
           <CardContent className="space-y-4">
             <UsageRow icon="prompts" label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
-            <UsageRow icon="globe" label="Proyectos / dominios" value={usage.projectCount} cap={usage.projectCap} />
+            <UsageRow icon="globe" label="Dominios" value={usage.projectCount} cap={usage.projectCap} />
             <UsageRow icon="layers" label="Motores de IA" value={usage.engineCount} cap={usage.engineCap} />
           </CardContent>
         </Card>
@@ -159,6 +165,7 @@ export function PlanBillingSection({
         <ChangePlanModal
           currentId={planId}
           initialTargetId={modal.initialTargetId}
+          activeProjects={projects}
           onClose={() => setModal(null)}
           onApply={applyChange}
         />

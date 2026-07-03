@@ -89,7 +89,7 @@ const GENERIC_REWRITE_FAILURE =
   "No se ha podido mejorar la redacción en este momento. Inténtalo de nuevo en unos minutos.";
 
 const RATE_LIMIT_FAILURE =
-  "Has alcanzado el límite de mejoras con IA para este proyecto por hoy. Vuelve a intentarlo más tarde.";
+  "Has alcanzado el límite de mejoras con IA para este dominio por hoy. Vuelve a intentarlo más tarde.";
 
 const LOG_PREFIX = "[geo:recommendation-rewrite]";
 

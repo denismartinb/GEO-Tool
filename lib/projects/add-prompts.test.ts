@@ -24,10 +24,19 @@ function freshId() {
 
 /**
  * Minimal in-memory fake covering exactly the query shapes `addPromptsCore`
- * issues against "projects" (single ownership-scoped read) and
- * "project_prompts" (active-prompt read + bulk insert).
+ * issues against "projects" (single ownership-scoped read), "profiles"
+ * (plan lookup), and "project_prompts" (active-prompt count/read + bulk
+ * insert).
  */
-function makeFakeSupabase({ project, activePrompts }: { project: Row | null; activePrompts: Row[] }) {
+function makeFakeSupabase({
+  project,
+  activePrompts,
+  planId = "pro"
+}: {
+  project: Row | null;
+  activePrompts: Row[];
+  planId?: string;
+}) {
   const insertedRows: Row[] = [];
   let forceInsertError = false;
 
@@ -52,6 +61,22 @@ function makeFakeSupabase({ project, activePrompts }: { project: Row | null; act
         };
       }
 
+      if (table === "profiles") {
+        return {
+          select(_cols: string) {
+            const builder = {
+              eq() {
+                return builder;
+              },
+              maybeSingle() {
+                return Promise.resolve({ data: { current_plan: planId }, error: null });
+              }
+            };
+            return builder;
+          }
+        };
+      }
+
       if (table === "project_prompts") {
         return {
           select(_cols: string) {
@@ -61,9 +86,9 @@ function makeFakeSupabase({ project, activePrompts }: { project: Row | null; act
                 filters.push([col, val]);
                 return builder;
               },
-              then(resolve: (value: { data: Row[]; error: null }) => unknown) {
+              then(resolve: (value: { data: Row[]; count: number; error: null }) => unknown) {
                 const data = activePrompts.filter((row) => filters.every(([col, val]) => row[col] === val));
-                return Promise.resolve({ data, error: null }).then(resolve);
+                return Promise.resolve({ data, count: data.length, error: null }).then(resolve);
               }
             };
             return builder;
@@ -334,6 +359,35 @@ describe("addPromptsCore", () => {
     expect(launchScanMock).not.toHaveBeenCalled();
   });
 
+  it("returns success:false without calling Gemini when the account is already at its plan's prompt cap", async () => {
+    const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+
+    // Free plan caps at 10 prompts (app/pricing/plans-data.ts) — pre-seed 10
+    // active prompts for this account (RLS scopes "project_prompts" reads to
+    // the owner across all their projects, so no project_id filter here).
+    const activePrompts = Array.from({ length: 10 }, (_, i) => ({
+      is_active: true,
+      prompt_text: `Prompt existente ${i}`,
+      category: "Comparación"
+    }));
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts, planId: "free" });
+
+    const result = await addPromptsCore({
+      projectId: PROJECT.id,
+      mode: "manual",
+      manualPrompts: ["¿Cuánto cuesta el plan Pro para diez usuarios?"],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result).toEqual({
+      success: false,
+      error: "Has alcanzado el límite de prompts monitorizados de tu plan actual. Sube de plan para añadir más."
+    });
+    expect(generateAddedPromptsMock).not.toHaveBeenCalled();
+    expect(insertedRows).toHaveLength(0);
+  });
+
   it("returns success:false when the project does not exist or is not owned by this user", async () => {
     const { addPromptsCore } = await import("@/lib/projects/add-prompts");
     const { client } = makeFakeSupabase({ project: null, activePrompts: [] });
@@ -380,7 +434,7 @@ describe("addPromptsCore", () => {
       success: true,
       addedCount: 1,
       scanLaunched: false,
-      scanWarning: "Ya hay un escaneo en curso o pendiente para este proyecto."
+      scanWarning: "Ya hay un escaneo en curso o pendiente para este dominio."
     });
   });
 });

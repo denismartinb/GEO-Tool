@@ -18,9 +18,9 @@ export function getSanitizedScanError(error: unknown) {
   if (error instanceof ProjectActionError) {
     switch (error.code) {
       case "project_not_found":
-        return "No se ha encontrado el proyecto o el escaneo solicitado.";
+        return "No se ha encontrado el dominio o el escaneo solicitado.";
       case "project_archived":
-        return "El proyecto está archivado y no puede ejecutarse.";
+        return "El dominio está archivado y no puede ejecutarse.";
       case "too_many_prompts":
         return "El escaneo pendiente supera el límite de prompts permitido.";
       case "scan_failed_no_results":

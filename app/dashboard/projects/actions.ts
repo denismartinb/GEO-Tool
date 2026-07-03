@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { getPlanForUser } from "@/lib/billing";
 import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
@@ -66,6 +67,15 @@ export async function createProject(formData: FormData) {
 
   const { domain, country, brand, name, language } = parsedForm.value;
   const { supabase, user } = await requireUser();
+
+  const [{ count: activeProjectCount, error: activeProjectsError }, plan] = await Promise.all([
+    supabase.from("projects").select("id", { count: "exact", head: true }).eq("owner_user_id", user.id).eq("is_archived", false),
+    getPlanForUser(supabase, user.id)
+  ]);
+
+  if (!activeProjectsError && (activeProjectCount ?? 0) >= plan.caps.projects) {
+    redirect("/dashboard/projects/new?error=project_limit_reached");
+  }
 
   const { data: existingProject, error: existingProjectError } = await supabase
     .from("projects")
@@ -163,6 +173,12 @@ export async function createProject(formData: FormData) {
     }
   }
 
+  // Revalidates the shared dashboard layout (Sidebar's project list, driven
+  // by getWorkspaceCounters()) — without this, a newly created project stays
+  // invisible in navigation until something else (archive/restore/delete)
+  // happens to trigger a layout revalidation, even though the project itself
+  // is correctly persisted and visible on /dashboard/projects.
+  revalidatePath("/dashboard", "layout");
   revalidatePath("/dashboard/projects");
   revalidatePath(`/dashboard/projects/${data.id}`);
 

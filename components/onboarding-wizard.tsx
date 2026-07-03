@@ -305,11 +305,12 @@ function SuggestionsLoadingOverlay({ domain }: { domain: string }) {
 
 type OnboardingWizardProps = {
   errorMessage: string | null;
+  atLimit?: boolean;
   suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
   createAction: (formData: FormData) => void | Promise<void>;
 };
 
-export function OnboardingWizard({ errorMessage, suggestAction, createAction }: OnboardingWizardProps) {
+export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction, createAction }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
   const [country, setCountry] = useState("ES");
@@ -353,6 +354,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
   const validPromptCount = promptsText ? promptsText.split("\n").length : 0;
 
   function generateSuggestions() {
+    if (atLimit) return;
     if (!domainIsValid) {
       setShowDomainErr(true);
       return;
@@ -420,7 +422,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
             </div>
             <div className="add-card-inner">
               <label className="field-label" htmlFor="domain">
-                Dominio del proyecto
+                Dominio
               </label>
               <div className="domain-bar">
                 <Icon name="globe" size={18} className="domain-globe" />
@@ -472,7 +474,7 @@ export function OnboardingWizard({ errorMessage, suggestAction, createAction }: 
                     ))}
                   </select>
                 </div>
-                <Button type="button" className="onb-cta" onClick={generateSuggestions} disabled={isPending}>
+                <Button type="button" className="onb-cta" onClick={generateSuggestions} disabled={isPending || atLimit}>
                   {isPending ? "Generando…" : "Continuar"}
                   <Icon name="arrRight" size={16} />
                 </Button>

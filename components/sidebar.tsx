@@ -54,7 +54,11 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const activeProjectId = getProjectId(pathname);
-  const project = projects.find((item) => item.id === activeProjectId) ?? null;
+  // Outside a project's own routes (Billing, Settings, the dashboard root)
+  // the URL carries no projectId — fall back to the most recent active
+  // project so "Analizar"/"Actuar" still link somewhere instead of going
+  // fully disabled whenever the account isn't currently inside a project.
+  const project = projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? null;
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
   const asideRef = useRef<HTMLElement | null>(null);
 
