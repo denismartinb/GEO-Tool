@@ -10,6 +10,7 @@ export const feedbackErrorMessages: Record<string, string> = {
   project_not_found: "No hemos encontrado el proyecto solicitado.",
   project_setup_partial:
     "El proyecto se creó, pero no pudimos guardar todos los prompts o competidores iniciales. Revísalos antes de escanear.",
+  prompt_limit_reached: "Has alcanzado el límite de prompts monitorizados de tu plan actual. Sube de plan para añadir más.",
   prompts_required: "Añade al menos un prompt activo antes de escanear.",
   recurring_requires_completed_scan:
     "Completa al menos un escaneo manual antes de activar el escaneo automático diario.",

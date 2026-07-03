@@ -1,6 +1,7 @@
 import "server-only";
 
 import { z } from "zod";
+import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, type AddPromptsMode, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
@@ -80,6 +81,15 @@ export async function addPromptsCore({
 
   if (project.is_archived) {
     return { success: false, error: feedbackErrorMessages.project_archived };
+  }
+
+  const [plan, { count: activePromptCount, error: activePromptCountError }] = await Promise.all([
+    getPlanForUser(supabase, user.id),
+    supabase.from("project_prompts").select("id", { count: "exact", head: true }).eq("is_active", true)
+  ]);
+
+  if (!activePromptCountError && (activePromptCount ?? 0) >= plan.caps.prompts) {
+    return { success: false, error: feedbackErrorMessages.prompt_limit_reached };
   }
 
   let normalizedManualPrompts: string[] = [];

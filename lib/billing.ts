@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireUser } from "@/lib/auth";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
+import type { AuthenticatedContext } from "@/lib/scan/types";
 
 const DEFAULT_PLAN_ID: Plan["id"] = "pro";
 
@@ -14,6 +15,23 @@ export type UsageSummary = {
   engineCount: number;
   engineCap: number;
 };
+
+function resolvePlan(planId: string | null | undefined): Plan {
+  return PLANS.find((p) => p.id === planId) ?? PLANS.find((p) => p.id === DEFAULT_PLAN_ID)!;
+}
+
+/**
+ * Fetches the caller's real plan (for limit-enforcement checks in server
+ * actions that already hold an authenticated `supabase`/`user` from
+ * `requireUser()` — avoids a second auth round trip).
+ */
+export async function getPlanForUser(
+  supabase: AuthenticatedContext["supabase"],
+  userId: string
+): Promise<Plan> {
+  const { data } = await supabase.from("profiles").select("current_plan").eq("id", userId).maybeSingle();
+  return resolvePlan(data?.current_plan as Plan["id"] | undefined);
+}
 
 /**
  * Real usage counters and current plan for the "Plan y facturación" page.
@@ -35,8 +53,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
       .limit(500)
   ]);
 
-  const planId = (profile?.current_plan as Plan["id"] | undefined) ?? DEFAULT_PLAN_ID;
-  const plan = PLANS.find((p) => p.id === planId) ?? PLANS.find((p) => p.id === DEFAULT_PLAN_ID)!;
+  const plan = resolvePlan(profile?.current_plan as Plan["id"] | undefined);
 
   const engineSet = new Set((results ?? []).map((r) => r.provider).filter(Boolean));
 
