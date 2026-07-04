@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { createClient } from "@/lib/supabase/server";
 import { PLANS } from "@/app/pricing/plans-data";
+import { signInWithApple } from "@/app/auth/apple/actions";
 import { signup } from "./actions";
 
 export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; plan?: string }> }) {
@@ -79,6 +80,15 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             </svg>
             Continuar con Google
           </button>
+          <form action={signInWithApple}>
+            <input type="hidden" name="from" value="/signup" />
+            <button type="submit" className="auth-sso-btn">
+              <svg width={17} height={17} viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M16.365 1.43c0 1.14-.42 2.2-1.12 2.99-.76.87-2.02 1.54-3.03 1.46-.13-1.11.42-2.28 1.06-3.01.72-.83 2.02-1.44 3.09-1.44zM20.5 17.02c-.55 1.27-.81 1.83-1.52 2.95-.99 1.57-2.38 3.52-4.1 3.53-1.53.01-1.92-.99-4-.98-2.07.01-2.5.99-4.03.98-1.72-.01-3.04-1.78-4.03-3.35C.4 15.71-.19 11.6 1.6 9.13c.99-1.37 2.57-2.24 4.05-2.24 1.51 0 2.46 1.01 3.71 1.01 1.21 0 1.95-1.01 3.7-1.01 1.32 0 2.72.72 3.72 1.96-3.27 1.79-2.74 6.47.02 8.17z"/>
+              </svg>
+              Continuar con Apple
+            </button>
+          </form>
         </div>
 
         {/* Link login */}

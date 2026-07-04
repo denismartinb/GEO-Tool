@@ -19,6 +19,44 @@ added, renamed, or removed.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Vercel + local `.env.local` | `eyJ...` JWT |
 | `SUPABASE_SERVICE_ROLE_KEY` | Only for admin tasks | Vercel (not local) | `eyJ...` JWT — never expose client-side |
 
+### Apple Sign In (OAuth)
+
+**No application env vars are required for Apple Sign In.** The provider is
+configured entirely in the Supabase dashboard, and the app code only relies on
+`NEXT_PUBLIC_SITE_URL` (documented below) to build the `redirectTo` callback.
+The "Continuar con Apple" buttons on `/login` and `/signup` call
+`supabase.auth.signInWithOAuth({ provider: "apple" })`
+(`app/auth/apple/actions.ts`) and return through `app/auth/callback/route.ts`.
+
+**The button will not work until the following MANUAL configuration is done —
+this cannot be done from this repo:**
+
+1. **Apple Developer Program** (paid, ~$99/year):
+   - Create a **Services ID** (this becomes the OAuth `client_id`).
+   - Enable the **"Sign in with Apple"** capability on it.
+   - Register the **Return URL(s)**: `https://<production-domain>/auth/callback`
+     (and any Vercel preview URL you want to allow — Apple requires each exact
+     domain to be whitelisted, so Apple login only works on registered hosts).
+2. **Private key (`.p8`)**: create a Key with "Sign in with Apple" enabled,
+   download the `.p8` (downloadable only once), and record the **Key ID** and
+   your **Team ID**.
+3. **Client Secret (signed JWT)**: Apple does not issue a static secret. You
+   must generate a JWT signed with the `.p8`, and it **expires in ≤6 months** —
+   it must be regenerated/rotated on a schedule or Apple sign-in breaks in
+   production.
+4. **Supabase dashboard** → Authentication → Providers → **Apple**: enable it
+   and paste the Services ID + the signed JWT secret. This step is manual in the
+   Supabase panel and has no code representation in this repo.
+5. **Supabase Auth → URL Configuration**: ensure `/auth/callback` on each
+   deployed domain is an allowed redirect URL.
+
+Notes:
+- Apple may return a private relay email (`@privaterelay.appleid.com`) when the
+  user hides their address. The profile trigger (`handle_new_user`, migration
+  `0011`) fires for OAuth users the same as for email/password signups and
+  inserts whatever email Apple provides; OAuth users have no `plan` metadata so
+  they default to `free`. No trigger change is needed.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |
