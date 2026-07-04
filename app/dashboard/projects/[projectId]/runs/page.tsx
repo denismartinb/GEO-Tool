@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
+import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
@@ -303,6 +304,7 @@ export default async function RunsPage({
       {shouldAutoExecute && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
+      {activeRun ? <ScanProgressPoller /> : null}
 
       {/* Sticky header */}
       <div className="ov-sticky-header">

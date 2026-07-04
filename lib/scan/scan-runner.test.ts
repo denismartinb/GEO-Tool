@@ -19,7 +19,7 @@ import {
 describe("getActionErrorCode", () => {
   it("returns the code for a ProjectActionError", () => {
     expect(getActionErrorCode(new ProjectActionError("project_not_found"))).toBe("project_not_found");
-    expect(getActionErrorCode(new ProjectActionError("too_many_prompts"))).toBe("too_many_prompts");
+    expect(getActionErrorCode(new ProjectActionError("scan_failed"))).toBe("scan_failed");
   });
 
   it("returns unexpected_error for an arbitrary Error", () => {
@@ -43,12 +43,6 @@ describe("getSanitizedScanError", () => {
   it("returns a specific message for project_archived", () => {
     expect(getSanitizedScanError(new ProjectActionError("project_archived"))).toBe(
       "El dominio está archivado y no puede ejecutarse."
-    );
-  });
-
-  it("returns a specific message for too_many_prompts", () => {
-    expect(getSanitizedScanError(new ProjectActionError("too_many_prompts"))).toBe(
-      "El escaneo pendiente supera el límite de prompts permitido."
     );
   });
 

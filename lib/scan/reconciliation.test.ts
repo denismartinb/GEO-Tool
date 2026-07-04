@@ -17,6 +17,7 @@ type ScanRunRow = {
   error_summary: string | null;
   started_at: string | null;
   created_at: string;
+  updated_at: string;
   finished_at: string | null;
 };
 
@@ -59,7 +60,7 @@ function fakeServiceClient(initialRows: ScanRunRow[]) {
         data = data.filter((row) => row[column] !== value);
         return builder;
       },
-      lt(column: "started_at" | "created_at", value: string) {
+      lt(column: "started_at" | "created_at" | "updated_at", value: string) {
         data = data.filter((row) => {
           const fieldValue = row[column];
           return fieldValue !== null && fieldValue < value;
@@ -139,6 +140,14 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
   beforeEach(() => {
     createPendingScanRunCore.mockReset();
     createPendingScanRunCore.mockResolvedValue("new-run-id");
+    // Every test in this block seeds rows with fixed 2026-06-13 timestamps
+    // and reasons about staleness/lookback windows relative to "now" (the
+    // pending/running timeout cutoffs, the 24h auto-retry lookback). Pinning
+    // the clock here — not just in the individual tests that already did —
+    // is what keeps those comparisons meaningful regardless of the real
+    // wall-clock date the suite happens to run on.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-13T12:00:00.000Z"));
   });
 
   afterEach(() => {
@@ -154,6 +163,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY,
         started_at: "2026-06-13T10:00:00.000Z",
         created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:01:00.000Z",
         finished_at: "2026-06-13T10:01:00.000Z"
       }
     ]);
@@ -180,6 +190,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY,
         started_at: "2026-06-13T10:00:00.000Z",
         created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:01:00.000Z",
         finished_at: "2026-06-13T10:01:00.000Z"
       },
       {
@@ -189,6 +200,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: null,
         started_at: null,
         created_at: "2026-06-13T10:05:00.000Z",
+        updated_at: "2026-06-13T10:05:00.000Z",
         finished_at: null
       }
     ]);
@@ -211,6 +223,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: SCAN_TIMEOUT_ERROR_SUMMARY,
         started_at: "2026-06-13T09:00:00.000Z",
         created_at: "2026-06-13T09:00:00.000Z",
+        updated_at: "2026-06-13T09:02:00.000Z",
         finished_at: "2026-06-13T09:02:00.000Z"
       },
       {
@@ -220,6 +233,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY,
         started_at: "2026-06-13T10:00:00.000Z",
         created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:01:00.000Z",
         finished_at: "2026-06-13T10:01:00.000Z"
       }
     ]);
@@ -242,6 +256,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: "No se pudo completar la ejecución del escaneo.",
         started_at: "2026-06-13T10:00:00.000Z",
         created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:01:00.000Z",
         finished_at: "2026-06-13T10:01:00.000Z"
       }
     ]);
@@ -263,8 +278,9 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         project_id: PROJECT_ID,
         status: "running",
         error_summary: null,
-        started_at: "2026-06-13T11:00:00.000Z", // > SCAN_RUNNING_TIMEOUT_SECONDS (120s) ago
+        started_at: "2026-06-13T11:00:00.000Z",
         created_at: "2026-06-13T11:00:00.000Z",
+        updated_at: "2026-06-13T11:00:00.000Z", // > SCAN_RUNNING_TIMEOUT_SECONDS (120s) ago, no batch progress since
         finished_at: null
       }
     ]);
@@ -276,6 +292,31 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     expect(rows[0].status).toBe("failed");
     expect(rows[0].error_summary).toBe(SCAN_TIMEOUT_ERROR_SUMMARY);
     expect(createPendingScanRunCore).toHaveBeenCalledTimes(1);
+  });
+
+  it("does NOT reconcile a running campaign whose started_at is stale but updated_at is recent (SCAN-CHAIN-1: an actively self-chaining multi-batch campaign)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-13T12:00:00.000Z"));
+
+    const { service, rows } = fakeServiceClient([
+      {
+        id: "run-1",
+        project_id: PROJECT_ID,
+        status: "running",
+        error_summary: null,
+        started_at: "2026-06-13T11:00:00.000Z", // > SCAN_RUNNING_TIMEOUT_SECONDS (120s) ago
+        created_at: "2026-06-13T11:00:00.000Z",
+        updated_at: "2026-06-13T11:59:50.000Z", // last batch's progress write, 10s ago
+        finished_at: null
+      }
+    ]);
+
+    const { reconcileStuckScanRuns } = await import("./reconciliation");
+    const result = await reconcileStuckScanRuns({ projectId: PROJECT_ID, service });
+
+    expect(result.reconciledCount).toBe(0);
+    expect(rows[0].status).toBe("running");
+    expect(createPendingScanRunCore).not.toHaveBeenCalled();
   });
 
   it("a single reconciliation pass triggers at most one auto-retry across stale-run and zero-results passes", async () => {
@@ -290,6 +331,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: null,
         started_at: null,
         created_at: "2026-06-13T11:00:00.000Z", // > SCAN_PENDING_TIMEOUT_SECONDS (300s) ago
+        updated_at: "2026-06-13T11:00:00.000Z",
         finished_at: null
       },
       {
@@ -299,6 +341,7 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
         error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY,
         started_at: "2026-06-13T10:00:00.000Z",
         created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:01:00.000Z",
         finished_at: "2026-06-13T10:01:00.000Z"
       }
     ]);

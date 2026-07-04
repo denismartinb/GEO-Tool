@@ -1,5 +1,6 @@
 import "server-only";
 
+import { after } from "next/server";
 import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
 import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
@@ -383,6 +384,98 @@ async function processPromptJob({
   return { kind: "failed" };
 }
 
+/**
+ * Recomputes `scan_runs.successful_prompts`/`failed_prompts` from the actual
+ * `jobs` rows (SCAN-CHAIN-1) rather than threading a delta count through
+ * across batches. This is deliberately a full recount, not an increment: a
+ * campaign can be advanced by more than one invocation in rare races (a
+ * duplicate continuation fetch), so counting from the source of truth is
+ * safe under concurrency in a way a `current + delta` read-modify-write is
+ * not. Also serves as the "campaign made progress" write that bumps
+ * `scan_runs.updated_at` (via the existing trigger), which is what
+ * `reconcileStuckScanRuns` now keys its staleness check on.
+ */
+async function refreshRunProgressCounters({
+  service,
+  projectId,
+  runId
+}: {
+  service: ReturnType<typeof createServiceClient>;
+  projectId: string;
+  runId: string;
+}): Promise<{ successCount: number; failedCount: number }> {
+  const [{ count: successCount }, { count: failedCount }] = await Promise.all([
+    service
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("run_id", runId)
+      .eq("job_type", "scan_prompt")
+      .eq("status", "completed"),
+    service
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("run_id", runId)
+      .eq("job_type", "scan_prompt")
+      .eq("status", "failed")
+  ]);
+
+  await service
+    .from("scan_runs")
+    .update({ successful_prompts: successCount ?? 0, failed_prompts: failedCount ?? 0 })
+    .eq("id", runId)
+    .eq("project_id", projectId);
+
+  return { successCount: successCount ?? 0, failedCount: failedCount ?? 0 };
+}
+
+function getSiteUrl(): string {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
+  );
+}
+
+/**
+ * Fires the next batch of a multi-batch campaign (SCAN-CHAIN-1) without
+ * making the caller wait for it: called from inside `after()`, so Next.js
+ * keeps this invocation's function instance alive just long enough for the
+ * POST to actually reach `/api/scan/continue`, but the *response* to
+ * whoever called `executePendingScan` (the manual "Lanzar escaneo" action,
+ * the cron sweep, ...) has already been sent — this does not add to their
+ * wait time. `/api/scan/continue` itself resolves quickly relative to its
+ * own 60s budget; awaiting its response here just means "the next batch was
+ * accepted," not "the whole remaining campaign finished."
+ *
+ * Errors are swallowed (logged only): if this dispatch is lost, the campaign
+ * simply stalls until `reconcileStuckScanRuns` notices no progress and
+ * auto-retries, same safety net as any other execution failure.
+ */
+async function triggerScanContinuation({ projectId, runId }: { projectId: string; runId: string }): Promise<void> {
+  const secret = process.env.SCAN_CONTINUE_SECRET;
+  if (!secret) {
+    console.error("[scan-runner] cannot self-chain scan batch: SCAN_CONTINUE_SECRET is not configured", {
+      projectId,
+      runId
+    });
+    return;
+  }
+
+  try {
+    await fetch(`${getSiteUrl()}/api/scan/continue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ projectId, runId })
+    });
+  } catch (error) {
+    console.error("[scan-runner] failed to dispatch scan continuation", {
+      projectId,
+      runId,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
 export async function executePendingScan({
   projectId,
   runId,
@@ -403,10 +496,18 @@ export async function executePendingScan({
     throw new ProjectActionError("project_not_found");
   }
 
-  if (run.status !== "pending") {
+  // A late/duplicate invocation (e.g. a retried continuation dispatch)
+  // landing on an already-terminal run has nothing to do — some other
+  // invocation already finished or aborted this campaign. Not an error.
+  if (run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
+    return;
+  }
+
+  if (run.status !== "pending" && run.status !== "running") {
     throw new ProjectActionError("scan_failed");
   }
 
+  const isFirstBatch = run.status === "pending";
   const service = createServiceClient();
 
   const { data: project } = await supabase
@@ -450,33 +551,37 @@ export async function executePendingScan({
 
   const jobs = jobsRaw as unknown as (JobRow & { created_at: string })[];
   const startJob = jobs.find((job) => job.job_type === "scan_start");
-  const promptJobs = jobs.filter((job) => job.job_type === "scan_prompt");
   const finalizeJob = jobs.find((job) => job.job_type === "scan_finalize");
-
-  if (promptJobs.length > MAX_REAL_SCAN_PROMPTS) {
-    throw new ProjectActionError("too_many_prompts");
-  }
+  // Only the pending scan_prompt jobs, oldest first — the batch this
+  // invocation is responsible for (SCAN-CHAIN-1). Jobs already
+  // completed/failed by an earlier batch of this same campaign are left
+  // alone; anything beyond MAX_REAL_SCAN_PROMPTS stays pending for the next
+  // self-chained invocation.
+  const batchCandidates = jobs
+    .filter((job) => job.job_type === "scan_prompt" && job.status === "pending")
+    .slice(0, MAX_REAL_SCAN_PROMPTS);
 
   const nowIso = new Date().toISOString();
-  const { data: runningRun, error: runStartError } = await service
-    .from("scan_runs")
-    .update({ status: "running", started_at: nowIso, error_summary: null })
-    .eq("id", runId)
-    .eq("project_id", projectId)
-    .eq("status", "pending")
-    .select("id")
-    .maybeSingle();
 
-  if (runStartError || !runningRun) {
-    throw new ProjectActionError("scan_failed");
+  if (isFirstBatch) {
+    const { data: runningRun, error: runStartError } = await service
+      .from("scan_runs")
+      .update({ status: "running", started_at: nowIso, error_summary: null })
+      .eq("id", runId)
+      .eq("project_id", projectId)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+
+    if (runStartError || !runningRun) {
+      throw new ProjectActionError("scan_failed");
+    }
   }
 
   const providers = getLLMScanProviders();
-  let promptSuccess = 0;
-  let promptFailed = 0;
 
   try {
-    if (startJob) {
+    if (isFirstBatch && startJob) {
       await service
         .from("jobs")
         .update({
@@ -511,56 +616,150 @@ export async function executePendingScan({
         .eq("run_id", runId);
     }
 
-    // Run all prompt jobs concurrently (SCAN-ROBUST-2) so the LLM calls
-    // overlap instead of summing — keeping the run within the Hobby plan's
-    // hard maxDuration=60s budget (docs/adr/0003-sync-scan-execution-and-maxduration.md).
-    const promptJobResults = await Promise.allSettled(
-      promptJobs.map((job) =>
-        processPromptJob({
-          service,
-          projectId,
-          runId,
-          job,
-          project,
-          competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
-          providers
-        })
-      )
-    );
+    // Atomically claim this batch's candidates (SCAN-CHAIN-1): a duplicate
+    // continuation dispatch (network retry, an `after()` re-fire) racing
+    // against this invocation can only ever "win" jobs that are still
+    // `pending` at the moment of the update — whichever invocation's UPDATE
+    // commits first for a given row is the only one that processes it.
+    let claimedJobs: (JobRow & { created_at: string })[] = [];
+    if (batchCandidates.length > 0) {
+      const { data: claimedRows, error: claimError } = await service
+        .from("jobs")
+        .update({ status: "running", locked_at: nowIso, locked_by: "gemini-executor" })
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "pending")
+        .in(
+          "id",
+          batchCandidates.map((job) => job.id)
+        )
+        .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at");
 
-    let configError: Error | null = null;
-
-    for (const settled of promptJobResults) {
-      if (settled.status === "rejected") {
-        promptFailed += 1;
-        continue;
+      if (claimError) {
+        throw new ProjectActionError("scan_failed");
       }
 
-      switch (settled.value.kind) {
-        case "success":
-          promptSuccess += 1;
-          break;
-        case "failed":
-          promptFailed += 1;
-          break;
-        case "config_error":
+      claimedJobs = (claimedRows ?? []) as unknown as (JobRow & { created_at: string })[];
+    }
+
+    if (claimedJobs.length > 0) {
+      // Run this batch's prompt jobs concurrently (SCAN-ROBUST-2) so the LLM
+      // calls overlap instead of summing — keeping each batch within the
+      // Hobby plan's hard maxDuration=60s budget
+      // (docs/adr/0003-sync-scan-execution-and-maxduration.md). A campaign
+      // larger than MAX_REAL_SCAN_PROMPTS spans multiple such batches,
+      // chained below (docs/adr/0014-batched-self-chaining-scan-execution.md).
+      const promptJobResults = await Promise.allSettled(
+        claimedJobs.map((job) =>
+          processPromptJob({
+            service,
+            projectId,
+            runId,
+            job,
+            project,
+            competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
+            providers
+          })
+        )
+      );
+
+      let configError: Error | null = null;
+
+      for (const settled of promptJobResults) {
+        if (settled.status === "rejected") continue;
+        if (settled.value.kind === "config_error") {
           configError = settled.value.error;
-          break;
+        }
       }
+
+      if (configError) {
+        throw configError;
+      }
+
+      await refreshRunProgressCounters({ service, projectId, runId });
     }
 
-    if (configError) {
-      throw configError;
+    // Not just `pending`: a job another concurrent invocation is actively
+    // processing is `running`, not yet `completed`/`failed`. Treating that as
+    // "nothing left" would let this invocation finalize the campaign (run
+    // scoring/recommendations) while results for that job are still being
+    // written elsewhere — checking both statuses is what makes finalize wait
+    // for every job to reach a terminal state, not just for the pending queue
+    // to empty out.
+    const { count: unfinishedCount } = await service
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("run_id", runId)
+      .eq("job_type", "scan_prompt")
+      .in("status", ["pending", "running"]);
+
+    if ((unfinishedCount ?? 0) > 0) {
+      // Work remains. If this invocation just made real progress
+      // (claimedJobs.length > 0), it owns handing off to the next batch
+      // without making whoever called executePendingScan (the manual scan
+      // action, the cron sweep, a prior continuation) wait for it. If this
+      // invocation claimed nothing — every candidate was already claimed by
+      // another in-flight invocation — the unfinished work belongs to that
+      // other invocation; scheduling a second continuation here would just
+      // be redundant.
+      if (claimedJobs.length > 0) {
+        after(() => triggerScanContinuation({ projectId, runId }));
+      }
+      return;
     }
 
-    if (promptSuccess === 0) {
-      // Distinct from the generic "scan_failed": zero successful prompts is a
-      // recoverable, run-level outcome (every individual prompt failed, but
-      // there is no reason to believe a retry would fail identically — e.g.
-      // a transient Gemini outage affecting all 6 calls). reconcileStuckScanRuns
-      // treats this error_summary as eligible for the same bounded auto-retry
-      // as a timeout (SCAN-ROBUST-1). GeminiConfigError (missing API key,
-      // invalid model) is NOT this code — it remains terminal.
+    // Every scan_prompt job for this campaign is terminal (completed or
+    // failed): this is the final batch. Atomically
+    // claim the scan_finalize job as the single-owner gate for the
+    // extraction/scoring/recommendations tail below, so a racing duplicate
+    // invocation that also observes zero pending prompt jobs cannot run it
+    // twice.
+    if (!finalizeJob) {
+      throw new ProjectActionError("scan_failed");
+    }
+
+    const { data: claimedFinalize, error: claimFinalizeError } = await service
+      .from("jobs")
+      .update({
+        status: "running",
+        locked_at: nowIso,
+        locked_by: "gemini-executor",
+        attempt_count: finalizeJob.attempt_count + 1,
+        last_error: null
+      })
+      .eq("id", finalizeJob.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
+
+    if (claimFinalizeError) {
+      throw new ProjectActionError("scan_failed");
+    }
+
+    if (!claimedFinalize) {
+      // Another invocation already claimed (or already completed) finalize
+      // for this campaign.
+      return;
+    }
+
+    const { count: totalSuccessCount } = await service
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("run_id", runId)
+      .eq("job_type", "scan_prompt")
+      .eq("status", "completed");
+
+    if ((totalSuccessCount ?? 0) === 0) {
+      // Distinct from the generic "scan_failed": zero successful prompts
+      // across the whole campaign is a recoverable, run-level outcome (every
+      // individual prompt failed, but there is no reason to believe a retry
+      // would fail identically — e.g. a transient Gemini outage). See
+      // docs/scan-lifecycle.md. GeminiConfigError (missing API key, invalid
+      // model) is NOT this code — it remains terminal.
       throw new ProjectActionError("scan_failed_no_results");
     }
 
@@ -766,47 +965,36 @@ export async function executePendingScan({
       });
     }
 
-    if (finalizeJob) {
-      await service
-        .from("jobs")
-        .update({
-          status: "running",
-          locked_at: new Date().toISOString(),
-          locked_by: "gemini-executor",
-          attempt_count: finalizeJob.attempt_count + 1,
-          last_error: null
-        })
-        .eq("id", finalizeJob.id)
-        .eq("project_id", projectId)
-        .eq("run_id", runId);
+    // finalizeJob was already claimed (status -> running) above, before the
+    // no-results check — this just logs and marks it completed.
+    await logJob(service, {
+      jobId: finalizeJob.id,
+      projectId,
+      runId,
+      level: "info",
+      message: "Finalizing LLM scan run.",
+      context: { providers }
+    });
 
-      await logJob(service, {
-        jobId: finalizeJob.id,
-        projectId,
-        runId,
-        level: "info",
-        message: "Finalizing LLM scan run.",
-        context: { providers }
-      });
+    await service
+      .from("jobs")
+      .update({
+        status: "completed",
+        locked_at: null,
+        locked_by: null
+      })
+      .eq("id", finalizeJob.id)
+      .eq("project_id", projectId)
+      .eq("run_id", runId);
 
-      await service
-        .from("jobs")
-        .update({
-          status: "completed",
-          locked_at: null,
-          locked_by: null
-        })
-        .eq("id", finalizeJob.id)
-        .eq("project_id", projectId)
-        .eq("run_id", runId);
-    }
+    const { failedCount: totalFailedCount } = await refreshRunProgressCounters({ service, projectId, runId });
 
     await service
       .from("scan_runs")
       .update({
         status: "completed",
-        successful_prompts: promptSuccess,
-        failed_prompts: promptFailed,
+        successful_prompts: totalSuccessCount ?? 0,
+        failed_prompts: totalFailedCount,
         finished_at: new Date().toISOString(),
         extraction_version: EXTRACTION_VERSION,
         scoring_version: SCORING_VERSION
@@ -844,21 +1032,15 @@ export async function executePendingScan({
       .eq("run_id", runId)
       .eq("status", "running");
 
-    const { count: failedPromptCount } = await service
-      .from("jobs")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("run_id", runId)
-      .eq("job_type", "scan_prompt")
-      .eq("status", "failed");
+    const { successCount, failedCount } = await refreshRunProgressCounters({ service, projectId, runId });
 
     await service
       .from("scan_runs")
       .update({
         status: "failed",
         error_summary: errorSummary,
-        successful_prompts: promptSuccess,
-        failed_prompts: failedPromptCount ?? promptFailed,
+        successful_prompts: successCount,
+        failed_prompts: failedCount,
         finished_at: new Date().toISOString()
       })
       .eq("id", runId)
