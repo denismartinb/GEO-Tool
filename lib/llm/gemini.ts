@@ -248,7 +248,7 @@ export type DomainAuditRawResponse = {
  * NOT decide what counts as "verified own-domain content". That filtering
  * (resolve each chunk's redirect, keep only ones matching the project's own
  * domain, fail-closed on any that can't be resolved) is the caller's
- * responsibility (lib/recommendations/domain-audit.ts), mirroring how
+ * responsibility (lib/recommendations/domain-coverage.ts), mirroring how
  * lib/scan/extraction.ts owns the equivalent decision for the main scan
  * pipeline. Never treat this function's `text` as a verified fact on its
  * own — the model is not hard-restricted to the given domain and may ground

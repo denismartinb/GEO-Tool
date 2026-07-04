@@ -140,13 +140,18 @@ function makeFakeService({
       return {
         select(_cols: string, options?: { count?: string; head?: boolean }) {
           if (options?.head) {
-            // Rate-limit count branch: .eq(...).gte(...) is awaited directly.
+            // Rate-limit count branch: .eq(...).gte(...).eq(generation_type)
+            // chained in any order, then awaited. The builder is thenable so it
+            // resolves regardless of how many filters are appended.
             const builder = {
               eq() {
                 return builder;
               },
               gte() {
-                return Promise.resolve({ count: rateCount, error: rateError });
+                return builder;
+              },
+              then(resolve: (v: { count: number | null; error: unknown }) => unknown) {
+                return Promise.resolve({ count: rateCount, error: rateError }).then(resolve);
               }
             };
             return builder;

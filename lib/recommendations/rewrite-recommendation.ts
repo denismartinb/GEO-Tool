@@ -325,9 +325,12 @@ export async function rewriteRecommendationCore({
 
     console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
 
-    // Bound Gemini cost/abuse per project before spending an LLM call.
+    // Bound Gemini cost/abuse per project before spending an LLM call. Scope
+    // the count to this generation type so unrelated rows (e.g. the separate
+    // domain_coverage budget, DOMAIN-COVERAGE-1) never consume the rewrite
+    // pool, and vice versa (data-guardian C6).
     stage = "rate_limit";
-    const rateLimit = await checkGenerationRateLimit(service, projectId);
+    const rateLimit = await checkGenerationRateLimit(service, projectId, { generationType: GENERATION_TYPE });
     if (!rateLimit.allowed) {
       console.warn(`${LOG_PREFIX} rate_limited`, {
         project_id: projectId,

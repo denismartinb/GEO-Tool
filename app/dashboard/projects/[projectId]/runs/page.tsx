@@ -6,11 +6,19 @@ import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
+import { isProOrAbove } from "@/lib/billing";
 import { ENABLE_SYNC_SCAN_EXECUTION, getRunErrorDisplay, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
+import { DomainCoverageSection } from "./domain-coverage-section";
+
+// The domain-coverage audit (auditDomainCoverageAction) runs several sequential
+// Gemini grounding calls; like the recommendations page, raise the server
+// action's ceiling to the 60s Vercel maxDuration so the in-app time budget
+// (COVERAGE_TOTAL_BUDGET_MS) governs, not the platform default. See ADR 0003.
+export const maxDuration = 60;
 
 /* ---- Status helpers ---- */
 
@@ -167,7 +175,17 @@ export default async function RunsPage({
   const { projectId } = await params;
   const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+
+  // "Cobertura del dominio" (DOMAIN-COVERAGE-1) is Pro+-gated. Read the raw
+  // plan column directly via isProOrAbove, never via getPlanForUser/resolvePlan
+  // (see lib/billing.ts for why that fallback is unsafe for a feature gate).
+  const { data: coverageProfile } = await supabase
+    .from("profiles")
+    .select("current_plan")
+    .eq("id", user.id)
+    .maybeSingle();
+  const canAuditCoverage = isProOrAbove(coverageProfile?.current_plan as string | undefined);
 
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
@@ -508,6 +526,10 @@ export default async function RunsPage({
           <ScanTriggerButton projectId={projectId} disabled={Boolean(activeRun)} label="Repetir escaneo" />
         </div>
       </div>
+
+      {/* Cobertura del dominio (DOMAIN-COVERAGE-1) — sits directly under the scan
+          controls; provisional placement, UX to be finalised. */}
+      <DomainCoverageSection projectId={projectId} canAuditCoverage={canAuditCoverage} />
 
       {/* Empty state */}
       {allRuns.length === 0 ? (
