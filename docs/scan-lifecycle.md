@@ -58,23 +58,38 @@ job when a run is created (`lib/scan/run-creation.ts`). `executePendingScan`
 does **not** try to process all of them in one invocation: it atomically
 claims up to `MAX_REAL_SCAN_PROMPTS` (10) still-`pending` jobs per call —
 enough to fit comfortably inside the ~60s Vercel `maxDuration` budget
-(docs/adr/0003) — processes that batch, and then:
+(docs/adr/0003) — processes that batch, and once every `scan_prompt` job is
+terminal, atomically claims the run's `scan_finalize` job as a single-owner
+gate and runs structured extraction, scoring, and recommendations exactly
+once, then marks the run `completed`.
 
-- if more `scan_prompt` jobs are still `pending` or `running` for this run,
-  schedules (via Next.js's `after()`, fire-and-forget) a POST to
-  `/api/scan/continue` that runs the next batch in its own fresh invocation,
-  without making whoever called `executePendingScan` (the manual "Lanzar
-  escaneo" action, the daily cron) wait for the rest of the campaign;
-- once every `scan_prompt` job is terminal, atomically claims the run's
-  `scan_finalize` job as a single-owner gate and runs structured extraction,
-  scoring, and recommendations exactly once, then marks the run `completed`.
+There are **two ways the remaining batches get driven**, chosen by
+`executePendingScan`'s `scheduleContinuation` flag:
+
+- **Foreground (default for the manual "Lanzar escaneo" / onboarding path):**
+  the `autoExecutePendingScan` server action loops `executePendingScan`
+  (`scheduleContinuation: false`) batch after batch within one request's
+  ~40s budget, then returns the run's status; the `AutoExecuteScan` client
+  component re-invokes it until the run is terminal. This drives the whole
+  campaign through the **authenticated user session**, so it needs neither the
+  continuation secret nor a reachable self-URL — it works on preview deploys
+  and behind Vercel deployment protection, where a server-to-server self-fetch
+  would be blocked.
+- **Background (the daily cron / a browser-closed continuation):**
+  `executePendingScan` (default `scheduleContinuation: true`) schedules, via
+  Next.js's `after()` (fire-and-forget), a POST to `/api/scan/continue` that
+  runs the next batch in its own fresh invocation. This requires
+  `SCAN_CONTINUE_SECRET` and a reachable deployment URL (see
+  `docs/environment-contract.md`); if that dispatch is lost, the run simply
+  stalls until the timeout + auto-retry below picks it up.
 
 See `docs/adr/0014-batched-self-chaining-scan-execution.md` for the full
 design and its rationale (why this, instead of an async worker or raising
 Vercel's plan). The claim step (`UPDATE ... WHERE status = 'pending' ...
 RETURNING`) is what makes a duplicate/racing invocation over the same batch a
 safe no-op rather than double-processed work — a job is only ever picked up
-by whichever invocation's update commits first.
+by whichever invocation's update commits first, so the foreground loop and a
+background continuation can never double-process a batch even if both fire.
 
 `scan_runs.successful_prompts`/`failed_prompts` are recomputed from the
 `jobs` table on every batch (not incremented), so they always reflect the

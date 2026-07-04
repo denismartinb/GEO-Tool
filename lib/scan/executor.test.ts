@@ -1085,4 +1085,30 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
     expect(finalizeJob.status).toBe("pending");
   });
+
+  it("does NOT schedule an after() continuation when scheduleContinuation is false (foreground driver loops the batches itself)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { service, supabase, state, jobsTable } = buildCampaignClients({ promptCount: 12 });
+    serviceClientHolder.current = service;
+
+    const { MAX_REAL_SCAN_PROMPTS } = await import("./constants");
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({
+      projectId: PROJECT_ID,
+      runId: CAMPAIGN_RUN_ID,
+      supabase,
+      scheduleContinuation: false
+    });
+
+    // The batch still ran and prompts remain (same as the default-continuation
+    // test above), but no self-fetch continuation is scheduled — the caller
+    // (autoExecutePendingScan) drives the next batch directly.
+    const completed = jobsTable.jobs.filter((j) => j.job_type === "scan_prompt" && j.status === "completed");
+    expect(completed).toHaveLength(MAX_REAL_SCAN_PROMPTS);
+    expect(state.status).toBe("running");
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });

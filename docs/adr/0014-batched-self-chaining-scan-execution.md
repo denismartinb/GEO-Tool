@@ -114,3 +114,45 @@ started.
   first attempt), reopen this ADR to consider the Supabase Cron rescue
   mechanism mentioned above, or revisit the Vercel plan question now that its
   actual cron/maxDuration constraints are documented here.
+
+---
+
+## Addendum (2026-07-04) — foreground path no longer depends on the self-fetch
+
+**Context:** first preview smoke of a 20-prompt (2-batch) scan failed at
+exactly `10/20`, twice (the run + its one auto-retry), then exhausted. Root
+cause: the foreground manual/onboarding path (`autoExecutePendingScan`)
+processed only the first batch and relied entirely on the `after()` →
+`/api/scan/continue` self-fetch to run the rest. On a Vercel **preview**
+deploy that self-fetch does not land — the target URL is gated by Vercel
+Deployment Protection (a server-to-server request without a bypass token gets
+a 401 HTML wall, not the route), and `SCAN_CONTINUE_SECRET` may also be unset
+there. So the campaign stalled after batch 1 and was later timed out by
+`reconcileStuckScanRuns`. This was the exact "works in the test, not in the
+real app" fragility the self-fetch approach carried.
+
+**Decision:** the **foreground** path stops depending on the self-fetch.
+`executePendingScan` gained a `scheduleContinuation` flag (default `true`,
+preserving the background/cron self-chain). `autoExecutePendingScan` now loops
+`executePendingScan` (`scheduleContinuation: false`) batch-after-batch within
+one request's ~40s budget and returns the run's status; the `AutoExecuteScan`
+client component re-invokes it until the run is terminal. Because this runs
+through the **authenticated user session**, it is unaffected by deployment
+protection and needs no secret — the manual/onboarding scan now completes
+end-to-end on preview and production alike. The runs page also now sets
+`export const maxDuration = 60` (server actions inherit the page's budget, and
+it was missing), and `AutoExecuteScan` is mounted while the run is `pending`
+**or** `running` so the client driver isn't unmounted after batch 1.
+
+The `after()` → `/api/scan/continue` self-chain is **retained** for the
+background paths that have no client to drive them: the daily cron and a
+browser-closed continuation in production (where the deployment URL is
+reachable and the secret is set). The atomic claim guarantees the foreground
+loop and any background continuation can never double-process a batch.
+
+**Consequence:** foreground completion (the overwhelmingly common case — a
+user launching a scan and watching it) is now robust and config-free. Fully
+browser-independent completion of a *large* campaign after the tab is closed
+still depends on the background self-chain, i.e. on `SCAN_CONTINUE_SECRET` +
+a reachable, unprotected deployment URL — unchanged, and still the documented
+production requirement.

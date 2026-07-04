@@ -479,11 +479,23 @@ async function triggerScanContinuation({ projectId, runId }: { projectId: string
 export async function executePendingScan({
   projectId,
   runId,
-  supabase
+  supabase,
+  scheduleContinuation = true
 }: {
   projectId: string;
   runId: string;
   supabase: AuthenticatedContext["supabase"];
+  /**
+   * When a batch finishes with prompts still pending, whether to self-schedule
+   * the next batch via `after()` + a fetch to `/api/scan/continue`
+   * (docs/adr/0014). Default `true` keeps the background self-chain used by the
+   * cron / browser-closed path. The foreground driver (`autoExecutePendingScan`)
+   * passes `false`: it loops the batches itself within one request budget and
+   * re-drives from the client, so it neither needs the secret-gated
+   * continuation endpoint (which a preview deploy may not reach) nor wants a
+   * duplicate dispatch racing its own loop.
+   */
+  scheduleContinuation?: boolean;
 }) {
   const { data: run, error: runError } = await supabase
     .from("scan_runs")
@@ -703,7 +715,12 @@ export async function executePendingScan({
       // another in-flight invocation — the unfinished work belongs to that
       // other invocation; scheduling a second continuation here would just
       // be redundant.
-      if (claimedJobs.length > 0) {
+      //
+      // `scheduleContinuation === false` means the caller (the foreground
+      // driver) is looping the batches itself, so it does not want a
+      // self-fetch continuation — which it doesn't need and which a preview
+      // deploy may not even be able to reach (docs/adr/0014).
+      if (scheduleContinuation && claimedJobs.length > 0) {
         after(() => triggerScanContinuation({ projectId, runId }));
       }
       return;

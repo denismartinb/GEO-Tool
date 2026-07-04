@@ -13,6 +13,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
+// Server Actions inherit the maxDuration of the page they're invoked from
+// (docs/adr/0003). `autoExecutePendingScan` is driven from this page and runs a
+// window of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s), so
+// this page needs the full 60s Vercel budget — the framework default would kill
+// the function mid-batch.
+export const maxDuration = 60;
+
 /* ---- Status helpers ---- */
 
 const statusLabels: Record<string, string> = {
@@ -283,7 +290,15 @@ export default async function RunsPage({
   // A run created without sync execution (e.g. right after onboarding) is
   // still `pending` here. Trigger its execution now that the user has landed
   // on this page, so they see real progress instead of waiting on creation.
-  const shouldAutoExecute = ENABLE_SYNC_SCAN_EXECUTION && activeRun?.status === "pending";
+  //
+  // Mount the driver while the run is pending OR running (not just pending):
+  // a multi-batch campaign (SCAN-CHAIN-1) transitions to `running` after its
+  // first batch, and the client driver (AutoExecuteScan) must stay mounted to
+  // keep re-driving the remaining batches — unmounting it the moment the run
+  // left `pending` would strand the campaign after batch 1. AutoExecuteScan
+  // guards against double-starting its own loop across re-renders.
+  const shouldAutoExecute =
+    ENABLE_SYNC_SCAN_EXECUTION && (activeRun?.status === "pending" || activeRun?.status === "running");
 
   const hasMultipleCompleted = completedRuns.length >= 2;
 
