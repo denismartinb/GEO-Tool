@@ -3,6 +3,22 @@ import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
 import { PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
+import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+
+// `after()` schedules work outside the request lifecycle Next.js provides in
+// a real deployment; under Vitest there is no such request context, so it
+// must be mocked. This fake just records the scheduled callback — tests
+// assert whether a continuation was scheduled (SCAN-CHAIN-1's self-chaining)
+// and can invoke+await the recorded callback themselves to simulate the next
+// batch actually running.
+const afterMock = vi.fn();
+vi.mock("next/server", () => ({
+  after: (callback: () => unknown) => afterMock(callback)
+}));
+
+beforeEach(() => {
+  afterMock.mockClear();
+});
 
 const generateGeminiVisibilityAnswer = vi.fn();
 vi.mock("@/lib/llm/gemini", async () => {
@@ -54,6 +70,8 @@ const PROMPT_ID = "44444444-4444-4444-4444-444444444444";
 
 type JobsRow = {
   id: string;
+  project_id: string;
+  run_id: string;
   job_type: string;
   status: string;
   attempt_count: number;
@@ -66,40 +84,59 @@ type JobsRow = {
 /**
  * Records every job update applied via service.from("jobs").update(...).
  * Used to assert attempt_count / status / last_error transitions across the
- * per-prompt retry loop (SCAN-ROBUST-1).
+ * per-prompt retry loop (SCAN-ROBUST-1), and — since SCAN-CHAIN-1 — the
+ * atomic batch/finalize claim (`.eq(...).in(...).select(...)` /
+ * `.eq(...).select(...).maybeSingle()`). Filtering here is genuine (every
+ * `.eq()`/`.in()` call collected is actually applied), unlike a hardcoded
+ * shortcut, because the executor now issues several differently-filtered
+ * update/count queries against this same table within one invocation.
  */
 function makeJobsTable(initialJobs: JobsRow[]) {
   const jobs: JobsRow[] = initialJobs.map((j) => ({ ...j }));
   const updates: Array<Partial<JobsRow> & { __id: string }> = [];
 
+  function rowMatches(job: JobsRow, filters: Array<[string, unknown]>, inFilter: { col: string; vals: unknown[] } | null) {
+    const record = job as unknown as Record<string, unknown>;
+    if (!filters.every(([col, val]) => record[col] === val)) return false;
+    if (inFilter && !inFilter.vals.includes(record[inFilter.col])) return false;
+    return true;
+  }
+
   function updateBuilder(patch: Partial<JobsRow>) {
     const filters: Array<[string, unknown]> = [];
+    let inFilter: { col: string; vals: unknown[] } | null = null;
+
+    function applyAndCollectMatches(): JobsRow[] {
+      const matched = jobs.filter((job) => rowMatches(job, filters, inFilter));
+      for (const job of matched) {
+        Object.assign(job, patch);
+        updates.push({ __id: job.id, ...patch });
+      }
+      return matched;
+    }
+
     const builder = {
       eq(column: string, value: unknown) {
         filters.push([column, value]);
         return builder;
       },
-      // executor.ts never awaits with `.then` chaining beyond the final
-      // `.eq(...)` for jobs updates — make the builder itself thenable so a
-      // bare `await service.from("jobs").update(...).eq(...).eq(...).eq(...)`
-      // resolves once all three .eq() calls have been applied.
+      in(column: string, values: unknown[]) {
+        inFilter = { col: column, vals: values };
+        return builder;
+      },
+      select(_cols?: string) {
+        const matched = applyAndCollectMatches();
+        const result = { data: matched.map((j) => ({ ...j })), error: null };
+        return {
+          ...result,
+          maybeSingle: () => Promise.resolve({ data: matched[0] ? { ...matched[0] } : null, error: null }),
+          then: (resolve: (value: typeof result) => unknown) => Promise.resolve(result).then(resolve)
+        };
+      },
+      // executor.ts also awaits some jobs updates directly (no `.select()`
+      // chained) — e.g. the catch-all "mark running jobs failed" bulk update.
       then(resolve: (value: { error: null }) => unknown) {
-        const idFilter = filters.find(([col]) => col === "id");
-        if (idFilter) {
-          const job = jobs.find((j) => j.id === idFilter[1]);
-          if (job) {
-            Object.assign(job, patch);
-            updates.push({ __id: job.id, ...patch });
-          }
-        } else {
-          // bulk update without an id filter (the catch-all "mark running jobs failed")
-          for (const job of jobs) {
-            if (job.status === "running") {
-              Object.assign(job, patch);
-              updates.push({ __id: job.id, ...patch });
-            }
-          }
-        }
+        applyAndCollectMatches();
         return Promise.resolve({ error: null }).then(resolve);
       }
     };
@@ -107,16 +144,27 @@ function makeJobsTable(initialJobs: JobsRow[]) {
   }
 
   function selectBuilder() {
+    const filters: Array<[string, unknown]> = [];
+    let inFilter: { col: string; vals: unknown[] } | null = null;
     const builder = {
-      eq(_column: string, _value: unknown) {
+      eq(column: string, value: unknown) {
+        filters.push([column, value]);
+        return builder;
+      },
+      in(column: string, values: unknown[]) {
+        inFilter = { col: column, vals: values };
         return builder;
       },
       order(_column: string, _opts: unknown) {
-        return Promise.resolve({ data: jobs, error: null });
+        return Promise.resolve({ data: jobs.map((j) => ({ ...j })), error: null });
       },
+      // Count queries (`{ count: "exact", head: true }`) are awaited
+      // directly, filtered genuinely by every `.eq()`/`.in()` collected —
+      // needed since the executor now issues several distinctly-filtered
+      // counts (pending+running/completed/failed) within one invocation.
       then(resolve: (value: { count: number; error: null }) => unknown) {
-        const failedCount = jobs.filter((j) => j.job_type === "scan_prompt" && j.status === "failed").length;
-        return Promise.resolve({ count: failedCount, error: null }).then(resolve);
+        const matched = jobs.filter((job) => rowMatches(job, filters, inFilter));
+        return Promise.resolve({ count: matched.length, error: null }).then(resolve);
       }
     };
     return builder;
@@ -314,6 +362,8 @@ function buildClients(
   const jobsTable = makeJobsTable([
     {
       id: "start-job",
+      project_id: PROJECT_ID,
+      run_id: RUN_ID,
       job_type: "scan_start",
       status: "pending",
       attempt_count: 0,
@@ -324,6 +374,8 @@ function buildClients(
     },
     {
       id: PROMPT_JOB_ID,
+      project_id: PROJECT_ID,
+      run_id: RUN_ID,
       job_type: "scan_prompt",
       status: "pending",
       attempt_count: 0,
@@ -334,6 +386,8 @@ function buildClients(
     },
     {
       id: "finalize-job",
+      project_id: PROJECT_ID,
+      run_id: RUN_ID,
       job_type: "scan_finalize",
       status: "pending",
       attempt_count: 0,
@@ -746,5 +800,315 @@ describe("executePendingScan — recommendation history across runs (RECS-3)", (
     expect(recommendationsTable.rows.filter((r) => r.status === "resolved")).toHaveLength(0);
     expect(recommendationsTable.insertedRows).toHaveLength(1);
     expect(recommendationsTable.insertedRows[0].consecutive_runs_open).toBe(1);
+  });
+});
+
+describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
+  const ORIGINAL_SCAN_CONTINUE_SECRET = process.env.SCAN_CONTINUE_SECRET;
+  const CAMPAIGN_RUN_ID = "66666666-6666-6666-6666-666666666666";
+
+  type CampaignRunState = {
+    id: string;
+    project_id: string;
+    status: string;
+    total_prompts: number;
+    successful_prompts: number;
+    failed_prompts: number;
+  };
+
+  /**
+   * A genuinely stateful `scan_runs` single-row fake (unlike `makeScanRunsTable`,
+   * which always reports a hardcoded "pending" run — fine for the single-batch
+   * tests above, which only ever call `executePendingScan` once, but wrong here
+   * since these tests call it multiple times in sequence against the *same*
+   * campaign and must see its real status/counters evolve between calls.
+   */
+  function makeCampaignScanRunsTable(state: CampaignRunState) {
+    let sawNeq = false;
+    const builder: Record<string, unknown> = {
+      eq: () => builder,
+      neq: () => {
+        sawNeq = true;
+        return builder;
+      },
+      order: () => builder,
+      limit: () => builder,
+      update: (patch: Partial<CampaignRunState>) => {
+        Object.assign(state, patch);
+        return builder;
+      },
+      select: () => builder,
+      maybeSingle: () => {
+        const wasNeq = sawNeq;
+        sawNeq = false;
+        // wasNeq => RECS-3's "find the immediately preceding completed run"
+        // lookup; there is none in these tests (first campaign for the project).
+        return Promise.resolve(wasNeq ? { data: null, error: null } : { data: { id: state.id }, error: null });
+      },
+      then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
+        Promise.resolve({ data: [], error: null }).then(resolve)
+    };
+    return builder;
+  }
+
+  function buildCampaignClients({ promptCount }: { promptCount: number }) {
+    const state: CampaignRunState = {
+      id: CAMPAIGN_RUN_ID,
+      project_id: PROJECT_ID,
+      status: "pending",
+      total_prompts: promptCount,
+      successful_prompts: 0,
+      failed_prompts: 0
+    };
+
+    const promptJobs = Array.from({ length: promptCount }, (_, i) => ({
+      id: `campaign-prompt-job-${i}`,
+      project_id: PROJECT_ID,
+      run_id: CAMPAIGN_RUN_ID,
+      job_type: "scan_prompt",
+      status: "pending",
+      attempt_count: 0,
+      max_attempts: 3,
+      payload_json: { prompt_id: `campaign-prompt-${i}`, prompt_text: `Prompt número ${i}` },
+      last_error: null,
+      created_at: `2026-06-13T10:00:${String(i).padStart(2, "0")}.000Z`
+    }));
+
+    const jobsTable = makeJobsTable([
+      {
+        id: "campaign-start-job",
+        project_id: PROJECT_ID,
+        run_id: CAMPAIGN_RUN_ID,
+        job_type: "scan_start",
+        status: "pending",
+        attempt_count: 0,
+        max_attempts: 3,
+        payload_json: {},
+        last_error: null,
+        created_at: "2026-06-13T09:59:59.000Z"
+      },
+      ...promptJobs,
+      {
+        id: "campaign-finalize-job",
+        project_id: PROJECT_ID,
+        run_id: CAMPAIGN_RUN_ID,
+        job_type: "scan_finalize",
+        status: "pending",
+        attempt_count: 0,
+        max_attempts: 3,
+        payload_json: {},
+        last_error: null,
+        created_at: "2026-06-13T10:59:59.000Z"
+      }
+    ]);
+
+    const scanRunsTable = makeCampaignScanRunsTable(state);
+    const scanPromptResultsTable = makeScanPromptResultsTable();
+    const recommendationsTable = makeRecommendationsTable();
+
+    const service = {
+      from(table: string) {
+        if (table === "jobs") return jobsTable.table;
+        if (table === "scan_runs") return scanRunsTable;
+        if (table === "scan_prompt_results") return scanPromptResultsTable.table;
+        if (table === "recommendations") return recommendationsTable.table;
+        return noopTable();
+      }
+    } as unknown as ServiceClient;
+
+    const supabase = {
+      from(table: string) {
+        if (table === "scan_runs") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: () =>
+                    Promise.resolve({
+                      data: {
+                        id: state.id,
+                        project_id: state.project_id,
+                        status: state.status,
+                        total_prompts: state.total_prompts
+                      },
+                      error: null
+                    })
+                })
+              })
+            })
+          };
+        }
+        if (table === "projects") {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: { id: PROJECT_ID, domain: "acme.com", brand: "Acme", country: "ES", language: "es" },
+                    error: null
+                  })
+              })
+            })
+          };
+        }
+        if (table === "project_competitors") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  order: () => Promise.resolve({ data: [], error: null })
+                })
+              })
+            })
+          };
+        }
+        return noopTable();
+      }
+    } as unknown as SupabaseClient;
+
+    return { state, service, supabase, jobsTable, scanPromptResultsTable };
+  }
+
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(runStructuredExtractionForRun).mockClear();
+    vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+    process.env.SCAN_CONTINUE_SECRET = "test-continue-secret";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_SCAN_CONTINUE_SECRET === undefined) {
+      delete process.env.SCAN_CONTINUE_SECRET;
+    } else {
+      process.env.SCAN_CONTINUE_SECRET = ORIGINAL_SCAN_CONTINUE_SECRET;
+    }
+    vi.unstubAllGlobals();
+  });
+
+  it("processes only MAX_REAL_SCAN_PROMPTS jobs per invocation and schedules a continuation via after() when more remain", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { service, supabase, state, jobsTable } = buildCampaignClients({ promptCount: 12 });
+    serviceClientHolder.current = service;
+
+    const { MAX_REAL_SCAN_PROMPTS } = await import("./constants");
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID, supabase });
+
+    const promptJobs = jobsTable.jobs.filter((j) => j.job_type === "scan_prompt");
+    const completed = promptJobs.filter((j) => j.status === "completed");
+    const stillPending = promptJobs.filter((j) => j.status === "pending");
+
+    expect(completed).toHaveLength(MAX_REAL_SCAN_PROMPTS);
+    expect(stillPending).toHaveLength(12 - MAX_REAL_SCAN_PROMPTS);
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(MAX_REAL_SCAN_PROMPTS);
+
+    // Campaign is not finalized yet — extraction/scoring/recommendations and
+    // the scan_finalize job must wait for the batch that clears the queue.
+    expect(state.status).toBe("running");
+    expect(vi.mocked(runStructuredExtractionForRun)).not.toHaveBeenCalled();
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
+    expect(finalizeJob.status).toBe("pending");
+
+    // The next batch was scheduled without the caller (this test's own
+    // `await executePendingScan(...)`) having to wait for it.
+    expect(afterMock).toHaveBeenCalledTimes(1);
+    await afterMock.mock.calls[0][0]();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/scan/continue");
+    expect(JSON.parse(init.body as string)).toEqual({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID });
+    expect(init.headers.Authorization).toBe("Bearer test-continue-secret");
+  });
+
+  it("a second invocation finishes the remaining batch and finalizes exactly once, with campaign-wide (not per-batch) counters", async () => {
+    const { service, supabase, state, jobsTable } = buildCampaignClients({ promptCount: 12 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+
+    // First batch (10 of 12), mirroring the manual "Lanzar escaneo" action.
+    await executePendingScan({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID, supabase });
+    afterMock.mockClear();
+    // Second batch (the remaining 2), mirroring /api/scan/continue's own call.
+    await executePendingScan({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID, supabase });
+
+    const promptJobs = jobsTable.jobs.filter((j) => j.job_type === "scan_prompt");
+    expect(promptJobs.every((j) => j.status === "completed")).toBe(true);
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(12);
+
+    expect(state.status).toBe("completed");
+    expect(state.successful_prompts).toBe(12);
+    expect(state.failed_prompts).toBe(0);
+
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
+    expect(finalizeJob.status).toBe("completed");
+
+    // Extraction/scoring/recommendations run exactly once for the whole
+    // campaign, on the final batch — not once per batch.
+    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
+
+    // The second invocation had nothing left to batch, so it must not have
+    // scheduled a further continuation.
+    expect(afterMock).not.toHaveBeenCalled();
+  });
+
+  it("a racing duplicate invocation over the same batch is a no-op (claim is exclusive)", async () => {
+    const { service, supabase, state, jobsTable } = buildCampaignClients({ promptCount: 3 });
+    serviceClientHolder.current = service;
+
+    // Simulate another invocation already having started this campaign
+    // (pending -> running, scan_start completed) and having claimed every
+    // scan_prompt job an instant before this invocation's own claim attempt
+    // — the realistic shape of the race, since a run only ever reaches
+    // "prompt jobs claimed" after its own pending -> running transition.
+    state.status = "running";
+    for (const job of jobsTable.jobs) {
+      if (job.job_type === "scan_start") job.status = "completed";
+      if (job.job_type === "scan_prompt") job.status = "running";
+    }
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID, supabase });
+
+    // This invocation claimed nothing (every candidate was already `running`,
+    // not `pending`), and the campaign still has unfinished work in flight
+    // elsewhere, so it must not have called the LLM, must not have
+    // scheduled a redundant continuation, and must not have finalized.
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(state.status).toBe("running");
+    expect(vi.mocked(runStructuredExtractionForRun)).not.toHaveBeenCalled();
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
+    expect(finalizeJob.status).toBe("pending");
+  });
+
+  it("does NOT schedule an after() continuation when scheduleContinuation is false (foreground driver loops the batches itself)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { service, supabase, state, jobsTable } = buildCampaignClients({ promptCount: 12 });
+    serviceClientHolder.current = service;
+
+    const { MAX_REAL_SCAN_PROMPTS } = await import("./constants");
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({
+      projectId: PROJECT_ID,
+      runId: CAMPAIGN_RUN_ID,
+      supabase,
+      scheduleContinuation: false
+    });
+
+    // The batch still ran and prompts remain (same as the default-continuation
+    // test above), but no self-fetch continuation is scheduled — the caller
+    // (autoExecutePendingScan) drives the next batch directly.
+    const completed = jobsTable.jobs.filter((j) => j.job_type === "scan_prompt" && j.status === "completed");
+    expect(completed).toHaveLength(MAX_REAL_SCAN_PROMPTS);
+    expect(state.status).toBe("running");
+    expect(afterMock).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

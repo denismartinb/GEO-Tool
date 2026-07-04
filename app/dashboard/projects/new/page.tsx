@@ -1,6 +1,6 @@
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { getUsageSummary } from "@/lib/billing";
-import { createProject, suggestProjectSetup } from "../actions";
+import { createProject, generateMorePrompts, suggestProjectSetup } from "../actions";
 
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
@@ -25,7 +25,9 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
     <OnboardingWizard
       errorMessage={errorMessage}
       atLimit={atProjectLimit}
+      promptCap={usage.promptCap}
       suggestAction={suggestProjectSetup}
+      generateMorePromptsAction={generateMorePrompts}
       createAction={createProject}
     />
   );

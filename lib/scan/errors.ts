@@ -21,8 +21,6 @@ export function getSanitizedScanError(error: unknown) {
         return "No se ha encontrado el dominio o el escaneo solicitado.";
       case "project_archived":
         return "El dominio está archivado y no puede ejecutarse.";
-      case "too_many_prompts":
-        return "El escaneo pendiente supera el límite de prompts permitido.";
       case "scan_failed_no_results":
         return SCAN_NO_RESULTS_ERROR_SUMMARY;
       default:

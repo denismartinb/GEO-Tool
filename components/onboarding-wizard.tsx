@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
-import type { ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
+import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { sanitizePromptLineText } from "@/lib/projects/project-form";
+
+const DEFAULT_PROMPT_CAP = 10;
+const GENERATE_MORE_BATCH_SIZE = 5;
 
 const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "ES", name: "España" },
@@ -306,11 +309,29 @@ function SuggestionsLoadingOverlay({ domain }: { domain: string }) {
 type OnboardingWizardProps = {
   errorMessage: string | null;
   atLimit?: boolean;
+  /** Owner's real plan cap on active prompts (app/pricing/plans-data.ts) —
+   * bounds both the manual "Añadir prompt" button and "Generar N más" here,
+   * so a Starter/Pro/Agency user isn't stuck at a hardcoded 10 during
+   * onboarding (SCAN-CHAIN-1 follow-up). */
+  promptCap?: number;
   suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
+  generateMorePromptsAction: (input: {
+    domain: string;
+    country: string;
+    existingPromptTexts: string[];
+    existingCategories: string[];
+  }) => Promise<GenerateMorePromptsResult>;
   createAction: (formData: FormData) => void | Promise<void>;
 };
 
-export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction, createAction }: OnboardingWizardProps) {
+export function OnboardingWizard({
+  errorMessage,
+  atLimit = false,
+  promptCap = DEFAULT_PROMPT_CAP,
+  suggestAction,
+  generateMorePromptsAction,
+  createAction
+}: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
   const [country, setCountry] = useState("ES");
@@ -321,6 +342,8 @@ export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction,
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
   const [showDomainErr, setShowDomainErr] = useState(false);
+  const [isGeneratingMore, startGenerateMoreTransition] = useTransition();
+  const [generateMoreError, setGenerateMoreError] = useState<string | null>(null);
 
   const domainHasValue = domain.trim().length > 0;
   const domainIsValid = isValidDomain(domain);
@@ -352,6 +375,8 @@ export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction,
   );
   const validCompetitorCount = competitorsText ? competitorsText.split("\n").length : 0;
   const validPromptCount = promptsText ? promptsText.split("\n").length : 0;
+  const promptRoomLeft = Math.max(0, promptCap - prompts.length);
+  const generateMoreCount = Math.min(GENERATE_MORE_BATCH_SIZE, promptRoomLeft);
 
   function generateSuggestions() {
     if (atLimit) return;
@@ -385,6 +410,33 @@ export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction,
   }
   function updatePrompt(index: number, value: string) {
     setPrompts((rows) => rows.map((row, i) => (i === index ? { ...row, text: value } : row)));
+  }
+
+  // "Generar N más" (prompts step): asks Gemini for a handful of new prompts
+  // distinct from what's already listed (generateMorePromptsAction ->
+  // generateAddedPrompts, same call the post-creation "Añadir prompts" flow
+  // uses), then appends up to however many slots remain under the plan cap.
+  function generateMorePromptsAutomatically() {
+    if (promptRoomLeft <= 0 || isGeneratingMore) return;
+    setGenerateMoreError(null);
+    startGenerateMoreTransition(async () => {
+      const existingPromptTexts = prompts.map((p) => sanitizePromptLineText(p.text)).filter(Boolean);
+      const existingCategories = prompts.map((p) => p.category ?? "").filter(Boolean);
+      const result = await generateMorePromptsAction({ domain, country, existingPromptTexts, existingCategories });
+
+      if (!result.ok) {
+        setGenerateMoreError(
+          "No hemos podido generar más prompts ahora mismo. Puedes reintentarlo o añadir uno manualmente."
+        );
+        return;
+      }
+
+      setPrompts((rows) => {
+        const room = Math.max(0, promptCap - rows.length);
+        const toAdd = result.prompts.slice(0, room);
+        return [...rows, ...toAdd.map((p) => ({ text: p.text, category: p.category }))];
+      });
+    });
   }
 
   if (step === 0) {
@@ -651,16 +703,33 @@ export function OnboardingWizard({ errorMessage, atLimit = false, suggestAction,
           ))}
         </div>
 
+        {generateMoreError ? <p className="feedback error">{generateMoreError}</p> : null}
+
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[var(--line)] bg-white p-3">
-          <p className="sub">{validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} listo{validPromptCount === 1 ? "" : "s"}.</p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setPrompts((rows) => (rows.length >= 10 ? rows : [...rows, { text: "", category: null }]))}
-            disabled={prompts.length >= 10}
-          >
-            Añadir prompt
-          </Button>
+          <p className="sub">
+            {validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} listo{validPromptCount === 1 ? "" : "s"}
+            {promptCap ? ` (límite de tu plan: ${promptCap})` : ""}.
+          </p>
+          <div className="flex items-center gap-2">
+            {promptRoomLeft > 0 ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={generateMorePromptsAutomatically}
+                disabled={isGeneratingMore}
+              >
+                {isGeneratingMore ? "Generando…" : `Generar ${generateMoreCount} más`}
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPrompts((rows) => (rows.length >= promptCap ? rows : [...rows, { text: "", category: null }]))}
+              disabled={prompts.length >= promptCap}
+            >
+              Añadir prompt
+            </Button>
+          </div>
         </div>
 
         <form action={createAction} className="flex items-center justify-between border-t border-[var(--line-soft)] pt-4">

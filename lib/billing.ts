@@ -19,7 +19,15 @@ export type UsageSummary = {
   activeProjects: ActiveProjectSummary[];
 };
 
-function resolvePlan(planId: string | null | undefined): Plan {
+/**
+ * Resolves a stored `profiles.current_plan` value to its `Plan` definition,
+ * falling back to `DEFAULT_PLAN_ID` for an unset/unknown value. Exported (not
+ * just used internally) so system-level code without an authenticated user
+ * session — e.g. `createPendingScanRunCore`'s owner-plan lookup for cron and
+ * auto-retry runs — can resolve a plan's caps from a plain plan id read via
+ * the service client.
+ */
+export function resolvePlan(planId: string | null | undefined): Plan {
   return PLANS.find((p) => p.id === planId) ?? PLANS.find((p) => p.id === DEFAULT_PLAN_ID)!;
 }
 

@@ -122,11 +122,20 @@ async function attemptAutoRetry({
 
 /**
  * Timeout-detection pass for the scan lifecycle (docs/scan-lifecycle.md,
- * "Timeout detection"). Finds `running` rows whose `started_at` is older than
+ * "Timeout detection"). Finds `running` rows whose `updated_at` is older than
  * SCAN_RUNNING_TIMEOUT_SECONDS and `pending` rows whose `created_at` is older
  * than SCAN_PENDING_TIMEOUT_SECONDS, and transitions them to `failed` with an
  * internal-only `error_summary` (see TIMEOUT_ERROR_SUMMARIES /
  * getDisplayErrorSummary for the user-facing mapping).
+ *
+ * `updated_at` (not `started_at`) is the staleness anchor for `running` rows
+ * (SCAN-CHAIN-1): a multi-batch campaign can legitimately stay `running` far
+ * longer than SCAN_RUNNING_TIMEOUT_SECONDS after `started_at`, self-chaining
+ * one batch at a time. `updated_at` is bumped by the DB trigger on every
+ * write `executePendingScan` makes as it makes real progress (each batch's
+ * `refreshRunProgressCounters` call), so a campaign that is actively
+ * progressing never looks stale — only one that has genuinely stopped
+ * advancing (a lost self-chain dispatch, a crashed invocation) does.
  *
  * This is what unblocks `active_run_exists`: a stuck run no longer permanently
  * blocks new scans for the project, because it becomes terminal (`failed`) on
@@ -173,10 +182,10 @@ export async function reconcileStuckScanRuns({
 
   const { data: staleRunningRuns, error: staleRunningError } = await service
     .from("scan_runs")
-    .select("id, started_at, created_at")
+    .select("id, started_at, created_at, updated_at")
     .eq("project_id", projectId)
     .eq("status", "running")
-    .lt("started_at", runningCutoffIso);
+    .lt("updated_at", runningCutoffIso);
 
   const { data: stalePendingRuns, error: stalePendingError } = await service
     .from("scan_runs")
@@ -235,6 +244,7 @@ export async function reconcileStuckScanRuns({
         projectId,
         runId: run.id,
         startedAt: run.started_at,
+        updatedAt: run.updated_at,
         capReached
       });
 

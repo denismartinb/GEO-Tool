@@ -1,6 +1,6 @@
 import "server-only";
 
-import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
+import { resolvePlan } from "@/lib/billing";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { ProjectActionError, type AuthenticatedContext } from "@/lib/scan/types";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -151,7 +151,7 @@ export async function createPendingScanRunCore({
 }): Promise<string> {
   const { data: project, error: projectError } = await readClient
     .from("projects")
-    .select("id, is_archived")
+    .select("id, is_archived, owner_user_id")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -166,6 +166,16 @@ export async function createPendingScanRunCore({
   if (project.is_archived) {
     throw new ProjectActionError("project_archived");
   }
+
+  // Read via the service client (not readClient) so this resolves correctly
+  // for every caller — the cron path and reconciliation's auto-retry path
+  // have no authenticated user/RLS-scoped session to read `profiles` through.
+  const { data: profileRow } = await service
+    .from("profiles")
+    .select("current_plan")
+    .eq("id", project.owner_user_id as string)
+    .maybeSingle();
+  const campaignCap = resolvePlan(profileRow?.current_plan as string | undefined).caps.prompts;
 
   // Reconcile any stuck pending/running runs before checking for an active
   // run, so a previously-stuck scan does not permanently block a new one
@@ -217,12 +227,15 @@ export async function createPendingScanRunCore({
     throw new ProjectActionError("prompts_required");
   }
 
-  // Cap the prompts processed by this run to MAX_REAL_SCAN_PROMPTS rather than
-  // rejecting the scan outright. Projects that predate a lower cap (or that
-  // simply have more active prompts than the per-run budget) still get a
-  // real scan of their oldest active prompts instead of being permanently
-  // blocked from scanning.
-  const scannedPrompts = eligibleForJobs.slice(0, MAX_REAL_SCAN_PROMPTS);
+  // Cap the prompts scheduled for this campaign at the owner's plan cap
+  // rather than at MAX_REAL_SCAN_PROMPTS (SCAN-CHAIN-1): every active prompt
+  // up to what the plan promises gets a real `scan_prompt` job here, and
+  // `executePendingScan` processes them across as many batches of
+  // MAX_REAL_SCAN_PROMPTS as it takes, self-chaining between batches. A
+  // project with more active prompts than its current plan allows (e.g.
+  // after a downgrade) still gets a real scan of its oldest active prompts up
+  // to the cap, instead of being permanently blocked from scanning.
+  const scannedPrompts = eligibleForJobs.slice(0, campaignCap);
   const promptCount = scannedPrompts.length;
 
   const { data: run, error: runError } = await service

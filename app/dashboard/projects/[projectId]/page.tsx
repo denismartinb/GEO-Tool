@@ -10,6 +10,7 @@ import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { InfoTip } from "@/components/ui/info-tip";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
@@ -432,6 +433,8 @@ export default async function ProjectDetailPage({
   /* ---- render ---- */
   return (
     <div className="page">
+      {activeRun ? <ScanProgressPoller /> : null}
+
       {/* Sticky page header */}
       <div className="ov-sticky-header">
         <div className="ov-sticky-left">

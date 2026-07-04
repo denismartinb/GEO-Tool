@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
+import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
@@ -18,6 +19,13 @@ import { DomainCoverageSection } from "./domain-coverage-section";
 // Gemini grounding calls; like the recommendations page, raise the server
 // action's ceiling to the 60s Vercel maxDuration so the in-app time budget
 // (COVERAGE_TOTAL_BUDGET_MS) governs, not the platform default. See ADR 0003.
+export const maxDuration = 60;
+
+// Server Actions inherit the maxDuration of the page they're invoked from
+// (docs/adr/0003). `autoExecutePendingScan` is driven from this page and runs a
+// window of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s), so
+// this page needs the full 60s Vercel budget — the framework default would kill
+// the function mid-batch.
 export const maxDuration = 60;
 
 /* ---- Status helpers ---- */
@@ -300,7 +308,15 @@ export default async function RunsPage({
   // A run created without sync execution (e.g. right after onboarding) is
   // still `pending` here. Trigger its execution now that the user has landed
   // on this page, so they see real progress instead of waiting on creation.
-  const shouldAutoExecute = ENABLE_SYNC_SCAN_EXECUTION && activeRun?.status === "pending";
+  //
+  // Mount the driver while the run is pending OR running (not just pending):
+  // a multi-batch campaign (SCAN-CHAIN-1) transitions to `running` after its
+  // first batch, and the client driver (AutoExecuteScan) must stay mounted to
+  // keep re-driving the remaining batches — unmounting it the moment the run
+  // left `pending` would strand the campaign after batch 1. AutoExecuteScan
+  // guards against double-starting its own loop across re-renders.
+  const shouldAutoExecute =
+    ENABLE_SYNC_SCAN_EXECUTION && (activeRun?.status === "pending" || activeRun?.status === "running");
 
   const hasMultipleCompleted = completedRuns.length >= 2;
 
@@ -321,6 +337,7 @@ export default async function RunsPage({
       {shouldAutoExecute && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
+      {activeRun ? <ScanProgressPoller /> : null}
 
       {/* Sticky header */}
       <div className="ov-sticky-header">

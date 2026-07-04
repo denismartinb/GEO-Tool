@@ -71,6 +71,22 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+### Batched scan campaigns (SCAN-CHAIN-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `SCAN_CONTINUE_SECRET` | Yes, for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
+| `NEXT_PUBLIC_SITE_URL` | No (falls back to `https://${VERCEL_URL}`, then `http://localhost:3000`) | Vercel | `https://<production-domain>` — set explicitly on Preview deploys if self-continuation needs to target the deploy's own URL rather than a stale `VERCEL_URL` |
+
+A project whose plan allows more active prompts than fit in one execution
+batch (`MAX_REAL_SCAN_PROMPTS=10`) has its scan split across multiple
+batches, each its own `executePendingScan` invocation. Without
+`SCAN_CONTINUE_SECRET` set, the first batch still runs (and its results are
+real), but the campaign stalls after it — no continuation can be dispatched,
+and the run only progresses further once `reconcileStuckScanRuns` notices no
+progress and auto-retries (docs/scan-lifecycle.md). See
+`docs/adr/0014-batched-self-chaining-scan-execution.md`.
+
 ---
 
 ## Vercel configuration
@@ -94,6 +110,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 GEMINI_API_KEY=AIza...
 ENABLE_SYNC_SCAN_EXECUTION=true
+SCAN_CONTINUE_SECRET=any-random-string
 ```
 
 ---
@@ -104,6 +121,7 @@ ENABLE_SYNC_SCAN_EXECUTION=true
 - [ ] `NEXT_PUBLIC_SUPABASE_URL` is a valid `https://` URL (not empty, not quoted)
 - [ ] `GEMINI_API_KEY` is present
 - [ ] `ENABLE_SYNC_SCAN_EXECUTION=true` is set in Vercel
+- [ ] `SCAN_CONTINUE_SECRET` is set in Vercel (required for any project whose plan allows more active prompts than `MAX_REAL_SCAN_PROMPTS` to finish a scan across batches)
 - [ ] Production branch in Vercel points to the branch under test
 - [ ] A fresh deploy was triggered after any env var change
 - [ ] Gemini model id is still served (validate against API before smoke — see ADR 0002)

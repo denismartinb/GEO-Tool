@@ -86,7 +86,11 @@ export function sanitizePromptLineText(text: string): string {
   return text.replace(/[\r\n]+/g, " ").replace(/\s{2,}/g, " ").trim();
 }
 
-export function parseInitialPrompts(promptsInput: string | undefined, categoriesInput?: string | undefined) {
+export function parseInitialPrompts(
+  promptsInput: string | undefined,
+  categoriesInput?: string | undefined,
+  maxPrompts: number = MAX_INITIAL_PROMPTS
+) {
   if (!promptsInput) return [];
 
   // Split BEFORE dedup so category lines align 1:1 with prompt lines by index.
@@ -110,7 +114,7 @@ export function parseInitialPrompts(promptsInput: string | undefined, categories
 
     prompts.push({ prompt_text: promptText, category, sort_order: prompts.length });
 
-    if (prompts.length >= MAX_INITIAL_PROMPTS) break;
+    if (prompts.length >= maxPrompts) break;
   }
 
   return prompts;
@@ -165,8 +169,15 @@ export type ParseProjectResult =
  * persists. Coerces absent FormData fields (null) to undefined so the optional
  * fields validate. Returns a discriminated result instead of throwing/redirecting
  * so it can be unit-tested in isolation.
+ *
+ * `maxPrompts` defaults to `MAX_INITIAL_PROMPTS` (10) so existing callers/tests
+ * that don't pass it keep behaving exactly as before; `createProject` passes
+ * the caller's real plan cap so a Starter/Pro/Agency user's manually-entered
+ * prompts (up to their plan's cap — app/pricing/plans-data.ts) aren't silently
+ * truncated to 10 server-side even though the onboarding wizard now lets them
+ * add that many.
  */
-export function parseProjectForm(formData: FormData): ParseProjectResult {
+export function parseProjectForm(formData: FormData, maxPrompts: number = MAX_INITIAL_PROMPTS): ParseProjectResult {
   const field = (key: string) => {
     const value = formData.get(key);
     return typeof value === "string" ? value : undefined;
@@ -208,7 +219,7 @@ export function parseProjectForm(formData: FormData): ParseProjectResult {
       name,
       language,
       businessDescription: payload.businessDescription?.trim() || undefined,
-      initialPrompts: parseInitialPrompts(payload.initialPrompts, payload.initialPromptCategories),
+      initialPrompts: parseInitialPrompts(payload.initialPrompts, payload.initialPromptCategories, maxPrompts),
       initialCompetitors: parseInitialCompetitors(payload.initialCompetitors)
     }
   };

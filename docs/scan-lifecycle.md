@@ -37,11 +37,65 @@ becomes terminal (`failed` or `completed`).
 - Triggered when the scan executor picks up the run.
 - Written to DB (`status: "running"`, `started_at`, `error_summary: null`)
   before any Gemini call begins.
+- This transition happens exactly once per campaign, on its first batch (see
+  "Batched, self-chaining execution" below) — a run can stay `running` across
+  many subsequent batches without ever going back through `pending`.
 
 ### running → completed
-- After all prompts have been executed, results persisted, and scores
-  computed via `computeRunScoresFromResults`.
+- After **every** `scan_prompt` job for the campaign has reached a terminal
+  state (`completed` or `failed`) — not just the jobs in the most recent
+  batch — results persisted, and scores computed via
+  `computeRunScoresFromResults`.
 - Sets `finished_at`.
+
+---
+
+## Batched, self-chaining execution (SCAN-CHAIN-1)
+
+A project's active prompts (up to its plan's cap — Free 10, Starter 25, Pro
+100, Agency 300, see `app/pricing/plans-data.ts`) all get a real `scan_prompt`
+job when a run is created (`lib/scan/run-creation.ts`). `executePendingScan`
+does **not** try to process all of them in one invocation: it atomically
+claims up to `MAX_REAL_SCAN_PROMPTS` (10) still-`pending` jobs per call —
+enough to fit comfortably inside the ~60s Vercel `maxDuration` budget
+(docs/adr/0003) — processes that batch, and once every `scan_prompt` job is
+terminal, atomically claims the run's `scan_finalize` job as a single-owner
+gate and runs structured extraction, scoring, and recommendations exactly
+once, then marks the run `completed`.
+
+There are **two ways the remaining batches get driven**, chosen by
+`executePendingScan`'s `scheduleContinuation` flag:
+
+- **Foreground (default for the manual "Lanzar escaneo" / onboarding path):**
+  the `autoExecutePendingScan` server action loops `executePendingScan`
+  (`scheduleContinuation: false`) batch after batch within one request's
+  ~40s budget, then returns the run's status; the `AutoExecuteScan` client
+  component re-invokes it until the run is terminal. This drives the whole
+  campaign through the **authenticated user session**, so it needs neither the
+  continuation secret nor a reachable self-URL — it works on preview deploys
+  and behind Vercel deployment protection, where a server-to-server self-fetch
+  would be blocked.
+- **Background (the daily cron / a browser-closed continuation):**
+  `executePendingScan` (default `scheduleContinuation: true`) schedules, via
+  Next.js's `after()` (fire-and-forget), a POST to `/api/scan/continue` that
+  runs the next batch in its own fresh invocation. This requires
+  `SCAN_CONTINUE_SECRET` and a reachable deployment URL (see
+  `docs/environment-contract.md`); if that dispatch is lost, the run simply
+  stalls until the timeout + auto-retry below picks it up.
+
+See `docs/adr/0014-batched-self-chaining-scan-execution.md` for the full
+design and its rationale (why this, instead of an async worker or raising
+Vercel's plan). The claim step (`UPDATE ... WHERE status = 'pending' ...
+RETURNING`) is what makes a duplicate/racing invocation over the same batch a
+safe no-op rather than double-processed work — a job is only ever picked up
+by whichever invocation's update commits first, so the foreground loop and a
+background continuation can never double-process a batch even if both fire.
+
+`scan_runs.successful_prompts`/`failed_prompts` are recomputed from the
+`jobs` table on every batch (not incremented), so they always reflect the
+whole campaign's progress, not just the most recent batch — this is what the
+real-progress bar (`components/scan-in-progress.tsx`) reads, and what a
+duplicate invocation racing against another cannot corrupt.
 
 ### running|pending → failed
 - On any **unrecoverable** error: a Gemini configuration error (missing API
@@ -84,26 +138,36 @@ becomes terminal (`failed` or `completed`).
   sanitized `last_error`. It never crashes the whole run.
 - **Worst-case budget note**: the ~60s Vercel `maxDuration`
   (`docs/adr/0003-sync-scan-execution-and-maxduration.md`) is a *typical-case*
-  target with `MAX_REAL_SCAN_PROMPTS=10`, not a hard guarantee. Since
-  SCAN-ROBUST-2 (`docs/adr/0003`, "Addendum (2026-06-14)"), `scan_prompt` jobs
-  run concurrently via `Promise.allSettled`, so the per-prompt retry costs
-  (`2 × 20s + 500ms` each) overlap rather than sum — a pathological run where
-  every prompt times out and retries once still takes roughly one prompt's
-  worst case (~40.5s), not 10 × that. That worst case is bounded by the
-  running-timeout + reconciliation auto-retry below, not by the per-call
-  timeout alone.
+  target **per batch** (`MAX_REAL_SCAN_PROMPTS=10`), not a hard guarantee, and
+  since SCAN-CHAIN-1 it is no longer a ceiling on the whole campaign — see
+  "Batched, self-chaining execution" above. Since SCAN-ROBUST-2 (`docs/adr/0003`,
+  "Addendum (2026-06-14)"), `scan_prompt` jobs within a batch run concurrently
+  via `Promise.allSettled`, so the per-prompt retry costs (`2 × 20s + 500ms`
+  each) overlap rather than sum — a pathological batch where every prompt
+  times out and retries once still takes roughly one prompt's worst case
+  (~40.5s), not 10 × that. That worst case is bounded by the running-timeout +
+  reconciliation auto-retry below, not by the per-call timeout alone.
 
 ---
 
 ## Timeout detection and auto-retry (`reconcileStuckScanRuns`)
 
-A run in `running` state for longer than `SCAN_RUNNING_TIMEOUT_SECONDS`
-(120s) is presumed to have timed out (e.g. Vercel function killed without
-updating state). A run in `pending` state for longer than
-`SCAN_PENDING_TIMEOUT_SECONDS` (300s) is stale. On the next reconciliation
-pass (triggered by UI load or the weekly-scans cron), both are transitioned
-to `failed` with an internal `error_summary` of `"scan_timeout"` /
-`"scan_pending_timeout"`.
+A run in `running` state whose `updated_at` is older than
+`SCAN_RUNNING_TIMEOUT_SECONDS` (120s) — not `started_at` — is presumed to
+have timed out (e.g. Vercel function killed without updating state, or a
+SCAN-CHAIN-1 continuation dispatch that was lost). A run in `pending` state
+for longer than `SCAN_PENDING_TIMEOUT_SECONDS` (300s) is stale. On the next
+reconciliation pass (triggered by UI load or the weekly-scans cron), both are
+transitioned to `failed` with an internal `error_summary` of `"scan_timeout"`
+/ `"scan_pending_timeout"`.
+
+Anchoring on `updated_at` rather than `started_at` is what lets a legitimate
+multi-batch campaign (SCAN-CHAIN-1) stay `running` far longer than 120s
+without being mistaken for stuck: `updated_at` is bumped by the DB's own
+`set_updated_at` trigger every time a batch makes real progress
+(`refreshRunProgressCounters`'s write to `scan_runs`), so only a campaign that
+has genuinely stopped advancing — not one that is still working through its
+prompts — ever looks stale by this check.
 
 This reconciliation is what unblocks the "one active scan per project"
 invariant: a stuck run no longer permanently blocks new scans, because it

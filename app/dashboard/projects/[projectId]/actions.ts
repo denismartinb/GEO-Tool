@@ -223,32 +223,91 @@ export async function setRecurringScans(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}/runs?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
 }
 
+export type AutoExecuteScanStatus = "idle" | "running" | "done";
+
+// How long this server action keeps processing batches before returning to let
+// the client re-drive. Kept safely under the page's maxDuration=60s budget
+// (docs/adr/0003) so the function is never killed mid-batch: a batch of
+// MAX_REAL_SCAN_PROMPTS takes up to ~20s, so stopping at ~40s leaves margin for
+// one more batch to finish. A campaign that fits in one or two batches (e.g. a
+// 20-prompt scan) therefore completes in a single call.
+const AUTO_EXECUTE_TIME_BUDGET_MS = 40_000;
+
 /**
  * Executes a pending scan run that was created without sync execution
  * (e.g. right after onboarding). Called from a client component on the
  * Escaneos page so the user lands there immediately and the heavy Gemini
  * work happens in this follow-up request while they watch the real
  * "scan in progress" UI. Does not redirect — the caller refreshes the page.
+ *
+ * SCAN-CHAIN-1 foreground driver: rather than processing a single batch and
+ * relying on the secret-gated `/api/scan/continue` self-fetch (which a preview
+ * deploy or a browser with an active session can't necessarily reach — see
+ * docs/adr/0014), this loops `executePendingScan` (with `scheduleContinuation:
+ * false`) directly, batch after batch, until the run is terminal or this
+ * request's time budget is nearly spent. It returns the run's resulting status
+ * so the client (`AutoExecuteScan`) can call again for the next window when a
+ * large campaign needs more than one request to finish. This path goes through
+ * the authenticated user session, so it works regardless of the continuation
+ * secret or Vercel deployment protection.
  */
-export async function autoExecutePendingScan(input: { projectId: string; runId: string }): Promise<void> {
+export async function autoExecutePendingScan(input: {
+  projectId: string;
+  runId: string;
+}): Promise<{ status: AutoExecuteScanStatus }> {
   const parsed = scanExecuteSchema.safeParse(input);
   if (!parsed.success || !ENABLE_SYNC_SCAN_EXECUTION) {
-    return;
+    return { status: "idle" };
   }
 
   const { projectId, runId } = parsed.data;
   const { supabase } = await requireUser();
 
-  try {
-    await executePendingScan({ projectId, runId, supabase });
-  } catch {
-    // Another request may already be executing or have finished this run;
-    // executePendingScan persists any real failure state itself.
-  }
+  const startedAt = Date.now();
+  let status: AutoExecuteScanStatus = "running";
+
+  // Drive as many batches as fit in this request's budget. `executePendingScan`
+  // claims one batch of still-pending prompt jobs per call (atomically, so a
+  // duplicate/racing driver is a safe no-op) and finalizes the run once none
+  // remain.
+  do {
+    const iterationStart = Date.now();
+
+    try {
+      await executePendingScan({ projectId, runId, supabase, scheduleContinuation: false });
+    } catch {
+      // executePendingScan persists any real failure state on the run itself;
+      // stop looping and report whatever the run's status now is.
+      break;
+    }
+
+    const { data: run } = await supabase
+      .from("scan_runs")
+      .select("status")
+      .eq("id", runId)
+      .eq("project_id", projectId)
+      .maybeSingle();
+
+    if (!run || run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
+      status = "done";
+      break;
+    }
+
+    // A real batch always spends seconds on concurrent Gemini calls; an
+    // iteration that returns near-instantly means this call claimed no jobs
+    // (another driver holds the remaining batch — rare in the foreground path).
+    // Break rather than spin so the client re-drives after its own pacing
+    // delay instead of hammering the DB inside the time budget.
+    if (Date.now() - iterationStart < 1_000) {
+      break;
+    }
+  } while (Date.now() - startedAt < AUTO_EXECUTE_TIME_BUDGET_MS);
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath(`/dashboard/projects/${projectId}/runs`);
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
+
+  return { status };
 }
 
 /**

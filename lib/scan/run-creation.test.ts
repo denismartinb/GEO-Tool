@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
-import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 
 vi.mock("@/lib/scan/reconciliation", () => ({
   reconcileStuckScanRuns: vi.fn().mockResolvedValue(undefined)
@@ -132,10 +131,12 @@ function makeFakeDb(initial: Record<string, Row[]>) {
 }
 
 const PROJECT_ID = "project-1";
+const OWNER_ID = "user-1";
 
 function baseTables(overrides: Partial<Record<string, Row[]>> = {}) {
   return {
-    projects: [{ id: PROJECT_ID, is_archived: false }],
+    projects: [{ id: PROJECT_ID, is_archived: false, owner_user_id: OWNER_ID }],
+    profiles: [{ id: OWNER_ID, current_plan: "pro" }],
     scan_runs: [],
     project_prompts: [],
     jobs: [],
@@ -149,18 +150,28 @@ describe("createPendingScanRunCore", () => {
     nextId = 1;
   });
 
-  it("default (no onlyPromptIds) scans every active prompt, capped at MAX_REAL_SCAN_PROMPTS, with no copy-forward", async () => {
+  it("default (no onlyPromptIds) creates a real job for every active prompt up to the owner's plan cap (SCAN-CHAIN-1), not MAX_REAL_SCAN_PROMPTS, with no copy-forward", async () => {
     const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
 
-    const prompts = Array.from({ length: MAX_REAL_SCAN_PROMPTS + 2 }, (_, i) => ({
+    // Starter plan caps at 25 prompts (app/pricing/plans-data.ts) — well above
+    // MAX_REAL_SCAN_PROMPTS (10), proving job creation is no longer capped at
+    // the per-batch execution size. Batching across multiple executePendingScan
+    // invocations is covered separately in executor.test.ts.
+    const PROMPT_COUNT = 30;
+    const prompts = Array.from({ length: PROMPT_COUNT }, (_, i) => ({
       id: `prompt-${i}`,
       project_id: PROJECT_ID,
       prompt_text: `Prompt ${i}`,
       is_active: true,
-      created_at: `2026-01-01T00:00:0${i}.000Z`
+      created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
     }));
 
-    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }));
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: prompts,
+        profiles: [{ id: OWNER_ID, current_plan: "starter" }]
+      })
+    );
 
     const runId = await createPendingScanRunCore({
       projectId: PROJECT_ID,
@@ -172,16 +183,44 @@ describe("createPendingScanRunCore", () => {
 
     expect(runId).toBeTruthy();
 
+    const STARTER_PROMPT_CAP = 25;
     const scanRun = tables.scan_runs.find((r) => r.id === runId);
-    expect(scanRun?.total_prompts).toBe(MAX_REAL_SCAN_PROMPTS);
+    expect(scanRun?.total_prompts).toBe(STARTER_PROMPT_CAP);
 
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt");
-    expect(promptJobs).toHaveLength(MAX_REAL_SCAN_PROMPTS);
-    // Oldest-first cap: prompt-0..prompt-(MAX-1) are scanned, not the last two.
+    expect(promptJobs).toHaveLength(STARTER_PROMPT_CAP);
+    // Oldest-first cap: prompt-0..prompt-24 get a job, the 5 newest do not.
     const scannedIds = promptJobs.map((j) => (j.payload_json as Row).prompt_id);
-    expect(scannedIds).toEqual(prompts.slice(0, MAX_REAL_SCAN_PROMPTS).map((p) => p.id));
+    expect(scannedIds).toEqual(prompts.slice(0, STARTER_PROMPT_CAP).map((p) => p.id));
 
     expect(tables.scan_prompt_results).toHaveLength(0);
+  });
+
+  it("falls back to the default plan's cap when the owner has no profile row", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const prompts = Array.from({ length: 5 }, (_, i) => ({
+      id: `prompt-${i}`,
+      project_id: PROJECT_ID,
+      prompt_text: `Prompt ${i}`,
+      is_active: true,
+      created_at: `2026-01-01T00:00:0${i}.000Z`
+    }));
+
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts, profiles: [] }));
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // Every prompt fits well under any plan's cap, so this just proves the
+    // lookup doesn't throw/block scanning when there's no profiles row yet.
+    const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
+    expect(promptJobs).toHaveLength(5);
   });
 
   it("onlyPromptIds scans only the given prompts and copies forward the latest results for every other active prompt", async () => {
@@ -325,21 +364,27 @@ describe("createPendingScanRunCore", () => {
     expect(tables.scan_prompt_results).toHaveLength(0);
   });
 
-  it("caps the scanned set at MAX_REAL_SCAN_PROMPTS even within onlyPromptIds, carrying forward the overflow", async () => {
+  it("caps onlyPromptIds at the owner's plan cap (not MAX_REAL_SCAN_PROMPTS), carrying forward the overflow", async () => {
     const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
 
-    const newPrompts = Array.from({ length: MAX_REAL_SCAN_PROMPTS + 1 }, (_, i) => ({
+    // SCAN-CHAIN-1: onlyPromptIds (the add-prompts flow) is no longer
+    // defensively truncated at MAX_REAL_SCAN_PROMPTS — its real callers
+    // (addPromptsCore) already bound it small, and execution now batches
+    // any size. The only remaining cap here is the owner's plan, so use a
+    // count above the Free plan's cap (10) to prove that cap still applies.
+    const FREE_PLAN_CAP = 10;
+    const newPrompts = Array.from({ length: FREE_PLAN_CAP + 1 }, (_, i) => ({
       id: `new-${i}`,
       project_id: PROJECT_ID,
       prompt_text: `New prompt ${i}`,
       is_active: true,
-      created_at: `2026-02-01T00:00:0${i}.000Z`
+      created_at: `2026-02-01T00:00:${String(i).padStart(2, "0")}.000Z`
     }));
 
     const priorRun = { id: "run-old", project_id: PROJECT_ID, status: "completed", created_at: "2026-01-01T00:00:00.000Z" };
     // One of the "overflow" new prompts already has a prior result (simulating
     // a retry of an add-prompts batch whose first attempt partially scanned).
-    const overflowPromptId = newPrompts[MAX_REAL_SCAN_PROMPTS].id;
+    const overflowPromptId = newPrompts[FREE_PLAN_CAP].id;
     const priorResults: Row[] = [
       {
         id: "spr-overflow",
@@ -372,7 +417,12 @@ describe("createPendingScanRunCore", () => {
     ];
 
     const { client, tables } = makeFakeDb(
-      baseTables({ project_prompts: newPrompts, scan_runs: [priorRun], scan_prompt_results: priorResults })
+      baseTables({
+        project_prompts: newPrompts,
+        scan_runs: [priorRun],
+        scan_prompt_results: priorResults,
+        profiles: [{ id: OWNER_ID, current_plan: "free" }]
+      })
     );
 
     const runId = await createPendingScanRunCore({
@@ -385,7 +435,7 @@ describe("createPendingScanRunCore", () => {
     });
 
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
-    expect(promptJobs).toHaveLength(MAX_REAL_SCAN_PROMPTS);
+    expect(promptJobs).toHaveLength(FREE_PLAN_CAP);
 
     const scannedIds = new Set(promptJobs.map((j) => (j.payload_json as Row).prompt_id as string));
     expect(scannedIds.has(overflowPromptId)).toBe(false);
