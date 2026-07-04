@@ -25,23 +25,27 @@ function asServiceClient(fake: { from: (table: string) => unknown }): ServiceCli
  *          .select("id", { count: "exact", head: true })
  *          .eq("project_id", projectId)
  *          .gte("created_at", windowStart)
+ *          .eq("generation_type", ...)   // optional, RECS-4B
  *
- * `.eq` and `.gte` are recorded (so tests can assert the guard scopes the
- * count to the right project and window) and the chain resolves to whatever
- * `{ count, error }` the test configures — mirroring the real client, which
- * resolves a thenable query builder to a `PostgrestResponse`-shaped object.
+ * Every `.eq`/`.gte` call is recorded (so tests can assert the guard scopes
+ * the count correctly) and the builder itself is thenable — like the real
+ * Supabase client, filters can be chained in any order before the query is
+ * awaited, it doesn't resolve early on any particular method.
  */
 function fakeServiceClient(result: { count: number | null; error: { message: string } | null }) {
-  const calls: { table?: string; eq?: [string, unknown]; gte?: [string, unknown] } = {};
+  const calls: { table?: string; eq: Array<[string, unknown]>; gte?: [string, unknown] } = { eq: [] };
 
   const builder = {
     eq(column: string, value: unknown) {
-      calls.eq = [column, value];
+      calls.eq.push([column, value]);
       return builder;
     },
     gte(column: string, value: unknown) {
       calls.gte = [column, value];
-      return Promise.resolve({ count: result.count, error: result.error });
+      return builder;
+    },
+    then(resolve: (value: { count: number | null; error: { message: string } | null }) => unknown) {
+      return Promise.resolve({ count: result.count, error: result.error }).then(resolve);
     }
   };
 
@@ -80,7 +84,7 @@ describe("checkGenerationRateLimit", () => {
 
     // Scoped to the right project and window — never a global count.
     expect(calls.table).toBe("generated_solutions");
-    expect(calls.eq).toEqual(["project_id", "project-1"]);
+    expect(calls.eq).toEqual([["project_id", "project-1"]]);
     expect(calls.gte).toEqual(["created_at", new Date(FIXED_NOW - ONE_DAY_MS).toISOString()]);
   });
 
@@ -188,5 +192,24 @@ describe("checkGenerationRateLimit", () => {
       config: tightConfig
     });
     expect(atResult.allowed).toBe(false);
+  });
+
+  it("scopes the count to a specific generation_type when provided (RECS-4B), leaving other callers unscoped", async () => {
+    const scoped = fakeServiceClient({ count: 1, error: null });
+    const result = await checkGenerationRateLimit(asServiceClient(scoped.service), "project-1", {
+      now: () => FIXED_NOW,
+      config: { window: "day", maxPerWindow: 5 },
+      generationType: "domain_audit"
+    });
+
+    expect(result.allowed).toBe(true);
+    expect(scoped.calls.eq).toContainEqual(["generation_type", "domain_audit"]);
+
+    const unscoped = fakeServiceClient({ count: 1, error: null });
+    await checkGenerationRateLimit(asServiceClient(unscoped.service), "project-1", {
+      now: () => FIXED_NOW,
+      config: tightConfig
+    });
+    expect(unscoped.calls.eq.some(([col]) => col === "generation_type")).toBe(false);
   });
 });
