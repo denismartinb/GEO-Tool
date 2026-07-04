@@ -73,9 +73,15 @@ const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de auditorías de cobertura para este proyecto por hoy. Vuelve a intentarlo más tarde.";
 const NO_SCAN_FAILURE = "Necesitas al menos un escaneo completado antes de auditar la cobertura de tu dominio.";
 const NO_PROMPTS_FAILURE = "Este proyecto no tiene prompts activos que auditar.";
-const NOT_COVERED_NOTE =
+// Exported (read-only reuse, no behavior change here) so callers like
+// coverage-overlay.ts can distinguish a genuinely-confirmed "not covered"
+// topic from an inconclusive one (transient Gemini failure / budget cutoff)
+// without string-matching a duplicated literal — both currently produce
+// found:false, but only the former is safe to reframe as "possible content
+// gap" (RECS-COVERAGE-OVERLAY-1).
+export const NOT_COVERED_NOTE =
   "No hemos encontrado contenido publicado en tu dominio sobre este tema a través de la búsqueda de Google.";
-const COULD_NOT_VERIFY_NOTE = "No hemos podido verificar la cobertura de este tema en este momento.";
+export const COULD_NOT_VERIFY_NOTE = "No hemos podido verificar la cobertura de este tema en este momento.";
 
 const LOG_PREFIX = "[geo:domain-coverage]";
 const GENERATION_TYPE = "domain_coverage";

@@ -37,6 +37,19 @@ export type GeneratedSolution = {
   examples: GeneratedSolutionExample[];
 };
 
+/**
+ * Read-time enrichment of an `add_citation_block` card with already-persisted
+ * domain-coverage data (RECS-COVERAGE-OVERLAY-1). Defined locally rather than
+ * imported from the server-only lib/recommendations/coverage-overlay.ts, same
+ * reason GeneratedSolution is defined locally. Absent/null means "render this
+ * card exactly as before" — coverage data is optional and sparse by design.
+ */
+export type CoverageOverlay = {
+  state: "confirmed_surfacing_gap" | "possible_content_gap" | "none";
+  verifiedPage: { url: string; title: string } | null;
+  confidenceOverride: "low" | "medium" | "high" | null;
+};
+
 export type Recommendation = {
   id: string;
   priority_rank: number;
@@ -61,6 +74,9 @@ export type Recommendation = {
    * to the user once it has persisted across at least one prior scan.
    */
   consecutive_runs_open?: number;
+  /** RECS-COVERAGE-OVERLAY-1 — null/undefined for every card type except a
+   * matched `add_citation_block` card for the current scan. */
+  coverageOverlay?: CoverageOverlay | null;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
@@ -95,7 +111,10 @@ function effortToN(val: string): number {
  * badge/colour reflect absolute importance.
  */
 function priorityLevel(rec: Recommendation): "high" | "med" | "low" {
-  if (rec.impact === "high" && rec.confidence !== "low") return "high";
+  // A confirmed surfacing gap (RECS-COVERAGE-OVERLAY-1) bumps the effective
+  // confidence used everywhere, since the assumption became verified evidence.
+  const confidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
+  if (rec.impact === "high" && confidence !== "low") return "high";
   if (rec.impact === "high" || rec.impact === "medium") return "med";
   return "low";
 }
@@ -363,6 +382,8 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
   const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
   const rankCls = priorityLevel(rec);
+  const effectiveConfidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
+  const overlay = rec.coverageOverlay;
 
   const priorityLabel =
     rankCls === "high" ? "Alta" : rankCls === "med" ? "Media" : "Baja";
@@ -412,10 +433,22 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 Victoria rápida
               </span>
             )}
-            {rec.confidence === "low" && (
+            {effectiveConfidence === "low" && (
               <span className="badge badge-warn">
                 <Icon name="info" size={11} />
                 Baja confianza
+              </span>
+            )}
+            {overlay?.state === "confirmed_surfacing_gap" && (
+              <span className="badge badge-pos">
+                <Icon name="check" size={11} />
+                Hueco de citación confirmado
+              </span>
+            )}
+            {overlay?.state === "possible_content_gap" && (
+              <span className="badge badge-outline">
+                <Icon name="info" size={11} />
+                Puede ser hueco de contenido
               </span>
             )}
             {(rec.consecutive_runs_open ?? 1) > 1 && (
@@ -455,11 +488,11 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             <div className="rmetric">
               <div className="l">Confianza</div>
               <div className="v" style={{ fontSize: 12, fontWeight: 700 }}>
-                {rec.confidence === "low" ? (
+                {effectiveConfidence === "low" ? (
                   <span className="badge badge-warn" style={{ fontSize: 10 }}>
                     Baja
                   </span>
-                ) : rec.confidence === "high" ? (
+                ) : effectiveConfidence === "high" ? (
                   "Alta"
                 ) : (
                   "Media"
@@ -581,6 +614,53 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
               )}
             </div>
           </div>
+
+          {/* Auditoría de cobertura del dominio (RECS-COVERAGE-OVERLAY-1) —
+              reframes this card's fix with verified evidence from "Auditar
+              cobertura" (Escaneos), when available for the current scan. */}
+          {overlay?.state === "confirmed_surfacing_gap" && (
+            <div
+              style={{
+                marginTop: 4,
+                padding: "12px 16px",
+                background: "var(--pos-soft, #f0faf3)",
+                borderRadius: 10,
+                border: "1px solid var(--pos, #1a9c5c)",
+              }}
+            >
+              <div style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: 0 }}>
+                <b>Confirmado por la auditoría de cobertura:</b> ya tienes una página propia sobre este tema — falta
+                que la IA la cite. No hace falta crear contenido nuevo, sino mejorar su citabilidad (bloque factual,
+                datos estructurados, enlace directo).
+              </div>
+              {overlay.verifiedPage && (
+                <a
+                  href={overlay.verifiedPage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12.5, color: "var(--accent)", display: "inline-block", marginTop: 6, overflowWrap: "anywhere" }}
+                >
+                  {overlay.verifiedPage.url}
+                </a>
+              )}
+            </div>
+          )}
+          {overlay?.state === "possible_content_gap" && (
+            <div
+              style={{
+                marginTop: 4,
+                padding: "12px 16px",
+                background: "var(--surface-sunk)",
+                borderRadius: 10,
+                border: "1.5px solid var(--line)",
+              }}
+            >
+              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+                La auditoría de cobertura no encontró contenido propio verificado sobre este tema — puede que el
+                hueco sea de contenido (crear la página), no solo de citación.
+              </p>
+            </div>
+          )}
 
           {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
               una solución generada; una vez generada, se muestra la insignia. */}
