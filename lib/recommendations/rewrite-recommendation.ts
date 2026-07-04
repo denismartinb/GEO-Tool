@@ -301,6 +301,13 @@ export async function rewriteRecommendationCore({
         .select("sanitized_content")
         .eq("project_id", projectId)
         .eq("recommendation_id", recommendationId)
+        // Scoped to this generation_type: RECS-4B added a second type
+        // ("domain_audit") that can share the same recommendation_id, so an
+        // unscoped "most recent completed row" lookup could pick up the
+        // wrong type's content (parseSolutionContent then safely returns
+        // null for it, but only after a wasted read — this filter avoids
+        // that cross-type interference outright).
+        .eq("generation_type", GENERATION_TYPE)
         .eq("status", "completed")
         .eq("is_sanitized", true)
         .order("created_at", { ascending: false })
@@ -318,9 +325,12 @@ export async function rewriteRecommendationCore({
 
     console.info(`${LOG_PREFIX} start`, { project_id: projectId, recommendation_id: recommendationId });
 
-    // Bound Gemini cost/abuse per project before spending an LLM call.
+    // Bound Gemini cost/abuse per project before spending an LLM call. Scope
+    // the count to this generation type so unrelated rows (e.g. the separate
+    // domain_coverage budget, DOMAIN-COVERAGE-1) never consume the rewrite
+    // pool, and vice versa (data-guardian C6).
     stage = "rate_limit";
-    const rateLimit = await checkGenerationRateLimit(service, projectId);
+    const rateLimit = await checkGenerationRateLimit(service, projectId, { generationType: GENERATION_TYPE });
     if (!rateLimit.allowed) {
       console.warn(`${LOG_PREFIX} rate_limited`, {
         project_id: projectId,
