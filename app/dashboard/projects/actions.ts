@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
-import { suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
 import {
@@ -32,7 +32,7 @@ export type ProjectSetupSuggestion = {
  * project. Returns data to the client; does not persist anything.
  */
 export async function suggestProjectSetup(input: { domain: string; country: string }): Promise<ProjectSetupSuggestion> {
-  await requireUser();
+  const { supabase, user } = await requireUser();
 
   const domain = cleanDomain(String(input.domain ?? ""));
   const country = String(input.country ?? "").trim();
@@ -44,10 +44,15 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
 
   const brand = deriveBrandFromDomain(domain);
   const language = languageForCountry(country);
+  const plan = await getPlanForUser(supabase, user.id);
+  // suggestPrompts itself hard-caps at 15 (lib/llm/gemini.ts) regardless of
+  // what's requested — Math.min just avoids asking for more than the plan
+  // allows when a lower-tier plan's cap is below that.
+  const promptLimit = Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS);
 
   const [competitors, prompts] = await Promise.all([
     suggestCompetitors({ brand, domain, country, language, limit: MAX_INITIAL_COMPETITORS }).catch(() => []),
-    suggestPrompts({ brand, domain, country, language, limit: MAX_INITIAL_PROMPTS }).catch(() => [])
+    suggestPrompts({ brand, domain, country, language, limit: promptLimit }).catch(() => [])
   ]);
 
   return {
@@ -59,19 +64,91 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   };
 }
 
+const generateMorePromptsSchema = z.object({
+  domain: z.string().min(3).max(255),
+  country: z.string().min(2).max(10),
+  existingPromptTexts: z.array(z.string().max(300)).max(500),
+  existingCategories: z.array(z.string().max(100)).max(50)
+});
+
+const GENERATE_MORE_PROMPTS_LIMIT = 5;
+
+export type GenerateMorePromptsResult =
+  | { ok: true; prompts: Array<{ text: string; category: PromptCategory }> }
+  | { ok: false };
+
+/**
+ * "Generar N más" in the onboarding wizard's prompts step: generates
+ * additional AI-suggested prompts, distinct from the ones already listed,
+ * before the project exists yet — there is no projectId to scope a DB read/
+ * write to, so (like suggestProjectSetup) this returns candidates to the
+ * client rather than persisting anything. Reuses generateAddedPrompts in
+ * "auto" mode — the same Gemini call the post-creation "Añadir prompts" flow
+ * uses (lib/projects/add-prompts.ts) — so results are deduped against
+ * whatever the user already has in the wizard, using the client's current
+ * draft as `existingPromptTexts` since no persisted rows exist yet.
+ */
+export async function generateMorePrompts(input: {
+  domain: string;
+  country: string;
+  existingPromptTexts: string[];
+  existingCategories: string[];
+}): Promise<GenerateMorePromptsResult> {
+  await requireUser();
+
+  const parsed = generateMorePromptsSchema.safeParse(input);
+  if (!parsed.success) return { ok: false };
+
+  const domain = cleanDomain(parsed.data.domain);
+  const country = parsed.data.country.trim();
+  if (!isValidDomain(domain) || country.length < 2) return { ok: false };
+
+  const brand = deriveBrandFromDomain(domain);
+  const language = languageForCountry(country);
+
+  try {
+    const candidates = await generateAddedPrompts({
+      mode: "auto",
+      brand,
+      domain,
+      country,
+      language,
+      existingPromptTexts: parsed.data.existingPromptTexts,
+      existingCategories: parsed.data.existingCategories,
+      limit: GENERATE_MORE_PROMPTS_LIMIT
+    });
+
+    if (!candidates.length) return { ok: false };
+
+    return {
+      ok: true,
+      prompts: candidates.map((candidate) => ({ text: candidate.text, category: candidate.category as PromptCategory }))
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export async function createProject(formData: FormData) {
-  const parsedForm = parseProjectForm(formData);
+  const { supabase, user } = await requireUser();
+  const plan = await getPlanForUser(supabase, user.id);
+
+  // The owner's real plan cap (not the hardcoded MAX_INITIAL_PROMPTS) bounds
+  // how many manually-entered prompts survive parsing — the onboarding wizard
+  // lets a Starter/Pro/Agency user add up to their plan's cap, so the server
+  // must accept that many rather than silently truncating to 10.
+  const parsedForm = parseProjectForm(formData, plan.caps.prompts);
   if (!parsedForm.ok) {
     redirect(`/dashboard/projects/new?error=${parsedForm.error}`);
   }
 
   const { domain, country, brand, name, language } = parsedForm.value;
-  const { supabase, user } = await requireUser();
 
-  const [{ count: activeProjectCount, error: activeProjectsError }, plan] = await Promise.all([
-    supabase.from("projects").select("id", { count: "exact", head: true }).eq("owner_user_id", user.id).eq("is_archived", false),
-    getPlanForUser(supabase, user.id)
-  ]);
+  const { count: activeProjectCount, error: activeProjectsError } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false);
 
   if (!activeProjectsError && (activeProjectCount ?? 0) >= plan.caps.projects) {
     redirect("/dashboard/projects/new?error=project_limit_reached");
