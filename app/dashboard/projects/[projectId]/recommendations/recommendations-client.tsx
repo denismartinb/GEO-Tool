@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
-import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
+import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
 type CitationPage = { domain: string; title: string; url: string };
@@ -289,7 +289,7 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
             <span className="badge badge-pos">
               {item.status === "resolved" ? "Resuelta automáticamente" : "Marcada como hecha"}
             </span>
-            <span className="badge badge-outline">{item.recommendation_type.replaceAll("_", " ")}</span>
+            <span className="badge badge-outline">{labelForType(item.recommendation_type)}</span>
           </div>
           <div className="rec-title" style={{ textDecoration: "line-through", color: "var(--ink-3)" }}>
             {item.title}
@@ -404,7 +404,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
           >
             <span className={priorityBadgeCls}>Prioridad {priorityLabel}</span>
             <span className="badge badge-outline">
-              {rec.recommendation_type.replaceAll("_", " ")}
+              {labelForType(rec.recommendation_type)}
             </span>
             {quickWin && (
               <span className="badge badge-pos">

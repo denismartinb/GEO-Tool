@@ -126,6 +126,36 @@ export function categoryForType(type: string): RecommendationCategory {
   return categoryByType[type] ?? "content";
 }
 
+// Spanish label for the "tipo" badge on a recommendation card. `recommendation_type`
+// is an internal snake_case identifier (also used for dedupeKey/rule wiring), never
+// meant to reach the UI verbatim — every value emitted by this engine must have an
+// entry here so the badge never leaks a raw English identifier into an otherwise
+// fully-localized Spanish UI (see recommendations-client.tsx).
+const labelByType: Record<string, string> = {
+  add_citation_block: "Añadir bloque de cita",
+  add_comparison_content: "Añadir contenido comparativo",
+  address_negative_narrative: "Corregir narrativa negativa",
+  amplify_positive_pattern: "Amplificar patrón positivo",
+  close_competitor_gap: "Cerrar brecha con competidores",
+  create_faq_section: "Crear sección de FAQ",
+  increase_brand_prominence: "Aumentar prominencia de marca",
+  increase_brand_visibility: "Aumentar visibilidad de marca",
+  pursue_citation_sources: "Perseguir fuentes de citación",
+  strengthen_brand_entity_clarity: "Reforzar claridad de marca",
+  track_emerging_competitor: "Seguir competidor emergente",
+  update_stale_content: "Actualizar contenido desactualizado"
+};
+
+/**
+ * Falls back to the old raw "snake_case -> spaced" rendering for any
+ * unmapped type (e.g. a future rule added without updating labelByType) —
+ * degrades to the previous (imperfect but harmless) behavior rather than
+ * throwing or showing an empty badge.
+ */
+export function labelForType(type: string): string {
+  return labelByType[type] ?? type.replaceAll("_", " ");
+}
+
 type ExtractedShape = {
   brand?: { evidence?: string[]; position?: number | null };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[]; position?: number | null }>;
