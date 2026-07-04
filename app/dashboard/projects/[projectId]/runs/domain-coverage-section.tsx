@@ -52,8 +52,13 @@ function TopicRow({ topic }: { topic: CoverageTopic }) {
         <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: "0 0 6px" }}>
           {topic.pages.map((page, i) => (
             <li key={i}>
-              <a href={page.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
-                {page.title}
+              <a
+                href={page.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "var(--accent)", overflowWrap: "anywhere" }}
+              >
+                {page.url}
               </a>
             </li>
           ))}
