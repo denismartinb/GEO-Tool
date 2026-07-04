@@ -15,17 +15,12 @@ import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 import { DomainCoverageSection } from "./domain-coverage-section";
 
-// The domain-coverage audit (auditDomainCoverageAction) runs several sequential
-// Gemini grounding calls; like the recommendations page, raise the server
-// action's ceiling to the 60s Vercel maxDuration so the in-app time budget
-// (COVERAGE_TOTAL_BUDGET_MS) governs, not the platform default. See ADR 0003.
-export const maxDuration = 60;
-
 // Server Actions inherit the maxDuration of the page they're invoked from
-// (docs/adr/0003). `autoExecutePendingScan` is driven from this page and runs a
-// window of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s), so
-// this page needs the full 60s Vercel budget — the framework default would kill
-// the function mid-batch.
+// (docs/adr/0003). Two callers on this page need the full 60s Vercel budget
+// instead of the platform default: `autoExecutePendingScan`, which runs a
+// window of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s),
+// and the domain-coverage audit (auditDomainCoverageAction), which runs
+// several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS.
 export const maxDuration = 60;
 
 /* ---- Status helpers ---- */
