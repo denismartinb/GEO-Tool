@@ -87,6 +87,25 @@ and the run only progresses further once `reconcileStuckScanRuns` notices no
 progress and auto-retries (docs/scan-lifecycle.md). See
 `docs/adr/0014-batched-self-chaining-scan-execution.md`.
 
+### Google sign-in (AUTH-GOOGLE-1)
+
+No new env vars for the app itself — it reuses `NEXT_PUBLIC_SITE_URL` (above)
+to build the OAuth `redirectTo`. This is external configuration, done by the
+founder, not something the app reads from Vercel:
+
+1. **Google Cloud Console**: create an OAuth 2.0 Client ID (Web application).
+   Authorized redirect URI must be the Supabase project's callback:
+   `https://<project-ref>.supabase.co/auth/v1/callback`.
+2. **Supabase → Authentication → Providers → Google**: enable it, paste the
+   Client ID and Client Secret from step 1.
+3. **Supabase → Authentication → URL Configuration**: add every environment's
+   origin (`http://localhost:3000`, each Vercel preview domain in use, the
+   production domain) to the Redirect URLs allow-list — Supabase rejects
+   `redirectTo` values not on this list, regardless of what the app sends.
+
+Without steps 1–3, the "Continuar con Google" button on `/login` and
+`/signup` fails with a mapped error and never reaches Google.
+
 ---
 
 ## Vercel configuration
@@ -125,3 +144,4 @@ SCAN_CONTINUE_SECRET=any-random-string
 - [ ] Production branch in Vercel points to the branch under test
 - [ ] A fresh deploy was triggered after any env var change
 - [ ] Gemini model id is still served (validate against API before smoke — see ADR 0002)
+- [ ] If testing Google sign-in: Google provider enabled in Supabase with valid Client ID/Secret, and the URL under test is in Supabase's Redirect URLs allow-list
