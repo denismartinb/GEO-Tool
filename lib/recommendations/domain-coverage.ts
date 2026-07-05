@@ -167,29 +167,58 @@ type ProjectRow = { id: string; brand: string; domain: string; language: string;
 type PromptRow = { id: string; prompt_text: string };
 
 /**
+ * Per-topic diagnostic counters (WEB-AUDIT-DQ): where own-domain pages are lost
+ * along the grounding → resolve → domain-match pipeline. Sanitized (domains
+ * only, no page content) and bounded, so it's safe to log. Used to confirm the
+ * cause of coverage false-negatives (e.g. a large brand auditing 0/N) before
+ * changing any detection behavior — see docs/specs/web-audit/phase-dq-coverage-quality.md.
+ */
+type OwnDomainDiag = {
+  /** Grounding chunks Gemini returned for this topic. */
+  chunks: number;
+  /** Of those, how many redirects resolved to a real destination URL. */
+  resolved: number;
+  /** Of the resolved, how many matched the project's own domain / a subdomain. */
+  own: number;
+  /** Up to 3 distinct resolved domains that were NOT own-domain (sample). */
+  otherDomainsSample: string[];
+};
+
+/**
  * Filters a topic's raw grounding chunks down to the pages that verifiably
  * belong to the project's own domain (invariant 1). A citation counts only if
  * its redirect resolves (fail-closed) to the project's own domain or a real
- * subdomain, label-boundary matched.
+ * subdomain, label-boundary matched. Also returns a sanitized per-stage
+ * diagnostic (WEB-AUDIT-DQ) — the returned `pages` and the coverage result are
+ * byte-for-byte unchanged; `diag` is observability only.
  */
 async function verifyOwnDomainPages(
   chunks: Array<{ uri: string; title?: string }>,
   projectDomainNormalized: string
-): Promise<DomainCoveragePage[]> {
+): Promise<{ pages: DomainCoveragePage[]; diag: OwnDomainDiag }> {
   const resolvedByUri = await resolveGroundingRedirects(chunks.map((c) => c.uri));
   const pages: DomainCoveragePage[] = [];
   const seen = new Set<string>();
+  const otherDomains = new Set<string>();
+  let resolvedCount = 0;
   for (const chunk of chunks) {
     const resolvedUrl = resolvedByUri.get(chunk.uri)?.resolvedUrl;
     if (!resolvedUrl) continue; // fail-closed: an unresolved redirect is never "own domain"
+    resolvedCount += 1;
     const resolvedDomain = extractDomain(resolvedUrl);
-    if (!resolvedDomain || !isSameOrSubdomain(resolvedDomain, projectDomainNormalized)) continue;
+    if (!resolvedDomain || !isSameOrSubdomain(resolvedDomain, projectDomainNormalized)) {
+      if (resolvedDomain && otherDomains.size < 3) otherDomains.add(resolvedDomain);
+      continue;
+    }
     if (seen.has(resolvedUrl)) continue;
     seen.add(resolvedUrl);
     pages.push({ url: resolvedUrl, title: sanitizeField(chunk.title ?? resolvedUrl, TITLE_MAX) });
     if (pages.length >= MAX_PAGES_PER_TOPIC) break;
   }
-  return pages;
+  return {
+    pages,
+    diag: { chunks: chunks.length, resolved: resolvedCount, own: pages.length, otherDomainsSample: [...otherDomains] }
+  };
 }
 
 export async function auditDomainCoverageCore({
@@ -371,7 +400,20 @@ export async function auditDomainCoverageCore({
         });
         rawByPrompt.push({ promptId: prompt.id, text: raw.text, groundingChunks: raw.groundingChunks });
 
-        const pages = await verifyOwnDomainPages(raw.groundingChunks, projectDomainNormalized);
+        const { pages, diag } = await verifyOwnDomainPages(raw.groundingChunks, projectDomainNormalized);
+        // WEB-AUDIT-DQ diagnostic: pinpoints where own-domain pages are lost
+        // (Gemini returned nothing vs. redirects failing to resolve vs. results
+        // resolving off-domain despite the site: restriction). Sanitized and
+        // bounded. Remove/downgrade once the coverage false-negative is fixed.
+        console.info(`${LOG_PREFIX}:dq topic_diag`, {
+          project_id: projectId,
+          scan_id: scanId,
+          prompt_id: prompt.id,
+          chunks: diag.chunks,
+          resolved: diag.resolved,
+          own: diag.own,
+          other_domains: diag.otherDomainsSample
+        });
         topics.push(
           pages.length > 0
             ? { promptId: prompt.id, topic, found: true, pages, note: sanitizeField(raw.text, NOTE_MAX) }

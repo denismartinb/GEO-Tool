@@ -338,4 +338,45 @@ describe("auditDomainCoverageCore", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.coverage.topics.map((t) => t.promptId)).toEqual(["p1", "p2"]);
   });
+
+  // WEB-AUDIT-DQ: the per-topic diagnostic must report where own-domain pages
+  // are lost, without changing the coverage result.
+  describe("coverage-quality diagnostic (WEB-AUDIT-DQ)", () => {
+    function findDiag(spy: ReturnType<typeof vi.spyOn>) {
+      return spy.mock.calls.find((c) => typeof c[0] === "string" && c[0].includes(":dq topic_diag"))?.[1] as
+        | { chunks: number; resolved: number; own: number; other_domains: string[] }
+        | undefined;
+    }
+
+    it("reports chunks/resolved/own when a citation resolves to the own domain", async () => {
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      const result = await auditDomainCoverageCore(makeDeps());
+      const diag = findDiag(infoSpy);
+      infoSpy.mockRestore();
+      expect(result.success).toBe(true);
+      expect(diag).toMatchObject({ chunks: 1, resolved: 1, own: 1, other_domains: [] });
+    });
+
+    it("reports the off-domain sample when a citation resolves elsewhere (own stays 0)", async () => {
+      mockedResolve.mockImplementation(
+        async (uris: string[]) => new Map(uris.map((u) => [u, { resolvedUrl: "https://evilacme.com/crm" }]))
+      );
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      const result = await auditDomainCoverageCore(makeDeps());
+      const diag = findDiag(infoSpy);
+      infoSpy.mockRestore();
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.coverage.topics[0].found).toBe(false); // result unchanged
+      expect(diag).toMatchObject({ chunks: 1, resolved: 1, own: 0, other_domains: ["evilacme.com"] });
+    });
+
+    it("reports resolved:0 when the redirect never resolves", async () => {
+      mockedResolve.mockImplementation(async (uris: string[]) => new Map(uris.map((u) => [u, { resolvedUrl: null }])));
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      await auditDomainCoverageCore(makeDeps());
+      const diag = findDiag(infoSpy);
+      infoSpy.mockRestore();
+      expect(diag).toMatchObject({ chunks: 1, resolved: 0, own: 0 });
+    });
+  });
 });
