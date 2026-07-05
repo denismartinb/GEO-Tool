@@ -41,6 +41,12 @@ import { type AuthenticatedContext } from "@/lib/scan/types";
  *    nullability CHECK in migration 0013). Ownership is proven with the
  *    user-context `supabase` client before any service-role write; scan_id and
  *    prompt ids are derived server-side, never accepted from the client (C5).
+ *
+ * Topic selection: prompts backing an active add_citation_block gap this run
+ * are audited first (see selectedPrompts below), filling any remaining budget
+ * with other active prompts in creation order. Without this, a large prompt
+ * set made it very unlikely the coverage budget (MAX_COVERAGE_TOPICS) ever
+ * reached the specific prompt behind a real citation-gap card.
  */
 
 export const domainCoverageInputSchema = z.object({
@@ -73,9 +79,15 @@ const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de auditorías de cobertura para este proyecto por hoy. Vuelve a intentarlo más tarde.";
 const NO_SCAN_FAILURE = "Necesitas al menos un escaneo completado antes de auditar la cobertura de tu dominio.";
 const NO_PROMPTS_FAILURE = "Este proyecto no tiene prompts activos que auditar.";
-const NOT_COVERED_NOTE =
+// Exported (read-only reuse, no behavior change here) so callers like
+// coverage-overlay.ts can distinguish a genuinely-confirmed "not covered"
+// topic from an inconclusive one (transient Gemini failure / budget cutoff)
+// without string-matching a duplicated literal — both currently produce
+// found:false, but only the former is safe to reframe as "possible content
+// gap" (RECS-COVERAGE-OVERLAY-1).
+export const NOT_COVERED_NOTE =
   "No hemos encontrado contenido publicado en tu dominio sobre este tema a través de la búsqueda de Google.";
-const COULD_NOT_VERIFY_NOTE = "No hemos podido verificar la cobertura de este tema en este momento.";
+export const COULD_NOT_VERIFY_NOTE = "No hemos podido verificar la cobertura de este tema en este momento.";
 
 const LOG_PREFIX = "[geo:domain-coverage]";
 const GENERATION_TYPE = "domain_coverage";
@@ -326,7 +338,50 @@ export async function auditDomainCoverageCore({
       };
     }
 
-    const selectedPrompts = prompts.slice(0, MAX_COVERAGE_TOPICS);
+    // Prioritize prompts that actually back an active add_citation_block gap
+    // this run (RECS-COVERAGE-OVERLAY-1's whole point is confirming/refuting
+    // those gaps) — with a prompt set much larger than MAX_COVERAGE_TOPICS,
+    // auditing "the first N active prompts" in creation order made it very
+    // unlikely a real citation-gap card's own prompt was ever covered. Fall
+    // back to creation order to fill any remaining budget.
+    const { data: citationRecRows } = await withTimeout(
+      supabase
+        .from("recommendations")
+        .select("evidence_json")
+        .eq("project_id", projectId)
+        .eq("run_id", scanId)
+        .eq("status", "active")
+        .eq("recommendation_type", "add_citation_block"),
+      "load_citation_gap_recs"
+    );
+    const citationResultIds = ((citationRecRows ?? []) as Array<{ evidence_json: unknown }>)
+      .map((row) => {
+        const ev = row.evidence_json as { affected_prompt_details?: Array<{ id?: string }> } | null;
+        return ev?.affected_prompt_details?.[0]?.id;
+      })
+      .filter((id): id is string => Boolean(id));
+
+    let priorityPromptIds = new Set<string>();
+    if (citationResultIds.length > 0) {
+      const { data: resultRows } = await withTimeout(
+        supabase
+          .from("scan_prompt_results")
+          .select("id, prompt_id")
+          .eq("project_id", projectId)
+          .eq("run_id", scanId)
+          .in("id", citationResultIds),
+        "load_citation_gap_prompt_ids"
+      );
+      priorityPromptIds = new Set(
+        ((resultRows ?? []) as Array<{ id: string; prompt_id: string | null }>)
+          .map((r) => r.prompt_id)
+          .filter((id): id is string => Boolean(id))
+      );
+    }
+
+    const priorityPrompts = prompts.filter((p) => priorityPromptIds.has(p.id));
+    const otherPrompts = prompts.filter((p) => !priorityPromptIds.has(p.id));
+    const selectedPrompts = [...priorityPrompts, ...otherPrompts].slice(0, MAX_COVERAGE_TOPICS);
     const projectDomainNormalized = normalizeDomain(project.domain);
     const topics: DomainCoverageTopic[] = [];
     const rawByPrompt: Array<{ promptId: string; text: string; groundingChunks: unknown }> = [];

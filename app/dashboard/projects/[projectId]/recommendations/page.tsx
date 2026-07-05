@@ -3,12 +3,37 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
+import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import {
   RecommendationsClient,
   type GeneratedSolution,
   type GeneratedSolutionExample,
   type Recommendation,
 } from "./recommendations-client";
+
+/**
+ * Parses a `domain_coverage` generated_solutions row's sanitized_content
+ * (DOMAIN-COVERAGE-1's DomainCoverageMap shape) defensively — same pattern as
+ * parseGeneratedSolution below. Not imported from lib/recommendations/domain-
+ * coverage.ts (server-only module already used for its type + constants here,
+ * but this parser mirrors its private one to keep this file's error handling
+ * self-contained).
+ */
+function parseCoverageMap(raw: string | null): { scanId: string; topics: DomainCoverageTopic[] } | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.scanId !== "string" || !Array.isArray(parsed.topics)) return null;
+    const topics = parsed.topics.filter((t): t is DomainCoverageTopic => {
+      const c = t as Record<string, unknown> | null;
+      return Boolean(c) && typeof c?.promptId === "string" && typeof c?.found === "boolean";
+    });
+    return { scanId: parsed.scanId, topics };
+  } catch {
+    return null;
+  }
+}
 
 function toExample(value: unknown): GeneratedSolutionExample | null {
   const ex = value as { label?: unknown; content?: unknown } | null | undefined;
@@ -189,9 +214,70 @@ export default async function RecommendationsPage({
     }
   }
 
+  // RECS-COVERAGE-OVERLAY-1: read-time enrichment of add_citation_block cards
+  // with already-persisted domain-coverage data (DOMAIN-COVERAGE-1) for the
+  // CURRENT scan only — never the recommendation engine or scan pipeline. See
+  // lib/recommendations/coverage-overlay.ts for the join/degradation rules.
+  const addCitationRecs = baseRecs.filter((r) => r.recommendation_type === "add_citation_block");
+  const coverageOverlayByRecId = new Map<string, CoverageOverlayEntry>();
+  if (addCitationRecs.length > 0 && latestCompletedRun) {
+    const resultIds = addCitationRecs
+      .map((r) => r.evidence_json?.affected_prompt_details?.[0]?.id)
+      .filter((id): id is string => Boolean(id));
+
+    const [{ data: resultRows }, { data: coverageRow }] = await Promise.all([
+      resultIds.length > 0
+        ? supabase
+            .from("scan_prompt_results")
+            .select("id, prompt_id")
+            .eq("project_id", projectId)
+            .eq("run_id", latestCompletedRun.id)
+            .in("id", resultIds)
+        : Promise.resolve({ data: [] as Array<{ id: string; prompt_id: string | null }> }),
+      supabase
+        .from("generated_solutions")
+        .select("sanitized_content")
+        .eq("project_id", projectId)
+        .eq("generation_type", "domain_coverage")
+        .is("recommendation_id", null)
+        .eq("status", "completed")
+        .eq("is_sanitized", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    const resultIdToPromptId = new Map(
+      ((resultRows ?? []) as Array<{ id: string; prompt_id: string | null }>)
+        .filter((row): row is { id: string; prompt_id: string } => Boolean(row.prompt_id))
+        .map((row) => [row.id, row.prompt_id]),
+    );
+
+    const coverage = parseCoverageMap(
+      (coverageRow as { sanitized_content: string | null } | null)?.sanitized_content ?? null,
+    );
+    // Only a coverage row derived from THIS scan counts — a cached row from an
+    // older scan (before the user re-ran "Auditar cobertura") never enriches.
+    const coverageTopics = coverage && coverage.scanId === latestCompletedRun.id ? coverage.topics : [];
+
+    for (const [recId, entry] of computeCoverageOverlay({
+      recommendations: baseRecs.map((r) => ({
+        id: r.id,
+        recommendationType: r.recommendation_type,
+        resultId: r.evidence_json?.affected_prompt_details?.[0]?.id ?? null,
+        confidence: r.confidence as "low" | "medium" | "high",
+      })),
+      resultIdToPromptId,
+      coverageTopics,
+    })) {
+      coverageOverlayByRecId.set(recId, entry);
+    }
+  }
+
   const recs: Recommendation[] = baseRecs.map((r) => ({
     ...r,
     solution: solutionByRecId.get(r.id) ?? null,
+    coverageOverlay: coverageOverlayByRecId.get(r.id) ?? null,
   }));
 
   // Computed stats
