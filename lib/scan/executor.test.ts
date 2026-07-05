@@ -801,6 +801,66 @@ describe("executePendingScan — recommendation history across runs (RECS-3)", (
     expect(recommendationsTable.insertedRows).toHaveLength(1);
     expect(recommendationsTable.insertedRows[0].consecutive_runs_open).toBe(1);
   });
+
+  it("persists every recommendation the engine returns with no separate cap here, and never resolves a gap still present this run (RECS-CAP-REMOVE regression)", async () => {
+    // 15 rows — more than the old recommendation-engine.ts cap of 10 — to prove
+    // executor.ts has no cap of its own hiding in the insert/transition path.
+    // One dedupe_key (gap-000) also existed last run: it must be superseded
+    // (carried forward), never falsely 'resolved', now that it's guaranteed to
+    // still be present in a run this large.
+    const currentRecs = Array.from({ length: 15 }, (_, i) => ({
+      priority_rank: i + 1,
+      title: `Gap ${i}`,
+      description: "desc",
+      rule_id: "rule_visibility_001",
+      recommendation_type: "increase_brand_visibility",
+      impact: "medium",
+      effort: "medium",
+      confidence: "high",
+      source_type: "rule",
+      evidence_json: {},
+      dedupe_key: `gap-${String(i).padStart(3, "0")}`
+    })) as unknown as ReturnType<typeof generateRecommendationsForRun>;
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce(currentRecs);
+
+    const { service, supabase, recommendationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      previousRunId: PREVIOUS_RUN_ID,
+      previousRecommendationRows: [
+        {
+          id: "old-still-open",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-000",
+          consecutive_runs_open: 1,
+          resolved_in_run_id: null
+        },
+        {
+          id: "old-genuinely-fixed",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-not-recurring",
+          consecutive_runs_open: 1,
+          resolved_in_run_id: null
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(recommendationsTable.insertedRows).toHaveLength(15);
+
+    const stillOpenRow = recommendationsTable.rows.find((r) => r.id === "old-still-open")!;
+    expect(stillOpenRow.status).toBe("superseded");
+
+    const genuinelyFixedRow = recommendationsTable.rows.find((r) => r.id === "old-genuinely-fixed")!;
+    expect(genuinelyFixedRow.status).toBe("resolved");
+    expect(genuinelyFixedRow.resolved_in_run_id).toBe(RUN_ID);
+  });
 });
 
 describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {

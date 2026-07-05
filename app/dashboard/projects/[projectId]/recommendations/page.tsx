@@ -151,10 +151,10 @@ export default async function RecommendationsPage({
   // A single logical prompt scanned by multiple LLM engines (Gemini + Claude)
   // produces one scan_prompt_results row per engine, so per-prompt gap cards
   // (increase_brand_visibility/add_citation_block) can generate two
-  // near-identical titles for the same underlying query. The active backlog
-  // hides this behind the top-10-by-severity cutoff, but these two
-  // unbounded, no-cap lists would show the duplicates raw — dedupe by
-  // normalized title, keeping the first (most relevant/most recent) row.
+  // near-identical titles for the same underlying query. The active backlog has
+  // no count cap of its own either (RECS-CAP-REMOVE), so these two lists would
+  // show the duplicates raw — dedupe by normalized title, keeping the first
+  // (most relevant/most recent) row.
   function dedupeByTitle<T extends { title: string }>(rows: T[]): T[] {
     const seen = new Set<string>();
     const out: T[] = [];
