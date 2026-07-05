@@ -68,7 +68,7 @@ export const domainCoverageInputSchema = z.object({
 });
 
 export type DomainCoverageResult =
-  | { success: true; coverage: DomainCoverageMap }
+  | { success: true; coverage: DomainCoverageMap; cached: boolean }
   | { success: false; error: string };
 
 const GENERIC_FAILURE = "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos.";
@@ -221,6 +221,41 @@ async function verifyOwnDomainPages(
   };
 }
 
+/**
+ * WEB-AUDIT-DQ cache-hit diagnostic: reads the per-topic grounding-chunk counts
+ * out of the persisted raw_content (shape: { topics: [{ promptId, groundingChunks }] })
+ * and logs one line per topic. Fully defensive — a malformed/absent raw_content
+ * just logs nothing. Observability only; never affects the returned map.
+ */
+function logCachedCoverageDiag(
+  projectId: string,
+  scanId: string,
+  rawContent: string | null,
+  coverage: DomainCoverageMap
+): void {
+  if (!rawContent) return;
+  try {
+    const parsed = JSON.parse(rawContent) as { topics?: Array<{ promptId?: string; groundingChunks?: unknown }> };
+    const chunksByPrompt = new Map<string, number>();
+    for (const t of parsed.topics ?? []) {
+      if (typeof t?.promptId === "string") {
+        chunksByPrompt.set(t.promptId, Array.isArray(t.groundingChunks) ? t.groundingChunks.length : 0);
+      }
+    }
+    for (const topic of coverage.topics) {
+      console.info(`${LOG_PREFIX}:dq cached_diag`, {
+        project_id: projectId,
+        scan_id: scanId,
+        prompt_id: topic.promptId,
+        found: topic.found,
+        chunks: chunksByPrompt.get(topic.promptId) ?? 0
+      });
+    }
+  } catch {
+    // malformed raw_content — diagnostic is best-effort, never throws
+  }
+}
+
 export async function auditDomainCoverageCore({
   projectId,
   supabase,
@@ -300,7 +335,7 @@ export async function auditDomainCoverageCore({
     const { data: existingRaw } = await withTimeout(
       service
         .from("generated_solutions")
-        .select("sanitized_content")
+        .select("sanitized_content, raw_content")
         .eq("project_id", projectId)
         .eq("generation_type", GENERATION_TYPE)
         .is("recommendation_id", null)
@@ -311,11 +346,17 @@ export async function auditDomainCoverageCore({
         .maybeSingle(),
       "load_existing_coverage"
     );
-    const existing = parseCoverageMap(
-      (existingRaw as unknown as { sanitized_content: string | null } | null)?.sanitized_content ?? null
-    );
+    const existingRow = existingRaw as unknown as { sanitized_content: string | null; raw_content: string | null } | null;
+    const existing = parseCoverageMap(existingRow?.sanitized_content ?? null);
     if (existing && existing.scanId === scanId) {
-      return { success: true, coverage: existing };
+      // WEB-AUDIT-DQ: the fresh-path per-topic diagnostic can't run on a cache
+      // hit (we return before the Gemini loop), so surface the equivalent
+      // signal from the already-persisted raw grounding chunks — how many
+      // chunks Gemini returned per topic. `chunks: 0` across topics points at
+      // the query/grounding stage; `chunks > 0` with found:false points at
+      // redirect-resolution / off-domain. No network, no Gemini spend.
+      logCachedCoverageDiag(projectId, scanId, existingRow?.raw_content ?? null, existing);
+      return { success: true, coverage: existing, cached: true };
     }
 
     console.info(`${LOG_PREFIX} start`, { project_id: projectId, scan_id: scanId, prompts: prompts.length });
@@ -471,7 +512,7 @@ export async function auditDomainCoverageCore({
       covered: topics.filter((t) => t.found).length
     });
 
-    return { success: true, coverage };
+    return { success: true, coverage, cached: false };
   } catch (error) {
     if (error instanceof OperationTimeoutError) {
       console.error(`${LOG_PREFIX} stage_timed_out`, { project_id: projectId, stage: error.message });

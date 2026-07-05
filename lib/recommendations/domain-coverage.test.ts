@@ -18,7 +18,7 @@ type Cfg = {
   profile?: unknown;
   latestRun?: unknown;
   prompts?: unknown[];
-  cacheRow?: { sanitized_content: string | null } | null;
+  cacheRow?: { sanitized_content: string | null; raw_content?: string | null } | null;
   insertError?: { message: string } | null;
   /** Active add_citation_block recommendations for the current run (topic-selection priority). */
   citationRecRows?: unknown[];
@@ -177,6 +177,7 @@ describe("auditDomainCoverageCore", () => {
       expect(result.coverage.topics).toHaveLength(1);
       expect(result.coverage.topics[0].found).toBe(true);
       expect(result.coverage.topics[0].pages[0].url).toBe("https://acme.com/crm");
+      expect(result.cached).toBe(false); // fresh run, not a cache hit
     }
   });
 
@@ -275,7 +276,10 @@ describe("auditDomainCoverageCore", () => {
     const deps = makeDeps({ cacheRow: { sanitized_content: JSON.stringify(cached) } });
     const result = await auditDomainCoverageCore(deps);
     expect(result.success).toBe(true);
-    if (result.success) expect(result.coverage.scanId).toBe("scan-1");
+    if (result.success) {
+      expect(result.coverage.scanId).toBe("scan-1");
+      expect(result.cached).toBe(true);
+    }
     expect(mockedGemini).not.toHaveBeenCalled();
   });
 
@@ -377,6 +381,27 @@ describe("auditDomainCoverageCore", () => {
       const diag = findDiag(infoSpy);
       infoSpy.mockRestore();
       expect(diag).toMatchObject({ chunks: 1, resolved: 0, own: 0 });
+    });
+
+    it("emits a cached_diag with per-topic chunk counts on a cache hit (no Gemini call)", async () => {
+      const cached = {
+        scanId: "scan-1",
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        topics: [{ promptId: "p1", topic: "x", found: false, pages: [], note: "n" }]
+      };
+      const rawContent = JSON.stringify({ topics: [{ promptId: "p1", text: "t", groundingChunks: [] }] });
+      const deps = makeDeps({ cacheRow: { sanitized_content: JSON.stringify(cached), raw_content: rawContent } });
+      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      const result = await auditDomainCoverageCore(deps);
+      const cachedDiag = infoSpy.mock.calls.find(
+        (c) => typeof c[0] === "string" && c[0].includes(":dq cached_diag")
+      )?.[1] as { chunks: number; found: boolean } | undefined;
+      infoSpy.mockRestore();
+      expect(result.success).toBe(true);
+      expect(mockedGemini).not.toHaveBeenCalled();
+      // Ryanair-like signal: a cached "not found" topic whose Gemini call
+      // returned zero grounding chunks — points at the query/grounding stage.
+      expect(cachedDiag).toMatchObject({ chunks: 0, found: false });
     });
   });
 });
