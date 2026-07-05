@@ -8,6 +8,20 @@ import { isProOrAbove } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
+import {
+  parseCoverageMap,
+  NOT_COVERED_NOTE,
+  COULD_NOT_VERIFY_NOTE,
+  type DomainCoveragePage,
+  type DomainCoverageTopic,
+  type DomainCoverageMap
+} from "@/lib/web-audit/coverage-map";
+
+// Re-exported for existing call sites (coverage-overlay.ts, the "Auditoría
+// web" section, tests) — the canonical definitions now live in
+// lib/web-audit/coverage-map.ts, shared with WEB-AUDIT-1's read-only usage.
+export { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE };
+export type { DomainCoveragePage, DomainCoverageTopic, DomainCoverageMap };
 
 /**
  * "Auditar cobertura del dominio" (DOMAIN-COVERAGE-1): a standalone, Pro+-gated
@@ -17,8 +31,8 @@ import { type AuthenticatedContext } from "@/lib/scan/types";
  * topic. The result is a per-topic "coverage map" that distinguishes:
  *   - a CONTENT gap  (no own-domain page exists on the topic), from
  *   - a SURFACING gap (a page exists but AI doesn't cite it in scans),
- * which need opposite fixes. This lives on the Escaneos page, NOT bolted onto a
- * recommendation card.
+ * which need opposite fixes. This lives on the "Auditoría web" page
+ * (WEB-AUDIT-1; previously Escaneos), NOT bolted onto a recommendation card.
  *
  * Reviewed by data-guardian before implementation (APROBADO CON CONDICIONES).
  * Non-negotiable invariants enforced here:
@@ -53,22 +67,6 @@ export const domainCoverageInputSchema = z.object({
   projectId: z.string().uuid()
 });
 
-export type DomainCoveragePage = { url: string; title: string };
-
-export type DomainCoverageTopic = {
-  promptId: string;
-  topic: string;
-  found: boolean;
-  pages: DomainCoveragePage[];
-  note: string;
-};
-
-export type DomainCoverageMap = {
-  scanId: string;
-  generatedAt: string;
-  topics: DomainCoverageTopic[];
-};
-
 export type DomainCoverageResult =
   | { success: true; coverage: DomainCoverageMap }
   | { success: false; error: string };
@@ -79,15 +77,6 @@ const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de auditorías de cobertura para este proyecto por hoy. Vuelve a intentarlo más tarde.";
 const NO_SCAN_FAILURE = "Necesitas al menos un escaneo completado antes de auditar la cobertura de tu dominio.";
 const NO_PROMPTS_FAILURE = "Este proyecto no tiene prompts activos que auditar.";
-// Exported (read-only reuse, no behavior change here) so callers like
-// coverage-overlay.ts can distinguish a genuinely-confirmed "not covered"
-// topic from an inconclusive one (transient Gemini failure / budget cutoff)
-// without string-matching a duplicated literal — both currently produce
-// found:false, but only the former is safe to reframe as "possible content
-// gap" (RECS-COVERAGE-OVERLAY-1).
-export const NOT_COVERED_NOTE =
-  "No hemos encontrado contenido publicado en tu dominio sobre este tema a través de la búsqueda de Google.";
-export const COULD_NOT_VERIFY_NOTE = "No hemos podido verificar la cobertura de este tema en este momento.";
 
 const LOG_PREFIX = "[geo:domain-coverage]";
 const GENERATION_TYPE = "domain_coverage";
@@ -172,30 +161,6 @@ function sanitizeField(input: string, maxLen: number): string {
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, maxLen);
-}
-
-function parseCoverageMap(raw: string | null): DomainCoverageMap | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.scanId !== "string" || typeof parsed.generatedAt !== "string" || !Array.isArray(parsed.topics)) {
-      return null;
-    }
-    const topics = parsed.topics.filter((t): t is DomainCoverageTopic => {
-      const c = t as Record<string, unknown> | null;
-      return (
-        Boolean(c) &&
-        typeof c?.promptId === "string" &&
-        typeof c?.topic === "string" &&
-        typeof c?.found === "boolean" &&
-        typeof c?.note === "string" &&
-        Array.isArray(c?.pages)
-      );
-    });
-    return { scanId: parsed.scanId, generatedAt: parsed.generatedAt, topics };
-  } catch {
-    return null;
-  }
 }
 
 type ProjectRow = { id: string; brand: string; domain: string; language: string; is_archived: boolean };

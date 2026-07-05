@@ -7,20 +7,17 @@ import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
-import { isProOrAbove } from "@/lib/billing";
 import { ENABLE_SYNC_SCAN_EXECUTION, getRunErrorDisplay, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
-import { DomainCoverageSection } from "./domain-coverage-section";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
-// (docs/adr/0003). Two callers on this page need the full 60s Vercel budget
-// instead of the platform default: `autoExecutePendingScan`, which runs a
-// window of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s),
-// and the domain-coverage audit (auditDomainCoverageAction), which runs
-// several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS.
+// (docs/adr/0003). `autoExecutePendingScan` needs the full 60s Vercel budget:
+// it runs a window of scan batches per call (up to
+// AUTO_EXECUTE_TIME_BUDGET_MS ~40s). The domain-coverage audit moved to the
+// Auditoría web page (WEB-AUDIT-1), which carries its own maxDuration.
 export const maxDuration = 60;
 
 /* ---- Status helpers ---- */
@@ -178,17 +175,7 @@ export default async function RunsPage({
   const { projectId } = await params;
   const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
-  const { supabase, user } = await requireUser();
-
-  // "Cobertura del dominio" (DOMAIN-COVERAGE-1) is Pro+-gated. Read the raw
-  // plan column directly via isProOrAbove, never via getPlanForUser/resolvePlan
-  // (see lib/billing.ts for why that fallback is unsafe for a feature gate).
-  const { data: coverageProfile } = await supabase
-    .from("profiles")
-    .select("current_plan")
-    .eq("id", user.id)
-    .maybeSingle();
-  const canAuditCoverage = isProOrAbove(coverageProfile?.current_plan as string | undefined);
+  const { supabase } = await requireUser();
 
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
@@ -539,10 +526,6 @@ export default async function RunsPage({
         </div>
       </div>
 
-      {/* Cobertura del dominio (DOMAIN-COVERAGE-1) — sits directly under the scan
-          controls; provisional placement, UX to be finalised. */}
-      <DomainCoverageSection projectId={projectId} canAuditCoverage={canAuditCoverage} />
-
       {/* Empty state */}
       {allRuns.length === 0 ? (
         <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
@@ -818,6 +801,20 @@ export default async function RunsPage({
         >
           <Icon name="prompts" size={13} />
           Prompts
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/web-audit`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontSize: 13,
+            color: "var(--ink-3)",
+            fontWeight: 600
+          }}
+        >
+          <Icon name="search" size={13} />
+          Auditoría web
         </Link>
         <Link
           href="/dashboard/projects/new"
