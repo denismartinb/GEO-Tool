@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryForType, generateRecommendationsForRun } from "./recommendation-engine";
+import { categoryForType, labelForType, generateRecommendationsForRun } from "./recommendation-engine";
 
 type PromptResultFixture = Parameters<typeof generateRecommendationsForRun>[0]["promptResults"][number];
 
@@ -644,6 +644,39 @@ describe("generateRecommendationsForRun", () => {
     expect(categoryForType("amplify_positive_pattern")).toBe("content");
     expect(categoryForType("track_emerging_competitor")).toBe("technical");
     expect(categoryForType("unknown_future_type")).toBe("content");
+  });
+
+  it("gives every emitted recommendation type a Spanish label instead of leaking the raw internal identifier", () => {
+    expect(labelForType("add_citation_block")).toBe("Añadir bloque de cita");
+    expect(labelForType("pursue_citation_sources")).toBe("Perseguir fuentes de citación");
+    expect(labelForType("create_faq_section")).toBe("Crear sección de FAQ");
+    expect(labelForType("increase_brand_visibility")).toBe("Aumentar visibilidad de marca");
+    expect(labelForType("strengthen_brand_entity_clarity")).toBe("Reforzar claridad de marca");
+    expect(labelForType("track_emerging_competitor")).toBe("Seguir competidor emergente");
+    // Every type this engine can actually emit must be mapped — this loop
+    // fails loudly (not silently falling back) if a future rule adds a new
+    // recommendation_type without a Spanish label for it.
+    const emittedTypes = [
+      "add_citation_block",
+      "add_comparison_content",
+      "address_negative_narrative",
+      "amplify_positive_pattern",
+      "close_competitor_gap",
+      "create_faq_section",
+      "increase_brand_prominence",
+      "increase_brand_visibility",
+      "pursue_citation_sources",
+      "strengthen_brand_entity_clarity",
+      "track_emerging_competitor",
+      "update_stale_content"
+    ];
+    for (const type of emittedTypes) {
+      expect(labelForType(type)).not.toBe(type.replaceAll("_", " "));
+    }
+  });
+
+  it("degrades to the old spaced rendering for an unmapped type instead of throwing or showing empty", () => {
+    expect(labelForType("some_future_type")).toBe("some future type");
   });
 
   // --- RECS-2B ---
