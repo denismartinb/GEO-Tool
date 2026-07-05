@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
@@ -41,6 +42,27 @@ const TOPIC_LIST_ORDER: TopicOutcome[] = [
   "open_opportunity",
   "inconclusive"
 ];
+
+// Single-line, ellipsis-truncated chip used inside every matrix quadrant. The
+// `title` attribute carries the full topic; the detail list below the matrix
+// shows it untruncated. Shared so all quadrants (including the merged
+// "Sin contenido propio" one) truncate identically instead of wrapping
+// character-by-character on narrow/mobile columns.
+const chipStyle: CSSProperties = {
+  display: "block",
+  fontSize: 10.5,
+  fontWeight: 600,
+  background: "var(--surface)",
+  border: "1px solid var(--line)",
+  color: "var(--ink-2)",
+  borderRadius: 999,
+  padding: "2px 8px",
+  margin: "0 0 4px",
+  maxWidth: "100%",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
 
 function TopicRow({ topic }: { topic: ClassifiedTopic }) {
   const meta = OUTCOME_META[topic.outcome];
@@ -109,33 +131,14 @@ function Quadrant({
   const v = toneVars[tone];
 
   return (
-    <div style={{ borderRadius: 10, padding: "10px 12px", border: `1px solid ${v.border}`, background: v.bg, minHeight: 108 }}>
+    <div style={{ borderRadius: 10, padding: "10px 12px", border: `1px solid ${v.border}`, background: v.bg, minHeight: 108, minWidth: 0, overflow: "hidden" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 750, color: v.fg }}>
         {title}
         <span style={{ marginLeft: "auto", fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{count}</span>
       </div>
       <div style={{ fontSize: 10.5, color: "var(--ink-3)", margin: "2px 0 7px" }}>{hint}</div>
       {topics.slice(0, 6).map((t) => (
-        <span
-          key={t.promptId}
-          title={t.topic}
-          style={{
-            display: "inline-block",
-            fontSize: 10.5,
-            fontWeight: 600,
-            background: "var(--surface)",
-            border: "1px solid var(--line)",
-            color: "var(--ink-2)",
-            borderRadius: 999,
-            padding: "2px 8px",
-            margin: "0 4px 4px 0",
-            maxWidth: "100%",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            verticalAlign: "top"
-          }}
-        >
+        <span key={t.promptId} title={t.topic} style={chipStyle}>
           {t.topic}
         </span>
       ))}
@@ -376,7 +379,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
                 {summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
                 <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>temas</small>
-                {coverageDelta !== null && <Delta value={coverageDelta} suffix=" pt" />}
+                {coverageDelta !== null && coverageDelta !== 0 && <Delta value={coverageDelta} suffix=" pt" />}
               </div>
               <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 6 }}>
                 temas de tus prompts con contenido propio verificado
@@ -398,8 +401,11 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </div>
           </div>
 
-          {/* Opportunity matrix + trend */}
-          <div style={{ display: "grid", gridTemplateColumns: trend.length >= 2 ? "minmax(0, 1.15fr) minmax(0, 1fr)" : "1fr", gap: 12, marginTop: 12 }}>
+          {/* Opportunity matrix + trend — auto-fit so the two cards sit side by
+              side on desktop but stack (never squash) on mobile; with only the
+              matrix (no trend yet) auto-fit collapses the empty track to full
+              width. */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
             <div className="card">
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750 }}>Matriz de oportunidad</div>
@@ -408,7 +414,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 </div>
               </div>
               <div style={{ padding: "14px 16px 16px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "18px 1fr 1fr", gridTemplateRows: "1fr 1fr 18px", gap: 6 }}>
+                {/* minmax(0, 1fr) — not "1fr" — so the nowrap topic chips inside
+                    the quadrants can't force the tracks to their min-content
+                    width and overflow the card horizontally on mobile. */}
+                <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr) minmax(0, 1fr)", gridTemplateRows: "1fr 1fr 18px", gap: 6 }}>
                   <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", gridRow: "1 / 3", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)", display: "grid", placeItems: "center" }}>
                     Con contenido propio
                   </div>
@@ -426,7 +435,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     hint="Contenido propio citado por la IA → mantener"
                     topics={grouped.performing}
                   />
-                  <div style={{ borderRadius: 10, padding: "10px 12px", border: "1px solid var(--neg-soft)", background: "var(--neg-soft)", minHeight: 108 }}>
+                  <div style={{ borderRadius: 10, padding: "10px 12px", border: "1px solid var(--neg-soft)", background: "var(--neg-soft)", minHeight: 108, minWidth: 0, overflow: "hidden" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 750, color: "var(--neg-ink)" }}>
                       ✕ Sin contenido propio
                       <span style={{ marginLeft: "auto", fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
@@ -442,7 +451,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                           Compite un rival ({grouped.content_gap.length})
                         </div>
                         {grouped.content_gap.slice(0, 4).map((t) => (
-                          <span key={t.promptId} title={t.topic} style={{ display: "inline-block", fontSize: 10.5, background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-2)", borderRadius: 999, padding: "2px 8px", margin: "2px 4px 0 0" }}>
+                          <span key={t.promptId} title={t.topic} style={{ ...chipStyle, margin: "2px 0 0" }}>
                             {t.topic}
                           </span>
                         ))}
@@ -454,7 +463,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                           Nadie destaca aún ({grouped.open_opportunity.length})
                         </div>
                         {grouped.open_opportunity.slice(0, 4).map((t) => (
-                          <span key={t.promptId} title={t.topic} style={{ display: "inline-block", fontSize: 10.5, background: "var(--surface)", border: "1px solid var(--line)", color: "var(--ink-2)", borderRadius: 999, padding: "2px 8px", margin: "2px 4px 0 0" }}>
+                          <span key={t.promptId} title={t.topic} style={{ ...chipStyle, margin: "2px 0 0" }}>
                             {t.topic}
                           </span>
                         ))}
