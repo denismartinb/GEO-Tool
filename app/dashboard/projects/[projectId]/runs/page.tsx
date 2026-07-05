@@ -8,7 +8,12 @@ import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
-import { ENABLE_SYNC_SCAN_EXECUTION, getRunErrorDisplay, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import {
+  ENABLE_SYNC_SCAN_EXECUTION,
+  getRunErrorDisplay,
+  reconcileStuckScanRuns,
+  scanRunsNeedReconciliation
+} from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
@@ -180,24 +185,50 @@ export default async function RunsPage({
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
+  const RUNS_SELECT =
+    "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
+
   // "Cobertura del dominio" (DOMAIN-COVERAGE-1) is Pro+-gated. Read the raw
   // plan column directly via isProOrAbove, never via getPlanForUser/resolvePlan
   // (see lib/billing.ts for why that fallback is unsafe for a feature gate).
-  // Runs concurrently with the reconciliation pass below — neither depends on
-  // the other (docs/architecture-audit-2026-07.md, finding 1.3).
-  const [{ data: coverageProfile }] = await Promise.all([
+  // Runs concurrently with the runs fetch — neither depends on the other.
+  // Reconciliation itself is decided below from the already-fetched runs
+  // instead of running unconditionally on every render
+  // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
+  const [{ data: coverageProfile }, { data: runsData }] = await Promise.all([
     supabase
       .from("profiles")
       .select("current_plan")
       .eq("id", user.id)
       .maybeSingle(),
-    // Reconcile any stuck pending/running runs before reading scan_runs, so
-    // the Escaneos table reflects a `failed` status promptly instead of
-    // showing an indefinite "scanning" state (docs/scan-lifecycle.md,
-    // "Timeout detection").
-    reconcileStuckScanRuns({ projectId, service: createServiceClient() })
+    supabase
+      .from("scan_runs")
+      .select(RUNS_SELECT)
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(50)
   ]);
   const canAuditCoverage = isProOrAbove(coverageProfile?.current_plan as string | undefined);
+
+  let allRuns = runsData ?? [];
+  if (scanRunsNeedReconciliation(allRuns)) {
+    // Reconcile any stuck pending/running runs (or retry an exhausted
+    // zero-result failure), then re-read scan_runs so the Escaneos table
+    // reflects the corrected status instead of the pre-reconciliation
+    // snapshot (docs/scan-lifecycle.md, "Timeout detection"). Must complete
+    // before `getWorkspaceCounters()` below so the domain cards' scan status
+    // is also correct.
+    const { reconciledCount } = await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
+    if (reconciledCount > 0) {
+      const { data: refreshedRuns } = await supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      allRuns = refreshedRuns ?? [];
+    }
+  }
 
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
@@ -234,17 +265,6 @@ export default async function RunsPage({
     };
   });
 
-  /* Fetch all runs */
-  const { data: runs } = await supabase
-    .from("scan_runs")
-    .select(
-      "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at"
-    )
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const allRuns = runs ?? [];
   const completedRuns = allRuns.filter((r) => r.status === "completed");
   const completedRunIds = completedRuns.map((r) => r.id);
 
