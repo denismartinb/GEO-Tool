@@ -151,19 +151,24 @@ export default async function ProjectDetailPage({
   const feedback = await searchParams;
   const { supabase } = await requireUser();
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, domain, brand, country, language, created_at")
-    .eq("id", projectId)
-    .eq("is_archived", false)
-    .single();
+  // The project lookup and the reconciliation pass are independent (the
+  // latter only needs `projectId`, not the fetched row), so they run
+  // concurrently instead of the reconcile waiting on the project fetch first
+  // (docs/architecture-audit-2026-07.md, finding 1.3).
+  const [{ data: project }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, domain, brand, country, language, created_at")
+      .eq("id", projectId)
+      .eq("is_archived", false)
+      .single(),
+    // Reconcile any stuck pending/running runs before reading scan_runs, so
+    // the Overview reflects a `failed` status promptly instead of showing an
+    // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
+    reconcileStuckScanRuns({ projectId, service: createServiceClient() })
+  ]);
 
   if (!project) notFound();
-
-  // Reconcile any stuck pending/running runs before reading scan_runs, so the
-  // Overview reflects a `failed` status promptly instead of showing an
-  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
-  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
 
   const [{ data: prompts }, { data: competitors }, { data: runs }] = await Promise.all([
     supabase

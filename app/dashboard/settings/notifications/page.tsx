@@ -1,14 +1,8 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { NotificationsTab } from "@/components/settings/notifications-tab";
 
 export default async function NotificationsSettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  await requireUser();
 
   return <NotificationsTab />;
 }

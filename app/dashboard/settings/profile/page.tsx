@@ -1,16 +1,10 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { ProfileTab } from "@/components/settings/profile-tab";
 import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
 
 export default async function ProfileSettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  const { user } = await requireUser();
 
   const role = await getAccountRole();
   const email = user.email ?? "";
