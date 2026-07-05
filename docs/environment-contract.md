@@ -96,6 +96,12 @@ progress and auto-retries (docs/scan-lifecycle.md). See
 - **maxDuration**: `export const maxDuration = 60` must be present in the scan
   route handler (`app/dashboard/projects/[projectId]/page.tsx`). Vercel Hobby
   plan default is 10s — scans take 30–60s and will time out silently without it.
+- **regions**: `vercel.json` pins serverless functions to `dub1` (Dublin, EU
+  West) to co-locate with the Supabase project (`eu-west-1`). Without this,
+  Vercel functions run in `iad1` (US East) by default and every Supabase round
+  trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
+  If the Supabase project is ever migrated to a different region, update this
+  value to match.
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
 

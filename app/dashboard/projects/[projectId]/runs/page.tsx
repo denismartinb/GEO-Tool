@@ -183,22 +183,26 @@ export default async function RunsPage({
   // "Cobertura del dominio" (DOMAIN-COVERAGE-1) is Pro+-gated. Read the raw
   // plan column directly via isProOrAbove, never via getPlanForUser/resolvePlan
   // (see lib/billing.ts for why that fallback is unsafe for a feature gate).
-  const { data: coverageProfile } = await supabase
-    .from("profiles")
-    .select("current_plan")
-    .eq("id", user.id)
-    .maybeSingle();
+  // Runs concurrently with the reconciliation pass below — neither depends on
+  // the other (docs/architecture-audit-2026-07.md, finding 1.3).
+  const [{ data: coverageProfile }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("current_plan")
+      .eq("id", user.id)
+      .maybeSingle(),
+    // Reconcile any stuck pending/running runs before reading scan_runs, so
+    // the Escaneos table reflects a `failed` status promptly instead of
+    // showing an indefinite "scanning" state (docs/scan-lifecycle.md,
+    // "Timeout detection").
+    reconcileStuckScanRuns({ projectId, service: createServiceClient() })
+  ]);
   const canAuditCoverage = isProOrAbove(coverageProfile?.current_plan as string | undefined);
 
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
   const feedbackSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
-
-  // Reconcile any stuck pending/running runs before reading scan_runs, so the
-  // Escaneos table reflects a `failed` status promptly instead of showing an
-  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
-  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
 
   /* Domains grid — reuses the same counters/queries as the dashboard sidebar */
   const {
