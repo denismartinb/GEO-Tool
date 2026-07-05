@@ -20,6 +20,10 @@ type Cfg = {
   prompts?: unknown[];
   cacheRow?: { sanitized_content: string | null } | null;
   insertError?: { message: string } | null;
+  /** Active add_citation_block recommendations for the current run (topic-selection priority). */
+  citationRecRows?: unknown[];
+  /** scan_prompt_results rows mapping id -> prompt_id for those recommendations' evidence. */
+  citationResultRows?: unknown[];
 };
 
 function makeSupabase(cfg: Cfg) {
@@ -30,6 +34,7 @@ function makeSupabase(cfg: Cfg) {
       builder.select = chain;
       builder.eq = chain;
       builder.is = chain;
+      builder.in = chain;
       builder.order = chain;
       builder.limit = chain;
       builder.maybeSingle = () => {
@@ -38,9 +43,15 @@ function makeSupabase(cfg: Cfg) {
         if (table === "scan_runs") return Promise.resolve({ data: cfg.latestRun ?? null, error: null });
         return Promise.resolve({ data: null, error: null });
       };
-      // project_prompts is awaited directly after .order() (a list query).
-      builder.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) =>
-        Promise.resolve({ data: cfg.prompts ?? [], error: null }).then(resolve, reject);
+      // project_prompts/recommendations/scan_prompt_results are all awaited
+      // directly after their filter chain (list queries).
+      builder.then = (resolve: (v: unknown) => unknown, reject?: (e: unknown) => unknown) => {
+        let data: unknown[] = [];
+        if (table === "project_prompts") data = cfg.prompts ?? [];
+        else if (table === "recommendations") data = cfg.citationRecRows ?? [];
+        else if (table === "scan_prompt_results") data = cfg.citationResultRows ?? [];
+        return Promise.resolve({ data, error: null }).then(resolve, reject);
+      };
       return builder;
     }
   };
@@ -296,5 +307,35 @@ describe("auditDomainCoverageCore", () => {
     expect(result.success).toBe(true);
     if (result.success) expect(result.coverage.topics.length).toBe(6);
     expect(mockedGemini).toHaveBeenCalledTimes(6);
+  });
+
+  it("prioritizes prompts backing an active add_citation_block gap this run, even when they'd otherwise fall outside the budget", async () => {
+    // 9 active prompts, but only "p8" (last by creation order — would never be
+    // reached by a naive first-N selection) backs a real citation-gap card.
+    const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
+    const deps = makeDeps({
+      prompts,
+      citationRecRows: [{ evidence_json: { affected_prompt_details: [{ id: "result-for-p8" }] } }],
+      citationResultRows: [{ id: "result-for-p8", prompt_id: "p8" }]
+    });
+    const result = await auditDomainCoverageCore(deps);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const promptIds = result.coverage.topics.map((t) => t.promptId);
+      expect(promptIds).toContain("p8");
+      expect(promptIds[0]).toBe("p8"); // audited first, ahead of creation order
+      expect(result.coverage.topics.length).toBe(6);
+    }
+  });
+
+  it("falls back to creation order alone when there are no active citation-gap recommendations this run", async () => {
+    const prompts = [
+      { id: "p1", prompt_text: "tema uno" },
+      { id: "p2", prompt_text: "tema dos" }
+    ];
+    const deps = makeDeps({ prompts, citationRecRows: [] });
+    const result = await auditDomainCoverageCore(deps);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.coverage.topics.map((t) => t.promptId)).toEqual(["p1", "p2"]);
   });
 });
