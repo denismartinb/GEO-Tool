@@ -1083,14 +1083,21 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     if (!existing || rec.severityScore > existing.severityScore) byKey.set(rec.dedupeKey, rec);
   }
 
+  // No count cap (RECS-CAP-REMOVE, founder-approved 2026-07-04): recommendations
+  // are this product's core value, so a real, deduplicated gap must never be
+  // silently discarded just because more candidates existed this run than an
+  // arbitrary number. The old .slice(0, 10) here was also a live "fake win" bug:
+  // lib/scan/executor.ts derives currentDedupeKeys from exactly this array to
+  // detect resolved gaps (RECS-3) — any real gap crowded out of a fixed-size cap
+  // was indistinguishable from a genuinely-fixed one, and got marked 'resolved'
+  // even though nothing was actually fixed. Sort order is kept (still drives
+  // priority_rank for display); only the truncation is gone.
   const impactWeight = (impact: "low" | "medium" | "high") => (impact === "high" ? 3 : impact === "medium" ? 2 : 1);
-  const deduped = Array.from(byKey.values())
-    .sort((a, b) => {
-      const aScore = a.severityScore + impactWeight(a.impact) * 10 + confWeight(a.confidence) * 5 + a.affectedCount;
-      const bScore = b.severityScore + impactWeight(b.impact) * 10 + confWeight(b.confidence) * 5 + b.affectedCount;
-      return bScore - aScore;
-    })
-    .slice(0, 10);
+  const deduped = Array.from(byKey.values()).sort((a, b) => {
+    const aScore = a.severityScore + impactWeight(a.impact) * 10 + confWeight(a.confidence) * 5 + a.affectedCount;
+    const bScore = b.severityScore + impactWeight(b.impact) * 10 + confWeight(b.confidence) * 5 + b.affectedCount;
+    return bScore - aScore;
+  });
 
   return deduped.map((rec, index) => ({
     priority_rank: index + 1,
