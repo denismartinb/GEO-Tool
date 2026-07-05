@@ -450,8 +450,8 @@ function shortPrompt(text: string): string {
  * exact prompts where it's absent, and those are the most actionable
  * recommendations it can get. Gating on the aggregate score used to hide them
  * entirely once the brand did well enough, which is backwards. Volume is
- * still bounded by the dedup + top-10-by-severity cutoff at the end of
- * generateRecommendationsForRun, same as before.
+ * still bounded by dedup (one candidate per dedupeKey); there is no count
+ * cap on the final list (RECS-CAP-REMOVE).
  */
 function perPromptGapCards(opts: {
   promptResults: PromptResultInput[];
