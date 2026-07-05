@@ -1,10 +1,10 @@
 # Web Audit ("Auditoría web") — Design Overview
 
-**Status:** Design approved by founder (2026-07-05). Implementation NOT started.
-**Phases:** WEB-AUDIT-1 (approved to design in detail; implementation requires its
-own go-ahead), WEB-AUDIT-2 and WEB-AUDIT-3 (designed here, each requires explicit
-founder approval before implementation — both touch entries on the CLAUDE.md
-forbidden list).
+**Status (2026-07-05):** WEB-AUDIT-1 **implemented** (PR #170) + mobile fixes.
+The remaining phases are designed/proposed and each requires its own go-ahead —
+several touch entries on the CLAUDE.md forbidden list.
+**Execution order:** see `ROADMAP.md` (single source of truth for phase order).
+It supersedes the "Phase map" table below, which now only indexes the specs.
 **Visual reference:** interactive mockup shared with the founder (Claude artifact
 "Propuesta · Auditoría Web"). The specs in this directory supersede the mockup on
 any detail where they differ.
@@ -25,16 +25,19 @@ matrix*: every prompt topic classified by (has own content?) × (AI cites your
 domain?), because each quadrant needs the opposite fix (create content vs.
 optimize existing content).
 
-## Phase map
+## Spec index (order lives in `ROADMAP.md`)
 
-| Phase | Spec | Scope | Risk / gates |
+| Identifier | Spec | Scope | Risk / gates |
 |---|---|---|---|
-| WEB-AUDIT-1 | `phase-1-section-and-matrix.md` | New section + move coverage audit there + persisted history + opportunity matrix + coverage/surfacing KPIs + trend | No migrations, no new Gemini calls, no forbidden areas. One PR. |
+| WEB-AUDIT-1 | `phase-1-section-and-matrix.md` | New section + move coverage audit there + persisted history + opportunity matrix + coverage/surfacing KPIs + trend | ✅ Implemented (PR #170). No migrations, no new Gemini calls, no forbidden areas. |
+| WEB-AUDIT-DQ | `phase-dq-coverage-quality.md` | Fix the coverage false-negative (Ryanair 0/6): diagnose + tune query derivation / redirect resolution | Touches the DOMAIN-COVERAGE-1 core; no schema → geo-strategy + data-guardian review |
+| WEB-AUDIT-ACTION | `phase-action-plan.md` | Action-plan card (matrix → recommendations) + competitor-aware content gaps | No migrations, no Gemini, no forbidden areas. One PR. |
 | WEB-AUDIT-2 | `phase-2-technical-audit.md` | Bounded fetch of ≤10 already-known own-domain pages + deterministic GEO-readiness checks + robots.txt/llms.txt AI-bot access + Readiness KPI | Adjacent to forbidden "crawler"; new table (migration 0015) → **data-guardian review + explicit founder approval required** |
+| WEB-AUDIT-BRIEF | `phase-brief-generator.md` | AI content-brief generator per content gap (H1/H2, entities, intent, answer-first intro) | New Gemini runtime + migration (generation_type) → **explicit founder approval + Task Intake + data-guardian** |
 | WEB-AUDIT-3 | `phase-3-daily-audit.md` | Daily automatic audit via the existing Vercel cron infrastructure + derived notifications on regressions | Extends the existing cron (a new cron entry) → **explicit founder approval required** |
 
-Phases are strictly sequential; each is one PR with its own Human Gate. Phase 2
-and 3 must each produce a Task Intake Report before implementation.
+Each phase is one PR with its own Human Gate. Every phase behind a hard gate
+(DQ, 2, BRIEF, 3) must produce a Task Intake Report before implementation.
 
 ## KPI definitions (canonical)
 
