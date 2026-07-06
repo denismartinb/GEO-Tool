@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
+import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
@@ -356,7 +357,7 @@ export default async function RunsPage({
       {shouldAutoExecute && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
-      {activeRun ? <ScanProgressPoller /> : null}
+      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -702,37 +703,55 @@ export default async function RunsPage({
                           </div>
                         </td>
 
-                        {/* Status badge */}
-                        <td>
-                          <span className={getStatusBadgeClass(run.status)}>
-                            {statusLabels[run.status] ?? run.status}
-                          </span>
-                        </td>
+                        {run.status === "pending" || run.status === "running" ? (
+                          /* Live cells (PERF-3b): poll independently instead of relying on
+                             the page-level router.refresh() the sibling ScanProgressPoller
+                             now only fires once, on terminal transition. */
+                          <LiveRunStatusCells
+                            projectId={projectId}
+                            initial={{
+                              id: run.id,
+                              status: run.status,
+                              total_prompts: run.total_prompts,
+                              successful_prompts: run.successful_prompts,
+                              failed_prompts: run.failed_prompts
+                            }}
+                          />
+                        ) : (
+                          <>
+                            {/* Status badge */}
+                            <td>
+                              <span className={getStatusBadgeClass(run.status)}>
+                                {statusLabels[run.status] ?? run.status}
+                              </span>
+                            </td>
 
-                        {/* Prompts progress bar */}
-                        <td>
-                          <div className="run-bar-wrap">
-                            <div className="run-bar">
-                              <div
-                                className="run-bar-fill"
-                                style={{ width: `${Math.min(100, okPct)}%`, background: barColor }}
-                              />
-                            </div>
-                            <span
-                              className="tnum"
-                              style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)", whiteSpace: "nowrap" }}
-                            >
-                              {ok}/{total}
-                            </span>
-                          </div>
-                          {hasFailed && Number(run.failed_prompts ?? 0) > 0 && (
-                            <div
-                              style={{ fontSize: 11, color: "var(--neg-ink)", marginTop: 2, fontWeight: 650 }}
-                            >
-                              {run.failed_prompts} {Number(run.failed_prompts) === 1 ? "fallo" : "fallos"}
-                            </div>
-                          )}
-                        </td>
+                            {/* Prompts progress bar */}
+                            <td>
+                              <div className="run-bar-wrap">
+                                <div className="run-bar">
+                                  <div
+                                    className="run-bar-fill"
+                                    style={{ width: `${Math.min(100, okPct)}%`, background: barColor }}
+                                  />
+                                </div>
+                                <span
+                                  className="tnum"
+                                  style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)", whiteSpace: "nowrap" }}
+                                >
+                                  {ok}/{total}
+                                </span>
+                              </div>
+                              {hasFailed && Number(run.failed_prompts ?? 0) > 0 && (
+                                <div
+                                  style={{ fontSize: 11, color: "var(--neg-ink)", marginTop: 2, fontWeight: 650 }}
+                                >
+                                  {run.failed_prompts} {Number(run.failed_prompts) === 1 ? "fallo" : "fallos"}
+                                </div>
+                              )}
+                            </td>
+                          </>
+                        )}
 
                         {/* GEO Score */}
                         <td className="num">
