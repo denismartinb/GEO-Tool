@@ -8,6 +8,25 @@ antes de mergear. No es "polish": es una corrección de honestidad de datos (P0
 según la clasificación de `CLAUDE.md`, porque hoy la matriz puede mostrar huecos
 que no existen).
 
+## Resultado (2026-07-06) — diagnosticado y arreglado
+
+Medición real sobre `ryanair.com` (6 temas, vía `:dq cached_diag`): **5 de 6
+temas con `chunks: 0`** (Gemini no devolvió ninguna cita) y 1 con `chunks: 1`
+que no resolvió a dominio propio. Confirma la **hipótesis 1**: se pasaba la
+pregunta entera como consulta de sitio literal.
+
+**Arreglo aplicado:** `auditDomainContent` (gemini.ts) ahora instruye a Gemini a
+reducir la pregunta a su *subject* en palabras clave y buscar `site:{domain}`
+con ellas (probando variaciones), en vez de buscar la pregunta verbatim. Se
+retiró la línea literal `Search query: site:{domain} {pregunta}`. La detección
+sube a `RULE_ID = domain_coverage_v2` y la caché filtra por versión, de modo que
+los mapas v1 (falsos negativos) se recalculan en la próxima auditoría. Las
+invariantes de DOMAIN-COVERAGE-1 (verificación fail-closed de dominio propio)
+quedan intactas: siguen siendo lo único que decide "contenido propio verificado".
+El diagnóstico `:dq` se mantiene para medir la mejora (chunks debería pasar de 0
+a >0). Pendiente: verificar en preview con una reauditoría real, y decidir si el
+caso `chunks>0 & found:false` (resolución de redirect) merece H2.
+
 ## Síntoma observado
 
 En el preview, `ryanair.com` audita **0/6 temas con contenido propio** — los 6

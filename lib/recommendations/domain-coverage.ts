@@ -80,7 +80,12 @@ const NO_PROMPTS_FAILURE = "Este proyecto no tiene prompts activos que auditar."
 
 const LOG_PREFIX = "[geo:domain-coverage]";
 const GENERATION_TYPE = "domain_coverage";
-const RULE_ID = "domain_coverage_v1";
+// Detection version. Bumped to v2 with WEB-AUDIT-DQ (keyword-subject grounding
+// query, gemini.ts auditDomainContent). The cache lookup filters by this, so
+// maps produced by an older, worse detection version are recomputed on the
+// next audit instead of being served stale — a detection improvement must not
+// be masked by a cached false-negative.
+const RULE_ID = "domain_coverage_v2";
 
 // Stricter, separately-scoped budget than the general 20/day rewrite pool: a
 // coverage run is several live grounding searches plus redirect-resolution
@@ -338,6 +343,7 @@ export async function auditDomainCoverageCore({
         .select("sanitized_content, raw_content")
         .eq("project_id", projectId)
         .eq("generation_type", GENERATION_TYPE)
+        .eq("rule_id", RULE_ID)
         .is("recommendation_id", null)
         .eq("status", "completed")
         .eq("is_sanitized", true)

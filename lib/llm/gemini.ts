@@ -261,16 +261,31 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
+  // WEB-AUDIT-DQ (2026-07-05): the input `topic` is a scan prompt — usually a
+  // full natural-language question ("¿Cuáles son las políticas de equipaje de
+  // mano más comunes…?"). The previous prompt handed Gemini a literal
+  // `Search query: site:{domain} {full question}`, which it searched verbatim
+  // and got zero grounding chunks for (measured: 5/6 Ryanair topics returned
+  // chunks:0). A whole question rarely matches how a page is titled. So we now
+  // instruct Gemini to first reduce the question to its core subject keywords
+  // and search site:{domain} for THOSE, trying a couple of variations — the
+  // model does the keyword extraction (robust across languages, no brittle
+  // per-language stopword heuristic). Behavior change reviewed against the
+  // DOMAIN-COVERAGE-1 invariants: the model is still not hard-restricted to the
+  // domain, so the caller's fail-closed own-domain verification is unchanged
+  // and remains the only thing that decides "verified own content".
   const instruction = [
-    `You are auditing what "${input.brand}" (domain: ${input.domain}) has ALREADY published on its own website about a specific topic, using web search restricted to that domain.`,
-    `Search specifically within site:${input.domain} for content related to the topic given. Do not consider or describe content from any other domain as if it belonged to this site.`,
+    `You are auditing what "${input.brand}" (domain: ${input.domain}) has ALREADY published on its OWN website about the subject of a user's question, using Google Search restricted to that domain.`,
+    "The input may be a full natural-language question, not a search query. First reduce it to its core subject as a few keywords (the product, policy, service, or topic it is about).",
+    `Then search the web using site:${input.domain} with those keywords. Do NOT search for the full question text verbatim — a whole question rarely matches how a page is titled. If the first keyword search finds nothing, try one or two alternative keyword phrasings before concluding.`,
+    `Only consider pages on ${input.domain} itself. Never describe content from any other domain as if it belonged to this site.`,
     "If you find relevant pages on this exact domain, briefly describe what each one covers, at most one short sentence per page.",
-    "If you do NOT find anything relevant on this domain via search, say so directly in one short sentence — do not guess, and do not describe content from any other site as if it were this brand's own.",
+    "If, after trying keyword searches, you do NOT find anything relevant on this domain, say so directly in one short sentence — do not guess.",
     `Respond in this language: ${input.language}.`,
     "Keep the entire response under 500 characters."
   ].join("\n");
 
-  const promptBlock = [`Topic to audit: ${input.topic}`, `Search query: site:${input.domain} ${input.topic}`].join("\n\n");
+  const promptBlock = `User question / topic to audit:\n${input.topic}`;
 
   const requestBody = JSON.stringify({
     contents: [{ parts: [{ text: promptBlock }] }],
