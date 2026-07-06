@@ -7,6 +7,7 @@ import {
   SCAN_TIMEOUT_AUTO_RETRY_CAP,
   SCAN_TIMEOUT_ERROR_SUMMARY
 } from "@/lib/scan/constants";
+import { scanRunsNeedReconciliation } from "@/lib/scan/reconciliation";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -359,5 +360,56 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     expect(rows[0].error_summary).toBe(SCAN_PENDING_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY);
     expect(rows[1].error_summary).toBe(SCAN_NO_RESULTS_ERROR_SUMMARY);
     expect(createPendingScanRunCore).not.toHaveBeenCalled();
+  });
+});
+
+describe("scanRunsNeedReconciliation — PERF-3a read-path gate", () => {
+  it("returns false when there are no runs at all", () => {
+    expect(scanRunsNeedReconciliation([])).toBe(false);
+    expect(scanRunsNeedReconciliation(null)).toBe(false);
+    expect(scanRunsNeedReconciliation(undefined)).toBe(false);
+  });
+
+  it("returns false when every run is terminal and not a zero-result failure", () => {
+    expect(
+      scanRunsNeedReconciliation([
+        { status: "completed", error_summary: null },
+        { status: "failed", error_summary: "some_other_error" }
+      ])
+    ).toBe(false);
+  });
+
+  it("returns true when any run is still pending or running, regardless of position", () => {
+    expect(
+      scanRunsNeedReconciliation([
+        { status: "completed", error_summary: null },
+        { status: "pending", error_summary: null }
+      ])
+    ).toBe(true);
+    expect(scanRunsNeedReconciliation([{ status: "running", error_summary: null }])).toBe(true);
+  });
+
+  it("returns true when the latest run is a zero-result failure eligible for auto-retry", () => {
+    expect(
+      scanRunsNeedReconciliation([{ status: "failed", error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY }])
+    ).toBe(true);
+  });
+
+  it("returns false when a zero-result failure has already been superseded by a newer run", () => {
+    // Runs are ordered created_at descending, so an older zero-result failure
+    // that is no longer the latest row is already superseded — matches
+    // reconcileStuckScanRuns' own "skip if a newer run exists" check.
+    expect(
+      scanRunsNeedReconciliation([
+        { status: "completed", error_summary: null },
+        { status: "failed", error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY }
+      ])
+    ).toBe(false);
+  });
+
+  it("returns false when the latest run is failed but not a recoverable zero-result failure", () => {
+    expect(
+      scanRunsNeedReconciliation([{ status: "failed", error_summary: SCAN_NO_RESULTS_RETRY_EXHAUSTED_ERROR_SUMMARY }])
+    ).toBe(false);
   });
 });

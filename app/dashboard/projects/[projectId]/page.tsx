@@ -13,7 +13,7 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
-import { reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -151,26 +151,21 @@ export default async function ProjectDetailPage({
   const feedback = await searchParams;
   const { supabase } = await requireUser();
 
-  // The project lookup and the reconciliation pass are independent (the
-  // latter only needs `projectId`, not the fetched row), so they run
-  // concurrently instead of the reconcile waiting on the project fetch first
-  // (docs/architecture-audit-2026-07.md, finding 1.3).
-  const [{ data: project }] = await Promise.all([
+  const RUNS_SELECT =
+    "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
+
+  // The project row, prompts, competitors, and runs are all independent of
+  // each other and of reconciliation, so they are fetched in one batch.
+  // Reconciliation itself is decided from the already-fetched `runs` below
+  // instead of running unconditionally on every render
+  // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
+  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }] = await Promise.all([
     supabase
       .from("projects")
       .select("id, name, domain, brand, country, language, created_at")
       .eq("id", projectId)
       .eq("is_archived", false)
       .single(),
-    // Reconcile any stuck pending/running runs before reading scan_runs, so
-    // the Overview reflects a `failed` status promptly instead of showing an
-    // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
-    reconcileStuckScanRuns({ projectId, service: createServiceClient() })
-  ]);
-
-  if (!project) notFound();
-
-  const [{ data: prompts }, { data: competitors }, { data: runs }] = await Promise.all([
     supabase
       .from("project_prompts")
       .select("id, prompt_text, category, is_active")
@@ -185,10 +180,29 @@ export default async function ProjectDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("scan_runs")
-      .select("id, status, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at")
+      .select(RUNS_SELECT)
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
   ]);
+
+  if (!project) notFound();
+
+  let runs = runsData;
+  if (scanRunsNeedReconciliation(runs)) {
+    // Reconcile any stuck pending/running runs (or retry an exhausted
+    // zero-result failure), then re-read scan_runs so the Overview reflects
+    // the corrected status instead of the pre-reconciliation snapshot
+    // (docs/scan-lifecycle.md, "Timeout detection").
+    const { reconciledCount } = await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
+    if (reconciledCount > 0) {
+      const { data: refreshedRuns } = await supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false });
+      runs = refreshedRuns;
+    }
+  }
 
   const latestRun = runs?.[0];
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
