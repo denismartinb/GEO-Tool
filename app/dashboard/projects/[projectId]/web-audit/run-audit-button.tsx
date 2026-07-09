@@ -136,7 +136,18 @@ export function RunAuditButton({
           if (abortedRef.current) return;
           consecutiveFailures += 1;
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-            setError("No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos.");
+            // Founder-confirmed real scenario: this fires while the campaign
+            // is genuinely fine and mid-way (e.g. 36/49) — only the CLIENT's
+            // own connection is what gave up, not the audit. The old generic
+            // "no se ha podido auditar" read as "everything failed", which
+            // was misleading right next to the still-accurate "Auditoría en
+            // curso" banner showing real, unlost progress. Say what's
+            // actually true instead.
+            setError(
+              progress
+                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). Pulsa «Auditar ahora» para continuar.`
+                : "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos."
+            );
             return;
           }
           await delay(PACING_DELAY_MS);
