@@ -261,6 +261,7 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | File | Purpose |
 |---|---|
 | `director-strategy.md` | Long-term roadmap (H1/H2/H3), active work, completed phases |
+| `launch-plan.md` | **Commercial launch roadmap** — ordered phases + status ledger. Any session doing launch work MUST read it first and update its ledger in the same PR |
 | `environment-contract.md` | All env vars, Vercel config, smoke checklist |
 | `scan-lifecycle.md` | Scan state machine and invariants |
 | `adr/0001-record-architecture-decisions.md` | ADR process |
