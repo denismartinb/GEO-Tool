@@ -59,8 +59,39 @@ export type { DomainCoveragePage, DomainCoverageTopic, DomainCoverageMap };
  * Topic selection: prompts backing an active add_citation_block gap this run
  * are audited first (see selectedPrompts below), filling any remaining budget
  * with other active prompts in creation order. Without this, a large prompt
- * set made it very unlikely the coverage budget (MAX_COVERAGE_TOPICS) ever
+ * set made it very unlikely the coverage budget (BATCH_TOPICS_PER_CALL) ever
  * reached the specific prompt behind a real citation-gap card.
+ *
+ * WEB-AUDIT-CHAIN (2026-07-09): a single request can only afford
+ * BATCH_TOPICS_PER_CALL sequential Gemini grounding calls under the page's
+ * maxDuration=60 (ADR-0003) — for a project with many more active prompts
+ * than that (49 on a real account), the old single-shot design meant most
+ * prompts were NEVER audited, no matter how many times "Auditar ahora" was
+ * clicked, because prompt selection was deterministic. This mirrors
+ * SCAN-CHAIN-1 (docs/adr/0014) instead: one campaign spans multiple batched
+ * requests, driven from the founder's own authenticated browser session
+ * (foreground-only — ADR-0014's own addendum found the background
+ * `after()`-driven self-chain unreliable behind Vercel preview-deployment
+ * protection, so this skips that path entirely and only does the proven
+ * foreground loop).
+ *
+ * Persistence model: the FIRST batch of a new campaign inserts one
+ * `generated_solutions` row with status='running' (allowed by
+ * gensol_status_chk) holding the topics covered so far. Every following
+ * batch UPDATEs that SAME row — never inserts a new one — so the campaign
+ * counts as exactly ONE unit against DOMAIN_COVERAGE_RATE_LIMIT (5/day)
+ * regardless of how many requests it takes (checkGenerationRateLimit counts
+ * rows, not calls). The rate limit is therefore checked only when starting a
+ * brand-new campaign; resuming an existing 'running' row for the same scanId
+ * skips it entirely (it was already counted at creation). The final batch
+ * flips status to 'completed'. "Remaining prompts to audit" is recomputed
+ * fresh every call from (active prompts) minus (promptIds already present in
+ * the persisted topics) — not fixed at campaign creation — so an edited
+ * prompt set self-corrects mid-campaign with no extra bookkeeping, and a
+ * campaign abandoned mid-flight (tab closed) simply resumes from wherever it
+ * left off the next time "Auditar ahora" is clicked, with no stale-run
+ * reconciliation needed (unlike scan_runs, an unfinished coverage campaign
+ * has no "stuck" failure mode — it just waits).
  */
 
 export const domainCoverageInputSchema = z.object({
@@ -68,7 +99,20 @@ export const domainCoverageInputSchema = z.object({
 });
 
 export type DomainCoverageResult =
-  | { success: true; coverage: DomainCoverageMap; cached: boolean }
+  | {
+      success: true;
+      coverage: DomainCoverageMap;
+      cached: boolean;
+      /**
+       * "running" when active prompts remain unaudited this campaign — the
+       * caller (run-audit-button.tsx) should call again to continue.
+       * "completed" once every active prompt has a result.
+       */
+      status: "running" | "completed";
+      /** Total active prompts this campaign covers — for progress display
+       * (coverage.topics.length / totalPrompts). */
+      totalPrompts: number;
+    }
   | { success: false; error: string };
 
 const GENERIC_FAILURE = "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos.";
@@ -92,15 +136,18 @@ const RULE_ID = "domain_coverage_v2";
 // fetches — materially more expensive than a plain JSON generation call.
 const DOMAIN_COVERAGE_RATE_LIMIT: GenerationRateLimitConfig = { window: "day", maxPerWindow: 5 };
 
-// Bound how many topics a single run audits, and cap the total wall-clock spent
-// on Gemini calls well under the page's maxDuration=60 (docs/adr/0003). Each
-// topic is a sequential grounding call (up to GEMINI_CALL_TIMEOUT_MS=20s), so
-// without a total budget a few slow calls could blow the platform ceiling and
-// get the whole request killed before we ever persist a row (breaking
-// invariant 3). Once the budget is exceeded, remaining topics are marked
-// "could not verify" rather than dropped, and the (partial) map is persisted.
-const MAX_COVERAGE_TOPICS = 6;
-const COVERAGE_TOTAL_BUDGET_MS = 45_000;
+// Bound how many topics a single BATCH (one request/call) audits, and cap the
+// wall-clock spent on Gemini calls in that batch well under the page's
+// maxDuration=60 (docs/adr/0003). Each topic is a sequential grounding call
+// (up to GEMINI_CALL_TIMEOUT_MS=20s), so without a per-batch budget a few slow
+// calls could blow the platform ceiling and get the whole request killed
+// before we ever persist a row (breaking invariant 3). Once the budget is
+// exceeded, the remaining topics selected for THIS batch are marked "could
+// not verify" rather than dropped, and the (partial) map is persisted — a
+// multi-prompt project simply picks them up in the next chained batch
+// (WEB-AUDIT-CHAIN) instead of losing them.
+const BATCH_TOPICS_PER_CALL = 6;
+const BATCH_TIME_BUDGET_MS = 45_000;
 
 const NOTE_MAX = 400;
 const TITLE_MAX = 160;
@@ -261,6 +308,26 @@ function logCachedCoverageDiag(
   }
 }
 
+/**
+ * Reads the prior batches' raw grounding data out of a campaign row's
+ * raw_content (WEB-AUDIT-CHAIN), so a continuation batch can append to it
+ * instead of discarding earlier batches' data. Defensive: malformed/absent
+ * raw_content yields an empty array rather than throwing.
+ */
+function parsePriorRawTopics(
+  rawContent: string | null
+): Array<{ promptId: string; text: string; groundingChunks: unknown }> {
+  if (!rawContent) return [];
+  try {
+    const parsed = JSON.parse(rawContent) as { topics?: unknown };
+    return Array.isArray(parsed.topics)
+      ? (parsed.topics as Array<{ promptId: string; text: string; groundingChunks: unknown }>)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function auditDomainCoverageCore({
   projectId,
   supabase,
@@ -334,57 +401,88 @@ export async function auditDomainCoverageCore({
       return { success: false, error: NO_PROMPTS_FAILURE };
     }
 
-    // Cache (data-guardian C4): reuse the most recent coverage map for THIS
-    // project only if it was derived from the current latest scan. `.is(null)`,
-    // not `.eq(..., null)`, is required for a NULL column in PostgREST.
+    // Existing campaign row for THIS project (any status). Used to (a) serve a
+    // completed cache hit for the current scan, (b) resume an in-progress
+    // campaign for the current scan (WEB-AUDIT-CHAIN), or (c) detect a
+    // stale/abandoned campaign from an older scan, which is never resumed — a
+    // fresh campaign starts instead. `.is(null)`, not `.eq(..., null)`, is
+    // required for a NULL column in PostgREST.
     const { data: existingRaw } = await withTimeout(
       service
         .from("generated_solutions")
-        .select("sanitized_content, raw_content")
+        .select("id, status, sanitized_content, raw_content")
         .eq("project_id", projectId)
         .eq("generation_type", GENERATION_TYPE)
         .eq("rule_id", RULE_ID)
         .is("recommendation_id", null)
-        .eq("status", "completed")
+        .in("status", ["completed", "running"])
         .eq("is_sanitized", true)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
       "load_existing_coverage"
     );
-    const existingRow = existingRaw as unknown as { sanitized_content: string | null; raw_content: string | null } | null;
+    const existingRow = existingRaw as unknown as {
+      id: string;
+      status: string;
+      sanitized_content: string | null;
+      raw_content: string | null;
+    } | null;
     const existing = parseCoverageMap(existingRow?.sanitized_content ?? null);
-    if (existing && existing.scanId === scanId) {
+    const existingMatchesScan = Boolean(existing && existing.scanId === scanId);
+
+    if (existingRow?.status === "completed" && existingMatchesScan) {
       // WEB-AUDIT-DQ: the fresh-path per-topic diagnostic can't run on a cache
       // hit (we return before the Gemini loop), so surface the equivalent
       // signal from the already-persisted raw grounding chunks — how many
       // chunks Gemini returned per topic. `chunks: 0` across topics points at
       // the query/grounding stage; `chunks > 0` with found:false points at
       // redirect-resolution / off-domain. No network, no Gemini spend.
-      logCachedCoverageDiag(projectId, scanId, existingRow?.raw_content ?? null, existing);
-      return { success: true, coverage: existing, cached: true };
+      logCachedCoverageDiag(projectId, scanId, existingRow.raw_content, existing!);
+      return { success: true, coverage: existing!, cached: true, status: "completed", totalPrompts: prompts.length };
     }
 
-    console.info(`${LOG_PREFIX} start`, { project_id: projectId, scan_id: scanId, prompts: prompts.length });
+    // Resuming an in-progress campaign for THIS scan skips the rate-limit
+    // check entirely — it was already consumed when the campaign's row was
+    // first inserted, and checkGenerationRateLimit counts rows (not calls), so
+    // re-checking here could spuriously block a campaign that is already one
+    // of today's counted units from continuing past the limit boundary.
+    const resuming = existingRow?.status === "running" && existingMatchesScan;
 
-    const rateLimit = await checkGenerationRateLimit(service, projectId, {
-      config: DOMAIN_COVERAGE_RATE_LIMIT,
-      generationType: GENERATION_TYPE
+    if (!resuming) {
+      const rateLimit = await checkGenerationRateLimit(service, projectId, {
+        config: DOMAIN_COVERAGE_RATE_LIMIT,
+        generationType: GENERATION_TYPE
+      });
+      if (!rateLimit.allowed) {
+        console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
+        return {
+          success: false,
+          error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE
+        };
+      }
+    }
+
+    // Remaining prompts for this campaign: every active prompt not already
+    // covered by an earlier batch. Recomputed fresh every call (not fixed at
+    // campaign creation) so an edited prompt set self-corrects mid-campaign.
+    const alreadyCoveredTopics = resuming ? existing!.topics : [];
+    const coveredPromptIds = new Set(alreadyCoveredTopics.map((t) => t.promptId));
+    const remainingPrompts = prompts.filter((p) => !coveredPromptIds.has(p.id));
+
+    console.info(`${LOG_PREFIX} ${resuming ? "resume" : "start"}`, {
+      project_id: projectId,
+      scan_id: scanId,
+      prompts: prompts.length,
+      already_covered: alreadyCoveredTopics.length
     });
-    if (!rateLimit.allowed) {
-      console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
-      return {
-        success: false,
-        error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE
-      };
-    }
 
     // Prioritize prompts that actually back an active add_citation_block gap
     // this run (RECS-COVERAGE-OVERLAY-1's whole point is confirming/refuting
-    // those gaps) — with a prompt set much larger than MAX_COVERAGE_TOPICS,
-    // auditing "the first N active prompts" in creation order made it very
+    // those gaps) — with a prompt set much larger than BATCH_TOPICS_PER_CALL,
+    // auditing "the first N remaining prompts" in creation order made it very
     // unlikely a real citation-gap card's own prompt was ever covered. Fall
-    // back to creation order to fill any remaining budget.
+    // back to creation order to fill any remaining batch capacity.
     const { data: citationRecRows } = await withTimeout(
       supabase
         .from("recommendations")
@@ -420,23 +518,25 @@ export async function auditDomainCoverageCore({
       );
     }
 
-    const priorityPrompts = prompts.filter((p) => priorityPromptIds.has(p.id));
-    const otherPrompts = prompts.filter((p) => !priorityPromptIds.has(p.id));
-    const selectedPrompts = [...priorityPrompts, ...otherPrompts].slice(0, MAX_COVERAGE_TOPICS);
+    const priorityPrompts = remainingPrompts.filter((p) => priorityPromptIds.has(p.id));
+    const otherPrompts = remainingPrompts.filter((p) => !priorityPromptIds.has(p.id));
+    const selectedPrompts = [...priorityPrompts, ...otherPrompts].slice(0, BATCH_TOPICS_PER_CALL);
     const projectDomainNormalized = normalizeDomain(project.domain);
     const topics: DomainCoverageTopic[] = [];
     const rawByPrompt: Array<{ promptId: string; text: string; groundingChunks: unknown }> = [];
     const startedAt = Date.now();
 
     for (const prompt of selectedPrompts) {
-      const topic = sanitizeField(prompt.prompt_text, TOPIC_MAX);
+      // Per-batch budget guard (see BATCH_TIME_BUDGET_MS): once exceeded, stop
+      // attempting more topics THIS batch rather than risking a platform kill.
+      // Unlike the pre-chaining design, a prompt not yet attempted is left OUT
+      // of `topics` entirely (not marked "could not verify") — it simply
+      // remains in the campaign's remaining-prompts set and is picked up
+      // normally by the next chained batch (WEB-AUDIT-CHAIN), instead of being
+      // permanently wasted as inconclusive.
+      if (Date.now() - startedAt > BATCH_TIME_BUDGET_MS) break;
 
-      // Total-budget guard (see COVERAGE_TOTAL_BUDGET_MS): once exceeded, mark
-      // the rest as "could not verify" instead of risking a platform kill.
-      if (Date.now() - startedAt > COVERAGE_TOTAL_BUDGET_MS) {
-        topics.push({ promptId: prompt.id, topic, found: false, pages: [], note: COULD_NOT_VERIFY_NOTE });
-        continue;
-      }
+      const topic = sanitizeField(prompt.prompt_text, TOPIC_MAX);
 
       try {
         const raw = await auditDomainContent({
@@ -476,49 +576,77 @@ export async function auditDomainCoverageCore({
       }
     }
 
+    // Merge this batch's results into the campaign's accumulated topics
+    // (WEB-AUDIT-CHAIN). Dedupe by promptId defensively — a racing duplicate
+    // driver call (e.g. two tabs) re-selecting an overlapping batch before
+    // either persists is a low-stakes edge case (wasted Gemini spend, not data
+    // corruption); this just keeps the merged map from listing a topic twice.
+    const seenPromptIds = new Set<string>();
+    const allTopics: DomainCoverageTopic[] = [];
+    for (const t of [...alreadyCoveredTopics, ...topics]) {
+      if (seenPromptIds.has(t.promptId)) continue;
+      seenPromptIds.add(t.promptId);
+      allTopics.push(t);
+    }
+    const stillRemaining = prompts.some((p) => !seenPromptIds.has(p.id));
+    const campaignStatus: "running" | "completed" = stillRemaining ? "running" : "completed";
+
     const coverage: DomainCoverageMap = {
       scanId,
       generatedAt: new Date().toISOString(),
-      topics
+      topics: allTopics
     };
 
-    // Persist unconditionally (invariant 3): every consumed run gets a row so
-    // the rate limit reflects real spend, even a fully "not covered" result.
+    // Persist unconditionally (invariant 3): every consumed batch gets a row/
+    // update so the rate limit reflects real spend, even a fully "not
+    // covered" partial result. First batch of a campaign INSERTs; every
+    // following batch UPDATEs the SAME row (never inserts again) — this is
+    // what makes one campaign count as exactly one unit of
+    // DOMAIN_COVERAGE_RATE_LIMIT regardless of how many chained requests it
+    // takes.
     const sanitizedAt = new Date().toISOString();
-    const { error: insertError } = await withTimeout(
-      service.from("generated_solutions").insert({
-        recommendation_id: null,
-        project_id: projectId,
-        rule_id: RULE_ID,
-        generation_type: GENERATION_TYPE,
-        status: "completed",
-        raw_content: JSON.stringify({ topics: rawByPrompt }),
-        sanitized_content: JSON.stringify(coverage),
-        is_sanitized: true,
-        sanitized_at: sanitizedAt,
-        provider: "gemini",
-        evidence_json: {
-          scan_id: scanId,
-          prompt_ids: selectedPrompts.map((p) => p.id),
-          topics: topics.map((t) => t.topic)
-        }
-      }),
-      "persist_coverage"
-    );
+    const mergedRawTopics = resuming
+      ? [...parsePriorRawTopics(existingRow!.raw_content), ...rawByPrompt]
+      : rawByPrompt;
+    const persistPayload = {
+      recommendation_id: null,
+      project_id: projectId,
+      rule_id: RULE_ID,
+      generation_type: GENERATION_TYPE,
+      status: campaignStatus,
+      raw_content: JSON.stringify({ topics: mergedRawTopics }),
+      sanitized_content: JSON.stringify(coverage),
+      is_sanitized: true,
+      sanitized_at: sanitizedAt,
+      provider: "gemini",
+      evidence_json: {
+        scan_id: scanId,
+        prompt_ids: allTopics.map((t) => t.promptId),
+        topics: allTopics.map((t) => t.topic)
+      }
+    };
 
-    if (insertError) {
+    const { error: persistError } = resuming
+      ? await withTimeout(
+          service.from("generated_solutions").update(persistPayload).eq("id", existingRow!.id),
+          "persist_coverage"
+        )
+      : await withTimeout(service.from("generated_solutions").insert(persistPayload), "persist_coverage");
+
+    if (persistError) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId });
       return { success: false, error: GENERIC_FAILURE };
     }
 
-    console.info(`${LOG_PREFIX} persisted`, {
+    console.info(`${LOG_PREFIX} ${campaignStatus === "completed" ? "completed" : "batch_persisted"}`, {
       project_id: projectId,
       scan_id: scanId,
-      topics_count: topics.length,
-      covered: topics.filter((t) => t.found).length
+      topics_count: allTopics.length,
+      total_prompts: prompts.length,
+      covered: allTopics.filter((t) => t.found).length
     });
 
-    return { success: true, coverage, cached: false };
+    return { success: true, coverage, cached: false, status: campaignStatus, totalPrompts: prompts.length };
   } catch (error) {
     if (error instanceof OperationTimeoutError) {
       console.error(`${LOG_PREFIX} stage_timed_out`, { project_id: projectId, stage: error.message });

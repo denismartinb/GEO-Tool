@@ -13,13 +13,16 @@ const mockedGemini = vi.mocked(auditDomainContent);
 const mockedResolve = vi.mocked(resolveGroundingRedirects);
 const mockedRateLimit = vi.mocked(checkGenerationRateLimit);
 
+type CacheRow = { id?: string; status?: string; sanitized_content: string | null; raw_content?: string | null };
+
 type Cfg = {
   project?: unknown;
   profile?: unknown;
   latestRun?: unknown;
   prompts?: unknown[];
-  cacheRow?: { sanitized_content: string | null; raw_content?: string | null } | null;
+  cacheRow?: CacheRow | null;
   insertError?: { message: string } | null;
+  updateError?: { message: string } | null;
   /** Active add_citation_block recommendations for the current run (topic-selection priority). */
   citationRecRows?: unknown[];
   /** scan_prompt_results rows mapping id -> prompt_id for those recommendations' evidence. */
@@ -57,23 +60,50 @@ function makeSupabase(cfg: Cfg) {
   };
 }
 
+let nextRowId = 0;
+
+/**
+ * Stateful single-row store for `generated_solutions`, matching the campaign
+ * lifecycle (WEB-AUDIT-CHAIN): `.insert()` creates the row and makes it what
+ * the next `.maybeSingle()` sees; `.update().eq("id", ...)` mutates that same
+ * row in place. This lets a test call `auditDomainCoverageCore` twice against
+ * the SAME `deps` and genuinely exercise "the second call resumes what the
+ * first call persisted", rather than only unit-testing each call in isolation.
+ */
 function makeService(cfg: Cfg) {
   const inserted: Array<Record<string, unknown>> = [];
+  const updated: Array<{ id: unknown; payload: Record<string, unknown> }> = [];
+  let currentRow: (CacheRow & Record<string, unknown>) | null = cfg.cacheRow ?? null;
+
   const service = {
     inserted,
+    updated,
     from() {
       const builder: Record<string, unknown> = {};
       const chain = () => builder;
       builder.select = chain;
       builder.eq = chain;
       builder.is = chain;
+      builder.in = chain;
       builder.order = chain;
       builder.limit = chain;
-      builder.maybeSingle = () => Promise.resolve({ data: cfg.cacheRow ?? null, error: null });
+      builder.maybeSingle = () => Promise.resolve({ data: currentRow, error: null });
       builder.insert = (payload: Record<string, unknown>) => {
         inserted.push(payload);
+        if (!cfg.insertError) {
+          currentRow = { id: `row-${++nextRowId}`, ...payload } as CacheRow & Record<string, unknown>;
+        }
         return Promise.resolve({ error: cfg.insertError ?? null });
       };
+      builder.update = (payload: Record<string, unknown>) => ({
+        eq: (_col: string, val: unknown) => {
+          updated.push({ id: val, payload });
+          if (!cfg.updateError && currentRow && currentRow.id === val) {
+            currentRow = { ...currentRow, ...payload };
+          }
+          return Promise.resolve({ error: cfg.updateError ?? null });
+        }
+      });
       return builder;
     }
   };
@@ -90,6 +120,7 @@ function makeDeps(cfg: Cfg = {}) {
     prompts: [{ id: "p1", prompt_text: "mejor crm para pymes" }],
     cacheRow: null,
     insertError: null,
+    updateError: null,
     ...cfg
   };
   const service = makeService(merged);
@@ -178,6 +209,8 @@ describe("auditDomainCoverageCore", () => {
       expect(result.coverage.topics[0].found).toBe(true);
       expect(result.coverage.topics[0].pages[0].url).toBe("https://acme.com/crm");
       expect(result.cached).toBe(false); // fresh run, not a cache hit
+      expect(result.status).toBe("completed"); // single prompt, fits in one batch
+      expect(result.totalPrompts).toBe(1);
     }
   });
 
@@ -267,32 +300,35 @@ describe("auditDomainCoverageCore", () => {
     expect(result.success).toBe(false);
   });
 
-  it("returns a cached coverage map (no Gemini call) when it matches the current scan", async () => {
+  it("returns a cached coverage map (no Gemini call) when a completed campaign matches the current scan", async () => {
     const cached = {
       scanId: "scan-1",
       generatedAt: "2026-01-01T00:00:00.000Z",
       topics: [{ promptId: "p1", topic: "x", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" }]
     };
-    const deps = makeDeps({ cacheRow: { sanitized_content: JSON.stringify(cached) } });
+    const deps = makeDeps({ cacheRow: { id: "row-cached", status: "completed", sanitized_content: JSON.stringify(cached) } });
     const result = await auditDomainCoverageCore(deps);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.coverage.scanId).toBe("scan-1");
       expect(result.cached).toBe(true);
+      expect(result.status).toBe("completed");
     }
     expect(mockedGemini).not.toHaveBeenCalled();
   });
 
-  it("regenerates when the cached map is from a different (older) scan", async () => {
+  it("regenerates when the cached completed campaign is from a different (older) scan", async () => {
     const cached = {
       scanId: "old-scan",
       generatedAt: "2026-01-01T00:00:00.000Z",
       topics: [{ promptId: "p1", topic: "x", found: false, pages: [], note: "n" }]
     };
-    const deps = makeDeps({ cacheRow: { sanitized_content: JSON.stringify(cached) } });
+    const deps = makeDeps({ cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(cached) } });
     const result = await auditDomainCoverageCore(deps);
     expect(result.success).toBe(true);
     expect(mockedGemini).toHaveBeenCalled();
+    // A fresh campaign for the new scan is INSERTed, not merged into the old row.
+    expect(deps._service.inserted).toHaveLength(1);
   });
 
   it("returns a sanitized rate-limit message and never calls Gemini when over the daily quota", async () => {
@@ -304,16 +340,21 @@ describe("auditDomainCoverageCore", () => {
     expect(mockedGemini).not.toHaveBeenCalled();
   });
 
-  it("caps the number of audited topics at MAX_COVERAGE_TOPICS", async () => {
+  it("caps a single batch at BATCH_TOPICS_PER_CALL and reports the campaign as still running", async () => {
     const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
     const deps = makeDeps({ prompts });
     const result = await auditDomainCoverageCore(deps);
     expect(result.success).toBe(true);
-    if (result.success) expect(result.coverage.topics.length).toBe(6);
+    if (result.success) {
+      expect(result.coverage.topics.length).toBe(6);
+      expect(result.status).toBe("running");
+      expect(result.totalPrompts).toBe(9);
+    }
     expect(mockedGemini).toHaveBeenCalledTimes(6);
+    expect(deps._service.inserted[0].status).toBe("running");
   });
 
-  it("prioritizes prompts backing an active add_citation_block gap this run, even when they'd otherwise fall outside the budget", async () => {
+  it("prioritizes prompts backing an active add_citation_block gap this run, even when they'd otherwise fall outside the batch", async () => {
     // 9 active prompts, but only "p8" (last by creation order — would never be
     // reached by a naive first-N selection) backs a real citation-gap card.
     const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
@@ -341,6 +382,90 @@ describe("auditDomainCoverageCore", () => {
     const result = await auditDomainCoverageCore(deps);
     expect(result.success).toBe(true);
     if (result.success) expect(result.coverage.topics.map((t) => t.promptId)).toEqual(["p1", "p2"]);
+  });
+
+  // WEB-AUDIT-CHAIN: a project with more active prompts than one batch can
+  // cover needs several chained calls to complete a campaign — see
+  // docs/specs/web-audit/ (persistence model: one INSERT, N UPDATEs).
+  describe("batched campaign chaining (WEB-AUDIT-CHAIN)", () => {
+    it("resumes an in-progress campaign across calls and completes once every prompt is covered", async () => {
+      const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
+      const deps = makeDeps({ prompts });
+
+      const first = await auditDomainCoverageCore(deps);
+      expect(first.success).toBe(true);
+      if (first.success) {
+        expect(first.status).toBe("running");
+        expect(first.coverage.topics.length).toBe(6);
+      }
+      expect(deps._service.inserted).toHaveLength(1);
+      expect(mockedRateLimit).toHaveBeenCalledTimes(1);
+
+      mockedGemini.mockClear();
+      mockedRateLimit.mockClear();
+
+      const second = await auditDomainCoverageCore(deps);
+      expect(second.success).toBe(true);
+      if (second.success) {
+        expect(second.status).toBe("completed");
+        expect(second.coverage.topics.length).toBe(9);
+        expect(second.totalPrompts).toBe(9);
+        // Every prompt appears exactly once across both batches.
+        const ids = second.coverage.topics.map((t) => t.promptId).sort();
+        expect(ids).toEqual(prompts.map((p) => p.id).sort());
+      }
+      expect(mockedGemini).toHaveBeenCalledTimes(3); // only the remaining 3 topics this batch
+      expect(deps._service.inserted).toHaveLength(1); // still just the one row
+      expect(deps._service.updated).toHaveLength(1); // second batch UPDATEs it
+      expect(deps._service.updated[0].payload.status).toBe("completed");
+    });
+
+    it("skips the rate-limit check entirely when resuming (a campaign is one unit regardless of batch count)", async () => {
+      const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
+      const deps = makeDeps({ prompts });
+      await auditDomainCoverageCore(deps);
+
+      mockedRateLimit.mockClear();
+      mockedRateLimit.mockResolvedValue({ allowed: false, reason: "rate_limit_exceeded" } as never);
+
+      // Even though the mock now says "blocked", resuming an already-counted
+      // campaign must not consult the rate limit at all.
+      const second = await auditDomainCoverageCore(deps);
+      expect(second.success).toBe(true);
+      expect(mockedRateLimit).not.toHaveBeenCalled();
+    });
+
+    it("does NOT resume a running campaign left over from an older scan — starts a fresh one instead", async () => {
+      const staleRunning = {
+        scanId: "old-scan",
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        topics: [{ promptId: "p1", topic: "old topic", found: false, pages: [], note: "n" }]
+      };
+      const deps = makeDeps({
+        prompts: [{ id: "p1", prompt_text: "tema nuevo" }],
+        cacheRow: { id: "row-stale", status: "running", sanitized_content: JSON.stringify(staleRunning) }
+      });
+
+      const result = await auditDomainCoverageCore(deps);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.coverage.scanId).toBe("scan-1"); // the current scan, not the stale one
+        expect(result.status).toBe("completed");
+      }
+      // A brand-new row is inserted; the stale running row is never updated.
+      expect(deps._service.inserted).toHaveLength(1);
+      expect(deps._service.updated).toHaveLength(0);
+      expect(mockedRateLimit).toHaveBeenCalledTimes(1); // treated as a new campaign, so it IS checked
+    });
+
+    // The per-batch time-budget guard (BATCH_TIME_BUDGET_MS) now `break`s
+    // instead of pushing a COULD_NOT_VERIFY_NOTE placeholder for prompts not
+    // yet attempted, so a chained batch can still audit them for real instead
+    // of them being permanently wasted as inconclusive. Verified by code
+    // review (a one-line `continue`+push → `break` change) rather than a
+    // Date.now()-mocked unit test — globally stubbing Date.now proved brittle
+    // here (other internal timestamp reads before the guard consumed the
+    // mocked sequence unpredictably) for a low-risk, easily-reviewed change.
   });
 
   // WEB-AUDIT-DQ: the per-topic diagnostic must report where own-domain pages
@@ -383,14 +508,16 @@ describe("auditDomainCoverageCore", () => {
       expect(diag).toMatchObject({ chunks: 1, resolved: 0, own: 0 });
     });
 
-    it("emits a cached_diag with per-topic chunk counts on a cache hit (no Gemini call)", async () => {
+    it("emits a cached_diag with per-topic chunk counts on a completed cache hit (no Gemini call)", async () => {
       const cached = {
         scanId: "scan-1",
         generatedAt: "2026-01-01T00:00:00.000Z",
         topics: [{ promptId: "p1", topic: "x", found: false, pages: [], note: "n" }]
       };
       const rawContent = JSON.stringify({ topics: [{ promptId: "p1", text: "t", groundingChunks: [] }] });
-      const deps = makeDeps({ cacheRow: { sanitized_content: JSON.stringify(cached), raw_content: rawContent } });
+      const deps = makeDeps({
+        cacheRow: { id: "row-cached", status: "completed", sanitized_content: JSON.stringify(cached), raw_content: rawContent }
+      });
       const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
       const result = await auditDomainCoverageCore(deps);
       const cachedDiag = infoSpy.mock.calls.find(
