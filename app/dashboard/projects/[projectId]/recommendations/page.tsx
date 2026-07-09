@@ -393,7 +393,7 @@ export default async function RecommendationsPage({
             <Icon name="recs" size={20} />
           </div>
           <div className="summary-txt" style={{ flex: "1 1 150px" }}>
-            Lumira encontró{" "}
+            GenScore encontró{" "}
             <b>{total} acciones</b> para{" "}
             <b>{project.domain}</b>.
           </div>

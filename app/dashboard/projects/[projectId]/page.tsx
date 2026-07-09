@@ -525,7 +525,7 @@ export default async function ProjectDetailPage({
               ) : null}
               {latestRecommendations?.length ? (
                 <>
-                  {" "}Lumira encontró{" "}
+                  {" "}GenScore encontró{" "}
                   <b>{latestRecommendations.length} acciones prioritarias</b> para mejorar tu visibilidad.
                 </>
               ) : null}

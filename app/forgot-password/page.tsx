@@ -119,7 +119,7 @@ export default function ForgotPasswordPage() {
           <div className="brand-mark">
             <Icon name="resonance" size={17} />
           </div>
-          <div className="brand-name">Lumira</div>
+          <div className="brand-name">GenScore</div>
         </div>
 
         {step === "request" && (

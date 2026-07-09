@@ -166,6 +166,15 @@ starts (schema + RLS + background scheduler are all in the Forbidden list).
 
 ---
 
+## Active work (2026-07-09)
+
+**Commercial launch track opened.** The founder requested a launch-readiness
+audit (market, pricing, legal, architecture, UX) and approved turning it into
+an executable roadmap: **`docs/launch-plan.md`** is now the single source of
+truth for all commercial-launch work (phases 0–9 + MODEL-PIN deadline, with a
+status ledger updated in the same PR as each phase). Read it before any
+launch-related work; H1/H2/H3 below still govern product-core priorities.
+
 ## Active work (2026-06-26)
 
 No branch currently in flight. `claude/architecture-review-refactor-o6n977`

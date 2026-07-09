@@ -1,4 +1,4 @@
-// Packaging de Lumira: 4 tramos, precio único en euros, facturación mensual.
+// Packaging de GenScore: 4 tramos, precio único en euros, facturación mensual.
 // Ejes de valor: bucle de acción + credibilidad — no el volumen de datos.
 
 export type PlanCell = boolean | string;
@@ -161,7 +161,7 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
 export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
     q: "¿Qué es el escaneo gratuito?",
-    a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de Lumira antes de pagar nada."
+    a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
   },
   {
     q: "¿Por qué cobráis por prompts y motores, y no por usuarios?",
