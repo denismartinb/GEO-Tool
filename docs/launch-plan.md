@@ -32,7 +32,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 
 | # | Fase | Estado | PRs | Última actualización | Notas |
 |---|------|--------|-----|----------------------|-------|
-| 0 | DECISIÓN-MARCA | 🟡 En curso | #174 | 2026-07-09 | Nombre elegido: **GenScore**. Rebrand de código shipeado (REBRAND-1). Pendiente: compra de dominios + clearance TMview (fundador) |
+| 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
 | 1 | LEGAL-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 2 | PRICING-TRUTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
@@ -107,21 +107,28 @@ día:
 
 **Tareas restantes (fundador):**
 - [x] Elegir nombre → **GenScore**.
-- [ ] Búsqueda en TMview (EUIPO + OEPM, clases 42 + 35); si limpio,
-      clearance profesional (~200–400 €).
-- [ ] Comprar YA los dominios libres: genscore.es + genscore.app (+
-      genscore.net / getgenscore.com como defensa). Consultar en el
-      registrador el estado real de genscore.com/.ai/.io y, si están
-      aparcados, pedir precio vía broker — sin bloquear el lanzamiento.
-- [ ] Solicitud EUIPO (clases 42 + 35, ~850–900 €) tras el clearance.
-- [ ] Comunicar dominio definitivo al repo: se actualizará `CLAUDE.md`
-      (la regla "Do not rename GEO Studio to Lumira" queda obsoleta) y el
-      branding de las páginas de marketing (hoy "Lumira") se cambia a
-      GenScore dentro de PRICING-TRUTH-1.
+- [x] Búsqueda en TMview (EUIPO + OEPM) — **hecha por el fundador
+      (2026-07-09): sin resultados para "GenScore"**, clases 42/35 libres de
+      colisión registrada. Nota de riesgo residual (no bloqueante): TMview
+      cubre marcas registradas, no marcas de uso no registradas (common law)
+      ni nombres de empresa societarios — si más adelante hay presupuesto,
+      un clearance profesional de pago añade esa capa; no es requisito para
+      seguir operando con el nombre.
+- [x] Dominio comprado: **genscore.es** (2026-07-09).
+- [ ] Opcional, no bloqueante: comprar genscore.app/.net/getgenscore.com
+      como defensa, y sondear precio de genscore.com/.ai/.io (aparcados) vía
+      broker si se quiere esa extensión más adelante.
+- [ ] Solicitud EUIPO (clases 42 + 35, ~850–900 €) — pendiente, recomendable
+      antes de invertir en marketing pagado con el nombre, pero no bloquea
+      las fases de código.
+- [x] Dominio definitivo comunicado al repo → aplicado en REBRAND-1 (abajo).
 
-**Criterio de salida:** nombre decidido + dominio en propiedad.
-No bloquea LEGAL-1 ni PRICING-TRUTH-1 (pueden arrancar con placeholder de
-marca), pero sí bloquea LAUNCH y GROWTH-1.
+**Criterio de salida: CUMPLIDO** (nombre decidido + dominio `.es` en
+propiedad). No bloquea LEGAL-1 ni PRICING-TRUTH-1. La solicitud EUIPO y los
+dominios adicionales quedan como tareas de fondo del fundador, sin bloquear
+ninguna fase de código restante (incluida LAUNCH, dado que ya hay un dominio
+real en propiedad — actualizar `NEXT_PUBLIC_SITE_URL` a `genscore.es` es
+tarea de PLATFORM-COMMERCIAL-1).
 
 **REBRAND-1 — hecho (2026-07-09):** rebranding de código completado tras
 Task Intake aprobado. Sustituido "Lumira" → "GenScore" en las 15 superficies
