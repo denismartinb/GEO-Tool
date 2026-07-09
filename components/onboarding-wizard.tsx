@@ -31,14 +31,12 @@ const COUNTRIES: Array<{ code: string; name: string }> = [
 const TYPE_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
 
 const ENGINES = [
-  { name: "ChatGPT", color: "#10a37f" },
-  { name: "Google AI Overviews", color: "#4285f4" },
-  { name: "Perplexity", color: "#20b8cd" },
+  { name: "Gemini", color: "#4285f4" },
   { name: "Claude", color: "#d97757" }
 ];
 
 const ADD_STEPS = [
-  { icon: "search", t: "Analizamos", d: "Leemos tu dominio y lanzamos tus prompts en 4 motores de IA." },
+  { icon: "search", t: "Analizamos", d: "Leemos tu dominio y lanzamos tus prompts en varios motores de IA." },
   { icon: "competitors", t: "Comparamos", d: "Medimos tu visibilidad frente a tus competidores." },
   { icon: "recs", t: "Recomendamos", d: "Recibes un plan de acciones priorizadas por impacto." }
 ];

@@ -146,8 +146,8 @@ export function PlanBillingSection({
               </p>
             </div>
             <p className="sub">
-              Workspaces multi-cliente, ~300 prompts, todos los motores, informes white-label, alertas por email y
-              Slack, y roles. Desde {agencyPlan.price}&nbsp;€/{agencyPlan.period}.
+              Dominios y prompts a medida (~300 de referencia), los mismos motores de IA que Pro, onboarding
+              acompañado. Desde {agencyPlan.price}&nbsp;€/{agencyPlan.period}.
             </p>
             <Button
               type="button"
