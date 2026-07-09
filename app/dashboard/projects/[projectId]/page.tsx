@@ -9,7 +9,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { InfoTip } from "@/components/ui/info-tip";
-import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -452,7 +452,7 @@ export default async function ProjectDetailPage({
   /* ---- render ---- */
   return (
     <div className="page">
-      {activeRun ? <ScanProgressPoller /> : null}
+      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky page header */}
       <div className="ov-sticky-header">
@@ -1144,7 +1144,7 @@ export default async function ProjectDetailPage({
         /* ===== EMPTY STATE ===== */
         activeRun ? (
           /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
-          <ScanInProgress activeRun={activeRun} />
+          <ScanInProgressLive projectId={projectId} initial={activeRun} />
         ) : prompts?.length ? (
           /* Estado B — Listo para lanzar */
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
