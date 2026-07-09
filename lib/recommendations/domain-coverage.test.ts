@@ -360,16 +360,16 @@ describe("auditDomainCoverageCore", () => {
   });
 
   it("caps a single batch at BATCH_TOPICS_PER_CALL and reports the campaign as still running", async () => {
-    const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
+    const prompts = Array.from({ length: 6 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
     const deps = makeDeps({ prompts });
     const result = await runFast(deps);
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.coverage.topics.length).toBe(6);
+      expect(result.coverage.topics.length).toBe(4);
       expect(result.status).toBe("running");
-      expect(result.totalPrompts).toBe(9);
+      expect(result.totalPrompts).toBe(6);
     }
-    expect(mockedGemini).toHaveBeenCalledTimes(6);
+    expect(mockedGemini).toHaveBeenCalledTimes(4);
     expect(deps._service.inserted[0].status).toBe("running");
   });
 
@@ -388,7 +388,7 @@ describe("auditDomainCoverageCore", () => {
       const promptIds = result.coverage.topics.map((t) => t.promptId);
       expect(promptIds).toContain("p8");
       expect(promptIds[0]).toBe("p8"); // audited first, ahead of creation order
-      expect(result.coverage.topics.length).toBe(6);
+      expect(result.coverage.topics.length).toBe(4);
     }
   });
 
@@ -408,14 +408,15 @@ describe("auditDomainCoverageCore", () => {
   // docs/specs/web-audit/ (persistence model: one INSERT, N UPDATEs).
   describe("batched campaign chaining (WEB-AUDIT-CHAIN)", () => {
     it("resumes an in-progress campaign across calls and completes once every prompt is covered", async () => {
-      const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
+      // Exactly two clean batches at BATCH_TOPICS_PER_CALL=4.
+      const prompts = Array.from({ length: 8 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
       const deps = makeDeps({ prompts });
 
       const first = await runFast(deps);
       expect(first.success).toBe(true);
       if (first.success) {
         expect(first.status).toBe("running");
-        expect(first.coverage.topics.length).toBe(6);
+        expect(first.coverage.topics.length).toBe(4);
       }
       expect(deps._service.inserted).toHaveLength(1);
       expect(mockedRateLimit).toHaveBeenCalledTimes(1);
@@ -427,13 +428,13 @@ describe("auditDomainCoverageCore", () => {
       expect(second.success).toBe(true);
       if (second.success) {
         expect(second.status).toBe("completed");
-        expect(second.coverage.topics.length).toBe(9);
-        expect(second.totalPrompts).toBe(9);
+        expect(second.coverage.topics.length).toBe(8);
+        expect(second.totalPrompts).toBe(8);
         // Every prompt appears exactly once across both batches.
         const ids = second.coverage.topics.map((t) => t.promptId).sort();
         expect(ids).toEqual(prompts.map((p) => p.id).sort());
       }
-      expect(mockedGemini).toHaveBeenCalledTimes(3); // only the remaining 3 topics this batch
+      expect(mockedGemini).toHaveBeenCalledTimes(4); // the remaining 4 topics this batch
       expect(deps._service.inserted).toHaveLength(1); // still just the one row
       expect(deps._service.updated).toHaveLength(1); // second batch UPDATEs it
       expect(deps._service.updated[0].payload.status).toBe("completed");

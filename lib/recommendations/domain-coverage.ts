@@ -141,13 +141,22 @@ const DOMAIN_COVERAGE_RATE_LIMIT: GenerationRateLimitConfig = { window: "day", m
 // maxDuration=60 (docs/adr/0003). Each topic is a sequential grounding call
 // (up to GEMINI_CALL_TIMEOUT_MS=20s), so without a per-batch budget a few slow
 // calls could blow the platform ceiling and get the whole request killed
-// before we ever persist a row (breaking invariant 3). Once the budget is
-// exceeded, the remaining topics selected for THIS batch are marked "could
-// not verify" rather than dropped, and the (partial) map is persisted — a
-// multi-prompt project simply picks them up in the next chained batch
-// (WEB-AUDIT-CHAIN) instead of losing them.
-const BATCH_TOPICS_PER_CALL = 6;
-const BATCH_TIME_BUDGET_MS = 45_000;
+// before we ever persist a row (breaking invariant 3) — with NO response ever
+// reaching the client, which looks like "stays on Auditando… forever" rather
+// than a clean error. Once the budget is exceeded, the loop simply stops
+// selecting more topics THIS batch (see the per-topic loop below); anything
+// not yet attempted stays unaudited and is picked up normally by the next
+// chained batch (WEB-AUDIT-CHAIN) instead of being lost or wasted as
+// inconclusive.
+//
+// Kept deliberately small — smaller than the 6/45s that shipped with the
+// initial WEB-AUDIT-CHAIN cut — after a real 49-prompt campaign combined with
+// GEMINI_CALL_PACING_MS below pushed batches close enough to the platform
+// ceiling to risk a silent kill. A smaller, safer batch also means more
+// frequent progress updates in the UI, which reads as "working" instead of
+// "stuck" during a long campaign.
+const BATCH_TOPICS_PER_CALL = 4;
+const BATCH_TIME_BUDGET_MS = 30_000;
 
 // Spacing between sequential Gemini grounding calls within one batch
 // (WEB-AUDIT-CHAIN, 2026-07-09): before chaining, a single audit made at most
