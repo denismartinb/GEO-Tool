@@ -20,6 +20,12 @@ const PACING_DELAY_MS = 1_200;
 // instead of cleanly resolving or rejecting, which would otherwise leave the
 // UI stuck on "Auditando…" forever with no error and no way to retry.
 const CALL_TIMEOUT_MS = 65_000;
+// How many THROWN (not well-formed) failures in a row before giving up and
+// showing an error — a single dropped mobile-network request should not kill
+// a mostly-finished campaign (founder report: one hiccup on weak 4G ended the
+// drive loop with a scary permanent-looking error while the campaign was 36
+// of 49 done and perfectly resumable). See the retry logic in drive() below.
+const MAX_CONSECUTIVE_FAILURES = 3;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -110,6 +116,7 @@ export function RunAuditButton({
     setError(null);
     setNotice(null);
     setIsPending(true);
+    let consecutiveFailures = 0;
 
     try {
       for (let i = 0; i < MAX_DRIVE_ITERATIONS; i += 1) {
@@ -119,18 +126,35 @@ export function RunAuditButton({
         try {
           result = await withClientTimeout(auditDomainCoverageAction({ projectId }), CALL_TIMEOUT_MS);
         } catch {
+          // Transient failure — a dropped mobile connection, a redeploy
+          // mid-request, our own client_timeout — never means the campaign
+          // itself is broken; the persisted 'running' row is untouched and
+          // fully resumable. Mirrors AutoExecuteScan's own resilience: don't
+          // abort on the first hiccup, just retry after the pacing delay.
+          // Only give up (and only THEN show the founder an error) after
+          // several IN A ROW, which means something is genuinely stuck.
           if (abortedRef.current) return;
-          setError("No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos.");
-          return;
+          consecutiveFailures += 1;
+          if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+            setError("No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos.");
+            return;
+          }
+          await delay(PACING_DELAY_MS);
+          continue;
         }
 
         if (abortedRef.current) return;
 
+        // A well-formed failure response (rate limit, plan gate, a real
+        // server-side error) is the server telling us definitively no —
+        // unlike a thrown/network error above, retrying this blindly would
+        // just waste calls, so it stops immediately.
         if (!result.success) {
           setError(result.error);
           return;
         }
 
+        consecutiveFailures = 0;
         setProgress({ covered: result.coverage.topics.length, total: result.totalPrompts });
 
         if (result.status === "completed") {
