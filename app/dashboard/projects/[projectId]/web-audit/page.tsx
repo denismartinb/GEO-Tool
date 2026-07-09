@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
@@ -9,6 +8,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { RunAuditButton } from "./run-audit-button";
+import { TopicChip } from "./topic-chip";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -42,27 +42,6 @@ const TOPIC_LIST_ORDER: TopicOutcome[] = [
   "open_opportunity",
   "inconclusive"
 ];
-
-// Single-line, ellipsis-truncated chip used inside every matrix quadrant. The
-// `title` attribute carries the full topic; the detail list below the matrix
-// shows it untruncated. Shared so all quadrants (including the merged
-// "Sin contenido propio" one) truncate identically instead of wrapping
-// character-by-character on narrow/mobile columns.
-const chipStyle: CSSProperties = {
-  display: "block",
-  fontSize: 10.5,
-  fontWeight: 600,
-  background: "var(--surface)",
-  border: "1px solid var(--line)",
-  color: "var(--ink-2)",
-  borderRadius: 999,
-  padding: "2px 8px",
-  margin: "0 0 4px",
-  maxWidth: "100%",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
 
 function TopicRow({ topic }: { topic: ClassifiedTopic }) {
   const meta = OUTCOME_META[topic.outcome];
@@ -138,9 +117,7 @@ function Quadrant({
       </div>
       <div style={{ fontSize: 10.5, color: "var(--ink-3)", margin: "2px 0 7px" }}>{hint}</div>
       {topics.slice(0, 6).map((t) => (
-        <span key={t.promptId} title={t.topic} style={chipStyle}>
-          {t.topic}
-        </span>
+        <TopicChip key={t.promptId} topic={t.topic} />
       ))}
       {topics.length > 6 && (
         <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>+{topics.length - 6} más</span>
@@ -458,9 +435,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                           Compite un rival ({grouped.content_gap.length})
                         </div>
                         {grouped.content_gap.slice(0, 4).map((t) => (
-                          <span key={t.promptId} title={t.topic} style={{ ...chipStyle, margin: "2px 0 0" }}>
-                            {t.topic}
-                          </span>
+                          <TopicChip key={t.promptId} topic={t.topic} style={{ margin: "2px 0 0" }} />
                         ))}
                       </div>
                     )}
@@ -470,9 +445,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                           Nadie destaca aún ({grouped.open_opportunity.length})
                         </div>
                         {grouped.open_opportunity.slice(0, 4).map((t) => (
-                          <span key={t.promptId} title={t.topic} style={{ ...chipStyle, margin: "2px 0 0" }}>
-                            {t.topic}
-                          </span>
+                          <TopicChip key={t.promptId} topic={t.topic} style={{ margin: "2px 0 0" }} />
                         ))}
                       </div>
                     )}
