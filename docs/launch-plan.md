@@ -34,7 +34,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 |---|------|--------|-----|----------------------|-------|
 | 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
-| 2 | PRICING-TRUTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
+| 2 | PRICING-TRUTH-1 | 🟡 En curso (PR a hecho) | — | 2026-07-09 | Copy honesto shipeado (motores reales, Agencia sin features falsas, trial "14 días" corregido — no existía expiración real). PR b (enforcement de límites) pendiente |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
 | 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
@@ -291,6 +291,39 @@ gemini-pipeline + reliability (PR b), qa. Añadir al checklist permanente de
 **Criterios de aceptación:** cada celda de la matriz de `/pricing`
 corresponde a comportamiento real y gateado; un usuario free no puede
 lanzar un segundo escaneo; un starter no recibe scans diarios del cron.
+
+**PR a — copy honesto — hecho (2026-07-09):**
+- Motores reales (Gemini + Claude = 2) en landing, `/pricing` (cards,
+  matriz, meter explicativo) y plan Agencia; eliminada toda mención a
+  ChatGPT/AI Overviews/Perplexity/"4 motores"/"Todos" que no existen hoy.
+  Pro añade el highlight "nuevos motores incluidos sin coste extra cuando
+  se publiquen" (compromiso honesto, no ficticio).
+- Plan Agencia reescrito sin features inexistentes (workspaces, roles,
+  white-label, Slack, API/CMS) — eliminado el grupo entero "Agencia y
+  plataforma" de la matriz. Highlights ahora solo listan lo real (volumen
+  a medida, mismos 2 motores, onboarding acompañado antes de contratar).
+  FAQ de white-label reescrita en la misma línea.
+- **Hallazgo no previsto en el plan original, corregido en la misma PR:**
+  el CTA "Probar Pro · 14 días" y su FAQ prometían una reversión automática
+  a Free tras 14 días. Verificado en código
+  (`supabase/migrations/0011_signup_plan_from_metadata.sql`,
+  `app/signup/actions.ts`): elegir "pro" en el signup fija
+  `profiles.current_plan='pro'` **permanentemente**, sin `trial_ends_at` ni
+  mecanismo de expiración — no hay ningún límite de 14 días real. Corregido
+  a "Probar Pro gratis" sin promesa de plazo, y FAQ reescrita explicando
+  que hoy no hay límite de tiempo automático mientras no se lance la
+  facturación. **Nota para el fundador:** esto significa que ahora mismo
+  cualquiera que elija Pro al registrarse tiene Pro gratis indefinido, sin
+  fuerza de conversión a pago — coherente con la estrategia de validar
+  demanda sin cobrar (ver nota de LEGAL-1), pero si se quiere acelerar el
+  reverse trial real con expiración, es trabajo de BILLING-STRIPE-1 (punto
+  3, "Reverse trial"), no de esta fase.
+- FAQ de cambio de plan reescrita: ya no promete prorrateo automático ni
+  self-service (no existe hasta BILLING-STRIPE-1); ahora describe el
+  cambio gestionado a mano por soporte, sin coste ni permanencia.
+- `pnpm test` (331/331) y `pnpm run validate` en verde.
+
+**PR b — enforcement de límites — pendiente**, siguiente paso de esta fase.
 
 ---
 
