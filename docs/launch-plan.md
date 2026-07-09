@@ -32,7 +32,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 
 | # | Fase | Estado | PRs | Última actualización | Notas |
 |---|------|--------|-----|----------------------|-------|
-| 0 | DECISIÓN-MARCA | 🔲 Pendiente (fundador) | — | 2026-07-09 | Candidatos investigados: ver fase |
+| 0 | DECISIÓN-MARCA | 🟡 En curso | #174 | 2026-07-09 | Nombre elegido: **GenScore**. Pendiente: compra de dominios + clearance TMview |
 | 1 | LEGAL-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 2 | PRICING-TRUTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
@@ -90,15 +90,34 @@ marca viva. Variantes a 1 letra (Lumirra/Lumeira/Lumaira) siguen siendo
 | Lumivista | .ai, .es (.com inactivo desde 2019) | Ninguna activa | Alternativa |
 | Mirelia / Lumavia / Lumery / Lumantia / Lumirra | .ai | Varias menores | Reserva |
 
-**Tareas (fundador):**
-- [ ] Elegir 2 finalistas.
-- [ ] Búsqueda en TMview (EUIPO + OEPM); si limpio, clearance profesional
-      (~200–400 €).
-- [ ] Comprar dominios el mismo día de la decisión (.ai + .es mínimo).
-- [ ] Solicitud EUIPO (clases 42 + 35, ~850–900 €).
-- [ ] Comunicar el nombre al repo: se actualizará `CLAUDE.md` (regla
-      "Do not rename GEO Studio to Lumira" queda obsoleta) y el branding de
-      las páginas de marketing dentro de PRICING-TRUTH-1.
+**DECISIÓN (fundador, 2026-07-09): el nombre elegido es "GenScore"**
+(descartada la familia Lumira/Mirantia). Due diligence realizada el mismo
+día:
+
+- Colisiones: ninguna empresa ni producto comercial "GenScore" encontrado.
+  Único homónimo: un proyecto académico open-source de scoring
+  proteína-ligando en GitHub (bioinformática) — clase de producto lejana,
+  sin marca comercial aparente. "Genspark" (unicornio AI) es fonéticamente
+  distinguible. Riesgo aparente: bajo, pero falta TMview.
+- Dominios (verificado vía DNS 2026-07-09):
+  **libres → genscore.es, genscore.app, genscore.net, getgenscore.com**;
+  registrados pero sin producto activo detectable → genscore.com,
+  genscore.ai, genscore.io (probablemente aparcados; valorar compra vía
+  broker).
+
+**Tareas restantes (fundador):**
+- [x] Elegir nombre → **GenScore**.
+- [ ] Búsqueda en TMview (EUIPO + OEPM, clases 42 + 35); si limpio,
+      clearance profesional (~200–400 €).
+- [ ] Comprar YA los dominios libres: genscore.es + genscore.app (+
+      genscore.net / getgenscore.com como defensa). Consultar en el
+      registrador el estado real de genscore.com/.ai/.io y, si están
+      aparcados, pedir precio vía broker — sin bloquear el lanzamiento.
+- [ ] Solicitud EUIPO (clases 42 + 35, ~850–900 €) tras el clearance.
+- [ ] Comunicar dominio definitivo al repo: se actualizará `CLAUDE.md`
+      (la regla "Do not rename GEO Studio to Lumira" queda obsoleta) y el
+      branding de las páginas de marketing (hoy "Lumira") se cambia a
+      GenScore dentro de PRICING-TRUTH-1.
 
 **Criterio de salida:** nombre decidido + dominio en propiedad.
 No bloquea LEGAL-1 ni PRICING-TRUTH-1 (pueden arrancar con placeholder de
