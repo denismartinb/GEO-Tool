@@ -8,6 +8,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { RunAuditButton } from "./run-audit-button";
+import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
@@ -301,6 +302,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   }
 
   return (
+    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress}>
     <div className="page">
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -325,7 +327,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               {auditedScanDate ? ` · sobre el escaneo del ${formatDate(auditedScanDate)}` : ""}
             </span>
           )}
-          <RunAuditButton projectId={projectId} canAudit={canAudit} autoStart={activeCampaignProgress} />
+          <RunAuditButton canAudit={canAudit} />
         </div>
       </div>
 
@@ -394,14 +396,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             las citas de tu último escaneo.
           </p>
           <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
-          {/* When a campaign is already running, the header button (above)
-              auto-drives it — rendering a second auto-starting instance here
-              would race it into two concurrent loops. The "en curso" banner
-              already covers this state, so this card just omits its own
-              trigger instead. */}
+          {/* Both RunAuditButton instances on this page share one campaign
+              driver via WebAuditProvider, so this can't race the header
+              button into a second concurrent loop. It's still hidden while a
+              campaign is active because the "en curso" banner above already
+              covers that state — showing a second button here would be
+              redundant, not unsafe. */}
           {!hasActiveCampaign && (
             <div style={{ display: "flex", justifyContent: "center" }}>
-              <RunAuditButton projectId={projectId} canAudit={canAudit} />
+              <RunAuditButton canAudit={canAudit} />
             </div>
           )}
         </div>
@@ -596,5 +599,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         </Link>
       </div>
     </div>
+    </WebAuditProvider>
   );
 }
