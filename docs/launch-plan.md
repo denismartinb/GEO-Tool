@@ -33,7 +33,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | # | Fase | Estado | PRs | Última actualización | Notas |
 |---|------|--------|-----|----------------------|-------|
 | 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
-| 1 | LEGAL-1 | ⛔ Bloqueada (parcial) | — | 2026-07-09 | Régimen B2C decidido. Aviso Legal/Privacidad esperan datos fiscales (fundador aún no dado de alta — no bloquea el resto del plan) |
+| 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
 | 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
@@ -199,6 +199,43 @@ del plan puede avanzar mientras tanto.
 
 **Fuera de alcance:** VeriFactu/facturación (va en BILLING-STRIPE-1),
 banner de consentimiento (solo si se elige analítica con cookies).
+
+**LEGAL-1a — hecho (2026-07-09):** el RGPD obliga a informar del
+tratamiento de datos personales desde que se recogen, no desde que hay
+actividad económica registrada — la web ya recoge email/contraseña,
+dominio, prompts y competidores sin ninguna política publicada, así que
+esta parte no podía esperar al alta. Shipeado sin esperar a LEGAL-1b:
+- `/privacidad` — responsable: Denis Martín Barroso, contacto
+  soporte@genscore.es (persona física, sin NIF/domicilio — eso es LEGAL-1b).
+  Encargados de tratamiento reales y activos hoy: Supabase, Vercel, Google
+  (Gemini API), Anthropic (Claude API). Deliberadamente NO menciona Stripe
+  ni proveedor de analítica/email — no están activos todavía
+  (BILLING-STRIPE-1 / PLATFORM-COMMERCIAL-1); la política se actualizará
+  cuando lo estén, para no prometer salvaguardas de un tratamiento que aún
+  no existe.
+- `/cookies` — cookie técnica de sesión de Supabase únicamente, sin banner
+  (no hay analítica con cookies activa hoy).
+- `/terminos` — con el régimen **B2C confirmado por el fundador**: incluye
+  derecho de desistimiento de 14 días de consumidor. Identificación del
+  operador solo por nombre + email (sin NIF/domicilio, igual que
+  privacidad). Estado "beta privada", sin SLA, limitación de
+  responsabilidad por depender de LLMs de terceros, referencia a
+  `/pricing` en vez de duplicar precios.
+- Footer de landing y `/pricing` enlazados de verdad a las 3 páginas
+  (antes eran `<span>` inertes). Componente compartido:
+  `components/legal-page-shell.tsx`.
+- `pnpm test` (331/331) y `pnpm run validate` (build+typecheck+lint) en
+  verde.
+
+**LEGAL-1b — pendiente, gatillada por el alta del fundador:** Aviso Legal
+LSSI completo (NIF, domicilio fiscal) + actualizar `/privacidad` y
+`/terminos` con la identidad comercial definitiva. No bloquea nada del
+resto del plan.
+
+**Recordatorio (no cambia por lo anterior):** estos textos son un borrador
+razonable, no asesoramiento legal — deben pasar revisión de un
+gestor/abogado antes de LAUNCH, en particular el capítulo de
+desistimiento B2C y las cláusulas de responsabilidad.
 
 **Nota importante:** los textos legales los redacta la sesión como borrador,
 pero **deben pasar revisión humana (gestor/abogado) antes de LAUNCH** —
