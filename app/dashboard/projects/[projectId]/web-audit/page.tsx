@@ -387,16 +387,23 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </div>
             <div className="card" style={{ padding: "13px 15px 11px" }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                Tasa de aprovechamiento
+                Temas aprovechados por la IA
               </div>
+              {/* Fraction (like the coverage tile), not a bare percentage: a
+                  giant "0 %" read as a failing grade when it actually flags
+                  the fastest lever — pages that exist but aren't cited yet. */}
               <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-                {summary.surfacingPct === null ? "—" : `${summary.surfacingPct}`}
-                {summary.surfacingPct !== null && <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600 }}>%</small>}
+                {summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
+                {summary.surfacingPct !== null && (
+                  <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>temas</small>
+                )}
               </div>
-              <div style={{ fontSize: 10.5, marginTop: 6, color: grouped.invisible.length > 0 ? "var(--warn-ink)" : "var(--ink-4)", fontWeight: grouped.invisible.length > 0 ? 650 : 400 }}>
-                {grouped.invisible.length > 0
-                  ? `${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema con contenido no se cita" : "temas con contenido no se citan"}`
-                  : "de los temas con contenido, cuántos cita la IA"}
+              <div style={{ fontSize: 10.5, marginTop: 6, color: grouped.invisible.length > 0 ? "var(--ink-2)" : "var(--ink-4)", fontWeight: grouped.invisible.length > 0 ? 650 : 400 }}>
+                {summary.surfacingPct === null
+                  ? "de tus temas con contenido propio, cuántos cita la IA"
+                  : grouped.invisible.length > 0
+                    ? `Tu palanca más rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema con página propia que la IA aún no cita" : "temas con página propia que la IA aún no cita"}`
+                    : "La IA ya cita todos tus temas con contenido propio"}
               </div>
             </div>
           </div>
