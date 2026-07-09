@@ -34,7 +34,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 |---|------|--------|-----|----------------------|-------|
 | 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
-| 2 | PRICING-TRUTH-1 | 🟡 En curso (PR a hecho) | — | 2026-07-09 | Copy honesto shipeado (motores reales, Agencia sin features falsas, trial "14 días" corregido — no existía expiración real). PR b (enforcement de límites) pendiente |
+| 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
 | 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
@@ -323,7 +323,34 @@ lanzar un segundo escaneo; un starter no recibe scans diarios del cron.
   cambio gestionado a mano por soporte, sin coste ni permanencia.
 - `pnpm test` (331/331) y `pnpm run validate` en verde.
 
-**PR b — enforcement de límites — pendiente**, siguiente paso de esta fase.
+**PR b — enforcement de límites — hecho (2026-07-09):**
+- **Free = 1 escaneo, de verdad**: `createPendingScanRunCore`
+  (`lib/scan/run-creation.ts`) bloquea con `free_plan_scan_limit_reached` en
+  cuanto el proyecto tiene ≥1 `scan_runs` con `status='completed'`. Gateado
+  sobre *completado*, no sobre "cualquier run", a propósito: no interfiere
+  con el auto-retry de SCAN-ROBUST-1 (un primer intento que falla por
+  timeout sigue reintentándose y dando al usuario su único escaneo real).
+- **Frecuencia de cron por plan**: `lib/scan/cron.ts` calculaba un único
+  intervalo de 24h para todos los proyectos; ahora resuelve el plan del
+  owner (`resolvePlan`) y aplica Starter → semanal (7 días), Pro/Agencia →
+  diario, por proyecto. Un proyecto Free que de algún modo tuviera
+  `recurring_scans_enabled=true` se filtra explícitamente
+  (`skipped_plan_ineligible`) antes de intentar nada — cinturón y tirantes
+  junto al bloqueo anterior.
+- **Motores por plan**: `executePendingScan` (`lib/scan/executor.ts`) ahora
+  resuelve el plan del owner y recorta `getLLMScanProviders()` a
+  `caps.engines`. Hoy es mayormente un no-op (solo existen 2 motores reales
+  y todo plan de pago ya tiene `caps.engines=2`), salvo para Free
+  (`caps.engines=1`) — pero deja el mecanismo listo para cuando ENGINES-2
+  añada un tercer/cuarto motor, sin tener que volver a tocar este gate.
+- 10 tests Vitest nuevos cubriendo los tres enforcement (bloqueo Free,
+  no-bloqueo del auto-retry, cadencia semanal/diaria por plan, filtro de
+  planes no elegibles, recorte de motores por plan) — 341/341 en verde,
+  `pnpm run validate` limpio. Un test existente
+  (`run-creation.test.ts`, "caps onlyPromptIds…") se cambió de plan Free a
+  Starter porque su fixture incluía un run previo completado que ahora
+  colisiona con el nuevo límite — su propósito real (probar el tope de
+  prompts del plan) es independiente de esa colisión.
 
 ---
 

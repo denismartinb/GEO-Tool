@@ -6,6 +6,8 @@
  */
 export const feedbackErrorMessages: Record<string, string> = {
   active_run_exists: "Ya hay un escaneo en curso o pendiente para este dominio.",
+  free_plan_scan_limit_reached:
+    "Tu plan Free incluye un único escaneo. Sube a Starter o Pro para volver a escanear este dominio.",
   project_archived: "Este dominio está archivado. Reactívalo antes de lanzar un escaneo.",
   project_not_found: "No hemos encontrado el dominio solicitado.",
   project_setup_partial:
