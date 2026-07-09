@@ -1,14 +1,35 @@
 import "server-only";
 
+import { resolvePlan } from "@/lib/billing";
 import { createPendingScanRunForCron } from "@/lib/scan/run-creation";
 import { executePendingScan } from "@/lib/scan/executor";
 import { ProjectActionError } from "@/lib/scan/types";
 import type { createServiceClient } from "@/lib/supabase/service";
 
-const RECURRING_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_BUDGET_MS = 45_000;
 const FAILURE_STREAK_LIMIT = 3;
 const DEFAULT_MAX_PROJECTS_PER_RUN = 5;
+
+/**
+ * PRICING-TRUTH-1 (PR b): recurring-scan cadence by the project owner's plan,
+ * replacing the previous single hardcoded 24h interval applied to every
+ * project regardless of plan — `/pricing` promises "Semanal" for Starter and
+ * "Diario" for Pro/Agencia, but the cron ran every project daily. `free` is
+ * listed only for completeness (its interval is never actually reached: a
+ * free-plan project cannot have `recurring_scans_enabled=true` in practice —
+ * enabling it requires a prior completed scan per
+ * `recurring_requires_completed_scan`, and `createPendingScanRunCore` now
+ * refuses a second run for a free-plan project outright, see
+ * `run-creation.ts`). Kept explicit rather than falling through to a default
+ * so a missing branch is a type error, not a silent wrong cadence.
+ */
+const RECURRING_INTERVAL_MS_BY_PLAN: Record<string, number> = {
+  free: DAY_MS,
+  starter: 7 * DAY_MS,
+  pro: DAY_MS,
+  agency: DAY_MS
+};
 
 /**
  * How many projects are scanned concurrently within a single cron
@@ -22,11 +43,18 @@ const BATCH_CONCURRENCY = 2;
 
 export type CronResult = {
   projectId: string;
-  status: "scanned" | "skipped_active_run" | "skipped_recent" | "skipped_failure_streak" | "skipped_budget" | "failed";
+  status:
+    | "scanned"
+    | "skipped_active_run"
+    | "skipped_recent"
+    | "skipped_failure_streak"
+    | "skipped_budget"
+    | "skipped_plan_ineligible"
+    | "failed";
 };
 
 type RecentRun = { status: string; created_at: string };
-type Candidate = { id: string; recentRuns: RecentRun[] };
+type Candidate = { id: string; recentRuns: RecentRun[]; cutoffIso: string };
 
 /**
  * A project whose latest run is pending/running is not skipped outright on
@@ -65,14 +93,12 @@ async function attemptScan({
 
 async function processCandidate({
   candidate,
-  service,
-  cutoffIso
+  service
 }: {
   candidate: Candidate;
   service: ReturnType<typeof createServiceClient>;
-  cutoffIso: string;
 }): Promise<CronResult> {
-  const { id: projectId, recentRuns } = candidate;
+  const { id: projectId, recentRuns, cutoffIso } = candidate;
   const latestRun = recentRuns[0];
   const latestLooksActive = Boolean(latestRun && (latestRun.status === "pending" || latestRun.status === "running"));
 
@@ -120,11 +146,10 @@ export async function runDailyCronScan({
   maxProjects?: number;
 }): Promise<{ processed: number; scanned: number; results: CronResult[] }> {
   const startedAt = Date.now();
-  const cutoffIso = new Date(Date.now() - RECURRING_INTERVAL_MS).toISOString();
 
   const { data: candidateProjects, error: projectsError } = await service
     .from("projects")
-    .select("id")
+    .select("id, owner_user_id")
     .eq("recurring_scans_enabled", true)
     .eq("is_archived", false);
 
@@ -133,11 +158,35 @@ export async function runDailyCronScan({
     throw new Error("query_failed");
   }
 
+  const ownerIds = Array.from(new Set((candidateProjects ?? []).map((project) => project.owner_user_id as string)));
+  const { data: profileRows } = ownerIds.length
+    ? await service.from("profiles").select("id, current_plan").in("id", ownerIds)
+    : { data: [] as Array<{ id: string; current_plan: string | null }> };
+  const planIdByOwnerId = new Map(
+    (profileRows ?? []).map((row) => [row.id, resolvePlan(row.current_plan as string | undefined).id])
+  );
+
+  const results: CronResult[] = [];
+
   // Fetched up front (for every candidate, not just the ones that end up
   // processed) so candidates can be sorted by last-scan recency before the
-  // budget-constrained loop runs.
+  // budget-constrained loop runs. Free-plan projects are filtered out here
+  // rather than left to fail inside attemptScan: in practice a free-plan
+  // project can't reach `recurring_scans_enabled=true` (it requires a prior
+  // completed scan, and a free-plan project can only ever have one), but
+  // this keeps the invariant explicit and visible in the result summary
+  // instead of relying on that indirect chain.
+  const eligibleProjects = (candidateProjects ?? []).filter((project) => {
+    const planId = planIdByOwnerId.get(project.owner_user_id as string) ?? "pro";
+    if (planId === "free") {
+      results.push({ projectId: project.id, status: "skipped_plan_ineligible" });
+      return false;
+    }
+    return true;
+  });
+
   const candidates: Candidate[] = await Promise.all(
-    (candidateProjects ?? []).map(async (project) => {
+    eligibleProjects.map(async (project) => {
       const { data: recentRuns } = await service
         .from("scan_runs")
         .select("status, created_at")
@@ -145,7 +194,11 @@ export async function runDailyCronScan({
         .order("created_at", { ascending: false })
         .limit(FAILURE_STREAK_LIMIT);
 
-      return { id: project.id, recentRuns: recentRuns ?? [] };
+      const planId = planIdByOwnerId.get(project.owner_user_id as string) ?? "pro";
+      const intervalMs = RECURRING_INTERVAL_MS_BY_PLAN[planId] ?? DAY_MS;
+      const cutoffIso = new Date(Date.now() - intervalMs).toISOString();
+
+      return { id: project.id, recentRuns: recentRuns ?? [], cutoffIso };
     })
   );
 
@@ -155,7 +208,6 @@ export async function runDailyCronScan({
     return aLatest.localeCompare(bLatest);
   });
 
-  const results: CronResult[] = [];
   let scannedCount = 0;
   let index = 0;
 
@@ -174,7 +226,7 @@ export async function runDailyCronScan({
     index += batch.length;
 
     const batchResults = await Promise.all(
-      batch.map((candidate) => processCandidate({ candidate, service, cutoffIso }))
+      batch.map((candidate) => processCandidate({ candidate, service }))
     );
 
     for (const result of batchResults) {
@@ -185,7 +237,7 @@ export async function runDailyCronScan({
 
   console.info("[geo:scan:cron] daily scan run summary", {
     elapsedMs: Date.now() - startedAt,
-    candidates: candidates.length,
+    candidates: (candidateProjects ?? []).length,
     scanned: scannedCount,
     results
   });
