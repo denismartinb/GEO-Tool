@@ -291,8 +291,9 @@ export default function HomePage() {
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
-              <span>Privacidad</span>
-              <span>Términos</span>
+              <Link href="/privacidad">Privacidad</Link>
+              <Link href="/cookies">Cookies</Link>
+              <Link href="/terminos">Términos</Link>
             </div>
           </div>
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
