@@ -32,8 +32,8 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 
 | # | Fase | Estado | PRs | Última actualización | Notas |
 |---|------|--------|-----|----------------------|-------|
-| 0 | DECISIÓN-MARCA | 🟡 En curso | #174 | 2026-07-09 | Nombre elegido: **GenScore**. Rebrand de código shipeado (REBRAND-1). Pendiente: compra de dominios + clearance TMview (fundador) |
-| 1 | LEGAL-1 | 🔲 Pendiente | — | 2026-07-09 | |
+| 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
+| 1 | LEGAL-1 | ⛔ Bloqueada (parcial) | — | 2026-07-09 | Régimen B2C decidido. Aviso Legal/Privacidad esperan datos fiscales (fundador aún no dado de alta — no bloquea el resto del plan) |
 | 2 | PRICING-TRUTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
 | 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
@@ -107,21 +107,28 @@ día:
 
 **Tareas restantes (fundador):**
 - [x] Elegir nombre → **GenScore**.
-- [ ] Búsqueda en TMview (EUIPO + OEPM, clases 42 + 35); si limpio,
-      clearance profesional (~200–400 €).
-- [ ] Comprar YA los dominios libres: genscore.es + genscore.app (+
-      genscore.net / getgenscore.com como defensa). Consultar en el
-      registrador el estado real de genscore.com/.ai/.io y, si están
-      aparcados, pedir precio vía broker — sin bloquear el lanzamiento.
-- [ ] Solicitud EUIPO (clases 42 + 35, ~850–900 €) tras el clearance.
-- [ ] Comunicar dominio definitivo al repo: se actualizará `CLAUDE.md`
-      (la regla "Do not rename GEO Studio to Lumira" queda obsoleta) y el
-      branding de las páginas de marketing (hoy "Lumira") se cambia a
-      GenScore dentro de PRICING-TRUTH-1.
+- [x] Búsqueda en TMview (EUIPO + OEPM) — **hecha por el fundador
+      (2026-07-09): sin resultados para "GenScore"**, clases 42/35 libres de
+      colisión registrada. Nota de riesgo residual (no bloqueante): TMview
+      cubre marcas registradas, no marcas de uso no registradas (common law)
+      ni nombres de empresa societarios — si más adelante hay presupuesto,
+      un clearance profesional de pago añade esa capa; no es requisito para
+      seguir operando con el nombre.
+- [x] Dominio comprado: **genscore.es** (2026-07-09).
+- [ ] Opcional, no bloqueante: comprar genscore.app/.net/getgenscore.com
+      como defensa, y sondear precio de genscore.com/.ai/.io (aparcados) vía
+      broker si se quiere esa extensión más adelante.
+- [ ] Solicitud EUIPO (clases 42 + 35, ~850–900 €) — pendiente, recomendable
+      antes de invertir en marketing pagado con el nombre, pero no bloquea
+      las fases de código.
+- [x] Dominio definitivo comunicado al repo → aplicado en REBRAND-1 (abajo).
 
-**Criterio de salida:** nombre decidido + dominio en propiedad.
-No bloquea LEGAL-1 ni PRICING-TRUTH-1 (pueden arrancar con placeholder de
-marca), pero sí bloquea LAUNCH y GROWTH-1.
+**Criterio de salida: CUMPLIDO** (nombre decidido + dominio `.es` en
+propiedad). No bloquea LEGAL-1 ni PRICING-TRUTH-1. La solicitud EUIPO y los
+dominios adicionales quedan como tareas de fondo del fundador, sin bloquear
+ninguna fase de código restante (incluida LAUNCH, dado que ya hay un dominio
+real en propiedad — actualizar `NEXT_PUBLIC_SITE_URL` a `genscore.es` es
+tarea de PLATFORM-COMMERCIAL-1).
 
 **REBRAND-1 — hecho (2026-07-09):** rebranding de código completado tras
 Task Intake aprobado. Sustituido "Lumira" → "GenScore" en las 15 superficies
@@ -148,6 +155,26 @@ solicitada.
 **Objetivo:** cumplir los mínimos legales para operar un SaaS de pago desde
 España hacia la UE. Hoy no existe **ninguna** página legal; los enlaces
 "Privacidad"/"Términos" del footer son `<span>` inertes.
+
+**Decisión de régimen (fundador, 2026-07-09): B2C incluido.** Se venderá
+tanto a empresas/profesionales como a particulares → los Términos deben
+incluir derecho de desistimiento de 14 días (o consentimiento expreso de
+ejecución inmediata del servicio digital, renunciando a ese derecho).
+
+**BLOQUEADA (fundador, 2026-07-09): el fundador aún no está dado de alta
+como autónomo.** El Aviso Legal y la Política de Privacidad necesitan un
+titular identificado (nombre/razón social, NIF, domicilio fiscal) — no se
+redactan con datos inventados ni placeholders. Aclarado con el fundador:
+**no hace falta darse de alta para validar demanda** (build, free scan,
+reverse trial gratis, y conversaciones de venta manual con las 3–5 agencias
+de la Fase 5 no requieren alta ni facturación — el alta solo es obligatoria
+cuando hay cobro recurrente real). Recomendación registrada: validar
+demanda primero (en paralelo a PRICING-TRUTH-1 / PLATFORM-COMMERCIAL-1, que
+no dependen de esto), dar el alta justo antes de activar Stripe
+(BILLING-STRIPE-1 → LAUNCH) — es reversible y de coste bajo (tarifa plana),
+no la burocracia pesada que se suele temer. Esta fase queda con el
+contenido de Aviso Legal/Privacidad **pendiente de esos datos**; el resto
+del plan puede avanzar mientras tanto.
 
 **Alcance:**
 - Página **Aviso legal** (LSSI-CE: identidad, NIF, domicilio, contacto).
