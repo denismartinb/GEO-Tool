@@ -69,7 +69,7 @@ export default function HomePage() {
           />
           <div className="lp-logo">
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GenScore</div>
           </div>
           <div className="lp-nav-links">
             <a href="#producto">Producto</a>
@@ -136,7 +136,7 @@ export default function HomePage() {
       {/* TRUST */}
       <div className="lp-trust">
         <div className="lp-inner">
-          <div className="cap">Equipos de marketing y agencias que confían en Lumira</div>
+          <div className="cap">Equipos de marketing y agencias que confían en GenScore</div>
           <div className="lp-logos">
             <span className="lg">Northwind</span><span className="lg">Quantix</span><span className="lg">Beltway</span>
             <span className="lg">Nuve</span><span className="lg">Aurora&nbsp;Labs</span>
@@ -150,7 +150,7 @@ export default function HomePage() {
           <div className="lp-sec-head">
             <div className="lp-kicker">Cómo funciona</div>
             <h2 className="lp-h2">De cero a un plan de acción en tres pasos</h2>
-            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que Lumira haga el análisis.</p>
+            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que GenScore haga el análisis.</p>
           </div>
           <div className="lp-steps">
             {STEPS.map((s) => (
@@ -285,7 +285,7 @@ export default function HomePage() {
           <div className="row1">
             <div className="lp-logo">
               <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">Lumira</div>
+              <div className="brand-name">GenScore</div>
             </div>
             <div className="links">
               <a href="#producto">Producto</a>
@@ -295,7 +295,7 @@ export default function HomePage() {
               <span>Términos</span>
             </div>
           </div>
-          <div className="copy">© 2026 Lumira · Generative Engine Optimization para empresas y agencias.</div>
+          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
     </div>

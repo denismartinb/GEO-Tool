@@ -32,7 +32,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 
 | # | Fase | Estado | PRs | Última actualización | Notas |
 |---|------|--------|-----|----------------------|-------|
-| 0 | DECISIÓN-MARCA | 🟡 En curso | #174 | 2026-07-09 | Nombre elegido: **GenScore**. Pendiente: compra de dominios + clearance TMview |
+| 0 | DECISIÓN-MARCA | 🟡 En curso | #174 | 2026-07-09 | Nombre elegido: **GenScore**. Rebrand de código shipeado (REBRAND-1). Pendiente: compra de dominios + clearance TMview (fundador) |
 | 1 | LEGAL-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 2 | PRICING-TRUTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
@@ -122,6 +122,24 @@ día:
 **Criterio de salida:** nombre decidido + dominio en propiedad.
 No bloquea LEGAL-1 ni PRICING-TRUTH-1 (pueden arrancar con placeholder de
 marca), pero sí bloquea LAUNCH y GROWTH-1.
+
+**REBRAND-1 — hecho (2026-07-09):** rebranding de código completado tras
+Task Intake aprobado. Sustituido "Lumira" → "GenScore" en las 15 superficies
+de producto real identificadas (landing, `/pricing` + `plans-data.ts`,
+login/signup/forgot-password, sidebar, topbar, `layout.tsx` metadata, copy
+de dashboard en Overview/Recomendaciones/Prompts, comentario de
+`scan-in-progress.tsx`). `CLAUDE.md` ahora fija "GenScore" como nombre
+público oficial en su cabecera y aclara que "GEO Studio" sigue siendo el
+nombre interno del proyecto/repo (decisión separada, no tocada). La regla
+"Do not rename product to Lumira" de `.claude/agents/ux-alignment.md` se
+actualizó a positiva (nombre público = GenScore). `docs/design-reference/**`
+se dejó intacto a propósito (material histórico del prototipo, sigue
+llamándose "Lumira" ahí). Grep de verificación: cero ocurrencias de
+"Lumira" fuera de design-reference y de esta bitácora/CLAUDE.md/agente
+(las tres últimas son referencias intencionales al propio rebrand).
+Pendiente aparte, no incluido: renombrar `package.json` (`geo-studio`) o el
+propio repo — es una decisión distinta con impacto en CI/deploy, no
+solicitada.
 
 ---
 

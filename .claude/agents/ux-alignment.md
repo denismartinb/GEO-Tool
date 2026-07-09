@@ -33,7 +33,7 @@ lists; the `frontend` agent implements.
 ## Rules
 
 - Do not paste prototype code blindly.
-- Do not rename product to Lumira.
+- The public product name is GenScore (see CLAUDE.md); do not reintroduce "Lumira" or "GEO Studio" in user-facing copy.
 - Do not prioritize pixel polish over broken flow.
 - Produce P0/P1/P2/P3 gap lists.
 

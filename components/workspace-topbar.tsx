@@ -77,7 +77,7 @@ export function WorkspaceTopbar({
 
       {!project ? (
         <div className="hdr-titlewrap">
-          <div className="hdr-crumb">Lumira</div>
+          <div className="hdr-crumb">GenScore</div>
           <div className="hdr-title">Espacio de trabajo</div>
           <div className="hdr-title-mobile">{mobileTitle}</div>
         </div>

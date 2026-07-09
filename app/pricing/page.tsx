@@ -134,7 +134,7 @@ export default function PricingPage() {
           />
           <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GenScore</div>
           </div>
           <div className="lp-nav-links">
             <Link href="/#producto">Producto</Link>
@@ -215,7 +215,7 @@ export default function PricingPage() {
             <h2 className="lp-h2">Todo lo que incluye cada plan</h2>
             <p className="lp-sec-sub">
               Las palancas de upsell son la cobertura de motores y la frecuencia de refresco — como en el resto del
-              mercado, pero con el bucle de acción que solo tiene Lumira.
+              mercado, pero con el bucle de acción que solo tiene GenScore.
             </p>
           </div>
           <PlanMatrix />
@@ -230,7 +230,7 @@ export default function PricingPage() {
             <div>
               <div className="price-anchor-t">El precio se ancla en el tiempo de analista que te ahorras</div>
               <p className="price-anchor-d">
-                Otras herramientas te entregan datos y te dejan el trabajo de priorizar. Lumira prioriza por ti —con
+                Otras herramientas te entregan datos y te dejan el trabajo de priorizar. GenScore prioriza por ti —con
                 evidencia, impacto y soluciones listas para implementar—. Eso es lo que justifica situarse en la
                 parte media-alta de la banda del mercado, no «otra herramienta de tracking».
               </p>
@@ -285,7 +285,7 @@ export default function PricingPage() {
           <div className="row1">
             <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
               <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">Lumira</div>
+              <div className="brand-name">GenScore</div>
             </div>
             <div className="links">
               <Link href="/#producto">Producto</Link>
@@ -295,7 +295,7 @@ export default function PricingPage() {
               <span>Términos</span>
             </div>
           </div>
-          <div className="copy">© 2026 Lumira · Generative Engine Optimization para empresas y agencias.</div>
+          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
     </div>

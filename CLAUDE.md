@@ -3,6 +3,12 @@
 GEO Studio is a private-beta SaaS that helps brands understand and improve how
 they appear in AI-generated answers.
 
+**Public product name: GenScore** (decided 2026-07-09, see
+`docs/launch-plan.md` Fase 0). "GEO Studio" remains the internal/repo project
+name (this file's title, `package.json`); "GenScore" is the brand shown to
+users across marketing pages and the dashboard. "Lumira" is retired — do not
+reintroduce it in user-facing copy.
+
 **Talk to the Director for every request.** The Director is the primary agent:
 it evaluates critically, consults specialists, orchestrates implementation, and
 owns the quality of every deliverable. Start sessions with `--agent director`.
@@ -206,9 +212,11 @@ bash scripts/agentic-handoff-check.sh
 
 ## Design Reference
 
-`GEO Suite-2.zip` is the UX/UI source of truth (`docs/design-reference/`).
-Do not rename GEO Studio to Lumira. Do not blindly paste prototype code.
-Do not introduce prototype-only state as real product behavior.
+`GEO Suite-2.zip` is the UX/UI source of truth (`docs/design-reference/`),
+including its "Lumira"-named prototype files — those are historical design
+assets and are not renamed. Do not blindly paste prototype code. Do not
+introduce prototype-only state as real product behavior. The public product
+name is GenScore, not the prototype's "Lumira" naming (see top of this file).
 
 ---
 
