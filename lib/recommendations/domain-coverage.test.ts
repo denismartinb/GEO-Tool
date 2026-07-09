@@ -146,6 +146,25 @@ beforeEach(() => {
   );
 });
 
+/**
+ * Runs `auditDomainCoverageCore` under fake timers so the real
+ * GEMINI_CALL_PACING_MS delay between calls (added by WEB-AUDIT-CHAIN to
+ * avoid tripping Gemini's per-minute grounding quota) doesn't make a
+ * multi-topic test take real wall-clock seconds. `vi.advanceTimersByTimeAsync`
+ * flushes pending timers and microtasks together, so chained `await delay()`
+ * calls inside the core function resolve as time is advanced.
+ */
+async function runFast(deps: ReturnType<typeof makeDeps>) {
+  vi.useFakeTimers();
+  try {
+    const promise = auditDomainCoverageCore(deps);
+    await vi.advanceTimersByTimeAsync(60_000);
+    return await promise;
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
 describe("auditDomainCoverageCore", () => {
   it("denies when the project does not exist or is not owned by this user", async () => {
     const deps = makeDeps({ project: null });
@@ -282,7 +301,7 @@ describe("auditDomainCoverageCore", () => {
         { id: "p2", prompt_text: "tema dos" }
       ]
     });
-    const result = await auditDomainCoverageCore(deps);
+    const result = await runFast(deps);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.coverage.topics).toHaveLength(2);
@@ -343,7 +362,7 @@ describe("auditDomainCoverageCore", () => {
   it("caps a single batch at BATCH_TOPICS_PER_CALL and reports the campaign as still running", async () => {
     const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
     const deps = makeDeps({ prompts });
-    const result = await auditDomainCoverageCore(deps);
+    const result = await runFast(deps);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.coverage.topics.length).toBe(6);
@@ -363,7 +382,7 @@ describe("auditDomainCoverageCore", () => {
       citationRecRows: [{ evidence_json: { affected_prompt_details: [{ id: "result-for-p8" }] } }],
       citationResultRows: [{ id: "result-for-p8", prompt_id: "p8" }]
     });
-    const result = await auditDomainCoverageCore(deps);
+    const result = await runFast(deps);
     expect(result.success).toBe(true);
     if (result.success) {
       const promptIds = result.coverage.topics.map((t) => t.promptId);
@@ -379,7 +398,7 @@ describe("auditDomainCoverageCore", () => {
       { id: "p2", prompt_text: "tema dos" }
     ];
     const deps = makeDeps({ prompts, citationRecRows: [] });
-    const result = await auditDomainCoverageCore(deps);
+    const result = await runFast(deps);
     expect(result.success).toBe(true);
     if (result.success) expect(result.coverage.topics.map((t) => t.promptId)).toEqual(["p1", "p2"]);
   });
@@ -392,7 +411,7 @@ describe("auditDomainCoverageCore", () => {
       const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
       const deps = makeDeps({ prompts });
 
-      const first = await auditDomainCoverageCore(deps);
+      const first = await runFast(deps);
       expect(first.success).toBe(true);
       if (first.success) {
         expect(first.status).toBe("running");
@@ -404,7 +423,7 @@ describe("auditDomainCoverageCore", () => {
       mockedGemini.mockClear();
       mockedRateLimit.mockClear();
 
-      const second = await auditDomainCoverageCore(deps);
+      const second = await runFast(deps);
       expect(second.success).toBe(true);
       if (second.success) {
         expect(second.status).toBe("completed");
@@ -423,14 +442,14 @@ describe("auditDomainCoverageCore", () => {
     it("skips the rate-limit check entirely when resuming (a campaign is one unit regardless of batch count)", async () => {
       const prompts = Array.from({ length: 9 }, (_, i) => ({ id: `p${i}`, prompt_text: `tema ${i}` }));
       const deps = makeDeps({ prompts });
-      await auditDomainCoverageCore(deps);
+      await runFast(deps);
 
       mockedRateLimit.mockClear();
       mockedRateLimit.mockResolvedValue({ allowed: false, reason: "rate_limit_exceeded" } as never);
 
       // Even though the mock now says "blocked", resuming an already-counted
       // campaign must not consult the rate limit at all.
-      const second = await auditDomainCoverageCore(deps);
+      const second = await runFast(deps);
       expect(second.success).toBe(true);
       expect(mockedRateLimit).not.toHaveBeenCalled();
     });

@@ -149,6 +149,24 @@ const DOMAIN_COVERAGE_RATE_LIMIT: GenerationRateLimitConfig = { window: "day", m
 const BATCH_TOPICS_PER_CALL = 6;
 const BATCH_TIME_BUDGET_MS = 45_000;
 
+// Spacing between sequential Gemini grounding calls within one batch
+// (WEB-AUDIT-CHAIN, 2026-07-09): before chaining, a single audit made at most
+// BATCH_TOPICS_PER_CALL calls total, once every few minutes at most (manual
+// click + the 5/day limit) — a tight back-to-back loop never tripped
+// anything. Chaining raised real sustained call volume (a 49-prompt campaign
+// now fires ~49 grounding calls across ~8 batches within roughly a minute),
+// which is exactly the shape that trips a provider's requests-per-minute
+// quota even while comfortably under its daily one. This delay keeps a
+// batch's own calls spaced out; the topic_failed log below also now
+// includes the real error message (previously only error.name, which for
+// every Gemini API failure is the same generic "Error") so a genuine quota
+// hit is visible in logs instead of silently guessed at.
+const GEMINI_CALL_PACING_MS = 700;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 const NOTE_MAX = 400;
 const TITLE_MAX = 160;
 const TOPIC_MAX = 300;
@@ -538,6 +556,11 @@ export async function auditDomainCoverageCore({
 
       const topic = sanitizeField(prompt.prompt_text, TOPIC_MAX);
 
+      // Space out sequential Gemini calls within this batch (see
+      // GEMINI_CALL_PACING_MS) — skip before the very first call, no point
+      // delaying a request that's about to fire immediately anyway.
+      if (topics.length > 0) await delay(GEMINI_CALL_PACING_MS);
+
       try {
         const raw = await auditDomainContent({
           brand: project.brand,
@@ -568,9 +591,17 @@ export async function auditDomainCoverageCore({
         );
       } catch (error) {
         // Fail-soft per topic: one failing grounding call never aborts the map.
+        // error_message is safe to log: auditDomainContent only ever throws
+        // GeminiTimeoutError, GeminiConfigError, or an Error built from
+        // getGeminiApiError(status) — all fixed, pre-sanitized strings, never
+        // a raw provider stack trace (reliability rule: no raw errors in
+        // logs). This is what actually distinguishes a real quota hit (429 →
+        // "Gemini API quota or rate limit reached.") from a timeout or a
+        // config problem, instead of every failure looking identical.
         console.error(`${LOG_PREFIX} topic_failed`, {
           project_id: projectId,
-          error_name: error instanceof Error ? error.name : "unknown"
+          error_name: error instanceof Error ? error.name : "unknown",
+          error_message: error instanceof Error ? error.message : "unknown"
         });
         topics.push({ promptId: prompt.id, topic, found: false, pages: [], note: COULD_NOT_VERIFY_NOTE });
       }
