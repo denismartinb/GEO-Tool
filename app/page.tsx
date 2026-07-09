@@ -11,7 +11,7 @@ const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
   { icon: "competitors", t: "Frente a quién pierdes", d: "Detecta competidores directos y descubre dónde ganan visibilidad que tú no tienes." },
   { icon: "cite", t: "Qué URLs se citan", d: "Conoce las páginas que los motores de IA usan como fuente para responder en tu mercado." },
-  { icon: "layers", t: "Multi-motor", d: "ChatGPT, Google AI Overviews, Perplexity y Claude — una visión unificada de tu visibilidad." },
+  { icon: "layers", t: "Multi-motor", d: "Gemini y Claude hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
   { icon: "recs", t: "Acciones, no solo datos", d: "Cada insight se convierte en una acción priorizada por impacto, esfuerzo y confianza." },
   { icon: "sparkles", t: "Soluciones generadas", d: "Genera el FAQ, el schema o el contenido que falta con un clic, listo para publicar." }
 ];
@@ -42,7 +42,7 @@ function EngineNote() {
     <div className="lp-hero-note">
       <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
       <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo en minutos</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />4 motores de IA</span>
+      <span><Icon name="check" size={14} className="text-[var(--pos)]" />2 motores de IA</span>
     </div>
   );
 }
@@ -228,7 +228,7 @@ export default function HomePage() {
               </div>
               <div className="evidence mt12">
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-                  <Badge tone="neutral" icon="quote">ChatGPT</Badge>
+                  <Badge tone="neutral" icon="quote">Gemini</Badge>
                 </div>
                 <div className="ev-quote">…las opciones más recomendadas son <span className="mk">Orbit</span> y <span className="mk">Quanta</span>, con onboarding sólido…</div>
               </div>
