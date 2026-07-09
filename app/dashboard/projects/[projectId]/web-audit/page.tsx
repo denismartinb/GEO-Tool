@@ -217,6 +217,39 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     .order("created_at", { ascending: false })
     .limit(12);
 
+  // WEB-AUDIT-CHAIN: detect a campaign left "running" for the current scan
+  // (from a previous batch, whether the user is still on this page or came
+  // back after navigating away/closing the tab) so the audit button can
+  // resume driving it automatically — same shape as AutoExecuteScan resuming
+  // a pending/running scan_run on Escaneos. Read server-side, not from any
+  // client-only state, so it survives a full page reload.
+  const { data: activeCampaignRow } = await supabase
+    .from("generated_solutions")
+    .select("sanitized_content")
+    .eq("project_id", projectId)
+    .eq("generation_type", "domain_coverage")
+    .is("recommendation_id", null)
+    .eq("status", "running")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const activeCampaignMap = parseCoverageMap(activeCampaignRow?.sanitized_content ?? null);
+  const hasActiveCampaign = Boolean(
+    activeCampaignMap && latestRunRow && activeCampaignMap.scanId === latestRunRow.id
+  );
+  let activeCampaignProgress: { covered: number; total: number } | null = null;
+  if (hasActiveCampaign && activeCampaignMap) {
+    const { count: activePromptCount } = await supabase
+      .from("project_prompts")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("is_active", true);
+    activeCampaignProgress = {
+      covered: activeCampaignMap.topics.length,
+      total: activePromptCount ?? activeCampaignMap.topics.length
+    };
+  }
+
   const maps = ((historyRows ?? []) as Array<{ sanitized_content: string | null }>)
     .map((row) => parseCoverageMap(row.sanitized_content))
     .filter((m): m is NonNullable<typeof m> => m !== null);
@@ -292,9 +325,29 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               {auditedScanDate ? ` · sobre el escaneo del ${formatDate(auditedScanDate)}` : ""}
             </span>
           )}
-          <RunAuditButton projectId={projectId} canAudit={canAudit} />
+          <RunAuditButton projectId={projectId} canAudit={canAudit} autoStart={activeCampaignProgress} />
         </div>
       </div>
+
+      {activeCampaignProgress && (
+        <div className="firstscan-banner">
+          <div className="fb-ico">
+            <Icon name="search" size={18} />
+            <span className="fb-spin"></span>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div className="fb-t">Auditoría en curso</div>
+            <div className="fb-d">
+              Llevamos {activeCampaignProgress.covered} de {activeCampaignProgress.total} temas. Puedes navegar a
+              otras páginas — al volver aquí, seguirá por donde se quedó.
+            </div>
+          </div>
+          <span className="st-chip st-scanning">
+            <span className="d" />
+            Auditando
+          </span>
+        </div>
+      )}
 
       <div className="summary mt8">
         <div className="summary-ico">
@@ -341,9 +394,16 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             las citas de tu último escaneo.
           </p>
           <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <RunAuditButton projectId={projectId} canAudit={canAudit} />
-          </div>
+          {/* When a campaign is already running, the header button (above)
+              auto-drives it — rendering a second auto-starting instance here
+              would race it into two concurrent loops. The "en curso" banner
+              already covers this state, so this card just omits its own
+              trigger instead. */}
+          {!hasActiveCampaign && (
+            <div style={{ display: "flex", justifyContent: "center" }}>
+              <RunAuditButton projectId={projectId} canAudit={canAudit} />
+            </div>
+          )}
         </div>
       ) : (
         <>

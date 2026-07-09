@@ -54,8 +54,16 @@ function withClientTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * (mirroring AutoExecuteScan's foreground-only driver; see ADR-0014) until the
  * campaign's `status` comes back "completed", showing real progress
  * (`covered / total temas`) along the way instead of an all-or-nothing
- * spinner. Closing the tab mid-campaign just leaves it "running" — the next
- * click resumes from wherever it left off (no lost work, no stuck state).
+ * spinner.
+ *
+ * `autoStart`: server-provided progress for an already-running campaign for
+ * the current scan (page.tsx detects it by querying generated_solutions
+ * directly — real persisted state, not client memory). When present, this
+ * component immediately resumes driving on mount, exactly like
+ * AutoExecuteScan resumes a pending/running scan_run: navigating away and
+ * back (or a full page reload, or a closed tab reopened later) must keep
+ * showing real progress instead of a reset "Auditar ahora" button, because
+ * the campaign genuinely is still running server-side.
  *
  * Deliberately NOT wrapped in `useTransition`/`startTransition`: that hook is
  * for marking a single state update low-priority, not for a multi-minute
@@ -66,33 +74,41 @@ function withClientTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * (ScanTriggerButton, AutoExecuteScan) uses plain useState instead — this
  * follows that same established pattern.
  */
-export function RunAuditButton({ projectId, canAudit }: { projectId: string; canAudit: boolean }) {
+export function RunAuditButton({
+  projectId,
+  canAudit,
+  autoStart
+}: {
+  projectId: string;
+  canAudit: boolean;
+  autoStart?: { covered: number; total: number } | null;
+}) {
   const router = useRouter();
-  const [isPending, setIsPending] = useState(false);
+  const [isPending, setIsPending] = useState(Boolean(autoStart));
   const [error, setError] = useState<string | null>(null);
   // Explicit success feedback. Without it, a cache hit (a re-audit of the same
   // scan returns the already-stored map) re-rendered identical content and the
   // button felt dead — "parece que no hace nada". We now confirm the click and,
   // on a cache hit, say why nothing changed.
   const [notice, setNotice] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ covered: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ covered: number; total: number } | null>(autoStart ?? null);
   const abortedRef = useRef(false);
+  const firedRef = useRef(false);
 
   // Stop driving if the user navigates away mid-campaign (component unmount)
   // instead of continuing to fire requests and set state on an unmounted
   // component — mirrors AutoExecuteScan's cleanup. The campaign itself is
   // safe either way (it just stays "running" server-side and resumes on the
-  // next click), this only stops the client-side loop.
+  // next click/mount), this only stops the client-side loop.
   useEffect(() => {
     return () => {
       abortedRef.current = true;
     };
   }, []);
 
-  async function handleClick() {
+  async function drive() {
     setError(null);
     setNotice(null);
-    setProgress(null);
     setIsPending(true);
 
     try {
@@ -132,12 +148,25 @@ export function RunAuditButton({ projectId, canAudit }: { projectId: string; can
 
       // Hit the iteration cap without completing (very large prompt sets) —
       // refresh anyway so the partial progress made so far is visible; the
-      // campaign stays "running" and the next click resumes it.
+      // campaign stays "running" and the next click/mount resumes it.
       if (!abortedRef.current) router.refresh();
     } finally {
       if (!abortedRef.current) setIsPending(false);
     }
   }
+
+  // Auto-resume: fires once per mount when the server says a campaign for
+  // this scan is already running. Guarded by firedRef so React re-rendering
+  // this component (e.g. a parent re-render) never starts a second
+  // concurrent loop.
+  useEffect(() => {
+    if (!autoStart || firedRef.current) return;
+    firedRef.current = true;
+    void drive();
+    // Deliberately fires once on mount only (autoStart is the server-provided
+    // snapshot that decides whether to auto-resume at all; `drive` closes
+    // over projectId/router, which are stable for this component's lifetime).
+  }, []);
 
   if (!canAudit) {
     return (
@@ -152,7 +181,7 @@ export function RunAuditButton({ projectId, canAudit }: { projectId: string; can
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-      <Button type="button" onClick={handleClick} disabled={isPending}>
+      <Button type="button" onClick={drive} disabled={isPending}>
         {isPending ? <span className="btn-spinner" /> : <Icon name="search" size={14} />}
         {isPending ? progressLabel : "Auditar ahora"}
       </Button>
