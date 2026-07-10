@@ -685,10 +685,17 @@ ventas").
 dos deep links y su fallback). 414/414 tests totales, `pnpm run validate`
 limpio.
 
-**Siguiente:** confirmar con el fundador que el deep link aterriza
-directamente en la pantalla de coste del plan Pro → PR 3 (reverse trial
-con `trial_ends_at`, requiere su propia aprobación de migración) → PR 4
-(emails Resend).
+**PR 2 verificado end-to-end en vivo (2026-07-10):** el fundador probó
+Starter→Pro real vía el deep link del Portal. El cambio de precio se
+aplicó correctamente en Stripe al primer intento (confirmado indirectamente:
+un segundo intento devolvió *"no hay ningún cambio que confirmar"*, prueba
+de que ya estaba en Pro), y tras refrescar la página de Facturación el plan
+se mostró correctamente actualizado a Pro — el webhook sí sincronizó
+`current_plan`, solo necesitaba ese refresco. Sin nuevos hallazgos de
+código.
+
+**Siguiente:** mergear PR 2 → PR 3 (reverse trial con `trial_ends_at`,
+requiere su propia aprobación de migración) → PR 4 (emails Resend).
 
 ---
 
