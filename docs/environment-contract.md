@@ -87,6 +87,27 @@ and the run only progresses further once `reconcileStuckScanRuns` notices no
 progress and auto-retries (docs/scan-lifecycle.md). See
 `docs/adr/0014-batched-self-chaining-scan-execution.md`.
 
+### Observability and analytics (PLATFORM-COMMERCIAL-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `SENTRY_DSN` | No | Vercel + local `.env.local` | Sentry server/edge DSN, `https://...@...ingest.sentry.io/...` |
+| `NEXT_PUBLIC_SENTRY_DSN` | No | Vercel | Same DSN, client-side (browser bundle) — usually identical to `SENTRY_DSN` |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | Vercel (build-time) | Enables source-map upload during `next build`; without them the Sentry webpack plugin silently skips upload, the build is unaffected |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | Vercel | PostHog project API key (`phc_...`) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No (defaults to `https://eu.i.posthog.com`) | Vercel | PostHog ingestion host — keep EU unless the project region changes |
+
+All five are optional by design: every one of `sentry.server.config.ts`,
+`sentry.edge.config.ts`, `instrumentation-client.ts`, and
+`components/posthog-provider.tsx` no-ops (no `Sentry.init`/`posthog.init`
+call, no script loaded) when its variable is unset — this repo ships with
+none of them configured until the founder creates the Sentry/PostHog
+accounts (docs/launch-plan.md, Fase 3). PostHog is initialized with
+`persistence: "memory"` (no cookies/localStorage) to match the "no
+analytics cookies in use" claim in `/cookies` — if that ever changes,
+`/cookies` and `/privacidad` need a follow-up update to list PostHog as a
+processor before flipping the key on in production.
+
 ---
 
 ## Vercel configuration

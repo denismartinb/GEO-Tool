@@ -35,7 +35,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
-| 3 | PLATFORM-COMMERCIAL-1 | 🔲 Pendiente | — | 2026-07-09 | Parte es config manual en Vercel |
+| 3 | PLATFORM-COMMERCIAL-1 | 🟡 En curso (código hecho) | — | 2026-07-09 | Sentry + PostHog (EU, cookieless) integrados y en no-op sin credenciales. Pendiente del fundador: Vercel Pro, dominio, cuentas Sentry/PostHog |
 | 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -403,6 +403,42 @@ mínima para operar con clientes.
 **Criterios de aceptación:** deploy productivo en dominio propio bajo plan
 Pro; un error de servidor provocado a propósito aparece en Sentry; los
 eventos del funnel se ven en la analítica; environment contract al día.
+
+**Parte de código — hecho (2026-07-09):** decisión de analítica: **PostHog**
+(no Plausible) — es el que de verdad ofrece plan gratuito indefinido (1M
+eventos/mes, sin tarjeta), frente al trial de 30 días de Plausible.
+
+- **Sentry**: `sentry.server.config.ts`, `sentry.edge.config.ts`,
+  `instrumentation.ts` (+ `onRequestError`), `instrumentation-client.ts`, y
+  `next.config.ts` envuelto en `withSentryConfig`. Todo condicionado a
+  `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` — sin esas vars (hoy, en todos los
+  entornos) no se llama a `Sentry.init` en ningún sitio, cero coste/ruido.
+  El build funciona igual sin `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN`
+  (el plugin de subida de sourcemaps simplemente no sube nada).
+- **PostHog**: `components/posthog-provider.tsx`, montado en
+  `app/layout.tsx`. `persistence: "memory"` (cookieless de verdad — sin
+  esto, la promesa de `/cookies` de "no usamos cookies de analítica" dejaría
+  de ser cierta en cuanto se active). Host EU
+  (`https://eu.i.posthog.com`). Pageviews vía autocapture manual en cada
+  cambio de ruta del App Router (no el pageview automático del SDK, que no
+  ve las navegaciones SPA). Condicionado a `NEXT_PUBLIC_POSTHOG_KEY` — sin
+  esa var, no se llama a `posthog.init` ni se carga el script.
+  **Alcance deliberadamente limitado**: esta PR solo deja la
+  infraestructura + autocapture de pageviews/clics; instrumentar eventos
+  explícitos del funnel (registro completado, primer escaneo, upgrade) es
+  un fast-follow pequeño, no incluido aquí para no inflar el PR.
+- `docs/environment-contract.md` actualizado con las 5 vars nuevas, todas
+  opcionales, con nota explícita de que `/cookies`/`/privacidad` necesitan
+  una actualización de LEGAL-1 el día que se active PostHog en producción
+  (añadirlo como encargado del tratamiento).
+- `pnpm test` (341/341) y `pnpm run validate` en verde.
+
+**Pendiente (fundador, sin código posible):**
+- [ ] Subir a Vercel Pro.
+- [ ] Conectar `genscore.es` en Vercel + fijar `NEXT_PUBLIC_SITE_URL`.
+- [ ] Crear cuenta Sentry → `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` en Vercel.
+- [ ] Crear cuenta PostHog (región EU) → `NEXT_PUBLIC_POSTHOG_KEY` en Vercel.
+- [ ] Panel de operador mínimo (queries guardadas / dashboard de PostHog).
 
 ---
 
