@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import { ChangePlanModal } from "@/components/billing/change-plan-modal";
-import { changePlan, createCheckoutSession, type ChangePlanResult } from "@/app/dashboard/settings/billing/actions";
+import {
+  changePlan,
+  createCheckoutSession,
+  createPortalSession,
+  type ChangePlanResult
+} from "@/app/dashboard/settings/billing/actions";
 import type { ActiveProjectSummary, UsageSummary } from "@/lib/billing";
 
 function UsageRow({
@@ -65,10 +70,19 @@ export function PlanBillingSection({
 }) {
   const [planId, setPlanId] = useState<Plan["id"]>(currentPlanId);
   const [projects, setProjects] = useState<ActiveProjectSummary[]>(activeProjects);
-  const [modal, setModal] = useState<{ initialTargetId?: Plan["id"] } | null>(null);
+  const [modal, setModal] = useState<{ initialTargetId?: Plan["id"]; overageOnly?: boolean } | null>(null);
+  const [portalError, setPortalError] = useState<string | null>(null);
+  const [isPortalPending, startPortalTransition] = useTransition();
 
   const current = PLANS.find((p) => p.id === planId)!;
   const agencyPlan = PLANS.find((p) => p.id === agencyPlanId)!;
+
+  // BILLING-STRIPE-1 PR 2: a plan/cancellation change made in the Stripe
+  // Customer Portal (outside this app) can leave the account over its new
+  // plan's domain cap — the webhook that syncs `current_plan` deliberately
+  // does not auto-archive anything (founder's choice: always let the owner
+  // pick which domains to keep, never decide for them).
+  const isOverCapacity = projects.length > current.caps.projects;
 
   const applyChange = async (id: Plan["id"], archiveProjectIds: string[]): Promise<ChangePlanResult> => {
     const result = await changePlan(id, archiveProjectIds);
@@ -81,8 +95,40 @@ export function PlanBillingSection({
     return result;
   };
 
+  const handleManageBilling = () => {
+    setPortalError(null);
+    startPortalTransition(async () => {
+      const result = await createPortalSession();
+      if (result.success) {
+        window.location.href = result.url;
+      } else {
+        setPortalError(result.error);
+      }
+    });
+  };
+
   return (
     <>
+      {isOverCapacity && (
+        <div className="flex flex-col gap-3 rounded-[14px] border border-[#f0c36d] bg-[#fdf6e8] p-4 sm:flex-row sm:items-center sm:gap-4">
+          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[#92600a]">
+            <Icon name="alertCircle" size={18} />
+          </div>
+          <p className="order-2 flex-1 text-sm text-[#6b4b09]">
+            Tienes <b>{projects.length}</b> dominios activos y tu plan {current.name} permite{" "}
+            <b>{current.caps.projects}</b>. Elige cuáles mantener activos.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="order-3 shrink-0"
+            onClick={() => setModal({ overageOnly: true })}
+          >
+            Elegir dominios
+          </Button>
+        </div>
+      )}
+
       <section className="space-y-2">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-semibold text-[var(--ink)]">Tu plan</h2>
@@ -92,6 +138,7 @@ export function PlanBillingSection({
           <Icon name="check" size={11} />
           Activo
         </span>
+        {portalError && <p className="feedback error">{portalError}</p>}
         <Card>
           <CardHeader>
             <div className="flex items-start justify-between gap-4">
@@ -119,9 +166,11 @@ export function PlanBillingSection({
                 <Icon name="arrUp" size={14} />
                 Cambiar de plan
               </Button>
-              <Button type="button" variant="outline">
-                Cancelar suscripción
-              </Button>
+              {planId !== "free" && (
+                <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
+                  {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -165,10 +214,12 @@ export function PlanBillingSection({
         <ChangePlanModal
           currentId={planId}
           initialTargetId={modal.initialTargetId}
+          overageOnly={modal.overageOnly}
           activeProjects={projects}
           onClose={() => setModal(null)}
           onApply={applyChange}
           onCheckout={createCheckoutSession}
+          onManageBilling={createPortalSession}
         />
       )}
     </>

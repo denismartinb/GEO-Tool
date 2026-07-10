@@ -1,16 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
-vi.mock("next/headers", () => ({
-  headers: () =>
-    Promise.resolve(
-      new Map([
-        ["host", "geo-tool-internal.vercel.app"],
-        ["x-forwarded-host", "geo-tool-git-some-branch-team.vercel.app"],
-        ["x-forwarded-proto", "https"]
-      ])
-    )
-}));
+
+// Mutable (not vi.doMock, which leaks into later tests since resetModules()
+// doesn't undo it) so individual tests can simulate a missing host header.
+let headerEntries = new Map<string, string>();
+function resetHeaderEntries() {
+  headerEntries = new Map([
+    ["host", "geo-tool-internal.vercel.app"],
+    ["x-forwarded-host", "geo-tool-git-some-branch-team.vercel.app"],
+    ["x-forwarded-proto", "https"]
+  ]);
+}
+resetHeaderEntries();
+vi.mock("next/headers", () => ({ headers: () => Promise.resolve(headerEntries) }));
 
 const requireUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(...args) }));
@@ -77,6 +80,7 @@ beforeEach(() => {
   requireUser.mockReset();
   getStripeClient.mockReset();
   getPriceIdForPlan.mockReset();
+  resetHeaderEntries();
 });
 
 afterEach(() => {
@@ -157,8 +161,8 @@ describe("createCheckoutSession", () => {
   });
 
   it("strips a trailing slash from the NEXT_PUBLIC_SITE_URL fallback when no host header is present", async () => {
-    vi.resetModules();
-    vi.doMock("next/headers", () => ({ headers: () => Promise.resolve(new Map()) }));
+    headerEntries = new Map();
+    const hadOriginal = "NEXT_PUBLIC_SITE_URL" in process.env;
     const ORIGINAL_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
     process.env.NEXT_PUBLIC_SITE_URL = "https://www.genscore.es/";
 
@@ -180,7 +184,14 @@ describe("createCheckoutSession", () => {
       })
     );
 
-    process.env.NEXT_PUBLIC_SITE_URL = ORIGINAL_SITE_URL;
+    // process.env assignment stringifies its value, so assigning back
+    // `undefined` would leave the literal string "undefined" behind for
+    // every later test in this run instead of actually clearing it.
+    if (hadOriginal) {
+      process.env.NEXT_PUBLIC_SITE_URL = ORIGINAL_SITE_URL;
+    } else {
+      delete process.env.NEXT_PUBLIC_SITE_URL;
+    }
   });
 
   it("reuses an existing stripe_customer_id instead of customer_email when one is on file", async () => {
@@ -212,6 +223,64 @@ describe("createCheckoutSession", () => {
     const { createCheckoutSession } = await import("./actions");
 
     const result = await createCheckoutSession("pro");
+
+    expect(result.success).toBe(false);
+    errorSpy.mockRestore();
+  });
+});
+
+describe("createPortalSession", () => {
+  it("fails gracefully when Stripe isn't configured yet", async () => {
+    getStripeClient.mockReturnValue(null);
+    const { createPortalSession } = await import("./actions");
+
+    const result = await createPortalSession();
+
+    expect(result).toMatchObject({ success: false });
+  });
+
+  it("fails when the account has no stripe_customer_id (never subscribed)", async () => {
+    getStripeClient.mockReturnValue({ billingPortal: { sessions: { create: vi.fn() } } });
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { stripe_customer_id: null } }),
+      user: { id: USER_ID }
+    });
+    const { createPortalSession } = await import("./actions");
+
+    const result = await createPortalSession();
+
+    expect(result).toMatchObject({ success: false });
+  });
+
+  it("creates a real portal session for an existing customer and returns its url, derived from the request host", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://billing.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ billingPortal: { sessions: { create } } });
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { stripe_customer_id: "cus_existing" } }),
+      user: { id: USER_ID }
+    });
+    const { createPortalSession } = await import("./actions");
+
+    const result = await createPortalSession();
+
+    expect(result).toEqual({ success: true, url: "https://billing.stripe.com/session/xyz" });
+    expect(create).toHaveBeenCalledWith({
+      customer: "cus_existing",
+      return_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing"
+    });
+  });
+
+  it("returns a safe error when Stripe itself throws", async () => {
+    const create = vi.fn().mockRejectedValue(new Error("stripe api down"));
+    getStripeClient.mockReturnValue({ billingPortal: { sessions: { create } } });
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { stripe_customer_id: "cus_existing" } }),
+      user: { id: USER_ID }
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { createPortalSession } = await import("./actions");
+
+    const result = await createPortalSession();
 
     expect(result.success).toBe(false);
     errorSpy.mockRestore();
