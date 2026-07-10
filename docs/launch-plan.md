@@ -35,7 +35,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
-| 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181 | 2026-07-10 | Dominio + Sentry + PostHog en vivo tras merge de #181. Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
+| 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
 | 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -441,9 +441,23 @@ eventos/mes, sin tarjeta), frente al trial de 30 días de Plausible.
 - [x] Cuenta PostHog creada, `NEXT_PUBLIC_POSTHOG_KEY` configurada en
       Vercel, host EU (2026-07-10).
 - [x] PR #181 (código Sentry/PostHog) mergeado con las 5 variables ya
-      presentes en Vercel — el próximo deploy de producción las recoge.
-      Verificación pendiente del fundador: confirmar en los dashboards de
-      Sentry/PostHog que llega el primer evento tras el redeploy.
+      presentes en Vercel. **Verificado en vivo (2026-07-10):** PostHog
+      confirmado funcionando de fábrica (sesión real registrada en
+      `https://www.genscore.es/`). Sentry, en cambio, **no recibía ningún
+      evento** en la primera prueba — bug real encontrado y corregido en el
+      mismo hallazgo: `onRequestError` en `instrumentation.ts` era una
+      función fire-and-forget que llamaba a `captureRequestError` dentro de
+      un `.then()` sin devolver esa promesa; Next.js resolvía el `await` del
+      hook de inmediato (`undefined` implícito), así que en el runtime
+      serverless de Vercel la instancia de función podía congelarse antes de
+      que el import dinámico + la captura llegaran a ejecutarse — el error
+      se perdía en silencio, sin ningún fallo visible. Corregido con una
+      `async function` real que espera `captureRequestError` +
+      `Sentry.flush(2000)` como red de seguridad adicional (PR #183,
+      verificado con una ruta de prueba temporal `/api/debug/sentry-test`
+      en el preview, que se lanzó, se confirmó el error en Sentry, y se
+      retiró antes de mergear — solo el fix llegó a `main`). Sentry
+      confirmado operativo en producción tras el fix.
 - [ ] **Subir a Vercel Pro — decisión explícita del fundador (2026-07-10):
       diferido hasta la primera contratación.** Riesgo registrado y
       aceptado conscientemente: a diferencia del alta de autónomo (donde el

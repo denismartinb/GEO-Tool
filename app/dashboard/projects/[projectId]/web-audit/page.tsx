@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
+import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
@@ -52,8 +53,25 @@ const ACTION_KIND_META: Record<ActionItemKind, { label: string; linkLabel: strin
   capture: { label: "Formalizar página propia", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" }
 };
 
-function TopicRow({ topic, competitors }: { topic: ClassifiedTopic; competitors: string[] }) {
+function TopicRow({
+  topic,
+  competitors,
+  brandMentioned
+}: {
+  topic: ClassifiedTopic;
+  competitors: string[];
+  brandMentioned: boolean;
+}) {
   const meta = OUTCOME_META[topic.outcome];
+  // "Hueco de contenido" / "Oportunidad abierta" only mean: no own content
+  // Google indexes for this topic, and no verified citation to your domain
+  // in this scan. Neither checks whether the AI's answer names your brand
+  // by its own knowledge (fame, not an asset you control) — a topic can be
+  // a genuine content gap while the AI still leads with your brand name.
+  // Surface that distinction here instead of leaving "Hueco de contenido"
+  // read as "the AI doesn't know you" (founder-reported confusion).
+  const showBrandMentionNote =
+    (topic.outcome === "content_gap" || topic.outcome === "open_opportunity") && brandMentioned;
   return (
     <div
       style={{
@@ -76,6 +94,13 @@ function TopicRow({ topic, competitors }: { topic: ClassifiedTopic; competitors:
       {topic.outcome === "content_gap" && competitors.length > 0 && (
         <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>
           La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{competitors.join(", ")}</strong>
+        </p>
+      )}
+
+      {showBrandMentionNote && (
+        <p style={{ fontSize: 12, color: "var(--ink-2)", margin: "0 0 6px", fontWeight: 600 }}>
+          Tu marca sí aparece mencionada en la respuesta de la IA — pero sin contenido propio verificado ni una cita a
+          tu dominio. Esa mención viene de lo que el modelo ya sabe de ti, no de un activo que controles.
         </p>
       )}
 
@@ -327,7 +352,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     scanIds.length > 0
       ? await supabase
           .from("scan_prompt_results")
-          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count")
+          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count, brand_mentioned")
           .eq("project_id", projectId)
           .in("run_id", scanIds)
           .eq("status", "completed")
@@ -341,6 +366,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   }
 
   const latestMap = maps.length > 0 ? maps.reduce((a, b) => (a.generatedAt > b.generatedAt ? a : b)) : null;
+
+  // Whether the AI mentioned the brand by name for a topic's prompt, in the
+  // audited scan — a signal the opportunity matrix itself never reads (see
+  // TopicRow). Merges across providers: true if ANY provider's answer
+  // mentioned the brand, since a single "no" from one engine shouldn't hide
+  // a "yes" from another.
+  const brandMentionedByPromptId = new Map<string, boolean>();
+  for (const row of (resultRows ?? []) as Array<{ prompt_id: string | null; run_id: string; brand_mentioned: boolean }>) {
+    if (!row.prompt_id || !latestMap || row.run_id !== latestMap.scanId) continue;
+    if (row.brand_mentioned) brandMentionedByPromptId.set(row.prompt_id, true);
+  }
   const summary = latestMap
     ? buildWebAuditSummary({ coverage: latestMap, results: resultsByScanId.get(latestMap.scanId) ?? [], projectDomain: project.domain })
     : null;
@@ -600,7 +636,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
             <div className="card">
               <div style={{ padding: "13px 16px 0" }}>
-                <div style={{ fontSize: 13.5, fontWeight: 750 }}>Matriz de oportunidad</div>
+                <div style={{ fontSize: 13.5, fontWeight: 750, display: "flex", alignItems: "center" }}>
+                  Matriz de oportunidad
+                  <InfoTip text="Cruza dos señales que sí controlas: contenido propio que Google indexa, y citas verificadas a tu dominio en las respuestas de la IA. No mide si la IA menciona tu marca por lo que ya sabe de ella — puedes salir en 'Hueco de contenido' aunque la IA te nombre primero; mira el detalle por tema para verlo." />
+                </div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
                   Cada tema de tus prompts, cruzando contenido propio verificado × citas en el último escaneo.
                 </div>
@@ -711,7 +750,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {TOPIC_LIST_ORDER.flatMap((outcome) => grouped[outcome]).map((topic) => (
-              <TopicRow key={topic.promptId} topic={topic} competitors={competitorsByPromptId.get(topic.promptId) ?? []} />
+              <TopicRow
+                key={topic.promptId}
+                topic={topic}
+                competitors={competitorsByPromptId.get(topic.promptId) ?? []}
+                brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
+              />
             ))}
           </div>
         </>

@@ -582,17 +582,30 @@ export default async function ProjectDetailPage({
               <div className="hv-block-label">Cómo se compone tu puntuación</div>
               {geoScore?.components ? (
                 [
-                  { l: "Presencia (mención)", c: geoScore.components.presence, color: "var(--accent)" },
+                  {
+                    l: "Presencia (mención)",
+                    c: geoScore.components.presence,
+                    color: "var(--accent)",
+                    info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
+                  },
                   { l: "Prominencia (posición)", c: geoScore.components.prominence, color: "#7c3aed" },
                   { l: "Posición competitiva", c: geoScore.components.standing, color: "#0d9488" },
-                  { l: "Autoridad (citas)", c: geoScore.components.authority, color: "#e54563" }
+                  {
+                    l: "Autoridad (citas)",
+                    c: geoScore.components.authority,
+                    color: "#e54563",
+                    info: "Cuántas respuestas incluyen una cita verificada (grounding) a tu propio dominio. A diferencia de la mención, esta señal sí depende de contenido real que publiques y puedas mejorar."
+                  }
                 ].map((row) => {
                   const unavailable = row.c?.value === null || row.c?.value === undefined;
                   const v = Math.min(100, Math.round(n(row.c?.value)));
                   return (
                     <div className="compose-row" key={row.l}>
                       <div className="compose-top">
-                        <span className="compose-l">{row.l}</span>
+                        <span className="compose-l">
+                          {row.l}
+                          {row.info && <InfoTip text={row.info} />}
+                        </span>
                         <span className="compose-v tnum">
                           {unavailable ? "—" : `${v}%`}
                         </span>
@@ -611,13 +624,26 @@ export default async function ProjectDetailPage({
                 })
               ) : (
                 [
-                  { l: "Tasa de mención", v: computedMentionRate, color: "var(--accent)" },
-                  { l: "Tasa de cita", v: computedCitationRate, color: "#7c3aed" },
+                  {
+                    l: "Tasa de mención",
+                    v: computedMentionRate,
+                    color: "var(--accent)",
+                    info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
+                  },
+                  {
+                    l: "Tasa de cita",
+                    v: computedCitationRate,
+                    color: "#7c3aed",
+                    info: "Cuántas respuestas incluyen una cita verificada (grounding) a tu propio dominio. A diferencia de la mención, esta señal sí depende de contenido real que publiques y puedas mejorar."
+                  },
                   { l: "Presión competitiva", v: Math.min(100, competitorPressureScore), color: "#0d9488" }
                 ].map((c) => (
                   <div className="compose-row" key={c.l}>
                     <div className="compose-top">
-                      <span className="compose-l">{c.l}</span>
+                      <span className="compose-l">
+                        {c.l}
+                        {c.info && <InfoTip text={c.info} />}
+                      </span>
                       <span className="compose-v tnum">{c.v}%</span>
                     </div>
                     <div className="sov-bar" style={{ height: 7 }}>
