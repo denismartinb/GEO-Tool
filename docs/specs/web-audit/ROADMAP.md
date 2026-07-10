@@ -28,10 +28,25 @@ huecos señalados en producción, tratados como fases separadas:
   (`synthesizedGuidance`) a partir de datos ya cargados, marcado visualmente
   como "Sugerencia" — nunca como una recomendación real/trackeable — para no
   fingir progreso.
-- **Fase B — pendiente, requiere geo-strategy.** Que la propia clasificación
-  "Hueco de contenido" tenga en cuenta `brand_mentioned` cambia la taxonomía de
-  la matriz (KPIs, cuadrantes, tendencia, plan de acción a la vez) — no es un
-  cambio de copy. Aparcada hasta que se plantee como Task Intake propio.
+- **Fase B — ❌ Cerrada, no se implementa.** Consultado el agente `geo-strategy`:
+  meter `brand_mentioned` como tercer eje de `classifyTopic()` sería un error
+  metodológico, no una mejora. Razones: (1) el producto ya distingue mención
+  (*presencia*, GEO Score) de cita de dominio propio (*autoridad*, ADR-0013) en
+  Visión general — la matriz de Auditoría web es deliberadamente la vista de
+  "oferta" (contenido propio × cita), y mezclar ahí la señal de fama duplicaría
+  un eje que ya existe en otra pantalla; (2) "sin activo controlable" es el
+  encuadre correcto tanto si la IA menciona la marca por fama como si no —
+  ambos casos comparten el mismo remedio (crear contenido propio), y una
+  mención paramétrica puede desaparecer con la siguiente actualización del
+  modelo o en cuanto un competidor publique la página canónica; (3) suavizar
+  "Hueco de contenido" cuando hay fama sería sobrecorrección — diría "estás
+  bien" justo cuando hay máxima exposición sin defensa. La Fase 1 (nota
+  aclaratoria inline) ya es el punto metodológicamente correcto donde parar.
+  Refinamiento opcional identificado pero no priorizado: exponer
+  `brand_mentioned` como flag presentacional no-clasificatorio
+  (`mentionedByFame`) en `ClassifiedTopic` en vez de prosa inline — matiza tono
+  sin tocar outcomes ni KPIs. Fundador decidió cerrar sin implementar ni el
+  refinamiento, 2026-07-10.
 
 ## Por qué este orden
 
