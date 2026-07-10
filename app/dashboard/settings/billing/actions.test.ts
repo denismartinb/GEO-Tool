@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/headers", () => ({
+  headers: () =>
+    Promise.resolve(
+      new Map([
+        ["host", "geo-tool-git-some-branch-team.vercel.app"],
+        ["x-forwarded-proto", "https"]
+      ])
+    )
+}));
 
 const requireUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(...args) }));
@@ -131,6 +140,13 @@ describe("createCheckoutSession", () => {
     expect(result).toEqual({ success: true, url: "https://checkout.stripe.com/session/xyz" });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
+        // Regression coverage: success_url/cancel_url must be derived from the
+        // request's own host (via next/headers), not NEXT_PUBLIC_SITE_URL —
+        // that env var points at production and previously sent a Preview
+        // deployment's checkout back to production's login after payment
+        // (different origin, no session) instead of back to the preview.
+        success_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=success",
+        cancel_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=cancelled",
         mode: "subscription",
         client_reference_id: USER_ID,
         line_items: [{ price: "price_pro_test", quantity: 1 }],

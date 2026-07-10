@@ -577,20 +577,41 @@ alcance original, pero eran precisamente lo que esta fase debía arreglar):**
   el downgrade, y los casos de fallo. 392/392 tests totales, `pnpm run
   validate` limpio.
 
-**Pendiente (fundador, antes de poder probar esto en modo test):**
-- [ ] Aplicar la migración `0015_stripe_billing.sql` en Supabase.
-- [ ] Crear cuenta Stripe (si no existe) y activarla en **modo test**.
-- [ ] Crear los productos/precios de Starter y Pro en Stripe → pasar
-      `STRIPE_PRICE_ID_STARTER` / `STRIPE_PRICE_ID_PRO` (modo test).
-- [ ] Configurar el endpoint de webhook en Stripe apuntando a
-      `<preview-o-producción>/api/webhooks/stripe` → pasar
-      `STRIPE_WEBHOOK_SECRET`.
-- [ ] Pasar `STRIPE_SECRET_KEY` (modo test, `sk_test_...`).
+**Pendiente (fundador) — hecho en su mayoría (2026-07-10):**
+- [x] Migración `0015_stripe_billing.sql` aplicada en Supabase.
+- [x] Cuenta Stripe en modo test creada, productos/precios de Starter y Pro
+      creados, IDs pasados (`STRIPE_PRICE_ID_STARTER` /
+      `STRIPE_PRICE_ID_PRO`), webhook configurado
+      (`STRIPE_WEBHOOK_SECRET`), `STRIPE_SECRET_KEY` puesta.
 
-**Siguiente:** PR 2 (Customer Portal — cambio de plan real entre pagos,
-cancelación real, facturas reales) → PR 3 (reverse trial con
-`trial_ends_at`, requiere su propia aprobación de migración) → PR 4 (emails
-Resend).
+**Verificación en vivo (2026-07-10) — dos problemas reales encontrados y
+corregidos durante la propia prueba, ambos configuración/código, no del
+alcance original:**
+
+1. **Stripe exigía código fiscal**: `automatic_tax` (activado desde PR 1)
+   falló con *"You must specify a tax code..."* hasta que el fundador
+   configuró un código fiscal por defecto en Stripe (Configuración →
+   Impuestos → código SaaS). Sin código, no es un bug de este repo —
+   documentado aquí para que quede constancia de que es un paso de cuenta
+   de Stripe, no solo de variables de entorno.
+2. **Bug real corregido**: tras completar el pago de prueba, Stripe
+   redirigía a `genscore.es` (producción) en vez de al preview donde se
+   estaba probando, aterrizando en el login (dominios distintos, sin
+   sesión). Causa: `createCheckoutSession` construía `success_url`/
+   `cancel_url` con `NEXT_PUBLIC_SITE_URL` (fijada a producción, correcto
+   para uso real, pero incorrecta al probar en preview). Corregido para
+   derivar el dominio de la propia petición entrante (`next/headers`) en
+   vez de confiar en esa variable — la redirección ahora coincide siempre
+   con el despliegue real desde el que se inició el pago, sea preview o
+   producción. Test de regresión añadido.
+- 392/392 tests en verde, `pnpm run validate` limpio tras el fix.
+
+**Siguiente:** confirmar con el fundador que, tras el fix, el pago de
+prueba completo (compra → webhook → plan actualizado → vuelta a la propia
+página) funciona de principio a fin. Después: PR 2 (Customer Portal —
+cambio de plan real entre pagos, cancelación real, facturas reales) → PR 3
+(reverse trial con `trial_ends_at`, requiere su propia aprobación de
+migración) → PR 4 (emails Resend).
 
 ---
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { PLANS } from "@/app/pricing/plans-data";
@@ -146,8 +147,18 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
     };
   }
 
-  const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  // Derived from the actual incoming request rather than NEXT_PUBLIC_SITE_URL:
+  // that env var is set to the production domain, which is correct for real
+  // usage but silently sends a Preview-deployment checkout back to
+  // production's login (a different origin, no session) once the payment
+  // completes — found via live testing. Reading the request's own host
+  // means the redirect always matches whichever deployment initiated it.
+  const headersList = await headers();
+  const host = headersList.get("host");
+  const protocol = headersList.get("x-forwarded-proto") ?? "https";
+  const siteUrl = host
+    ? `${protocol}://${host}`
+    : (process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"));
   const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
 
   try {
