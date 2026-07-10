@@ -18,6 +18,9 @@ vi.mock("next/headers", () => ({ headers: () => Promise.resolve(headerEntries) }
 const requireUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(...args) }));
 
+const createServiceClient = vi.fn();
+vi.mock("@/lib/supabase/service", () => ({ createServiceClient: (...args: unknown[]) => createServiceClient(...args) }));
+
 const getStripeClient = vi.fn();
 const getPriceIdForPlan = vi.fn();
 const isSelfServePlan = vi.fn((planId: string) => planId === "starter" || planId === "pro");
@@ -80,6 +83,7 @@ beforeEach(() => {
   requireUser.mockReset();
   getStripeClient.mockReset();
   getPriceIdForPlan.mockReset();
+  createServiceClient.mockReset();
   resetHeaderEntries();
 });
 
@@ -362,12 +366,15 @@ describe("changePlan — Stripe-aware downgrade", () => {
       activeProjectCount: 0
     });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
     const { changePlan } = await import("./actions");
 
     const result = await changePlan("free");
 
     expect(result).toEqual({ success: true });
     expect(cancel).toHaveBeenCalledWith("sub_123");
+    // Regression: the final profiles write is privileged (0016_protect_billing_columns.sql
+    // rejects it otherwise) — must go through the service client, not the caller's own session.
     expect(supabase.__profileUpdates).toContainEqual({ current_plan: "free", stripe_subscription_id: null });
   });
 
@@ -376,6 +383,7 @@ describe("changePlan — Stripe-aware downgrade", () => {
     getStripeClient.mockReturnValue({ subscriptions: { cancel } });
     const supabase = fakeSupabase({ profile: { stripe_subscription_id: null }, activeProjectCount: 0 });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
     const { changePlan } = await import("./actions");
 
     const result = await changePlan("free");
@@ -389,6 +397,23 @@ describe("changePlan — Stripe-aware downgrade", () => {
     getStripeClient.mockReturnValue({ subscriptions: { cancel } });
     const supabase = fakeSupabase({ profile: { stripe_subscription_id: "sub_123" }, activeProjectCount: 0 });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { changePlan } = await import("./actions");
+
+    const result = await changePlan("free");
+
+    expect(result.success).toBe(false);
+    expect(supabase.__profileUpdates).toHaveLength(0);
+    errorSpy.mockRestore();
+  });
+
+  it("fails gracefully instead of crashing when the service client is unavailable", async () => {
+    const supabase = fakeSupabase({ profile: { stripe_subscription_id: null }, activeProjectCount: 0 });
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockImplementation(() => {
+      throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
+    });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const { changePlan } = await import("./actions");
 

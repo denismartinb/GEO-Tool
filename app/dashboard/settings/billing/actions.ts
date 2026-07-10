@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 import { PLANS } from "@/app/pricing/plans-data";
 import { getStripeClient, getPriceIdForPlan, isSelfServePlan, type SelfServePlanId } from "@/lib/stripe";
 
@@ -119,7 +120,23 @@ export async function changePlan(planId: string, archiveProjectIds: string[] = [
     }
   }
 
-  const { error } = await supabase
+  // 0016_protect_billing_columns.sql rejects a write to current_plan/
+  // stripe_subscription_id from anything but the service role — everything
+  // above this point (archiving, the domain-cap recheck, the real Stripe
+  // cancellation) still runs under the caller's own session; only this last,
+  // already-validated write is privileged.
+  let serviceClient: ReturnType<typeof createServiceClient>;
+  try {
+    serviceClient = createServiceClient();
+  } catch (configError) {
+    console.error("[geo:billing] service client unavailable for changePlan", {
+      userId: user.id,
+      message: configError instanceof Error ? configError.message : String(configError)
+    });
+    return { success: false, error: "No se pudo guardar el cambio de plan. Inténtalo de nuevo." };
+  }
+
+  const { error } = await serviceClient
     .from("profiles")
     .update({ current_plan: parsedPlan.data, stripe_subscription_id: null })
     .eq("id", user.id);
