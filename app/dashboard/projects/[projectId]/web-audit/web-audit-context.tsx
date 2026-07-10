@@ -69,14 +69,24 @@ const WebAuditRunnerContext = createContext<WebAuditRunnerState | null>(null);
 export function WebAuditProvider({
   projectId,
   autoStart,
+  canAudit,
   children
 }: {
   projectId: string;
   autoStart?: Progress;
+  canAudit: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
-  const [isPending, setIsPending] = useState(Boolean(autoStart));
+  // Founder-reported stuck screen: a campaign started while the account was
+  // Pro, then the plan lapsed (e.g. downgraded via the new Stripe billing
+  // flow) before it finished. Auto-resuming would call a server action that
+  // immediately fails the Pro gate — a single silent failure nothing here
+  // renders, since the only consumer that reads this context (RunAuditButton)
+  // bails out before mounting when !canAudit. Never start a doomed call;
+  // page.tsx now shows an explicit "plan changed mid-campaign" message using
+  // the same server-computed `autoStart` snapshot instead.
+  const [isPending, setIsPending] = useState(canAudit && Boolean(autoStart));
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [progress, setProgress] = useState<Progress>(autoStart ?? null);
@@ -147,7 +157,7 @@ export function WebAuditProvider({
   }
 
   useEffect(() => {
-    if (!autoStart || firedRef.current) return;
+    if (!canAudit || !autoStart || firedRef.current) return;
     firedRef.current = true;
     void drive();
     // Deliberately fires once on mount only (autoStart is the server-provided

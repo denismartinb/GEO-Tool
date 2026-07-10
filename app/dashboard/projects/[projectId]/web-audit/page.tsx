@@ -557,7 +557,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   }
 
   return (
-    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress}>
+    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAudit}>
     <div className="page">
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -571,7 +571,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
                 {project.domain}
               </span>
-              <span className="badge badge-accent" style={{ fontSize: 10 }}>PRO</span>
+              {/* Was hardcoded unconditionally — read as "your account is
+                  Pro" sitting right next to a "Disponible en plan Pro"
+                  button when it wasn't (founder report: contradictory at a
+                  glance after a plan downgrade). Now reflects the actual
+                  gate this page enforces below. */}
+              {canAudit && <span className="badge badge-accent" style={{ fontSize: 10 }}>PRO</span>}
             </div>
           </div>
         </div>
@@ -586,25 +591,51 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         </div>
       </div>
 
-      {activeCampaignProgress && (
-        <div className="firstscan-banner">
-          <div className="fb-ico">
-            <Icon name="search" size={18} />
-            <span className="fb-spin"></span>
-          </div>
-          <div style={{ flex: 1 }}>
-            <div className="fb-t">Auditoría en curso</div>
-            <div className="fb-d">
-              Llevamos {activeCampaignProgress.covered} de {activeCampaignProgress.total} temas. Puedes navegar a
-              otras páginas — al volver aquí, seguirá por donde se quedó.
+      {/* A campaign can be left "running" server-side while the account's
+          plan lapses mid-audit (e.g. downgraded via Stripe billing) — the
+          banner must never promise "seguirá por donde se quedó" when it
+          genuinely can't: WebAuditProvider won't auto-resume without
+          canAudit, and the button that would show any driving state is
+          hidden entirely under the plan gate. Founder report: the old
+          unconditional version left the page looking permanently stuck with
+          no error, no explanation. */}
+      {activeCampaignProgress &&
+        (canAudit ? (
+          <div className="firstscan-banner">
+            <div className="fb-ico">
+              <Icon name="search" size={18} />
+              <span className="fb-spin"></span>
             </div>
+            <div style={{ flex: 1 }}>
+              <div className="fb-t">Auditoría en curso</div>
+              <div className="fb-d">
+                Llevamos {activeCampaignProgress.covered} de {activeCampaignProgress.total} temas. Puedes navegar a
+                otras páginas — al volver aquí, seguirá por donde se quedó.
+              </div>
+            </div>
+            <span className="st-chip st-scanning">
+              <span className="d" />
+              Auditando
+            </span>
           </div>
-          <span className="st-chip st-scanning">
-            <span className="d" />
-            Auditando
-          </span>
-        </div>
-      )}
+        ) : (
+          <div className="firstscan-banner">
+            <div className="fb-ico">
+              <Icon name="search" size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="fb-t">Auditoría pausada por cambio de plan</div>
+              <div className="fb-d">
+                Se quedó en {activeCampaignProgress.covered} de {activeCampaignProgress.total} temas. Tu plan actual
+                no incluye esta función — el progreso está guardado y se reanudará en cuanto vuelvas a un plan Pro o
+                superior.
+              </div>
+            </div>
+            <Link href="/dashboard/settings/billing" className="btn btn-primary btn-sm">
+              Ver planes
+            </Link>
+          </div>
+        ))}
 
       <div className="summary mt8">
         <div className="summary-ico">
