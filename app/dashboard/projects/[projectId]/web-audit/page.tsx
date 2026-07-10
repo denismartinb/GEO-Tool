@@ -7,6 +7,7 @@ import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
+import { buildActionPlan, extractMentionedCompetitors, type ActionItem, type ActionItemKind } from "@/lib/web-audit/action-plan";
 import { RunAuditButton } from "./run-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
@@ -44,7 +45,14 @@ const TOPIC_LIST_ORDER: TopicOutcome[] = [
   "inconclusive"
 ];
 
-function TopicRow({ topic }: { topic: ClassifiedTopic }) {
+const ACTION_KIND_META: Record<ActionItemKind, { label: string; linkLabel: string; badgeClass: string }> = {
+  optimize: { label: "Optimizar página existente", linkLabel: "Cómo optimizar →", badgeClass: "badge-warn" },
+  create_competing: { label: "Crear contenido — compite un rival", linkLabel: "Ver recomendación →", badgeClass: "badge-neg" },
+  create_open: { label: "Crear contenido — oportunidad abierta", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" },
+  capture: { label: "Formalizar página propia", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" }
+};
+
+function TopicRow({ topic, competitors }: { topic: ClassifiedTopic; competitors: string[] }) {
   const meta = OUTCOME_META[topic.outcome];
   return (
     <div
@@ -61,6 +69,15 @@ function TopicRow({ topic }: { topic: ClassifiedTopic }) {
           {topic.topic}
         </span>
       </div>
+
+      {/* WEB-AUDIT-ACTION: only rendered for content_gap topics with at least
+          one AI-mentioned competitor — never inferred, straight from
+          extracted_json.competitors[].mentioned for this prompt's result. */}
+      {topic.outcome === "content_gap" && competitors.length > 0 && (
+        <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>
+          La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{competitors.join(", ")}</strong>
+        </p>
+      )}
 
       {topic.pages.length > 0 && (
         <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: "0 0 6px" }}>
@@ -85,6 +102,55 @@ function TopicRow({ topic }: { topic: ClassifiedTopic }) {
           <span style={{ color: "var(--ink-4)" }}> (interpretación de la IA, revísala antes de confiar en ella)</span>
         )}
       </p>
+    </div>
+  );
+}
+
+function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: number; projectId: string }) {
+  const meta = ACTION_KIND_META[item.kind];
+  // A deep-link only exists for recommendation types whose evidence anchors
+  // to this exact prompt's result (currently add_citation_block — see
+  // lib/recommendations/coverage-overlay.ts's join). Everything else falls
+  // back to the generic Recomendaciones page rather than inventing a link.
+  const href = item.recommendationId
+    ? `/dashboard/projects/${projectId}/recommendations#rec-${item.recommendationId}`
+    : `/dashboard/projects/${projectId}/recommendations`;
+
+  return (
+    <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+      <div
+        style={{
+          flexShrink: 0,
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          background: "var(--surface-2)",
+          color: "var(--ink-3)",
+          fontSize: 11,
+          fontWeight: 750,
+          display: "grid",
+          placeItems: "center"
+        }}
+      >
+        {index}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+          <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
+          <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
+            {item.topic}
+          </span>
+        </div>
+        <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
+        {item.competitors.length > 0 && (
+          <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
+            La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
+          </p>
+        )}
+        <Link href={href} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
+          {meta.linkLabel}
+        </Link>
+      </div>
     </div>
   );
 }
@@ -261,7 +327,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     scanIds.length > 0
       ? await supabase
           .from("scan_prompt_results")
-          .select("prompt_id, run_id, extracted_json, provider, mentioned_competitors_count")
+          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count")
           .eq("project_id", projectId)
           .in("run_id", scanIds)
           .eq("status", "completed")
@@ -288,6 +354,49 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     summary?.coveragePct !== null && summary?.coveragePct !== undefined && previousCoveragePct !== null
       ? summary.coveragePct - previousCoveragePct
       : null;
+
+  // WEB-AUDIT-ACTION: competitor names the AI actually mentioned per topic,
+  // and a deep-link to the matching `add_citation_block` recommendation when
+  // one exists — both read straight from data this page already loads for
+  // `latestMap.scanId`, no new Gemini calls, no schema. `resultIdToPromptId`
+  // mirrors the join lib/recommendations/coverage-overlay.ts already
+  // establishes for the same recommendation type.
+  const latestScanResultRows = ((resultRows ?? []) as Array<PromptResultLite & { id: string; run_id: string }>).filter(
+    (row) => latestMap && row.run_id === latestMap.scanId
+  );
+  const competitorsByPromptId = new Map<string, string[]>();
+  const resultIdToPromptId = new Map<string, string>();
+  for (const row of latestScanResultRows) {
+    if (!row.prompt_id) continue;
+    competitorsByPromptId.set(row.prompt_id, extractMentionedCompetitors(row.extracted_json));
+    resultIdToPromptId.set(row.id, row.prompt_id);
+  }
+
+  const { data: addCitationRecs } = latestMap
+    ? await supabase
+        .from("recommendations")
+        .select("id, evidence_json")
+        .eq("project_id", projectId)
+        .eq("run_id", latestMap.scanId)
+        .eq("recommendation_type", "add_citation_block")
+        .eq("status", "active")
+    : { data: [] };
+
+  const recommendationIdByPromptId = new Map<string, string>();
+  for (const rec of (addCitationRecs ?? []) as Array<{
+    id: string;
+    evidence_json: { affected_prompt_details?: Array<{ id: string }> } | null;
+  }>) {
+    const resultId = rec.evidence_json?.affected_prompt_details?.[0]?.id;
+    if (!resultId) continue;
+    const promptId = resultIdToPromptId.get(resultId);
+    if (!promptId || recommendationIdByPromptId.has(promptId)) continue;
+    recommendationIdByPromptId.set(promptId, rec.id);
+  }
+
+  const actionPlan = summary
+    ? buildActionPlan({ summary, competitorsByPromptId, recommendationIdByPromptId })
+    : [];
 
   const grouped: Record<TopicOutcome, ClassifiedTopic[]> = {
     performing: [],
@@ -448,6 +557,29 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </div>
           </div>
 
+          {/* Plan de acción (WEB-AUDIT-ACTION) — the first accionable thing
+              after the KPIs, closing the "¿y ahora qué hago?" the matrix on
+              its own leaves open. */}
+          <div className="card" style={{ marginTop: 12 }}>
+            <div style={{ padding: "13px 16px 0" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                Las acciones de mayor palanca según la matriz, de más a menos urgentes.
+              </div>
+            </div>
+            <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {actionPlan.length > 0 ? (
+                actionPlan.map((item, i) => (
+                  <ActionPlanRow key={item.promptId} item={item} index={i + 1} projectId={projectId} />
+                ))
+              ) : (
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  Tu contenido propio está rindiendo — nada urgente que crear ahora.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Opportunity matrix + trend — auto-fit so the two cards sit side by
               side on desktop but stack (never squash) on mobile; with only the
               matrix (no trend yet) auto-fit collapses the empty track to full
@@ -566,7 +698,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {TOPIC_LIST_ORDER.flatMap((outcome) => grouped[outcome]).map((topic) => (
-              <TopicRow key={topic.promptId} topic={topic} />
+              <TopicRow key={topic.promptId} topic={topic} competitors={competitorsByPromptId.get(topic.promptId) ?? []} />
             ))}
           </div>
         </>
