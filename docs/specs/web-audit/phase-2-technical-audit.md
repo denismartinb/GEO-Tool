@@ -1,10 +1,14 @@
 # WEB-AUDIT-2 — Technical GEO audit (page checks + AI-bot access)
 
 **Gates:** this phase is adjacent to the forbidden "crawler" entry and adds a
-table (migration 0015). It MUST NOT be implemented without (a) its own Task
-Intake Report, (b) a data-guardian review of the migration + fetch surface, and
-(c) explicit founder approval. This document is the design those reviews start
-from.
+table (migration 0017). Requires (a) its own Task Intake Report, (b) a
+data-guardian review of the migration + fetch surface, and (c) explicit
+founder approval. (b) is done — verdict: **approve with required changes**,
+folded into this document (manual-redirect handling, migration renumber,
+scan_id FK, cache-before-rate-limit ordering) — one open item remains an
+explicit founder decision (resolved-IP validation vs. named residual risk,
+see "Fetch safety spec"). (a)/(c) happen in the Task Intake Report itself,
+not this file.
 
 ## Goal
 
@@ -45,10 +49,29 @@ this site?" with deterministic checks (no LLM):
   a truncated body is still analyzed (checks are head-heavy).
 - Send a honest UA: `GEOStudioAudit/1.0 (+https://<product-domain>/bots)`.
 - Never store raw HTML. The fetcher returns the parsed check results only.
-- SSRF hardening: reject candidates whose host is an IP literal, `localhost`,
-  or ends in a non-public suffix; https only (http candidates upgraded, and
-  discarded if https fails). Domain re-verification after redirect is the main
-  guard (data-guardian to confirm sufficiency for our Vercel egress model).
+- SSRF hardening (data-guardian review, R2/R3 — see
+  `docs/specs/web-audit/README.md` decision log):
+  - **Manual redirect handling, not automatic.** `fetch()` following redirects
+    automatically means an attacker-controlled response (the audited domain's
+    own server) can `302` to an internal address and the request is already
+    sent before any post-hoc URL check runs. Use `redirect: "manual"`,
+    validate each `Location` header's host against the domain allowlist +
+    IP-literal/localhost/non-public-suffix rejection **before** following it,
+    cap at ≤ 3 hops, discard the page (`status: "skipped_offsite"`) on any
+    off-domain hop.
+  - **Hostname allowlisting alone is not sufficient** — the founder controls
+    the audited domain's own DNS, so a subdomain's A record could point
+    directly at a private/reserved IP with no redirect involved. [DECISION
+    NEEDED FROM FOUNDER — see Task Intake]: either (a) resolve DNS explicitly
+    and reject private/reserved/link-local resolved addresses before
+    connecting (undici custom `lookup`/agent), which is the correct bar for
+    multi-tenant egress, or (b) ship without resolved-IP validation as a
+    named, accepted residual risk (justified by: raw HTML is never stored,
+    only sanitized title/matched-`@type`/date/score persist — a narrow exfil
+    channel — and Vercel's IMDSv2 blocks unauthenticated metadata GETs).
+    DNS-rebinding (TOCTOU between check and connect) is accepted as
+    out-of-scope residual risk either way — not solvable by a plain `fetch()`
+    approach, flagged not blocked.
 
 ## Page checks (`lib/web-audit/page-checks.ts`, pure, heavily unit-tested)
 
@@ -85,7 +108,9 @@ the existing `sanitizeField` pattern with tight caps.
   case — path-level nuance is out of scope and must not be guessed).
 - llms.txt: presence + byte size only. No parsing beyond that in this phase.
 
-## Persistence — migration `0015_web_audit_snapshots.sql` (data-guardian review required)
+## Persistence — migration `0017_web_audit_snapshots.sql` (data-guardian reviewed; was
+drafted as `0015` — renumbered, `0015`/`0016` are already taken by
+`BILLING-STRIPE-1`/`protect_billing_columns`)
 
 `generated_solutions` is NOT reused: these are not LLM generations, and its
 sanitization CHECK constraints don't model this data. New table:
@@ -94,7 +119,7 @@ sanitization CHECK constraints don't model this data. New table:
 create table public.web_audit_snapshots (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
-  scan_id uuid null,             -- latest completed run at audit time, server-derived
+  scan_id uuid null references public.scan_runs(id) on delete set null,  -- latest completed run at audit time, server-derived
   source text not null default 'manual',   -- 'manual' | 'cron' (phase 3)
   readiness_score integer null,  -- 0-100, null when no page analyzed
   pages jsonb not null default '[]'::jsonb,  -- PageAuditEntry[], sanitized fields only
@@ -111,6 +136,11 @@ create policy web_audit_select_owner on public.web_audit_snapshots
 -- same rationale as generated_solutions (0005).
 ```
 
+`scan_id` now has an explicit FK (`on delete set null`, data-guardian
+recommendation) instead of a bare `uuid null`, to prevent a dangling or
+cross-project `scan_id` — it's server-derived so this is a cheap consistency
+guard, not a behavior change.
+
 Rate limit: 5/day/project, counted from this table's
 `(project_id, created_at)` index — same windowed-count approach as
 `generation-rate-limit.ts` (generalize that helper or add a sibling
@@ -119,14 +149,18 @@ Rate limit: 5/day/project, counted from this table's
 ## Server action + core
 
 - `lib/web-audit/technical-audit.ts` (server-only) `runTechnicalAuditCore`:
-  ownership via user client → Pro gate (raw `current_plan`) → rate limit →
-  candidate URL selection → fetch/check loop under the total budget →
-  robots/llms fetch → **persist unconditionally** (invariant 3 of
-  domain-coverage: consumed budget always leaves a row) → return typed result.
-  Cache rule: if the latest snapshot is `< 24h` old AND its scan_id equals the
-  current latest completed run, return it instead of re-running (mirrors the
-  coverage cache; a founder-visible "Repetir" affordance is NOT offered within
-  the cache window in this phase).
+  ownership via user client → Pro gate (raw `current_plan`) → **cache check**
+  (if the latest snapshot is `< 24h` old AND its `scan_id` equals the current
+  latest completed run, return it immediately) → rate limit → candidate URL
+  selection → fetch/check loop under the total budget → robots/llms fetch →
+  **persist unconditionally** (invariant 3 of domain-coverage: consumed
+  budget always leaves a row) → return typed result. Cache check MUST run
+  before the rate-limit check (data-guardian R4: mirrors
+  `domain-coverage.ts`'s core, which returns a completed cache hit before
+  `checkGenerationRateLimit` — otherwise a founder repeatedly re-opening the
+  page within the cache window could get rate-limited for work the server
+  never actually redid). A founder-visible "Repetir" affordance is NOT
+  offered within the cache window in this phase.
 - `runTechnicalAuditAction` in the project `actions.ts`, zod-validated
   `{ projectId: uuid }`, revalidates `/web-audit`.
 
@@ -155,8 +189,12 @@ Rate limit: 5/day/project, counted from this table's
   `Disallow: /` vs `Disallow: /private` (latter ≠ blocked); missing file ⇒
   all allowed + `robots_found: false`.
 - `technical-audit` candidate selection: dedupe, cap, off-domain rejection
-  (including post-redirect re-verification, mocked fetch), budget cutoff
-  produces `skipped_budget` rows and still persists.
+  (including manual-redirect host verification per hop before following,
+  mocked fetch), budget cutoff produces `skipped_budget` rows and still
+  persists.
+- `technical-audit` core ordering: cache hit returns before the rate-limit
+  check is ever invoked (mocked rate-limit function must not be called on a
+  cache hit).
 
 ## Acceptance criteria
 
