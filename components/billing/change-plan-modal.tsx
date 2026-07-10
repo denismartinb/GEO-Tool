@@ -34,6 +34,7 @@ export function ChangePlanModal({
   currentId,
   initialTargetId,
   activeProjects,
+  hasRealSubscription,
   onClose,
   onApply,
   onCheckout,
@@ -43,9 +44,18 @@ export function ChangePlanModal({
   currentId: Plan["id"];
   initialTargetId?: Plan["id"];
   activeProjects: ActiveProjectSummary[];
+  /**
+   * BILLING-STRIPE-1 PR 3: whether `currentId` is backed by a real Stripe
+   * subscription, as opposed to an unconverted reverse trial. A trialing
+   * account's `current_plan` can already be "pro" with nothing to show for
+   * it in Stripe — selecting that same plan must still go through Checkout
+   * (a first real subscription), not be treated as a no-op or routed to the
+   * Portal (which has no subscription/customer to manage yet).
+   */
+  hasRealSubscription: boolean;
   onClose: () => void;
   onApply: (targetId: Plan["id"], archiveProjectIds: string[]) => Promise<{ success: boolean; error?: string }>;
-  /** BILLING-STRIPE-1: real Stripe Checkout Session for a Free -> paid move. */
+  /** BILLING-STRIPE-1: real Stripe Checkout Session for a Free -> paid move (or converting a trial to a real subscription). */
   onCheckout: (targetId: Plan["id"]) => Promise<CheckoutSessionResult>;
   /** BILLING-STRIPE-1 PR 2: real Stripe Customer Portal session — payment method, invoices, cancellation, and paid<->paid plan switching. */
   onManageBilling: (intent?: PortalIntent) => Promise<PortalSessionResult>;
@@ -79,20 +89,29 @@ export function ChangePlanModal({
   }, [isPending]);
 
   const target = PLANS.find((p) => p.id === sel)!;
-  const isSame = sel === currentId;
+  // Selecting the plan you're already trialing (current_plan matches, but no
+  // real subscription backs it) is not a no-op — it's the "start paying for
+  // real" action, so it must NOT be treated the same as re-selecting a plan
+  // you already pay for.
+  const isSame = sel === currentId && (currentId === "free" || hasRealSubscription);
 
-  // BILLING-STRIPE-1: only a Free -> paid move can go through Checkout (a
-  // fresh subscription). Switching between two already-paid plans would
-  // create a second parallel Stripe subscription instead of modifying the
-  // existing one — that goes through the Customer Portal's in-place,
-  // prorated subscription update instead (PR 2).
-  const requiresCheckout = currentId === "free" && target.id !== "free";
+  const isSelfServeTarget = target.id === "starter" || target.id === "pro";
+  // BILLING-STRIPE-1: a fresh Checkout Session (as opposed to the Customer
+  // Portal's in-place, prorated update) is needed whenever there's no real
+  // subscription yet to modify — a Free account, or a reverse-trial account
+  // converting to a real paid plan for the first time (PR 3).
+  const requiresCheckout = !hasRealSubscription && isSelfServeTarget;
   const isDowngradeToFree = currentId !== "free" && target.id === "free";
-  const paidToPaidBlocked = currentId !== "free" && target.id !== "free" && target.id !== currentId;
+  const paidToPaidBlocked = hasRealSubscription && target.id !== "free" && target.id !== currentId;
   // Agency has no self-serve Stripe price (still "hablar con ventas" per
   // PRICING-TRUTH-1) — only Starter<->Pro can be deep-linked into the
   // Portal's plan-switch flow.
   const paidToPaidSelfServe = paidToPaidBlocked && target.id !== "agency";
+  // Agency always needs sales regardless of subscription/trial state — a
+  // trialing or Free account selecting Agency shows the same message rather
+  // than routing into Checkout (isSelfServeTarget already excludes it) or
+  // silently doing nothing.
+  const agencyNeedsSales = target.id === "agency" && target.id !== currentId;
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
@@ -120,7 +139,7 @@ export function ChangePlanModal({
     "Selecciona un plan distinto al actual."
   ) : paidToPaidSelfServe ? (
     "Se gestiona en el portal seguro de Stripe."
-  ) : paidToPaidBlocked ? (
+  ) : agencyNeedsSales ? (
     "Disponible muy pronto."
   ) : requiresCheckout ? (
     "Se abre el pago seguro de Stripe."
@@ -252,7 +271,7 @@ export function ChangePlanModal({
                   </span>
                 </p>
               )}
-              {paidToPaidBlocked && !paidToPaidSelfServe && (
+              {agencyNeedsSales && (
                 <p className="cp-pror-note" style={{ marginTop: 14 }}>
                   <Icon name="info" size={14} />
                   <span>
@@ -274,7 +293,7 @@ export function ChangePlanModal({
               </Button>
               <Button
                 type="button"
-                disabled={isSame || isPending || (paidToPaidBlocked && !paidToPaidSelfServe)}
+                disabled={isSame || isPending || agencyNeedsSales}
                 onClick={paidToPaidSelfServe ? handleGoToPortal : () => setStep("confirm")}
               >
                 {paidToPaidSelfServe ? (isPending ? "Abriendo portal…" : "Ir al portal de Stripe") : "Continuar"}

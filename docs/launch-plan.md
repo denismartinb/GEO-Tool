@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1 y 2 verificados en vivo; fix de seguridad RLS en curso; PR 3 (reverse trial, 7 días) siguiente | #186, #189 | 2026-07-10 | PR 1 y PR 2 mergeados y confirmados end-to-end (Checkout, webhook, Customer Portal con cambio de plan y cancelación reales). Hallazgo al preparar PR 3: `profiles_update_own` no protege columnas — cualquier usuario podía autoconcederse un plan vía API directa. Fix aprobado (migración `0016` + `changePlan` escribe por rol de servicio) antes de añadir `trial_ends_at` |
+| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1, 2 y fix RLS mergeados; PR 3 (reverse trial, 7 días) en curso | #186, #189, #191 | 2026-07-10 | PR 1/2 verificados end-to-end. Fix de seguridad RLS mergeado (#191, migración `0016` pendiente de aplicar por el fundador). PR 3 en curso: registro nuevo = Pro 7 días de prueba para todos (sustituye la selección de plan gratis-para-siempre del CTA de precios), degradación a Free perezosa (sin cron) al leer el plan tras expirar, nunca toca cuentas con suscripción real de Stripe |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -726,9 +726,120 @@ trial.
   manualmente en el editor SQL de Supabase (mismo procedimiento de siempre),
   después de `0015`.
 
-**Siguiente:** fundador aplica la migración `0016` → PR 3 (reverse trial,
-**7 días** en vez de 14, decisión del fundador) construido ya sobre la
-columna protegida.
+**Fix de seguridad RLS mergeado (2026-07-10, #191 → `main`).** Pendiente:
+fundador aplica `0016_protect_billing_columns.sql` en Supabase.
+
+**PR 3 — reverse trial, 7 días (2026-07-10, en curso):** decisión del
+fundador — sustituye por completo el mecanismo anterior de "elige un plan
+gratis para siempre según el CTA de precios" (`0011_signup_plan_from_metadata.sql`,
+ya sin sentido con Stripe real): **todo registro nuevo empieza en Pro con
+7 días de prueba**, sin tarjeta, sin importar qué botón de `/pricing`
+pulsó.
+
+- Migración `0017_reverse_trial.sql`: añade `profiles.trial_ends_at`;
+  amplía el trigger de `0016` para proteger también esta columna (solo el
+  rol de servicio puede escribirla); reemplaza `handle_new_user()` para que
+  todo alta inserte `current_plan='pro'` + `trial_ends_at = now() + 7 días`,
+  ignorando el metadata de plan del signup.
+- `app/signup/actions.ts` y `app/signup/page.tsx`: eliminada la selección de
+  plan en el registro (el chip "Plan elegido: X" y el campo oculto) —
+  habría sido directamente falso mostrarlo cuando todos reciben Pro. Copy
+  actualizado a "7 días de prueba gratis de Pro, sin tarjeta".
+- `lib/billing.ts`: `getPlanForUser` y `getUsageSummary` comprueban de forma
+  perezosa (sin cron nuevo, al leer el plan) si `trial_ends_at` ya pasó; si
+  es así y **no hay** `stripe_subscription_id` real, degradan a Free y
+  limpian `trial_ends_at` vía `createServiceClient()` — nunca toca una
+  cuenta que ya contrató de verdad durante el trial. Falla seguro (mantiene
+  el plan anterior) si la escritura de degradación falla.
+- `UsageSummary.trialEndsAt` nuevo; `BillingContent` muestra un aviso con
+  los días restantes de prueba.
+- **Alcance deliberadamente no cubierto en este PR**: la comprobación de
+  expiración vive en `getPlanForUser`/`getUsageSummary` (cubre creación de
+  proyectos/prompts y la página de facturación), no en las lecturas
+  directas de `resolvePlan(profile.current_plan)` dentro de
+  `lib/scan/run-creation.ts`, `cron.ts` y `executor.ts` — un scan ya
+  encolado podría ejecutarse con la cadencia/motores de Pro hasta el
+  siguiente punto de contacto interactivo tras la expiración. Ventana de
+  desfase aceptada, no un agujero de seguridad (no permite upgrade gratis
+  permanente).
+- Página de precios (`/pricing`): las tarjetas por plan siguen mostrando
+  CTAs distintos ("Empezar con Starter", "Probar Pro gratis"...) aunque
+  todos llevan al mismo resultado (Pro 7 días). Copy sin retocar en este
+  PR — es una decisión de marketing/conversión aparte, no de este alcance.
+- 8 tests nuevos en `lib/billing.test.ts`. 423/423 tests totales, `pnpm run
+  validate` limpio.
+- **Pendiente del fundador:** aplicar `0017_reverse_trial.sql` en Supabase,
+  después de `0016`.
+
+**Migraciones `0016`/`0017` aplicadas por el fundador (2026-07-10).**
+Verificado en vivo: alta nueva en el preview → dashboard directo, sin
+pantalla de elegir plan → Ajustes → Facturación muestra Pro con el aviso
+de días de prueba.
+
+**Dos hallazgos de UX en la misma verificación, corregidos en el mismo PR:**
+
+1. **Aviso de trial poco visible**: el aviso "Estás probando Pro..." era un
+   texto plano sin urgencia ni acción. Movido de `billing-content.tsx` a
+   `PlanBillingSection` (para poder abrir el modal) y rediseñado con el
+   mismo estilo de aviso ámbar que el de sobre-cupo (icono de reloj, texto
+   en negrita, "te quedan X días" destacado) + botón **"Contratar ahora"**
+   que abre "Cambiar de plan" directamente en Pro.
+2. **Bug real: no se podía contratar Pro estando en el trial**. El modal de
+   "Cambiar de plan" decidía el flujo (Checkout / Portal / bloqueado) solo
+   mirando `currentId` — como una cuenta en trial ya tiene
+   `current_plan='pro'`, seleccionar Pro se trataba como "ya estás en este
+   plan" (deshabilitado), y elegir Starter/Agencia se enrutaba al Customer
+   Portal, que no tiene nada que gestionar todavía (sin `stripe_customer_id`
+   real). Corregido: `ChangePlanModal` recibe ahora `hasRealSubscription`
+   (de `usage.hasStripeSubscription`, nuevo en `UsageSummary`) en vez de
+   inferir "tiene suscripción real" a partir de `currentId !== "free"`.
+   Mientras haya trial sin conversión, cualquier plan de pago (incluido el
+   mismo que ya se está probando) pasa por Checkout real; solo una cuenta
+   con suscripción real de Stripe usa el Portal. El botón "Cancelar
+   suscripción" también se ocultaba tras esta misma corrección, ya que
+   durante el trial no hay nada que cancelar en el Portal (ahora se guarda
+   en `usage.hasStripeSubscription`, antes se guiaba solo por
+   `planId !== "free"`).
+- Sin tests de componente nuevos (este repo no usa React Testing Library
+  para UI; la lógica subyacente del trial —`getPlanForUser`/
+  `getUsageSummary`— ya está cubierta en `lib/billing.test.ts`). 423/423
+  tests totales, `pnpm run validate` limpio.
+
+**Tercer hallazgo, en vivo, mismo bug pero en el servidor:** el fix
+anterior corrigió el modal (cliente), pero `createCheckoutSession`
+bloqueaba igualmente el pago con *"Ya tienes un plan de pago activo"*,
+comprobando `current_plan !== "free"` en vez de si existía una suscripción
+real. Corregido para comprobar `stripe_subscription_id` en su lugar — solo
+bloquea un segundo Checkout cuando ya hay una suscripción real detrás, no
+cuando `current_plan` es "pro" solo por estar en el trial. 2 tests
+actualizados/nuevos. 424/424 tests totales, `pnpm run validate` limpio.
+
+Además, el fundador pidió quitar la tarjeta de "Ver todos los planes" /
+"Has usado X de Y prompts" de la página de facturación (redundante junto
+al nuevo aviso de trial) — eliminada de `billing-content.tsx`.
+
+**Cuarto hallazgo, en vivo:** pago completado de verdad (conversión de
+trial a Pro real, confirmado en Stripe), pero el aviso de trial seguía
+mostrándose tras el redirect — el webhook de Stripe tarda unos segundos en
+llegar, y mientras tanto la página ya se había cargado con el estado
+anterior. Dos causas, ambas corregidas:
+
+1. `checkout.session.completed` y `customer.subscription.updated`
+   (`lib/billing/stripe-webhook.ts`) no limpiaban `trial_ends_at` al
+   confirmar una suscripción real — aunque el webhook llegara, el aviso de
+   trial habría seguido ahí indefinidamente. Ahora ambos lo ponen a `null`.
+2. **Refresco casi instantáneo**: nuevo `CheckoutSuccessPoller` (componente
+   cliente) que, mientras `checkout=success` está en la URL y
+   `usage.hasStripeSubscription` sigue siendo falso, llama a
+   `router.refresh()` cada 2s (para en cuanto el dato ya refleja el pago,
+   o a los 20s como límite). Antes había que recargar la página a mano.
+
+2 tests de webhook actualizados. 424/424 tests totales, `pnpm run
+validate` limpio.
+
+**Siguiente:** confirmar con el fundador que el refresco automático
+funciona (ya no hace falta recargar a mano) → PR 4 (emails Resend:
+bienvenida, aviso 3 días antes de expirar, expirado, pago fallido).
 
 ---
 

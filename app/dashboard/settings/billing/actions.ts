@@ -175,11 +175,16 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   const { supabase, user } = await requireUser();
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("stripe_customer_id, current_plan")
+    .select("stripe_customer_id, stripe_subscription_id")
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileRow?.current_plan && profileRow.current_plan !== "free") {
+  // Checked against stripe_subscription_id (a real subscription), not
+  // current_plan — a reverse-trial account already has current_plan="pro"
+  // with nothing real behind it yet, and must still be able to check out
+  // (BILLING-STRIPE-1 PR 3). Only an existing real subscription would make a
+  // second Checkout create a duplicate, parallel one.
+  if (profileRow?.stripe_subscription_id) {
     return {
       success: false,
       error: "Ya tienes un plan de pago activo. Escríbenos a soporte@genscore.es para cambiarlo."

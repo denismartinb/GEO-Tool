@@ -46,7 +46,15 @@ export async function handleStripeWebhookEvent(
 
       const { error } = await service
         .from("profiles")
-        .update({ current_plan: planId, stripe_customer_id: customerId, stripe_subscription_id: subscriptionId })
+        .update({
+          current_plan: planId,
+          stripe_customer_id: customerId,
+          stripe_subscription_id: subscriptionId,
+          // A real subscription just started — clear any reverse trial
+          // (BILLING-STRIPE-1 PR 3) so its banner/countdown disappears
+          // immediately instead of lingering until the original trial date.
+          trial_ends_at: null
+        })
         .eq("id", userId);
 
       if (error) throw new Error(`profiles update failed: ${error.message}`);
@@ -78,7 +86,10 @@ export async function handleStripeWebhookEvent(
         const planId = priceId ? getPlanIdForPriceId(priceId) : null;
         if (!planId) return;
 
-        const { error } = await service.from("profiles").update({ current_plan: planId }).eq("id", userId);
+        const { error } = await service
+          .from("profiles")
+          .update({ current_plan: planId, trial_ends_at: null })
+          .eq("id", userId);
         if (error) throw new Error(`profiles update failed: ${error.message}`);
       }
       return;

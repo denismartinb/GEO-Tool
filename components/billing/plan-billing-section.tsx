@@ -84,6 +84,10 @@ export function PlanBillingSection({
   // pick which domains to keep, never decide for them).
   const isOverCapacity = projects.length > current.caps.projects;
 
+  const trialDaysLeft = usage.trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(usage.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+    : null;
+
   const applyChange = async (id: Plan["id"], archiveProjectIds: string[]): Promise<ChangePlanResult> => {
     const result = await changePlan(id, archiveProjectIds);
     if (result.success) {
@@ -109,6 +113,25 @@ export function PlanBillingSection({
 
   return (
     <>
+      {trialDaysLeft !== null && (
+        <div className="flex flex-col gap-3 rounded-[14px] border border-[#f0c36d] bg-[#fdf6e8] p-4 sm:flex-row sm:items-center sm:gap-4">
+          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[#92600a]">
+            <Icon name="clock" size={18} />
+          </div>
+          <p className="order-2 flex-1 text-sm font-medium text-[#6b4b09]">
+            Estás probando <b>Pro</b> gratis — te quedan <b>{trialDaysLeft} día{trialDaysLeft === 1 ? "" : "s"}</b>.
+            Cuando termine, bajarás a Free si no contratas antes.
+          </p>
+          <Button
+            type="button"
+            className="order-3 shrink-0"
+            onClick={() => setModal({ initialTargetId: "pro" })}
+          >
+            Contratar ahora
+          </Button>
+        </div>
+      )}
+
       {isOverCapacity && (
         <div className="flex flex-col gap-3 rounded-[14px] border border-[#f0c36d] bg-[#fdf6e8] p-4 sm:flex-row sm:items-center sm:gap-4">
           <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[#92600a]">
@@ -166,7 +189,7 @@ export function PlanBillingSection({
                 <Icon name="arrUp" size={14} />
                 Cambiar de plan
               </Button>
-              {planId !== "free" && (
+              {usage.hasStripeSubscription && (
                 <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
                   {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
                 </Button>
@@ -215,6 +238,7 @@ export function PlanBillingSection({
           currentId={planId}
           initialTargetId={modal.initialTargetId}
           overageOnly={modal.overageOnly}
+          hasRealSubscription={usage.hasStripeSubscription}
           activeProjects={projects}
           onClose={() => setModal(null)}
           onApply={applyChange}
