@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1, 2 y fix RLS mergeados; PR 3 (reverse trial, 7 días) en curso | #186, #189, #191 | 2026-07-10 | PR 1/2 verificados end-to-end. Fix de seguridad RLS mergeado (#191, migración `0016` pendiente de aplicar por el fundador). PR 3 en curso: registro nuevo = Pro 7 días de prueba para todos (sustituye la selección de plan gratis-para-siempre del CTA de precios), degradación a Free perezosa (sin cron) al leer el plan tras expirar, nunca toca cuentas con suscripción real de Stripe |
+| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1-3 y fix RLS verificados en prod; PR 4 (emails) siguiente | #186, #189, #191, #192 | 2026-07-10 | Checkout, webhook, Customer Portal, protección RLS y reverse trial (7 días) mergeados y confirmados end-to-end en producción: alta nueva → Pro 7 días → "Contratar ahora" → pago real → aviso de trial desaparece solo. Siguiente: PR 4 (emails Resend) — pendiente de scope/aprobación, no incluido en el alcance ya aprobado |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -837,9 +837,21 @@ anterior. Dos causas, ambas corregidas:
 2 tests de webhook actualizados. 424/424 tests totales, `pnpm run
 validate` limpio.
 
-**Siguiente:** confirmar con el fundador que el refresco automático
-funciona (ya no hace falta recargar a mano) → PR 4 (emails Resend:
-bienvenida, aviso 3 días antes de expirar, expirado, pago fallido).
+**PR 3 mergeado y verificado end-to-end en producción (2026-07-10, #192 →
+`main`).** El fundador confirmó en `genscore.es`: cuenta en trial → botón
+"Contratar ahora" → pago real completado en Stripe → el aviso de trial
+desapareció solo (sin recargar a mano), plan mostrado como Pro real con
+"Cancelar suscripción" disponible. BILLING-STRIPE-1 PR 1-3 + el fix de
+seguridad RLS quedan cerrados y verificados en vivo.
+
+**Siguiente:** PR 4 (emails transaccionales Resend). A diferencia de PR 1-3,
+esto **no está recogido explícitamente** en la nota de `CLAUDE.md` sobre
+el alcance ya aprobado de BILLING-STRIPE-1 ("Stripe Checkout + webhooks +
+reverse trial + Customer Portal") — introduce un proveedor externo nuevo
+(Resend), variables de entorno nuevas, y contenido de comunicación real a
+usuarios. Antes de implementar, confirmar alcance con el fundador
+(Task Intake corto): qué emails exactamente, dominio de envío/verificación
+DNS, y si requiere revisión de `/privacidad` (nuevo processor de datos).
 
 ---
 
