@@ -814,10 +814,32 @@ bloquea un segundo Checkout cuando ya hay una suscripción real detrás, no
 cuando `current_plan` es "pro" solo por estar en el trial. 2 tests
 actualizados/nuevos. 424/424 tests totales, `pnpm run validate` limpio.
 
-**Siguiente:** confirmar con el fundador que "Contratar ahora" durante el
-trial completa el pago real de principio a fin (no solo que abra Stripe) →
-PR 4 (emails Resend: bienvenida, aviso 3 días antes de expirar, expirado,
-pago fallido).
+Además, el fundador pidió quitar la tarjeta de "Ver todos los planes" /
+"Has usado X de Y prompts" de la página de facturación (redundante junto
+al nuevo aviso de trial) — eliminada de `billing-content.tsx`.
+
+**Cuarto hallazgo, en vivo:** pago completado de verdad (conversión de
+trial a Pro real, confirmado en Stripe), pero el aviso de trial seguía
+mostrándose tras el redirect — el webhook de Stripe tarda unos segundos en
+llegar, y mientras tanto la página ya se había cargado con el estado
+anterior. Dos causas, ambas corregidas:
+
+1. `checkout.session.completed` y `customer.subscription.updated`
+   (`lib/billing/stripe-webhook.ts`) no limpiaban `trial_ends_at` al
+   confirmar una suscripción real — aunque el webhook llegara, el aviso de
+   trial habría seguido ahí indefinidamente. Ahora ambos lo ponen a `null`.
+2. **Refresco casi instantáneo**: nuevo `CheckoutSuccessPoller` (componente
+   cliente) que, mientras `checkout=success` está en la URL y
+   `usage.hasStripeSubscription` sigue siendo falso, llama a
+   `router.refresh()` cada 2s (para en cuanto el dato ya refleja el pago,
+   o a los 20s como límite). Antes había que recargar la página a mano.
+
+2 tests de webhook actualizados. 424/424 tests totales, `pnpm run
+validate` limpio.
+
+**Siguiente:** confirmar con el fundador que el refresco automático
+funciona (ya no hace falta recargar a mano) → PR 4 (emails Resend:
+bienvenida, aviso 3 días antes de expirar, expirado, pago fallido).
 
 ---
 

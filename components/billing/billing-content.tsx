@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { getUsageSummary } from "@/lib/billing";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
 import { ManageBillingButton } from "@/components/billing/manage-billing-button";
+import { CheckoutSuccessPoller } from "@/components/billing/checkout-success-poller";
 
 export async function BillingContent({
   embedded = false,
@@ -17,10 +18,12 @@ export async function BillingContent({
   const sections = (
     <>
       {checkoutStatus === "success" && (
-        <p className="feedback success">
-          Pago completado. Tu plan se está activando — si todavía no ves el cambio abajo, espera unos segundos y
-          recarga la página.
-        </p>
+        <>
+          <p className="feedback success">
+            Pago completado. Tu plan se está activando — esto debería tardar solo unos segundos.
+          </p>
+          <CheckoutSuccessPoller pending={!usage.hasStripeSubscription} />
+        </>
       )}
       {checkoutStatus === "cancelled" && (
         <p className="feedback">No se ha completado el pago. Tu plan no ha cambiado.</p>

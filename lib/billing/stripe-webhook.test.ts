@@ -56,7 +56,15 @@ describe("handleStripeWebhookEvent", () => {
     await handleStripeWebhookEvent(event, client);
 
     expect(updates).toEqual([
-      { patch: { current_plan: "pro", stripe_customer_id: "cus_123", stripe_subscription_id: "sub_123" }, id: "user-1" }
+      {
+        patch: {
+          current_plan: "pro",
+          stripe_customer_id: "cus_123",
+          stripe_subscription_id: "sub_123",
+          trial_ends_at: null
+        },
+        id: "user-1"
+      }
     ]);
   });
 
@@ -103,7 +111,7 @@ describe("handleStripeWebhookEvent", () => {
 
     await handleStripeWebhookEvent(event, client);
 
-    expect(updates).toEqual([{ patch: { current_plan: "pro" }, id: "user-1" }]);
+    expect(updates).toEqual([{ patch: { current_plan: "pro", trial_ends_at: null }, id: "user-1" }]);
   });
 
   it("customer.subscription.updated: does nothing when the price id isn't a known self-serve plan", async () => {
