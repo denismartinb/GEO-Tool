@@ -372,6 +372,32 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     resultIdToPromptId.set(row.id, row.prompt_id);
   }
 
+  // TEMPORARY DIAGNOSTIC (WEB-AUDIT-ACTION follow-up): founder reported a
+  // content_gap topic's "La IA cita a" chip missing a brand (Movistar) that
+  // visibly leads the AI's actual answer. Logs the raw extraction fields
+  // this page reads from, for content_gap topics only, so we can see in
+  // Vercel logs whether other_brands_mentioned was actually populated by
+  // the extraction step for this scan — no new scan needed, a page reload
+  // is enough. Remove once diagnosed.
+  if (summary) {
+    for (const topic of summary.topics) {
+      if (topic.outcome !== "content_gap") continue;
+      const row = latestScanResultRows.find((r) => r.prompt_id === topic.promptId);
+      const extracted = row?.extracted_json as
+        | { competitors?: Array<{ name?: string; mentioned?: boolean }>; other_brands_mentioned?: string[] }
+        | null
+        | undefined;
+      console.log("[geo:web-audit]:action_diag content_gap", {
+        project_id: projectId,
+        prompt_id: topic.promptId,
+        provider: row?.provider ?? null,
+        tracked_competitors: extracted?.competitors ?? null,
+        other_brands_mentioned: extracted?.other_brands_mentioned ?? null,
+        resolved: competitorsByPromptId.get(topic.promptId) ?? []
+      });
+    }
+  }
+
   const { data: addCitationRecs } = latestMap
     ? await supabase
         .from("recommendations")
