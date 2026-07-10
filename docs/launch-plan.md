@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | ✅ PR 1 hecho y verificado en producción | #186 | 2026-07-10 | Task Intake aprobado (modo test primero). PR 1 (Checkout+webhooks) mergeado y confirmado end-to-end en producción: compra real de Starter → webhook → plan activado, todo en modo test de Stripe. Cambio entre planes de pago (Starter↔Pro) sigue bloqueado a propósito con mensaje honesto hasta el PR 2. Siguiente: PR 2 (Customer Portal) |
+| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1 verificado en prod, PR 2 en curso | #186 | 2026-07-10 | Task Intake aprobado (modo test primero). PR 1 (Checkout+webhooks) mergeado y confirmado end-to-end en producción. PR 2 (Customer Portal) en curso: pago↔pago y cancelación reales vía Stripe, con guard de sobre-cupo de dominios en el webhook (decisión fundador: preguntar siempre, nunca archivar solo) |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -637,10 +637,65 @@ planes de pago (Starter↔Pro) muestra el mensaje honesto "disponible muy
 pronto" en vez de fingir el cambio — comportamiento esperado, alcance del
 PR 2.
 
-**Siguiente:** PR 2 (Customer Portal — cambio de plan real
-entre pagos, cancelación real, facturas reales) → PR 3 (reverse trial con
-`trial_ends_at`, requiere su propia aprobación de migración) → PR 4 (emails
-Resend).
+**PR 2 (Customer Portal) — en curso (2026-07-10):**
+
+- `createPortalSession` (`app/dashboard/settings/billing/actions.ts`): abre
+  una sesión real del Customer Portal de Stripe para el `stripe_customer_id`
+  de la cuenta — método de pago, facturas, cancelación y (si el fundador lo
+  activa en Stripe) cambio de plan Starter↔Pro. Reutiliza `STRIPE_SECRET_KEY`,
+  sin variables nuevas.
+- **Decisión de producto explícita del fundador**: si un cambio o
+  cancelación hecho en el Portal (fuera de la app) deja la cuenta con más
+  dominios activos de los que permite el plan nuevo, el sistema **nunca
+  archiva automáticamente** — siempre se le pregunta al dueño de la cuenta
+  qué dominios quiere mantener. `PlanBillingSection` detecta ese sobre-cupo
+  comparando los dominios activos reales contra el cupo del plan actual y
+  muestra un aviso persistente con un selector (reutiliza el picker de
+  archivado ya existente del downgrade manual, en un nuevo modo
+  `overageOnly` de `ChangePlanModal`).
+- Cambio entre planes de pago (Starter↔Pro) ya no está bloqueado con el
+  aviso "muy pronto": redirige al Customer Portal real.
+- Botón "Cancelar suscripción" (antes inerte, sin `onClick`) ahora abre el
+  Portal real.
+- Placeholder falso de "Pago y facturas" (`billing-content.tsx`) sustituido
+  por un botón real "Gestionar facturación" hacia el Portal, visible incluso
+  si la cuenta ha vuelto a Free tras cancelar (se guarda que tuvo alguna vez
+  un `stripe_customer_id`, para no perder acceso a las facturas pasadas).
+- **Pendiente del fundador**: configurar en Stripe Dashboard (Settings →
+  Billing → Customer portal, en modo test) "Customers can switch plans"
+  (Starter/Pro) y "Customers can cancel subscriptions" — sin esto el Portal
+  abre pero no ofrece esas acciones.
+
+**Verificación en vivo (2026-07-10) — un hallazgo de UX, corregido en el
+mismo PR:** una vez el fundador activó el Portal en Stripe, el flujo
+funcionaba pero aterrizaba en la home del Portal ("Suscripción actual" +
+botón "Actualiza la suscripción"), obligando a un clic extra antes de ver
+el precio del plan destino — se sentía a medio construir. Corregido con
+`flow_data` de Stripe (Portal deep links): `createPortalSession` acepta
+ahora un `intent` opcional (`{ type: "update", planId }` o
+`{ type: "cancel" }`) que salta directo a la pantalla de confirmación del
+plan elegido (con su precio ya calculado) o a la de cancelación,
+respectivamente. Si la búsqueda de la suscripción/ítem necesaria para el
+deep link falla por lo que sea, cae de vuelta a la home del Portal en vez
+de bloquear la acción. Cambiar a Agencia sigue mostrando "disponible muy
+pronto" (no tiene precio propio en Stripe, sigue siendo "hablar con
+ventas").
+
+18 tests nuevos en `actions.test.ts` (`createPortalSession`, incluyendo los
+dos deep links y su fallback). 414/414 tests totales, `pnpm run validate`
+limpio.
+
+**PR 2 verificado end-to-end en vivo (2026-07-10):** el fundador probó
+Starter→Pro real vía el deep link del Portal. El cambio de precio se
+aplicó correctamente en Stripe al primer intento (confirmado indirectamente:
+un segundo intento devolvió *"no hay ningún cambio que confirmar"*, prueba
+de que ya estaba en Pro), y tras refrescar la página de Facturación el plan
+se mostró correctamente actualizado a Pro — el webhook sí sincronizó
+`current_plan`, solo necesitaba ese refresco. Sin nuevos hallazgos de
+código.
+
+**Siguiente:** mergear PR 2 → PR 3 (reverse trial con `trial_ends_at`,
+requiere su propia aprobación de migración) → PR 4 (emails Resend).
 
 ---
 

@@ -1,14 +1,36 @@
 "use server";
 
 import { z } from "zod";
+import type Stripe from "stripe";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { PLANS } from "@/app/pricing/plans-data";
-import { getStripeClient, getPriceIdForPlan, isSelfServePlan } from "@/lib/stripe";
+import { getStripeClient, getPriceIdForPlan, isSelfServePlan, type SelfServePlanId } from "@/lib/stripe";
 
 const planIdSchema = z.enum(PLANS.map((plan) => plan.id) as [string, ...string[]]);
 const archiveIdsSchema = z.array(z.string().uuid()).max(50);
+
+/**
+ * Derived from the actual incoming request rather than NEXT_PUBLIC_SITE_URL:
+ * that env var is set to the production domain, which is correct for real
+ * usage but silently sends a Preview-deployment redirect back to
+ * production's login (a different origin, no session) once Stripe redirects
+ * — found via live testing. Vercel's branch-alias domains (geo-tool-git-*)
+ * proxy the request and rewrite `host` to the underlying deployment's own
+ * host, exposing the original public domain only via `x-forwarded-host` —
+ * found via a second round of live testing. Trailing slash is stripped in
+ * case the env var fallback itself has one (it does, in this project's
+ * Vercel config).
+ */
+async function getRequestSiteUrl(): Promise<string> {
+  const headersList = await headers();
+  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
+  const protocol = headersList.get("x-forwarded-proto") ?? "https";
+  const fallbackSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  return (host ? `${protocol}://${host}` : fallbackSiteUrl).replace(/\/+$/, "");
+}
 
 export type ChangePlanResult = { success: true } | { success: false; error: string };
 
@@ -147,23 +169,7 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
     };
   }
 
-  // Derived from the actual incoming request rather than NEXT_PUBLIC_SITE_URL:
-  // that env var is set to the production domain, which is correct for real
-  // usage but silently sends a Preview-deployment checkout back to
-  // production's login (a different origin, no session) once the payment
-  // completes — found via live testing. Vercel's branch-alias domains
-  // (geo-tool-git-*) proxy the request and rewrite `host` to the underlying
-  // deployment's own host, exposing the original public domain only via
-  // `x-forwarded-host` — found via a second round of live testing, where the
-  // Checkout session still came back with the production domain despite this
-  // running on a preview. Trailing slash is stripped in case the env var
-  // fallback itself has one (it does, in this project's Vercel config).
-  const headersList = await headers();
-  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
-  const protocol = headersList.get("x-forwarded-proto") ?? "https";
-  const fallbackSiteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-  const siteUrl = (host ? `${protocol}://${host}` : fallbackSiteUrl).replace(/\/+$/, "");
+  const siteUrl = await getRequestSiteUrl();
   const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
 
   try {
@@ -193,5 +199,111 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
       message: stripeError instanceof Error ? stripeError.message : String(stripeError)
     });
     return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
+  }
+}
+
+export type PortalSessionResult = { success: true; url: string } | { success: false; error: string };
+
+/** Deep-links straight into a specific Portal screen instead of its homepage — see `createPortalSession`. */
+export type PortalIntent = { type: "update"; planId: SelfServePlanId } | { type: "cancel" };
+
+/**
+ * Opens a real Stripe Customer Portal session for the caller's own
+ * subscription — payment method, invoice history, cancellation, and (once
+ * configured in the Stripe Dashboard) switching between Starter/Pro. Portal
+ * changes are picked up by the existing webhook (`customer.subscription.*`),
+ * same as a Checkout-created subscription.
+ *
+ * `intent` deep-links straight into the Portal's "confirm this plan" or
+ * "cancel" screen (Stripe's `flow_data`) instead of landing on the Portal
+ * homepage and making the customer click through to it themselves — found
+ * to be worth doing via live testing, where the extra click read as the
+ * feature being half-built. Falls back to the plain portal homepage (still
+ * useful, just not deep-linked) if the subscription/item lookup needed to
+ * build the deep link fails for any reason; this is a convenience, never a
+ * reason to block opening the portal at all.
+ *
+ * Deliberately does not auto-archive projects if a Portal-driven downgrade
+ * leaves the account over its new plan's domain cap: the founder wants the
+ * owner to choose which domains to keep, not have the system pick for them.
+ * `PlanBillingSection` detects that overage from the same usage numbers
+ * already shown on the page and prompts the owner to resolve it themselves
+ * (`ChangePlanModal`'s `overageOnly` mode), the same archive picker already
+ * used for an in-app downgrade.
+ */
+export async function createPortalSession(intent?: PortalIntent): Promise<PortalSessionResult> {
+  const stripe = getStripeClient();
+  if (!stripe) {
+    return { success: false, error: "La facturación todavía no está disponible. Vuelve a intentarlo más tarde." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id, stripe_subscription_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const customerId = profileRow?.stripe_customer_id as string | null | undefined;
+  if (!customerId) {
+    return { success: false, error: "Todavía no tienes ninguna suscripción de pago que gestionar." };
+  }
+
+  const siteUrl = await getRequestSiteUrl();
+  const returnUrl = `${siteUrl}/dashboard/settings/billing`;
+  const subscriptionId = profileRow?.stripe_subscription_id as string | null | undefined;
+  const flowData = subscriptionId ? await buildPortalFlowData(stripe, intent, subscriptionId, returnUrl) : undefined;
+
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+      ...(flowData ? { flow_data: flowData } : {})
+    });
+
+    return { success: true, url: session.url };
+  } catch (stripeError) {
+    console.error("[geo:billing] failed to create Stripe billing portal session", {
+      userId: user.id,
+      message: stripeError instanceof Error ? stripeError.message : String(stripeError)
+    });
+    return { success: false, error: "No se pudo abrir el portal de facturación. Inténtalo de nuevo." };
+  }
+}
+
+async function buildPortalFlowData(
+  stripe: NonNullable<ReturnType<typeof getStripeClient>>,
+  intent: PortalIntent | undefined,
+  subscriptionId: string,
+  returnUrl: string
+): Promise<Stripe.BillingPortal.SessionCreateParams.FlowData | undefined> {
+  if (!intent) return undefined;
+
+  if (intent.type === "cancel") {
+    return { type: "subscription_cancel", subscription_cancel: { subscription: subscriptionId } };
+  }
+
+  const priceId = getPriceIdForPlan(intent.planId);
+  if (!priceId) return undefined;
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId) return undefined;
+
+    return {
+      type: "subscription_update_confirm",
+      subscription_update_confirm: {
+        subscription: subscriptionId,
+        items: [{ id: itemId, price: priceId, quantity: 1 }]
+      },
+      after_completion: { type: "redirect", redirect: { return_url: `${returnUrl}?checkout=success` } }
+    };
+  } catch (stripeError) {
+    console.error("[geo:billing] failed to look up subscription for a Portal deep link, falling back to homepage", {
+      subscriptionId,
+      message: stripeError instanceof Error ? stripeError.message : String(stripeError)
+    });
+    return undefined;
   }
 }

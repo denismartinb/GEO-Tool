@@ -130,6 +130,15 @@ Vercel Pro, founder registered as autónomo (or fiscal vehicle chosen),
 VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
 test-mode price ids for their live-mode equivalents.
 
+**Customer Portal (BILLING-STRIPE-1 PR 2)**: no new env var — reuses
+`STRIPE_SECRET_KEY` via `stripe.billingPortal.sessions.create()`. Requires a
+one-time **founder configuration in the Stripe Dashboard** (Settings →
+Billing → Customer portal), separately for test mode and later for live
+mode: enable "Customers can switch plans" listing the Starter/Pro prices,
+and "Customers can cancel subscriptions". Without this configuration the
+portal session still opens, but Stripe's own portal UI won't offer those
+actions.
+
 ---
 
 ## Vercel configuration
