@@ -89,22 +89,47 @@ export function buildActionPlan(input: {
   return items.slice(0, limit);
 }
 
-type ExtractedCompetitors = { competitors?: Array<{ name?: string | null; mentioned?: boolean }> };
+type ExtractedCompetitors = {
+  competitors?: Array<{ name?: string | null; mentioned?: boolean }>;
+  /** Brands the AI surfaced on its own that aren't in the project's tracked
+   * competitor list — see lib/extraction/schema.ts's other_brands_mentioned. */
+  other_brands_mentioned?: string[];
+};
 
 /**
- * Names the AI actually mentioned for a single prompt result — only
- * `mentioned: true` entries, deduped, capped. Mirrors the established
- * pattern in lib/recommendations/recommendation-engine.ts's promptEvidence
- * (same filter/map shape) so this never invents a competitor the AI didn't
- * name. Callers build the `competitorsByPromptId` map buildActionPlan needs
- * from this, one call per scan_prompt_results row.
+ * Names the AI actually mentioned for a single prompt result: tracked
+ * competitors (`competitors[]`, only `mentioned: true` entries — mirrors
+ * lib/recommendations/recommendation-engine.ts's promptEvidence) PLUS
+ * untracked brands the AI surfaced on its own (`other_brands_mentioned`,
+ * RECS-4A). Both matter here: a founder only tracks a handful of rivals when
+ * setting up a project, but the AI's actual top answer for a topic is often
+ * dominated by a brand nobody added — e.g. a telecom project tracking Orange/
+ * Vodafone/Yoigo/MásMóvil where the AI's answer leads with Movistar. Reading
+ * only `competitors[]` silently dropped that name, making the chip look
+ * wrong ("La IA cita a: Orange, Vodafone…" while the actual top answer never
+ * mentioned any of them). Never invents a name either way — only what the
+ * extraction step actually recorded. Callers build the `competitorsByPromptId`
+ * map buildActionPlan needs from this, one call per scan_prompt_results row.
  */
 export function extractMentionedCompetitors(extractedJson: unknown): string[] {
   if (!extractedJson || typeof extractedJson !== "object") return [];
-  const competitors = (extractedJson as ExtractedCompetitors).competitors ?? [];
-  const names = competitors
+  const extracted = extractedJson as ExtractedCompetitors;
+
+  const tracked = (extracted.competitors ?? [])
     .filter((c) => c.mentioned && c.name)
     .map((c) => (c.name as string).trim())
     .filter(Boolean);
-  return Array.from(new Set(names)).slice(0, 5);
+  const emerging = (extracted.other_brands_mentioned ?? [])
+    .filter((name): name is string => typeof name === "string" && name.trim().length > 0)
+    .map((name) => name.trim());
+
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const name of [...tracked, ...emerging]) {
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(name);
+  }
+  return names.slice(0, 5);
 }

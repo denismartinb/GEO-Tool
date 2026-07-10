@@ -156,4 +156,27 @@ describe("extractMentionedCompetitors", () => {
     expect(extractMentionedCompetitors("not an object")).toEqual([]);
     expect(extractMentionedCompetitors({})).toEqual([]);
   });
+
+  it("includes untracked brands from other_brands_mentioned, not just tracked competitors", () => {
+    // Real-world case that surfaced the bug: a telecom project tracks
+    // Orange/Vodafone/Yoigo/MásMóvil, but the AI's actual top answer leads
+    // with Movistar — untracked, so it only ever appears in
+    // other_brands_mentioned, never in competitors[].
+    const extracted = {
+      competitors: [
+        { name: "Orange España", mentioned: true },
+        { name: "Vodafone España", mentioned: true }
+      ],
+      other_brands_mentioned: ["Movistar"]
+    };
+    expect(extractMentionedCompetitors(extracted)).toEqual(["Orange España", "Vodafone España", "Movistar"]);
+  });
+
+  it("dedupes case-insensitively across tracked and untracked names", () => {
+    const extracted = {
+      competitors: [{ name: "Movistar", mentioned: true }],
+      other_brands_mentioned: ["movistar", "Movistar "]
+    };
+    expect(extractMentionedCompetitors(extracted)).toEqual(["Movistar"]);
+  });
 });
