@@ -82,13 +82,13 @@ function TopicRow({
   topic,
   competitors,
   brandMentioned,
-  recommendationId,
+  recommendation,
   projectId
 }: {
   topic: ClassifiedTopic;
   competitors: string[];
   brandMentioned: boolean;
-  recommendationId: string | null;
+  recommendation: { id: string; title: string; description: string } | null;
   projectId: string;
 }) {
   const meta = OUTCOME_META[topic.outcome];
@@ -120,31 +120,55 @@ function TopicRow({
 
       {/* "Qué hacer" inline, per row — not just in the "Plan de acción"
           summary card above (which caps at 5 items and requires scrolling
-          back up to find). Founder report: looking at a single topic row
-          here gave no idea what to do about it. */}
+          back up to find). Founder report (twice): looking at a single
+          topic row here gave no idea what to do about it, and clicking
+          through to Recomendaciones landed on a decontextualized page with
+          no explanation of the problem or the fix.
+          When a real recommendation matches this exact topic (only
+          add_citation_block/increase_brand_visibility can — see the query
+          above), show its own title + description right here; the link
+          becomes a secondary "ver más" action instead of the only place to
+          read anything. content_gap/unverified_cited topics have no
+          matching recommendation type in the engine yet, so they keep the
+          generic kind label + link — never inventing a problem statement
+          that doesn't exist. */}
       {actionKind && (
         <div
           style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 10,
             padding: "8px 10px",
             margin: "0 0 8px",
             background: "var(--surface-2)",
-            borderRadius: 8,
-            flexWrap: "wrap"
+            borderRadius: 8
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)" }}>
-            Qué hacer: {ACTION_KIND_META[actionKind].label}
-          </span>
-          <Link
-            href={recommendationHref(projectId, recommendationId)}
-            style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)", whiteSpace: "nowrap" }}
-          >
-            {ACTION_KIND_META[actionKind].linkLabel}
-          </Link>
+          {recommendation ? (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>
+                {recommendation.title}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
+                {recommendation.description}
+              </p>
+              <Link
+                href={recommendationHref(projectId, recommendation.id)}
+                style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
+              >
+                Ver en Recomendaciones →
+              </Link>
+            </>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)" }}>
+                Qué hacer: {ACTION_KIND_META[actionKind].label}
+              </span>
+              <Link
+                href={recommendationHref(projectId, null)}
+                style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)", whiteSpace: "nowrap" }}
+              >
+                {ACTION_KIND_META[actionKind].linkLabel}
+              </Link>
+            </div>
+          )}
         </div>
       )}
 
@@ -475,25 +499,44 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     competitorsByPromptId.set(promptId, mergeCompetitorNames(lists));
   }
 
-  const { data: addCitationRecs } = latestMap
+  // Only these two recommendation types anchor their evidence to a single
+  // scan_prompt_results row (dedupeKey: `<type>:${result.id}` in
+  // recommendation-engine.ts) — every other type is aggregate/run-wide
+  // (e.g. close_competitor_gap groups multiple prompts by competitor name)
+  // and can't be joined back to one specific topic. content_gap/
+  // unverified_cited topics genuinely have no matching recommendation yet;
+  // that's a real gap in the engine's rule set, not a bug in this join.
+  const { data: matchedRecs } = latestMap
     ? await supabase
         .from("recommendations")
-        .select("id, evidence_json")
+        .select("id, title, description, evidence_json")
         .eq("project_id", projectId)
         .eq("run_id", latestMap.scanId)
-        .eq("recommendation_type", "add_citation_block")
+        .in("recommendation_type", ["add_citation_block", "increase_brand_visibility"])
         .eq("status", "active")
     : { data: [] };
 
-  const recommendationIdByPromptId = new Map<string, string>();
-  for (const rec of (addCitationRecs ?? []) as Array<{
+  // Founder report: "Ver recomendación →" sent the founder to a
+  // decontextualized Recomendaciones page with no explanation of the
+  // problem or the fix right where they were looking. When a real
+  // recommendation matches this exact topic, surface its own title/
+  // description inline instead of making the link the only place to read
+  // it — the link still exists, but as a secondary "ver más" action.
+  const recommendationByPromptId = new Map<string, { id: string; title: string; description: string }>();
+  for (const rec of (matchedRecs ?? []) as Array<{
     id: string;
+    title: string;
+    description: string;
     evidence_json: { affected_prompt_details?: Array<{ id: string }> } | null;
   }>) {
     const resultId = rec.evidence_json?.affected_prompt_details?.[0]?.id;
     if (!resultId) continue;
     const promptId = resultIdToPromptId.get(resultId);
-    if (!promptId || recommendationIdByPromptId.has(promptId)) continue;
+    if (!promptId || recommendationByPromptId.has(promptId)) continue;
+    recommendationByPromptId.set(promptId, { id: rec.id, title: rec.title, description: rec.description });
+  }
+  const recommendationIdByPromptId = new Map<string, string>();
+  for (const [promptId, rec] of recommendationByPromptId) {
     recommendationIdByPromptId.set(promptId, rec.id);
   }
 
@@ -809,7 +852,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 topic={topic}
                 competitors={competitorsByPromptId.get(topic.promptId) ?? []}
                 brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
-                recommendationId={recommendationIdByPromptId.get(topic.promptId) ?? null}
+                recommendation={recommendationByPromptId.get(topic.promptId) ?? null}
                 projectId={projectId}
               />
             ))}
