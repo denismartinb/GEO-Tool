@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 En curso (PR 1 mergeado) | #186 | 2026-07-10 | Task Intake aprobado (modo test primero). PR 1 (Checkout+webhooks) mergeado tras verificación en vivo: checkout real y redirect confirmados en preview; webhook aún sin confirmar end-to-end (bloqueado en preview por Vercel Deployment Protection, no por código — ver nota abajo). Pendiente: cambiar URL del webhook de Stripe a producción y verificar una compra real ahí, luego PRs 2-4 |
+| 4 | BILLING-STRIPE-1 ⚠️ | ✅ PR 1 hecho y verificado en producción | #186 | 2026-07-10 | Task Intake aprobado (modo test primero). PR 1 (Checkout+webhooks) mergeado y confirmado end-to-end en producción: compra real de Starter → webhook → plan activado, todo en modo test de Stripe. Cambio entre planes de pago (Starter↔Pro) sigue bloqueado a propósito con mensaje honesto hasta el PR 2. Siguiente: PR 2 (Customer Portal) |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -628,11 +628,14 @@ alcance original:**
    quedaron confirmados end-to-end en preview) y verificar el webhook en
    producción, en vez de configurar un bypass de protección en el preview.
 
-**PR 1 mergeado (2026-07-10, #186 → `main`).** Pendiente antes de dar por
-verificado el flujo completo: cambiar la URL del webhook en el Dashboard de
-Stripe de la del preview a `https://www.genscore.es/api/webhooks/stripe`, y
-hacer una compra de prueba real en producción confirmando que el plan pasa
-a Starter/Pro inmediatamente tras el pago.
+**PR 1 mergeado y verificado end-to-end en producción (2026-07-10, #186 →
+`main`).** El fundador cambió la URL del webhook a
+`https://www.genscore.es/api/webhooks/stripe` e hizo una compra de prueba
+real de Starter en `genscore.es`: pago → webhook → plan activado a Starter,
+funcionando de principio a fin. Confirmado también que el cambio entre dos
+planes de pago (Starter↔Pro) muestra el mensaje honesto "disponible muy
+pronto" en vez de fingir el cambio — comportamiento esperado, alcance del
+PR 2.
 
 **Siguiente:** PR 2 (Customer Portal — cambio de plan real
 entre pagos, cancelación real, facturas reales) → PR 3 (reverse trial con
