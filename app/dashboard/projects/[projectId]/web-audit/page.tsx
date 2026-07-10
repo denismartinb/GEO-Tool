@@ -53,16 +53,46 @@ const ACTION_KIND_META: Record<ActionItemKind, { label: string; linkLabel: strin
   capture: { label: "Formalizar página propia", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" }
 };
 
+// Which action a topic's own outcome maps to — same mapping buildActionPlan()
+// uses to prioritize the "Plan de acción" card, applied here per-row so
+// every actionable topic in "Detalle por tema" shows its own "Qué hacer"
+// inline, instead of making the founder cross-reference a summary card
+// elsewhere on the page (founder report: looking at a single topic row gave
+// no idea what to do about it). performing/inconclusive intentionally have
+// no entry — the first is already working, the second has no reliable
+// signal to act on.
+const OUTCOME_TO_ACTION_KIND: Partial<Record<TopicOutcome, ActionItemKind>> = {
+  invisible: "optimize",
+  content_gap: "create_competing",
+  open_opportunity: "create_open",
+  unverified_cited: "capture"
+};
+
+function recommendationHref(projectId: string, recommendationId: string | null): string {
+  // A deep-link only exists for recommendation types whose evidence anchors
+  // to this exact prompt's result (currently add_citation_block — see
+  // lib/recommendations/coverage-overlay.ts's join). Everything else falls
+  // back to the generic Recomendaciones page rather than inventing a link.
+  return recommendationId
+    ? `/dashboard/projects/${projectId}/recommendations#rec-${recommendationId}`
+    : `/dashboard/projects/${projectId}/recommendations`;
+}
+
 function TopicRow({
   topic,
   competitors,
-  brandMentioned
+  brandMentioned,
+  recommendationId,
+  projectId
 }: {
   topic: ClassifiedTopic;
   competitors: string[];
   brandMentioned: boolean;
+  recommendationId: string | null;
+  projectId: string;
 }) {
   const meta = OUTCOME_META[topic.outcome];
+  const actionKind = OUTCOME_TO_ACTION_KIND[topic.outcome];
   // "Hueco de contenido" / "Oportunidad abierta" only mean: no own content
   // Google indexes for this topic, and no verified citation to your domain
   // in this scan. Neither checks whether the AI's answer names your brand
@@ -87,6 +117,36 @@ function TopicRow({
           {topic.topic}
         </span>
       </div>
+
+      {/* "Qué hacer" inline, per row — not just in the "Plan de acción"
+          summary card above (which caps at 5 items and requires scrolling
+          back up to find). Founder report: looking at a single topic row
+          here gave no idea what to do about it. */}
+      {actionKind && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "8px 10px",
+            margin: "0 0 8px",
+            background: "var(--surface-2)",
+            borderRadius: 8,
+            flexWrap: "wrap"
+          }}
+        >
+          <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)" }}>
+            Qué hacer: {ACTION_KIND_META[actionKind].label}
+          </span>
+          <Link
+            href={recommendationHref(projectId, recommendationId)}
+            style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)", whiteSpace: "nowrap" }}
+          >
+            {ACTION_KIND_META[actionKind].linkLabel}
+          </Link>
+        </div>
+      )}
 
       {/* WEB-AUDIT-ACTION: only rendered for content_gap topics with at least
           one AI-mentioned competitor — never inferred, straight from
@@ -133,13 +193,7 @@ function TopicRow({
 
 function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: number; projectId: string }) {
   const meta = ACTION_KIND_META[item.kind];
-  // A deep-link only exists for recommendation types whose evidence anchors
-  // to this exact prompt's result (currently add_citation_block — see
-  // lib/recommendations/coverage-overlay.ts's join). Everything else falls
-  // back to the generic Recomendaciones page rather than inventing a link.
-  const href = item.recommendationId
-    ? `/dashboard/projects/${projectId}/recommendations#rec-${item.recommendationId}`
-    : `/dashboard/projects/${projectId}/recommendations`;
+  const href = recommendationHref(projectId, item.recommendationId);
 
   return (
     <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
@@ -755,6 +809,8 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 topic={topic}
                 competitors={competitorsByPromptId.get(topic.promptId) ?? []}
                 brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
+                recommendationId={recommendationIdByPromptId.get(topic.promptId) ?? null}
+                projectId={projectId}
               />
             ))}
           </div>
