@@ -22,6 +22,8 @@ export type UsageSummary = {
   hasStripeCustomer: boolean;
   /** BILLING-STRIPE-1 PR 3: null once there's no active reverse trial (never started, converted to a real subscription, or already expired and downgraded). */
   trialEndsAt: string | null;
+  /** Whether `current_plan` is backed by a real Stripe subscription, as opposed to an unconverted reverse trial — distinguishes "paying Pro" from "trialing Pro" for the change-plan flow and the Portal cancel button. */
+  hasStripeSubscription: boolean;
 };
 
 type TrialFields = {
@@ -152,6 +154,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     engineCap: plan.caps.engines,
     activeProjects: projects ?? [],
     hasStripeCustomer: Boolean(profile?.stripe_customer_id),
-    trialEndsAt: trialExpired ? null : (profile?.trial_ends_at ?? null)
+    trialEndsAt: trialExpired ? null : (profile?.trial_ends_at ?? null),
+    hasStripeSubscription: Boolean(profile?.stripe_subscription_id)
   };
 }

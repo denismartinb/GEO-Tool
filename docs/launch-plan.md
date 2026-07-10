@@ -771,8 +771,42 @@ pulsó.
 - **Pendiente del fundador:** aplicar `0017_reverse_trial.sql` en Supabase,
   después de `0016`.
 
-**Siguiente:** fundador aplica `0016` y `0017` → verificar en vivo (alta
-nueva → Pro 7 días → expira → Free) → PR 4 (emails Resend: bienvenida,
+**Migraciones `0016`/`0017` aplicadas por el fundador (2026-07-10).**
+Verificado en vivo: alta nueva en el preview → dashboard directo, sin
+pantalla de elegir plan → Ajustes → Facturación muestra Pro con el aviso
+de días de prueba.
+
+**Dos hallazgos de UX en la misma verificación, corregidos en el mismo PR:**
+
+1. **Aviso de trial poco visible**: el aviso "Estás probando Pro..." era un
+   texto plano sin urgencia ni acción. Movido de `billing-content.tsx` a
+   `PlanBillingSection` (para poder abrir el modal) y rediseñado con el
+   mismo estilo de aviso ámbar que el de sobre-cupo (icono de reloj, texto
+   en negrita, "te quedan X días" destacado) + botón **"Contratar ahora"**
+   que abre "Cambiar de plan" directamente en Pro.
+2. **Bug real: no se podía contratar Pro estando en el trial**. El modal de
+   "Cambiar de plan" decidía el flujo (Checkout / Portal / bloqueado) solo
+   mirando `currentId` — como una cuenta en trial ya tiene
+   `current_plan='pro'`, seleccionar Pro se trataba como "ya estás en este
+   plan" (deshabilitado), y elegir Starter/Agencia se enrutaba al Customer
+   Portal, que no tiene nada que gestionar todavía (sin `stripe_customer_id`
+   real). Corregido: `ChangePlanModal` recibe ahora `hasRealSubscription`
+   (de `usage.hasStripeSubscription`, nuevo en `UsageSummary`) en vez de
+   inferir "tiene suscripción real" a partir de `currentId !== "free"`.
+   Mientras haya trial sin conversión, cualquier plan de pago (incluido el
+   mismo que ya se está probando) pasa por Checkout real; solo una cuenta
+   con suscripción real de Stripe usa el Portal. El botón "Cancelar
+   suscripción" también se ocultaba tras esta misma corrección, ya que
+   durante el trial no hay nada que cancelar en el Portal (ahora se guarda
+   en `usage.hasStripeSubscription`, antes se guiaba solo por
+   `planId !== "free"`).
+- Sin tests de componente nuevos (este repo no usa React Testing Library
+  para UI; la lógica subyacente del trial —`getPlanForUser`/
+  `getUsageSummary`— ya está cubierta en `lib/billing.test.ts`). 423/423
+  tests totales, `pnpm run validate` limpio.
+
+**Siguiente:** confirmar con el fundador que "Contratar ahora" durante el
+trial lleva a Stripe Checkout de verdad → PR 4 (emails Resend: bienvenida,
 aviso 3 días antes de expirar, expirado, pago fallido).
 
 ---

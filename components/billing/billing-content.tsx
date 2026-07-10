@@ -18,18 +18,9 @@ export async function BillingContent({
   checkoutStatus?: string;
 }) {
   const usage = await getUsageSummary();
-  const trialDaysLeft = usage.trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(usage.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
-    : null;
 
   const sections = (
     <>
-      {trialDaysLeft !== null && (
-        <p className="feedback">
-          Estás probando <b>Pro</b> gratis — te quedan {trialDaysLeft} día{trialDaysLeft === 1 ? "" : "s"}. Contrata
-          un plan para no perder el acceso cuando termine.
-        </p>
-      )}
       {checkoutStatus === "success" && (
         <p className="feedback success">
           Pago completado. Tu plan se está activando — si todavía no ves el cambio abajo, espera unos segundos y
