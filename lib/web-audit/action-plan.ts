@@ -27,12 +27,32 @@ export type ActionItem = {
   recommendationId: string | null;
 };
 
-const RATIONALE_BY_KIND: Record<ActionItemKind, string> = {
-  optimize: "Tienes página propia pero la IA todavía no la cita",
-  create_competing: "No tienes contenido propio y la IA cita a un competidor",
-  create_open: "No tienes contenido propio; todavía nadie destaca en este tema",
-  capture: "La IA te cita por otra vía, sin una página propia verificada"
-};
+/**
+ * Fuller "problem + suggested fix" text for a topic. Used both as
+ * `ActionItem.rationale` (the "Plan de acción" card) and, when no real
+ * recommendation matches a topic (see web-audit/page.tsx's TopicRow), as the
+ * only explanation shown inline on that topic's own row — the recommendation
+ * engine never generates a card for content_gap/open_opportunity/
+ * unverified_cited topics at all (it runs the instant a scan completes,
+ * before any domain-coverage audit can exist — see
+ * lib/recommendations/coverage-overlay.ts's header comment), so this is
+ * synthesized entirely from data already on the topic. Deliberately NOT a
+ * persisted/trackable recommendation — never claim it's one.
+ */
+export function synthesizedGuidance(kind: ActionItemKind, competitors: string[]): string {
+  switch (kind) {
+    case "optimize":
+      return "Tienes contenido propio sobre este tema, pero la IA todavía no lo cita. Optimiza esa página para hacerla más citable: datos concretos, estructura clara y contenido actualizado.";
+    case "create_competing":
+      return competitors.length > 0
+        ? `No tienes contenido propio sobre este tema, y la IA cita a ${competitors.join(", ")} en su respuesta. Publica una página específica y factual para empezar a competir por esa cita.`
+        : "No tienes contenido propio sobre este tema, y la IA cita a un competidor en su respuesta. Publica una página específica y factual para empezar a competir por esa cita.";
+    case "create_open":
+      return "No tienes contenido propio sobre este tema y todavía nadie destaca en él — es una oportunidad limpia. Publica una página específica antes de que lo haga un rival.";
+    case "capture":
+      return "La IA ya te cita por otra vía en este tema, pero no tienes una página propia verificada como fuente. Publica contenido dedicado para consolidar esa cita.";
+  }
+}
 
 function toActionItem(
   topic: ClassifiedTopic,
@@ -40,12 +60,13 @@ function toActionItem(
   competitorsByPromptId: Map<string, string[]>,
   recommendationIdByPromptId: Map<string, string>
 ): ActionItem {
+  const competitors = competitorsByPromptId.get(topic.promptId) ?? [];
   return {
     kind,
     promptId: topic.promptId,
     topic: topic.topic,
-    rationale: RATIONALE_BY_KIND[kind],
-    competitors: competitorsByPromptId.get(topic.promptId) ?? [],
+    rationale: synthesizedGuidance(kind, competitors),
+    competitors,
     recommendationId: recommendationIdByPromptId.get(topic.promptId) ?? null
   };
 }

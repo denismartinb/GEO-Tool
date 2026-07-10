@@ -8,7 +8,14 @@ import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
-import { buildActionPlan, extractMentionedCompetitors, mergeCompetitorNames, type ActionItem, type ActionItemKind } from "@/lib/web-audit/action-plan";
+import {
+  buildActionPlan,
+  extractMentionedCompetitors,
+  mergeCompetitorNames,
+  synthesizedGuidance,
+  type ActionItem,
+  type ActionItemKind
+} from "@/lib/web-audit/action-plan";
 import { RunAuditButton } from "./run-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
@@ -157,17 +164,30 @@ function TopicRow({
               </Link>
             </>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-              <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)" }}>
-                Qué hacer: {ACTION_KIND_META[actionKind].label}
-              </span>
+            <>
+              {/* No real recommendation matches this topic (only
+                  add_citation_block/increase_brand_visibility ever can — see
+                  the query above) — the recommendation engine never
+                  generates a card for content_gap/open_opportunity/
+                  unverified_cited at all. Synthesize the guidance from data
+                  already on the topic instead of leaving a bare label + a
+                  link to a decontextualized page. Framed as "Sugerencia",
+                  not a title, and never linked with a #rec- anchor — this
+                  isn't a trackable/dismissible recommendation, and must
+                  never look like one. */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 3 }}>
+                Sugerencia · {ACTION_KIND_META[actionKind].label}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
+                {synthesizedGuidance(actionKind, competitors)}
+              </p>
               <Link
                 href={recommendationHref(projectId, null)}
-                style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)", whiteSpace: "nowrap" }}
+                style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
               >
-                {ACTION_KIND_META[actionKind].linkLabel}
+                Ver recomendaciones →
               </Link>
-            </div>
+            </>
           )}
         </div>
       )}
@@ -218,6 +238,12 @@ function TopicRow({
 function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: number; projectId: string }) {
   const meta = ACTION_KIND_META[item.kind];
   const href = recommendationHref(projectId, item.recommendationId);
+  // Only claim a specific link when a real recommendation matches — the
+  // per-kind label ("Cómo optimizar →" etc.) implies a matched card exists,
+  // which is only ever true for optimize/capture-adjacent kinds anchored via
+  // add_citation_block/increase_brand_visibility (see the query in the page
+  // component). Everything else falls back to the honest generic wording.
+  const linkLabel = item.recommendationId ? meta.linkLabel : "Ver recomendaciones →";
 
   return (
     <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
@@ -251,7 +277,7 @@ function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: nu
           </p>
         )}
         <Link href={href} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
-          {meta.linkLabel}
+          {linkLabel}
         </Link>
       </div>
     </div>
