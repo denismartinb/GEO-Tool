@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildActionPlan, extractMentionedCompetitors, mergeCompetitorNames, type ActionItem } from "@/lib/web-audit/action-plan";
+import {
+  buildActionPlan,
+  extractMentionedCompetitors,
+  mergeCompetitorNames,
+  synthesizedGuidance,
+  type ActionItem
+} from "@/lib/web-audit/action-plan";
 import type { ClassifiedTopic, TopicOutcome, WebAuditSummary } from "@/lib/web-audit/opportunity-matrix";
 
 function topic(overrides: Partial<ClassifiedTopic> & { promptId: string; outcome: TopicOutcome }): ClassifiedTopic {
@@ -206,5 +212,25 @@ describe("mergeCompetitorNames", () => {
 
   it("returns an empty array for no rows", () => {
     expect(mergeCompetitorNames([])).toEqual([]);
+  });
+});
+
+describe("synthesizedGuidance", () => {
+  it("interpolates competitor names into create_competing guidance when present", () => {
+    const text = synthesizedGuidance("create_competing", ["Movistar", "Vodafone España"]);
+    expect(text).toContain("Movistar, Vodafone España");
+  });
+
+  it("still returns sensible guidance for create_competing with no competitors", () => {
+    const text = synthesizedGuidance("create_competing", []);
+    expect(text.length).toBeGreaterThan(0);
+    expect(text).not.toContain("undefined");
+  });
+
+  it("returns distinct, non-empty guidance for every kind", () => {
+    const kinds: Array<Parameters<typeof synthesizedGuidance>[0]> = ["optimize", "create_competing", "create_open", "capture"];
+    const texts = kinds.map((k) => synthesizedGuidance(k, []));
+    expect(new Set(texts).size).toBe(kinds.length);
+    for (const text of texts) expect(text.length).toBeGreaterThan(0);
   });
 });

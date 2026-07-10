@@ -15,6 +15,24 @@ orden — el orden lo fija la columna `#`.
 | 5 | Generador de briefs de contenido con IA | WEB-AUDIT-BRIEF | `phase-brief-generator.md` | Propuesta | Gemini runtime + migración (generation_type) | **Aprobación explícita + Task Intake + data-guardian** |
 | 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | Diseñada | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
 
+## Cabos sueltos post-ACTION (no numerados, siguen el mismo Human Gate)
+
+Tras fusionar la fase 3 (ACTION) y la explicación mención-vs-cita, quedaron dos
+huecos señalados en producción, tratados como fases separadas:
+
+- **Fase A — ✅ Implementada.** `content_gap`/`open_opportunity`/`unverified_cited`
+  no tienen ningún tipo de recomendación en el motor (`recommendation-engine.ts`
+  genera recomendaciones al terminar el escaneo, antes de que exista ninguna
+  auditoría de dominio — ver cabecera de `coverage-overlay.ts`). Se sintetiza el
+  texto de "qué hacer" directamente en `lib/web-audit/action-plan.ts`
+  (`synthesizedGuidance`) a partir de datos ya cargados, marcado visualmente
+  como "Sugerencia" — nunca como una recomendación real/trackeable — para no
+  fingir progreso.
+- **Fase B — pendiente, requiere geo-strategy.** Que la propia clasificación
+  "Hueco de contenido" tenga en cuenta `brand_mentioned` cambia la taxonomía de
+  la matriz (KPIs, cuadrantes, tendencia, plan de acción a la vez) — no es un
+  cambio de copy. Aparcada hasta que se plantee como Task Intake propio.
+
 ## Por qué este orden
 
 1. **DQ antes que nada nuevo.** El caso Ryanair (0/6 temas, todo "Hueco de
