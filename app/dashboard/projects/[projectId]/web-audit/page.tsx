@@ -8,6 +8,7 @@ import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
+import { buildActionPlan, extractMentionedCompetitors, mergeCompetitorNames, type ActionItem, type ActionItemKind } from "@/lib/web-audit/action-plan";
 import { RunAuditButton } from "./run-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
@@ -45,8 +46,53 @@ const TOPIC_LIST_ORDER: TopicOutcome[] = [
   "inconclusive"
 ];
 
-function TopicRow({ topic, brandMentioned }: { topic: ClassifiedTopic; brandMentioned: boolean }) {
+const ACTION_KIND_META: Record<ActionItemKind, { label: string; linkLabel: string; badgeClass: string }> = {
+  optimize: { label: "Optimizar página existente", linkLabel: "Cómo optimizar →", badgeClass: "badge-warn" },
+  create_competing: { label: "Crear contenido — compite un rival", linkLabel: "Ver recomendación →", badgeClass: "badge-neg" },
+  create_open: { label: "Crear contenido — oportunidad abierta", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" },
+  capture: { label: "Formalizar página propia", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" }
+};
+
+// Which action a topic's own outcome maps to — same mapping buildActionPlan()
+// uses to prioritize the "Plan de acción" card, applied here per-row so
+// every actionable topic in "Detalle por tema" shows its own "Qué hacer"
+// inline, instead of making the founder cross-reference a summary card
+// elsewhere on the page (founder report: looking at a single topic row gave
+// no idea what to do about it). performing/inconclusive intentionally have
+// no entry — the first is already working, the second has no reliable
+// signal to act on.
+const OUTCOME_TO_ACTION_KIND: Partial<Record<TopicOutcome, ActionItemKind>> = {
+  invisible: "optimize",
+  content_gap: "create_competing",
+  open_opportunity: "create_open",
+  unverified_cited: "capture"
+};
+
+function recommendationHref(projectId: string, recommendationId: string | null): string {
+  // A deep-link only exists for recommendation types whose evidence anchors
+  // to this exact prompt's result (currently add_citation_block — see
+  // lib/recommendations/coverage-overlay.ts's join). Everything else falls
+  // back to the generic Recomendaciones page rather than inventing a link.
+  return recommendationId
+    ? `/dashboard/projects/${projectId}/recommendations#rec-${recommendationId}`
+    : `/dashboard/projects/${projectId}/recommendations`;
+}
+
+function TopicRow({
+  topic,
+  competitors,
+  brandMentioned,
+  recommendation,
+  projectId
+}: {
+  topic: ClassifiedTopic;
+  competitors: string[];
+  brandMentioned: boolean;
+  recommendation: { id: string; title: string; description: string } | null;
+  projectId: string;
+}) {
   const meta = OUTCOME_META[topic.outcome];
+  const actionKind = OUTCOME_TO_ACTION_KIND[topic.outcome];
   // "Hueco de contenido" / "Oportunidad abierta" only mean: no own content
   // Google indexes for this topic, and no verified citation to your domain
   // in this scan. Neither checks whether the AI's answer names your brand
@@ -71,6 +117,69 @@ function TopicRow({ topic, brandMentioned }: { topic: ClassifiedTopic; brandMent
           {topic.topic}
         </span>
       </div>
+
+      {/* "Qué hacer" inline, per row — not just in the "Plan de acción"
+          summary card above (which caps at 5 items and requires scrolling
+          back up to find). Founder report (twice): looking at a single
+          topic row here gave no idea what to do about it, and clicking
+          through to Recomendaciones landed on a decontextualized page with
+          no explanation of the problem or the fix.
+          When a real recommendation matches this exact topic (only
+          add_citation_block/increase_brand_visibility can — see the query
+          above), show its own title + description right here; the link
+          becomes a secondary "ver más" action instead of the only place to
+          read anything. content_gap/unverified_cited topics have no
+          matching recommendation type in the engine yet, so they keep the
+          generic kind label + link — never inventing a problem statement
+          that doesn't exist. */}
+      {actionKind && (
+        <div
+          style={{
+            padding: "8px 10px",
+            margin: "0 0 8px",
+            background: "var(--surface-2)",
+            borderRadius: 8
+          }}
+        >
+          {recommendation ? (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>
+                {recommendation.title}
+              </div>
+              <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
+                {recommendation.description}
+              </p>
+              <Link
+                href={recommendationHref(projectId, recommendation.id)}
+                style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
+              >
+                Ver en Recomendaciones →
+              </Link>
+            </>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)" }}>
+                Qué hacer: {ACTION_KIND_META[actionKind].label}
+              </span>
+              <Link
+                href={recommendationHref(projectId, null)}
+                style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)", whiteSpace: "nowrap" }}
+              >
+                {ACTION_KIND_META[actionKind].linkLabel}
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* WEB-AUDIT-ACTION: only rendered for content_gap topics with at least
+          one AI-mentioned competitor — never inferred, straight from
+          extracted_json.competitors[].mentioned for this prompt's result. */}
+      {topic.outcome === "content_gap" && competitors.length > 0 && (
+        <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>
+          La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{competitors.join(", ")}</strong>
+        </p>
+      )}
 
       {showBrandMentionNote && (
         <p style={{ fontSize: 12, color: "var(--ink-2)", margin: "0 0 6px", fontWeight: 600 }}>
@@ -102,6 +211,49 @@ function TopicRow({ topic, brandMentioned }: { topic: ClassifiedTopic; brandMent
           <span style={{ color: "var(--ink-4)" }}> (interpretación de la IA, revísala antes de confiar en ella)</span>
         )}
       </p>
+    </div>
+  );
+}
+
+function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: number; projectId: string }) {
+  const meta = ACTION_KIND_META[item.kind];
+  const href = recommendationHref(projectId, item.recommendationId);
+
+  return (
+    <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+      <div
+        style={{
+          flexShrink: 0,
+          width: 22,
+          height: 22,
+          borderRadius: "50%",
+          background: "var(--surface-2)",
+          color: "var(--ink-3)",
+          fontSize: 11,
+          fontWeight: 750,
+          display: "grid",
+          placeItems: "center"
+        }}
+      >
+        {index}
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+          <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
+          <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
+            {item.topic}
+          </span>
+        </div>
+        <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
+        {item.competitors.length > 0 && (
+          <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
+            La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
+          </p>
+        )}
+        <Link href={href} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
+          {meta.linkLabel}
+        </Link>
+      </div>
     </div>
   );
 }
@@ -278,7 +430,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     scanIds.length > 0
       ? await supabase
           .from("scan_prompt_results")
-          .select("prompt_id, run_id, extracted_json, provider, mentioned_competitors_count, brand_mentioned")
+          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count, brand_mentioned")
           .eq("project_id", projectId)
           .in("run_id", scanIds)
           .eq("status", "completed")
@@ -316,6 +468,81 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     summary?.coveragePct !== null && summary?.coveragePct !== undefined && previousCoveragePct !== null
       ? summary.coveragePct - previousCoveragePct
       : null;
+
+  // WEB-AUDIT-ACTION: competitor names the AI actually mentioned per topic,
+  // and a deep-link to the matching `add_citation_block` recommendation when
+  // one exists — both read straight from data this page already loads for
+  // `latestMap.scanId`, no new Gemini calls, no schema. `resultIdToPromptId`
+  // mirrors the join lib/recommendations/coverage-overlay.ts already
+  // establishes for the same recommendation type.
+  //
+  // A prompt can have more than one result row (one per LLM provider the
+  // project scans with, e.g. Gemini + Claude) — collect every row's
+  // extraction per promptId first, then merge, instead of overwriting with
+  // whichever row happens to be iterated last (production bug: a name from
+  // a DIFFERENT provider's row than the one actually shown was leaking into
+  // the resolved list).
+  const latestScanResultRows = ((resultRows ?? []) as Array<PromptResultLite & { id: string; run_id: string }>).filter(
+    (row) => latestMap && row.run_id === latestMap.scanId
+  );
+  const competitorListsByPromptId = new Map<string, string[][]>();
+  const resultIdToPromptId = new Map<string, string>();
+  for (const row of latestScanResultRows) {
+    if (!row.prompt_id) continue;
+    const lists = competitorListsByPromptId.get(row.prompt_id) ?? [];
+    lists.push(extractMentionedCompetitors(row.extracted_json));
+    competitorListsByPromptId.set(row.prompt_id, lists);
+    resultIdToPromptId.set(row.id, row.prompt_id);
+  }
+  const competitorsByPromptId = new Map<string, string[]>();
+  for (const [promptId, lists] of competitorListsByPromptId) {
+    competitorsByPromptId.set(promptId, mergeCompetitorNames(lists));
+  }
+
+  // Only these two recommendation types anchor their evidence to a single
+  // scan_prompt_results row (dedupeKey: `<type>:${result.id}` in
+  // recommendation-engine.ts) — every other type is aggregate/run-wide
+  // (e.g. close_competitor_gap groups multiple prompts by competitor name)
+  // and can't be joined back to one specific topic. content_gap/
+  // unverified_cited topics genuinely have no matching recommendation yet;
+  // that's a real gap in the engine's rule set, not a bug in this join.
+  const { data: matchedRecs } = latestMap
+    ? await supabase
+        .from("recommendations")
+        .select("id, title, description, evidence_json")
+        .eq("project_id", projectId)
+        .eq("run_id", latestMap.scanId)
+        .in("recommendation_type", ["add_citation_block", "increase_brand_visibility"])
+        .eq("status", "active")
+    : { data: [] };
+
+  // Founder report: "Ver recomendación →" sent the founder to a
+  // decontextualized Recomendaciones page with no explanation of the
+  // problem or the fix right where they were looking. When a real
+  // recommendation matches this exact topic, surface its own title/
+  // description inline instead of making the link the only place to read
+  // it — the link still exists, but as a secondary "ver más" action.
+  const recommendationByPromptId = new Map<string, { id: string; title: string; description: string }>();
+  for (const rec of (matchedRecs ?? []) as Array<{
+    id: string;
+    title: string;
+    description: string;
+    evidence_json: { affected_prompt_details?: Array<{ id: string }> } | null;
+  }>) {
+    const resultId = rec.evidence_json?.affected_prompt_details?.[0]?.id;
+    if (!resultId) continue;
+    const promptId = resultIdToPromptId.get(resultId);
+    if (!promptId || recommendationByPromptId.has(promptId)) continue;
+    recommendationByPromptId.set(promptId, { id: rec.id, title: rec.title, description: rec.description });
+  }
+  const recommendationIdByPromptId = new Map<string, string>();
+  for (const [promptId, rec] of recommendationByPromptId) {
+    recommendationIdByPromptId.set(promptId, rec.id);
+  }
+
+  const actionPlan = summary
+    ? buildActionPlan({ summary, competitorsByPromptId, recommendationIdByPromptId })
+    : [];
 
   const grouped: Record<TopicOutcome, ClassifiedTopic[]> = {
     performing: [],
@@ -476,6 +703,29 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </div>
           </div>
 
+          {/* Plan de acción (WEB-AUDIT-ACTION) — the first accionable thing
+              after the KPIs, closing the "¿y ahora qué hago?" the matrix on
+              its own leaves open. */}
+          <div className="card" style={{ marginTop: 12 }}>
+            <div style={{ padding: "13px 16px 0" }}>
+              <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
+              <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                Las acciones de mayor palanca según la matriz, de más a menos urgentes.
+              </div>
+            </div>
+            <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {actionPlan.length > 0 ? (
+                actionPlan.map((item, i) => (
+                  <ActionPlanRow key={item.promptId} item={item} index={i + 1} projectId={projectId} />
+                ))
+              ) : (
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  Tu contenido propio está rindiendo — nada urgente que crear ahora.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Opportunity matrix + trend — auto-fit so the two cards sit side by
               side on desktop but stack (never squash) on mobile; with only the
               matrix (no trend yet) auto-fit collapses the empty track to full
@@ -597,7 +847,14 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {TOPIC_LIST_ORDER.flatMap((outcome) => grouped[outcome]).map((topic) => (
-              <TopicRow key={topic.promptId} topic={topic} brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false} />
+              <TopicRow
+                key={topic.promptId}
+                topic={topic}
+                competitors={competitorsByPromptId.get(topic.promptId) ?? []}
+                brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
+                recommendation={recommendationByPromptId.get(topic.promptId) ?? null}
+                projectId={projectId}
+              />
             ))}
           </div>
         </>

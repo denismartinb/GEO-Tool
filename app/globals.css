@@ -1980,6 +1980,9 @@ textarea.add-prompts-text-input {
   margin-bottom: 12px;
   transition: box-shadow .15s, border-color .15s;
   overflow: hidden;
+  /* So a #rec-<id> deep-link (WEB-AUDIT-ACTION) doesn't land the card under
+     the page's sticky header. */
+  scroll-margin-top: 84px;
 }
 .rec-card:hover { box-shadow: var(--sh-2); border-color: var(--line-strong); }
 

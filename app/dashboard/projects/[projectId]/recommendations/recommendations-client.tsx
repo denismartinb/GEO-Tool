@@ -395,7 +395,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         : "badge badge-neutral";
 
   return (
-    <div className={`rec-card${open ? " open" : ""}`}>
+    <div id={`rec-${rec.id}`} className={`rec-card${open ? " open" : ""}`}>
       <div
         className="rec-main"
         onClick={() => setOpen((o) => !o)}
