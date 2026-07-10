@@ -158,7 +158,7 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí, escríbenos a soporte@genscore.es y lo cambiamos por ti. Estamos preparando el cambio de plan self-service; hasta entonces lo gestionamos a mano, sin coste ni permanencia."
+    a: "Sí, desde \"Plan y facturación\" en tu cuenta, sin esperar a nadie. Mientras no activemos la facturación real, cambiar de plan no tiene coste ni compromiso de permanencia."
   },
   {
     q: "¿Qué incluye la prueba de Pro?",

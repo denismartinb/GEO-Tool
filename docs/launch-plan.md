@@ -352,6 +352,29 @@ lanzar un segundo escaneo; un starter no recibe scans diarios del cron.
   colisiona con el nuevo límite — su propósito real (probar el tope de
   prompts del plan) es independiente de esa colisión.
 
+**Hallazgo posterior, corregido (2026-07-09):** al empezar PLATFORM-COMMERCIAL-1
+se descubrió que el grep de PR a (acotado a "ChatGPT|Perplexity|AI
+Overviews|4 motores") no cubrió todas las superficies con reclamos falsos.
+Quedaban vivos en `main`: `components/billing/plan-billing-section.tsx` y
+`components/billing/billing-content.tsx` (ambos prometían a Agencia
+"workspaces multi-cliente" e "informes white-label" inexistentes),
+`components/settings/organization-tab.tsx` (el hint del logo de
+organización decía "Aparece en los informes white-label"),
+`components/onboarding-wizard.tsx` (chips de motor mostrando ChatGPT/Google
+AI Overviews/Perplexity/Claude en el wizard de alta de dominio, y el copy
+"4 motores de IA"). Además, la propia FAQ reescrita en PR a decía que el
+cambio de plan **no** era self-service todavía ("hasta entonces lo
+gestionamos a mano") — resultó ser incorrecto: `changePlan`
+(`app/dashboard/settings/billing/actions.ts`, vía
+`components/billing/plan-billing-section.tsx`) ya es un cambio de plan
+self-service real y funcional hoy (sin coste, porque no hay facturación
+todavía). Los cinco puntos corregidos en el mismo barrido; grep final de
+`white-label|workspaces multi-cliente|todos los motores|4 motores|ChatGPT|
+Perplexity|AI Overviews|Slack` sobre `app/`, `components/`, `lib/` limpio
+(el único resultado restante, en `lib/llm/gemini.ts`, es un prompt interno
+para el LLM generador de preguntas, no una promesa de producto). 341/341
+tests y `pnpm run validate` en verde.
+
 ---
 
 ## Fase 3 — PLATFORM-COMMERCIAL-1

@@ -60,7 +60,7 @@ export function OrganizationTab({
                 Cambiar logo
               </Button>
               <div className="set-hint" style={{ marginTop: 7 }}>
-                Aparece en los informes white-label.
+                Se mostrará en tu cuenta y en futuros informes exportables.
               </div>
             </div>
           </div>
