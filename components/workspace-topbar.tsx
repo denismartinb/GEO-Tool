@@ -17,7 +17,8 @@ const routeLabels = [
   { suffix: "/prompts", label: "Prompts" },
   { suffix: "/competitors", label: "Competidores" },
   { suffix: "/recommendations", label: "Recomendaciones" },
-  { suffix: "/runs", label: "Escaneos" }
+  { suffix: "/runs", label: "Escaneos" },
+  { suffix: "/web-audit", label: "Auditoría web" }
 ];
 
 const statusLabels: Record<string, string> = {

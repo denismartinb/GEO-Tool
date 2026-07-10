@@ -8,7 +8,6 @@ import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
-import { isProOrAbove } from "@/lib/billing";
 import {
   ENABLE_SYNC_SCAN_EXECUTION,
   getRunErrorDisplay,
@@ -19,14 +18,12 @@ import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/f
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
-import { DomainCoverageSection } from "./domain-coverage-section";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
-// (docs/adr/0003). Two callers on this page need the full 60s Vercel budget
-// instead of the platform default: `autoExecutePendingScan`, which runs a
-// window of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s),
-// and the domain-coverage audit (auditDomainCoverageAction), which runs
-// several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS.
+// (docs/adr/0003). `autoExecutePendingScan` needs the full 60s Vercel budget:
+// it runs a window of scan batches per call (up to
+// AUTO_EXECUTE_TIME_BUDGET_MS ~40s). The domain-coverage audit moved to the
+// Auditoría web page (WEB-AUDIT-1), which carries its own maxDuration.
 export const maxDuration = 60;
 
 /* ---- Status helpers ---- */
@@ -184,32 +181,20 @@ export default async function RunsPage({
   const { projectId } = await params;
   const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
 
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
 
-  // "Cobertura del dominio" (DOMAIN-COVERAGE-1) is Pro+-gated. Read the raw
-  // plan column directly via isProOrAbove, never via getPlanForUser/resolvePlan
-  // (see lib/billing.ts for why that fallback is unsafe for a feature gate).
-  // Runs concurrently with the runs fetch — neither depends on the other.
   // Reconciliation itself is decided below from the already-fetched runs
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [{ data: coverageProfile }, { data: runsData }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("current_plan")
-      .eq("id", user.id)
-      .maybeSingle(),
-    supabase
-      .from("scan_runs")
-      .select(RUNS_SELECT)
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(50)
-  ]);
-  const canAuditCoverage = isProOrAbove(coverageProfile?.current_plan as string | undefined);
+  const { data: runsData } = await supabase
+    .from("scan_runs")
+    .select(RUNS_SELECT)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(50);
 
   let allRuns = runsData ?? [];
   if (scanRunsNeedReconciliation(allRuns)) {
@@ -564,10 +549,6 @@ export default async function RunsPage({
         </div>
       </div>
 
-      {/* Cobertura del dominio (DOMAIN-COVERAGE-1) — sits directly under the scan
-          controls; provisional placement, UX to be finalised. */}
-      <DomainCoverageSection projectId={projectId} canAuditCoverage={canAuditCoverage} />
-
       {/* Empty state */}
       {allRuns.length === 0 ? (
         <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
@@ -861,6 +842,20 @@ export default async function RunsPage({
         >
           <Icon name="prompts" size={13} />
           Prompts
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/web-audit`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontSize: 13,
+            color: "var(--ink-3)",
+            fontWeight: 600
+          }}
+        >
+          <Icon name="search" size={13} />
+          Auditoría web
         </Link>
         <Link
           href="/dashboard/projects/new"

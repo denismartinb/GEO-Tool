@@ -397,10 +397,11 @@ export async function dismissRecommendationAction(input: {
 
 /**
  * "Auditar cobertura del dominio" (DOMAIN-COVERAGE-1): standalone, Pro+-gated
- * feature on the Escaneos page. Audits, per active prompt topic of the latest
- * completed scan, whether the brand's own domain verifiably publishes content
- * on it (Google Search grounding restricted to the domain). Called directly
- * from the client via `useTransition`, same pattern as `rewriteRecommendationAction`.
+ * feature on the Auditoría web page (WEB-AUDIT-1; previously on Escaneos).
+ * Audits, per active prompt topic of the latest completed scan, whether the
+ * brand's own domain verifiably publishes content on it (Google Search
+ * grounding restricted to the domain). Called directly from the client via
+ * `useTransition`, same pattern as `rewriteRecommendationAction`.
  * See lib/recommendations/domain-coverage.ts for the plan gate, verified-
  * citation filtering, time budget, and rate-limit invariants.
  */
@@ -417,7 +418,7 @@ export async function auditDomainCoverageAction(input: {
   const result = await auditDomainCoverageCore({ ...parsed.data, supabase, service, user });
 
   if (result.success) {
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/web-audit`);
   }
 
   return result;

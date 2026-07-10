@@ -3,6 +3,7 @@ import {
   generateAddedPrompts,
   generateGeminiVisibilityAnswer,
   rewriteRecommendation,
+  auditDomainContent,
   GeminiConfigError,
   GeminiTimeoutError
 } from "./gemini";
@@ -567,5 +568,69 @@ describe("rewriteRecommendation", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(rewriteRecommendation(rewriteInput())).rejects.toThrow();
+  });
+});
+
+describe("auditDomainContent (WEB-AUDIT-DQ query derivation)", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  const auditInput = {
+    brand: "Ryanair",
+    domain: "ryanair.com",
+    language: "es",
+    topic: "¿Cuáles son las políticas de equipaje de mano más comunes en las aerolíneas económicas?"
+  };
+
+  it("does NOT hand Gemini the full question as a literal site: search query", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: "Sí, hay una página." }] } }],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await auditDomainContent(auditInput);
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const contentText = body.contents[0].parts[0].text as string;
+    const instructionText = body.systemInstruction.parts[0].text as string;
+
+    // The regression we are fixing: the old prompt embedded
+    // `Search query: site:ryanair.com {full question}`, which Gemini searched
+    // verbatim and got zero grounding chunks for.
+    expect(contentText).not.toContain(`Search query: site:${auditInput.domain}`);
+    // It still enables grounding and restricts to the domain in the instruction.
+    expect(body.tools).toEqual([{ google_search: {} }]);
+    expect(instructionText).toContain(`site:${auditInput.domain}`);
+    // And it instructs keyword-subject derivation instead of verbatim search.
+    expect(instructionText).toMatch(/keyword/i);
+    expect(instructionText).toMatch(/do not search for the full question text verbatim/i);
+  });
+
+  it("parses own-domain grounding chunks from the response", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [
+        {
+          content: { parts: [{ text: "Página encontrada." }] },
+          groundingMetadata: {
+            groundingChunks: [{ web: { uri: "https://redirect/abc", title: "Equipaje de mano" } }]
+          }
+        }
+      ],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await auditDomainContent(auditInput);
+    expect(result.groundingChunks).toEqual([{ uri: "https://redirect/abc", title: "Equipaje de mano" }]);
+    expect(result.text).toBe("Página encontrada.");
   });
 });
