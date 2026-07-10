@@ -17,6 +17,8 @@ export type UsageSummary = {
   engineCount: number;
   engineCap: number;
   activeProjects: ActiveProjectSummary[];
+  /** Whether the account has ever had a real Stripe customer — kept even after a downgrade/cancellation so past invoices stay reachable via the Customer Portal. */
+  hasStripeCustomer: boolean;
 };
 
 /**
@@ -69,7 +71,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
   const { supabase, user } = await requireUser();
 
   const [{ data: profile }, { data: projects }, { data: prompts }, { data: results }] = await Promise.all([
-    supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("current_plan, stripe_customer_id").eq("id", user.id).maybeSingle(),
     supabase.from("projects").select("id, name, domain").eq("is_archived", false),
     supabase.from("project_prompts").select("id").eq("is_active", true),
     supabase
@@ -91,6 +93,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     projectCap: plan.caps.projects,
     engineCount: engineSet.size,
     engineCap: plan.caps.engines,
-    activeProjects: projects ?? []
+    activeProjects: projects ?? [],
+    hasStripeCustomer: Boolean(profile?.stripe_customer_id)
   };
 }

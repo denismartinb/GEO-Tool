@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
-import type { CheckoutSessionResult } from "@/app/dashboard/settings/billing/actions";
+import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
 
 const money = (n: number, dec = 2) =>
   n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + " €";
@@ -36,7 +36,9 @@ export function ChangePlanModal({
   activeProjects,
   onClose,
   onApply,
-  onCheckout
+  onCheckout,
+  onManageBilling,
+  overageOnly = false
 }: {
   currentId: Plan["id"];
   initialTargetId?: Plan["id"];
@@ -45,10 +47,20 @@ export function ChangePlanModal({
   onApply: (targetId: Plan["id"], archiveProjectIds: string[]) => Promise<{ success: boolean; error?: string }>;
   /** BILLING-STRIPE-1: real Stripe Checkout Session for a Free -> paid move. */
   onCheckout: (targetId: Plan["id"]) => Promise<CheckoutSessionResult>;
+  /** BILLING-STRIPE-1 PR 2: real Stripe Customer Portal session — payment method, invoices, cancellation, and paid<->paid plan switching. */
+  onManageBilling: (intent?: PortalIntent) => Promise<PortalSessionResult>;
+  /**
+   * Opens straight into the archive picker for the CURRENT plan instead of a
+   * plan-change flow — used when a Portal-driven change (switch or
+   * cancellation, both outside this app) left the account over its own
+   * plan's domain cap. The founder chose to always ask the owner which
+   * domains to keep rather than auto-archiving on their behalf.
+   */
+  overageOnly?: boolean;
 }) {
   const current = PLANS.find((p) => p.id === currentId)!;
-  const [sel, setSel] = useState<Plan["id"]>(initialTargetId ?? currentId);
-  const [step, setStep] = useState<"select" | "confirm" | "done">("select");
+  const [sel, setSel] = useState<Plan["id"]>(overageOnly ? currentId : (initialTargetId ?? currentId));
+  const [step, setStep] = useState<"select" | "confirm" | "overage" | "done">(overageOnly ? "overage" : "select");
   const [error, setError] = useState<string | null>(null);
   const [archiveIds, setArchiveIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -72,12 +84,15 @@ export function ChangePlanModal({
   // BILLING-STRIPE-1: only a Free -> paid move can go through Checkout (a
   // fresh subscription). Switching between two already-paid plans would
   // create a second parallel Stripe subscription instead of modifying the
-  // existing one — that needs the Customer Portal's in-place, prorated
-  // subscription update (PR 2), not a new Checkout Session. Disabled here
-  // rather than faked.
+  // existing one — that goes through the Customer Portal's in-place,
+  // prorated subscription update instead (PR 2).
   const requiresCheckout = currentId === "free" && target.id !== "free";
   const isDowngradeToFree = currentId !== "free" && target.id === "free";
   const paidToPaidBlocked = currentId !== "free" && target.id !== "free" && target.id !== currentId;
+  // Agency has no self-serve Stripe price (still "hablar con ventas" per
+  // PRICING-TRUTH-1) — only Starter<->Pro can be deep-linked into the
+  // Portal's plan-switch flow.
+  const paidToPaidSelfServe = paidToPaidBlocked && target.id !== "agency";
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
@@ -103,6 +118,8 @@ export function ChangePlanModal({
 
   const footNote = isSame ? (
     "Selecciona un plan distinto al actual."
+  ) : paidToPaidSelfServe ? (
+    "Se gestiona en el portal seguro de Stripe."
   ) : paidToPaidBlocked ? (
     "Disponible muy pronto."
   ) : requiresCheckout ? (
@@ -135,6 +152,20 @@ export function ChangePlanModal({
     });
   };
 
+  const handleGoToPortal = () => {
+    setError(null);
+    startTransition(async () => {
+      // paidToPaidSelfServe already excludes "free" and "agency", so this is
+      // always "starter" or "pro" here.
+      const result = await onManageBilling({ type: "update", planId: sel as "starter" | "pro" });
+      if (result.success) {
+        window.location.href = result.url;
+      } else {
+        setError(result.error);
+      }
+    });
+  };
+
   return (
     <div className="cp-scrim" onClick={close}>
       <div
@@ -149,7 +180,9 @@ export function ChangePlanModal({
             <Icon name="grid" size={20} />
           </div>
           <div>
-            <h3>{step === "done" ? "Cambio confirmado" : "Cambiar de plan"}</h3>
+            <h3>
+              {step === "done" ? "Cambio confirmado" : step === "overage" ? "Ajusta tus dominios activos" : "Cambiar de plan"}
+            </h3>
             <p>
               {step === "select" && (
                 <>
@@ -158,6 +191,7 @@ export function ChangePlanModal({
               )}
               {step === "confirm" &&
                 (requiresCheckout ? "Vas a completar el pago en Stripe" : "Revisa qué cambia antes de confirmar")}
+              {step === "overage" && "Elige qué dominios mantener activos"}
               {step === "done" && "Todo listo"}
             </p>
           </div>
@@ -209,13 +243,27 @@ export function ChangePlanModal({
                   );
                 })}
               </div>
-              {paidToPaidBlocked && (
+              {paidToPaidSelfServe && (
                 <p className="cp-pror-note" style={{ marginTop: 14 }}>
                   <Icon name="info" size={14} />
                   <span>
-                    Cambiar entre planes de pago estará disponible muy pronto. Mientras tanto, escríbenos a{" "}
+                    Cambiar entre {current.name} y {target.name} se gestiona en el portal seguro de Stripe, donde
+                    también puedes cancelar o ver tus facturas.
+                  </span>
+                </p>
+              )}
+              {paidToPaidBlocked && !paidToPaidSelfServe && (
+                <p className="cp-pror-note" style={{ marginTop: 14 }}>
+                  <Icon name="info" size={14} />
+                  <span>
+                    Cambiar a {target.name} estará disponible muy pronto. Mientras tanto, escríbenos a{" "}
                     <b>soporte@genscore.es</b>.
                   </span>
+                </p>
+              )}
+              {error && (
+                <p className="feedback error" style={{ marginTop: 14 }}>
+                  {error}
                 </p>
               )}
             </div>
@@ -224,8 +272,12 @@ export function ChangePlanModal({
               <Button type="button" variant="ghost" onClick={close}>
                 Cancelar
               </Button>
-              <Button type="button" disabled={isSame || paidToPaidBlocked} onClick={() => setStep("confirm")}>
-                Continuar
+              <Button
+                type="button"
+                disabled={isSame || isPending || (paidToPaidBlocked && !paidToPaidSelfServe)}
+                onClick={paidToPaidSelfServe ? handleGoToPortal : () => setStep("confirm")}
+              >
+                {paidToPaidSelfServe ? (isPending ? "Abriendo portal…" : "Ir al portal de Stripe") : "Continuar"}
                 <Icon name="arrRight" size={15} />
               </Button>
             </div>
@@ -402,16 +454,99 @@ export function ChangePlanModal({
           </>
         )}
 
+        {step === "overage" && (
+          <>
+            <div className="cp-body">
+              <div className="cp-pror-note">
+                <Icon name="info" size={14} />
+                <span>
+                  Tienes <b>{activeProjects.length}</b> dominios activos y tu plan <b>{current.name}</b> permite{" "}
+                  <b>{current.caps.projects}</b>. Elige {requiredArchiveCount} para archivar — el resto sigue
+                  monitorizándose sin cambios.
+                </span>
+              </div>
+              <div className="cp-diff">
+                <div className="cp-diff-h">
+                  <Icon name="alertCircle" size={14} />
+                  Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar
+                </div>
+                <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                  {activeProjects.map((project) => {
+                    const checked = archiveIds.has(project.id);
+                    const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
+                    return (
+                      <li key={project.id}>
+                        <label
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            width: "100%",
+                            cursor: disableUnchecked ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={disableUnchecked}
+                            onChange={() => toggleArchiveId(project.id)}
+                          />
+                          <span className="k">{project.name}</span>
+                          <span className="from" style={{ textDecoration: "none" }}>
+                            {project.domain}
+                          </span>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="cp-pror-note" style={{ marginTop: 10 }}>
+                  <Icon name="info" size={14} />
+                  <span>
+                    Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
+                    configuración ni sus escaneos.
+                  </span>
+                </p>
+              </div>
+              {error && (
+                <p className="feedback error" style={{ marginTop: 14 }}>
+                  {error}
+                </p>
+              )}
+            </div>
+            <div className="cp-foot">
+              <div className="cp-foot-note">
+                Efectivo <b>de inmediato</b>
+              </div>
+              <Button
+                type="button"
+                disabled={isPending || !archiveSelectionComplete}
+                onClick={handleConfirmDowngrade}
+              >
+                {isPending ? "Guardando…" : "Confirmar archivado"}
+              </Button>
+            </div>
+          </>
+        )}
+
         {step === "done" && (
           <>
             <div className="cp-done">
               <div className="cp-done-badge">
                 <Icon name="check" size={30} />
               </div>
-              <h3>Ya estás en {target.name}</h3>
+              <h3>{overageOnly ? "Dominios actualizados" : `Ya estás en ${target.name}`}</h3>
               <p>
-                Tu plan <b>{target.name}</b> está activo desde ahora. Puedes cambiarlo cuando quieras desde Plan y
-                facturación.
+                {overageOnly ? (
+                  <>
+                    Tus dominios activos ya encajan en el plan <b>{current.name}</b>.
+                  </>
+                ) : (
+                  <>
+                    Tu plan <b>{target.name}</b> está activo desde ahora. Puedes cambiarlo cuando quieras desde Plan y
+                    facturación.
+                  </>
+                )}
               </p>
             </div>
             <div className="cp-foot" style={{ justifyContent: "flex-end" }}>

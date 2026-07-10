@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { getUsageSummary } from "@/lib/billing";
 import { PLANS } from "@/app/pricing/plans-data";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
+import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 
 const agencyPlan = PLANS.find((plan) => plan.id === "agency")!;
 
@@ -17,7 +18,6 @@ export async function BillingContent({
   checkoutStatus?: string;
 }) {
   const usage = await getUsageSummary();
-  const hasStripeSubscription = usage.planId !== "free";
 
   const sections = (
     <>
@@ -62,20 +62,14 @@ export async function BillingContent({
 
         <Card>
           <CardContent className="space-y-3 py-6 text-center">
-            {hasStripeSubscription ? (
+            <Icon name="card" size={22} className="mx-auto text-[var(--ink-3)]" />
+            {usage.hasStripeCustomer ? (
               <>
-                <Icon name="card" size={22} className="mx-auto text-[var(--ink-3)]" />
-                <p className="sub">
-                  La gestión de método de pago y el historial de facturas estarán disponibles aquí muy pronto, a
-                  través del portal de facturación de Stripe. Mientras tanto, escríbenos a{" "}
-                  <b>soporte@genscore.es</b>.
-                </p>
+                <p className="sub">Actualiza tu método de pago o consulta tu historial de facturas en Stripe.</p>
+                <ManageBillingButton />
               </>
             ) : (
-              <>
-                <Icon name="card" size={22} className="mx-auto text-[var(--ink-3)]" />
-                <p className="sub">Todavía no tienes ningún plan de pago activo.</p>
-              </>
+              <p className="sub">Todavía no tienes ningún plan de pago activo.</p>
             )}
           </CardContent>
         </Card>
