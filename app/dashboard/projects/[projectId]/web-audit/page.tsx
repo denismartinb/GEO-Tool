@@ -7,7 +7,7 @@ import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
-import { buildActionPlan, extractMentionedCompetitors, type ActionItem, type ActionItemKind } from "@/lib/web-audit/action-plan";
+import { buildActionPlan, extractMentionedCompetitors, mergeCompetitorNames, type ActionItem, type ActionItemKind } from "@/lib/web-audit/action-plan";
 import { RunAuditButton } from "./run-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
@@ -361,41 +361,28 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // `latestMap.scanId`, no new Gemini calls, no schema. `resultIdToPromptId`
   // mirrors the join lib/recommendations/coverage-overlay.ts already
   // establishes for the same recommendation type.
+  //
+  // A prompt can have more than one result row (one per LLM provider the
+  // project scans with, e.g. Gemini + Claude) — collect every row's
+  // extraction per promptId first, then merge, instead of overwriting with
+  // whichever row happens to be iterated last (production bug: a name from
+  // a DIFFERENT provider's row than the one actually shown was leaking into
+  // the resolved list).
   const latestScanResultRows = ((resultRows ?? []) as Array<PromptResultLite & { id: string; run_id: string }>).filter(
     (row) => latestMap && row.run_id === latestMap.scanId
   );
-  const competitorsByPromptId = new Map<string, string[]>();
+  const competitorListsByPromptId = new Map<string, string[][]>();
   const resultIdToPromptId = new Map<string, string>();
   for (const row of latestScanResultRows) {
     if (!row.prompt_id) continue;
-    competitorsByPromptId.set(row.prompt_id, extractMentionedCompetitors(row.extracted_json));
+    const lists = competitorListsByPromptId.get(row.prompt_id) ?? [];
+    lists.push(extractMentionedCompetitors(row.extracted_json));
+    competitorListsByPromptId.set(row.prompt_id, lists);
     resultIdToPromptId.set(row.id, row.prompt_id);
   }
-
-  // TEMPORARY DIAGNOSTIC (WEB-AUDIT-ACTION follow-up): founder reported a
-  // content_gap topic's "La IA cita a" chip missing a brand (Movistar) that
-  // visibly leads the AI's actual answer. Logs the raw extraction fields
-  // this page reads from, for content_gap topics only, so we can see in
-  // Vercel logs whether other_brands_mentioned was actually populated by
-  // the extraction step for this scan — no new scan needed, a page reload
-  // is enough. Remove once diagnosed.
-  if (summary) {
-    for (const topic of summary.topics) {
-      if (topic.outcome !== "content_gap") continue;
-      const row = latestScanResultRows.find((r) => r.prompt_id === topic.promptId);
-      const extracted = row?.extracted_json as
-        | { competitors?: Array<{ name?: string; mentioned?: boolean }>; other_brands_mentioned?: string[] }
-        | null
-        | undefined;
-      console.log("[geo:web-audit]:action_diag content_gap", {
-        project_id: projectId,
-        prompt_id: topic.promptId,
-        provider: row?.provider ?? null,
-        tracked_competitors: extracted?.competitors ?? null,
-        other_brands_mentioned: extracted?.other_brands_mentioned ?? null,
-        resolved: competitorsByPromptId.get(topic.promptId) ?? []
-      });
-    }
+  const competitorsByPromptId = new Map<string, string[]>();
+  for (const [promptId, lists] of competitorListsByPromptId) {
+    competitorsByPromptId.set(promptId, mergeCompetitorNames(lists));
   }
 
   const { data: addCitationRecs } = latestMap

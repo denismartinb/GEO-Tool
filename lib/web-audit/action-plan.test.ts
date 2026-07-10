@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildActionPlan, extractMentionedCompetitors, type ActionItem } from "@/lib/web-audit/action-plan";
+import { buildActionPlan, extractMentionedCompetitors, mergeCompetitorNames, type ActionItem } from "@/lib/web-audit/action-plan";
 import type { ClassifiedTopic, TopicOutcome, WebAuditSummary } from "@/lib/web-audit/opportunity-matrix";
 
 function topic(overrides: Partial<ClassifiedTopic> & { promptId: string; outcome: TopicOutcome }): ClassifiedTopic {
@@ -178,5 +178,33 @@ describe("extractMentionedCompetitors", () => {
       other_brands_mentioned: ["movistar", "Movistar "]
     };
     expect(extractMentionedCompetitors(extracted)).toEqual(["Movistar"]);
+  });
+});
+
+describe("mergeCompetitorNames", () => {
+  it("combines every provider's resolved names for the same prompt, never dropping one silently", () => {
+    // Production case: a telecom project scanning with Gemini + Claude on the
+    // same prompt. Each provider's own row resolves a different list (only
+    // Gemini's extraction happened to mention Movistar); a promptId keyed by
+    // a single "last row wins" map would drop Movistar entirely depending on
+    // iteration order.
+    const geminiRow = ["Orange España", "Vodafone España", "Movistar"];
+    const claudeRow = ["Digi España", "Yoigo"];
+    expect(mergeCompetitorNames([geminiRow, claudeRow])).toEqual([
+      "Orange España",
+      "Vodafone España",
+      "Movistar",
+      "Digi España",
+      "Yoigo"
+    ]);
+  });
+
+  it("dedupes case-insensitively across rows and respects the limit", () => {
+    const result = mergeCompetitorNames([["Movistar", "Orange"], ["movistar", "Vodafone", "Yoigo", "Jazztel"]], 3);
+    expect(result).toEqual(["Movistar", "Orange", "Vodafone"]);
+  });
+
+  it("returns an empty array for no rows", () => {
+    expect(mergeCompetitorNames([])).toEqual([]);
   });
 });

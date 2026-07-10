@@ -111,6 +111,18 @@ type ExtractedCompetitors = {
  * extraction step actually recorded. Callers build the `competitorsByPromptId`
  * map buildActionPlan needs from this, one call per scan_prompt_results row.
  */
+function dedupeCaseInsensitive(names: string[], limit: number): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const name of names) {
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out.slice(0, limit);
+}
+
 export function extractMentionedCompetitors(extractedJson: unknown): string[] {
   if (!extractedJson || typeof extractedJson !== "object") return [];
   const extracted = extractedJson as ExtractedCompetitors;
@@ -123,13 +135,21 @@ export function extractMentionedCompetitors(extractedJson: unknown): string[] {
     .filter((name): name is string => typeof name === "string" && name.trim().length > 0)
     .map((name) => name.trim());
 
-  const seen = new Set<string>();
-  const names: string[] = [];
-  for (const name of [...tracked, ...emerging]) {
-    const key = name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    names.push(name);
-  }
-  return names.slice(0, 5);
+  return dedupeCaseInsensitive([...tracked, ...emerging], 5);
+}
+
+/**
+ * A single prompt can have more than one scan_prompt_results row — one per
+ * LLM provider the project scans with (e.g. Gemini + Claude), each with its
+ * own independent extraction. Picking only one row's competitor list (the
+ * bug this fixes: a Map keyed by promptId, last-write-wins) silently drops
+ * every other provider's evidence and, worse, can surface a name from
+ * whichever row happened to be iterated last — observed in production as a
+ * competitor name appearing in the resolved chip that wasn't actually in
+ * that row's own extracted_json. Combine every provider's resolved names for
+ * the same prompt instead, so "La IA cita a" reflects what ANY provider
+ * actually said.
+ */
+export function mergeCompetitorNames(lists: string[][], limit = 5): string[] {
+  return dedupeCaseInsensitive(lists.flat(), limit);
 }
