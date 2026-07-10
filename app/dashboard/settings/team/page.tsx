@@ -1,15 +1,9 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { TeamTab } from "@/components/settings/team-tab";
 
 export default async function TeamSettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  const { user } = await requireUser();
 
   const role = await getAccountRole();
   const email = user.email ?? "";

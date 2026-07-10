@@ -17,6 +17,32 @@ import {
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
+ * Cheap, read-only gate for callers on a hot render path (Overview, Escaneos)
+ * that today call `reconcileStuckScanRuns` unconditionally on every page
+ * load. `reconcileStuckScanRuns` itself always issues its staleness-check
+ * SELECTs even when nothing is stale, so the common case (no active scan,
+ * no unresolved zero-result failure) pays that cost for nothing.
+ *
+ * `runs` must be ordered by `created_at` descending (both call sites already
+ * do this) — mirrors the two things `reconcileStuckScanRuns` can actually act
+ * on: (1) any row still `pending`/`running` (might be stale — the exact
+ * staleness cutoff is re-checked inside `reconcileStuckScanRuns` itself, this
+ * only decides whether it's worth asking), and (2) the zero-result auto-retry
+ * pass, which only ever acts on the *latest* row for the project (an older
+ * `SCAN_NO_RESULTS_ERROR_SUMMARY` row is already "superseded" by construction
+ * once a newer row exists — see the pass's own supersede check below).
+ */
+export function scanRunsNeedReconciliation(
+  runs: Array<{ status: string; error_summary?: string | null }> | null | undefined
+): boolean {
+  if (!runs?.length) return false;
+  if (runs.some((r) => r.status === "pending" || r.status === "running")) return true;
+
+  const latest = runs[0];
+  return latest.status === "failed" && latest.error_summary === SCAN_NO_RESULTS_ERROR_SUMMARY;
+}
+
+/**
  * Counts how many `scan_runs` rows for this project are already terminal
  * `failed` with a recoverable `error_summary` (ALL_RECOVERABLE_ERROR_SUMMARIES
  * — timeouts AND "zero successful prompts", SCAN-ROBUST-1) within the last

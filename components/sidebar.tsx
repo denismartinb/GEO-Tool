@@ -100,7 +100,7 @@ export function Sidebar({
             <Icon name="resonance" size={16} />
           </div>
           <div className="hide-collapsed">
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GenScore</div>
             <div className="brand-sub">Espacio de visibilidad en IA</div>
           </div>
           <button type="button" className="sb-close" onClick={handleClose} aria-label="Cerrar menú">

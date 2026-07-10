@@ -9,7 +9,7 @@ import { PLANS, PLAN_MATRIX, PLAN_FAQ, type Plan, type PlanCell } from "./plans-
 
 const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }> = [
   { icon: "prompts", t: "Prompts", d: "Cuántas preguntas monitorizamos en tu mercado, de 10 a 300.", scale: ["10", "25", "100", "300"] },
-  { icon: "layers", t: "Motores", d: "ChatGPT, AI Overviews, Perplexity, Claude — más motores, más cobertura.", scale: ["1", "2", "4", "Todos"] },
+  { icon: "layers", t: "Motores", d: "Gemini y Claude hoy — sumamos más motores de IA sin coste extra según se publiquen.", scale: ["1", "2", "2", "2"] },
   { icon: "refresh", t: "Frecuencia", d: "De un escaneo puntual a refresco diario con tendencia y alertas.", scale: ["Puntual", "Semanal", "Diario", "Diario"] }
 ];
 
@@ -134,7 +134,7 @@ export default function PricingPage() {
           />
           <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GenScore</div>
           </div>
           <div className="lp-nav-links">
             <Link href="/#producto">Producto</Link>
@@ -215,7 +215,7 @@ export default function PricingPage() {
             <h2 className="lp-h2">Todo lo que incluye cada plan</h2>
             <p className="lp-sec-sub">
               Las palancas de upsell son la cobertura de motores y la frecuencia de refresco — como en el resto del
-              mercado, pero con el bucle de acción que solo tiene Lumira.
+              mercado, pero con el bucle de acción que solo tiene GenScore.
             </p>
           </div>
           <PlanMatrix />
@@ -230,7 +230,7 @@ export default function PricingPage() {
             <div>
               <div className="price-anchor-t">El precio se ancla en el tiempo de analista que te ahorras</div>
               <p className="price-anchor-d">
-                Otras herramientas te entregan datos y te dejan el trabajo de priorizar. Lumira prioriza por ti —con
+                Otras herramientas te entregan datos y te dejan el trabajo de priorizar. GenScore prioriza por ti —con
                 evidencia, impacto y soluciones listas para implementar—. Eso es lo que justifica situarse en la
                 parte media-alta de la banda del mercado, no «otra herramienta de tracking».
               </p>
@@ -285,17 +285,18 @@ export default function PricingPage() {
           <div className="row1">
             <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
               <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">Lumira</div>
+              <div className="brand-name">GenScore</div>
             </div>
             <div className="links">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
-              <span>Privacidad</span>
-              <span>Términos</span>
+              <Link href="/privacidad">Privacidad</Link>
+              <Link href="/cookies">Cookies</Link>
+              <Link href="/terminos">Términos</Link>
             </div>
           </div>
-          <div className="copy">© 2026 Lumira · Generative Engine Optimization para empresas y agencias.</div>
+          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
     </div>

@@ -43,7 +43,7 @@ export async function BillingContent({ embedded = false }: { embedded?: boolean 
         </Link>
         <p className="order-3 text-sm text-[var(--accent-ink)] sm:order-2 sm:flex-1">
           Has usado <strong>{usage.promptCount} de {usage.promptCap}</strong> prompts incluidos en tu plan.
-          Subir a {agencyPlan.name} desbloquea workspaces multi-cliente e informes white-label.
+          Subir a {agencyPlan.name} amplía dominios y prompts a tu medida.
         </p>
       </div>
 

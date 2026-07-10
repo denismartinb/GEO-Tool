@@ -67,6 +67,7 @@ const PROJECT_ID = "11111111-1111-1111-1111-111111111111";
 const RUN_ID = "22222222-2222-2222-2222-222222222222";
 const PROMPT_JOB_ID = "33333333-3333-3333-3333-333333333333";
 const PROMPT_ID = "44444444-4444-4444-4444-444444444444";
+const OWNER_ID = "55555555-5555-5555-5555-555555555555";
 
 type JobsRow = {
   id: string;
@@ -355,8 +356,18 @@ function buildClients(
   {
     promptJobMaxAttempts,
     previousRunId = null,
-    previousRecommendationRows = []
-  }: { promptJobMaxAttempts: number; previousRunId?: string | null; previousRecommendationRows?: RecRow[] },
+    previousRecommendationRows = [],
+    ownerPlan
+  }: {
+    promptJobMaxAttempts: number;
+    previousRunId?: string | null;
+    previousRecommendationRows?: RecRow[];
+    /** PRICING-TRUTH-1 (PR b): owner's `profiles.current_plan`, read by executePendingScan
+     *  to cap the active engine set at `caps.engines`. Undefined -> no profiles row ->
+     *  resolvePlan falls back to the default plan ("pro", caps.engines: 2), same as
+     *  every test written before this option existed. */
+    ownerPlan?: string;
+  },
   existingProviders: string[] = []
 ) {
   const jobsTable = makeJobsTable([
@@ -408,6 +419,19 @@ function buildClients(
       if (table === "scan_runs") return scanRunsTable;
       if (table === "scan_prompt_results") return scanPromptResultsTable.table;
       if (table === "recommendations") return recommendationsTable.table;
+      if (table === "profiles") {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () =>
+                Promise.resolve({
+                  data: ownerPlan ? { current_plan: ownerPlan } : null,
+                  error: null
+                })
+            })
+          })
+        };
+      }
       return noopTable();
     }
   } as unknown as ServiceClient;
@@ -435,7 +459,14 @@ function buildClients(
             eq: () => ({
               single: () =>
                 Promise.resolve({
-                  data: { id: PROJECT_ID, domain: "acme.com", brand: "Acme", country: "ES", language: "es" },
+                  data: {
+                    id: PROJECT_ID,
+                    domain: "acme.com",
+                    brand: "Acme",
+                    country: "ES",
+                    language: "es",
+                    owner_user_id: OWNER_ID
+                  },
                   error: null
                 })
             })
@@ -702,6 +733,43 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted).toHaveLength(1);
     expect(scanPromptResultsTable.inserted[0].provider).toBe("claude");
+  });
+
+  it("PRICING-TRUTH-1 (PR b): caps a Free-plan project to 1 engine even with 2 configured", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3, ownerPlan: "free" });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    // LLM_SCAN_PROVIDERS="gemini,claude" preserves that order; Free's
+    // caps.engines (1) keeps only the first — Gemini, never called for
+    // Claude, and only one result row.
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(generateClaudeVisibilityAnswer).not.toHaveBeenCalled();
+    expect(scanPromptResultsTable.inserted).toHaveLength(1);
+    expect(scanPromptResultsTable.inserted[0].provider).toBe("gemini");
+  });
+
+  it("PRICING-TRUTH-1 (PR b): keeps both engines for a Starter-plan project", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      ownerPlan: "starter"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(2);
   });
 });
 

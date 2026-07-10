@@ -57,7 +57,7 @@ export {
   getDisplayErrorSummary,
   getRunErrorDisplay
 } from "@/lib/scan/errors";
-export { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
+export { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/reconciliation";
 export { createPendingScanRun, createPendingScanRunForCron } from "@/lib/scan/run-creation";
 export { executePendingScan } from "@/lib/scan/executor";
 export { launchScan } from "@/lib/scan/launch";

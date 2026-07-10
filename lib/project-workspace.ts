@@ -63,6 +63,27 @@ export type WorkspaceCounters = {
 };
 
 /**
+ * Interim cap (PERF-4a, docs/architecture-audit-2026-07.md section 2.1) on the
+ * two `getWorkspaceCounters` queries that only ever need the *most recent*
+ * row(s) per project, not an exact total: the latest scan status/date, and
+ * the latest 2 scores (for the score + its delta). Ordered `created_at`
+ * descending, so a project's most recent row always sorts before this cap
+ * unless the user has more than WORKSPACE_RECENCY_QUERY_LIMIT more-recent
+ * rows across *other* projects — at current beta scale this is generous
+ * headroom, not a real limit. If a project's data ever ages out of this
+ * window, that project's status/date/score just reads as unknown (graceful
+ * degradation), not wrong — unlike a count, which must stay exact. This is a
+ * stopgap, not the fix: the correct version is a Postgres aggregate
+ * (RPC/view) returning one row per project directly, which needs a schema
+ * migration and its own explicit approval.
+ *
+ * `completedRunCountByProject` below is deliberately NOT capped — it's a
+ * displayed count ("N escaneos completados"), and capping it would make that
+ * count silently wrong past the cap instead of gracefully stale.
+ */
+const WORKSPACE_RECENCY_QUERY_LIMIT = 1000;
+
+/**
  * Loads the active projects for the current user along with the counters and
  * status maps shared by the dashboard sidebar/topbar and the Escaneos
  * (domains) grid. Centralized here so both call sites query Supabase once
@@ -90,7 +111,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     supabase
       .from("scan_runs")
       .select("project_id, status, created_at, finished_at")
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(WORKSPACE_RECENCY_QUERY_LIMIT),
     supabase
       .from("project_prompts")
       .select("project_id")
@@ -110,7 +132,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     supabase
       .from("run_scores")
       .select("project_id, run_id, visibility_score, created_at")
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(WORKSPACE_RECENCY_QUERY_LIMIT),
     supabase
       .from("scan_runs")
       .select("id, project_id, finished_at, successful_prompts")

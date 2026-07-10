@@ -1,28 +1,60 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 const POLL_INTERVAL_MS = 4000;
 
+type ScanStatusRun = { id: string; status: string } | null;
+
 /**
- * Keeps the Overview/Escaneos pages live while a scan campaign is in
- * progress. Since SCAN-CHAIN-1, a campaign spanning multiple batches
- * completes server-side over potentially several minutes, self-chained
- * independently of this browser tab staying open — nothing client-side
- * drives it forward anymore. This component just periodically asks the
- * server for the current page state so real progress (already derived from
- * `scan_runs` counters — see `ScanInProgress`) becomes visible without a
- * manual reload, and the page naturally reflects completion once the
- * campaign finishes and `activeRun` stops being rendered by the caller.
+ * Watches the project's latest scan run while one is active, so the
+ * Overview/Escaneos pages naturally reflect completion without the user
+ * manually reloading. Previously this polled by calling `router.refresh()`
+ * on a fixed timer, which re-rendered the whole layout + page — including
+ * the unbounded `getWorkspaceCounters` query — every 4s for as long as a
+ * scan campaign ran (docs/architecture-audit-2026-07.md, finding 1.5).
+ *
+ * Now it polls the lightweight `/api/projects/[projectId]/scan-status`
+ * endpoint instead, and only triggers a real `router.refresh()` once: when
+ * the run transitions to a terminal status (completed/failed/cancelled), or
+ * is superseded by a different run id (e.g. SCAN-ROBUST-1's auto-retry
+ * creating a fresh pending run). Live progress numbers while the scan is
+ * still in flight are rendered separately by `ScanInProgressLive` /
+ * `LiveRunStatusCells`, which poll the same endpoint independently — this
+ * component itself renders nothing.
  */
-export function ScanProgressPoller() {
+export function ScanProgressPoller({ projectId, initialRunId }: { projectId: string; initialRunId: string }) {
   const router = useRouter();
+  const lastKnownRunId = useRef(initialRunId);
 
   useEffect(() => {
-    const id = setInterval(() => router.refresh(), POLL_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [router]);
+    let cancelled = false;
+
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/scan-status`, { cache: "no-store" });
+        if (!res.ok || cancelled) return;
+
+        const data: { run: ScanStatusRun } = await res.json();
+        const run = data.run;
+        const isTerminal = !run || ["completed", "failed", "cancelled"].includes(run.status);
+        const isSuperseded = Boolean(run) && run!.id !== lastKnownRunId.current;
+
+        if (isTerminal || isSuperseded) {
+          clearInterval(id);
+          if (!cancelled) router.refresh();
+        }
+      } catch {
+        // Transient network error — the next tick retries.
+      }
+    }, POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [projectId, router]);
 
   return null;
 }

@@ -17,7 +17,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Lumira",
+  title: "GenScore",
   description: "Espacio de visibilidad de marca en motores de IA"
 };
 

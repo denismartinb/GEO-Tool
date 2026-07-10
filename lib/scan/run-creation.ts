@@ -175,7 +175,38 @@ export async function createPendingScanRunCore({
     .select("current_plan")
     .eq("id", project.owner_user_id as string)
     .maybeSingle();
-  const campaignCap = resolvePlan(profileRow?.current_plan as string | undefined).caps.prompts;
+  const plan = resolvePlan(profileRow?.current_plan as string | undefined);
+  const campaignCap = plan.caps.prompts;
+
+  // PRICING-TRUTH-1 (PR b): Free is "1 escaneo puntual" (see /pricing) — a
+  // free-plan project gets exactly one real, *completed* scan, ever. Gated
+  // on a prior COMPLETED run rather than "any run exists" so this never
+  // fights SCAN-ROBUST-1's auto-retry: a timed-out/failed first attempt
+  // doesn't count, and reconcileStuckScanRuns' internal retry (also routed
+  // through this function, trigger_source='cron') is free to create the
+  // replacement run that gives the user their one real result. Once a
+  // completed run exists, this also transitively blocks the recurring-cron
+  // path (which independently already requires a completed scan to enable,
+  // and is filtered out for free-plan owners in cron.ts) and a repeat
+  // manual click, matching "sin tendencia ni monitorización" in the Free
+  // plan's own marketing copy.
+  if (plan.id === "free") {
+    const { data: priorCompletedRun, error: priorRunError } = await service
+      .from("scan_runs")
+      .select("id")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .limit(1)
+      .maybeSingle();
+
+    if (priorRunError) {
+      throw new ProjectActionError("unexpected_error");
+    }
+
+    if (priorCompletedRun) {
+      throw new ProjectActionError("free_plan_scan_limit_reached");
+    }
+  }
 
   // Reconcile any stuck pending/running runs before checking for an active
   // run, so a previously-stuck scan does not permanently block a new one

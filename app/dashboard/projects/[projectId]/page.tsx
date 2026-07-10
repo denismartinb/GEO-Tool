@@ -9,11 +9,11 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { InfoTip } from "@/components/ui/info-tip";
-import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
-import { reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -151,21 +151,21 @@ export default async function ProjectDetailPage({
   const feedback = await searchParams;
   const { supabase } = await requireUser();
 
-  const { data: project } = await supabase
-    .from("projects")
-    .select("id, name, domain, brand, country, language, created_at")
-    .eq("id", projectId)
-    .eq("is_archived", false)
-    .single();
+  const RUNS_SELECT =
+    "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
 
-  if (!project) notFound();
-
-  // Reconcile any stuck pending/running runs before reading scan_runs, so the
-  // Overview reflects a `failed` status promptly instead of showing an
-  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
-  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
-
-  const [{ data: prompts }, { data: competitors }, { data: runs }] = await Promise.all([
+  // The project row, prompts, competitors, and runs are all independent of
+  // each other and of reconciliation, so they are fetched in one batch.
+  // Reconciliation itself is decided from the already-fetched `runs` below
+  // instead of running unconditionally on every render
+  // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
+  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, domain, brand, country, language, created_at")
+      .eq("id", projectId)
+      .eq("is_archived", false)
+      .single(),
     supabase
       .from("project_prompts")
       .select("id, prompt_text, category, is_active")
@@ -180,10 +180,29 @@ export default async function ProjectDetailPage({
       .order("created_at", { ascending: false }),
     supabase
       .from("scan_runs")
-      .select("id, status, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at")
+      .select(RUNS_SELECT)
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
   ]);
+
+  if (!project) notFound();
+
+  let runs = runsData;
+  if (scanRunsNeedReconciliation(runs)) {
+    // Reconcile any stuck pending/running runs (or retry an exhausted
+    // zero-result failure), then re-read scan_runs so the Overview reflects
+    // the corrected status instead of the pre-reconciliation snapshot
+    // (docs/scan-lifecycle.md, "Timeout detection").
+    const { reconciledCount } = await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
+    if (reconciledCount > 0) {
+      const { data: refreshedRuns } = await supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false });
+      runs = refreshedRuns;
+    }
+  }
 
   const latestRun = runs?.[0];
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
@@ -433,7 +452,7 @@ export default async function ProjectDetailPage({
   /* ---- render ---- */
   return (
     <div className="page">
-      {activeRun ? <ScanProgressPoller /> : null}
+      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky page header */}
       <div className="ov-sticky-header">
@@ -506,7 +525,7 @@ export default async function ProjectDetailPage({
               ) : null}
               {latestRecommendations?.length ? (
                 <>
-                  {" "}Lumira encontró{" "}
+                  {" "}GenScore encontró{" "}
                   <b>{latestRecommendations.length} acciones prioritarias</b> para mejorar tu visibilidad.
                 </>
               ) : null}
@@ -1125,7 +1144,7 @@ export default async function ProjectDetailPage({
         /* ===== EMPTY STATE ===== */
         activeRun ? (
           /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
-          <ScanInProgress activeRun={activeRun} />
+          <ScanInProgressLive projectId={projectId} initial={activeRun} />
         ) : prompts?.length ? (
           /* Estado B — Listo para lanzar */
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>

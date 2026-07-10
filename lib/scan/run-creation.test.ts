@@ -371,9 +371,14 @@ describe("createPendingScanRunCore", () => {
     // defensively truncated at MAX_REAL_SCAN_PROMPTS — its real callers
     // (addPromptsCore) already bound it small, and execution now batches
     // any size. The only remaining cap here is the owner's plan, so use a
-    // count above the Free plan's cap (10) to prove that cap still applies.
-    const FREE_PLAN_CAP = 10;
-    const newPrompts = Array.from({ length: FREE_PLAN_CAP + 1 }, (_, i) => ({
+    // count above Starter's cap (25) to prove that cap still applies.
+    // Deliberately not the Free plan here: PRICING-TRUTH-1 (PR b) added a
+    // separate one-completed-scan-ever limit for Free (see the dedicated
+    // "free plan" describe block below), which this fixture's prior
+    // completed run would otherwise trip — this test is about the prompts
+    // cap, not that limit.
+    const STARTER_PLAN_CAP = 25;
+    const newPrompts = Array.from({ length: STARTER_PLAN_CAP + 1 }, (_, i) => ({
       id: `new-${i}`,
       project_id: PROJECT_ID,
       prompt_text: `New prompt ${i}`,
@@ -384,7 +389,7 @@ describe("createPendingScanRunCore", () => {
     const priorRun = { id: "run-old", project_id: PROJECT_ID, status: "completed", created_at: "2026-01-01T00:00:00.000Z" };
     // One of the "overflow" new prompts already has a prior result (simulating
     // a retry of an add-prompts batch whose first attempt partially scanned).
-    const overflowPromptId = newPrompts[FREE_PLAN_CAP].id;
+    const overflowPromptId = newPrompts[STARTER_PLAN_CAP].id;
     const priorResults: Row[] = [
       {
         id: "spr-overflow",
@@ -421,7 +426,7 @@ describe("createPendingScanRunCore", () => {
         project_prompts: newPrompts,
         scan_runs: [priorRun],
         scan_prompt_results: priorResults,
-        profiles: [{ id: OWNER_ID, current_plan: "free" }]
+        profiles: [{ id: OWNER_ID, current_plan: "starter" }]
       })
     );
 
@@ -435,7 +440,7 @@ describe("createPendingScanRunCore", () => {
     });
 
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
-    expect(promptJobs).toHaveLength(FREE_PLAN_CAP);
+    expect(promptJobs).toHaveLength(STARTER_PLAN_CAP);
 
     const scannedIds = new Set(promptJobs.map((j) => (j.payload_json as Row).prompt_id as string));
     expect(scannedIds.has(overflowPromptId)).toBe(false);
@@ -463,5 +468,108 @@ describe("createPendingScanRunCore", () => {
         onlyPromptIds: ["does-not-exist"]
       })
     ).rejects.toMatchObject({ code: "prompts_required" });
+  });
+});
+
+describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", () => {
+  beforeEach(() => {
+    nextId = 1;
+  });
+
+  const p1 = { id: "p1", project_id: PROJECT_ID, prompt_text: "Existing prompt", is_active: true, created_at: "2026-01-01T00:00:00.000Z" };
+
+  it("blocks a second scan for a free-plan project that already has a completed run", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const priorRun = { id: "run-old", project_id: PROJECT_ID, status: "completed", created_at: "2026-01-01T00:00:00.000Z" };
+    const { client } = makeFakeDb(
+      baseTables({
+        project_prompts: [p1],
+        scan_runs: [priorRun],
+        profiles: [{ id: OWNER_ID, current_plan: "free" }]
+      })
+    );
+
+    await expect(
+      createPendingScanRunCore({
+        projectId: PROJECT_ID,
+        readClient: client as unknown as SupabaseClient,
+        service: client as unknown as ServiceClient,
+        triggeredByUserId: "user-1",
+        triggerSource: "user"
+      })
+    ).rejects.toMatchObject({ code: "free_plan_scan_limit_reached" });
+  });
+
+  it("allows a free-plan project's first scan (no completed run yet)", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: [p1],
+        profiles: [{ id: OWNER_ID, current_plan: "free" }]
+      })
+    );
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    expect(runId).toBeTruthy();
+    expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
+  });
+
+  it("does not block a free-plan project whose only prior run failed (SCAN-ROBUST-1 auto-retry must still get its one real scan)", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const failedRun = { id: "run-failed", project_id: PROJECT_ID, status: "failed", created_at: "2026-01-01T00:00:00.000Z" };
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: [p1],
+        scan_runs: [failedRun],
+        profiles: [{ id: OWNER_ID, current_plan: "free" }]
+      })
+    );
+
+    // Mirrors reconcileStuckScanRuns' internal auto-retry call shape:
+    // no authenticated user, trigger_source='cron'.
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: null,
+      triggerSource: "cron"
+    });
+
+    expect(runId).toBeTruthy();
+    expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
+  });
+
+  it("does not apply the free-plan limit to paid plans", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const priorRun = { id: "run-old", project_id: PROJECT_ID, status: "completed", created_at: "2026-01-01T00:00:00.000Z" };
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: [p1],
+        scan_runs: [priorRun],
+        profiles: [{ id: OWNER_ID, current_plan: "starter" }]
+      })
+    );
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    expect(runId).toBeTruthy();
+    expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
   });
 });
