@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { InfoTip } from "@/components/ui/info-tip";
 
 export type CitationRow = {
   id: string;
@@ -352,7 +353,10 @@ export function CitationsClient({
       <div className="card">
         <div className="cit-head">
           <span>Prompt</span>
-          <span className="c">Marca mencionada</span>
+          <span className="c" style={{ display: "inline-flex", alignItems: "center" }}>
+            Marca mencionada
+            <InfoTip text="Que la IA nombre tu marca no depende de tus URLs citadas — puede venir solo de lo que el modelo ya sabe de ella. Las columnas de citas, a la derecha, son la señal que sí depende de contenido tuyo que la IA usó como fuente." />
+          </span>
           <span>URLs citadas</span>
           <span className="num">Citas</span>
         </div>

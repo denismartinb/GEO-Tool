@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
 import { DeletePromptButton } from "@/app/dashboard/projects/[projectId]/prompts/delete-prompt-button";
+import { InfoTip } from "@/components/ui/info-tip";
 
 type Competitor = {
   id: string;
@@ -238,7 +239,10 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
             <div>
               {/* Presencia de marca */}
               <div className="aside-card">
-                <div className="ac-title">Presencia de tu marca en este prompt</div>
+                <div className="ac-title" style={{ display: "flex", alignItems: "center" }}>
+                  Presencia de tu marca en este prompt
+                  <InfoTip text="Mencionada: la IA nombra tu marca por lo que ya sabe de ella (fame), sin depender de tu web. Citada: la respuesta incluye una fuente verificada apuntando a tu propio dominio — solo esta segunda señal depende de contenido que publiques." />
+                </div>
                 <div style={{ display: "flex", gap: 24, marginTop: 8 }}>
                   <div>
                     <div
