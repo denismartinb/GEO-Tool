@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { PLANS } from "@/app/pricing/plans-data";
+import { getStripeClient, getPriceIdForPlan, isSelfServePlan } from "@/lib/stripe";
 
 const planIdSchema = z.enum(PLANS.map((plan) => plan.id) as [string, ...string[]]);
 const archiveIdsSchema = z.array(z.string().uuid()).max(50);
@@ -65,7 +66,40 @@ export async function changePlan(planId: string, archiveProjectIds: string[] = [
     };
   }
 
-  const { error } = await supabase.from("profiles").update({ current_plan: parsedPlan.data }).eq("id", user.id);
+  // BILLING-STRIPE-1: a self-serve immediate plan change (this action) only
+  // ever targets a plan with no real Stripe price (today: only "free" — see
+  // the change-plan-modal's paid<->paid guard, which routes any Free->paid
+  // move through createCheckoutSession below instead). Cancel any real
+  // subscription for real before flipping the DB column, so downgrading
+  // actually stops the recurring charge rather than just relabeling the
+  // account while Stripe keeps billing it.
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("stripe_subscription_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const subscriptionId = profileRow?.stripe_subscription_id as string | null | undefined;
+  if (subscriptionId) {
+    const stripe = getStripeClient();
+    if (stripe) {
+      try {
+        await stripe.subscriptions.cancel(subscriptionId);
+      } catch (stripeError) {
+        console.error("[geo:billing] failed to cancel Stripe subscription on downgrade", {
+          userId: user.id,
+          subscriptionId,
+          message: stripeError instanceof Error ? stripeError.message : String(stripeError)
+        });
+        return { success: false, error: "No se pudo cancelar la suscripción activa. Inténtalo de nuevo." };
+      }
+    }
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ current_plan: parsedPlan.data, stripe_subscription_id: null })
+    .eq("id", user.id);
 
   if (error) {
     return { success: false, error: "No se pudo guardar el cambio de plan. Inténtalo de nuevo." };
@@ -74,4 +108,74 @@ export async function changePlan(planId: string, archiveProjectIds: string[] = [
   revalidatePath("/dashboard/settings/billing");
   revalidatePath("/dashboard/billing");
   return { success: true };
+}
+
+export type CheckoutSessionResult = { success: true; url: string } | { success: false; error: string };
+
+/**
+ * Creates a real Stripe Checkout Session for a first-time paid subscription
+ * (Free -> Starter/Pro). Deliberately NOT used for switching between two
+ * already-paid plans (Starter <-> Pro): that would create a second parallel
+ * Stripe subscription for the same customer instead of modifying the
+ * existing one, double-billing them. That transition is disabled in the UI
+ * (change-plan-modal) until PR 2's Customer Portal, which handles a
+ * prorated in-place subscription update correctly.
+ */
+export async function createCheckoutSession(planId: string): Promise<CheckoutSessionResult> {
+  if (!isSelfServePlan(planId)) {
+    return { success: false, error: "Este plan no se contrata online. Escríbenos a soporte@genscore.es." };
+  }
+
+  const stripe = getStripeClient();
+  const priceId = getPriceIdForPlan(planId);
+  if (!stripe || !priceId) {
+    return { success: false, error: "La facturación todavía no está disponible. Vuelve a intentarlo más tarde." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const { data: profileRow } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id, current_plan")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileRow?.current_plan && profileRow.current_plan !== "free") {
+    return {
+      success: false,
+      error: "Ya tienes un plan de pago activo. Escríbenos a soporte@genscore.es para cambiarlo."
+    };
+  }
+
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: user.id,
+      customer: existingCustomerId ?? undefined,
+      customer_email: existingCustomerId ? undefined : (user.email ?? undefined),
+      billing_address_collection: "required",
+      automatic_tax: { enabled: true },
+      subscription_data: { metadata: { user_id: user.id, plan_id: planId } },
+      metadata: { user_id: user.id, plan_id: planId },
+      success_url: `${siteUrl}/dashboard/settings/billing?checkout=success`,
+      cancel_url: `${siteUrl}/dashboard/settings/billing?checkout=cancelled`
+    });
+
+    if (!session.url) {
+      return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
+    }
+
+    return { success: true, url: session.url };
+  } catch (stripeError) {
+    console.error("[geo:billing] failed to create Stripe checkout session", {
+      userId: user.id,
+      planId,
+      message: stripeError instanceof Error ? stripeError.message : String(stripeError)
+    });
+    return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
+  }
 }

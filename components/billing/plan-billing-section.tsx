@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import { ChangePlanModal } from "@/components/billing/change-plan-modal";
-import { changePlan, type ChangePlanResult } from "@/app/dashboard/settings/billing/actions";
+import { changePlan, createCheckoutSession, type ChangePlanResult } from "@/app/dashboard/settings/billing/actions";
 import type { ActiveProjectSummary, UsageSummary } from "@/lib/billing";
 
 function UsageRow({
@@ -168,6 +168,7 @@ export function PlanBillingSection({
           activeProjects={projects}
           onClose={() => setModal(null)}
           onApply={applyChange}
+          onCheckout={createCheckoutSession}
         />
       )}
     </>
