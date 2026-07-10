@@ -805,9 +805,19 @@ de días de prueba.
   `getUsageSummary`— ya está cubierta en `lib/billing.test.ts`). 423/423
   tests totales, `pnpm run validate` limpio.
 
+**Tercer hallazgo, en vivo, mismo bug pero en el servidor:** el fix
+anterior corrigió el modal (cliente), pero `createCheckoutSession`
+bloqueaba igualmente el pago con *"Ya tienes un plan de pago activo"*,
+comprobando `current_plan !== "free"` en vez de si existía una suscripción
+real. Corregido para comprobar `stripe_subscription_id` en su lugar — solo
+bloquea un segundo Checkout cuando ya hay una suscripción real detrás, no
+cuando `current_plan` es "pro" solo por estar en el trial. 2 tests
+actualizados/nuevos. 424/424 tests totales, `pnpm run validate` limpio.
+
 **Siguiente:** confirmar con el fundador que "Contratar ahora" durante el
-trial lleva a Stripe Checkout de verdad → PR 4 (emails Resend: bienvenida,
-aviso 3 días antes de expirar, expirado, pago fallido).
+trial completa el pago real de principio a fin (no solo que abra Stripe) →
+PR 4 (emails Resend: bienvenida, aviso 3 días antes de expirar, expirado,
+pago fallido).
 
 ---
 

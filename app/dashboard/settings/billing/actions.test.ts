@@ -119,11 +119,13 @@ describe("createCheckoutSession", () => {
     expect(result).toMatchObject({ success: false });
   });
 
-  it("blocks starting a second checkout when the account already has a paid plan", async () => {
+  it("blocks starting a second checkout when the account already has a real paid subscription", async () => {
     getStripeClient.mockReturnValue({ checkout: { sessions: { create: vi.fn() } } });
     getPriceIdForPlan.mockReturnValue("price_pro_test");
     requireUser.mockResolvedValue({
-      supabase: fakeSupabase({ profile: { current_plan: "starter", stripe_customer_id: null } }),
+      supabase: fakeSupabase({
+        profile: { current_plan: "starter", stripe_customer_id: "cus_existing", stripe_subscription_id: "sub_existing" }
+      }),
       user: { id: USER_ID, email: "founder@example.com" }
     });
     const { createCheckoutSession } = await import("./actions");
@@ -132,6 +134,24 @@ describe("createCheckoutSession", () => {
 
     expect(result).toMatchObject({ success: false });
     expect(getStripeClient().checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
+  it("allows checking out during an unconverted reverse trial (current_plan='pro' but no real subscription)", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({
+        profile: { current_plan: "pro", stripe_customer_id: null, stripe_subscription_id: null }
+      }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("pro");
+
+    expect(result).toEqual({ success: true, url: "https://checkout.stripe.com/session/xyz" });
+    expect(create).toHaveBeenCalled();
   });
 
   it("creates a real Checkout Session for a Free -> paid move and returns its url", async () => {
