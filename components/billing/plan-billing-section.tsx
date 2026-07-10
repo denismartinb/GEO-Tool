@@ -95,10 +95,10 @@ export function PlanBillingSection({
     return result;
   };
 
-  const handleManageBilling = () => {
+  const handleCancelSubscription = () => {
     setPortalError(null);
     startPortalTransition(async () => {
-      const result = await createPortalSession();
+      const result = await createPortalSession({ type: "cancel" });
       if (result.success) {
         window.location.href = result.url;
       } else {
@@ -167,7 +167,7 @@ export function PlanBillingSection({
                 Cambiar de plan
               </Button>
               {planId !== "free" && (
-                <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
+                <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
                   {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
                 </Button>
               )}

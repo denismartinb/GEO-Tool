@@ -5,7 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
-import type { CheckoutSessionResult, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
+import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@/app/dashboard/settings/billing/actions";
 
 const money = (n: number, dec = 2) =>
   n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + " €";
@@ -48,7 +48,7 @@ export function ChangePlanModal({
   /** BILLING-STRIPE-1: real Stripe Checkout Session for a Free -> paid move. */
   onCheckout: (targetId: Plan["id"]) => Promise<CheckoutSessionResult>;
   /** BILLING-STRIPE-1 PR 2: real Stripe Customer Portal session — payment method, invoices, cancellation, and paid<->paid plan switching. */
-  onManageBilling: () => Promise<PortalSessionResult>;
+  onManageBilling: (intent?: PortalIntent) => Promise<PortalSessionResult>;
   /**
    * Opens straight into the archive picker for the CURRENT plan instead of a
    * plan-change flow — used when a Portal-driven change (switch or
@@ -84,12 +84,15 @@ export function ChangePlanModal({
   // BILLING-STRIPE-1: only a Free -> paid move can go through Checkout (a
   // fresh subscription). Switching between two already-paid plans would
   // create a second parallel Stripe subscription instead of modifying the
-  // existing one — that needs the Customer Portal's in-place, prorated
-  // subscription update (PR 2), not a new Checkout Session. Disabled here
-  // rather than faked.
+  // existing one — that goes through the Customer Portal's in-place,
+  // prorated subscription update instead (PR 2).
   const requiresCheckout = currentId === "free" && target.id !== "free";
   const isDowngradeToFree = currentId !== "free" && target.id === "free";
   const paidToPaidBlocked = currentId !== "free" && target.id !== "free" && target.id !== currentId;
+  // Agency has no self-serve Stripe price (still "hablar con ventas" per
+  // PRICING-TRUTH-1) — only Starter<->Pro can be deep-linked into the
+  // Portal's plan-switch flow.
+  const paidToPaidSelfServe = paidToPaidBlocked && target.id !== "agency";
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
@@ -115,8 +118,10 @@ export function ChangePlanModal({
 
   const footNote = isSame ? (
     "Selecciona un plan distinto al actual."
-  ) : paidToPaidBlocked ? (
+  ) : paidToPaidSelfServe ? (
     "Se gestiona en el portal seguro de Stripe."
+  ) : paidToPaidBlocked ? (
+    "Disponible muy pronto."
   ) : requiresCheckout ? (
     "Se abre el pago seguro de Stripe."
   ) : (
@@ -150,7 +155,9 @@ export function ChangePlanModal({
   const handleGoToPortal = () => {
     setError(null);
     startTransition(async () => {
-      const result = await onManageBilling();
+      // paidToPaidSelfServe already excludes "free" and "agency", so this is
+      // always "starter" or "pro" here.
+      const result = await onManageBilling({ type: "update", planId: sel as "starter" | "pro" });
       if (result.success) {
         window.location.href = result.url;
       } else {
@@ -236,12 +243,21 @@ export function ChangePlanModal({
                   );
                 })}
               </div>
-              {paidToPaidBlocked && (
+              {paidToPaidSelfServe && (
                 <p className="cp-pror-note" style={{ marginTop: 14 }}>
                   <Icon name="info" size={14} />
                   <span>
                     Cambiar entre {current.name} y {target.name} se gestiona en el portal seguro de Stripe, donde
                     también puedes cancelar o ver tus facturas.
+                  </span>
+                </p>
+              )}
+              {paidToPaidBlocked && !paidToPaidSelfServe && (
+                <p className="cp-pror-note" style={{ marginTop: 14 }}>
+                  <Icon name="info" size={14} />
+                  <span>
+                    Cambiar a {target.name} estará disponible muy pronto. Mientras tanto, escríbenos a{" "}
+                    <b>soporte@genscore.es</b>.
                   </span>
                 </p>
               )}
@@ -258,10 +274,10 @@ export function ChangePlanModal({
               </Button>
               <Button
                 type="button"
-                disabled={isSame || isPending}
-                onClick={paidToPaidBlocked ? handleGoToPortal : () => setStep("confirm")}
+                disabled={isSame || isPending || (paidToPaidBlocked && !paidToPaidSelfServe)}
+                onClick={paidToPaidSelfServe ? handleGoToPortal : () => setStep("confirm")}
               >
-                {paidToPaidBlocked ? (isPending ? "Abriendo portal…" : "Ir al portal de Stripe") : "Continuar"}
+                {paidToPaidSelfServe ? (isPending ? "Abriendo portal…" : "Ir al portal de Stripe") : "Continuar"}
                 <Icon name="arrRight" size={15} />
               </Button>
             </div>

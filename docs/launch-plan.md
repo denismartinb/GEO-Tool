@@ -665,12 +665,30 @@ PR 2.
   Billing → Customer portal, en modo test) "Customers can switch plans"
   (Starter/Pro) y "Customers can cancel subscriptions" — sin esto el Portal
   abre pero no ofrece esas acciones.
-- 15 tests nuevos en `actions.test.ts` (`createPortalSession`). 411/411
-  tests totales, `pnpm run validate` limpio.
 
-**Siguiente:** verificar en vivo (cambio de plan y cancelación reales vía
-Portal) → PR 3 (reverse trial con `trial_ends_at`, requiere su propia
-aprobación de migración) → PR 4 (emails Resend).
+**Verificación en vivo (2026-07-10) — un hallazgo de UX, corregido en el
+mismo PR:** una vez el fundador activó el Portal en Stripe, el flujo
+funcionaba pero aterrizaba en la home del Portal ("Suscripción actual" +
+botón "Actualiza la suscripción"), obligando a un clic extra antes de ver
+el precio del plan destino — se sentía a medio construir. Corregido con
+`flow_data` de Stripe (Portal deep links): `createPortalSession` acepta
+ahora un `intent` opcional (`{ type: "update", planId }` o
+`{ type: "cancel" }`) que salta directo a la pantalla de confirmación del
+plan elegido (con su precio ya calculado) o a la de cancelación,
+respectivamente. Si la búsqueda de la suscripción/ítem necesaria para el
+deep link falla por lo que sea, cae de vuelta a la home del Portal en vez
+de bloquear la acción. Cambiar a Agencia sigue mostrando "disponible muy
+pronto" (no tiene precio propio en Stripe, sigue siendo "hablar con
+ventas").
+
+18 tests nuevos en `actions.test.ts` (`createPortalSession`, incluyendo los
+dos deep links y su fallback). 414/414 tests totales, `pnpm run validate`
+limpio.
+
+**Siguiente:** confirmar con el fundador que el deep link aterriza
+directamente en la pantalla de coste del plan Pro → PR 3 (reverse trial
+con `trial_ends_at`, requiere su propia aprobación de migración) → PR 4
+(emails Resend).
 
 ---
 

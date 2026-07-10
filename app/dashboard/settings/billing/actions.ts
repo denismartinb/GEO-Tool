@@ -1,11 +1,12 @@
 "use server";
 
 import { z } from "zod";
+import type Stripe from "stripe";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { PLANS } from "@/app/pricing/plans-data";
-import { getStripeClient, getPriceIdForPlan, isSelfServePlan } from "@/lib/stripe";
+import { getStripeClient, getPriceIdForPlan, isSelfServePlan, type SelfServePlanId } from "@/lib/stripe";
 
 const planIdSchema = z.enum(PLANS.map((plan) => plan.id) as [string, ...string[]]);
 const archiveIdsSchema = z.array(z.string().uuid()).max(50);
@@ -203,12 +204,24 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
 
 export type PortalSessionResult = { success: true; url: string } | { success: false; error: string };
 
+/** Deep-links straight into a specific Portal screen instead of its homepage — see `createPortalSession`. */
+export type PortalIntent = { type: "update"; planId: SelfServePlanId } | { type: "cancel" };
+
 /**
  * Opens a real Stripe Customer Portal session for the caller's own
  * subscription — payment method, invoice history, cancellation, and (once
  * configured in the Stripe Dashboard) switching between Starter/Pro. Portal
  * changes are picked up by the existing webhook (`customer.subscription.*`),
  * same as a Checkout-created subscription.
+ *
+ * `intent` deep-links straight into the Portal's "confirm this plan" or
+ * "cancel" screen (Stripe's `flow_data`) instead of landing on the Portal
+ * homepage and making the customer click through to it themselves — found
+ * to be worth doing via live testing, where the extra click read as the
+ * feature being half-built. Falls back to the plain portal homepage (still
+ * useful, just not deep-linked) if the subscription/item lookup needed to
+ * build the deep link fails for any reason; this is a convenience, never a
+ * reason to block opening the portal at all.
  *
  * Deliberately does not auto-archive projects if a Portal-driven downgrade
  * leaves the account over its new plan's domain cap: the founder wants the
@@ -218,7 +231,7 @@ export type PortalSessionResult = { success: true; url: string } | { success: fa
  * (`ChangePlanModal`'s `overageOnly` mode), the same archive picker already
  * used for an in-app downgrade.
  */
-export async function createPortalSession(): Promise<PortalSessionResult> {
+export async function createPortalSession(intent?: PortalIntent): Promise<PortalSessionResult> {
   const stripe = getStripeClient();
   if (!stripe) {
     return { success: false, error: "La facturación todavía no está disponible. Vuelve a intentarlo más tarde." };
@@ -227,7 +240,7 @@ export async function createPortalSession(): Promise<PortalSessionResult> {
   const { supabase, user } = await requireUser();
   const { data: profileRow } = await supabase
     .from("profiles")
-    .select("stripe_customer_id")
+    .select("stripe_customer_id, stripe_subscription_id")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -237,11 +250,15 @@ export async function createPortalSession(): Promise<PortalSessionResult> {
   }
 
   const siteUrl = await getRequestSiteUrl();
+  const returnUrl = `${siteUrl}/dashboard/settings/billing`;
+  const subscriptionId = profileRow?.stripe_subscription_id as string | null | undefined;
+  const flowData = subscriptionId ? await buildPortalFlowData(stripe, intent, subscriptionId, returnUrl) : undefined;
 
   try {
     const session = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${siteUrl}/dashboard/settings/billing`
+      return_url: returnUrl,
+      ...(flowData ? { flow_data: flowData } : {})
     });
 
     return { success: true, url: session.url };
@@ -251,5 +268,42 @@ export async function createPortalSession(): Promise<PortalSessionResult> {
       message: stripeError instanceof Error ? stripeError.message : String(stripeError)
     });
     return { success: false, error: "No se pudo abrir el portal de facturación. Inténtalo de nuevo." };
+  }
+}
+
+async function buildPortalFlowData(
+  stripe: NonNullable<ReturnType<typeof getStripeClient>>,
+  intent: PortalIntent | undefined,
+  subscriptionId: string,
+  returnUrl: string
+): Promise<Stripe.BillingPortal.SessionCreateParams.FlowData | undefined> {
+  if (!intent) return undefined;
+
+  if (intent.type === "cancel") {
+    return { type: "subscription_cancel", subscription_cancel: { subscription: subscriptionId } };
+  }
+
+  const priceId = getPriceIdForPlan(intent.planId);
+  if (!priceId) return undefined;
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const itemId = subscription.items.data[0]?.id;
+    if (!itemId) return undefined;
+
+    return {
+      type: "subscription_update_confirm",
+      subscription_update_confirm: {
+        subscription: subscriptionId,
+        items: [{ id: itemId, price: priceId, quantity: 1 }]
+      },
+      after_completion: { type: "redirect", redirect: { return_url: `${returnUrl}?checkout=success` } }
+    };
+  } catch (stripeError) {
+    console.error("[geo:billing] failed to look up subscription for a Portal deep link, falling back to homepage", {
+      subscriptionId,
+      message: stripeError instanceof Error ? stripeError.message : String(stripeError)
+    });
+    return undefined;
   }
 }

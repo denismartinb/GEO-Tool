@@ -285,6 +285,72 @@ describe("createPortalSession", () => {
     expect(result.success).toBe(false);
     errorSpy.mockRestore();
   });
+
+  it("deep-links a cancel intent straight into the Portal's cancellation flow", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://billing.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ billingPortal: { sessions: { create } } });
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { stripe_customer_id: "cus_existing", stripe_subscription_id: "sub_123" } }),
+      user: { id: USER_ID }
+    });
+    const { createPortalSession } = await import("./actions");
+
+    await createPortalSession({ type: "cancel" });
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flow_data: { type: "subscription_cancel", subscription_cancel: { subscription: "sub_123" } }
+      })
+    );
+  });
+
+  it("deep-links an update intent straight into the Portal's plan-confirmation flow, using the subscription's item id", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://billing.stripe.com/session/xyz" });
+    const retrieve = vi.fn().mockResolvedValue({ items: { data: [{ id: "si_abc" }] } });
+    getStripeClient.mockReturnValue({ billingPortal: { sessions: { create } }, subscriptions: { retrieve } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { stripe_customer_id: "cus_existing", stripe_subscription_id: "sub_123" } }),
+      user: { id: USER_ID }
+    });
+    const { createPortalSession } = await import("./actions");
+
+    await createPortalSession({ type: "update", planId: "pro" });
+
+    expect(retrieve).toHaveBeenCalledWith("sub_123");
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flow_data: expect.objectContaining({
+          type: "subscription_update_confirm",
+          subscription_update_confirm: {
+            subscription: "sub_123",
+            items: [{ id: "si_abc", price: "price_pro_test", quantity: 1 }]
+          }
+        })
+      })
+    );
+  });
+
+  it("falls back to the plain portal homepage when the subscription lookup fails for a deep link", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://billing.stripe.com/session/xyz" });
+    const retrieve = vi.fn().mockRejectedValue(new Error("stripe api down"));
+    getStripeClient.mockReturnValue({ billingPortal: { sessions: { create } }, subscriptions: { retrieve } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { stripe_customer_id: "cus_existing", stripe_subscription_id: "sub_123" } }),
+      user: { id: USER_ID }
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { createPortalSession } = await import("./actions");
+
+    const result = await createPortalSession({ type: "update", planId: "pro" });
+
+    expect(result.success).toBe(true);
+    expect(create).toHaveBeenCalledWith(
+      expect.not.objectContaining({ flow_data: expect.anything() })
+    );
+    errorSpy.mockRestore();
+  });
 });
 
 describe("changePlan — Stripe-aware downgrade", () => {
