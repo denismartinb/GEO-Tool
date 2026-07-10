@@ -5,10 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import type { ActiveProjectSummary } from "@/lib/billing";
-
-const CYCLE_DAYS = 30;
-const DAYS_LEFT = 5;
-const CYCLE_END = "1 jul 2026";
+import type { CheckoutSessionResult } from "@/app/dashboard/settings/billing/actions";
 
 const money = (n: number, dec = 2) =>
   n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + " €";
@@ -38,13 +35,16 @@ export function ChangePlanModal({
   initialTargetId,
   activeProjects,
   onClose,
-  onApply
+  onApply,
+  onCheckout
 }: {
   currentId: Plan["id"];
   initialTargetId?: Plan["id"];
   activeProjects: ActiveProjectSummary[];
   onClose: () => void;
   onApply: (targetId: Plan["id"], archiveProjectIds: string[]) => Promise<{ success: boolean; error?: string }>;
+  /** BILLING-STRIPE-1: real Stripe Checkout Session for a Free -> paid move. */
+  onCheckout: (targetId: Plan["id"]) => Promise<CheckoutSessionResult>;
 }) {
   const current = PLANS.find((p) => p.id === currentId)!;
   const [sel, setSel] = useState<Plan["id"]>(initialTargetId ?? currentId);
@@ -68,16 +68,21 @@ export function ChangePlanModal({
 
   const target = PLANS.find((p) => p.id === sel)!;
   const isSame = sel === currentId;
-  const isUpgrade = target.price > current.price;
 
-  const creditUnused = (current.price * DAYS_LEFT) / CYCLE_DAYS;
-  const chargeNew = (target.price * DAYS_LEFT) / CYCLE_DAYS;
-  const dueToday = Math.max(0, chargeNew - creditUnused);
+  // BILLING-STRIPE-1: only a Free -> paid move can go through Checkout (a
+  // fresh subscription). Switching between two already-paid plans would
+  // create a second parallel Stripe subscription instead of modifying the
+  // existing one — that needs the Customer Portal's in-place, prorated
+  // subscription update (PR 2), not a new Checkout Session. Disabled here
+  // rather than faked.
+  const requiresCheckout = currentId === "free" && target.id !== "free";
+  const isDowngradeToFree = currentId !== "free" && target.id === "free";
+  const paidToPaidBlocked = currentId !== "free" && target.id !== "free" && target.id !== currentId;
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
   const requiredArchiveCount = Math.max(0, activeProjects.length - target.caps.projects);
-  const hasProjectOverage = !isUpgrade && !isSame && requiredArchiveCount > 0;
+  const hasProjectOverage = isDowngradeToFree && requiredArchiveCount > 0;
   const archiveSelectionComplete = archiveIds.size === requiredArchiveCount;
 
   useEffect(() => {
@@ -98,13 +103,15 @@ export function ChangePlanModal({
 
   const footNote = isSame ? (
     "Selecciona un plan distinto al actual."
+  ) : paidToPaidBlocked ? (
+    "Disponible muy pronto."
+  ) : requiresCheckout ? (
+    "Se abre el pago seguro de Stripe."
   ) : (
-    <>
-      Se aplica <b>de inmediato</b> al confirmar.
-    </>
+    "Se aplica de inmediato al confirmar."
   );
 
-  const handleConfirm = () => {
+  const handleConfirmDowngrade = () => {
     setError(null);
     startTransition(async () => {
       const result = await onApply(sel, Array.from(archiveIds));
@@ -112,6 +119,18 @@ export function ChangePlanModal({
         setStep("done");
       } else {
         setError(result.error ?? "No se pudo guardar el cambio de plan.");
+      }
+    });
+  };
+
+  const handleGoToCheckout = () => {
+    setError(null);
+    startTransition(async () => {
+      const result = await onCheckout(sel);
+      if (result.success) {
+        window.location.href = result.url;
+      } else {
+        setError(result.error);
       }
     });
   };
@@ -137,7 +156,8 @@ export function ChangePlanModal({
                   Estás en <b style={{ color: "var(--ink-2)" }}>{current.name}</b> · {money(current.price, 0)}/mes
                 </>
               )}
-              {step === "confirm" && (isUpgrade ? "Revisa el prorrateo antes de confirmar" : "Revisa qué cambia antes de confirmar")}
+              {step === "confirm" &&
+                (requiresCheckout ? "Vas a completar el pago en Stripe" : "Revisa qué cambia antes de confirmar")}
               {step === "done" && "Todo listo"}
             </p>
           </div>
@@ -189,13 +209,22 @@ export function ChangePlanModal({
                   );
                 })}
               </div>
+              {paidToPaidBlocked && (
+                <p className="cp-pror-note" style={{ marginTop: 14 }}>
+                  <Icon name="info" size={14} />
+                  <span>
+                    Cambiar entre planes de pago estará disponible muy pronto. Mientras tanto, escríbenos a{" "}
+                    <b>soporte@genscore.es</b>.
+                  </span>
+                </p>
+              )}
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">{footNote}</div>
               <Button type="button" variant="ghost" onClick={close}>
                 Cancelar
               </Button>
-              <Button type="button" disabled={isSame} onClick={() => setStep("confirm")}>
+              <Button type="button" disabled={isSame || paidToPaidBlocked} onClick={() => setStep("confirm")}>
                 Continuar
                 <Icon name="arrRight" size={15} />
               </Button>
@@ -203,13 +232,60 @@ export function ChangePlanModal({
           </>
         )}
 
-        {step === "confirm" && (
+        {step === "confirm" && requiresCheckout && (
+          <>
+            <div className="cp-body">
+              <div className="cp-move">
+                <div className="cp-move-side">
+                  <div className="cp-move-lbl">Actual</div>
+                  <div className="cp-move-plan">
+                    {current.name} <span className="per">· gratis</span>
+                  </div>
+                </div>
+                <Icon name="arrRight" size={20} className="cp-move-arrow" />
+                <div className="cp-move-side">
+                  <div className="cp-move-lbl">Nuevo</div>
+                  <div className="cp-move-plan">
+                    {target.name} <span className="per">· {money(target.price, 0)}/mes</span>
+                  </div>
+                </div>
+              </div>
+              <div className="cp-pror-note" style={{ marginTop: 16 }}>
+                <Icon name="info" size={14} />
+                <span>
+                  Al continuar, Stripe te pedirá los datos de pago en una página segura fuera de GenScore. Tu plan{" "}
+                  {target.name} se activa en cuanto el pago se confirme.
+                </span>
+              </div>
+              {error && (
+                <p className="feedback error" style={{ marginTop: 14 }}>
+                  {error}
+                </p>
+              )}
+            </div>
+            <div className="cp-foot">
+              <div className="cp-foot-note">
+                {money(target.price, 0)}/mes
+              </div>
+              <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
+                <Icon name="chevLeft" size={15} />
+                Atrás
+              </Button>
+              <Button type="button" disabled={isPending} onClick={handleGoToCheckout}>
+                {isPending ? "Abriendo Stripe…" : "Ir a pagar"}
+                <Icon name="arrRight" size={15} />
+              </Button>
+            </div>
+          </>
+        )}
+
+        {step === "confirm" && !requiresCheckout && (
           <>
             <div className="cp-body">
               <div className="cp-confirm-head">
-                <span className={"cp-confirm-badge " + (isUpgrade ? "up" : "down")}>
-                  <Icon name={isUpgrade ? "arrUp" : "arrDown"} size={13} />
-                  {isUpgrade ? "Mejora de plan" : "Bajada de plan"}
+                <span className="cp-confirm-badge down">
+                  <Icon name="arrDown" size={13} />
+                  Bajada de plan
                 </span>
               </div>
 
@@ -224,99 +300,82 @@ export function ChangePlanModal({
                 <div className="cp-move-side">
                   <div className="cp-move-lbl">Nuevo</div>
                   <div className="cp-move-plan">
-                    {target.name}{" "}
-                    <span className="per">· {target.price === 0 ? "gratis" : money(target.price, 0) + "/mes"}</span>
+                    {target.name} <span className="per">· gratis</span>
                   </div>
                 </div>
               </div>
 
-              {isUpgrade ? (
-                <>
-                  <div className="cp-proration">
-                    <div className="cp-pror-row">
-                      Crédito por los {DAYS_LEFT} días no usados de {current.name}
-                      <span className="v credit">−{money(creditUnused)}</span>
-                    </div>
-                    <div className="cp-pror-row">
-                      {target.name} · {DAYS_LEFT} días hasta la renovación
-                      <span className="v">{money(chargeNew)}</span>
-                    </div>
-                    <div className="cp-pror-row total">
-                      A pagar hoy <span className="v">{money(dueToday)}</span>
-                    </div>
+              <div className="cp-pror-note" style={{ marginTop: 16 }}>
+                <Icon name="info" size={14} />
+                <span>
+                  El cambio a <b>{target.name}</b> se aplica de inmediato y cancela cualquier suscripción activa —
+                  no se te volverá a cobrar.
+                </span>
+              </div>
+              {diffs.length > 0 && (
+                <div className="cp-diff">
+                  <div className="cp-diff-h">
+                    <Icon name="alertCircle" size={14} />
+                    Qué se reduce al bajar a {target.name}
                   </div>
-                  <div className="cp-pror-note">
+                  <ul className="cp-diff-list">
+                    {diffs.map((d) => (
+                      <li key={d.label}>
+                        <Icon name={d.icon} size={14} />
+                        <span className="k">{d.label}</span>
+                        <span className="from">{d.get(current)}</span>
+                        <Icon name="arrRight" size={13} />
+                        <span className="to">{d.get(target)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {hasProjectOverage && (
+                <div className="cp-diff">
+                  <div className="cp-diff-h">
+                    <Icon name="alertCircle" size={14} />
+                    Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar (tienes{" "}
+                    {activeProjects.length}, {target.name} permite {target.caps.projects})
+                  </div>
+                  <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
+                    {activeProjects.map((project) => {
+                      const checked = archiveIds.has(project.id);
+                      const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
+                      return (
+                        <li key={project.id}>
+                          <label
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 10,
+                              width: "100%",
+                              cursor: disableUnchecked ? "not-allowed" : "pointer"
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={disableUnchecked}
+                              onChange={() => toggleArchiveId(project.id)}
+                            />
+                            <span className="k">{project.name}</span>
+                            <span className="from" style={{ textDecoration: "none" }}>
+                              {project.domain}
+                            </span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="cp-pror-note" style={{ marginTop: 10 }}>
                     <Icon name="info" size={14} />
                     <span>
-                      El acceso a {target.name} se activa al instante. A partir del <b>{CYCLE_END}</b> se te cobrarán{" "}
-                      {money(target.price)}/mes.
+                      Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
+                      configuración ni sus escaneos.
                     </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="cp-pror-note" style={{ marginTop: 16 }}>
-                    <Icon name="info" size={14} />
-                    <span>
-                      El cambio a <b>{target.name}</b> se aplica de inmediato. Todavía no hay cobro real activado.
-                    </span>
-                  </div>
-                  {diffs.length > 0 && (
-                    <div className="cp-diff">
-                      <div className="cp-diff-h">
-                        <Icon name="alertCircle" size={14} />
-                        Qué se reduce al bajar a {target.name}
-                      </div>
-                      <ul className="cp-diff-list">
-                        {diffs.map((d) => (
-                          <li key={d.label}>
-                            <Icon name={d.icon} size={14} />
-                            <span className="k">{d.label}</span>
-                            <span className="from">{d.get(current)}</span>
-                            <Icon name="arrRight" size={13} />
-                            <span className="to">{d.get(target)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {hasProjectOverage && (
-                    <div className="cp-diff">
-                      <div className="cp-diff-h">
-                        <Icon name="alertCircle" size={14} />
-                        Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para archivar
-                        (tienes {activeProjects.length}, {target.name} permite {target.caps.projects})
-                      </div>
-                      <ul className="cp-diff-list" role="group" aria-label="Dominios a archivar">
-                        {activeProjects.map((project) => {
-                          const checked = archiveIds.has(project.id);
-                          const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
-                          return (
-                            <li key={project.id}>
-                              <label style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", cursor: disableUnchecked ? "not-allowed" : "pointer" }}>
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  disabled={disableUnchecked}
-                                  onChange={() => toggleArchiveId(project.id)}
-                                />
-                                <span className="k">{project.name}</span>
-                                <span className="from" style={{ textDecoration: "none" }}>{project.domain}</span>
-                              </label>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <p className="cp-pror-note" style={{ marginTop: 10 }}>
-                        <Icon name="info" size={14} />
-                        <span>
-                          Archivar es reversible: podrás restaurarlos cuando quieras desde "Dominios", sin perder su
-                          configuración ni sus escaneos.
-                        </span>
-                      </p>
-                    </div>
-                  )}
-                </>
+                  </p>
+                </div>
               )}
               {error && (
                 <p className="feedback error" style={{ marginTop: 14 }}>
@@ -326,15 +385,7 @@ export function ChangePlanModal({
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">
-                {isUpgrade ? (
-                  <>
-                    Total hoy: <b>{money(dueToday)}</b>
-                  </>
-                ) : (
-                  <>
-                    Efectivo <b>de inmediato</b>
-                  </>
-                )}
+                Efectivo <b>de inmediato</b>
               </div>
               <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
                 <Icon name="chevLeft" size={15} />
@@ -343,9 +394,9 @@ export function ChangePlanModal({
               <Button
                 type="button"
                 disabled={isPending || (hasProjectOverage && !archiveSelectionComplete)}
-                onClick={handleConfirm}
+                onClick={handleConfirmDowngrade}
               >
-                {isPending ? "Guardando…" : isUpgrade ? "Confirmar y pagar " + money(dueToday) : "Confirmar cambio"}
+                {isPending ? "Guardando…" : "Confirmar cambio"}
               </Button>
             </div>
           </>
@@ -357,24 +408,11 @@ export function ChangePlanModal({
               <div className="cp-done-badge">
                 <Icon name="check" size={30} />
               </div>
-              {isUpgrade ? (
-                <>
-                  <h3>Ya estás en {target.name}</h3>
-                  <p>
-                    Hemos cobrado <b>{money(dueToday)}</b> a tu Visa ···· 4242. Tu plan <b>{target.name}</b> está
-                    activo y ya puedes usar todas sus funciones. La próxima factura será de{" "}
-                    <b>{money(target.price)}</b> el {CYCLE_END}.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <h3>Ya estás en {target.name}</h3>
-                  <p>
-                    Tu plan <b>{target.name}</b> está activo desde ahora. Puedes cambiarlo cuando quieras desde Plan y
-                    facturación.
-                  </p>
-                </>
-              )}
+              <h3>Ya estás en {target.name}</h3>
+              <p>
+                Tu plan <b>{target.name}</b> está activo desde ahora. Puedes cambiarlo cuando quieras desde Plan y
+                facturación.
+              </p>
             </div>
             <div className="cp-foot" style={{ justifyContent: "flex-end" }}>
               <Button type="button" onClick={onClose}>

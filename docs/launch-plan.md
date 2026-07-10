@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Forbidden list: requiere aprobación explícita |
+| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 En curso (PR 1 hecho) | — | 2026-07-10 | Task Intake aprobado (modo test primero). PR 1 (Checkout+webhooks) shipeado; encontrado y corregido cobro/facturas falsas preexistentes. Pendiente: migración manual + credenciales test de Stripe (fundador), luego PRs 2-4 |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -474,12 +474,16 @@ eventos/mes, sin tarjeta), frente al trial de 30 días de Plausible.
 
 ---
 
-## Fase 4 — BILLING-STRIPE-1 ⚠️ (requiere aprobación explícita del fundador)
+## Fase 4 — BILLING-STRIPE-1 ⚠️ (Task Intake aprobado 2026-07-10)
 
 **Objetivo:** cobrar. "billing" está en la Forbidden list de `CLAUDE.md`:
-esta fase requiere Task Intake Report aprobado antes de código, y al
-aprobarse debe **actualizarse CLAUDE.md** redefiniendo el límite (p. ej.
-"Stripe sí; cambios de precios en producción solo con aprobación").
+esta fase requería Task Intake Report aprobado antes de código — **aprobado
+por el fundador el 2026-07-10**, con una decisión explícita: construir y
+probar todo contra **Stripe en modo test** ahora ("dejamos la plataforma
+preparada"); VeriFactu se decide más adelante, como condición para pasar a
+claves reales, no para empezar a construir. `CLAUDE.md` actualizado en
+consecuencia (billing pasa de prohibido a "parcialmente aprobado, solo modo
+test").
 
 **Alcance (trocear en 3–4 PRs):**
 1. **Stripe Checkout + webhooks**: suscripciones Starter/Pro, webhook
@@ -517,6 +521,109 @@ vars, webhook endpoint), frontend, test-architect, qa.
 → webhook → plan actualizado → límites nuevos aplicados); cancelación y
 downgrade correctos; trial expira y degrada solo; emails llegan; ninguna
 clave en cliente; `qa` ACCEPT.
+
+**PR 1 (Stripe Checkout + webhooks) — hecho (2026-07-10):**
+
+- Migración `0015_stripe_billing.sql`: `profiles.stripe_customer_id` (único),
+  `profiles.stripe_subscription_id`. Sin cambios de RLS (misma política
+  `profiles_update_own`, ambas columnas solo las escribe el webhook vía
+  service role). **Pendiente: aplicar manualmente en Supabase SQL editor**
+  (mismo procedimiento que todas las migraciones anteriores de este repo).
+- `lib/stripe.ts`: cliente Stripe perezoso + mapping `price_id` ↔ plan,
+  ambos condicionados a variables de entorno — sin `STRIPE_SECRET_KEY`,
+  `getStripeClient()` devuelve `null` y cada llamador responde con un error
+  seguro en vez de romper (mismo patrón que Sentry/PostHog).
+- `createCheckoutSession` (`app/dashboard/settings/billing/actions.ts`):
+  Stripe Checkout real, modo suscripción, `automatic_tax` activado,
+  metadata de usuario/plan para que el webhook pueda sincronizar sin
+  ambigüedad. Bloquea explícitamente crear un segundo Checkout si la cuenta
+  ya tiene un plan de pago (evitar doble suscripción) — cambiar entre
+  planes de pago (Starter↔Pro) queda para el Customer Portal (PR 2), que
+  gestiona el prorrateo de una suscripción existente correctamente; aquí se
+  desactiva en la UI con aviso honesto en vez de simularlo.
+- `changePlan`: ahora cancela de verdad la suscripción de Stripe al bajar a
+  Free (antes solo cambiaba una columna, dejando la suscripción cobrando
+  igualmente).
+- Webhook `app/api/webhooks/stripe/route.ts` +
+  `lib/billing/stripe-webhook.ts` (lógica separada y testeada aparte):
+  verifica firma, gestiona `checkout.session.completed`,
+  `customer.subscription.updated` (incluye downgrade automático a Free si
+  el estado pasa a `canceled`/`unpaid`/`incomplete_expired`/`paused`) y
+  `customer.subscription.deleted`. Escrituras idempotentes por diseño (sin
+  tabla de eventos procesados); responde 500 si falla de verdad, para que
+  Stripe reintente solo.
+
+**Hallazgos serios encontrados y corregidos en el mismo PR (no estaban en el
+alcance original, pero eran precisamente lo que esta fase debía arreglar):**
+
+- `components/billing/change-plan-modal.tsx` **simulaba un cobro real**: el
+  paso de confirmación de una subida de plan mostraba un prorrateo
+  inventado y, al confirmar, un mensaje final literal *"Hemos cobrado
+  179,00 € a tu Visa ····4242"* — sin que ocurriera ningún cobro real
+  (`changePlan` solo escribía una columna). Sustituido por el flujo real de
+  Stripe Checkout; el paso de confirmación ya no inventa importes ni
+  tarjetas.
+- `components/billing/billing-content.tsx` mostraba **método de pago y
+  facturas completamente ficticios** (`FAKE_PAYMENT_METHOD` con tarjeta,
+  email de facturación, razón social y CIF inventados; `FAKE_INVOICES` con
+  3 facturas "Pagada" inventadas) a cualquier usuario real de la app. El
+  comentario del código decía que era "referencia visual" aprobada por el
+  fundador para revisar el layout — pero seguía viva en producción.
+  Sustituido por un estado honesto ("todavía no tienes ningún plan de pago
+  activo" / aviso de que la gestión llegará con el Customer Portal).
+- 22 tests Vitest nuevos (`lib/billing/stripe-webhook.test.ts`,
+  `app/dashboard/settings/billing/actions.test.ts`) cubriendo los tres
+  eventos del webhook, el bloqueo de doble-checkout, la cancelación real en
+  el downgrade, y los casos de fallo. 392/392 tests totales, `pnpm run
+  validate` limpio.
+
+**Pendiente (fundador) — hecho en su mayoría (2026-07-10):**
+- [x] Migración `0015_stripe_billing.sql` aplicada en Supabase.
+- [x] Cuenta Stripe en modo test creada, productos/precios de Starter y Pro
+      creados, IDs pasados (`STRIPE_PRICE_ID_STARTER` /
+      `STRIPE_PRICE_ID_PRO`), webhook configurado
+      (`STRIPE_WEBHOOK_SECRET`), `STRIPE_SECRET_KEY` puesta.
+
+**Verificación en vivo (2026-07-10) — dos problemas reales encontrados y
+corregidos durante la propia prueba, ambos configuración/código, no del
+alcance original:**
+
+1. **Stripe exigía código fiscal**: `automatic_tax` (activado desde PR 1)
+   falló con *"You must specify a tax code..."* hasta que el fundador
+   configuró un código fiscal por defecto en Stripe (Configuración →
+   Impuestos → código SaaS). Sin código, no es un bug de este repo —
+   documentado aquí para que quede constancia de que es un paso de cuenta
+   de Stripe, no solo de variables de entorno.
+2. **Bug real corregido (1ª vuelta)**: tras completar el pago de prueba,
+   Stripe redirigía a `genscore.es` (producción) en vez de al preview donde
+   se estaba probando, aterrizando en el login (dominios distintos, sin
+   sesión). Causa: `createCheckoutSession` construía `success_url`/
+   `cancel_url` con `NEXT_PUBLIC_SITE_URL` (fijada a producción, correcto
+   para uso real, pero incorrecta al probar en preview). Corregido para
+   derivar el dominio de la propia petición entrante (`next/headers`).
+3. **Bug real corregido (2ª vuelta, encontrado al reprobar el fix
+   anterior)**: la sesión de Checkout seguía apuntando a `genscore.es` (con
+   doble barra: `NEXT_PUBLIC_SITE_URL` mal configurada con `/` final) pese
+   al fix. Causa: el dominio de alias de rama de Vercel
+   (`geo-tool-git-...vercel.app`) reescribe internamente la cabecera `host`
+   a un valor interno de despliegue y expone el dominio público real solo en
+   `x-forwarded-host`. Corregido para preferir `x-forwarded-host` sobre
+   `host`, y para recortar barras finales al construir la URL (protege
+   también contra el propio `NEXT_PUBLIC_SITE_URL` mal configurado). Este
+   segundo fallo se detectó porque la sesión de Stripe (pegada por el
+   fundador) mostraba `status: "open"` / `payment_status: "unpaid"` — el
+   pago de prueba nunca llegó a completarse, así que el plan tampoco se
+   activó; no llegó a ser un fallo de webhook.
+- Tests de regresión añadidos para ambos casos. 393/393 tests en verde,
+  `pnpm run validate` limpio tras el segundo fix.
+
+**Siguiente:** confirmar con el fundador que, tras este segundo fix, el pago
+de prueba completo (compra → checkout completado en Stripe → webhook → plan
+actualizado → vuelta a la propia página con éxito) funciona de principio a
+fin en el preview. Después: PR 2 (Customer Portal — cambio de plan real
+entre pagos, cancelación real, facturas reales) → PR 3 (reverse trial con
+`trial_ends_at`, requiere su propia aprobación de migración) → PR 4 (emails
+Resend).
 
 ---
 

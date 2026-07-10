@@ -8,29 +8,29 @@ import { PlanBillingSection } from "@/components/billing/plan-billing-section";
 
 const agencyPlan = PLANS.find((plan) => plan.id === "agency")!;
 
-// Visual reference only — there is no real payment/invoicing backend yet.
-// Faked per explicit founder instruction so the layout can be reviewed
-// pixel-perfect ahead of real Stripe integration.
-const FAKE_PAYMENT_METHOD = {
-  brand: "Visa",
-  last4: "4242",
-  expiry: "04 / 2028",
-  billingEmail: "denis@agenciaacme.com",
-  legalName: "Agencia Acme S.L.",
-  taxId: "ESB12345678"
-};
-
-const FAKE_INVOICES = [
-  { number: "INV-2026-006", date: "1 jun 2026", amount: 179 },
-  { number: "INV-2026-005", date: "1 may 2026", amount: 179 },
-  { number: "INV-2026-004", date: "1 abr 2026", amount: 179 }
-];
-
-export async function BillingContent({ embedded = false }: { embedded?: boolean }) {
+export async function BillingContent({
+  embedded = false,
+  checkoutStatus
+}: {
+  embedded?: boolean;
+  /** BILLING-STRIPE-1: `?checkout=success|cancelled` from the Stripe Checkout redirect. */
+  checkoutStatus?: string;
+}) {
   const usage = await getUsageSummary();
+  const hasStripeSubscription = usage.planId !== "free";
 
   const sections = (
     <>
+      {checkoutStatus === "success" && (
+        <p className="feedback success">
+          Pago completado. Tu plan se está activando — si todavía no ves el cambio abajo, espera unos segundos y
+          recarga la página.
+        </p>
+      )}
+      {checkoutStatus === "cancelled" && (
+        <p className="feedback">No se ha completado el pago. Tu plan no ha cambiado.</p>
+      )}
+
       <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--accent-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
         <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--accent)]">
           <Icon name="card" size={18} />
@@ -57,80 +57,26 @@ export async function BillingContent({ embedded = false }: { embedded?: boolean 
       <section className="space-y-2">
         <div>
           <h2 className="text-lg font-semibold text-[var(--ink)]">Pago y facturas</h2>
-          <p className="sub mt-1">
-            Método de pago y tu historial de facturación. Datos de ejemplo — disponibles cuando activemos la
-            facturación real.
-          </p>
+          <p className="sub mt-1">Método de pago y tu historial de facturación.</p>
         </div>
 
         <Card>
-          <CardHeader>
-            <p className="sub">Método de pago</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[var(--accent-soft)] text-[var(--accent)]">
-                  <Icon name="card" size={18} />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-[var(--ink)]">
-                    {FAKE_PAYMENT_METHOD.brand} •••• {FAKE_PAYMENT_METHOD.last4}
-                  </p>
-                  <p className="sub">Caduca {FAKE_PAYMENT_METHOD.expiry}</p>
-                </div>
-              </div>
-              <Button type="button" variant="outline">
-                <Icon name="edit" size={13} />
-                Editar
-              </Button>
-            </div>
-            <div className="space-y-2 border-t border-[var(--line-soft)] pt-4 text-sm">
-              <div className="flex items-center gap-2 text-[var(--ink-2)]">
-                <Icon name="mail" size={14} />
-                Email de facturación
-                <span className="ml-auto font-medium text-[var(--ink)]">{FAKE_PAYMENT_METHOD.billingEmail}</span>
-              </div>
-              <div className="flex items-center gap-2 text-[var(--ink-2)]">
-                <Icon name="fileText" size={14} />
-                Datos fiscales
-                <span className="ml-auto font-medium text-[var(--ink)]">
-                  {FAKE_PAYMENT_METHOD.legalName} · {FAKE_PAYMENT_METHOD.taxId}
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex items-center justify-between gap-3">
-            <p className="sub">Historial de facturas</p>
-            <Button type="button" variant="outline">
-              <Icon name="download" size={13} />
-              Exportar todo
-            </Button>
-          </CardHeader>
-          <CardContent className="divide-y divide-[var(--line-soft)]">
-            {FAKE_INVOICES.map((invoice) => (
-              <div key={invoice.number} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <Icon name="fileText" size={16} className="text-[var(--ink-3)]" />
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--ink)]">{invoice.number}</p>
-                    <p className="sub">{invoice.date}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold tabular-nums text-[var(--ink)]">
-                    {invoice.amount.toFixed(2).replace(".", ",")}&nbsp;€
-                  </span>
-                  <span className="badge badge-pos">Pagada</span>
-                  <Button type="button" variant="outline" aria-label={`Descargar factura ${invoice.number}`}>
-                    <Icon name="download" size={13} />
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <CardContent className="space-y-3 py-6 text-center">
+            {hasStripeSubscription ? (
+              <>
+                <Icon name="card" size={22} className="mx-auto text-[var(--ink-3)]" />
+                <p className="sub">
+                  La gestión de método de pago y el historial de facturas estarán disponibles aquí muy pronto, a
+                  través del portal de facturación de Stripe. Mientras tanto, escríbenos a{" "}
+                  <b>soporte@genscore.es</b>.
+                </p>
+              </>
+            ) : (
+              <>
+                <Icon name="card" size={22} className="mx-auto text-[var(--ink-3)]" />
+                <p className="sub">Todavía no tienes ningún plan de pago activo.</p>
+              </>
+            )}
           </CardContent>
         </Card>
       </section>

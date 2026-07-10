@@ -108,6 +108,28 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
+### Billing (BILLING-STRIPE-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `STRIPE_SECRET_KEY` | No | Vercel + local `.env.local` | Stripe secret key — `sk_test_...` until the go-live checklist is done, then `sk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
+| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price |
+| `STRIPE_PRICE_ID_PRO` | No | Vercel | Stripe Price id for the Pro plan's recurring price |
+
+All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
+`null` when `STRIPE_SECRET_KEY` is unset, and every caller (`createCheckoutSession`,
+`changePlan`, the webhook route) handles that by returning a safe "facturación
+no disponible todavía" error instead of crashing — same inert-until-configured
+pattern as Sentry/PostHog. Agency has no self-serve price (still "hablar con
+ventas" per PRICING-TRUTH-1), so there's no `STRIPE_PRICE_ID_AGENCY`.
+
+**Go-live checklist** (building/testing against Stripe test mode doesn't need
+any of this; only switching to real charges does — docs/launch-plan.md Fase 4):
+Vercel Pro, founder registered as autónomo (or fiscal vehicle chosen),
+VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
+test-mode price ids for their live-mode equivalents.
+
 ---
 
 ## Vercel configuration

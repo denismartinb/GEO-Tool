@@ -165,7 +165,14 @@ Do not implement without explicit founder approval:
 - Perplexity runtime;
 - crawler;
 - background scheduler;
-- billing;
+- billing — **partially approved**: BILLING-STRIPE-1 (Task Intake approved
+  2026-07-10, see `docs/launch-plan.md` Fase 4) covers Stripe Checkout +
+  webhooks + reverse trial + Customer Portal, built and tested against
+  Stripe **test mode** only. Switching to live charges requires the go-live
+  checklist in that same section (Vercel Pro, alta autónomo, VeriFactu
+  decision) — still gated on founder sign-off, not automatic. Any billing
+  work beyond that approved scope (new pricing mechanics, additional
+  payment providers, invoicing changes) needs its own approval;
 - teams / RBAC;
 - auto-merge;
 - automatic destructive cleanup;
