@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1 verificado en prod, PR 2 en curso | #186 | 2026-07-10 | Task Intake aprobado (modo test primero). PR 1 (Checkout+webhooks) mergeado y confirmado end-to-end en producción. PR 2 (Customer Portal) en curso: pago↔pago y cancelación reales vía Stripe, con guard de sobre-cupo de dominios en el webhook (decisión fundador: preguntar siempre, nunca archivar solo) |
+| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1 y 2 verificados en vivo; fix de seguridad RLS en curso; PR 3 (reverse trial, 7 días) siguiente | #186, #189 | 2026-07-10 | PR 1 y PR 2 mergeados y confirmados end-to-end (Checkout, webhook, Customer Portal con cambio de plan y cancelación reales). Hallazgo al preparar PR 3: `profiles_update_own` no protege columnas — cualquier usuario podía autoconcederse un plan vía API directa. Fix aprobado (migración `0016` + `changePlan` escribe por rol de servicio) antes de añadir `trial_ends_at` |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -696,6 +696,39 @@ código.
 
 **Siguiente:** mergear PR 2 → PR 3 (reverse trial con `trial_ends_at`,
 requiere su propia aprobación de migración) → PR 4 (emails Resend).
+
+**PR 2 mergeado (2026-07-10, #189 → `main`).**
+
+**Fix de seguridad RLS (2026-07-10, founder-approved antes de PR 3):**
+al preparar el reverse trial se detectó que `profiles_update_own`
+(`0002_v0_rls.sql`) solo comprueba propiedad de la fila (`id = auth.uid()`),
+sin restringir columnas — cualquier usuario autenticado podía llamar a la
+API de Supabase directamente (sin exploit, solo su propia sesión) y
+autoasignarse `current_plan`/`stripe_customer_id`/`stripe_subscription_id`,
+sin pasar por Stripe ni por `changePlan`. Existía desde `0010`/`0015`;
+añadir `trial_ends_at` sin arreglarlo habría extendido el mismo agujero al
+trial.
+
+- Migración `0016_protect_billing_columns.sql`: trigger `BEFORE UPDATE` en
+  `profiles` que rechaza cambios a esas tres columnas salvo que vengan del
+  rol de servicio. No RLS policy nueva — el trigger vive por debajo de RLS.
+- `changePlan` (`app/dashboard/settings/billing/actions.ts`): toda la
+  validación (archivado, recomprobación de cupo, cancelación real en
+  Stripe) sigue bajo la sesión propia del usuario; solo la escritura final
+  en `profiles` pasa a usar `createServiceClient()` (`lib/supabase/service.ts`,
+  ya usado por el webhook). Fallback seguro si la clave de servicio no está
+  configurada, en vez de reventar la request.
+- El webhook no cambia (ya escribía por rol de servicio).
+- 4 tests actualizados/nuevos en `actions.test.ts` (incluye el caso de
+  cliente de servicio no disponible). 415/415 tests totales, `pnpm run
+  validate` limpio.
+- **Pendiente del fundador:** aplicar `0016_protect_billing_columns.sql`
+  manualmente en el editor SQL de Supabase (mismo procedimiento de siempre),
+  después de `0015`.
+
+**Siguiente:** fundador aplica la migración `0016` → PR 3 (reverse trial,
+**7 días** en vez de 14, decisión del fundador) construido ya sobre la
+columna protegida.
 
 ---
 
