@@ -1,7 +1,7 @@
 # WEB-AUDIT-2 — Technical GEO audit (page checks + AI-bot access)
 
 **Gates:** this phase is adjacent to the forbidden "crawler" entry and adds a
-table (migration 0017). Requires (a) its own Task Intake Report, (b) a
+table (migration 0018). Requires (a) its own Task Intake Report, (b) a
 data-guardian review of the migration + fetch surface, and (c) explicit
 founder approval. (b) is done — verdict: **approve with required changes**,
 folded into this document (manual-redirect handling, migration renumber,
@@ -108,9 +108,11 @@ the existing `sanitizeField` pattern with tight caps.
   case — path-level nuance is out of scope and must not be guessed).
 - llms.txt: presence + byte size only. No parsing beyond that in this phase.
 
-## Persistence — migration `0017_web_audit_snapshots.sql` (data-guardian reviewed; was
-drafted as `0015` — renumbered, `0015`/`0016` are already taken by
-`BILLING-STRIPE-1`/`protect_billing_columns`)
+## Persistence — migration `0018_web_audit_snapshots.sql` (data-guardian reviewed; was
+drafted as `0015`, renumbered once to `0017` — both are already taken by
+`BILLING-STRIPE-1`/`protect_billing_columns`/`reverse_trial`, fast-moving
+billing work keeps landing ahead of this phase; confirm the next free number
+again immediately before creating the migration file)
 
 `generated_solutions` is NOT reused: these are not LLM generations, and its
 sanitization CHECK constraints don't model this data. New table:
