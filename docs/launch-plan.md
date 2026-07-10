@@ -434,10 +434,26 @@ eventos/mes, sin tarjeta), frente al trial de 30 días de Plausible.
 - `pnpm test` (341/341) y `pnpm run validate` en verde.
 
 **Pendiente (fundador, sin código posible):**
-- [ ] Subir a Vercel Pro.
-- [ ] Conectar `genscore.es` en Vercel + fijar `NEXT_PUBLIC_SITE_URL`.
-- [ ] Crear cuenta Sentry → `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` en Vercel.
-- [ ] Crear cuenta PostHog (región EU) → `NEXT_PUBLIC_POSTHOG_KEY` en Vercel.
+- [x] Conectar `genscore.es` en Vercel (2026-07-10) — falta fijar
+      `NEXT_PUBLIC_SITE_URL=https://www.genscore.es` en Vercel (variable de
+      entorno, no requiere código).
+- [x] Crear cuenta Sentry (2026-07-10) — falta pegar `SENTRY_DSN` /
+      `NEXT_PUBLIC_SENTRY_DSN` en Vercel.
+- [x] Crear cuenta PostHog (2026-07-10) — falta pegar
+      `NEXT_PUBLIC_POSTHOG_KEY` en Vercel (host EU por defecto, ver
+      `docs/environment-contract.md`).
+- [ ] **Subir a Vercel Pro — decisión explícita del fundador (2026-07-10):
+      diferido hasta la primera contratación.** Riesgo registrado y
+      aceptado conscientemente: a diferencia del alta de autónomo (donde el
+      disparador legal es cobrar), los términos de Vercel prohíben el plan
+      Hobby para **cualquier** proyecto que sea un negocio/SaaS — "even if
+      the traffic is low" — independientemente de si ya se factura.
+      `genscore.es` ya tiene página de precios pública y flujo de registro,
+      así que ya encaja en esa categoría hoy. Vercel puede suspender el
+      proyecto sin aviso previo si lo detecta. Coste de mitigar: ~20 $/mes
+      (Vercel Pro). El Director recomendó subir ya; el fundador prefiere
+      esperar. Revisar este riesgo antes de cualquier actividad de difusión
+      pública (GROWTH-1) o intento de captar la primera agencia (LAUNCH).
 - [ ] Panel de operador mínimo (queries guardadas / dashboard de PostHog).
 
 ---
