@@ -5,7 +5,8 @@ vi.mock("next/headers", () => ({
   headers: () =>
     Promise.resolve(
       new Map([
-        ["host", "geo-tool-git-some-branch-team.vercel.app"],
+        ["host", "geo-tool-internal.vercel.app"],
+        ["x-forwarded-host", "geo-tool-git-some-branch-team.vercel.app"],
         ["x-forwarded-proto", "https"]
       ])
     )
@@ -140,11 +141,11 @@ describe("createCheckoutSession", () => {
     expect(result).toEqual({ success: true, url: "https://checkout.stripe.com/session/xyz" });
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        // Regression coverage: success_url/cancel_url must be derived from the
-        // request's own host (via next/headers), not NEXT_PUBLIC_SITE_URL —
-        // that env var points at production and previously sent a Preview
-        // deployment's checkout back to production's login after payment
-        // (different origin, no session) instead of back to the preview.
+        // Regression coverage: success_url/cancel_url must be derived from
+        // x-forwarded-host (the branch alias the user actually visited), not
+        // the internal `host` Vercel rewrites requests to, and not
+        // NEXT_PUBLIC_SITE_URL (production) — both previously sent a Preview
+        // deployment's checkout back to the wrong origin after payment.
         success_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=success",
         cancel_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=cancelled",
         mode: "subscription",
@@ -153,6 +154,33 @@ describe("createCheckoutSession", () => {
         metadata: { user_id: USER_ID, plan_id: "pro" }
       })
     );
+  });
+
+  it("strips a trailing slash from the NEXT_PUBLIC_SITE_URL fallback when no host header is present", async () => {
+    vi.resetModules();
+    vi.doMock("next/headers", () => ({ headers: () => Promise.resolve(new Map()) }));
+    const ORIGINAL_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+    process.env.NEXT_PUBLIC_SITE_URL = "https://www.genscore.es/";
+
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    await createCheckoutSession("pro");
+
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success_url: "https://www.genscore.es/dashboard/settings/billing?checkout=success",
+        cancel_url: "https://www.genscore.es/dashboard/settings/billing?checkout=cancelled"
+      })
+    );
+
+    process.env.NEXT_PUBLIC_SITE_URL = ORIGINAL_SITE_URL;
   });
 
   it("reuses an existing stripe_customer_id instead of customer_email when one is on file", async () => {

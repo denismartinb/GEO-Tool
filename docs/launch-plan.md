@@ -594,24 +594,36 @@ alcance original:**
    Impuestos → código SaaS). Sin código, no es un bug de este repo —
    documentado aquí para que quede constancia de que es un paso de cuenta
    de Stripe, no solo de variables de entorno.
-2. **Bug real corregido**: tras completar el pago de prueba, Stripe
-   redirigía a `genscore.es` (producción) en vez de al preview donde se
-   estaba probando, aterrizando en el login (dominios distintos, sin
+2. **Bug real corregido (1ª vuelta)**: tras completar el pago de prueba,
+   Stripe redirigía a `genscore.es` (producción) en vez de al preview donde
+   se estaba probando, aterrizando en el login (dominios distintos, sin
    sesión). Causa: `createCheckoutSession` construía `success_url`/
    `cancel_url` con `NEXT_PUBLIC_SITE_URL` (fijada a producción, correcto
    para uso real, pero incorrecta al probar en preview). Corregido para
-   derivar el dominio de la propia petición entrante (`next/headers`) en
-   vez de confiar en esa variable — la redirección ahora coincide siempre
-   con el despliegue real desde el que se inició el pago, sea preview o
-   producción. Test de regresión añadido.
-- 392/392 tests en verde, `pnpm run validate` limpio tras el fix.
+   derivar el dominio de la propia petición entrante (`next/headers`).
+3. **Bug real corregido (2ª vuelta, encontrado al reprobar el fix
+   anterior)**: la sesión de Checkout seguía apuntando a `genscore.es` (con
+   doble barra: `NEXT_PUBLIC_SITE_URL` mal configurada con `/` final) pese
+   al fix. Causa: el dominio de alias de rama de Vercel
+   (`geo-tool-git-...vercel.app`) reescribe internamente la cabecera `host`
+   a un valor interno de despliegue y expone el dominio público real solo en
+   `x-forwarded-host`. Corregido para preferir `x-forwarded-host` sobre
+   `host`, y para recortar barras finales al construir la URL (protege
+   también contra el propio `NEXT_PUBLIC_SITE_URL` mal configurado). Este
+   segundo fallo se detectó porque la sesión de Stripe (pegada por el
+   fundador) mostraba `status: "open"` / `payment_status: "unpaid"` — el
+   pago de prueba nunca llegó a completarse, así que el plan tampoco se
+   activó; no llegó a ser un fallo de webhook.
+- Tests de regresión añadidos para ambos casos. 393/393 tests en verde,
+  `pnpm run validate` limpio tras el segundo fix.
 
-**Siguiente:** confirmar con el fundador que, tras el fix, el pago de
-prueba completo (compra → webhook → plan actualizado → vuelta a la propia
-página) funciona de principio a fin. Después: PR 2 (Customer Portal —
-cambio de plan real entre pagos, cancelación real, facturas reales) → PR 3
-(reverse trial con `trial_ends_at`, requiere su propia aprobación de
-migración) → PR 4 (emails Resend).
+**Siguiente:** confirmar con el fundador que, tras este segundo fix, el pago
+de prueba completo (compra → checkout completado en Stripe → webhook → plan
+actualizado → vuelta a la propia página con éxito) funciona de principio a
+fin en el preview. Después: PR 2 (Customer Portal — cambio de plan real
+entre pagos, cancelación real, facturas reales) → PR 3 (reverse trial con
+`trial_ends_at`, requiere su propia aprobación de migración) → PR 4 (emails
+Resend).
 
 ---
 

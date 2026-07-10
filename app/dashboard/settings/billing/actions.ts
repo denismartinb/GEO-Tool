@@ -151,14 +151,19 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   // that env var is set to the production domain, which is correct for real
   // usage but silently sends a Preview-deployment checkout back to
   // production's login (a different origin, no session) once the payment
-  // completes — found via live testing. Reading the request's own host
-  // means the redirect always matches whichever deployment initiated it.
+  // completes — found via live testing. Vercel's branch-alias domains
+  // (geo-tool-git-*) proxy the request and rewrite `host` to the underlying
+  // deployment's own host, exposing the original public domain only via
+  // `x-forwarded-host` — found via a second round of live testing, where the
+  // Checkout session still came back with the production domain despite this
+  // running on a preview. Trailing slash is stripped in case the env var
+  // fallback itself has one (it does, in this project's Vercel config).
   const headersList = await headers();
-  const host = headersList.get("host");
+  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
   const protocol = headersList.get("x-forwarded-proto") ?? "https";
-  const siteUrl = host
-    ? `${protocol}://${host}`
-    : (process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"));
+  const fallbackSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const siteUrl = (host ? `${protocol}://${host}` : fallbackSiteUrl).replace(/\/+$/, "");
   const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
 
   try {
