@@ -99,6 +99,26 @@ export async function sendCancellationScheduledEmail(to: string, activeUntil: Da
   );
 }
 
+export async function sendScoreDropAlertEmail(
+  to: string,
+  projectDomain: string,
+  previousScore: number,
+  currentScore: number
+): Promise<void> {
+  await sendEmail(
+    to,
+    `Tu GEO Score de ${projectDomain} ha bajado`,
+    wrap(`
+      <p>Tu GEO Score de <b>${projectDomain}</b> ha pasado de <b>${Math.round(previousScore)}</b> a
+      <b>${Math.round(currentScore)}</b> en el último escaneo.</p>
+      <p>Puede deberse a un cambio real de visibilidad en las respuestas de IA, o a variación normal entre
+      escaneos. Revisa el detalle y las recomendaciones para entender qué ha cambiado.</p>
+      <p><a href="https://www.genscore.es/dashboard">Ver mi cuenta</a></p>
+      <p style="font-size: 13px; color: #666;">Puedes desactivar este aviso en Ajustes → Notificaciones.</p>
+    `)
+  );
+}
+
 export async function sendAccountDeletedEmail(to: string): Promise<void> {
   await sendEmail(
     to,

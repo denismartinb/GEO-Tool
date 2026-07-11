@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { InfoTip } from "@/components/ui/info-tip";
 import { SettingRow } from "@/components/settings/setting-row";
 import { Switch } from "@/components/settings/switch";
+import { updateNotificationPreference, type NotificationPreferenceKey } from "@/app/dashboard/settings/notifications/actions";
 
 type NotificationKey = "visibility" | "competitor" | "weekly" | "recs" | "scan" | "product";
 
@@ -17,7 +18,14 @@ const ROWS: { key: NotificationKey; title: string; desc: string; last?: boolean 
   { key: "product", title: "Novedades de producto", desc: "Mejoras y nuevas funciones de GEO Studio", last: true }
 ];
 
-const DEFAULTS: Record<NotificationKey, boolean> = {
+// visibility/weekly are persisted server-side (ALERTS-1 Fase 6a); the rest
+// stay client-only placeholders until their own phase.
+const PERSISTED_KEYS: Partial<Record<NotificationKey, NotificationPreferenceKey>> = {
+  visibility: "notify_score_drop_alert",
+  weekly: "notify_weekly_digest"
+};
+
+const LOCAL_DEFAULTS: Record<NotificationKey, boolean> = {
   visibility: true,
   competitor: true,
   weekly: true,
@@ -26,9 +34,34 @@ const DEFAULTS: Record<NotificationKey, boolean> = {
   product: false
 };
 
-export function NotificationsTab() {
-  const [n, setN] = useState(DEFAULTS);
-  const set = (key: NotificationKey) => (value: boolean) => setN((current) => ({ ...current, [key]: value }));
+export function NotificationsTab({
+  initialScoreDropAlert,
+  initialWeeklyDigest
+}: {
+  initialScoreDropAlert: boolean;
+  initialWeeklyDigest: boolean;
+}) {
+  const [n, setN] = useState<Record<NotificationKey, boolean>>({
+    ...LOCAL_DEFAULTS,
+    visibility: initialScoreDropAlert,
+    weekly: initialWeeklyDigest
+  });
+  const [, startTransition] = useTransition();
+
+  const set = (key: NotificationKey) => (value: boolean) => {
+    const previous = n[key];
+    setN((current) => ({ ...current, [key]: value }));
+
+    const persistedKey = PERSISTED_KEYS[key];
+    if (!persistedKey) return;
+
+    startTransition(async () => {
+      const result = await updateNotificationPreference(persistedKey, value);
+      if (!result.success) {
+        setN((current) => ({ ...current, [key]: previous }));
+      }
+    });
+  };
 
   return (
     <div className="set-pane">
