@@ -5,7 +5,11 @@ import { PassField } from "@/components/ui/pass-field";
 import { Icon } from "@/components/ui/icon";
 import { login, signInWithGoogle } from "./actions";
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function LoginPage({
+  searchParams
+}: {
+  searchParams: Promise<{ error?: string; deleted?: string }>;
+}) {
   const params = await searchParams;
 
   const supabase = await createClient();
@@ -26,6 +30,10 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
         <div className="auth-h1">Bienvenido de nuevo</div>
         <div className="auth-sub">Accede a tu panel y sigue mejorando tu visibilidad en IA.</div>
+
+        {params.deleted === "1" ? (
+          <p className="feedback success">Tu cuenta se ha eliminado correctamente.</p>
+        ) : null}
 
         <form action={login} className="auth-form">
           <div>

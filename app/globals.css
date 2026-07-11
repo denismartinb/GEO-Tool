@@ -399,6 +399,14 @@ a {
   padding: 16px;
 }
 
+.card-danger-zone {
+  border-color: var(--neg-soft);
+}
+
+.card-danger-zone .card-head {
+  border-bottom-color: var(--neg-soft);
+}
+
 .kicker {
   font-size: 11.5px;
   color: var(--ink-4);
