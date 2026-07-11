@@ -1,13 +1,31 @@
+import Image from "next/image";
 import { Icon } from "@/components/ui/icon";
 
 /**
- * Abstract gradient cover "image" for a blog post — reuses the same aurora/
- * blob decoration already on the landing hero (app/globals.css's
- * .onb-aurora) instead of stock photography (licensing risk, and nothing on
- * hand matches the brand). Same visual system, just contained to a fixed
- * height box.
+ * Blog post cover. When `image` is set (a founder-provided illustration
+ * under public/blog/<slug>/cover.png), renders that; otherwise falls back to
+ * an abstract gradient (reusing the landing hero's .onb-aurora decoration)
+ * with a centered icon — no stock photography either way.
  */
-export function BlogCover({ icon, compact = false }: { icon: string; compact?: boolean }) {
+export function BlogCover({
+  icon,
+  image,
+  alt,
+  compact = false
+}: {
+  icon: string;
+  image?: string;
+  alt?: string;
+  compact?: boolean;
+}) {
+  if (image) {
+    return (
+      <div className={`blog-cover blog-cover-image ${compact ? "blog-cover-compact" : ""}`}>
+        <Image src={image} alt={alt ?? ""} fill sizes="(max-width: 760px) 100vw, 760px" style={{ objectFit: "cover" }} priority={!compact} />
+      </div>
+    );
+  }
+
   return (
     <div className={`blog-cover ${compact ? "blog-cover-compact" : ""}`}>
       <div className="onb-aurora">

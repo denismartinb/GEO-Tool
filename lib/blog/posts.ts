@@ -1,17 +1,19 @@
 /**
- * Single source of truth for blog post metadata (GROWTH-1 Fase 7a) — used by
- * the index page, the sitemap, and each post's own <title>/description/JSON-LD
- * (via ArticleSchema), so the same title/description/date never has to be
- * typed out in more than one place. Adding a post = one entry here + one new
- * app/blog/<slug>/page.mdx file.
+ * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b) — used
+ * by the index page, the sitemap, and each post's own <title>/description/
+ * JSON-LD (via ArticleSchema), so the same title/description/date never has
+ * to be typed out in more than one place. Adding a post = one entry here +
+ * one new app/blog/<slug>/page.mdx file.
  */
 export type BlogPost = {
   slug: string;
   title: string;
   description: string;
   datePublished: string; // ISO date, e.g. "2026-07-12"
-  /** Icon name (components/ui/icon.tsx) shown on the post's abstract gradient cover (components/blog/blog-cover.tsx) — no stock photography. */
+  /** Icon name (components/ui/icon.tsx) shown on the post's abstract gradient cover (components/blog/blog-cover.tsx) when there's no coverImage. */
   coverIcon: string;
+  /** Path under /public to a real cover image (public/blog/<slug>/cover.png). When set, BlogCover renders this instead of the icon+gradient fallback. */
+  coverImage?: string;
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -22,6 +24,42 @@ export const BLOG_POSTS: BlogPost[] = [
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
     coverIcon: "trendUp"
+  },
+  {
+    slug: "que-es-geo-generative-engine-optimization",
+    title: "Qué es GEO (Generative Engine Optimization) y por qué no es lo mismo que SEO",
+    description:
+      "Descubre qué es el GEO, cómo funciona y por qué las marcas necesitan optimizar su presencia en ChatGPT, Gemini y Claude.",
+    datePublished: "2026-07-13",
+    coverIcon: "compass",
+    coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.png"
+  },
+  {
+    slug: "como-elegir-prompts-monitorizar-marca-ia",
+    title: "Cómo elegir los prompts correctos para monitorizar tu marca en IA",
+    description:
+      "Aprende una metodología práctica para seleccionar los prompts que realmente reflejan cómo tus clientes preguntan a ChatGPT y Gemini.",
+    datePublished: "2026-07-13",
+    coverIcon: "target",
+    coverImage: "/blog/como-elegir-prompts-monitorizar-marca-ia/cover.png"
+  },
+  {
+    slug: "como-elegir-competidores-analisis-geo",
+    title: "Cómo seleccionar los competidores adecuados para un análisis GEO",
+    description:
+      "Elegir mal a tus competidores puede distorsionar todo tu análisis GEO. Aprende una metodología para compararte con las marcas correctas.",
+    datePublished: "2026-07-13",
+    coverIcon: "layers",
+    coverImage: "/blog/como-elegir-competidores-analisis-geo/cover.png"
+  },
+  {
+    slug: "genscore-vs-herramientas-geo",
+    title: "GenScore frente a las herramientas GEO tradicionales: la diferencia entre medir y mejorar",
+    description:
+      "Muchas herramientas GEO muestran qué ocurre. GenScore busca ayudarte a decidir qué hacer después. Descubre en qué se diferencian.",
+    datePublished: "2026-07-13",
+    coverIcon: "refresh",
+    coverImage: "/blog/genscore-vs-herramientas-geo/cover.png"
   }
 ];
 
