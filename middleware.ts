@@ -40,8 +40,18 @@ export async function middleware(request: NextRequest) {
   );
 
   // Refresh the session if expired. Required for Server Components, which
-  // cannot set cookies themselves.
-  await supabase.auth.getUser();
+  // cannot set cookies themselves. `getClaims()` verifies the JWT locally via
+  // WebCrypto when the project uses asymmetric signing keys (confirmed for
+  // this project), avoiding the network round trip to the Auth server that
+  // `getUser()` always makes — and it falls back to that same live check
+  // automatically if local verification isn't available, so this is never
+  // weaker than before (docs/architecture-audit-2026-07.md, PERF-4b).
+  //
+  // This middleware does not gate access — its result is discarded, it only
+  // triggers the session-refresh side effect above. The actual authorization
+  // checkpoints (`requireUser()` in lib/auth.ts, and the API routes) still
+  // call `getUser()` directly and must keep doing so; do not change those.
+  await supabase.auth.getClaims();
 
   return response;
 }
