@@ -291,6 +291,7 @@ export default function HomePage() {
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
+              <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>
               <Link href="/terminos">Términos</Link>

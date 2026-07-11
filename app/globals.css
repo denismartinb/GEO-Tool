@@ -2800,6 +2800,24 @@ textarea.add-prompts-text-input {
 .legal-body strong { color: var(--ink); font-weight: 650; }
 .legal-body a { color: var(--accent-ink); font-weight: 600; }
 
+.blog-body { max-width: 760px; }
+.blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
+.blog-body h2:first-child { margin-top: 0; }
+.blog-body h3 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 28px 0 10px; }
+.blog-body p { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin: 0 0 16px; }
+.blog-body ul, .blog-body ol { margin: 0 0 16px; padding-left: 20px; }
+.blog-body li { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 8px; }
+.blog-body strong { color: var(--ink); font-weight: 650; }
+.blog-body a { color: var(--accent-ink); font-weight: 600; }
+.blog-body blockquote { border-left: 3px solid var(--line); padding-left: 16px; margin: 0 0 16px; color: var(--ink-3); font-style: italic; }
+.blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+.blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
+.blog-cta p { margin-bottom: 14px; }
+.blog-index-card { display: block; padding: 20px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); margin-bottom: 14px; }
+.blog-index-card:hover { border-color: var(--accent); }
+.blog-index-card h2 { margin: 0 0 6px; font-size: 18px; }
+.blog-index-card p { margin: 0; color: var(--ink-2); font-size: 14px; }
+
 .evidence { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; }
 .ev-quote { font-size: 13px; line-height: 1.6; color: var(--ink-2); font-style: italic; }
 .ev-quote .mk { background: var(--warn-soft); color: var(--warn-ink); padding: 1px 4px; border-radius: 4px; font-style: normal; font-weight: 650; }

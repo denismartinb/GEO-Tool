@@ -1,0 +1,77 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { getBlogPost } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-es-el-geo-score");
+
+export const metadata = {
+  title: `${post.title} — GenScore`,
+  description: post.description
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
+
+<BlogPageShell>
+
+# {post.title}
+
+<p className="blog-post-meta">12 de julio de 2026</p>
+
+<div className="blog-body">
+
+## Por qué "¿me menciona la IA?" no es suficiente
+
+La primera pregunta que se hace cualquiera al empezar con GEO
+(Generative Engine Optimization) es simple: *¿aparece mi marca cuando alguien
+le pregunta a ChatGPT, Gemini o Claude sobre mi categoría?* Es una pregunta
+binaria — sí o no — y responde a lo que en GenScore llamamos **presencia**.
+
+Pero un analista de visibilidad de marca nunca se conforma con un sí o un no.
+Las siguientes preguntas que hace son: *¿en qué posición aparece respecto a
+mis competidores? ¿cómo salgo parado frente a ellos en conjunto? ¿esa mención
+está respaldada por una cita o fuente real, o es solo una opinión genérica
+del modelo?* El GEO Score de GenScore existe para responder a las cuatro a
+la vez, en un solo número de 0 a 100.
+
+## Los cuatro componentes
+
+El GEO Score es una media ponderada de cuatro señales, cada una normalizada
+a una escala de 0 a 100 donde más alto es siempre mejor:
+
+| Componente | De dónde sale | Peso | Qué mide |
+|---|---|---|---|
+| **Presencia** | Tasa de mención (% de prompts donde aparece tu marca) | 40% | Lo más fundamental: si la marca nunca aparece, el resto no importa |
+| **Prominencia** | Posición media de tu marca frente a competidores | 25% | No solo si apareces, sino si apareces primero o como una idea tardía |
+| **Posición competitiva** | Presión competitiva general del run | 20% | Cómo te va frente a la competencia en conjunto, no solo prompt a prompt |
+| **Autoridad** | Tasa de citación de tu propio dominio | 15% | Si esa presencia está respaldada por una fuente real, no solo por una opinión del modelo |
+
+El orden de los pesos no es arbitrario: refleja cómo razona un analista real
+— primero "¿estamos en la conversación?", después "¿con qué protagonismo?",
+después "¿cómo estamos en conjunto frente a la competencia?", y por último
+"¿hay evidencia real detrás?".
+
+## Qué pasa cuando falta un dato
+
+No todos los escaneos tienen los cuatro componentes disponibles — por
+ejemplo, la prominencia solo se puede calcular cuando hay datos de posición
+válidos para ese prompt. Cuando un componente no está disponible, GenScore
+no le pone un cero (eso penalizaría injustamente sin motivo): lo **descarta**
+del cálculo y reparte su peso proporcionalmente entre los demás. Si eso
+ocurre, la confianza del resultado se marca como media en vez de alta, para
+dejar claro que el número se apoya en menos señales de lo habitual.
+
+## Por qué esto importa
+
+Un GEO Score de 72 no significa "te mencionan en el 72% de las respuestas".
+Significa: *combinando cuánto apareces, con qué protagonismo, cómo estás
+frente a tus competidores y si hay una fuente real detrás, tu marca saca un
+72 sobre 100*. Es la diferencia entre un contador y un diagnóstico.
+
+<div className="blog-cta">
+<p>¿Quieres ver el GEO Score real de tu marca?</p>
+<a href="/signup" className="btn btn-primary">Prueba gratis</a>
+</div>
+
+</div>
+
+</BlogPageShell>

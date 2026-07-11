@@ -39,7 +39,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 4 | BILLING-STRIPE-1 ⚠️ | ✅ Hecho (alcance aprobado) | #186, #189, #191, #192, #196, #200, #202, #205, #207 | 2026-07-11 | Checkout, webhook, Customer Portal, protección RLS, reverse trial (7 días) y los 5 emails transaccionales (bienvenida, plan confirmado, pago fallido, trial terminado, cancelación programada) verificados end-to-end en producción, incluida la cancelación real (fecha guardada, UI con estado "Cancelada — activa hasta…" + botón reactivar, email recibido). Bug real encontrado y corregido en vivo: el código exigía `cancel_at_period_end` además de `cancel_at`, pero el Customer Portal solo fija `cancel_at`. Pendiente, deliberadamente fuera de este alcance: PR B (aviso 3 días antes de expirar el trial, necesita su propia aprobación de migración/cron) y el go-live checklist (Vercel Pro, alta autónomo, VeriFactu, claves live) antes de cobros reales |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🟡 Fase 6a hecha; 6b (resumen semanal) pendiente | — | 2026-07-11 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b (resumen semanal) necesita resolver antes el límite de cron jobs de Vercel Hobby |
-| 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
+| 7 | GROWTH-1 | 🟡 Fase 7a hecha; catálogo de artículos pendiente | — | 2026-07-11 | Fase 7a: blog MDX (`@next/mdx`), sitemap, robots.txt, llms.txt, agente `growth-content` y 1 artículo ("Qué es el GEO Score") verificado. Próximos artículos en PRs pequeños separados |
 | 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
 | 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
 | ⏰ | MODEL-PIN (deadline 2026-10-16) | 🔲 Pendiente | — | 2026-07-09 | Cutover anunciado de gemini-2.5-flash |
@@ -1129,6 +1129,38 @@ tardan semanas en recogerlo.
 **Agentes:** nuevo agente `growth-content` (ver "Cambios en la estructura
 de agentes" abajo) + frontend para la sección MDX.
 
+**Fase 7a — hecha (2026-07-11):** Task Intake aprobado por el fundador
+("Si") para la porción de infraestructura + 1 artículo de prueba,
+dejando el resto del contenido para PRs pequeños posteriores.
+
+- `.claude/agents/growth-content.md` creado (posicionamiento, blog,
+  emails de ciclo de vida — regla dura: todo dato de metodología debe
+  trazarse a un ADR/código real, nunca reconstruirse de memoria).
+- Blog MDX nativo de Next.js (`@next/mdx`, sin CMS): `next.config.ts` +
+  `mdx-components.tsx`; cada post es un archivo `.mdx` bajo
+  `app/blog/<slug>/`. `lib/blog/posts.ts` es la única fuente de verdad de
+  metadatos (slug/título/descripción/fecha), usada por el índice, el
+  sitemap y el propio post (evita duplicar la descripción en dos sitios).
+- `components/blog/blog-page-shell.tsx` (mismo patrón de nav/footer que
+  `legal-page-shell.tsx`) y `components/blog/article-schema.tsx`
+  (JSON-LD `Article` por post).
+- `app/sitemap.ts` y `app/robots.ts` (convención nativa de Next.js —
+  antes no existía ninguno) + `public/llms.txt`.
+- Enlace "Blog" añadido a los footers de `/` y `/pricing`.
+- 1 artículo de prueba end-to-end: "Qué es el GEO Score y cómo se
+  calcula", contenido derivado literalmente de
+  `docs/adr/0008-composite-geo-score.md` (pesos y fórmulas reales, no
+  inventados).
+- Verificado el HTML estático generado en el build (`/blog`, el artículo,
+  `sitemap.xml`, `robots.txt`) — no se pudo levantar el dev server en este
+  entorno por falta de credenciales reales de Supabase (afecta a
+  cualquier ruta vía middleware, no es un bug de esta PR).
+- `pnpm test` (565/565) y `pnpm run validate` en verde.
+
+**Siguiente:** el fundador revisa el artículo en el preview; los próximos
+3–5 artículos fundacionales del catálogo llegan en PRs pequeños
+separados (una o dos piezas por vez), no de golpe.
+
 ---
 
 ## Fase 8 — ENGINES-2 ⚠️ (requiere aprobación explícita)
@@ -1173,8 +1205,8 @@ semana del 2026-10-01**, en cualquier punto del plan en que se esté.
 
 ## Cambios en la estructura de agentes (hacer junto a las fases que los usan)
 
-1. **`growth-content` (nuevo)** — posicionamiento, copy marketing, blog,
-   emails de ciclo de vida. Crear en Fase 7 (o antes si se adelanta el blog).
+1. **`growth-content`** — posicionamiento, copy marketing, blog, emails de
+   ciclo de vida. **Creado en Fase 7a (2026-07-11)**, `.claude/agents/growth-content.md`.
 2. **`billing-compliance` (nuevo, o extensión de `platform-deploy`)** —
    Stripe, webhooks, enforcement de planes, facturación, checklist legal.
    Crear en el Task Intake de la Fase 4. Plan-mode para todo lo que toque
