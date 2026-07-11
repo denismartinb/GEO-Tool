@@ -70,10 +70,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               Continuar con Google
             </button>
           </form>
-          <button type="button" className="auth-social" disabled aria-disabled="true">
-            <Icon name="lock" size={15} />
-            Continuar con SSO
-          </button>
         </div>
 
         <div className="auth-alt">
