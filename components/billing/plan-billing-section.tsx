@@ -216,8 +216,8 @@ export function PlanBillingSection({
                   <b>{cancelAtDate}</b>; después bajarás a Free. ¿Cambiaste de idea? Puedes reactivarla en el
                   portal de Stripe.
                 </p>
-                <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
-                  {isPortalPending ? "Abriendo…" : "Gestionar en el portal de Stripe"}
+                <Button type="button" disabled={isPortalPending} onClick={handleManageBilling}>
+                  {isPortalPending ? "Abriendo…" : "Reactivar suscripción"}
                 </Button>
               </div>
             ) : (
