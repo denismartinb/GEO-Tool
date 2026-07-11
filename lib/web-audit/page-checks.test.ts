@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { checkAnswerFormat, checkFreshness, checkMetadata, checkStructuredData, buildPageCheckResult } from "./page-checks";
+import {
+  checkAnswerFormat,
+  checkFreshness,
+  checkMetadata,
+  checkStructuredData,
+  buildPageCheckResult,
+  buildPageCheckGuidance
+} from "./page-checks";
 
 const NOW = new Date("2026-07-10T00:00:00Z");
 
@@ -73,6 +80,12 @@ describe("checkAnswerFormat", () => {
   it("fails hasTwoH2 with fewer than two h2s", () => {
     expect(checkAnswerFormat("<h1>a</h1><h2>only one</h2>", noStructuredData).hasTwoH2).toBe(false);
   });
+
+  it("reports the raw h1/h2 counts backing hasOneH1/hasTwoH2", () => {
+    expect(checkAnswerFormat("<p>no h1</p>", noStructuredData).h1Count).toBe(0);
+    expect(checkAnswerFormat("<h1>a</h1><h1>b</h1>", noStructuredData).h1Count).toBe(2);
+    expect(checkAnswerFormat("<h1>a</h1><h2>only one</h2>", noStructuredData).h2Count).toBe(1);
+  });
 });
 
 describe("checkMetadata", () => {
@@ -99,6 +112,12 @@ describe("checkMetadata", () => {
 
   it("scores zero with no title or description", () => {
     expect(checkMetadata("<html></html>").points).toBe(0);
+  });
+
+  it("reports the raw title/description lengths backing titleOk/descriptionOk", () => {
+    const result = checkMetadata(`<title>${"a".repeat(100)}</title>`);
+    expect(result.titleLength).toBe(100);
+    expect(checkMetadata("<html></html>").descriptionLength).toBe(0);
   });
 });
 
@@ -184,5 +203,43 @@ describe("buildPageCheckResult", () => {
     );
     expect(withoutDate.pageScore).toBeGreaterThanOrEqual(0);
     expect(withDate.pageScore).toBeGreaterThanOrEqual(withoutDate.pageScore);
+  });
+});
+
+describe("buildPageCheckGuidance", () => {
+  it("returns no guidance for a fully compliant page", () => {
+    const html = `
+      <title>A perfectly reasonable page title</title>
+      <meta name="description" content="${"a".repeat(80)}">
+      <script type="application/ld+json">{"@type":"Article","dateModified":"2026-06-01T00:00:00Z"}</script>
+      <h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>
+    `;
+    expect(buildPageCheckGuidance(buildPageCheckResult(html, NOW))).toEqual([]);
+  });
+
+  it("cites the real measured h1 count and title length in the guidance text", () => {
+    const html = `<h1>a</h1><h1>b</h1><title>${"a".repeat(100)}</title>`;
+    const guidance = buildPageCheckGuidance(buildPageCheckResult(html, NOW));
+    expect(guidance.some((line) => line.includes("ahora: 2 detectados"))).toBe(true);
+    expect(guidance.some((line) => line.includes("ahora: 100"))).toBe(true);
+  });
+
+  it("suggests adding a date when freshness is unknown, and updating content when stale/aging", () => {
+    const unknown = buildPageCheckGuidance(buildPageCheckResult("<html></html>", NOW));
+    expect(unknown.some((line) => line.includes("fecha de actualización"))).toBe(true);
+
+    const staleHtml = `<script type="application/ld+json">{"datePublished":"2023-01-01T00:00:00Z"}</script>`;
+    const stale = buildPageCheckGuidance(buildPageCheckResult(staleHtml, NOW));
+    expect(stale.some((line) => line.includes("Actualiza el contenido"))).toBe(true);
+  });
+
+  it("suggests structured data only when the check actually fails", () => {
+    const withStructuredData = buildPageCheckGuidance(
+      buildPageCheckResult(`<script type="application/ld+json">{"@type":"Article"}</script>`, NOW)
+    );
+    expect(withStructuredData.some((line) => line.includes("datos estructurados"))).toBe(false);
+
+    const withoutStructuredData = buildPageCheckGuidance(buildPageCheckResult("<html></html>", NOW));
+    expect(withoutStructuredData.some((line) => line.includes("datos estructurados"))).toBe(true);
   });
 });

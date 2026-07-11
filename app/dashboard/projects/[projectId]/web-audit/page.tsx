@@ -22,6 +22,7 @@ import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
+import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -165,6 +166,22 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
         <CheckDot ok={check.metadata.points === 20} label="Metadatos" />
         <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
       </div>
+      {/* Deterministic "qué hacer" per failing sub-check (no LLM — see
+          buildPageCheckGuidance), reviewed with geo-strategy 2026-07-11:
+          founder report was that seeing red X's with no explanation left no
+          idea what to actually do. An AI-generated draft (rewritten title/
+          description/intro) is a separate, larger feature explicitly parked
+          for its own Task Intake — this is only the deterministic half. */}
+      {(() => {
+        const guidance = buildPageCheckGuidance(check);
+        return guidance.length > 0 ? (
+          <ul style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5, margin: "8px 0 0", paddingLeft: 16 }}>
+            {guidance.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        ) : null;
+      })()}
     </div>
   );
 }
