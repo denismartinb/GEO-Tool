@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function PrivacidadPage() {
   return (
-    <LegalPageShell title="Política de Privacidad" updated="9 de julio de 2026" activeHref="/privacidad">
+    <LegalPageShell title="Política de Privacidad" updated="11 de julio de 2026" activeHref="/privacidad">
       <h2>Responsable del tratamiento</h2>
       <p>
         El responsable del tratamiento de los datos personales recogidos a través de GenScore es{" "}
@@ -42,6 +42,9 @@ export default function PrivacidadPage() {
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Resend</strong> — envía los correos transaccionales de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba).</li>
+        <li><strong>Stripe</strong> — procesa los pagos de tu suscripción (datos de facturación y de tu tarjeta; nunca almacenamos ni vemos el número completo de tu tarjeta, lo gestiona Stripe directamente). Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
+        <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Funciona sin cookies (no te identifica entre sesiones ni dispositivos).</li>
+        <li><strong>Sentry</strong> — monitorización de errores técnicos de la aplicación, para detectar y corregir fallos.</li>
       </ul>
       <p>
         Las transferencias de datos a proveedores fuera del Espacio Económico Europeo se realizan
@@ -50,8 +53,8 @@ export default function PrivacidadPage() {
         cedemos tus datos a terceros con fines publicitarios.
       </p>
       <p>
-        Esta política se actualizará si en el futuro se incorporan nuevos proveedores (por
-        ejemplo, de facturación o analítica de producto) antes de que empiecen a tratar tus datos.
+        Esta política se actualizará si en el futuro se incorporan nuevos proveedores antes de que
+        empiecen a tratar tus datos.
       </p>
 
       <h2>Cuánto tiempo conservamos tus datos</h2>
