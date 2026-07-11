@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeRunScoresFromResults, SCORING_VERSION } from "./run-scoring";
+import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "./run-scoring";
 
 type ScoreInputRow = Parameters<typeof computeRunScoresFromResults>[0][number];
 
@@ -799,5 +799,34 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     expect(geoScore.composite_version).toBe("geo-score-v1");
     expect(geoScore.formula).toContain("standing = 100 - competitor_gap_score");
     expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position-1)/total_entities)*100");
+  });
+});
+
+describe("getEffectiveGeoScore", () => {
+  it("prefers the composite geo_score.score when present", () => {
+    const score = getEffectiveGeoScore({
+      visibility_score: 90,
+      details_json: { geo_score: { score: 55.5 } }
+    });
+
+    expect(score).toBe(55.5);
+  });
+
+  it("falls back to visibility_score for runs scored before geo-score-v1 existed", () => {
+    const score = getEffectiveGeoScore({ visibility_score: 42, details_json: null });
+
+    expect(score).toBe(42);
+  });
+
+  it("falls back to visibility_score when details_json has no geo_score", () => {
+    const score = getEffectiveGeoScore({ visibility_score: 42, details_json: { total_results: 10 } });
+
+    expect(score).toBe(42);
+  });
+
+  it("defaults to 0 when both geo_score and visibility_score are absent", () => {
+    const score = getEffectiveGeoScore({ visibility_score: null, details_json: null });
+
+    expect(score).toBe(0);
   });
 });

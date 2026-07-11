@@ -456,3 +456,19 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     }
   };
 }
+
+/**
+ * The single "GEO Score" number shown on the Overview gauge, extracted from
+ * a run_scores row so callers other than the project page (e.g. the
+ * score-drop alert, ALERTS-1) don't re-derive it differently. Falls back to
+ * the legacy visibility_score for runs scored before geo-score-v1 existed
+ * (no backfill, per ADR 0008) — mirrors app/dashboard/projects/[projectId]/page.tsx.
+ */
+export function getEffectiveGeoScore(row: {
+  visibility_score: number | null;
+  details_json: unknown;
+}): number {
+  const details =
+    row.details_json && typeof row.details_json === "object" ? (row.details_json as { geo_score?: { score?: number } }) : {};
+  return details.geo_score?.score ?? row.visibility_score ?? 0;
+}

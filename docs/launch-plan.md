@@ -38,7 +38,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
 | 4 | BILLING-STRIPE-1 ⚠️ | ✅ Hecho (alcance aprobado) | #186, #189, #191, #192, #196, #200, #202, #205, #207 | 2026-07-11 | Checkout, webhook, Customer Portal, protección RLS, reverse trial (7 días) y los 5 emails transaccionales (bienvenida, plan confirmado, pago fallido, trial terminado, cancelación programada) verificados end-to-end en producción, incluida la cancelación real (fecha guardada, UI con estado "Cancelada — activa hasta…" + botón reactivar, email recibido). Bug real encontrado y corregido en vivo: el código exigía `cancel_at_period_end` además de `cancel_at`, pero el Customer Portal solo fija `cancel_at`. Pendiente, deliberadamente fuera de este alcance: PR B (aviso 3 días antes de expirar el trial, necesita su propia aprobación de migración/cron) y el go-live checklist (Vercel Pro, alta autónomo, VeriFactu, claves live) antes de cobros reales |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
-| 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
+| 6 | ALERTS-1 | 🟡 Fase 6a hecha; 6b (resumen semanal) pendiente | — | 2026-07-11 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b (resumen semanal) necesita resolver antes el límite de cron jobs de Vercel Hobby |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
 | 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
@@ -1065,6 +1065,43 @@ ASYNC-SCAN-1 se aprueba antes, diseñar las notificaciones una sola vez
 
 **Agentes:** director + geo-strategy (qué contar en el email), reliability
 (triggers), frontend.
+
+**Fase 6a — hecha (2026-07-11):** Task Intake aprobado por el fundador
+("Si") para la porción de menor riesgo: alerta de caída puntual +
+preferencias reales, sin cron nuevo (el resumen semanal queda como Fase 6b,
+pendiente de resolver antes el límite de cron jobs de Vercel Hobby con
+`platform-deploy`).
+
+- Migración `0020_notification_preferences.sql`: dos columnas nuevas en
+  `profiles` (`notify_score_drop_alert`, `notify_weekly_digest`, boolean,
+  default `true`). A diferencia de las columnas de billing (0016/0017/0019),
+  estas NO se protegen con `protect_billing_columns()` — son preferencias
+  normales que el propio usuario debe poder cambiar desde su sesión; la
+  política RLS `profiles_update_own` ya lo permite correctamente.
+- `lib/scoring/run-scoring.ts`: nueva función `getEffectiveGeoScore()` —
+  extrae el mismo GEO Score que ya mostraba el gauge de Overview
+  (`geo_score.score` con fallback a `visibility_score`), ahora reutilizable
+  fuera de la página del proyecto.
+- `lib/scan/score-alert.ts`: tras persistir el score de cada escaneo
+  (`lib/scan/executor.ts`), compara con el run anterior del mismo proyecto;
+  si la caída es ≥10 puntos (umbral de primera pasada, pendiente de afinar
+  con datos reales de uso) y el dueño no lo ha desactivado, envía
+  `sendScoreDropAlertEmail` (nuevo email en `lib/email/transactional.ts`).
+  Fail-soft, igual que la generación de recomendaciones en la misma función:
+  un fallo del email nunca debe tumbar un escaneo que sí funcionó.
+- `/dashboard/settings/notifications`: los toggles "Cambios de visibilidad"
+  y "Resumen semanal" ahora leen/escriben de verdad
+  (`app/dashboard/settings/notifications/actions.ts`); los otros 4 toggles
+  (competidores, recomendaciones, escaneos, producto) siguen siendo solo de
+  cliente — deuda conocida, fuera de esta PR.
+- 13 tests nuevos (`score-alert.test.ts` x7, `run-scoring.test.ts` x4,
+  `notifications/actions.test.ts` x2). 565/565 tests totales, `pnpm run
+  validate` limpio.
+
+**Siguiente:** el fundador aplica la migración 0020, prueba en producción
+provocando una caída real de score y confirma que llega el email y que los
+dos toggles persisten. Fase 6b (resumen semanal) queda pendiente hasta
+resolver la pregunta de cron con `platform-deploy`.
 
 ---
 

@@ -10,6 +10,7 @@ import {
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
+import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
   EXTRACTION_VERSION,
@@ -840,6 +841,17 @@ export async function executePendingScan({
       },
       { onConflict: "run_id" }
     );
+
+    // Fail-soft, same reasoning as recommendation generation below: an alert
+    // email must never sink an otherwise-successful scan (ALERTS-1 Fase 6a).
+    await checkAndSendScoreDropAlert({
+      service,
+      projectId,
+      runId,
+      ownerUserId: project.owner_user_id as string,
+      projectDomain: project.domain as string,
+      currentRow: { visibility_score: scores.visibility_score, details_json: scores.details_json }
+    });
 
     // Fail-soft: derived recommendations must never sink an otherwise-successful
     // scan. The real scan work (answers + scores) is already persisted above; if
