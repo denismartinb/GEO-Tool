@@ -2,11 +2,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
 import type { createServiceClient } from "@/lib/supabase/service";
 
+const sendPlanConfirmedEmail = vi.fn();
+const sendPaymentFailedEmail = vi.fn();
+vi.mock("@/lib/email/transactional", () => ({
+  sendPlanConfirmedEmail: (...args: unknown[]) => sendPlanConfirmedEmail(...args),
+  sendPaymentFailedEmail: (...args: unknown[]) => sendPaymentFailedEmail(...args)
+}));
+
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
   process.env.STRIPE_PRICE_ID_STARTER = "price_starter_test";
   process.env.STRIPE_PRICE_ID_PRO = "price_pro_test";
+  sendPlanConfirmedEmail.mockReset();
+  sendPaymentFailedEmail.mockReset();
 });
 
 afterEach(() => {
@@ -50,7 +59,8 @@ describe("handleStripeWebhookEvent", () => {
     const event = makeEvent("checkout.session.completed", {
       metadata: { user_id: "user-1", plan_id: "pro" },
       customer: "cus_123",
-      subscription: "sub_123"
+      subscription: "sub_123",
+      customer_details: { email: "founder@example.com" }
     });
 
     await handleStripeWebhookEvent(event, client);
@@ -66,6 +76,22 @@ describe("handleStripeWebhookEvent", () => {
         id: "user-1"
       }
     ]);
+    expect(sendPlanConfirmedEmail).toHaveBeenCalledWith("founder@example.com", "Pro");
+  });
+
+  it("checkout.session.completed: doesn't send an email when the session has no customer email", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client } = fakeServiceClient();
+
+    const event = makeEvent("checkout.session.completed", {
+      metadata: { user_id: "user-1", plan_id: "pro" },
+      customer: "cus_123",
+      subscription: "sub_123"
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendPlanConfirmedEmail).not.toHaveBeenCalled();
   });
 
   it("checkout.session.completed: skips silently when required fields are missing (logged, not thrown)", async () => {
@@ -189,5 +215,31 @@ describe("handleStripeWebhookEvent", () => {
 
     await expect(handleStripeWebhookEvent(event, client)).resolves.toBeUndefined();
     expect(updates).toHaveLength(0);
+  });
+
+  it("invoice.payment_failed: sends a payment-failed email, no profile write", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client, updates } = fakeServiceClient();
+
+    const event = makeEvent("invoice.payment_failed", {
+      id: "in_123",
+      customer_email: "founder@example.com"
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendPaymentFailedEmail).toHaveBeenCalledWith("founder@example.com");
+    expect(updates).toHaveLength(0);
+  });
+
+  it("invoice.payment_failed: no-ops when the invoice has no customer email", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client } = fakeServiceClient();
+
+    const event = makeEvent("invoice.payment_failed", { id: "in_123" });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendPaymentFailedEmail).not.toHaveBeenCalled();
   });
 });

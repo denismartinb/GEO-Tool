@@ -853,6 +853,50 @@ usuarios. Antes de implementar, confirmar alcance con el fundador
 (Task Intake corto): qué emails exactamente, dominio de envío/verificación
 DNS, y si requiere revisión de `/privacidad` (nuevo processor de datos).
 
+**Fundador confirmó (2026-07-10):** los 4 emails originales + confirmación
+de plan contratado (5 en total); todavía no tiene cuenta de Resend; sí,
+actualizar `/privacidad`. Repartido en dos PRs — PR A ahora (sin migración
+ni cron), PR B más adelante (aviso "3 días antes de expirar" — necesita
+columna nueva + cron, su propia aprobación de esquema).
+
+**PR A (Resend, sin migración) — hecho (2026-07-10):**
+
+- `lib/email/resend.ts`: cliente perezoso, mismo patrón inerte que
+  Stripe/Sentry/PostHog — sin `RESEND_API_KEY`, no envía nada, no rompe
+  nada. `RESEND_FROM_EMAIL` opcional (usa el remitente de pruebas propio de
+  Resend hasta que el fundador verifique un dominio).
+- `lib/email/transactional.ts`: 4 funciones (`sendWelcomeEmail`,
+  `sendPlanConfirmedEmail`, `sendPaymentFailedEmail`, `sendTrialEndedEmail`),
+  todas silenciosas ante fallo (nunca deben romper el signup/checkout/
+  degradación de trial a los que van enganchadas).
+- Puntos de disparo: `app/signup/actions.ts` (bienvenida, tras un alta
+  real); `lib/billing/stripe-webhook.ts` en `checkout.session.completed`
+  (confirmación de plan, usando `session.customer_details.email`) y en el
+  nuevo caso `invoice.payment_failed` (pago fallido, sin escritura en BD,
+  solo aviso); `lib/billing.ts`'s `applyTrialExpiry` (trial terminado, en
+  el momento exacto de la degradación perezosa).
+- **Pendiente del fundador**: crear cuenta de Resend, verificar dominio de
+  envío (SPF/DKIM), y suscribir el endpoint del webhook de Stripe al
+  evento `invoice.payment_failed` (Dashboard → Developers → Webhooks →
+  editar endpoint → añadir evento) — sin esto Stripe nunca envía ese
+  evento y el email de pago fallido no se dispara nunca, aunque el código
+  ya lo soporte.
+- `/privacidad` actualizado: Resend añadido a la lista de encargados del
+  tratamiento.
+- **Hallazgo aparte, no corregido en este PR** (fuera del alcance pedido):
+  Stripe, PostHog y Sentry procesan datos reales (facturación, analítica,
+  errores) pero **no están listados** en `/privacidad` ni `/cookies` —
+  gap legal preexistente de PLATFORM-COMMERCIAL-1/BILLING-STRIPE-1, no
+  introducido aquí. Señalado para que el fundador decida si se corrige
+  aparte.
+- 5 tests nuevos (`stripe-webhook.test.ts` x4, `app/signup/actions.test.ts`
+  x2, `lib/billing.test.ts` x1). 433/433 tests totales, `pnpm run
+  validate` limpio.
+
+**Siguiente:** el fundador crea la cuenta de Resend y prueba en vivo los 5
+correos → PR B (aviso 3 días antes, con su propia aprobación de migración)
+cuando el fundador lo pida.
+
 ---
 
 ## Fase 5 — LAUNCH

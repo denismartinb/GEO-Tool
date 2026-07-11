@@ -41,6 +41,7 @@ export default function PrivacidadPage() {
         <li><strong>Vercel</strong> (alojamiento y ejecución de la aplicación).</li>
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
+        <li><strong>Resend</strong> — envía los correos transaccionales de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba).</li>
       </ul>
       <p>
         Las transferencias de datos a proveedores fuera del Espacio Económico Europeo se realizan

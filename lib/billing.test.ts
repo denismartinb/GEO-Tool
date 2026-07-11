@@ -6,6 +6,11 @@ vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(
 const createServiceClient = vi.fn();
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: (...args: unknown[]) => createServiceClient(...args) }));
 
+const sendTrialEndedEmail = vi.fn();
+vi.mock("@/lib/email/transactional", () => ({
+  sendTrialEndedEmail: (...args: unknown[]) => sendTrialEndedEmail(...args)
+}));
+
 import { getPlanForUser, getUsageSummary, isProOrAbove } from "./billing";
 
 describe("isProOrAbove", () => {
@@ -66,6 +71,7 @@ const PAST = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 beforeEach(() => {
   createServiceClient.mockReset();
   requireUser.mockReset();
+  sendTrialEndedEmail.mockReset();
 });
 
 describe("getPlanForUser — reverse trial expiry", () => {
@@ -79,7 +85,12 @@ describe("getPlanForUser — reverse trial expiry", () => {
   });
 
   it("downgrades to free and clears trial_ends_at once the trial has expired", async () => {
-    const supabase = fakeProfileClient({ current_plan: "pro", trial_ends_at: PAST, stripe_subscription_id: null });
+    const supabase = fakeProfileClient({
+      current_plan: "pro",
+      trial_ends_at: PAST,
+      stripe_subscription_id: null,
+      email: "founder@example.com"
+    });
     const { client, updates } = fakeServiceClient();
     createServiceClient.mockReturnValue(client);
 
@@ -87,6 +98,24 @@ describe("getPlanForUser — reverse trial expiry", () => {
 
     expect(plan.id).toBe("free");
     expect(updates).toEqual([{ patch: { current_plan: "free", trial_ends_at: null }, id: "user-1" }]);
+    expect(sendTrialEndedEmail).toHaveBeenCalledWith("founder@example.com");
+  });
+
+  it("doesn't send a trial-ended email when the downgrade write fails", async () => {
+    const supabase = fakeProfileClient({
+      current_plan: "pro",
+      trial_ends_at: PAST,
+      stripe_subscription_id: null,
+      email: "founder@example.com"
+    });
+    const { client } = fakeServiceClient("db down");
+    createServiceClient.mockReturnValue(client);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await getPlanForUser(supabase as never, "user-1");
+
+    expect(sendTrialEndedEmail).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
   });
 
   it("never downgrades an account that converted to a real paid subscription during the trial", async () => {
