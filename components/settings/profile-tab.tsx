@@ -5,6 +5,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { SettingRow } from "@/components/settings/setting-row";
+import { DeleteAccountButton } from "@/components/settings/delete-account-button";
 import type { AccountRole } from "@/lib/account-role";
 import { updateProfileName, changePassword } from "@/app/dashboard/settings/profile/actions";
 
@@ -286,6 +287,23 @@ export function ProfileTab({
               <Icon name="shield" size={13} />
               Activar 2FA
             </Button>
+          </SettingRow>
+        </CardContent>
+      </Card>
+
+      <Card className="card-danger-zone">
+        <CardHeader>
+          <p className="card-title" style={{ color: "var(--neg-ink)" }}>
+            Zona de peligro
+          </p>
+        </CardHeader>
+        <CardContent>
+          <SettingRow
+            title="Eliminar cuenta"
+            desc="Elimina tu cuenta y todos tus datos de forma permanente. Esta acción no se puede deshacer."
+            last
+          >
+            <DeleteAccountButton email={email} />
           </SettingRow>
         </CardContent>
       </Card>
