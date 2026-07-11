@@ -1006,6 +1006,18 @@ condición correcta. 530/530 tests, `pnpm run validate` limpio.
 en producción tras este fix y confirma las tres cosas de siempre: fecha
 guardada, pantalla actualizada, email recibido.
 
+**Sexto email, fuera del alcance original de PR 4 (fundador pidió
+explícitamente, 2026-07-11, junto con el merge de ACCOUNT-DELETE-1):**
+`sendAccountDeletedEmail` — confirma por email que la cuenta y todos sus
+datos se han eliminado. Se dispara desde `deleteAccount`
+(`app/dashboard/settings/profile/actions.ts`) tras borrar el `auth.user`,
+usando el email capturado antes del borrado (fire-and-forget, mismo patrón
+que el resto de `lib/email/transactional.ts` — nunca bloquea la respuesta).
+No estaba entre "los 4 emails originales + confirmación de plan" aprobados
+el 2026-07-10; se implementa directamente por ser una petición explícita,
+pequeña y de bajo riesgo que replica un patrón ya aprobado, sin tocar
+schema/RLS/webhook.
+
 ---
 
 ## Fase 5 — LAUNCH

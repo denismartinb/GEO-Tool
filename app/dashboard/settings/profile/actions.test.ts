@@ -20,6 +20,11 @@ vi.mock("@/lib/supabase/service", () => ({ createServiceClient: (...args: unknow
 const getStripeClient = vi.fn();
 vi.mock("@/lib/stripe", () => ({ getStripeClient: (...args: unknown[]) => getStripeClient(...args) }));
 
+const sendAccountDeletedEmail = vi.fn();
+vi.mock("@/lib/email/transactional", () => ({
+  sendAccountDeletedEmail: (...args: unknown[]) => sendAccountDeletedEmail(...args)
+}));
+
 const USER_ID = "user-1";
 const USER_EMAIL = "founder@example.com";
 
@@ -83,6 +88,7 @@ beforeEach(() => {
   requireUser.mockReset();
   createServiceClient.mockReset();
   getStripeClient.mockReset();
+  sendAccountDeletedEmail.mockReset();
 });
 
 describe("deleteAccount", () => {
@@ -96,6 +102,7 @@ describe("deleteAccount", () => {
     expect(result).toEqual({ success: false, error: "El email no coincide." });
     expect(createServiceClient).not.toHaveBeenCalled();
     expect(redirectMock).not.toHaveBeenCalled();
+    expect(sendAccountDeletedEmail).not.toHaveBeenCalled();
   });
 
   it("accepts a case-insensitive match of the confirmation email", async () => {
@@ -105,6 +112,7 @@ describe("deleteAccount", () => {
     const { deleteAccount } = await import("./actions");
 
     await expect(deleteAccount(USER_EMAIL.toUpperCase())).rejects.toThrow(/^REDIRECT:\/login\?deleted=1$/);
+    expect(sendAccountDeletedEmail).toHaveBeenCalledWith(USER_EMAIL);
   });
 
   it("treats an already-cancelled Stripe subscription (resource_missing) as success and continues", async () => {
@@ -132,6 +140,7 @@ describe("deleteAccount", () => {
     expect(result).toEqual({ success: false, error: "No se pudo cancelar tu suscripción activa. Inténtalo de nuevo." });
     expect(createServiceClient).not.toHaveBeenCalled();
     expect(redirectMock).not.toHaveBeenCalled();
+    expect(sendAccountDeletedEmail).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
 
@@ -142,6 +151,7 @@ describe("deleteAccount", () => {
     const { deleteAccount } = await import("./actions");
 
     await expect(deleteAccount(USER_EMAIL)).rejects.toThrow(/^REDIRECT:\/login\?deleted=1$/);
+    expect(sendAccountDeletedEmail).toHaveBeenCalledWith(USER_EMAIL);
   });
 
   it("fails with a sanitized message when deleting the auth user fails, without crashing", async () => {
@@ -159,10 +169,11 @@ describe("deleteAccount", () => {
       expect(result.error).toBe("No se pudo eliminar la cuenta. Inténtalo de nuevo.");
     }
     expect(redirectMock).not.toHaveBeenCalled();
+    expect(sendAccountDeletedEmail).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
 
-  it("deletes projects, deletes the auth user, signs out and redirects to /login?deleted=1 on success", async () => {
+  it("deletes projects, deletes the auth user, sends the confirmation email, signs out and redirects to /login?deleted=1 on success", async () => {
     const signOut = vi.fn().mockResolvedValue({ error: null });
     const supabase = fakeSupabase({ profile: { stripe_subscription_id: null }, deleteProjectsCount: 3, signOut });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID, email: USER_EMAIL } });
@@ -173,6 +184,7 @@ describe("deleteAccount", () => {
     await expect(deleteAccount(USER_EMAIL)).rejects.toThrow(/^REDIRECT:\/login\?deleted=1$/);
 
     expect(serviceClient.auth.admin.deleteUser).toHaveBeenCalledWith(USER_ID);
+    expect(sendAccountDeletedEmail).toHaveBeenCalledWith(USER_EMAIL);
     expect(signOut).toHaveBeenCalled();
   });
 
@@ -189,6 +201,7 @@ describe("deleteAccount", () => {
 
     expect(result).toEqual({ success: false, error: "No se pudo eliminar la cuenta. Inténtalo de nuevo." });
     expect(redirectMock).not.toHaveBeenCalled();
+    expect(sendAccountDeletedEmail).not.toHaveBeenCalled();
     errorSpy.mockRestore();
   });
 

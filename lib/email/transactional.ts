@@ -98,3 +98,15 @@ export async function sendCancellationScheduledEmail(to: string, activeUntil: Da
     `)
   );
 }
+
+export async function sendAccountDeletedEmail(to: string): Promise<void> {
+  await sendEmail(
+    to,
+    "Tu cuenta de GenScore se ha eliminado correctamente",
+    wrap(`
+      <p>Confirmamos que tu cuenta y todos tus datos —dominios, escaneos, prompts, competidores y
+      recomendaciones— se han eliminado de forma permanente.</p>
+      <p>Si no has sido tú, escríbenos de inmediato a <a href="mailto:soporte@genscore.es">soporte@genscore.es</a>.</p>
+    `)
+  );
+}

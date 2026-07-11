@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getStripeClient } from "@/lib/stripe";
+import { sendAccountDeletedEmail } from "@/lib/email/transactional";
 
 const nameSchema = z.string().trim().min(1).max(80);
 const optionalNameSchema = z.string().trim().max(80);
@@ -174,8 +175,12 @@ export async function deleteAccount(confirmationEmail: string): Promise<DeleteAc
     return { success: false, error: "No se pudo eliminar la cuenta. Inténtalo de nuevo." };
   }
 
-  // Step D: sign out and redirect. No revalidatePath needed — the redirect
-  // takes the browser to a route outside this now-deleted session entirely.
+  // Step D: notify, sign out and redirect. The confirmation email is
+  // fire-and-forget (see lib/email/transactional.ts) and must never block
+  // this response — the account is already gone at this point regardless.
+  // No revalidatePath needed — the redirect takes the browser to a route
+  // outside this now-deleted session entirely.
+  await sendAccountDeletedEmail(accountEmail);
   await supabase.auth.signOut();
   redirect("/login?deleted=1");
 }
