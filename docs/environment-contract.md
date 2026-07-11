@@ -139,6 +139,23 @@ and "Customers can cancel subscriptions". Without this configuration the
 portal session still opens, but Stripe's own portal UI won't offer those
 actions.
 
+### Transactional email (BILLING-STRIPE-1 PR 4)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
+| `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
+
+Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
+`null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`
+sender no-ops (logs, doesn't throw) instead of blocking the signup/checkout/
+trial-expiry flow it's attached to — same inert-until-configured pattern as
+Stripe/Sentry/PostHog. The founder hasn't created a Resend account yet as of
+this PR; until they do and verify a sending domain (SPF/DKIM DNS records),
+no emails actually go out. Stripe's webhook endpoint must also be
+subscribed to the `invoice.payment_failed` event in the Stripe Dashboard
+for the payment-failed email to fire.
+
 ---
 
 ## Vercel configuration

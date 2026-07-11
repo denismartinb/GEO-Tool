@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
+import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import type { AuthenticatedContext } from "@/lib/scan/types";
 
@@ -30,6 +31,7 @@ type TrialFields = {
   current_plan?: string | null;
   trial_ends_at?: string | null;
   stripe_subscription_id?: string | null;
+  email?: string | null;
 };
 
 /**
@@ -64,6 +66,10 @@ async function applyTrialExpiry(userId: string, row: TrialFields | null | undefi
       message: configError instanceof Error ? configError.message : String(configError)
     });
     return row.current_plan;
+  }
+
+  if (row.email) {
+    await sendTrialEndedEmail(row.email);
   }
 
   return "free";
@@ -107,7 +113,7 @@ export async function getPlanForUser(
 ): Promise<Plan> {
   const { data } = await supabase
     .from("profiles")
-    .select("current_plan, trial_ends_at, stripe_subscription_id")
+    .select("current_plan, trial_ends_at, stripe_subscription_id, email")
     .eq("id", userId)
     .maybeSingle();
   const effectivePlanId = await applyTrialExpiry(userId, data);
@@ -126,7 +132,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
   const [{ data: profile }, { data: projects }, { data: prompts }, { data: results }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("current_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at")
+      .select("current_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at, email")
       .eq("id", user.id)
       .maybeSingle(),
     supabase.from("projects").select("id, name, domain").eq("is_archived", false),

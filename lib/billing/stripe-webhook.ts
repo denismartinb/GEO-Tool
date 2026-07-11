@@ -3,6 +3,8 @@ import "server-only";
 import type Stripe from "stripe";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { getPlanIdForPriceId } from "@/lib/stripe";
+import { PLANS } from "@/app/pricing/plans-data";
+import { sendPaymentFailedEmail, sendPlanConfirmedEmail } from "@/lib/email/transactional";
 
 const ENDED_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   "canceled",
@@ -58,6 +60,12 @@ export async function handleStripeWebhookEvent(
         .eq("id", userId);
 
       if (error) throw new Error(`profiles update failed: ${error.message}`);
+
+      const email = session.customer_details?.email;
+      if (email) {
+        const planName = PLANS.find((p) => p.id === planId)?.name ?? planId;
+        await sendPlanConfirmedEmail(email, planName);
+      }
       return;
     }
 
@@ -105,6 +113,18 @@ export async function handleStripeWebhookEvent(
         .update({ current_plan: "free", stripe_subscription_id: null })
         .eq("id", userId);
       if (error) throw new Error(`profiles update failed: ${error.message}`);
+      return;
+    }
+
+    // Purely a notification — no profile write. The plan itself only
+    // changes once Stripe actually cancels the subscription after its own
+    // retry schedule is exhausted (customer.subscription.updated fires that,
+    // handled above), so this just warns the owner their card was declined.
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice;
+      if (invoice.customer_email) {
+        await sendPaymentFailedEmail(invoice.customer_email);
+      }
       return;
     }
 
