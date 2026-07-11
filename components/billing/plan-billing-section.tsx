@@ -111,6 +111,24 @@ export function PlanBillingSection({
     });
   };
 
+  const handleManageBilling = () => {
+    setPortalError(null);
+    startPortalTransition(async () => {
+      const result = await createPortalSession();
+      if (result.success) {
+        window.location.href = result.url;
+      } else {
+        setPortalError(result.error);
+      }
+    });
+  };
+
+  const cancelAtDate = usage.cancelAt
+    ? new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" }).format(
+        new Date(usage.cancelAt)
+      )
+    : null;
+
   return (
     <>
       {trialDaysLeft !== null && (
@@ -157,10 +175,17 @@ export function PlanBillingSection({
           <h2 className="text-lg font-semibold text-[var(--ink)]">Tu plan</h2>
           <p className="sub">Facturación mensual</p>
         </div>
-        <span className="badge badge-pos">
-          <Icon name="check" size={11} />
-          Activo
-        </span>
+        {cancelAtDate ? (
+          <span className="badge badge-warn">
+            <Icon name="alertCircle" size={11} />
+            Cancelada — activa hasta el {cancelAtDate}
+          </span>
+        ) : (
+          <span className="badge badge-pos">
+            <Icon name="check" size={11} />
+            Activo
+          </span>
+        )}
         {portalError && <p className="feedback error">{portalError}</p>}
         <Card>
           <CardHeader>
@@ -184,17 +209,30 @@ export function PlanBillingSection({
                 </li>
               ))}
             </ul>
-            <div className="flex gap-2 border-t border-[var(--line-soft)] pt-4">
-              <Button type="button" onClick={() => setModal({})}>
-                <Icon name="arrUp" size={14} />
-                Cambiar de plan
-              </Button>
-              {usage.hasStripeSubscription && (
-                <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
-                  {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
+            {cancelAtDate ? (
+              <div className="space-y-3 border-t border-[var(--line-soft)] pt-4">
+                <p className="sub">
+                  Tu suscripción está cancelada. Mantienes acceso a {current.name} hasta el{" "}
+                  <b>{cancelAtDate}</b>; después bajarás a Free. ¿Cambiaste de idea? Puedes reactivarla en el
+                  portal de Stripe.
+                </p>
+                <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
+                  {isPortalPending ? "Abriendo…" : "Gestionar en el portal de Stripe"}
                 </Button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 border-t border-[var(--line-soft)] pt-4">
+                <Button type="button" onClick={() => setModal({})}>
+                  <Icon name="arrUp" size={14} />
+                  Cambiar de plan
+                </Button>
+                {usage.hasStripeSubscription && (
+                  <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
+                    {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

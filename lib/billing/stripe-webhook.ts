@@ -83,7 +83,7 @@ export async function handleStripeWebhookEvent(
       if (ENDED_SUBSCRIPTION_STATUSES.has(subscription.status)) {
         const { error } = await service
           .from("profiles")
-          .update({ current_plan: "free", stripe_subscription_id: null })
+          .update({ current_plan: "free", stripe_subscription_id: null, cancel_at: null })
           .eq("id", userId);
         if (error) throw new Error(`profiles update failed: ${error.message}`);
         return;
@@ -107,9 +107,17 @@ export async function handleStripeWebhookEvent(
           .eq("id", userId)
           .maybeSingle();
 
+        // Mirrors Stripe's own cancel_at_period_end/cancel_at regardless of
+        // whether it's newly set or being cleared (the owner reactivated) —
+        // the billing page reads this to show a real "cancels on <date>"
+        // state instead of a plain "active" one with no such information.
+        const cancelAt = subscription.cancel_at_period_end && subscription.cancel_at
+          ? new Date(subscription.cancel_at * 1000).toISOString()
+          : null;
+
         const { error } = await service
           .from("profiles")
-          .update({ current_plan: planId, trial_ends_at: null })
+          .update({ current_plan: planId, trial_ends_at: null, cancel_at: cancelAt })
           .eq("id", userId);
         if (error) throw new Error(`profiles update failed: ${error.message}`);
 
@@ -118,8 +126,8 @@ export async function handleStripeWebhookEvent(
             const planName = PLANS.find((p) => p.id === planId)?.name ?? planId;
             await sendPlanConfirmedEmail(profileRow.email, planName);
           }
-          if (subscription.cancel_at_period_end && subscription.cancel_at) {
-            await sendCancellationScheduledEmail(profileRow.email, new Date(subscription.cancel_at * 1000));
+          if (cancelAt) {
+            await sendCancellationScheduledEmail(profileRow.email, new Date(cancelAt));
           }
         }
       }
@@ -133,7 +141,7 @@ export async function handleStripeWebhookEvent(
 
       const { error } = await service
         .from("profiles")
-        .update({ current_plan: "free", stripe_subscription_id: null })
+        .update({ current_plan: "free", stripe_subscription_id: null, cancel_at: null })
         .eq("id", userId);
       if (error) throw new Error(`profiles update failed: ${error.message}`);
       return;

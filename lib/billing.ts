@@ -25,6 +25,8 @@ export type UsageSummary = {
   trialEndsAt: string | null;
   /** Whether `current_plan` is backed by a real Stripe subscription, as opposed to an unconverted reverse trial — distinguishes "paying Pro" from "trialing Pro" for the change-plan flow and the Portal cancel button. */
   hasStripeSubscription: boolean;
+  /** Set when a Portal-driven cancellation is scheduled (Stripe's cancel_at_period_end) — the real date the plan stops, not yet reflected as a downgrade since the account keeps access until then. */
+  cancelAt: string | null;
 };
 
 type TrialFields = {
@@ -132,7 +134,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
   const [{ data: profile }, { data: projects }, { data: prompts }, { data: results }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("current_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at, email")
+      .select("current_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at, email, cancel_at")
       .eq("id", user.id)
       .maybeSingle(),
     supabase.from("projects").select("id, name, domain").eq("is_archived", false),
@@ -161,6 +163,7 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     activeProjects: projects ?? [],
     hasStripeCustomer: Boolean(profile?.stripe_customer_id),
     trialEndsAt: trialExpired ? null : (profile?.trial_ends_at ?? null),
-    hasStripeSubscription: Boolean(profile?.stripe_subscription_id)
+    hasStripeSubscription: Boolean(profile?.stripe_subscription_id),
+    cancelAt: (profile?.cancel_at as string | null | undefined) ?? null
   };
 }

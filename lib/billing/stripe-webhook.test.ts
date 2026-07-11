@@ -144,7 +144,7 @@ describe("handleStripeWebhookEvent", () => {
 
     await handleStripeWebhookEvent(event, client);
 
-    expect(updates).toEqual([{ patch: { current_plan: "pro", trial_ends_at: null }, id: "user-1" }]);
+    expect(updates).toEqual([{ patch: { current_plan: "pro", trial_ends_at: null, cancel_at: null }, id: "user-1" }]);
   });
 
   it("customer.subscription.updated: sends a plan-confirmed email when the plan actually changed (a Portal-driven switch)", async () => {
@@ -216,6 +216,45 @@ describe("handleStripeWebhookEvent", () => {
     expect(sendCancellationScheduledEmail).not.toHaveBeenCalled();
   });
 
+  it("customer.subscription.updated: stores cancel_at so the billing page can show the scheduled cancellation", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
+    const cancelAt = Math.floor(new Date("2026-08-11T00:00:00Z").getTime() / 1000);
+
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] },
+      cancel_at_period_end: true,
+      cancel_at: cancelAt
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(updates).toEqual([
+      { patch: { current_plan: "pro", trial_ends_at: null, cancel_at: "2026-08-11T00:00:00.000Z" }, id: "user-1" }
+    ]);
+  });
+
+  it("customer.subscription.updated: clears cancel_at when the owner reactivates (cancel_at_period_end back to false)", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
+
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] },
+      cancel_at_period_end: false,
+      cancel_at: null
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(updates).toEqual([{ patch: { current_plan: "pro", trial_ends_at: null, cancel_at: null }, id: "user-1" }]);
+  });
+
   it("customer.subscription.updated: does nothing when the price id isn't a known self-serve plan", async () => {
     const { handleStripeWebhookEvent } = await import("./stripe-webhook");
     const { client, updates } = fakeServiceClient();
@@ -247,7 +286,7 @@ describe("handleStripeWebhookEvent", () => {
 
       await handleStripeWebhookEvent(event, client);
 
-      expect(updates).toEqual([{ patch: { current_plan: "free", stripe_subscription_id: null }, id: "user-1" }]);
+      expect(updates).toEqual([{ patch: { current_plan: "free", stripe_subscription_id: null, cancel_at: null }, id: "user-1" }]);
     }
   );
 
@@ -280,7 +319,7 @@ describe("handleStripeWebhookEvent", () => {
 
     await handleStripeWebhookEvent(event, client);
 
-    expect(updates).toEqual([{ patch: { current_plan: "free", stripe_subscription_id: null }, id: "user-1" }]);
+    expect(updates).toEqual([{ patch: { current_plan: "free", stripe_subscription_id: null, cancel_at: null }, id: "user-1" }]);
   });
 
   it("ignores event types it doesn't handle", async () => {

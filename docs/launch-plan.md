@@ -922,10 +922,53 @@ Corregido en el mismo PR:
   (incluye trabajo de otras ramas ya mergeadas), `pnpm run validate`
   limpio.
 
-**Siguiente:** el fundador prueba en vivo el cambio de plan y la
-cancelación vía Portal para confirmar que ahora sí llegan los emails →
-PR B (aviso 3 días antes de expirar el trial, con su propia aprobación de
-migración) cuando el fundador lo pida.
+**Sexto hallazgo, en vivo (tras #200):** el fundador probó de nuevo en
+producción — el email de cambio de plan ya llega, pero el de cancelación
+seguía sin llegar, y además un bug real de UI: tras cancelar en el Portal,
+la pantalla de facturación seguía mostrando "Activo" y los botones
+normales de "Cambiar de plan"/"Cancelar suscripción", sin ningún indicio
+de que la baja ya estaba programada ni hasta qué fecha seguía activo el
+plan.
+
+**Decisión (Task Intake, aprobada — "Apruebo opción a"):** en vez de
+consultar Stripe en cada carga de la página (opción B, sin migración), se
+guarda `cancel_at` en `profiles` (opción A) para que la propia pantalla de
+facturación lo lea sin llamada externa. Implementado:
+
+- `supabase/migrations/0019_subscription_cancel_at.sql` — añade
+  `profiles.cancel_at` (timestamptz) y extiende el trigger
+  `protect_billing_columns()` para protegerla igual que `current_plan`,
+  `trial_ends_at`, etc. (**pendiente de aplicar manualmente en Supabase**,
+  igual que las migraciones anteriores de esta fase).
+- `customer.subscription.updated` ahora calcula `cancel_at` a partir de
+  `subscription.cancel_at_period_end`/`subscription.cancel_at` de Stripe y
+  lo persiste (null si el owner reactiva la suscripción); reutiliza ese
+  mismo valor para decidir si envía el email de cancelación programada.
+  `customer.subscription.deleted` y el resto de estados terminales
+  también limpian `cancel_at` a null.
+- `lib/billing.ts` (`getUsageSummary`) expone el nuevo campo `cancelAt`.
+- `components/billing/plan-billing-section.tsx`: cuando `cancelAt` está
+  presente, el badge pasa de "Activo" a "Cancelada — activa hasta el
+  {fecha}", y los dos botones ("Cambiar de plan"/"Cancelar suscripción")
+  se sustituyen por uno solo ("Gestionar en el portal de Stripe") que
+  abre el Customer Portal para reactivar si el fundador cambia de idea.
+- 8 tests nuevos (`stripe-webhook.test.ts` x6, `lib/billing.test.ts` x2).
+  529/529 tests totales, `pnpm run validate` limpio.
+
+**Nota sobre el email de cancelación:** no se obtuvo evidencia directa
+(el fundador pegó un objeto `billing_portal.session`, no el evento
+`customer.subscription.updated`) de por qué falló específicamente ese
+envío. Con `cancel_at` ahora persistido en base de datos, la próxima
+prueba en producción da una señal independiente del email: si la columna
+se rellena correctamente, el pipeline del evento funciona y el email
+perdido fue probablemente un caso aislado.
+
+**Siguiente:** el fundador aplica la migración 0019, prueba de nuevo la
+cancelación en producción y confirma (a) que `cancel_at` se guarda, (b)
+que la pantalla de facturación ahora refleja la cancelación programada, y
+(c) si el email de cancelación llega esta vez → PR B (aviso 3 días antes
+de expirar el trial, con su propia aprobación de migración) cuando el
+fundador lo pida.
 
 ---
 
