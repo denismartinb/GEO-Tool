@@ -107,13 +107,16 @@ export async function handleStripeWebhookEvent(
           .eq("id", userId)
           .maybeSingle();
 
-        // Mirrors Stripe's own cancel_at_period_end/cancel_at regardless of
-        // whether it's newly set or being cleared (the owner reactivated) —
-        // the billing page reads this to show a real "cancels on <date>"
-        // state instead of a plain "active" one with no such information.
-        const cancelAt = subscription.cancel_at_period_end && subscription.cancel_at
-          ? new Date(subscription.cancel_at * 1000).toISOString()
-          : null;
+        // Mirrors Stripe's own cancel_at regardless of whether it's newly
+        // set or being cleared (the owner reactivated) — the billing page
+        // reads this to show a real "cancels on <date>" state instead of a
+        // plain "active" one with no such information. Deliberately does NOT
+        // additionally require cancel_at_period_end: true — found via live
+        // testing that the Customer Portal's cancel flow sets cancel_at to
+        // the period end timestamp directly without ever flipping
+        // cancel_at_period_end, so requiring both silently dropped every
+        // real Portal-driven cancellation.
+        const cancelAt = subscription.cancel_at ? new Date(subscription.cancel_at * 1000).toISOString() : null;
 
         const { error } = await service
           .from("profiles")
