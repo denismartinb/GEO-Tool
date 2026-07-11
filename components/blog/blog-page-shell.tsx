@@ -28,7 +28,7 @@ export function BlogPageShell({ children }: { children: ReactNode }) {
           </Link>
           <div className="lp-nav-links">
             {NAV_LINKS.map((l) => (
-              <Link key={l.href} href={l.href}>
+              <Link key={l.href} href={l.href} className={l.href === "/blog" ? "active" : ""}>
                 {l.label}
               </Link>
             ))}

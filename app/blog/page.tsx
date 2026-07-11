@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { BlogCover } from "@/components/blog/blog-cover";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
@@ -20,9 +21,12 @@ export default function BlogIndexPage() {
       <div>
         {BLOG_POSTS.map((post) => (
           <Link key={post.slug} href={`/blog/${post.slug}`} className="blog-index-card">
-            <h2>{post.title}</h2>
-            <p>{post.description}</p>
-            <p className="blog-post-meta">{dateFormatter.format(new Date(post.datePublished))}</p>
+            <BlogCover icon={post.coverIcon} />
+            <div className="blog-index-card-body">
+              <h2>{post.title}</h2>
+              <p>{post.description}</p>
+              <p className="blog-post-meta">{dateFormatter.format(new Date(post.datePublished))}</p>
+            </div>
           </Link>
         ))}
       </div>

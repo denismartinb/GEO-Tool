@@ -10,6 +10,8 @@ export type BlogPost = {
   title: string;
   description: string;
   datePublished: string; // ISO date, e.g. "2026-07-12"
+  /** Icon name (components/ui/icon.tsx) shown on the post's abstract gradient cover (components/blog/blog-cover.tsx) — no stock photography. */
+  coverIcon: string;
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -18,7 +20,8 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Qué es el GEO Score y cómo se calcula",
     description:
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
-    datePublished: "2026-07-12"
+    datePublished: "2026-07-12",
+    coverIcon: "trendUp"
   }
 ];
 

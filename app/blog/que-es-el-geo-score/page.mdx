@@ -1,5 +1,7 @@
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
+import { BlogCover } from "@/components/blog/blog-cover";
+import { GeoScoreBreakdown } from "@/components/blog/geo-score-breakdown";
 import { getBlogPost } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-el-geo-score");
@@ -12,6 +14,8 @@ export const metadata = {
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
 
 <BlogPageShell>
+
+<BlogCover icon={post.coverIcon} compact />
 
 # {post.title}
 
@@ -44,6 +48,8 @@ a una escala de 0 a 100 donde más alto es siempre mejor:
 | **Prominencia** | Posición media de tu marca frente a competidores | 25% | No solo si apareces, sino si apareces primero o como una idea tardía |
 | **Posición competitiva** | Presión competitiva general del run | 20% | Cómo te va frente a la competencia en conjunto, no solo prompt a prompt |
 | **Autoridad** | Tasa de citación de tu propio dominio | 15% | Si esa presencia está respaldada por una fuente real, no solo por una opinión del modelo |
+
+<GeoScoreBreakdown />
 
 El orden de los pesos no es arbitrario: refleja cómo razona un analista real
 — primero "¿estamos en la conversación?", después "¿con qué protagonismo?",
