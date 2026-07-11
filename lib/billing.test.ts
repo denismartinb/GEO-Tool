@@ -218,4 +218,33 @@ describe("getUsageSummary — trial fields", () => {
     expect(usage.planId).toBe("free");
     expect(usage.trialEndsAt).toBeNull();
   });
+
+  it("reports cancelAt when a Portal-driven cancellation is scheduled", async () => {
+    const supabase = fakeUsageSupabase({
+      current_plan: "pro",
+      trial_ends_at: null,
+      stripe_customer_id: "cus_123",
+      stripe_subscription_id: "sub_123",
+      cancel_at: FUTURE
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: "user-1" } });
+
+    const usage = await getUsageSummary();
+
+    expect(usage.cancelAt).toBe(FUTURE);
+  });
+
+  it("reports cancelAt as null when there's no scheduled cancellation", async () => {
+    const supabase = fakeUsageSupabase({
+      current_plan: "pro",
+      trial_ends_at: null,
+      stripe_customer_id: "cus_123",
+      stripe_subscription_id: "sub_123"
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: "user-1" } });
+
+    const usage = await getUsageSummary();
+
+    expect(usage.cancelAt).toBeNull();
+  });
 });
