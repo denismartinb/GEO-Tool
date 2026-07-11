@@ -7,20 +7,30 @@ vi.mock("@/lib/supabase/server", () => ({
   })
 }));
 
+const sendWelcomeEmail = vi.fn();
+vi.mock("@/lib/email/transactional", () => ({
+  sendWelcomeEmail: (...args: unknown[]) => sendWelcomeEmail(...args)
+}));
+
 import { GET } from "./route";
 
 function requestFor(search: string): Request {
   return new Request(`https://app.example.com/auth/callback${search}`);
 }
 
+function userAt(email: string, createdAt: string, lastSignInAt: string) {
+  return { email, created_at: createdAt, last_sign_in_at: lastSignInAt };
+}
+
 describe("GET /auth/callback", () => {
   beforeEach(() => {
     exchangeCodeForSession.mockReset();
+    sendWelcomeEmail.mockReset();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
   it("exchanges a valid code and redirects to next (default /dashboard)", async () => {
-    exchangeCodeForSession.mockResolvedValue({ error: null });
+    exchangeCodeForSession.mockResolvedValue({ data: { user: null }, error: null });
 
     const response = await GET(requestFor("?code=abc123"));
 
@@ -29,11 +39,33 @@ describe("GET /auth/callback", () => {
   });
 
   it("honors an explicit next param on success", async () => {
-    exchangeCodeForSession.mockResolvedValue({ error: null });
+    exchangeCodeForSession.mockResolvedValue({ data: { user: null }, error: null });
 
     const response = await GET(requestFor("?code=abc123&next=/dashboard/billing"));
 
     expect(response.headers.get("location")).toBe("https://app.example.com/dashboard/billing");
+  });
+
+  it("sends the welcome email for a brand-new OAuth signup (last_sign_in_at ≈ created_at)", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { user: userAt("new@example.com", "2026-07-11T18:00:00.000Z", "2026-07-11T18:00:00.400Z") },
+      error: null
+    });
+
+    await GET(requestFor("?code=abc123"));
+
+    expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
+  });
+
+  it("does not send a welcome email for a returning user signing back in", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { user: userAt("returning@example.com", "2026-01-01T00:00:00.000Z", "2026-07-11T18:00:00.000Z") },
+      error: null
+    });
+
+    await GET(requestFor("?code=abc123"));
+
+    expect(sendWelcomeEmail).not.toHaveBeenCalled();
   });
 
   it("never lands the user on a stale/unauthenticated /dashboard when the exchange fails", async () => {
