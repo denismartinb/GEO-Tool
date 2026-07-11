@@ -14,6 +14,10 @@
 ## Blog
 
 - [Qué es el GEO Score y cómo se calcula](https://www.genscore.es/blog/que-es-el-geo-score): metodología del GEO Score compuesto.
+- [Qué es GEO (Generative Engine Optimization) y por qué no es lo mismo que SEO](https://www.genscore.es/blog/que-es-geo-generative-engine-optimization)
+- [Cómo elegir los prompts correctos para monitorizar tu marca en IA](https://www.genscore.es/blog/como-elegir-prompts-monitorizar-marca-ia)
+- [Cómo seleccionar los competidores adecuados para un análisis GEO](https://www.genscore.es/blog/como-elegir-competidores-analisis-geo)
+- [GenScore frente a las herramientas GEO tradicionales](https://www.genscore.es/blog/genscore-vs-herramientas-geo)
 
 ## Legal
 

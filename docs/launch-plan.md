@@ -39,7 +39,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 4 | BILLING-STRIPE-1 ⚠️ | ✅ Hecho (alcance aprobado) | #186, #189, #191, #192, #196, #200, #202, #205, #207 | 2026-07-11 | Checkout, webhook, Customer Portal, protección RLS, reverse trial (7 días) y los 5 emails transaccionales (bienvenida, plan confirmado, pago fallido, trial terminado, cancelación programada) verificados end-to-end en producción, incluida la cancelación real (fecha guardada, UI con estado "Cancelada — activa hasta…" + botón reactivar, email recibido). Bug real encontrado y corregido en vivo: el código exigía `cancel_at_period_end` además de `cancel_at`, pero el Customer Portal solo fija `cancel_at`. Pendiente, deliberadamente fuera de este alcance: PR B (aviso 3 días antes de expirar el trial, necesita su propia aprobación de migración/cron) y el go-live checklist (Vercel Pro, alta autónomo, VeriFactu, claves live) antes de cobros reales |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🟡 Fase 6a hecha; 6b (resumen semanal) pendiente | — | 2026-07-11 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b (resumen semanal) necesita resolver antes el límite de cron jobs de Vercel Hobby |
-| 7 | GROWTH-1 | 🟡 Fase 7a hecha; catálogo de artículos pendiente | — | 2026-07-11 | Fase 7a: blog MDX (`@next/mdx`), sitemap, robots.txt, llms.txt, agente `growth-content` y 1 artículo ("Qué es el GEO Score") verificado. Próximos artículos en PRs pequeños separados |
+| 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-11 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso) |
 | 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
 | 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
 | ⏰ | MODEL-PIN (deadline 2026-10-16) | 🔲 Pendiente | — | 2026-07-09 | Cutover anunciado de gemini-2.5-flash |
@@ -1160,6 +1160,52 @@ dejando el resto del contenido para PRs pequeños posteriores.
 **Siguiente:** el fundador revisa el artículo en el preview; los próximos
 3–5 artículos fundacionales del catálogo llegan en PRs pequeños
 separados (una o dos piezas por vez), no de golpe.
+
+**Feedback del fundador sobre el preview (mismo día):** "Blog" debía estar
+en el menú principal (no solo en el footer), pidió una plantilla más
+llamativa con imagen principal, y una ilustración en el artículo — más 3
+correcciones encontradas en vivo:
+
+- "Blog" añadido al nav principal de `/` y `/pricing` (antes solo footer).
+- Portadas con degradado abstracto (reutilizando `.onb-aurora` del hero)
+  + icono, para no depender de fotos de stock.
+- Ilustración de contenido en el artículo del GEO Score: desglose visual
+  con barras de los 4 componentes y sus pesos reales (mismos datos que la
+  tabla, no decorativo).
+- **Bug real encontrado por el fundador** (captura de pantalla): la tabla
+  Markdown salía como texto plano con `|` en vez de tabla HTML —
+  `@next/mdx` no incluye GFM (tablas) por defecto. Corregido con
+  `remark-gfm` (pasado como string, no función importada — Turbopack
+  necesita serializar las opciones del loader) + estilos de tabla.
+
+**Fase 7b — 4 artículos más (2026-07-11):** el fundador generó el
+contenido de 4 artículos con ChatGPT (usando un prompt que el Director le
+proporcionó, diseñado para un handoff estructurado: slug/title/
+description/coverIcon/contentIllustration + cuerpo en Markdown) y generó
+también 4 imágenes de portada llamativas (degradados 3D, mismo estilo
+visual entre sí). El Director no tiene herramienta de generación de
+imágenes — las portadas son las que aportó el fundador, guardadas en
+`public/blog/<slug>/cover.png`, servidas vía `next/image` (responsive,
+optimizadas automáticamente).
+
+- `BlogCover` ahora acepta una imagen real (`coverImage`) o cae al
+  degradado+icono anterior si no hay imagen (el primer artículo, "Qué es
+  el GEO Score", se queda con el degradado — no se le generó imagen).
+- `ArticleSchema` incluye la imagen en el JSON-LD cuando existe.
+- Nuevo componente `ProcessFlow` (reutilizable) para las ilustraciones de
+  flujo de 2 de los 4 artículos (categorización de prompts; dato →
+  evidencia → recomendación → acción) — secuencia horizontal, no circular:
+  más legible en móvil, que es donde el fundador prueba todo.
+- Los otros 2 artículos usan tablas GFM reales (tipos de competidor,
+  tipos de intención de prompt) — mismo dato que ya estaba en el texto
+  del fundador, sin inventar una matriz 2×2 que el contenido no
+  desarrollaba.
+- Contenido verificado contra el catálogo de competidores real
+  (Otterly, Peec AI, Athena, Semrush AI Toolkit, Ahrefs Brand Radar) del
+  informe de mercado — sin cifras ni testimonios inventados.
+- `pnpm test` (565/565) y `pnpm run validate` en verde.
+
+**Siguiente:** el fundador revisa los 4 artículos nuevos en el preview.
 
 ---
 

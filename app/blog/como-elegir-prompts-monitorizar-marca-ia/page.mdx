@@ -1,0 +1,103 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BlogCover } from "@/components/blog/blog-cover";
+import { ProcessFlow } from "@/components/blog/process-flow";
+import { getBlogPost } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-elegir-prompts-monitorizar-marca-ia");
+
+export const metadata = {
+  title: `${post.title} — GenScore`,
+  description: post.description
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">13 de julio de 2026</p>
+
+<div className="blog-body">
+
+Una de las preguntas más habituales cuando una empresa empieza a trabajar el GEO es sorprendentemente sencilla: *"¿Qué prompts tengo que monitorizar?"*
+
+La respuesta corta es que depende. La respuesta útil es que depende de cómo compran tus clientes, no de las palabras que a ti te gustaría posicionar.
+
+Ese es probablemente el error más frecuente: muchas empresas crean una lista de consultas que hablan únicamente de su producto o de su marca. Después descubren que aparecen muy bien… porque prácticamente nadie formula esas preguntas.
+
+Monitorizar prompts útiles no consiste en acumular cientos de consultas. Consiste en elegir las que representan las decisiones reales que toma un comprador.
+
+<ProcessFlow steps={[
+  { icon: "search", label: "Intención del usuario" },
+  { icon: "layers", label: "Categorías de prompts" },
+  { icon: "check", label: "Selección" },
+  { icon: "refresh", label: "Monitorización continua" }
+]} />
+
+## Empieza por el problema, no por tu producto
+
+Imagina que vendes un software de gestión documental. Es fácil caer en prompts como "software de gestión documental" o "gestión documental". Pero pocas personas hablan así con una IA.
+
+Lo normal es que expliquen el problema. Por ejemplo: *"Necesito una herramienta para organizar todos los documentos de mi empresa"*, o bien *"¿Qué software recomiendas para digitalizar archivos?"*
+
+La diferencia parece pequeña, pero cambia completamente el contexto de la respuesta. Las IAs entienden muy bien el lenguaje natural. Por eso conviene pensar como un cliente, no como un departamento de marketing.
+
+## No todas las preguntas tienen la misma intención
+
+Una buena colección de prompts suele cubrir distintas fases del proceso de decisión. Algunas personas todavía están explorando. Otras comparan alternativas. Y otras ya buscan una solución concreta.
+
+| Tipo de intención | Ejemplo |
+|---|---|
+| **Descubrimiento** | "¿Cómo puedo organizar la documentación de una empresa?" |
+| **Investigación** | "¿Qué programas existen para gestionar documentos?" |
+| **Comparación** | "¿Qué alternativa a X recomendarías?" |
+| **Decisión** | "¿Cuál es el mejor software de gestión documental para una pyme?" |
+
+Si solo monitorizas preguntas de decisión, perderás una parte importante del recorrido del usuario. Y si solo monitorizas preguntas muy generales, quizá nunca veas cómo compites realmente frente a otras marcas. Lo interesante es combinar ambos mundos.
+
+## Construye una muestra representativa
+
+No necesitas miles de prompts. De hecho, demasiados pueden introducir ruido. Es más útil construir una muestra equilibrada. Una metodología sencilla podría ser:
+
+1. Define los principales problemas que resuelve tu producto.
+2. Escribe cómo los explicaría un cliente.
+3. Agrupa consultas similares.
+4. Elimina duplicados.
+5. Revisa periódicamente la lista.
+
+Ese último paso suele olvidarse. Los hábitos cambian, aparecen nuevas herramientas, los modelos evolucionan. Los prompts que eran relevantes hace seis meses pueden dejar de representar las preguntas actuales.
+
+## Evita tres errores muy comunes
+
+El primero es utilizar únicamente el nombre de tu marca. Eso sirve para analizar reputación, pero no para descubrir oportunidades.
+
+El segundo consiste en crear prompts excesivamente específicos. Cuanto más artificial sea una consulta, menos probabilidades habrá de que represente una búsqueda real.
+
+Y el tercero es obsesionarse con el volumen. No gana quien monitoriza más prompts. Gana quien monitoriza los adecuados. Un conjunto pequeño pero bien diseñado suele aportar mucha más información que una lista enorme llena de consultas parecidas.
+
+## Los prompts también cuentan una historia
+
+Una buena colección de prompts permite responder preguntas muy interesantes. Por ejemplo: ¿en qué tipo de consultas aparece tu marca? ¿Dónde desaparece frente a tus competidores? ¿Qué necesidades relacionan las IAs contigo? ¿Qué categorías de producto dominas? ¿En cuáles ni siquiera eres mencionado?
+
+Con el tiempo empiezas a detectar patrones. Quizá descubras que apareces siempre cuando se habla de empresas grandes, pero nunca cuando la consulta menciona pymes. O que eres muy visible en preguntas técnicas, pero casi inexistente en comparativas.
+
+Ese tipo de información vale mucho más que una fotografía puntual, porque ayuda a decidir dónde merece la pena invertir esfuerzos.
+
+## El objetivo no es monitorizar más, sino aprender mejor
+
+En GEO, la calidad de los prompts determina la calidad del análisis. Si las preguntas no representan el lenguaje real de tus potenciales clientes, cualquier métrica estará sesgada.
+
+Por eso merece la pena dedicar tiempo a diseñar esa base. Es el equivalente a elegir correctamente las palabras clave en una estrategia SEO. Solo que aquí trabajamos con conversaciones completas, contexto e intención. Y cuanto más se parezcan esas conversaciones a las que mantiene un usuario con ChatGPT, Gemini o Claude, más útil será el resultado.
+
+<div className="blog-cta">
+<p>¿Quieres saber si estás monitorizando los prompts adecuados?</p>
+<a href="/signup" className="btn btn-primary">Prueba gratis</a>
+</div>
+
+</div>
+
+</BlogPageShell>

@@ -21,7 +21,7 @@ export default function BlogIndexPage() {
       <div>
         {BLOG_POSTS.map((post) => (
           <Link key={post.slug} href={`/blog/${post.slug}`} className="blog-index-card">
-            <BlogCover icon={post.coverIcon} />
+            <BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} />
             <div className="blog-index-card-body">
               <h2>{post.title}</h2>
               <p>{post.description}</p>

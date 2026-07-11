@@ -1,0 +1,103 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BlogCover } from "@/components/blog/blog-cover";
+import { getBlogPost } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-elegir-competidores-analisis-geo");
+
+export const metadata = {
+  title: `${post.title} — GenScore`,
+  description: post.description
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">13 de julio de 2026</p>
+
+<div className="blog-body">
+
+Una de las primeras decisiones al empezar un análisis GEO parece muy sencilla: elegir contra quién quieres compararte. Sin embargo, es una de las que más impacto tiene en los resultados.
+
+Si escoges mal a tus competidores, cualquier conclusión posterior será cuestionable. Puedes pensar que tu visibilidad es excelente cuando en realidad estás ignorando a quienes realmente aparecen en las respuestas de IA. O al contrario: creer que vas muy por detrás porque te estás comparando con empresas que juegan en otra liga.
+
+La buena noticia es que existe una forma bastante lógica de construir esa lista.
+
+## Tu competencia no siempre es la que tú crees
+
+Cuando pensamos en competidores solemos hacer una lista mental bastante rápida: las empresas que conocemos, las que vemos en ferias, las que suelen salir en las oportunidades que pierde el equipo de ventas.
+
+Todo eso está bien, pero los modelos generativos no construyen sus respuestas utilizando únicamente ese criterio. Una IA no sabe quién consideras tu competidor. Lo que hace es responder a una necesidad del usuario.
+
+Por ejemplo, imagina una empresa que vende un software para reservas de restaurantes. Si alguien pregunta *"¿Qué programa puedo usar para gestionar las reservas de mi restaurante?"*, la IA probablemente mencionará competidores directos.
+
+Pero si la pregunta cambia ligeramente — *"¿Cómo puedo organizar mejor las reservas de un restaurante pequeño?"* — quizá también recomiende herramientas de gestión, plataformas de pedidos o incluso soluciones de agenda online.
+
+Desde el punto de vista de la IA, todas ayudan a resolver el mismo problema. Y eso significa que pueden competir contigo dentro de una respuesta.
+
+## Empieza por la intención del usuario
+
+En GEO conviene darle la vuelta al razonamiento. No empieces preguntándote *"¿Quiénes son mis competidores?"*. Empieza por esto: *"¿Qué otras soluciones podrían recomendarle a un cliente con este problema?"*
+
+Ese pequeño cambio suele producir listas mucho más útiles, porque obliga a pensar desde la perspectiva del usuario. Y esa es exactamente la perspectiva desde la que responden ChatGPT, Gemini o Claude.
+
+## Cuatro tipos de competidores que merece la pena considerar
+
+No todos los competidores juegan el mismo papel dentro de un análisis GEO. Una clasificación sencilla puede ayudarte a construir una lista equilibrada.
+
+| Tipo | Cuándo incluirlo |
+|---|---|
+| **Competidor directo** | Ofrece prácticamente la misma solución para el mismo cliente. |
+| **Competidor indirecto** | Resuelve el mismo problema con un enfoque distinto. |
+| **Referente del mercado** | Tiene mucha autoridad y suele aparecer aunque su producto sea más amplio. |
+| **No relevante** | No comparte cliente ni necesidad principal. Mejor dejarlo fuera. |
+
+El objetivo no es llenar una lista enorme. Normalmente bastan unos pocos competidores bien elegidos para obtener una visión bastante representativa.
+
+## Evita compararte con empresas demasiado diferentes
+
+Este error es más habitual de lo que parece. Imagina una startup que vende un CRM especializado para despachos profesionales. Si decide compararse únicamente con Salesforce, Microsoft Dynamics y HubSpot, probablemente obtendrá un resultado desalentador.
+
+¿Significa eso que está haciendo las cosas mal? No necesariamente. Quizá sus clientes reales comparan esa solución con otros CRMs especializados mucho más pequeños. O incluso con herramientas que no son CRMs en sentido estricto.
+
+Por eso conviene preguntarse siempre: ¿nos dirigimos al mismo tipo de cliente? ¿Resolvemos el mismo problema? ¿Podríamos aparecer juntos en una misma recomendación? Si la respuesta es no, quizá ese competidor no aporte demasiado valor al análisis.
+
+## La competencia cambia según el prompt
+
+Este es uno de los aspectos más interesantes del GEO. En SEO solemos trabajar con rankings relativamente estables para una palabra clave. En IA, la competencia puede variar mucho dependiendo de cómo formule la pregunta el usuario.
+
+Por ejemplo, una empresa puede competir contra unas marcas cuando la consulta es muy técnica — *"¿Qué software permite automatizar facturas electrónicas?"* — y contra un conjunto completamente distinto cuando la pregunta es más general — *"¿Qué herramienta recomendarías para ahorrar tiempo en administración?"*
+
+Por eso no conviene sacar conclusiones observando un único prompt. Lo interesante es analizar un conjunto amplio de consultas y detectar patrones. Quizá descubras que siempre compites con las mismas tres marcas en preguntas de comparación, pero aparecen otros actores cuando la conversación gira hacia productividad o automatización.
+
+## No copies listas de Internet
+
+Es habitual encontrar artículos titulados "Las diez mejores herramientas de…" o rankings elaborados por terceros. Pueden servir como inspiración, pero no deberían convertirse automáticamente en tu lista de competidores.
+
+¿Por qué? Porque suelen responder a criterios editoriales, comerciales o de popularidad, no necesariamente al conjunto de marcas que las IAs consideran relevantes para tus clientes. La mejor lista es la que nace del análisis de tus propios casos de uso.
+
+## Revisa la lista periódicamente
+
+El mercado cambia. Aparecen nuevas empresas, otras desaparecen, algunas amplían su catálogo y empiezan a competir en categorías donde antes no estaban. Y las respuestas de los modelos también evolucionan.
+
+Por eso no tiene sentido definir una lista de competidores una vez y olvidarse de ella. Conviene revisarla con cierta frecuencia para comprobar si siguen siendo las referencias adecuadas. En muchos casos descubrirás marcas que ni siquiera conocías, pero que aparecen una y otra vez en las recomendaciones generadas por IA. Y ese descubrimiento, por sí solo, ya aporta mucho valor.
+
+## El objetivo no es ganar a todos
+
+Un buen análisis GEO no consiste en vencer a cualquier empresa del mercado. Consiste en entender contra quién compites realmente cuando un potencial cliente hace una pregunta relevante.
+
+Cuanto más precisa sea esa comparación, más útiles serán las conclusiones. Y cuanto más útiles sean las conclusiones, más fácil será priorizar acciones que tengan un impacto real en tu visibilidad.
+
+<div className="blog-cta">
+<p>¿Quieres descubrir qué marcas compiten contigo dentro de ChatGPT, Gemini o Claude?</p>
+<a href="/signup" className="btn btn-primary">Prueba gratis</a>
+</div>
+
+</div>
+
+</BlogPageShell>

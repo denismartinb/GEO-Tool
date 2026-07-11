@@ -1,0 +1,124 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BlogCover } from "@/components/blog/blog-cover";
+import { getBlogPost } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-es-geo-generative-engine-optimization");
+
+export const metadata = {
+  title: `${post.title} — GenScore`,
+  description: post.description
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">13 de julio de 2026</p>
+
+<div className="blog-body">
+
+Durante más de veinte años, el objetivo del marketing digital ha sido bastante claro: aparecer lo más arriba posible en Google. Si alguien buscaba "mejor CRM para pymes" o "software de facturación", querías que tu web estuviera entre los primeros resultados.
+
+Pero algo ha cambiado.
+
+Cada vez más personas hacen esas mismas preguntas directamente a ChatGPT, Gemini o Claude. En lugar de recibir diez enlaces azules, obtienen una respuesta ya elaborada con varias recomendaciones. Y ahí aparece una pregunta nueva para cualquier empresa: ¿está mi marca siendo mencionada por estas herramientas?
+
+De esa necesidad nace el GEO (Generative Engine Optimization).
+
+## ¿Qué es exactamente el GEO?
+
+GEO significa Generative Engine Optimization. Es el conjunto de estrategias destinadas a mejorar cómo aparece una marca dentro de las respuestas generadas por modelos de inteligencia artificial.
+
+La diferencia es importante.
+
+Mientras que un buscador tradicional muestra una lista de páginas web, un modelo generativo construye una respuesta propia utilizando la información que considera más relevante.
+
+Eso significa que una marca puede tener un SEO excelente y, aun así, apenas aparecer cuando alguien pregunta a una IA.
+
+Imagina una consulta como esta: *"¿Qué herramientas existen para monitorizar la visibilidad de una marca en ChatGPT?"*
+
+Google devolverá enlaces. ChatGPT probablemente responderá con una lista de herramientas, una pequeña explicación de cada una y quizá una recomendación final.
+
+El objetivo del GEO es conseguir que tu marca forme parte de esa respuesta.
+
+## SEO y GEO persiguen objetivos diferentes
+
+Es tentador pensar que el GEO es simplemente "el nuevo SEO". En realidad, comparten algunas bases, pero resuelven problemas distintos.
+
+| | SEO | GEO |
+|---|---|---|
+| **Objetivo** | Optimiza posiciones en buscadores | Optimiza presencia en respuestas generadas por IA |
+| **Canal** | El usuario hace clic en enlaces | El usuario puede obtener la respuesta sin visitar ninguna web |
+| **Métrica** | La métrica principal suele ser el tráfico | La métrica principal es la visibilidad y presencia de marca |
+| **Resultado** | El éxito depende del ranking | El éxito depende de si la IA te menciona y cómo lo hace |
+
+Una consecuencia interesante es que el clic deja de ser la única medida importante. Si una IA recomienda tu marca como una de las mejores opciones para resolver un problema, ya has ganado una parte importante de la decisión del usuario, incluso aunque no visite tu página en ese momento.
+
+Entonces, ¿el SEO deja de importar? No. De hecho, un buen SEO sigue siendo una ventaja: los modelos de IA necesitan fuentes de información fiables para construir sus respuestas. Si tu contenido es claro, está bien estructurado y demuestra autoridad sobre un tema, aumentan las probabilidades de que termine influyendo en esas respuestas.
+
+Lo que cambia es la pregunta que debes hacerte. Antes era: *"¿En qué posición aparezco en Google?"* Ahora también necesitas responder: *"¿Qué dice ChatGPT sobre mi empresa cuando alguien busca una solución como la mía?"*
+
+Son preguntas diferentes. Y requieren métricas diferentes.
+
+## El reto no es aparecer una vez
+
+Un error habitual es hacer una única prueba: abres ChatGPT, escribes una consulta, ves si apareces y sacas conclusiones. El problema es que eso no representa la realidad.
+
+Cada cliente utiliza palabras distintas. Alguien preguntará:
+
+- "mejor CRM para una pyme"
+- "software para gestionar clientes"
+- "alternativa a Salesforce"
+- "CRM sencillo para comerciales"
+
+Todas hablan del mismo problema, pero las respuestas pueden cambiar.
+
+Por eso el GEO no consiste en analizar una búsqueda aislada, sino un conjunto de prompts que representen las preguntas reales que hacen tus potenciales clientes. Solo así puedes obtener una imagen fiable de tu visibilidad.
+
+## ¿Cómo se mide la visibilidad en IA?
+
+Aquí aparece otro cambio importante respecto al SEO. En Google basta con saber en qué posición aparece una URL para una palabra clave. En un modelo generativo intervienen más factores. Por ejemplo:
+
+- ¿La IA menciona tu marca?
+- ¿La menciona como primera opción o como una alternativa secundaria?
+- ¿Explica por qué recomienda tu empresa?
+- ¿Qué competidores aparecen junto a ti?
+- ¿Cita alguna fuente relacionada con tu marca?
+
+Todas esas señales ayudan a entender cómo te percibe un modelo generativo. Una única mención perdida al final de una respuesta no tiene el mismo valor que aparecer como la recomendación principal acompañada de una explicación.
+
+Por eso muchas herramientas empiezan a utilizar métricas compuestas que combinan distintos indicadores de presencia, prominencia y contexto.
+
+## GEO no consiste solo en medir
+
+Aquí es donde muchas empresas se quedan a medias. Obtienen un informe que les dice que aparecen poco en ChatGPT. Perfecto. ¿Y ahora qué?
+
+Saber que existe un problema no dice cómo solucionarlo. Lo realmente útil es entender qué evidencia ha llevado a esa situación y qué acciones concretas pueden mejorarla.
+
+Por ejemplo, imagina una marca de zapatillas que descubre que las IAs siempre recomiendan a sus competidores cuando alguien pregunta por "las mejores zapatillas para correr un maratón". El informe puede mostrar varias pistas: apenas existen contenidos especializados sobre maratón, las menciones externas hablan más de moda que de rendimiento, y las comparativas del sector nunca incluyen la marca.
+
+Ese tipo de información permite priorizar acciones reales, en lugar de limitarse a observar un gráfico.
+
+## GEO es una disciplina nueva, pero la pregunta es muy antigua
+
+En el fondo, el objetivo sigue siendo el mismo que ha perseguido siempre el marketing digital: estar presente cuando un potencial cliente busca una solución.
+
+Lo que ha cambiado es el lugar donde ocurre esa búsqueda. Antes sucedía en un buscador. Ahora también sucede dentro de asistentes conversacionales capaces de recomendar marcas directamente.
+
+Y eso obliga a ampliar la estrategia. El SEO sigue siendo importante. El GEO añade una nueva capa: entender cómo los modelos de IA interpretan, comparan y recomiendan tu marca frente a las demás.
+
+Las empresas que empiecen a medir esa visibilidad antes tendrán una ventaja para adaptarse a una forma de descubrir productos que ya está cambiando los hábitos de búsqueda.
+
+<div className="blog-cta">
+<p>¿Quieres saber cómo aparece tu marca en ChatGPT, Gemini o Claude?</p>
+<a href="/signup" className="btn btn-primary">Prueba gratis</a>
+</div>
+
+</div>
+
+</BlogPageShell>

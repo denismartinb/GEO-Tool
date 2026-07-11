@@ -7,12 +7,14 @@ export function ArticleSchema({
   title,
   description,
   slug,
-  datePublished
+  datePublished,
+  coverImage
 }: {
   title: string;
   description: string;
   slug: string;
   datePublished: string;
+  coverImage?: string;
 }) {
   const json = {
     "@context": "https://schema.org",
@@ -23,7 +25,8 @@ export function ArticleSchema({
     datePublished,
     dateModified: datePublished,
     author: { "@type": "Organization", name: "GenScore" },
-    publisher: { "@type": "Organization", name: "GenScore" }
+    publisher: { "@type": "Organization", name: "GenScore" },
+    ...(coverImage ? { image: `https://www.genscore.es${coverImage}` } : {})
   };
 
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }} />;

@@ -1,0 +1,100 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BlogCover } from "@/components/blog/blog-cover";
+import { ProcessFlow } from "@/components/blog/process-flow";
+import { getBlogPost } from "@/lib/blog/posts";
+
+export const post = getBlogPost("genscore-vs-herramientas-geo");
+
+export const metadata = {
+  title: `${post.title} — GenScore`,
+  description: post.description
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">13 de julio de 2026</p>
+
+<div className="blog-body">
+
+El mercado de herramientas GEO todavía está dando sus primeros pasos. Cada pocos meses aparece una nueva plataforma que promete ayudarte a entender cómo aparece tu marca en ChatGPT, Gemini o Claude. Eso es una buena noticia: significa que cada vez más empresas empiezan a considerar importante su visibilidad en inteligencia artificial.
+
+Sin embargo, cuando pruebas varias de estas herramientas, es fácil encontrar un patrón común. La mayoría responden bastante bien a una pregunta: *"¿Qué está pasando?"* Pero dejan al usuario solo cuando llega la siguiente: *"¿Qué hago ahora?"*
+
+Ahí es donde GenScore intenta aportar un enfoque diferente.
+
+## Medir es imprescindible, pero no suficiente
+
+El primer paso de cualquier análisis GEO consiste en obtener datos. ¿Qué prompts se han ejecutado? ¿Qué marcas aparecen? ¿En qué posición? ¿Qué competidores reciben más menciones? ¿Cómo evoluciona la presencia de cada empresa?
+
+Sin esa información sería imposible tomar decisiones. Por eso herramientas como Otterly, Peec AI, Athena, Semrush AI Toolkit o Ahrefs Brand Radar han contribuido a dar forma a esta categoría. Cada una aborda el problema desde una perspectiva distinta y con diferentes capacidades, pero todas ayudan a entender cómo se comportan los modelos generativos respecto a una marca.
+
+Hasta aquí, el objetivo es parecido. La diferencia suele aparecer después.
+
+## El verdadero trabajo empieza cuando termina el informe
+
+Imagina que una plataforma te dice que tu visibilidad ha bajado un 18 % respecto al mes anterior. Es un dato interesante. Pero también plantea varias preguntas nuevas: ¿por qué ha ocurrido? ¿Qué evidencia apunta a esa conclusión? ¿Es un problema de contenido? ¿De autoridad? ¿De cobertura temática? ¿De comparativas? ¿Qué acción concreta debería tener prioridad?
+
+Responder a esas preguntas suele requerir un trabajo manual. Alguien tiene que interpretar el informe, identificar patrones, priorizar problemas y convertir esas conclusiones en tareas para el equipo de marketing o contenidos.
+
+Ese paso consume tiempo. Y, en muchas empresas, termina posponiéndose.
+
+## Del dato a la acción
+
+La filosofía de GenScore parte de una idea bastante sencilla: un informe solo genera valor cuando termina convirtiéndose en una mejora. Por eso el objetivo no es quedarse en el reporting, sino construir un recorrido completo.
+
+<ProcessFlow steps={[
+  { icon: "fileText", label: "Datos" },
+  { icon: "search", label: "Evidencia" },
+  { icon: "sparkles", label: "Recomendación" },
+  { icon: "check", label: "Acción" }
+]} />
+
+Primero detectas qué ocurre. Después entiendes por qué ocurre. A continuación identificas la acción que probablemente tendrá más impacto. Y finalmente obtienes un recurso que facilite ejecutar esa mejora.
+
+En lugar de obligar al usuario a interpretar todo desde cero, la idea es reducir la distancia entre descubrir un problema y empezar a resolverlo.
+
+## No todas las recomendaciones tienen el mismo valor
+
+Otra diferencia importante está en la priorización. Cuando un análisis detecta diez posibles mejoras, pocas empresas tienen capacidad para abordarlas todas a la vez.
+
+Por eso resulta útil responder preguntas como: ¿qué cambio puede tener mayor impacto? ¿Qué problema afecta a más prompts? ¿Qué recomendación es sencilla de ejecutar? ¿Qué acciones pueden esperar?
+
+Priorizar suele ser tan importante como detectar el problema. Especialmente en equipos pequeños.
+
+## Un enfoque pensado para trabajar, no solo para observar
+
+GenScore también pone el foco en facilitar la ejecución. La idea es que una recomendación no termine siendo un simple párrafo que alguien tendrá que reinterpretar.
+
+Siempre que sea posible, el objetivo es acompañarla de un recurso práctico que pueda aprovecharse directamente en el trabajo diario. Por ejemplo, un borrador de contenido, una estructura sugerida o un asset listo para adaptar y publicar.
+
+No sustituye el criterio del equipo. Pero reduce bastante el tiempo que transcurre entre detectar una oportunidad y empezar a aprovecharla.
+
+## Una apuesta por el mercado en castellano
+
+Otro aspecto diferencial es el foco. Gran parte de las herramientas GEO actuales están orientadas principalmente al mercado anglosajón. Eso no significa que no puedan utilizarse desde España. Pero muchas agencias y empresas trabajan en castellano, analizan consultas en español y compiten en mercados donde todavía existe poca oferta especializada.
+
+GenScore nace precisamente con esa realidad en mente. No porque el GEO sea diferente en español, sino porque las necesidades, los prompts y el contexto de muchas empresas españolas también lo son.
+
+## No existe una herramienta perfecta
+
+Conviene ser honestos. El GEO es una disciplina muy joven. Todas las plataformas están evolucionando y seguirán incorporando funcionalidades durante los próximos años. No tendría sentido afirmar que una herramienta sustituye completamente a otra: cada una tiene fortalezas distintas y puede encajar mejor según el tipo de empresa, el mercado o el nivel de madurez del equipo.
+
+Lo importante es entender qué problema quieres resolver. Si únicamente necesitas saber cómo aparece tu marca, probablemente un buen sistema de monitorización sea suficiente. Si además buscas reducir el tiempo que pasa entre detectar un problema y empezar a solucionarlo, merece la pena valorar herramientas que cierren ese recorrido de principio a fin.
+
+Porque, al final, medir es solo el principio. La mejora llega cuando alguien convierte esos datos en decisiones.
+
+<div className="blog-cta">
+<p>¿Quieres pasar del análisis a la acción?</p>
+<a href="/signup" className="btn btn-primary">Prueba gratis</a>
+</div>
+
+</div>
+
+</BlogPageShell>

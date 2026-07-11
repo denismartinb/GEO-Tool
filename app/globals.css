@@ -2841,6 +2841,13 @@ textarea.add-prompts-text-input {
   .geo-breakdown-weight { text-align: right; }
 }
 
+.process-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.process-flow-step-wrap { display: flex; align-items: center; gap: 8px; }
+.process-flow-step { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 120px; text-align: center; }
+.process-flow-step span { font-size: 12.5px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+.process-flow-icon { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); display: flex; align-items: center; justify-content: center; }
+.process-flow-arrow { color: var(--ink-4); flex-shrink: 0; }
+
 .evidence { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; }
 .ev-quote { font-size: 13px; line-height: 1.6; color: var(--ink-2); font-style: italic; }
 .ev-quote .mk { background: var(--warn-soft); color: var(--warn-ink); padding: 1px 4px; border-radius: 4px; font-style: normal; font-weight: 650; }
