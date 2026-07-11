@@ -17,8 +17,11 @@ import {
   type ActionItemKind
 } from "@/lib/web-audit/action-plan";
 import { RunAuditButton } from "./run-audit-button";
+import { RunTechnicalAuditButton } from "./run-technical-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
 import { TopicChip } from "./topic-chip";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -74,6 +77,128 @@ const OUTCOME_TO_ACTION_KIND: Partial<Record<TopicOutcome, ActionItemKind>> = {
   open_opportunity: "create_open",
   unverified_cited: "capture"
 };
+
+// Display names for the AI-bot user agents tracked by robots.ts — the
+// UA token stays visible alongside it (badges), since that's what actually
+// appears in a robots.txt file and what the founder would go verify.
+const BOT_ENGINE_LABELS: Record<BotAgent, string> = {
+  GPTBot: "OpenAI (ChatGPT)",
+  "OAI-SearchBot": "OpenAI (búsqueda)",
+  "Google-Extended": "Google (Gemini)",
+  PerplexityBot: "Perplexity",
+  ClaudeBot: "Anthropic (Claude)",
+  "anthropic-ai": "Anthropic (legado)",
+  Bingbot: "Microsoft (Copilot/Bing)"
+};
+
+const PAGE_SKIP_LABELS: Record<Exclude<PageAuditEntry["status"], "analyzed">, string> = {
+  skipped_offsite: "Descartada: fuera del dominio verificado",
+  skipped_not_html: "Descartada: la respuesta no es HTML",
+  skipped_timeout: "Descartada: tiempo de carga agotado",
+  skipped_error: "Descartada: no se ha podido cargar",
+  skipped_budget: "Sin comprobar: límite de tiempo de la auditoría"
+};
+
+function freshnessLabel(status: "fresh" | "aging" | "stale" | "unknown"): string {
+  switch (status) {
+    case "fresh":
+      return "Actualizada";
+    case "aging":
+      return "Empieza a desactualizarse";
+    case "stale":
+      return "Desactualizada";
+    default:
+      return "Sin fecha detectada";
+  }
+}
+
+function CheckDot({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, color: ok ? "var(--ink-2)" : "var(--ink-4)" }}>
+      <Icon name={ok ? "check" : "x"} size={11} />
+      {label}
+    </span>
+  );
+}
+
+function PageAuditRow({ page }: { page: PageAuditEntry }) {
+  let path: string;
+  try {
+    path = new URL(page.url).pathname || "/";
+  } catch {
+    path = page.url;
+  }
+
+  if (page.status !== "analyzed" || !page.check) {
+    const skipLabel = page.status === "analyzed" ? PAGE_SKIP_LABELS.skipped_error : PAGE_SKIP_LABELS[page.status];
+    return (
+      <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink-3)", overflowWrap: "anywhere" }}>{path}</span>
+          <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{page.contextLabel}</span>
+        </div>
+        <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "4px 0 0" }}>{skipLabel}</p>
+      </div>
+    );
+  }
+
+  const { check } = page;
+  return (
+    <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 6 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)", overflowWrap: "anywhere" }}>{path}</div>
+          <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{page.contextLabel}</div>
+        </div>
+        <span className="badge badge-neutral" style={{ fontVariantNumeric: "tabular-nums" }}>{check.pageScore} / 100</span>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+        <CheckDot ok={check.structuredData.pass} label="Datos estructurados" />
+        <CheckDot ok={check.answerFormat.points === 30} label="Formato respuesta-primero" />
+        <CheckDot ok={check.metadata.points === 20} label="Metadatos" />
+        <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
+      </div>
+    </div>
+  );
+}
+
+function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: string }) {
+  return (
+    <div className="card">
+      <div style={{ padding: "13px 16px 0" }}>
+        <div style={{ fontSize: 13.5, fontWeight: 750 }}>Acceso de bots de IA</div>
+        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+          Qué motores de IA puede rastrear tu robots.txt. Comprobado {formatDate(checkedAt)}.
+        </div>
+      </div>
+      <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+        {!bots.robotsFound && (
+          <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "0 0 4px" }}>
+            No se ha encontrado robots.txt — se asume acceso permitido por defecto.
+          </p>
+        )}
+        {bots.bots.map((bot) => (
+          <div
+            key={bot.agent}
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}
+          >
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>{BOT_ENGINE_LABELS[bot.agent]}</div>
+              <div style={{ fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>{bot.agent}</div>
+            </div>
+            <span className={`badge ${bot.allowed ? "badge-pos" : "badge-neg"}`}>{bot.allowed ? "Permitido" : "Bloqueado"}</span>
+          </div>
+        ))}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
+          <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>llms.txt</div>
+          <span className={`badge ${bots.llmsTxtFound ? "badge-pos" : "badge-outline"}`}>
+            {bots.llmsTxtFound ? `Encontrado (${bots.llmsTxtBytes} bytes)` : "No encontrado"}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function recommendationHref(projectId: string, recommendationId: string | null): string {
   // A deep-link only exists for recommendation types whose evidence anchors
@@ -412,6 +537,25 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     .eq("is_sanitized", true)
     .order("created_at", { ascending: false })
     .limit(12);
+
+  // WEB-AUDIT-2: latest technical-audit snapshot, if any. Rendered as-is —
+  // this page never re-triggers the audit itself, only the button does
+  // (lib/web-audit/technical-audit.ts owns the cache/rate-limit rules).
+  const { data: technicalSnapshotRow } = canAudit
+    ? await supabase
+        .from("web_audit_snapshots")
+        .select("readiness_score, pages, bots, created_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+  const technicalSnapshot = technicalSnapshotRow as {
+    readiness_score: number | null;
+    pages: PageAuditEntry[];
+    bots: BotAccessReport;
+    created_at: string;
+  } | null;
 
   // WEB-AUDIT-CHAIN: detect a campaign left "running" for the current scan
   // (from a previous batch, whether the user is still on this page or came
@@ -758,6 +902,43 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     : "La IA ya cita todos tus temas con contenido propio"}
               </div>
             </div>
+
+            {/* WEB-AUDIT-2: technical-audit KPI tiles. Render ONLY when a
+                snapshot exists (never a placeholder "—" tile for a check
+                that has never run — that reads as broken, not "not run
+                yet"). */}
+            {technicalSnapshot && (
+              <>
+                <div className="card" style={{ padding: "13px 15px 11px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+                    Preparación GEO
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+                    {technicalSnapshot.readiness_score === null ? "—" : technicalSnapshot.readiness_score}
+                    <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>/ 100</small>
+                  </div>
+                  <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 6 }}>
+                    media de {technicalSnapshot.pages.filter((p) => p.status === "analyzed").length} páginas clave
+                  </div>
+                </div>
+                <div className="card" style={{ padding: "13px 15px 11px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+                    Acceso bots IA
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
+                    {technicalSnapshot.bots.bots.filter((b) => b.allowed).length} / {technicalSnapshot.bots.bots.length}
+                    <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>permitidos</small>
+                  </div>
+                  <div style={{ fontSize: 10.5, marginTop: 6, color: "var(--ink-4)" }}>
+                    {!technicalSnapshot.bots.llmsTxtFound
+                      ? "llms.txt no encontrado"
+                      : technicalSnapshot.bots.bots.some((b) => !b.allowed)
+                        ? `Bloqueado: ${technicalSnapshot.bots.bots.filter((b) => !b.allowed).map((b) => b.agent).join(", ")}`
+                        : "Todos los bots rastreados tienen acceso"}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Plan de acción (WEB-AUDIT-ACTION) — the first accionable thing
@@ -782,6 +963,43 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               )}
             </div>
           </div>
+
+          {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
+              AI-bot access, independent from the Gemini-driven coverage
+              audit above. One shared button drives both cards. */}
+          <div className="section-head" style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
+            <div>
+              <div className="section-title">Salud técnica GEO</div>
+              <div className="section-desc">
+                {technicalSnapshot
+                  ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
+                  : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
+              </div>
+            </div>
+            <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
+          </div>
+          {technicalSnapshot ? (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
+              <div className="card">
+                <div style={{ padding: "13px 16px 0" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                    Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA.
+                  </div>
+                </div>
+                <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                  {technicalSnapshot.pages.map((page, i) => (
+                    <PageAuditRow key={`${page.url}-${i}`} page={page} />
+                  ))}
+                </div>
+              </div>
+              <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
+            </div>
+          ) : (
+            <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
+              Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
+            </p>
+          )}
 
           {/* Opportunity matrix + trend — auto-fit so the two cards sit side by
               side on desktop but stack (never squash) on mobile; with only the
