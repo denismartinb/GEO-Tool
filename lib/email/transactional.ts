@@ -83,3 +83,18 @@ export async function sendTrialEndedEmail(to: string): Promise<void> {
     `)
   );
 }
+
+const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
+
+export async function sendCancellationScheduledEmail(to: string, activeUntil: Date): Promise<void> {
+  await sendEmail(
+    to,
+    "Tu suscripción de GenScore se cancelará al final de tu periodo",
+    wrap(`
+      <p>Hemos registrado tu cancelación. Tu plan sigue activo, con todas sus funciones, hasta el
+      <b>${dateFormatter.format(activeUntil)}</b> — no se te volverá a cobrar después de esa fecha.</p>
+      <p>¿Cambiaste de idea? Puedes reactivarlo en cualquier momento antes de esa fecha.</p>
+      <p><a href="https://www.genscore.es/dashboard/settings/billing">Ver mi facturación</a></p>
+    `)
+  );
+}

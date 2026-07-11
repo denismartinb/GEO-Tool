@@ -4,9 +4,11 @@ import type { createServiceClient } from "@/lib/supabase/service";
 
 const sendPlanConfirmedEmail = vi.fn();
 const sendPaymentFailedEmail = vi.fn();
+const sendCancellationScheduledEmail = vi.fn();
 vi.mock("@/lib/email/transactional", () => ({
   sendPlanConfirmedEmail: (...args: unknown[]) => sendPlanConfirmedEmail(...args),
-  sendPaymentFailedEmail: (...args: unknown[]) => sendPaymentFailedEmail(...args)
+  sendPaymentFailedEmail: (...args: unknown[]) => sendPaymentFailedEmail(...args),
+  sendCancellationScheduledEmail: (...args: unknown[]) => sendCancellationScheduledEmail(...args)
 }));
 
 const ORIGINAL_ENV = { ...process.env };
@@ -16,6 +18,7 @@ beforeEach(() => {
   process.env.STRIPE_PRICE_ID_PRO = "price_pro_test";
   sendPlanConfirmedEmail.mockReset();
   sendPaymentFailedEmail.mockReset();
+  sendCancellationScheduledEmail.mockReset();
 });
 
 afterEach(() => {
@@ -24,14 +27,18 @@ afterEach(() => {
 });
 
 type Update = { patch: Record<string, unknown>; id: string };
+type Row = Record<string, unknown>;
 
-function fakeServiceClient(options: { updateError?: string } = {}) {
+function fakeServiceClient(options: { updateError?: string; profile?: Row | null } = {}) {
   const updates: Update[] = [];
 
   const client = {
     from(table: string) {
       if (table !== "profiles") throw new Error(`unexpected table ${table}`);
       return {
+        select() {
+          return { eq: () => ({ maybeSingle: () => Promise.resolve({ data: options.profile ?? null, error: null }) }) };
+        },
         update(patch: Record<string, unknown>) {
           return {
             eq(_column: string, id: string) {
@@ -138,6 +145,75 @@ describe("handleStripeWebhookEvent", () => {
     await handleStripeWebhookEvent(event, client);
 
     expect(updates).toEqual([{ patch: { current_plan: "pro", trial_ends_at: null }, id: "user-1" }]);
+  });
+
+  it("customer.subscription.updated: sends a plan-confirmed email when the plan actually changed (a Portal-driven switch)", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client } = fakeServiceClient({ profile: { current_plan: "starter", email: "founder@example.com" } });
+
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] }
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendPlanConfirmedEmail).toHaveBeenCalledWith("founder@example.com", "Pro");
+  });
+
+  it("customer.subscription.updated: doesn't send a plan-confirmed email when the plan didn't actually change", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
+
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] }
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendPlanConfirmedEmail).not.toHaveBeenCalled();
+  });
+
+  it("customer.subscription.updated: sends a cancellation-scheduled email with the end-of-period date", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
+    const cancelAt = Math.floor(new Date("2026-08-11T00:00:00Z").getTime() / 1000);
+
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] },
+      cancel_at_period_end: true,
+      cancel_at: cancelAt
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendCancellationScheduledEmail).toHaveBeenCalledWith("founder@example.com", new Date(cancelAt * 1000));
+  });
+
+  it("customer.subscription.updated: doesn't send a cancellation email when cancel_at_period_end is false", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
+
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] },
+      cancel_at_period_end: false,
+      cancel_at: null
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendCancellationScheduledEmail).not.toHaveBeenCalled();
   });
 
   it("customer.subscription.updated: does nothing when the price id isn't a known self-serve plan", async () => {
