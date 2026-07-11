@@ -36,7 +36,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
-| 4 | BILLING-STRIPE-1 ⚠️ | 🟡 PR 1-3 y fix RLS verificados en prod; PR 4 (emails) siguiente | #186, #189, #191, #192 | 2026-07-10 | Checkout, webhook, Customer Portal, protección RLS y reverse trial (7 días) mergeados y confirmados end-to-end en producción: alta nueva → Pro 7 días → "Contratar ahora" → pago real → aviso de trial desaparece solo. Siguiente: PR 4 (emails Resend) — pendiente de scope/aprobación, no incluido en el alcance ya aprobado |
+| 4 | BILLING-STRIPE-1 ⚠️ | ✅ Hecho (alcance aprobado) | #186, #189, #191, #192, #196, #200, #202, #205, #207 | 2026-07-11 | Checkout, webhook, Customer Portal, protección RLS, reverse trial (7 días) y los 5 emails transaccionales (bienvenida, plan confirmado, pago fallido, trial terminado, cancelación programada) verificados end-to-end en producción, incluida la cancelación real (fecha guardada, UI con estado "Cancelada — activa hasta…" + botón reactivar, email recibido). Bug real encontrado y corregido en vivo: el código exigía `cancel_at_period_end` además de `cancel_at`, pero el Customer Portal solo fija `cancel_at`. Pendiente, deliberadamente fuera de este alcance: PR B (aviso 3 días antes de expirar el trial, necesita su propia aprobación de migración/cron) y el go-live checklist (Vercel Pro, alta autónomo, VeriFactu, claves live) antes de cobros reales |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
 | 6 | ALERTS-1 | 🔲 Pendiente | — | 2026-07-09 | |
 | 7 | GROWTH-1 | 🔲 Pendiente | — | 2026-07-09 | |
@@ -432,6 +432,14 @@ eventos/mes, sin tarjeta), frente al trial de 30 días de Plausible.
   una actualización de LEGAL-1 el día que se active PostHog en producción
   (añadirlo como encargado del tratamiento).
 - `pnpm test` (341/341) y `pnpm run validate` en verde.
+
+**LEGAL-1 al día (2026-07-11):** con Sentry/PostHog (Fase 3) y Stripe
+(Fase 4) ya confirmados operativos en producción, `/privacidad` se
+actualizó para añadirlos a la lista de encargados del tratamiento —
+cerraba el hallazgo señalado (sin corregir) en los PRs #196/#200/#202 de
+BILLING-STRIPE-1. `/cookies` no cambia: PostHog corre en modo cookieless
+(`persistence: "memory"`) y Sentry no fija cookies de seguimiento, así que
+la promesa de "sin cookies de analítica" se mantiene cierta.
 
 **Pendiente (fundador, sin código posible):**
 - [x] Conectar `genscore.es` en Vercel (2026-07-10), con
