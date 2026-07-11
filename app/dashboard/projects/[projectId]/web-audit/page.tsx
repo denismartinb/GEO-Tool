@@ -93,6 +93,13 @@ const BOT_ENGINE_LABELS: Record<BotAgent, string> = {
 
 const PAGE_SKIP_LABELS: Record<Exclude<PageAuditEntry["status"], "analyzed">, string> = {
   skipped_offsite: "Descartada: fuera del dominio verificado",
+  // Distinct from skipped_offsite (WEB-AUDIT-2 bug report, 2026-07-11): a page
+  // whose hostname genuinely IS the audited domain but whose DNS resolution
+  // couldn't be verified safe (lookup error/timeout, or a resolved private
+  // address) — never the same thing as "not your domain". Check the Vercel
+  // function logs (lib/web-audit/fetch-page.ts's dns_lookup_failed /
+  // dns_resolved_unsafe_ip lines) for the actual reason.
+  skipped_unsafe_ip: "Descartada: no se ha podido verificar de forma segura la IP de este dominio",
   skipped_not_html: "Descartada: la respuesta no es HTML",
   skipped_timeout: "Descartada: tiempo de carga agotado",
   skipped_error: "Descartada: no se ha podido cargar",

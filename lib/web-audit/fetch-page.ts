@@ -34,8 +34,11 @@ import { isIP } from "node:net";
 export const MAX_HTML_BYTES = 512 * 1024;
 export const PER_PAGE_TIMEOUT_MS = 4_000;
 const MAX_REDIRECTS = 3;
+const DNS_LOOKUP_TIMEOUT_MS = 3_000;
 
 export const AUDIT_USER_AGENT = "GEOStudioAudit/1.0 (+https://genscore.es/bots)";
+
+const LOG_PREFIX = "[geo:web-audit-fetch]";
 
 function isPrivateOrReservedIPv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
@@ -75,18 +78,71 @@ export function isPrivateOrReservedIp(ip: string): boolean {
   return true;
 }
 
+class DnsLookupTimeoutError extends Error {
+  constructor() {
+    super("DNS lookup timed out");
+    this.name = "DnsLookupTimeoutError";
+  }
+}
+
+/**
+ * `dns.promises.lookup` has no built-in cancellation — without a bound, a
+ * slow/unresponsive resolver on the serving platform's network path would
+ * hang this check indefinitely instead of failing fast like every other
+ * network call in this module. Fail-closed on timeout, same as any other
+ * lookup error.
+ */
+function lookupWithTimeout(hostname: string): Promise<Array<{ address: string; family: number }>> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new DnsLookupTimeoutError()), DNS_LOOKUP_TIMEOUT_MS);
+    lookup(hostname, { all: true, verbatim: true }).then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
 /**
  * Resolves a hostname and confirms every returned address is public —
- * fails closed on a DNS error or an empty result (never "assume it's fine").
+ * fails closed on a DNS error, a timeout, or an empty result (never "assume
+ * it's fine"). Logs WHY on every fail-closed path (hostname + a generic
+ * error code/reason, never raw stack traces) — a candidate silently
+ * disappearing behind "fuera del dominio verificado" with no diagnosable
+ * cause was a real production report (founder audited their own domain's
+ * homepage and it was rejected here, not by the domain-match check).
  */
 export async function hostnameResolvesToPublicIp(hostname: string): Promise<boolean> {
+  let results: Array<{ address: string; family: number }>;
   try {
-    const results = await lookup(hostname, { all: true, verbatim: true });
-    if (results.length === 0) return false;
-    return results.every((r) => !isPrivateOrReservedIp(r.address));
-  } catch {
+    results = await lookupWithTimeout(hostname);
+  } catch (error) {
+    console.warn(`${LOG_PREFIX} dns_lookup_failed`, {
+      hostname,
+      error_name: error instanceof Error ? error.name : "unknown",
+      error_code: error instanceof Error && "code" in error ? String((error as { code?: unknown }).code) : undefined
+    });
     return false;
   }
+  if (results.length === 0) {
+    console.warn(`${LOG_PREFIX} dns_lookup_empty`, { hostname });
+    return false;
+  }
+  const unsafe = results.filter((r) => isPrivateOrReservedIp(r.address));
+  if (unsafe.length > 0) {
+    console.warn(`${LOG_PREFIX} dns_resolved_unsafe_ip`, {
+      hostname,
+      resolved_count: results.length,
+      unsafe_addresses: unsafe.map((r) => r.address)
+    });
+    return false;
+  }
+  return true;
 }
 
 /** Mirrors lib/recommendations/domain-coverage.ts's isSameOrSubdomain exactly (label-boundary match). */
@@ -96,12 +152,24 @@ export function isAllowedAuditHost(hostname: string, projectDomainNormalized: st
   return h === projectDomainNormalized || h.endsWith(`.${projectDomainNormalized}`);
 }
 
-async function verifyUrlIsSafe(url: URL, projectDomainNormalized: string): Promise<boolean> {
-  if (url.protocol !== "https:") return false;
+type UrlSafetyVerdict = "ok" | "off_domain" | "unsafe_ip";
+
+/**
+ * Split into two failure reasons (data-guardian follow-up, WEB-AUDIT-2 bug
+ * report): "off_domain" means the hostname itself is wrong — never a
+ * candidate the product should have offered. "unsafe_ip" means the hostname
+ * IS the audited domain (or a real subdomain) but its DNS resolution
+ * couldn't be verified safe — a DNS error, timeout, or a resolved private/
+ * reserved address. Collapsing both into one "fuera del dominio verificado"
+ * message was actively misleading when the failure was actually a DNS
+ * check, not a domain mismatch.
+ */
+async function verifyUrlIsSafe(url: URL, projectDomainNormalized: string): Promise<UrlSafetyVerdict> {
+  if (url.protocol !== "https:") return "off_domain";
   const hostname = url.hostname.toLowerCase();
-  if (isIP(hostname)) return false; // reject IP-literal hosts outright, never resolve/allow them
-  if (!isAllowedAuditHost(hostname, projectDomainNormalized)) return false;
-  return hostnameResolvesToPublicIp(hostname);
+  if (isIP(hostname)) return "off_domain"; // reject IP-literal hosts outright, never resolve/allow them
+  if (!isAllowedAuditHost(hostname, projectDomainNormalized)) return "off_domain";
+  return (await hostnameResolvesToPublicIp(hostname)) ? "ok" : "unsafe_ip";
 }
 
 /** Reads a response body as text, stopping at maxBytes (a truncated body is still usable — checks are head-heavy). */
@@ -131,6 +199,7 @@ export async function readBodyCapped(response: Response, maxBytes: number): Prom
 export type PageFetchStatus =
   | "analyzed"
   | "skipped_offsite"
+  | "skipped_unsafe_ip"
   | "skipped_not_html"
   | "skipped_timeout"
   | "skipped_error";
@@ -157,8 +226,9 @@ export async function fetchPageSafely(rawUrl: string, projectDomainNormalized: s
   }
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const safe = await verifyUrlIsSafe(current, projectDomainNormalized);
-    if (!safe) return { status: "skipped_offsite" };
+    const verdict = await verifyUrlIsSafe(current, projectDomainNormalized);
+    if (verdict === "off_domain") return { status: "skipped_offsite" };
+    if (verdict === "unsafe_ip") return { status: "skipped_unsafe_ip" };
 
     let response: Response;
     try {
