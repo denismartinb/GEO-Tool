@@ -970,6 +970,42 @@ que la pantalla de facturación ahora refleja la cancelación programada, y
 de expirar el trial, con su propia aprobación de migración) cuando el
 fundador lo pida.
 
+**Séptimo hallazgo, causa raíz encontrada (mismo día):** tras aplicar la
+migración 0019 y mergear el PR anterior, el fundador probó la cancelación
+tanto en una cuenta con historial de cambios de plan como en una cuenta
+registrada desde cero — en ambas, ni llegaba el email ni la pantalla
+reflejaba la cancelación. Se descartó primero una confusión de eventos
+antiguos/clientes de Stripe equivocados (reenviar eventos históricos no
+sirve: repiten el dato congelado de aquel momento, no el estado actual).
+Con la cuenta nueva se obtuvo el payload JSON real del evento
+`customer.subscription.updated` disparado por el propio Portal al
+cancelar:
+
+```
+"cancel_at": 1786469448,
+"cancel_at_period_end": false
+```
+
+**Causa raíz:** el código de este PR exigía `cancel_at_period_end &&
+cancel_at` para considerar que había una cancelación programada. El flujo
+de cancelación del Customer Portal en realidad programa la baja fijando
+`cancel_at` directamente, sin activar nunca `cancel_at_period_end` — la
+condición estaba mal planteada y descartaba silenciosamente **todas**
+las cancelaciones reales, sin lanzar ningún error (de ahí el 200 OK en
+Stripe y en los logs de Vercel, pero sin llamada a Resend ni escritura
+real de `cancel_at`).
+
+**Corregido** en `lib/billing/stripe-webhook.ts`: `cancelAt` ahora
+depende solo de `subscription.cancel_at` (si Stripe lo ha puesto, hay
+cancelación programada, sin más condiciones). 1 test nuevo que reproduce
+exactamente el caso real (`cancel_at_period_end: false` + `cancel_at`
+puesto) más el renombrado de 2 tests existentes para reflejar la
+condición correcta. 530/530 tests, `pnpm run validate` limpio.
+
+**Siguiente:** el fundador vuelve a probar cancelar una suscripción real
+en producción tras este fix y confirma las tres cosas de siempre: fecha
+guardada, pantalla actualizada, email recibido.
+
 ---
 
 ## Fase 5 — LAUNCH

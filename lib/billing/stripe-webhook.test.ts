@@ -198,7 +198,7 @@ describe("handleStripeWebhookEvent", () => {
     expect(sendCancellationScheduledEmail).toHaveBeenCalledWith("founder@example.com", new Date(cancelAt * 1000));
   });
 
-  it("customer.subscription.updated: doesn't send a cancellation email when cancel_at_period_end is false", async () => {
+  it("customer.subscription.updated: doesn't send a cancellation email when there's no cancel_at at all", async () => {
     const { handleStripeWebhookEvent } = await import("./stripe-webhook");
     const { client } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
 
@@ -214,6 +214,32 @@ describe("handleStripeWebhookEvent", () => {
     await handleStripeWebhookEvent(event, client);
 
     expect(sendCancellationScheduledEmail).not.toHaveBeenCalled();
+  });
+
+  it("customer.subscription.updated: sends the cancellation email even when cancel_at_period_end stays false (Portal's actual behavior)", async () => {
+    const { handleStripeWebhookEvent } = await import("./stripe-webhook");
+    const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
+    const cancelAt = Math.floor(new Date("2026-08-11T00:00:00Z").getTime() / 1000);
+
+    // Found via live testing: the Customer Portal's cancel flow sets
+    // cancel_at directly and never flips cancel_at_period_end to true, so
+    // this combination — not cancel_at_period_end: true — is the real shape
+    // of a Portal-driven cancellation.
+    const event = makeEvent("customer.subscription.updated", {
+      id: "sub_123",
+      status: "active",
+      metadata: { user_id: "user-1" },
+      items: { data: [{ price: { id: "price_pro_test" } }] },
+      cancel_at_period_end: false,
+      cancel_at: cancelAt
+    });
+
+    await handleStripeWebhookEvent(event, client);
+
+    expect(sendCancellationScheduledEmail).toHaveBeenCalledWith("founder@example.com", new Date(cancelAt * 1000));
+    expect(updates).toEqual([
+      { patch: { current_plan: "pro", trial_ends_at: null, cancel_at: "2026-08-11T00:00:00.000Z" }, id: "user-1" }
+    ]);
   });
 
   it("customer.subscription.updated: stores cancel_at so the billing page can show the scheduled cancellation", async () => {
@@ -237,7 +263,7 @@ describe("handleStripeWebhookEvent", () => {
     ]);
   });
 
-  it("customer.subscription.updated: clears cancel_at when the owner reactivates (cancel_at_period_end back to false)", async () => {
+  it("customer.subscription.updated: clears cancel_at when the owner reactivates (cancel_at back to null)", async () => {
     const { handleStripeWebhookEvent } = await import("./stripe-webhook");
     const { client, updates } = fakeServiceClient({ profile: { current_plan: "pro", email: "founder@example.com" } });
 
