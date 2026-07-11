@@ -4,7 +4,7 @@ import type Stripe from "stripe";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { getPlanIdForPriceId } from "@/lib/stripe";
 import { PLANS } from "@/app/pricing/plans-data";
-import { sendPaymentFailedEmail, sendPlanConfirmedEmail } from "@/lib/email/transactional";
+import { sendCancellationScheduledEmail, sendPaymentFailedEmail, sendPlanConfirmedEmail } from "@/lib/email/transactional";
 
 const ENDED_SUBSCRIPTION_STATUSES = new Set<Stripe.Subscription.Status>([
   "canceled",
@@ -94,11 +94,34 @@ export async function handleStripeWebhookEvent(
         const planId = priceId ? getPlanIdForPriceId(priceId) : null;
         if (!planId) return;
 
+        // Read before writing, purely to email-notify a real plan change —
+        // this only fires for a genuine update to an already-existing
+        // subscription (e.g. a Portal-driven Starter<->Pro switch), never
+        // for the initial subscription a Checkout creates (that's a
+        // customer.subscription.created event, which this handler doesn't
+        // listen for at all — checkout.session.completed's own email covers
+        // that case, so there's no double-send risk here).
+        const { data: profileRow } = await service
+          .from("profiles")
+          .select("current_plan, email")
+          .eq("id", userId)
+          .maybeSingle();
+
         const { error } = await service
           .from("profiles")
           .update({ current_plan: planId, trial_ends_at: null })
           .eq("id", userId);
         if (error) throw new Error(`profiles update failed: ${error.message}`);
+
+        if (profileRow?.email) {
+          if (profileRow.current_plan && profileRow.current_plan !== planId) {
+            const planName = PLANS.find((p) => p.id === planId)?.name ?? planId;
+            await sendPlanConfirmedEmail(profileRow.email, planName);
+          }
+          if (subscription.cancel_at_period_end && subscription.cancel_at) {
+            await sendCancellationScheduledEmail(profileRow.email, new Date(subscription.cancel_at * 1000));
+          }
+        }
       }
       return;
     }

@@ -893,9 +893,39 @@ columna nueva + cron, su propia aprobación de esquema).
   x2, `lib/billing.test.ts` x1). 433/433 tests totales, `pnpm run
   validate` limpio.
 
-**Siguiente:** el fundador crea la cuenta de Resend y prueba en vivo los 5
-correos → PR B (aviso 3 días antes, con su propia aprobación de migración)
-cuando el fundador lo pida.
+**PR A mergeado (2026-07-11, #196 → `main`).** Verificado en producción:
+email de bienvenida y de confirmación de plan (Free→Starter, y conversión
+de trial a Pro real) llegaron correctamente tras un despliegue fresco
+(mismo gotcha de siempre: variables de entorno nuevas requieren un
+redeploy — resuelto con un commit vacío).
+
+**Quinto hallazgo, en vivo:** al cambiar de plan (Starter↔Pro) o cancelar
+la suscripción **desde el Customer Portal**, no llegaba ningún email — el
+alcance original de PR A solo enganchaba los emails a
+`checkout.session.completed` (primera contratación), no a
+`customer.subscription.updated` (cambios posteriores vía Portal).
+Corregido en el mismo PR:
+
+- `customer.subscription.updated` ahora lee el plan anterior antes de
+  escribir el nuevo, y si de verdad cambió, envía el mismo email de
+  "tu plan X ya está activo" (cubre el cambio de plan vía Portal). No hay
+  riesgo de duplicado con el email de `checkout.session.completed`: ese
+  evento solo se dispara para una suscripción que ya existía antes
+  (una recién creada por Checkout emite `customer.subscription.created`,
+  que este webhook no escucha).
+- Nueva función `sendCancellationScheduledEmail`: cuando
+  `subscription.cancel_at_period_end` es true, envía un aviso con la
+  fecha exacta (`subscription.cancel_at`) hasta la que el plan sigue
+  activo — igual que la propia pantalla de Stripe se lo muestra al
+  usuario, pero por email.
+- 4 tests nuevos en `stripe-webhook.test.ts`. 525/525 tests totales
+  (incluye trabajo de otras ramas ya mergeadas), `pnpm run validate`
+  limpio.
+
+**Siguiente:** el fundador prueba en vivo el cambio de plan y la
+cancelación vía Portal para confirmar que ahora sí llegan los emails →
+PR B (aviso 3 días antes de expirar el trial, con su propia aprobación de
+migración) cuando el fundador lo pida.
 
 ---
 
