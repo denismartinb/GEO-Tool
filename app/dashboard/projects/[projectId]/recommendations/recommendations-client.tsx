@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
-import { categoryForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
+import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 
 type CitationPage = { domain: string; title: string; url: string };
@@ -37,6 +37,19 @@ export type GeneratedSolution = {
   examples: GeneratedSolutionExample[];
 };
 
+/**
+ * Read-time enrichment of an `add_citation_block` card with already-persisted
+ * domain-coverage data (RECS-COVERAGE-OVERLAY-1). Defined locally rather than
+ * imported from the server-only lib/recommendations/coverage-overlay.ts, same
+ * reason GeneratedSolution is defined locally. Absent/null means "render this
+ * card exactly as before" — coverage data is optional and sparse by design.
+ */
+export type CoverageOverlay = {
+  state: "confirmed_surfacing_gap" | "possible_content_gap" | "none";
+  verifiedPage: { url: string; title: string } | null;
+  confidenceOverride: "low" | "medium" | "high" | null;
+};
+
 export type Recommendation = {
   id: string;
   priority_rank: number;
@@ -61,6 +74,9 @@ export type Recommendation = {
    * to the user once it has persisted across at least one prior scan.
    */
   consecutive_runs_open?: number;
+  /** RECS-COVERAGE-OVERLAY-1 — null/undefined for every card type except a
+   * matched `add_citation_block` card for the current scan. */
+  coverageOverlay?: CoverageOverlay | null;
 };
 
 type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
@@ -95,7 +111,10 @@ function effortToN(val: string): number {
  * badge/colour reflect absolute importance.
  */
 function priorityLevel(rec: Recommendation): "high" | "med" | "low" {
-  if (rec.impact === "high" && rec.confidence !== "low") return "high";
+  // A confirmed surfacing gap (RECS-COVERAGE-OVERLAY-1) bumps the effective
+  // confidence used everywhere, since the assumption became verified evidence.
+  const confidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
+  if (rec.impact === "high" && confidence !== "low") return "high";
   if (rec.impact === "high" || rec.impact === "medium") return "med";
   return "low";
 }
@@ -289,7 +308,7 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
             <span className="badge badge-pos">
               {item.status === "resolved" ? "Resuelta automáticamente" : "Marcada como hecha"}
             </span>
-            <span className="badge badge-outline">{item.recommendation_type.replaceAll("_", " ")}</span>
+            <span className="badge badge-outline">{labelForType(item.recommendation_type)}</span>
           </div>
           <div className="rec-title" style={{ textDecoration: "line-through", color: "var(--ink-3)" }}>
             {item.title}
@@ -363,6 +382,8 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
   const assumptions = ev.assumptions ?? [];
   const quickWin = isQuickWin(rec);
   const rankCls = priorityLevel(rec);
+  const effectiveConfidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
+  const overlay = rec.coverageOverlay;
 
   const priorityLabel =
     rankCls === "high" ? "Alta" : rankCls === "med" ? "Media" : "Baja";
@@ -374,7 +395,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
         : "badge badge-neutral";
 
   return (
-    <div className={`rec-card${open ? " open" : ""}`}>
+    <div id={`rec-${rec.id}`} className={`rec-card${open ? " open" : ""}`}>
       <div
         className="rec-main"
         onClick={() => setOpen((o) => !o)}
@@ -404,7 +425,7 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
           >
             <span className={priorityBadgeCls}>Prioridad {priorityLabel}</span>
             <span className="badge badge-outline">
-              {rec.recommendation_type.replaceAll("_", " ")}
+              {labelForType(rec.recommendation_type)}
             </span>
             {quickWin && (
               <span className="badge badge-pos">
@@ -412,10 +433,22 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
                 Victoria rápida
               </span>
             )}
-            {rec.confidence === "low" && (
+            {effectiveConfidence === "low" && (
               <span className="badge badge-warn">
                 <Icon name="info" size={11} />
                 Baja confianza
+              </span>
+            )}
+            {overlay?.state === "confirmed_surfacing_gap" && (
+              <span className="badge badge-pos">
+                <Icon name="check" size={11} />
+                Ya tienes contenido sobre esto
+              </span>
+            )}
+            {overlay?.state === "possible_content_gap" && (
+              <span className="badge badge-outline">
+                <Icon name="info" size={11} />
+                Sin contenido propio encontrado
               </span>
             )}
             {(rec.consecutive_runs_open ?? 1) > 1 && (
@@ -455,11 +488,11 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
             <div className="rmetric">
               <div className="l">Confianza</div>
               <div className="v" style={{ fontSize: 12, fontWeight: 700 }}>
-                {rec.confidence === "low" ? (
+                {effectiveConfidence === "low" ? (
                   <span className="badge badge-warn" style={{ fontSize: 10 }}>
                     Baja
                   </span>
-                ) : rec.confidence === "high" ? (
+                ) : effectiveConfidence === "high" ? (
                   "Alta"
                 ) : (
                   "Media"
@@ -483,6 +516,99 @@ function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string })
       {/* Expandable detail */}
       <div className="rec-detail">
         <div className="rec-detail-inner">
+          {/* Auditoría de cobertura del dominio (RECS-COVERAGE-OVERLAY-1) — shown
+              FIRST because it reframes what this whole card means. Plain-language
+              explanation of what we checked, what we found on the user's own
+              site, and what that changes about the fix. */}
+          {overlay?.state === "confirmed_surfacing_gap" && (
+            <div
+              style={{
+                marginBottom: 14,
+                padding: "12px 16px",
+                background: "var(--pos-soft, #f0faf3)",
+                borderRadius: 10,
+                border: "1px solid var(--pos, #1a9c5c)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  color: "var(--pos-ink, #1a7a49)",
+                  marginBottom: 6,
+                }}
+              >
+                <Icon name="check" size={12} />
+                Auditoría de tu web
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
+                Sí tienes una página sobre este tema
+              </div>
+              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+                Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema
+                no es que te falte contenido, sino que la IA no lo está citando como fuente.
+              </p>
+              <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
+                <b>Qué hacer:</b> no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar —
+                añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.
+              </p>
+              {overlay.verifiedPage && (
+                <a
+                  href={overlay.verifiedPage.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ fontSize: 12.5, color: "var(--accent)", display: "inline-block", marginTop: 8, overflowWrap: "anywhere" }}
+                >
+                  Tu página: {overlay.verifiedPage.url}
+                </a>
+              )}
+            </div>
+          )}
+          {overlay?.state === "possible_content_gap" && (
+            <div
+              style={{
+                marginBottom: 14,
+                padding: "12px 16px",
+                background: "var(--surface-sunk)",
+                borderRadius: 10,
+                border: "1.5px solid var(--line)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  color: "var(--ink-4)",
+                  marginBottom: 6,
+                }}
+              >
+                <Icon name="info" size={12} />
+                Auditoría de tu web
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
+                No encontramos contenido tuyo sobre este tema
+              </div>
+              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+                Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede
+                que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.
+              </p>
+              <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
+                <b>Qué hacer:</b> antes de intentar que te citen, plantéate crear una página que responda a esta
+                consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo.
+              </p>
+            </div>
+          )}
+
           {/* Two-column evidence grid */}
           <div className="rec-evidence-grid">
             {/* Columna izquierda — Por qué importa */}

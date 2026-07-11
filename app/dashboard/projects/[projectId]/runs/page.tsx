@@ -4,23 +4,26 @@ import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
+import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
-import { isProOrAbove } from "@/lib/billing";
-import { ENABLE_SYNC_SCAN_EXECUTION, getRunErrorDisplay, reconcileStuckScanRuns } from "@/lib/scan/scan-runner";
+import {
+  ENABLE_SYNC_SCAN_EXECUTION,
+  getRunErrorDisplay,
+  reconcileStuckScanRuns,
+  scanRunsNeedReconciliation
+} from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
-import { DomainCoverageSection } from "./domain-coverage-section";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
-// (docs/adr/0003). Two callers on this page need the full 60s Vercel budget,
-// not the platform default: the domain-coverage audit (auditDomainCoverageAction),
-// which runs several sequential Gemini grounding calls gated by
-// COVERAGE_TOTAL_BUDGET_MS; and `autoExecutePendingScan`, which runs a window
-// of scan batches per call (up to AUTO_EXECUTE_TIME_BUDGET_MS ~40s).
+// (docs/adr/0003). `autoExecutePendingScan` needs the full 60s Vercel budget:
+// it runs a window of scan batches per call (up to
+// AUTO_EXECUTE_TIME_BUDGET_MS ~40s). The domain-coverage audit moved to the
+// Auditoría web page (WEB-AUDIT-1), which carries its own maxDuration.
 export const maxDuration = 60;
 
 /* ---- Status helpers ---- */
@@ -178,27 +181,45 @@ export default async function RunsPage({
   const { projectId } = await params;
   const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
 
-  // "Cobertura del dominio" (DOMAIN-COVERAGE-1) is Pro+-gated. Read the raw
-  // plan column directly via isProOrAbove, never via getPlanForUser/resolvePlan
-  // (see lib/billing.ts for why that fallback is unsafe for a feature gate).
-  const { data: coverageProfile } = await supabase
-    .from("profiles")
-    .select("current_plan")
-    .eq("id", user.id)
-    .maybeSingle();
-  const canAuditCoverage = isProOrAbove(coverageProfile?.current_plan as string | undefined);
+  const RUNS_SELECT =
+    "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
+
+  // Reconciliation itself is decided below from the already-fetched runs
+  // instead of running unconditionally on every render
+  // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
+  const { data: runsData } = await supabase
+    .from("scan_runs")
+    .select(RUNS_SELECT)
+    .eq("project_id", projectId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  let allRuns = runsData ?? [];
+  if (scanRunsNeedReconciliation(allRuns)) {
+    // Reconcile any stuck pending/running runs (or retry an exhausted
+    // zero-result failure), then re-read scan_runs so the Escaneos table
+    // reflects the corrected status instead of the pre-reconciliation
+    // snapshot (docs/scan-lifecycle.md, "Timeout detection"). Must complete
+    // before `getWorkspaceCounters()` below so the domain cards' scan status
+    // is also correct.
+    const { reconciledCount } = await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
+    if (reconciledCount > 0) {
+      const { data: refreshedRuns } = await supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      allRuns = refreshedRuns ?? [];
+    }
+  }
 
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
   const feedbackSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
-
-  // Reconcile any stuck pending/running runs before reading scan_runs, so the
-  // Escaneos table reflects a `failed` status promptly instead of showing an
-  // indefinite "scanning" state (docs/scan-lifecycle.md, "Timeout detection").
-  await reconcileStuckScanRuns({ projectId, service: createServiceClient() });
 
   /* Domains grid — reuses the same counters/queries as the dashboard sidebar */
   const {
@@ -230,17 +251,6 @@ export default async function RunsPage({
     };
   });
 
-  /* Fetch all runs */
-  const { data: runs } = await supabase
-    .from("scan_runs")
-    .select(
-      "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at"
-    )
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const allRuns = runs ?? [];
   const completedRuns = allRuns.filter((r) => r.status === "completed");
   const completedRunIds = completedRuns.map((r) => r.id);
 
@@ -332,7 +342,7 @@ export default async function RunsPage({
       {shouldAutoExecute && activeRun ? (
         <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
       ) : null}
-      {activeRun ? <ScanProgressPoller /> : null}
+      {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -539,10 +549,6 @@ export default async function RunsPage({
         </div>
       </div>
 
-      {/* Cobertura del dominio (DOMAIN-COVERAGE-1) — sits directly under the scan
-          controls; provisional placement, UX to be finalised. */}
-      <DomainCoverageSection projectId={projectId} canAuditCoverage={canAuditCoverage} />
-
       {/* Empty state */}
       {allRuns.length === 0 ? (
         <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
@@ -678,37 +684,55 @@ export default async function RunsPage({
                           </div>
                         </td>
 
-                        {/* Status badge */}
-                        <td>
-                          <span className={getStatusBadgeClass(run.status)}>
-                            {statusLabels[run.status] ?? run.status}
-                          </span>
-                        </td>
+                        {run.status === "pending" || run.status === "running" ? (
+                          /* Live cells (PERF-3b): poll independently instead of relying on
+                             the page-level router.refresh() the sibling ScanProgressPoller
+                             now only fires once, on terminal transition. */
+                          <LiveRunStatusCells
+                            projectId={projectId}
+                            initial={{
+                              id: run.id,
+                              status: run.status,
+                              total_prompts: run.total_prompts,
+                              successful_prompts: run.successful_prompts,
+                              failed_prompts: run.failed_prompts
+                            }}
+                          />
+                        ) : (
+                          <>
+                            {/* Status badge */}
+                            <td>
+                              <span className={getStatusBadgeClass(run.status)}>
+                                {statusLabels[run.status] ?? run.status}
+                              </span>
+                            </td>
 
-                        {/* Prompts progress bar */}
-                        <td>
-                          <div className="run-bar-wrap">
-                            <div className="run-bar">
-                              <div
-                                className="run-bar-fill"
-                                style={{ width: `${Math.min(100, okPct)}%`, background: barColor }}
-                              />
-                            </div>
-                            <span
-                              className="tnum"
-                              style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)", whiteSpace: "nowrap" }}
-                            >
-                              {ok}/{total}
-                            </span>
-                          </div>
-                          {hasFailed && Number(run.failed_prompts ?? 0) > 0 && (
-                            <div
-                              style={{ fontSize: 11, color: "var(--neg-ink)", marginTop: 2, fontWeight: 650 }}
-                            >
-                              {run.failed_prompts} {Number(run.failed_prompts) === 1 ? "fallo" : "fallos"}
-                            </div>
-                          )}
-                        </td>
+                            {/* Prompts progress bar */}
+                            <td>
+                              <div className="run-bar-wrap">
+                                <div className="run-bar">
+                                  <div
+                                    className="run-bar-fill"
+                                    style={{ width: `${Math.min(100, okPct)}%`, background: barColor }}
+                                  />
+                                </div>
+                                <span
+                                  className="tnum"
+                                  style={{ fontSize: 12, fontWeight: 650, color: "var(--ink-2)", whiteSpace: "nowrap" }}
+                                >
+                                  {ok}/{total}
+                                </span>
+                              </div>
+                              {hasFailed && Number(run.failed_prompts ?? 0) > 0 && (
+                                <div
+                                  style={{ fontSize: 11, color: "var(--neg-ink)", marginTop: 2, fontWeight: 650 }}
+                                >
+                                  {run.failed_prompts} {Number(run.failed_prompts) === 1 ? "fallo" : "fallos"}
+                                </div>
+                              )}
+                            </td>
+                          </>
+                        )}
 
                         {/* GEO Score */}
                         <td className="num">
@@ -818,6 +842,20 @@ export default async function RunsPage({
         >
           <Icon name="prompts" size={13} />
           Prompts
+        </Link>
+        <Link
+          href={`/dashboard/projects/${projectId}/web-audit`}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            fontSize: 13,
+            color: "var(--ink-3)",
+            fontWeight: 600
+          }}
+        >
+          <Icon name="search" size={13} />
+          Auditoría web
         </Link>
         <Link
           href="/dashboard/projects/new"

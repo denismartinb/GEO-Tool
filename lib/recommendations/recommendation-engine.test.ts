@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categoryForType, generateRecommendationsForRun } from "./recommendation-engine";
+import { categoryForType, labelForType, generateRecommendationsForRun } from "./recommendation-engine";
 
 type PromptResultFixture = Parameters<typeof generateRecommendationsForRun>[0]["promptResults"][number];
 
@@ -590,22 +590,42 @@ describe("generateRecommendationsForRun", () => {
     expect(recs.some((r) => r.recommendation_type === "update_stale_content")).toBe(false);
   });
 
-  it("caps the backlog at 10 recommendations and assigns priority_rank within [1,10]", () => {
-    const prompts: PromptResultFixture[] = [];
-    const competitors = ["C1", "C2", "C3", "C4", "C5"];
-    for (const name of competitors) {
-      prompts.push(
-        prompt({ id: `${name}-a`, prompt_text_snapshot: `${name} a`, brand_mentioned: false, mentioned_competitors_count: 1, extracted_json: extractedWith({ competitors: [{ name, mentioned: true }] }) }),
-        prompt({ id: `${name}-b`, prompt_text_snapshot: `${name} b`, brand_mentioned: false, mentioned_competitors_count: 1, extracted_json: extractedWith({ competitors: [{ name, mentioned: true }] }) })
-      );
-    }
+  it("does not cap the backlog — every real, deduplicated gap is returned (RECS-CAP-REMOVE)", () => {
+    // 20 distinct prompts, each a genuine, real visibility gap (brand absent, no
+    // competitor named) — before RECS-CAP-REMOVE this would have silently
+    // discarded 10 of them. priority_rank still assigns a dense, gapless
+    // [1..N] order (display ordering only, not a limit on what gets persisted).
+    const prompts: PromptResultFixture[] = Array.from({ length: 20 }, (_, i) =>
+      prompt({ id: `p${i}`, prompt_text_snapshot: `consulta ${i}`, brand_mentioned: false })
+    );
 
-    const recs = run(prompts, { visibility_score: 10, citation_score: 5 }, competitors);
-    expect(recs.length).toBeLessThanOrEqual(10);
-    for (const rec of recs) {
-      expect(rec.priority_rank).toBeGreaterThanOrEqual(1);
-      expect(rec.priority_rank).toBeLessThanOrEqual(10);
-    }
+    const recs = run(prompts, { visibility_score: 10, citation_score: 5 }, []);
+    const visibilityRecs = recs.filter((r) => r.recommendation_type === "increase_brand_visibility");
+    expect(visibilityRecs.length).toBe(20);
+
+    const ranks = recs.map((r) => r.priority_rank).sort((a, b) => a - b);
+    expect(ranks).toEqual(Array.from({ length: recs.length }, (_, i) => i + 1));
+  });
+
+  it("keeps a real, lower-severity citation gap even when 10+ higher-severity visibility gaps exist the same run (RECS-CAP-REMOVE)", () => {
+    // Reproduces the real-world case that surfaced this bug: a large scan where
+    // "brand not mentioned" (severity base 48) candidates outnumber and outscore
+    // a genuine "mentioned but not cited" gap (severity base 44). Under the old
+    // cap, the citation gap never made the top 10 no matter how real it was.
+    const visibilityPrompts: PromptResultFixture[] = Array.from({ length: 12 }, (_, i) =>
+      prompt({ id: `v${i}`, prompt_text_snapshot: `consulta visibilidad ${i}`, brand_mentioned: false })
+    );
+    const citationPrompt = prompt({
+      id: "citation-1",
+      prompt_text_snapshot: "valoraciones fiables del servicio",
+      brand_mentioned: true,
+      citation_found: false
+    });
+
+    const recs = run([...visibilityPrompts, citationPrompt], { visibility_score: 10, citation_score: 5 }, []);
+
+    expect(recs.some((r) => r.recommendation_type === "add_citation_block")).toBe(true);
+    expect(recs.filter((r) => r.recommendation_type === "increase_brand_visibility").length).toBe(12);
   });
 
   it("persists a non-empty, unique dedupe_key per recommendation (RECS-3)", () => {
@@ -644,6 +664,39 @@ describe("generateRecommendationsForRun", () => {
     expect(categoryForType("amplify_positive_pattern")).toBe("content");
     expect(categoryForType("track_emerging_competitor")).toBe("technical");
     expect(categoryForType("unknown_future_type")).toBe("content");
+  });
+
+  it("gives every emitted recommendation type a Spanish label instead of leaking the raw internal identifier", () => {
+    expect(labelForType("add_citation_block")).toBe("Añadir bloque de cita");
+    expect(labelForType("pursue_citation_sources")).toBe("Perseguir fuentes de citación");
+    expect(labelForType("create_faq_section")).toBe("Crear sección de FAQ");
+    expect(labelForType("increase_brand_visibility")).toBe("Aumentar visibilidad de marca");
+    expect(labelForType("strengthen_brand_entity_clarity")).toBe("Reforzar claridad de marca");
+    expect(labelForType("track_emerging_competitor")).toBe("Seguir competidor emergente");
+    // Every type this engine can actually emit must be mapped — this loop
+    // fails loudly (not silently falling back) if a future rule adds a new
+    // recommendation_type without a Spanish label for it.
+    const emittedTypes = [
+      "add_citation_block",
+      "add_comparison_content",
+      "address_negative_narrative",
+      "amplify_positive_pattern",
+      "close_competitor_gap",
+      "create_faq_section",
+      "increase_brand_prominence",
+      "increase_brand_visibility",
+      "pursue_citation_sources",
+      "strengthen_brand_entity_clarity",
+      "track_emerging_competitor",
+      "update_stale_content"
+    ];
+    for (const type of emittedTypes) {
+      expect(labelForType(type)).not.toBe(type.replaceAll("_", " "));
+    }
+  });
+
+  it("degrades to the old spaced rendering for an unmapped type instead of throwing or showing empty", () => {
+    expect(labelForType("some_future_type")).toBe("some future type");
   });
 
   // --- RECS-2B ---

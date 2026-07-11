@@ -20,6 +20,7 @@ const analyzeLinks = [
   { segment: "/competitors", label: "Competidores", icon: "competitors", countKey: "competitors" },
   { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null as null | string },
   { segment: "/runs", label: "Escaneos", icon: "runs", countKey: "runs" },
+  { segment: "/web-audit", label: "Auditoría web", icon: "search", countKey: null as null | string },
 ];
 
 const actLinks = [
@@ -99,7 +100,7 @@ export function Sidebar({
             <Icon name="resonance" size={16} />
           </div>
           <div className="hide-collapsed">
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GenScore</div>
             <div className="brand-sub">Espacio de visibilidad en IA</div>
           </div>
           <button type="button" className="sb-close" onClick={handleClose} aria-label="Cerrar menú">

@@ -2,6 +2,7 @@ import type { requireUser } from "@/lib/auth";
 
 export type ProjectActionErrorCode =
   | "active_run_exists"
+  | "free_plan_scan_limit_reached"
   | "project_archived"
   | "project_not_found"
   | "prompts_required"

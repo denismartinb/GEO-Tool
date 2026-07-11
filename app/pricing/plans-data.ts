@@ -1,4 +1,4 @@
-// Packaging de Lumira: 4 tramos, precio único en euros, facturación mensual.
+// Packaging de GenScore: 4 tramos, precio único en euros, facturación mensual.
 // Ejes de valor: bucle de acción + credibilidad — no el volumen de datos.
 
 export type PlanCell = boolean | string;
@@ -79,17 +79,17 @@ export const PLANS: Plan[] = [
     tagline: "El bucle de acción completo",
     who: "Equipo in-house o consultor avanzado",
     recommended: true,
-    cta: "Probar Pro · 14 días",
+    cta: "Probar Pro gratis",
     ctaStyle: "primary",
     highlights: [
       "3–5 dominios · ~100 prompts",
-      "4 motores de IA · refresco diario",
+      "2 motores de IA (Gemini + Claude) · refresco diario",
+      "Nuevos motores incluidos sin coste extra cuando se publiquen",
       "Bucle de acción completo",
-      "Generador de soluciones (FAQ, schema, briefs)",
-      "Sentimiento, temas y citas profundas"
+      "Generador de soluciones (FAQ, schema, briefs)"
     ],
-    meter: { projects: "3–5", prompts: 100, engines: 4, refresh: "Diario" },
-    caps: { projects: 5, prompts: 100, engines: 4 }
+    meter: { projects: "3–5", prompts: 100, engines: 2, refresh: "Diario" },
+    caps: { projects: 5, prompts: 100, engines: 2 }
   },
   {
     id: "agency",
@@ -101,14 +101,13 @@ export const PLANS: Plan[] = [
     cta: "Hablar con ventas",
     ctaStyle: "ghost",
     highlights: [
-      "Workspaces multi-cliente · roles",
-      "~300 prompts · todos los motores",
-      "Informes white-label exportables",
-      "Alertas por email y Slack",
-      "Acceso API e integraciones"
+      "Dominios y prompts a medida (~300 de referencia)",
+      "2 motores de IA (Gemini + Claude) · refresco diario",
+      "Volumen y condiciones adaptadas a tu agencia",
+      "Onboarding acompañado antes de contratar"
     ],
-    meter: { projects: "∞", prompts: 300, engines: "Todos", refresh: "Diario" },
-    caps: { projects: 999, prompts: 300, engines: 999 }
+    meter: { projects: "A medida", prompts: 300, engines: 2, refresh: "Diario" },
+    caps: { projects: 999, prompts: 300, engines: 2 }
   }
 ];
 
@@ -119,9 +118,9 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
   {
     group: "Medición",
     rows: [
-      { label: "Dominios", vals: ["1", "1", "3–5", "Ilimitados"] },
+      { label: "Dominios", vals: ["1", "1", "3–5", "A medida"] },
       { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
-      { label: "Motores de IA", vals: ["1", "2", "4", "Todos"] },
+      { label: "Motores de IA", vals: ["1", "2", "2", "2"] },
       { label: "Frecuencia de refresco", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
       { label: "Tendencia temporal", vals: [false, true, true, true] },
       { label: "Usuarios del equipo", vals: ["1", "Ilimitados", "Ilimitados", "Ilimitados"] }
@@ -145,23 +144,13 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
       { label: "Generador de soluciones", vals: [false, false, true, true] },
       { label: "Credibilidad de medición visible", vals: [true, true, true, true] }
     ]
-  },
-  {
-    group: "Agencia y plataforma",
-    rows: [
-      { label: "Workspaces multi-cliente", vals: [false, false, false, true] },
-      { label: "Informes white-label", vals: [false, false, false, true] },
-      { label: "Alertas (email / Slack)", vals: [false, false, "Email", true] },
-      { label: "Roles y permisos", vals: [false, false, false, true] },
-      { label: "Acceso API e integraciones CMS", vals: [false, false, false, true] }
-    ]
   }
 ];
 
 export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
     q: "¿Qué es el escaneo gratuito?",
-    a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de Lumira antes de pagar nada."
+    a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
   },
   {
     q: "¿Por qué cobráis por prompts y motores, y no por usuarios?",
@@ -169,18 +158,18 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí. Subes o bajas de plan cuando quieras; el prorrateo es automático. La cobertura de motores y la frecuencia de refresco son las palancas naturales para crecer de Starter a Pro y a Agencia."
+    a: "Sí, desde \"Plan y facturación\" en tu cuenta, sin esperar a nadie. Mientras no activemos la facturación real, cambiar de plan no tiene coste ni compromiso de permanencia."
   },
   {
     q: "¿Qué incluye la prueba de Pro?",
-    a: "14 días con el bucle de acción completo, el generador de soluciones y los 4 motores. Onboarding en menos de una hora. Sin compromiso: si no conviertes, vuelves a Free."
+    a: "Actualmente puedes activar Pro completo eligiendo ese plan al registrarte, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Mientras no lancemos la facturación no hay límite de tiempo automático — te avisaremos con antelación razonable antes de introducir el cobro."
   },
   {
     q: "¿Cómo se mide la fiabilidad de los datos?",
     a: "Cada métrica muestra su tamaño de muestra y metodología. No inflamos puntuaciones ni mostramos progreso falso: si la confianza de un dato es baja, lo verás. Es nuestro principio de credibilidad de medición."
   },
   {
-    q: "¿El plan Agencia tiene white-label completo?",
-    a: "Incluye informes white-label exportables (PDF / Sheets / Looker), workspaces por cliente, roles y alertas. Es el plan pensado para agencias que reportan resultados a sus clientes."
+    q: "¿Qué incluye el plan Agencia?",
+    a: "Volumen de dominios y prompts a medida de tu cartera de clientes, con los mismos motores y frecuencia que Pro. Al ser un plan a medida, hablamos contigo antes de contratar para ajustar las condiciones a tu caso."
   }
 ];

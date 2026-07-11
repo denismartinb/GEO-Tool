@@ -106,6 +106,75 @@ founder, not something the app reads from Vercel:
 Without steps 1–3, the "Continuar con Google" button on `/login` and
 `/signup` fails with a mapped error and never reaches Google.
 
+### Observability and analytics (PLATFORM-COMMERCIAL-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `SENTRY_DSN` | No | Vercel + local `.env.local` | Sentry server/edge DSN, `https://...@...ingest.sentry.io/...` |
+| `NEXT_PUBLIC_SENTRY_DSN` | No | Vercel | Same DSN, client-side (browser bundle) — usually identical to `SENTRY_DSN` |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | Vercel (build-time) | Enables source-map upload during `next build`; without them the Sentry webpack plugin silently skips upload, the build is unaffected |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | Vercel | PostHog project API key (`phc_...`) |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No (defaults to `https://eu.i.posthog.com`) | Vercel | PostHog ingestion host — keep EU unless the project region changes |
+
+All five are optional by design: every one of `sentry.server.config.ts`,
+`sentry.edge.config.ts`, `instrumentation-client.ts`, and
+`components/posthog-provider.tsx` no-ops (no `Sentry.init`/`posthog.init`
+call, no script loaded) when its variable is unset — this repo ships with
+none of them configured until the founder creates the Sentry/PostHog
+accounts (docs/launch-plan.md, Fase 3). PostHog is initialized with
+`persistence: "memory"` (no cookies/localStorage) to match the "no
+analytics cookies in use" claim in `/cookies` — if that ever changes,
+`/cookies` and `/privacidad` need a follow-up update to list PostHog as a
+processor before flipping the key on in production.
+
+### Billing (BILLING-STRIPE-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `STRIPE_SECRET_KEY` | No | Vercel + local `.env.local` | Stripe secret key — `sk_test_...` until the go-live checklist is done, then `sk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
+| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price |
+| `STRIPE_PRICE_ID_PRO` | No | Vercel | Stripe Price id for the Pro plan's recurring price |
+
+All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
+`null` when `STRIPE_SECRET_KEY` is unset, and every caller (`createCheckoutSession`,
+`changePlan`, the webhook route) handles that by returning a safe "facturación
+no disponible todavía" error instead of crashing — same inert-until-configured
+pattern as Sentry/PostHog. Agency has no self-serve price (still "hablar con
+ventas" per PRICING-TRUTH-1), so there's no `STRIPE_PRICE_ID_AGENCY`.
+
+**Go-live checklist** (building/testing against Stripe test mode doesn't need
+any of this; only switching to real charges does — docs/launch-plan.md Fase 4):
+Vercel Pro, founder registered as autónomo (or fiscal vehicle chosen),
+VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
+test-mode price ids for their live-mode equivalents.
+
+**Customer Portal (BILLING-STRIPE-1 PR 2)**: no new env var — reuses
+`STRIPE_SECRET_KEY` via `stripe.billingPortal.sessions.create()`. Requires a
+one-time **founder configuration in the Stripe Dashboard** (Settings →
+Billing → Customer portal), separately for test mode and later for live
+mode: enable "Customers can switch plans" listing the Starter/Pro prices,
+and "Customers can cancel subscriptions". Without this configuration the
+portal session still opens, but Stripe's own portal UI won't offer those
+actions.
+
+### Transactional email (BILLING-STRIPE-1 PR 4)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
+| `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
+
+Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
+`null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`
+sender no-ops (logs, doesn't throw) instead of blocking the signup/checkout/
+trial-expiry flow it's attached to — same inert-until-configured pattern as
+Stripe/Sentry/PostHog. The founder hasn't created a Resend account yet as of
+this PR; until they do and verify a sending domain (SPF/DKIM DNS records),
+no emails actually go out. Stripe's webhook endpoint must also be
+subscribed to the `invoice.payment_failed` event in the Stripe Dashboard
+for the payment-failed email to fire.
+
 ---
 
 ## Vercel configuration
@@ -115,6 +184,12 @@ Without steps 1–3, the "Continuar con Google" button on `/login` and
 - **maxDuration**: `export const maxDuration = 60` must be present in the scan
   route handler (`app/dashboard/projects/[projectId]/page.tsx`). Vercel Hobby
   plan default is 10s — scans take 30–60s and will time out silently without it.
+- **regions**: `vercel.json` pins serverless functions to `dub1` (Dublin, EU
+  West) to co-locate with the Supabase project (`eu-west-1`). Without this,
+  Vercel functions run in `iad1` (US East) by default and every Supabase round
+  trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
+  If the Supabase project is ever migrated to a different region, update this
+  value to match.
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
 

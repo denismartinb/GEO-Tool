@@ -1,6 +1,7 @@
 import "server-only";
 
 import { after } from "next/server";
+import { resolvePlan } from "@/lib/billing";
 import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
 import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
@@ -524,7 +525,7 @@ export async function executePendingScan({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, domain, brand, country, language")
+    .select("id, domain, brand, country, language, owner_user_id")
     .eq("id", projectId)
     .single();
 
@@ -590,7 +591,21 @@ export async function executePendingScan({
     }
   }
 
-  const providers = getLLMScanProviders();
+  // PRICING-TRUTH-1 (PR b): the active engine set is otherwise a single
+  // deployment-wide env var (LLM_SCAN_PROVIDERS) — cap it per the project
+  // owner's plan (`caps.engines`) so a Free project never fans out to more
+  // engines than its plan promises. A no-op today (every plan already caps
+  // at <= the number of real engines configured), but becomes load-bearing
+  // the moment a third engine is added (ENGINES-2) without needing to touch
+  // this gate again. `.slice` preserves LLM_SCAN_PROVIDERS' configured order,
+  // so whichever engine is listed first is the one every plan gets.
+  const { data: ownerProfile } = await service
+    .from("profiles")
+    .select("current_plan")
+    .eq("id", project.owner_user_id as string)
+    .maybeSingle();
+  const plan = resolvePlan(ownerProfile?.current_plan as string | undefined);
+  const providers = getLLMScanProviders().slice(0, plan.caps.engines);
 
   try {
     if (isFirstBatch && startJob) {

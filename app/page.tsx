@@ -11,7 +11,7 @@ const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
   { icon: "competitors", t: "Frente a quién pierdes", d: "Detecta competidores directos y descubre dónde ganan visibilidad que tú no tienes." },
   { icon: "cite", t: "Qué URLs se citan", d: "Conoce las páginas que los motores de IA usan como fuente para responder en tu mercado." },
-  { icon: "layers", t: "Multi-motor", d: "ChatGPT, Google AI Overviews, Perplexity y Claude — una visión unificada de tu visibilidad." },
+  { icon: "layers", t: "Multi-motor", d: "Gemini y Claude hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
   { icon: "recs", t: "Acciones, no solo datos", d: "Cada insight se convierte en una acción priorizada por impacto, esfuerzo y confianza." },
   { icon: "sparkles", t: "Soluciones generadas", d: "Genera el FAQ, el schema o el contenido que falta con un clic, listo para publicar." }
 ];
@@ -42,7 +42,7 @@ function EngineNote() {
     <div className="lp-hero-note">
       <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
       <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo en minutos</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />4 motores de IA</span>
+      <span><Icon name="check" size={14} className="text-[var(--pos)]" />2 motores de IA</span>
     </div>
   );
 }
@@ -69,7 +69,7 @@ export default function HomePage() {
           />
           <div className="lp-logo">
             <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">Lumira</div>
+            <div className="brand-name">GenScore</div>
           </div>
           <div className="lp-nav-links">
             <a href="#producto">Producto</a>
@@ -136,7 +136,7 @@ export default function HomePage() {
       {/* TRUST */}
       <div className="lp-trust">
         <div className="lp-inner">
-          <div className="cap">Equipos de marketing y agencias que confían en Lumira</div>
+          <div className="cap">Equipos de marketing y agencias que confían en GenScore</div>
           <div className="lp-logos">
             <span className="lg">Northwind</span><span className="lg">Quantix</span><span className="lg">Beltway</span>
             <span className="lg">Nuve</span><span className="lg">Aurora&nbsp;Labs</span>
@@ -150,7 +150,7 @@ export default function HomePage() {
           <div className="lp-sec-head">
             <div className="lp-kicker">Cómo funciona</div>
             <h2 className="lp-h2">De cero a un plan de acción en tres pasos</h2>
-            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que Lumira haga el análisis.</p>
+            <p className="lp-sec-sub">Sin configuración compleja. Introduce tu dominio y deja que GenScore haga el análisis.</p>
           </div>
           <div className="lp-steps">
             {STEPS.map((s) => (
@@ -228,7 +228,7 @@ export default function HomePage() {
               </div>
               <div className="evidence mt12">
                 <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-                  <Badge tone="neutral" icon="quote">ChatGPT</Badge>
+                  <Badge tone="neutral" icon="quote">Gemini</Badge>
                 </div>
                 <div className="ev-quote">…las opciones más recomendadas son <span className="mk">Orbit</span> y <span className="mk">Quanta</span>, con onboarding sólido…</div>
               </div>
@@ -285,17 +285,18 @@ export default function HomePage() {
           <div className="row1">
             <div className="lp-logo">
               <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">Lumira</div>
+              <div className="brand-name">GenScore</div>
             </div>
             <div className="links">
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
-              <span>Privacidad</span>
-              <span>Términos</span>
+              <Link href="/privacidad">Privacidad</Link>
+              <Link href="/cookies">Cookies</Link>
+              <Link href="/terminos">Términos</Link>
             </div>
           </div>
-          <div className="copy">© 2026 Lumira · Generative Engine Optimization para empresas y agencias.</div>
+          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
     </div>

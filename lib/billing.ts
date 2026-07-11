@@ -1,6 +1,8 @@
 import "server-only";
 
 import { requireUser } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
+import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
 import type { AuthenticatedContext } from "@/lib/scan/types";
 
@@ -17,7 +19,63 @@ export type UsageSummary = {
   engineCount: number;
   engineCap: number;
   activeProjects: ActiveProjectSummary[];
+  /** Whether the account has ever had a real Stripe customer — kept even after a downgrade/cancellation so past invoices stay reachable via the Customer Portal. */
+  hasStripeCustomer: boolean;
+  /** BILLING-STRIPE-1 PR 3: null once there's no active reverse trial (never started, converted to a real subscription, or already expired and downgraded). */
+  trialEndsAt: string | null;
+  /** Whether `current_plan` is backed by a real Stripe subscription, as opposed to an unconverted reverse trial — distinguishes "paying Pro" from "trialing Pro" for the change-plan flow and the Portal cancel button. */
+  hasStripeSubscription: boolean;
+  /** Set when a Portal-driven cancellation is scheduled (Stripe's cancel_at_period_end) — the real date the plan stops, not yet reflected as a downgrade since the account keeps access until then. */
+  cancelAt: string | null;
 };
+
+type TrialFields = {
+  current_plan?: string | null;
+  trial_ends_at?: string | null;
+  stripe_subscription_id?: string | null;
+  email?: string | null;
+};
+
+/**
+ * A reverse-trial account (`current_plan='pro'`, `trial_ends_at` set at
+ * signup — see 0017_reverse_trial.sql) downgrades to Free the first time its
+ * plan is read after the trial window ends, checked lazily here rather than
+ * via a cron — matches this codebase's "recheck at the point of use" style
+ * (PRICING-TRUTH-1's real enforcement). Never touches an account with a real
+ * `stripe_subscription_id`: converting to a paid plan during the trial must
+ * never be undone just because the original trial window elapsed. Fails
+ * safe — if the (privileged, service-role) downgrade write itself fails,
+ * callers still see the pre-expiry plan rather than a silently-wrong one.
+ */
+async function applyTrialExpiry(userId: string, row: TrialFields | null | undefined): Promise<string | null | undefined> {
+  if (!row?.trial_ends_at || row.stripe_subscription_id) return row?.current_plan;
+  if (new Date(row.trial_ends_at).getTime() > Date.now()) return row.current_plan;
+
+  try {
+    const service = createServiceClient();
+    const { error } = await service
+      .from("profiles")
+      .update({ current_plan: "free", trial_ends_at: null })
+      .eq("id", userId);
+
+    if (error) {
+      console.error("[geo:billing] failed to downgrade an expired trial", { userId, message: error.message });
+      return row.current_plan;
+    }
+  } catch (configError) {
+    console.error("[geo:billing] service client unavailable to downgrade an expired trial", {
+      userId,
+      message: configError instanceof Error ? configError.message : String(configError)
+    });
+    return row.current_plan;
+  }
+
+  if (row.email) {
+    await sendTrialEndedEmail(row.email);
+  }
+
+  return "free";
+}
 
 /**
  * Resolves a stored `profiles.current_plan` value to its `Plan` definition,
@@ -55,8 +113,13 @@ export async function getPlanForUser(
   supabase: AuthenticatedContext["supabase"],
   userId: string
 ): Promise<Plan> {
-  const { data } = await supabase.from("profiles").select("current_plan").eq("id", userId).maybeSingle();
-  return resolvePlan(data?.current_plan as Plan["id"] | undefined);
+  const { data } = await supabase
+    .from("profiles")
+    .select("current_plan, trial_ends_at, stripe_subscription_id, email")
+    .eq("id", userId)
+    .maybeSingle();
+  const effectivePlanId = await applyTrialExpiry(userId, data);
+  return resolvePlan(effectivePlanId as Plan["id"] | undefined);
 }
 
 /**
@@ -69,7 +132,11 @@ export async function getUsageSummary(): Promise<UsageSummary> {
   const { supabase, user } = await requireUser();
 
   const [{ data: profile }, { data: projects }, { data: prompts }, { data: results }] = await Promise.all([
-    supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("current_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at, email, cancel_at")
+      .eq("id", user.id)
+      .maybeSingle(),
     supabase.from("projects").select("id, name, domain").eq("is_archived", false),
     supabase.from("project_prompts").select("id").eq("is_active", true),
     supabase
@@ -79,7 +146,9 @@ export async function getUsageSummary(): Promise<UsageSummary> {
       .limit(500)
   ]);
 
-  const plan = resolvePlan(profile?.current_plan as Plan["id"] | undefined);
+  const effectivePlanId = await applyTrialExpiry(user.id, profile);
+  const plan = resolvePlan(effectivePlanId as Plan["id"] | undefined);
+  const trialExpired = effectivePlanId !== profile?.current_plan;
 
   const engineSet = new Set((results ?? []).map((r) => r.provider).filter(Boolean));
 
@@ -91,6 +160,10 @@ export async function getUsageSummary(): Promise<UsageSummary> {
     projectCap: plan.caps.projects,
     engineCount: engineSet.size,
     engineCap: plan.caps.engines,
-    activeProjects: projects ?? []
+    activeProjects: projects ?? [],
+    hasStripeCustomer: Boolean(profile?.stripe_customer_id),
+    trialEndsAt: trialExpired ? null : (profile?.trial_ends_at ?? null),
+    hasStripeSubscription: Boolean(profile?.stripe_subscription_id),
+    cancelAt: (profile?.cancel_at as string | null | undefined) ?? null
   };
 }

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
+import { InfoTip } from "@/components/ui/info-tip";
 import type { ResultRow, TopicGroup } from "./page";
 
 type Competitor = {
@@ -163,7 +164,7 @@ export function PromptsClient({
               marginBottom: 16,
             }}
           >
-            Tus prompts no tienen topics asignados todavía. Cuando Lumira genere
+            Tus prompts no tienen topics asignados todavía. Cuando GenScore genere
             topics automáticamente, aparecerán agrupados aquí.
           </div>
 
@@ -172,7 +173,10 @@ export function PromptsClient({
               <thead>
                 <tr>
                   <th style={{ paddingLeft: 16 }}>Prompt</th>
-                  <th>Marca</th>
+                  <th>
+                    Marca
+                    <InfoTip text="Que la IA nombre tu marca no depende de tu contenido — puede venir solo de lo que el modelo ya sabe de ella. 'Citas', a la derecha, es la señal que sí depende de páginas tuyas que la IA usó como fuente." />
+                  </th>
                   <th className="num">Competidores</th>
                   <th className="num">Citas</th>
                   <th>Sentimiento</th>
@@ -264,7 +268,10 @@ export function PromptsClient({
                   <th style={{ paddingLeft: 16 }}>Topic / Prompt</th>
                   <th className="num">Visibilidad</th>
                   <th className="num">Menciones</th>
-                  <th>Marca</th>
+                  <th>
+                    Marca
+                    <InfoTip text="Que la IA nombre tu marca no depende de tu contenido — puede venir solo de lo que el modelo ya sabe de ella. 'Citas', a la derecha, es la señal que sí depende de páginas tuyas que la IA usó como fuente." />
+                  </th>
                   <th className="num">Citas</th>
                   <th>Sentimiento</th>
                 </tr>

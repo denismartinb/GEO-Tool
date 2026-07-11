@@ -126,6 +126,36 @@ export function categoryForType(type: string): RecommendationCategory {
   return categoryByType[type] ?? "content";
 }
 
+// Spanish label for the "tipo" badge on a recommendation card. `recommendation_type`
+// is an internal snake_case identifier (also used for dedupeKey/rule wiring), never
+// meant to reach the UI verbatim — every value emitted by this engine must have an
+// entry here so the badge never leaks a raw English identifier into an otherwise
+// fully-localized Spanish UI (see recommendations-client.tsx).
+const labelByType: Record<string, string> = {
+  add_citation_block: "Añadir bloque de cita",
+  add_comparison_content: "Añadir contenido comparativo",
+  address_negative_narrative: "Corregir narrativa negativa",
+  amplify_positive_pattern: "Amplificar patrón positivo",
+  close_competitor_gap: "Cerrar brecha con competidores",
+  create_faq_section: "Crear sección de FAQ",
+  increase_brand_prominence: "Aumentar prominencia de marca",
+  increase_brand_visibility: "Aumentar visibilidad de marca",
+  pursue_citation_sources: "Perseguir fuentes de citación",
+  strengthen_brand_entity_clarity: "Reforzar claridad de marca",
+  track_emerging_competitor: "Seguir competidor emergente",
+  update_stale_content: "Actualizar contenido desactualizado"
+};
+
+/**
+ * Falls back to the old raw "snake_case -> spaced" rendering for any
+ * unmapped type (e.g. a future rule added without updating labelByType) —
+ * degrades to the previous (imperfect but harmless) behavior rather than
+ * throwing or showing an empty badge.
+ */
+export function labelForType(type: string): string {
+  return labelByType[type] ?? type.replaceAll("_", " ");
+}
+
 type ExtractedShape = {
   brand?: { evidence?: string[]; position?: number | null };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[]; position?: number | null }>;
@@ -420,8 +450,8 @@ function shortPrompt(text: string): string {
  * exact prompts where it's absent, and those are the most actionable
  * recommendations it can get. Gating on the aggregate score used to hide them
  * entirely once the brand did well enough, which is backwards. Volume is
- * still bounded by the dedup + top-10-by-severity cutoff at the end of
- * generateRecommendationsForRun, same as before.
+ * still bounded by dedup (one candidate per dedupeKey); there is no count
+ * cap on the final list (RECS-CAP-REMOVE).
  */
 function perPromptGapCards(opts: {
   promptResults: PromptResultInput[];
@@ -1053,14 +1083,21 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     if (!existing || rec.severityScore > existing.severityScore) byKey.set(rec.dedupeKey, rec);
   }
 
+  // No count cap (RECS-CAP-REMOVE, founder-approved 2026-07-04): recommendations
+  // are this product's core value, so a real, deduplicated gap must never be
+  // silently discarded just because more candidates existed this run than an
+  // arbitrary number. The old .slice(0, 10) here was also a live "fake win" bug:
+  // lib/scan/executor.ts derives currentDedupeKeys from exactly this array to
+  // detect resolved gaps (RECS-3) — any real gap crowded out of a fixed-size cap
+  // was indistinguishable from a genuinely-fixed one, and got marked 'resolved'
+  // even though nothing was actually fixed. Sort order is kept (still drives
+  // priority_rank for display); only the truncation is gone.
   const impactWeight = (impact: "low" | "medium" | "high") => (impact === "high" ? 3 : impact === "medium" ? 2 : 1);
-  const deduped = Array.from(byKey.values())
-    .sort((a, b) => {
-      const aScore = a.severityScore + impactWeight(a.impact) * 10 + confWeight(a.confidence) * 5 + a.affectedCount;
-      const bScore = b.severityScore + impactWeight(b.impact) * 10 + confWeight(b.confidence) * 5 + b.affectedCount;
-      return bScore - aScore;
-    })
-    .slice(0, 10);
+  const deduped = Array.from(byKey.values()).sort((a, b) => {
+    const aScore = a.severityScore + impactWeight(a.impact) * 10 + confWeight(a.confidence) * 5 + a.affectedCount;
+    const bScore = b.severityScore + impactWeight(b.impact) * 10 + confWeight(b.confidence) * 5 + b.affectedCount;
+    return bScore - aScore;
+  });
 
   return deduped.map((rec, index) => ({
     priority_rank: index + 1,

@@ -12,16 +12,32 @@ vi.mock("@/lib/scan/executor", () => ({
   executePendingScan: (...args: unknown[]) => executePendingScan(...args)
 }));
 
-type ProjectRow = { id: string };
+type ProjectRow = { id: string; owner_user_id?: string };
 type ScanRunRow = { project_id: string; status: string; created_at: string };
+type ProfileRow = { id: string; current_plan: string };
 
 /**
- * Minimal fake service client supporting exactly the two query shapes
+ * Minimal fake service client supporting exactly the query shapes
  * `runDailyCronScan` issues:
- *   - projects: select("id").eq(...).eq(...)                              -> array
- *   - scan_runs: select(...).eq("project_id", id).order(...).limit(n)     -> array, newest first
+ *   - projects: select("id, owner_user_id").eq(...).eq(...)                     -> array
+ *   - profiles: select("id, current_plan").in("id", ownerIds)                  -> array
+ *   - scan_runs: select(...).eq("project_id", id).order(...).limit(n)          -> array, newest first
+ *
+ * `owner_user_id` defaults to the project's own id when a test doesn't care
+ * about plan-based behavior; `profiles` defaults to empty, which makes every
+ * owner resolve to the default plan ("pro") via `resolvePlan` — preserving
+ * the pre-PRICING-TRUTH-1 universal-24h cadence for every test that doesn't
+ * explicitly opt into plan-cadence assertions.
  */
-function fakeServiceClient({ projects, scanRuns }: { projects: ProjectRow[]; scanRuns: ScanRunRow[] }) {
+function fakeServiceClient({
+  projects,
+  scanRuns,
+  profiles = []
+}: {
+  projects: ProjectRow[];
+  scanRuns: ScanRunRow[];
+  profiles?: ProfileRow[];
+}) {
   return {
     from(table: string) {
       if (table === "projects") {
@@ -33,10 +49,22 @@ function fakeServiceClient({ projects, scanRuns }: { projects: ProjectRow[]; sca
             return builder;
           },
           then(resolve: (value: { data: ProjectRow[]; error: null }) => unknown) {
-            return Promise.resolve({ data: projects, error: null }).then(resolve);
+            const rows = projects.map((p) => ({ owner_user_id: p.id, ...p }));
+            return Promise.resolve({ data: rows, error: null }).then(resolve);
           }
         };
         return builder;
+      }
+
+      if (table === "profiles") {
+        return {
+          select() {
+            return this;
+          },
+          in(_column: string, ids: string[]) {
+            return Promise.resolve({ data: profiles.filter((p) => ids.includes(p.id)), error: null });
+          }
+        };
       }
 
       if (table === "scan_runs") {
@@ -256,6 +284,90 @@ describe("runDailyCronScan", () => {
     const result = await runDailyCronScan({ service });
 
     expect(result.results).toEqual([{ projectId: "p1", status: "skipped_active_run" }]);
+    expect(executePendingScan).not.toHaveBeenCalled();
+  });
+});
+
+describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH-1)", () => {
+  let nowMs: number;
+
+  beforeEach(() => {
+    nowMs = Date.parse("2026-06-20T08:00:00.000Z");
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    createPendingScanRunForCron.mockReset().mockResolvedValue("run-id");
+    executePendingScan.mockReset().mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("applies Starter's weekly cadence, skipping a project scanned 3 days ago even though it's over 24h", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      profiles: [{ id: "p1", current_plan: "starter" }],
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 72 * HOUR_MS).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "p1", status: "skipped_recent" }]);
+    expect(createPendingScanRunForCron).not.toHaveBeenCalled();
+  });
+
+  it("scans a Starter-plan project once its last scan is over 7 days old", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      profiles: [{ id: "p1", current_plan: "starter" }],
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 8 * 24 * HOUR_MS).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "p1", status: "scanned" }]);
+  });
+
+  it("still applies the daily cadence for Pro and Agency plans", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "pro-project" }, { id: "agency-project" }],
+      profiles: [
+        { id: "pro-project", current_plan: "pro" },
+        { id: "agency-project", current_plan: "agency" }
+      ],
+      scanRuns: [
+        { project_id: "pro-project", status: "completed", created_at: new Date(nowMs - 30 * HOUR_MS).toISOString() },
+        { project_id: "agency-project", status: "completed", created_at: new Date(nowMs - 30 * HOUR_MS).toISOString() }
+      ]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual(
+      expect.arrayContaining([
+        { projectId: "pro-project", status: "scanned" },
+        { projectId: "agency-project", status: "scanned" }
+      ])
+    );
+  });
+
+  it("filters out a free-plan project as skipped_plan_ineligible without attempting a scan", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "free-project" }],
+      profiles: [{ id: "free-project", current_plan: "free" }],
+      // Recurring requires a prior completed scan to enable in the first
+      // place — included here to prove the filter still applies even if a
+      // free-plan project somehow reached this state.
+      scanRuns: [{ project_id: "free-project", status: "completed", created_at: new Date(nowMs - 8 * 24 * HOUR_MS).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "free-project", status: "skipped_plan_ineligible" }]);
+    expect(createPendingScanRunForCron).not.toHaveBeenCalled();
     expect(executePendingScan).not.toHaveBeenCalled();
   });
 });

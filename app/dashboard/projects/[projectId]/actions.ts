@@ -22,6 +22,11 @@ import {
   type DomainCoverageResult
 } from "@/lib/recommendations/domain-coverage";
 import {
+  runTechnicalAuditCore,
+  technicalAuditInputSchema,
+  type TechnicalAuditResult
+} from "@/lib/web-audit/technical-audit";
+import {
   ENABLE_SYNC_SCAN_EXECUTION,
   executePendingScan,
   getActionErrorCode
@@ -397,10 +402,11 @@ export async function dismissRecommendationAction(input: {
 
 /**
  * "Auditar cobertura del dominio" (DOMAIN-COVERAGE-1): standalone, Pro+-gated
- * feature on the Escaneos page. Audits, per active prompt topic of the latest
- * completed scan, whether the brand's own domain verifiably publishes content
- * on it (Google Search grounding restricted to the domain). Called directly
- * from the client via `useTransition`, same pattern as `rewriteRecommendationAction`.
+ * feature on the Auditoría web page (WEB-AUDIT-1; previously on Escaneos).
+ * Audits, per active prompt topic of the latest completed scan, whether the
+ * brand's own domain verifiably publishes content on it (Google Search
+ * grounding restricted to the domain). Called directly from the client via
+ * `useTransition`, same pattern as `rewriteRecommendationAction`.
  * See lib/recommendations/domain-coverage.ts for the plan gate, verified-
  * citation filtering, time budget, and rate-limit invariants.
  */
@@ -417,7 +423,36 @@ export async function auditDomainCoverageAction(input: {
   const result = await auditDomainCoverageCore({ ...parsed.data, supabase, service, user });
 
   if (result.success) {
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/web-audit`);
+  }
+
+  return result;
+}
+
+/**
+ * "Auditar salud técnica GEO" (WEB-AUDIT-2): standalone, Pro+-gated technical
+ * audit of up to MAX_AUDIT_PAGES own-domain pages (structured data,
+ * answer-first format, metadata, freshness) plus AI-bot access
+ * (robots.txt / llms.txt). Deterministic — no Gemini call, no LLM spend.
+ * Called directly from the client via `useTransition`, same pattern as
+ * `auditDomainCoverageAction`. See lib/web-audit/technical-audit.ts for the
+ * plan gate, cache-before-rate-limit ordering, and candidate-selection
+ * invariants.
+ */
+export async function runTechnicalAuditAction(input: {
+  projectId: string;
+}): Promise<TechnicalAuditResult> {
+  const parsed = technicalAuditInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  const result = await runTechnicalAuditCore({ ...parsed.data, supabase, service, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/web-audit`);
   }
 
   return result;

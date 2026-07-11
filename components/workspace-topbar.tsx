@@ -17,7 +17,8 @@ const routeLabels = [
   { suffix: "/prompts", label: "Prompts" },
   { suffix: "/competitors", label: "Competidores" },
   { suffix: "/recommendations", label: "Recomendaciones" },
-  { suffix: "/runs", label: "Escaneos" }
+  { suffix: "/runs", label: "Escaneos" },
+  { suffix: "/web-audit", label: "Auditoría web" }
 ];
 
 const statusLabels: Record<string, string> = {
@@ -77,7 +78,7 @@ export function WorkspaceTopbar({
 
       {!project ? (
         <div className="hdr-titlewrap">
-          <div className="hdr-crumb">Lumira</div>
+          <div className="hdr-crumb">GenScore</div>
           <div className="hdr-title">Espacio de trabajo</div>
           <div className="hdr-title-mobile">{mobileTitle}</div>
         </div>

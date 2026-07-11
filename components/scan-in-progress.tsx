@@ -1,6 +1,7 @@
 /**
- * Pantalla de "escaneo en curso" — pixel-perfect respecto al diseño Lumira
- * (`design_handoff_lumira/prototype/states.jsx`, componente `LoadingState`).
+ * Pantalla de "escaneo en curso" — pixel-perfect respecto al diseño de
+ * referencia (`design_handoff_lumira/prototype/states.jsx`, componente
+ * `LoadingState`).
  *
  * Adaptación obligatoria respecto al prototipo: el original simula 6 pasos
  * fijos con `setTimeout` (avance ficticio cada 1.1s). Eso es "fake progress",

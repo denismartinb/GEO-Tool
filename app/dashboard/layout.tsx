@@ -1,6 +1,5 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
+import { requireUser } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { NotificationBell } from "@/components/notification-bell";
@@ -10,12 +9,7 @@ import { MobileShellProvider } from "@/components/mobile-shell";
 import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  const { user } = await requireUser();
 
   const {
     projects,

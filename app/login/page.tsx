@@ -21,7 +21,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <div className="brand-mark">
             <Icon name="resonance" size={17} />
           </div>
-          <div className="brand-name">Lumira</div>
+          <div className="brand-name">GenScore</div>
         </div>
 
         <div className="auth-h1">Bienvenido de nuevo</div>

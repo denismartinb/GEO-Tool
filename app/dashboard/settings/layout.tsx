@@ -1,15 +1,9 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
+  await requireUser();
 
   const role = await getAccountRole();
 
