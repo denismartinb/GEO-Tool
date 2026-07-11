@@ -13,7 +13,14 @@ const nextConfig: NextConfig = {
   }
 };
 
-const withMDX = createMDX({});
+// remarkGfm: @next/mdx defaults to plain CommonMark, which does NOT parse
+// pipe tables — without this, "| Componente | Peso |..." rendered as raw
+// text with the pipe characters visible instead of an actual <table>
+// (found via founder screenshot on the geo-score article's preview).
+// Passed as a string module specifier, not the imported function: Turbopack
+// needs to serialize the MDX loader options across its own worker
+// processes, and a live function reference isn't serializable.
+const withMDX = createMDX({ options: { remarkPlugins: [["remark-gfm"]] } });
 
 // PLATFORM-COMMERCIAL-1: safe to apply unconditionally — without
 // SENTRY_ORG/SENTRY_PROJECT/SENTRY_AUTH_TOKEN (none set until the founder

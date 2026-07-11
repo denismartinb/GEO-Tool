@@ -2810,6 +2810,11 @@ textarea.add-prompts-text-input {
 .blog-body strong { color: var(--ink); font-weight: 650; }
 .blog-body a { color: var(--accent-ink); font-weight: 600; }
 .blog-body blockquote { border-left: 3px solid var(--line); padding-left: 16px; margin: 0 0 16px; color: var(--ink-3); font-style: italic; }
+.blog-body table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; }
+.blog-body th, .blog-body td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.blog-body th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
+.blog-body td { color: var(--ink-2); line-height: 1.6; }
+.blog-body table strong { white-space: nowrap; }
 .blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
 .blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
 .blog-cta p { margin-bottom: 14px; }
