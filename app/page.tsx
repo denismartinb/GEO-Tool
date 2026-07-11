@@ -64,7 +64,8 @@ export default function HomePage() {
               { href: "#producto", label: "Producto" },
               { href: "#como", label: "Cómo funciona" },
               { href: "#recomendaciones", label: "Recomendaciones" },
-              { href: "/pricing", label: "Precios" }
+              { href: "/pricing", label: "Precios" },
+              { href: "/blog", label: "Blog" }
             ]}
           />
           <div className="lp-logo">
@@ -76,6 +77,7 @@ export default function HomePage() {
             <a href="#como">Cómo funciona</a>
             <a href="#recomendaciones">Recomendaciones</a>
             <Link href="/pricing">Precios</Link>
+            <Link href="/blog">Blog</Link>
           </div>
           <div className="lp-nav-right">
             <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
@@ -291,6 +293,7 @@ export default function HomePage() {
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
+              <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>
               <Link href="/terminos">Términos</Link>

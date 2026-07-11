@@ -129,7 +129,8 @@ export default function PricingPage() {
             links={[
               { href: "/#producto", label: "Producto" },
               { href: "/#como", label: "Cómo funciona" },
-              { href: "/pricing", label: "Precios" }
+              { href: "/pricing", label: "Precios" },
+              { href: "/blog", label: "Blog" }
             ]}
           />
           <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
@@ -140,6 +141,7 @@ export default function PricingPage() {
             <Link href="/#producto">Producto</Link>
             <Link href="/#como">Cómo funciona</Link>
             <Link className="active" href="/pricing">Precios</Link>
+            <Link href="/blog">Blog</Link>
           </div>
           <div className="lp-nav-right">
             <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
@@ -291,6 +293,7 @@ export default function PricingPage() {
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
+              <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>
               <Link href="/terminos">Términos</Link>

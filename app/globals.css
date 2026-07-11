@@ -2800,6 +2800,47 @@ textarea.add-prompts-text-input {
 .legal-body strong { color: var(--ink); font-weight: 650; }
 .legal-body a { color: var(--accent-ink); font-weight: 600; }
 
+.blog-body { max-width: 760px; }
+.blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
+.blog-body h2:first-child { margin-top: 0; }
+.blog-body h3 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 28px 0 10px; }
+.blog-body p { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin: 0 0 16px; }
+.blog-body ul, .blog-body ol { margin: 0 0 16px; padding-left: 20px; }
+.blog-body li { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 8px; }
+.blog-body strong { color: var(--ink); font-weight: 650; }
+.blog-body a { color: var(--accent-ink); font-weight: 600; }
+.blog-body blockquote { border-left: 3px solid var(--line); padding-left: 16px; margin: 0 0 16px; color: var(--ink-3); font-style: italic; }
+.blog-body table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; }
+.blog-body th, .blog-body td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.blog-body th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
+.blog-body td { color: var(--ink-2); line-height: 1.6; }
+.blog-body table strong { white-space: nowrap; }
+.blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+.blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
+.blog-cta p { margin-bottom: 14px; }
+.blog-index-card { display: block; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); margin-bottom: 20px; overflow: hidden; }
+.blog-index-card:hover { border-color: var(--accent); }
+.blog-index-card-body { padding: 20px; }
+.blog-index-card h2 { margin: 0 0 6px; font-size: 18px; }
+.blog-index-card p { margin: 0; color: var(--ink-2); font-size: 14px; }
+
+.blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
+.blog-cover-compact { height: 96px; }
+.blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
+.blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
+
+.geo-breakdown { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.geo-breakdown-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
+.geo-breakdown-label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.geo-breakdown-bar-wrap { height: 8px; border-radius: 4px; background: var(--surface-sunk); overflow: hidden; }
+.geo-breakdown-bar { height: 100%; border-radius: 4px; }
+.geo-breakdown-weight { font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
+
+@media (min-width: 560px) {
+  .geo-breakdown-row { grid-template-columns: 180px 1fr 44px; align-items: center; gap: 12px; }
+  .geo-breakdown-weight { text-align: right; }
+}
+
 .evidence { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 16px; }
 .ev-quote { font-size: 13px; line-height: 1.6; color: var(--ink-2); font-style: italic; }
 .ev-quote .mk { background: var(--warn-soft); color: var(--warn-ink); padding: 1px 4px; border-radius: 4px; font-style: normal; font-weight: 650; }
