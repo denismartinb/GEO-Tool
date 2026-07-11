@@ -117,6 +117,36 @@ describe("hostnameResolvesToPublicIp", () => {
     lookupMock.mockResolvedValue([]);
     expect(await hostnameResolvesToPublicIp("example.com")).toBe(false);
   });
+
+  it("fails closed when the DNS lookup hangs past the internal timeout", async () => {
+    vi.useFakeTimers();
+    lookupMock.mockReturnValue(new Promise(() => {})); // never resolves
+    const resultPromise = hostnameResolvesToPublicIp("example.com");
+    await vi.advanceTimersByTimeAsync(3_100);
+    expect(await resultPromise).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("logs a sanitized reason (never a raw stack trace) on every fail-closed path", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    lookupMock.mockRejectedValueOnce(Object.assign(new Error("getaddrinfo ENOTFOUND"), { code: "ENOTFOUND" }));
+    await hostnameResolvesToPublicIp("broken.example.com");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[geo:web-audit-fetch] dns_lookup_failed",
+      expect.objectContaining({ hostname: "broken.example.com", error_code: "ENOTFOUND" })
+    );
+
+    warnSpy.mockClear();
+    lookupMock.mockResolvedValueOnce([{ address: "169.254.169.254", family: 4 }]);
+    await hostnameResolvesToPublicIp("sneaky.example.com");
+    expect(warnSpy).toHaveBeenCalledWith(
+      "[geo:web-audit-fetch] dns_resolved_unsafe_ip",
+      expect.objectContaining({ hostname: "sneaky.example.com", unsafe_addresses: ["169.254.169.254"] })
+    );
+
+    warnSpy.mockRestore();
+  });
 });
 
 describe("fetchPageSafely", () => {
@@ -125,13 +155,13 @@ describe("fetchPageSafely", () => {
     vi.unstubAllGlobals();
   });
 
-  it("rejects a host that resolves to a private IP even though the domain matches", async () => {
+  it("rejects a host that resolves to a private IP even though the domain matches — distinctly from an off-domain candidate", async () => {
     lookupMock.mockResolvedValue([{ address: "169.254.169.254", family: 4 }]);
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fetchPageSafely("https://sub.example.com/page", "example.com");
-    expect(result.status).toBe("skipped_offsite");
+    expect(result.status).toBe("skipped_unsafe_ip");
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

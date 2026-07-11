@@ -22,8 +22,18 @@ export type AnswerFormatCheck = {
   hasOneH1: boolean;
   hasTwoH2: boolean;
   hasAnswerFirstIntro: boolean;
+  /** Raw counts backing hasOneH1/hasTwoH2 — surfaced so guidance can cite the actual measured value, not just pass/fail. */
+  h1Count: number;
+  h2Count: number;
 };
-export type MetadataCheck = { points: number; titleOk: boolean; descriptionOk: boolean };
+export type MetadataCheck = {
+  points: number;
+  titleOk: boolean;
+  descriptionOk: boolean;
+  /** Raw lengths backing titleOk/descriptionOk — surfaced for the same reason as h1Count/h2Count above. */
+  titleLength: number;
+  descriptionLength: number;
+};
 export type FreshnessStatus = "fresh" | "aging" | "stale" | "unknown";
 export type FreshnessCheck = { status: FreshnessStatus; points: number; date: string | null };
 
@@ -94,7 +104,7 @@ export function checkAnswerFormat(html: string, structuredData: StructuredDataCh
   }
 
   const points = (hasOneH1 ? 10 : 0) + (hasTwoH2 ? 10 : 0) + (hasAnswerFirstIntro ? 10 : 0);
-  return { points, hasOneH1, hasTwoH2, hasAnswerFirstIntro };
+  return { points, hasOneH1, hasTwoH2, hasAnswerFirstIntro, h1Count: h1Matches.length, h2Count: h2Matches.length };
 }
 
 export function checkMetadata(html: string): MetadataCheck {
@@ -109,7 +119,7 @@ export function checkMetadata(html: string): MetadataCheck {
   const descriptionOk = description.length >= 50 && description.length <= 160;
 
   const points = (titleOk ? 10 : 0) + (descriptionOk ? 10 : 0);
-  return { points, titleOk, descriptionOk };
+  return { points, titleOk, descriptionOk, titleLength: title.length, descriptionLength: description.length };
 }
 
 function parseDate(raw: string | undefined | null): Date | null {
@@ -168,4 +178,59 @@ export function buildPageCheckResult(html: string, now: Date = new Date()): Page
     freshness.status === "unknown" ? Math.round((baseline / 80) * 100) : Math.round(baseline + freshness.points);
 
   return { structuredData, answerFormat, metadata, freshness, pageScore };
+}
+
+/**
+ * Deterministic (no LLM) "qué hacer" guidance per failing sub-check, derived
+ * purely from the already-computed PageCheckResult — no interpretation, no
+ * generated prose. Reviewed with geo-strategy (2026-07-11): each of these
+ * checks is objective/mechanical (a missing <h1>, a title outside a length
+ * range, a date that can't be found), so the fix follows directly from the
+ * failed sub-check itself. This is deliberately NOT the same thing as an
+ * AI-generated draft (a rewritten title/description/intro) — that's a
+ * separate, larger feature (Gemini runtime, its own rate limit, output
+ * sanitization) parked under the roadmap's WEB-AUDIT-BRIEF phase, which
+ * needs its own Task Intake and data-guardian review before it exists.
+ *
+ * Cites the real measured value (e.g. "ahora: 2 detectados") wherever the
+ * PageCheckResult carries one — a passed check contributes nothing here.
+ */
+export function buildPageCheckGuidance(check: PageCheckResult): string[] {
+  const lines: string[] = [];
+
+  if (!check.structuredData.pass) {
+    lines.push(
+      "Añade datos estructurados (JSON-LD) con un @type reconocido por los motores de IA: Article, FAQPage, HowTo, Product, Organization..."
+    );
+  }
+  if (!check.answerFormat.hasOneH1) {
+    // `?? 0`: defensive against a snapshot persisted before h1Count/h2Count
+    // existed (pre-existing cached rows within the 24h cache window) —
+    // never render "undefined detectado".
+    const h1Count = check.answerFormat.h1Count ?? 0;
+    lines.push(`Usa un único <h1> por página (ahora: ${h1Count} detectado${h1Count === 1 ? "" : "s"}).`);
+  }
+  if (!check.answerFormat.hasTwoH2) {
+    lines.push(`Añade al menos dos <h2> que estructuren la respuesta (ahora: ${check.answerFormat.h2Count ?? 0}).`);
+  }
+  if (!check.answerFormat.hasAnswerFirstIntro) {
+    lines.push(
+      "Añade un párrafo de al menos 200 caracteres justo después del título que responda directamente a la pregunta principal."
+    );
+  }
+  if (!check.metadata.titleOk) {
+    lines.push(`Ajusta el <title> a entre 15 y 70 caracteres (ahora: ${check.metadata.titleLength ?? 0}).`);
+  }
+  if (!check.metadata.descriptionOk) {
+    lines.push(`Ajusta la meta description a entre 50 y 160 caracteres (ahora: ${check.metadata.descriptionLength ?? 0}).`);
+  }
+  if (check.freshness.status === "unknown") {
+    lines.push(
+      "Añade una fecha de actualización localizable: dateModified/datePublished en el JSON-LD, o una etiqueta <meta> de última modificación."
+    );
+  } else if (check.freshness.status === "stale" || check.freshness.status === "aging") {
+    lines.push("Actualiza el contenido de esta página y refresca su fecha de modificación.");
+  }
+
+  return lines;
 }
