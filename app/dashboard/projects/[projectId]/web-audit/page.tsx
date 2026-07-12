@@ -278,30 +278,53 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
         </span>
       </summary>
       <div className="wa-details-body">
+        {/* LEGACY SNAPSHOTS: `check` is a persisted JSONB row; a snapshot
+            taken before R3 has NO indexability/citability objects and no
+            metadata.ogOk (production crash 2026-07-12 on exactly this render:
+            "Cannot read properties of undefined (reading 'noindex')"). The
+            R3 dots render only when their sub-check was actually measured —
+            an old snapshot shows the original 4 dots until re-audited (the
+            "criterios ampliados" note above the cards already tells the
+            founder to re-audit). Same rationale as buildPageCheckGuidance's
+            legacy guards. */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           <CheckDot ok={check.structuredData.pass} label="Datos estructurados" />
           <CheckDot
             ok={check.answerFormat.hasOneH1 && check.answerFormat.hasTwoH2 && check.answerFormat.hasAnswerFirstIntro}
             label="Formato respuesta-primero"
           />
-          <CheckDot ok={check.metadata.titleOk && check.metadata.descriptionOk && check.metadata.ogOk} label="Metadatos + Open Graph" />
+          <CheckDot
+            ok={check.metadata.titleOk && check.metadata.descriptionOk && check.metadata.ogOk !== false}
+            label={check.metadata.ogOk === undefined ? "Metadatos" : "Metadatos + Open Graph"}
+          />
           <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
           {/* WEB-AUDIT-R3 (founder-approved 2026-07-12): indexing + citability signals. */}
-          <CheckDot ok={!check.indexability.noindex} label="Indexable" />
-          <CheckDot ok={check.indexability.canonicalOk} label="Canonical propio" />
-          {/* hreflang is never shown as a hard failure elsewhere (guidance text
-              is conditional — a single-market page genuinely has none to add)
-              but the dot itself stays a simple presence signal, consistent
-              with every other dot on this row. */}
-          <CheckDot ok={check.indexability.hreflangPresent} label="Hreflang" />
-          <CheckDot ok={check.citability.hasListOrTable} label="Listas o tablas" />
-          <CheckDot ok={check.citability.contentOk} label="Contenido sustancial" />
+          {check.indexability && (
+            <>
+              <CheckDot ok={!check.indexability.noindex} label="Indexable" />
+              <CheckDot ok={check.indexability.canonicalOk} label="Canonical propio" />
+              {/* hreflang is never shown as a hard failure elsewhere (guidance
+                  text is conditional — a single-market page genuinely has none
+                  to add) but the dot itself stays a simple presence signal,
+                  consistent with every other dot on this row. */}
+              <CheckDot ok={check.indexability.hreflangPresent} label="Hreflang" />
+            </>
+          )}
+          {check.citability && (
+            <>
+              <CheckDot ok={check.citability.hasListOrTable} label="Listas o tablas" />
+              <CheckDot ok={check.citability.contentOk} label="Contenido sustancial" />
+            </>
+          )}
         </div>
-        {(page.fetchMs !== null || page.htmlBytes !== null) && (
+        {/* `!= null` (loose), not `!== null`: legacy PageAuditEntry rows lack
+            fetchMs/htmlBytes entirely (undefined), which `!== null` would let
+            through as "Tiempo de respuesta: undefined ms". */}
+        {(page.fetchMs != null || page.htmlBytes != null) && (
           <p style={{ fontSize: 10.5, color: "var(--ink-4)", margin: "8px 0 0" }}>
-            {page.fetchMs !== null && `Tiempo de respuesta: ${page.fetchMs} ms`}
-            {page.fetchMs !== null && page.htmlBytes !== null && " · "}
-            {page.htmlBytes !== null && `Tamaño HTML: ${(page.htmlBytes / 1024).toFixed(1)} KB`}
+            {page.fetchMs != null && `Tiempo de respuesta: ${page.fetchMs} ms`}
+            {page.fetchMs != null && page.htmlBytes != null && " · "}
+            {page.htmlBytes != null && `Tamaño HTML: ${(page.htmlBytes / 1024).toFixed(1)} KB`}
           </p>
         )}
         {/* Deterministic "qué hacer" per failing sub-check (no LLM — see

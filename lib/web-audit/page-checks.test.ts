@@ -393,6 +393,28 @@ describe("buildPageCheckGuidance", () => {
     expect(thin.some((line) => line.includes("Amplía el contenido"))).toBe(true);
   });
 
+  it("never throws on a legacy pre-R3 snapshot (no indexability/citability/ogOk) and asserts nothing it never measured", () => {
+    // Shape of a web_audit_snapshots row persisted BEFORE R3 shipped — this
+    // exact input crashed the web-audit page in production (2026-07-12:
+    // "Cannot read properties of undefined (reading 'noindex')").
+    const legacy = {
+      structuredData: { pass: true, matchedTypes: ["Article"] },
+      answerFormat: { points: 30, hasOneH1: true, hasTwoH2: true, hasAnswerFirstIntro: true, h1Count: 1, h2Count: 2 },
+      metadata: { points: 20, titleOk: true, descriptionOk: true, titleLength: 30, descriptionLength: 80 },
+      freshness: { status: "fresh" as const, points: 20, date: "2026-06-01T00:00:00.000Z" },
+      pageScore: 100
+    };
+    expect(() => buildPageCheckGuidance(legacy)).not.toThrow();
+    const guidance = buildPageCheckGuidance(legacy);
+    // No R3 guidance for sub-checks that were never measured on this row:
+    expect(guidance.some((line) => line.includes("noindex"))).toBe(false);
+    expect(guidance.some((line) => line.includes("canonical"))).toBe(false);
+    expect(guidance.some((line) => line.includes("hreflang"))).toBe(false);
+    expect(guidance.some((line) => line.includes("listas o tablas"))).toBe(false);
+    expect(guidance.some((line) => line.includes("Open Graph"))).toBe(false);
+    expect(guidance).toEqual([]);
+  });
+
   it("suggests Open Graph tags only when they're missing", () => {
     const withOg = buildPageCheckGuidance(
       buildPageCheckResult(`<meta property="og:title" content="a"><meta property="og:description" content="b">`, CTX, NOW)

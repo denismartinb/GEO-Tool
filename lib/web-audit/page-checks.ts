@@ -39,7 +39,8 @@ export type MetadataCheck = {
   points: number;
   titleOk: boolean;
   descriptionOk: boolean;
-  ogOk: boolean;
+  /** Optional ONLY because persisted pre-R3 snapshots lack it (checkMetadata always sets it) — undefined means "never measured", which is not the same as false. */
+  ogOk?: boolean;
   /** Raw lengths backing titleOk/descriptionOk — surfaced for the same reason as h1Count/h2Count above. */
   titleLength: number;
   descriptionLength: number;
@@ -71,8 +72,9 @@ export type PageCheckResult = {
   answerFormat: AnswerFormatCheck;
   metadata: MetadataCheck;
   freshness: FreshnessCheck;
-  indexability: IndexabilityCheck;
-  citability: CitabilityCheck;
+  /** Optional ONLY because persisted pre-R3 snapshots lack them (buildPageCheckResult always sets both) — every consumer of a persisted row must tolerate their absence. Production crash 2026-07-12: the web-audit page read `.noindex` off a pre-R3 row and took the whole page down. */
+  indexability?: IndexabilityCheck;
+  citability?: CitabilityCheck;
   /** 0-100, rescaled from an 85-point baseline when freshness is unknown (see buildPageCheckResult). */
   pageScore: number;
 };
@@ -356,9 +358,19 @@ export function buildPageCheckResult(html: string, context: PageCheckContext, no
  *
  * Cites the real measured value (e.g. "ahora: 2 detectados") wherever the
  * PageCheckResult carries one — a passed check contributes nothing here.
+ *
+ * LEGACY SNAPSHOTS: `check` comes straight from a persisted JSONB row, and a
+ * snapshot taken before R3 shipped has NO indexability/citability objects and
+ * no metadata.ogOk (production crash 2026-07-12: "Cannot read properties of
+ * undefined (reading 'noindex')" on a pre-R3 snapshot). The R3 fields are
+ * read through explicit `| undefined` locals — an absent sub-check yields no
+ * guidance, never an assertion about something that was never measured. Same
+ * rationale as the existing `?? 0` guards for h1Count/titleLength below.
  */
 export function buildPageCheckGuidance(check: PageCheckResult): string[] {
   const lines: string[] = [];
+  const indexability: IndexabilityCheck | undefined = check.indexability;
+  const citability: CitabilityCheck | undefined = check.citability;
 
   if (!check.structuredData.pass) {
     lines.push(
@@ -386,7 +398,9 @@ export function buildPageCheckGuidance(check: PageCheckResult): string[] {
   if (!check.metadata.descriptionOk) {
     lines.push(`Ajusta la meta description a entre 50 y 160 caracteres (ahora: ${check.metadata.descriptionLength ?? 0}).`);
   }
-  if (!check.metadata.ogOk) {
+  // `=== false`, not `!`: a legacy snapshot never measured OG at all
+  // (ogOk undefined) — only a real measured failure earns guidance.
+  if (check.metadata.ogOk === false) {
     lines.push("Añade etiquetas Open Graph (og:title y og:description) para que la página se comparta y previsualice correctamente.");
   }
   if (check.freshness.status === "unknown") {
@@ -396,29 +410,29 @@ export function buildPageCheckGuidance(check: PageCheckResult): string[] {
   } else if (check.freshness.status === "stale" || check.freshness.status === "aging") {
     lines.push("Actualiza el contenido de esta página y refresca su fecha de modificación.");
   }
-  if (check.indexability.noindex) {
+  if (indexability?.noindex) {
     lines.push(
       "Esta página tiene una etiqueta <meta name=\"robots\"> con noindex: ni Google ni los motores de IA pueden indexarla. Quítala si quieres que sea citable."
     );
   }
-  if (!check.indexability.canonicalOk) {
+  if (indexability && !indexability.canonicalOk) {
     lines.push(
-      check.indexability.canonicalPresent
+      indexability.canonicalPresent
         ? "El <link rel=\"canonical\"> de esta página apunta a otro dominio — corrígelo para que apunte a esta misma URL en tu dominio."
         : "Añade una etiqueta <link rel=\"canonical\"> que apunte a esta misma página en tu dominio."
     );
   }
-  if (!check.indexability.hreflangPresent) {
+  if (indexability && !indexability.hreflangPresent) {
     lines.push(
       "Si esta página tiene versiones en otros idiomas o países, añade etiquetas <link rel=\"alternate\" hreflang=\"...\"> para cada una."
     );
   }
-  if (!check.citability.hasListOrTable) {
+  if (citability && !citability.hasListOrTable) {
     lines.push("Añade listas o tablas que estructuren la información — los motores de IA citan con más frecuencia contenido en ese formato.");
   }
-  if (!check.citability.contentOk) {
+  if (citability && !citability.contentOk) {
     lines.push(
-      `Amplía el contenido visible de esta página (ahora: ${check.citability.wordCount} palabras) — los motores de IA prefieren respuestas sustanciales.`
+      `Amplía el contenido visible de esta página (ahora: ${citability.wordCount} palabras) — los motores de IA prefieren respuestas sustanciales.`
     );
   }
 
