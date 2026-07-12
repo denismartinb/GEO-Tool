@@ -352,3 +352,12 @@ implementada en este mismo PR** (tendencias descendente+reverse, `citDelta`/
 fallback legacy alineado con su cálculo, `isOwnDomain` compartido para
 cuota de citas y páginas citadas). Fases B–D pendientes, en PRs pequeños
 separados; Fase E pendiente de Task Intake con `geo-strategy`.
+
+**Estado (2026-07-12):** #213 (auditoría + Fase A) mergeado por orden del
+fundador, que aprobó encadenar B → C → D en PRs separados. **Fase B
+implementada** en el PR siguiente: card "Sentimiento de marca" (dominante +
+desglose, solo sobre respuestas con la marca mencionada, sin delta ni
+tendencia fabricados) sustituye a la card "Confianza" (que ya se comunica
+como badge del gauge), y el gauge del GEO Score gana sparkline + delta
+"vs. escaneo anterior" usando `getEffectiveGeoScore` sobre los últimos 7
+runs (mismo fallback a `visibility_score` que el propio gauge, ADR-0008).
