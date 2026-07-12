@@ -3640,3 +3640,48 @@ select.set-field {
   padding: 18px;
 }
 
+
+/* ============================================================
+   Auditoría web — collapsed detail rows (WEB-AUDIT-R1)
+   Native <details>/<summary> rows: zero-JS expand/collapse for
+   the per-topic and per-page lists, chevron rotates when open.
+   ============================================================ */
+.wa-details {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.wa-details > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.wa-details > summary::-webkit-details-marker { display: none; }
+.wa-details > summary:hover { background: var(--surface-2); border-radius: 10px; }
+.wa-details .wa-chev {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--ink-4);
+  transition: transform 0.15s ease;
+}
+.wa-details[open] > summary .wa-chev { transform: rotate(180deg); }
+.wa-details > .wa-details-body {
+  padding: 2px 12px 12px;
+  border-top: 1px solid var(--line-soft);
+  margin-top: 0;
+  padding-top: 10px;
+}
+.wa-more > summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--accent);
+  padding: 4px 0;
+}
+.wa-more > summary::-webkit-details-marker { display: none; }
+.wa-more[open] > summary { margin-bottom: 8px; }
