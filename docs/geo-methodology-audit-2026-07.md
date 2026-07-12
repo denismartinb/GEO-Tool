@@ -345,3 +345,10 @@ Lo que cambiaría, en orden:
 A y C son las que protegen la credibilidad ante las primeras agencias
 (Fase 5 del launch plan); E es la única que necesita debate de metodología y
 decisión explícita del fundador.
+
+**Estado (2026-07-11):** plan aprobado por el fundador ("Sí"). **Fase A
+implementada en este mismo PR** (tendencias descendente+reverse, `citDelta`/
+`citTrend` eliminados, sparkline plano de Confianza retirado, tooltip del
+fallback legacy alineado con su cálculo, `isOwnDomain` compartido para
+cuota de citas y páginas citadas). Fases B–D pendientes, en PRs pequeños
+separados; Fase E pendiente de Task Intake con `geo-strategy`.
