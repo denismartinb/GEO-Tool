@@ -283,9 +283,22 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
             description/intro) is a separate, larger feature explicitly parked
             for its own Task Intake — this is only the deterministic half. */}
         {guidance.length > 0 && (
-          <ul style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5, margin: "8px 0 0", paddingLeft: 16 }}>
+          <ul
+            style={{
+              fontSize: 11.5,
+              color: "var(--ink-3)",
+              lineHeight: 1.5,
+              margin: "8px 0 0",
+              paddingLeft: 18,
+              listStyleType: "disc",
+              listStylePosition: "outside",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4
+            }}
+          >
             {guidance.map((line, i) => (
-              <li key={i}>{line}</li>
+              <li key={i} style={{ display: "list-item" }}>{line}</li>
             ))}
           </ul>
         )}
@@ -1001,19 +1014,19 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               replacing the old 4-tile KPI row that mixed units (fractions,
               scores, counts) with no hierarchy. */}
           <div className="card" style={{ marginTop: 14, padding: "16px 18px" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 20 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 20 }}>
               <ScoreGauge score={globalScore.score} />
               <div style={{ flex: 1, minWidth: 240 }}>
                 <div style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
-                  Preparación GEO global
+                  Diagnóstico general
                   <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas aprovechados por la IA y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
                 </div>
-                <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
-                  {globalScore.includedCount === 3
-                    ? "Media de tus 3 señales: contenido, aprovechamiento y salud técnica."
-                    : `Media de ${globalScore.includedCount} ${globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.`}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
+                {globalScore.includedCount < 3 && (
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
+                    Media de {globalScore.includedCount} {globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
                   <SubScoreTile
                     label="Contenido"
                     value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
