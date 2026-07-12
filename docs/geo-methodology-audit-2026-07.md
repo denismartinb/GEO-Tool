@@ -393,3 +393,14 @@ comparación, confianza "alta" exige ≥20 resultados, fila del Overview
 versionada ("Cuota de voz" solo para runs v2). **E2 pendiente** (PR
 siguiente): la alerta de caída no comparará runs de versiones distintas y
 exigirá caída sostenida en 2 comparaciones consecutivas.
+
+**Estado (2026-07-12, cont.):** #217 (E1) mergeado. **E2 implementada** en
+el PR siguiente: `checkAndSendScoreDropAlert` exige ahora caída
+**sostenida** — el run actual y el anterior deben estar ambos ≥10 puntos
+por debajo del baseline pre-caída (el run previo a ambos) — y nunca compara
+runs con `composite_version` distinta (el escalón v1→v2 no dispara email).
+Consecuencias documentadas: hacen falta ≥3 runs puntuados de la misma
+versión para poder alertar, y la alerta llega un escaneo más tarde a cambio
+de no entrenar al usuario a ignorarla. Con E2 mergeada, **el plan A–E de
+esta auditoría queda completo**; solo sigue diferida la recalibración de
+bandas (ADR-0015 §5, necesita distribución real de ≥10–20 proyectos).
