@@ -178,7 +178,8 @@ describe("computeRunScoresFromResults — grounding-aware citation_score (docs/a
   });
 
   it("drops the authority component of geo_score and caps confidence at medium when no grounded rows exist", () => {
-    const results = Array.from({ length: 5 }, (_, i) =>
+    // 20 rows so run confidence is "high" (ADR 0015 threshold) and the cap is observable.
+    const results = Array.from({ length: 20 }, (_, i) =>
       row({ id: String(i), provider: "claude", brand_mentioned: true })
     );
 
@@ -402,13 +403,21 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
     expect(result.details_json.extracted_results_count).toBe(5);
   });
 
-  it("is high with >=5 results and full extraction coverage (>=0.8)", () => {
-    const results = Array.from({ length: 5 }, (_, i) => row({ id: String(i) }));
+  it("is high with >=20 results and full extraction coverage (>=0.8) — ADR 0015", () => {
+    const results = Array.from({ length: 20 }, (_, i) => row({ id: String(i) }));
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("high");
-    expect(result.details_json.total_results).toBe(5);
+    expect(result.details_json.total_results).toBe(20);
+  });
+
+  it("is medium with 5..19 fully-extracted results (was high before geo-score-v2 — ADR 0015)", () => {
+    const results = Array.from({ length: 5 }, (_, i) => row({ id: String(i) }));
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.confidence).toBe("medium");
   });
 
   it("is medium with >=2 and <5 fully-extracted results", () => {
@@ -673,13 +682,13 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
   });
 
   it("computes the full-data case with all 4 components present", () => {
-    // 5 rows, all valid extraction, brand mentioned + cited (own domain) in all 5 -> high confidence.
+    // 20 rows (high confidence per ADR 0015), all valid extraction, brand
+    // mentioned + cited (own domain) in every row.
     // visibility_score = 100, citation_score = 100.
-    // mentioned_competitors_count = 0 in all rows -> displaced_prompts_count = 0
-    // -> competitor_gap_score = 0/5*100 = 0 -> standing = 100 - 0 = 100
+    // mentioned_competitors_count = 0 in all rows -> share of voice = 20/(20+0) = 100 -> standing = 100
     // brand_position: N = 1 (brand) + 1 (competitor) = 2; brand mentioned at position 1 in every prompt
     // -> brand_avg_position = 1; prominence = (1 - (1-1)/2)*100 = 100
-    const results = Array.from({ length: 5 }, (_, i) =>
+    const results = Array.from({ length: 20 }, (_, i) =>
       positionRow({
         id: String(i),
         brand_mentioned: true,
@@ -707,7 +716,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     };
 
     expect(geoScore).toBeDefined();
-    expect(geoScore.composite_version).toBe("geo-score-v1");
+    expect(geoScore.composite_version).toBe("geo-score-v2");
     expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
     expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
     expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
@@ -722,8 +731,10 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
 
   it("degraded case: drops prominence and renormalizes weights when brand_position is absent", () => {
     // No valid brand/competitors shape -> brand_position is null -> prominence dropped.
-    // visibility_score = 100, citation_score = 100 (own-domain cited), competitor_gap_score = 0 -> standing = 100.
-    const results = Array.from({ length: 5 }, (_, i) =>
+    // visibility_score = 100, citation_score = 100 (own-domain cited),
+    // share of voice = 20/(20+0) = 100 -> standing = 100. 20 rows so run
+    // confidence is "high" (ADR 0015) and the prominence cap is observable.
+    const results = Array.from({ length: 20 }, (_, i) =>
       row({
         id: String(i),
         brand_mentioned: true,
@@ -796,9 +807,57 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     ).toBe(true);
 
     const geoScore = result.details_json.geo_score as { composite_version: string; formula: string };
-    expect(geoScore.composite_version).toBe("geo-score-v1");
-    expect(geoScore.formula).toContain("standing = 100 - competitor_gap_score");
+    expect(geoScore.composite_version).toBe("geo-score-v2");
+    expect(geoScore.formula).toContain("standing = share of voice");
+    expect(geoScore.formula).toContain("standing_v1");
     expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position-1)/total_entities)*100");
+  });
+
+  it("standing is real share of voice, with the v1 value retained as standing_v1 (ADR 0015)", () => {
+    // brand mentioned in 2 of 3 prompts; competitors: 2 mentions on a
+    // brand-present prompt + 1 mention on the brand-absent prompt.
+    // share of voice = 2 / (2 + 3) = 40.
+    // v1 (100 - competitive pressure): displaced prompts = 1 of 3 -> 100 - 33.33 = 66.67.
+    const results = [
+      row({ id: "1", brand_mentioned: true, mentioned_competitors_count: 2 }),
+      row({ id: "2", brand_mentioned: true, mentioned_competitors_count: 0 }),
+      row({ id: "3", brand_mentioned: false, mentioned_competitors_count: 1 })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    const geoScore = result.details_json.geo_score as {
+      standing_v1: number;
+      components: Record<string, { value: number | null }>;
+    };
+
+    expect(geoScore.components.standing.value).toBe(40);
+    expect(geoScore.standing_v1).toBe(66.67);
+  });
+
+  it("empty market: drops standing (no voice to share) instead of awarding 100 (ADR 0015)", () => {
+    // Brand never mentioned AND no tracked competitor mentioned anywhere.
+    // v1 scored standing = 100 here (pressure 0), giving an invisible brand
+    // ~20/100; v2 drops the component and renormalizes.
+    const results = [
+      row({ id: "1", brand_mentioned: false, mentioned_competitors_count: 0 }),
+      row({ id: "2", brand_mentioned: false, mentioned_competitors_count: 0 })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    const geoScore = result.details_json.geo_score as {
+      score: number;
+      inputs_used: string[];
+      components: Record<string, { value: number | null; weight: number; reason?: string }>;
+    };
+
+    expect(geoScore.inputs_used).not.toContain("standing");
+    expect(geoScore.components.standing).toMatchObject({ value: null, weight: 0 });
+    expect(geoScore.components.standing.reason).toContain("share-of-voice denominator");
+    // presence = 0 and authority = 0 are the only scoring inputs left
+    // (prominence also dropped, no position data) -> composite is 0, not ~20.
+    expect(geoScore.score).toBe(0);
   });
 });
 

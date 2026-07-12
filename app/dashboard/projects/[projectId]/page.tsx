@@ -678,7 +678,18 @@ export default async function ProjectDetailPage({
                     info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
                   },
                   { l: "Prominencia (posición)", c: geoScore.components.prominence, color: "#7c3aed" },
-                  { l: "Posición competitiva", c: geoScore.components.standing, color: "#0d9488" },
+                  // Label follows the stored composite's semantics: v2 runs
+                  // score standing as real share of voice (ADR 0015), while
+                  // legacy v1 runs stored 100 - presión competitiva — showing
+                  // the v2 label over a v1 value would misdescribe the number.
+                  geoScore.composite_version === "geo-score-v2"
+                    ? {
+                        l: "Cuota de voz",
+                        c: geoScore.components.standing,
+                        color: "#0d9488",
+                        info: "Qué parte de las menciones en las respuestas de IA son tuyas, frente a los competidores que monitorizas. Si ni tu marca ni tus competidores aparecen, este componente no puntúa (no hay voz que repartir)."
+                      }
+                    : { l: "Posición competitiva", c: geoScore.components.standing, color: "#0d9488" },
                   {
                     l: "Autoridad (citas)",
                     c: geoScore.components.authority,

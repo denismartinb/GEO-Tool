@@ -1,4 +1,4 @@
-export const SCORING_VERSION = "phase8-own-domain-citation-score-v1";
+export const SCORING_VERSION = "phase9-geo-score-v2";
 
 type ScoreInputRow = {
   id: string;
@@ -312,10 +312,15 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   ).length;
   const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeTotal) * 100));
 
+  // "high" requires >=20 fully-extracted results (was >=5): with one LLM
+  // sample per prompt/engine, 5 results give each answer a 20-point swing on
+  // presence — calling that sample "high confidence" overstated its
+  // statistical reliability (docs/geo-methodology-audit-2026-07.md, finding
+  // 5 / ADR 0015). 2..19 clean results are "medium".
   let confidence: "low" | "medium" | "high" = "low";
   if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
     confidence = "low";
-  } else if (totalResults >= 5 && extractionCoverage >= 0.8) {
+  } else if (totalResults >= 20 && extractionCoverage >= 0.8) {
     confidence = "high";
   } else if (totalResults >= 2) {
     confidence = "medium";
@@ -328,12 +333,28 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
 
   const brandPosition = computeBrandPosition(results, totalResults);
 
-  // --- GEO Score composite (ADR 0008) ---
-  const COMPOSITE_VERSION = "geo-score-v1";
+  // --- GEO Score composite (ADR 0008, revised by ADR 0015) ---
+  const COMPOSITE_VERSION = "geo-score-v2";
 
   const presenceScore = visibilityScore; // 0..100, higher better
   const authorityScore: number | null = citationScoreDataAvailable ? citationScore : null; // 0..100, higher better
-  const standingScore = clamp(0, 100, 100 - competitorGapScore); // invert: higher = better
+
+  // --- standing = Share of Voice (geo-score-v2, ADR 0015) ---
+  // v1 used 100 - competitor_gap_score, which (a) double-counted the same
+  // brand_mentioned signal that presence already carries, and (b) awarded a
+  // perfect standing to a brand that is invisible in a market where the AI
+  // mentions no competitors either (docs/geo-methodology-audit-2026-07.md,
+  // finding 4). v2 uses real share of voice over per-prompt mention counts of
+  // tracked entities: brand mentions / (brand + tracked competitor mentions).
+  // With a zero denominator there is no voice to share — the component is
+  // dropped and the remaining weights renormalize (same mechanism as
+  // prominence/authority), instead of fabricating a 100. The v1 value is kept
+  // below as standing_v1 for comparison only, mirroring how ADR 0013 retained
+  // citation_score_any_domain.
+  const standingV1 = clamp(0, 100, 100 - competitorGapScore);
+  const sovDenominator = brandMentionedCount + totalCompetitorMentions;
+  const standingScore: number | null =
+    sovDenominator > 0 ? round2((brandMentionedCount / sovDenominator) * 100) : null;
 
   let prominenceScore: number | null = null;
   if (brandPosition && brandPosition.brand_avg_position !== null && brandPosition.total_entities > 0) {
@@ -361,20 +382,32 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
 
     const droppedProminence = prominenceScore === null;
     const droppedAuthority = authorityScore === null;
-    const compositeConfidence = (droppedProminence || droppedAuthority) && confidence === "high" ? "medium" : confidence;
+    const droppedStanding = standingScore === null;
+    const compositeConfidence =
+      (droppedProminence || droppedAuthority || droppedStanding) && confidence === "high" ? "medium" : confidence;
 
     geoScore = {
       score: round2(score),
       composite_version: COMPOSITE_VERSION,
       confidence: compositeConfidence,
       inputs_used: availableGeoScoreComponents.map((c) => c.key),
+      // v1 standing (100 - competitor_gap_score), retained for comparison
+      // only across the v1 -> v2 transition (ADR 0015) — not part of the score.
+      standing_v1: round2(standingV1),
       components: {
         presence: { value: presenceScore, weight: round2(0.4 / geoScoreWeightSum) },
         prominence:
           prominenceScore === null
             ? { value: null, weight: 0, reason: "brand_position absent (pre-grounded-position-v1 run)" }
             : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
-        standing: { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
+        standing:
+          standingScore === null
+            ? {
+                value: null,
+                weight: 0,
+                reason: "no brand or tracked-competitor mentions in this run (share-of-voice denominator is 0, ADR 0015)"
+              }
+            : { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
         authority:
           authorityScore === null
             ? {
@@ -387,7 +420,9 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       },
       formula:
         "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
-        "standing = 100 - competitor_gap_score; prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
+        "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
+        "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
+        "prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
         "absent components dropped and remaining weights renormalized."
     };
   }
@@ -400,7 +435,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
       : "Extraction coverage is complete.",
     "brand_position: position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). Not-mentioned entities are penalized with position N+1 (N = total tracked entities for that prompt). avg_position = mean(effective_position) across prompts with valid extraction; lower is better.",
-    "geo_score: composite of presence (visibility_score), prominence (derived from brand_position), standing (100 - competitor_gap_score) and authority (citation_score), weighted .40/.25/.20/.15. If brand_position is unavailable, prominence is dropped and the remaining weights are renormalized; confidence is capped at medium in that case."
+    "geo_score (geo-score-v2, ADR 0015): composite of presence (visibility_score), prominence (derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
+    "confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); 2-19 clean results are medium (ADR 0015)."
   ];
 
   const perPromptSummary = results.slice(0, 10).map((row) => ({
@@ -446,7 +482,9 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
           "avg_position(entity) = mean(position if mentioned else N+1, over prompts with valid extraction); N = total tracked entities for that prompt",
         geo_score:
           "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
-          "standing = 100 - competitor_gap_score; prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
+          "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
+          "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
+          "prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
           "absent components dropped and remaining weights renormalized."
       },
       assumptions,
