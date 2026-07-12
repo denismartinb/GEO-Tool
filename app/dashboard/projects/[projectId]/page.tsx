@@ -246,7 +246,7 @@ export default async function ProjectDetailPage({
           .maybeSingle(),
         supabase
           .from("scan_prompt_results")
-          .select("brand_mentioned, citation_found, sentiment, extracted_json, provider")
+          .select("prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider")
           .eq("project_id", projectId)
           .eq("run_id", latestCompletedRun.id)
           .eq("status", "completed"),
@@ -473,6 +473,35 @@ export default async function ProjectDetailPage({
 
   const brandSov = totalForSov > 0 ? Math.round((brandMentions / totalForSov) * 100) : 0;
   const maxMentionRate = Math.max(computedMentionRate, ...competitorRows.map((c) => c.mentionRate));
+
+  /* ---- prompt opportunities (audit phase D, finding 3) ----
+   * Prompts where at least one competitor is mentioned in the AI answer and
+   * the brand is not — the "where you're losing today" list. Built entirely
+   * from the extracted_json already fetched for this run (the same signal the
+   * recommendation engine's competitor rules use); display only. With
+   * multiple engines, a prompt qualifies if ANY engine's answer shows the
+   * gap, and the winning competitors are aggregated across those answers.
+   */
+  const promptOpportunities = (() => {
+    const byPrompt = new Map<string, { prompt: string; competitors: Set<string> }>();
+    for (const result of allPromptResults ?? []) {
+      if (result.brand_mentioned) continue;
+      const promptText = (result.prompt_text_snapshot as string | null)?.trim();
+      if (!promptText) continue;
+      const ext = parseExt(result.extracted_json);
+      const winners = (ext.competitors ?? [])
+        .filter((c) => c.mentioned && c.name)
+        .map((c) => c.name as string);
+      if (!winners.length) continue;
+      const entry = byPrompt.get(promptText) ?? { prompt: promptText, competitors: new Set<string>() };
+      winners.forEach((name) => entry.competitors.add(name));
+      byPrompt.set(promptText, entry);
+    }
+    return Array.from(byPrompt.values())
+      .sort((a, b) => b.competitors.size - a.competitors.size)
+      .slice(0, 5)
+      .map((entry) => ({ prompt: entry.prompt, competitors: Array.from(entry.competitors).slice(0, 3) }));
+  })();
 
   const citedPages = Object.values(citedUrlCounts)
     .sort((a, b) => b.count - a.count)
@@ -1088,17 +1117,57 @@ export default async function ProjectDetailPage({
           <div className="grid-2-1">
             {/* Prompt opportunities */}
             <div className="card">
-              <div className="card-head">
+              <div className="card-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div className="card-title">Oportunidades de prompts</div>
+                {promptOpportunities.length > 0 && (
+                  <span className="badge badge-neutral">{promptOpportunities.length}</span>
+                )}
+                <InfoTip text="Prompts de tu último escaneo donde la IA menciona al menos un competidor pero no a tu marca — las consultas concretas donde hoy pierdes la respuesta. Cada una tiene su recomendación asociada en Recomendaciones." />
               </div>
-              <div style={{ padding: "16px 18px" }}>
-                <div className="section-empty">
-                  <div className="section-empty-title">Detección de oportunidades en desarrollo</div>
-                  <div className="section-empty-desc">
-                    Las oportunidades de prompts (prompts donde los competidores ganan y tu marca no aparece) se calcularán automáticamente en la próxima actualización.
+              {promptOpportunities.length > 0 ? (
+                <div style={{ padding: "4px 0" }}>
+                  {promptOpportunities.map((op, i) => (
+                    <div
+                      key={op.prompt}
+                      style={{
+                        padding: "11px 18px",
+                        borderBottom: i < promptOpportunities.length - 1 ? "1px solid var(--line-soft)" : "none"
+                      }}
+                    >
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-2)", lineHeight: 1.45 }}>
+                        {op.prompt}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, color: "var(--ink-4)", fontWeight: 600 }}>
+                          {op.competitors.length === 1 ? "Gana" : "Ganan"}
+                        </span>
+                        {op.competitors.map((name) => (
+                          <span key={name} className="badge badge-neg" style={{ fontSize: 11 }}>
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ padding: "10px 18px 12px" }}>
+                    <Link
+                      href={`/dashboard/projects/${projectId}/recommendations`}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 650, color: "var(--accent)" }}
+                    >
+                      Ver las acciones para recuperarlos <Icon name="arrRight" size={13} />
+                    </Link>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ padding: "16px 18px" }}>
+                  <div className="section-empty">
+                    <div className="section-empty-title">Sin oportunidades abiertas</div>
+                    <div className="section-empty-desc">
+                      En este escaneo no hay prompts donde un competidor aparezca y tu marca no. Si añades más prompts o competidores, aquí verás dónde te desplazan.
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Cited pages */}
