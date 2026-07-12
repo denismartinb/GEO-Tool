@@ -6,7 +6,7 @@ export function SettingRow({
   children,
   last
 }: {
-  title: string;
+  title: ReactNode;
   desc?: string;
   children: ReactNode;
   last?: boolean;
