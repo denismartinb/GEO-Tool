@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
+    // Next.js's error.tsx boundary is not auto-instrumented by
+    // @sentry/nextjs — without this explicit call, a render error caught
+    // here never reaches Sentry, only the browser console (lost the
+    // moment the tab closes). Found via a founder-reported crash on
+    // Auditoría web that Sentry had no record of.
     console.error("[dashboard] unhandled render error", { message: error.message, digest: error.digest });
+    Sentry.captureException(error);
   }, [error]);
 
   return (
