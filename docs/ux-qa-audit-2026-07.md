@@ -204,3 +204,11 @@ petición explícita de combinarlas:
   genera para exactamente este gap.
 
 `pnpm test` 573/573, `pnpm run validate` limpio. Sin schema/RLS/pipeline.
+
+**Follow-up F1 (2026-07-12, mismo PR):** el fundador decidió ir más allá
+del estado honesto — el multiusuario no es prioridad para el lanzamiento,
+así que la pestaña **"Equipo" se oculta** de la navegación de Ajustes
+(`settings-tabs.tsx`) en vez de mostrar el estado de un solo usuario.
+`/dashboard/settings/team` redirige a Perfil (mismo patrón que
+`/dashboard/billing`); el componente `team-tab.tsx` (huérfano tras la
+redirección, sin otras referencias) se elimina.
