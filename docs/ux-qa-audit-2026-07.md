@@ -177,3 +177,30 @@ nuevo.
 
 F1 es la única que considero bloqueante antes de sentar a la primera
 agencia delante del producto.
+
+---
+
+**Estado (2026-07-12):** plan aprobado por el fundador ("Sí, haz F1 a F3 en
+loop, todo junto") — implementadas las tres en el mismo PR (#219), a
+petición explícita de combinarlas:
+
+- **F1:** `components/settings/team-tab.tsx` reescrito — sin equipo
+  fabricado ni invitación fingida; muestra solo el usuario real y un
+  aviso honesto de que el modo multiusuario llega más adelante. Sin
+  claim de "usuarios ilimitados".
+- **F2:** `components/settings/notifications-tab.tsx` — de los 6 toggles,
+  solo "Cambios de visibilidad" queda activo (es el único que envía un
+  email real hoy); los otros 5, incluido "Resumen semanal" (persiste una
+  preferencia real pero de un email aún no construido, Fase 6b),
+  aparecen deshabilitados con badge "Próximamente". `organization-tab.tsx`
+  — botón "Cambiar logo" deshabilitado, hint ya no promete "informes
+  exportables" inexistentes.
+- **F3:** `citations-client.tsx` — la guía de tácticas ya existente (que
+  la auditoría había etiquetado por error como ausente; en realidad
+  estaba colapsada tras "Cómo usar esto") gana un enlace real "Ver el
+  plan de acción para estas fuentes" hacia Recomendaciones, cerrando el
+  hueco entre el consejo genérico y las recomendaciones reales
+  (`pursue_citation_sources`, `add_citation_block`) que el motor ya
+  genera para exactamente este gap.
+
+`pnpm test` 573/573, `pnpm run validate` limpio. Sin schema/RLS/pipeline.

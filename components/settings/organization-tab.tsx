@@ -55,12 +55,17 @@ export function OrganizationTab({
           <div className="set-profile-head">
             <div className="set-org-logo">{orgName.trim().slice(0, 1).toUpperCase() || "?"}</div>
             <div>
-              <Button type="button" variant="outline" disabled={ro}>
+              {/* No upload backend exists yet — a working button here would
+                  have nothing to save to. Disabled + "Próximamente" instead
+                  of an inert control that looks live (docs/ux-qa-audit-2026-07.md,
+                  finding 4). Hint no longer promises exportable reports,
+                  which don't exist either. */}
+              <Button type="button" variant="outline" disabled title="Próximamente">
                 <Icon name="image" size={14} />
                 Cambiar logo
               </Button>
               <div className="set-hint" style={{ marginTop: 7 }}>
-                Se mostrará en tu cuenta y en futuros informes exportables.
+                Próximamente: personaliza el logo de tu organización.
               </div>
             </div>
           </div>

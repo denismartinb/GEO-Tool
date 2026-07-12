@@ -371,6 +371,7 @@ export default async function CitationsPage({
           opportunityRows={opportunityRows.slice(0, 5)}
           citationScore={score?.citation_score ?? null}
           brandLabel={project.brand}
+          projectId={projectId}
         />
       )}
     </div>

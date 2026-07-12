@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
 
@@ -163,7 +164,8 @@ export function CitationsClient({
   opportunities,
   opportunityRows,
   citationScore,
-  brandLabel
+  brandLabel,
+  projectId
 }: {
   promptGroups: PromptGroup[];
   totalUrls: number;
@@ -173,6 +175,7 @@ export function CitationsClient({
   opportunityRows: CitationRow[];
   citationScore: number | null;
   brandLabel: string;
+  projectId: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
   const [guide, setGuide] = useState(false);
@@ -317,6 +320,22 @@ export function CitationsClient({
                 </div>
               </div>
             </div>
+          </div>
+          {/* Links these tactics to the real, evidence-backed action plans the
+              recommendation engine already generates for this exact gap
+              (pursue_citation_sources, add_citation_block…) instead of leaving
+              the tactics as generic unlinked advice
+              (docs/ux-qa-audit-2026-07.md, finding 5). */}
+          <div style={{ marginTop: 16 }}>
+            <Link
+              href={`/dashboard/projects/${projectId}/recommendations`}
+              className="btn btn-soft btn-sm"
+              style={{ display: "inline-flex" }}
+            >
+              <Icon name="sparkles" size={14} />
+              Ver el plan de acción para estas fuentes
+              <Icon name="arrRight" size={13} />
+            </Link>
           </div>
         </div>
       )}
