@@ -361,3 +361,13 @@ tendencia fabricados) sustituye a la card "Confianza" (que ya se comunica
 como badge del gauge), y el gauge del GEO Score gana sparkline + delta
 "vs. escaneo anterior" usando `getEffectiveGeoScore` sobre los últimos 7
 runs (mismo fallback a `visibility_score` que el propio gauge, ADR-0008).
+
+**Estado (2026-07-12, cont.):** #214 (Fase B) mergeado. **Fase C
+implementada** en el PR siguiente: la heurística de año suelto de
+`computeFreshnessGap` se sustituye por `findStaleYearSignal` — un año
+antiguo solo cuenta como señal de desactualización cuando sigue
+inmediatamente a un marcador de vigencia (`RECENCY_MARKERS`: "según datos
+de", "as of", "última actualización"…); la narración histórica ("fundada
+en 1975") deja de disparar la card. `STALE_PHRASES` sin cambios. Tests
+actualizados (el que fijaba el comportamiento antiguo ahora fija el nuevo)
++ 2 casos nuevos. Queda la Fase D y, aparte, la Fase E (Task Intake).
