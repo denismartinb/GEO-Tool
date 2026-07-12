@@ -63,9 +63,10 @@ describe("buildBotAccessReport", () => {
     expect(report.bots.every((b) => b.allowed)).toBe(true);
     expect(report.llmsTxtFound).toBe(false);
     expect(report.llmsTxtBytes).toBeNull();
+    expect(report.sitemapFound).toBe(false);
   });
 
-  it("parses a real robots.txt and reports llms.txt presence + byte size", async () => {
+  it("parses a real robots.txt and reports llms.txt/sitemap.xml presence + byte size", async () => {
     const fetchMock = vi.fn().mockImplementation((url: string) => {
       if (url.includes("robots.txt")) {
         return Promise.resolve(
@@ -74,6 +75,9 @@ describe("buildBotAccessReport", () => {
       }
       if (url.includes("llms.txt")) {
         return Promise.resolve(new Response("hello world", { status: 200 }));
+      }
+      if (url.includes("sitemap.xml")) {
+        return Promise.resolve(new Response("<urlset></urlset>", { status: 200 }));
       }
       return Promise.resolve(new Response(null, { status: 404 }));
     });
@@ -84,13 +88,15 @@ describe("buildBotAccessReport", () => {
     expect(report.bots.find((b) => b.agent === "GPTBot")?.allowed).toBe(false);
     expect(report.llmsTxtFound).toBe(true);
     expect(report.llmsTxtBytes).toBe(Buffer.byteLength("hello world", "utf-8"));
+    expect(report.sitemapFound).toBe(true);
   });
 
   it("treats a fetch error as a missing file rather than throwing", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
     await expect(buildBotAccessReport("example.com")).resolves.toMatchObject({
       robotsFound: false,
-      llmsTxtFound: false
+      llmsTxtFound: false,
+      sitemapFound: false
     });
   });
 });

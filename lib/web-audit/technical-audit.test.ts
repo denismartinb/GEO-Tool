@@ -196,7 +196,7 @@ describe("runTechnicalAuditCore", () => {
       windowStart: new Date().toISOString()
     });
     mockedFetchPageSafely.mockResolvedValue({ status: "skipped_offsite" });
-    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null });
+    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null, sitemapFound: false });
 
     const tables = baseTables({
       web_audit_snapshots: {
@@ -230,7 +230,7 @@ describe("runTechnicalAuditCore", () => {
       remaining: 5,
       windowStart: new Date().toISOString()
     });
-    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null });
+    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null, sitemapFound: false });
 
     mockedFetchPageSafely.mockResolvedValue({ status: "analyzed", html: "<html></html>", finalUrl: "https://acme.com/" });
 
@@ -338,7 +338,7 @@ describe("runTechnicalAuditCore", () => {
       remaining: 5,
       windowStart: new Date().toISOString()
     });
-    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null });
+    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null, sitemapFound: false });
     mockedFetchPageSafely.mockResolvedValue({ status: "analyzed", html: "<html></html>", finalUrl: "https://acme.com/" });
     mockedResolveGroundingRedirects.mockResolvedValue(new Map([["https://vertexaisearch.example/redirect1", { resolvedUrl: null }]]));
 

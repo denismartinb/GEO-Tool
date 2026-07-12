@@ -30,6 +30,8 @@ export type BotAccessReport = {
   bots: BotAccessEntry[];
   llmsTxtFound: boolean;
   llmsTxtBytes: number | null;
+  /** WEB-AUDIT-R3: whether /sitemap.xml is reachable — same reachability check as llms.txt, no XML parsing (presence only). */
+  sitemapFound: boolean;
 };
 
 type RawGroup = { agents: string[]; disallows: string[] };
@@ -120,11 +122,13 @@ export async function buildBotAccessReport(domain: string): Promise<BotAccessRep
   }));
 
   const llmsContent = await fetchTextCapped(`https://${domain}/llms.txt`);
+  const sitemapContent = await fetchTextCapped(`https://${domain}/sitemap.xml`);
 
   return {
     robotsFound,
     bots,
     llmsTxtFound: llmsContent !== null,
-    llmsTxtBytes: llmsContent !== null ? Buffer.byteLength(llmsContent, "utf-8") : null
+    llmsTxtBytes: llmsContent !== null ? Buffer.byteLength(llmsContent, "utf-8") : null,
+    sitemapFound: sitemapContent !== null
   };
 }
