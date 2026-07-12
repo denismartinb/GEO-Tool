@@ -119,6 +119,46 @@ export async function sendScoreDropAlertEmail(
   );
 }
 
+export async function sendWeeklyDigestEmail(
+  to: string,
+  projectDomain: string,
+  digest: {
+    currentScore: number;
+    previousScore: number;
+    topMover: { name: string; mentionDelta: number } | null;
+    recommendation: { title: string; description: string } | null;
+  }
+): Promise<void> {
+  const delta = digest.currentScore - digest.previousScore;
+  const deltaText =
+    delta === 0
+      ? "se mantiene igual que la semana pasada"
+      : `ha ${delta > 0 ? "subido" : "bajado"} ${Math.abs(Math.round(delta))} puntos respecto a la semana pasada`;
+
+  const moverHtml = digest.topMover
+    ? `<p>El movimiento de competidor más notable: <b>${digest.topMover.name}</b> ${
+        digest.topMover.mentionDelta > 0 ? "ha ganado" : "ha perdido"
+      } ${Math.abs(digest.topMover.mentionDelta)} mención${Math.abs(digest.topMover.mentionDelta) === 1 ? "" : "es"} esta semana.</p>`
+    : "";
+
+  const recommendationHtml = digest.recommendation
+    ? `<p><b>Recomendación destacada:</b> ${digest.recommendation.title}</p>`
+    : "";
+
+  await sendEmail(
+    to,
+    `Tu resumen semanal de ${projectDomain}`,
+    wrap(`
+      <p>Tu GEO Score de <b>${projectDomain}</b> es <b>${Math.round(digest.currentScore)}</b> —
+      ${deltaText}.</p>
+      ${moverHtml}
+      ${recommendationHtml}
+      <p><a href="https://www.genscore.es/dashboard">Ver el detalle completo</a></p>
+      <p style="font-size: 13px; color: #666;">Puedes desactivar este resumen en Ajustes → Notificaciones.</p>
+    `)
+  );
+}
+
 export async function sendAccountDeletedEmail(to: string): Promise<void> {
   await sendEmail(
     to,

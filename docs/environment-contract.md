@@ -71,6 +71,26 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+### Weekly digest email (ALERTS-1 Fase 6b)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `CRON_DIGEST_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch |
+| `MAX_PROJECTS_PER_DIGEST_RUN` | No (defaults to `200`) | Vercel | positive integer |
+
+Reuses `CRON_SECRET` (same one as `/api/cron/weekly-scans`) — Vercel sends
+it automatically to `/api/cron/weekly-digest` too. `vercel.json` schedules
+it weekly (`0 8 * * 1`, every Monday). As of January 2026 Vercel allows up
+to 100 cron jobs per project on every plan including Hobby, with the
+Hobby-plan restriction being a minimum once-per-day frequency (a weekly
+schedule is well within that) — no Vercel Pro dependency for this cron,
+unlike the go-live billing checklist.
+
+Only sends to a project with **at least 2** scored runs (`run_scores`
+rows) — with just one, there's no real week-over-week evolution to
+report. Respects `profiles.notify_weekly_digest` (defaults `true`,
+toggle at `/dashboard/settings/notifications`).
+
 ### Batched scan campaigns (SCAN-CHAIN-1)
 
 | Variable | Required | Where | Expected shape |

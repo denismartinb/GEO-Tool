@@ -38,7 +38,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
 | 4 | BILLING-STRIPE-1 ⚠️ | ✅ Hecho (alcance aprobado) | #186, #189, #191, #192, #196, #200, #202, #205, #207 | 2026-07-11 | Checkout, webhook, Customer Portal, protección RLS, reverse trial (7 días) y los 5 emails transaccionales (bienvenida, plan confirmado, pago fallido, trial terminado, cancelación programada) verificados end-to-end en producción, incluida la cancelación real (fecha guardada, UI con estado "Cancelada — activa hasta…" + botón reactivar, email recibido). Bug real encontrado y corregido en vivo: el código exigía `cancel_at_period_end` además de `cancel_at`, pero el Customer Portal solo fija `cancel_at`. Pendiente, deliberadamente fuera de este alcance: PR B (aviso 3 días antes de expirar el trial, necesita su propia aprobación de migración/cron) y el go-live checklist (Vercel Pro, alta autónomo, VeriFactu, claves live) antes de cobros reales |
 | 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
-| 6 | ALERTS-1 | 🟡 Fase 6a hecha; 6b (resumen semanal) pendiente | — | 2026-07-11 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b (resumen semanal) necesita resolver antes el límite de cron jobs de Vercel Hobby |
+| 6 | ALERTS-1 | ✅ Hecho | — | 2026-07-12 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b: resumen semanal por email (cron nuevo, deshabilitado por defecto vía `CRON_DIGEST_ENABLED`) — Vercel levantó el límite de cron jobs en enero 2026 (100/proyecto en todos los planes, incl. Hobby), así que no dependía de Vercel Pro como se pensaba |
 | 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-11 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso) |
 | 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
 | 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
@@ -1102,6 +1102,38 @@ pendiente de resolver antes el límite de cron jobs de Vercel Hobby con
 provocando una caída real de score y confirma que llega el email y que los
 dos toggles persisten. Fase 6b (resumen semanal) queda pendiente hasta
 resolver la pregunta de cron con `platform-deploy`.
+
+**Fase 6b — hecha (2026-07-12):** resuelta la pregunta de cron pendiente:
+Vercel levantó el límite de cron jobs en enero 2026 (100 por proyecto en
+todos los planes, incluido Hobby; la única restricción real es la
+frecuencia mínima de una vez al día) — un cron semanal encaja de sobra,
+sin necesidad de Vercel Pro.
+
+- Nuevo cron `app/api/cron/weekly-digest/route.ts`, mismo patrón que
+  `weekly-scans` (secreto `CRON_SECRET` compartido, inyectado
+  automáticamente por Vercel; interruptor `CRON_DIGEST_ENABLED`,
+  deshabilitado por defecto). Programado los lunes (`0 8 * * 1` en
+  `vercel.json`).
+- `lib/scan/weekly-digest.ts`: por cada proyecto activo cuyo dueño no haya
+  desactivado el resumen, compara el GEO Score del último run con el
+  anterior, calcula el mayor movimiento de competidor por variación de
+  menciones (dato real ya persistido en `details_json.brand_position`,
+  ADR-0005 — no inventado), y adjunta la recomendación activa de mayor
+  prioridad. Solo se envía si el proyecto tiene **al menos 2** runs con
+  score — con uno solo no hay evolución real que contar.
+- `sendWeeklyDigestEmail` en `lib/email/transactional.ts`, mismo patrón
+  fail-soft que el resto de emails.
+- 6 tests nuevos (`weekly-digest.test.ts`). 571/571 tests totales,
+  `pnpm run validate` limpio.
+- `docs/environment-contract.md` actualizado con las 2 vars nuevas
+  (`CRON_DIGEST_ENABLED`, `MAX_PROJECTS_PER_DIGEST_RUN`) y la nota sobre
+  el límite de cron de Vercel ya no siendo un bloqueante.
+
+**Siguiente:** el fundador aplica la migración si falta alguna
+(ninguna nueva en esta PR), y cuando quiera activar el resumen semanal en
+producción, pone `CRON_DIGEST_ENABLED=true` en Vercel (con un redeploy
+después, como siempre) y espera al primer lunes para verlo en acción — o
+lo prueba antes llamando manualmente al endpoint con el secreto correcto.
 
 ---
 
