@@ -466,6 +466,23 @@ la promesa de "sin cookies de analítica" se mantiene cierta.
       en el preview, que se lanzó, se confirmó el error en Sentry, y se
       retiró antes de mergear — solo el fix llegó a `main`). Sentry
       confirmado operativo en producción tras el fix.
+
+**Segundo hallazgo de Sentry, en vivo (2026-07-12):** el fundador reportó
+un error real ("Algo ha ido mal") en `/dashboard/projects/[id]/web-audit`
+tras lanzar un escaneo + una auditoría técnica, pero Sentry no tenía
+ningún registro de ese momento — solo un error antiguo. Causa: a
+diferencia de `instrumentation.ts`'s `onRequestError` (ya corregido
+arriba), el único error boundary de la app
+(`app/dashboard/error.tsx`, cubre toda la sección `/dashboard`, incluida
+Auditoría web) solo hacía `console.error` en el navegador — Sentry
+**no instrumenta automáticamente** los boundaries `error.tsx` de Next.js,
+hace falta una llamada explícita a `Sentry.captureException`. El fallo
+de hoy se perdió sin remedio (solo estaba en la consola del móvil del
+fundador). Corregido: `Sentry.captureException(error)` añadido al mismo
+`useEffect`. **Pendiente:** el fundador debe reproducir el mismo flujo
+(escanear + auditoría técnica) una vez desplegado el fix, para que esta
+vez sí quede capturado en Sentry con el stack trace real — la causa raíz
+original de ese fallo concreto sigue sin identificar.
 - [ ] **Subir a Vercel Pro — decisión explícita del fundador (2026-07-10):
       diferido hasta la primera contratación.** Riesgo registrado y
       aceptado conscientemente: a diferencia del alta de autónomo (donde el
