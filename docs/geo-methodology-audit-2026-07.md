@@ -381,3 +381,15 @@ competidor del motor), agregando los competidores ganadores entre motores,
 con estado vacío honesto y enlace a Recomendaciones. Solo display; con la
 Fase D quedan cerradas A–D. Pendiente únicamente la Fase E (geo-score-v2),
 gatillada a su Task Intake con `geo-strategy`.
+
+**Estado (2026-07-12, cont.):** #216 (Fase D) mergeado. Task Intake de
+GEO-SCORE-V2 presentado y **aprobado por el fundador** ("Sí"), con las
+bandas 70/40 explícitamente fuera de alcance (necesitan distribución real).
+**Fase E1 implementada** (ver `docs/adr/0015-geo-score-v2.md`): `standing`
+pasa a Cuota de Voz real (denominador 0 → componente descartado y pesos
+renormalizados — la marca invisible en mercado vacío ya no puntúa 20),
+`composite_version` a `geo-score-v2` con `standing_v1` conservado para
+comparación, confianza "alta" exige ≥20 resultados, fila del Overview
+versionada ("Cuota de voz" solo para runs v2). **E2 pendiente** (PR
+siguiente): la alerta de caída no comparará runs de versiones distintas y
+exigirá caída sostenida en 2 comparaciones consecutivas.
