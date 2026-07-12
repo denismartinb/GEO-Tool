@@ -546,20 +546,52 @@ describe("generateRecommendationsForRun", () => {
     expect((rec!.evidence_json.affected_prompt_ids as string[])).toEqual(["p1"]);
   });
 
-  it("generates an update_stale_content recommendation when an AI response cites a year ≥3 years old (gap 10)", () => {
+  it("generates an update_stale_content recommendation when an old year follows a recency marker (gap 10, phase C)", () => {
     const recs = run([
       prompt({
         id: "p1",
-        prompt_text_snapshot: "historia de Acme",
+        prompt_text_snapshot: "tarifas de Acme",
         brand_mentioned: true,
-        raw_response_text: "Acme fue fundada en 2019 y en 2020 lanzó su plataforma principal.",
-        sentiment: "positive"
+        raw_response_text: "Según datos de 2019, Acme ofrece tres planes de suscripción.",
+        sentiment: "neutral"
       })
     ]);
 
     const rec = recs.find((r) => r.recommendation_type === "update_stale_content");
     expect(rec).toBeDefined();
     expect((rec!.evidence_json.affected_prompt_ids as string[])).toEqual(["p1"]);
+    // The evidence snippet must surface the actual stale signal, not an
+    // unrelated brand quote.
+    expect((rec!.evidence_json.stale_signals as string[])[0]).toContain("2019");
+  });
+
+  it("does not flag bare historical years without a recency marker (gap 10, phase C — audit finding 2)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "historia de Acme",
+        brand_mentioned: true,
+        raw_response_text: "Acme fue fundada en 1975 y en 2019 lanzó su plataforma principal.",
+        sentiment: "positive"
+      })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "update_stale_content")).toBe(false);
+  });
+
+  it("does not flag a recent year even when it follows a recency marker (gap 10, phase C)", () => {
+    const currentYear = new Date().getFullYear();
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "tarifas de Acme",
+        brand_mentioned: true,
+        raw_response_text: `As of ${currentYear}, Acme offers three subscription plans.`,
+        sentiment: "neutral"
+      })
+    ]);
+
+    expect(recs.some((r) => r.recommendation_type === "update_stale_content")).toBe(false);
   });
 
   it("does not generate update_stale_content when the brand is not mentioned even if stale phrase present (gap 10)", () => {

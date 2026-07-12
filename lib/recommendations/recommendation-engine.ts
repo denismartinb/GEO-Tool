@@ -653,7 +653,62 @@ const STALE_YEAR_CUTOFF = new Date().getFullYear() - 3;
 // Simple 4-digit year pattern; the actual cutoff check uses parseInt so the
 // regex stays readable and correct (the previous character-class approach
 // produced 20[0-2]\d which matched years up to 2029, causing false positives).
-const YEAR_RE = /\b(19\d{2}|20\d{2})\b/g;
+const YEAR_RE = /\b(19\d{2}|20\d{2})\b/;
+
+// Phrases that assert the vintage/currency of the information itself, as
+// opposed to narrating the brand's history. An old year only counts as a
+// staleness signal when it immediately follows one of these markers:
+// "según datos de 2019" means the AI is working from 2019 data, while
+// "fundada en 1975" is a correct historical fact. The previous bare-year
+// heuristic flagged both, permanently mis-flagging any brand with history
+// (docs/geo-methodology-audit-2026-07.md, finding 2 / phase C).
+const RECENCY_MARKERS = [
+  "a fecha de",
+  "as of",
+  "datos de",
+  "data from",
+  "según datos",
+  "actualizado en",
+  "actualizada en",
+  "actualizado a",
+  "actualizada a",
+  "última actualización",
+  "last updated",
+  "updated in",
+  "mi información llega hasta",
+  "conocimiento hasta",
+  "knowledge cutoff"
+];
+
+// How far after a recency marker a year may appear and still be attributed to
+// it ("según datos de finales de 2019" still matches; a year several clauses
+// later does not).
+const RECENCY_MARKER_WINDOW = 24;
+
+/**
+ * Finds the first old year (≤ cutoff) that immediately follows a recency
+ * marker, returning its position in the raw text so callers can extract the
+ * surrounding context. Returns null when every old year in the text is just
+ * historical narration with no marker attributing it to the info's vintage.
+ */
+function findStaleYearSignal(raw: string, cutoff: number): { index: number; length: number } | null {
+  const lower = raw.toLowerCase();
+  for (const marker of RECENCY_MARKERS) {
+    let from = 0;
+    for (;;) {
+      const idx = lower.indexOf(marker, from);
+      if (idx === -1) break;
+      const windowStart = idx + marker.length;
+      const window = raw.slice(windowStart, windowStart + RECENCY_MARKER_WINDOW);
+      const m = window.match(YEAR_RE);
+      if (m && m.index !== undefined && parseInt(m[0], 10) <= cutoff) {
+        return { index: windowStart + m.index, length: m[0].length };
+      }
+      from = windowStart;
+    }
+  }
+  return null;
+}
 
 /**
  * Extracts ~150 chars of context around the first stale signal found in the
@@ -670,14 +725,11 @@ function extractStaleContext(raw: string, cutoff: number): string | null {
       return `…${raw.slice(start, end).trim()}…`;
     }
   }
-  const yearMatches = [...raw.matchAll(YEAR_RE)];
-  for (const m of yearMatches) {
-    if (parseInt(m[0], 10) <= cutoff) {
-      const idx = m.index!;
-      const start = Math.max(0, idx - 60);
-      const end = Math.min(raw.length, idx + m[0].length + 100);
-      return `…${raw.slice(start, end).trim()}…`;
-    }
+  const yearSignal = findStaleYearSignal(raw, cutoff);
+  if (yearSignal) {
+    const start = Math.max(0, yearSignal.index - 60);
+    const end = Math.min(raw.length, yearSignal.index + yearSignal.length + 100);
+    return `…${raw.slice(start, end).trim()}…`;
   }
   return null;
 }
@@ -685,20 +737,22 @@ function extractStaleContext(raw: string, cutoff: number): string | null {
 /**
  * Gap 10 (freshness/recency, Fase D2): detects prompts where the AI response
  * explicitly signals that the brand's information may be stale — either via
- * staleness phrases ("ya no está disponible", "was discontinued") or by citing
- * a year ≥3 years before the current year. Only fires for prompts where the
- * brand is actually mentioned. Uses raw_response_text directly — no secondary
- * LLM extraction needed.
+ * staleness phrases ("ya no está disponible", "was discontinued") or via an
+ * old year (≥3 years back) attributed to the info's vintage by a recency
+ * marker ("según datos de 2019", "as of 2019"). A bare old year with no
+ * marker is treated as historical narration ("fundada en 1975"), never as a
+ * staleness signal (audit finding 2 / phase C). Only fires for prompts where
+ * the brand is actually mentioned. Uses raw_response_text directly — no
+ * secondary LLM extraction needed.
  */
 function computeFreshnessGap(promptResults: PromptResultInput[]): PromptResultInput[] {
   return promptResults.filter((r) => {
     if (!r.brand_mentioned) return false;
-    const text = (r.raw_response_text ?? "").toLowerCase();
-    if (!text) return false;
-    if (STALE_PHRASES.some((phrase) => text.includes(phrase.toLowerCase()))) return true;
-    const years = text.match(YEAR_RE);
-    if (years?.some((y) => parseInt(y, 10) <= STALE_YEAR_CUTOFF)) return true;
-    return false;
+    const raw = r.raw_response_text ?? "";
+    if (!raw) return false;
+    const lower = raw.toLowerCase();
+    if (STALE_PHRASES.some((phrase) => lower.includes(phrase.toLowerCase()))) return true;
+    return findStaleYearSignal(raw, STALE_YEAR_CUTOFF) !== null;
   });
 }
 
