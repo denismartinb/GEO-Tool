@@ -138,6 +138,21 @@ function parseExt(raw: unknown): ExtractedJsonPartial {
   return raw as ExtractedJsonPartial;
 }
 
+/**
+ * Same/subdomain match against the project's own domain, mirroring the
+ * scoring-side semantics (isSameOrSubdomain, lib/scoring/run-scoring.ts). A
+ * plain substring check would also mark third-party domains that merely
+ * contain the project domain (e.g. "no-acme.com" vs "acme.com") as the
+ * brand's own (docs/geo-methodology-audit-2026-07.md, finding 9).
+ */
+function isOwnDomain(domain: string | null | undefined, projectDomain: string): boolean {
+  if (!domain) return false;
+  const d = domain.trim().toLowerCase().replace(/^www\./, "");
+  const own = projectDomain.trim().toLowerCase().replace(/^www\./, "");
+  if (!d || !own) return false;
+  return d === own || d.endsWith(`.${own}`);
+}
+
 /* ---- page ---- */
 
 export default async function ProjectDetailPage({
@@ -219,7 +234,7 @@ export default async function ProjectDetailPage({
     { data: latestScore },
     { data: allPromptResults },
     { data: latestRecommendations },
-    { data: trendHistory }
+    { data: trendHistoryDesc }
   ] = latestCompletedRun
     ? await Promise.all([
         supabase
@@ -246,10 +261,17 @@ export default async function ProjectDetailPage({
           .from("run_scores")
           .select("visibility_score, citation_score, competitor_gap_score, created_at")
           .eq("project_id", projectId)
-          .order("created_at", { ascending: true })
+          .order("created_at", { ascending: false })
           .limit(7)
       ])
     : [{ data: null }, { data: null }, { data: null }, { data: null }];
+
+  // The trend window is the LAST 7 scored runs; the query fetches them
+  // newest-first (descending + limit) and this reversal restores chronological
+  // order for sparklines and "vs. previous scan" deltas. Ascending + limit
+  // would instead pin the window to the project's 7 OLDEST runs forever
+  // (docs/geo-methodology-audit-2026-07.md, finding 1).
+  const trendHistory = [...(trendHistoryDesc ?? [])].reverse();
 
   /* ---- derived values ---- */
   const scoreDetails =
@@ -316,8 +338,6 @@ export default async function ProjectDetailPage({
   const citationShareResult: { share: number | null; ownCitations: number; totalCitations: number } = (() => {
     if (!allPromptResults?.length) return { share: null, ownCitations: 0, totalCitations: 0 };
 
-    const projectDomain = project.domain.replace(/^www\./, "").toLowerCase();
-
     let totalResolved = 0;
     let ownCitations = 0;
 
@@ -327,8 +347,7 @@ export default async function ProjectDetailPage({
         if (cit.source !== "grounding") continue;
         if (!cit.domain) continue;
         totalResolved += 1;
-        const citDomain = cit.domain.replace(/^www\./, "").toLowerCase();
-        if (citDomain === projectDomain || citDomain.endsWith(`.${projectDomain}`)) {
+        if (isOwnDomain(cit.domain, project.domain)) {
           ownCitations += 1;
         }
       }
@@ -343,14 +362,11 @@ export default async function ProjectDetailPage({
   })();
 
   /* ---- trend sparklines ---- */
-  const visTrend = (trendHistory ?? []).map((r) => n(r.visibility_score));
-  const citTrend = (trendHistory ?? []).map((r) => n(r.citation_score));
-  const gapTrend = (trendHistory ?? []).map((r) => n(r.competitor_gap_score));
-  const confTrend = (trendHistory ?? []).map(() => confidenceToPercent(runConfidence));
+  const visTrend = trendHistory.map((r) => n(r.visibility_score));
+  const gapTrend = trendHistory.map((r) => n(r.competitor_gap_score));
 
-  const prevScore = trendHistory && trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
+  const prevScore = trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
-  const citDelta = prevScore ? computedCitationRate - n(prevScore.citation_score) : 0;
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
 
   /* ---- competitor breakdown from extracted_json ---- */
@@ -430,9 +446,7 @@ export default async function ProjectDetailPage({
     .slice(0, 5)
     .map((p) => ({
       ...p,
-      isYours: Boolean(
-        p.domain && p.domain.replace(/^www\./, "").includes(project.domain.replace(/^www\./, ""))
-      )
+      isYours: isOwnDomain(p.domain, project.domain)
     }));
 
   const hasData = Boolean(latestCompletedRun && latestScore);
@@ -633,8 +647,15 @@ export default async function ProjectDetailPage({
                   {
                     l: "Tasa de cita",
                     v: computedCitationRate,
+                    // computedCitationRate counts rows with ANY citation
+                    // (citation_found), not own-domain citations — this legacy
+                    // fallback only renders for runs scored before geo-score-v1,
+                    // whose data predates the own-domain distinction
+                    // (docs/adr/0013). The tooltip must describe that broader
+                    // measure, not the stricter authority definition
+                    // (docs/geo-methodology-audit-2026-07.md, finding 8).
                     color: "#7c3aed",
-                    info: "Cuántas respuestas incluyen una cita verificada (grounding) a tu propio dominio. A diferencia de la mención, esta señal sí depende de contenido real que publiques y puedas mejorar."
+                    info: "Cuántas respuestas incluyen al menos una cita verificada (grounding) a alguna fuente, propia o de terceros. Este escaneo es anterior a la métrica actual de autoridad, que solo cuenta citas a tu propio dominio."
                   },
                   { l: "Presión competitiva", v: Math.min(100, competitorPressureScore), color: "#0d9488" }
                 ].map((c) => (
@@ -705,7 +726,11 @@ export default async function ProjectDetailPage({
                   ? confidenceLabels[runConfidence].charAt(0).toUpperCase() + confidenceLabels[runConfidence].slice(1)
                   : runConfidence,
                 unit: "",
-                trend: confTrend,
+                // No fabricated history: confidence is only computed for the
+                // latest run, so rendering it as a flat "trend" line would
+                // present a constant as if it were historical data
+                // (docs/geo-methodology-audit-2026-07.md, finding 7).
+                trend: [] as number[],
                 delta: 0,
                 color: "#0d9488",
                 hint: "Fiabilidad de la muestra de este escaneo.",
