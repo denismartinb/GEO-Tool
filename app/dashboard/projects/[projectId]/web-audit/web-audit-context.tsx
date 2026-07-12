@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { auditDomainCoverageAction } from "../actions";
+import { auditDomainCoverageAction, runTechnicalAuditAction } from "../actions";
 
 // Hard cap on how many times this drives the server action for one campaign
 // (WEB-AUDIT-CHAIN, mirrors AutoExecuteScan/SCAN-CHAIN-1). Each call audits up
@@ -18,6 +18,10 @@ const PACING_DELAY_MS = 1_200;
 // instead of cleanly resolving or rejecting, which would otherwise leave the
 // UI stuck on "Auditando…" forever with no error and no way to retry.
 const CALL_TIMEOUT_MS = 65_000;
+// Client-side guard for the piggybacked technical-audit call below —
+// comfortably above its own TECH_AUDIT_TOTAL_BUDGET_MS (25s server-side), for
+// the same "never hang forever on a dropped request" reason as CALL_TIMEOUT_MS.
+const TECH_AUDIT_CALL_TIMEOUT_MS = 30_000;
 // How many THROWN (not well-formed) failures in a row before giving up and
 // showing an error — a single dropped mobile-network request should not kill
 // a mostly-finished campaign (founder report: one hiccup on weak 4G ended the
@@ -143,6 +147,24 @@ export function WebAuditProvider({
               ? "Ya tenías la auditoría más reciente de este escaneo. Vuelve a lanzar un escaneo para auditar datos nuevos."
               : "Auditoría actualizada."
           );
+          // WEB-AUDIT-R2 (founder-approved 2026-07-12): "Auditar ahora" now
+          // also refreshes technical health, in the same click — coverage and
+          // technical share the same "auditoría web" mental model going
+          // forward, and each already carries its own independent 5/day rate
+          // limit (no new shared budget introduced). Fire-and-forget: errors
+          // and a spent rate limit are swallowed silently here, since this is
+          // a piggybacked call the user didn't explicitly ask for — it must
+          // never turn a successful coverage audit into something that reads
+          // as broken. The manual "Auditar salud técnica" button still
+          // surfaces its own errors when clicked directly. Its own 24h cache
+          // (technical-audit.ts) makes this a cheap no-op when the snapshot
+          // for this scan is already fresh.
+          try {
+            await withClientTimeout(runTechnicalAuditAction({ projectId }), TECH_AUDIT_CALL_TIMEOUT_MS);
+          } catch {
+            // swallowed — see comment above
+          }
+          if (abortedRef.current) return;
           router.refresh();
           return;
         }

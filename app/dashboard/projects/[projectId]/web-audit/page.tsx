@@ -8,6 +8,7 @@ import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
+import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import {
   buildActionPlan,
   extractMentionedCompetitors,
@@ -19,7 +20,16 @@ import {
 import { RunAuditButton } from "./run-audit-button";
 import { RunTechnicalAuditButton } from "./run-technical-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
-import { TopicChip } from "./topic-chip";
+import {
+  AuditTabsProvider,
+  AuditTabBar,
+  AuditTabPanel,
+  GoToTabButton,
+  QuadrantButton,
+  TopicFilterBar,
+  TopicGroupSection,
+  type TopicFilterCount
+} from "./audit-tabs";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
 import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
@@ -56,6 +66,16 @@ const TOPIC_LIST_ORDER: TopicOutcome[] = [
   "open_opportunity",
   "inconclusive"
 ];
+
+/** Segment colors for the coverage distribution bar in the Contenido tab. */
+const OUTCOME_BAR_COLOR: Record<TopicOutcome, string> = {
+  performing: "var(--pos)",
+  invisible: "var(--warn)",
+  content_gap: "var(--neg-ink)",
+  open_opportunity: "var(--info)",
+  unverified_cited: "var(--ink-3)",
+  inconclusive: "var(--line)"
+};
 
 const ACTION_KIND_META: Record<ActionItemKind, { label: string; linkLabel: string; badgeClass: string }> = {
   optimize: { label: "Optimizar página existente", linkLabel: "Cómo optimizar →", badgeClass: "badge-warn" },
@@ -129,6 +149,82 @@ function CheckDot({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
+/** Gauge ring for the hero's global "Preparación GEO" score. */
+function ScoreGauge({ score }: { score: number | null }) {
+  const size = 116;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const pct = score ?? 0;
+  const color = score === null ? "var(--ink-4)" : score < 40 ? "var(--neg-ink)" : score < 70 ? "var(--warn)" : "var(--pos)";
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={score === null ? "Preparación GEO sin datos" : `Preparación GEO ${score} de 100`}
+      style={{ flexShrink: 0 }}
+    >
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line-soft)" strokeWidth={stroke} />
+      {score !== null && (
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${(pct / 100) * c} ${c}`}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+      )}
+      <text
+        x="50%"
+        y="47%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        style={{ fontSize: 30, fontWeight: 800, letterSpacing: "-.02em", fill: "var(--ink)", fontVariantNumeric: "tabular-nums" }}
+      >
+        {score === null ? "—" : score}
+      </text>
+      <text x="50%" y="66%" textAnchor="middle" style={{ fontSize: 10.5, fontWeight: 600, fill: "var(--ink-4)" }}>
+        / 100
+      </text>
+    </svg>
+  );
+}
+
+function SubScoreTile({
+  label,
+  value,
+  hint,
+  delta
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  delta: number | null;
+}) {
+  return (
+    <div style={{ padding: "9px 11px", background: "var(--surface-2)", borderRadius: 10, minWidth: 0 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.01em", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+        {value}
+        {delta !== null && delta !== 0 && (
+          <span style={{ marginLeft: 6, fontSize: 12, fontWeight: 600 }}>
+            <Delta value={delta} suffix=" pt" />
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 2 }}>{hint}</div>
+    </div>
+  );
+}
+
 function PageAuditRow({ page }: { page: PageAuditEntry }) {
   let path: string;
   try {
@@ -151,38 +247,63 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
   }
 
   const { check } = page;
+  const guidance = buildPageCheckGuidance(check);
+  // Collapsed by default (WEB-AUDIT-R1): 10 pages × up to 7 guidance bullets
+  // was the page's biggest wall of text. The summary row keeps the verdict
+  // (score + failing-check count); the how-to-fix detail is one tap away.
+  const failingCount = guidance.length;
   return (
-    <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 6 }}>
-        <div style={{ minWidth: 0 }}>
+    <details className="wa-details">
+      <summary>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)", overflowWrap: "anywhere" }}>{path}</div>
-          <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{page.contextLabel}</div>
+          <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>
+            {page.contextLabel}
+            {failingCount > 0 ? ` · ${failingCount} ${failingCount === 1 ? "mejora pendiente" : "mejoras pendientes"}` : " · todo en orden"}
+          </div>
         </div>
-        <span className="badge badge-neutral" style={{ fontVariantNumeric: "tabular-nums" }}>{check.pageScore} / 100</span>
-      </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-        <CheckDot ok={check.structuredData.pass} label="Datos estructurados" />
-        <CheckDot ok={check.answerFormat.points === 30} label="Formato respuesta-primero" />
-        <CheckDot ok={check.metadata.points === 20} label="Metadatos" />
-        <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
-      </div>
-      {/* Deterministic "qué hacer" per failing sub-check (no LLM — see
-          buildPageCheckGuidance), reviewed with geo-strategy 2026-07-11:
-          founder report was that seeing red X's with no explanation left no
-          idea what to actually do. An AI-generated draft (rewritten title/
-          description/intro) is a separate, larger feature explicitly parked
-          for its own Task Intake — this is only the deterministic half. */}
-      {(() => {
-        const guidance = buildPageCheckGuidance(check);
-        return guidance.length > 0 ? (
-          <ul style={{ fontSize: 11.5, color: "var(--ink-3)", lineHeight: 1.5, margin: "8px 0 0", paddingLeft: 16 }}>
+        <span className="badge badge-neutral" style={{ fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+          {check.pageScore} / 100
+        </span>
+        <span className="wa-chev">
+          <Icon name="chevDown" size={14} />
+        </span>
+      </summary>
+      <div className="wa-details-body">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <CheckDot ok={check.structuredData.pass} label="Datos estructurados" />
+          <CheckDot ok={check.answerFormat.points === 30} label="Formato respuesta-primero" />
+          <CheckDot ok={check.metadata.points === 20} label="Metadatos" />
+          <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
+        </div>
+        {/* Deterministic "qué hacer" per failing sub-check (no LLM — see
+            buildPageCheckGuidance), reviewed with geo-strategy 2026-07-11:
+            founder report was that seeing red X's with no explanation left no
+            idea what to actually do. An AI-generated draft (rewritten title/
+            description/intro) is a separate, larger feature explicitly parked
+            for its own Task Intake — this is only the deterministic half. */}
+        {guidance.length > 0 && (
+          <ul
+            style={{
+              fontSize: 11.5,
+              color: "var(--ink-3)",
+              lineHeight: 1.5,
+              margin: "8px 0 0",
+              paddingLeft: 18,
+              listStyleType: "disc",
+              listStylePosition: "outside",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4
+            }}
+          >
             {guidance.map((line, i) => (
-              <li key={i}>{line}</li>
+              <li key={i} style={{ display: "list-item" }}>{line}</li>
             ))}
           </ul>
-        ) : null;
-      })()}
-    </div>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -258,129 +379,129 @@ function TopicRow({
   // read as "the AI doesn't know you" (founder-reported confusion).
   const showBrandMentionNote =
     (topic.outcome === "content_gap" || topic.outcome === "open_opportunity") && brandMentioned;
+
+  // Collapsed by default (WEB-AUDIT-R1): 49 fully-expanded topic cards were
+  // ~70% of the page's scroll. The summary row keeps outcome badge + topic;
+  // everything else (qué hacer, competitors, pages, AI note) expands on tap.
   return (
-    <div
-      style={{
-        padding: "12px 14px",
-        background: "var(--surface)",
-        border: "1px solid var(--line)",
-        borderRadius: 10
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-        <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
+    <details className="wa-details">
+      <summary>
+        <span className={`badge ${meta.badgeClass}`} style={{ flexShrink: 0 }}>{meta.label}</span>
         <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
           {topic.topic}
         </span>
-      </div>
-
-      {/* "Qué hacer" inline, per row — not just in the "Plan de acción"
-          summary card above (which caps at 5 items and requires scrolling
-          back up to find). Founder report (twice): looking at a single
-          topic row here gave no idea what to do about it, and clicking
-          through to Recomendaciones landed on a decontextualized page with
-          no explanation of the problem or the fix.
-          When a real recommendation matches this exact topic (only
-          add_citation_block/increase_brand_visibility can — see the query
-          above), show its own title + description right here; the link
-          becomes a secondary "ver más" action instead of the only place to
-          read anything. content_gap/unverified_cited topics have no
-          matching recommendation type in the engine yet, so they keep the
-          generic kind label + link — never inventing a problem statement
-          that doesn't exist. */}
-      {actionKind && (
-        <div
-          style={{
-            padding: "8px 10px",
-            margin: "0 0 8px",
-            background: "var(--surface-2)",
-            borderRadius: 8
-          }}
-        >
-          {recommendation ? (
-            <>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>
-                {recommendation.title}
-              </div>
-              <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
-                {recommendation.description}
-              </p>
-              <Link
-                href={recommendationHref(projectId, recommendation.id)}
-                style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
-              >
-                Ver en Recomendaciones →
-              </Link>
-            </>
-          ) : (
-            <>
-              {/* No real recommendation matches this topic (only
-                  add_citation_block/increase_brand_visibility ever can — see
-                  the query above) — the recommendation engine never
-                  generates a card for content_gap/open_opportunity/
-                  unverified_cited at all. Synthesize the guidance from data
-                  already on the topic instead of leaving a bare label + a
-                  link to a decontextualized page. Framed as "Sugerencia",
-                  not a title, and never linked with a #rec- anchor — this
-                  isn't a trackable/dismissible recommendation, and must
-                  never look like one. */}
-              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 3 }}>
-                Sugerencia · {ACTION_KIND_META[actionKind].label}
-              </div>
-              <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
-                {synthesizedGuidance(actionKind, competitors)}
-              </p>
-              <Link
-                href={recommendationHref(projectId, null)}
-                style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
-              >
-                Ver recomendaciones →
-              </Link>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* WEB-AUDIT-ACTION: only rendered for content_gap topics with at least
-          one AI-mentioned competitor — never inferred, straight from
-          extracted_json.competitors[].mentioned for this prompt's result. */}
-      {topic.outcome === "content_gap" && competitors.length > 0 && (
-        <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>
-          La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{competitors.join(", ")}</strong>
-        </p>
-      )}
-
-      {showBrandMentionNote && (
-        <p style={{ fontSize: 12, color: "var(--ink-2)", margin: "0 0 6px", fontWeight: 600 }}>
-          Tu marca sí aparece mencionada en la respuesta de la IA — pero sin contenido propio verificado ni una cita a
-          tu dominio. Esa mención viene de lo que el modelo ya sabe de ti, no de un activo que controles.
-        </p>
-      )}
-
-      {topic.pages.length > 0 && (
-        <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: "0 0 6px" }}>
-          {topic.pages.map((page, i) => (
-            <li key={i}>
-              <a
-                href={page.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "var(--accent)", overflowWrap: "anywhere" }}
-              >
-                {page.url}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <p style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>
-        {topic.note}
-        {topic.found && (
-          <span style={{ color: "var(--ink-4)" }}> (interpretación de la IA, revísala antes de confiar en ella)</span>
+        <span className="wa-chev">
+          <Icon name="chevDown" size={14} />
+        </span>
+      </summary>
+      <div className="wa-details-body">
+        {/* "Qué hacer" inline, per row — not just in the "Plan de acción"
+            summary card (founder report, twice: looking at a single topic row
+            gave no idea what to do about it, and clicking through to
+            Recomendaciones landed on a decontextualized page with no
+            explanation of the problem or the fix).
+            When a real recommendation matches this exact topic (only
+            add_citation_block/increase_brand_visibility can — see the query
+            in the page component), show its own title + description right
+            here; the link becomes a secondary "ver más" action instead of
+            the only place to read anything. content_gap/unverified_cited
+            topics have no matching recommendation type in the engine yet, so
+            they keep the generic kind label + link — never inventing a
+            problem statement that doesn't exist. */}
+        {actionKind && (
+          <div
+            style={{
+              padding: "8px 10px",
+              margin: "0 0 8px",
+              background: "var(--surface-2)",
+              borderRadius: 8
+            }}
+          >
+            {recommendation ? (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>
+                  {recommendation.title}
+                </div>
+                <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
+                  {recommendation.description}
+                </p>
+                <Link
+                  href={recommendationHref(projectId, recommendation.id)}
+                  style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
+                >
+                  Ver en Recomendaciones →
+                </Link>
+              </>
+            ) : (
+              <>
+                {/* No real recommendation matches this topic (only
+                    add_citation_block/increase_brand_visibility ever can — see
+                    the query above) — the recommendation engine never
+                    generates a card for content_gap/open_opportunity/
+                    unverified_cited at all. Synthesize the guidance from data
+                    already on the topic instead of leaving a bare label + a
+                    link to a decontextualized page. Framed as "Sugerencia",
+                    not a title, and never linked with a #rec- anchor — this
+                    isn't a trackable/dismissible recommendation, and must
+                    never look like one. */}
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 3 }}>
+                  Sugerencia · {ACTION_KIND_META[actionKind].label}
+                </div>
+                <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
+                  {synthesizedGuidance(actionKind, competitors)}
+                </p>
+                <Link
+                  href={recommendationHref(projectId, null)}
+                  style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
+                >
+                  Ver recomendaciones →
+                </Link>
+              </>
+            )}
+          </div>
         )}
-      </p>
-    </div>
+
+        {/* WEB-AUDIT-ACTION: only rendered for content_gap topics with at least
+            one AI-mentioned competitor — never inferred, straight from
+            extracted_json.competitors[].mentioned for this prompt's result. */}
+        {topic.outcome === "content_gap" && competitors.length > 0 && (
+          <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>
+            La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{competitors.join(", ")}</strong>
+          </p>
+        )}
+
+        {showBrandMentionNote && (
+          <p style={{ fontSize: 12, color: "var(--ink-2)", margin: "0 0 6px", fontWeight: 600 }}>
+            Tu marca sí aparece mencionada en la respuesta de la IA — pero sin contenido propio verificado ni una cita a
+            tu dominio. Esa mención viene de lo que el modelo ya sabe de ti, no de un activo que controles.
+          </p>
+        )}
+
+        {topic.pages.length > 0 && (
+          <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: "0 0 6px" }}>
+            {topic.pages.map((page, i) => (
+              <li key={i}>
+                <a
+                  href={page.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "var(--accent)", overflowWrap: "anywhere" }}
+                >
+                  {page.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <p style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>
+          {topic.note}
+          {topic.found && (
+            <span style={{ color: "var(--ink-4)" }}> (interpretación de la IA, revísala antes de confiar en ella)</span>
+          )}
+        </p>
+      </div>
+    </details>
   );
 }
 
@@ -433,44 +554,6 @@ function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: nu
   );
 }
 
-function Quadrant({
-  title,
-  count,
-  tone,
-  hint,
-  topics
-}: {
-  title: string;
-  count: number;
-  tone: "pos" | "warn" | "neg" | "neutral";
-  hint: string;
-  topics: ClassifiedTopic[];
-}) {
-  const toneVars: Record<string, { bg: string; fg: string; border: string }> = {
-    pos: { bg: "var(--pos-soft)", fg: "var(--pos-ink)", border: "var(--pos-soft)" },
-    warn: { bg: "var(--warn-soft)", fg: "var(--warn-ink)", border: "var(--warn-soft)" },
-    neg: { bg: "var(--neg-soft)", fg: "var(--neg-ink)", border: "var(--neg-soft)" },
-    neutral: { bg: "var(--surface-2)", fg: "var(--ink-3)", border: "var(--line)" }
-  };
-  const v = toneVars[tone];
-
-  return (
-    <div style={{ borderRadius: 10, padding: "10px 12px", border: `1px solid ${v.border}`, background: v.bg, minHeight: 108, minWidth: 0, overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 750, color: v.fg }}>
-        {title}
-        <span style={{ marginLeft: "auto", fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{count}</span>
-      </div>
-      <div style={{ fontSize: 10.5, color: "var(--ink-3)", margin: "2px 0 7px" }}>{hint}</div>
-      {topics.slice(0, 6).map((t) => (
-        <TopicChip key={t.promptId} topic={t.topic} />
-      ))}
-      {topics.length > 6 && (
-        <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>+{topics.length - 6} más</span>
-      )}
-    </div>
-  );
-}
-
 function TrendChart({ points }: { points: { generatedAt: string; coveragePct: number | null; surfacingPct: number | null }[] }) {
   const W = 440;
   const H = 190;
@@ -499,6 +582,11 @@ function TrendChart({ points }: { points: { generatedAt: string; coveragePct: nu
 
   const ariaLabel = `Cobertura ${points[0]?.coveragePct ?? "sin dato"}% a ${lastCov?.coveragePct ?? "sin dato"}%; aprovechamiento ${points[0]?.surfacingPct ?? "sin dato"}% a ${lastSur?.surfacingPct ?? "sin dato"}% en ${points.length} auditorías.`;
 
+  // Consecutive audits over the same scan share a calendar date — render each
+  // date label once (founder screenshot: "9 jul 2026 · 9 jul 20…" repeated,
+  // truncated, on the x-axis).
+  const xLabels = points.map((p) => formatDate(p.generatedAt));
+
   return (
     <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}>
       <g stroke="var(--line-soft)" strokeWidth={1}>
@@ -514,11 +602,14 @@ function TrendChart({ points }: { points: { generatedAt: string; coveragePct: nu
         ))}
       </g>
       <g fontSize={10} fill="var(--ink-4)" textAnchor="middle">
-        {points.map((p, i) => (
-          <text key={p.generatedAt} x={xFor(i)} y={H - 4}>
-            {formatDate(p.generatedAt)}
-          </text>
-        ))}
+        {points.map((p, i) => {
+          if (i > 0 && xLabels[i] === xLabels[i - 1]) return null;
+          return (
+            <text key={p.generatedAt} x={xFor(i)} y={H - 4}>
+              {xLabels[i]}
+            </text>
+          );
+        })}
       </g>
       {covPath && <path d={covPath} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
       {surPath && <path d={surPath} fill="none" stroke="var(--pos)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
@@ -662,6 +753,22 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     summary?.coveragePct !== null && summary?.coveragePct !== undefined && previousCoveragePct !== null
       ? summary.coveragePct - previousCoveragePct
       : null;
+  const previousSurfacingPct = trend.length >= 2 ? trend[trend.length - 2].surfacingPct : null;
+  const surfacingDelta =
+    summary?.surfacingPct !== null && summary?.surfacingPct !== undefined && previousSurfacingPct !== null
+      ? summary.surfacingPct - previousSurfacingPct
+      : null;
+
+  // WEB-AUDIT-R1: the hero's composite score — plain mean of the real signals
+  // available (see lib/web-audit/global-score.ts). Its breakdown renders right
+  // next to it, so the composite is never a black box; a component that has
+  // never been computed (e.g. technical audit not yet run) is excluded, not
+  // faked as 0.
+  const globalScore = buildGlobalScore({
+    coveragePct: summary?.coveragePct ?? null,
+    surfacingPct: summary?.surfacingPct ?? null,
+    technicalScore: technicalSnapshot?.readiness_score ?? null
+  });
 
   // WEB-AUDIT-ACTION: competitor names the AI actually mentioned per topic,
   // and a deep-link to the matching `add_citation_block` recommendation when
@@ -734,9 +841,19 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     recommendationIdByPromptId.set(promptId, rec.id);
   }
 
+  // Full prioritized list (WEB-AUDIT-R1): the Resumen tab shows the top 3
+  // expanded and folds the rest behind a native "Ver todas" expander, instead
+  // of the old hard cap of 5 with no way to see beyond it.
   const actionPlan = summary
-    ? buildActionPlan({ summary, competitorsByPromptId, recommendationIdByPromptId })
+    ? buildActionPlan({
+        summary,
+        competitorsByPromptId,
+        recommendationIdByPromptId,
+        limit: summary.topics.length
+      })
     : [];
+  const topActions = actionPlan.slice(0, 3);
+  const restActions = actionPlan.slice(3);
 
   const grouped: Record<TopicOutcome, ClassifiedTopic[]> = {
     performing: [],
@@ -749,6 +866,18 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   for (const topic of summary?.topics ?? []) {
     grouped[topic.outcome].push(topic);
   }
+
+  const filterOptions: TopicFilterCount[] = [
+    { id: "all", label: "Todos", count: summary?.topics.length ?? 0 },
+    ...TOPIC_LIST_ORDER.filter((outcome) => grouped[outcome].length > 0).map((outcome) => ({
+      id: outcome as TopicFilterCount["id"],
+      label: OUTCOME_META[outcome].label,
+      count: grouped[outcome].length
+    }))
+  ];
+
+  const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;
+  const allowedBotsCount = technicalSnapshot ? technicalSnapshot.bots.bots.filter((b) => b.allowed).length : 0;
 
   return (
     <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAudit}>
@@ -831,15 +960,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           </div>
         ))}
 
-      <div className="summary mt8">
-        <div className="summary-ico">
-          <Icon name="search" size={20} />
-        </div>
-        <p className="summary-txt">
-          Tu dominio visto como lo ve la IA: qué contenido tienes y si las respuestas de IA lo aprovechan.
-        </p>
-      </div>
-
       {/* Gated / empty states */}
       {!canAudit ? (
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
@@ -872,8 +992,8 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             Todavía no has auditado tu web
           </div>
           <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-            La auditoría comprueba, tema a tema, si tu dominio publica contenido que Google encuentra, y lo cruza con
-            las citas de tu último escaneo.
+            Tu dominio visto como lo ve la IA: la auditoría comprueba, tema a tema, si tu dominio publica contenido
+            que Google encuentra, y lo cruza con las citas de tu último escaneo.
           </p>
           <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
           {/* Both RunAuditButton instances on this page share one campaign
@@ -889,216 +1009,159 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           )}
         </div>
       ) : (
-        <>
-          {/* KPI row */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12, marginTop: 14 }}>
-            <div className="card" style={{ padding: "13px 15px 11px" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                Cobertura de temas
-              </div>
-              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-                {summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
-                <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>temas</small>
-                {coverageDelta !== null && coverageDelta !== 0 && <Delta value={coverageDelta} suffix=" pt" />}
-              </div>
-              <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 6 }}>
-                temas de tus prompts con contenido propio verificado
+        <AuditTabsProvider>
+          {/* HERO (WEB-AUDIT-R1): one composite verdict + its breakdown,
+              replacing the old 4-tile KPI row that mixed units (fractions,
+              scores, counts) with no hierarchy. */}
+          <div className="card" style={{ marginTop: 14, padding: "16px 18px" }}>
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 20 }}>
+              <ScoreGauge score={globalScore.score} />
+              <div style={{ flex: 1, minWidth: 240 }}>
+                <div style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
+                  Diagnóstico general
+                  <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas aprovechados por la IA y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
+                </div>
+                {globalScore.includedCount < 3 && (
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
+                    Media de {globalScore.includedCount} {globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
+                  <SubScoreTile
+                    label="Contenido"
+                    value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
+                    hint="temas con contenido propio verificado"
+                    delta={coverageDelta}
+                  />
+                  <SubScoreTile
+                    label="Aprovechamiento"
+                    value={summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
+                    hint={
+                      summary.surfacingPct !== null && grouped.invisible.length > 0
+                        ? `palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
+                        : "de tus temas con contenido, cuántos cita la IA"
+                    }
+                    delta={surfacingDelta}
+                  />
+                  <SubScoreTile
+                    label="Salud técnica"
+                    value={
+                      technicalSnapshot
+                        ? technicalSnapshot.readiness_score === null
+                          ? "—"
+                          : `${technicalSnapshot.readiness_score} / 100`
+                        : "Sin auditar"
+                    }
+                    hint={
+                      technicalSnapshot
+                        ? `media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
+                        : "lánzala desde la pestaña Salud técnica"
+                    }
+                    delta={null}
+                  />
+                </div>
               </div>
             </div>
-            <div className="card" style={{ padding: "13px 15px 11px" }}>
-              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                Temas aprovechados por la IA
+          </div>
+
+          <AuditTabBar />
+
+          {/* ─── Resumen ─── */}
+          <AuditTabPanel id="resumen">
+            {/* Plan de acción — the first actionable thing after the verdict,
+                closing the "¿y ahora qué hago?" the matrix on its own leaves
+                open (WEB-AUDIT-ACTION), now the protagonist of the default
+                tab (WEB-AUDIT-R1). */}
+            <div className="card" style={{ marginTop: 12 }}>
+              <div style={{ padding: "13px 16px 0" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                  Las acciones de mayor palanca según la matriz, de más a menos urgentes.
+                </div>
               </div>
-              {/* Fraction (like the coverage tile), not a bare percentage: a
-                  giant "0 %" read as a failing grade when it actually flags
-                  the fastest lever — pages that exist but aren't cited yet. */}
-              <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-                {summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
-                {summary.surfacingPct !== null && (
-                  <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>temas</small>
+              <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                {actionPlan.length > 0 ? (
+                  <>
+                    {topActions.map((item, i) => (
+                      <ActionPlanRow key={item.promptId} item={item} index={i + 1} projectId={projectId} />
+                    ))}
+                    {restActions.length > 0 && (
+                      <details className="wa-more">
+                        <summary>Ver todas las acciones ({actionPlan.length})</summary>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {restActions.map((item, i) => (
+                            <ActionPlanRow key={item.promptId} item={item} index={i + 4} projectId={projectId} />
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                  </>
+                ) : (
+                  <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                    Tu contenido propio está rindiendo — nada urgente que crear ahora.
+                  </p>
                 )}
               </div>
-              <div style={{ fontSize: 10.5, marginTop: 6, color: grouped.invisible.length > 0 ? "var(--ink-2)" : "var(--ink-4)", fontWeight: grouped.invisible.length > 0 ? 650 : 400 }}>
-                {summary.surfacingPct === null
-                  ? "de tus temas con contenido propio, cuántos cita la IA"
-                  : grouped.invisible.length > 0
-                    ? `Tu palanca más rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema con página propia que la IA aún no cita" : "temas con página propia que la IA aún no cita"}`
-                    : "La IA ya cita todos tus temas con contenido propio"}
-              </div>
             </div>
 
-            {/* WEB-AUDIT-2: technical-audit KPI tiles. Render ONLY when a
-                snapshot exists (never a placeholder "—" tile for a check
-                that has never run — that reads as broken, not "not run
-                yet"). */}
-            {technicalSnapshot && (
-              <>
-                <div className="card" style={{ padding: "13px 15px 11px" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                    Preparación GEO
-                  </div>
-                  <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-                    {technicalSnapshot.readiness_score === null ? "—" : technicalSnapshot.readiness_score}
-                    <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>/ 100</small>
-                  </div>
-                  <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 6 }}>
-                    media de {technicalSnapshot.pages.filter((p) => p.status === "analyzed").length} páginas clave
-                  </div>
-                </div>
-                <div className="card" style={{ padding: "13px 15px 11px" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                    Acceso bots IA
-                  </div>
-                  <div style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", marginTop: 4, fontVariantNumeric: "tabular-nums" }}>
-                    {technicalSnapshot.bots.bots.filter((b) => b.allowed).length} / {technicalSnapshot.bots.bots.length}
-                    <small style={{ fontSize: 13, color: "var(--ink-4)", fontWeight: 600, marginLeft: 6 }}>permitidos</small>
-                  </div>
-                  <div style={{ fontSize: 10.5, marginTop: 6, color: "var(--ink-4)" }}>
-                    {!technicalSnapshot.bots.llmsTxtFound
-                      ? "llms.txt no encontrado"
-                      : technicalSnapshot.bots.bots.some((b) => !b.allowed)
-                        ? `Bloqueado: ${technicalSnapshot.bots.bots.filter((b) => !b.allowed).map((b) => b.agent).join(", ")}`
-                        : "Todos los bots rastreados tienen acceso"}
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Plan de acción (WEB-AUDIT-ACTION) — the first accionable thing
-              after the KPIs, closing the "¿y ahora qué hago?" the matrix on
-              its own leaves open. */}
-          <div className="card" style={{ marginTop: 12 }}>
-            <div style={{ padding: "13px 16px 0" }}>
-              <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
-              <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                Las acciones de mayor palanca según la matriz, de más a menos urgentes.
-              </div>
-            </div>
-            <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-              {actionPlan.length > 0 ? (
-                actionPlan.map((item, i) => (
-                  <ActionPlanRow key={item.promptId} item={item} index={i + 1} projectId={projectId} />
-                ))
-              ) : (
-                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
-                  Tu contenido propio está rindiendo — nada urgente que crear ahora.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
-              AI-bot access, independent from the Gemini-driven coverage
-              audit above. One shared button drives both cards. */}
-          <div className="section-head" style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-            <div>
-              <div className="section-title">Salud técnica GEO</div>
-              <div className="section-desc">
-                {technicalSnapshot
-                  ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
-                  : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
-              </div>
-            </div>
-            <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
-          </div>
-          {technicalSnapshot ? (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
-              <div className="card">
-                <div style={{ padding: "13px 16px 0" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
-                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                    Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA.
-                  </div>
-                </div>
-                <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                  {technicalSnapshot.pages.map((page, i) => (
-                    <PageAuditRow key={`${page.url}-${i}`} page={page} />
-                  ))}
-                </div>
-              </div>
-              <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
-            </div>
-          ) : (
-            <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
-              Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
-            </p>
-          )}
-
-          {/* Opportunity matrix + trend — auto-fit so the two cards sit side by
-              side on desktop but stack (never squash) on mobile; with only the
-              matrix (no trend yet) auto-fit collapses the empty track to full
-              width. */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
-            <div className="card">
+            {/* Opportunity matrix as navigation: counts only, tap → Contenido
+                tab pre-filtered. The topics themselves render exactly once,
+                in that tab (founder report: every topic used to appear up to
+                three times on one endless page). */}
+            <div className="card" style={{ marginTop: 12 }}>
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750, display: "flex", alignItems: "center" }}>
                   Matriz de oportunidad
-                  <InfoTip text="Cruza dos señales que sí controlas: contenido propio que Google indexa, y citas verificadas a tu dominio en las respuestas de la IA. No mide si la IA menciona tu marca por lo que ya sabe de ella — puedes salir en 'Hueco de contenido' aunque la IA te nombre primero; mira el detalle por tema para verlo." />
+                  <InfoTip text="Cruza dos señales que sí controlas: contenido propio que Google indexa, y citas verificadas a tu dominio en las respuestas de la IA. No mide si la IA menciona tu marca por lo que ya sabe de ella — puedes salir en 'Hueco de contenido' aunque la IA te nombre primero; abre un tema en la pestaña Contenido para verlo." />
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                  Cada tema de tus prompts, cruzando contenido propio verificado × citas en el último escaneo.
+                  Cada tema de tus prompts, cruzando contenido propio verificado × citas en el último escaneo. Toca un
+                  cuadrante para ver sus temas.
                 </div>
               </div>
               <div style={{ padding: "14px 16px 16px" }}>
-                {/* minmax(0, 1fr) — not "1fr" — so the nowrap topic chips inside
-                    the quadrants can't force the tracks to their min-content
-                    width and overflow the card horizontally on mobile. */}
+                {/* minmax(0, 1fr) — not "1fr" — so the quadrant buttons can't
+                    force the tracks past the card's width on mobile. */}
                 <div style={{ display: "grid", gridTemplateColumns: "18px minmax(0, 1fr) minmax(0, 1fr)", gridTemplateRows: "1fr 1fr 18px", gap: 6 }}>
                   <div style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", gridRow: "1 / 3", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)", display: "grid", placeItems: "center" }}>
                     Con contenido propio
                   </div>
-                  <Quadrant
+                  <QuadrantButton
                     title="⚠ Invisible para la IA"
                     count={grouped.invisible.length}
                     tone="warn"
                     hint="Tienes página, pero la IA no la cita → optimizar"
-                    topics={grouped.invisible}
+                    target="invisible"
                   />
-                  <Quadrant
+                  <QuadrantButton
                     title="✓ Rindiendo"
                     count={grouped.performing.length}
                     tone="pos"
                     hint="Contenido propio citado por la IA → mantener"
-                    topics={grouped.performing}
+                    target="performing"
                   />
-                  <div style={{ borderRadius: 10, padding: "10px 12px", border: "1px solid var(--neg-soft)", background: "var(--neg-soft)", minHeight: 108, minWidth: 0, overflow: "hidden" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 750, color: "var(--neg-ink)" }}>
-                      ✕ Sin contenido propio
-                      <span style={{ marginLeft: "auto", fontSize: 16, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>
-                        {grouped.content_gap.length + grouped.open_opportunity.length}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 10.5, color: "var(--ink-3)", margin: "2px 0 7px" }}>
-                      Sin página propia y sin citas → crear contenido
-                    </div>
-                    {grouped.content_gap.length > 0 && (
-                      <div style={{ marginBottom: 4 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--neg-ink)" }}>
-                          Compite un rival ({grouped.content_gap.length})
-                        </div>
-                        {grouped.content_gap.slice(0, 4).map((t) => (
-                          <TopicChip key={t.promptId} topic={t.topic} style={{ margin: "2px 0 0" }} />
-                        ))}
-                      </div>
-                    )}
-                    {grouped.open_opportunity.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--ink-3)" }}>
-                          Nadie destaca aún ({grouped.open_opportunity.length})
-                        </div>
-                        {grouped.open_opportunity.slice(0, 4).map((t) => (
-                          <TopicChip key={t.promptId} topic={t.topic} style={{ margin: "2px 0 0" }} />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <Quadrant
+                  <QuadrantButton
+                    title="✕ Sin contenido propio"
+                    count={grouped.content_gap.length + grouped.open_opportunity.length}
+                    tone="neg"
+                    hint="Sin página propia y sin citas → crear contenido"
+                    target="no_content"
+                    extra={
+                      grouped.content_gap.length + grouped.open_opportunity.length > 0 ? (
+                        <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
+                          {grouped.content_gap.length > 0 && `Compite un rival: ${grouped.content_gap.length}`}
+                          {grouped.content_gap.length > 0 && grouped.open_opportunity.length > 0 && " · "}
+                          {grouped.open_opportunity.length > 0 && `Nadie destaca aún: ${grouped.open_opportunity.length}`}
+                        </span>
+                      ) : undefined
+                    }
+                  />
+                  <QuadrantButton
                     title="◌ Citado sin contenido verificado"
                     count={grouped.unverified_cited.length}
                     tone="neutral"
                     hint="La IA te cita por otra vía, sin página verificada → capturar"
-                    topics={grouped.unverified_cited}
+                    target="unverified_cited"
                   />
                   <div style={{ gridColumn: "2 / 4", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)", display: "grid", placeItems: "center" }}>
                     La IA no te cita → sí te cita
@@ -1114,8 +1177,135 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             </div>
 
-            {trend.length >= 2 && (
-              <div className="card">
+            {/* Compact technical status — one line per signal; the detail
+                lives once, in its own tab. Expanded only when something is
+                actually wrong (a blocked bot deserves attention; seven green
+                "Permitido" rows don't). */}
+            <div className="card" style={{ marginTop: 12 }}>
+              <div style={{ padding: "13px 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>Salud técnica</span>
+                  <span style={{ fontSize: 12, color: "var(--ink-3)", flex: 1, minWidth: 0 }}>
+                    {technicalSnapshot
+                      ? technicalSnapshot.readiness_score === null
+                        ? "Ninguna página clave se pudo analizar en la última auditoría técnica."
+                        : `${technicalSnapshot.readiness_score} / 100 · media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"} · ${formatDate(technicalSnapshot.created_at)}`
+                      : "Todavía no has auditado la salud técnica de tu web."}
+                  </span>
+                  <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>Bots de IA</span>
+                  <span style={{ fontSize: 12, color: "var(--ink-3)", flex: 1, minWidth: 0 }}>
+                    {technicalSnapshot ? (
+                      <>
+                        {allowedBotsCount} / {technicalSnapshot.bots.bots.length} con acceso
+                        {technicalSnapshot.bots.bots.some((b) => !b.allowed) &&
+                          ` · bloqueado: ${technicalSnapshot.bots.bots.filter((b) => !b.allowed).map((b) => b.agent).join(", ")}`}
+                        {" · llms.txt "}
+                        {technicalSnapshot.bots.llmsTxtFound ? "encontrado ✓" : "no encontrado"}
+                      </>
+                    ) : (
+                      "Se comprueban con la auditoría técnica (robots.txt y llms.txt)."
+                    )}
+                  </span>
+                  <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
+                </div>
+              </div>
+            </div>
+          </AuditTabPanel>
+
+          {/* ─── Contenido ─── */}
+          <AuditTabPanel id="contenido">
+            <div className="section-head" style={{ marginTop: 16 }}>
+              <div className="section-title">Detalle por tema</div>
+              <div className="section-desc">{summary.topics.length} temas auditados · toca un tema para ver qué hacer</div>
+            </div>
+
+            {/* Distribution bar: how the audited topics split across
+                outcomes, in the same colors as their badges/quadrants. */}
+            {summary.topics.length > 0 && (
+              <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", margin: "10px 0 2px", background: "var(--surface-2)" }}>
+                {TOPIC_LIST_ORDER.filter((outcome) => grouped[outcome].length > 0).map((outcome) => (
+                  <div
+                    key={outcome}
+                    title={`${OUTCOME_META[outcome].label}: ${grouped[outcome].length}`}
+                    style={{
+                      width: `${(grouped[outcome].length / summary.topics.length) * 100}%`,
+                      background: OUTCOME_BAR_COLOR[outcome]
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            <TopicFilterBar options={filterOptions} />
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {TOPIC_LIST_ORDER.map((outcome) =>
+                grouped[outcome].length > 0 ? (
+                  <TopicGroupSection key={outcome} outcome={outcome}>
+                    {grouped[outcome].map((topic) => (
+                      <TopicRow
+                        key={topic.promptId}
+                        topic={topic}
+                        competitors={competitorsByPromptId.get(topic.promptId) ?? []}
+                        brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
+                        recommendation={recommendationByPromptId.get(topic.promptId) ?? null}
+                        projectId={projectId}
+                      />
+                    ))}
+                  </TopicGroupSection>
+                ) : null
+              )}
+            </div>
+          </AuditTabPanel>
+
+          {/* ─── Salud técnica ─── */}
+          <AuditTabPanel id="tecnica">
+            {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
+                AI-bot access, independent from the Gemini-driven coverage
+                audit. */}
+            <div className="section-head" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <div className="section-title">Salud técnica GEO</div>
+                <div className="section-desc">
+                  {technicalSnapshot
+                    ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
+                    : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
+                </div>
+              </div>
+              <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
+            </div>
+            {technicalSnapshot ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
+                <div className="card">
+                  <div style={{ padding: "13px 16px 0" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                      Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA. Toca una
+                      página para ver qué mejorar.
+                    </div>
+                  </div>
+                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {technicalSnapshot.pages.map((page, i) => (
+                      <PageAuditRow key={`${page.url}-${i}`} page={page} />
+                    ))}
+                  </div>
+                </div>
+                <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
+              </div>
+            ) : (
+              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
+                Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
+              </p>
+            )}
+          </AuditTabPanel>
+
+          {/* ─── Evolución ─── */}
+          <AuditTabPanel id="evolucion">
+            {trend.length >= 2 ? (
+              <div className="card" style={{ marginTop: 16 }}>
                 <div style={{ padding: "13px 16px 0" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
@@ -1136,27 +1326,41 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   <TrendChart points={trend} />
                 </div>
               </div>
+            ) : (
+              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 16 }}>
+                Necesitas al menos dos auditorías sobre escaneos distintos para ver la evolución. Lanza un nuevo
+                escaneo y vuelve a auditar para empezar a comparar.
+              </p>
             )}
-          </div>
 
-          {/* Topic detail list, grouped by outcome */}
-          <div className="section-head" style={{ marginTop: 20 }}>
-            <div className="section-title">Detalle por tema</div>
-            <div className="section-desc">{summary.topics.length} temas auditados</div>
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {TOPIC_LIST_ORDER.flatMap((outcome) => grouped[outcome]).map((topic) => (
-              <TopicRow
-                key={topic.promptId}
-                topic={topic}
-                competitors={competitorsByPromptId.get(topic.promptId) ?? []}
-                brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
-                recommendation={recommendationByPromptId.get(topic.promptId) ?? null}
-                projectId={projectId}
-              />
-            ))}
-          </div>
-        </>
+            {trend.length > 0 && (
+              <div className="card" style={{ marginTop: 12 }}>
+                <div style={{ padding: "13px 16px 0" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 750 }}>Historial de auditorías</div>
+                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                    Una entrada por escaneo auditado (máx. las 8 más recientes).
+                  </div>
+                </div>
+                <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {[...trend].reverse().map((point) => (
+                    <div
+                      key={point.scanId}
+                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 10px", borderRadius: 8, background: "var(--surface-2)", flexWrap: "wrap" }}
+                    >
+                      <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>{formatDate(point.generatedAt)}</span>
+                      <span style={{ fontSize: 11.5, color: "var(--ink-3)", marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>
+                        Cobertura: {point.coveragePct === null ? "—" : `${point.coveragePct}%`}
+                      </span>
+                      <span style={{ fontSize: 11.5, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums" }}>
+                        Aprovechamiento: {point.surfacingPct === null ? "—" : `${point.surfacingPct}%`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </AuditTabPanel>
+        </AuditTabsProvider>
       )}
 
       {/* Footer links */}
