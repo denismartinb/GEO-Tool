@@ -9,25 +9,23 @@ import { updateNotificationPreference, type NotificationPreferenceKey } from "@/
 
 type NotificationKey = "visibility" | "competitor" | "weekly" | "recs" | "scan" | "product";
 
-// Only "visibility" sends a real email today (ALERTS-1 Fase 6a). The other
-// five are shown disabled with a "Próximamente" badge instead of a live
-// toggle: none of them controls an email that actually exists yet — "weekly"
-// persists a real column (notify_weekly_digest) but the digest itself is
-// Fase 6b, still unbuilt, so leaving it toggleable implied a Monday email
-// that would never arrive (docs/ux-qa-audit-2026-07.md, findings 2 and 3).
+// "visibility" (Fase 6a) and "weekly" (Fase 6b) send real emails now — both
+// have a working backend (score-drop alert; weekly digest cron, gated
+// behind CRON_DIGEST_ENABLED until the founder turns it on in Vercel). The
+// other three still show disabled with a "Próximamente" badge: none of them
+// controls an email that actually exists yet (docs/ux-qa-audit-2026-07.md,
+// findings 2 and 3).
 const ROWS: { key: NotificationKey; title: string; desc: string; comingSoon?: boolean; last?: boolean }[] = [
   { key: "visibility", title: "Cambios de visibilidad", desc: "Cuando tu GEO Score sube o baja de forma significativa" },
+  { key: "weekly", title: "Resumen semanal", desc: "Un email cada lunes con la evolución de la semana" },
   { key: "competitor", title: "Movimientos de competidores", desc: "Cuando un competidor te adelanta o pierde posiciones", comingSoon: true },
-  { key: "weekly", title: "Resumen semanal", desc: "Un email cada lunes con la evolución de la semana", comingSoon: true },
   { key: "recs", title: "Nuevas recomendaciones", desc: "Cuando se generan acciones prioritarias para tu marca", comingSoon: true },
   { key: "scan", title: "Escaneos completados", desc: "Aviso cada vez que termina un escaneo", comingSoon: true },
   { key: "product", title: "Novedades de producto", desc: "Mejoras y nuevas funciones de GEO Studio", comingSoon: true, last: true }
 ];
 
-// visibility/weekly are persisted server-side (ALERTS-1 Fase 6a); the rest
-// stay client-only placeholders until their own phase. Kept even for
-// "weekly" so the stored preference survives until Fase 6b ships the digest
-// and can re-enable the toggle without a data migration.
+// visibility (Fase 6a) and weekly (Fase 6b) are persisted server-side; the
+// rest stay client-only placeholders until their own phase.
 const PERSISTED_KEYS: Partial<Record<NotificationKey, NotificationPreferenceKey>> = {
   visibility: "notify_score_drop_alert",
   weekly: "notify_weekly_digest"
