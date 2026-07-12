@@ -371,3 +371,13 @@ de", "as of", "última actualización"…); la narración histórica ("fundada
 en 1975") deja de disparar la card. `STALE_PHRASES` sin cambios. Tests
 actualizados (el que fijaba el comportamiento antiguo ahora fija el nuevo)
 + 2 casos nuevos. Queda la Fase D y, aparte, la Fase E (Task Intake).
+
+**Estado (2026-07-12, cont.):** #215 (Fase C) mergeado. **Fase D
+implementada** en el PR siguiente: la card "Oportunidades de prompts" del
+Overview deja de ser un placeholder que prometía "próxima actualización" y
+muestra la lista real — prompts del último escaneo donde la IA menciona a
+un competidor y no a la marca (misma señal que usan las reglas de
+competidor del motor), agregando los competidores ganadores entre motores,
+con estado vacío honesto y enlace a Recomendaciones. Solo display; con la
+Fase D quedan cerradas A–D. Pendiente únicamente la Fase E (geo-score-v2),
+gatillada a su Task Intake con `geo-strategy`.
