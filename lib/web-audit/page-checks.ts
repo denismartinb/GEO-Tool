@@ -1,8 +1,17 @@
 /**
  * Deterministic, no-LLM technical GEO checks for a single fetched page
- * (WEB-AUDIT-2). Pure string/regex scans over raw HTML — no DOM library
- * dependency (see docs/specs/web-audit/phase-2-technical-audit.md). No I/O,
- * fully unit-testable.
+ * (WEB-AUDIT-2, expanded under WEB-AUDIT-R3 with indexing/citability/OG
+ * signals — founder-approved 2026-07-12). Pure string/regex scans over raw
+ * HTML — no DOM library dependency (see
+ * docs/specs/web-audit/phase-2-technical-audit.md). No I/O, fully
+ * unit-testable.
+ *
+ * R3 rescaled every existing check's point weight to make room for the new
+ * indexing/citability dimensions while keeping the total at 100 — see the
+ * weights inline below. This means `pageScore` for the SAME page can differ
+ * before/after this change even with no content change on the audited site;
+ * the UI surfaces "criterios ampliados" alongside the score so this never
+ * reads as a silent regression.
  */
 
 const STRUCTURED_DATA_TYPES = new Set([
@@ -30,6 +39,7 @@ export type MetadataCheck = {
   points: number;
   titleOk: boolean;
   descriptionOk: boolean;
+  ogOk: boolean;
   /** Raw lengths backing titleOk/descriptionOk — surfaced for the same reason as h1Count/h2Count above. */
   titleLength: number;
   descriptionLength: number;
@@ -37,13 +47,40 @@ export type MetadataCheck = {
 export type FreshnessStatus = "fresh" | "aging" | "stale" | "unknown";
 export type FreshnessCheck = { status: FreshnessStatus; points: number; date: string | null };
 
+export type IndexabilityCheck = {
+  points: number;
+  canonicalPresent: boolean;
+  /** true only when a canonical tag exists AND resolves to the audited domain (or a subdomain of it). */
+  canonicalOk: boolean;
+  canonicalUrl: string | null;
+  /** true when a <meta name="robots" content="..."> tag contains "noindex". Absence of the tag means indexable (the default). */
+  noindex: boolean;
+  hreflangPresent: boolean;
+};
+
+export type CitabilityCheck = {
+  points: number;
+  hasListOrTable: boolean;
+  /** Word count over visible text only — <script>/<style> block contents are excluded, see stripToVisibleText. */
+  wordCount: number;
+  contentOk: boolean;
+};
+
 export type PageCheckResult = {
   structuredData: StructuredDataCheck;
   answerFormat: AnswerFormatCheck;
   metadata: MetadataCheck;
   freshness: FreshnessCheck;
-  /** 0-100, rescaled from an 80-point baseline when freshness is unknown (see buildPageCheckResult). */
+  indexability: IndexabilityCheck;
+  citability: CitabilityCheck;
+  /** 0-100, rescaled from an 85-point baseline when freshness is unknown (see buildPageCheckResult). */
   pageScore: number;
+};
+
+export type PageCheckContext = {
+  /** The page's own (post-redirect) URL — used to resolve a relative canonical href to an absolute one. */
+  pageUrl: string;
+  projectDomainNormalized: string;
 };
 
 const LD_JSON_RE = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -83,6 +120,12 @@ function stripTags(html: string): string {
   return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Like stripTags, but drops <script>/<style> block CONTENTS first — a JSON-LD blob or a CSS rule is not visible text and must never count toward the content-length check. */
+function stripToVisibleText(html: string): string {
+  const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
+  return stripTags(withoutScripts);
+}
+
 export function checkAnswerFormat(html: string, structuredData: StructuredDataCheck): AnswerFormatCheck {
   const h1Matches = html.match(/<h1[\s>]/gi) ?? [];
   const h2Matches = html.match(/<h2[\s>]/gi) ?? [];
@@ -103,8 +146,27 @@ export function checkAnswerFormat(html: string, structuredData: StructuredDataCh
     }
   }
 
-  const points = (hasOneH1 ? 10 : 0) + (hasTwoH2 ? 10 : 0) + (hasAnswerFirstIntro ? 10 : 0);
+  // R3 weight: 5+5+5 = 15 (was 10+10+10 = 30 pre-R3) — see module header.
+  const points = (hasOneH1 ? 5 : 0) + (hasTwoH2 ? 5 : 0) + (hasAnswerFirstIntro ? 5 : 0);
   return { points, hasOneH1, hasTwoH2, hasAnswerFirstIntro, h1Count: h1Matches.length, h2Count: h2Matches.length };
+}
+
+function getAttr(tag: string, name: string): string | null {
+  const re = new RegExp(`${name}\\s*=\\s*["']([^"']*)["']`, "i");
+  const match = tag.match(re);
+  return match ? match[1] : null;
+}
+
+function checkOpenGraph(html: string): { ok: boolean; titleFound: boolean; descriptionFound: boolean } {
+  const titleMatch =
+    html.match(/<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']*)["'][^>]*>/i) ??
+    html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:title["'][^>]*>/i);
+  const descMatch =
+    html.match(/<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']*)["'][^>]*>/i) ??
+    html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:description["'][^>]*>/i);
+  const titleFound = Boolean(titleMatch?.[1]?.trim());
+  const descriptionFound = Boolean(descMatch?.[1]?.trim());
+  return { ok: titleFound && descriptionFound, titleFound, descriptionFound };
 }
 
 export function checkMetadata(html: string): MetadataCheck {
@@ -118,8 +180,11 @@ export function checkMetadata(html: string): MetadataCheck {
   const description = descMatch ? descMatch[1].trim() : "";
   const descriptionOk = description.length >= 50 && description.length <= 160;
 
-  const points = (titleOk ? 10 : 0) + (descriptionOk ? 10 : 0);
-  return { points, titleOk, descriptionOk, titleLength: title.length, descriptionLength: description.length };
+  const ogOk = checkOpenGraph(html).ok;
+
+  // R3 weight: 5+5+5 = 15 (was 10+10 = 20 pre-R3) — see module header.
+  const points = (titleOk ? 5 : 0) + (descriptionOk ? 5 : 0) + (ogOk ? 5 : 0);
+  return { points, titleOk, descriptionOk, ogOk, titleLength: title.length, descriptionLength: description.length };
 }
 
 function parseDate(raw: string | undefined | null): Date | null {
@@ -153,44 +218,141 @@ export function checkFreshness(html: string, now: Date): FreshnessCheck {
   if (!date) return { status: "unknown", points: 0, date: null };
 
   const ageDays = (now.getTime() - date.getTime()) / MS_PER_DAY;
-  if (ageDays <= 180) return { status: "fresh", points: 20, date: date.toISOString() };
-  if (ageDays <= 540) return { status: "aging", points: 10, date: date.toISOString() };
+  // R3 weight: fresh=15, aging=8 (was 20/10 pre-R3) — see module header.
+  if (ageDays <= 180) return { status: "fresh", points: 15, date: date.toISOString() };
+  if (ageDays <= 540) return { status: "aging", points: 8, date: date.toISOString() };
   return { status: "stale", points: 0, date: date.toISOString() };
 }
 
+/** Mirrors lib/web-audit/fetch-page.ts's isAllowedAuditHost exactly (label-boundary match) — kept as a local copy so this module stays a pure, dependency-free, fully-unit-testable string scanner (same rationale opportunity-matrix.ts documents for its own mirrored copy). */
+function isSameOrSubdomainHost(hostname: string, projectDomainNormalized: string): boolean {
+  const h = hostname.toLowerCase();
+  if (!h || !projectDomainNormalized) return false;
+  return h === projectDomainNormalized || h.endsWith(`.${projectDomainNormalized}`);
+}
+
+const LINK_TAG_RE = /<link\b[^>]*>/gi;
+
+function findCanonical(html: string, pageUrl: string, projectDomainNormalized: string): { present: boolean; url: string | null; sameDomain: boolean } {
+  for (const match of html.matchAll(LINK_TAG_RE)) {
+    const tag = match[0];
+    const rel = getAttr(tag, "rel");
+    if (!rel || rel.toLowerCase() !== "canonical") continue;
+    const href = getAttr(tag, "href");
+    if (!href) return { present: true, url: null, sameDomain: false };
+    try {
+      const resolved = new URL(href, pageUrl);
+      return { present: true, url: resolved.toString(), sameDomain: isSameOrSubdomainHost(resolved.hostname, projectDomainNormalized) };
+    } catch {
+      return { present: true, url: null, sameDomain: false };
+    }
+  }
+  return { present: false, url: null, sameDomain: false };
+}
+
+function hasHreflang(html: string): boolean {
+  for (const match of html.matchAll(LINK_TAG_RE)) {
+    const tag = match[0];
+    const rel = getAttr(tag, "rel");
+    if (rel?.toLowerCase() !== "alternate") continue;
+    if (getAttr(tag, "hreflang")) return true;
+  }
+  return false;
+}
+
+function hasNoindex(html: string): boolean {
+  const metaTagRe = /<meta\b[^>]*>/gi;
+  for (const match of html.matchAll(metaTagRe)) {
+    const tag = match[0];
+    if ((getAttr(tag, "name") ?? "").toLowerCase() !== "robots") continue;
+    if ((getAttr(tag, "content") ?? "").toLowerCase().includes("noindex")) return true;
+  }
+  return false;
+}
+
 /**
- * Combines the four checks into a page's overall score. When freshness can't
- * be determined at all, the score is computed over the remaining 80 points
- * (structured data 30 + answer format 30 + metadata 20) and rescaled to
- * 0-100 — a page with no discoverable date must never read as "stale"
- * (0 freshness points folded straight into the total would do exactly that).
+ * Indexing signals (WEB-AUDIT-R3): whether the page can even be indexed
+ * (noindex is a hard blocker worth the most points here — a verified page
+ * with noindex can never be cited, no matter how good the rest of it is),
+ * whether its canonical points at the audited domain, and whether it
+ * declares hreflang alternates. hreflang absence is deliberately never
+ * treated as a hard failure in the guidance text (buildPageCheckGuidance) —
+ * a single-market site has no hreflang to add, and asserting a universal
+ * problem there would be inventing urgency that doesn't exist for that site.
  */
-export function buildPageCheckResult(html: string, now: Date = new Date()): PageCheckResult {
+export function checkIndexability(html: string, context: PageCheckContext): IndexabilityCheck {
+  const canonical = findCanonical(html, context.pageUrl, context.projectDomainNormalized);
+  const noindex = hasNoindex(html);
+  const hreflangPresent = hasHreflang(html);
+
+  // R3 weight: canonical 5 + indexable 10 + hreflang 5 = 20 — see module header.
+  const points = (canonical.present && canonical.sameDomain ? 5 : 0) + (noindex ? 0 : 10) + (hreflangPresent ? 5 : 0);
+  return {
+    points,
+    canonicalPresent: canonical.present,
+    canonicalOk: canonical.present && canonical.sameDomain,
+    canonicalUrl: canonical.url,
+    noindex,
+    hreflangPresent
+  };
+}
+
+const MIN_SUBSTANTIVE_WORD_COUNT = 300;
+
+/**
+ * Citability signals (WEB-AUDIT-R3): structured content (lists/tables) reads
+ * better for AI answer engines than a wall of prose, and a page needs enough
+ * real, visible text to be worth citing at all. 300 words is an arbitrary but
+ * documented bar for "not a stub page" — deliberately generous rather than a
+ * strict SEO word-count target, since the point is ruling out near-empty
+ * pages, not grading prose length.
+ */
+export function checkCitability(html: string): CitabilityCheck {
+  const hasListOrTable = /<(ul|ol|table)[\s>]/i.test(html);
+  const wordCount = stripToVisibleText(html).split(/\s+/).filter(Boolean).length;
+  const contentOk = wordCount >= MIN_SUBSTANTIVE_WORD_COUNT;
+
+  // R3 weight: 10 + 10 = 20 — see module header.
+  const points = (hasListOrTable ? 10 : 0) + (contentOk ? 10 : 0);
+  return { points, hasListOrTable, wordCount, contentOk };
+}
+
+/**
+ * Combines the six checks into a page's overall score. When freshness can't
+ * be determined at all, the score is computed over the remaining 85 points
+ * (structured data 15 + answer format 15 + metadata 15 + indexability 20 +
+ * citability 20) and rescaled to 0-100 — a page with no discoverable date
+ * must never read as "stale" (0 freshness points folded straight into the
+ * total would do exactly that).
+ */
+export function buildPageCheckResult(html: string, context: PageCheckContext, now: Date = new Date()): PageCheckResult {
   const structuredData = checkStructuredData(html);
   const answerFormat = checkAnswerFormat(html, structuredData);
   const metadata = checkMetadata(html);
   const freshness = checkFreshness(html, now);
+  const indexability = checkIndexability(html, context);
+  const citability = checkCitability(html);
 
-  const structuredPoints = structuredData.pass ? 30 : 0;
-  const baseline = structuredPoints + answerFormat.points + metadata.points; // out of 80
+  const structuredPoints = structuredData.pass ? 15 : 0;
+  const baseline = structuredPoints + answerFormat.points + metadata.points + indexability.points + citability.points; // out of 85
 
   const pageScore =
-    freshness.status === "unknown" ? Math.round((baseline / 80) * 100) : Math.round(baseline + freshness.points);
+    freshness.status === "unknown" ? Math.round((baseline / 85) * 100) : Math.round(baseline + freshness.points);
 
-  return { structuredData, answerFormat, metadata, freshness, pageScore };
+  return { structuredData, answerFormat, metadata, freshness, indexability, citability, pageScore };
 }
 
 /**
  * Deterministic (no LLM) "qué hacer" guidance per failing sub-check, derived
  * purely from the already-computed PageCheckResult — no interpretation, no
- * generated prose. Reviewed with geo-strategy (2026-07-11): each of these
- * checks is objective/mechanical (a missing <h1>, a title outside a length
- * range, a date that can't be found), so the fix follows directly from the
- * failed sub-check itself. This is deliberately NOT the same thing as an
- * AI-generated draft (a rewritten title/description/intro) — that's a
- * separate, larger feature (Gemini runtime, its own rate limit, output
- * sanitization) parked under the roadmap's WEB-AUDIT-BRIEF phase, which
- * needs its own Task Intake and data-guardian review before it exists.
+ * generated prose. Reviewed with geo-strategy (2026-07-11, extended for R3
+ * 2026-07-12): each of these checks is objective/mechanical, so the fix
+ * follows directly from the failed sub-check itself. This is deliberately
+ * NOT the same thing as an AI-generated draft (a rewritten title/description/
+ * intro) — that's a separate, larger feature (Gemini runtime, its own rate
+ * limit, output sanitization) parked under the roadmap's WEB-AUDIT-BRIEF
+ * phase, which needs its own Task Intake and data-guardian review before it
+ * exists.
  *
  * Cites the real measured value (e.g. "ahora: 2 detectados") wherever the
  * PageCheckResult carries one — a passed check contributes nothing here.
@@ -224,12 +386,40 @@ export function buildPageCheckGuidance(check: PageCheckResult): string[] {
   if (!check.metadata.descriptionOk) {
     lines.push(`Ajusta la meta description a entre 50 y 160 caracteres (ahora: ${check.metadata.descriptionLength ?? 0}).`);
   }
+  if (!check.metadata.ogOk) {
+    lines.push("Añade etiquetas Open Graph (og:title y og:description) para que la página se comparta y previsualice correctamente.");
+  }
   if (check.freshness.status === "unknown") {
     lines.push(
       "Añade una fecha de actualización localizable: dateModified/datePublished en el JSON-LD, o una etiqueta <meta> de última modificación."
     );
   } else if (check.freshness.status === "stale" || check.freshness.status === "aging") {
     lines.push("Actualiza el contenido de esta página y refresca su fecha de modificación.");
+  }
+  if (check.indexability.noindex) {
+    lines.push(
+      "Esta página tiene una etiqueta <meta name=\"robots\"> con noindex: ni Google ni los motores de IA pueden indexarla. Quítala si quieres que sea citable."
+    );
+  }
+  if (!check.indexability.canonicalOk) {
+    lines.push(
+      check.indexability.canonicalPresent
+        ? "El <link rel=\"canonical\"> de esta página apunta a otro dominio — corrígelo para que apunte a esta misma URL en tu dominio."
+        : "Añade una etiqueta <link rel=\"canonical\"> que apunte a esta misma página en tu dominio."
+    );
+  }
+  if (!check.indexability.hreflangPresent) {
+    lines.push(
+      "Si esta página tiene versiones en otros idiomas o países, añade etiquetas <link rel=\"alternate\" hreflang=\"...\"> para cada una."
+    );
+  }
+  if (!check.citability.hasListOrTable) {
+    lines.push("Añade listas o tablas que estructuren la información — los motores de IA citan con más frecuencia contenido en ese formato.");
+  }
+  if (!check.citability.contentOk) {
+    lines.push(
+      `Amplía el contenido visible de esta página (ahora: ${check.citability.wordCount} palabras) — los motores de IA prefieren respuestas sustanciales.`
+    );
   }
 
   return lines;

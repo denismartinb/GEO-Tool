@@ -39,6 +39,14 @@ import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
 // (~45s) — same ADR-0003 rationale as the Escaneos page's maxDuration.
 export const maxDuration = 60;
 
+// WEB-AUDIT-R3 (founder-approved 2026-07-12) rescaled page-checks.ts's point
+// weights and added new sub-checks — the SAME page's pageScore can differ
+// before/after this ships even with zero content change. A snapshot taken
+// before this date used the old (narrower) criteria; the banner below flags
+// that explicitly so a lower score never reads as a silent regression. Purely
+// a display cutoff — self-expiring the moment a project re-audits.
+const TECHNICAL_CRITERIA_EXPANDED_AT = new Date("2026-07-13T00:00:00Z");
+
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   return new Date(value).toLocaleDateString("es-ES", {
@@ -272,10 +280,30 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
       <div className="wa-details-body">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
           <CheckDot ok={check.structuredData.pass} label="Datos estructurados" />
-          <CheckDot ok={check.answerFormat.points === 30} label="Formato respuesta-primero" />
-          <CheckDot ok={check.metadata.points === 20} label="Metadatos" />
+          <CheckDot
+            ok={check.answerFormat.hasOneH1 && check.answerFormat.hasTwoH2 && check.answerFormat.hasAnswerFirstIntro}
+            label="Formato respuesta-primero"
+          />
+          <CheckDot ok={check.metadata.titleOk && check.metadata.descriptionOk && check.metadata.ogOk} label="Metadatos + Open Graph" />
           <CheckDot ok={check.freshness.status === "fresh"} label={freshnessLabel(check.freshness.status)} />
+          {/* WEB-AUDIT-R3 (founder-approved 2026-07-12): indexing + citability signals. */}
+          <CheckDot ok={!check.indexability.noindex} label="Indexable" />
+          <CheckDot ok={check.indexability.canonicalOk} label="Canonical propio" />
+          {/* hreflang is never shown as a hard failure elsewhere (guidance text
+              is conditional — a single-market page genuinely has none to add)
+              but the dot itself stays a simple presence signal, consistent
+              with every other dot on this row. */}
+          <CheckDot ok={check.indexability.hreflangPresent} label="Hreflang" />
+          <CheckDot ok={check.citability.hasListOrTable} label="Listas o tablas" />
+          <CheckDot ok={check.citability.contentOk} label="Contenido sustancial" />
         </div>
+        {(page.fetchMs !== null || page.htmlBytes !== null) && (
+          <p style={{ fontSize: 10.5, color: "var(--ink-4)", margin: "8px 0 0" }}>
+            {page.fetchMs !== null && `Tiempo de respuesta: ${page.fetchMs} ms`}
+            {page.fetchMs !== null && page.htmlBytes !== null && " · "}
+            {page.htmlBytes !== null && `Tamaño HTML: ${(page.htmlBytes / 1024).toFixed(1)} KB`}
+          </p>
+        )}
         {/* Deterministic "qué hacer" per failing sub-check (no LLM — see
             buildPageCheckGuidance), reviewed with geo-strategy 2026-07-11:
             founder report was that seeing red X's with no explanation left no
@@ -338,6 +366,13 @@ function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: 
           <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>llms.txt</div>
           <span className={`badge ${bots.llmsTxtFound ? "badge-pos" : "badge-outline"}`}>
             {bots.llmsTxtFound ? `Encontrado (${bots.llmsTxtBytes} bytes)` : "No encontrado"}
+          </span>
+        </div>
+        {/* WEB-AUDIT-R3: sitemap.xml reachability — same presence-only check as llms.txt, no XML parsing. */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
+          <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>sitemap.xml</div>
+          <span className={`badge ${bots.sitemapFound ? "badge-pos" : "badge-outline"}`}>
+            {bots.sitemapFound ? "Encontrado" : "No encontrado"}
           </span>
         </div>
       </div>
@@ -1277,6 +1312,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
               <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
             </div>
+            {technicalSnapshot && new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
+              <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 8 }}>
+                Los criterios técnicos se ampliaron el 13 jul 2026 (canonical, indexabilidad, hreflang, listas/tablas,
+                contenido, Open Graph). Esta auditoría es de antes de ese cambio — vuelve a auditar para comparar con
+                los criterios actuales.
+              </p>
+            )}
             {technicalSnapshot ? (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
                 <div className="card">

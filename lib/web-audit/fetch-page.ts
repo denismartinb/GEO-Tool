@@ -205,7 +205,15 @@ export type PageFetchStatus =
   | "skipped_error";
 
 export type PageFetchResult =
-  | { status: "analyzed"; html: string; finalUrl: string }
+  | {
+      status: "analyzed";
+      html: string;
+      finalUrl: string;
+      /** Wall-clock time for the whole fetch (across redirect hops), informational only (WEB-AUDIT-R3) — never fed into pageScore, since a single serverless fetch's latency is too noisy to grade a page on. Optional so existing mocked fixtures in technical-audit.test.ts don't need updating. */
+      fetchMs?: number;
+      /** Byte size of the (possibly truncated) HTML body, informational only, same rationale as fetchMs. */
+      htmlBytes?: number;
+    }
   | { status: Exclude<PageFetchStatus, "analyzed"> };
 
 function isTimeoutError(error: unknown): boolean {
@@ -218,6 +226,7 @@ function isTimeoutError(error: unknown): boolean {
  * what (if anything) to persist for a skipped page.
  */
 export async function fetchPageSafely(rawUrl: string, projectDomainNormalized: string): Promise<PageFetchResult> {
+  const startedAt = Date.now();
   let current: URL;
   try {
     current = new URL(rawUrl);
@@ -258,7 +267,13 @@ export async function fetchPageSafely(rawUrl: string, projectDomainNormalized: s
     if (!contentType.includes("text/html")) return { status: "skipped_not_html" };
 
     const html = await readBodyCapped(response, MAX_HTML_BYTES);
-    return { status: "analyzed", html, finalUrl: current.toString() };
+    return {
+      status: "analyzed",
+      html,
+      finalUrl: current.toString(),
+      fetchMs: Date.now() - startedAt,
+      htmlBytes: Buffer.byteLength(html, "utf-8")
+    };
   }
 
   return { status: "skipped_offsite" }; // exceeded MAX_REDIRECTS

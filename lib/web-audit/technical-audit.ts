@@ -54,6 +54,9 @@ export type PageAuditEntry = {
   contextLabel: string;
   status: PageFetchStatus | "skipped_budget";
   check: PageCheckResult | null;
+  /** WEB-AUDIT-R3: informational fetch metadata, never fed into pageScore — see fetch-page.ts's PageFetchResult. Null for any non-"analyzed" status. */
+  fetchMs: number | null;
+  htmlBytes: number | null;
 };
 
 export type TechnicalAuditSnapshot = {
@@ -412,7 +415,7 @@ export async function runTechnicalAuditCore({
     const startedAt = Date.now();
     for (const candidate of candidates) {
       if (Date.now() - startedAt > TECH_AUDIT_TOTAL_BUDGET_MS) {
-        pages.push({ url: candidate.url, contextLabel: candidate.contextLabel, status: "skipped_budget", check: null });
+        pages.push({ url: candidate.url, contextLabel: candidate.contextLabel, status: "skipped_budget", check: null, fetchMs: null, htmlBytes: null });
         continue;
       }
       const fetchResult = await fetchPageSafely(candidate.url, projectDomainNormalized);
@@ -421,10 +424,12 @@ export async function runTechnicalAuditCore({
           url: candidate.url,
           contextLabel: candidate.contextLabel,
           status: "analyzed",
-          check: buildPageCheckResult(fetchResult.html)
+          check: buildPageCheckResult(fetchResult.html, { pageUrl: fetchResult.finalUrl, projectDomainNormalized }),
+          fetchMs: fetchResult.fetchMs ?? null,
+          htmlBytes: fetchResult.htmlBytes ?? null
         });
       } else {
-        pages.push({ url: candidate.url, contextLabel: candidate.contextLabel, status: fetchResult.status, check: null });
+        pages.push({ url: candidate.url, contextLabel: candidate.contextLabel, status: fetchResult.status, check: null, fetchMs: null, htmlBytes: null });
       }
     }
 

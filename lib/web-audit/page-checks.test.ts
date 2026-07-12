@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   checkAnswerFormat,
+  checkCitability,
   checkFreshness,
+  checkIndexability,
   checkMetadata,
   checkStructuredData,
   buildPageCheckResult,
@@ -9,6 +11,7 @@ import {
 } from "./page-checks";
 
 const NOW = new Date("2026-07-10T00:00:00Z");
+const CTX = { pageUrl: "https://acme.com/page", projectDomainNormalized: "acme.com" };
 
 describe("checkStructuredData", () => {
   it("passes for a recognized @type", () => {
@@ -55,7 +58,7 @@ describe("checkAnswerFormat", () => {
   it("awards full points for a well-formed answer-first page", () => {
     const html = `<h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>`;
     const result = checkAnswerFormat(html, noStructuredData);
-    expect(result.points).toBe(30);
+    expect(result.points).toBe(15);
     expect(result.hasOneH1).toBe(true);
     expect(result.hasTwoH2).toBe(true);
     expect(result.hasAnswerFirstIntro).toBe(true);
@@ -89,12 +92,15 @@ describe("checkAnswerFormat", () => {
 });
 
 describe("checkMetadata", () => {
-  it("awards points for a title and description in range", () => {
-    const html = `<title>A perfectly reasonable title</title><meta name="description" content="${"a".repeat(80)}">`;
+  const og = `<meta property="og:title" content="A title"><meta property="og:description" content="A description">`;
+
+  it("awards points for a title, description, and OG tags", () => {
+    const html = `<title>A perfectly reasonable title</title><meta name="description" content="${"a".repeat(80)}">${og}`;
     const result = checkMetadata(html);
-    expect(result.points).toBe(20);
+    expect(result.points).toBe(15);
     expect(result.titleOk).toBe(true);
     expect(result.descriptionOk).toBe(true);
+    expect(result.ogOk).toBe(true);
   });
 
   it("penalizes a too-short title", () => {
@@ -110,8 +116,18 @@ describe("checkMetadata", () => {
     expect(checkMetadata(html).descriptionOk).toBe(true);
   });
 
-  it("scores zero with no title or description", () => {
+  it("scores zero with no title, description, or OG tags", () => {
     expect(checkMetadata("<html></html>").points).toBe(0);
+  });
+
+  it("requires both og:title and og:description for ogOk", () => {
+    expect(checkMetadata(`<meta property="og:title" content="only title">`).ogOk).toBe(false);
+    expect(checkMetadata(og).ogOk).toBe(true);
+  });
+
+  it("handles content-before-property attribute order for OG tags", () => {
+    const html = `<meta content="A title" property="og:title"><meta content="A description" property="og:description">`;
+    expect(checkMetadata(html).ogOk).toBe(true);
   });
 
   it("reports the raw title/description lengths backing titleOk/descriptionOk", () => {
@@ -126,7 +142,7 @@ describe("checkFreshness", () => {
     const html = `<script type="application/ld+json">{"dateModified":"2026-06-01T00:00:00Z"}</script>`;
     const result = checkFreshness(html, NOW);
     expect(result.status).toBe("fresh");
-    expect(result.points).toBe(20);
+    expect(result.points).toBe(15);
   });
 
   it("classifies 200-540 days old as aging", () => {
@@ -166,39 +182,142 @@ describe("checkFreshness", () => {
   });
 });
 
-describe("buildPageCheckResult", () => {
-  it("scores a fully compliant page at 100", () => {
+describe("checkIndexability", () => {
+  it("awards full points for a same-domain canonical, no noindex, and hreflang", () => {
     const html = `
-      <title>A perfectly reasonable page title</title>
-      <meta name="description" content="${"a".repeat(80)}">
-      <script type="application/ld+json">{"@type":"Article","dateModified":"2026-06-01T00:00:00Z"}</script>
-      <h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>
+      <link rel="canonical" href="https://acme.com/page">
+      <link rel="alternate" hreflang="es" href="https://acme.com/es/page">
     `;
-    expect(buildPageCheckResult(html, NOW).pageScore).toBe(100);
+    const result = checkIndexability(html, CTX);
+    expect(result.points).toBe(20);
+    expect(result.canonicalOk).toBe(true);
+    expect(result.noindex).toBe(false);
+    expect(result.hreflangPresent).toBe(true);
   });
 
-  it("rescales to 0-100 over the 80-point baseline when freshness is unknown", () => {
+  it("resolves a relative canonical href against pageUrl", () => {
+    const html = `<link rel="canonical" href="/page">`;
+    const result = checkIndexability(html, CTX);
+    expect(result.canonicalOk).toBe(true);
+    expect(result.canonicalUrl).toBe("https://acme.com/page");
+  });
+
+  it("rejects a canonical pointing at a different domain", () => {
+    const html = `<link rel="canonical" href="https://evil.com/page">`;
+    const result = checkIndexability(html, CTX);
+    expect(result.canonicalPresent).toBe(true);
+    expect(result.canonicalOk).toBe(false);
+  });
+
+  it("accepts a canonical on a real subdomain of the audited domain", () => {
+    const html = `<link rel="canonical" href="https://blog.acme.com/page">`;
+    expect(checkIndexability(html, CTX).canonicalOk).toBe(true);
+  });
+
+  it("flags noindex from a meta robots tag as a hard zero on that sub-check", () => {
+    const html = `<meta name="robots" content="noindex, nofollow">`;
+    const result = checkIndexability(html, CTX);
+    expect(result.noindex).toBe(true);
+    expect(result.points).toBe(0);
+  });
+
+  it("ignores a robots meta tag without noindex", () => {
+    const html = `<meta name="robots" content="index, follow">`;
+    expect(checkIndexability(html, CTX).noindex).toBe(false);
+  });
+
+  it("treats absent canonical/hreflang as failing without throwing", () => {
+    const result = checkIndexability("<html></html>", CTX);
+    expect(result.canonicalPresent).toBe(false);
+    expect(result.canonicalOk).toBe(false);
+    expect(result.hreflangPresent).toBe(false);
+    expect(result.noindex).toBe(false); // absence of the tag means indexable, the default
+    expect(result.points).toBe(10); // only the "not noindexed" points
+  });
+
+  it("handles attribute order (href before rel) on the canonical link tag", () => {
+    const html = `<link href="/page" rel="canonical">`;
+    expect(checkIndexability(html, CTX).canonicalOk).toBe(true);
+  });
+});
+
+describe("checkCitability", () => {
+  it("awards points for lists/tables and substantive content", () => {
+    const html = `<ul><li>a</li></ul><p>${"word ".repeat(300)}</p>`;
+    const result = checkCitability(html);
+    expect(result.hasListOrTable).toBe(true);
+    expect(result.contentOk).toBe(true);
+    expect(result.points).toBe(20);
+  });
+
+  it("detects a table as satisfying hasListOrTable", () => {
+    expect(checkCitability("<table><tr><td>x</td></tr></table>").hasListOrTable).toBe(true);
+  });
+
+  it("fails contentOk under the word-count threshold", () => {
+    const result = checkCitability("<p>too short</p>");
+    expect(result.contentOk).toBe(false);
+    expect(result.wordCount).toBeLessThan(300);
+  });
+
+  it("excludes script and style block contents from the word count", () => {
+    const html = `<script>${"x ".repeat(400)}</script><style>${"y ".repeat(400)}</style><p>short</p>`;
+    const result = checkCitability(html);
+    expect(result.wordCount).toBeLessThan(10);
+    expect(result.contentOk).toBe(false);
+  });
+});
+
+describe("buildPageCheckResult", () => {
+  const fullHtml = `
+    <title>A perfectly reasonable page title</title>
+    <meta name="description" content="${"a".repeat(80)}">
+    <meta property="og:title" content="A title">
+    <meta property="og:description" content="A description">
+    <link rel="canonical" href="https://acme.com/page">
+    <link rel="alternate" hreflang="es" href="https://acme.com/es/page">
+    <script type="application/ld+json">{"@type":"Article","dateModified":"2026-06-01T00:00:00Z"}</script>
+    <h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>
+    <ul><li>${"word ".repeat(300)}</li></ul>
+  `;
+
+  it("scores a fully compliant page at 100", () => {
+    expect(buildPageCheckResult(fullHtml, CTX, NOW).pageScore).toBe(100);
+  });
+
+  it("rescales to 0-100 over the 85-point baseline when freshness is unknown", () => {
     const html = `
       <script type="application/ld+json">{"@type":"Article"}</script>
       <h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>
     `;
-    // baseline = 30 (structured) + 30 (answer format) + 0 (metadata) = 60/80 -> rescaled
-    const result = buildPageCheckResult(html, NOW);
+    // baseline = 15 (structured) + 15 (answer format) + 0 (metadata) + 10 (not noindexed) + 0 (citability) = 40/85 -> rescaled
+    const result = buildPageCheckResult(html, CTX, NOW);
     expect(result.freshness.status).toBe("unknown");
-    expect(result.pageScore).toBe(Math.round((60 / 80) * 100));
+    expect(result.pageScore).toBe(Math.round((40 / 85) * 100));
   });
 
-  it("scores an empty page at 0", () => {
-    expect(buildPageCheckResult("<html></html>", NOW).pageScore).toBe(0);
+  it("scores an empty page at the 'not noindexed by default' floor, not zero", () => {
+    // An empty page has no robots meta tag at all, so it's not noindexed —
+    // that's still 10/85 baseline points, which is genuinely correct: an
+    // indexable-but-empty page differs from a noindexed one.
+    const result = buildPageCheckResult("<html></html>", CTX, NOW);
+    expect(result.pageScore).toBe(Math.round((10 / 85) * 100));
+  });
+
+  it("scores a noindexed empty page at 0", () => {
+    const html = `<meta name="robots" content="noindex">`;
+    expect(buildPageCheckResult(html, CTX, NOW).pageScore).toBe(0);
   });
 
   it("never lets an unknown-freshness page score higher than a fully-scored equivalent", () => {
     const withDate = buildPageCheckResult(
       `<script type="application/ld+json">{"@type":"Article","dateModified":"2026-06-01T00:00:00Z"}</script><h1>a</h1>`,
+      CTX,
       NOW
     );
     const withoutDate = buildPageCheckResult(
       `<script type="application/ld+json">{"@type":"Article"}</script><h1>a</h1>`,
+      CTX,
       NOW
     );
     expect(withoutDate.pageScore).toBeGreaterThanOrEqual(0);
@@ -207,39 +326,80 @@ describe("buildPageCheckResult", () => {
 });
 
 describe("buildPageCheckGuidance", () => {
-  it("returns no guidance for a fully compliant page", () => {
-    const html = `
-      <title>A perfectly reasonable page title</title>
-      <meta name="description" content="${"a".repeat(80)}">
-      <script type="application/ld+json">{"@type":"Article","dateModified":"2026-06-01T00:00:00Z"}</script>
-      <h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>
-    `;
-    expect(buildPageCheckGuidance(buildPageCheckResult(html, NOW))).toEqual([]);
+  const fullHtml = `
+    <title>A perfectly reasonable page title</title>
+    <meta name="description" content="${"a".repeat(80)}">
+    <meta property="og:title" content="A title">
+    <meta property="og:description" content="A description">
+    <link rel="canonical" href="https://acme.com/page">
+    <script type="application/ld+json">{"@type":"Article","dateModified":"2026-06-01T00:00:00Z"}</script>
+    <h1>Title</h1><p>${"a".repeat(200)}</p><h2>A</h2><h2>B</h2>
+    <ul><li>${"word ".repeat(300)}</li></ul>
+  `;
+
+  it("returns only the hreflang note for a fully compliant single-market page", () => {
+    // hreflang is the one check that's never a hard "problem" for a
+    // single-market site — see checkIndexability's header comment.
+    const guidance = buildPageCheckGuidance(buildPageCheckResult(fullHtml, CTX, NOW));
+    expect(guidance).toEqual(["Si esta página tiene versiones en otros idiomas o países, añade etiquetas <link rel=\"alternate\" hreflang=\"...\"> para cada una."]);
   });
 
   it("cites the real measured h1 count and title length in the guidance text", () => {
     const html = `<h1>a</h1><h1>b</h1><title>${"a".repeat(100)}</title>`;
-    const guidance = buildPageCheckGuidance(buildPageCheckResult(html, NOW));
+    const guidance = buildPageCheckGuidance(buildPageCheckResult(html, CTX, NOW));
     expect(guidance.some((line) => line.includes("ahora: 2 detectados"))).toBe(true);
     expect(guidance.some((line) => line.includes("ahora: 100"))).toBe(true);
   });
 
   it("suggests adding a date when freshness is unknown, and updating content when stale/aging", () => {
-    const unknown = buildPageCheckGuidance(buildPageCheckResult("<html></html>", NOW));
+    const unknown = buildPageCheckGuidance(buildPageCheckResult("<html></html>", CTX, NOW));
     expect(unknown.some((line) => line.includes("fecha de actualización"))).toBe(true);
 
     const staleHtml = `<script type="application/ld+json">{"datePublished":"2023-01-01T00:00:00Z"}</script>`;
-    const stale = buildPageCheckGuidance(buildPageCheckResult(staleHtml, NOW));
+    const stale = buildPageCheckGuidance(buildPageCheckResult(staleHtml, CTX, NOW));
     expect(stale.some((line) => line.includes("Actualiza el contenido"))).toBe(true);
   });
 
   it("suggests structured data only when the check actually fails", () => {
     const withStructuredData = buildPageCheckGuidance(
-      buildPageCheckResult(`<script type="application/ld+json">{"@type":"Article"}</script>`, NOW)
+      buildPageCheckResult(`<script type="application/ld+json">{"@type":"Article"}</script>`, CTX, NOW)
     );
     expect(withStructuredData.some((line) => line.includes("datos estructurados"))).toBe(false);
 
-    const withoutStructuredData = buildPageCheckGuidance(buildPageCheckResult("<html></html>", NOW));
+    const withoutStructuredData = buildPageCheckGuidance(buildPageCheckResult("<html></html>", CTX, NOW));
     expect(withoutStructuredData.some((line) => line.includes("datos estructurados"))).toBe(true);
+  });
+
+  it("warns about noindex distinctly from a missing/wrong canonical", () => {
+    const noindexHtml = `<meta name="robots" content="noindex">`;
+    const guidance = buildPageCheckGuidance(buildPageCheckResult(noindexHtml, CTX, NOW));
+    expect(guidance.some((line) => line.includes("noindex"))).toBe(true);
+    expect(guidance.some((line) => line.includes("canonical"))).toBe(true);
+  });
+
+  it("distinguishes a missing canonical from one pointing off-domain", () => {
+    const missing = buildPageCheckGuidance(buildPageCheckResult("<html></html>", CTX, NOW));
+    expect(missing.some((line) => line.includes("Añade una etiqueta"))).toBe(true);
+
+    const wrongDomain = buildPageCheckGuidance(
+      buildPageCheckResult(`<link rel="canonical" href="https://evil.com/page">`, CTX, NOW)
+    );
+    expect(wrongDomain.some((line) => line.includes("apunta a otro dominio"))).toBe(true);
+  });
+
+  it("suggests lists/tables and more content only when those checks fail", () => {
+    const thin = buildPageCheckGuidance(buildPageCheckResult("<p>short</p>", CTX, NOW));
+    expect(thin.some((line) => line.includes("listas o tablas"))).toBe(true);
+    expect(thin.some((line) => line.includes("Amplía el contenido"))).toBe(true);
+  });
+
+  it("suggests Open Graph tags only when they're missing", () => {
+    const withOg = buildPageCheckGuidance(
+      buildPageCheckResult(`<meta property="og:title" content="a"><meta property="og:description" content="b">`, CTX, NOW)
+    );
+    expect(withOg.some((line) => line.includes("Open Graph"))).toBe(false);
+
+    const withoutOg = buildPageCheckGuidance(buildPageCheckResult("<html></html>", CTX, NOW));
+    expect(withoutOg.some((line) => line.includes("Open Graph"))).toBe(true);
   });
 });
