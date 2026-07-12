@@ -13,6 +13,7 @@ import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -259,7 +260,7 @@ export default async function ProjectDetailPage({
           .limit(3),
         supabase
           .from("run_scores")
-          .select("visibility_score, citation_score, competitor_gap_score, created_at")
+          .select("visibility_score, citation_score, competitor_gap_score, created_at, details_json")
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
           .limit(7)
@@ -291,7 +292,6 @@ export default async function ProjectDetailPage({
   const visibilityScore = n(latestScore?.visibility_score);
   const citationScore = n(latestScore?.citation_score);
   const competitorPressureScore = n(latestScore?.competitor_gap_score);
-  const runConfidence = latestScore?.confidence ?? "low";
 
   /* ---- composite GEO score (ADR 0008) ---- */
   const geoScore = scoreDetails.geo_score;
@@ -365,9 +365,42 @@ export default async function ProjectDetailPage({
   const visTrend = trendHistory.map((r) => n(r.visibility_score));
   const gapTrend = trendHistory.map((r) => n(r.competitor_gap_score));
 
+  // GEO Score history for the gauge (audit phase B, finding 10). Pre-composite
+  // runs fall back to visibility_score inside getEffectiveGeoScore — the same
+  // fallback the gauge itself applies (ADR 0008, no backfill).
+  const geoTrend = trendHistory.map((r) => Math.round(getEffectiveGeoScore(r)));
+
   const prevScore = trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
+  const gaugeDelta = geoTrend.length >= 2 ? gaugeScore - geoTrend[geoTrend.length - 2] : 0;
+
+  /* ---- sentiment KPI (audit phase B, finding 6) ----
+   * Distribution of the sentiment the AI expresses ABOUT THE BRAND in the
+   * latest scan, computed only over answers where the brand is actually
+   * mentioned (rows without a brand mention carry no brand sentiment).
+   * Data already extracted and persisted per prompt; this is display only.
+   */
+  const sentimentCounts = { positive: 0, neutral: 0, mixed: 0, negative: 0 };
+  for (const r of allPromptResults ?? []) {
+    if (!r.brand_mentioned) continue;
+    const s = r.sentiment as keyof typeof sentimentCounts;
+    if (s in sentimentCounts) sentimentCounts[s] += 1;
+  }
+  const sentimentTotal =
+    sentimentCounts.positive + sentimentCounts.neutral + sentimentCounts.mixed + sentimentCounts.negative;
+  const dominantSentiment =
+    sentimentTotal > 0
+      ? (Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof sentimentCounts)
+      : null;
+  const sentimentBreakdown = [
+    sentimentCounts.positive > 0 ? `${sentimentCounts.positive} positivas` : null,
+    sentimentCounts.neutral > 0 ? `${sentimentCounts.neutral} neutras` : null,
+    sentimentCounts.mixed > 0 ? `${sentimentCounts.mixed} mixtas` : null,
+    sentimentCounts.negative > 0 ? `${sentimentCounts.negative} negativas` : null
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   /* ---- competitor breakdown from extracted_json ---- */
   const competitorMentionCounts: Record<string, number> = {};
@@ -586,6 +619,19 @@ export default async function ProjectDetailPage({
                     </span>
                   </div>
                 )}
+                {geoTrend.length >= 2 && (
+                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                    <Sparkline data={geoTrend} w={120} h={30} color="var(--accent)" />
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {gaugeDelta !== 0 ? (
+                        <Delta value={gaugeDelta} suffix=" pt" />
+                      ) : (
+                        <span className="delta flat">— sin cambio</span>
+                      )}
+                      <span className="stat-hint">vs. escaneo anterior</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -720,22 +766,28 @@ export default async function ProjectDetailPage({
                 band: getCompetitivePressureBand(competitorPressureScore)
               },
               {
-                key: "confidence",
-                label: "Confianza",
-                value: confidenceLabels[runConfidence]
-                  ? confidenceLabels[runConfidence].charAt(0).toUpperCase() + confidenceLabels[runConfidence].slice(1)
-                  : runConfidence,
+                // Sentiment replaces the old "Confianza" card (audit phase B,
+                // findings 6+7): confidence is a data-quality meta-metric that
+                // already surfaces as a badge on the gauge when degraded, while
+                // brand sentiment was extracted and persisted but shown nowhere.
+                // No fabricated history: sentiment is only computed for the
+                // latest run, so no trend line and no "vs. previous" delta.
+                key: "sentiment",
+                label: "Sentimiento de marca",
+                value: dominantSentiment
+                  ? sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1)
+                  : "Sin datos",
                 unit: "",
-                // No fabricated history: confidence is only computed for the
-                // latest run, so rendering it as a flat "trend" line would
-                // present a constant as if it were historical data
-                // (docs/geo-methodology-audit-2026-07.md, finding 7).
                 trend: [] as number[],
                 delta: 0,
                 color: "#0d9488",
-                hint: "Fiabilidad de la muestra de este escaneo.",
-                tip: "Indica cuán fiable es la muestra de este escaneo, según la cobertura de extracción de datos (porcentaje de prompts procesados correctamente). Alta = cobertura completa; media/baja = datos parciales o errores de extracción.",
-                isShare: false as const
+                hint:
+                  sentimentTotal > 0
+                    ? `${sentimentBreakdown} · sobre ${sentimentTotal} ${sentimentTotal === 1 ? "respuesta" : "respuestas"} con tu marca.`
+                    : "Sin respuestas con tu marca mencionada en este escaneo.",
+                tip: "Tono con el que las respuestas de IA hablan de tu marca en el último escaneo, calculado solo sobre las respuestas donde tu marca aparece. Se muestra el tono dominante; el desglose completo está debajo.",
+                isShare: false as const,
+                hideDelta: true as const
               }
             ].map((m) => (
               <div key={m.key} className="wide-stat">
@@ -787,14 +839,16 @@ export default async function ProjectDetailPage({
                           </span>
                         </div>
                       ) : null}
-                      <div className="ws-delta">
-                        {m.delta !== 0 ? (
-                          <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
-                        ) : (
-                          <span className="delta flat">— sin cambio</span>
-                        )}
-                        <span className="stat-hint">vs. escaneo anterior</span>
-                      </div>
+                      {"hideDelta" in m && m.hideDelta ? null : (
+                        <div className="ws-delta">
+                          {m.delta !== 0 ? (
+                            <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                          ) : (
+                            <span className="delta flat">— sin cambio</span>
+                          )}
+                          <span className="stat-hint">vs. escaneo anterior</span>
+                        </div>
+                      )}
                       <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
                     </>
                   )}
