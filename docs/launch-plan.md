@@ -1135,6 +1135,15 @@ producción, pone `CRON_DIGEST_ENABLED=true` en Vercel (con un redeploy
 después, como siempre) y espera al primer lunes para verlo en acción — o
 lo prueba antes llamando manualmente al endpoint con el secreto correcto.
 
+**Reconciliación con el audit de UX/QA concurrente:** una auditoría
+paralela (docs/ux-qa-audit-2026-07.md) había marcado el toggle "Resumen
+semanal" de `/dashboard/settings/notifications` como "Próximamente"
+porque, en ese momento, la Fase 6b todavía no existía — dejarlo activable
+habría prometido un email de los lunes que nunca llegaba. Con la Fase 6b
+ya mergeada, se reactivó ese toggle (founder: "Sí, reactivar ya") — el
+usuario ya puede activarlo/desactivarlo de verdad; el email en sí sigue
+sin salir hasta que el fundador active `CRON_DIGEST_ENABLED`.
+
 ---
 
 ## Fase 7 — GROWTH-1 (continua)
