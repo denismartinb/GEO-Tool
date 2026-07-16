@@ -210,8 +210,8 @@ function ScoreGauge({ score }: { score: number | null }) {
   );
 }
 
-/** Small Lighthouse-style score ring for per-page rows in Salud técnica (WEB-AUDIT-R4). */
-function ScoreRing({ score }: { score: number }) {
+/** Small Lighthouse-style score ring for per-page rows in Salud técnica (WEB-AUDIT-R4). `label` names WHICH page the ring belongs to — QA report: a screen reader tabbing the page list heard the same generic phrase on every ring. */
+function ScoreRing({ score, label }: { score: number; label: string }) {
   const size = 38;
   const stroke = 4;
   const r = (size - stroke) / 2;
@@ -223,7 +223,7 @@ function ScoreRing({ score }: { score: number }) {
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       role="img"
-      aria-label={`Salud técnica ${score} de 100`}
+      aria-label={`Salud técnica de ${label}: ${score} de 100`}
       style={{ flexShrink: 0 }}
     >
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line-soft)" strokeWidth={stroke} />
@@ -372,7 +372,7 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
         {/* Lighthouse-style ring instead of a flat neutral badge (WEB-AUDIT-R4):
             same semantic thresholds as the hero gauge, so a failing page reads
             red at a glance without opening it. */}
-        <ScoreRing score={check.pageScore} />
+        <ScoreRing score={check.pageScore} label={path} />
         <span className="wa-chev">
           <Icon name="chevDown" size={14} />
         </span>
