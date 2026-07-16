@@ -157,6 +157,12 @@ function CheckDot({ ok, label }: { ok: boolean; label: string }) {
   );
 }
 
+/** Shared semantic color for any 0-100 score (gauge, rings, mini bars): red <40, amber 40-69, green ≥70. */
+function scoreColor(score: number | null): string {
+  if (score === null) return "var(--ink-4)";
+  return score < 40 ? "var(--neg-ink)" : score < 70 ? "var(--warn)" : "var(--pos)";
+}
+
 /** Gauge ring for the hero's global "Preparación GEO" score. */
 function ScoreGauge({ score }: { score: number | null }) {
   const size = 116;
@@ -164,7 +170,7 @@ function ScoreGauge({ score }: { score: number | null }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const pct = score ?? 0;
-  const color = score === null ? "var(--ink-4)" : score < 40 ? "var(--neg-ink)" : score < 70 ? "var(--warn)" : "var(--pos)";
+  const color = scoreColor(score);
   return (
     <svg
       width={size}
@@ -204,21 +210,109 @@ function ScoreGauge({ score }: { score: number | null }) {
   );
 }
 
+/** Small Lighthouse-style score ring for per-page rows in Salud técnica (WEB-AUDIT-R4). */
+function ScoreRing({ score }: { score: number }) {
+  const size = 38;
+  const stroke = 4;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const color = scoreColor(score);
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={`Salud técnica ${score} de 100`}
+      style={{ flexShrink: 0 }}
+    >
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--line-soft)" strokeWidth={stroke} />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeDasharray={`${(score / 100) * c} ${c}`}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+      <text
+        x="50%"
+        y="50%"
+        textAnchor="middle"
+        dominantBaseline="central"
+        style={{ fontSize: 11.5, fontWeight: 800, fill: "var(--ink)", fontVariantNumeric: "tabular-nums" }}
+      >
+        {score}
+      </text>
+    </svg>
+  );
+}
+
+/**
+ * Tiny trend sparkline for a hero sub-score tile (WEB-AUDIT-R4). Values are
+ * the same real per-audit percentages the Evolución chart plots — null points
+ * (an audit where that rate couldn't be computed) are skipped, exactly like
+ * TrendChart's pathFor. Rendered only with ≥2 real points; anything less has
+ * no trend to show.
+ */
+function Sparkline({ values, color }: { values: Array<number | null>; color: string }) {
+  const W = 64;
+  const H = 22;
+  const pad = 2;
+  const points = values
+    .map((v, i) => ({ v, i }))
+    .filter((p): p is { v: number; i: number } => p.v !== null);
+  if (points.length < 2) return null;
+  const stepX = values.length > 1 ? (W - pad * 2) / (values.length - 1) : 0;
+  const yFor = (pct: number) => H - pad - (pct / 100) * (H - pad * 2);
+  const d = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${pad + p.i * stepX} ${yFor(p.v)}`).join(" ");
+  const last = points[points.length - 1];
+  return (
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={pad + last.i * stepX} cy={yFor(last.v)} r={2.5} fill={color} />
+    </svg>
+  );
+}
+
+/** 4px progress bar under a hero tile / history row (WEB-AUDIT-R4). */
+function MiniBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <div style={{ height: 4, borderRadius: 999, background: "var(--line-soft)", overflow: "hidden" }}>
+      <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: "100%", borderRadius: 999, background: color }} />
+    </div>
+  );
+}
+
 function SubScoreTile({
   label,
   value,
   hint,
-  delta
+  delta,
+  pct,
+  sparkValues,
+  sparkColor
 }: {
   label: string;
   value: string;
   hint: string;
   delta: number | null;
+  /** 0-100 fill for the tile's progress bar; null → no bar (signal never computed). */
+  pct: number | null;
+  /** Per-audit history for the sparkline — same series the Evolución chart plots. */
+  sparkValues?: Array<number | null>;
+  sparkColor?: string;
 }) {
   return (
     <div style={{ padding: "9px 11px", background: "var(--surface-2)", borderRadius: 10, minWidth: 0 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-        {label}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)", flex: 1, minWidth: 0 }}>
+          {label}
+        </div>
+        {sparkValues && <Sparkline values={sparkValues} color={sparkColor ?? "var(--accent)"} />}
       </div>
       <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.01em", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
         {value}
@@ -228,7 +322,12 @@ function SubScoreTile({
           </span>
         )}
       </div>
-      <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 2 }}>{hint}</div>
+      {pct !== null && (
+        <div style={{ marginTop: 6 }}>
+          <MiniBar pct={pct} color={scoreColor(pct)} />
+        </div>
+      )}
+      <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: pct !== null ? 5 : 2 }}>{hint}</div>
     </div>
   );
 }
@@ -270,9 +369,10 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
             {failingCount > 0 ? ` · ${failingCount} ${failingCount === 1 ? "mejora pendiente" : "mejoras pendientes"}` : " · todo en orden"}
           </div>
         </div>
-        <span className="badge badge-neutral" style={{ fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
-          {check.pageScore} / 100
-        </span>
+        {/* Lighthouse-style ring instead of a flat neutral badge (WEB-AUDIT-R4):
+            same semantic thresholds as the hero gauge, so a failing page reads
+            red at a glance without opening it. */}
+        <ScoreRing score={check.pageScore} />
         <span className="wa-chev">
           <Icon name="chevDown" size={14} />
         </span>
@@ -573,6 +673,17 @@ function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: nu
   // component). Everything else falls back to the honest generic wording.
   const linkLabel = item.recommendationId ? meta.linkLabel : "Ver recomendaciones →";
 
+  // Number chip picks up the same soft tone as the action-kind badge next to
+  // it (WEB-AUDIT-R4) — the priority order reads as a colored sequence
+  // (amber optimize → red competing → neutral) instead of a flat grey list.
+  const numberTone: Record<ActionItemKind, { bg: string; fg: string }> = {
+    optimize: { bg: "var(--warn-soft)", fg: "var(--warn-ink)" },
+    create_competing: { bg: "var(--neg-soft)", fg: "var(--neg-ink)" },
+    create_open: { bg: "var(--surface-2)", fg: "var(--ink-3)" },
+    capture: { bg: "var(--accent-soft)", fg: "var(--accent-ink)" }
+  };
+  const tone = numberTone[item.kind];
+
   return (
     <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
       <div
@@ -581,8 +692,8 @@ function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: nu
           width: 22,
           height: 22,
           borderRadius: "50%",
-          background: "var(--surface-2)",
-          color: "var(--ink-3)",
+          background: tone.bg,
+          color: tone.fg,
           fontSize: 11,
           fontWeight: 750,
           display: "grid",
@@ -1085,11 +1196,19 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   </div>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
+                  {/* Sparklines plot the same real per-audit series as the
+                      Evolución chart, in the same series colors (accent =
+                      cobertura, pos = aprovechamiento). The técnica tile has
+                      no history loaded (only the latest snapshot) — no
+                      sparkline rather than a fake flat line. */}
                   <SubScoreTile
                     label="Contenido"
                     value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
                     hint="temas con contenido propio verificado"
                     delta={coverageDelta}
+                    pct={summary.coveragePct}
+                    sparkValues={trend.map((p) => p.coveragePct)}
+                    sparkColor="var(--accent)"
                   />
                   <SubScoreTile
                     label="Aprovechamiento"
@@ -1100,6 +1219,9 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                         : "de tus temas con contenido, cuántos cita la IA"
                     }
                     delta={surfacingDelta}
+                    pct={summary.surfacingPct}
+                    sparkValues={trend.map((p) => p.surfacingPct)}
+                    sparkColor="var(--pos)"
                   />
                   <SubScoreTile
                     label="Salud técnica"
@@ -1116,6 +1238,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                         : "lánzala desde la pestaña Salud técnica"
                     }
                     delta={null}
+                    pct={technicalSnapshot?.readiness_score ?? null}
                   />
                 </div>
               </div>
@@ -1406,19 +1529,40 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     Una entrada por escaneo auditado (máx. las 8 más recientes).
                   </div>
                 </div>
+                {/* Each row gets mini bars in the same series colors as the
+                    chart above (accent = cobertura, pos = aprovechamiento) so
+                    the history scans visually, not just numerically
+                    (WEB-AUDIT-R4). A null rate renders "—" with no bar —
+                    never a 0-width bar, which would read as a measured 0%. */}
                 <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
                   {[...trend].reverse().map((point) => (
                     <div
                       key={point.scanId}
-                      style={{ display: "flex", alignItems: "center", gap: 12, padding: "7px 10px", borderRadius: 8, background: "var(--surface-2)", flexWrap: "wrap" }}
+                      style={{ padding: "8px 10px", borderRadius: 8, background: "var(--surface-2)" }}
                     >
-                      <span style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>{formatDate(point.generatedAt)}</span>
-                      <span style={{ fontSize: 11.5, color: "var(--ink-3)", marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>
-                        Cobertura: {point.coveragePct === null ? "—" : `${point.coveragePct}%`}
-                      </span>
-                      <span style={{ fontSize: 11.5, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums" }}>
-                        Aprovechamiento: {point.surfacingPct === null ? "—" : `${point.surfacingPct}%`}
-                      </span>
+                      <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)", marginBottom: 6 }}>
+                        {formatDate(point.generatedAt)}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "110px minmax(0, 1fr) 42px", gap: 8, alignItems: "center" }}>
+                        <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>Cobertura</span>
+                        {point.coveragePct !== null ? (
+                          <MiniBar pct={point.coveragePct} color="var(--accent)" />
+                        ) : (
+                          <span />
+                        )}
+                        <span style={{ fontSize: 11, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
+                          {point.coveragePct === null ? "—" : `${point.coveragePct}%`}
+                        </span>
+                        <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>Aprovechamiento</span>
+                        {point.surfacingPct !== null ? (
+                          <MiniBar pct={point.surfacingPct} color="var(--pos)" />
+                        ) : (
+                          <span />
+                        )}
+                        <span style={{ fontSize: 11, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
+                          {point.surfacingPct === null ? "—" : `${point.surfacingPct}%`}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
