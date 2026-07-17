@@ -505,8 +505,7 @@ function ActionNumberChip({ index, kind }: { index: number; kind: ActionItemKind
         fontSize: 11,
         fontWeight: 750,
         display: "grid",
-        placeItems: "center",
-        marginTop: 2
+        placeItems: "center"
       }}
     >
       {index}
@@ -525,6 +524,14 @@ function ActionNumberChip({ index, kind }: { index: number; kind: ActionItemKind
  * have no matching type in the engine yet), keep the synthesized
  * "Sugerencia" box — plain text and a generic link, never a fake button on
  * something that isn't a trackable recommendation.
+ *
+ * The number chip + kind badge sit in a header ABOVE the content box in
+ * BOTH cases (founder report 2026-07-17: with the chip sitting beside the
+ * box only for the synthesized case, `RecCard` — which owns its own full-
+ * width border and can't have a sibling merged into it — rendered visibly
+ * narrower and offset from the synthesized box next to it). Keeping the
+ * chip entirely outside either box means the box itself is always the row's
+ * full available width, whichever branch renders.
  */
 function ActionPlanRow({
   item,
@@ -539,40 +546,35 @@ function ActionPlanRow({
 }) {
   const meta = ACTION_KIND_META[item.kind];
 
-  if (recommendation) {
-    return (
-      <div style={{ display: "flex", gap: 10 }}>
-        <ActionNumberChip index={index} kind={item.kind} />
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 4 }}>
-            {meta.label}
-          </div>
-          <RecCard rec={recommendation} projectId={projectId} />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-      <ActionNumberChip index={index} kind={item.kind} />
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
-          <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
+    <div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+        <ActionNumberChip index={index} kind={item.kind} />
+        <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
+        {/* The topic text only needs to appear here for the synthesized case
+            — a matched recommendation's own title (inside RecCard) already
+            names the topic, repeating it in the header would be redundant. */}
+        {!recommendation && (
           <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
             {item.topic}
           </span>
-        </div>
-        <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
-        {item.competitors.length > 0 && (
-          <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
-            La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
-          </p>
         )}
-        <Link href={genericRecommendationsHref(projectId)} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
-          Ver recomendaciones →
-        </Link>
       </div>
+      {recommendation ? (
+        <RecCard rec={recommendation} projectId={projectId} />
+      ) : (
+        <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+          <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
+          {item.competitors.length > 0 && (
+            <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
+              La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
+            </p>
+          )}
+          <Link href={genericRecommendationsHref(projectId)} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
+            Ver recomendaciones →
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
