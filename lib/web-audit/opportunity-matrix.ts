@@ -1,13 +1,24 @@
-import { COULD_NOT_VERIFY_NOTE, type DomainCoverageMap, type DomainCoverageTopic } from "@/lib/web-audit/coverage-map";
+import { COULD_NOT_VERIFY_NOTE, dedupeMapsByScanId, type DomainCoverageMap, type DomainCoverageTopic } from "@/lib/web-audit/coverage-map";
 
 /**
  * "Opportunity matrix" (WEB-AUDIT-1): classifies every topic of a coverage
  * map along two axes — does the domain have verified own content on the
- * topic (`found`), and does the latest scan actually cite that domain for
- * the same topic's prompt (`aiCitesOwnDomain`)? Each of the resulting
- * outcomes needs an opposite fix (create vs. optimize vs. maintain), which is
- * the whole point of joining the coverage side (DOMAIN-COVERAGE-1) with the
- * scan-citation side instead of showing them as two disconnected features.
+ * topic (`found`), and does the domain get cited for the same topic's
+ * prompt across a recent window of scans (`aiCitesOwnDomain`)? Each of the
+ * resulting outcomes needs an opposite fix (create vs. optimize vs.
+ * maintain), which is the whole point of joining the coverage side
+ * (DOMAIN-COVERAGE-1) with the scan-citation side instead of showing them as
+ * two disconnected features.
+ *
+ * Citation is classified over a fixed window of recent scans rather than the
+ * single latest scan (WEB-AUDIT-R6 phase 2, geo-strategy methodology review
+ * 2026-07-17) — grounding is a noisy sensor (see sample-confidence.ts), so a
+ * single scan's citation flip should not by itself flip a topic between
+ * "performing" and "invisible". A majority-of-window rule was chosen
+ * deliberately over "cited in ANY of the last N scans", which is a
+ * monotonically-upward-biased estimator (widening the window can only add
+ * citations, never remove them) and would inflate the metric — see that
+ * phase's Task Intake for the full rejection rationale.
  *
  * Deliberately NOT marked `import "server-only"`: pure classification logic
  * over plain data, importable from Vitest (same rationale as
@@ -34,6 +45,13 @@ export type PromptResultLite = {
 };
 
 export type ClassifiedTopic = DomainCoverageTopic & { outcome: TopicOutcome };
+
+/** One scan's prompt results, dated — the unit the citation window is built from. */
+export type ScanResultsWindow = {
+  scanId: string;
+  generatedAt: string;
+  results: PromptResultLite[];
+};
 
 export type WebAuditSummary = {
   topics: ClassifiedTopic[];
@@ -106,37 +124,125 @@ export function hasOwnDomainGroundingCitation(
   return false;
 }
 
+/** Fixed methodology constant — not user-configurable. geo-strategy review 2026-07-17 (WEB-AUDIT-R6 phase 2). */
+export const CITATION_WINDOW_SIZE = 3;
+
+/**
+ * Scans older than this many days before the reference point are excluded
+ * from the citation window — a citation from months ago says nothing about
+ * whether the domain is cited today, so it must not prop up a stale
+ * "performing" verdict.
+ */
+export const CITATION_WINDOW_MAX_AGE_DAYS = 30;
+
+const CITATION_WINDOW_MAX_AGE_MS = CITATION_WINDOW_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+
+/**
+ * Selects the scans that make up the citation window for a given reference
+ * date: only scans at-or-before `asOf` (never a future scan — avoids
+ * look-ahead bias when this is called per historical trend point), within
+ * the recency guard, most recent first, capped at CITATION_WINDOW_SIZE.
+ */
+function buildCitationWindow(candidates: ScanResultsWindow[], asOf: string): ScanResultsWindow[] {
+  const asOfMs = Date.parse(asOf);
+  return candidates
+    .filter((c) => c.generatedAt <= asOf)
+    .filter((c) => {
+      const ms = Date.parse(c.generatedAt);
+      return Number.isFinite(ms) && asOfMs - ms <= CITATION_WINDOW_MAX_AGE_MS;
+    })
+    .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt))
+    .slice(0, CITATION_WINDOW_SIZE);
+}
+
+type CitationFrequency = { citedRuns: number; totalRuns: number };
+
+/**
+ * Counts, across the window, how many scans actually had a result for this
+ * prompt (totalRuns) and how many of those cited the domain (citedRuns). A
+ * scan missing a result for this specific prompt contributes no data point
+ * either way — it is not counted as "not cited".
+ */
+function citationFrequency(
+  promptId: string,
+  window: ScanResultsWindow[],
+  projectDomainNormalized: string
+): CitationFrequency {
+  let citedRuns = 0;
+  let totalRuns = 0;
+  for (const scan of window) {
+    const result = scan.results.find((r) => r.prompt_id === promptId);
+    if (!result) continue;
+    totalRuns += 1;
+    if (hasOwnDomainGroundingCitation(result.extracted_json, projectDomainNormalized, result.provider)) {
+      citedRuns += 1;
+    }
+  }
+  return { citedRuns, totalRuns };
+}
+
+/**
+ * Majority rule over the window: cited when at least half of the runs that
+ * had data cite the domain. Deliberately NOT "cited in ANY run of the
+ * window" — that estimator only ever goes up as the window widens, which
+ * would inflate the metric rather than stabilize it (rejected in the phase 2
+ * Task Intake).
+ */
+function isCitedByMajority(freq: CitationFrequency): boolean {
+  return freq.totalRuns > 0 && freq.citedRuns * 2 >= freq.totalRuns;
+}
+
 function classifyTopic(
   topic: DomainCoverageTopic,
-  result: PromptResultLite | undefined,
+  currentResult: PromptResultLite | undefined,
+  citationWindow: ScanResultsWindow[],
   projectDomainNormalized: string
 ): TopicOutcome {
   if (topic.note === COULD_NOT_VERIFY_NOTE) return "inconclusive";
-  if (!result) return "inconclusive";
+  if (!currentResult) return "inconclusive";
 
-  const cited = hasOwnDomainGroundingCitation(result.extracted_json, projectDomainNormalized, result.provider);
+  const cited = isCitedByMajority(citationFrequency(topic.promptId, citationWindow, projectDomainNormalized));
 
   if (topic.found) return cited ? "performing" : "invisible";
 
   // !topic.found (conclusive, since we already excluded COULD_NOT_VERIFY_NOTE)
   if (cited) return "unverified_cited";
-  return result.mentioned_competitors_count > 0 ? "content_gap" : "open_opportunity";
+  return currentResult.mentioned_competitors_count > 0 ? "content_gap" : "open_opportunity";
+}
+
+/**
+ * Builds the {scanId, generatedAt, results} candidates the citation window
+ * is drawn from. Dedupes by scanId (see dedupeMapsByScanId) so trend.ts and
+ * this module's own callers agree on exactly one results list per scan.
+ */
+export function buildCitationWindowCandidates(
+  maps: DomainCoverageMap[],
+  resultsByScanId: Map<string, PromptResultLite[]>
+): ScanResultsWindow[] {
+  return dedupeMapsByScanId(maps).map((map) => ({
+    scanId: map.scanId,
+    generatedAt: map.generatedAt,
+    results: resultsByScanId.get(map.scanId) ?? []
+  }));
 }
 
 export function buildWebAuditSummary(input: {
   coverage: DomainCoverageMap;
-  results: PromptResultLite[];
+  citationWindowCandidates: ScanResultsWindow[];
   projectDomain: string;
 }): WebAuditSummary {
   const projectDomainNormalized = normalizeDomain(input.projectDomain);
+  const citationWindow = buildCitationWindow(input.citationWindowCandidates, input.coverage.generatedAt);
+
+  const currentResults = input.citationWindowCandidates.find((c) => c.scanId === input.coverage.scanId)?.results ?? [];
   const resultByPromptId = new Map<string, PromptResultLite>();
-  for (const result of input.results) {
+  for (const result of currentResults) {
     if (result.prompt_id) resultByPromptId.set(result.prompt_id, result);
   }
 
   const topics: ClassifiedTopic[] = input.coverage.topics.map((topic) => ({
     ...topic,
-    outcome: classifyTopic(topic, resultByPromptId.get(topic.promptId), projectDomainNormalized)
+    outcome: classifyTopic(topic, resultByPromptId.get(topic.promptId), citationWindow, projectDomainNormalized)
   }));
 
   const conclusive = topics.filter((t) => t.outcome !== "inconclusive");

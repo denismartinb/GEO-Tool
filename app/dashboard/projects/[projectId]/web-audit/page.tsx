@@ -6,7 +6,13 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
-import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
+import {
+  buildWebAuditSummary,
+  buildCitationWindowCandidates,
+  type PromptResultLite,
+  type ClassifiedTopic,
+  type TopicOutcome
+} from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
@@ -809,8 +815,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
 
   const latestMap = maps.length > 0 ? maps.reduce((a, b) => (a.generatedAt > b.generatedAt ? a : b)) : null;
 
+  // WEB-AUDIT-R6 phase 2: citation is classified over a fixed window of
+  // recent scans, not just the latest one (see opportunity-matrix.ts) — the
+  // same deduped candidates list drives both this current summary and every
+  // historical trend point (buildCoverageTrend), so they stay consistent.
+  const citationWindowCandidates = buildCitationWindowCandidates(maps, resultsByScanId);
   const summary = latestMap
-    ? buildWebAuditSummary({ coverage: latestMap, results: resultsByScanId.get(latestMap.scanId) ?? [], projectDomain: project.domain })
+    ? buildWebAuditSummary({ coverage: latestMap, citationWindowCandidates, projectDomain: project.domain })
     : null;
   const trend = buildCoverageTrend({ maps, resultsByScanId, projectDomain: project.domain });
 

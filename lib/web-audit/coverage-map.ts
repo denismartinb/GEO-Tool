@@ -35,6 +35,24 @@ export const NOT_COVERED_NOTE =
   "No hemos encontrado contenido publicado en tu dominio sobre este tema a través de la búsqueda de Google.";
 export const COULD_NOT_VERIFY_NOTE = "No hemos podido verificar la cobertura de este tema en este momento.";
 
+/**
+ * Dedupes a list of coverage-map snapshots by scanId, keeping the most
+ * recently generated one for each — re-auditing the same scan (cache-hit or
+ * not) can otherwise repeat a scanId across the persisted history rows.
+ * Shared by trend.ts (per-point series) and opportunity-matrix.ts
+ * (citation-window candidates) so both agree on exactly one snapshot per scan.
+ */
+export function dedupeMapsByScanId(maps: DomainCoverageMap[]): DomainCoverageMap[] {
+  const latestByScanId = new Map<string, DomainCoverageMap>();
+  for (const map of maps) {
+    const existing = latestByScanId.get(map.scanId);
+    if (!existing || existing.generatedAt < map.generatedAt) {
+      latestByScanId.set(map.scanId, map);
+    }
+  }
+  return Array.from(latestByScanId.values());
+}
+
 export function parseCoverageMap(raw: string | null): DomainCoverageMap | null {
   if (!raw) return null;
   try {
