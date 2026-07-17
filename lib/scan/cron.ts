@@ -1,8 +1,9 @@
 import "server-only";
 
+import { after } from "next/server";
 import { resolvePlan } from "@/lib/billing";
 import { createPendingScanRunForCron } from "@/lib/scan/run-creation";
-import { executePendingScan } from "@/lib/scan/executor";
+import { executePendingScan, getSiteUrl } from "@/lib/scan/executor";
 import { ProjectActionError } from "@/lib/scan/types";
 import type { createServiceClient } from "@/lib/supabase/service";
 
@@ -10,6 +11,14 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const TIME_BUDGET_MS = 45_000;
 const FAILURE_STREAK_LIMIT = 3;
 const DEFAULT_MAX_PROJECTS_PER_RUN = 5;
+
+/**
+ * Hard cap on how many chained sweep invocations a single daily cron firing
+ * can produce (ASYNC-SCAN-1a, docs/adr/0016). Bounds the sweep's total work
+ * per day to `MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`
+ * projects even if the convergence guarantees below were ever violated.
+ */
+const DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS = 20;
 
 /**
  * PRICING-TRUTH-1 (PR b): recurring-scan cadence by the project owner's plan,
@@ -118,6 +127,37 @@ async function processCandidate({
 }
 
 /**
+ * Fires the next link of a multi-invocation daily sweep (ASYNC-SCAN-1a,
+ * docs/adr/0016) without making the caller wait for it: called from inside
+ * `after()`, mirroring `triggerScanContinuation` in `executor.ts`
+ * (docs/adr/0014). Errors are swallowed (logged only): if this dispatch is
+ * lost, the deferred projects simply wait for the next day's cron firing —
+ * candidate ordering (oldest-last-scan-first) guarantees they are
+ * prioritized then, same starvation protection as before this mechanism
+ * existed.
+ */
+async function triggerSweepContinuation({ chainIndex }: { chainIndex: number }): Promise<void> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    console.error("[geo:scan:cron] cannot self-chain sweep: CRON_SECRET is not configured", { chainIndex });
+    return;
+  }
+
+  try {
+    await fetch(`${getSiteUrl()}/api/cron/sweep-continue`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ chainIndex })
+    });
+  } catch (error) {
+    console.error("[geo:scan:cron] failed to dispatch sweep continuation", {
+      chainIndex,
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+/**
  * Runs the daily recurring-scan sweep.
  *
  * Candidates are ordered oldest-last-scan-first (a project with no prior run
@@ -137,14 +177,40 @@ async function processCandidate({
  * processCandidate), which reconciles stuck runs and only reports
  * skipped_active_run if a fresh check confirms the run is genuinely still
  * active.
+ *
+ * Self-chaining (ASYNC-SCAN-1a, docs/adr/0016): candidates left over when
+ * the per-invocation cap (`maxProjects`) or the time budget is hit are
+ * *deferred*, and — instead of silently waiting for the next day, which
+ * capped the whole system at `MAX_PROJECTS_PER_CRON_RUN` recurring projects
+ * per day on Vercel Hobby's once-daily cron — the next sweep invocation is
+ * dispatched via `after()` + `/api/cron/sweep-continue`, which repeats this
+ * same function with `chainIndex + 1`. Convergence: every scanned project's
+ * fresh run makes it `skipped_recent` (or `skipped_active_run`) for every
+ * later link, so the eligible set strictly shrinks; a link that scans
+ * nothing does not chain (progress guard), and `maxChainInvocations` bounds
+ * the chain regardless.
  */
 export async function runDailyCronScan({
   service,
-  maxProjects = Number(process.env.MAX_PROJECTS_PER_CRON_RUN ?? DEFAULT_MAX_PROJECTS_PER_RUN)
+  maxProjects = Number(process.env.MAX_PROJECTS_PER_CRON_RUN ?? DEFAULT_MAX_PROJECTS_PER_RUN),
+  chainIndex = 0,
+  scheduleContinuation = true,
+  maxChainInvocations = Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS)
 }: {
   service: ReturnType<typeof createServiceClient>;
   maxProjects?: number;
-}): Promise<{ processed: number; scanned: number; results: CronResult[] }> {
+  /** 0 for the daily cron firing itself; ≥1 for chained continuation invocations. */
+  chainIndex?: number;
+  /** Set false to run a single invocation with no self-chaining (tests, manual ops). */
+  scheduleContinuation?: boolean;
+  maxChainInvocations?: number;
+}): Promise<{
+  processed: number;
+  scanned: number;
+  results: CronResult[];
+  deferred: number;
+  continuationScheduled: boolean;
+}> {
   const startedAt = Date.now();
 
   const { data: candidateProjects, error: projectsError } = await service
@@ -235,12 +301,36 @@ export async function runDailyCronScan({
     }
   }
 
+  // Candidates the loop never reached (per-invocation cap) or explicitly
+  // marked skipped_budget (time budget) — both leave `index` behind
+  // `candidates.length`. Skips decided inside the loop (recent, streak,
+  // active run) advance `index` and are NOT deferred: they resolved for
+  // today, chaining again would not change them.
+  const deferredCount = candidates.length - index;
+
+  const continuationScheduled =
+    scheduleContinuation && deferredCount > 0 && scannedCount > 0 && chainIndex + 1 < maxChainInvocations;
+
+  if (continuationScheduled) {
+    const nextChainIndex = chainIndex + 1;
+    after(() => triggerSweepContinuation({ chainIndex: nextChainIndex }));
+  }
+
   console.info("[geo:scan:cron] daily scan run summary", {
     elapsedMs: Date.now() - startedAt,
+    chainIndex,
     candidates: (candidateProjects ?? []).length,
     scanned: scannedCount,
+    deferred: deferredCount,
+    continuationScheduled,
     results
   });
 
-  return { processed: results.length, scanned: scannedCount, results };
+  return {
+    processed: results.length,
+    scanned: scannedCount,
+    results,
+    deferred: deferredCount,
+    continuationScheduled
+  };
 }

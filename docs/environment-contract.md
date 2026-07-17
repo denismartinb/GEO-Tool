@@ -63,13 +63,23 @@ See `docs/adr/0003-sync-scan-execution-and-maxduration.md`.
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `CRON_SECRET` | Yes, once `CRON_SCANS_ENABLED=true` | Vercel | random secret string; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` to `/api/cron/weekly-scans` |
-| `CRON_SCANS_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch |
-| `MAX_PROJECTS_PER_CRON_RUN` | No (defaults to `5`) | Vercel | positive integer |
+| `CRON_SECRET` | Yes, once `CRON_SCANS_ENABLED=true` | Vercel | random secret string; Vercel sends it as `Authorization: Bearer <CRON_SECRET>` to `/api/cron/weekly-scans`, and the sweep chain sends the same one to `/api/cron/sweep-continue` |
+| `CRON_SCANS_ENABLED` | No (defaults to disabled) | Vercel | `true` to enable; any other value (or unset) is a no-op kill switch — also stops any in-flight sweep chain |
+| `MAX_PROJECTS_PER_CRON_RUN` | No (defaults to `5`) | Vercel | positive integer — **per invocation**, not per day (see below) |
+| `MAX_SWEEP_CHAIN_INVOCATIONS` | No (defaults to `20`) | Vercel | positive integer — hard cap on chained sweep invocations per daily firing |
 
 The cron only ever processes projects with `projects.recurring_scans_enabled = true`
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
+
+Since ASYNC-SCAN-1a (`docs/adr/0016-self-chaining-daily-cron-sweep.md`), one
+daily firing self-chains across up to `MAX_SWEEP_CHAIN_INVOCATIONS`
+invocations of `MAX_PROJECTS_PER_CRON_RUN` projects each (default capacity:
+20 × 5 = 100 projects/day), via `after()` + a POST to
+`/api/cron/sweep-continue`. Like `/api/scan/continue`, the chain dispatch
+needs a reachable deployment URL (`NEXT_PUBLIC_SITE_URL` / `VERCEL_URL`); a
+lost dispatch is benign — deferred projects are prioritized by the next
+day's firing.
 
 ### Weekly digest email (ALERTS-1 Fase 6b)
 

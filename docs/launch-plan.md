@@ -41,7 +41,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 6 | ALERTS-1 | ✅ Hecho | — | 2026-07-12 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b: resumen semanal por email (cron nuevo, deshabilitado por defecto vía `CRON_DIGEST_ENABLED`) — Vercel levantó el límite de cron jobs en enero 2026 (100/proyecto en todos los planes, incl. Hobby), así que no dependía de Vercel Pro como se pensaba |
 | 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-11 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso) |
 | 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
-| 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
+| 9 | ASYNC-SCAN-1 ⚠️ | 🟡 En curso (1a en PR) | — | 2026-07-17 | Task Intake de la Fase 9 aprobado 2026-07-17, dividida: **1a CRON-SCALE** (sweep diario auto-encadenado, ADR-0016, sin schema) en PR pendiente de Human Gate; **1b NOTIF-SERVER** (notificaciones server-side, schema+RLS) pendiente de su propio Task Intake, a diseñar junto a Fase 6 |
 | ⏰ | MODEL-PIN (deadline 2026-10-16) | 🔲 Pendiente | — | 2026-07-09 | Cutover anunciado de gemini-2.5-flash |
 
 Estados: 🔲 Pendiente · 🟡 En curso · ✅ Hecho · ⛔ Bloqueada · ❌ Cancelada
@@ -1294,6 +1294,22 @@ proyectos una vez al día), **30 clientes Pro con refresco diario y 100
 prompts × 2 motores no caben**. No bloquea LAUNCH; bloquea el primer mes
 con tracción. Elevar prioridad en cuanto haya >10 clientes con recurring
 scans. Reabre ADR-0003; schema + RLS + scheduler → aprobación explícita.
+
+**Actualización 2026-07-17 — Task Intake aprobado ("Si"), fase dividida:**
+
+- **1a — CRON-SCALE (en PR):** el sweep diario se auto-encadena con el
+  mismo patrón de ADR-0014 un nivel más arriba (`after()` +
+  `/api/cron/sweep-continue`, `CRON_SECRET` reutilizado, kill switch
+  `CRON_SCANS_ENABLED` intacto). Capacidad: de 5 a 100 proyectos/día
+  (`MAX_SWEEP_CHAIN_INVOCATIONS=20` × `MAX_PROJECTS_PER_CRON_RUN=5`), sin
+  schema, sin RLS, sin infra nueva. Ver ADR-0016 para convergencia,
+  terminación y matemática de coste. Parte del scope original de junio ya
+  no aplica: SCAN-CHAIN-1 (ADR-0014) ya había resuelto el aterrizaje
+  inmediato en Escaneos y la ejecución browser-independent por campaña.
+- **1b — NOTIF-SERVER (pendiente de Task Intake propio):** notificaciones
+  server-side (schema + RLS nuevos, campana cross-device), a diseñar una
+  sola vez junto a las necesidades de Fase 6, con data-guardian en
+  plan-mode. Sigue gateada por aprobación explícita.
 
 ---
 
