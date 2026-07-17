@@ -38,6 +38,28 @@ override is set in Vercel, it must also be updated to a served model id.
 | `ANTHROPIC_API_KEY` | Only if Claude is an active scan engine | Vercel + local `.env.local` | Anthropic API key |
 | `ANTHROPIC_MODEL` | No (defaults to `claude-haiku-4-5-20251001`) | Vercel optional | Valid Claude model id |
 
+### OpenAI (ENGINES-2a — cost PoC only, not wired into scans yet)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `OPENAI_API_KEY` | Only when running the `lib/llm/openai.ts` cost PoC | Local `.env.local` for now | `sk-...` |
+| `OPENAI_MODEL` | **Required if `OPENAI_API_KEY` is set — no default.** | Local `.env.local` for now | Any current Responses-API model id, e.g. `gpt-4o-mini` |
+
+Unlike `GEMINI_MODEL`/`ANTHROPIC_MODEL`, `OPENAI_MODEL` has deliberately no
+hardcoded fallback: this module was written against third-party
+documentation of the Responses API (the official pricing/docs pages
+returned 403 from this environment when it was built), so guessing a
+default model id risked repeating the exact pinning gap that caused the
+`gemini-2.0-flash` 404 (`docs/adr/0002-gemini-model-pinning.md`). Confirm the
+model id is live before any real usage. `lib/llm/openai.ts` uses the
+Responses API `web_search` tool for real grounding (`url_citation`
+annotations map to `groundingChunks`, same shape Gemini uses) — this is NOT
+yet an active scan engine: it is not in `VALID_LLM_SCAN_PROVIDERS`
+(`lib/scan/executor.ts`) or `lib/scan/extraction.ts`, and not in
+`LLM_SCAN_PROVIDERS`/plan `caps.engines`. It exists solely to measure real
+per-call cost (tokens + web_search tool fee) before deciding plan gating and
+pricing (see `docs/launch-plan.md`, Fase 8).
+
 ### Scan engines
 
 | Variable | Required | Where | Expected shape |
@@ -49,7 +71,7 @@ Setting `LLM_SCAN_PROVIDERS=gemini,claude` requires both `GEMINI_API_KEY` and
 `ANTHROPIC_API_KEY` to be configured — a misconfigured engine does not abort
 the run as long as at least one other listed engine is configured (see
 `lib/scan/executor.ts`), but if every listed engine is misconfigured the run
-fails fast.
+fails fast. `openai` is not yet a valid value here (see above).
 
 ### Scan execution
 

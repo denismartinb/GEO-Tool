@@ -1405,6 +1405,48 @@ PRICING-TRUTH-1 solo puede anunciar motores ya reales).
 **Dependencias:** LAUNCH (no bloquea cobrar con 2 motores honestos).
 Presupuestar coste por escaneo antes (geo-strategy + platform-deploy).
 
+**ENGINES-2a — OpenAI únicamente, con búsqueda web (2026-07-17, en curso):**
+Task Intake conversacional con el fundador — decisión explícita: solo
+OpenAI por ahora (Perplexity queda fuera, sin fecha), y **con búsqueda web
+activada** (Responses API, tool `web_search`), no solo texto — es la
+oportunidad de tener un segundo motor con grounding real (citas
+verificables), no solo un tercer motor "ciego" como Claude hoy.
+
+Antes de comprometer precio/gating de plan, primer paso aprobado: medir
+coste real por llamada (no estimarlo). Hecho en este PR:
+
+- `lib/llm/openai.ts`: `generateOpenAIVisibilityAnswer` (Responses API +
+  `web_search`, mismo prompt neutral brand-blind que Gemini/Claude —
+  ADR-0007) y `extractOpenAIStructuredData` (mismo patrón que
+  `extractClaudeStructuredData`). Devuelve la misma forma
+  `GeminiVisibilityResponse`, incluido `groundingChunks` desde las
+  anotaciones `url_citation` reales de OpenAI.
+- **Deliberadamente NO activo todavía**: no está en
+  `VALID_LLM_SCAN_PROVIDERS` (`lib/scan/executor.ts`), ni en el dispatch de
+  `lib/scan/extraction.ts`, ni en `caps.engines`/`/pricing`. Ningún cliente
+  real lo recibe con este PR.
+- **Sin modelo por defecto**: a diferencia de Gemini/Claude, `OPENAI_MODEL`
+  no tiene fallback hardcodeado — este módulo se escribió contra
+  documentación de terceros (la web oficial de pricing/docs de OpenAI
+  devolvió 403 desde este entorno), así que adivinar un id de modelo actual
+  repetiría el mismo gap de pinning que causó el 404 de
+  `gemini-2.0-flash` (ADR-0002). Hay que confirmarlo en vivo antes de usarlo.
+- **Hallazgo arquitectónico importante para el PR que lo active de
+  verdad**: las citas `url_citation` de OpenAI ya son la URL real de
+  destino (a diferencia del wrapper de redirección de Google que sí
+  necesita `resolveGroundingRedirects`, ADR-0006) — enchufar este proveedor
+  en `extraction.ts` sin más haría una petición HTTP innecesaria a cada URL
+  citada. Necesitará una rama por proveedor en `buildGroundedCitations`,
+  documentado en el propio código (`lib/llm/openai.ts`).
+- 16 tests nuevos (`lib/llm/openai.test.ts`), mismo patrón que
+  `claude.test.ts`. `pnpm test` y `pnpm run validate` en verde.
+
+**Siguiente:** medir coste real (no de fuentes de terceros, que se
+contradicen entre sí) — script de medición fuera del repo, a ejecutar con
+`OPENAI_API_KEY` real contra ~50-100 prompts, leyendo el coste real
+facturado en el dashboard de OpenAI. Con ese dato: (b) qué planes incluyen
+OpenAI, (c) cuánto sube el precio de Pro.
+
 ---
 
 ## Fase 9 — ASYNC-SCAN-1 ⚠️ (prerrequisito de escala, ya scoped)
