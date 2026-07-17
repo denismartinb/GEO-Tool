@@ -13,10 +13,10 @@ import {
   buildActionPlan,
   extractMentionedCompetitors,
   mergeCompetitorNames,
-  synthesizedGuidance,
   type ActionItem,
   type ActionItemKind
 } from "@/lib/web-audit/action-plan";
+import { parseGeneratedSolution, type GeneratedSolution } from "@/lib/recommendations/generated-solution";
 import { RunAuditButton } from "./run-audit-button";
 import { RunTechnicalAuditButton } from "./run-technical-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
@@ -26,10 +26,12 @@ import {
   AuditTabPanel,
   GoToTabButton,
   QuadrantButton,
-  TopicFilterBar,
-  TopicGroupSection,
-  type TopicFilterCount
+  ActionFilterBar,
+  ActionRowVisibility,
+  type ActionFilterId,
+  type ActionFilterCount
 } from "./audit-tabs";
+import { RecCard, type Recommendation } from "../recommendations/recommendations-client";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
 import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
@@ -57,55 +59,22 @@ function formatDate(value: string | null | undefined): string {
   });
 }
 
-const OUTCOME_META: Record<TopicOutcome, { label: string; badgeClass: string }> = {
-  performing: { label: "Rindiendo", badgeClass: "badge-pos" },
-  invisible: { label: "Invisible para la IA", badgeClass: "badge-warn" },
-  content_gap: { label: "Hueco de contenido", badgeClass: "badge-neg" },
-  open_opportunity: { label: "Oportunidad abierta", badgeClass: "badge-neutral" },
-  unverified_cited: { label: "Citado sin contenido verificado", badgeClass: "badge-neutral" },
-  inconclusive: { label: "Sin verificar", badgeClass: "badge-outline" }
+const ACTION_KIND_META: Record<ActionItemKind, { label: string; badgeClass: string }> = {
+  optimize: { label: "Optimizar página existente", badgeClass: "badge-warn" },
+  create_competing: { label: "Crear contenido — compite un rival", badgeClass: "badge-neg" },
+  create_open: { label: "Crear contenido — oportunidad abierta", badgeClass: "badge-neutral" },
+  capture: { label: "Formalizar página propia", badgeClass: "badge-neutral" }
 };
 
-const TOPIC_LIST_ORDER: TopicOutcome[] = [
-  "invisible",
-  "content_gap",
-  "performing",
-  "unverified_cited",
-  "open_opportunity",
-  "inconclusive"
-];
-
-/** Segment colors for the coverage distribution bar in the Contenido tab. */
-const OUTCOME_BAR_COLOR: Record<TopicOutcome, string> = {
-  performing: "var(--pos)",
-  invisible: "var(--warn)",
-  content_gap: "var(--neg-ink)",
-  open_opportunity: "var(--info)",
-  unverified_cited: "var(--ink-3)",
-  inconclusive: "var(--line)"
-};
-
-const ACTION_KIND_META: Record<ActionItemKind, { label: string; linkLabel: string; badgeClass: string }> = {
-  optimize: { label: "Optimizar página existente", linkLabel: "Cómo optimizar →", badgeClass: "badge-warn" },
-  create_competing: { label: "Crear contenido — compite un rival", linkLabel: "Ver recomendación →", badgeClass: "badge-neg" },
-  create_open: { label: "Crear contenido — oportunidad abierta", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" },
-  capture: { label: "Formalizar página propia", linkLabel: "Ver recomendación →", badgeClass: "badge-neutral" }
-};
-
-// Which action a topic's own outcome maps to — same mapping buildActionPlan()
-// uses to prioritize the "Plan de acción" card, applied here per-row so
-// every actionable topic in "Detalle por tema" shows its own "Qué hacer"
-// inline, instead of making the founder cross-reference a summary card
-// elsewhere on the page (founder report: looking at a single topic row gave
-// no idea what to do about it). performing/inconclusive intentionally have
-// no entry — the first is already working, the second has no reliable
-// signal to act on.
-const OUTCOME_TO_ACTION_KIND: Partial<Record<TopicOutcome, ActionItemKind>> = {
-  invisible: "optimize",
-  content_gap: "create_competing",
-  open_opportunity: "create_open",
-  unverified_cited: "capture"
-};
+/**
+ * Which real filter value(s) a Plan de acción row should stay visible under
+ * (WEB-AUDIT-R5). content_gap/open_opportunity rows (create_competing/
+ * create_open) also match the matrix's combined "no_content" quadrant.
+ */
+function visibilityMatches(kind: ActionItemKind): ActionFilterId[] {
+  if (kind === "create_competing" || kind === "create_open") return [kind, "no_content"];
+  return [kind];
+}
 
 // Display names for the AI-bot user agents tracked by robots.ts — the
 // UA token stays visible alongside it (badges), since that's what actually
@@ -503,205 +472,89 @@ function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: 
   );
 }
 
-function recommendationHref(projectId: string, recommendationId: string | null): string {
-  // A deep-link only exists for recommendation types whose evidence anchors
-  // to this exact prompt's result (currently add_citation_block — see
-  // lib/recommendations/coverage-overlay.ts's join). Everything else falls
-  // back to the generic Recomendaciones page rather than inventing a link.
-  return recommendationId
-    ? `/dashboard/projects/${projectId}/recommendations#rec-${recommendationId}`
-    : `/dashboard/projects/${projectId}/recommendations`;
+// WEB-AUDIT-R5: a matched recommendation now embeds its own interactive
+// RecCard (see ActionPlanRow) instead of deep-linking out — this only ever
+// points at the generic Recomendaciones page, for topics with no matching
+// recommendation type in the engine at all.
+function genericRecommendationsHref(projectId: string): string {
+  return `/dashboard/projects/${projectId}/recommendations`;
 }
 
-function TopicRow({
-  topic,
-  competitors,
-  brandMentioned,
-  recommendation,
-  projectId
-}: {
-  topic: ClassifiedTopic;
-  competitors: string[];
-  brandMentioned: boolean;
-  recommendation: { id: string; title: string; description: string } | null;
-  projectId: string;
-}) {
-  const meta = OUTCOME_META[topic.outcome];
-  const actionKind = OUTCOME_TO_ACTION_KIND[topic.outcome];
-  // "Hueco de contenido" / "Oportunidad abierta" only mean: no own content
-  // Google indexes for this topic, and no verified citation to your domain
-  // in this scan. Neither checks whether the AI's answer names your brand
-  // by its own knowledge (fame, not an asset you control) — a topic can be
-  // a genuine content gap while the AI still leads with your brand name.
-  // Surface that distinction here instead of leaving "Hueco de contenido"
-  // read as "the AI doesn't know you" (founder-reported confusion).
-  const showBrandMentionNote =
-    (topic.outcome === "content_gap" || topic.outcome === "open_opportunity") && brandMentioned;
+// Number chip tone per action kind (WEB-AUDIT-R4) — the priority order reads
+// as a colored sequence (amber optimize → red competing → neutral) instead
+// of a flat grey list.
+const NUMBER_TONE: Record<ActionItemKind, { bg: string; fg: string }> = {
+  optimize: { bg: "var(--warn-soft)", fg: "var(--warn-ink)" },
+  create_competing: { bg: "var(--neg-soft)", fg: "var(--neg-ink)" },
+  create_open: { bg: "var(--surface-2)", fg: "var(--ink-3)" },
+  capture: { bg: "var(--accent-soft)", fg: "var(--accent-ink)" }
+};
 
-  // Collapsed by default (WEB-AUDIT-R1): 49 fully-expanded topic cards were
-  // ~70% of the page's scroll. The summary row keeps outcome badge + topic;
-  // everything else (qué hacer, competitors, pages, AI note) expands on tap.
+function ActionNumberChip({ index, kind }: { index: number; kind: ActionItemKind }) {
+  const tone = NUMBER_TONE[kind];
   return (
-    <details className="wa-details">
-      <summary>
-        <span className={`badge ${meta.badgeClass}`} style={{ flexShrink: 0 }}>{meta.label}</span>
-        <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
-          {topic.topic}
-        </span>
-        <span className="wa-chev">
-          <Icon name="chevDown" size={14} />
-        </span>
-      </summary>
-      <div className="wa-details-body">
-        {/* "Qué hacer" inline, per row — not just in the "Plan de acción"
-            summary card (founder report, twice: looking at a single topic row
-            gave no idea what to do about it, and clicking through to
-            Recomendaciones landed on a decontextualized page with no
-            explanation of the problem or the fix).
-            When a real recommendation matches this exact topic (only
-            add_citation_block/increase_brand_visibility can — see the query
-            in the page component), show its own title + description right
-            here; the link becomes a secondary "ver más" action instead of
-            the only place to read anything. content_gap/unverified_cited
-            topics have no matching recommendation type in the engine yet, so
-            they keep the generic kind label + link — never inventing a
-            problem statement that doesn't exist. */}
-        {actionKind && (
-          <div
-            style={{
-              padding: "8px 10px",
-              margin: "0 0 8px",
-              background: "var(--surface-2)",
-              borderRadius: 8
-            }}
-          >
-            {recommendation ? (
-              <>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginBottom: 3 }}>
-                  {recommendation.title}
-                </div>
-                <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
-                  {recommendation.description}
-                </p>
-                <Link
-                  href={recommendationHref(projectId, recommendation.id)}
-                  style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
-                >
-                  Ver en Recomendaciones →
-                </Link>
-              </>
-            ) : (
-              <>
-                {/* No real recommendation matches this topic (only
-                    add_citation_block/increase_brand_visibility ever can — see
-                    the query above) — the recommendation engine never
-                    generates a card for content_gap/open_opportunity/
-                    unverified_cited at all. Synthesize the guidance from data
-                    already on the topic instead of leaving a bare label + a
-                    link to a decontextualized page. Framed as "Sugerencia",
-                    not a title, and never linked with a #rec- anchor — this
-                    isn't a trackable/dismissible recommendation, and must
-                    never look like one. */}
-                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink-3)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 3 }}>
-                  Sugerencia · {ACTION_KIND_META[actionKind].label}
-                </div>
-                <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.5, margin: "0 0 6px" }}>
-                  {synthesizedGuidance(actionKind, competitors)}
-                </p>
-                <Link
-                  href={recommendationHref(projectId, null)}
-                  style={{ fontSize: 11.5, fontWeight: 650, color: "var(--accent)" }}
-                >
-                  Ver recomendaciones →
-                </Link>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* WEB-AUDIT-ACTION: only rendered for content_gap topics with at least
-            one AI-mentioned competitor — never inferred, straight from
-            extracted_json.competitors[].mentioned for this prompt's result. */}
-        {topic.outcome === "content_gap" && competitors.length > 0 && (
-          <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 6px" }}>
-            La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{competitors.join(", ")}</strong>
-          </p>
-        )}
-
-        {showBrandMentionNote && (
-          <p style={{ fontSize: 12, color: "var(--ink-2)", margin: "0 0 6px", fontWeight: 600 }}>
-            Tu marca sí aparece mencionada en la respuesta de la IA — pero sin contenido propio verificado ni una cita a
-            tu dominio. Esa mención viene de lo que el modelo ya sabe de ti, no de un activo que controles.
-          </p>
-        )}
-
-        {topic.pages.length > 0 && (
-          <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: "0 0 6px" }}>
-            {topic.pages.map((page, i) => (
-              <li key={i}>
-                <a
-                  href={page.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: "var(--accent)", overflowWrap: "anywhere" }}
-                >
-                  {page.url}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <p style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.55, margin: 0, fontStyle: "italic" }}>
-          {topic.note}
-          {topic.found && (
-            <span style={{ color: "var(--ink-4)" }}> (interpretación de la IA, revísala antes de confiar en ella)</span>
-          )}
-        </p>
-      </div>
-    </details>
+    <div
+      style={{
+        flexShrink: 0,
+        width: 22,
+        height: 22,
+        borderRadius: "50%",
+        background: tone.bg,
+        color: tone.fg,
+        fontSize: 11,
+        fontWeight: 750,
+        display: "grid",
+        placeItems: "center",
+        marginTop: 2
+      }}
+    >
+      {index}
+    </div>
   );
 }
 
-function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: number; projectId: string }) {
+/**
+ * One row of the Plan de acción (WEB-AUDIT-R5, self-contained per founder
+ * request 2026-07-16). When a real recommendation matches this topic (only
+ * add_citation_block/increase_brand_visibility ever can — see the query in
+ * the page component), embed the SAME interactive `RecCard` used on the
+ * Recomendaciones page: its own evidence, "Generar propuesta con IA", and
+ * "Marcar como hecho" all work right here, no navigation required. When no
+ * real recommendation matches (content_gap/open_opportunity/unverified_cited
+ * have no matching type in the engine yet), keep the synthesized
+ * "Sugerencia" box — plain text and a generic link, never a fake button on
+ * something that isn't a trackable recommendation.
+ */
+function ActionPlanRow({
+  item,
+  index,
+  projectId,
+  recommendation
+}: {
+  item: ActionItem;
+  index: number;
+  projectId: string;
+  recommendation: Recommendation | null;
+}) {
   const meta = ACTION_KIND_META[item.kind];
-  const href = recommendationHref(projectId, item.recommendationId);
-  // Only claim a specific link when a real recommendation matches — the
-  // per-kind label ("Cómo optimizar →" etc.) implies a matched card exists,
-  // which is only ever true for optimize/capture-adjacent kinds anchored via
-  // add_citation_block/increase_brand_visibility (see the query in the page
-  // component). Everything else falls back to the honest generic wording.
-  const linkLabel = item.recommendationId ? meta.linkLabel : "Ver recomendaciones →";
 
-  // Number chip picks up the same soft tone as the action-kind badge next to
-  // it (WEB-AUDIT-R4) — the priority order reads as a colored sequence
-  // (amber optimize → red competing → neutral) instead of a flat grey list.
-  const numberTone: Record<ActionItemKind, { bg: string; fg: string }> = {
-    optimize: { bg: "var(--warn-soft)", fg: "var(--warn-ink)" },
-    create_competing: { bg: "var(--neg-soft)", fg: "var(--neg-ink)" },
-    create_open: { bg: "var(--surface-2)", fg: "var(--ink-3)" },
-    capture: { bg: "var(--accent-soft)", fg: "var(--accent-ink)" }
-  };
-  const tone = numberTone[item.kind];
+  if (recommendation) {
+    return (
+      <div style={{ display: "flex", gap: 10 }}>
+        <ActionNumberChip index={index} kind={item.kind} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--ink-4)", textTransform: "uppercase", letterSpacing: ".04em", marginBottom: 4 }}>
+            {meta.label}
+          </div>
+          <RecCard rec={recommendation} projectId={projectId} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-      <div
-        style={{
-          flexShrink: 0,
-          width: 22,
-          height: 22,
-          borderRadius: "50%",
-          background: tone.bg,
-          color: tone.fg,
-          fontSize: 11,
-          fontWeight: 750,
-          display: "grid",
-          placeItems: "center"
-        }}
-      >
-        {index}
-      </div>
+      <ActionNumberChip index={index} kind={item.kind} />
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
           <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
@@ -715,8 +568,8 @@ function ActionPlanRow({ item, index, projectId }: { item: ActionItem; index: nu
             La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
           </p>
         )}
-        <Link href={href} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
-          {linkLabel}
+        <Link href={genericRecommendationsHref(projectId)} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
+          Ver recomendaciones →
         </Link>
       </div>
     </div>
@@ -749,7 +602,7 @@ function TrendChart({ points }: { points: { generatedAt: string; coveragePct: nu
   const lastCov = [...points].reverse().find((p) => p.coveragePct !== null);
   const lastSur = [...points].reverse().find((p) => p.surfacingPct !== null);
 
-  const ariaLabel = `Cobertura ${points[0]?.coveragePct ?? "sin dato"}% a ${lastCov?.coveragePct ?? "sin dato"}%; aprovechamiento ${points[0]?.surfacingPct ?? "sin dato"}% a ${lastSur?.surfacingPct ?? "sin dato"}% en ${points.length} auditorías.`;
+  const ariaLabel = `Cobertura ${points[0]?.coveragePct ?? "sin dato"}% a ${lastCov?.coveragePct ?? "sin dato"}%; implementación ${points[0]?.surfacingPct ?? "sin dato"}% a ${lastSur?.surfacingPct ?? "sin dato"}% en ${points.length} auditorías.`;
 
   // Consecutive audits over the same scan share a calendar date — render each
   // date label once (founder screenshot: "9 jul 2026 · 9 jul 20…" repeated,
@@ -884,7 +737,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     scanIds.length > 0
       ? await supabase
           .from("scan_prompt_results")
-          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count, brand_mentioned")
+          .select("id, prompt_id, run_id, extracted_json, provider, mentioned_competitors_count")
           .eq("project_id", projectId)
           .in("run_id", scanIds)
           .eq("status", "completed")
@@ -899,16 +752,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
 
   const latestMap = maps.length > 0 ? maps.reduce((a, b) => (a.generatedAt > b.generatedAt ? a : b)) : null;
 
-  // Whether the AI mentioned the brand by name for a topic's prompt, in the
-  // audited scan — a signal the opportunity matrix itself never reads (see
-  // TopicRow). Merges across providers: true if ANY provider's answer
-  // mentioned the brand, since a single "no" from one engine shouldn't hide
-  // a "yes" from another.
-  const brandMentionedByPromptId = new Map<string, boolean>();
-  for (const row of (resultRows ?? []) as Array<{ prompt_id: string | null; run_id: string; brand_mentioned: boolean }>) {
-    if (!row.prompt_id || !latestMap || row.run_id !== latestMap.scanId) continue;
-    if (row.brand_mentioned) brandMentionedByPromptId.set(row.prompt_id, true);
-  }
   const summary = latestMap
     ? buildWebAuditSummary({ coverage: latestMap, results: resultsByScanId.get(latestMap.scanId) ?? [], projectDomain: project.domain })
     : null;
@@ -976,43 +819,105 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // and can't be joined back to one specific topic. content_gap/
   // unverified_cited topics genuinely have no matching recommendation yet;
   // that's a real gap in the engine's rule set, not a bug in this join.
+  //
+  // WEB-AUDIT-R5 (founder-approved 2026-07-16): the Plan de acción now embeds
+  // the SAME interactive RecCard the Recomendaciones page renders — "Generar
+  // propuesta con IA" and "Marcar como hecho" work in place, so the query
+  // widened from {id, title, description} to every column RecCard reads.
   const { data: matchedRecs } = latestMap
     ? await supabase
         .from("recommendations")
-        .select("id, title, description, evidence_json")
+        .select(
+          "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open"
+        )
         .eq("project_id", projectId)
         .eq("run_id", latestMap.scanId)
         .in("recommendation_type", ["add_citation_block", "increase_brand_visibility"])
         .eq("status", "active")
     : { data: [] };
 
-  // Founder report: "Ver recomendación →" sent the founder to a
-  // decontextualized Recomendaciones page with no explanation of the
-  // problem or the fix right where they were looking. When a real
-  // recommendation matches this exact topic, surface its own title/
-  // description inline instead of making the link the only place to read
-  // it — the link still exists, but as a secondary "ver más" action.
-  const recommendationByPromptId = new Map<string, { id: string; title: string; description: string }>();
-  for (const rec of (matchedRecs ?? []) as Array<{
+  type MatchedRecRow = {
     id: string;
+    priority_rank: number;
     title: string;
     description: string;
-    evidence_json: { affected_prompt_details?: Array<{ id: string }> } | null;
-  }>) {
-    const resultId = rec.evidence_json?.affected_prompt_details?.[0]?.id;
+    recommendation_type: string;
+    impact: string;
+    effort: string;
+    confidence: string;
+    status: string;
+    source_type: string;
+    evidence_json: unknown;
+    consecutive_runs_open: number | null;
+  };
+
+  // Founder report: "Ver recomendación →" sent the founder to a
+  // decontextualized Recomendaciones page with no explanation of the
+  // problem or the fix right where they were looking. A matched real
+  // recommendation now renders inline via RecCard instead of a link.
+  // `coverageOverlay` is intentionally left null here — computing it needs
+  // the same coverage-overlay join lib/recommendations/coverage-overlay.ts
+  // performs, out of scope for this first cut; RecCard renders its normal
+  // (non-enriched) state without it, never a fake one.
+  const recommendationByPromptId = new Map<string, Recommendation>();
+  for (const rec of (matchedRecs ?? []) as MatchedRecRow[]) {
+    const evidence = rec.evidence_json as { affected_prompt_details?: Array<{ id: string }> } | null;
+    const resultId = evidence?.affected_prompt_details?.[0]?.id;
     if (!resultId) continue;
     const promptId = resultIdToPromptId.get(resultId);
     if (!promptId || recommendationByPromptId.has(promptId)) continue;
-    recommendationByPromptId.set(promptId, { id: rec.id, title: rec.title, description: rec.description });
+    recommendationByPromptId.set(promptId, {
+      id: rec.id,
+      priority_rank: rec.priority_rank,
+      title: rec.title,
+      description: rec.description,
+      recommendation_type: rec.recommendation_type,
+      impact: rec.impact,
+      effort: rec.effort,
+      confidence: rec.confidence,
+      status: rec.status,
+      source_type: rec.source_type,
+      evidence_json: rec.evidence_json as Recommendation["evidence_json"],
+      consecutive_runs_open: rec.consecutive_runs_open ?? undefined,
+      solution: null,
+      coverageOverlay: null
+    });
   }
+
+  // Same pattern recommendations/page.tsx uses to attach the latest
+  // sanitized AI-generated solution (if any) — the embedded RecCard needs it
+  // to show "Propuesta generada" instead of the "Generar propuesta" button.
+  const matchedRecIds = Array.from(recommendationByPromptId.values()).map((r) => r.id);
+  if (matchedRecIds.length > 0) {
+    const { data: solutionRows } = await supabase
+      .from("generated_solutions")
+      .select("recommendation_id, sanitized_content, created_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .eq("is_sanitized", true)
+      .in("recommendation_id", matchedRecIds)
+      .order("created_at", { ascending: false });
+
+    const solutionByRecId = new Map<string, GeneratedSolution>();
+    for (const row of (solutionRows ?? []) as Array<{ recommendation_id: string; sanitized_content: string | null }>) {
+      // Newest-first order means the first row seen per recommendation wins.
+      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
+      const parsed = parseGeneratedSolution(row.sanitized_content);
+      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
+    }
+    for (const rec of recommendationByPromptId.values()) {
+      rec.solution = solutionByRecId.get(rec.id) ?? null;
+    }
+  }
+
   const recommendationIdByPromptId = new Map<string, string>();
   for (const [promptId, rec] of recommendationByPromptId) {
     recommendationIdByPromptId.set(promptId, rec.id);
   }
 
-  // Full prioritized list (WEB-AUDIT-R1): the Resumen tab shows the top 3
-  // expanded and folds the rest behind a native "Ver todas" expander, instead
-  // of the old hard cap of 5 with no way to see beyond it.
+  // Full prioritized list — every actionable topic, not just a top-N slice
+  // (WEB-AUDIT-R1). The Resumen tab shows the top 3 expanded and folds the
+  // rest behind a native "Ver todas" expander.
   const actionPlan = summary
     ? buildActionPlan({
         summary,
@@ -1036,13 +941,16 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     grouped[topic.outcome].push(topic);
   }
 
-  const filterOptions: TopicFilterCount[] = [
-    { id: "all", label: "Todos", count: summary?.topics.length ?? 0 },
-    ...TOPIC_LIST_ORDER.filter((outcome) => grouped[outcome].length > 0).map((outcome) => ({
-      id: outcome as TopicFilterCount["id"],
-      label: OUTCOME_META[outcome].label,
-      count: grouped[outcome].length
-    }))
+  // WEB-AUDIT-R5: filter chips above the Plan de acción, driven by the same
+  // ActionItemKind the matrix quadrants target — replaces the old per-outcome
+  // topic filter that lived in the removed "Contenido" tab.
+  const countsByKind: Record<ActionItemKind, number> = { optimize: 0, create_competing: 0, create_open: 0, capture: 0 };
+  for (const item of actionPlan) countsByKind[item.kind] += 1;
+  const actionFilterOptions: ActionFilterCount[] = [
+    { id: "all", label: "Todas", count: actionPlan.length },
+    ...(["optimize", "create_competing", "create_open", "capture"] as ActionItemKind[])
+      .filter((kind) => countsByKind[kind] > 0)
+      .map((kind) => ({ id: kind as ActionFilterId, label: ACTION_KIND_META[kind].label, count: countsByKind[kind] }))
   ];
 
   const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;
@@ -1136,7 +1044,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             Disponible en el plan Pro
           </div>
           <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-            Auditar la cobertura y el aprovechamiento de tu web es una función del plan Pro. Compara lo que publicas
+            Auditar la cobertura y la implementación de tu web es una función del plan Pro. Compara lo que publicas
             con lo que la IA realmente cita en sus respuestas.
           </p>
           <Link href="/dashboard/settings/billing" className="btn btn-primary btn-sm">
@@ -1188,7 +1096,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <div style={{ flex: 1, minWidth: 240 }}>
                 <div style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
                   Diagnóstico general
-                  <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas aprovechados por la IA y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
+                  <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas implementados (citados por la IA) y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
                 </div>
                 {globalScore.includedCount < 3 && (
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
@@ -1198,7 +1106,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
                   {/* Sparklines plot the same real per-audit series as the
                       Evolución chart, in the same series colors (accent =
-                      cobertura, pos = aprovechamiento). The técnica tile has
+                      cobertura, pos = implementación). The técnica tile has
                       no history loaded (only the latest snapshot) — no
                       sparkline rather than a fake flat line. */}
                   <SubScoreTile
@@ -1211,7 +1119,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     sparkColor="var(--accent)"
                   />
                   <SubScoreTile
-                    label="Aprovechamiento"
+                    label="Implementado"
                     value={summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
                     hint={
                       summary.surfacingPct !== null && grouped.invisible.length > 0
@@ -1251,9 +1159,14 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           <AuditTabPanel id="resumen">
             {/* Plan de acción — the first actionable thing after the verdict,
                 closing the "¿y ahora qué hago?" the matrix on its own leaves
-                open (WEB-AUDIT-ACTION), now the protagonist of the default
-                tab (WEB-AUDIT-R1). */}
-            <div className="card" style={{ marginTop: 12 }}>
+                open (WEB-AUDIT-ACTION), the protagonist of the default tab
+                (WEB-AUDIT-R1) and now fully self-contained (WEB-AUDIT-R5,
+                founder-approved 2026-07-16): a matched real recommendation
+                embeds its own interactive RecCard right here — Generar
+                propuesta / Marcar como hecho work in place, no navigation
+                required. `id="action-plan"` / `id="action-plan-more"` are the
+                matrix's scroll+open targets (audit-tabs.tsx). */}
+            <div className="card" style={{ marginTop: 12 }} id="action-plan">
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
@@ -1263,15 +1176,30 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
                 {actionPlan.length > 0 ? (
                   <>
+                    <ActionFilterBar options={actionFilterOptions} />
                     {topActions.map((item, i) => (
-                      <ActionPlanRow key={item.promptId} item={item} index={i + 1} projectId={projectId} />
+                      <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
+                        <ActionPlanRow
+                          item={item}
+                          index={i + 1}
+                          projectId={projectId}
+                          recommendation={recommendationByPromptId.get(item.promptId) ?? null}
+                        />
+                      </ActionRowVisibility>
                     ))}
                     {restActions.length > 0 && (
-                      <details className="wa-more">
+                      <details className="wa-more" id="action-plan-more">
                         <summary>Ver todas las acciones ({actionPlan.length})</summary>
                         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                           {restActions.map((item, i) => (
-                            <ActionPlanRow key={item.promptId} item={item} index={i + 4} projectId={projectId} />
+                            <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
+                              <ActionPlanRow
+                                item={item}
+                                index={i + 4}
+                                projectId={projectId}
+                                recommendation={recommendationByPromptId.get(item.promptId) ?? null}
+                              />
+                            </ActionRowVisibility>
                           ))}
                         </div>
                       </details>
@@ -1285,19 +1213,54 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             </div>
 
-            {/* Opportunity matrix as navigation: counts only, tap → Contenido
-                tab pre-filtered. The topics themselves render exactly once,
-                in that tab (founder report: every topic used to appear up to
-                three times on one endless page). */}
+            {/* "Lo que ya funciona" (WEB-AUDIT-R5): performing topics have no
+                action, so they never belonged in the plan above — but they
+                shouldn't vanish either (they used to live in the removed
+                "Contenido" tab). Collapsed by default; the matrix's
+                "Rindiendo" quadrant opens + scrolls here. */}
+            {grouped.performing.length > 0 && (
+              <details className="wa-details" id="performing-section" style={{ marginTop: 12 }}>
+                <summary>
+                  <span className="badge badge-pos" style={{ flexShrink: 0 }}>Rindiendo</span>
+                  <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)" }}>
+                    Lo que ya funciona ({grouped.performing.length})
+                  </span>
+                  <span className="wa-chev">
+                    <Icon name="chevDown" size={14} />
+                  </span>
+                </summary>
+                <div className="wa-details-body">
+                  <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 10px" }}>
+                    Contenido propio que la IA ya cita en sus respuestas — sin acción pendiente, solo mantenlo actualizado.
+                  </p>
+                  <ul style={{ display: "flex", flexDirection: "column", gap: 8, margin: 0, padding: 0, listStyle: "none" }}>
+                    {grouped.performing.map((topic) => (
+                      <li
+                        key={topic.promptId}
+                        style={{ padding: "8px 10px", background: "var(--surface-2)", borderRadius: 8, fontSize: 12.5, color: "var(--ink-2)" }}
+                      >
+                        {topic.topic}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </details>
+            )}
+
+            {/* Opportunity matrix as navigation: counts only, tap → filters
+                the Plan de acción above (same tab, scrolled into view). The
+                topics themselves render exactly once, inside that plan or
+                "Lo que ya funciona" (founder report: every topic used to
+                appear up to three times on one endless page). */}
             <div className="card" style={{ marginTop: 12 }}>
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750, display: "flex", alignItems: "center" }}>
                   Matriz de oportunidad
-                  <InfoTip text="Cruza dos señales que sí controlas: contenido propio que Google indexa, y citas verificadas a tu dominio en las respuestas de la IA. No mide si la IA menciona tu marca por lo que ya sabe de ella — puedes salir en 'Hueco de contenido' aunque la IA te nombre primero; abre un tema en la pestaña Contenido para verlo." />
+                  <InfoTip text="Cruza dos señales que sí controlas: contenido propio que Google indexa, y citas verificadas a tu dominio en las respuestas de la IA. No mide si la IA menciona tu marca por lo que ya sabe de ella — puedes salir en 'Hueco de contenido' aunque la IA te nombre primero; revisa el Plan de acción para verlo." />
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
                   Cada tema de tus prompts, cruzando contenido propio verificado × citas en el último escaneo. Toca un
-                  cuadrante para ver sus temas.
+                  cuadrante para filtrar el plan de acción.
                 </div>
               </div>
               <div style={{ padding: "14px 16px 16px" }}>
@@ -1312,7 +1275,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     count={grouped.invisible.length}
                     tone="warn"
                     hint="Tienes página, pero la IA no la cita → optimizar"
-                    target="invisible"
+                    target="optimize"
                   />
                   <QuadrantButton
                     title="✓ Rindiendo"
@@ -1342,7 +1305,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     count={grouped.unverified_cited.length}
                     tone="neutral"
                     hint="La IA te cita por otra vía, sin página verificada → capturar"
-                    target="unverified_cited"
+                    target="capture"
                   />
                   <div style={{ gridColumn: "2 / 4", fontSize: 10, fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--ink-4)", display: "grid", placeItems: "center" }}>
                     La IA no te cita → sí te cita
@@ -1393,52 +1356,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
                 </div>
               </div>
-            </div>
-          </AuditTabPanel>
-
-          {/* ─── Contenido ─── */}
-          <AuditTabPanel id="contenido">
-            <div className="section-head" style={{ marginTop: 16 }}>
-              <div className="section-title">Detalle por tema</div>
-              <div className="section-desc">{summary.topics.length} temas auditados · toca un tema para ver qué hacer</div>
-            </div>
-
-            {/* Distribution bar: how the audited topics split across
-                outcomes, in the same colors as their badges/quadrants. */}
-            {summary.topics.length > 0 && (
-              <div style={{ display: "flex", height: 8, borderRadius: 999, overflow: "hidden", margin: "10px 0 2px", background: "var(--surface-2)" }}>
-                {TOPIC_LIST_ORDER.filter((outcome) => grouped[outcome].length > 0).map((outcome) => (
-                  <div
-                    key={outcome}
-                    title={`${OUTCOME_META[outcome].label}: ${grouped[outcome].length}`}
-                    style={{
-                      width: `${(grouped[outcome].length / summary.topics.length) * 100}%`,
-                      background: OUTCOME_BAR_COLOR[outcome]
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            <TopicFilterBar options={filterOptions} />
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {TOPIC_LIST_ORDER.map((outcome) =>
-                grouped[outcome].length > 0 ? (
-                  <TopicGroupSection key={outcome} outcome={outcome}>
-                    {grouped[outcome].map((topic) => (
-                      <TopicRow
-                        key={topic.promptId}
-                        topic={topic}
-                        competitors={competitorsByPromptId.get(topic.promptId) ?? []}
-                        brandMentioned={brandMentionedByPromptId.get(topic.promptId) ?? false}
-                        recommendation={recommendationByPromptId.get(topic.promptId) ?? null}
-                        projectId={projectId}
-                      />
-                    ))}
-                  </TopicGroupSection>
-                ) : null
-              )}
             </div>
           </AuditTabPanel>
 
@@ -1497,7 +1414,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 <div style={{ padding: "13px 16px 0" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                    Cobertura y aprovechamiento a lo largo de los últimos escaneos.
+                    Cobertura e implementación a lo largo de los últimos escaneos.
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 14, fontSize: 11, color: "var(--ink-3)", fontWeight: 600, padding: "10px 16px 0" }}>
@@ -1507,7 +1424,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   </span>
                   <span>
                     <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--pos)" }} />
-                    Tasa de aprovechamiento
+                    Tasa de implementación
                   </span>
                 </div>
                 <div style={{ padding: "12px 16px 14px" }}>
@@ -1530,7 +1447,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   </div>
                 </div>
                 {/* Each row gets mini bars in the same series colors as the
-                    chart above (accent = cobertura, pos = aprovechamiento) so
+                    chart above (accent = cobertura, pos = implementación) so
                     the history scans visually, not just numerically
                     (WEB-AUDIT-R4). A null rate renders "—" with no bar —
                     never a 0-width bar, which would read as a measured 0%. */}
@@ -1553,7 +1470,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                         <span style={{ fontSize: 11, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
                           {point.coveragePct === null ? "—" : `${point.coveragePct}%`}
                         </span>
-                        <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>Aprovechamiento</span>
+                        <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>Implementado</span>
                         {point.surfacingPct !== null ? (
                           <MiniBar pct={point.surfacingPct} color="var(--pos)" />
                         ) : (

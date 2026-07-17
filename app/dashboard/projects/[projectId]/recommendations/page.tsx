@@ -5,12 +5,8 @@ import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
-import {
-  RecommendationsClient,
-  type GeneratedSolution,
-  type GeneratedSolutionExample,
-  type Recommendation,
-} from "./recommendations-client";
+import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
+import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /**
  * Parses a `domain_coverage` generated_solutions row's sanitized_content
@@ -30,34 +26,6 @@ function parseCoverageMap(raw: string | null): { scanId: string; topics: DomainC
       return Boolean(c) && typeof c?.promptId === "string" && typeof c?.found === "boolean";
     });
     return { scanId: parsed.scanId, topics };
-  } catch {
-    return null;
-  }
-}
-
-function toExample(value: unknown): GeneratedSolutionExample | null {
-  const ex = value as { label?: unknown; content?: unknown } | null | undefined;
-  if (ex && typeof ex.label === "string" && typeof ex.content === "string") {
-    return { label: ex.label, content: ex.content };
-  }
-  return null;
-}
-
-/**
- * Parses a sanitized `generated_solutions.sanitized_content` JSON string into a
- * structured solution. Defensive: returns null on any unexpected shape rather
- * than crashing the page (the content was sanitized server-side at write time).
- * Accepts the new `examples` array and the legacy single `example` object.
- */
-function parseGeneratedSolution(raw: string): GeneratedSolution | null {
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.title !== "string" || typeof parsed.summary !== "string") return null;
-    const steps = Array.isArray(parsed.steps) ? parsed.steps.filter((s): s is string => typeof s === "string") : [];
-    const examples = Array.isArray(parsed.examples)
-      ? parsed.examples.map(toExample).filter((e): e is GeneratedSolutionExample => e !== null)
-      : [toExample(parsed.example)].filter((e): e is GeneratedSolutionExample => e !== null);
-    return { title: parsed.title, summary: parsed.summary, steps, examples };
   } catch {
     return null;
   }

@@ -3,43 +3,41 @@
 import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
 
 /**
- * Tab + topic-filter state for the restructured "Auditoría web" page
- * (WEB-AUDIT-R1). Every panel's content is server-rendered once and passed in
- * as children; switching tabs only toggles visibility (CSS hidden), so there
- * is no client-side refetch, no loss of <details> open/closed state, and no
+ * Tab + Plan-de-acción-filter state for the "Auditoría web" page. Every
+ * panel's content is server-rendered once and passed in as children;
+ * switching tabs only toggles visibility (CSS hidden), so there is no
+ * client-side refetch, no loss of <details> open/closed state, and no
  * serialization of Supabase data into client props beyond what each small
  * client component receives explicitly.
  *
- * The filter exists so the opportunity matrix can act as navigation: tapping
- * a quadrant jumps to the "Contenido" tab already filtered to that quadrant's
- * topics, instead of listing (truncated) topic chips inside the quadrant
- * itself — the founder-reported "everything appears three times" redundancy.
+ * WEB-AUDIT-R5 (founder-approved 2026-07-16) removed the standalone
+ * "Contenido" tab — every actionable topic now lives exactly once, inside
+ * the Plan de acción on Resumen (with a real, interactive recommendation
+ * card embedded when one matches). The opportunity matrix still acts as
+ * navigation, but now filters the Plan de acción list IN PLACE (same tab,
+ * scrolled into view) instead of switching tabs — see `applyActionFilter`.
  */
 
-export type AuditTabId = "resumen" | "contenido" | "tecnica" | "evolucion";
+export type AuditTabId = "resumen" | "tecnica" | "evolucion";
 
 /**
  * "no_content" is the combined bottom-left matrix quadrant
- * (content_gap + open_opportunity) — the matrix presents them as one cell, so
- * its tap target filters to both at once. The individual filter chips in the
- * Contenido tab still address each outcome separately.
+ * (content_gap + open_opportunity outcomes → the create_competing/create_open
+ * action kinds) — the matrix presents them as one cell, so its tap target
+ * filters to both kinds at once.
  */
-export type TopicFilterId =
-  | "all"
-  | "performing"
-  | "invisible"
-  | "content_gap"
-  | "open_opportunity"
-  | "unverified_cited"
-  | "inconclusive"
-  | "no_content";
+export type ActionFilterId = "all" | "optimize" | "create_competing" | "create_open" | "capture" | "no_content";
+
+/** `QuadrantButton`'s `target` additionally accepts "performing" — a signal to open the separate "Lo que ya funciona" section instead of filtering the plan (performing topics have no action). */
+export type QuadrantTarget = ActionFilterId | "performing";
 
 interface AuditTabsState {
   tab: AuditTabId;
   setTab: (tab: AuditTabId) => void;
-  filter: TopicFilterId;
-  setFilter: (filter: TopicFilterId) => void;
-  openTopics: (filter: TopicFilterId) => void;
+  filter: ActionFilterId;
+  setFilter: (filter: ActionFilterId) => void;
+  applyActionFilter: (filter: ActionFilterId) => void;
+  openPerforming: () => void;
 }
 
 const AuditTabsContext = createContext<AuditTabsState | null>(null);
@@ -52,15 +50,26 @@ function useAuditTabs(): AuditTabsState {
 
 export function AuditTabsProvider({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState<AuditTabId>("resumen");
-  const [filter, setFilter] = useState<TopicFilterId>("all");
+  const [filter, setFilter] = useState<ActionFilterId>("all");
 
-  function openTopics(nextFilter: TopicFilterId) {
+  function applyActionFilter(nextFilter: ActionFilterId) {
     setFilter(nextFilter);
-    setTab("contenido");
+    // Force the "Ver todas" expander open — a matched row can sit inside it,
+    // and per-row visibility (ActionRowVisibility) alone can't reveal a row
+    // nested in a collapsed native <details>.
+    const moreEl = document.getElementById("action-plan-more");
+    if (moreEl instanceof HTMLDetailsElement) moreEl.open = true;
+    document.getElementById("action-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function openPerforming() {
+    const el = document.getElementById("performing-section");
+    if (el instanceof HTMLDetailsElement) el.open = true;
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
-    <AuditTabsContext.Provider value={{ tab, setTab, filter, setFilter, openTopics }}>
+    <AuditTabsContext.Provider value={{ tab, setTab, filter, setFilter, applyActionFilter, openPerforming }}>
       {children}
     </AuditTabsContext.Provider>
   );
@@ -68,7 +77,6 @@ export function AuditTabsProvider({ children }: { children: ReactNode }) {
 
 const TAB_LABELS: Array<{ id: AuditTabId; label: string }> = [
   { id: "resumen", label: "Resumen" },
-  { id: "contenido", label: "Contenido" },
   { id: "tecnica", label: "Salud técnica" },
   { id: "evolucion", label: "Evolución" }
 ];
@@ -138,9 +146,10 @@ const QUADRANT_TONES: Record<string, { bg: string; fg: string; border: string }>
 };
 
 /**
- * A matrix quadrant as a tap target: count + hint only (no topic chips — the
- * topics themselves live once, in the Contenido tab). Tapping filters the
- * Contenido tab to this quadrant's outcome(s) and switches to it.
+ * A matrix quadrant as a tap target: count + hint only. Tapping either
+ * filters the Plan de acción (staying on Resumen, scrolled into view) or,
+ * for `target="performing"`, opens the separate "Lo que ya funciona" section
+ * — performing topics have no action, so they were never part of the plan.
  */
 export function QuadrantButton({
   title,
@@ -154,15 +163,24 @@ export function QuadrantButton({
   count: number;
   tone: "pos" | "warn" | "neg" | "neutral";
   hint: string;
-  target: TopicFilterId;
+  target: QuadrantTarget;
   extra?: ReactNode;
 }) {
-  const { openTopics } = useAuditTabs();
+  const { applyActionFilter, openPerforming } = useAuditTabs();
   const v = QUADRANT_TONES[tone];
+
+  function handleClick() {
+    if (target === "performing") {
+      openPerforming();
+    } else {
+      applyActionFilter(target);
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={() => openTopics(target)}
+      onClick={handleClick}
       style={{
         borderRadius: 10,
         padding: "12px 12px 10px",
@@ -187,16 +205,16 @@ export function QuadrantButton({
       <span style={{ fontSize: 10.5, color: "var(--ink-3)" }}>{hint}</span>
       {extra}
       <span style={{ marginTop: "auto", paddingTop: 4, fontSize: 11, fontWeight: 650, color: "var(--accent)" }}>
-        Ver temas →
+        {target === "performing" ? "Ver qué funciona →" : "Ver plan de acción →"}
       </span>
     </button>
   );
 }
 
-export type TopicFilterCount = { id: TopicFilterId; label: string; count: number };
+export type ActionFilterCount = { id: ActionFilterId; label: string; count: number };
 
-/** Filter chips above the topic list in the Contenido tab. */
-export function TopicFilterBar({ options }: { options: TopicFilterCount[] }) {
+/** Filter chips above the Plan de acción list. */
+export function ActionFilterBar({ options }: { options: ActionFilterCount[] }) {
   const { filter, setFilter } = useAuditTabs();
   const chipStyle = (active: boolean): CSSProperties => ({
     border: active ? "1px solid var(--accent)" : "1px solid var(--line)",
@@ -211,7 +229,7 @@ export function TopicFilterBar({ options }: { options: TopicFilterCount[] }) {
     whiteSpace: "nowrap"
   });
   return (
-    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", margin: "10px 0 12px" }}>
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4 }}>
       {options.map((opt) => (
         <button
           key={opt.id}
@@ -228,19 +246,15 @@ export function TopicFilterBar({ options }: { options: TopicFilterCount[] }) {
   );
 }
 
-const NO_CONTENT_OUTCOMES = new Set(["content_gap", "open_opportunity"]);
-
 /**
- * Wraps the server-rendered rows of one outcome group and shows/hides them
- * according to the active filter — the rows themselves stay server-rendered.
+ * Wraps ONE pre-rendered Plan de acción row and shows/hides it per the
+ * active filter — the row itself stays server-rendered (may embed a client
+ * RecCard). `matches` lists every filter value under which this row should
+ * be visible (e.g. a create_competing row matches both "create_competing"
+ * and the combined "no_content" quadrant filter).
  */
-export function TopicGroupSection({ outcome, children }: { outcome: string; children: ReactNode }) {
+export function ActionRowVisibility({ matches, children }: { matches: ActionFilterId[]; children: ReactNode }) {
   const { filter } = useAuditTabs();
-  const visible =
-    filter === "all" || filter === outcome || (filter === "no_content" && NO_CONTENT_OUTCOMES.has(outcome));
-  return (
-    <div hidden={!visible} style={{ display: visible ? "flex" : "none", flexDirection: "column", gap: 8 }}>
-      {children}
-    </div>
-  );
+  const visible = filter === "all" || matches.includes(filter);
+  return <div hidden={!visible}>{children}</div>;
 }
