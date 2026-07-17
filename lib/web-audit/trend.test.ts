@@ -40,6 +40,17 @@ describe("buildCoverageTrend", () => {
     expect(trend[0].coveragePct).toBe(100);
   });
 
+  it("carries the raw n/k counts behind each point's percentages", () => {
+    const trend = buildCoverageTrend({
+      maps: [map("scan-1", "2026-06-01T00:00:00.000Z", true)],
+      resultsByScanId: results,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(trend[0].conclusiveCount).toBe(1);
+    expect(trend[0].coveredCount).toBe(1);
+    expect(trend[0].surfacedCount).toBe(0);
+  });
+
   it("caps the series at the last 8 points", () => {
     const maps = Array.from({ length: 12 }, (_, i) =>
       map(`scan-${i}`, `2026-06-${String(i + 1).padStart(2, "0")}T00:00:00.000Z`, true)

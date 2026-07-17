@@ -12,6 +12,16 @@ export type CoverageTrendPoint = {
   generatedAt: string;
   coveragePct: number | null;
   surfacingPct: number | null;
+  /**
+   * Raw counts behind coveragePct/surfacingPct (WEB-AUDIT-R6 phase 1,
+   * geo-strategy review 2026-07-17) — callers need these to compute a Wilson
+   * confidence interval and to decide whether a point-to-point delta is
+   * trustworthy (lib/web-audit/sample-confidence.ts). Mirrors
+   * WebAuditSummary's own field names exactly.
+   */
+  conclusiveCount: number;
+  coveredCount: number;
+  surfacedCount: number;
 };
 
 const MAX_TREND_POINTS = 8;
@@ -44,7 +54,10 @@ export function buildCoverageTrend(input: {
         scanId: map.scanId,
         generatedAt: map.generatedAt,
         coveragePct: summary.coveragePct,
-        surfacingPct: summary.surfacingPct
+        surfacingPct: summary.surfacingPct,
+        conclusiveCount: summary.conclusiveCount,
+        coveredCount: summary.coveredCount,
+        surfacedCount: summary.surfacedCount
       };
     });
 
