@@ -9,6 +9,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
+import { computeSampleConfidence, isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
 import {
   buildActionPlan,
   extractMentionedCompetitors,
@@ -264,17 +265,21 @@ function SubScoreTile({
   delta,
   pct,
   sparkValues,
-  sparkColor
+  sparkColor,
+  confidenceNote
 }: {
   label: string;
   value: string;
   hint: string;
+  /** null also when the delta exists but isn't trustworthy enough to show — see isDeltaTrustworthy. */
   delta: number | null;
   /** 0-100 fill for the tile's progress bar; null → no bar (signal never computed). */
   pct: number | null;
   /** Per-audit history for the sparkline — same series the Evolución chart plots. */
   sparkValues?: Array<number | null>;
   sparkColor?: string;
+  /** Wilson-interval note for a small sample (WEB-AUDIT-R6 phase 1) — e.g. "Muestra pequeña (n=3) — rango real: 16%-58%". Only ever set when the sample is genuinely small; never fabricated. */
+  confidenceNote?: string;
 }) {
   return (
     <div style={{ padding: "9px 11px", background: "var(--surface-2)", borderRadius: 10, minWidth: 0 }}>
@@ -298,6 +303,9 @@ function SubScoreTile({
         </div>
       )}
       <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: pct !== null ? 5 : 2 }}>{hint}</div>
+      {confidenceNote && (
+        <div style={{ fontSize: 10, color: "var(--warn-ink)", marginTop: 3, fontStyle: "italic" }}>{confidenceNote}</div>
+      )}
     </div>
   );
 }
@@ -579,7 +587,37 @@ function ActionPlanRow({
   );
 }
 
-function TrendChart({ points }: { points: { generatedAt: string; coveragePct: number | null; surfacingPct: number | null }[] }) {
+type TrendChartPoint = {
+  generatedAt: string;
+  coveragePct: number | null;
+  surfacingPct: number | null;
+  conclusiveCount: number;
+  coveredCount: number;
+};
+
+/**
+ * A hollow (stroke-only) point marker instead of the usual filled dot when
+ * that point's sample is small (WEB-AUDIT-R6 phase 1, geo-strategy review
+ * 2026-07-17) — a visual cue, per point along the whole series, that a swing
+ * around a hollow marker is more likely sampling noise than real movement.
+ * The legend below the chart spells this out in words too, never relying on
+ * the shape alone.
+ */
+function TrendPointMarker({ cx, cy, color, isLast, isSmallSample }: { cx: number; cy: number; color: string; isLast: boolean; isSmallSample: boolean }) {
+  const r = isLast ? 4 : 3;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={r}
+      fill={isSmallSample ? "var(--surface)" : color}
+      stroke={color}
+      strokeWidth={isSmallSample ? 1.5 : 2}
+    />
+  );
+}
+
+function TrendChart({ points }: { points: TrendChartPoint[] }) {
   const W = 440;
   const H = 190;
   const padL = 42;
@@ -602,10 +640,10 @@ function TrendChart({ points }: { points: { generatedAt: string; coveragePct: nu
 
   const covPath = pathFor("coveragePct");
   const surPath = pathFor("surfacingPct");
-  const lastCov = [...points].reverse().find((p) => p.coveragePct !== null);
-  const lastSur = [...points].reverse().find((p) => p.surfacingPct !== null);
+  const lastCovIdx = [...points].map((p, i) => ({ p, i })).reverse().find(({ p }) => p.coveragePct !== null)?.i;
+  const lastSurIdx = [...points].map((p, i) => ({ p, i })).reverse().find(({ p }) => p.surfacingPct !== null)?.i;
 
-  const ariaLabel = `Cobertura ${points[0]?.coveragePct ?? "sin dato"}% a ${lastCov?.coveragePct ?? "sin dato"}%; implementación ${points[0]?.surfacingPct ?? "sin dato"}% a ${lastSur?.surfacingPct ?? "sin dato"}% en ${points.length} auditorías.`;
+  const ariaLabel = `Cobertura ${points[0]?.coveragePct ?? "sin dato"}% a ${lastCovIdx !== undefined ? points[lastCovIdx].coveragePct : "sin dato"}%; implementación ${points[0]?.surfacingPct ?? "sin dato"}% a ${lastSurIdx !== undefined ? points[lastSurIdx].surfacingPct : "sin dato"}% en ${points.length} auditorías. Los puntos huecos son de muestra pequeña (menos de ${SMALL_SAMPLE_THRESHOLD} temas) y pueden variar mucho entre auditorías.`;
 
   // Consecutive audits over the same scan share a calendar date — render each
   // date label once (founder screenshot: "9 jul 2026 · 9 jul 20…" repeated,
@@ -638,8 +676,30 @@ function TrendChart({ points }: { points: { generatedAt: string; coveragePct: nu
       </g>
       {covPath && <path d={covPath} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
       {surPath && <path d={surPath} fill="none" stroke="var(--pos)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />}
-      {lastCov && <circle cx={xFor(points.indexOf(lastCov))} cy={yFor(lastCov.coveragePct!)} r={4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} />}
-      {lastSur && <circle cx={xFor(points.indexOf(lastSur))} cy={yFor(lastSur.surfacingPct!)} r={4} fill="var(--pos)" stroke="var(--surface)" strokeWidth={2} />}
+      {points.map((p, i) =>
+        p.coveragePct !== null ? (
+          <TrendPointMarker
+            key={`cov-${p.generatedAt}`}
+            cx={xFor(i)}
+            cy={yFor(p.coveragePct)}
+            color="var(--accent)"
+            isLast={i === lastCovIdx}
+            isSmallSample={p.conclusiveCount < SMALL_SAMPLE_THRESHOLD}
+          />
+        ) : null
+      )}
+      {points.map((p, i) =>
+        p.surfacingPct !== null ? (
+          <TrendPointMarker
+            key={`sur-${p.generatedAt}`}
+            cx={xFor(i)}
+            cy={yFor(p.surfacingPct)}
+            color="var(--pos)"
+            isLast={i === lastSurIdx}
+            isSmallSample={p.coveredCount < SMALL_SAMPLE_THRESHOLD}
+          />
+        ) : null
+      )}
     </svg>
   );
 }
@@ -763,16 +823,50 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const auditedScan = latestMap ? maps.find((m) => m.scanId === latestMap.scanId) : null;
   const auditedScanDate = auditedScan?.scanId === latestRunRow?.id ? latestRunRow?.finished_at ?? latestRunRow?.created_at : null;
 
-  const previousCoveragePct = trend.length >= 2 ? trend[trend.length - 2].coveragePct : null;
+  // WEB-AUDIT-R6 phase 1 (geo-strategy methodology review 2026-07-17):
+  // coverage/citation are both sampled fresh per scan from Gemini's Google
+  // Search grounding — a noisy sensor. With a small denominator, a single
+  // sampling flip swings the percentage by double digits; showing that swing
+  // as a bare "+17 pt" delta reads as precision the sample doesn't support.
+  // A delta is only shown when BOTH the current and previous point clear
+  // SMALL_SAMPLE_THRESHOLD (isDeltaTrustworthy) — never fabricated, never
+  // silently rounded away, just withheld when the comparison itself would be
+  // noise. The tile itself still always shows the real fraction (n/N).
+  const previousPoint = trend.length >= 2 ? trend[trend.length - 2] : null;
+
+  const previousCoveragePct = previousPoint?.coveragePct ?? null;
+  const coverageDeltaTrustworthy =
+    previousPoint !== null && isDeltaTrustworthy(summary?.conclusiveCount ?? 0, previousPoint.conclusiveCount);
   const coverageDelta =
-    summary?.coveragePct !== null && summary?.coveragePct !== undefined && previousCoveragePct !== null
+    coverageDeltaTrustworthy &&
+    summary?.coveragePct !== null &&
+    summary?.coveragePct !== undefined &&
+    previousCoveragePct !== null
       ? summary.coveragePct - previousCoveragePct
       : null;
-  const previousSurfacingPct = trend.length >= 2 ? trend[trend.length - 2].surfacingPct : null;
+
+  const previousSurfacingPct = previousPoint?.surfacingPct ?? null;
+  const surfacingDeltaTrustworthy =
+    previousPoint !== null && isDeltaTrustworthy(summary?.coveredCount ?? 0, previousPoint.coveredCount);
   const surfacingDelta =
-    summary?.surfacingPct !== null && summary?.surfacingPct !== undefined && previousSurfacingPct !== null
+    surfacingDeltaTrustworthy &&
+    summary?.surfacingPct !== null &&
+    summary?.surfacingPct !== undefined &&
+    previousSurfacingPct !== null
       ? summary.surfacingPct - previousSurfacingPct
       : null;
+
+  const coverageConfidence = summary ? computeSampleConfidence(summary.coveredCount, summary.conclusiveCount) : null;
+  const coverageConfidenceNote =
+    coverageConfidence?.isSmallSample && summary
+      ? `Muestra pequeña (${summary.coveredCount}/${summary.conclusiveCount} temas) — rango real: ${coverageConfidence.lowerPct}%–${coverageConfidence.upperPct}%`
+      : undefined;
+
+  const surfacingConfidence = summary ? computeSampleConfidence(summary.surfacedCount, summary.coveredCount) : null;
+  const surfacingConfidenceNote =
+    surfacingConfidence?.isSmallSample && summary
+      ? `Muestra pequeña (${summary.surfacedCount}/${summary.coveredCount} temas) — rango real: ${surfacingConfidence.lowerPct}%–${surfacingConfidence.upperPct}%`
+      : undefined;
 
   // WEB-AUDIT-R1: the hero's composite score — plain mean of the real signals
   // available (see lib/web-audit/global-score.ts). Its breakdown renders right
@@ -1120,6 +1214,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     pct={summary.coveragePct}
                     sparkValues={trend.map((p) => p.coveragePct)}
                     sparkColor="var(--accent)"
+                    confidenceNote={coverageConfidenceNote}
                   />
                   <SubScoreTile
                     label="Implementado"
@@ -1133,6 +1228,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     pct={summary.surfacingPct}
                     sparkValues={trend.map((p) => p.surfacingPct)}
                     sparkColor="var(--pos)"
+                    confidenceNote={surfacingConfidenceNote}
                   />
                   <SubScoreTile
                     label="Salud técnica"
@@ -1430,6 +1526,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 </div>
                 <div style={{ padding: "12px 16px 14px" }}>
                   <TrendChart points={trend} />
+                  {/* WEB-AUDIT-R6 phase 1 (geo-strategy review 2026-07-17):
+                      coverage/citation are sampled fresh from Gemini's
+                      grounding on every scan — a noisy sensor. With few
+                      topics, a single sampling flip swings the percentage
+                      by double digits; that's not real progress or
+                      regression. Hollow points flag exactly where that
+                      applies, spelled out here in words too. */}
+                  <p style={{ fontSize: 10.5, color: "var(--ink-4)", margin: "8px 0 0" }}>
+                    ○ Punto hueco = muestra pequeña (menos de {SMALL_SAMPLE_THRESHOLD} temas) — puede variar mucho entre
+                    auditorías sin que hayas cambiado nada.
+                  </p>
                 </div>
               </div>
             ) : (
@@ -1461,7 +1568,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                       <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)", marginBottom: 6 }}>
                         {formatDate(point.generatedAt)}
                       </div>
-                      <div style={{ display: "grid", gridTemplateColumns: "110px minmax(0, 1fr) 42px", gap: 8, alignItems: "center" }}>
+                      {/* n/N always shown next to the %, and a "muestra
+                          pequeña" note when the sample is too small for the
+                          percentage to mean much on its own (WEB-AUDIT-R6
+                          phase 1) — same SMALL_SAMPLE_THRESHOLD used to
+                          suppress deltas on the hero tiles above. */}
+                      <div style={{ display: "grid", gridTemplateColumns: "110px minmax(0, 1fr) 92px", gap: 8, alignItems: "center" }}>
                         <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>Cobertura</span>
                         {point.coveragePct !== null ? (
                           <MiniBar pct={point.coveragePct} color="var(--accent)" />
@@ -1469,7 +1581,9 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                           <span />
                         )}
                         <span style={{ fontSize: 11, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
-                          {point.coveragePct === null ? "—" : `${point.coveragePct}%`}
+                          {point.coveragePct === null
+                            ? "—"
+                            : `${point.coveragePct}% (${point.coveredCount}/${point.conclusiveCount})`}
                         </span>
                         <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>Implementado</span>
                         {point.surfacingPct !== null ? (
@@ -1478,9 +1592,16 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                           <span />
                         )}
                         <span style={{ fontSize: 11, color: "var(--ink-3)", fontVariantNumeric: "tabular-nums", textAlign: "right" }}>
-                          {point.surfacingPct === null ? "—" : `${point.surfacingPct}%`}
+                          {point.surfacingPct === null
+                            ? "—"
+                            : `${point.surfacingPct}% (${point.surfacedCount}/${point.coveredCount})`}
                         </span>
                       </div>
+                      {(point.conclusiveCount < SMALL_SAMPLE_THRESHOLD || point.coveredCount < SMALL_SAMPLE_THRESHOLD) && (
+                        <div style={{ fontSize: 10, color: "var(--warn-ink)", marginTop: 4, fontStyle: "italic" }}>
+                          Muestra pequeña — estos porcentajes pueden variar mucho entre auditorías.
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
