@@ -24,7 +24,8 @@ const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"
 
 const ENGINE_LABELS: Record<string, { label: string; color: string }> = {
   gemini: { label: "Gemini", color: "#4285f4" },
-  claude: { label: "Claude", color: "#d97757" }
+  claude: { label: "Claude", color: "#d97757" },
+  openai: { label: "ChatGPT", color: "#10a37f" }
 };
 
 const statusLabels: Record<string, string> = {

@@ -29,17 +29,18 @@ type ScoreInputRow = {
 };
 
 /**
- * Providers whose generation call includes real grounding (Google Search,
- * docs/adr/0004-gemini-search-grounding.md) and can therefore produce
- * genuine citation evidence. citation_score and the authority component of
- * geo_score are computed only over rows from these providers — see
+ * Providers whose generation call includes real grounding (Gemini via Google
+ * Search, docs/adr/0004-gemini-search-grounding.md; OpenAI via the Responses
+ * API `web_search` tool, lib/llm/openai.ts) and can therefore produce genuine
+ * citation evidence. citation_score and the authority component of geo_score
+ * are computed only over rows from these providers — see
  * docs/adr/0012-grounding-aware-citation-score.md. An ungrounded provider's
- * citation_found is always false by construction (lib/llm/claude.ts), so
- * pooling it into the denominator only ever imposes a structural ceiling on
- * citation_score, never reflecting genuine citation performance. Add a
- * provider here only once it has real grounding wired up.
+ * citation_found is always false by construction (lib/llm/claude.ts, no web
+ * search), so pooling it into the denominator only ever imposes a structural
+ * ceiling on citation_score, never reflecting genuine citation performance.
+ * Add a provider here only once it has real grounding wired up.
  */
-const GROUNDED_PROVIDERS = new Set<string>(["gemini"]);
+const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 
 function isGroundedRow(row: ScoreInputRow): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);

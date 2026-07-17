@@ -1441,11 +1441,48 @@ coste real por llamada (no estimarlo). Hecho en este PR:
 - 16 tests nuevos (`lib/llm/openai.test.ts`), mismo patrón que
   `claude.test.ts`. `pnpm test` y `pnpm run validate` en verde.
 
-**Siguiente:** medir coste real (no de fuentes de terceros, que se
-contradicen entre sí) — script de medición fuera del repo, a ejecutar con
-`OPENAI_API_KEY` real contra ~50-100 prompts, leyendo el coste real
-facturado en el dashboard de OpenAI. Con ese dato: (b) qué planes incluyen
-OpenAI, (c) cuánto sube el precio de Pro.
+**ENGINES-2a — OpenAI cableado en el pipeline, dormido (2026-07-17):** el
+fundador pidió "avanza el desarrollo", así que se integró OpenAI como motor
+real en todo el pipeline, pero **sin activarlo para ningún cliente**. La
+garantía de dormancia es doble y está testeada: (1) `openai` no está en
+`LLM_SCAN_PROVIDERS` en ningún entorno, y (2) aunque se añadiera, los planes
+siguen con `caps.engines=2`, y `getLLMScanProviders().slice(0, caps.engines)`
+lo recortaría. Ningún cliente recibe OpenAI hasta que se suba el cap del
+plan Y se ponga la variable — eso es un PR aparte que depende de la decisión
+de coste/precio.
+
+Cambios de este PR:
+- `lib/scan/executor.ts`: `openai` añadido a `VALID_LLM_SCAN_PROVIDERS`,
+  `callProvider` y el catch de config-error. La lógica de recorte por
+  `caps.engines` ya existía (PRICING-TRUTH-1 PR b) y ahora es load-bearing.
+- `lib/scan/extraction.ts`: dispatch a `extractOpenAIStructuredData` +
+  `.in("provider", [...])` ampliado. **Detalle clave**: `buildGroundedCitations`
+  ahora es provider-aware — las citas `url_citation` de OpenAI ya son URLs
+  finales, así que se saltan `resolveGroundingRedirects` (evita una petición
+  HTTP innecesaria por cita, a diferencia de los wrappers de redirección de
+  Google que sí necesita Gemini).
+- `lib/scoring/run-scoring.ts`: `openai` añadido a `GROUNDED_PROVIDERS` —
+  tiene grounding real (web_search), así que sus filas cuentan para
+  `citation_score` y el componente de autoridad del GEO Score.
+- UI: etiqueta/badge de motor (`components/prompts/prompt-drawer.tsx`,
+  `ENGINE_LABELS` en la página del proyecto) ahora contemplan "ChatGPT" —
+  se renderiza solo si aparecen filas reales de OpenAI (dormido = nunca).
+- **Copy de marketing/pricing/legal NO tocado a propósito**: landing,
+  `/pricing`, `/privacidad`, `/terminos`, chips del onboarding siguen
+  diciendo "Gemini y Claude" — es verdad hoy (OpenAI dormido). Cambiarlos
+  sería prometer un motor no activo (viola PRICING-TRUTH-1).
+- +3 tests de cableado (dormancia en executor, citas finales en extraction,
+  grounded en scoring), además de los 16 unitarios del módulo. 623/623 y
+  `pnpm run validate` en verde.
+
+**Siguiente (bloqueado en el fundador):** medir coste real. El entorno de
+esta sesión tiene bloqueado por política de red el acceso a
+`api.openai.com`, y el Playground de OpenAI falla en móvil — el fundador
+hará la medición desde el Playground en un ordenador (modo Responses +
+web_search + ~5 prompts) y mirará el coste facturado en
+`platform.openai.com/usage`. Con ese dato: (b) qué planes incluyen OpenAI,
+(c) cuánto sube el precio de Pro → PR de activación (subir `caps.engines`,
+poner la variable, actualizar copy de `/pricing`).
 
 ---
 

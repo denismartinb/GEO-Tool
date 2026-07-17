@@ -38,6 +38,15 @@ vi.mock("@/lib/llm/claude", async () => {
   };
 });
 
+const generateOpenAIVisibilityAnswer = vi.fn();
+vi.mock("@/lib/llm/openai", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/llm/openai")>("@/lib/llm/openai");
+  return {
+    ...actual,
+    generateOpenAIVisibilityAnswer: (...args: unknown[]) => generateOpenAIVisibilityAnswer(...args)
+  };
+});
+
 vi.mock("@/lib/scan/extraction", () => ({
   runStructuredExtractionForRun: vi.fn().mockResolvedValue(undefined)
 }));
@@ -628,6 +637,7 @@ describe("executePendingScan — multi-engine execution", () => {
   beforeEach(() => {
     generateGeminiVisibilityAnswer.mockReset();
     generateClaudeVisibilityAnswer.mockReset();
+    generateOpenAIVisibilityAnswer.mockReset();
     process.env.LLM_SCAN_PROVIDERS = "gemini,claude";
   });
 
@@ -664,6 +674,27 @@ describe("executePendingScan — multi-engine execution", () => {
 
     const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
     expect(promptJob.status).toBe("completed");
+  });
+
+  it("ENGINES-2a dormancy: openai is a valid engine but a caps.engines=2 plan slices it off, so it never runs", async () => {
+    // OpenAI is wired into the executor but must stay dormant until a plan
+    // actually raises caps.engines to 3. With the default fixture plan
+    // (pro, caps.engines=2) and the env var listing all three, only the
+    // first two configured engines run — openai is never called and never
+    // produces a result row.
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    generateOpenAIVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateOpenAIVisibilityAnswer).not.toHaveBeenCalled();
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini"]);
   });
 
   it("completes the run even when recommendation generation throws (fail-soft)", async () => {
