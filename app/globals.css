@@ -3675,13 +3675,3 @@ select.set-field {
   margin-top: 0;
   padding-top: 10px;
 }
-.wa-more > summary {
-  list-style: none;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--accent);
-  padding: 4px 0;
-}
-.wa-more > summary::-webkit-details-marker { display: none; }
-.wa-more[open] > summary { margin-bottom: 8px; }
