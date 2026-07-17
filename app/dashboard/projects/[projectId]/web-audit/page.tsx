@@ -28,6 +28,7 @@ import {
   QuadrantButton,
   ActionFilterBar,
   ActionRowVisibility,
+  PlanExpander,
   type ActionFilterId,
   type ActionFilterCount
 } from "./audit-tabs";
@@ -1164,8 +1165,11 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 founder-approved 2026-07-16): a matched real recommendation
                 embeds its own interactive RecCard right here — Generar
                 propuesta / Marcar como hecho work in place, no navigation
-                required. `id="action-plan"` / `id="action-plan-more"` are the
-                matrix's scroll+open targets (audit-tabs.tsx). */}
+                required. `id="action-plan"` is the matrix's scroll target
+                (audit-tabs.tsx). "Ver todas las acciones" only appears while
+                filter === "all" (founder-approved 2026-07-17) — with a
+                specific filter active, every matching row is already shown
+                directly; see PlanExpander. */}
             <div className="card" style={{ marginTop: 12 }} id="action-plan">
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
@@ -1177,33 +1181,30 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 {actionPlan.length > 0 ? (
                   <>
                     <ActionFilterBar options={actionFilterOptions} />
-                    {topActions.map((item, i) => (
-                      <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
-                        <ActionPlanRow
-                          item={item}
-                          index={i + 1}
-                          projectId={projectId}
-                          recommendation={recommendationByPromptId.get(item.promptId) ?? null}
-                        />
-                      </ActionRowVisibility>
-                    ))}
-                    {restActions.length > 0 && (
-                      <details className="wa-more" id="action-plan-more">
-                        <summary>Ver todas las acciones ({actionPlan.length})</summary>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          {restActions.map((item, i) => (
-                            <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
-                              <ActionPlanRow
-                                item={item}
-                                index={i + 4}
-                                projectId={projectId}
-                                recommendation={recommendationByPromptId.get(item.promptId) ?? null}
-                              />
-                            </ActionRowVisibility>
-                          ))}
-                        </div>
-                      </details>
-                    )}
+                    <PlanExpander
+                      totalCount={actionPlan.length}
+                      restCount={restActions.length}
+                      top={topActions.map((item, i) => (
+                        <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
+                          <ActionPlanRow
+                            item={item}
+                            index={i + 1}
+                            projectId={projectId}
+                            recommendation={recommendationByPromptId.get(item.promptId) ?? null}
+                          />
+                        </ActionRowVisibility>
+                      ))}
+                      rest={restActions.map((item, i) => (
+                        <ActionRowVisibility key={item.promptId} matches={visibilityMatches(item.kind)}>
+                          <ActionPlanRow
+                            item={item}
+                            index={i + 4}
+                            projectId={projectId}
+                            recommendation={recommendationByPromptId.get(item.promptId) ?? null}
+                          />
+                        </ActionRowVisibility>
+                      ))}
+                    />
                   </>
                 ) : (
                   <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
@@ -1216,20 +1217,18 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             {/* "Lo que ya funciona" (WEB-AUDIT-R5): performing topics have no
                 action, so they never belonged in the plan above — but they
                 shouldn't vanish either (they used to live in the removed
-                "Contenido" tab). Collapsed by default; the matrix's
-                "Rindiendo" quadrant opens + scrolls here. */}
+                "Contenido" tab). Plain always-expanded `.card`, matching every
+                other top-level card's width/border-radius exactly (founder
+                report 2026-07-17: it previously used the smaller-radius
+                `.wa-details` chrome meant for NESTED rows, standing out from
+                its siblings). The matrix's "Rindiendo" quadrant scrolls here. */}
             {grouped.performing.length > 0 && (
-              <details className="wa-details" id="performing-section" style={{ marginTop: 12 }}>
-                <summary>
+              <div className="card" style={{ marginTop: 12 }} id="performing-section">
+                <div style={{ padding: "13px 16px 0", display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="badge badge-pos" style={{ flexShrink: 0 }}>Rindiendo</span>
-                  <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)" }}>
-                    Lo que ya funciona ({grouped.performing.length})
-                  </span>
-                  <span className="wa-chev">
-                    <Icon name="chevDown" size={14} />
-                  </span>
-                </summary>
-                <div className="wa-details-body">
+                  <div style={{ fontSize: 13.5, fontWeight: 750 }}>Lo que ya funciona ({grouped.performing.length})</div>
+                </div>
+                <div style={{ padding: "14px 16px 16px" }}>
                   <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 10px" }}>
                     Contenido propio que la IA ya cita en sus respuestas — sin acción pendiente, solo mantenlo actualizado.
                   </p>
@@ -1244,7 +1243,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     ))}
                   </ul>
                 </div>
-              </details>
+              </div>
             )}
 
             {/* Opportunity matrix as navigation: counts only, tap → filters

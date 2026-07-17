@@ -54,18 +54,17 @@ export function AuditTabsProvider({ children }: { children: ReactNode }) {
 
   function applyActionFilter(nextFilter: ActionFilterId) {
     setFilter(nextFilter);
-    // Force the "Ver todas" expander open — a matched row can sit inside it,
-    // and per-row visibility (ActionRowVisibility) alone can't reveal a row
-    // nested in a collapsed native <details>.
-    const moreEl = document.getElementById("action-plan-more");
-    if (moreEl instanceof HTMLDetailsElement) moreEl.open = true;
+    // No need to force any <details> open here (founder-approved 2026-07-17):
+    // PlanExpander only wraps the "rest" rows behind the "Ver todas" toggle
+    // while filter === "all" — any other filter renders every matching row
+    // directly, unconditionally, so there's nothing collapsed left to reveal.
     document.getElementById("action-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function openPerforming() {
-    const el = document.getElementById("performing-section");
-    if (el instanceof HTMLDetailsElement) el.open = true;
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // "Lo que ya funciona" is a plain always-expanded card (matches every
+    // other top-level card's width/style) — nothing to open, just scroll.
+    document.getElementById("performing-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
@@ -76,7 +75,7 @@ export function AuditTabsProvider({ children }: { children: ReactNode }) {
 }
 
 const TAB_LABELS: Array<{ id: AuditTabId; label: string }> = [
-  { id: "resumen", label: "Resumen" },
+  { id: "resumen", label: "Plan de acción" },
   { id: "tecnica", label: "Salud técnica" },
   { id: "evolucion", label: "Evolución" }
 ];
@@ -257,4 +256,41 @@ export function ActionRowVisibility({ matches, children }: { matches: ActionFilt
   const { filter } = useAuditTabs();
   const visible = filter === "all" || matches.includes(filter);
   return <div hidden={!visible}>{children}</div>;
+}
+
+/**
+ * Decides how the Plan de acción's overflow rows (everything past the first
+ * 3) are shown (founder-approved 2026-07-17): behind the native "Ver todas"
+ * toggle ONLY while filter === "all" — with a specific filter active, every
+ * matching row must already be visible without an extra click, so the toggle
+ * disappears and the rows render directly. `top`/`rest` are pre-rendered
+ * server output (each row already wrapped in its own `ActionRowVisibility`),
+ * passed in as children slots — this component only decides the WRAPPER.
+ */
+export function PlanExpander({
+  top,
+  rest,
+  restCount,
+  totalCount
+}: {
+  top: ReactNode;
+  rest: ReactNode;
+  restCount: number;
+  totalCount: number;
+}) {
+  const { filter } = useAuditTabs();
+  return (
+    <>
+      {top}
+      {restCount > 0 &&
+        (filter === "all" ? (
+          <details className="wa-more">
+            <summary>Ver todas las acciones ({totalCount})</summary>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{rest}</div>
+          </details>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{rest}</div>
+        ))}
+    </>
+  );
 }
