@@ -258,14 +258,32 @@ export function ActionRowVisibility({ matches, children }: { matches: ActionFilt
   return <div hidden={!visible}>{children}</div>;
 }
 
+const EXPANDER_LINK_STYLE: CSSProperties = {
+  background: "none",
+  border: "none",
+  padding: "4px 0",
+  font: "inherit",
+  fontSize: 12,
+  fontWeight: 650,
+  color: "var(--accent)",
+  cursor: "pointer",
+  textAlign: "left"
+};
+
 /**
  * Decides how the Plan de acción's overflow rows (everything past the first
- * 3) are shown (founder-approved 2026-07-17): behind the native "Ver todas"
- * toggle ONLY while filter === "all" — with a specific filter active, every
- * matching row must already be visible without an extra click, so the toggle
- * disappears and the rows render directly. `top`/`rest` are pre-rendered
- * server output (each row already wrapped in its own `ActionRowVisibility`),
- * passed in as children slots — this component only decides the WRAPPER.
+ * 3) are shown (founder-approved 2026-07-17): behind a toggle ONLY while
+ * filter === "all" — with a specific filter active, every matching row must
+ * already be visible without an extra click, so the toggle disappears and
+ * the rows render directly. `top`/`rest` are pre-rendered server output
+ * (each row already wrapped in its own `ActionRowVisibility`), passed in as
+ * children slots — this component only decides the WRAPPER.
+ *
+ * A controlled (not native <details>) toggle so the trigger can relocate:
+ * "Ver todas las acciones (N)" sits right after the top 3 while collapsed;
+ * clicking it reveals the rest AND moves the trigger to after the last row,
+ * now reading "Ver menos acciones" — clicking that collapses back to
+ * exactly the initial state (founder-approved 2026-07-17).
  */
 export function PlanExpander({
   top,
@@ -279,18 +297,45 @@ export function PlanExpander({
   totalCount: number;
 }) {
   const { filter } = useAuditTabs();
+  const [open, setOpen] = useState(false);
+
+  if (filter !== "all") {
+    // A specific filter already shows every match directly — no toggle.
+    return (
+      <>
+        {top}
+        {restCount > 0 && <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{rest}</div>}
+      </>
+    );
+  }
+
+  if (restCount === 0) return <>{top}</>;
+
+  if (!open) {
+    return (
+      <>
+        {top}
+        <button type="button" style={EXPANDER_LINK_STYLE} onClick={() => setOpen(true)}>
+          Ver todas las acciones ({totalCount})
+        </button>
+      </>
+    );
+  }
+
   return (
     <>
       {top}
-      {restCount > 0 &&
-        (filter === "all" ? (
-          <details className="wa-more">
-            <summary>Ver todas las acciones ({totalCount})</summary>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{rest}</div>
-          </details>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{rest}</div>
-        ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>{rest}</div>
+      <button
+        type="button"
+        style={EXPANDER_LINK_STYLE}
+        onClick={() => {
+          setOpen(false);
+          document.getElementById("action-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }}
+      >
+        Ver menos acciones
+      </button>
     </>
   );
 }
