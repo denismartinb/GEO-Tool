@@ -121,7 +121,17 @@ forbidden without its own dedicated phase approval.
 
 ---
 
-## Planned phase — ASYNC-SCAN-1 (not started, not approved)
+## Planned phase — ASYNC-SCAN-1 (split 2026-07-17; 1a in PR, 1b not approved)
+
+**Status update (2026-07-17):** Task Intake for launch-plan Fase 9 approved
+by the founder. The phase was split: **ASYNC-SCAN-1a (CRON-SCALE)** — the
+self-chaining daily sweep, no schema, `docs/adr/0016` — is implemented and
+awaiting Human Gate; **ASYNC-SCAN-1b (NOTIF-SERVER)** — server-side
+notifications schema + RLS — still needs its own Task Intake and explicit
+approval, designed once with Fase 6's needs. Much of the original scope
+below was already delivered earlier by SCAN-CHAIN-1 (`docs/adr/0014`):
+immediate landing on Escaneos and browser-independent campaign completion.
+The original write-up is kept below for context.
 
 **Origin:** while testing the redesigned add-domain wizard (PR #41), the
 founder asked whether scan launch could be made asynchronous so the user lands
