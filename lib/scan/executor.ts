@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { resolvePlan } from "@/lib/billing";
 import { generateGeminiVisibilityAnswer, GeminiConfigError, type GeminiVisibilityResponse } from "@/lib/llm/gemini";
 import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
+import { generateOpenAIVisibilityAnswer, OpenAIConfigError } from "@/lib/llm/openai";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import {
   computeRecommendationTransition,
@@ -28,8 +29,8 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export type LLMScanProvider = "gemini" | "claude";
-const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude"];
+export type LLMScanProvider = "gemini" | "claude" | "openai";
+const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude", "openai"];
 
 function parseProviderList(raw: string): LLMScanProvider[] {
   const parsed = raw
@@ -56,7 +57,9 @@ export function getLLMScanProviders(): LLMScanProvider[] {
   }
 
   const legacy = process.env.LLM_SCAN_PROVIDER?.trim().toLowerCase();
-  return legacy === "claude" ? ["claude"] : ["gemini"];
+  if (legacy === "claude") return ["claude"];
+  if (legacy === "openai") return ["openai"];
+  return ["gemini"];
 }
 
 type PromptJobOutcome =
@@ -73,7 +76,9 @@ async function callProvider(
   provider: LLMScanProvider,
   input: { prompt: string; country: string; language: string }
 ): Promise<GeminiVisibilityResponse> {
-  return provider === "claude" ? generateClaudeVisibilityAnswer(input) : generateGeminiVisibilityAnswer(input);
+  if (provider === "claude") return generateClaudeVisibilityAnswer(input);
+  if (provider === "openai") return generateOpenAIVisibilityAnswer(input);
+  return generateGeminiVisibilityAnswer(input);
 }
 
 // Processes a single scan_prompt job end-to-end (status transitions, one LLM
@@ -224,7 +229,7 @@ async function processPromptJob({
           });
           return { provider, kind: "success", llmResult, latency: Date.now() - llmStart };
         } catch (error) {
-          if (error instanceof GeminiConfigError || error instanceof ClaudeConfigError) {
+          if (error instanceof GeminiConfigError || error instanceof ClaudeConfigError || error instanceof OpenAIConfigError) {
             return { provider, kind: "config_error", error };
           }
           return { provider, kind: "retryable_error", error };

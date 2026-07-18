@@ -148,6 +148,34 @@ describe("computeRunScoresFromResults — grounding-aware citation_score (docs/a
     });
   });
 
+  it("treats openai as a grounded provider (real web_search grounding), counting its rows in citation_score", () => {
+    // 2 openai rows (1 cited to own domain), 2 claude rows (ungrounded) ->
+    // citation_score = 1/2 = 50 over grounded providers, same as gemini would
+    // be. If openai were mistakenly excluded, grounded_results_count would be
+    // 0 and citation_score_data_available false.
+    const results = [
+      row({
+        id: "1",
+        provider: "openai",
+        citation_found: true,
+        extracted_json: { phase: "phase4-basic", citations: [ownDomainCitation()] }
+      }),
+      row({ id: "2", provider: "openai", citation_found: false }),
+      row({ id: "3", provider: "claude", citation_found: false }),
+      row({ id: "4", provider: "claude", citation_found: false })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.citation_score).toBe(50);
+    expect(result.details_json.citation_score_data_available).toBe(true);
+    expect(result.details_json.grounded_results_count).toBe(2);
+    expect(result.details_json.citation_by_provider).toEqual({
+      openai: { total: 2, citation_found_count: 1 },
+      claude: { total: 2, citation_found_count: 0 }
+    });
+  });
+
   it("falls back to citation_score = 0 with citation_score_data_available: false when no grounded provider rows exist", () => {
     const results = [
       row({ id: "1", provider: "claude", citation_found: false }),

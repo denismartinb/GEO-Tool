@@ -41,7 +41,18 @@ const sentimentLabels: Record<string, string> = {
 type Tab = "resumen" | "respuestas";
 
 function providerLabel(provider: string | null): string {
-  return provider === "claude" ? "Claude" : "Gemini";
+  if (provider === "claude") return "Claude";
+  if (provider === "openai") return "ChatGPT";
+  return "Gemini";
+}
+
+// Per-provider badge visuals (background + single-letter mark), kept next to
+// providerLabel so adding an engine touches one place. Falls back to Gemini's
+// styling for any unknown value.
+function providerBadge(provider: string | null): { bg: string; letter: string } {
+  if (provider === "claude") return { bg: "#cc785c", letter: "C" };
+  if (provider === "openai") return { bg: "#10a37f", letter: "O" };
+  return { bg: "#1a73e8", letter: "G" };
 }
 
 /**
@@ -619,7 +630,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                               width: 20,
                               height: 20,
                               borderRadius: 5,
-                              background: r.provider === "claude" ? "#cc785c" : "#1a73e8",
+                              background: providerBadge(r.provider).bg,
                               display: "grid",
                               placeItems: "center",
                               color: "#fff",
@@ -627,7 +638,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                               fontWeight: 800,
                             }}
                           >
-                            {r.provider === "claude" ? "C" : "G"}
+                            {providerBadge(r.provider).letter}
                           </div>
                           <span style={{ fontWeight: 600 }}>
                             {providerLabel(r.provider)}

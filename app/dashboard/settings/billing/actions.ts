@@ -194,20 +194,49 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   const siteUrl = await getRequestSiteUrl();
   const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
 
+  // Arrow function expressions (not hoisted `function` declarations) so
+  // TypeScript retains the `priceId` non-null narrowing from the early
+  // return above — a hoisted declaration is conservative about closures.
+  const buildSessionParams = (customerId: string | null | undefined): Stripe.Checkout.SessionCreateParams => ({
+    mode: "subscription",
+    line_items: [{ price: priceId, quantity: 1 }],
+    client_reference_id: user.id,
+    customer: customerId ?? undefined,
+    customer_email: customerId ? undefined : (user.email ?? undefined),
+    billing_address_collection: "required",
+    automatic_tax: { enabled: true },
+    subscription_data: { metadata: { user_id: user.id, plan_id: planId } },
+    metadata: { user_id: user.id, plan_id: planId },
+    success_url: `${siteUrl}/dashboard/settings/billing?checkout=success`,
+    cancel_url: `${siteUrl}/dashboard/settings/billing?checkout=cancelled`
+  });
+
+  const isMissingCustomerError = (error: unknown): boolean => {
+    const stripeErr = error as { code?: string; param?: string } | null;
+    return stripeErr?.code === "resource_missing" && stripeErr?.param === "customer";
+  };
+
   try {
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      client_reference_id: user.id,
-      customer: existingCustomerId ?? undefined,
-      customer_email: existingCustomerId ? undefined : (user.email ?? undefined),
-      billing_address_collection: "required",
-      automatic_tax: { enabled: true },
-      subscription_data: { metadata: { user_id: user.id, plan_id: planId } },
-      metadata: { user_id: user.id, plan_id: planId },
-      success_url: `${siteUrl}/dashboard/settings/billing?checkout=success`,
-      cancel_url: `${siteUrl}/dashboard/settings/billing?checkout=cancelled`
-    });
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(buildSessionParams(existingCustomerId));
+    } catch (firstError) {
+      // A stored stripe_customer_id can go stale (Stripe test-data reset,
+      // manual deletion in the dashboard) independently of anything this app
+      // does — found live when a real profile's customer id no longer
+      // existed in Stripe, hard-failing checkout for that user with no
+      // recovery. Retry once, letting Stripe create a fresh customer from
+      // customer_email instead; the webhook's checkout.session.completed
+      // handler already overwrites stripe_customer_id unconditionally on
+      // success, so this self-heals the stale value without a separate write.
+      if (!existingCustomerId || !isMissingCustomerError(firstError)) throw firstError;
+
+      console.warn("[geo:billing] stale stripe_customer_id, retrying checkout without it", {
+        userId: user.id,
+        planId
+      });
+      session = await stripe.checkout.sessions.create(buildSessionParams(null));
+    }
 
     if (!session.url) {
       return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
