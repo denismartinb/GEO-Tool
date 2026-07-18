@@ -2865,6 +2865,15 @@ textarea.add-prompts-text-input {
     margin-left: -6px;
   }
   .lp-burger:hover { background: var(--surface-2); }
+  /* .lp-hero has no side padding of its own (relies on centered max-width
+     content) — without this, .lp-hero-content's heading/lead text runs flush
+     to the viewport edge below 900px. */
+  .lp-hero-content { padding: 0 24px; }
+  /* .lp-ctaband keeps a fixed 56px padding at every width; on narrow phones
+     that leaves too little room for its two CTA buttons side by side, so
+     they end up cramped against each other. Stack them full-width instead. */
+  .lp-ctaband .row { flex-direction: column; align-items: stretch; gap: 14px; }
+  .lp-ctaband .row .btn { width: 100%; }
 }
 
 /* ============================================================
