@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
@@ -442,19 +441,11 @@ export function OnboardingWizard({
     return (
       <div className="page add-domain fade-in">
         {isPending ? <SuggestionsLoadingOverlay domain={domain} /> : null}
-        <Link href="/dashboard" className="add-back">
-          <Icon name="chevLeft" size={15} />
-          Volver a Escaneos
-        </Link>
         <div className="add-wrap">
           <div className="add-hero">
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
               <WizardSteps currentStep={step} />
             </div>
-            <span className="onb-eyebrow">
-              <Icon name="plus" size={14} />
-              Nuevo dominio
-            </span>
             <h1 className="add-h1">
               Añade un dominio para <span className="grad">monitorizar</span>
             </h1>
@@ -547,7 +538,7 @@ export function OnboardingWizard({
               {suggestError ? <p className="feedback error mt-2">{suggestError}</p> : null}
 
               <div className="add-engines">
-                <span className="cap">Motores incluidos</span>
+                <span className="cap">Motores</span>
                 {ENGINES.map((engine) => (
                   <span className="eng-chip" key={engine.name}>
                     <span className="eng-dot" style={{ background: engine.color }} />
