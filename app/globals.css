@@ -3675,3 +3675,25 @@ select.set-field {
   margin-top: 0;
   padding-top: 10px;
 }
+
+/* iOS Safari auto-zooms the whole page when a text input/select/textarea
+ * whose font-size is under 16px receives focus. Because this app is an SPA
+ * (client-side route transitions), that zoom can persist across the very
+ * next navigation instead of resetting the way a full page load would —
+ * so the founder could focus one of these smaller fields, navigate on, and
+ * "land" on an unrelated page already zoomed in (founder report,
+ * 2026-07-18). Bumping these specific fields to 16px on phone-sized
+ * viewports removes the trigger without touching their desktop appearance,
+ * where the bug doesn't occur. Selectors mirror their base definitions
+ * above so this wins purely on source order (equal specificity, declared
+ * later) — no !important needed.
+ */
+@media (max-width: 767px) {
+  .domain-input,
+  .pr-search input,
+  .add-prompts-text-input,
+  .set-field,
+  .cit-select {
+    font-size: 16px;
+  }
+}
