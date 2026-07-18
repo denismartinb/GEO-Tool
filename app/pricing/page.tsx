@@ -74,7 +74,9 @@ function MatrixCell({ v }: { v: PlanCell }) {
 
 function PlanMatrix() {
   return (
-    <div className="price-matrix-wrap">
+    <div className="price-matrix-outer">
+      <p className="price-matrix-hint">Desliza para ver los 4 planes →</p>
+      <div className="price-matrix-wrap">
       <table className="price-matrix">
         <thead>
           <tr>
@@ -110,6 +112,7 @@ function PlanMatrix() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

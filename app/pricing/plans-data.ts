@@ -102,7 +102,7 @@ export const PLANS: Plan[] = [
     id: "agency",
     name: "Agencia",
     price: 449,
-    priceLabel: "A medida",
+    priceLabel: "Plan a medida",
     period: "mes",
     tagline: "Escala multi-cliente",
     who: "Agencias que reportan a sus clientes",

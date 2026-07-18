@@ -2955,11 +2955,29 @@ textarea.add-prompts-text-input {
 .price-faq-item.open .price-faq-a { max-height: 240px; }
 .price-faq-a p { margin: 0; padding: 0 20px 18px; font-size: 14px; line-height: 1.62; color: var(--ink-2); }
 
+.price-matrix-hint { display: none; }
+
 @media (max-width: 1000px) {
   .price-cards { grid-template-columns: repeat(2, 1fr); }
   .price-meter-grid { grid-template-columns: 1fr; }
   .price-matrix-wrap { overflow-x: auto; }
   .price-matrix { min-width: 680px; }
+}
+
+@media (max-width: 620px) {
+  /* The 34%-wide label column left almost no room for plan columns on a
+     phone — at any scroll position only one plan (sometimes not even a
+     full one) was visible, with no cue that the table scrolls, so it read
+     as broken/incomplete rather than swipeable. Shrink the label column to
+     a fixed compact width and the table's min-width so ~1.5-2 plan columns
+     peek into view at once, and add an explicit hint above it. */
+  .price-matrix-hint { display: block; text-align: center; font-size: 12.5px; font-weight: 650; color: var(--ink-3); margin: 0 0 8px; }
+  .price-matrix thead th.price-mx-rowhead { width: 92px; }
+  .price-matrix thead th { padding: 14px 10px 12px; }
+  .price-matrix tbody td { padding: 12px 10px; }
+  .price-mx-planname { font-size: 13.5px; }
+  .price-mx-planprice { font-size: 11.5px; }
+  .price-matrix { min-width: 460px; }
 }
 @media (max-width: 620px) {
   .price-cards { grid-template-columns: 1fr; }
