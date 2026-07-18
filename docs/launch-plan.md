@@ -1557,6 +1557,54 @@ identificado arriba) y quedar documentado como intentado y descartado.
 
 ---
 
+## Hallazgo P0 no planeado — checkout de Stripe roto en Producción (2026-07-18)
+
+Al intentar contratar Starter para la prueba de ENGINES-2a, el fundador
+encontró el checkout roto **tanto en el preview como en Producción**
+("Tampoco funciona en producción"). Confirmado por git log que no era una
+regresión de esta rama (sin commits en `lib/stripe.ts` ni
+`app/dashboard/settings/billing/` desde BILLING-STRIPE-1 PR 3, #192).
+
+**Causa raíz (log real del servidor):**
+```
+[geo:billing] failed to create Stripe checkout session {
+  userId: '9733f169-506e-4f20-9bde-443f73973024',
+  planId: 'starter',
+  message: "No such customer: 'cus_Urlxn9bbBOzGmh'"
+}
+```
+`profiles.stripe_customer_id` guardaba un customer id que ya no existe en
+Stripe (borrado/reseteado en el lado de Stripe, independientemente de
+nuestro código) — `createCheckoutSession` lo reutilizaba sin comprobar que
+siguiera existiendo, y Stripe rechazaba la sesión entera sin recuperación
+posible para esa cuenta.
+
+**Corregido** en `app/dashboard/settings/billing/actions.ts`: si Stripe
+responde `code: "resource_missing"` / `param: "customer"`, se reintenta
+una vez la creación de la sesión sin ese `customer` (cae a
+`customer_email`, dejando que Stripe cree uno nuevo) — mismo patrón de
+"un reintento acotado a un fallo concreto" que ya usan
+`lib/llm/gemini.ts`/`claude.ts`/`openai.ts` para 429. El webhook
+`checkout.session.completed` ya sobreescribe `stripe_customer_id`
+incondicionalmente al completar el pago, así que el valor obsoleto se
+autocura solo, sin necesidad de una escritura aparte. Cualquier otro error
+de Stripe sigue fallando igual que antes (sin reintento ciego).
+
+- 2 tests nuevos (`actions.test.ts`): reproduce exactamente el incidente
+  real (reintento exitoso) y confirma que un error de Stripe no relacionado
+  (p. ej. clave de API inválida) no dispara ningún reintento. 626/626 tests
+  totales, `pnpm run validate` limpio.
+
+**Siguiente:** el fundador vuelve a intentar contratar Starter (en
+Producción y/o en el preview de este PR) una vez desplegado el fix, y
+confirma que el checkout se completa. Sigue pendiente, aparte, entender
+**por qué** ese customer dejó de existir en Stripe (¿reseteo de datos de
+test manual? ¿rotación de clave a otra cuenta/modo?) — el fix es
+resiliente ante esto, pero no explica la causa original; si vuelve a pasar
+con más cuentas, revisar la configuración de la cuenta de Stripe.
+
+---
+
 ## Fase 9 — ASYNC-SCAN-1 ⚠️ (prerrequisito de escala, ya scoped)
 
 Ya documentada en `docs/director-strategy.md` (planned, not approved).
