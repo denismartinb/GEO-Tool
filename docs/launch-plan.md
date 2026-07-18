@@ -41,7 +41,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 6 | ALERTS-1 | ✅ Hecho | — | 2026-07-12 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b: resumen semanal por email (cron nuevo, deshabilitado por defecto vía `CRON_DIGEST_ENABLED`) — Vercel levantó el límite de cron jobs en enero 2026 (100/proyecto en todos los planes, incl. Hobby), así que no dependía de Vercel Pro como se pensaba |
 | 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-11 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso) |
 | 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
-| 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
+| 9 | ASYNC-SCAN-1 ⚠️ | 🟡 En curso (1a y 1c en PR) | #231 | 2026-07-18 | Task Intake aprobado 2026-07-17 y dividida: **1a CRON-SCALE** (sweep diario auto-encadenado, ADR-0016, PR #231) y **1c ASYNC-LAUNCH** (lanzamiento manual no bloqueante + mensaje honesto de escaneo activo, addendum ADR-0003) en PRs pendientes de Human Gate; **1b NOTIF-SERVER** (schema+RLS) pendiente de su propio Task Intake |
 | ⏰ | MODEL-PIN (deadline 2026-10-16) | 🔲 Pendiente | — | 2026-07-09 | Cutover anunciado de gemini-2.5-flash |
 
 Estados: 🔲 Pendiente · 🟡 En curso · ✅ Hecho · ⛔ Bloqueada · ❌ Cancelada
