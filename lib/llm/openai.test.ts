@@ -72,7 +72,10 @@ describe("generateOpenAIVisibilityAnswer", () => {
     const body = JSON.parse((init as RequestInit).body as string);
     expect(body.model).toBe("gpt-test-model");
     expect(body.tools).toEqual([{ type: "web_search" }]);
-    expect(body.tool_choice).toBe("auto");
+    // Forced (not "auto") — gpt-4o-mini answered from memory on all 10
+    // prompts of the first real scan when left to decide, producing zero
+    // grounding citations.
+    expect(body.tool_choice).toEqual({ type: "web_search" });
   });
 
   it("sends a brand-blind neutral prompt", async () => {
