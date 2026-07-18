@@ -1,12 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { buildWebAuditSummary, hasOwnDomainGroundingCitation } from "./opportunity-matrix";
+import {
+  buildWebAuditSummary,
+  hasOwnDomainGroundingCitation,
+  CITATION_WINDOW_SIZE,
+  CITATION_WINDOW_MAX_AGE_DAYS,
+  type ScanResultsWindow
+} from "./opportunity-matrix";
 import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageMap } from "./coverage-map";
 import type { PromptResultLite } from "./opportunity-matrix";
 
 const PROJECT_DOMAIN = "acme.com";
+const SCAN_1_DATE = "2026-07-01T00:00:00.000Z";
 
-function coverage(topics: DomainCoverageMap["topics"]): DomainCoverageMap {
-  return { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", topics };
+function coverage(topics: DomainCoverageMap["topics"], scanId = "scan-1", generatedAt = SCAN_1_DATE): DomainCoverageMap {
+  return { scanId, generatedAt, topics };
 }
 
 function result(overrides: Partial<PromptResultLite> = {}): PromptResultLite {
@@ -21,6 +28,11 @@ function result(overrides: Partial<PromptResultLite> = {}): PromptResultLite {
 
 function ownGroundingCitation(domain: string) {
   return { citations: [{ domain, source: "grounding" }] };
+}
+
+/** Wraps a single scan's results into the {scanId, generatedAt, results} window shape buildWebAuditSummary now expects. */
+function candidates(results: PromptResultLite[], scanId = "scan-1", generatedAt = SCAN_1_DATE): ScanResultsWindow[] {
+  return [{ scanId, generatedAt, results }];
 }
 
 describe("hasOwnDomainGroundingCitation", () => {
@@ -59,7 +71,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies a covered, cited topic as performing", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" }]),
-      results: [result({ extracted_json: ownGroundingCitation("acme.com") })],
+      citationWindowCandidates: candidates([result({ extracted_json: ownGroundingCitation("acme.com") })]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("performing");
@@ -68,7 +80,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies a covered, uncited topic as invisible", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" }]),
-      results: [result()],
+      citationWindowCandidates: candidates([result()]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("invisible");
@@ -77,7 +89,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies an uncovered, uncited topic with competitors mentioned as content_gap", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: false, pages: [], note: NOT_COVERED_NOTE }]),
-      results: [result({ mentioned_competitors_count: 2 })],
+      citationWindowCandidates: candidates([result({ mentioned_competitors_count: 2 })]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("content_gap");
@@ -86,7 +98,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies an uncovered, uncited topic with no competitors as open_opportunity", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: false, pages: [], note: NOT_COVERED_NOTE }]),
-      results: [result({ mentioned_competitors_count: 0 })],
+      citationWindowCandidates: candidates([result({ mentioned_competitors_count: 0 })]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("open_opportunity");
@@ -95,7 +107,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies an uncovered but cited topic as unverified_cited", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: false, pages: [], note: NOT_COVERED_NOTE }]),
-      results: [result({ extracted_json: ownGroundingCitation("acme.com") })],
+      citationWindowCandidates: candidates([result({ extracted_json: ownGroundingCitation("acme.com") })]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("unverified_cited");
@@ -104,7 +116,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies a COULD_NOT_VERIFY_NOTE topic as inconclusive regardless of result data", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: false, pages: [], note: COULD_NOT_VERIFY_NOTE }]),
-      results: [result({ extracted_json: ownGroundingCitation("acme.com") })],
+      citationWindowCandidates: candidates([result({ extracted_json: ownGroundingCitation("acme.com") })]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("inconclusive");
@@ -113,7 +125,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("classifies a topic with no matching scan result as inconclusive", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p-missing", topic: "t1", found: true, pages: [], note: "n" }]),
-      results: [],
+      citationWindowCandidates: candidates([]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.topics[0].outcome).toBe("inconclusive");
@@ -125,7 +137,7 @@ describe("buildWebAuditSummary — classification", () => {
         { promptId: "p1", topic: "t1", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" },
         { promptId: "p2", topic: "t2", found: false, pages: [], note: COULD_NOT_VERIFY_NOTE }
       ]),
-      results: [result({ prompt_id: "p1", extracted_json: ownGroundingCitation("acme.com") })],
+      citationWindowCandidates: candidates([result({ prompt_id: "p1", extracted_json: ownGroundingCitation("acme.com") })]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.conclusiveCount).toBe(1);
@@ -136,7 +148,7 @@ describe("buildWebAuditSummary — classification", () => {
   it("returns null percentages on an empty denominator instead of 0", () => {
     const summary = buildWebAuditSummary({
       coverage: coverage([{ promptId: "p1", topic: "t1", found: false, pages: [], note: COULD_NOT_VERIFY_NOTE }]),
-      results: [],
+      citationWindowCandidates: candidates([]),
       projectDomain: PROJECT_DOMAIN
     });
     expect(summary.conclusiveCount).toBe(0);
@@ -161,7 +173,7 @@ describe("buildWebAuditSummary — classification", () => {
       result({ prompt_id: "p5", extracted_json: ownGroundingCitation("acme.com") })
       // p6 intentionally has no matching result row
     ];
-    const summary = buildWebAuditSummary({ coverage: coverage(topics), results, projectDomain: PROJECT_DOMAIN });
+    const summary = buildWebAuditSummary({ coverage: coverage(topics), citationWindowCandidates: candidates(results), projectDomain: PROJECT_DOMAIN });
     const counts = summary.topics.reduce<Record<string, number>>((acc, t) => {
       acc[t.outcome] = (acc[t.outcome] ?? 0) + 1;
       return acc;
@@ -175,5 +187,131 @@ describe("buildWebAuditSummary — classification", () => {
       inconclusive: 1
     });
     expect(summary.topics.length).toBe(6);
+  });
+});
+
+describe("buildWebAuditSummary — citation window (WEB-AUDIT-R6 phase 2)", () => {
+  const foundTopic = [{ promptId: "p1", topic: "t1", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" }];
+
+  it("classifies as performing when 2 of 3 window scans cite the domain (majority)", () => {
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-3", generatedAt: "2026-07-15T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] },
+      { scanId: "scan-2", generatedAt: "2026-07-08T00:00:00.000Z", results: [result()] },
+      { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] }
+    ];
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-3", "2026-07-15T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("performing");
+  });
+
+  it("classifies as invisible when only 1 of 3 window scans cite the domain (minority)", () => {
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-3", generatedAt: "2026-07-15T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] },
+      { scanId: "scan-2", generatedAt: "2026-07-08T00:00:00.000Z", results: [result()] },
+      { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", results: [result()] }
+    ];
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-3", "2026-07-15T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("invisible");
+  });
+
+  it("treats an exact 1-of-2 tie as cited (citedRuns*2 >= totalRuns)", () => {
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-2", generatedAt: "2026-07-08T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] },
+      { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", results: [result()] }
+    ];
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-2", "2026-07-08T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("performing");
+  });
+
+  it("ignores scans beyond CITATION_WINDOW_SIZE, using only the most recent ones", () => {
+    // 4 scans available; the 2 oldest are both cited but must fall outside the size-3 window.
+    // Window (3 most recent): scan-4 uncited, scan-3 uncited, scan-2 uncited → majority uncited → invisible.
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-4", generatedAt: "2026-07-22T00:00:00.000Z", results: [result()] },
+      { scanId: "scan-3", generatedAt: "2026-07-15T00:00:00.000Z", results: [result()] },
+      { scanId: "scan-2", generatedAt: "2026-07-08T00:00:00.000Z", results: [result()] },
+      { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] }
+    ];
+    expect(CITATION_WINDOW_SIZE).toBe(3);
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-4", "2026-07-22T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("invisible");
+  });
+
+  it("excludes scans older than CITATION_WINDOW_MAX_AGE_DAYS from the window (recency guard)", () => {
+    expect(CITATION_WINDOW_MAX_AGE_DAYS).toBe(30);
+    // Only the current scan is inside the recency guard; the cited scan is 90 days old.
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-2", generatedAt: "2026-07-15T00:00:00.000Z", results: [result()] },
+      { scanId: "scan-1", generatedAt: "2026-04-16T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] }
+    ];
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-2", "2026-07-15T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("invisible");
+  });
+
+  it("never looks ahead: a future scan's citation does not affect an earlier reference point", () => {
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-2", generatedAt: "2026-07-08T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] },
+      { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", results: [result()] }
+    ];
+    // Reference point is scan-1's own date — scan-2 (later) must be excluded from its window.
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-1", "2026-07-01T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("invisible");
+  });
+
+  it("degrades gracefully with fewer than CITATION_WINDOW_SIZE scans available", () => {
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-1", generatedAt: "2026-07-01T00:00:00.000Z", results: [result({ extracted_json: ownGroundingCitation("acme.com") })] }
+    ];
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-1", "2026-07-01T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("performing");
+  });
+
+  it("does not count a window scan missing this prompt's result as a 'not cited' vote", () => {
+    // scan-2 has a result row, but for a different prompt — no data point for p1 in that
+    // scan. Only the current scan (uncited) and scan-1 (cited) should count, tying 1-of-2
+    // → performing. If the missing-data scan were wrongly counted as "not cited" it would
+    // become 1-of-3 → invisible, so this distinguishes the two behaviors.
+    const window: ScanResultsWindow[] = [
+      { scanId: "scan-3", generatedAt: "2026-07-15T00:00:00.000Z", results: [result({ prompt_id: "p1" })] },
+      { scanId: "scan-2", generatedAt: "2026-07-08T00:00:00.000Z", results: [result({ prompt_id: "p9" })] },
+      {
+        scanId: "scan-1",
+        generatedAt: "2026-07-01T00:00:00.000Z",
+        results: [result({ prompt_id: "p1", extracted_json: ownGroundingCitation("acme.com") })]
+      }
+    ];
+    const summary = buildWebAuditSummary({
+      coverage: coverage(foundTopic, "scan-3", "2026-07-15T00:00:00.000Z"),
+      citationWindowCandidates: window,
+      projectDomain: PROJECT_DOMAIN
+    });
+    expect(summary.topics[0].outcome).toBe("performing");
   });
 });

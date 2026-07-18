@@ -6,7 +6,13 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
-import { buildWebAuditSummary, type PromptResultLite, type ClassifiedTopic, type TopicOutcome } from "@/lib/web-audit/opportunity-matrix";
+import {
+  buildWebAuditSummary,
+  buildCitationWindowCandidates,
+  type PromptResultLite,
+  type ClassifiedTopic,
+  type TopicOutcome
+} from "@/lib/web-audit/opportunity-matrix";
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
@@ -72,9 +78,13 @@ const ACTION_KIND_META: Record<ActionItemKind, { label: string; badgeClass: stri
  * Which real filter value(s) a Plan de acción row should stay visible under
  * (WEB-AUDIT-R5). content_gap/open_opportunity rows (create_competing/
  * create_open) also match the matrix's combined "no_content" quadrant.
+ * create_competing/create_open/capture additionally match the chip row's
+ * broader "create_content" grouping (founder-approved 2026-07-18) — all
+ * three mean "publish a page", only `optimize` means editing an existing one.
  */
 function visibilityMatches(kind: ActionItemKind): ActionFilterId[] {
-  if (kind === "create_competing" || kind === "create_open") return [kind, "no_content"];
+  if (kind === "create_competing" || kind === "create_open") return [kind, "no_content", "create_content"];
+  if (kind === "capture") return [kind, "create_content"];
   return [kind];
 }
 
@@ -809,8 +819,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
 
   const latestMap = maps.length > 0 ? maps.reduce((a, b) => (a.generatedAt > b.generatedAt ? a : b)) : null;
 
+  // WEB-AUDIT-R6 phase 2: citation is classified over a fixed window of
+  // recent scans, not just the latest one (see opportunity-matrix.ts) — the
+  // same deduped candidates list drives both this current summary and every
+  // historical trend point (buildCoverageTrend), so they stay consistent.
+  const citationWindowCandidates = buildCitationWindowCandidates(maps, resultsByScanId);
   const summary = latestMap
-    ? buildWebAuditSummary({ coverage: latestMap, results: resultsByScanId.get(latestMap.scanId) ?? [], projectDomain: project.domain })
+    ? buildWebAuditSummary({ coverage: latestMap, citationWindowCandidates, projectDomain: project.domain })
     : null;
   const trend = buildCoverageTrend({ maps, resultsByScanId, projectDomain: project.domain });
 
@@ -878,13 +893,11 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     (row) => latestMap && row.run_id === latestMap.scanId
   );
   const competitorListsByPromptId = new Map<string, string[][]>();
-  const resultIdToPromptId = new Map<string, string>();
   for (const row of latestScanResultRows) {
     if (!row.prompt_id) continue;
     const lists = competitorListsByPromptId.get(row.prompt_id) ?? [];
     lists.push(extractMentionedCompetitors(row.extracted_json));
     competitorListsByPromptId.set(row.prompt_id, lists);
-    resultIdToPromptId.set(row.id, row.prompt_id);
   }
   const competitorsByPromptId = new Map<string, string[]>();
   for (const [promptId, lists] of competitorListsByPromptId) {
@@ -903,20 +916,35 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // the SAME interactive RecCard the Recomendaciones page renders — "Generar
   // propuesta con IA" and "Marcar como hecho" work in place, so the query
   // widened from {id, title, description} to every column RecCard reads.
+  //
+  // Bug fix (founder report 2026-07-18): "Ver recomendación" stopped
+  // rendering inline. Root cause — lib/scan/executor.ts supersedes every
+  // OTHER run's "active" recommendations project-wide the instant any new
+  // scan completes (exactly one run ever holds "active" at a time), but the
+  // domain-coverage audit behind `latestMap` is a separate, manually
+  // triggered action that can lag behind the latest scan (see
+  // `auditedScanDate`'s own scanId-mismatch guard just above, which already
+  // anticipated this). Filtering matchedRecs by `run_id = latestMap.scanId`
+  // silently returned nothing whenever the two fell out of sync — a very
+  // common state, not an edge case — so every row fell back to the plain
+  // link. `status = "active"` alone is the correct, staleness-proof filter;
+  // the evidence's scan_prompt_results id is resolved to a promptId via a
+  // query scoped to each recommendation's own `run_id`, never assumed to
+  // equal `latestMap.scanId`.
   const { data: matchedRecs } = latestMap
     ? await supabase
         .from("recommendations")
         .select(
-          "id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open"
+          "id, run_id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open"
         )
         .eq("project_id", projectId)
-        .eq("run_id", latestMap.scanId)
         .in("recommendation_type", ["add_citation_block", "increase_brand_visibility"])
         .eq("status", "active")
     : { data: [] };
 
   type MatchedRecRow = {
     id: string;
+    run_id: string;
     priority_rank: number;
     title: string;
     description: string;
@@ -930,6 +958,21 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     consecutive_runs_open: number | null;
   };
 
+  const matchedRecRows = (matchedRecs ?? []) as MatchedRecRow[];
+  const matchedRecRunIds = Array.from(new Set(matchedRecRows.map((r) => r.run_id)));
+  const { data: recResultRows } =
+    matchedRecRunIds.length > 0
+      ? await supabase
+          .from("scan_prompt_results")
+          .select("id, prompt_id")
+          .eq("project_id", projectId)
+          .in("run_id", matchedRecRunIds)
+      : { data: [] };
+  const resultIdToPromptIdForRecs = new Map<string, string>();
+  for (const row of (recResultRows ?? []) as Array<{ id: string; prompt_id: string | null }>) {
+    if (row.prompt_id) resultIdToPromptIdForRecs.set(row.id, row.prompt_id);
+  }
+
   // Founder report: "Ver recomendación →" sent the founder to a
   // decontextualized Recomendaciones page with no explanation of the
   // problem or the fix right where they were looking. A matched real
@@ -939,11 +982,11 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // performs, out of scope for this first cut; RecCard renders its normal
   // (non-enriched) state without it, never a fake one.
   const recommendationByPromptId = new Map<string, Recommendation>();
-  for (const rec of (matchedRecs ?? []) as MatchedRecRow[]) {
+  for (const rec of matchedRecRows) {
     const evidence = rec.evidence_json as { affected_prompt_details?: Array<{ id: string }> } | null;
     const resultId = evidence?.affected_prompt_details?.[0]?.id;
     if (!resultId) continue;
-    const promptId = resultIdToPromptId.get(resultId);
+    const promptId = resultIdToPromptIdForRecs.get(resultId);
     if (!promptId || recommendationByPromptId.has(promptId)) continue;
     recommendationByPromptId.set(promptId, {
       id: rec.id,
@@ -1023,13 +1066,22 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // WEB-AUDIT-R5: filter chips above the Plan de acción, driven by the same
   // ActionItemKind the matrix quadrants target — replaces the old per-outcome
   // topic filter that lived in the removed "Contenido" tab.
+  //
+  // Simplified to 3 chips (founder-approved 2026-07-18): Todas / Optimizar
+  // página / Crear contenido. create_competing, create_open and capture all
+  // collapse into the single "Crear contenido" chip — from the founder's
+  // perspective all three mean "publish a page" (only optimize means editing
+  // an existing one); each row still shows its own more specific badge
+  // (ACTION_KIND_META) so the distinction isn't lost, just not exposed as
+  // three separate top-level filters. The matrix quadrants keep their
+  // original per-kind precision untouched (visibilityMatches).
   const countsByKind: Record<ActionItemKind, number> = { optimize: 0, create_competing: 0, create_open: 0, capture: 0 };
   for (const item of actionPlan) countsByKind[item.kind] += 1;
+  const createContentCount = countsByKind.create_competing + countsByKind.create_open + countsByKind.capture;
   const actionFilterOptions: ActionFilterCount[] = [
     { id: "all", label: "Todas", count: actionPlan.length },
-    ...(["optimize", "create_competing", "create_open", "capture"] as ActionItemKind[])
-      .filter((kind) => countsByKind[kind] > 0)
-      .map((kind) => ({ id: kind as ActionFilterId, label: ACTION_KIND_META[kind].label, count: countsByKind[kind] }))
+    ...(countsByKind.optimize > 0 ? [{ id: "optimize" as ActionFilterId, label: "Optimizar página", count: countsByKind.optimize }] : []),
+    ...(createContentCount > 0 ? [{ id: "create_content" as ActionFilterId, label: "Crear contenido", count: createContentCount }] : [])
   ];
 
   const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;

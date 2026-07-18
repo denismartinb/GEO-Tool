@@ -1,10 +1,15 @@
-import { buildWebAuditSummary, type PromptResultLite } from "@/lib/web-audit/opportunity-matrix";
-import type { DomainCoverageMap } from "@/lib/web-audit/coverage-map";
+import { buildWebAuditSummary, buildCitationWindowCandidates, type PromptResultLite } from "@/lib/web-audit/opportunity-matrix";
+import { dedupeMapsByScanId, type DomainCoverageMap } from "@/lib/web-audit/coverage-map";
 
 /**
  * Builds the "evolución entre auditorías" trend series (WEB-AUDIT-1) from a
  * project's persisted coverage-map history. Pure — no I/O; the caller loads
  * `maps` and `resultsByScanId` from Supabase.
+ *
+ * Each point's citation window (WEB-AUDIT-R6 phase 2) only ever looks at
+ * scans at-or-before that point's own generatedAt — buildWebAuditSummary
+ * enforces this per point, so an earlier point in the series is never
+ * affected by a citation from a scan that hadn't happened yet.
  */
 
 export type CoverageTrendPoint = {
@@ -34,20 +39,15 @@ export function buildCoverageTrend(input: {
   // Dedupe by scanId, keeping the most recently generated map for each —
   // re-auditing the same scan (cache-hit or not) can otherwise repeat a
   // scanId across history rows.
-  const latestByScanId = new Map<string, DomainCoverageMap>();
-  for (const map of input.maps) {
-    const existing = latestByScanId.get(map.scanId);
-    if (!existing || existing.generatedAt < map.generatedAt) {
-      latestByScanId.set(map.scanId, map);
-    }
-  }
+  const dedupedMaps = dedupeMapsByScanId(input.maps);
+  const citationWindowCandidates = buildCitationWindowCandidates(input.maps, input.resultsByScanId);
 
-  const points = Array.from(latestByScanId.values())
+  const points = dedupedMaps
     .sort((a, b) => a.generatedAt.localeCompare(b.generatedAt))
     .map((map) => {
       const summary = buildWebAuditSummary({
         coverage: map,
-        results: input.resultsByScanId.get(map.scanId) ?? [],
+        citationWindowCandidates,
         projectDomain: input.projectDomain
       });
       return {
