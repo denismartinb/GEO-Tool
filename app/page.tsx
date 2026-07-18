@@ -64,6 +64,7 @@ export default function HomePage() {
               { href: "#producto", label: "Producto" },
               { href: "#como", label: "Cómo funciona" },
               { href: "#recomendaciones", label: "Recomendaciones" },
+              { href: "/geo", label: "Qué es GEO" },
               { href: "/pricing", label: "Precios" },
               { href: "/blog", label: "Blog" }
             ]}
@@ -76,6 +77,7 @@ export default function HomePage() {
             <a href="#producto">Producto</a>
             <a href="#como">Cómo funciona</a>
             <a href="#recomendaciones">Recomendaciones</a>
+            <Link href="/geo">Qué es GEO</Link>
             <Link href="/pricing">Precios</Link>
             <Link href="/blog">Blog</Link>
           </div>
@@ -293,6 +295,7 @@ export default function HomePage() {
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
+              <Link href="/geo">Qué es GEO</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>
