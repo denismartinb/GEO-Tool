@@ -1475,14 +1475,45 @@ Cambios de este PR:
   grounded en scoring), además de los 16 unitarios del módulo. 623/623 y
   `pnpm run validate` en verde.
 
-**Siguiente (bloqueado en el fundador):** medir coste real. El entorno de
-esta sesión tiene bloqueado por política de red el acceso a
-`api.openai.com`, y el Playground de OpenAI falla en móvil — el fundador
-hará la medición desde el Playground en un ordenador (modo Responses +
-web_search + ~5 prompts) y mirará el coste facturado en
-`platform.openai.com/usage`. Con ese dato: (b) qué planes incluyen OpenAI,
-(c) cuánto sube el precio de Pro → PR de activación (subir `caps.engines`,
-poner la variable, actualizar copy de `/pricing`).
+**Primera medición real, hallazgo de latencia (2026-07-17):** el fundador
+probó un prompt real en el Playground (modo Responses + `web_search`) desde
+un ordenador. Resultado: **6 citas reales** (`url_citation`, dominios de
+verdad — de hecho, competidores reales de GenScore para ese prompt),
+confirmando que el formato implementado en `lib/llm/openai.ts` es correcto.
+Pero la latencia de esa llamada fue **1m1s (61 segundos)** — muy por encima
+de:
+- `OPENAI_CALL_TIMEOUT_MS` (20s) en `lib/llm/openai.ts` — esa llamada
+  habría abortado por timeout en producción.
+- El presupuesto **completo** del escaneo síncrono (`maxDuration=60`,
+  ADR-0003) — una sola llamada de 61s ya excede el presupuesto entero, no
+  solo el de esa llamada.
+
+Investigado (WebSearch, foro de desarrolladores de OpenAI): **latencias de
+~1 minuto con la Responses API son un patrón ya reportado por otros
+desarrolladores específicamente con modelos de la familia gpt-5** ("gpt-5
+with the Responses API takes around 1 minute for even a basic query") — no
+parece un caso aislado, sino característico de ese modelo si es el que se
+usó (no se confirmó qué modelo eligió el Playground por defecto). Modelos
+más ligeros (gpt-4o-mini y similares) se reportan sensiblemente más rápidos
+en esos mismos hilos, aunque sin cifra exacta fiable todavía.
+
+**Implicación importante — esto es un problema de arquitectura, no solo de
+precio.** Si la latencia real con búsqueda web ronda el minuto
+independientemente del modelo, la integración síncrona actual (dentro del
+mismo escaneo de 60s) no es viable — necesitaría desacoplar OpenAI a
+ejecución asíncrona, fuera del ciclo síncrono del escaneo (repropone
+ASYNC-SCAN-1, todavía no aprobado, ver Fase 9). Si un modelo más ligero
+resuelve la latencia, la integración síncrona actual podría servir tal cual.
+
+**Siguiente (bloqueado en el fundador):** repetir la prueba en el Playground
+con un modelo más ligero — probar explícitamente `gpt-4o-mini` (o el más
+ligero disponible) con `web_search` activado, 2-3 veces, y anotar el tiempo
+de respuesta de cada una. Si baja de forma consistente a <20s, la
+arquitectura actual sirve y solo falta el coste real
+(`platform.openai.com/usage`) para decidir (b)/(c). Si sigue por encima de
+20-30s incluso con un modelo ligero, ENGINES-2a necesita replantearse como
+ejecución asíncrona antes de activarse — una decisión de alcance mayor, no
+un ajuste de timeout.
 
 ---
 
