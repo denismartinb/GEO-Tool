@@ -9,7 +9,7 @@ import { PLANS, PLAN_MATRIX, PLAN_FAQ, type Plan, type PlanCell } from "./plans-
 
 const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }> = [
   { icon: "prompts", t: "Prompts", d: "Cuántas preguntas monitorizamos en tu mercado, de 10 a 300.", scale: ["10", "25", "100", "300"] },
-  { icon: "layers", t: "Motores", d: "Gemini y Claude hoy — sumamos más motores de IA sin coste extra según se publiquen.", scale: ["1", "2", "2", "2"] },
+  { icon: "layers", t: "Motores", d: "Gemini, Claude y ChatGPT hoy — sumamos más motores de IA sin coste extra según se publiquen.", scale: ["1", "3", "3", "3"] },
   { icon: "refresh", t: "Frecuencia", d: "De un escaneo puntual a refresco diario con tendencia y alertas.", scale: ["Puntual", "Semanal", "Diario", "Diario"] }
 ];
 
@@ -30,7 +30,9 @@ function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: (planId: string) =
         <div className="price-tag">{plan.tagline}</div>
       </div>
       <div className="price-price">
-        {plan.price === 0 ? (
+        {plan.priceLabel ? (
+          <span className="price-amount">{plan.priceLabel}</span>
+        ) : plan.price === 0 ? (
           <span className="price-amount">0&nbsp;€</span>
         ) : (
           <>
@@ -72,7 +74,9 @@ function MatrixCell({ v }: { v: PlanCell }) {
 
 function PlanMatrix() {
   return (
-    <div className="price-matrix-wrap">
+    <div className="price-matrix-outer">
+      <p className="price-matrix-hint">Desliza para ver los 4 planes →</p>
+      <div className="price-matrix-wrap">
       <table className="price-matrix">
         <thead>
           <tr>
@@ -81,8 +85,8 @@ function PlanMatrix() {
               <th key={p.id} className={p.recommended ? "price-rec" : ""}>
                 <div className="price-mx-planname">{p.name}</div>
                 <div className="price-mx-planprice">
-                  {p.price === 0 ? "0 €" : p.price + " €"}
-                  <span>{p.price === 0 ? "" : "/mes"}</span>
+                  {p.priceLabel ?? (p.price === 0 ? "0 €" : p.price + " €")}
+                  <span>{p.priceLabel || p.price === 0 ? "" : "/mes"}</span>
                 </div>
               </th>
             ))}
@@ -108,6 +112,7 @@ function PlanMatrix() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

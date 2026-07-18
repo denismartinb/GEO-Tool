@@ -676,12 +676,11 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(promptJob.status).toBe("completed");
   });
 
-  it("ENGINES-2a dormancy: openai is a valid engine but a caps.engines=2 plan slices it off, so it never runs", async () => {
-    // OpenAI is wired into the executor but must stay dormant until a plan
-    // actually raises caps.engines to 3. With the default fixture plan
-    // (pro, caps.engines=2) and the env var listing all three, only the
-    // first two configured engines run — openai is never called and never
-    // produces a result row.
+  it("ENGINES-2a: a paid plan (pro, caps.engines=3) runs all three engines when LLM_SCAN_PROVIDERS lists them", async () => {
+    // Founder decision 2026-07-18 after the real-world validation (real
+    // grounding citations, fastest engine, negligible cost): every paid
+    // plan gets 3 engines. Free (caps.engines=1) remains the plan that
+    // exercises the slice — covered by the Free-plan test above.
     process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
     generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
     generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
@@ -693,8 +692,8 @@ describe("executePendingScan — multi-engine execution", () => {
     const { executePendingScan } = await import("./executor");
     await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
 
-    expect(generateOpenAIVisibilityAnswer).not.toHaveBeenCalled();
-    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini"]);
+    expect(generateOpenAIVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini", "openai"]);
   });
 
   it("completes the run even when recommendation generation throws (fail-soft)", async () => {

@@ -10,6 +10,9 @@ import type { CheckoutSessionResult, PortalIntent, PortalSessionResult } from "@
 const money = (n: number, dec = 2) =>
   n.toLocaleString("es-ES", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + " €";
 
+/** "449 €/mes" for priced plans, the negotiable label ("A medida") for plans that don't advertise a price. */
+const planPrice = (p: Plan, suffix = "/mes") => (p.priceLabel ? p.priceLabel : money(p.price, 0) + suffix);
+
 const METER_ROWS: Array<{ label: string; icon: string; get: (p: Plan) => string }> = [
   { label: "Dominios", icon: "globe", get: (p) => p.meter.projects },
   { label: "Prompts monitorizados", icon: "prompts", get: (p) => "~" + p.meter.prompts },
@@ -205,7 +208,7 @@ export function ChangePlanModal({
             <p>
               {step === "select" && (
                 <>
-                  Estás en <b style={{ color: "var(--ink-2)" }}>{current.name}</b> · {money(current.price, 0)}/mes
+                  Estás en <b style={{ color: "var(--ink-2)" }}>{current.name}</b> · {planPrice(current)}
                 </>
               )}
               {step === "confirm" &&
@@ -252,8 +255,8 @@ export function ChangePlanModal({
                       <div className="cp-plan-top">
                         <span className="cp-plan-name">{p.name}</span>
                         <span className="cp-plan-price">
-                          {money(p.price, 0)}
-                          <span className="per">/{p.id === "free" ? "" : "mes"}</span>
+                          {p.priceLabel ?? money(p.price, 0)}
+                          <span className="per">{p.priceLabel || p.id === "free" ? "" : "/mes"}</span>
                         </span>
                       </div>
                       <div className="cp-plan-tag">{p.tagline}</div>
@@ -317,7 +320,7 @@ export function ChangePlanModal({
                 <div className="cp-move-side">
                   <div className="cp-move-lbl">Nuevo</div>
                   <div className="cp-move-plan">
-                    {target.name} <span className="per">· {money(target.price, 0)}/mes</span>
+                    {target.name} <span className="per">· {planPrice(target)}</span>
                   </div>
                 </div>
               </div>
@@ -336,7 +339,7 @@ export function ChangePlanModal({
             </div>
             <div className="cp-foot">
               <div className="cp-foot-note">
-                {money(target.price, 0)}/mes
+                {planPrice(target)}
               </div>
               <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
                 <Icon name="chevLeft" size={15} />
@@ -364,7 +367,7 @@ export function ChangePlanModal({
                 <div className="cp-move-side">
                   <div className="cp-move-lbl">Actual</div>
                   <div className="cp-move-plan">
-                    {current.name} <span className="per">· {money(current.price, 0)}/mes</span>
+                    {current.name} <span className="per">· {planPrice(current)}</span>
                   </div>
                 </div>
                 <Icon name="arrRight" size={20} className="cp-move-arrow" />
