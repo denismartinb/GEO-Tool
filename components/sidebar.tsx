@@ -225,7 +225,7 @@ export function Sidebar({
 
       <div className="sb-foot">
         <a
-          href="https://lumira.ai/geo"
+          href="/geo"
           target="_blank"
           rel="noopener noreferrer"
           className="nav-item"
