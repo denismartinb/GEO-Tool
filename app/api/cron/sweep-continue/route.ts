@@ -2,14 +2,22 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
-import { runDailyCronScan } from "@/lib/scan/cron";
+import { resolveMaxSweepChainInvocations, runDailyCronScan } from "@/lib/scan/cron";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
-const bodySchema = z.object({
-  chainIndex: z.number().int().min(1).max(1000)
-});
+/**
+ * A legitimately dispatched chainIndex is always in [1, cap-1]: the dispatch
+ * side only chains while `chainIndex + 1 < maxChainInvocations`. Built per
+ * request so the bound tracks the env-configured cap, mirroring the
+ * dispatch-side check instead of a looser hardcoded sanity number.
+ */
+function bodySchema() {
+  return z.object({
+    chainIndex: z.number().int().min(1).max(resolveMaxSweepChainInvocations() - 1)
+  });
+}
 
 /**
  * Internal continuation endpoint for the self-chaining daily recurring-scan
@@ -35,7 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ skipped: "cron_scans_disabled" });
   }
 
-  const parsed = bodySchema.safeParse(await request.json().catch(() => null));
+  const parsed = bodySchema().safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }

@@ -92,9 +92,10 @@ ordering prioritizes them (the pre-existing starvation protection).
 
 - **Vercel Pro + more frequent cron schedule:** simpler, but couples pipeline
   scale to the billing go-live checklist (launch-plan Fase 3/4, deliberately
-  deferred by the founder). Worth revisiting once Pro is contracted anyway —
-  this design degrades gracefully into it (a more frequent firing just makes
-  chains shorter).
+  deferred by the founder). Pro is **not** a prerequisite for this design —
+  it works on Hobby today. Worth revisiting if/when Pro is contracted for
+  other reasons — this design degrades gracefully into it (a more frequent
+  firing just makes chains shorter).
 - **External queue / scheduler (QStash, pg_cron, GitHub Actions):** all
   rejected for the same reasons as in ADR 0014 — new vendor or out-of-repo
   component for something the existing in-repo pattern covers.

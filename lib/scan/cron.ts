@@ -15,10 +15,15 @@ const DEFAULT_MAX_PROJECTS_PER_RUN = 5;
 /**
  * Hard cap on how many chained sweep invocations a single daily cron firing
  * can produce (ASYNC-SCAN-1a, docs/adr/0016). Bounds the sweep's total work
- * per day to `MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`
- * projects even if the convergence guarantees below were ever violated.
+ * per firing to `MAX_SWEEP_CHAIN_INVOCATIONS × MAX_PROJECTS_PER_CRON_RUN`
+ * projects even if the convergence guarantees below were ever violated —
+ * with the once-daily Hobby cron that is also the daily bound.
  */
 const DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS = 20;
+
+export function resolveMaxSweepChainInvocations(): number {
+  return Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS);
+}
 
 /**
  * PRICING-TRUTH-1 (PR b): recurring-scan cadence by the project owner's plan,
@@ -195,7 +200,7 @@ export async function runDailyCronScan({
   maxProjects = Number(process.env.MAX_PROJECTS_PER_CRON_RUN ?? DEFAULT_MAX_PROJECTS_PER_RUN),
   chainIndex = 0,
   scheduleContinuation = true,
-  maxChainInvocations = Number(process.env.MAX_SWEEP_CHAIN_INVOCATIONS ?? DEFAULT_MAX_SWEEP_CHAIN_INVOCATIONS)
+  maxChainInvocations = resolveMaxSweepChainInvocations()
 }: {
   service: ReturnType<typeof createServiceClient>;
   maxProjects?: number;
