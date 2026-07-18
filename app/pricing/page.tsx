@@ -30,7 +30,9 @@ function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: (planId: string) =
         <div className="price-tag">{plan.tagline}</div>
       </div>
       <div className="price-price">
-        {plan.price === 0 ? (
+        {plan.priceLabel ? (
+          <span className="price-amount">{plan.priceLabel}</span>
+        ) : plan.price === 0 ? (
           <span className="price-amount">0&nbsp;€</span>
         ) : (
           <>
@@ -81,8 +83,8 @@ function PlanMatrix() {
               <th key={p.id} className={p.recommended ? "price-rec" : ""}>
                 <div className="price-mx-planname">{p.name}</div>
                 <div className="price-mx-planprice">
-                  {p.price === 0 ? "0 €" : p.price + " €"}
-                  <span>{p.price === 0 ? "" : "/mes"}</span>
+                  {p.priceLabel ?? (p.price === 0 ? "0 €" : p.price + " €")}
+                  <span>{p.priceLabel || p.price === 0 ? "" : "/mes"}</span>
                 </div>
               </th>
             ))}
