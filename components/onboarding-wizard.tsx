@@ -32,7 +32,8 @@ const TYPE_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai"
 
 const ENGINES = [
   { name: "Gemini", color: "#4285f4" },
-  { name: "Claude", color: "#d97757" }
+  { name: "Claude", color: "#d97757" },
+  { name: "ChatGPT", color: "#10a37f" }
 ];
 
 const ADD_STEPS = [

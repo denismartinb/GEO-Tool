@@ -41,6 +41,7 @@ export default function PrivacidadPage() {
         <li><strong>Vercel</strong> (alojamiento y ejecución de la aplicación).</li>
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
+        <li><strong>OpenAI (ChatGPT API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Resend</strong> — envía los correos transaccionales de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba).</li>
         <li><strong>Stripe</strong> — procesa los pagos de tu suscripción (datos de facturación y de tu tarjeta; nunca almacenamos ni vemos el número completo de tu tarjeta, lo gestiona Stripe directamente). Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Funciona sin cookies (no te identifica entre sesiones ni dispositivos).</li>

@@ -11,7 +11,7 @@ const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
   { icon: "competitors", t: "Frente a quién pierdes", d: "Detecta competidores directos y descubre dónde ganan visibilidad que tú no tienes." },
   { icon: "cite", t: "Qué URLs se citan", d: "Conoce las páginas que los motores de IA usan como fuente para responder en tu mercado." },
-  { icon: "layers", t: "Multi-motor", d: "Gemini y Claude hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
+  { icon: "layers", t: "Multi-motor", d: "Gemini, Claude y ChatGPT hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
   { icon: "recs", t: "Acciones, no solo datos", d: "Cada insight se convierte en una acción priorizada por impacto, esfuerzo y confianza." },
   { icon: "sparkles", t: "Soluciones generadas", d: "Genera el FAQ, el schema o el contenido que falta con un clic, listo para publicar." }
 ];
@@ -42,7 +42,7 @@ function EngineNote() {
     <div className="lp-hero-note">
       <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
       <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo en minutos</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />2 motores de IA</span>
+      <span><Icon name="check" size={14} className="text-[var(--pos)]" />3 motores de IA</span>
     </div>
   );
 }

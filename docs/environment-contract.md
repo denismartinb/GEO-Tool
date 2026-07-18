@@ -38,49 +38,46 @@ override is set in Vercel, it must also be updated to a served model id.
 | `ANTHROPIC_API_KEY` | Only if Claude is an active scan engine | Vercel + local `.env.local` | Anthropic API key |
 | `ANTHROPIC_MODEL` | No (defaults to `claude-haiku-4-5-20251001`) | Vercel optional | Valid Claude model id |
 
-### OpenAI (ENGINES-2a — wired into the pipeline, real-world test in progress)
+### OpenAI (active scan engine since 2026-07-18, ENGINES-2a)
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `OPENAI_API_KEY` | Only to test ENGINES-2a for real | **Vercel, Preview environment ONLY — do not set on Production yet** | `sk-...` |
-| `OPENAI_MODEL` | **Required if `OPENAI_API_KEY` is set — no default.** | Same, Preview only | `gpt-4o-mini` (founder's chosen model for this test, 2026-07-18) |
-| `LLM_SCAN_PROVIDERS` | To include `openai` in the test | Same, Preview only | `gemini,claude,openai` |
+| `OPENAI_API_KEY` | Yes (openai is an active engine) | Vercel, Production + Preview | `sk-proj-...` |
+| `OPENAI_MODEL` | **Required if `OPENAI_API_KEY` is set — no default.** | Vercel, Production + Preview | `gpt-4o-mini` (validated live 2026-07-18: real grounding citations, ~4.4s avg latency, negligible cost) |
 
 Unlike `GEMINI_MODEL`/`ANTHROPIC_MODEL`, `OPENAI_MODEL` has deliberately no
 hardcoded fallback: this module was written against third-party
 documentation of the Responses API (the official pricing/docs pages
-returned 403 from this environment when it was built), so guessing a
-default model id risked repeating the exact pinning gap that caused the
-`gemini-2.0-flash` 404 (`docs/adr/0002-gemini-model-pinning.md`). Confirm the
-model id is live before any real usage. `lib/llm/openai.ts` uses the
-Responses API `web_search` tool for real grounding (`url_citation`
-annotations map to `groundingChunks`, same shape Gemini uses).
+returned 403 from the build environment), so guessing a default model id
+risked repeating the exact pinning gap that caused the `gemini-2.0-flash`
+404 (`docs/adr/0002-gemini-model-pinning.md`). Confirm any model change is
+live before deploying it.
 
-`openai` IS now a valid `VALID_LLM_SCAN_PROVIDERS` value and IS wired into
-`lib/scan/extraction.ts` and `lib/scoring/run-scoring.ts`'s
-`GROUNDED_PROVIDERS`. Real-world cost/latency test in progress
-(`docs/launch-plan.md`, Fase 8): `caps.engines` was bumped to 3 for the
-**Starter** plan only (`app/pricing/plans-data.ts`) — chosen because its
-weekly cadence keeps cost exposure low while validating gpt-4o-mini's real
-economics; `meter.engines` (the public `/pricing` display) is deliberately
-left at 2, since PRICING-TRUTH-1 forbids advertising an engine not yet
-confirmed for real customers. Set the three vars above **scoped to Preview
-only** in Vercel project settings (uncheck Production) so this test never
-reaches real Starter customers until it's confirmed viable and merged with
-a corresponding `/pricing` copy update.
+`lib/llm/openai.ts` uses the Responses API with the `web_search` tool
+**forced** (`tool_choice: { type: "web_search" }`, not `"auto"` — left to
+decide, gpt-4o-mini answered from memory on 10/10 real prompts, producing
+zero citations). `url_citation` annotations map to `groundingChunks` (same
+shape as Gemini's), already-final URLs (no redirect resolution needed,
+unlike Gemini — see `buildGroundedCitations`). `openai` counts as a
+grounded provider in `lib/scoring/run-scoring.ts` (ADR-0012).
+
+All three paid plans (Starter/Pro/Agencia) have `caps.engines: 3` (founder
+decision 2026-07-18); Free stays at 1 (Gemini only, via the
+`LLM_SCAN_PROVIDERS` order slice).
 
 ### Scan engines
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `LLM_SCAN_PROVIDERS` | No (defaults to Gemini-only) | Vercel | Comma-separated engine list, e.g. `gemini,claude` — each listed engine runs concurrently for every prompt in a scan |
-| `LLM_SCAN_PROVIDER` | No — legacy, only read when `LLM_SCAN_PROVIDERS` is unset | Vercel | `gemini` \| `claude` |
+| `LLM_SCAN_PROVIDERS` | No (defaults to Gemini-only) | Vercel | Comma-separated engine list, e.g. `gemini,claude,openai` — each listed engine runs concurrently for every prompt in a scan |
+| `LLM_SCAN_PROVIDER` | No — legacy, only read when `LLM_SCAN_PROVIDERS` is unset | Vercel | `gemini` \| `claude` \| `openai` |
 
-Setting `LLM_SCAN_PROVIDERS=gemini,claude` requires both `GEMINI_API_KEY` and
-`ANTHROPIC_API_KEY` to be configured — a misconfigured engine does not abort
-the run as long as at least one other listed engine is configured (see
-`lib/scan/executor.ts`), but if every listed engine is misconfigured the run
-fails fast. `openai` is now a valid value (see above) — Preview-only for now.
+Every engine listed in `LLM_SCAN_PROVIDERS` needs its API key configured
+(`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`+`OPENAI_MODEL`) —
+a misconfigured engine does not abort the run as long as at least one other
+listed engine is configured (see `lib/scan/executor.ts`), but if every
+listed engine is misconfigured the run fails fast. Current production
+value: `gemini,claude,openai`.
 
 ### Scan execution
 

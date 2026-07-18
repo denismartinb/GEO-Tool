@@ -9,7 +9,7 @@ import { PLANS, PLAN_MATRIX, PLAN_FAQ, type Plan, type PlanCell } from "./plans-
 
 const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }> = [
   { icon: "prompts", t: "Prompts", d: "Cuántas preguntas monitorizamos en tu mercado, de 10 a 300.", scale: ["10", "25", "100", "300"] },
-  { icon: "layers", t: "Motores", d: "Gemini y Claude hoy — sumamos más motores de IA sin coste extra según se publiquen.", scale: ["1", "2", "2", "2"] },
+  { icon: "layers", t: "Motores", d: "Gemini, Claude y ChatGPT hoy — sumamos más motores de IA sin coste extra según se publiquen.", scale: ["1", "3", "3", "3"] },
   { icon: "refresh", t: "Frecuencia", d: "De un escaneo puntual a refresco diario con tendencia y alertas.", scale: ["Puntual", "Semanal", "Diario", "Diario"] }
 ];
 
