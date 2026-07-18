@@ -437,7 +437,7 @@ async function refreshRunProgressCounters({
   return { successCount: successCount ?? 0, failedCount: failedCount ?? 0 };
 }
 
-function getSiteUrl(): string {
+export function getSiteUrl(): string {
   return (
     process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
   );

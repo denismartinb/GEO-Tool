@@ -9,8 +9,23 @@ vi.mock("@/lib/scan/run-creation", () => ({
 
 const executePendingScan = vi.fn();
 vi.mock("@/lib/scan/executor", () => ({
-  executePendingScan: (...args: unknown[]) => executePendingScan(...args)
+  executePendingScan: (...args: unknown[]) => executePendingScan(...args),
+  getSiteUrl: () => "http://test.local"
 }));
+
+// `after()` callbacks are captured, not executed — a test that wants to
+// observe the continuation dispatch flushes them explicitly.
+const afterCallbacks: Array<() => unknown> = [];
+vi.mock("next/server", () => ({
+  after: (fn: () => unknown) => {
+    afterCallbacks.push(fn);
+  }
+}));
+
+async function flushAfterCallbacks() {
+  const callbacks = afterCallbacks.splice(0);
+  await Promise.all(callbacks.map((fn) => fn()));
+}
 
 type ProjectRow = { id: string; owner_user_id?: string };
 type ScanRunRow = { project_id: string; status: string; created_at: string };
@@ -103,6 +118,7 @@ describe("runDailyCronScan", () => {
     vi.spyOn(Date, "now").mockImplementation(() => nowMs);
     createPendingScanRunForCron.mockReset().mockResolvedValue("run-id");
     executePendingScan.mockReset().mockResolvedValue(undefined);
+    afterCallbacks.length = 0;
   });
 
   afterEach(() => {
@@ -115,7 +131,13 @@ describe("runDailyCronScan", () => {
 
     const result = await runDailyCronScan({ service });
 
-    expect(result).toEqual({ processed: 0, scanned: 0, results: [] });
+    expect(result).toEqual({
+      processed: 0,
+      scanned: 0,
+      results: [],
+      deferred: 0,
+      continuationScheduled: false
+    });
   });
 
   it("scans a never-scanned project and a project with an old scan", async () => {
@@ -236,6 +258,7 @@ describe("runDailyCronScan", () => {
     expect(result.scanned).toBe(1);
     expect(result.results).toHaveLength(1);
     expect(result.processed).toBe(1);
+    expect(result.deferred).toBe(2);
   });
 
   it("marks remaining candidates as skipped_budget once the time budget is exceeded", async () => {
@@ -258,6 +281,8 @@ describe("runDailyCronScan", () => {
     const statuses = result.results.map((r) => r.status);
     expect(statuses.filter((s) => s === "scanned")).toHaveLength(2);
     expect(statuses.filter((s) => s === "skipped_budget")).toHaveLength(2);
+    expect(result.deferred).toBe(2);
+    expect(result.continuationScheduled).toBe(true);
   });
 
   it("reconciles a stuck run instead of skipping outright: a stale pending/running latest run that createPendingScanRunForCron clears results in a real scan", async () => {
@@ -296,6 +321,7 @@ describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH
     vi.spyOn(Date, "now").mockImplementation(() => nowMs);
     createPendingScanRunForCron.mockReset().mockResolvedValue("run-id");
     executePendingScan.mockReset().mockResolvedValue(undefined);
+    afterCallbacks.length = 0;
   });
 
   afterEach(() => {
@@ -369,5 +395,135 @@ describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH
     expect(result.results).toEqual([{ projectId: "free-project", status: "skipped_plan_ineligible" }]);
     expect(createPendingScanRunForCron).not.toHaveBeenCalled();
     expect(executePendingScan).not.toHaveBeenCalled();
+  });
+});
+
+describe("runDailyCronScan — self-chaining sweep (ASYNC-SCAN-1a)", () => {
+  let nowMs: number;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    nowMs = Date.parse("2026-06-20T08:00:00.000Z");
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    createPendingScanRunForCron.mockReset().mockResolvedValue("run-id");
+    executePendingScan.mockReset().mockResolvedValue(undefined);
+    afterCallbacks.length = 0;
+    fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubEnv("CRON_SECRET", "test-cron-secret");
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("dispatches a sweep continuation when candidates are deferred by the per-invocation cap", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }, { id: "p3" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 1 });
+
+    expect(result.scanned).toBe(1);
+    expect(result.deferred).toBe(2);
+    expect(result.continuationScheduled).toBe(true);
+
+    await flushAfterCallbacks();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("http://test.local/api/cron/sweep-continue");
+    expect(init.method).toBe("POST");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer test-cron-secret");
+    expect(JSON.parse(init.body as string)).toEqual({ chainIndex: 1 });
+  });
+
+  it("does not chain when every candidate was processed this invocation", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 10 });
+
+    expect(result.deferred).toBe(0);
+    expect(result.continuationScheduled).toBe(false);
+    await flushAfterCallbacks();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not chain when the invocation made no progress (progress guard against non-converging loops)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    // Every attempt fails slowly enough to blow the 45s soft budget, so
+    // candidates remain deferred but nothing was actually scanned — chaining
+    // again would retry the exact same failing set forever.
+    executePendingScan.mockImplementation(async () => {
+      nowMs += 50_000;
+      throw new Error("boom");
+    });
+
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }, { id: "p3" }, { id: "p4" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 10 });
+
+    expect(result.scanned).toBe(0);
+    expect(result.deferred).toBeGreaterThan(0);
+    expect(result.continuationScheduled).toBe(false);
+    await flushAfterCallbacks();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("stops chaining at the hard invocation cap even with deferred candidates and progress", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }, { id: "p3" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 1, chainIndex: 19 });
+
+    expect(result.scanned).toBe(1);
+    expect(result.deferred).toBe(2);
+    expect(result.continuationScheduled).toBe(false);
+    await flushAfterCallbacks();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("respects scheduleContinuation=false (single-invocation mode)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 1, scheduleContinuation: false });
+
+    expect(result.deferred).toBe(1);
+    expect(result.continuationScheduled).toBe(false);
+    await flushAfterCallbacks();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("skips the dispatch (logged only) when CRON_SECRET is missing at fire time", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    vi.stubEnv("CRON_SECRET", "");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }, { id: "p2" }],
+      scanRuns: []
+    });
+
+    const result = await runDailyCronScan({ service, maxProjects: 1 });
+
+    expect(result.continuationScheduled).toBe(true);
+    await flushAfterCallbacks();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

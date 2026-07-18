@@ -6,6 +6,14 @@ import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
+import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
+
+// Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
+// keeps working unchanged — lib/recommendations/generated-solution.ts is now
+// the single source of truth for this shape (WEB-AUDIT-R5: the web-audit
+// page parses the same generated_solutions rows and needed the same type
+// without a third independent copy).
+export type { GeneratedSolution, GeneratedSolutionExample };
 
 type CitationPage = { domain: string; title: string; url: string };
 
@@ -21,20 +29,6 @@ type EvidenceJson = {
   citation_domains?: string[];
   citation_pages?: CitationPage[];
   action_suggested?: string;
-};
-
-/**
- * Sanitized, copy-paste-ready AI solution for a recommendation, loaded from
- * `generated_solutions`. Defined here (not in the server-only rewrite module)
- * so both the server page and this client component can share the shape.
- */
-export type GeneratedSolutionExample = { label: string; content: string };
-
-export type GeneratedSolution = {
-  title: string;
-  summary: string;
-  steps: string[];
-  examples: GeneratedSolutionExample[];
 };
 
 /**
@@ -320,7 +314,14 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
   );
 }
 
-function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
+/**
+ * Exported (WEB-AUDIT-R5) so the "Auditoría web" page's Plan de acción can
+ * embed the SAME interactive card — evidence, "Generar propuesta con IA",
+ * "Marcar como hecho" — for a matched recommendation instead of linking out
+ * to this page. Self-contained: owns its own open/close state and calls the
+ * same server actions regardless of which page renders it.
+ */
+export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
   const [open, setOpen] = useState(false);
   const [isRewriting, startRewrite] = useTransition();
   const [rewriteError, setRewriteError] = useState<string | null>(null);

@@ -4,7 +4,7 @@ import { BLOG_POSTS } from "@/lib/blog/posts";
 const SITE_URL = "https://www.genscore.es";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ["", "/pricing", "/blog", "/privacidad", "/cookies", "/terminos"].map((path) => ({
+  const staticRoutes = ["", "/geo", "/pricing", "/blog", "/privacidad", "/cookies", "/terminos"].map((path) => ({
     url: `${SITE_URL}${path}`,
     lastModified: new Date()
   }));

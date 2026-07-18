@@ -15,7 +15,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
     projects,
     promptCountByProject,
     competitorCountByProject,
-    completedRunCountByProject,
     recommendationCountByProject,
     latestScanStatusByProject,
     recentCompletedRuns,
@@ -28,7 +27,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
         projects={projects ?? []}
         promptCountByProject={promptCountByProject}
         competitorCountByProject={competitorCountByProject}
-        completedRunCountByProject={completedRunCountByProject}
         recommendationCountByProject={recommendationCountByProject}
         userEmail={user.email ?? ""}
         signOutAction={signOut}
