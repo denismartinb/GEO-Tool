@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,18 @@ export const dynamic = "force-dynamic";
  * checks, whitespace/quote contamination) and performs one live auth check
  * against OpenAI's /v1/models — it NEVER returns the key itself.
  *
- * Gated by DEBUG_CHECK_SECRET (a throwaway value the founder sets in Vercel
- * for the duration of the diagnosis); denies everything when unset.
+ * Gated by an authenticated session (any logged-in user) instead of a
+ * dedicated secret env var: the first version used DEBUG_CHECK_SECRET, but
+ * newly-added env vars were exactly what wasn't reaching the runtime — the
+ * gate itself reproduced the bug it was meant to diagnose. A session
+ * cookie doesn't depend on any env var landing.
  */
-export async function GET(request: Request) {
-  const expected = process.env.DEBUG_CHECK_SECRET;
-  const provided = new URL(request.url).searchParams.get("secret");
-  if (!expected || provided !== expected) {
+export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
@@ -37,7 +43,10 @@ export async function GET(request: Request) {
     keyFirst8: rawKey.slice(0, 8),
     keyLast4: rawKey.slice(-4),
     model: process.env.OPENAI_MODEL ?? null,
-    providers: process.env.LLM_SCAN_PROVIDERS ?? null
+    providers: process.env.LLM_SCAN_PROVIDERS ?? null,
+    debugCheckSecretPresent: Boolean(process.env.DEBUG_CHECK_SECRET),
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+    vercelGitCommitSha: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null
   };
 
   // Live auth check using the value EXACTLY as the scan executor would
