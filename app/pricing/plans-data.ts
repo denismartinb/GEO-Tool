@@ -68,8 +68,16 @@ export const PLANS: Plan[] = [
       "Bucle de acción básico",
       "Credibilidad de medición visible"
     ],
+    // ENGINES-2a real-world test (2026-07-18, founder-approved): caps.engines
+    // bumped to 3 so Starter can pick up OpenAI once LLM_SCAN_PROVIDERS
+    // includes "openai" — but ONLY via Preview-scoped env vars on this PR's
+    // branch, never merged to main until the founder confirms real cost/
+    // latency from an actual scan justify it. `meter.engines` (the /pricing
+    // display) is deliberately left at 2 — PRICING-TRUTH-1 forbids
+    // advertising an engine that isn't confirmed live for real customers
+    // yet. If this doesn't pan out, revert this single line.
     meter: { projects: "1", prompts: 25, engines: 2, refresh: "Semanal" },
-    caps: { projects: 1, prompts: 25, engines: 2 }
+    caps: { projects: 1, prompts: 25, engines: 3 }
   },
   {
     id: "pro",

@@ -802,6 +802,28 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted).toHaveLength(2);
   });
+
+  it("ENGINES-2a real-world test: a Starter-plan project picks up openai once LLM_SCAN_PROVIDERS lists it (caps.engines=3)", async () => {
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    generateOpenAIVisibilityAnswer.mockResolvedValue({
+      ...SUCCESS_RESPONSE,
+      groundingChunks: [{ uri: "https://example.com/page", title: "Example" }]
+    });
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      ownerPlan: "starter"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateOpenAIVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini", "openai"]);
+  });
 });
 
 describe("executePendingScan — recommendation history across runs (RECS-3)", () => {

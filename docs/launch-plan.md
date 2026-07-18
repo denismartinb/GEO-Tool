@@ -1505,15 +1505,55 @@ ejecución asíncrona, fuera del ciclo síncrono del escaneo (repropone
 ASYNC-SCAN-1, todavía no aprobado, ver Fase 9). Si un modelo más ligero
 resuelve la latencia, la integración síncrona actual podría servir tal cual.
 
-**Siguiente (bloqueado en el fundador):** repetir la prueba en el Playground
-con un modelo más ligero — probar explícitamente `gpt-4o-mini` (o el más
-ligero disponible) con `web_search` activado, 2-3 veces, y anotar el tiempo
-de respuesta de cada una. Si baja de forma consistente a <20s, la
-arquitectura actual sirve y solo falta el coste real
-(`platform.openai.com/usage`) para decidir (b)/(c). Si sigue por encima de
-20-30s incluso con un modelo ligero, ENGINES-2a necesita replantearse como
-ejecución asíncrona antes de activarse — una decisión de alcance mayor, no
-un ajuste de timeout.
+**Segunda medición real (2026-07-18):** el fundador probó de nuevo en el
+Playground — el selector de modelo de su cuenta solo ofrece la familia
+`gpt-5.x` (`gpt-5.4-mini` como opción más ligera visible, sin `gpt-4o-mini`
+ni similares más antiguos/ligeros disponibles). Con `gpt-5.4-mini` +
+`web_search`, **una sola llamada costó $0,20**.
+
+Cálculo real de impacto por plan (con los caps de `plans-data.ts`):
+
+| Plan | Prompts | Cadencia | Llamadas OpenAI/mes | Coste OpenAI/mes (a $0,20) | Precio del plan |
+|---|---|---|---|---|---|
+| Starter | 25 | Semanal | ~100 | ~$20 | 45 € |
+| Pro | 100 | Diario | ~3.000 | ~$600 | 179 € |
+| Agencia | 300 | Diario | ~9.000 | ~$1.800 | 449 € |
+
+**Hallazgo importante — invierte la recomendación original de gating:** a
+$0,20/llamada, Pro y Agencia (cadencia diaria) no son viables en absoluto
+(el coste de un solo motor superaría 3-4× el precio del plan entero).
+Starter (cadencia semanal) es la única que absorbe ese coste con margen —
+justo al revés de lo que planteaba el Task Intake inicial (que proponía
+Pro+Agencia, no Starter).
+
+**Decisión del fundador (2026-07-18): "Impleméntalo con el gpt 4o mini y lo
+probamos en real. Si al final no es rentable lo desactivamos. Pero lo
+dejamos desarrollado."** Implementado con el máximo cuidado de no exponer a
+clientes reales mientras se valida:
+
+- `app/pricing/plans-data.ts`: `caps.engines` de **Starter** subido a 3
+  (única cadencia económicamente viable, ver tabla arriba). `meter.engines`
+  (el número que ve el público en `/pricing`) se deja deliberadamente en 2
+  — PRICING-TRUTH-1 prohíbe anunciar un motor no confirmado para clientes
+  reales. Pro/Agencia quedan sin tocar.
+- **Este cambio vive solo en esta rama/PR, sin mergear a `main` todavía.**
+  Las variables (`OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`,
+  `LLM_SCAN_PROVIDERS=gemini,claude,openai`) deben ponerse en Vercel
+  **escopadas solo al entorno Preview** (desmarcar Production al añadirlas)
+  — así la prueba usa el pipeline real (coste y latencia reales) sin que
+  ningún cliente de Producción la reciba mientras no esté validada.
+- 1 test nuevo (`executor.test.ts`) que confirma que un proyecto Starter
+  recoge `openai` en cuanto `LLM_SCAN_PROVIDERS` lo incluye. 624/624 tests,
+  `pnpm run validate` limpio.
+
+**Siguiente:** el fundador pone las 3 variables en Vercel (solo Preview),
+lanza un escaneo real en un proyecto de plan Starter contra la URL de
+preview de este PR, y observa coste real (`platform.openai.com/usage`) y
+latencia real (logs de Vercel / duración del escaneo) con `gpt-4o-mini`. Si
+compensa: mergear (lo que dispara actualizar `meter.engines`/`/pricing` a
+"3 motores" para Starter, y poner las mismas variables en Producción). Si
+no compensa: revertir la línea de `caps.engines` (un solo cambio, ya
+identificado arriba) y quedar documentado como intentado y descartado.
 
 ---
 
