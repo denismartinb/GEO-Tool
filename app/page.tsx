@@ -130,16 +130,6 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
   );
 }
 
-function EngineNote() {
-  return (
-    <div className="lp-hero-note">
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo en minutos</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />2 motores de IA</span>
-    </div>
-  );
-}
-
 /**
  * Hero product shot — a real Visión general screen, not an illustration:
  * same components (Gauge, Sparkline, Delta, InfoTip) and same CSS classes
@@ -301,7 +291,6 @@ export default function HomePage() {
                 Analiza gratis <Icon name="arrRight" size={16} />
               </button>
             </div>
-            <EngineNote />
           </div>
         </div>
 
