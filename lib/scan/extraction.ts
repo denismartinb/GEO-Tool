@@ -2,6 +2,7 @@ import "server-only";
 
 import { extractGeminiStructuredData } from "@/lib/llm/gemini";
 import { extractClaudeStructuredData } from "@/lib/llm/claude";
+import { extractOpenAIStructuredData } from "@/lib/llm/openai";
 import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -32,17 +33,23 @@ function extractDomain(uri: string): string | null {
  *
  * Only "grounding" citations count toward citations_count / citation_found.
  *
- * Grounding chunk URIs are Google's redirect wrapper
+ * Gemini's grounding chunk URIs are Google's redirect wrapper
  * (`vertexaisearch.cloud.google.com/grounding-api-redirect/...`), not the
  * real cited page. We resolve them to their final destination so `domain`
  * reflects the actual source (e.g. `www.movistar.es`) — see
  * docs/adr/0006-grounding-redirect-resolution.md. If resolution fails or
  * times out, `domain` is set to `null` and `confidence` is downgraded to
  * "low" rather than showing the Google redirect host.
+ *
+ * `groundingUrlsAreFinal` short-circuits that resolution for providers whose
+ * grounding URLs are already the real destination page (OpenAI's Responses
+ * API `url_citation` annotations) — resolving them would add a needless live
+ * fetch per citation to an arbitrary third-party host, with nothing to gain.
  */
 async function buildGroundedCitations(input: {
   groundingChunks: Array<{ uri?: string; title?: string }> | undefined;
   inlineCitations: Array<{ url: string | null; domain: string | null; label: string | null }>;
+  groundingUrlsAreFinal?: boolean;
 }): Promise<GroundedCitation[]> {
   const citations: GroundedCitation[] = [];
 
@@ -50,31 +57,46 @@ async function buildGroundedCitations(input: {
     (chunk): chunk is { uri: string; title?: string } => Boolean(chunk.uri)
   );
 
-  const resolvedByUri = await resolveGroundingRedirects(groundingChunks.map((chunk) => chunk.uri));
-
-  for (const chunk of groundingChunks) {
-    const resolution = resolvedByUri.get(chunk.uri);
-    const resolvedUrl = resolution?.resolvedUrl ?? null;
-
-    if (resolvedUrl) {
+  if (input.groundingUrlsAreFinal) {
+    for (const chunk of groundingChunks) {
+      const domain = extractDomain(chunk.uri);
       citations.push({
         url: chunk.uri,
-        domain: extractDomain(resolvedUrl),
+        domain,
         title: chunk.title ?? null,
         source: "grounding",
-        confidence: "high"
+        // A URL we cannot even parse a host from is malformed — downgrade
+        // rather than assert high confidence in a domain of `null`.
+        confidence: domain ? "high" : "low"
       });
-    } else {
-      // Redirect resolution failed or timed out: never surface the Google
-      // redirect host as a domain. Keep the original URL for traceability,
-      // drop the domain, and downgrade confidence.
-      citations.push({
-        url: chunk.uri,
-        domain: null,
-        title: chunk.title ?? null,
-        source: "grounding",
-        confidence: "low"
-      });
+    }
+  } else {
+    const resolvedByUri = await resolveGroundingRedirects(groundingChunks.map((chunk) => chunk.uri));
+
+    for (const chunk of groundingChunks) {
+      const resolution = resolvedByUri.get(chunk.uri);
+      const resolvedUrl = resolution?.resolvedUrl ?? null;
+
+      if (resolvedUrl) {
+        citations.push({
+          url: chunk.uri,
+          domain: extractDomain(resolvedUrl),
+          title: chunk.title ?? null,
+          source: "grounding",
+          confidence: "high"
+        });
+      } else {
+        // Redirect resolution failed or timed out: never surface the Google
+        // redirect host as a domain. Keep the original URL for traceability,
+        // drop the domain, and downgrade confidence.
+        citations.push({
+          url: chunk.uri,
+          domain: null,
+          title: chunk.title ?? null,
+          source: "grounding",
+          confidence: "low"
+        });
+      }
     }
   }
 
@@ -115,20 +137,18 @@ async function extractAndPersistRow(input: {
           .filter((name) => name.length > 0)
       : [];
 
+    const extractionArgs = {
+      brand: row.brand_snapshot,
+      competitors,
+      rawResponseText,
+      promptText: row.prompt_text_snapshot
+    };
     const extracted =
       row.provider === "claude"
-        ? await extractClaudeStructuredData({
-            brand: row.brand_snapshot,
-            competitors,
-            rawResponseText,
-            promptText: row.prompt_text_snapshot
-          })
-        : await extractGeminiStructuredData({
-            brand: row.brand_snapshot,
-            competitors,
-            rawResponseText,
-            promptText: row.prompt_text_snapshot
-          });
+        ? await extractClaudeStructuredData(extractionArgs)
+        : row.provider === "openai"
+          ? await extractOpenAIStructuredData(extractionArgs)
+          : await extractGeminiStructuredData(extractionArgs);
 
     const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
 
@@ -139,7 +159,10 @@ async function extractAndPersistRow(input: {
         url: c.url,
         domain: c.domain,
         label: c.label
-      }))
+      })),
+      // OpenAI's web_search citations are already final destination URLs
+      // (unlike Gemini's Google redirect wrappers) — skip live resolution.
+      groundingUrlsAreFinal: row.provider === "openai"
     });
 
     // Anti-fake invariant: citations_count / citation_found only reflect
@@ -190,7 +213,7 @@ export async function runStructuredExtractionForRun(input: {
     .eq("project_id", input.projectId)
     .eq("run_id", input.runId)
     .eq("status", "completed")
-    .in("provider", ["gemini", "claude"])
+    .in("provider", ["gemini", "claude", "openai"])
     .not("raw_response_text", "is", null);
 
   if (error || !rows?.length) return;
