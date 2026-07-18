@@ -25,8 +25,17 @@ export type AuditTabId = "resumen" | "tecnica" | "evolucion";
  * (content_gap + open_opportunity outcomes → the create_competing/create_open
  * action kinds) — the matrix presents them as one cell, so its tap target
  * filters to both kinds at once.
+ *
+ * "create_content" (founder-approved 2026-07-18) is the Plan de acción filter
+ * chips' own coarser grouping — create_competing, create_open AND capture all
+ * ultimately mean "publish a page" from the founder's perspective (only
+ * `optimize` means editing an existing one), so the chip row shows just
+ * Todas / Optimizar página / Crear contenido instead of one chip per
+ * ActionItemKind. The matrix quadrants keep their original per-kind
+ * precision (`capture`, `no_content`) — only the chip row's own derived
+ * options collapse into this broader id.
  */
-export type ActionFilterId = "all" | "optimize" | "create_competing" | "create_open" | "capture" | "no_content";
+export type ActionFilterId = "all" | "optimize" | "create_competing" | "create_open" | "capture" | "no_content" | "create_content";
 
 /** `QuadrantButton`'s `target` additionally accepts "performing" — a signal to open the separate "Lo que ya funciona" section instead of filtering the plan (performing topics have no action). */
 export type QuadrantTarget = ActionFilterId | "performing";
