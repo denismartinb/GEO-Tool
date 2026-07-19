@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
 import { DeletePromptButton } from "@/app/dashboard/projects/[projectId]/prompts/delete-prompt-button";
 import { InfoTip } from "@/components/ui/info-tip";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 type Competitor = {
   id: string;
@@ -39,10 +40,6 @@ const sentimentLabels: Record<string, string> = {
 };
 
 type Tab = "resumen" | "respuestas";
-
-function providerLabel(provider: string | null): string {
-  return provider === "claude" ? "Claude" : "Gemini";
-}
 
 /**
  * Mirrors the frontend display rule from docs/adr/0006: the raw Google
@@ -159,7 +156,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
   });
 
   const uniqueProviderLabels = Array.from(
-    new Set(results.map((r) => providerLabel(r.provider)))
+    new Set(results.map((r) => getEngineMeta(r.provider).label))
   );
 
   return (
@@ -619,7 +616,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                               width: 20,
                               height: 20,
                               borderRadius: 5,
-                              background: r.provider === "claude" ? "#cc785c" : "#1a73e8",
+                              background: getEngineMeta(r.provider).color,
                               display: "grid",
                               placeItems: "center",
                               color: "#fff",
@@ -627,10 +624,10 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                               fontWeight: 800,
                             }}
                           >
-                            {r.provider === "claude" ? "C" : "G"}
+                            {getEngineMeta(r.provider).short}
                           </div>
                           <span style={{ fontWeight: 600 }}>
-                            {providerLabel(r.provider)}
+                            {getEngineMeta(r.provider).label}
                           </span>
                         </div>
                       </td>
@@ -686,7 +683,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                           letterSpacing: "0.06em",
                         }}
                       >
-                        {providerLabel(r.provider)}
+                        {getEngineMeta(r.provider).label}
                       </div>
                       <div className="body" style={{ whiteSpace: "pre-wrap" }}>
                         {r.raw_response_text}
