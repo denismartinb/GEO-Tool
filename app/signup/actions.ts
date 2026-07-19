@@ -4,6 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 
+const EMAIL_RATE_LIMIT_ERROR =
+  "Se han enviado demasiados emails de confirmación en poco tiempo. Espera unos minutos e inténtalo de nuevo.";
+
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -19,7 +22,13 @@ export async function signup(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+    // Supabase's built-in mailer (no custom SMTP configured) throttles auth
+    // emails very aggressively — a handful of signups within the same short
+    // window trips this, and the raw message ("email rate limit exceeded")
+    // would otherwise leak straight to the UI (docs/environment-contract.md
+    // has the custom-SMTP recommendation before enabling "Confirm email").
+    const message = error.code === "over_email_send_rate_limit" ? EMAIL_RATE_LIMIT_ERROR : error.message;
+    redirect(`/signup?error=${encodeURIComponent(message)}`);
   }
 
   // Every account starts on a 7-day Pro trial regardless of which /pricing

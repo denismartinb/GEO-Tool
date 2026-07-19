@@ -81,4 +81,40 @@ describe("signup", () => {
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
   });
+
+  it("maps the over_email_send_rate_limit error code to a safe Spanish message", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" }
+    });
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(redirectUrl.startsWith("/signup?error=")).toBe(true);
+    expect(redirectUrl).not.toContain("email+rate+limit+exceeded");
+    expect(decodeURIComponent(redirectUrl)).toContain("Espera unos minutos");
+  });
+
+  it("passes through other Supabase signup error messages unchanged", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "user_already_exists", message: "already registered" }
+    });
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(decodeURIComponent(redirectUrl)).toContain("already registered");
+  });
 });

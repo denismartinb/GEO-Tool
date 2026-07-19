@@ -30,6 +30,18 @@ sends the welcome email once they click the confirmation link. Both
 same Supabase project the deploy points at — enabling it on the wrong project
 (e.g. only locally) silently leaves production signups unconfirmed.
 
+**Do not enable "Confirm email" against Supabase's built-in mailer.** With no
+custom SMTP configured, Supabase sends auth emails (confirmation, OTP) through
+its own shared test mailer, which throttles hard — confirmed live 2026-07-18:
+a handful of signups in the same short window returns `over_email_send_rate_limit`
+("email rate limit exceeded"), blocking every signup after that until the
+window resets. `app/signup/actions.ts` maps that code to a safe Spanish
+message, but the underlying block is real and would hit real users, not just
+manual testing. Before turning this toggle on in production, configure a
+custom SMTP provider in `Authentication → Settings → SMTP Settings` — Resend
+(already used for `lib/email/transactional.ts`) supports SMTP relay and is
+the natural choice here.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |
