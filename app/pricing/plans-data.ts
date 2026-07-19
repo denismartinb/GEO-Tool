@@ -22,6 +22,13 @@ export type Plan = {
   id: "free" | "starter" | "pro" | "agency";
   name: string;
   price: number;
+  /**
+   * When set, every price surface shows this label instead of `price`
+   * (founder decision 2026-07-18: Agencia must not advertise a concrete
+   * price — it's negotiated per deal). `price` stays as the internal
+   * reference figure only.
+   */
+  priceLabel?: string;
   period: string;
   tagline: string;
   who: string;
@@ -40,7 +47,7 @@ export const PLANS: Plan[] = [
     price: 0,
     period: "siempre",
     tagline: "Tu primer escaneo, gratis",
-    who: "Gancho de adquisición · pruébalo sin tarjeta",
+    who: "Pruébalo sin tarjeta",
     cta: "Escanear gratis",
     ctaStyle: "ghost",
     highlights: [
@@ -63,20 +70,12 @@ export const PLANS: Plan[] = [
     ctaStyle: "ghost",
     highlights: [
       "1 dominio · ~25 prompts",
-      "2 motores de IA",
+      "3 motores de IA (Gemini, Claude y ChatGPT)",
       "Refresco semanal + tendencia",
       "Bucle de acción básico",
       "Credibilidad de medición visible"
     ],
-    // ENGINES-2a real-world test (2026-07-18, founder-approved): caps.engines
-    // bumped to 3 so Starter can pick up OpenAI once LLM_SCAN_PROVIDERS
-    // includes "openai" — but ONLY via Preview-scoped env vars on this PR's
-    // branch, never merged to main until the founder confirms real cost/
-    // latency from an actual scan justify it. `meter.engines` (the /pricing
-    // display) is deliberately left at 2 — PRICING-TRUTH-1 forbids
-    // advertising an engine that isn't confirmed live for real customers
-    // yet. If this doesn't pan out, revert this single line.
-    meter: { projects: "1", prompts: 25, engines: 2, refresh: "Semanal" },
+    meter: { projects: "1", prompts: 25, engines: 3, refresh: "Semanal" },
     caps: { projects: 1, prompts: 25, engines: 3 }
   },
   {
@@ -90,19 +89,20 @@ export const PLANS: Plan[] = [
     cta: "Probar Pro gratis",
     ctaStyle: "primary",
     highlights: [
-      "3–5 dominios · ~100 prompts",
-      "2 motores de IA (Gemini + Claude) · refresco diario",
+      "5 dominios · ~100 prompts",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · refresco diario",
       "Nuevos motores incluidos sin coste extra cuando se publiquen",
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)"
     ],
-    meter: { projects: "3–5", prompts: 100, engines: 2, refresh: "Diario" },
-    caps: { projects: 5, prompts: 100, engines: 2 }
+    meter: { projects: "5", prompts: 100, engines: 3, refresh: "Diario" },
+    caps: { projects: 5, prompts: 100, engines: 3 }
   },
   {
     id: "agency",
     name: "Agencia",
     price: 449,
+    priceLabel: "Plan a medida",
     period: "mes",
     tagline: "Escala multi-cliente",
     who: "Agencias que reportan a sus clientes",
@@ -110,12 +110,12 @@ export const PLANS: Plan[] = [
     ctaStyle: "ghost",
     highlights: [
       "Dominios y prompts a medida (~300 de referencia)",
-      "2 motores de IA (Gemini + Claude) · refresco diario",
+      "3 motores de IA (Gemini, Claude y ChatGPT) · refresco diario",
       "Volumen y condiciones adaptadas a tu agencia",
       "Onboarding acompañado antes de contratar"
     ],
-    meter: { projects: "A medida", prompts: 300, engines: 2, refresh: "Diario" },
-    caps: { projects: 999, prompts: 300, engines: 2 }
+    meter: { projects: "A medida", prompts: 300, engines: 3, refresh: "Diario" },
+    caps: { projects: 999, prompts: 300, engines: 3 }
   }
 ];
 
@@ -126,9 +126,9 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
   {
     group: "Medición",
     rows: [
-      { label: "Dominios", vals: ["1", "1", "3–5", "A medida"] },
+      { label: "Dominios", vals: ["1", "1", "5", "A medida"] },
       { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
-      { label: "Motores de IA", vals: ["1", "2", "2", "2"] },
+      { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
       { label: "Frecuencia de refresco", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
       { label: "Tendencia temporal", vals: [false, true, true, true] },
       { label: "Usuarios del equipo", vals: ["1", "Ilimitados", "Ilimitados", "Ilimitados"] }

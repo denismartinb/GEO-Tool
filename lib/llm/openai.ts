@@ -155,7 +155,14 @@ export async function generateOpenAIVisibilityAnswer(input: {
     instructions: instruction,
     input: userContent,
     tools: [{ type: "web_search" }],
-    tool_choice: "auto",
+    // Forced, not "auto": in the first real-world scan (2026-07-18,
+    // 10 prompts, gpt-4o-mini) the model chose to answer from memory every
+    // single time — zero searches, zero url_citation annotations. An
+    // ungrounded-in-practice engine would both lose this provider's whole
+    // differentiator vs Claude AND dilute citation_score's denominator,
+    // since openai is declared in GROUNDED_PROVIDERS (ADR-0012's structural
+    // ceiling, reintroduced by the back door).
+    tool_choice: { type: "web_search" },
     temperature: 0
   });
 

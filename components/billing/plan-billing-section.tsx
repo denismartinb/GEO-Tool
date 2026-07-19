@@ -195,7 +195,11 @@ export function PlanBillingSection({
                 <span className="badge badge-accent">Plan actual</span>
               </div>
               <p className="text-lg font-bold text-[var(--ink)]">
-                {current.price}&nbsp;€/{current.period}
+                {current.priceLabel ?? (
+                  <>
+                    {current.price}&nbsp;€/{current.period}
+                  </>
+                )}
               </p>
             </div>
             <p className="sub mt-1">{current.tagline}</p>
@@ -257,7 +261,7 @@ export function PlanBillingSection({
             </div>
             <p className="sub">
               Dominios y prompts a medida (~300 de referencia), los mismos motores de IA que Pro, onboarding
-              acompañado. Desde {agencyPlan.price}&nbsp;€/{agencyPlan.period}.
+              acompañado. Precio a medida — hablamos contigo y lo ajustamos a tu cartera.
             </p>
             <Button
               type="button"

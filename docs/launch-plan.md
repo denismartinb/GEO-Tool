@@ -40,7 +40,7 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 5 | LAUNCH | 🔲 Pendiente — es el camino crítico actual | — | 2026-07-17 | Todo el código de las fases 0–4 está shipeado y verificado en producción (modo test). Lo que queda es casi todo del fundador: Vercel Pro, alta autónomo, VeriFactu, claves live de Stripe, revisión legal humana. Checklist detallado y ordenado en la sección de Fase 5 |
 | 6 | ALERTS-1 | ✅ Hecho | — | 2026-07-12 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b: resumen semanal por email (cron nuevo, deshabilitado por defecto vía `CRON_DIGEST_ENABLED`) — Vercel levantó el límite de cron jobs en enero 2026 (100/proyecto en todos los planes, incl. Hobby), así que no dependía de Vercel Pro como se pensaba |
 | 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-17 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso). Pendiente: el 5º post del prompt original del fundador (cuando lo aporte) + resto del catálogo en PRs pequeños |
-| 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
+| 8 | ENGINES-2 ⚠️ | 🟡 OpenAI hecho (2a); Perplexity fuera de alcance | #226, #236 | 2026-07-18 | ChatGPT (gpt-4o-mini + búsqueda web forzada) activo como motor 3 en los 3 planes de pago, validado en vivo: citas reales (6/10 prompts), el motor más rápido (4,4s media), coste despreciable (~$0,01-0,02/escaneo). Free sigue con 1 motor. Perplexity sin fecha, requeriría su propia aprobación |
 | 9 | ASYNC-SCAN-1 ⚠️ | 🟡 En curso (1c hecho, 1a en PR) | #231, #232 | 2026-07-18 | Task Intake de la Fase 9 aprobado 2026-07-17, dividida en tres: **1a CRON-SCALE** (sweep diario auto-encadenado, ADR-0016, sin schema) en PR #231 pendiente de Human Gate; **1c ASYNC-LAUNCH** (lanzamiento manual no bloqueante + mensaje honesto de escaneo activo, addendum ADR-0003) ✅ hecho, PR #232 mergeada 2026-07-18 tras smoke real del fundador; **1b NOTIF-SERVER** (notificaciones server-side, schema+RLS) pendiente de su propio Task Intake, a diseñar junto a Fase 6 |
 | 10 | AUTH-EMAIL-VERIFY-1 | 🟡 Código en PR, falta activar el toggle | #237 | 2026-07-18 | Task Intake aprobado 2026-07-18. Signup con email/contraseña exige confirmación por enlace antes de dar acceso: `app/signup/actions.ts` detecta la ausencia de sesión de `signUp()` y manda a `/signup/confirm` en vez de `/dashboard`; `app/auth/callback/route.ts` envía el email de bienvenida al confirmar (reusa la detección de "cuenta recién creada" ya existente para OAuth); login con cuenta no confirmada da mensaje seguro en castellano (`error.code === "email_not_confirmed"`). Sin cambios de schema/RLS. **Bug real encontrado en vivo (2026-07-18):** el fundador activó el toggle directamente en Supabase antes del merge — el código de producción sin este fix no comprueba la sesión y deja al usuario sin acceso silenciosamente; además, probarlo repetidas veces sin SMTP propio dispara el rate limit del mailer por defecto de Supabase (`over_email_send_rate_limit`), ahora mapeado a mensaje seguro. Toggle desactivado de nuevo por el fundador hasta mergear. **Pendiente antes de reactivar en producción:** configurar SMTP propio (Resend) en Supabase — ver `docs/environment-contract.md` — y mergear este PR |
 | ⏰ | MODEL-PIN (deadline 2026-10-16) | 🔲 Pendiente | — | 2026-07-09 | Cutover anunciado de gemini-2.5-flash |
@@ -1547,14 +1547,62 @@ clientes reales mientras se valida:
   recoge `openai` en cuanto `LLM_SCAN_PROVIDERS` lo incluye. 624/624 tests,
   `pnpm run validate` limpio.
 
-**Siguiente:** el fundador pone las 3 variables en Vercel (solo Preview),
-lanza un escaneo real en un proyecto de plan Starter contra la URL de
-preview de este PR, y observa coste real (`platform.openai.com/usage`) y
-latencia real (logs de Vercel / duración del escaneo) con `gpt-4o-mini`. Si
-compensa: mergear (lo que dispara actualizar `meter.engines`/`/pricing` a
-"3 motores" para Starter, y poner las mismas variables en Producción). Si
-no compensa: revertir la línea de `caps.engines` (un solo cambio, ya
-identificado arriba) y quedar documentado como intentado y descartado.
+**Validación en vivo completada (2026-07-18), con tres hallazgos por el
+camino que costaron varias horas de diagnóstico:**
+
+1. **Checkout de Stripe roto (P0, sin relación con ENGINES-2a)**: al
+   intentar contratar Starter para la prueba apareció un
+   `stripe_customer_id` obsoleto — documentado y corregido en la sección
+   propia de abajo (PR #226).
+2. **La clave de OpenAI no llegaba al runtime**: una tarde entera de 401s
+   que resultaron ser una carrera de tiempos (cada escaneo corría contra un
+   deployment anterior a la corrección de la clave), diagnosticada
+   definitivamente con un endpoint temporal (`/api/debug/openai-check`,
+   gateado por sesión, retirado antes del merge — mismo ciclo de vida que
+   el `sentry-test` de #183). Lección operativa real: las variables
+   Sensitive de Vercel no se pueden releer, y un secreto pegado con el
+   prefijo "Bearer" o sin redeploy posterior produce el mismo síntoma que
+   una clave inválida — el endpoint de diagnóstico resolvió en una pasada
+   lo que a ciegas no salía.
+3. **`tool_choice: "auto"` no busca**: el primer escaneo real completó
+   10/10 prompts pero con **cero** búsquedas web — gpt-4o-mini decidió
+   responder de memoria siempre, dejando al motor sin citas (como Claude) y
+   además diluyendo el denominador del citation_score (techo estructural de
+   ADR-0012 reintroducido por la puerta de atrás, al estar `openai` en
+   `GROUNDED_PROVIDERS`). Corregido forzando la herramienta:
+   `tool_choice: { type: "web_search" }`.
+
+**Resultados finales del escaneo de validación (10 prompts, Starter,
+vivagym.com):**
+
+| Motor | Con citas | Citas | Latencia media | Máx |
+|---|---|---|---|---|
+| Gemini | 7/10 | 99 | 6,0s | 7,5s |
+| **ChatGPT** | **6/10** | **35** | **4,4s** | **5,2s** |
+| Claude | 0/10 (sin búsqueda, esperado) | 0 | 4,8s | 5,7s |
+
+Coste real: **~$0,01-0,02 por escaneo completo** (el $0,20/llamada que
+asustaba era específico de gpt-5.4-mini; gpt-4o-mini es dos órdenes de
+magnitud más barato). Latencia: ChatGPT es el motor más rápido incluso
+buscando. El miedo de arquitectura (61s en el Playground) era del modelo,
+no de la búsqueda.
+
+**Decisión del fundador (2026-07-18): "que en los 3 planes de pago de
+momento se ofrezcan los 3 motores".** Aplicado en el PR de cierre (#236):
+`caps.engines: 3` y `meter.engines: 3` en Starter/Pro/Agencia (Free sigue
+en 1); copy actualizado a "Gemini, Claude y ChatGPT" en landing, `/pricing`
+(cards, matriz, meter) y chips del onboarding; **`/privacidad` añade OpenAI
+como encargado del tratamiento y `/terminos` lo añade a la lista de
+modelos de terceros** (obligatorio: procesa prompts de usuarios reales
+desde hoy); endpoint de diagnóstico retirado; variables activas en
+Producción (`OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`,
+`LLM_SCAN_PROVIDERS=gemini,claude,openai`), verificado por el fundador en
+producción ("Funciona bien en pro").
+
+**Nota de coste registrada:** con cadencia diaria (Pro/Agencia), el coste
+de OpenAI es ~$0,60/mes por proyecto a precios actuales de gpt-4o-mini —
+asumible. Vigilar el dashboard de OpenAI las primeras semanas por si las
+tarifas de la herramienta de búsqueda aparecen con retraso.
 
 ---
 
@@ -1615,22 +1663,6 @@ proyectos una vez al día), **30 clientes Pro con refresco diario y 100
 prompts × 2 motores no caben**. No bloquea LAUNCH; bloquea el primer mes
 con tracción. Elevar prioridad en cuanto haya >10 clientes con recurring
 scans. Reabre ADR-0003; schema + RLS + scheduler → aprobación explícita.
-
-**Actualización 2026-07-17 — Task Intake aprobado ("Si"), fase dividida:**
-
-- **1a — CRON-SCALE (en PR):** el sweep diario se auto-encadena con el
-  mismo patrón de ADR-0014 un nivel más arriba (`after()` +
-  `/api/cron/sweep-continue`, `CRON_SECRET` reutilizado, kill switch
-  `CRON_SCANS_ENABLED` intacto). Capacidad: de 5 a 100 proyectos/día
-  (`MAX_SWEEP_CHAIN_INVOCATIONS=20` × `MAX_PROJECTS_PER_CRON_RUN=5`), sin
-  schema, sin RLS, sin infra nueva. Ver ADR-0016 para convergencia,
-  terminación y matemática de coste. Parte del scope original de junio ya
-  no aplica: SCAN-CHAIN-1 (ADR-0014) ya había resuelto el aterrizaje
-  inmediato en Escaneos y la ejecución browser-independent por campaña.
-- **1b — NOTIF-SERVER (pendiente de Task Intake propio):** notificaciones
-  server-side (schema + RLS nuevos, campana cross-device), a diseñar una
-  sola vez junto a las necesidades de Fase 6, con data-guardian en
-  plan-mode. Sigue gateada por aprobación explícita.
 
 ---
 
