@@ -3044,6 +3044,12 @@ textarea.add-prompts-text-input {
 .cit-prow .num { text-align: right; }
 .cit-pq { font-size: 12.5px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 8px; line-height: 1.35; }
 .cit-pq .ico { flex: 0 0 auto; }
+/* Groups the engine chips / category badge / citation count into one row.
+   display: contents on desktop keeps them as independent grid items (same
+   4-column layout as before); the mobile override below turns this into an
+   actual flex row instead. */
+.cit-prow-meta { display: contents; }
+.cit-prow-motors-label { display: none; }
 
 .cit-guide { background: linear-gradient(120deg, var(--accent-soft), #fbfbff); border: 1px solid var(--accent-soft-2); border-radius: var(--r-lg); padding: 16px 18px; margin-top: 14px; }
 .cit-guide-head { display: flex; align-items: flex-start; gap: 13px; }
@@ -3095,12 +3101,39 @@ textarea.add-prompts-text-input {
   }
 
   .cit-prow {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
+    padding: 12px 14px;
   }
 
   .cit-prow .num {
     text-align: left;
+  }
+
+  /* Engine chips, category badge, and citation count render as one wrapped
+     row instead of three unlabeled stacked lines (founder review,
+     2026-07-19: the colored chip, "Otra fuente", and the bare number read as
+     meaningless in isolation once the desktop-only column header
+     disappears). */
+  .cit-prow-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .cit-prow-motors-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-4);
   }
 }
 

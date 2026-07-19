@@ -159,11 +159,19 @@ function PromptGroupCard({
                       )}
                     </span>
                   </div>
-                  <EngineChips engines={c.engines} />
-                  <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
-                  <span className="num tnum" style={{ fontWeight: 700 }}>
-                    {c.cited}
-                  </span>
+                  <div className="cit-prow-meta">
+                    {/* "Motores" text label is invisible on desktop (the
+                        .cit-detail-head column header already says it) and
+                        only shows on mobile, where that header row is
+                        hidden — without it the colored engine chip reads as
+                        an unexplained icon (founder review, 2026-07-19). */}
+                    {c.engines.length > 0 && <span className="cit-prow-motors-label">Motores</span>}
+                    <EngineChips engines={c.engines} />
+                    <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
+                    <span className="num tnum" style={{ fontWeight: 700 }}>
+                      {c.cited} {c.cited === 1 ? "cita" : "citas"}
+                    </span>
+                  </div>
                 </div>
               ))}
             </>
