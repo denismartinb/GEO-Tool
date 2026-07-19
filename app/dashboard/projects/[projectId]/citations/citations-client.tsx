@@ -58,7 +58,7 @@ function BrandMentioned({ value }: { value: boolean }) {
 function EngineChips({ engines }: { engines: CitationEngine[] }) {
   if (engines.length === 0) return null;
   return (
-    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", minWidth: 0 }}>
       {engines.map((e) => {
         const meta = getEngineMeta(e.provider);
         return (
@@ -165,8 +165,14 @@ function PromptGroupCard({
                         only shows on mobile, where that header row is
                         hidden — without it the colored engine chip reads as
                         an unexplained icon (founder review, 2026-07-19). */}
-                    {c.engines.length > 0 && <span className="cit-prow-motors-label">Motores</span>}
+                    {c.engines.length > 0 && <span className="cit-prow-meta-label">Motores</span>}
                     <EngineChips engines={c.engines} />
+                    {/* "Citado por" is invisible on desktop (the column
+                        header already says "Categoría") and only shows on
+                        mobile, where that header is hidden — without it a
+                        bare "Otra fuente"/"Competidor" badge doesn't say
+                        what it's describing (founder review, 2026-07-19). */}
+                    <span className="cit-prow-meta-label">Citado por</span>
                     <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
                     <span className="num tnum" style={{ fontWeight: 700 }}>
                       {c.cited} {c.cited === 1 ? "cita" : "citas"}

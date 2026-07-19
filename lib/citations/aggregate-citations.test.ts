@@ -307,4 +307,41 @@ describe("aggregateCitations", () => {
     expect(citationRows[0].engines.some((e) => e.provider === "claude")).toBe(false);
     expect(engineTotals.some((e) => e.provider === "claude")).toBe(false);
   });
+
+  it("8. inline citation pointing to google.com (e.g. a Maps search link) is excluded as noise; a real grounding citation is never filtered even if its domain happens to be google.com", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        provider: "openai",
+        extracted_json: {
+          citations: [
+            { source: "inline", url: "https://www.google.com/maps/search/BANNI%2C+Espa%C3%B1a", domain: "google.com", title: "BANNI" },
+            { source: "inline", url: "https://real-site.com/page", domain: "real-site.com", title: "Real Site" }
+          ]
+        }
+      }),
+      row({
+        provider: "gemini",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "google.com", title: "Google Shopping listing" }]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({
+      rows,
+      projectDomain,
+      competitorDomains,
+      promptCategoryMap
+    });
+
+    // The inline Maps-noise citation ("BANNI") is excluded entirely — no row
+    // for it at all, under any title or domain.
+    expect(citationRows.some((r) => r.title === "BANNI")).toBe(false);
+    // The other inline citation (a real third-party page) is unaffected.
+    expect(citationRows.some((r) => r.domain === "real-site.com")).toBe(true);
+    // The grounding citation survives even though its domain is also
+    // google.com — only the heuristic inline path is filtered.
+    expect(citationRows.some((r) => r.title === "Google Shopping listing")).toBe(true);
+    expect(citationRows).toHaveLength(2);
+  });
 });

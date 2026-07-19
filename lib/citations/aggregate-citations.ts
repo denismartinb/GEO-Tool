@@ -132,6 +132,20 @@ export function resolveCitation(
   const inlineUrl = citation.url?.trim();
   const domain = rawDomain ? normalizeDomain(rawDomain) : "";
   if (!inlineUrl && !domain) return null;
+
+  // Inline citations are heuristically extracted from the model's own
+  // answer text and never count toward citation_found/citations_count (see
+  // the "Anti-fake invariant" comment in lib/scan/extraction.ts) — so they
+  // can pick up an incidental link the model wrote next to a business-name
+  // mention rather than a real source page, most often a Google Maps/Search
+  // URL (e.g. "BANNI" → google.com/maps/search/BANNI...). That's not a
+  // genuine citation and never an actionable outreach target, so it's
+  // excluded from the Citations page entirely (founder review 2026-07-19).
+  // Grounding citations (real web_search/Search results, which DO count
+  // toward citation_score) are handled above and never reach this branch,
+  // so this only ever filters the noisy heuristic inline path.
+  if (domain && isSameOrSubdomain(domain, "google.com")) return null;
+
   const key = (inlineUrl ?? domain).toLowerCase();
   return { key, title: citation.title?.trim() || inlineUrl || domain, url: inlineUrl ?? "", domain };
 }
