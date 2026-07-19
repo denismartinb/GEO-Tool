@@ -4,36 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
+import type { CitationRow, PromptCitation, PromptGroup } from "@/lib/citations/aggregate-citations";
 
-export type CitationRow = {
-  id: string;
-  title: string;
-  url: string;
-  domain: string;
-  category: "brand" | "competitor" | "third_party";
-  brandMentioned: "yes" | "no" | "na";
-  competitors: string[];
-  cited: number;
-  prompts: Array<{ text: string; brandMentioned: boolean }>;
-};
-
-export type PromptCitation = {
-  title: string;
-  url: string;
-  domain: string;
-  category: CitationRow["category"];
-  cited: number;
-};
-
-export type PromptGroup = {
-  id: string;
-  promptText: string;
-  topic: string | null;
-  brandMentioned: boolean;
-  citations: PromptCitation[];
-  citedUrls: number;
-  totalCites: number;
-};
+export type { CitationRow, PromptCitation, PromptGroup };
 
 const CATEGORY_LABEL: Record<CitationRow["category"], string> = {
   brand: "Tu marca",
