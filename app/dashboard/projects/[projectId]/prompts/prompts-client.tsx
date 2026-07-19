@@ -245,7 +245,7 @@ export function PromptsClient({
           <Icon name="prompts" size={20} />
         </div>
         <div className="summary-txt" style={{ flex: 1 }}>
-          Monitorizas{" "}
+          GenScore monitoriza{" "}
           <b>{totalPrompts} {totalPrompts === 1 ? "prompt" : "prompts"}</b>
           {hasTopics ? (
             <>
@@ -281,7 +281,6 @@ export function PromptsClient({
               flojo, «{worstTopic.category}» ({worstTopic.visibilidad}%).
             </>
           ) : null}
-          {" "}Pulsa un prompt para ver la respuesta de cada motor de IA.
         </div>
       </div>
 

@@ -574,9 +574,9 @@ export default async function ProjectDetailPage({
               <Icon name="sparkles" size={18} />
             </div>
             <p className="summary-txt">
-              <b>{project.brand}</b> aparece en{" "}
+              GenScore detectó que <b>{project.brand}</b> aparece en{" "}
               <b>{brandMentions} de {totalResults} prompts</b> ({computedMentionRate}%), con una{" "}
-              <b>puntuación GEO de {gaugeScore}/100</b> — {getBandLabel(gaugeScore).toLowerCase()}.
+              <b>puntuación GEO de {gaugeScore}/100</b>.
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
                   {" "}Tu rival más visible,{" "}
