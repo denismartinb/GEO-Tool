@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
     <main className="auth-bg">
       <div className="auth-card fade-in" key={step}>
         <div className="auth-logo">
-          <BrandLogo size={22} textSize={17} />
+          <BrandLogo size={22} />
         </div>
 
         {step === "request" && (

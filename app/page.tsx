@@ -243,7 +243,7 @@ export default function HomePage() {
             ]}
           />
           <div className="lp-logo">
-            <BrandLogo size={22} textSize={16} />
+            <BrandLogo size={20} />
           </div>
           <div className="lp-nav-links">
             <a href="#producto">Producto</a>
@@ -458,7 +458,7 @@ export default function HomePage() {
         <div className="lp-inner">
           <div className="row1">
             <div className="lp-logo">
-              <BrandLogo size={20} textSize={15} />
+              <BrandLogo size={18} />
             </div>
             <div className="links">
               <a href="#producto">Producto</a>

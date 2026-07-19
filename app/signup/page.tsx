@@ -21,7 +21,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
     <main className="auth-bg">
       <div className="auth-card">
         <div className="auth-logo">
-          <BrandLogo size={22} textSize={17} />
+          <BrandLogo size={22} />
         </div>
 
         {/* Título */}

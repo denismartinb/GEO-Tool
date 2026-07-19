@@ -7,44 +7,53 @@
 
 ---
 
-## 1. Concepto del logo: la "G-gauge"
+## 1. Concepto del logo: la "G-gauge" integrada (v2)
 
-El símbolo es una **G construida como un arco de indicador (gauge)** con un
-**punto de acento** que marca la posición del score. Une las dos ideas del
-producto en una sola forma:
+El logo es un **lockup integrado**: la G-gauge — una G construida como un
+arco de indicador (gauge) — actúa como la **letra inicial del propio
+wordmark**, seguida de "enScore". Marca y nombre son una única pieza
+coherente, no un icono junto a un texto.
 
-- la **G** de GenScore;
-- el **gauge/score**, el elemento héroe del Overview (el GEO Score).
+- la **G** en **degradado índigo** (`#6d5ef0 → #4338ca`): el color de acción
+  de la interfaz, con volumen para no leerse como texto plano;
+- el **punto ámbar** (`#f59e0b`) en la apertura del arco: la posición del
+  score, la firma visual de la marca — visible incluso a 18 px en móvil;
+- el wordmark en **Bricolage Grotesque ExtraBold (800)** convertido a
+  trazados: una grotesca con carácter, distinta de la tipografía de UI.
 
-Es geométrico, monocolor + un acento, sin degradados: serio, profesional y
-legible desde 96 px hasta el favicon de 16 px.
+v1 (G monocolor tinta + punto índigo, wordmark Hanken) se descartó por
+feedback del fundador: demasiado simple, en móvil el gauge apenas se
+apreciaba y el conjunto leía como texto negro.
 
 ### Archivos (`public/brand/`)
 
 | Archivo | Uso |
 |---|---|
-| `genscore-mark.svg` | Símbolo solo, sobre fondo claro |
-| `genscore-mark-white.svg` | Símbolo solo, sobre fondo oscuro |
-| `genscore-mark-mono.svg` | Símbolo monocromo (tinta única: sellos, docs) |
-| `genscore-tile.svg` | Tile cuadrado redondeado (app icon / favicon / redes) |
-| `genscore-logo.svg` | Lockup horizontal (símbolo + wordmark), fondo claro |
-| `genscore-logo-white.svg` | Lockup horizontal, fondo oscuro |
-| `genscore-wordmark.svg` | Solo wordmark (trazados vectoriales reales) |
+| `genscore-mark.svg` | G-gauge sola (degradado + punto ámbar), fondo claro |
+| `genscore-mark-white.svg` | G-gauge sola (degradado claro + ámbar claro), fondo oscuro |
+| `genscore-mark-mono.svg` | G-gauge monocroma en tinta (sellos, docs) |
+| `genscore-tile.svg` | Tile: squircle degradado índigo + G blanca + punto ámbar (favicon / app icon / redes) |
+| `genscore-logo.svg` | Lockup integrado (G-gauge + "enScore"), fondo claro |
+| `genscore-logo-white.svg` | Lockup integrado, fondo oscuro |
+| `genscore-wordmark.svg` | "GenScore" completo en Bricolage 800 tinta (contextos de solo texto) |
 | `genscore-og.png` | Open Graph 1200×630 (pendiente de conectar en metadata) |
 
 `app/icon.svg` es el favicon (Next.js lo sirve automáticamente) y usa el tile.
 
 ### Reglas de uso
 
-- El wordmark es **Hanken Grotesk ExtraBold (800)**, tracking −0.015 em,
-  convertido a trazados en los SVG (no depende de la fuente instalada).
+- El wordmark es **Bricolage Grotesque ExtraBold (800)**, tracking −0.012 em,
+  convertido a trazados en los SVG y en el componente (no depende de la
+  fuente instalada; la UI sigue usando Hanken Grotesk).
 - En cabeceras dentro de la app, usar `components/ui/brand-logo.tsx`
-  (`BrandLogo` / `BrandMark`) en lugar de los SVG: renderiza nítido a
-  cualquier tamaño y en un solo color + acento.
-- Tamaño mínimo del símbolo: 16 px. Por debajo, usar el tile.
-- No aplicar degradados al símbolo ni al wordmark. No recolorear el punto de
-  acento fuera de la paleta (índigo sobre claro, índigo suave sobre oscuro).
-- Zona de respeto: medio símbolo de margen alrededor del lockup.
+  (`BrandLogo` para el lockup íntegro, `BrandMark` para la G sola): mismos
+  trazados que los SVG, nítido a cualquier tamaño. `size` = altura en px.
+- Tamaño mínimo del lockup: 18 px de altura. Para el símbolo suelto por
+  debajo de 16 px, usar el tile.
+- El degradado índigo pertenece a la G; el texto va siempre en tinta plana
+  (blanco sobre oscuro). El punto es siempre ámbar (`#f59e0b` claro /
+  `#fbbf24` oscuro) — es la firma de la marca, no recolorear.
+- Zona de respeto: la altura de la G de margen alrededor del lockup.
 
 ---
 
@@ -57,9 +66,10 @@ genérico de "ondas").
 
 | Rol | Token | Hex | Notas |
 |---|---|---|---|
-| Tinta de marca (primario) | `--ink` | `#0f1729` | El color que transmite "serio y contrastado". Domina el logo, el tile y los fondos oscuros de marketing |
-| Acento | `--accent` | `#4f46e5` | Índigo de acción. En la marca aparece **solo** en el punto del score |
-| Acento sobre oscuro | — | `#818cf8` | Punto de score y enlaces sobre `--ink` |
+| Tinta de marca | `--ink` | `#0f1729` | Texto del wordmark y fondos oscuros de marketing |
+| Índigo de marca (G) | — | `#6d5ef0 → #4338ca` | Degradado exclusivo de la G del logo y del tile. Sobre oscuro: `#a5b0fb → #7c74f2` |
+| Ámbar de score (punto) | — | `#f59e0b` | **Solo** para el punto del score del logo (`#fbbf24` sobre oscuro). No usarlo como color de UI |
+| Acento de UI | `--accent` | `#4f46e5` | Índigo de acción de la interfaz, sin cambios |
 | Lienzo | `--canvas` | `#f6f7f9` | Sin cambios |
 | Positivo / negativo | `--pos` / `--neg` | `#15915a` / `#d23b48` | Sin cambios, solo semántica de datos |
 
@@ -73,13 +83,14 @@ no para el símbolo.
 
 ## 3. Tipografía
 
-**Veredicto: se mantiene.** Hanken Grotesk (UI y marca) + JetBrains Mono
-(datos/dominios) es una combinación correcta y ya transmite producto técnico
-serio. No se añade ninguna fuente display: el wordmark usa la misma Hanken
-Grotesk en 800, lo que refuerza coherencia entre marca y producto.
+**UI: se mantiene** Hanken Grotesk + JetBrains Mono (datos/dominios) —
+combinación correcta para producto técnico serio.
 
-Único ajuste recomendado: cargar también el peso 800 donde se use el wordmark
-como texto (ya está incluido en `app/layout.tsx`).
+**Marca: Bricolage Grotesque 800, solo en el wordmark.** El wordmark vive
+como trazados vectoriales (SVG y componente), así que **no se carga ninguna
+fuente nueva en la app** — cero coste de peso ni de FOUT. La distinción
+marca/UI es deliberada: el logo tiene carácter propio y la interfaz sigue
+neutra y legible.
 
 ---
 

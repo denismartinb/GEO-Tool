@@ -187,12 +187,8 @@ a {
   border-bottom: 1px solid var(--line-soft);
 }
 
-.brand-name {
-  font-weight: 700;
-  font-size: 15px;
-}
-
 .brand-sub {
+  margin-top: 2px;
   font-size: 11px;
   color: var(--ink-4);
 }
