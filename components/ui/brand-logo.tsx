@@ -1,11 +1,10 @@
 /**
- * GenScore brand logo (BRAND-1).
+ * GenScore brand logo (BRAND-1/BRAND-2).
  *
  * Canonical source of the mark is `public/brand/genscore-mark.svg`; this
  * component inlines the same paths so headers render crisp at any size
- * without an extra asset request. Not yet wired into the app shells —
- * adoption in sidebar/landing/auth headers is a separate approved phase
- * (see docs/brand/brand-guidelines.md, "Plan de adopción").
+ * without an extra asset request. Used across the sidebar, marketing nav/
+ * footer and auth headers (see docs/brand/brand-guidelines.md).
  */
 
 const INK = "#0f1729";

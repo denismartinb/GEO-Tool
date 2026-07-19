@@ -1,8 +1,9 @@
-# GenScore — Guía de identidad de marca (BRAND-1)
+# GenScore — Guía de identidad de marca (BRAND-1/BRAND-2)
 
-> Estado: propuesta aprobable. Este documento acompaña al PR de BRAND-1, que
-> solo añade activos, el favicon y este documento. La adopción del logo en las
-> pantallas existentes es una fase posterior (ver "Plan de adopción").
+> Estado: BRAND-1 (activos + favicon + guía) y BRAND-2 (adopción del logo en
+> cabeceras + retirada de los logos ficticios de la landing) implementados.
+> Fase 3 (Open Graph en metadata, cabecera con logo en emails) sigue
+> pendiente de aprobación — ver "Plan de adopción".
 
 ---
 
@@ -63,8 +64,10 @@ genérico de "ondas").
 | Positivo / negativo | `--pos` / `--neg` | `#15915a` / `#d23b48` | Sin cambios, solo semántica de datos |
 
 Recomendación asociada: retirar progresivamente los degradados decorativos de
-marca (`.brand-mark`, `.avatar`) en favor de tinta plana + acento. Los
-degradados quedan para fondos de marketing (hero, OG), no para el símbolo.
+marca en favor de tinta plana + acento. El degradado de `.brand-mark` ya se
+retiró en BRAND-2 (la clase se eliminó del CSS); `.avatar` sigue pendiente y
+queda para Fase 4. Los degradados quedan para fondos de marketing (hero, OG),
+no para el símbolo.
 
 ---
 
@@ -80,15 +83,15 @@ como texto (ya está incluido en `app/layout.tsx`).
 
 ---
 
-## 4. Auditoría de marca (estado previo a BRAND-1)
+## 4. Auditoría de marca
 
 | # | Hallazgo | Gravedad | Estado |
 |---|---|---|---|
-| 1 | **No existía favicon ni app icon** (pestaña con globo por defecto) | P1 — daña confianza en cada pestaña | ✅ Resuelto en este PR (`app/icon.svg`) |
-| 2 | **No existía ningún activo de logo** (`public/` sin marca); el "logo" era CSS (`.brand-mark`, degradado + icono genérico `resonance`) | P1 | ✅ Activos creados; adopción en pantallas = Fase 2 |
-| 3 | Logo duplicado a mano en 4 sitios (sidebar, landing, legal shell, blog shell) con tamaños inconsistentes (16/17 px) | P2 | Fase 2 (sustituir por `BrandLogo`) |
+| 1 | **No existía favicon ni app icon** (pestaña con globo por defecto) | P1 — daña confianza en cada pestaña | ✅ Resuelto en BRAND-1 (`app/icon.svg`) |
+| 2 | **No existía ningún activo de logo** (`public/` sin marca); el "logo" era CSS (`.brand-mark`, degradado + icono genérico `resonance`) | P1 | ✅ Activos creados en BRAND-1; adoptados en BRAND-2 |
+| 3 | Logo duplicado a mano en **10 sitios** (sidebar, landing, legal shell, blog shell, `geo`, `pricing` y las 4 pantallas de auth), con tamaños inconsistentes (16/17 px). En `signup` y `signup/confirm` el icono ni siquiera era el de marca: un SVG de ajustes (engranaje) copiado por error | P2 (P1 en signup/confirm por el icono incorrecto) | ✅ Resuelto en BRAND-2 — los 10 sitios usan `BrandLogo`/`BrandMark`; icono incorrecto corregido |
 | 4 | **Sin Open Graph / Twitter image** — los enlaces compartidos salen sin imagen | P1 para marketing | Asset listo; conectar metadata = Fase 3 |
-| 5 | La sección de confianza de la landing muestra **logos de empresas ficticias** ("Northwind", "Quantix", "Beltway"…) | **P1 — viola "no fake product behavior"** y es lo contrario de "marca contrastada" | Propuesto: retirar o sustituir por claim honesto (Fase 2) |
+| 5 | La sección de confianza de la landing muestra **logos de empresas ficticias** ("Northwind", "Quantix", "Beltway"…) | **P1 — viola "no fake product behavior"** y es lo contrario de "marca contrastada" | ✅ Resuelto en BRAND-2 — sustituido por los motores de IA reales que analiza el producto (Gemini, ChatGPT, Claude) |
 | 6 | Emails transaccionales: marca solo texto plano | P3 | Fase 3 (cabecera con logo) |
 | 7 | Paleta y tipografía | Correctas | Se codifican roles en este doc |
 
@@ -96,16 +99,23 @@ como texto (ya está incluido en `app/layout.tsx`).
 
 ## 5. Plan de adopción (requiere aprobación por fases)
 
-- **Fase 1 — este PR (BRAND-1):** activos en `public/brand/`, favicon
-  `app/icon.svg`, componente `BrandLogo` (sin usos), esta guía. Cero cambios
-  de comportamiento o de pantallas.
-- **Fase 2 — BRAND-2 (UI):** sustituir los cuatro bloques `brand-mark` +
-  `brand-name` por `BrandLogo` (sidebar, landing, legal, blog, auth) y
-  retirar los logos ficticios de la sección de confianza de la landing.
+- **Fase 1 — BRAND-1 (✅ implementado):** activos en `public/brand/`,
+  favicon `app/icon.svg`, componente `BrandLogo`, esta guía. Cero cambios de
+  pantallas.
+- **Fase 2 — BRAND-2 (✅ implementado):** sustituidos los bloques
+  `brand-mark` + `brand-name` por `BrandLogo`/`BrandMark` en los 10 sitios
+  reales encontrados en el repo — `components/sidebar.tsx`,
+  `components/blog/blog-page-shell.tsx`, `components/legal-page-shell.tsx`,
+  `app/page.tsx`, `app/geo/page.tsx`, `app/pricing/page.tsx`,
+  `app/login/page.tsx`, `app/forgot-password/page.tsx`,
+  `app/signup/page.tsx`, `app/signup/confirm/page.tsx` — y retirados los
+  logos ficticios de la landing (sustituidos por Gemini/ChatGPT/Claude, los
+  motores reales que analiza el producto). Se eliminó la clase CSS
+  `.brand-mark` (degradado) del sistema.
 - **Fase 3 — BRAND-3 (metadata + emails):** `openGraph`/`twitter` en
   `app/layout.tsx` apuntando a `genscore-og.png`; cabecera con logo en los
-  emails de Resend.
+  emails de Resend. Pendiente de aprobación.
 - **Fase 4 — polish (P3):** avatar sin degradado, revisión de estados vacíos
-  y microcopy de marca.
+  y microcopy de marca. Pendiente de aprobación.
 
 Cada fase pasa por Task Intake ligero + Human Gate como siempre.

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PassField } from "@/components/ui/pass-field";
-import { Icon } from "@/components/ui/icon";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { login, signInWithGoogle } from "./actions";
 
 export default async function LoginPage({
@@ -22,10 +22,7 @@ export default async function LoginPage({
     <main className="auth-bg">
       <div className="auth-card fade-in">
         <div className="auth-logo">
-          <div className="brand-mark">
-            <Icon name="resonance" size={17} />
-          </div>
-          <div className="brand-name">GenScore</div>
+          <BrandLogo size={22} textSize={17} />
         </div>
 
         <div className="auth-h1">Bienvenido de nuevo</div>

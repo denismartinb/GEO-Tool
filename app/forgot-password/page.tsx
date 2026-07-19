@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useTransition } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { PassField } from "@/components/ui/pass-field";
 import { sendOtpAction, verifyOtpAction, updatePasswordAction } from "./actions";
 
@@ -119,10 +120,7 @@ export default function ForgotPasswordPage() {
     <main className="auth-bg">
       <div className="auth-card fade-in" key={step}>
         <div className="auth-logo">
-          <div className="brand-mark">
-            <Icon name="resonance" size={17} />
-          </div>
-          <div className="brand-name">GenScore</div>
+          <BrandLogo size={22} textSize={17} />
         </div>
 
         {step === "request" && (

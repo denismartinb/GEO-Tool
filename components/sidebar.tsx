@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
+import { BrandMark } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
 
 type WorkspaceProject = {
@@ -96,9 +97,7 @@ export function Sidebar({
       )}
       <aside className="sb" ref={asideRef} tabIndex={-1}>
         <div className="sb-brand">
-          <div className="brand-mark">
-            <Icon name="resonance" size={16} />
-          </div>
+          <BrandMark size={24} />
           <div className="hide-collapsed">
             <div className="brand-name">GenScore</div>
             <div className="brand-sub">Espacio de visibilidad en IA</div>

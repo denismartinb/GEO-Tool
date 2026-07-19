@@ -187,16 +187,6 @@ a {
   border-bottom: 1px solid var(--line-soft);
 }
 
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(150deg, var(--accent) 0%, #6d63f0 100%);
-  display: grid;
-  place-items: center;
-  color: #fff;
-}
-
 .brand-name {
   font-weight: 700;
   font-size: 15px;
@@ -2696,7 +2686,6 @@ textarea.add-prompts-text-input {
 .lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line-soft); }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
-.lp-logo .brand-name { font-size: 16px; }
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
 .lp-nav-links a { padding: 7px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .lp-nav-links a:hover { background: var(--surface-2); color: var(--ink); }
