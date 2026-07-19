@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { DotMeter } from "@/components/ui/dot-meter";
 import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
@@ -242,8 +243,7 @@ export default function HomePage() {
             ]}
           />
           <div className="lp-logo">
-            <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">GenScore</div>
+            <BrandLogo size={18} />
           </div>
           <div className="lp-nav-links">
             <a href="#producto">Producto</a>
@@ -311,10 +311,9 @@ export default function HomePage() {
       {/* TRUST */}
       <div className="lp-trust">
         <div className="lp-inner">
-          <div className="cap">Equipos de marketing y agencias que confían en GenScore</div>
+          <div className="cap">Motores de IA que analizamos por ti</div>
           <div className="lp-logos">
-            <span className="lg">Northwind</span><span className="lg">Quantix</span><span className="lg">Beltway</span>
-            <span className="lg">Nuve</span><span className="lg">Aurora&nbsp;Labs</span>
+            <span className="lg">Gemini</span><span className="lg">ChatGPT</span><span className="lg">Claude</span>
           </div>
         </div>
       </div>
@@ -459,8 +458,7 @@ export default function HomePage() {
         <div className="lp-inner">
           <div className="row1">
             <div className="lp-logo">
-              <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">GenScore</div>
+              <BrandLogo size={16} />
             </div>
             <div className="links">
               <a href="#producto">Producto</a>
