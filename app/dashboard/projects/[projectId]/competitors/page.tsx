@@ -5,6 +5,8 @@ import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { CompetitorRow } from "./competitor-row";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
+import { computeEntityEngineBreakdown, type EntityEngineBreakdown } from "@/lib/competitors/engine-share";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 /* ---- Helpers ---- */
 
@@ -21,6 +23,9 @@ export type CompetitorRowData = {
   mentionRate: number;
   citationRate: number;
   promptCount: number; // unique runs where seen
+  // ENGINES-VALUE-3: per-engine mention breakdown, only rendered when it
+  // has >= 2 entries (see docs/specs/engines-value-3.md Paso C).
+  engineBreakdown: EntityEngineBreakdown[];
 };
 
 type ExtractedJson = {
@@ -116,7 +121,7 @@ export default async function CompetitorsPage({
       ? await Promise.all([
           supabase
             .from("scan_prompt_results")
-            .select("extracted_json, run_id")
+            .select("extracted_json, run_id, provider")
             .eq("project_id", projectId)
             .eq("status", "completed")
             .in("run_id", completedRunIds),
@@ -209,6 +214,19 @@ export default async function CompetitorsPage({
   const brandCitationRate =
     totalResultsCount > 0 ? Math.round((brandCitations / totalResultsCount) * 100) : 0;
 
+  // ENGINES-VALUE-3: per-engine mention breakdown, computed once for the
+  // brand and once per active competitor by reusing the same rows with a
+  // different mention predicate — see docs/specs/engines-value-3.md Paso A.
+  const engineRows = results.map((r) => ({
+    provider: r.provider as string | null,
+    extracted_json: r.extracted_json
+  }));
+
+  const brandEngineBreakdown = computeEntityEngineBreakdown({
+    rows: engineRows,
+    isEntityMentioned: (ext) => Boolean(ext.brand?.mentioned)
+  });
+
   // Build competitor rows
   const competitorRows: CompetitorRowData[] = configuredCompetitors
     .filter((c) => c.is_active)
@@ -223,6 +241,11 @@ export default async function CompetitorsPage({
       const citations = competitorCitationMap.get(key) ?? 0;
       const citationRate =
         totalResultsCount > 0 ? Math.round((citations / totalResultsCount) * 100) : 0;
+      const engineBreakdown = computeEntityEngineBreakdown({
+        rows: engineRows,
+        isEntityMentioned: (ext) =>
+          (ext.competitors ?? []).some((x) => x.mentioned && x.name && normKey(x.name) === key)
+      });
 
       return {
         id: c.id,
@@ -234,7 +257,8 @@ export default async function CompetitorsPage({
         sov,
         mentionRate,
         citationRate,
-        promptCount
+        promptCount,
+        engineBreakdown
       };
     })
     .sort((a, b) => b.sov - a.sov);
@@ -246,6 +270,23 @@ export default async function CompetitorsPage({
   /* Summary text */
   const topCompetitor = competitorRows[0];
   const hasData = completedRuns.length > 0 && totalResultsCount > 0;
+
+  // ENGINES-VALUE-3 Paso D: gap insight for the leading competitor only —
+  // only when it's actually ahead of the brand (already an "amenaza" signal
+  // in the summary banner above) and its engine breakdown has >= 2 engines
+  // with a >= 20pt spread between the strongest and weakest (higher
+  // threshold than Overview's 15pt gap because this dataset is accumulated
+  // across all completed runs, not just the latest, and therefore noisier).
+  const topCompetitorGap = (() => {
+    if (!topCompetitor || topCompetitor.sov <= brandSov) return null;
+    const bd = topCompetitor.engineBreakdown;
+    if (bd.length < 2) return null;
+    const strongest = bd.reduce((a, b) => (b.mentionRate > a.mentionRate ? b : a));
+    const weakest = bd.reduce((a, b) => (b.mentionRate < a.mentionRate ? b : a));
+    const points = strongest.mentionRate - weakest.mentionRate;
+    if (points < 20) return null;
+    return { strongest, weakest, points };
+  })();
 
   /* Position trend: brand + active competitors' avg_position across completed runs */
   const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
@@ -365,6 +406,16 @@ export default async function CompetitorsPage({
                         {brandSov}%
                       </span>
                     </div>
+                    {brandEngineBreakdown.length >= 2 && (
+                      <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 4 }}>
+                        {brandEngineBreakdown.map((e, idx) => (
+                          <span key={e.provider}>
+                            {idx > 0 && " · "}
+                            {getEngineMeta(e.provider).label} {e.mentionRate}%
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="num">
                     <span className="tnum" style={{ color: "var(--ink-2)" }}>
@@ -408,6 +459,26 @@ export default async function CompetitorsPage({
             <b>Cuota de voz</b>: menciones propias / (menciones marca + Σ menciones competidores).{" "}
             <b>Prompts</b>: total de respuestas donde se menciona al competidor.
           </div>
+
+          {/* ENGINES-VALUE-3 Paso D: gap insight for the leading competitor */}
+          {topCompetitorGap && (
+            <div
+              style={{
+                borderTop: "1px solid var(--line-soft)",
+                padding: "12px 16px",
+                fontSize: 12.5,
+                color: "var(--ink-3)",
+                lineHeight: 1.5
+              }}
+            >
+              <b style={{ color: "var(--ink)" }}>{topCompetitor.name}</b> concentra su presencia en{" "}
+              <b style={{ color: "var(--ink)" }}>{getEngineMeta(topCompetitorGap.strongest.provider).label}</b>{" "}
+              ({topCompetitorGap.strongest.mentionRate}%) mucho más que en{" "}
+              <b style={{ color: "var(--ink)" }}>{getEngineMeta(topCompetitorGap.weakest.provider).label}</b>{" "}
+              ({topCompetitorGap.weakest.mentionRate}%) — ahí es donde compite menos y es tu mejor
+              oportunidad de defensa.
+            </div>
+          )}
         </div>
 
         {/* No detections */}

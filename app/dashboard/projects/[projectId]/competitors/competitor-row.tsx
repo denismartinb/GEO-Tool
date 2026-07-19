@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 import type { CompetitorRowData } from "./page";
 
 export function CompetitorRow({
@@ -69,6 +70,16 @@ export function CompetitorRow({
             {row.sov}%
           </span>
         </div>
+        {row.engineBreakdown.length >= 2 && (
+          <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 4 }}>
+            {row.engineBreakdown.map((e, idx) => (
+              <span key={e.provider}>
+                {idx > 0 && " · "}
+                {getEngineMeta(e.provider).label} {e.mentionRate}%
+              </span>
+            ))}
+          </div>
+        )}
       </td>
       <td className="num">
         <span className="tnum" style={{ color: "var(--ink-2)" }}>
