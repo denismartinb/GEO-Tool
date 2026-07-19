@@ -46,17 +46,19 @@ function BrandMentioned({ value }: { value: boolean }) {
 
 /**
  * Compact per-engine chips for a cited domain/URL — same visual language as
- * the "Motores" column in prompts-client.tsx (18x18, borderRadius 5,
- * meta.short on meta.color). Unlike that column, chips here are ALWAYS
- * solid: a citation from an engine either happened or it didn't, there's no
- * "absent" state to render hollow. Only engines that actually cited this
- * domain appear — Claude (no web search) simply never shows up here, its
- * absence is never asserted (docs/specs/engines-value-2.md §honesty rule).
+ * the "Motores" column in prompts-client.tsx (pill badge, meta.label on
+ * meta.color; full engine name rather than a single-letter initial, per
+ * founder review 2026-07-19 — an unlabeled colored letter read as
+ * meaningless). Unlike that column, chips here are ALWAYS solid: a citation
+ * from an engine either happened or it didn't, there's no "absent" state to
+ * render hollow. Only engines that actually cited this domain appear —
+ * Claude (no web search) simply never shows up here, its absence is never
+ * asserted (docs/specs/engines-value-2.md §honesty rule).
  */
 function EngineChips({ engines }: { engines: CitationEngine[] }) {
   if (engines.length === 0) return null;
   return (
-    <div style={{ display: "flex", gap: 4 }}>
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
       {engines.map((e) => {
         const meta = getEngineMeta(e.provider);
         return (
@@ -64,19 +66,17 @@ function EngineChips({ engines }: { engines: CitationEngine[] }) {
             key={e.provider}
             title={`Citado por ${meta.label}: ${e.cited} ${e.cited === 1 ? "vez" : "veces"}`}
             style={{
-              width: 18,
-              height: 18,
-              borderRadius: 5,
-              fontSize: 10,
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 10.5,
               fontWeight: 700,
-              display: "grid",
-              placeItems: "center",
+              whiteSpace: "nowrap",
               flexShrink: 0,
               background: meta.color,
               color: "#fff"
             }}
           >
-            {meta.short}
+            {meta.label}
           </span>
         );
       })}
