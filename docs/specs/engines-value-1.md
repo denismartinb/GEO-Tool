@@ -2,7 +2,7 @@
 
 **Vista comparativa por motor + matriz prompt × motor**
 
-- Estado: ⏳ Pendiente de aprobación del fundador
+- Estado: ✅ Aprobado por el fundador (2026-07-18, en sesión) · Implementado en PR #228 — pendiente Human Gate
 - Fecha: 2026-07-17
 - Autor del intake: Director (sesión multi-search-engine-value)
 - Agente implementador previsto: Sonnet 5 (frontend / core-flow)
