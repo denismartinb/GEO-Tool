@@ -19,6 +19,29 @@ added, renamed, or removed.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Vercel + local `.env.local` | `eyJ...` JWT |
 | `SUPABASE_SERVICE_ROLE_KEY` | Only for admin tasks | Vercel (not local) | `eyJ...` JWT — never expose client-side |
 
+**Email confirmation on signup** (AUTH-EMAIL-VERIFY-1) is a Supabase project
+setting, not an env var: `Authentication → Providers → Email → Confirm email`
+in the Supabase dashboard, set per-project (no repo config). When ON,
+`app/signup/actions.ts` gets no session back from `signUp()` and sends the
+user to `/signup/confirm` instead of `/dashboard`; `app/auth/callback/route.ts`
+sends the welcome email once they click the confirmation link. Both
+`signUp()` and `signInWithOtp()` set `emailRedirectTo` to
+`${NEXT_PUBLIC_SITE_URL}/auth/callback`, so this toggle must be enabled on the
+same Supabase project the deploy points at — enabling it on the wrong project
+(e.g. only locally) silently leaves production signups unconfirmed.
+
+**Do not enable "Confirm email" against Supabase's built-in mailer.** With no
+custom SMTP configured, Supabase sends auth emails (confirmation, OTP) through
+its own shared test mailer, which throttles hard — confirmed live 2026-07-18:
+a handful of signups in the same short window returns `over_email_send_rate_limit`
+("email rate limit exceeded"), blocking every signup after that until the
+window resets. `app/signup/actions.ts` maps that code to a safe Spanish
+message, but the underlying block is real and would hit real users, not just
+manual testing. Before turning this toggle on in production, configure a
+custom SMTP provider in `Authentication → Settings → SMTP Settings` — Resend
+(already used for `lib/email/transactional.ts`) supports SMTP relay and is
+the natural choice here.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |

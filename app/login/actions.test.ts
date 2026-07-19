@@ -12,9 +12,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const signInWithOAuth = vi.fn();
+const signInWithPassword = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { signInWithOAuth }
+    auth: { signInWithOAuth, signInWithPassword }
   })
 }));
 
@@ -26,11 +27,56 @@ vi.mock("@/lib/supabase/server", () => ({
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { signInWithGoogle } from "./actions";
+import { login, signInWithGoogle } from "./actions";
 
 function calledRedirectUrl(): string {
   return redirectMock.mock.calls[0]?.[0] as string;
 }
+
+function formData(fields: Record<string, string>) {
+  const data = new FormData();
+  for (const [key, value] of Object.entries(fields)) data.set(key, value);
+  return data;
+}
+
+describe("login", () => {
+  beforeEach(() => {
+    redirectMock.mockClear();
+    signInWithPassword.mockReset();
+  });
+
+  it("redirects to /dashboard on success", async () => {
+    signInWithPassword.mockResolvedValue({ error: null });
+
+    await expect(
+      login(formData({ email: "user@example.com", password: "supersecret" }))
+    ).rejects.toThrow("REDIRECT:/dashboard");
+  });
+
+  it("maps the email_not_confirmed error code to a safe Spanish message", async () => {
+    signInWithPassword.mockResolvedValue({
+      error: { code: "email_not_confirmed", message: "Email not confirmed" }
+    });
+
+    await expect(
+      login(formData({ email: "user@example.com", password: "supersecret" }))
+    ).rejects.toThrow(/^REDIRECT:\/login\?error=/);
+
+    const url = calledRedirectUrl();
+    expect(url).not.toContain("Email+not+confirmed");
+    expect(decodeURIComponent(url)).toContain("todavía no está confirmado");
+  });
+
+  it("passes through other Supabase error messages unchanged", async () => {
+    signInWithPassword.mockResolvedValue({ error: { code: "invalid_credentials", message: "Invalid login credentials" } });
+
+    await expect(
+      login(formData({ email: "user@example.com", password: "wrong" }))
+    ).rejects.toThrow(/^REDIRECT:\/login\?error=/);
+
+    expect(decodeURIComponent(calledRedirectUrl())).toContain("Invalid login credentials");
+  });
+});
 
 describe("signInWithGoogle", () => {
   beforeEach(() => {

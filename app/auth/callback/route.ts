@@ -5,12 +5,16 @@ import { NextResponse } from "next/server";
 const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténtalo de nuevo.";
 
 // signup() (app/signup/actions.ts) sends the welcome email itself right after
-// a password signup. An OAuth signup (Google) never goes through that action
-// — it lands here instead — so this is the only place that can catch it.
-// Supabase gives no explicit "this was just created" flag on the exchange
-// result, so a new account is inferred from last_sign_in_at landing within
-// this window of created_at; an existing user signing back in has a
-// created_at from the past, so this never re-fires for them.
+// a password signup, but only when Supabase returns a session immediately
+// (email confirmation off). Two other cases land here instead, and this is
+// the only place that can catch them: an OAuth signup (Google) never goes
+// through that action at all, and a password signup with "Confirm email" ON
+// gets no session until the user clicks the confirmation link — that click
+// is this route's first real request for them. Supabase gives no explicit
+// "this was just created" flag on the exchange result, so a new account is
+// inferred from last_sign_in_at landing within this window of created_at; an
+// existing user signing back in (or re-confirming) has a created_at from the
+// past, so this never re-fires for them.
 const NEW_USER_WINDOW_MS = 5000;
 
 function safeLoginError(url: URL) {
