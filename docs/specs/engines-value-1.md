@@ -349,4 +349,22 @@ Cero cambios. Ambas páginas ya consultan `scan_prompt_results` con
 
 ---
 
+## Addendum — Cambios de revisión del fundador (Human Gate, 2026-07-19)
+
+Pedidos por el fundador al probar el preview con datos reales de 3 motores:
+
+1. **Sin texto de citación para motores no-grounded**: la tarjeta del
+   Overview ya no muestra "citación n/a" en Claude — simplemente omite la
+   citación (el dato `citationRate: null` sigue distinguiendo grounded de
+   no-grounded internamente).
+2. **Orden de motores**: grounded primero (Gemini, ChatGPT), no-grounded
+   (Claude) al final; dentro de cada grupo, por mention rate desc. La brecha
+   sigue calculándose solo por mention rate, independiente del orden visual.
+3. **Sentimiento "unknown" → "Neutral"** en la tabla de Prompts y el drawer
+   (antes se filtraba el valor crudo en inglés).
+4. **Tablas de Prompts con scroll propio en móvil** (`.tbl-wrap`): la tabla
+   desplaza dentro de su card en vez de romper el layout de la página.
+
+---
+
 > **Do you approve this plan? I will not implement until you confirm.**

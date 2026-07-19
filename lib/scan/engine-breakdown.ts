@@ -109,18 +109,29 @@ export function computeEngineBreakdown(rows: EngineBreakdownInputRow[]): {
     };
   });
 
-  engines.sort((a, b) => b.mentionRate - a.mentionRate);
-
+  // Gap is always leader/laggard by mentionRate, independent of the display
+  // order below.
   let gap: EngineGap = null;
   if (engines.length >= 2) {
-    const leader = engines[0];
-    const laggard = engines[engines.length - 1];
+    const byRate = [...engines].sort((a, b) => b.mentionRate - a.mentionRate);
+    const leader = byRate[0];
+    const laggard = byRate[byRate.length - 1];
     gap = {
       leader: leader.provider,
       laggard: laggard.provider,
       points: leader.mentionRate - laggard.mentionRate
     };
   }
+
+  // Display order: grounded (web-search) engines first, then ungrounded —
+  // founder request: Claude always renders last. Within each group, by
+  // mentionRate desc.
+  const groundedOf = (provider: string) => ENGINE_META[provider]?.grounded ?? false;
+  engines.sort(
+    (a, b) =>
+      Number(groundedOf(b.provider)) - Number(groundedOf(a.provider)) ||
+      b.mentionRate - a.mentionRate
+  );
 
   return { engines, gap };
 }

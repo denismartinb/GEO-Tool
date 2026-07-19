@@ -1100,16 +1100,11 @@ export default async function ProjectDetailPage({
                               color: "var(--ink-3)"
                             }}
                           >
-                            <span>
-                              {e.citationRate !== null ? (
-                                `${e.citationRate}% citación`
-                              ) : (
-                                <>
-                                  citación n/a{" "}
-                                  <InfoTip text="Este motor responde sin búsqueda web, así que no puede citar fuentes. No es un fallo de tu marca." />
-                                </>
-                              )}
-                            </span>
+                            {/* Ungrounded engines (no web search) show no citation
+                                text at all — founder decision on review; the
+                                grounded/ungrounded distinction stays honest via
+                                citationRate: null, it's just not verbalized here. */}
+                            {e.citationRate !== null && <span>{e.citationRate}% citación</span>}
                             <span style={{ marginLeft: "auto" }}>
                               {e.dominantSentiment ? (
                                 <span

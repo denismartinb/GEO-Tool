@@ -37,6 +37,9 @@ const sentimentLabels: Record<string, string> = {
   neutral: "Neutral",
   negative: "Negativo",
   mixed: "Mixto",
+  // Founder decision: extraction's "unknown" reads as "Neutral" in the UI
+  // instead of leaking the raw English value.
+  unknown: "Neutral",
 };
 
 type Tab = "resumen" | "respuestas";

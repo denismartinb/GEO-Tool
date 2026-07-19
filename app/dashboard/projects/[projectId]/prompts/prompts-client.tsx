@@ -42,6 +42,9 @@ function sentimentLabel(s: string | null): string {
     neutral: "Neutral",
     negative: "Negativo",
     mixed: "Mixto",
+    // Founder decision: extraction's "unknown" reads as "Neutral" in the UI
+    // instead of leaking the raw English value.
+    unknown: "Neutral",
   };
   return s ? (map[s] ?? s) : "—";
 }
@@ -243,6 +246,7 @@ export function PromptsClient({
           </div>
 
           <div className="card">
+            <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
@@ -313,6 +317,7 @@ export function PromptsClient({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}
@@ -340,6 +345,7 @@ export function PromptsClient({
           </p>
 
           <div className="card">
+            <div className="tbl-wrap">
             <table className="tbl topics-tbl">
               <thead>
                 <tr>
@@ -492,6 +498,7 @@ export function PromptsClient({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

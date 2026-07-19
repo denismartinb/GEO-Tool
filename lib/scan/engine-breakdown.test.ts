@@ -117,7 +117,10 @@ describe("computeEngineBreakdown", () => {
     const { engines, gap } = computeEngineBreakdown(rows);
 
     expect(engines).toHaveLength(3);
-    expect(engines.map((e) => e.provider)).toEqual(["gemini", "claude", "openai"]);
+    // Display order is grounded-first (gemini, openai), ungrounded (claude)
+    // last — even though claude's mentionRate beats openai's. The gap is
+    // still computed purely by mentionRate, independent of display order.
+    expect(engines.map((e) => e.provider)).toEqual(["gemini", "openai", "claude"]);
     expect(gap).toEqual({ leader: "gemini", laggard: "openai", points: 100 });
 
     // ENGINES-2a: openai generates with real web search, so it is grounded —
