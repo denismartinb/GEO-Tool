@@ -1026,6 +1026,12 @@ a {
 .tbl .you { background: var(--accent-soft); }
 .tbl .hoverable:hover { background: var(--surface-2); cursor: pointer; }
 
+/* Wide tables (Prompts) scroll inside their card on small screens instead of
+   stretching the whole page horizontally. min-width keeps the columns legible
+   while the wrapper provides the scroll. */
+.tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tbl-wrap .tbl { min-width: 680px; }
+
 /* entity cell */
 .ent { display: flex; align-items: center; gap: 9px; }
 .ent .nm { font-size: 13px; font-weight: 650; color: var(--ink); }

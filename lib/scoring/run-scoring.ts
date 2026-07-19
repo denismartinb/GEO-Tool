@@ -39,6 +39,11 @@ type ScoreInputRow = {
  * search), so pooling it into the denominator only ever imposes a structural
  * ceiling on citation_score, never reflecting genuine citation performance.
  * Add a provider here only once it has real grounding wired up.
+ *
+ * Cross-reference (ENGINES-VALUE-1): the `grounded` flag on ENGINE_META in
+ * lib/scan/engine-meta.ts deliberately duplicates this same semantics for
+ * UI purposes (that module must stay import-free of scoring code). If a
+ * provider gains real grounding, update BOTH this set and ENGINE_META.
  */
 const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 

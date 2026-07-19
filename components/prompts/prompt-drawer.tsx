@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
 import { DeletePromptButton } from "@/app/dashboard/projects/[projectId]/prompts/delete-prompt-button";
 import { InfoTip } from "@/components/ui/info-tip";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 type Competitor = {
   id: string;
@@ -36,24 +37,12 @@ const sentimentLabels: Record<string, string> = {
   neutral: "Neutral",
   negative: "Negativo",
   mixed: "Mixto",
+  // Founder decision: extraction's "unknown" reads as "Neutral" in the UI
+  // instead of leaking the raw English value.
+  unknown: "Neutral",
 };
 
 type Tab = "resumen" | "respuestas";
-
-function providerLabel(provider: string | null): string {
-  if (provider === "claude") return "Claude";
-  if (provider === "openai") return "ChatGPT";
-  return "Gemini";
-}
-
-// Per-provider badge visuals (background + single-letter mark), kept next to
-// providerLabel so adding an engine touches one place. Falls back to Gemini's
-// styling for any unknown value.
-function providerBadge(provider: string | null): { bg: string; letter: string } {
-  if (provider === "claude") return { bg: "#cc785c", letter: "C" };
-  if (provider === "openai") return { bg: "#10a37f", letter: "O" };
-  return { bg: "#1a73e8", letter: "G" };
-}
 
 /**
  * Mirrors the frontend display rule from docs/adr/0006: the raw Google
@@ -170,7 +159,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
   });
 
   const uniqueProviderLabels = Array.from(
-    new Set(results.map((r) => providerLabel(r.provider)))
+    new Set(results.map((r) => getEngineMeta(r.provider).label))
   );
 
   return (
@@ -630,7 +619,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                               width: 20,
                               height: 20,
                               borderRadius: 5,
-                              background: providerBadge(r.provider).bg,
+                              background: getEngineMeta(r.provider).color,
                               display: "grid",
                               placeItems: "center",
                               color: "#fff",
@@ -638,10 +627,10 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                               fontWeight: 800,
                             }}
                           >
-                            {providerBadge(r.provider).letter}
+                            {getEngineMeta(r.provider).short}
                           </div>
                           <span style={{ fontWeight: 600 }}>
-                            {providerLabel(r.provider)}
+                            {getEngineMeta(r.provider).label}
                           </span>
                         </div>
                       </td>
@@ -697,7 +686,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
                           letterSpacing: "0.06em",
                         }}
                       >
-                        {providerLabel(r.provider)}
+                        {getEngineMeta(r.provider).label}
                       </div>
                       <div className="body" style={{ whiteSpace: "pre-wrap" }}>
                         {r.raw_response_text}

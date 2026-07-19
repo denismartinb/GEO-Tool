@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
 import { InfoTip } from "@/components/ui/info-tip";
+import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import type { ResultRow, TopicGroup } from "./page";
 
 type Competitor = {
@@ -41,6 +42,9 @@ function sentimentLabel(s: string | null): string {
     neutral: "Neutral",
     negative: "Negativo",
     mixed: "Mixto",
+    // Founder decision: extraction's "unknown" reads as "Neutral" in the UI
+    // instead of leaking the raw English value.
+    unknown: "Neutral",
   };
   return s ? (map[s] ?? s) : "—";
 }
@@ -81,6 +85,79 @@ function mentionedCompetitorsUnion(rows: ResultRow[]): number {
     }
   }
   return names.size;
+}
+
+// Prompt × engine matrix (ENGINES-VALUE-1): one chip per EXISTING row for
+// this prompt, never an invented one for an engine with no row (absence of a
+// row means "no data", not "brand absent"). Alphabetical order by normalized
+// provider keeps the column stable across rows with different engines present.
+function EngineChips({ engines }: { engines: ResultRow[] }) {
+  const sorted = [...engines].sort((a, b) =>
+    normalizeProvider(a.provider).localeCompare(normalizeProvider(b.provider))
+  );
+
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {sorted.map((r) => {
+        const meta = getEngineMeta(r.provider);
+        const baseStyle: React.CSSProperties = {
+          width: 18,
+          height: 18,
+          borderRadius: 5,
+          fontSize: 10,
+          fontWeight: 700,
+          display: "grid",
+          placeItems: "center",
+          flexShrink: 0,
+        };
+
+        if (r.brand_mentioned === true) {
+          return (
+            <span
+              key={r.id}
+              title={`${meta.label}: marca mencionada`}
+              style={{ ...baseStyle, background: meta.color, color: "#fff" }}
+            >
+              {meta.short}
+            </span>
+          );
+        }
+
+        if (r.brand_mentioned === false) {
+          return (
+            <span
+              key={r.id}
+              title={`${meta.label}: marca ausente`}
+              style={{
+                ...baseStyle,
+                background: "transparent",
+                border: `1.5px solid ${meta.color}`,
+                color: meta.color,
+              }}
+            >
+              {meta.short}
+            </span>
+          );
+        }
+
+        // brand_mentioned === null → failed/unextracted row for this engine.
+        return (
+          <span
+            key={r.id}
+            title={`${meta.label}: sin datos en este escaneo`}
+            style={{
+              ...baseStyle,
+              background: "transparent",
+              border: "1.5px solid var(--ink-4)",
+              color: "var(--ink-4)",
+            }}
+          >
+            {meta.short}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 // Multi-engine execution means a prompt can have up to one
@@ -169,6 +246,7 @@ export function PromptsClient({
           </div>
 
           <div className="card">
+            <div className="tbl-wrap">
             <table className="tbl">
               <thead>
                 <tr>
@@ -177,6 +255,7 @@ export function PromptsClient({
                     Marca
                     <InfoTip text="Que la IA nombre tu marca no depende de tu contenido — puede venir solo de lo que el modelo ya sabe de ella. 'Citas', a la derecha, es la señal que sí depende de páginas tuyas que la IA usó como fuente." />
                   </th>
+                  <th>Motores</th>
                   <th className="num">Competidores</th>
                   <th className="num">Citas</th>
                   <th>Sentimiento</th>
@@ -212,6 +291,9 @@ export function PromptsClient({
                         {g.brandMentioned ? "Mencionada" : "Ausente"}
                       </span>
                     </td>
+                    <td>
+                      <EngineChips engines={g.engines} />
+                    </td>
                     <td className="num">{g.competitorsCount}</td>
                     <td className="num">{g.citationsTotal}</td>
                     <td>
@@ -235,6 +317,7 @@ export function PromptsClient({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}
@@ -262,6 +345,7 @@ export function PromptsClient({
           </p>
 
           <div className="card">
+            <div className="tbl-wrap">
             <table className="tbl topics-tbl">
               <thead>
                 <tr>
@@ -272,6 +356,7 @@ export function PromptsClient({
                     Marca
                     <InfoTip text="Que la IA nombre tu marca no depende de tu contenido — puede venir solo de lo que el modelo ya sabe de ella. 'Citas', a la derecha, es la señal que sí depende de páginas tuyas que la IA usó como fuente." />
                   </th>
+                  <th>Motores</th>
                   <th className="num">Citas</th>
                   <th>Sentimiento</th>
                 </tr>
@@ -315,6 +400,9 @@ export function PromptsClient({
                         <span style={{ fontSize: 12.5, color: "var(--ink-2)" }}>
                           {group.menciones}/{group.results.length}
                         </span>
+                      </td>
+                      <td>
+                        <span style={{ color: "var(--ink-4)" }}>—</span>
                       </td>
                       <td className="num">
                         {group.citasTotal > 0 ? (
@@ -377,6 +465,9 @@ export function PromptsClient({
                               {g.brandMentioned ? "Mencionada" : "Ausente"}
                             </span>
                           </td>
+                          <td>
+                            <EngineChips engines={g.engines} />
+                          </td>
                           <td className="num">
                             {g.citationsTotal > 0 ? (
                               g.citationsTotal
@@ -407,6 +498,7 @@ export function PromptsClient({
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}
