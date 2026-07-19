@@ -4,36 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
+import type {
+  CitationEngine,
+  CitationRow,
+  EngineTotal,
+  PromptCitation,
+  PromptGroup
+} from "@/lib/citations/aggregate-citations";
 
-export type CitationRow = {
-  id: string;
-  title: string;
-  url: string;
-  domain: string;
-  category: "brand" | "competitor" | "third_party";
-  brandMentioned: "yes" | "no" | "na";
-  competitors: string[];
-  cited: number;
-  prompts: Array<{ text: string; brandMentioned: boolean }>;
-};
-
-export type PromptCitation = {
-  title: string;
-  url: string;
-  domain: string;
-  category: CitationRow["category"];
-  cited: number;
-};
-
-export type PromptGroup = {
-  id: string;
-  promptText: string;
-  topic: string | null;
-  brandMentioned: boolean;
-  citations: PromptCitation[];
-  citedUrls: number;
-  totalCites: number;
-};
+export type { CitationRow, PromptCitation, PromptGroup };
 
 const CATEGORY_LABEL: Record<CitationRow["category"], string> = {
   brand: "Tu marca",
@@ -61,6 +41,46 @@ function BrandMentioned({ value }: { value: boolean }) {
       <Icon name="info" size={11} />
       No
     </span>
+  );
+}
+
+/**
+ * Compact per-engine chips for a cited domain/URL — same visual language as
+ * the "Motores" column in prompts-client.tsx (pill badge, meta.label on
+ * meta.color; full engine name rather than a single-letter initial, per
+ * founder review 2026-07-19 — an unlabeled colored letter read as
+ * meaningless). Unlike that column, chips here are ALWAYS solid: a citation
+ * from an engine either happened or it didn't, there's no "absent" state to
+ * render hollow. Only engines that actually cited this domain appear —
+ * Claude (no web search) simply never shows up here, its absence is never
+ * asserted (docs/specs/engines-value-2.md §honesty rule).
+ */
+function EngineChips({ engines }: { engines: CitationEngine[] }) {
+  if (engines.length === 0) return null;
+  return (
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", minWidth: 0 }}>
+      {engines.map((e) => {
+        const meta = getEngineMeta(e.provider);
+        return (
+          <span
+            key={e.provider}
+            title={`Citado por ${meta.label}: ${e.cited} ${e.cited === 1 ? "vez" : "veces"}`}
+            style={{
+              padding: "2px 8px",
+              borderRadius: 999,
+              fontSize: 10.5,
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+              background: meta.color,
+              color: "#fff"
+            }}
+          >
+            {meta.label}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -118,6 +138,7 @@ function PromptGroupCard({
             <>
               <div className="cit-detail-head">
                 <span>URL</span>
+                <span>Motores</span>
                 <span>Categoría</span>
                 <span className="num">Citas</span>
               </div>
@@ -138,10 +159,25 @@ function PromptGroupCard({
                       )}
                     </span>
                   </div>
-                  <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
-                  <span className="num tnum" style={{ fontWeight: 700 }}>
-                    {c.cited}
-                  </span>
+                  <div className="cit-prow-meta">
+                    {/* "Motores" text label is invisible on desktop (the
+                        .cit-detail-head column header already says it) and
+                        only shows on mobile, where that header row is
+                        hidden — without it the colored engine chip reads as
+                        an unexplained icon (founder review, 2026-07-19). */}
+                    {c.engines.length > 0 && <span className="cit-prow-meta-label">Motores</span>}
+                    <EngineChips engines={c.engines} />
+                    {/* "Citado por" is invisible on desktop (the column
+                        header already says "Categoría") and only shows on
+                        mobile, where that header is hidden — without it a
+                        bare "Otra fuente"/"Competidor" badge doesn't say
+                        what it's describing (founder review, 2026-07-19). */}
+                    <span className="cit-prow-meta-label">Citado por</span>
+                    <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
+                    <span className="num tnum" style={{ fontWeight: 700 }}>
+                      {c.cited} {c.cited === 1 ? "cita" : "citas"}
+                    </span>
+                  </div>
                 </div>
               ))}
             </>
@@ -163,6 +199,7 @@ export function CitationsClient({
   yours,
   opportunities,
   opportunityRows,
+  engineTotals,
   citationScore,
   brandLabel,
   projectId
@@ -173,6 +210,7 @@ export function CitationsClient({
   yours: number;
   opportunities: number;
   opportunityRows: CitationRow[];
+  engineTotals: EngineTotal[];
   citationScore: number | null;
   brandLabel: string;
   projectId: string;
@@ -232,6 +270,44 @@ export function CitationsClient({
           {citationScore !== null && (
             <> Tu puntuación de citas en el último escaneo es <b>{citationScore}/100</b>.</>
           )}
+          {engineTotals.length > 0 && (
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
+              {engineTotals.map((e) => {
+                const meta = getEngineMeta(e.provider);
+                return (
+                  <span
+                    key={e.provider}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      color: "var(--ink-3)",
+                      fontWeight: 600
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 4,
+                        background: meta.color,
+                        color: "#fff",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        display: "grid",
+                        placeItems: "center",
+                        flexShrink: 0
+                      }}
+                    >
+                      {meta.short}
+                    </span>
+                    {meta.label} citó {e.domains} {e.domains === 1 ? "fuente" : "fuentes"}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
         <button type="button" className="btn btn-soft btn-sm" onClick={() => setGuide((g) => !g)}>
           <Icon name="sparkles" size={14} />
@@ -279,8 +355,16 @@ export function CitationsClient({
                     <ul className="cit-opp-list">
                       {opportunityRows.map((r) => (
                         <li key={r.id} className="cit-opp-item">
-                          <span className="cit-opp-domain">{r.domain}</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                            <span className="cit-opp-domain">{r.domain}</span>
+                            <EngineChips engines={r.engines} />
+                          </span>
                           <span className="cit-opp-meta">
+                            {r.engines.length >= 2 && (
+                              <span className="badge badge-accent" style={{ marginRight: 6 }}>
+                                Citado por {r.engines.length} motores
+                              </span>
+                            )}
                             {r.cited} {r.cited === 1 ? "cita" : "citas"}
                             {r.competitors.length > 0 && <> · cita a {r.competitors.join(", ")}</>}
                           </span>
