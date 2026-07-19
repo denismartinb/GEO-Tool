@@ -42,6 +42,7 @@ export function BrandMark({ size = 28, onDark = false }: BrandProps) {
   const id = onDark ? "gs-mark-dark" : "gs-mark";
   return (
     <svg
+      className="brand-mark-svg"
       viewBox={MARK_VB}
       width={size}
       height={size}
@@ -67,6 +68,7 @@ export function BrandLogo({ size = 22, onDark = false }: BrandProps) {
   const id = onDark ? "gs-logo-dark" : "gs-logo";
   return (
     <svg
+      className="brand-logo-svg"
       viewBox={LOCKUP_VB}
       height={size}
       width={(size * LOCKUP_W) / LOCKUP_H}

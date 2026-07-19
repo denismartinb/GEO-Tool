@@ -22,7 +22,7 @@ export default async function LoginPage({
     <main className="auth-bg">
       <div className="auth-card fade-in">
         <div className="auth-logo">
-          <BrandLogo size={22} />
+          <BrandLogo size={20} />
         </div>
 
         <div className="auth-h1">Bienvenido de nuevo</div>

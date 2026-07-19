@@ -26,7 +26,7 @@ export function LegalPageShell({
         <nav className="lp-nav">
           <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...LEGAL_NAV_LINKS]} />
           <Link href="/" className="lp-logo">
-            <BrandLogo size={20} />
+            <BrandLogo size={18} />
           </Link>
           <div className="lp-nav-links">
             {LEGAL_NAV_LINKS.map((l) => (
@@ -61,7 +61,7 @@ export function LegalPageShell({
         <div className="lp-inner">
           <div className="row1">
             <Link href="/" className="lp-logo">
-              <BrandLogo size={18} />
+              <BrandLogo size={16} />
             </Link>
             <div className="links">
               <Link href="/#producto">Producto</Link>

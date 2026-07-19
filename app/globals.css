@@ -517,6 +517,11 @@ a {
    Auth v2 — Flujo recuperación contraseña (GEO Suite 8)
    ============================================================ */
 .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+@media (max-width: 480px) {
+  /* Same logo-size trim as the marketing nav/sidebar (founder feedback) on
+     narrow phones, where auth-bg's own padding already tightens up. */
+  .auth-logo .brand-logo-svg { height: 18px; width: auto; }
+}
 .auth-h1 { font-size: 25px; font-weight: 800; letter-spacing: -.02em; }
 .auth-sub { font-size: 14.5px; color: var(--ink-3); margin-top: 6px; }
 .auth-form { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -2857,6 +2862,11 @@ textarea.add-prompts-text-input {
     margin-left: -6px;
   }
   .lp-burger:hover { background: var(--surface-2); }
+  /* Logo reads oversized once the nav collapses to just burger + wordmark
+     (founder feedback) — drop it a couple of px alongside the rest of the
+     mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
+     it instead of stretching at the desktop-computed pixel width. */
+  .lp-logo .brand-logo-svg { height: 16px; width: auto; }
   /* .lp-hero has no side padding of its own (relies on centered max-width
      content) — without this, .lp-hero-content's heading/lead text runs flush
      to the viewport edge below 900px. */
@@ -3155,6 +3165,10 @@ textarea.add-prompts-text-input {
     display: block;
     margin-top: 6px;
   }
+
+  /* Same logo-size trim as the marketing nav (founder feedback) — applies
+     to the sidebar's mobile drawer. */
+  .sb-brand .brand-logo-svg { height: 16px; width: auto; }
 
   /* --- Scrim --- */
   .mob-scrim {
