@@ -206,31 +206,37 @@ export function CitationsClient({
         </div>
         <div className="summary-txt" style={{ flex: 1 }}>
           La IA citó <b>{totalUrls}</b> {totalUrls === 1 ? "URL distinta" : "URLs distintas"} al
-          responder tus prompts, con <b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en
-          total.
+          responder tus prompts (<b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en
+          total).
           {totalUrls > 0 && (
             <>
               {" "}
               {yours === 0 ? (
                 <>
-                  <span className="hl-neg">Ninguna es tuya</span> — todas alimentan a competidores
+                  <span className="hl-neg">Ninguna es tuya</span> — todas refuerzan a competidores
                   o a otras fuentes.
                 </>
               ) : yours === totalUrls ? (
                 <>
-                  <span className="hl-pos">Todas son tuyas</span> — buen dominio de tus propias
-                  páginas en las respuestas.
+                  <span className="hl-pos">Todas son tuyas</span>: dominas las fuentes que la IA
+                  usa para responder.
                 </>
               ) : (
                 <>
-                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>
-                  {" "}— el resto alimentan a competidores o a otras fuentes.
+                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>;
+                  {" "}el resto refuerzan a competidores o a otras fuentes.
                 </>
               )}
             </>
           )}
           {citationScore !== null && (
-            <> Tu puntuación de citas en el último escaneo es <b>{citationScore}/100</b>.</>
+            <> Tu puntuación de citas es <b>{citationScore}/100</b>.</>
+          )}
+          {opportunities > 0 && (
+            <>
+              {" "}Hay <b>{opportunities} {opportunities === 1 ? "fuente" : "fuentes"}</b> que citan a
+              un rival y no a {brandLabel}: tu lista de contactos para empezar a aparecer.
+            </>
           )}
         </div>
         <button type="button" className="btn btn-soft btn-sm" onClick={() => setGuide((g) => !g)}>

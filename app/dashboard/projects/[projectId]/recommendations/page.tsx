@@ -361,9 +361,18 @@ export default async function RecommendationsPage({
             <Icon name="recs" size={20} />
           </div>
           <div className="summary-txt" style={{ flex: "1 1 150px" }}>
-            GenScore encontró{" "}
-            <b>{total} acciones</b> para{" "}
+            GenScore ha convertido tu último escaneo en{" "}
+            <b>{total} {total === 1 ? "acción concreta" : "acciones concretas"}</b> para{" "}
             <b>{project.domain}</b>.
+            {highPriority > 0 ? (
+              <>
+                {" "}Empieza por las <b>{highPriority} de alta prioridad</b>: son las que más pueden
+                mover tu puntuación GEO.
+              </>
+            ) : (
+              <> Ninguna es de alta prioridad ahora mismo — son mejoras incrementales.</>
+            )}
+            {" "}Pulsa cualquier acción para ver la evidencia y el plan paso a paso.
           </div>
           <div
             style={{
