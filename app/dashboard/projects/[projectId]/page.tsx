@@ -16,16 +16,13 @@ import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/f
 import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
+import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /* ---- constants & helpers ---- */
 
 const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
-
-const ENGINE_LABELS: Record<string, { label: string; color: string }> = {
-  gemini: { label: "Gemini", color: "#4285f4" },
-  claude: { label: "Claude", color: "#d97757" }
-};
 
 const statusLabels: Record<string, string> = {
   pending: "pendiente",
@@ -310,25 +307,12 @@ export default async function ProjectDetailPage({
     ? Math.round((allPromptResults.filter((r) => r.citation_found).length / allPromptResults.length) * 100)
     : citationScore;
 
-  /* ---- distribución por motor de IA: mention rate real de cada engine activo ---- */
-  const engineDistribution = (() => {
-    const byProvider = new Map<string, { total: number; mentioned: number }>();
-    for (const r of allPromptResults ?? []) {
-      const provider = (r.provider as string | null) ?? "gemini";
-      const entry = byProvider.get(provider) ?? { total: 0, mentioned: 0 };
-      entry.total += 1;
-      if (r.brand_mentioned) entry.mentioned += 1;
-      byProvider.set(provider, entry);
-    }
-    return Array.from(byProvider.entries())
-      .map(([provider, { total, mentioned }]) => ({
-        provider,
-        label: ENGINE_LABELS[provider]?.label ?? provider,
-        color: ENGINE_LABELS[provider]?.color ?? "#9333a8",
-        mentionRate: total > 0 ? Math.round((mentioned / total) * 100) : 0
-      }))
-      .sort((a, b) => b.mentionRate - a.mentionRate);
-  })();
+  /* ---- distribución por motor de IA: vista comparativa real por motor ----
+   * (ENGINES-VALUE-1) mention, citación y sentimiento por motor, computados
+   * en tiempo de lectura sobre las mismas filas de scan_prompt_results que
+   * ya trae esta página — cero queries nuevas.
+   */
+  const { engines: engineBreakdown, gap: engineGap } = computeEngineBreakdown(allPromptResults ?? []);
 
   /* ---- citation share (computed at read time — no persisted column) ----
    * own_citation_share = own_citations / total_resolved_citations × 100
@@ -1084,28 +1068,89 @@ export default async function ProjectDetailPage({
             <div className="card">
               <div className="card-head">
                 <div className="card-title">Distribución por motor de IA</div>
-                <InfoTip text="Tasa de mención de tu marca en cada motor de IA ejecutado en el último escaneo. Cada motor responde distinto — las brechas de cobertura en uno son una oportunidad." />
+                <InfoTip text="Mención, citación y sentimiento de tu marca en cada motor de IA ejecutado en el último escaneo. Cada motor responde distinto — las brechas de cobertura en uno son una oportunidad." />
               </div>
-              {engineDistribution.length > 0 ? (
-                <div style={{ padding: "18px" }}>
-                  {engineDistribution.map((e) => (
-                    <div key={e.provider} style={{ marginBottom: 16 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                        <span style={{ width: 9, height: 9, borderRadius: 3, background: e.color }} />
-                        <span style={{ fontSize: 13, fontWeight: 650 }}>{e.label}</span>
-                        <span
-                          className="tnum"
-                          style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-3)", fontWeight: 600 }}
-                        >
-                          {e.mentionRate}% mención
-                        </span>
-                      </div>
-                      <div className="sov-bar" style={{ height: 9 }}>
-                        <div className="sov-fill" style={{ width: `${e.mentionRate}%`, background: e.color }} />
-                      </div>
+              {engineBreakdown.length > 0 ? (
+                <>
+                  <div style={{ padding: "18px" }}>
+                    {engineBreakdown.map((e) => {
+                      const meta = getEngineMeta(e.provider);
+                      return (
+                        <div key={e.provider} style={{ marginBottom: 16 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
+                            <span style={{ width: 9, height: 9, borderRadius: 3, background: meta.color }} />
+                            <span style={{ fontSize: 13, fontWeight: 650 }}>{meta.label}</span>
+                            <span
+                              className="tnum"
+                              style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-3)", fontWeight: 600 }}
+                            >
+                              {e.mentionRate}% mención
+                            </span>
+                          </div>
+                          <div className="sov-bar" style={{ height: 9 }}>
+                            <div className="sov-fill" style={{ width: `${e.mentionRate}%`, background: meta.color }} />
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 6,
+                              marginTop: 6,
+                              fontSize: 12,
+                              color: "var(--ink-3)"
+                            }}
+                          >
+                            <span>
+                              {e.citationRate !== null ? (
+                                `${e.citationRate}% citación`
+                              ) : (
+                                <>
+                                  citación n/a{" "}
+                                  <InfoTip text="Este motor responde sin búsqueda web, así que no puede citar fuentes. No es un fallo de tu marca." />
+                                </>
+                              )}
+                            </span>
+                            <span style={{ marginLeft: "auto" }}>
+                              {e.dominantSentiment ? (
+                                <span
+                                  className={`badge ${
+                                    e.dominantSentiment === "positive"
+                                      ? "badge-pos"
+                                      : e.dominantSentiment === "negative"
+                                        ? "badge-neg"
+                                        : "badge-neutral"
+                                  }`}
+                                  style={{ fontSize: 10.5 }}
+                                >
+                                  {sentimentLabels[e.dominantSentiment] ?? e.dominantSentiment}
+                                </span>
+                              ) : (
+                                <span style={{ color: "var(--ink-4)" }}>—</span>
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {engineGap && engineGap.points >= 15 && (
+                    <div
+                      style={{
+                        borderTop: "1px solid var(--line-soft)",
+                        padding: "12px 18px",
+                        fontSize: 12.5,
+                        color: "var(--ink-3)",
+                        lineHeight: 1.5
+                      }}
+                    >
+                      Brecha de {engineGap.points} pts: tu marca aparece mucho más en{" "}
+                      <b style={{ color: "var(--ink)" }}>{getEngineMeta(engineGap.leader).label}</b> que en{" "}
+                      <b style={{ color: "var(--ink)" }}>{getEngineMeta(engineGap.laggard).label}</b>. Mejorar tu
+                      presencia en las fuentes que usa {getEngineMeta(engineGap.laggard).label} es tu mayor
+                      oportunidad multi-motor.
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               ) : (
                 <div style={{ padding: "24px 18px" }}>
                   <div className="section-empty">
@@ -1354,7 +1399,7 @@ export default async function ProjectDetailPage({
                 <ScanTriggerButton projectId={projectId} label="Lanzar escaneo" />
               </div>
               <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
-                Primer escaneo · {prompts.length} prompts · {getLLMScanProviders().map((p) => ENGINE_LABELS[p]?.label ?? p).join(" y ")}
+                Primer escaneo · {prompts.length} prompts · {getLLMScanProviders().map((p) => getEngineMeta(p).label).join(" y ")}
               </p>
             </div>
           </div>
