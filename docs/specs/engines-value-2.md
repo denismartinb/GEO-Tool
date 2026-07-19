@@ -2,7 +2,7 @@
 
 **Fuentes citadas por motor** ("qué dominios usa cada motor → dónde conseguir presencia")
 
-- Estado: ⏳ Pendiente de aprobación del fundador
+- Estado: Implementado en PR #240 — pendiente Human Gate
 - Fecha: 2026-07-19
 - Autor del intake: Director (misma sesión que ENGINES-VALUE-1)
 - Agente implementador previsto: Sonnet 5 (frontend / core-flow)
