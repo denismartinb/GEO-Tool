@@ -4,7 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
-import type { CitationRow, PromptCitation, PromptGroup } from "@/lib/citations/aggregate-citations";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
+import type {
+  CitationEngine,
+  CitationRow,
+  EngineTotal,
+  PromptCitation,
+  PromptGroup
+} from "@/lib/citations/aggregate-citations";
 
 export type { CitationRow, PromptCitation, PromptGroup };
 
@@ -34,6 +41,46 @@ function BrandMentioned({ value }: { value: boolean }) {
       <Icon name="info" size={11} />
       No
     </span>
+  );
+}
+
+/**
+ * Compact per-engine chips for a cited domain/URL — same visual language as
+ * the "Motores" column in prompts-client.tsx (18x18, borderRadius 5,
+ * meta.short on meta.color). Unlike that column, chips here are ALWAYS
+ * solid: a citation from an engine either happened or it didn't, there's no
+ * "absent" state to render hollow. Only engines that actually cited this
+ * domain appear — Claude (no web search) simply never shows up here, its
+ * absence is never asserted (docs/specs/engines-value-2.md §honesty rule).
+ */
+function EngineChips({ engines }: { engines: CitationEngine[] }) {
+  if (engines.length === 0) return null;
+  return (
+    <div style={{ display: "flex", gap: 4 }}>
+      {engines.map((e) => {
+        const meta = getEngineMeta(e.provider);
+        return (
+          <span
+            key={e.provider}
+            title={`Citado por ${meta.label}: ${e.cited} ${e.cited === 1 ? "vez" : "veces"}`}
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 5,
+              fontSize: 10,
+              fontWeight: 700,
+              display: "grid",
+              placeItems: "center",
+              flexShrink: 0,
+              background: meta.color,
+              color: "#fff"
+            }}
+          >
+            {meta.short}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
@@ -91,6 +138,7 @@ function PromptGroupCard({
             <>
               <div className="cit-detail-head">
                 <span>URL</span>
+                <span>Motores</span>
                 <span>Categoría</span>
                 <span className="num">Citas</span>
               </div>
@@ -111,6 +159,7 @@ function PromptGroupCard({
                       )}
                     </span>
                   </div>
+                  <EngineChips engines={c.engines} />
                   <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
                   <span className="num tnum" style={{ fontWeight: 700 }}>
                     {c.cited}
@@ -136,6 +185,7 @@ export function CitationsClient({
   yours,
   opportunities,
   opportunityRows,
+  engineTotals,
   citationScore,
   brandLabel,
   projectId
@@ -146,6 +196,7 @@ export function CitationsClient({
   yours: number;
   opportunities: number;
   opportunityRows: CitationRow[];
+  engineTotals: EngineTotal[];
   citationScore: number | null;
   brandLabel: string;
   projectId: string;
@@ -205,6 +256,44 @@ export function CitationsClient({
           {citationScore !== null && (
             <> Tu puntuación de citas en el último escaneo es <b>{citationScore}/100</b>.</>
           )}
+          {engineTotals.length > 0 && (
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
+              {engineTotals.map((e) => {
+                const meta = getEngineMeta(e.provider);
+                return (
+                  <span
+                    key={e.provider}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 12,
+                      color: "var(--ink-3)",
+                      fontWeight: 600
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 16,
+                        height: 16,
+                        borderRadius: 4,
+                        background: meta.color,
+                        color: "#fff",
+                        fontSize: 9,
+                        fontWeight: 700,
+                        display: "grid",
+                        placeItems: "center",
+                        flexShrink: 0
+                      }}
+                    >
+                      {meta.short}
+                    </span>
+                    {meta.label} citó {e.domains} {e.domains === 1 ? "fuente" : "fuentes"}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
         <button type="button" className="btn btn-soft btn-sm" onClick={() => setGuide((g) => !g)}>
           <Icon name="sparkles" size={14} />
@@ -252,8 +341,16 @@ export function CitationsClient({
                     <ul className="cit-opp-list">
                       {opportunityRows.map((r) => (
                         <li key={r.id} className="cit-opp-item">
-                          <span className="cit-opp-domain">{r.domain}</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                            <span className="cit-opp-domain">{r.domain}</span>
+                            <EngineChips engines={r.engines} />
+                          </span>
                           <span className="cit-opp-meta">
+                            {r.engines.length >= 2 && (
+                              <span className="badge badge-accent" style={{ marginRight: 6 }}>
+                                Citado por {r.engines.length} motores
+                              </span>
+                            )}
                             {r.cited} {r.cited === 1 ? "cita" : "citas"}
                             {r.competitors.length > 0 && <> · cita a {r.competitors.join(", ")}</>}
                           </span>

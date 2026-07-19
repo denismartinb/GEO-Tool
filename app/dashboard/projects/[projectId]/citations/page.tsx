@@ -6,6 +6,7 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { CitationsClient } from "./citations-client";
 import {
   aggregateCitations,
+  compareOpportunityRows,
   normalizeDomain,
   type CitationInputRow,
   type CitationRow
@@ -75,7 +76,7 @@ export default async function CitationsPage({
     .map((c) => ({ name: c.name, domain: normalizeDomain(c.domain ?? "") }))
     .filter((c) => c.domain.length > 0);
 
-  const { citationRows, promptGroups, hasStructuredCitations } = aggregateCitations({
+  const { citationRows, promptGroups, hasStructuredCitations, engineTotals } = aggregateCitations({
     rows: (results ?? []) as CitationInputRow[],
     projectDomain: project.domain ?? "",
     competitorDomains,
@@ -89,10 +90,12 @@ export default async function CitationsPage({
   // Competitor domains (already tracked in project_competitors) are excluded:
   // a brand will never earn a citation on a rival's own site. Unresolved
   // grounding citations (no domain) are excluded too: there's no address to
-  // reach out to.
-  const opportunityRows: CitationRow[] = citationRows.filter(
-    (r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain
-  );
+  // reach out to. Ranked by number of distinct engines citing the domain
+  // first (ENGINES-VALUE-2), then by cited count — a source both Gemini and
+  // ChatGPT cite is a stronger outreach target than one only one engine uses.
+  const opportunityRows: CitationRow[] = citationRows
+    .filter((r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain)
+    .sort(compareOpportunityRows);
   const opportunities = opportunityRows.length;
 
   const lastScanDate = latestRun
@@ -191,6 +194,7 @@ export default async function CitationsPage({
           yours={yours}
           opportunities={opportunities}
           opportunityRows={opportunityRows.slice(0, 5)}
+          engineTotals={engineTotals}
           citationScore={score?.citation_score ?? null}
           brandLabel={project.brand}
           projectId={projectId}

@@ -3002,10 +3002,13 @@ textarea.add-prompts-text-input {
 
 /* ============================================================
    Citations page (Páginas citadas) — adapted from design reference
-   styles.css .cit-* / .pr-* rules. Multi-engine columns and the
-   reviews/community/media source taxonomy from the prototype were
-   dropped: we only run Gemini and have no crawler to verify source
-   types, so sources are classified as brand / competitor / other.
+   styles.css .cit-* / .pr-* rules. The reviews/community/media source
+   taxonomy from the prototype was dropped: we have no crawler to verify
+   source types, so sources are classified as brand / competitor / other.
+   Per-engine attribution (ENGINES-VALUE-2) was added on top of that:
+   each cited domain/URL shows which grounded engine(s) — Gemini,
+   ChatGPT — actually cited it (see .cit-prow's "Motores" column and
+   .cit-opp-item's chips below).
    ============================================================ */
 .pr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .pr-search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: #fff; flex: 1; max-width: 320px; }
@@ -3035,9 +3038,9 @@ textarea.add-prompts-text-input {
 .cit-url .ico { flex: 0 0 auto; }
 
 .cit-detail { padding: 4px 18px 16px 40px; }
-.cit-detail-head { display: grid; grid-template-columns: 1fr 130px 70px; gap: 14px; padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
+.cit-detail-head { display: grid; grid-template-columns: 1fr 74px 130px 70px; gap: 14px; padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
 .cit-detail-head .num { text-align: right; }
-.cit-prow { display: grid; grid-template-columns: 1fr 130px 70px; gap: 14px; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); margin-bottom: 7px; }
+.cit-prow { display: grid; grid-template-columns: 1fr 74px 130px 70px; gap: 14px; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); margin-bottom: 7px; }
 .cit-prow .num { text-align: right; }
 .cit-pq { font-size: 12.5px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 8px; line-height: 1.35; }
 .cit-pq .ico { flex: 0 0 auto; }
