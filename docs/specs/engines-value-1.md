@@ -94,9 +94,9 @@ export type EngineMeta = {
 export const ENGINE_META: Record<string, EngineMeta> = {
   gemini: { label: "Gemini", color: "#4285f4", short: "G", grounded: true },
   claude: { label: "Claude", color: "#d97757", short: "C", grounded: false },
-  // Forward-compat: cuando ENGINES-2 active OpenAI, la UI ya lo pinta bien.
-  // `grounded` debe revisarse al implementarse su runtime real.
-  openai: { label: "ChatGPT", color: "#10a37f", short: "O", grounded: false }
+  // ENGINES-2a (posterior a este spec): OpenAI genera con `web_search` real,
+  // así que es grounded — igual que GROUNDED_PROVIDERS en run-scoring.ts.
+  openai: { label: "ChatGPT", color: "#10a37f", short: "O", grounded: true }
 };
 
 // Filas anteriores a la migración 0009 tienen provider null y eran siempre

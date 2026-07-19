@@ -119,5 +119,10 @@ describe("computeEngineBreakdown", () => {
     expect(engines).toHaveLength(3);
     expect(engines.map((e) => e.provider)).toEqual(["gemini", "claude", "openai"]);
     expect(gap).toEqual({ leader: "gemini", laggard: "openai", points: 100 });
+
+    // ENGINES-2a: openai generates with real web search, so it is grounded —
+    // numeric citationRate (0 here, no citation_found rows), never null.
+    expect(engines.find((e) => e.provider === "openai")!.citationRate).toBe(0);
+    expect(engines.find((e) => e.provider === "claude")!.citationRate).toBeNull();
   });
 });

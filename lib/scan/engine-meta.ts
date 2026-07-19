@@ -34,9 +34,10 @@ export type EngineMeta = {
 export const ENGINE_META: Record<string, EngineMeta> = {
   gemini: { label: "Gemini", color: "#4285f4", short: "G", grounded: true },
   claude: { label: "Claude", color: "#d97757", short: "C", grounded: false },
-  // Forward-compat: when ENGINES-2 activates OpenAI, the UI already paints
-  // it correctly. `grounded` must be revisited once its real runtime lands.
-  openai: { label: "ChatGPT", color: "#10a37f", short: "O", grounded: false }
+  // ENGINES-2a: OpenAI generates with the Responses API `web_search` tool
+  // (lib/llm/openai.ts), so it produces real url_citation grounding — same
+  // grounded semantics as GROUNDED_PROVIDERS in lib/scoring/run-scoring.ts.
+  openai: { label: "ChatGPT", color: "#10a37f", short: "O", grounded: true }
 };
 
 const FALLBACK_META: EngineMeta = { label: "", color: "#9333a8", short: "?", grounded: false };
