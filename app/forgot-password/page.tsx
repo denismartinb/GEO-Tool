@@ -21,7 +21,10 @@ const PW_REQS = [
   },
 ] as const;
 
-const STRENGTH_LBL = ["", "Débil", "Aceptable", "Buena", "Fuerte"];
+// Level 2 must NOT read as sufficient: the submit gate below requires
+// score >= 3, so calling 2/4 "Aceptable" told users a blocked password was
+// fine (founder-reported bug: matching passwords + always-solid button).
+const STRENGTH_LBL = ["", "Débil", "Insuficiente", "Buena", "Fuerte"];
 const STRENGTH_COL = ["", "var(--neg)", "var(--warn)", "#4f9bd9", "var(--pos)"];
 
 type Step = "request" | "sent" | "reset" | "success";
@@ -281,6 +284,12 @@ export default function ForgotPasswordPage() {
                 <div className="field-err">
                   <Icon name="x" size={13} />
                   Las contraseñas no coinciden
+                </div>
+              )}
+              {match && score < 3 && (
+                <div className="field-err">
+                  <Icon name="alertCircle" size={13} />
+                  Tu contraseña debe cumplir al menos 3 de los 4 requisitos.
                 </div>
               )}
               {error && <p className="field-err"><Icon name="alertCircle" size={13} />{error}</p>}

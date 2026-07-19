@@ -19,6 +19,29 @@ added, renamed, or removed.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Vercel + local `.env.local` | `eyJ...` JWT |
 | `SUPABASE_SERVICE_ROLE_KEY` | Only for admin tasks | Vercel (not local) | `eyJ...` JWT — never expose client-side |
 
+**Email confirmation on signup** (AUTH-EMAIL-VERIFY-1) is a Supabase project
+setting, not an env var: `Authentication → Providers → Email → Confirm email`
+in the Supabase dashboard, set per-project (no repo config). When ON,
+`app/signup/actions.ts` gets no session back from `signUp()` and sends the
+user to `/signup/confirm` instead of `/dashboard`; `app/auth/callback/route.ts`
+sends the welcome email once they click the confirmation link. Both
+`signUp()` and `signInWithOtp()` set `emailRedirectTo` to
+`${NEXT_PUBLIC_SITE_URL}/auth/callback`, so this toggle must be enabled on the
+same Supabase project the deploy points at — enabling it on the wrong project
+(e.g. only locally) silently leaves production signups unconfirmed.
+
+**Do not enable "Confirm email" against Supabase's built-in mailer.** With no
+custom SMTP configured, Supabase sends auth emails (confirmation, OTP) through
+its own shared test mailer, which throttles hard — confirmed live 2026-07-18:
+a handful of signups in the same short window returns `over_email_send_rate_limit`
+("email rate limit exceeded"), blocking every signup after that until the
+window resets. `app/signup/actions.ts` maps that code to a safe Spanish
+message, but the underlying block is real and would hit real users, not just
+manual testing. Before turning this toggle on in production, configure a
+custom SMTP provider in `Authentication → Settings → SMTP Settings` — Resend
+(already used for `lib/email/transactional.ts`) supports SMTP relay and is
+the natural choice here.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |
@@ -38,18 +61,46 @@ override is set in Vercel, it must also be updated to a served model id.
 | `ANTHROPIC_API_KEY` | Only if Claude is an active scan engine | Vercel + local `.env.local` | Anthropic API key |
 | `ANTHROPIC_MODEL` | No (defaults to `claude-haiku-4-5-20251001`) | Vercel optional | Valid Claude model id |
 
+### OpenAI (active scan engine since 2026-07-18, ENGINES-2a)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `OPENAI_API_KEY` | Yes (openai is an active engine) | Vercel, Production + Preview | `sk-proj-...` |
+| `OPENAI_MODEL` | **Required if `OPENAI_API_KEY` is set — no default.** | Vercel, Production + Preview | `gpt-4o-mini` (validated live 2026-07-18: real grounding citations, ~4.4s avg latency, negligible cost) |
+
+Unlike `GEMINI_MODEL`/`ANTHROPIC_MODEL`, `OPENAI_MODEL` has deliberately no
+hardcoded fallback: this module was written against third-party
+documentation of the Responses API (the official pricing/docs pages
+returned 403 from the build environment), so guessing a default model id
+risked repeating the exact pinning gap that caused the `gemini-2.0-flash`
+404 (`docs/adr/0002-gemini-model-pinning.md`). Confirm any model change is
+live before deploying it.
+
+`lib/llm/openai.ts` uses the Responses API with the `web_search` tool
+**forced** (`tool_choice: { type: "web_search" }`, not `"auto"` — left to
+decide, gpt-4o-mini answered from memory on 10/10 real prompts, producing
+zero citations). `url_citation` annotations map to `groundingChunks` (same
+shape as Gemini's), already-final URLs (no redirect resolution needed,
+unlike Gemini — see `buildGroundedCitations`). `openai` counts as a
+grounded provider in `lib/scoring/run-scoring.ts` (ADR-0012).
+
+All three paid plans (Starter/Pro/Agencia) have `caps.engines: 3` (founder
+decision 2026-07-18); Free stays at 1 (Gemini only, via the
+`LLM_SCAN_PROVIDERS` order slice).
+
 ### Scan engines
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `LLM_SCAN_PROVIDERS` | No (defaults to Gemini-only) | Vercel | Comma-separated engine list, e.g. `gemini,claude` — each listed engine runs concurrently for every prompt in a scan |
-| `LLM_SCAN_PROVIDER` | No — legacy, only read when `LLM_SCAN_PROVIDERS` is unset | Vercel | `gemini` \| `claude` |
+| `LLM_SCAN_PROVIDERS` | No (defaults to Gemini-only) | Vercel | Comma-separated engine list, e.g. `gemini,claude,openai` — each listed engine runs concurrently for every prompt in a scan |
+| `LLM_SCAN_PROVIDER` | No — legacy, only read when `LLM_SCAN_PROVIDERS` is unset | Vercel | `gemini` \| `claude` \| `openai` |
 
-Setting `LLM_SCAN_PROVIDERS=gemini,claude` requires both `GEMINI_API_KEY` and
-`ANTHROPIC_API_KEY` to be configured — a misconfigured engine does not abort
-the run as long as at least one other listed engine is configured (see
-`lib/scan/executor.ts`), but if every listed engine is misconfigured the run
-fails fast.
+Every engine listed in `LLM_SCAN_PROVIDERS` needs its API key configured
+(`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`+`OPENAI_MODEL`) —
+a misconfigured engine does not abort the run as long as at least one other
+listed engine is configured (see `lib/scan/executor.ts`), but if every
+listed engine is misconfigured the run fails fast. Current production
+value: `gemini,claude,openai`.
 
 ### Scan execution
 

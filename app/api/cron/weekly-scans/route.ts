@@ -22,8 +22,8 @@ export async function GET(request: Request) {
   const service = createServiceClient();
 
   try {
-    const { processed, scanned, results } = await runDailyCronScan({ service });
-    return NextResponse.json({ processed, scanned, results });
+    const { processed, scanned, results, deferred, continuationScheduled } = await runDailyCronScan({ service });
+    return NextResponse.json({ processed, scanned, results, deferred, continuationScheduled });
   } catch {
     return NextResponse.json({ processed: 0, error: "query_failed" }, { status: 500 });
   }

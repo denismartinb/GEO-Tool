@@ -14,12 +14,15 @@ type WorkspaceProject = {
   language: string;
 };
 
+// "Escaneos" (/runs) deliberately has no entry here (founder-approved
+// 2026-07-18): the domain block at the top of the sidebar (`proj-switch`)
+// already links straight to it — a second link would just duplicate that
+// entry point.
 const analyzeLinks = [
   { segment: "", label: "Visión general", icon: "overview", countKey: null as null | string },
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
   { segment: "/competitors", label: "Competidores", icon: "competitors", countKey: "competitors" },
   { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null as null | string },
-  { segment: "/runs", label: "Escaneos", icon: "runs", countKey: "runs" },
   { segment: "/web-audit", label: "Auditoría web", icon: "search", countKey: null as null | string },
 ];
 
@@ -40,7 +43,6 @@ export function Sidebar({
   projects,
   promptCountByProject,
   competitorCountByProject,
-  completedRunCountByProject,
   recommendationCountByProject,
   userEmail,
   signOutAction
@@ -48,7 +50,6 @@ export function Sidebar({
   projects: WorkspaceProject[];
   promptCountByProject: Record<string, number>;
   competitorCountByProject: Record<string, number>;
-  completedRunCountByProject: Record<string, number>;
   recommendationCountByProject: Record<string, number>;
   userEmail: string;
   signOutAction: () => Promise<void>;
@@ -82,7 +83,6 @@ export function Sidebar({
     if (!key) return 0;
     if (key === "prompts") return promptCountByProject[projectId] ?? 0;
     if (key === "competitors") return competitorCountByProject[projectId] ?? 0;
-    if (key === "runs") return completedRunCountByProject[projectId] ?? 0;
     if (key === "recs") return recommendationCountByProject[projectId] ?? 0;
     return 0;
   }
@@ -225,7 +225,7 @@ export function Sidebar({
 
       <div className="sb-foot">
         <a
-          href="https://lumira.ai/geo"
+          href="/geo"
           target="_blank"
           rel="noopener noreferrer"
           className="nav-item"

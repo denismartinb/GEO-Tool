@@ -251,6 +251,55 @@ describe("createCheckoutSession", () => {
     expect(result.success).toBe(false);
     errorSpy.mockRestore();
   });
+
+  it("retries without a stale stripe_customer_id when Stripe reports it no longer exists (real incident, 2026-07-18)", async () => {
+    const missingCustomerError = Object.assign(new Error("No such customer: 'cus_stale'"), {
+      code: "resource_missing",
+      param: "customer"
+    });
+    const create = vi
+      .fn()
+      .mockRejectedValueOnce(missingCustomerError)
+      .mockResolvedValueOnce({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_starter_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: "cus_stale" } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("starter");
+
+    expect(result).toEqual({ success: true, url: "https://checkout.stripe.com/session/xyz" });
+    expect(create).toHaveBeenCalledTimes(2);
+    // First attempt reused the stale id; the retry falls back to
+    // customer_email so Stripe creates a fresh customer instead.
+    expect(create.mock.calls[0][0]).toMatchObject({ customer: "cus_stale", customer_email: undefined });
+    expect(create.mock.calls[1][0]).toMatchObject({ customer: undefined, customer_email: "founder@example.com" });
+    warnSpy.mockRestore();
+  });
+
+  it("does not retry (and surfaces the safe error) for a Stripe error unrelated to a missing customer", async () => {
+    const create = vi.fn().mockRejectedValue(
+      Object.assign(new Error("Invalid API key provided"), { code: "api_key_expired" })
+    );
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_starter_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: "cus_existing" } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("starter");
+
+    expect(result.success).toBe(false);
+    expect(create).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
+  });
 });
 
 describe("createPortalSession", () => {

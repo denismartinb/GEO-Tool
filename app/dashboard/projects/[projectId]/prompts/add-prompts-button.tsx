@@ -239,8 +239,11 @@ export function AddPromptsButton({
                     <span className="add-prompts-stat-pill">
                       <Icon name="sparkles" size={13} /> 5 prompts nuevos
                     </span>
+                    {/* Engine count is plan-dependent (Free scans with 1,
+                        paid plans with 3) — keep this pill count-free so it
+                        stays true for every plan without loading usage here. */}
                     <span className="add-prompts-stat-pill">
-                      <Icon name="bolt" size={13} /> 2 motores de IA
+                      <Icon name="bolt" size={13} /> Todos tus motores de IA
                     </span>
                   </div>
                 </>

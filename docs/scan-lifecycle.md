@@ -150,6 +150,21 @@ duplicate invocation racing against another cannot corrupt.
 
 ---
 
+## Daily sweep capacity (ASYNC-SCAN-1a)
+
+One level above individual runs, the daily recurring-scan sweep
+(`runDailyCronScan`, `lib/scan/cron.ts`) is itself self-chaining: a single
+daily cron firing processes projects in invocation-sized links
+(`MAX_PROJECTS_PER_CRON_RUN` each), dispatching the next link via `after()`
++ `/api/cron/sweep-continue` (secret-gated by `CRON_SECRET`) until every
+eligible project is handled or the `MAX_SWEEP_CHAIN_INVOCATIONS` cap is
+reached. Each link only *starts* a project's campaign — everything below
+(batching, continuation, reconciliation) is governed by this document
+unchanged. See `docs/adr/0016-self-chaining-daily-cron-sweep.md` for
+convergence/termination guarantees and capacity math.
+
+---
+
 ## Timeout detection and auto-retry (`reconcileStuckScanRuns`)
 
 A run in `running` state whose `updated_at` is older than

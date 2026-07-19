@@ -19,6 +19,8 @@ beforeEach(() => {
   redirectMock.mockClear();
   signUp.mockReset();
   sendWelcomeEmail.mockReset();
+  delete process.env.NEXT_PUBLIC_SITE_URL;
+  delete process.env.VERCEL_URL;
 });
 
 function formData(fields: Record<string, string>) {
@@ -28,8 +30,8 @@ function formData(fields: Record<string, string>) {
 }
 
 describe("signup", () => {
-  it("sends a welcome email and redirects to the dashboard on success", async () => {
-    signUp.mockResolvedValue({ error: null });
+  it("sends a welcome email and redirects to the dashboard when email confirmation is off (session returned immediately)", async () => {
+    signUp.mockResolvedValue({ data: { session: { access_token: "tok" } }, error: null });
     const { signup } = await import("./actions");
 
     await expect(
@@ -37,10 +39,40 @@ describe("signup", () => {
     ).rejects.toThrow("REDIRECT:/dashboard");
 
     expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
+    expect(signUp).toHaveBeenCalledWith({
+      email: "new@example.com",
+      password: "supersecret",
+      options: { emailRedirectTo: "http://localhost:3000/auth/callback" }
+    });
+  });
+
+  it("does not send a welcome email and redirects to the check-email screen when confirmation is required (no session)", async () => {
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(formData({ email: "new@example.com", password: "supersecret" }))
+    ).rejects.toThrow("REDIRECT:/signup/confirm?email=new%40example.com");
+
+    expect(sendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it("builds emailRedirectTo from NEXT_PUBLIC_SITE_URL when set", async () => {
+    process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(formData({ email: "new@example.com", password: "supersecret" }))
+    ).rejects.toThrow();
+
+    expect(signUp).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { emailRedirectTo: "https://app.example.com/auth/callback" } })
+    );
   });
 
   it("does not send a welcome email when signup fails", async () => {
-    signUp.mockResolvedValue({ error: { message: "already registered" } });
+    signUp.mockResolvedValue({ data: { session: null }, error: { message: "already registered" } });
     const { signup } = await import("./actions");
 
     await expect(
@@ -48,5 +80,41 @@ describe("signup", () => {
     ).rejects.toThrow(/^REDIRECT:\/signup\?error=/);
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it("maps the over_email_send_rate_limit error code to a safe Spanish message", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "over_email_send_rate_limit", message: "email rate limit exceeded" }
+    });
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(redirectUrl.startsWith("/signup?error=")).toBe(true);
+    expect(redirectUrl).not.toContain("email+rate+limit+exceeded");
+    expect(decodeURIComponent(redirectUrl)).toContain("Espera unos minutos");
+  });
+
+  it("passes through other Supabase signup error messages unchanged", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null },
+      error: { code: "user_already_exists", message: "already registered" }
+    });
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(decodeURIComponent(redirectUrl)).toContain("already registered");
   });
 });

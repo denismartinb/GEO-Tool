@@ -10,11 +10,16 @@ vi.mock("@/lib/llm/claude", () => ({
   extractClaudeStructuredData: vi.fn()
 }));
 
+vi.mock("@/lib/llm/openai", () => ({
+  extractOpenAIStructuredData: vi.fn()
+}));
+
 vi.mock("@/lib/scan/citation-resolution", () => ({
   resolveGroundingRedirects: vi.fn().mockResolvedValue(new Map())
 }));
 
 import { extractGeminiStructuredData } from "@/lib/llm/gemini";
+import { extractOpenAIStructuredData } from "@/lib/llm/openai";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 
 /**
@@ -79,10 +84,65 @@ function baseExtractionOutput(overrides: Record<string, unknown> = {}) {
 describe("runStructuredExtractionForRun", () => {
   afterEach(() => {
     vi.mocked(extractGeminiStructuredData).mockReset();
+    vi.mocked(extractOpenAIStructuredData).mockReset();
     vi.mocked(resolveGroundingRedirects).mockReset();
     // Restore the default no-op resolution (empty map) for tests that don't
     // exercise grounding-chunk resolution explicitly.
     vi.mocked(resolveGroundingRedirects).mockResolvedValue(new Map());
+  });
+
+  it("uses the OpenAI extractor and treats its grounding URLs as final (no redirect resolution)", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          baseRow({
+            provider: "openai",
+            raw_response_json: {
+              grounding_chunks: [
+                { uri: "https://www.acme.com/products", title: "Acme Products" },
+                { uri: "not a url" }
+              ]
+            }
+          })
+        ],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractOpenAIStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gpt-test-model"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    // The OpenAI extractor is used, the Gemini one is not, and — critically —
+    // OpenAI's already-final url_citation URLs never go through the live
+    // redirect resolver.
+    expect(extractOpenAIStructuredData).toHaveBeenCalledTimes(1);
+    expect(extractGeminiStructuredData).not.toHaveBeenCalled();
+    expect(resolveGroundingRedirects).not.toHaveBeenCalled();
+
+    expect(updateCalls).toHaveLength(1);
+    const update = updateCalls[0];
+    const extractedJson = update.extracted_json as {
+      citations: Array<{ source: string; domain: string | null; confidence: string; url: string | null }>;
+    };
+    const groundingCitations = extractedJson.citations.filter((c) => c.source === "grounding");
+
+    // Domain is derived straight from the citation URL; a well-formed URL is
+    // high-confidence, a malformed one degrades to low with a null domain.
+    expect(groundingCitations).toHaveLength(2);
+    expect(groundingCitations[0]).toMatchObject({ domain: "acme.com", confidence: "high" });
+    expect(groundingCitations[1]).toMatchObject({ domain: null, confidence: "low" });
+    expect(update.citations_count).toBe(2);
+    expect(update.citation_found).toBe(true);
   });
 
   it("derives citations_count/citation_found from grounding chunks only, ignoring inline matches", async () => {

@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/icon";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 
 const NAV_LINKS = [
+  { href: "/geo", label: "Qué es GEO" },
   { href: "/blog", label: "Blog" },
   { href: "/pricing", label: "Precios" }
 ];
@@ -59,6 +60,7 @@ export function BlogPageShell({ children }: { children: ReactNode }) {
             </Link>
             <div className="links">
               <Link href="/#producto">Producto</Link>
+              <Link href="/geo">Qué es GEO</Link>
               <Link href="/pricing">Precios</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>

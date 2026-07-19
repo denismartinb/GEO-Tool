@@ -77,6 +77,24 @@ extraction is a candidate follow-up (separate Task Intake).
 
 ---
 
+## Addendum (2026-07-18) — manual launch responds immediately (ASYNC-SCAN-1c)
+
+The manual "Lanzar/Repetir escaneo" route (`app/api/projects/[projectId]/scan`)
+no longer holds the request open through the first execution batch: it
+creates the pending run, responds at once (so the UI can show "Escaneo en
+curso" immediately), and starts execution via `after()` — with the runs
+page's `AutoExecuteScan` foreground driver also picking the run up on
+refresh, safely, thanks to ADR-0014's atomic job claim. This does **not**
+reopen this ADR's core decision: execution itself is still the sync
+in-process model gated by `ENABLE_SYNC_SCAN_EXECUTION` (no queue, no worker,
+no scheduler); only the *response timing* of the manual trigger changed.
+Founder-approved as ASYNC-SCAN-1c (launch-plan Fase 9), 2026-07-18, after a
+real UX failure: relaunching while a run was active showed a generic
+"No se pudo lanzar" error instead of the truth ("ya hay un escaneo en
+curso"), which the trigger button now reports honestly.
+
+---
+
 ## Addendum (2026-06-14) — structured extraction parallelized (SCAN-ROBUST-2 phase 2)
 
 `runStructuredExtractionForRun` now also runs concurrently across scan

@@ -35,14 +35,15 @@ camino hasta cobrar el primer euro y las fases inmediatamente posteriores.
 | 0 | DECISIÓN-MARCA | ✅ Hecho | #174 | 2026-07-09 | **GenScore**: sin colisión en TMview/EUIPO, dominio genscore.es comprado, rebrand de código shipeado (REBRAND-1). Pendiente de fondo (no bloqueante): solicitud EUIPO, dominios adicionales |
 | 1 | LEGAL-1 | 🟡 En curso (1a hecho) | — | 2026-07-09 | LEGAL-1a shipeado: `/privacidad`, `/cookies`, `/terminos` (B2C) + footers reales. LEGAL-1b (Aviso Legal LSSI con NIF/domicilio) pendiente del alta del fundador, no bloqueante |
 | 2 | PRICING-TRUTH-1 | ✅ Hecho | — | 2026-07-09 | PR a (copy honesto) + PR b (enforcement real: 1 escaneo Free, cadencia cron por plan, motores por plan) shipeados |
-| 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183 | 2026-07-10 | Dominio + PostHog + Sentry verificados en vivo y funcionando (bug real de Sentry encontrado y corregido en #183). Solo falta Vercel Pro, diferido a propósito hasta la primera contratación (riesgo aceptado, ver nota abajo) |
+| 3 | PLATFORM-COMMERCIAL-1 | 🟡 Bloqueada en Vercel Pro (diferido, decisión fundador) | #181, #183, #223 | 2026-07-17 | Dominio + PostHog + Sentry verificados en vivo y funcionando (dos bugs reales de instrumentación de Sentry encontrados y corregidos: `onRequestError` en #183, boundary `error.tsx` en #223). Pendiente: Vercel Pro (diferido a propósito, riesgo aceptado), sourcemaps de Sentry (`SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN`), eventos de funnel en PostHog, panel de operador |
 | 4 | BILLING-STRIPE-1 ⚠️ | ✅ Hecho (alcance aprobado) | #186, #189, #191, #192, #196, #200, #202, #205, #207 | 2026-07-11 | Checkout, webhook, Customer Portal, protección RLS, reverse trial (7 días) y los 5 emails transaccionales (bienvenida, plan confirmado, pago fallido, trial terminado, cancelación programada) verificados end-to-end en producción, incluida la cancelación real (fecha guardada, UI con estado "Cancelada — activa hasta…" + botón reactivar, email recibido). Bug real encontrado y corregido en vivo: el código exigía `cancel_at_period_end` además de `cancel_at`, pero el Customer Portal solo fija `cancel_at`. Pendiente, deliberadamente fuera de este alcance: PR B (aviso 3 días antes de expirar el trial, necesita su propia aprobación de migración/cron) y el go-live checklist (Vercel Pro, alta autónomo, VeriFactu, claves live) antes de cobros reales |
-| 5 | LAUNCH | 🔲 Pendiente | — | 2026-07-09 | |
+| 5 | LAUNCH | 🔲 Pendiente — es el camino crítico actual | — | 2026-07-17 | Todo el código de las fases 0–4 está shipeado y verificado en producción (modo test). Lo que queda es casi todo del fundador: Vercel Pro, alta autónomo, VeriFactu, claves live de Stripe, revisión legal humana. Checklist detallado y ordenado en la sección de Fase 5 |
 | 6 | ALERTS-1 | ✅ Hecho | — | 2026-07-12 | Fase 6a: alerta de caída de GEO Score (≥10 puntos) + preferencias reales en `/dashboard/settings/notifications`. Fase 6b: resumen semanal por email (cron nuevo, deshabilitado por defecto vía `CRON_DIGEST_ENABLED`) — Vercel levantó el límite de cron jobs en enero 2026 (100/proyecto en todos los planes, incl. Hobby), así que no dependía de Vercel Pro como se pensaba |
-| 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-11 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso) |
-| 8 | ENGINES-2 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | OpenAI/Perplexity están en Forbidden list |
-| 8b | ENGINES-VALUE-1 | 🟡 Implementado, pendiente Human Gate | #228 | 2026-07-18 | Explotar el dato multi-motor ya persistido (migración 0009): tarjeta comparativa por motor en Overview (mención, citación con honestidad ADR 0012, sentimiento, brecha) + matriz prompt × motor en Prompts. Cero llamadas nuevas, cero esquema. Spec aprobada por el fundador: `docs/specs/engines-value-1.md` |
-| 9 | ASYNC-SCAN-1 ⚠️ | 🔲 Pendiente aprobación | — | 2026-07-09 | Ya scoped en director-strategy.md |
+| 7 | GROWTH-1 | 🟡 5 artículos publicados; catálogo abierto | — | 2026-07-17 | Fase 7a: blog MDX, sitemap, robots.txt, llms.txt, agente `growth-content`. Fase 7b: 4 artículos más (contenido del fundador vía ChatGPT, revisado) + portadas con imágenes reales generadas por el fundador + ilustraciones de contenido (tablas GFM, flujo de proceso). Pendiente: el 5º post del prompt original del fundador (cuando lo aporte) + resto del catálogo en PRs pequeños |
+| 8 | ENGINES-2 ⚠️ | 🟡 OpenAI hecho (2a); Perplexity fuera de alcance | #226, #236 | 2026-07-18 | ChatGPT (gpt-4o-mini + búsqueda web forzada) activo como motor 3 en los 3 planes de pago, validado en vivo: citas reales (6/10 prompts), el motor más rápido (4,4s media), coste despreciable (~$0,01-0,02/escaneo). Free sigue con 1 motor. Perplexity sin fecha, requeriría su propia aprobación |
+| 8b | ENGINES-VALUE-1 | 🟡 Implementado, pendiente Human Gate | #228 | 2026-07-19 | Explotar el dato multi-motor ya persistido (migración 0009): tarjeta comparativa por motor en Overview (mención, citación con honestidad ADR 0012, sentimiento, brecha) + matriz prompt × motor en Prompts. Cero llamadas nuevas, cero esquema. Actualizado tras ENGINES-2a: ChatGPT marcado como grounded en `engine-meta` (tiene web search real). Spec aprobada por el fundador: `docs/specs/engines-value-1.md` |
+| 9 | ASYNC-SCAN-1 ⚠️ | 🟡 En curso (1c hecho, 1a en PR) | #231, #232 | 2026-07-18 | Task Intake de la Fase 9 aprobado 2026-07-17, dividida en tres: **1a CRON-SCALE** (sweep diario auto-encadenado, ADR-0016, sin schema) en PR #231 pendiente de Human Gate; **1c ASYNC-LAUNCH** (lanzamiento manual no bloqueante + mensaje honesto de escaneo activo, addendum ADR-0003) ✅ hecho, PR #232 mergeada 2026-07-18 tras smoke real del fundador; **1b NOTIF-SERVER** (notificaciones server-side, schema+RLS) pendiente de su propio Task Intake, a diseñar junto a Fase 6 |
+| 10 | AUTH-EMAIL-VERIFY-1 | 🟡 Código en PR, falta activar el toggle | #237 | 2026-07-18 | Task Intake aprobado 2026-07-18. Signup con email/contraseña exige confirmación por enlace antes de dar acceso: `app/signup/actions.ts` detecta la ausencia de sesión de `signUp()` y manda a `/signup/confirm` en vez de `/dashboard`; `app/auth/callback/route.ts` envía el email de bienvenida al confirmar (reusa la detección de "cuenta recién creada" ya existente para OAuth); login con cuenta no confirmada da mensaje seguro en castellano (`error.code === "email_not_confirmed"`). Sin cambios de schema/RLS. **Bug real encontrado en vivo (2026-07-18):** el fundador activó el toggle directamente en Supabase antes del merge — el código de producción sin este fix no comprueba la sesión y deja al usuario sin acceso silenciosamente; además, probarlo repetidas veces sin SMTP propio dispara el rate limit del mailer por defecto de Supabase (`over_email_send_rate_limit`), ahora mapeado a mensaje seguro. Toggle desactivado de nuevo por el fundador hasta mergear. **Pendiente antes de reactivar en producción:** configurar SMTP propio (Resend) en Supabase — ver `docs/environment-contract.md` — y mergear este PR |
 | ⏰ | MODEL-PIN (deadline 2026-10-16) | 🔲 Pendiente | — | 2026-07-09 | Cutover anunciado de gemini-2.5-flash |
 
 Estados: 🔲 Pendiente · 🟡 En curso · ✅ Hecho · ⛔ Bloqueada · ❌ Cancelada
@@ -480,10 +481,17 @@ Auditoría web) solo hacía `console.error` en el navegador — Sentry
 hace falta una llamada explícita a `Sentry.captureException`. El fallo
 de hoy se perdió sin remedio (solo estaba en la consola del móvil del
 fundador). Corregido: `Sentry.captureException(error)` añadido al mismo
-`useEffect`. **Pendiente:** el fundador debe reproducir el mismo flujo
-(escanear + auditoría técnica) una vez desplegado el fix, para que esta
-vez sí quede capturado en Sentry con el stack trace real — la causa raíz
-original de ese fallo concreto sigue sin identificar.
+`useEffect`. **Resuelto en producción (confirmado por el fundador,
+2026-07-17):** el fallo dejó de reproducirse tras la reestructuración
+completa de la página de Auditoría web (PRs #222/#224/#225 — hero score,
+tabs, checks técnicos ampliados, pulido visual), que reescribió el árbol
+de render donde ocurría. La causa raíz exacta del `TypeError ... 'noindex'`
+original nunca llegó a identificarse con certeza: el stack de Sentry era
+código minificado sin resolver porque **los sourcemaps de producción no se
+suben** — `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` nunca se han
+configurado en Vercel (ver checklist de Fase 5). El fix del boundary
+(#223) queda en su sitio: si el error reapareciera, esta vez sí quedaría
+capturado.
 - [ ] **Subir a Vercel Pro — decisión explícita del fundador (2026-07-10):
       diferido hasta la primera contratación.** Riesgo registrado y
       aceptado conscientemente: a diferencia del alta de autónomo (donde el
@@ -1050,18 +1058,133 @@ schema/RLS/webhook.
 
 **Objetivo:** primeros clientes de pago.
 
-**Alcance:**
-- Smoke completo del checklist de `docs/environment-contract.md` +
-  recorrido de compra en producción (modo live, importe real, refund).
-- Revisión humana final de textos legales (pendiente de LEGAL-1).
-- Onboarding manual de 3–5 agencias españolas (ICP primario del PRD) antes
-  de cualquier difusión pública. Feedback directo → backlog.
-- Anuncio público solo cuando las 3–5 primeras cuentas usen el producto sin
-  fricción.
-
-**Dependencias:** Fases 0–4 completas.
-
 **Criterio de salida:** ≥1 cliente pagando con factura correcta emitida.
+
+**Dependencias:** Fases 0–4 completas — **cumplido a nivel de código**
+(2026-07-17): checkout, webhooks, Customer Portal, reverse trial, emails
+transaccionales, enforcement de planes, legal mínimo, alertas y digest
+están shipeados y verificados en producción (Stripe en modo test). Lo que
+queda es configuración, trámites y decisiones del fundador, más un puñado
+de verificaciones. Desglose completo y ordenado:
+
+### Bloque A — Trámites y decisiones del fundador (sin código)
+
+- [ ] **A1 · Vercel Pro (~20 $/mes)** — diferido conscientemente el
+      2026-07-10, pero es el primer paso del camino crítico: los términos
+      de Vercel prohíben el plan Hobby para cualquier SaaS comercial
+      ("even if the traffic is low") y `genscore.es` ya tiene pricing
+      público y registro. Debe resolverse **antes** de cualquier difusión
+      pública o de captar la primera agencia — una suspensión sin aviso en
+      plena venta sería mucho más cara que la cuota.
+- [ ] **A2 · Alta de autónomo** — el disparador legal es el primer cobro
+      real. Reversible, tarifa plana. Hacerlo justo antes del Bloque B.
+- [ ] **A3 · Decisión VeriFactu con el gestor** — Stripe solo no emite
+      factura española compliant. Opciones: software de facturación
+      VeriFactu conectado a Stripe, o merchant of record (Paddle/Lemon
+      Squeezy, sustituiría a Stripe entero — coste de re-integración alto,
+      solo si el gestor lo exige). Condición para la primera venta real,
+      no para nada anterior.
+- [ ] **A4 · Revisión legal humana** (gestor/abogado) de `/privacidad`,
+      `/cookies` y `/terminos` — en particular el desistimiento B2C de 14
+      días y las cláusulas de limitación de responsabilidad. Los textos
+      actuales son borradores redactados por la sesión.
+- [ ] **A5 · LEGAL-1b** — con los datos del alta (NIF, domicilio fiscal):
+      publicar la página de Aviso Legal LSSI y actualizar
+      `/privacidad`/`/terminos` con la identidad definitiva. PR pequeño de
+      código, gatillado por A2.
+- [ ] **A6 · Solicitud EUIPO** (clases 42+35, ~850–900 €) — recomendable
+      antes de invertir en marketing pagado con el nombre; no bloquea el
+      lanzamiento.
+- [ ] **A7 · (Opcional)** dominios defensivos genscore.app/.net/
+      getgenscore.com; sondear genscore.com/.ai/.io vía broker.
+
+### Bloque B — Go-live de Stripe (test → live)
+
+Todo el flujo está verificado end-to-end en modo test; pasar a live es
+repetir la configuración de cuenta en el entorno live de Stripe:
+
+- [ ] **B1** · Crear productos/precios live de Starter y Pro; poner las
+      claves live en Vercel (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID_STARTER`,
+      `STRIPE_PRICE_ID_PRO`) + redeploy (las env vars nuevas no aplican
+      sin redeploy — gotcha ya documentado).
+- [ ] **B2** · Webhook live apuntando a
+      `https://www.genscore.es/api/webhooks/stripe`, suscrito a los mismos
+      eventos que en test **incluido `invoice.payment_failed`** (en test
+      hubo que añadirlo a mano; sin él, el email de pago fallido no se
+      dispara nunca). `STRIPE_WEBHOOK_SECRET` live en Vercel.
+- [ ] **B3** · Stripe Tax en live: código fiscal SaaS por defecto
+      (Configuración → Impuestos) — en test el checkout falló hasta
+      configurarlo; en live pasará exactamente lo mismo si se omite.
+- [ ] **B4** · Customer Portal en live: activar "switch plans"
+      (Starter/Pro) y "cancel subscriptions" — misma configuración manual
+      que se hizo en test.
+- [ ] **B5** · Compra real de verificación con tarjeta propia (importe
+      real) + refund desde Stripe: pago → webhook → plan activado →
+      emails → cancelación programada reflejada en la UI. Es el mismo
+      recorrido ya validado en test, ahora con dinero de verdad.
+- [ ] **B6** · A3 (VeriFactu) resuelto antes de la primera venta a
+      terceros.
+
+### Bloque C — Verificaciones y flecos de producto (código ya shipeado)
+
+- [ ] **C1** · Resumen semanal: `CRON_DIGEST_ENABLED=true` ya puesto
+      (2026-07-12). Verificar el primer envío real el próximo lunes
+      (`0 8 * * 1` UTC) — o antes, llamando manualmente al endpoint con
+      `CRON_SECRET`.
+- [ ] **C2** · Alerta de caída de score: provocar/esperar una caída ≥10
+      puntos y confirmar que llega el email y que los toggles de
+      `/dashboard/settings/notifications` persisten.
+- [ ] **C3** · Resend con dominio propio verificado (SPF/DKIM) y
+      `RESEND_FROM_EMAIL` fijado — los emails ya llegan, pero salir desde
+      `genscore.es` en vez del remitente de pruebas de Resend mejora
+      entregabilidad y confianza antes de tener clientes reales.
+- [ ] **C4** · Sourcemaps de Sentry: `SENTRY_ORG`/`SENTRY_PROJECT`/
+      `SENTRY_AUTH_TOKEN` en Vercel (build-time) + redeploy. Sin ellos,
+      cualquier error de producción llega minificado e ilegible — el
+      crash de Auditoría web (2026-07-12→17) costó días de diagnóstico
+      exactamente por esto. Barato, alto retorno operativo.
+- [ ] **C5** · Eventos explícitos de funnel en PostHog (registro
+      completado → primer escaneo → upgrade) — fast-follow pendiente de
+      Fase 3; hoy solo hay autocapture. Necesario para medir conversión
+      del reverse trial con los primeros usuarios reales.
+- [ ] **C6** · Panel de operador mínimo (queries guardadas de Supabase +
+      dashboard de PostHog; no construir producto).
+- [ ] **C7** · Smoke completo del checklist de
+      `docs/environment-contract.md` en producción, como cierre previo al
+      onboarding de agencias.
+
+### Bloque D — Primeros clientes (el lanzamiento en sí)
+
+- [ ] **D1** · Onboarding manual de 3–5 agencias españolas (ICP primario
+      del PRD) antes de cualquier difusión pública. Feedback directo →
+      backlog. Requiere A1 hecho (riesgo Hobby) y C1–C4 verificados; NO
+      requiere B (pueden probar con el reverse trial gratuito).
+- [ ] **D2** · Primera venta real (requiere Bloque B completo + A2/A3).
+- [ ] **D3** · Anuncio público (LinkedIn build-in-public, difusión del
+      blog) solo cuando las 3–5 primeras cuentas usen el producto sin
+      fricción.
+
+### Orden recomendado
+
+**A1 → C1–C7 (en paralelo, esta semana) → D1 (agencias con trial) →
+A2+A3 (cuando una agencia quiera pagar) → B (go-live Stripe) → D2 → A4/A5
+→ D3.** La lógica: validar con agencias reales usando el trial no
+requiere ni alta ni Stripe live — solo Vercel Pro y el producto
+verificado; los trámites con coste (alta, VeriFactu, EUIPO) se disparan
+cuando hay demanda confirmada, no antes.
+
+### Fuera del camino crítico (post-launch, ya planificado)
+
+- **PR B de BILLING-STRIPE-1** — email "tu trial acaba en 3 días"
+  (necesita columna + cron → su propia aprobación de esquema).
+- **ENGINES-2** ⚠️ (Fase 8) — ChatGPT/Perplexity; Task Intake +
+  aprobación. La mejora comercial nº 1 tras lanzar.
+- **ASYNC-SCAN-1** ⚠️ (Fase 9) — elevar prioridad con >10 clientes con
+  recurring scans.
+- **GROWTH-1 continuo** — 5º artículo del prompt original (cuando el
+  fundador lo aporte) + resto del catálogo.
+- **⏰ MODEL-PIN** — deadline duro 2026-10-16; programar la migración la
+  semana del 2026-10-01 como muy tarde, pase lo que pase con el resto.
 
 ---
 
@@ -1283,6 +1406,252 @@ PRICING-TRUTH-1 solo puede anunciar motores ya reales).
 
 **Dependencias:** LAUNCH (no bloquea cobrar con 2 motores honestos).
 Presupuestar coste por escaneo antes (geo-strategy + platform-deploy).
+
+**ENGINES-2a — OpenAI únicamente, con búsqueda web (2026-07-17, en curso):**
+Task Intake conversacional con el fundador — decisión explícita: solo
+OpenAI por ahora (Perplexity queda fuera, sin fecha), y **con búsqueda web
+activada** (Responses API, tool `web_search`), no solo texto — es la
+oportunidad de tener un segundo motor con grounding real (citas
+verificables), no solo un tercer motor "ciego" como Claude hoy.
+
+Antes de comprometer precio/gating de plan, primer paso aprobado: medir
+coste real por llamada (no estimarlo). Hecho en este PR:
+
+- `lib/llm/openai.ts`: `generateOpenAIVisibilityAnswer` (Responses API +
+  `web_search`, mismo prompt neutral brand-blind que Gemini/Claude —
+  ADR-0007) y `extractOpenAIStructuredData` (mismo patrón que
+  `extractClaudeStructuredData`). Devuelve la misma forma
+  `GeminiVisibilityResponse`, incluido `groundingChunks` desde las
+  anotaciones `url_citation` reales de OpenAI.
+- **Deliberadamente NO activo todavía**: no está en
+  `VALID_LLM_SCAN_PROVIDERS` (`lib/scan/executor.ts`), ni en el dispatch de
+  `lib/scan/extraction.ts`, ni en `caps.engines`/`/pricing`. Ningún cliente
+  real lo recibe con este PR.
+- **Sin modelo por defecto**: a diferencia de Gemini/Claude, `OPENAI_MODEL`
+  no tiene fallback hardcodeado — este módulo se escribió contra
+  documentación de terceros (la web oficial de pricing/docs de OpenAI
+  devolvió 403 desde este entorno), así que adivinar un id de modelo actual
+  repetiría el mismo gap de pinning que causó el 404 de
+  `gemini-2.0-flash` (ADR-0002). Hay que confirmarlo en vivo antes de usarlo.
+- **Hallazgo arquitectónico importante para el PR que lo active de
+  verdad**: las citas `url_citation` de OpenAI ya son la URL real de
+  destino (a diferencia del wrapper de redirección de Google que sí
+  necesita `resolveGroundingRedirects`, ADR-0006) — enchufar este proveedor
+  en `extraction.ts` sin más haría una petición HTTP innecesaria a cada URL
+  citada. Necesitará una rama por proveedor en `buildGroundedCitations`,
+  documentado en el propio código (`lib/llm/openai.ts`).
+- 16 tests nuevos (`lib/llm/openai.test.ts`), mismo patrón que
+  `claude.test.ts`. `pnpm test` y `pnpm run validate` en verde.
+
+**ENGINES-2a — OpenAI cableado en el pipeline, dormido (2026-07-17):** el
+fundador pidió "avanza el desarrollo", así que se integró OpenAI como motor
+real en todo el pipeline, pero **sin activarlo para ningún cliente**. La
+garantía de dormancia es doble y está testeada: (1) `openai` no está en
+`LLM_SCAN_PROVIDERS` en ningún entorno, y (2) aunque se añadiera, los planes
+siguen con `caps.engines=2`, y `getLLMScanProviders().slice(0, caps.engines)`
+lo recortaría. Ningún cliente recibe OpenAI hasta que se suba el cap del
+plan Y se ponga la variable — eso es un PR aparte que depende de la decisión
+de coste/precio.
+
+Cambios de este PR:
+- `lib/scan/executor.ts`: `openai` añadido a `VALID_LLM_SCAN_PROVIDERS`,
+  `callProvider` y el catch de config-error. La lógica de recorte por
+  `caps.engines` ya existía (PRICING-TRUTH-1 PR b) y ahora es load-bearing.
+- `lib/scan/extraction.ts`: dispatch a `extractOpenAIStructuredData` +
+  `.in("provider", [...])` ampliado. **Detalle clave**: `buildGroundedCitations`
+  ahora es provider-aware — las citas `url_citation` de OpenAI ya son URLs
+  finales, así que se saltan `resolveGroundingRedirects` (evita una petición
+  HTTP innecesaria por cita, a diferencia de los wrappers de redirección de
+  Google que sí necesita Gemini).
+- `lib/scoring/run-scoring.ts`: `openai` añadido a `GROUNDED_PROVIDERS` —
+  tiene grounding real (web_search), así que sus filas cuentan para
+  `citation_score` y el componente de autoridad del GEO Score.
+- UI: etiqueta/badge de motor (`components/prompts/prompt-drawer.tsx`,
+  `ENGINE_LABELS` en la página del proyecto) ahora contemplan "ChatGPT" —
+  se renderiza solo si aparecen filas reales de OpenAI (dormido = nunca).
+- **Copy de marketing/pricing/legal NO tocado a propósito**: landing,
+  `/pricing`, `/privacidad`, `/terminos`, chips del onboarding siguen
+  diciendo "Gemini y Claude" — es verdad hoy (OpenAI dormido). Cambiarlos
+  sería prometer un motor no activo (viola PRICING-TRUTH-1).
+- +3 tests de cableado (dormancia en executor, citas finales en extraction,
+  grounded en scoring), además de los 16 unitarios del módulo. 623/623 y
+  `pnpm run validate` en verde.
+
+**Primera medición real, hallazgo de latencia (2026-07-17):** el fundador
+probó un prompt real en el Playground (modo Responses + `web_search`) desde
+un ordenador. Resultado: **6 citas reales** (`url_citation`, dominios de
+verdad — de hecho, competidores reales de GenScore para ese prompt),
+confirmando que el formato implementado en `lib/llm/openai.ts` es correcto.
+Pero la latencia de esa llamada fue **1m1s (61 segundos)** — muy por encima
+de:
+- `OPENAI_CALL_TIMEOUT_MS` (20s) en `lib/llm/openai.ts` — esa llamada
+  habría abortado por timeout en producción.
+- El presupuesto **completo** del escaneo síncrono (`maxDuration=60`,
+  ADR-0003) — una sola llamada de 61s ya excede el presupuesto entero, no
+  solo el de esa llamada.
+
+Investigado (WebSearch, foro de desarrolladores de OpenAI): **latencias de
+~1 minuto con la Responses API son un patrón ya reportado por otros
+desarrolladores específicamente con modelos de la familia gpt-5** ("gpt-5
+with the Responses API takes around 1 minute for even a basic query") — no
+parece un caso aislado, sino característico de ese modelo si es el que se
+usó (no se confirmó qué modelo eligió el Playground por defecto). Modelos
+más ligeros (gpt-4o-mini y similares) se reportan sensiblemente más rápidos
+en esos mismos hilos, aunque sin cifra exacta fiable todavía.
+
+**Implicación importante — esto es un problema de arquitectura, no solo de
+precio.** Si la latencia real con búsqueda web ronda el minuto
+independientemente del modelo, la integración síncrona actual (dentro del
+mismo escaneo de 60s) no es viable — necesitaría desacoplar OpenAI a
+ejecución asíncrona, fuera del ciclo síncrono del escaneo (repropone
+ASYNC-SCAN-1, todavía no aprobado, ver Fase 9). Si un modelo más ligero
+resuelve la latencia, la integración síncrona actual podría servir tal cual.
+
+**Segunda medición real (2026-07-18):** el fundador probó de nuevo en el
+Playground — el selector de modelo de su cuenta solo ofrece la familia
+`gpt-5.x` (`gpt-5.4-mini` como opción más ligera visible, sin `gpt-4o-mini`
+ni similares más antiguos/ligeros disponibles). Con `gpt-5.4-mini` +
+`web_search`, **una sola llamada costó $0,20**.
+
+Cálculo real de impacto por plan (con los caps de `plans-data.ts`):
+
+| Plan | Prompts | Cadencia | Llamadas OpenAI/mes | Coste OpenAI/mes (a $0,20) | Precio del plan |
+|---|---|---|---|---|---|
+| Starter | 25 | Semanal | ~100 | ~$20 | 45 € |
+| Pro | 100 | Diario | ~3.000 | ~$600 | 179 € |
+| Agencia | 300 | Diario | ~9.000 | ~$1.800 | 449 € |
+
+**Hallazgo importante — invierte la recomendación original de gating:** a
+$0,20/llamada, Pro y Agencia (cadencia diaria) no son viables en absoluto
+(el coste de un solo motor superaría 3-4× el precio del plan entero).
+Starter (cadencia semanal) es la única que absorbe ese coste con margen —
+justo al revés de lo que planteaba el Task Intake inicial (que proponía
+Pro+Agencia, no Starter).
+
+**Decisión del fundador (2026-07-18): "Impleméntalo con el gpt 4o mini y lo
+probamos en real. Si al final no es rentable lo desactivamos. Pero lo
+dejamos desarrollado."** Implementado con el máximo cuidado de no exponer a
+clientes reales mientras se valida:
+
+- `app/pricing/plans-data.ts`: `caps.engines` de **Starter** subido a 3
+  (única cadencia económicamente viable, ver tabla arriba). `meter.engines`
+  (el número que ve el público en `/pricing`) se deja deliberadamente en 2
+  — PRICING-TRUTH-1 prohíbe anunciar un motor no confirmado para clientes
+  reales. Pro/Agencia quedan sin tocar.
+- **Este cambio vive solo en esta rama/PR, sin mergear a `main` todavía.**
+  Las variables (`OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`,
+  `LLM_SCAN_PROVIDERS=gemini,claude,openai`) deben ponerse en Vercel
+  **escopadas solo al entorno Preview** (desmarcar Production al añadirlas)
+  — así la prueba usa el pipeline real (coste y latencia reales) sin que
+  ningún cliente de Producción la reciba mientras no esté validada.
+- 1 test nuevo (`executor.test.ts`) que confirma que un proyecto Starter
+  recoge `openai` en cuanto `LLM_SCAN_PROVIDERS` lo incluye. 624/624 tests,
+  `pnpm run validate` limpio.
+
+**Validación en vivo completada (2026-07-18), con tres hallazgos por el
+camino que costaron varias horas de diagnóstico:**
+
+1. **Checkout de Stripe roto (P0, sin relación con ENGINES-2a)**: al
+   intentar contratar Starter para la prueba apareció un
+   `stripe_customer_id` obsoleto — documentado y corregido en la sección
+   propia de abajo (PR #226).
+2. **La clave de OpenAI no llegaba al runtime**: una tarde entera de 401s
+   que resultaron ser una carrera de tiempos (cada escaneo corría contra un
+   deployment anterior a la corrección de la clave), diagnosticada
+   definitivamente con un endpoint temporal (`/api/debug/openai-check`,
+   gateado por sesión, retirado antes del merge — mismo ciclo de vida que
+   el `sentry-test` de #183). Lección operativa real: las variables
+   Sensitive de Vercel no se pueden releer, y un secreto pegado con el
+   prefijo "Bearer" o sin redeploy posterior produce el mismo síntoma que
+   una clave inválida — el endpoint de diagnóstico resolvió en una pasada
+   lo que a ciegas no salía.
+3. **`tool_choice: "auto"` no busca**: el primer escaneo real completó
+   10/10 prompts pero con **cero** búsquedas web — gpt-4o-mini decidió
+   responder de memoria siempre, dejando al motor sin citas (como Claude) y
+   además diluyendo el denominador del citation_score (techo estructural de
+   ADR-0012 reintroducido por la puerta de atrás, al estar `openai` en
+   `GROUNDED_PROVIDERS`). Corregido forzando la herramienta:
+   `tool_choice: { type: "web_search" }`.
+
+**Resultados finales del escaneo de validación (10 prompts, Starter,
+vivagym.com):**
+
+| Motor | Con citas | Citas | Latencia media | Máx |
+|---|---|---|---|---|
+| Gemini | 7/10 | 99 | 6,0s | 7,5s |
+| **ChatGPT** | **6/10** | **35** | **4,4s** | **5,2s** |
+| Claude | 0/10 (sin búsqueda, esperado) | 0 | 4,8s | 5,7s |
+
+Coste real: **~$0,01-0,02 por escaneo completo** (el $0,20/llamada que
+asustaba era específico de gpt-5.4-mini; gpt-4o-mini es dos órdenes de
+magnitud más barato). Latencia: ChatGPT es el motor más rápido incluso
+buscando. El miedo de arquitectura (61s en el Playground) era del modelo,
+no de la búsqueda.
+
+**Decisión del fundador (2026-07-18): "que en los 3 planes de pago de
+momento se ofrezcan los 3 motores".** Aplicado en el PR de cierre (#236):
+`caps.engines: 3` y `meter.engines: 3` en Starter/Pro/Agencia (Free sigue
+en 1); copy actualizado a "Gemini, Claude y ChatGPT" en landing, `/pricing`
+(cards, matriz, meter) y chips del onboarding; **`/privacidad` añade OpenAI
+como encargado del tratamiento y `/terminos` lo añade a la lista de
+modelos de terceros** (obligatorio: procesa prompts de usuarios reales
+desde hoy); endpoint de diagnóstico retirado; variables activas en
+Producción (`OPENAI_API_KEY`, `OPENAI_MODEL=gpt-4o-mini`,
+`LLM_SCAN_PROVIDERS=gemini,claude,openai`), verificado por el fundador en
+producción ("Funciona bien en pro").
+
+**Nota de coste registrada:** con cadencia diaria (Pro/Agencia), el coste
+de OpenAI es ~$0,60/mes por proyecto a precios actuales de gpt-4o-mini —
+asumible. Vigilar el dashboard de OpenAI las primeras semanas por si las
+tarifas de la herramienta de búsqueda aparecen con retraso.
+
+---
+
+## Hallazgo P0 no planeado — checkout de Stripe roto en Producción (2026-07-18)
+
+Al intentar contratar Starter para la prueba de ENGINES-2a, el fundador
+encontró el checkout roto **tanto en el preview como en Producción**
+("Tampoco funciona en producción"). Confirmado por git log que no era una
+regresión de esta rama (sin commits en `lib/stripe.ts` ni
+`app/dashboard/settings/billing/` desde BILLING-STRIPE-1 PR 3, #192).
+
+**Causa raíz (log real del servidor):**
+```
+[geo:billing] failed to create Stripe checkout session {
+  userId: '9733f169-506e-4f20-9bde-443f73973024',
+  planId: 'starter',
+  message: "No such customer: 'cus_Urlxn9bbBOzGmh'"
+}
+```
+`profiles.stripe_customer_id` guardaba un customer id que ya no existe en
+Stripe (borrado/reseteado en el lado de Stripe, independientemente de
+nuestro código) — `createCheckoutSession` lo reutilizaba sin comprobar que
+siguiera existiendo, y Stripe rechazaba la sesión entera sin recuperación
+posible para esa cuenta.
+
+**Corregido** en `app/dashboard/settings/billing/actions.ts`: si Stripe
+responde `code: "resource_missing"` / `param: "customer"`, se reintenta
+una vez la creación de la sesión sin ese `customer` (cae a
+`customer_email`, dejando que Stripe cree uno nuevo) — mismo patrón de
+"un reintento acotado a un fallo concreto" que ya usan
+`lib/llm/gemini.ts`/`claude.ts`/`openai.ts` para 429. El webhook
+`checkout.session.completed` ya sobreescribe `stripe_customer_id`
+incondicionalmente al completar el pago, así que el valor obsoleto se
+autocura solo, sin necesidad de una escritura aparte. Cualquier otro error
+de Stripe sigue fallando igual que antes (sin reintento ciego).
+
+- 2 tests nuevos (`actions.test.ts`): reproduce exactamente el incidente
+  real (reintento exitoso) y confirma que un error de Stripe no relacionado
+  (p. ej. clave de API inválida) no dispara ningún reintento. 626/626 tests
+  totales, `pnpm run validate` limpio.
+
+**Siguiente:** el fundador vuelve a intentar contratar Starter (en
+Producción y/o en el preview de este PR) una vez desplegado el fix, y
+confirma que el checkout se completa. Sigue pendiente, aparte, entender
+**por qué** ese customer dejó de existir en Stripe (¿reseteo de datos de
+test manual? ¿rotación de clave a otra cuenta/modo?) — el fix es
+resiliente ante esto, pero no explica la causa original; si vuelve a pasar
+con más cuentas, revisar la configuración de la cuenta de Stripe.
 
 ---
 

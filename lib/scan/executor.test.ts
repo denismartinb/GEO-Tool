@@ -38,6 +38,15 @@ vi.mock("@/lib/llm/claude", async () => {
   };
 });
 
+const generateOpenAIVisibilityAnswer = vi.fn();
+vi.mock("@/lib/llm/openai", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/llm/openai")>("@/lib/llm/openai");
+  return {
+    ...actual,
+    generateOpenAIVisibilityAnswer: (...args: unknown[]) => generateOpenAIVisibilityAnswer(...args)
+  };
+});
+
 vi.mock("@/lib/scan/extraction", () => ({
   runStructuredExtractionForRun: vi.fn().mockResolvedValue(undefined)
 }));
@@ -628,6 +637,7 @@ describe("executePendingScan — multi-engine execution", () => {
   beforeEach(() => {
     generateGeminiVisibilityAnswer.mockReset();
     generateClaudeVisibilityAnswer.mockReset();
+    generateOpenAIVisibilityAnswer.mockReset();
     process.env.LLM_SCAN_PROVIDERS = "gemini,claude";
   });
 
@@ -664,6 +674,26 @@ describe("executePendingScan — multi-engine execution", () => {
 
     const promptJob = jobsTable.jobs.find((j) => j.id === PROMPT_JOB_ID)!;
     expect(promptJob.status).toBe("completed");
+  });
+
+  it("ENGINES-2a: a paid plan (pro, caps.engines=3) runs all three engines when LLM_SCAN_PROVIDERS lists them", async () => {
+    // Founder decision 2026-07-18 after the real-world validation (real
+    // grounding citations, fastest engine, negligible cost): every paid
+    // plan gets 3 engines. Free (caps.engines=1) remains the plan that
+    // exercises the slice — covered by the Free-plan test above.
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    generateOpenAIVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateOpenAIVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini", "openai"]);
   });
 
   it("completes the run even when recommendation generation throws (fail-soft)", async () => {
@@ -770,6 +800,28 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted).toHaveLength(2);
+  });
+
+  it("ENGINES-2a real-world test: a Starter-plan project picks up openai once LLM_SCAN_PROVIDERS lists it (caps.engines=3)", async () => {
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    generateOpenAIVisibilityAnswer.mockResolvedValue({
+      ...SUCCESS_RESPONSE,
+      groundingChunks: [{ uri: "https://example.com/page", title: "Example" }]
+    });
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      ownerPlan: "starter"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateOpenAIVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini", "openai"]);
   });
 });
 

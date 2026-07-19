@@ -53,11 +53,22 @@ never "not covered" — same distinction RECS-COVERAGE-OVERLAY-1 already enforce
 | **Preparación GEO (0–100)** | weighted page checks: structured data 30 + answer format 30 + metadata 20 + freshness 20, averaged over audited pages | Bounded fetch + deterministic HTML analysis (no LLM) | 2 |
 | **Acceso bots IA** | allowed AI crawlers ÷ tracked AI crawlers, plus llms.txt presence | `/robots.txt` + `/llms.txt` fetch, deterministic parse | 2 |
 
-`aiCitesOwnDomain` for a topic = its prompt's latest scan result contains at least
-one `source: "grounding"` citation whose resolved domain equals, or is a
-label-boundary subdomain of, the project's normalized domain — the same semantics
-as `hasOwnDomainCitation` in `lib/scoring/run-scoring.ts` (ADR-0013). Rows from
-ungrounded providers are excluded (ADR-0012).
+`aiCitesOwnDomain` for a topic (WEB-AUDIT-R6 phase 2, geo-strategy review
+2026-07-17) = **majority of a fixed citation window**, not just the latest scan.
+For each of the up to 3 most recent scans within 30 days of the reference date
+that have a completed result for that prompt, a "vote" is cast: cited if that
+scan's result contains at least one `source: "grounding"` citation whose resolved
+domain equals, or is a label-boundary subdomain of, the project's normalized
+domain (same base semantics as `hasOwnDomainCitation` in
+`lib/scoring/run-scoring.ts`, ADR-0013; rows from ungrounded providers excluded,
+ADR-0012). The topic is cited when `citedVotes * 2 >= totalVotes`. This was
+chosen over "cited in ANY of the last N scans" — a monotonically-upward-biased
+estimator that only ever adds citations as the window widens — because grounding
+is a noisy sensor (see `lib/web-audit/sample-confidence.ts`) and a single scan's
+flip should not by itself flip a topic between `performing` and `invisible`. A
+scan with no result for that specific prompt casts no vote either way. See
+`lib/web-audit/opportunity-matrix.ts` (`CITATION_WINDOW_SIZE`,
+`CITATION_WINDOW_MAX_AGE_DAYS`) for the implementation.
 
 ## Opportunity matrix classification (canonical)
 

@@ -5,13 +5,106 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { DotMeter } from "@/components/ui/dot-meter";
+import { Gauge } from "@/components/ui/gauge";
+import { Sparkline } from "@/components/ui/sparkline";
+import { Delta } from "@/components/ui/delta";
+import { InfoTip } from "@/components/ui/info-tip";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+
+/**
+ * Illustrative sample data for the hero product shot below — mirrors the
+ * real Overview screen's hero-v2 card and metrics-2col row 1:1 (same
+ * components, same CSS classes: app/dashboard/projects/[projectId]/page.tsx)
+ * so the marketing "screenshot" is the actual product UI, not a mockup.
+ */
+const SHOT_SCORE = 78;
+const SHOT_SCORE_TREND = [52, 58, 61, 67, 71, 78];
+const SHOT_COMPONENTS: Array<{ l: string; v: number; color: string; info?: string }> = [
+  {
+    l: "Presencia (mención)",
+    v: 92,
+    color: "var(--accent)",
+    info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
+  },
+  { l: "Prominencia (posición)", v: 68, color: "#7c3aed" },
+  {
+    l: "Cuota de voz",
+    v: 54,
+    color: "#0d9488",
+    info: "Qué parte de las menciones en las respuestas de IA son tuyas, frente a los competidores que monitorizas."
+  },
+  {
+    l: "Autoridad (citas)",
+    v: 41,
+    color: "#e54563",
+    info: "Cuántas respuestas incluyen una cita verificada (grounding) a tu propio dominio."
+  }
+];
+const SHOT_METRICS: Array<{
+  key: string;
+  label: string;
+  value: string;
+  unit: string;
+  trend: number[];
+  delta: number;
+  invert?: boolean;
+  color: string;
+  hint: string;
+  badge?: { label: string; tone: string };
+  hideDelta?: boolean;
+}> = [
+  {
+    key: "mention",
+    label: "Tasa de mención",
+    value: "92",
+    unit: "%",
+    trend: [78, 82, 85, 88, 90, 92],
+    delta: 4,
+    color: "var(--accent)",
+    hint: "Prompts donde aparece tu marca."
+  },
+  {
+    key: "citation-share",
+    label: "Cuota de Citas",
+    value: "34",
+    unit: "%",
+    trend: [],
+    delta: 0,
+    hideDelta: true,
+    color: "#7c3aed",
+    hint: "38 de 112 citas grounding resueltas apuntan a tu dominio.",
+    badge: { label: "Alto", tone: "accent" }
+  },
+  {
+    key: "gap",
+    label: "Presión competitiva",
+    value: "18",
+    unit: "%",
+    trend: [31, 27, 24, 22, 20, 18],
+    delta: -4,
+    invert: true,
+    color: "#e54563",
+    hint: "Prompts donde aparece un competidor pero tu marca no.",
+    badge: { label: "Baja", tone: "pos" }
+  },
+  {
+    key: "sentiment",
+    label: "Sentimiento de marca",
+    value: "Positivo",
+    unit: "",
+    trend: [],
+    delta: 0,
+    hideDelta: true,
+    color: "#0d9488",
+    hint: "82% positivo · sobre 46 respuestas con tu marca."
+  }
+];
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
   { icon: "search", t: "¿Apareces en la IA?", d: "Mide en qué porcentaje de respuestas de IA te mencionan y te citan como fuente, prompt a prompt." },
   { icon: "competitors", t: "Frente a quién pierdes", d: "Detecta competidores directos y descubre dónde ganan visibilidad que tú no tienes." },
   { icon: "cite", t: "Qué URLs se citan", d: "Conoce las páginas que los motores de IA usan como fuente para responder en tu mercado." },
-  { icon: "layers", t: "Multi-motor", d: "Gemini y Claude hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
+  { icon: "layers", t: "Multi-motor", d: "Gemini, Claude y ChatGPT hoy, con más motores de IA sumándose sin coste extra — una visión unificada de tu visibilidad." },
   { icon: "recs", t: "Acciones, no solo datos", d: "Cada insight se convierte en una acción priorizada por impacto, esfuerzo y confianza." },
   { icon: "sparkles", t: "Soluciones generadas", d: "Genera el FAQ, el schema o el contenido que falta con un clic, listo para publicar." }
 ];
@@ -37,12 +130,91 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
   );
 }
 
-function EngineNote() {
+/**
+ * Hero product shot — a real Visión general screen, not an illustration:
+ * same components (Gauge, Sparkline, Delta, InfoTip) and same CSS classes
+ * as app/dashboard/projects/[projectId]/page.tsx, populated with clearly
+ * illustrative sample data.
+ */
+function ProductShot() {
   return (
-    <div className="lp-hero-note">
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />Primer escaneo en minutos</span>
-      <span><Icon name="check" size={14} className="text-[var(--pos)]" />2 motores de IA</span>
+    <div className="lp-shot-body">
+      <div className="section-head" style={{ margin: "0 0 14px" }}>
+        <div className="section-title">Visibilidad de un vistazo</div>
+        <div className="section-desc">Señales reales · último escaneo 14 jul</div>
+        <div className="right"><Badge tone="pos">Franja «competitivo»</Badge></div>
+      </div>
+
+      <div className="hero-v2">
+        <div className="hv-gauge">
+          <Gauge value={SHOT_SCORE} size={116} stroke={12} />
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-4)", marginBottom: 6 }}>
+              Puntuación GEO
+            </div>
+            <Badge tone="pos">Franja «competitivo»</Badge>
+            <div style={{ marginTop: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+              <Sparkline data={SHOT_SCORE_TREND} w={100} h={26} color="var(--accent)" />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <Delta value={7} suffix=" pt" />
+                <span className="stat-hint">vs. escaneo anterior</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="hv-divider" />
+
+        <div className="hv-compose">
+          <div className="hv-block-label">Cómo se compone tu puntuación</div>
+          {SHOT_COMPONENTS.map((row) => (
+            <div className="compose-row" key={row.l}>
+              <div className="compose-top">
+                <span className="compose-l">
+                  {row.l}
+                  {row.info && <InfoTip text={row.info} />}
+                </span>
+                <span className="compose-v tnum">{row.v}%</span>
+              </div>
+              <div className="sov-bar" style={{ height: 7 }}>
+                <div className="sov-fill" style={{ width: `${row.v}%`, background: row.color }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="metrics-2col" style={{ marginTop: 12 }}>
+        {SHOT_METRICS.map((m) => (
+          <div key={m.key} className="wide-stat">
+            <div className="ws-left">
+              <div className="stat-label">{m.label}</div>
+              <div className="stat-value tnum">
+                {m.value}<span className="unit">{m.unit}</span>
+              </div>
+              {m.badge && (
+                <div style={{ marginTop: 4 }}>
+                  <span className={`badge badge-${m.badge.tone}`} style={{ fontSize: 11 }}>{m.badge.label}</span>
+                </div>
+              )}
+              {!m.hideDelta && (
+                <div className="ws-delta">
+                  <Delta value={m.delta} suffix=" pt" invert={m.invert} />
+                  <span className="stat-hint">vs. escaneo anterior</span>
+                </div>
+              )}
+              <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: m.badge || !m.hideDelta ? 6 : 2 }}>{m.hint}</p>
+            </div>
+            <div className="ws-spark">
+              {m.trend.length >= 2 ? (
+                <Sparkline data={m.trend} w={110} h={44} color={m.color} />
+              ) : (
+                <div style={{ width: 110, height: 44 }} />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -64,6 +236,7 @@ export default function HomePage() {
               { href: "#producto", label: "Producto" },
               { href: "#como", label: "Cómo funciona" },
               { href: "#recomendaciones", label: "Recomendaciones" },
+              { href: "/geo", label: "Qué es GEO" },
               { href: "/pricing", label: "Precios" },
               { href: "/blog", label: "Blog" }
             ]}
@@ -76,6 +249,7 @@ export default function HomePage() {
             <a href="#producto">Producto</a>
             <a href="#como">Cómo funciona</a>
             <a href="#recomendaciones">Recomendaciones</a>
+            <Link href="/geo">Qué es GEO</Link>
             <Link href="/pricing">Precios</Link>
             <Link href="/blog">Blog</Link>
           </div>
@@ -117,7 +291,6 @@ export default function HomePage() {
                 Analiza gratis <Icon name="arrRight" size={16} />
               </button>
             </div>
-            <EngineNote />
           </div>
         </div>
 
@@ -128,9 +301,9 @@ export default function HomePage() {
               <span className="bf-dot" style={{ background: "#f06360" }} />
               <span className="bf-dot" style={{ background: "#f6be4f" }} />
               <span className="bf-dot" style={{ background: "#5ac15a" }} />
-              <span className="bf-url"><Icon name="lock" size={11} className="mr-1.5" />app.lumira.ai/overview</span>
+              <span className="bf-url"><Icon name="lock" size={11} className="mr-1.5" />genscore.es/dashboard</span>
             </div>
-            <div className="lp-shot-ph">[ vista del panel ]</div>
+            <ProductShot />
           </div>
         </div>
       </header>
@@ -293,6 +466,7 @@ export default function HomePage() {
               <a href="#producto">Producto</a>
               <a href="#como">Cómo funciona</a>
               <a href="#recomendaciones">Recomendaciones</a>
+              <Link href="/geo">Qué es GEO</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/cookies">Cookies</Link>

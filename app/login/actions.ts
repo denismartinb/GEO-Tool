@@ -3,6 +3,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+const EMAIL_NOT_CONFIRMED_ERROR =
+  "Tu email todavía no está confirmado. Revisa tu bandeja de entrada y haz clic en el enlace que te enviamos.";
+
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -11,7 +14,8 @@ export async function login(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    const message = error.code === "email_not_confirmed" ? EMAIL_NOT_CONFIRMED_ERROR : error.message;
+    redirect(`/login?error=${encodeURIComponent(message)}`);
   }
 
   redirect("/dashboard");
