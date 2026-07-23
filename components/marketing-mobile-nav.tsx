@@ -1,10 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/icon";
 
-export function MarketingMobileNav({ links }: { links: Array<{ href: string; label: string }> }) {
+export function MarketingMobileNav({
+  links,
+  twoLine = false,
+  ctas
+}: {
+  links: Array<{ href: string; label: string }>;
+  /** Two-line burger glyph (v3 landing hero) instead of the default three-line one. */
+  twoLine?: boolean;
+  /** Extra actions (e.g. login/signup) rendered at the bottom of the drawer. */
+  ctas?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
 
   // Portal straight to <body>: .lp-nav-wrap is `position: sticky` with its
@@ -24,6 +34,7 @@ export function MarketingMobileNav({ links }: { links: Array<{ href: string; lab
                 {link.label}
               </a>
             ))}
+            {ctas ? <div className="lp-mobnav-ctas">{ctas}</div> : null}
           </nav>
         </>,
         document.body
@@ -33,7 +44,7 @@ export function MarketingMobileNav({ links }: { links: Array<{ href: string; lab
   return (
     <>
       <button type="button" className="lp-burger" onClick={() => setOpen(true)} aria-label="Abrir menú">
-        <Icon name="menu" size={20} />
+        <Icon name={twoLine ? "menu2" : "menu"} size={twoLine ? 22 : 20} />
       </button>
       {drawer}
     </>
