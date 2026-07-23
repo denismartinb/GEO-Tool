@@ -574,19 +574,32 @@ export default async function ProjectDetailPage({
               <Icon name="sparkles" size={18} />
             </div>
             <p className="summary-txt">
-              <b>{project.brand}</b> aparece en{" "}
-              <b>{brandMentions} de {totalResults} prompts</b> analizados.
+              GenScore detectó que <b>{project.brand}</b> aparece en{" "}
+              <b>{brandMentions} de {totalResults} prompts</b> ({computedMentionRate}%), con una{" "}
+              <b>puntuación GEO de {gaugeScore}/100</b>.
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
-                  {" "}Tu competidor más visible,{" "}
-                  <b>{topCompetitor.name}</b>, aparece en{" "}
-                  <span className="hl-neg">{topCompetitor.mentionRate}% de los prompts</span>.
+                  {" "}Tu rival más visible,{" "}
+                  <b>{topCompetitor.name}</b>, te saca ventaja:{" "}
+                  <span className="hl-neg">{topCompetitor.mentionRate}% de presencia</span> frente a
+                  tu {computedMentionRate}%.
                 </>
-              ) : null}
+              ) : citationScore === 0 ? (
+                <>
+                  {" "}Tu mayor freno son las citas:{" "}
+                  <span className="hl-neg">ninguna de las fuentes que usa la IA es tuya todavía</span>.
+                </>
+              ) : (
+                <>
+                  {" "}Hoy mantienes la{" "}
+                  <span className="hl-pos">mayor visibilidad</span> frente a tus competidores.
+                </>
+              )}
               {latestRecommendations?.length ? (
                 <>
-                  {" "}GenScore encontró{" "}
-                  <b>{latestRecommendations.length} acciones prioritarias</b> para mejorar tu visibilidad.
+                  {" "}GenScore ha priorizado{" "}
+                  <b>{latestRecommendations.length} {latestRecommendations.length === 1 ? "acción" : "acciones"}</b>{" "}
+                  para mejorar tu presencia en las respuestas de IA.
                 </>
               ) : null}
               {completedRunsCount < 2 && (

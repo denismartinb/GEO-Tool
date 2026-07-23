@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
@@ -198,25 +197,20 @@ export function CitationsClient({
   totalCited,
   yours,
   opportunities,
-  opportunityRows,
   engineTotals,
   citationScore,
-  brandLabel,
-  projectId
+  brandLabel
 }: {
   promptGroups: PromptGroup[];
   totalUrls: number;
   totalCited: number;
   yours: number;
   opportunities: number;
-  opportunityRows: CitationRow[];
   engineTotals: EngineTotal[];
   citationScore: number | null;
   brandLabel: string;
-  projectId: string;
 }) {
   const [open, setOpen] = useState<string | null>(null);
-  const [guide, setGuide] = useState(false);
   const [q, setQ] = useState("");
   const [topicFilter, setTopicFilter] = useState("all");
 
@@ -243,32 +237,38 @@ export function CitationsClient({
           <Icon name="cite" size={20} />
         </div>
         <div className="summary-txt" style={{ flex: 1 }}>
-          La IA citó <b>{totalUrls}</b> {totalUrls === 1 ? "URL distinta" : "URLs distintas"} al
-          responder tus prompts, con <b>{totalCited}</b> {totalCited === 1 ? "cita" : "citas"} en
-          total.
+          GenScore encontró <b>{totalUrls}</b> {totalUrls === 1 ? "URL distinta" : "URLs distintas"}{" "}
+          citadas por la IA al responder tus prompts (<b>{totalCited}</b>{" "}
+          {totalCited === 1 ? "cita" : "citas"} en total).
           {totalUrls > 0 && (
             <>
               {" "}
               {yours === 0 ? (
                 <>
-                  <span className="hl-neg">Ninguna es tuya</span> — todas alimentan a competidores
+                  <span className="hl-neg">Ninguna es tuya</span> — todas refuerzan a competidores
                   o a otras fuentes.
                 </>
               ) : yours === totalUrls ? (
                 <>
-                  <span className="hl-pos">Todas son tuyas</span> — buen dominio de tus propias
-                  páginas en las respuestas.
+                  <span className="hl-pos">Todas son tuyas</span>: dominas las fuentes que la IA
+                  usa para responder.
                 </>
               ) : (
                 <>
-                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>
-                  {" "}— el resto alimentan a competidores o a otras fuentes.
+                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>;
+                  {" "}el resto refuerzan a competidores o a otras fuentes.
                 </>
               )}
             </>
           )}
           {citationScore !== null && (
-            <> Tu puntuación de citas en el último escaneo es <b>{citationScore}/100</b>.</>
+            <> Tu puntuación de citas es <b>{citationScore}/100</b>.</>
+          )}
+          {opportunities > 0 && (
+            <>
+              {" "}Hay <b>{opportunities} {opportunities === 1 ? "fuente" : "fuentes"}</b> que citan a
+              un rival y no a {brandLabel}: tu lista de contactos para empezar a aparecer.
+            </>
           )}
           {engineTotals.length > 0 && (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
@@ -309,120 +309,7 @@ export function CitationsClient({
             </div>
           )}
         </div>
-        <button type="button" className="btn btn-soft btn-sm" onClick={() => setGuide((g) => !g)}>
-          <Icon name="sparkles" size={14} />
-          {guide ? "Ocultar guía" : "Cómo usar esto"}
-        </button>
       </div>
-
-      {/* Guide */}
-      {guide && (
-        <div className="cit-guide fade-in">
-          <div className="cit-guide-head">
-            <div className="cit-guide-ico">
-              <Icon name="sparkles" size={17} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="cit-guide-t">De páginas citadas a más visibilidad en IA</div>
-              <div className="cit-guide-d">
-                Las fuentes que cita la IA son tu hoja de ruta de contenido y enlaces. Tienes{" "}
-                <b>{opportunities} {opportunities === 1 ? "oportunidad" : "oportunidades"}</b>{" "}
-                donde la IA cita una fuente y {brandLabel} no aparece en esa respuesta.
-              </div>
-            </div>
-            <button
-              type="button"
-              className="cit-guide-x"
-              onClick={() => setGuide(false)}
-              title="Ocultar"
-            >
-              <Icon name="info" size={15} />
-            </button>
-          </div>
-          <div className="cit-tactics">
-            <div className="cit-tactic">
-              <div className="ct-num">
-                <Icon name="competitors" size={15} />
-              </div>
-              <div style={{ minWidth: 0 }}>
-                <div className="ct-t">Consigue menciones donde ya citan a tus rivales</div>
-                {opportunityRows.length > 0 ? (
-                  <>
-                    <div className="ct-d">
-                      Estas fuentes citan a un competidor y no a {brandLabel} — tu lista de
-                      outreach:
-                    </div>
-                    <ul className="cit-opp-list">
-                      {opportunityRows.map((r) => (
-                        <li key={r.id} className="cit-opp-item">
-                          <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                            <span className="cit-opp-domain">{r.domain}</span>
-                            <EngineChips engines={r.engines} />
-                          </span>
-                          <span className="cit-opp-meta">
-                            {r.engines.length >= 2 && (
-                              <span className="badge badge-accent" style={{ marginRight: 6 }}>
-                                Citado por {r.engines.length} motores
-                              </span>
-                            )}
-                            {r.cited} {r.cited === 1 ? "cita" : "citas"}
-                            {r.competitors.length > 0 && <> · cita a {r.competitors.join(", ")}</>}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : (
-                  <div className="ct-d">
-                    En este escaneo no hay fuentes que citen a un competidor sin mencionar a{" "}
-                    {brandLabel}.
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="cit-tactic">
-              <div className="ct-num">
-                <Icon name="prompts" size={15} />
-              </div>
-              <div>
-                <div className="ct-t">Crea contenido para los prompts que no cubres</div>
-                <div className="ct-d">
-                  Si una fuente externa responde a un prompt donde no apareces, crea una página
-                  equivalente — mejor estructurada y citable — para esa intención.
-                </div>
-              </div>
-            </div>
-            <div className="cit-tactic">
-              <div className="ct-num">
-                <Icon name="link" size={15} />
-              </div>
-              <div>
-                <div className="ct-t">Refuerza tus propias páginas citadas</div>
-                <div className="ct-d">
-                  Las URLs de tu marca ya funcionan: amplíalas con datos y FAQ claros para que la
-                  IA las cite en más prompts.
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Links these tactics to the real, evidence-backed action plans the
-              recommendation engine already generates for this exact gap
-              (pursue_citation_sources, add_citation_block…) instead of leaving
-              the tactics as generic unlinked advice
-              (docs/ux-qa-audit-2026-07.md, finding 5). */}
-          <div style={{ marginTop: 16 }}>
-            <Link
-              href={`/dashboard/projects/${projectId}/recommendations`}
-              className="btn btn-soft btn-sm"
-              style={{ display: "inline-flex" }}
-            >
-              <Icon name="sparkles" size={14} />
-              Ver el plan de acción para estas fuentes
-              <Icon name="arrRight" size={13} />
-            </Link>
-          </div>
-        </div>
-      )}
 
       {/* Toolbar */}
       <div className="pr-toolbar" style={{ marginTop: 16 }}>

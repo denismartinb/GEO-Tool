@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
 import { InfoTip } from "@/components/ui/info-tip";
+import { Icon } from "@/components/ui/icon";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import type { ResultRow, TopicGroup } from "./page";
 
@@ -212,6 +213,16 @@ export function PromptsClient({
     return a.brandMentioned ? 1 : -1;
   });
 
+  // Header insight: how many scanned prompts actually name the brand, and which
+  // topics carry / drag the brand's visibility. Derived from the same data
+  // already rendered in the table — no extra fetch.
+  const scannedGroups = flatGroups.length;
+  const brandPresent = flatGroups.filter((g) => g.brandMentioned).length;
+  const brandAbsent = scannedGroups - brandPresent;
+  const rankedTopics = [...topicGroups].sort((a, b) => b.visibilidad - a.visibilidad);
+  const bestTopic = rankedTopics[0] ?? null;
+  const worstTopic = rankedTopics.length > 1 ? rankedTopics[rankedTopics.length - 1] : null;
+
   function toggleTopic(cat: string) {
     setExpandedTopics((prev) => {
       const next = new Set(prev);
@@ -226,6 +237,51 @@ export function PromptsClient({
 
   return (
     <>
+      {/* Summary banner — unified with Overview / Citations / Recommendations */}
+      <div className="summary mt8" style={{ marginBottom: 16 }}>
+        <div className="summary-ico">
+          <Icon name="prompts" size={20} />
+        </div>
+        <div className="summary-txt" style={{ flex: 1 }}>
+          GenScore monitoriza{" "}
+          <b>{totalPrompts} {totalPrompts === 1 ? "prompt" : "prompts"}</b>
+          {hasTopics ? (
+            <>
+              {" "}agrupados en <b>{totalTopics} topics</b>
+            </>
+          ) : null}
+          .
+          {scannedGroups > 0 ? (
+            <>
+              {" "}Tu marca aparece en <b>{brandPresent} de {scannedGroups}</b>
+              {scannedPrompts < totalPrompts ? " escaneados" : ""}
+              {brandAbsent > 0 ? (
+                <>
+                  ; en{" "}
+                  <span className="hl-neg">
+                    {brandAbsent} {brandAbsent === 1 ? "sigue ausente" : "siguen ausentes"}
+                  </span>
+                  , donde la IA responde sin nombrarte.
+                </>
+              ) : (
+                <>
+                  {" "}—{" "}
+                  <span className="hl-pos">presente en todos los escaneados</span>.
+                </>
+              )}
+            </>
+          ) : (
+            <> Aún no hay resultados de escaneo para estos prompts.</>
+          )}
+          {hasTopics && bestTopic && worstTopic && bestTopic.category !== worstTopic.category ? (
+            <>
+              {" "}Tu topic más fuerte es «{bestTopic.category}» ({bestTopic.visibilidad}%); el más
+              flojo, «{worstTopic.category}» ({worstTopic.visibilidad}%).
+            </>
+          ) : null}
+        </div>
+      </div>
+
       {/* Modo flat sin topics */}
       {!hasTopics && (
         <>
@@ -323,25 +379,6 @@ export function PromptsClient({
       {/* Modo Topics */}
       {hasTopics && (
         <>
-          <p
-            style={{
-              fontSize: 13,
-              color: "var(--ink-3)",
-              marginBottom: 16,
-            }}
-          >
-            Monitorizas{" "}
-            <b style={{ color: "var(--ink)" }}>{totalPrompts} prompts</b>
-            {scannedPrompts < totalPrompts ? (
-              <span style={{ color: "var(--ink-3)" }}>
-                {" "}({scannedPrompts} escaneados en el último run)
-              </span>
-            ) : null}
-            {" "}agrupados en{" "}
-            <b style={{ color: "var(--ink)" }}>{totalTopics} topics</b>. Pulsa
-            un prompt para ver la respuesta de cada motor de IA.
-          </p>
-
           <div className="card">
             <div className="tbl-wrap">
             <table className="tbl topics-tbl">
