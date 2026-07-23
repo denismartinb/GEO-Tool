@@ -1,9 +1,12 @@
-# GenScore — Guía de identidad de marca (BRAND-1/BRAND-2)
+# GenScore — Guía de identidad de marca (BRAND-1/BRAND-2/BRAND-3 parcial)
 
 > Estado: BRAND-1 (activos + favicon + guía) y BRAND-2 (adopción del logo en
 > cabeceras + retirada de los logos ficticios de la landing) implementados.
-> Fase 3 (Open Graph en metadata, cabecera con logo en emails) sigue
-> pendiente de aprobación — ver "Plan de adopción".
+> BRAND-3 — mitad emails (cabecera con el logo real en los 8 emails
+> transaccionales y las 2 plantillas de Supabase Auth, PR #242,
+> `docs/launch-plan.md` fila 11) implementada. La otra mitad de BRAND-3
+> (Open Graph/Twitter metadata en `app/layout.tsx`) sigue pendiente de
+> aprobación — ver "Plan de adopción".
 
 ---
 
@@ -103,7 +106,7 @@ neutra y legible.
 | 3 | Logo duplicado a mano en **10 sitios** (sidebar, landing, legal shell, blog shell, `geo`, `pricing` y las 4 pantallas de auth), con tamaños inconsistentes (16/17 px). En `signup` y `signup/confirm` el icono ni siquiera era el de marca: un SVG de ajustes (engranaje) copiado por error | P2 (P1 en signup/confirm por el icono incorrecto) | ✅ Resuelto en BRAND-2 — los 10 sitios usan `BrandLogo`/`BrandMark`; icono incorrecto corregido |
 | 4 | **Sin Open Graph / Twitter image** — los enlaces compartidos salen sin imagen | P1 para marketing | Asset listo; conectar metadata = Fase 3 |
 | 5 | La sección de confianza de la landing muestra **logos de empresas ficticias** ("Northwind", "Quantix", "Beltway"…) | **P1 — viola "no fake product behavior"** y es lo contrario de "marca contrastada" | ✅ Resuelto en BRAND-2 — sustituido por los motores de IA reales que analiza el producto (Gemini, ChatGPT, Claude) |
-| 6 | Emails transaccionales: marca solo texto plano | P3 | Fase 3 (cabecera con logo) |
+| 6 | Emails transaccionales: marca solo texto plano | P3 | ✅ Resuelto en BRAND-3/BRANDED-EMAILS-1 (PR #242) — logo real rasterizado (`genscore-logo-white-email.png`) en los 8 emails de Resend y las 2 plantillas de Supabase Auth |
 | 7 | Paleta y tipografía | Correctas | Se codifican roles en este doc |
 
 ---
@@ -123,9 +126,15 @@ neutra y legible.
   logos ficticios de la landing (sustituidos por Gemini/ChatGPT/Claude, los
   motores reales que analiza el producto). Se eliminó la clase CSS
   `.brand-mark` (degradado) del sistema.
-- **Fase 3 — BRAND-3 (metadata + emails):** `openGraph`/`twitter` en
-  `app/layout.tsx` apuntando a `genscore-og.png`; cabecera con logo en los
-  emails de Resend. Pendiente de aprobación.
+- **Fase 3 — BRAND-3 (metadata + emails):**
+  - Emails (✅ implementado, PR #242 / BRANDED-EMAILS-1,
+    `docs/launch-plan.md` fila 11): cabecera con el logo real en los 8
+    emails transaccionales de Resend y las 2 plantillas de Supabase Auth
+    (registro, recuperación de contraseña) — como PNG rasterizado
+    (`public/brand/genscore-logo-white-email.png`), no SVG inline, porque
+    Outlook de escritorio no renderiza SVG en emails.
+  - `openGraph`/`twitter` en `app/layout.tsx` apuntando a `genscore-og.png`
+    — pendiente de aprobación.
 - **Fase 4 — polish (P3):** avatar sin degradado, revisión de estados vacíos
   y microcopy de marca. Pendiente de aprobación.
 
