@@ -74,7 +74,7 @@ export function LiveRunStatusCells({ projectId, initial }: { projectId: string; 
   const ok = Number(run.successful_prompts ?? 0);
   const okPct = total > 0 ? (ok / total) * 100 : 0;
   const hasFailed = run.status === "failed" || Number(run.failed_prompts ?? 0) > 0;
-  const barColor = run.status === "failed" ? "var(--warn)" : run.status === "completed" ? "var(--pos)" : "var(--accent)";
+  const barColor = run.status === "failed" ? "var(--warn)" : run.status === "completed" ? "var(--pos)" : "var(--brand-blue)";
 
   return (
     <>

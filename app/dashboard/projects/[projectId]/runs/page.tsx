@@ -434,7 +434,7 @@ export default async function RunsPage({
                 <b>Lanza el primer escaneo</b> desde la{" "}
                 <Link
                   href={`/dashboard/projects/${projectId}`}
-                  style={{ color: "var(--accent)", fontWeight: 700 }}
+                  style={{ color: "var(--brand-blue)", fontWeight: 700 }}
                 >
                   visión general
                 </Link>
@@ -478,7 +478,7 @@ export default async function RunsPage({
               background: "var(--surface-sunk)",
               display: "grid",
               placeItems: "center",
-              color: project.recurring_scans_enabled ? "var(--accent)" : "var(--ink-3)",
+              color: project.recurring_scans_enabled ? "var(--brand-blue)" : "var(--ink-3)",
               flexShrink: 0
             }}
           >
@@ -584,7 +584,7 @@ export default async function RunsPage({
                 gap: 5,
                 fontSize: 13,
                 fontWeight: 650,
-                color: "var(--accent)"
+                color: "var(--brand-blue)"
               }}
             >
               <Icon name="play" size={13} />
@@ -647,7 +647,7 @@ export default async function RunsPage({
                       ? "var(--warn)"
                       : run.status === "completed"
                       ? "var(--pos)"
-                      : "var(--accent)";
+                      : "var(--brand-blue)";
 
                   const geoScore =
                     run.status === "completed" ? (scoreByRunId.get(run.id) ?? null) : null;

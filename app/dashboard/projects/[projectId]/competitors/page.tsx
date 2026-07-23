@@ -299,7 +299,7 @@ export default async function CompetitorsPage({
   );
 
   const trendSeries: TrendSeries[] = [
-    { key: "brand", label: project.brand, color: "var(--accent)", isBrand: true },
+    { key: "brand", label: project.brand, color: "var(--brand-blue)", isBrand: true },
     ...competitorRows.map((c) => ({ key: c.id, label: c.name, color: c.color }))
   ];
 
@@ -360,7 +360,7 @@ export default async function CompetitorsPage({
                     <div className="ent">
                       <span
                         className="fav"
-                        style={{ background: "var(--accent)" }}
+                        style={{ background: "var(--brand-blue)" }}
                       >
                         {getInitial(project.brand)}
                       </span>
@@ -370,7 +370,7 @@ export default async function CompetitorsPage({
                           <span
                             style={{
                               fontSize: 11,
-                              color: "var(--accent)",
+                              color: "var(--brand-blue)",
                               fontWeight: 700,
                               marginLeft: 6
                             }}
@@ -395,7 +395,7 @@ export default async function CompetitorsPage({
                           className="sov-fill"
                           style={{
                             width: `${(brandSov / maxSov) * 100}%`,
-                            background: "var(--accent)"
+                            background: "var(--brand-blue)"
                           }}
                         />
                       </div>
@@ -573,7 +573,7 @@ export default async function CompetitorsPage({
               Sin datos de competencia todavía.{" "}
               <Link
                 href={`/dashboard/projects/${projectId}`}
-                style={{ color: "var(--accent)", fontWeight: 700 }}
+                style={{ color: "var(--brand-blue)", fontWeight: 700 }}
               >
                 Lanza el primer escaneo
               </Link>{" "}
@@ -641,7 +641,7 @@ export default async function CompetitorsPage({
                 gap: 5,
                 fontSize: 13,
                 fontWeight: 650,
-                color: "var(--accent)"
+                color: "var(--brand-blue)"
               }}
             >
               Volver a visión general
@@ -689,7 +689,7 @@ export default async function CompetitorsPage({
                 gap: 5,
                 fontSize: 13,
                 fontWeight: 650,
-                color: "var(--accent)"
+                color: "var(--brand-blue)"
               }}
             >
               <Icon name="play" size={13} />

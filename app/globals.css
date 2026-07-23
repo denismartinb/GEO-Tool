@@ -372,7 +372,7 @@ a {
 }
 
 .dot.run {
-  background: var(--accent);
+  background: var(--brand-blue);
 }
 
 .dot.err {
@@ -678,7 +678,7 @@ a {
 .badge-neg    { background: var(--neg-soft);  color: var(--neg-ink); }
 .badge-warn   { background: var(--warn-soft); color: var(--warn-ink); }
 .badge-info   { background: var(--info-soft); color: var(--info); }
-.badge-accent { background: var(--accent-soft); color: var(--accent-ink); }
+.badge-accent { background: rgba(37,99,235,.1); color: var(--brand-blue); }
 .badge-neutral { background: var(--surface-sunk); color: var(--ink-2); }
 .badge-outline { background: transparent; border: 1px solid var(--line); color: var(--ink-2); }
 
@@ -1026,7 +1026,7 @@ a {
 }
 .ie-dot.on-h { background: var(--p-high); }
 .ie-dot.on-m { background: var(--p-med); }
-.ie-dot.on-l { background: var(--accent); }
+.ie-dot.on-l { background: var(--brand-blue); }
 
 /* ============================================================
    Overview — share-of-voice bar
@@ -1060,6 +1060,7 @@ a {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
+  font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 .tbl th {
   padding: 8px 14px;
@@ -1079,7 +1080,7 @@ a {
 }
 .tbl td.num { text-align: right; }
 .tbl tr:last-child td { border-bottom: none; }
-.tbl .you { background: var(--accent-soft); }
+.tbl .you { background: rgba(37,99,235,.1); }
 .tbl .hoverable:hover { background: var(--surface-2); cursor: pointer; }
 
 /* Wide tables (Prompts) scroll inside their card on small screens instead of
