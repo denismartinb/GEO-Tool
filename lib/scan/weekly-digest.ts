@@ -5,14 +5,44 @@ import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
 import { sendWeeklyDigestEmail } from "@/lib/email/transactional";
 
 const TIME_BUDGET_MS = 45_000;
+const SCANS_THIS_WEEK_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 type RunScoreRow = {
   run_id: string;
   visibility_score: number | null;
+  citation_score: number | null;
   details_json: unknown;
 };
 
 type RankingEntry = { name: string; is_brand: boolean; avg_position: number; mention_count: number };
+
+type SubScores = {
+  /** presence — % of prompts where the brand was mentioned */
+  visibility: number | null;
+  /** authority — % of grounded prompts citing the brand's own domain */
+  citation: number | null;
+  /** standing — share of voice among brand + tracked competitor mentions */
+  standing: number | null;
+};
+
+/**
+ * Reads the already-computed sub-scores straight off the run row — no new
+ * formulas, same fields the Overview page's geo_score breakdown uses
+ * (lib/scoring/run-scoring.ts). null when a component was dropped for that
+ * run (e.g. no grounded rows for authority) rather than fabricating a value.
+ */
+function getSubScores(row: RunScoreRow): SubScores {
+  const details =
+    row.details_json && typeof row.details_json === "object"
+      ? (row.details_json as { geo_score?: { components?: Record<string, { value: number | null }> } })
+      : {};
+  const standing = details.geo_score?.components?.standing?.value ?? null;
+  return {
+    visibility: row.visibility_score,
+    citation: row.citation_score,
+    standing
+  };
+}
 
 /**
  * Biggest competitor mention-count swing between two runs, by absolute
@@ -48,12 +78,14 @@ function getTopCompetitorMover(
 }
 
 /**
- * Weekly digest per project (ALERTS-1 Fase 6b): GEO Score, its delta since
- * the previous scored run, the biggest competitor mention-count swing (if
- * available), and the top active recommendation. Only sent to a project
- * with at least 2 scored runs — with just 1, there is nothing real to
- * compare, and this digest is specifically about the week's evolution, not
- * a plain snapshot (that's what the Overview page is for).
+ * Weekly digest per project (ALERTS-1 Fase 6b, expanded 2026-07-19 to
+ * surface a real snapshot of every core-flow section — Overview,
+ * Competitors, Recommendations, Escaneos — instead of just the score
+ * delta). Only sent to a project with at least 2 scored runs — with just
+ * 1, there is nothing real to compare, and this digest is specifically
+ * about the week's evolution, not a plain snapshot (that's what the
+ * Overview page is for). Every field is read from data already computed by
+ * the scan pipeline or a plain count query — nothing here is invented.
  */
 export async function runWeeklyDigest({
   service,
@@ -100,7 +132,7 @@ export async function runWeeklyDigest({
 
     const { data: recentScores } = await service
       .from("run_scores")
-      .select("run_id, visibility_score, details_json")
+      .select("run_id, visibility_score, citation_score, details_json")
       .eq("project_id", project.id)
       .order("created_at", { ascending: false })
       .limit(2);
@@ -113,23 +145,51 @@ export async function runWeeklyDigest({
     const [currentRow, previousRow] = recentScores as RunScoreRow[];
     const currentScore = getEffectiveGeoScore(currentRow);
     const previousScore = getEffectiveGeoScore(previousRow);
+    const subScores = getSubScores(currentRow);
     const topMover = getTopCompetitorMover(currentRow, previousRow);
 
-    const { data: topRecommendation } = await service
-      .from("recommendations")
-      .select("title, description")
-      .eq("run_id", currentRow.run_id)
-      .eq("status", "active")
-      .order("priority_rank", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const scansSinceIso = new Date(Date.now() - SCANS_THIS_WEEK_WINDOW_MS).toISOString();
+
+    const [{ data: topRecommendation }, { count: activeRecommendationsCount }, { count: promptsCount }, { count: competitorsCount }, { count: scansThisWeek }] =
+      await Promise.all([
+        service
+          .from("recommendations")
+          .select("title, description")
+          .eq("run_id", currentRow.run_id)
+          .eq("status", "active")
+          .order("priority_rank", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        service
+          .from("recommendations")
+          .select("id", { count: "exact", head: true })
+          .eq("run_id", currentRow.run_id)
+          .eq("status", "active"),
+        service.from("project_prompts").select("id", { count: "exact", head: true }).eq("project_id", project.id).eq("is_active", true),
+        service
+          .from("project_competitors")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", project.id)
+          .eq("is_active", true),
+        service
+          .from("scan_runs")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", project.id)
+          .eq("status", "completed")
+          .gte("created_at", scansSinceIso)
+      ]);
 
     const email = emailByOwnerId.get(project.owner_user_id as string)!;
     await sendWeeklyDigestEmail(email, project.domain as string, {
       currentScore,
       previousScore,
+      subScores,
       topMover,
-      recommendation: topRecommendation ?? null
+      recommendation: topRecommendation ?? null,
+      activeRecommendationsCount: activeRecommendationsCount ?? 0,
+      promptsCount: promptsCount ?? 0,
+      competitorsCount: competitorsCount ?? 0,
+      scansThisWeek: scansThisWeek ?? 0
     });
     sent += 1;
   }
