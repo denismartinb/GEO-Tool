@@ -246,7 +246,7 @@ export default function HomePage() {
       {/* HERO — nav + promo strip integrated into the same gradient ground
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
-        <div className="lp-promo">7 días de Pro · sin tarjeta</div>
+        <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
         <nav className="lp-nav lp-nav--hero">
           <div className="lp-logo">
             <BrandLogo size={22} />
