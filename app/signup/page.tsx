@@ -34,14 +34,14 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         <form action={signup} className="space-y-3">
           <div>
             <Label htmlFor="email">Email de trabajo</Label>
-            <Input id="email" name="email" type="email" required placeholder="nombre@empresa.com" />
+            <Input id="email" name="email" type="email" required placeholder="nombre@empresa.com" className="auth-input-v3" />
           </div>
           <div>
             <Label htmlFor="password">Contraseña</Label>
-            <Input id="password" name="password" type="password" required minLength={8} />
+            <Input id="password" name="password" type="password" required minLength={8} className="auth-input-v3" />
           </div>
           {params.error ? <p className="feedback error">{params.error}</p> : null}
-          <Button type="submit" className="w-full">
+          <Button type="submit" className="w-full auth-btn-v3">
             Crear cuenta gratis
           </Button>
         </form>
