@@ -642,6 +642,13 @@ export default async function ProjectDetailPage({
       affectedPromptIds: affectedPromptIds(rec.evidence_json)
     }))
   );
+  // Rounded for display (the mockup's "+14" is a clean integer, not
+  // "+13.87") — a delta that rounds down to 0 isn't worth headlining, so
+  // that case falls back to the real recommendation count instead.
+  const roundedJointPoints =
+    jointPotentialPoints && Math.round(jointPotentialPoints.deltaPoints) > 0
+      ? Math.round(jointPotentialPoints.deltaPoints)
+      : null;
 
   /* ---- render ---- */
   return (
@@ -1038,9 +1045,9 @@ export default async function ProjectDetailPage({
               <div className="card ov2-opps">
                 <div className="ov2-opps-hero">
                   <div className="ov2-opps-gain">
-                    {jointPotentialPoints ? (
+                    {roundedJointPoints !== null ? (
                       <>
-                        <div className="ov2-opps-gain-n">+{jointPotentialPoints.deltaPoints}</div>
+                        <div className="ov2-opps-gain-n">+{roundedJointPoints}</div>
                         <div className="ov2-opps-gain-l">Puntos potenciales</div>
                       </>
                     ) : (
@@ -1059,7 +1066,7 @@ export default async function ProjectDetailPage({
                         : "Acciones priorizadas para ti"}
                     </div>
                     <div className="ov2-opps-s">
-                      {jointPotentialPoints
+                      {roundedJointPoints !== null
                         ? "Techo optimista si resuelves estas acciones — tu próximo escaneo lo confirma."
                         : topCompetitor && topCompetitor.mentionRate > computedMentionRate
                           ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
@@ -1069,19 +1076,28 @@ export default async function ProjectDetailPage({
                 </div>
                 <div className="ov2-opps-list">
                   {latestRecommendations.map((rec) => {
-                    const priority = (rec.priority_rank ?? 1) <= 2 ? "high" : (rec.priority_rank ?? 1) <= 4 ? "med" : "low";
-                    const dotColor = priority === "high" ? "var(--p-high)" : priority === "med" ? "var(--p-med)" : "var(--p-low)";
+                    const effort = (rec.effort ?? "medium").toLowerCase();
+                    const isQuick = effort === "low";
                     const impact = (rec.impact ?? "low").toLowerCase();
                     const impactLabel = impact === "high" ? "Alto" : impact === "medium" || impact === "med" ? "Medio" : "Bajo";
-                    const points = potentialPointsByRecId.get(rec.id);
+                    const rawPoints = potentialPointsByRecId.get(rec.id);
+                    const displayPoints = rawPoints !== null && rawPoints !== undefined ? Math.round(rawPoints) : null;
                     return (
                       <div key={rec.id} className="ov2-opp">
-                        <span className="ov2-opp-dot" style={{ background: dotColor }} />
-                        <span className="ov2-opp-t">{rec.title}</span>
+                        <span className="ov2-opp-dot" style={{ background: isQuick ? "var(--pos)" : "var(--brand-neg)" }} />
+                        <span className="ov2-opp-t">
+                          <span>{rec.title}</span>
+                          {isQuick && <span className="ov2-opp-quick">rápida</span>}
+                        </span>
                         <span className="ov2-opp-r">
-                          {points !== null && points !== undefined && points > 0
-                            ? `hasta +${points}pt`
-                            : `Impacto ${impactLabel.toLowerCase()}`}
+                          {displayPoints !== null && displayPoints > 0 ? (
+                            <>
+                              <span className="n">+{displayPoints}</span>
+                              <span className="u">pt</span>
+                            </>
+                          ) : (
+                            <span className="impact-lbl">Impacto {impactLabel.toLowerCase()}</span>
+                          )}
                         </span>
                       </div>
                     );
