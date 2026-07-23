@@ -2763,6 +2763,21 @@ textarea.add-prompts-text-input {
    / `.lp-nav--hero` so `/geo` (`.gx-hero`) and `/pricing` (`.price-hero`)
    keep the original `.lp-hero` look untouched.
    ------------------------------------------------------------------ */
+/* Body/UI copy in this hero uses Figtree (--font-body) — thinner, more
+   elegant than the site-wide Hanken Grotesk default at the same weight,
+   matching the approved mockup (founder feedback: "fuente más fina"). The
+   headline (.lp-h1) keeps the site's existing display weight untouched. */
+.lp-hero--home .lp-lead,
+.lp-nav--hero .lp-nav-links a,
+.lp-nav-btn,
+.lp-field-input,
+.lp-field-ghost,
+.lp-cta,
+.lp-cta-soft,
+.lp-promo {
+  font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 .lp-hero--home {
   padding: 0 0 64px;
   background: linear-gradient(180deg, #f4f7ff 0%, #f7f8fb 60%);
@@ -2770,7 +2785,7 @@ textarea.add-prompts-text-input {
 .lp-hero--home .lp-hero-content { padding-top: 44px; }
 
 .lp-promo {
-  text-align: center; font-size: 12.5px; font-weight: 650; color: #8a5a08;
+  text-align: center; font-size: 12.5px; font-weight: 600; color: #8a5a08;
   background: #fff3dc; padding: 8px 14px;
 }
 
@@ -2779,7 +2794,7 @@ textarea.add-prompts-text-input {
 }
 .lp-nav-btn {
   display: inline-flex; align-items: center; height: 36px; padding: 0 15px;
-  border-radius: 999px; font-size: 13.5px; font-weight: 650; color: var(--ink-2);
+  border-radius: 999px; font-size: 13.5px; font-weight: 600; color: var(--ink-2);
   background: none; border: 1px solid transparent; white-space: nowrap;
 }
 .lp-nav-btn:hover { background: rgba(11,20,38,.05); color: var(--ink); }
@@ -2799,22 +2814,22 @@ textarea.add-prompts-text-input {
 .lp-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
 .lp-field-ico { color: var(--ink-4); flex: 0 0 auto; }
 .lp-field-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
-  font-size: 15.5px; font-weight: 550; color: var(--ink); height: 40px; }
+  font-size: 15.5px; font-weight: 500; color: var(--ink); height: 40px; }
 .lp-field-ghost { position: absolute; left: 44px; top: 6px; bottom: 6px; display: flex; align-items: center;
-  color: var(--ink-4); font-size: 15.5px; font-weight: 450; pointer-events: none; line-height: 1; }
+  color: var(--ink-4); font-size: 15.5px; font-weight: 400; pointer-events: none; line-height: 1; }
 .lp-field-ghost .type-caret { background: var(--brand-blue); }
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .lp-cta {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 650;
+  height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
   background: var(--brand-blue); color: #fff; border: 1px solid var(--brand-blue);
   white-space: nowrap; transition: background .13s;
 }
 .lp-cta:hover { background: #1d4ed8; color: #fff; }
 .lp-cta-soft {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-  height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 650;
+  height: 44px; padding: 0 20px; border-radius: 999px; font-size: 14.5px; font-weight: 600;
   background: rgba(37,99,235,.08); color: var(--brand-blue); border: 1px solid transparent;
   white-space: nowrap; transition: background .13s;
 }
