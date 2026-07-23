@@ -2887,7 +2887,10 @@ textarea.add-prompts-text-input {
 }
 .lp-cta-soft:hover { background: rgba(37,99,235,.14); }
 
-.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+/* Pinned to the bottom of the drawer (margin-top: auto in the flex column)
+   instead of following right after the links — founder feedback: the CTAs
+   read as more prominent anchored low, like Semrush's mobile menu. */
+.lp-mobnav-ctas { display: flex; flex-direction: column; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line-soft); }
 .lp-mobnav-ctas .lp-cta, .lp-mobnav-ctas .lp-cta-soft { width: 100%; }
 
 .lp-trust { padding: 40px 0 8px; text-align: center; }
