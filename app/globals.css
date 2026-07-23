@@ -1281,12 +1281,12 @@ a {
 /* 1 · Insight banner */
 .ov2-insight {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-start;
-  padding: 12px 13px;
+  padding: 15px 16px;
   background: linear-gradient(180deg, rgba(37, 99, 235, .07), rgba(37, 99, 235, .03));
   border: 1px solid rgba(37, 99, 235, .16);
-  border-radius: 13px;
+  border-radius: 14px;
 }
 .ov2-insight-ico {
   flex: 0 0 auto;
@@ -1310,9 +1310,9 @@ a {
 .ov2-gauge-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 18px;
-  margin-top: 11px;
+  gap: 18px;
+  padding: 20px 22px;
+  margin-top: 14px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -1326,8 +1326,8 @@ a {
   text-transform: uppercase;
   letter-spacing: .05em;
 }
-.ov2-gauge-badges { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 6px 0 8px; }
-.ov2-gauge-trend-cap { font-size: 10.5px; color: var(--ink-4); font-weight: 600; margin-top: 2px; }
+.ov2-gauge-badges { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 8px 0 10px; }
+.ov2-gauge-trend-cap { font-size: 10.5px; color: var(--ink-4); font-weight: 600; margin-top: 4px; }
 
 /* 3 · Section labels */
 .ov2-sec-lbl {
@@ -1336,7 +1336,7 @@ a {
   letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--ink-4);
-  margin: 22px 2px 9px;
+  margin: 30px 2px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1353,17 +1353,17 @@ a {
 }
 
 /* KPI carousel */
-.ov2-kpi-car { display: flex; gap: 9px; overflow-x: auto; padding-bottom: 4px; }
+.ov2-kpi-car { display: flex; gap: 11px; overflow-x: auto; padding-bottom: 4px; }
 .ov2-kpi-car::-webkit-scrollbar { height: 0; }
 .ov2-kpi {
   flex: 0 0 auto;
-  width: 150px;
-  padding: 13px 14px;
+  width: 158px;
+  padding: 16px 16px;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 13px;
 }
-.ov2-kpi-k { font-size: 11px; color: var(--ink-3); font-weight: 650; margin-bottom: 6px; }
+.ov2-kpi-k { font-size: 11px; color: var(--ink-3); font-weight: 650; margin-bottom: 8px; }
 .ov2-kpi-v {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
   font-size: 24px;
@@ -1377,13 +1377,13 @@ a {
 }
 .ov2-kpi-v small { font-size: 13px; color: var(--ink-4); font-weight: 700; }
 .ov2-kpi-v.txt { font-size: 17px; }
-.ov2-kpi-foot { margin-top: 7px; display: flex; align-items: center; gap: 5px; }
-.ov2-senti-bar { display: flex; gap: 2px; margin-top: 8px; }
+.ov2-kpi-foot { margin-top: 9px; display: flex; align-items: center; gap: 5px; }
+.ov2-senti-bar { display: flex; gap: 2px; margin-top: 10px; }
 .ov2-senti-bar i { height: 5px; border-radius: 99px; display: block; }
-.ov2-senti-cap { font-size: 10px; color: var(--ink-4); font-weight: 600; margin-top: 5px; }
+.ov2-senti-cap { font-size: 10px; color: var(--ink-4); font-weight: 600; margin-top: 6px; }
 
 /* 4 · Engine bars */
-.ov2-engbar { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.ov2-engbar { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
 .ov2-engbar:last-child { margin-bottom: 0; }
 .ov2-engbar .nm { width: 92px; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 650; color: var(--ink); flex-shrink: 0; }
 .ov2-eng-ico { width: 15px; height: 15px; flex: 0 0 auto; display: grid; place-items: center; }
@@ -1418,7 +1418,7 @@ a {
   text-align: center; font-size: 9.5px; font-weight: 700; color: var(--ink-4);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.ov2-cmp-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: 1px solid var(--line-soft); }
+.ov2-cmp-row { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid var(--line-soft); }
 .ov2-cmp-row:last-child { border-bottom: none; }
 .ov2-cmp-row.you { background: var(--brand-blue-soft); }
 .ov2-cmp-n { width: 16px; font-size: 12px; font-weight: 750; color: var(--ink-3); text-align: center; flex: 0 0 auto; }
@@ -1446,11 +1446,11 @@ a {
 /* 6 · Oportunidades (light card, matches prototype) */
 .ov2-opps { overflow: hidden; }
 .ov2-opps-hero {
-  display: flex; align-items: center; gap: 14px; padding: 15px;
+  display: flex; align-items: center; gap: 16px; padding: 18px;
   background: linear-gradient(135deg, rgba(37, 99, 235, .09), rgba(37, 99, 235, .02));
   border-bottom: 1px solid var(--line-soft);
 }
-.ov2-opps-gain { text-align: center; flex: 0 0 auto; padding-right: 14px; border-right: 1px solid rgba(37, 99, 235, .16); }
+.ov2-opps-gain { text-align: center; flex: 0 0 auto; padding-right: 16px; border-right: 1px solid rgba(37, 99, 235, .16); }
 .ov2-opps-gain-n {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
   font-size: 30px; font-weight: 800; color: var(--brand-blue); letter-spacing: -.02em; line-height: 1;
@@ -1458,8 +1458,8 @@ a {
 .ov2-opps-gain-l { font-size: 9.5px; color: var(--ink-4); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-top: 5px; }
 .ov2-opps-h { font-size: 14px; font-weight: 750; color: var(--ink); }
 .ov2-opps-s { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
-.ov2-opps-list { padding: 6px 5px; }
-.ov2-opp { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
+.ov2-opps-list { padding: 8px 6px; }
+.ov2-opp { display: flex; align-items: center; gap: 11px; padding: 11px 13px; }
 .ov2-opp-dot { width: 7px; height: 7px; border-radius: 99px; flex: 0 0 auto; }
 .ov2-opp-t { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ov2-opp-r { font-size: 11px; font-weight: 700; color: var(--brand-blue); flex: 0 0 auto; }

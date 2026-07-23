@@ -175,12 +175,16 @@ function EngineGlyph({ provider }: { provider: string }) {
         </svg>
       );
     case "openai":
-      // Simplified, non-literal knot stand-in — recognizable as "the other
-      // engine" without reproducing the trademarked mark 1:1.
+      // Six-petal rosette (overlapping circles) — evokes the ChatGPT knot
+      // without reproducing the trademarked mark 1:1.
       return (
-        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round">
-          <path d="M12 4.5a4 4 0 0 1 6.9 2.8 4 4 0 0 1-1 6.8 4 4 0 0 1-6.9 2.8 4 4 0 0 1-6.9-2.8 4 4 0 0 1 1-6.8A4 4 0 0 1 12 4.5Z" />
-          <path d="M12 8v4l3.4 2" />
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.3">
+          <circle cx="12" cy="7.5" r="4.2" />
+          <circle cx="15.9" cy="9.75" r="4.2" />
+          <circle cx="15.9" cy="14.25" r="4.2" />
+          <circle cx="12" cy="16.5" r="4.2" />
+          <circle cx="8.1" cy="14.25" r="4.2" />
+          <circle cx="8.1" cy="9.75" r="4.2" />
         </svg>
       );
     case "claude":
@@ -853,7 +857,7 @@ export default async function ProjectDetailPage({
 
           {/* 4 · Posicionamiento por motores de IA */}
           <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
-          <div className="card" style={{ padding: 14 }}>
+          <div className="card" style={{ padding: 18 }}>
             {engineBreakdown.length > 0 ? (
               engineBreakdown.map((e) => {
                 const meta = getEngineMeta(e.provider);
@@ -889,7 +893,7 @@ export default async function ProjectDetailPage({
           {competitorRows.length > 0 ? (
             <>
               {brandPositionAvailable && posbarsData.length > 0 && (
-                <div className="card" style={{ padding: "13px 13px 4px" }}>
+                <div className="card" style={{ padding: "17px 16px 6px" }}>
                   <div className="ov2-pm-lbl">Tu posición media</div>
                   <div className="ov2-pm-val">
                     {brandRank ?? "—"}<small> / {totalRanked}</small>
@@ -903,7 +907,7 @@ export default async function ProjectDetailPage({
                   </div>
                 </div>
               )}
-              <div className="card" style={{ marginTop: brandPositionAvailable && posbarsData.length > 0 ? 9 : 0 }}>
+              <div className="card" style={{ marginTop: brandPositionAvailable && posbarsData.length > 0 ? 11 : 0 }}>
                 {competitiveList.map((row) => {
                   const favicon = faviconUrl(row.domain);
                   const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
