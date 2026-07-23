@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "./run-scoring";
+import {
+  computeJointPotentialPoints,
+  computeRecommendationPotentialPoints,
+  computeRunScoresFromResults,
+  getEffectiveGeoScore,
+  isQuantifiableRecommendationType,
+  SCORING_VERSION
+} from "./run-scoring";
 
 type ScoreInputRow = Parameters<typeof computeRunScoresFromResults>[0][number];
 
@@ -915,5 +922,294 @@ describe("getEffectiveGeoScore", () => {
     const score = getEffectiveGeoScore({ visibility_score: null, details_json: null });
 
     expect(score).toBe(0);
+  });
+});
+
+/**
+ * RECS-POTENTIAL-1 — real "potential score points" (docs/adr/0016).
+ * `row()`/`ownDomainCitation()`/`thirdPartyCitation()` from the top of this
+ * file are reused so the counterfactual is exercised against the exact same
+ * row shape and helpers as the rest of the scoring engine's tests.
+ */
+describe("isQuantifiableRecommendationType", () => {
+  it("is true for the 5 types with a real 1:1 score-component mapping", () => {
+    expect(isQuantifiableRecommendationType("increase_brand_visibility")).toBe(true);
+    expect(isQuantifiableRecommendationType("close_competitor_gap")).toBe(true);
+    expect(isQuantifiableRecommendationType("increase_brand_prominence")).toBe(true);
+    expect(isQuantifiableRecommendationType("add_citation_block")).toBe(true);
+    expect(isQuantifiableRecommendationType("pursue_citation_sources")).toBe(true);
+  });
+
+  it("is false for types with no defensible 1:1 component mapping", () => {
+    expect(isQuantifiableRecommendationType("create_faq_section")).toBe(false);
+    expect(isQuantifiableRecommendationType("strengthen_brand_entity_clarity")).toBe(false);
+    expect(isQuantifiableRecommendationType("track_emerging_competitor")).toBe(false);
+    expect(isQuantifiableRecommendationType("address_negative_narrative")).toBe(false);
+    expect(isQuantifiableRecommendationType("unknown_future_type")).toBe(false);
+  });
+});
+
+describe("computeRecommendationPotentialPoints", () => {
+  // 10 fully-extracted, error-free rows -> confidence "medium" (2..19 clean
+  // results), so every scenario below clears the confidence gate on its own
+  // merits and isolates the counterfactual math being tested.
+  function baseline(): ReturnType<typeof row>[] {
+    const mentioned = Array.from({ length: 5 }, (_, i) =>
+      row({
+        brand_snapshot: "MiMarca",
+        id: `mentioned-${i}`,
+        brand_mentioned: true,
+        citation_found: true,
+        extracted_json: { brand: { mentioned: true, position: 1 }, competitors: [], citations: [ownDomainCitation()] }
+      })
+    );
+    const absentNoCompetitor = Array.from({ length: 3 }, (_, i) =>
+      row({
+        brand_snapshot: "MiMarca",
+        id: `absent-${i}`,
+        brand_mentioned: false,
+        extracted_json: { brand: { mentioned: false, position: null }, competitors: [], citations: [] }
+      })
+    );
+    const absentWithCompetitor = Array.from({ length: 2 }, (_, i) =>
+      row({
+        brand_snapshot: "MiMarca",
+        id: `displaced-${i}`,
+        brand_mentioned: false,
+        mentioned_competitors_count: 1,
+        extracted_json: {
+          brand: { mentioned: false, position: null },
+          competitors: [{ name: "Rival", mentioned: true, position: 1 }],
+          citations: []
+        }
+      })
+    );
+    return [...mentioned, ...absentNoCompetitor, ...absentWithCompetitor];
+  }
+
+  it("returns null for a non-quantifiable recommendation type", () => {
+    const result = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "create_faq_section", ["absent-0"]);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when there are no affected prompts", () => {
+    const result = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "increase_brand_visibility", []);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when confidence is low (extraction errors present)", () => {
+    const rows = baseline();
+    rows[0] = { ...rows[0], extraction_error: "timeout" };
+    const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "increase_brand_visibility", ["absent-0"]);
+    expect(result).toBeNull();
+  });
+
+  it("increase_brand_visibility: resolving an absent-brand prompt yields a positive delta", () => {
+    const result = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "increase_brand_visibility", ["absent-0"]);
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBeGreaterThan(0);
+  });
+
+  it("close_competitor_gap: resolving a displaced prompt yields a positive delta", () => {
+    const result = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "close_competitor_gap", ["displaced-0"]);
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBeGreaterThan(0);
+  });
+
+  it("increase_brand_visibility and close_competitor_gap use the identical presence+standing mutation, so an equivalent single prompt yields the same delta", () => {
+    // Both types are classified as "presence" kind (RECOMMENDATION_POTENTIAL_KIND):
+    // brand_mentioned -> true. standing = brandMentionedCount / (brandMentionedCount
+    // + totalCompetitorMentions) depends only on the totals, not on whether the
+    // resolved prompt itself carried a competitor mention, so resolving one
+    // "displaced" prompt or one "absent, no competitor" prompt moves both
+    // presence and standing by the same amount.
+    const visibilityDelta = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "increase_brand_visibility", ["absent-0"])!.deltaPoints;
+    const competitorGapDelta = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "close_competitor_gap", ["displaced-0"])!.deltaPoints;
+    expect(competitorGapDelta).toBe(visibilityDelta);
+  });
+
+  it("increase_brand_prominence: promoting a mentioned-but-poorly-ranked prompt to position 1 yields a positive delta", () => {
+    const rows = baseline();
+    rows.push(
+      row({
+        brand_snapshot: "MiMarca",
+        id: "poorly-ranked",
+        brand_mentioned: true,
+        extracted_json: {
+          brand: { mentioned: true, position: 4 },
+          competitors: [{ name: "Rival", mentioned: true, position: 1 }],
+          citations: []
+        }
+      })
+    );
+    const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "increase_brand_prominence", ["poorly-ranked"]);
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBeGreaterThan(0);
+  });
+
+  it("add_citation_block: injecting an own-domain citation on a grounded row yields a positive delta", () => {
+    const rows = baseline();
+    rows.push(
+      row({
+        brand_snapshot: "MiMarca",
+        id: "uncited",
+        brand_mentioned: true,
+        citation_found: false,
+        provider: "gemini",
+        extracted_json: { brand: { mentioned: true, position: 2 }, competitors: [], citations: [] }
+      })
+    );
+    const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "add_citation_block", ["uncited"]);
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBeGreaterThan(0);
+  });
+
+  it("add_citation_block: an ungrounded row (no real grounding possible) yields no delta", () => {
+    const rows = baseline();
+    rows.push(
+      row({
+        brand_snapshot: "MiMarca",
+        id: "uncited-ungrounded",
+        brand_mentioned: true,
+        citation_found: false,
+        provider: "claude",
+        extracted_json: { brand: { mentioned: true, position: 2 }, competitors: [], citations: [] }
+      })
+    );
+    const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "add_citation_block", ["uncited-ungrounded"]);
+    // Still non-null (the type is quantifiable and the run has a composite),
+    // but the mutation is a structural no-op on an ungrounded row, so the
+    // counterfactual score equals the real score.
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBe(0);
+  });
+
+  it("pursue_citation_sources: same mechanism as add_citation_block (own-domain citation on a grounded row)", () => {
+    const rows = baseline();
+    rows.push(
+      row({
+        brand_snapshot: "MiMarca",
+        id: "third-party-only",
+        brand_mentioned: false,
+        citation_found: true,
+        provider: "gemini",
+        extracted_json: {
+          brand: { mentioned: false, position: null },
+          competitors: [],
+          citations: [thirdPartyCitation()]
+        }
+      })
+    );
+    const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "pursue_citation_sources", ["third-party-only"]);
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBeGreaterThan(0);
+  });
+
+  it("never returns a negative delta even for an already-resolved prompt", () => {
+    const result = computeRecommendationPotentialPoints(baseline(), PROJECT_DOMAIN, "increase_brand_visibility", ["mentioned-0"]);
+    expect(result).not.toBeNull();
+    expect(result!.deltaPoints).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("computeJointPotentialPoints", () => {
+  function baseline(): ReturnType<typeof row>[] {
+    return [
+      ...Array.from({ length: 5 }, (_, i) =>
+        row({
+        brand_snapshot: "MiMarca",
+          id: `mentioned-${i}`,
+          brand_mentioned: true,
+          citation_found: true,
+          extracted_json: { brand: { mentioned: true, position: 1 }, competitors: [], citations: [ownDomainCitation()] }
+        })
+      ),
+      row({
+        brand_snapshot: "MiMarca",
+        id: "gap-a",
+        brand_mentioned: false,
+        mentioned_competitors_count: 1,
+        extracted_json: {
+          brand: { mentioned: false, position: null },
+          competitors: [{ name: "Rival A", mentioned: true, position: 1 }],
+          citations: []
+        }
+      }),
+      row({
+        brand_snapshot: "MiMarca",
+        id: "gap-b",
+        brand_mentioned: false,
+        mentioned_competitors_count: 1,
+        extracted_json: {
+          brand: { mentioned: false, position: null },
+          competitors: [{ name: "Rival B", mentioned: true, position: 1 }],
+          citations: []
+        }
+      })
+    ];
+  }
+
+  it("returns null when no recommendation in the list is quantifiable", () => {
+    const result = computeJointPotentialPoints(baseline(), PROJECT_DOMAIN, [
+      { recommendationType: "create_faq_section", affectedPromptIds: ["gap-a"] }
+    ]);
+    expect(result).toBeNull();
+  });
+
+  it("the joint delta of two DISJOINT recommendations is the resolution of both prompts together", () => {
+    const rows = baseline();
+    const joint = computeJointPotentialPoints(rows, PROJECT_DOMAIN, [
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] },
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-b"] }
+    ]);
+    const onlyA = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "close_competitor_gap", ["gap-a"]);
+    const onlyB = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "close_competitor_gap", ["gap-b"]);
+
+    expect(joint).not.toBeNull();
+    // Disjoint prompts: resolving both together is at least as good as
+    // either alone (monotonic), and should land close to (not necessarily
+    // exactly, since geo_score is non-linear) the sum of the two standalone
+    // deltas — the key invariant is it doesn't UNDER-count real, non-
+    // overlapping gains.
+    expect(joint!.deltaPoints).toBeGreaterThanOrEqual(Math.max(onlyA!.deltaPoints, onlyB!.deltaPoints));
+  });
+
+  it("the joint delta of two OVERLAPPING recommendations does not double-count the shared prompt", () => {
+    const rows = baseline();
+    const joint = computeJointPotentialPoints(rows, PROJECT_DOMAIN, [
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] },
+      // A second "recommendation" that claims the SAME prompt as the first
+      // — this is the double-counting scenario the aggregate must collapse
+      // (e.g. two dominant-competitor cards both citing the same prompt).
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] }
+    ]);
+    const onlyA = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "close_competitor_gap", ["gap-a"]);
+
+    expect(joint).not.toBeNull();
+    // The union of {gap-a} and {gap-a} is just {gap-a}, so the joint delta
+    // must equal the single standalone delta, NOT double it.
+    expect(joint!.deltaPoints).toBe(onlyA!.deltaPoints);
+  });
+
+  it("joint delta never exceeds the sum of the standalone deltas (the overlap ceiling)", () => {
+    const rows = baseline();
+    const joint = computeJointPotentialPoints(rows, PROJECT_DOMAIN, [
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] },
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a", "gap-b"] }
+    ]);
+    const onlyA = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "close_competitor_gap", ["gap-a"]);
+    const aAndB = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "close_competitor_gap", ["gap-a", "gap-b"]);
+
+    expect(joint).not.toBeNull();
+    expect(joint!.deltaPoints).toBeLessThanOrEqual(onlyA!.deltaPoints + aAndB!.deltaPoints);
+  });
+
+  it("returns null when confidence is low", () => {
+    const rows = baseline();
+    rows[0] = { ...rows[0], extraction_error: "timeout" };
+    const result = computeJointPotentialPoints(rows, PROJECT_DOMAIN, [
+      { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] }
+    ]);
+    expect(result).toBeNull();
   });
 });
