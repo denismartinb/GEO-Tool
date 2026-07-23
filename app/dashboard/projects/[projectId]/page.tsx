@@ -499,7 +499,15 @@ export default async function ProjectDetailPage({
     isBrand: boolean;
     avgPosition: number | null;
     sov: number;
+    /** Real rank among ranked entities (1-based), or null when unavailable. */
+    rank: number | null;
   };
+  // Single source of truth for BOTH the position-bar chart and the ranked
+  // list below it — both panels must show the same entities in the same
+  // order, or the two numbers ("posición 2" on the bar vs. a different row
+  // in the list) read as contradictory (founder-reported confusion,
+  // real-data case: 18 competitors made the old "brand pinned + rest by
+  // SOV" list diverge completely from the position-ranked bars).
   const panoramaRows: PanoramaRow[] = brandPositionAvailable
     ? brandPositionRanking.map((entry, i) => {
         if (entry.is_brand) {
@@ -509,7 +517,8 @@ export default async function ProjectDetailPage({
             domain: project.domain,
             isBrand: true,
             avgPosition: n(entry.avg_position),
-            sov: brandSov
+            sov: brandSov,
+            rank: i + 1
           };
         }
         const match = competitorRows.find(
@@ -521,15 +530,16 @@ export default async function ProjectDetailPage({
           domain: match?.domain ?? null,
           isBrand: false,
           avgPosition: n(entry.avg_position),
-          sov: match?.sov ?? 0
+          sov: match?.sov ?? 0,
+          rank: i + 1
         };
       })
     : [
-        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, sov: brandSov },
+        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, sov: brandSov, rank: null },
         ...competitorRows
           .slice()
           .sort((a, b) => b.mentionRate - a.mentionRate)
-          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov }))
+          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov, rank: null }))
       ];
   const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
 
@@ -542,37 +552,29 @@ export default async function ProjectDetailPage({
   const brandRankIndex = brandPositionRanking.findIndex((e) => e.is_brand);
   const brandRank = brandRankIndex >= 0 ? brandRankIndex + 1 : null;
   const totalRanked = brandPositionRanking.length;
+
+  // Top 5 by real position — the exact same rows feed both the bars and the
+  // list. If the brand falls outside the top 5, its real row is appended so
+  // "dónde estoy" never disappears, but the top-5 podium itself stays intact.
+  const topPanoramaRows = panoramaRows.slice(0, 5);
+  const brandRow = panoramaRows.find((r) => r.isBrand);
+  const panoramaListRows =
+    brandPositionAvailable && brandRow && !topPanoramaRows.some((r) => r.isBrand)
+      ? [...topPanoramaRows, brandRow]
+      : topPanoramaRows;
+
   const posbarsData = (() => {
-    if (!brandPositionAvailable) return [];
-    const top = brandPositionRanking.slice(0, 5);
-    const positions = top.map((e) => n(e.avg_position));
+    if (!brandPositionAvailable || topPanoramaRows.length === 0) return [];
+    const positions = topPanoramaRows.map((r) => n(r.avgPosition));
     const maxPos = Math.max(...positions);
     const minPos = Math.min(...positions);
     const range = maxPos - minPos;
-    return top.map((e) => {
-      const pos = n(e.avg_position);
+    return topPanoramaRows.map((r) => {
+      const pos = n(r.avgPosition);
       // Lower avg_position (better) → taller bar. Flat range → uniform height.
       const height = range > 0 ? 20 + ((maxPos - pos) / range) * 40 : 40;
-      return { name: e.name ?? "—", isBrand: Boolean(e.is_brand), height };
+      return { name: r.name, isBrand: r.isBrand, height };
     });
-  })();
-
-  // Ranking list: brand pinned first, then competitors by SOV desc (top 5
-  // rows total). Rank number is the real position rank when available.
-  const rankOf = (name: string, isBrand: boolean) => {
-    if (!brandPositionAvailable) return null;
-    const idx = brandPositionRanking.findIndex((e) =>
-      isBrand ? e.is_brand : (e.name ?? "").toLowerCase().trim() === name.toLowerCase().trim()
-    );
-    return idx >= 0 ? idx + 1 : null;
-  };
-  const competitiveList = (() => {
-    const brand = panoramaRows.find((r) => r.isBrand);
-    const others = panoramaRows.filter((r) => !r.isBrand).sort((a, b) => b.sov - a.sov);
-    return [...(brand ? [brand] : []), ...others].slice(0, 5).map((r) => ({
-      ...r,
-      rank: rankOf(r.name, r.isBrand)
-    }));
   })();
 
   // Real, honest content for the Oportunidades summary card (Task Intake
@@ -908,7 +910,7 @@ export default async function ProjectDetailPage({
                 </div>
               )}
               <div className="card" style={{ marginTop: brandPositionAvailable && posbarsData.length > 0 ? 11 : 0 }}>
-                {competitiveList.map((row) => {
+                {panoramaListRows.map((row) => {
                   const favicon = faviconUrl(row.domain);
                   const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
                   return (
