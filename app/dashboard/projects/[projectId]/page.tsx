@@ -11,7 +11,13 @@ import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
-import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
+import {
+  computeJointPotentialPoints,
+  computeRecommendationPotentialPoints,
+  getEffectiveGeoScore,
+  isQuantifiableRecommendationType,
+  type ScoreInputRow
+} from "@/lib/scoring/run-scoring";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
@@ -139,6 +145,18 @@ function isOwnDomain(domain: string | null | undefined, projectDomain: string): 
   const own = projectDomain.trim().toLowerCase().replace(/^www\./, "");
   if (!d || !own) return false;
   return d === own || d.endsWith(`.${own}`);
+}
+
+/**
+ * Reads the real, already-persisted affected_prompt_ids off a
+ * recommendation's evidence_json (buildEvidenceJson,
+ * lib/recommendations/recommendation-engine.ts) — the same list RECS-
+ * POTENTIAL-1 (docs/adr/0017) recomputes the real score over.
+ */
+function affectedPromptIds(evidenceJson: unknown): string[] {
+  if (!evidenceJson || typeof evidenceJson !== "object") return [];
+  const ids = (evidenceJson as Record<string, unknown>).affected_prompt_ids;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
 }
 
 /**
@@ -275,51 +293,48 @@ export default async function ProjectDetailPage({
   const successMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
 
   /* ---- queries that require a completed run ---- */
-  const [
-    { data: latestScore },
-    { data: allPromptResults },
-    { data: latestRecommendations },
-    { data: trendHistoryDesc },
-    { count: activeRecommendationsCount }
-  ] = latestCompletedRun
-    ? await Promise.all([
-        supabase
-          .from("run_scores")
-          .select("visibility_score, citation_score, competitor_gap_score, confidence, details_json")
-          .eq("project_id", projectId)
-          .eq("run_id", latestCompletedRun.id)
-          .maybeSingle(),
-        supabase
-          .from("scan_prompt_results")
-          .select("prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider")
-          .eq("project_id", projectId)
-          .eq("run_id", latestCompletedRun.id)
-          .eq("status", "completed"),
-        supabase
-          .from("recommendations")
-          .select("id, priority_rank, title, impact, effort, confidence, recommendation_type, evidence_json")
-          .eq("project_id", projectId)
-          .eq("run_id", latestCompletedRun.id)
-          .eq("status", "active")
-          .order("priority_rank", { ascending: true })
-          .limit(3),
-        supabase
-          .from("run_scores")
-          .select("visibility_score, citation_score, competitor_gap_score, created_at, details_json")
-          .eq("project_id", projectId)
-          .order("created_at", { ascending: false })
-          .limit(7),
-        // Real total (not just the top-3 fetched above) for the Oportunidades
-        // summary card's headline number — Task Intake 2026-07-23, Option A:
-        // ship without any invented "potential points", real counts only.
-        supabase
-          .from("recommendations")
-          .select("id", { count: "exact", head: true })
-          .eq("project_id", projectId)
-          .eq("run_id", latestCompletedRun.id)
-          .eq("status", "active")
-      ])
-    : [{ data: null }, { data: null }, { data: null }, { data: null }, { count: null }];
+  const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
+    latestCompletedRun
+      ? await Promise.all([
+          supabase
+            .from("run_scores")
+            .select("visibility_score, citation_score, competitor_gap_score, confidence, details_json")
+            .eq("project_id", projectId)
+            .eq("run_id", latestCompletedRun.id)
+            .maybeSingle(),
+          supabase
+            .from("scan_prompt_results")
+            .select(
+              "id, prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider, mentioned_competitors_count, citations_count, extraction_error, brand_snapshot"
+            )
+            .eq("project_id", projectId)
+            .eq("run_id", latestCompletedRun.id)
+            .eq("status", "completed"),
+          // No .limit(3) here: the Oportunidades card's joint "potential
+          // points" ceiling (RECS-POTENTIAL-1) needs EVERY active
+          // recommendation's affected_prompt_ids, not just the top 3 shown
+          // as cards — otherwise the aggregate would silently ignore
+          // whatever's ranked 4th and beyond. latestRecommendations (the
+          // top-3 display slice) and activeRecommendationsCount are both
+          // derived from this same array below.
+          supabase
+            .from("recommendations")
+            .select("id, priority_rank, title, impact, effort, confidence, recommendation_type, evidence_json")
+            .eq("project_id", projectId)
+            .eq("run_id", latestCompletedRun.id)
+            .eq("status", "active")
+            .order("priority_rank", { ascending: true }),
+          supabase
+            .from("run_scores")
+            .select("visibility_score, citation_score, competitor_gap_score, created_at, details_json")
+            .eq("project_id", projectId)
+            .order("created_at", { ascending: false })
+            .limit(7)
+        ])
+      : [{ data: null }, { data: null }, { data: null }, { data: null }];
+
+  const latestRecommendations = activeRecommendations?.slice(0, 3) ?? null;
+  const activeRecommendationsCount = activeRecommendations?.length ?? null;
 
   // The trend window is the LAST 7 scored runs; the query fetches them
   // newest-first (descending + limit) and this reversal restores chronological
@@ -579,10 +594,54 @@ export default async function ProjectDetailPage({
 
   // Real, honest content for the Oportunidades summary card (Task Intake
   // 2026-07-23, Option A): total active recommendations + how many are
-  // high priority. NO invented "potential points".
+  // high priority.
   const highPriorityCount = (latestRecommendations ?? []).filter(
     (r) => (r.priority_rank ?? 99) <= 2
   ).length;
+
+  /* ---- RECS-POTENTIAL-1: real "potential score points" ----
+   * docs/adr/0017-recommendation-potential-points.md. Every number here is
+   * a real counterfactual recomputation of the same composite score over
+   * the real per-prompt rows of this scan — computeRecommendationPotentialPoints
+   * returns null (render a qualitative badge, never a number) for
+   * non-quantifiable types, missing evidence, or a low-confidence run.
+   */
+  const scoreInputRows: ScoreInputRow[] = (allPromptResults ?? []).map((r) => ({
+    id: r.id,
+    prompt_text_snapshot: r.prompt_text_snapshot,
+    brand_mentioned: r.brand_mentioned,
+    citation_found: r.citation_found,
+    mentioned_competitors_count: r.mentioned_competitors_count ?? 0,
+    citations_count: r.citations_count ?? 0,
+    sentiment: r.sentiment,
+    extracted_json: r.extracted_json,
+    extraction_error: r.extraction_error,
+    brand_snapshot: r.brand_snapshot,
+    provider: r.provider
+  }));
+
+  const potentialPointsByRecId = new Map<string, number | null>();
+  for (const rec of latestRecommendations ?? []) {
+    const points = computeRecommendationPotentialPoints(
+      scoreInputRows,
+      project.domain,
+      rec.recommendation_type,
+      affectedPromptIds(rec.evidence_json)
+    );
+    potentialPointsByRecId.set(rec.id, points?.deltaPoints ?? null);
+  }
+
+  // Joint ceiling over EVERY active recommendation (not just the top 3
+  // shown as cards) — summing standalone deltas would double-count any
+  // prompt shared by more than one recommendation (docs/adr/0017 §3).
+  const jointPotentialPoints = computeJointPotentialPoints(
+    scoreInputRows,
+    project.domain,
+    (activeRecommendations ?? []).map((rec) => ({
+      recommendationType: rec.recommendation_type,
+      affectedPromptIds: affectedPromptIds(rec.evidence_json)
+    }))
+  );
 
   /* ---- render ---- */
   return (
@@ -962,10 +1021,12 @@ export default async function ProjectDetailPage({
           )}
 
           {/* 6 · Oportunidades — resumen visual de Recomendaciones.
-              Contenido REAL: nº de recomendaciones activas + cuántas son de
-              alta prioridad. Sin "puntos potenciales" inventados (Task Intake
-              2026-07-23, Opción A: la estimación real de impacto en puntuación
-              es una fase futura, aún sin diseñar). */}
+              Cabecera: "hasta +Y pt" real (RECS-POTENTIAL-1, docs/adr/0017)
+              cuando hay recomendaciones cuantificables y confianza
+              suficiente; si no, cae al conteo real de recomendaciones
+              activas — nunca un número inventado. Cada tarjeta muestra su
+              propio "hasta +Xpt" cuando es cuantificable, o el impacto
+              cualitativo cuando no lo es. */}
           {latestRecommendations?.length ? (
             <>
               <div className="ov2-sec-lbl">
@@ -977,10 +1038,19 @@ export default async function ProjectDetailPage({
               <div className="card ov2-opps">
                 <div className="ov2-opps-hero">
                   <div className="ov2-opps-gain">
-                    <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
-                    <div className="ov2-opps-gain-l">
-                      {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
-                    </div>
+                    {jointPotentialPoints ? (
+                      <>
+                        <div className="ov2-opps-gain-n">+{jointPotentialPoints.deltaPoints}</div>
+                        <div className="ov2-opps-gain-l">Puntos potenciales</div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
+                        <div className="ov2-opps-gain-l">
+                          {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div>
                     <div className="ov2-opps-h">
@@ -989,9 +1059,11 @@ export default async function ProjectDetailPage({
                         : "Acciones priorizadas para ti"}
                     </div>
                     <div className="ov2-opps-s">
-                      {topCompetitor && topCompetitor.mentionRate > computedMentionRate
-                        ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
-                        : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
+                      {jointPotentialPoints
+                        ? "Techo optimista si resuelves estas acciones — tu próximo escaneo lo confirma."
+                        : topCompetitor && topCompetitor.mentionRate > computedMentionRate
+                          ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
+                          : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
                     </div>
                   </div>
                 </div>
@@ -1001,11 +1073,16 @@ export default async function ProjectDetailPage({
                     const dotColor = priority === "high" ? "var(--p-high)" : priority === "med" ? "var(--p-med)" : "var(--p-low)";
                     const impact = (rec.impact ?? "low").toLowerCase();
                     const impactLabel = impact === "high" ? "Alto" : impact === "medium" || impact === "med" ? "Medio" : "Bajo";
+                    const points = potentialPointsByRecId.get(rec.id);
                     return (
                       <div key={rec.id} className="ov2-opp">
                         <span className="ov2-opp-dot" style={{ background: dotColor }} />
                         <span className="ov2-opp-t">{rec.title}</span>
-                        <span className="ov2-opp-r">Impacto {impactLabel.toLowerCase()}</span>
+                        <span className="ov2-opp-r">
+                          {points !== null && points !== undefined && points > 0
+                            ? `hasta +${points}pt`
+                            : `Impacto ${impactLabel.toLowerCase()}`}
+                        </span>
                       </div>
                     );
                   })}
