@@ -2733,6 +2733,12 @@ textarea.add-prompts-text-input {
   font-size: 15px; font-weight: 600; color: var(--ink-2); }
 .lp-mobnav a:hover { background: var(--surface-2); color: var(--ink); }
 @keyframes lpMobnavIn { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+/* Homepage hero nav has the burger on the right (.lp-nav--hero .lp-burger) —
+   the drawer should slide in from that same side. /geo, /pricing, /blog
+   keep the burger on the left and don't pass `fromRight`, so they keep
+   the default left-slide .lp-mobnav above untouched. */
+.lp-mobnav--right { left: auto; right: 0; box-shadow: -20px 0 60px rgba(15,23,41,.20); animation-name: lpMobnavInRight; }
+@keyframes lpMobnavInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
 .lp-hero { position: relative; overflow: hidden; padding: 76px 0 64px; text-align: center; }
 .lp-hero .onb-aurora { opacity: .85; }

@@ -266,6 +266,7 @@ export default function HomePage() {
           <MarketingMobileNav
             links={NAV_LINKS}
             twoLine
+            fromRight
             ctas={
               <>
                 <button type="button" className="lp-cta-soft" onClick={goToLogin}>Iniciar sesión</button>

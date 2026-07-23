@@ -7,11 +7,14 @@ import { Icon } from "@/components/ui/icon";
 export function MarketingMobileNav({
   links,
   twoLine = false,
+  fromRight = false,
   ctas
 }: {
   links: Array<{ href: string; label: string }>;
   /** Two-line burger glyph (v3 landing hero) instead of the default three-line one. */
   twoLine?: boolean;
+  /** Slide the drawer in from the right (matches a right-positioned burger) instead of the default left. */
+  fromRight?: boolean;
   /** Extra actions (e.g. login/signup) rendered at the bottom of the drawer. */
   ctas?: ReactNode;
 }) {
@@ -25,7 +28,7 @@ export function MarketingMobileNav({
     ? createPortal(
         <>
           <div className="lp-mobnav-scrim" onClick={() => setOpen(false)} aria-hidden="true" />
-          <nav className="lp-mobnav" aria-label="Menú">
+          <nav className={`lp-mobnav${fromRight ? " lp-mobnav--right" : ""}`} aria-label="Menú">
             <button type="button" className="lp-mobnav-close" onClick={() => setOpen(false)} aria-label="Cerrar menú">
               <Icon name="x" size={18} />
             </button>
