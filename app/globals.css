@@ -462,7 +462,7 @@ a {
   grid-template-columns: minmax(0, 1fr);
   place-items: start center;
   padding: 40px 24px;
-  background: radial-gradient(120% 120% at 50% -10%, #ede9ff 0%, #f6f7fb 46%, #eef0f8 100%);
+  background: radial-gradient(120% 120% at 50% -10%, #e8f0ff 0%, #f6f7fb 46%, #eef1f8 100%);
   background-attachment: fixed;
 }
 
@@ -618,6 +618,46 @@ a {
 .auth-resend a { color: var(--accent); font-weight: 700; }
 .auth-resend a:hover { text-decoration: underline; text-underline-offset: 2px; }
 .auth-resend .muted { color: var(--ink-4); font-weight: 600; }
+
+/* ------------------------------------------------------------------
+   BRAND-5b — Auth zone (login, signup, signup/confirm, forgot-password):
+   v3 palette + typography. `.auth-*`, `.field`, `.otp-row`, `.pw-*` are
+   used only by this zone's 4 pages (verified by grep before editing), so
+   most rules above are edited directly. `.field`/`.sub`/`.btn-primary`
+   ARE shared with other zones (settings, onboarding, etc.) — those get
+   scoped `.auth-card ...` overrides here instead of being edited in place.
+   ------------------------------------------------------------------ */
+/* Figtree cascades from the card to every descendant (labels, inputs,
+   buttons, links) — Tailwind's preflight already resets form elements to
+   `font-family: inherit`, so this reaches the shared Button/Input/Label
+   components used by signup/page.tsx too, without editing those files.
+   `.otp-row input`'s own explicit monospace rule (above) still wins over
+   this inherited value. */
+.auth-card { font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.auth-h1, .auth-title {
+  font-family: var(--font-display), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.auth-alt a, .auth-resend a, .link-mini { color: var(--brand-blue); }
+.auth-icon-badge { background: rgba(37,99,235,.1); color: var(--brand-blue); }
+.otp-row input:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14); }
+.otp-row input.filled { border-color: var(--brand-blue); }
+.auth-card .field:focus { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14); }
+/* .auth-btn's background override lives further down, after .btn-primary's
+   definition — same 1-class specificity, so source order decides the tie. */
+
+/* signup/page.tsx alone uses the shared Button/Input/Label components
+   (dashboard/settings/billing's design system, not this zone's `.field`/
+   `.btn`) — scoped classes added only on that page's elements so those
+   shared components stay untouched for their own zones. Font-family is
+   inherited from `.auth-card` above; only color needs overriding here. */
+/* Extra `.auth-card` ancestor selector (not just `.auth-input-v3`/`.auth-btn-v3`
+   alone) deliberately over-specifies these past Tailwind's `bg-[var(--accent)]`/
+   `focus:border-[var(--accent)]` arbitrary-value utilities on the same
+   elements — Tailwind's variant utilities aren't reliably emitted before
+   custom CSS in the bundled output, so source order alone isn't safe here. */
+.auth-card .auth-input-v3:focus { border-color: var(--brand-blue); }
+.auth-card .auth-btn-v3 { background: var(--brand-blue); }
 
 /* ============================================================
    Overview — badge system
@@ -2695,6 +2735,11 @@ textarea.add-prompts-text-input {
 .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 2px var(--accent-ring); }
 .btn-primary:hover:not(:disabled) { background: var(--accent-700); }
 .btn-primary:disabled { opacity: .55; box-shadow: none; cursor: not-allowed; }
+/* BRAND-5b auth zone — same 1-class specificity as .btn-primary above;
+   placed after it so source order wins the tie (see the auth-zone block
+   near .auth-resend for the rest of this zone's overrides). */
+.auth-btn { background: var(--brand-blue); border-color: var(--brand-blue); }
+.auth-btn:hover:not(:disabled) { background: #1d4ed8; }
 .btn-ghost { background: var(--surface); color: var(--ink-2); border-color: var(--line-strong); }
 .btn-ghost:hover { background: var(--surface-2); color: var(--ink); border-color: var(--ink-4); }
 .btn-soft { background: var(--accent-soft); color: var(--accent-ink); }
