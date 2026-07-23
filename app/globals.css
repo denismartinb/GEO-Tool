@@ -1260,213 +1260,213 @@ a {
   --neg-ink: var(--brand-neg);
 }
 .ov2-scope .card,
-.ov2-scope .hero-v2,
 .ov2-scope .ov2-insight,
 .ov2-scope .ov2-kpi,
-.ov2-scope .wide-stat,
 .ov2-scope .ov2-opps {
   box-shadow: var(--brand-shadow-card);
 }
-.ov2-scope .section-title,
-.ov2-scope .card-title,
-.ov2-scope .gauge-num,
-.ov2-scope .ov2-kpi-value,
-.ov2-scope .compose-v,
-.ov2-scope .stat-value,
-.ov2-scope .ov2-opps-n,
-.ov2-scope .ov2-cmp-sov,
-.ov2-scope .ov2-cmp-pos {
+/* Gauge component's inner number is a shared component (not an ov2 class), so
+   it needs the display face applied here; every other big-number element in
+   Overview already declares var(--font-display) in its own ov2 rule. */
+.ov2-scope .gauge-num {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
 }
-/* `.card-title` carries zero base styling anywhere in this file (every page
-   that uses it relies on inherited body text) — give it real weight/size
-   here, scoped, rather than fixing the shared base rule for every page. */
-.ov2-scope .card-title {
-  font-size: 14px;
-  color: var(--ink);
-}
 
+/* Overview content is centered in a phone-width column so the desktop
+   console renders the same single-column layout as the approved prototype,
+   instead of stretching the cards across the full content width. */
+.ov2-scope { max-width: 460px; margin: 0 auto; }
+
+/* 1 · Insight banner */
 .ov2-insight {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   align-items: flex-start;
-  padding: 16px 18px;
-  background: linear-gradient(135deg, rgba(37, 99, 235, .07), rgba(79, 123, 255, .02));
-  border: 1px solid rgba(37, 99, 235, .18);
-  border-radius: var(--r-xl);
+  padding: 12px 13px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .07), rgba(37, 99, 235, .03));
+  border: 1px solid rgba(37, 99, 235, .16);
+  border-radius: 13px;
 }
 .ov2-insight-ico {
   flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 9px;
   background: var(--brand-blue);
   color: #fff;
 }
 .ov2-insight-txt {
-  font-size: 14px;
-  line-height: 1.75;
+  font-size: 13px;
+  line-height: 1.55;
   color: var(--ink-2);
 }
-.ov2-insight-txt b { color: var(--ink); font-weight: 700; }
+.ov2-insight-txt b { color: var(--ink); font-weight: 750; }
+.ov2-insight-txt .hl { color: var(--brand-blue); font-weight: 750; }
 
-.ov2-kpi-car {
+/* 2 · Compact horizontal gauge card */
+.ov2-gauge-card {
   display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  scroll-snap-type: x proximity;
-}
-.ov2-kpi-car::-webkit-scrollbar { height: 5px; }
-.ov2-kpi-car::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
-.ov2-kpi {
-  flex: 0 0 auto;
-  scroll-snap-align: start;
-  width: 208px;
+  align-items: center;
+  gap: 16px;
   padding: 16px 18px;
+  margin-top: 11px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
 }
-.ov2-kpi-label {
+.ov2-gauge-ring { flex: 0 0 auto; }
+.ov2-gauge-info { flex: 1; min-width: 0; }
+.ov2-gauge-lbl {
   font-size: 10.5px;
   font-weight: 700;
   color: var(--ink-4);
   text-transform: uppercase;
-  letter-spacing: .07em;
+  letter-spacing: .05em;
+}
+.ov2-gauge-badges { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 6px 0 8px; }
+.ov2-gauge-trend-cap { font-size: 10.5px; color: var(--ink-4); font-weight: 600; margin-top: 2px; }
+
+/* 3 · Section labels */
+.ov2-sec-lbl {
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin: 22px 2px 9px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: space-between;
 }
-.ov2-kpi-value {
-  font-size: 25px;
-  font-weight: 800;
-  letter-spacing: -.03em;
-  color: var(--ink);
-  line-height: 1;
-}
-.ov2-kpi-value .unit { font-size: 12.5px; font-weight: 600; color: var(--ink-3); margin-left: 2px; }
-.ov2-kpi-hint { font-size: 11px; color: var(--ink-4); line-height: 1.4; }
-.ov2-kpi-foot { display: flex; align-items: center; gap: 6px; }
-
-.ov2-senti-bar {
-  display: flex;
-  height: 8px;
-  border-radius: 99px;
-  overflow: hidden;
-  background: var(--surface-sunk);
-}
-.ov2-senti-bar span { height: 100%; }
-.ov2-senti-legend {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 10px;
-  color: var(--ink-3);
-}
-.ov2-senti-legend i { width: 6px; height: 6px; border-radius: 2px; display: inline-block; margin-right: 3px; }
-
-.ov2-eng-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
-.ov2-eng-row:last-child { margin-bottom: 0; }
-.ov2-eng-ico {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-}
-.ov2-eng-body { flex: 1; min-width: 0; }
-.ov2-eng-top { display: flex; align-items: baseline; gap: 6px; margin-bottom: 7px; }
-.ov2-eng-name { font-size: 13px; font-weight: 650; color: var(--ink); }
-.ov2-eng-pct { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ink-3); }
-.ov2-eng-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; color: var(--ink-3); }
-
-.ov2-cmp-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 8px;
-  border-radius: var(--r-md);
-}
-.ov2-cmp-row.you { background: rgba(37, 99, 235, .07); }
-.ov2-cmp-rank { font-size: 11px; font-weight: 700; color: var(--ink-4); width: 14px; text-align: center; flex-shrink: 0; }
-.ov2-cmp-fav {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  flex-shrink: 0;
-  object-fit: cover;
-  background: var(--surface-sunk);
-  border: 1px solid var(--line-soft);
-}
-.ov2-cmp-name {
-  font-size: 13px;
-  font-weight: 650;
-  color: var(--ink);
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.ov2-cmp-row.you .ov2-cmp-name { font-weight: 750; }
-.ov2-cmp-you-tag { font-size: 10.5px; font-weight: 700; color: var(--brand-blue); margin-left: 6px; }
-.ov2-cmp-pos { font-size: 12px; font-weight: 700; color: var(--ink-3); width: 46px; text-align: right; flex-shrink: 0; }
-.ov2-cmp-bar { flex: 0 0 64px; height: 6px; border-radius: 99px; background: var(--surface-sunk); overflow: hidden; }
-.ov2-cmp-bar span { display: block; height: 100%; border-radius: 99px; }
-.ov2-cmp-sov { font-size: 12px; font-weight: 750; color: var(--ink); width: 36px; text-align: right; flex-shrink: 0; }
-
-.ov2-opps {
-  display: flex;
-  gap: 22px;
-  padding: 22px 24px;
-  background: linear-gradient(135deg, var(--brand-ink) 0%, #16233d 100%);
-  border-radius: var(--r-xl);
-  color: #fff;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.ov2-opps-hero {
-  flex: 0 0 auto;
-  text-align: center;
-  padding-right: 22px;
-  border-right: 1px solid rgba(255, 255, 255, .12);
-}
-.ov2-opps-n { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--brand-blue-2); }
-.ov2-opps-l { font-size: 11.5px; color: rgba(247, 248, 251, .65); margin-top: 4px; font-weight: 600; line-height: 1.4; }
-.ov2-opps-list { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 9px; }
-.ov2-opps-item { display: flex; align-items: center; gap: 9px; font-size: 13px; color: rgba(247, 248, 251, .9); }
-.ov2-opps-dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
-.ov2-opps-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ov2-opps-cta {
-  flex: 0 0 auto;
+.ov2-sec-lbl a {
+  color: var(--brand-blue);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 12px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 9px 16px;
-  border-radius: 999px;
-  background: #fff;
-  color: var(--brand-ink);
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
+  gap: 3px;
 }
-@media (max-width: 860px) {
-  .ov2-opps { flex-direction: column; align-items: stretch; }
-  .ov2-opps-hero {
-    border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, .12);
-    padding-right: 0;
-    padding-bottom: 14px;
-    width: 100%;
-  }
+
+/* KPI carousel */
+.ov2-kpi-car { display: flex; gap: 9px; overflow-x: auto; padding-bottom: 4px; }
+.ov2-kpi-car::-webkit-scrollbar { height: 0; }
+.ov2-kpi {
+  flex: 0 0 auto;
+  width: 150px;
+  padding: 13px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.ov2-kpi-k { font-size: 11px; color: var(--ink-3); font-weight: 650; margin-bottom: 6px; }
+.ov2-kpi-v {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--ink);
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 1px;
+}
+.ov2-kpi-v small { font-size: 13px; color: var(--ink-4); font-weight: 700; }
+.ov2-kpi-v.txt { font-size: 17px; }
+.ov2-kpi-foot { margin-top: 7px; display: flex; align-items: center; gap: 5px; }
+.ov2-senti-bar { display: flex; gap: 2px; margin-top: 8px; }
+.ov2-senti-bar i { height: 5px; border-radius: 99px; display: block; }
+.ov2-senti-cap { font-size: 10px; color: var(--ink-4); font-weight: 600; margin-top: 5px; }
+
+/* 4 · Engine bars */
+.ov2-engbar { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.ov2-engbar:last-child { margin-bottom: 0; }
+.ov2-engbar .nm { width: 92px; display: flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 650; color: var(--ink); flex-shrink: 0; }
+.ov2-eng-ico { width: 15px; height: 15px; flex: 0 0 auto; display: grid; place-items: center; }
+.ov2-engbar .track { flex: 1; height: 8px; background: var(--line-soft); border-radius: 99px; overflow: hidden; }
+.ov2-engbar .track > i { display: block; height: 100%; border-radius: 99px; }
+.ov2-engbar .v {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 12.5px;
+  font-weight: 800;
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+  color: var(--ink);
+}
+
+/* 5 · Panorámica competitiva */
+.ov2-pm-lbl { font-size: 10.5px; font-weight: 700; color: var(--ink-4); text-transform: uppercase; letter-spacing: .05em; }
+.ov2-pm-val {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: var(--ink);
+  margin: 3px 0 6px;
+}
+.ov2-pm-val small { font-size: 14px; color: var(--ink-4); font-weight: 700; }
+.ov2-posbars { display: flex; align-items: flex-end; gap: 9px; height: 60px; padding: 0 2px; margin: 6px 0 26px; }
+.ov2-posbars .b { flex: 1; border-radius: 6px 6px 0 0; position: relative; background: var(--line); min-height: 6px; }
+.ov2-posbars .b.you { background: var(--brand-blue); }
+.ov2-posbars .b span {
+  position: absolute; bottom: -18px; left: 0; right: 0;
+  text-align: center; font-size: 9.5px; font-weight: 700; color: var(--ink-4);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ov2-cmp-row { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-bottom: 1px solid var(--line-soft); }
+.ov2-cmp-row:last-child { border-bottom: none; }
+.ov2-cmp-row.you { background: var(--brand-blue-soft); }
+.ov2-cmp-n { width: 16px; font-size: 12px; font-weight: 750; color: var(--ink-3); text-align: center; flex: 0 0 auto; }
+.ov2-cmp-fav {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
+  object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
+.ov2-cmp-nm { flex: 1; min-width: 0; }
+.ov2-cmp-nm .t {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ov2-cmp-tag { font-size: 9.5px; font-weight: 750; color: var(--brand-blue); background: var(--brand-blue-soft-2); padding: 1px 6px; border-radius: 999px; flex: 0 0 auto; }
+.ov2-cmp-sov { width: 54px; flex: 0 0 auto; }
+.ov2-cmp-sov .track { height: 5px; background: var(--line-soft); border-radius: 99px; overflow: hidden; }
+.ov2-cmp-sov .track > i { display: block; height: 100%; border-radius: 99px; }
+.ov2-cmp-sov .pct { font-size: 9.5px; color: var(--ink-4); font-weight: 700; margin-top: 2px; text-align: right; }
+.ov2-cmp-sc {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 13px; font-weight: 800; flex: 0 0 auto; width: 52px; text-align: right; color: var(--ink);
+}
+.ov2-cmp-sc small { font-size: 9.5px; color: var(--ink-4); font-weight: 700; }
+
+/* 6 · Oportunidades (light card, matches prototype) */
+.ov2-opps { overflow: hidden; }
+.ov2-opps-hero {
+  display: flex; align-items: center; gap: 14px; padding: 15px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .09), rgba(37, 99, 235, .02));
+  border-bottom: 1px solid var(--line-soft);
+}
+.ov2-opps-gain { text-align: center; flex: 0 0 auto; padding-right: 14px; border-right: 1px solid rgba(37, 99, 235, .16); }
+.ov2-opps-gain-n {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 30px; font-weight: 800; color: var(--brand-blue); letter-spacing: -.02em; line-height: 1;
+}
+.ov2-opps-gain-l { font-size: 9.5px; color: var(--ink-4); font-weight: 700; text-transform: uppercase; letter-spacing: .03em; margin-top: 5px; }
+.ov2-opps-h { font-size: 14px; font-weight: 750; color: var(--ink); }
+.ov2-opps-s { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.45; }
+.ov2-opps-list { padding: 6px 5px; }
+.ov2-opp { display: flex; align-items: center; gap: 10px; padding: 9px 12px; }
+.ov2-opp-dot { width: 7px; height: 7px; border-radius: 99px; flex: 0 0 auto; }
+.ov2-opp-t { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov2-opp-r { font-size: 11px; font-weight: 700; color: var(--brand-blue); flex: 0 0 auto; }
+.ov2-opps-cta {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: 4px 13px 14px; height: 40px; border-radius: 11px;
+  background: var(--brand-blue); color: #fff; font-size: 13px; font-weight: 700;
 }
 
 /* ============================================================

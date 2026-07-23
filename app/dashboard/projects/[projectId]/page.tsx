@@ -7,8 +7,6 @@ import { EmptyState } from "@/components/empty-state";
 import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
-import { DotMeter } from "@/components/ui/dot-meter";
-import { InfoTip } from "@/components/ui/info-tip";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
@@ -54,14 +52,6 @@ const priorityLabels: Record<string, string> = {
 
 function n(v: unknown): number {
   return Number(v ?? 0);
-}
-
-function confidenceToPercent(c: string): number {
-  return c === "high" ? 90 : c === "medium" ? 70 : 40;
-}
-
-function impactEffortToN(v: string): number {
-  return v === "high" ? 5 : v === "medium" || v === "med" ? 3 : 1;
 }
 
 function getBandLabel(score: number): string {
@@ -173,25 +163,30 @@ function EngineGlyph({ provider }: { provider: string }) {
   switch (provider) {
     case "gemini":
       return (
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
-          <path d="M12 2c.9 4.2 2.9 7.1 7 8-4.1.9-6.1 3.8-7 8-.9-4.2-2.9-7.1-7-8 4.1-.9 6.1-3.8 7-8Z" />
+        <svg viewBox="0 0 24 24" width="100%" height="100%">
+          <defs>
+            <linearGradient id="ov2-gem" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#4285F4" />
+              <stop offset=".5" stopColor="#9B72CB" />
+              <stop offset="1" stopColor="#D96570" />
+            </linearGradient>
+          </defs>
+          <path d="M12 1 Q13 11 23 12 Q13 13 12 23 Q11 13 1 12 Q11 11 12 1 Z" fill="url(#ov2-gem)" />
         </svg>
       );
     case "openai":
+      // Simplified, non-literal knot stand-in — recognizable as "the other
+      // engine" without reproducing the trademarked mark 1:1.
       return (
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6">
-          <circle cx="12" cy="6" r="3" />
-          <circle cx="17.2" cy="9" r="3" />
-          <circle cx="17.2" cy="15" r="3" />
-          <circle cx="12" cy="18" r="3" />
-          <circle cx="6.8" cy="15" r="3" />
-          <circle cx="6.8" cy="9" r="3" />
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round">
+          <path d="M12 4.5a4 4 0 0 1 6.9 2.8 4 4 0 0 1-1 6.8 4 4 0 0 1-6.9 2.8 4 4 0 0 1-6.9-2.8 4 4 0 0 1 1-6.8A4 4 0 0 1 12 4.5Z" />
+          <path d="M12 8v4l3.4 2" />
         </svg>
       );
     case "claude":
       return (
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M12 3v18M4.5 7.5l15 9M4.5 16.5l15-9" />
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round">
+          <path d="M12 2.5v19M2.5 12h19M5.4 5.4l13.2 13.2M18.6 5.4L5.4 18.6" />
         </svg>
       );
     default:
@@ -361,16 +356,12 @@ export default async function ProjectDetailPage({
     ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
     : Math.round((totalResults > 0 ? (brandMentions / totalResults) * 100 : visibilityScore));
 
-  const computedCitationRate = allPromptResults?.length
-    ? Math.round((allPromptResults.filter((r) => r.citation_found).length / allPromptResults.length) * 100)
-    : citationScore;
-
   /* ---- distribución por motor de IA: vista comparativa real por motor ----
    * (ENGINES-VALUE-1) mention, citación y sentimiento por motor, computados
    * en tiempo de lectura sobre las mismas filas de scan_prompt_results que
    * ya trae esta página — cero queries nuevas.
    */
-  const { engines: engineBreakdown, gap: engineGap } = computeEngineBreakdown(allPromptResults ?? []);
+  const { engines: engineBreakdown } = computeEngineBreakdown(allPromptResults ?? []);
 
   /* ---- citation share (computed at read time — no persisted column) ----
    * own_citation_share = own_citations / total_resolved_citations × 100
@@ -442,12 +433,6 @@ export default async function ProjectDetailPage({
 
   /* ---- competitor breakdown from extracted_json ---- */
   const competitorMentionCounts: Record<string, number> = {};
-  // Keyed by `domain` when known, or by `title`/fallback label when the
-  // grounding redirect could not be resolved (see
-  // docs/adr/0006-grounding-redirect-resolution.md). Unresolved entries are
-  // never grouped under the same key as resolved ones — display falls back
-  // to `title`, never the raw Google redirect URL.
-  const citedUrlCounts: Record<string, { display: string; domain: string | null; count: number }> = {};
 
   for (const result of allPromptResults ?? []) {
     const ext = parseExt(result.extracted_json);
@@ -457,33 +442,6 @@ export default async function ProjectDetailPage({
         const key = comp.name.toLowerCase().trim();
         competitorMentionCounts[key] = (competitorMentionCounts[key] ?? 0) + 1;
       }
-    }
-    for (const cit of ext.citations ?? []) {
-      const domain = cit.domain?.trim() || null;
-
-      if (domain) {
-        if (!citedUrlCounts[domain]) citedUrlCounts[domain] = { display: domain, domain, count: 0 };
-        citedUrlCounts[domain].count++;
-        continue;
-      }
-
-      // Unresolved grounding redirect: never display the raw
-      // vertexaisearch.cloud.google.com URL. Group by title instead, or a
-      // generic label if even the title is missing.
-      if (cit.source === "grounding") {
-        const label = cit.title?.trim() || "Fuente sin resolver";
-        const key = `unresolved:${label.toLowerCase()}`;
-        if (!citedUrlCounts[key]) citedUrlCounts[key] = { display: label, domain: null, count: 0 };
-        citedUrlCounts[key].count++;
-        continue;
-      }
-
-      // Inline citations without a domain: fall back to the raw URL as
-      // before (these are not grounding redirects).
-      const url = cit.url?.trim();
-      if (!url) continue;
-      if (!citedUrlCounts[url]) citedUrlCounts[url] = { display: url, domain: null, count: 0 };
-      citedUrlCounts[url].count++;
     }
   }
 
@@ -510,43 +468,6 @@ export default async function ProjectDetailPage({
   });
 
   const brandSov = totalForSov > 0 ? Math.round((brandMentions / totalForSov) * 100) : 0;
-
-  /* ---- prompt opportunities (audit phase D, finding 3) ----
-   * Prompts where at least one competitor is mentioned in the AI answer and
-   * the brand is not — the "where you're losing today" list. Built entirely
-   * from the extracted_json already fetched for this run (the same signal the
-   * recommendation engine's competitor rules use); display only. With
-   * multiple engines, a prompt qualifies if ANY engine's answer shows the
-   * gap, and the winning competitors are aggregated across those answers.
-   */
-  const promptOpportunities = (() => {
-    const byPrompt = new Map<string, { prompt: string; competitors: Set<string> }>();
-    for (const result of allPromptResults ?? []) {
-      if (result.brand_mentioned) continue;
-      const promptText = (result.prompt_text_snapshot as string | null)?.trim();
-      if (!promptText) continue;
-      const ext = parseExt(result.extracted_json);
-      const winners = (ext.competitors ?? [])
-        .filter((c) => c.mentioned && c.name)
-        .map((c) => c.name as string);
-      if (!winners.length) continue;
-      const entry = byPrompt.get(promptText) ?? { prompt: promptText, competitors: new Set<string>() };
-      winners.forEach((name) => entry.competitors.add(name));
-      byPrompt.set(promptText, entry);
-    }
-    return Array.from(byPrompt.values())
-      .sort((a, b) => b.competitors.size - a.competitors.size)
-      .slice(0, 5)
-      .map((entry) => ({ prompt: entry.prompt, competitors: Array.from(entry.competitors).slice(0, 3) }));
-  })();
-
-  const citedPages = Object.values(citedUrlCounts)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5)
-    .map((p) => ({
-      ...p,
-      isYours: isOwnDomain(p.domain, project.domain)
-    }));
 
   const hasData = Boolean(latestCompletedRun && latestScore);
 
@@ -607,6 +528,55 @@ export default async function ProjectDetailPage({
           .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov }))
       ];
   const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
+
+  /* ---- position-media summary + bars (real brand_position data) ----
+   * "Tu posición media X / N" = brand's rank among the ranked entities.
+   * Bars encode avg_position (lower = better = taller). Only when
+   * brand_position is available for this scan; otherwise the panorama
+   * shows the SOV ranking list alone.
+   */
+  const brandRankIndex = brandPositionRanking.findIndex((e) => e.is_brand);
+  const brandRank = brandRankIndex >= 0 ? brandRankIndex + 1 : null;
+  const totalRanked = brandPositionRanking.length;
+  const posbarsData = (() => {
+    if (!brandPositionAvailable) return [];
+    const top = brandPositionRanking.slice(0, 5);
+    const positions = top.map((e) => n(e.avg_position));
+    const maxPos = Math.max(...positions);
+    const minPos = Math.min(...positions);
+    const range = maxPos - minPos;
+    return top.map((e) => {
+      const pos = n(e.avg_position);
+      // Lower avg_position (better) → taller bar. Flat range → uniform height.
+      const height = range > 0 ? 20 + ((maxPos - pos) / range) * 40 : 40;
+      return { name: e.name ?? "—", isBrand: Boolean(e.is_brand), height };
+    });
+  })();
+
+  // Ranking list: brand pinned first, then competitors by SOV desc (top 5
+  // rows total). Rank number is the real position rank when available.
+  const rankOf = (name: string, isBrand: boolean) => {
+    if (!brandPositionAvailable) return null;
+    const idx = brandPositionRanking.findIndex((e) =>
+      isBrand ? e.is_brand : (e.name ?? "").toLowerCase().trim() === name.toLowerCase().trim()
+    );
+    return idx >= 0 ? idx + 1 : null;
+  };
+  const competitiveList = (() => {
+    const brand = panoramaRows.find((r) => r.isBrand);
+    const others = panoramaRows.filter((r) => !r.isBrand).sort((a, b) => b.sov - a.sov);
+    return [...(brand ? [brand] : []), ...others].slice(0, 5).map((r) => ({
+      ...r,
+      rank: rankOf(r.name, r.isBrand)
+    }));
+  })();
+
+  // Real, honest content for the Oportunidades summary card (Task Intake
+  // 2026-07-23, Option A): total active recommendations + how many are
+  // high priority. NO invented "potential points".
+  const highPriorityCount = (latestRecommendations ?? []).filter(
+    (r) => (r.priority_rank ?? 99) <= 2
+  ).length;
 
   /* ---- render ---- */
   return (
@@ -709,157 +679,40 @@ export default async function ProjectDetailPage({
             </p>
           </div>
 
-          {/* 2 · Section: Visibilidad de un vistazo */}
-          <div className="section-head" style={{ marginTop: 28 }}>
-            <div className="section-title">Visibilidad de un vistazo</div>
-            <div className="section-desc">
-              Señales reales · último escaneo{" "}
-              {new Date(latestCompletedRun!.finished_at ?? latestCompletedRun!.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" })}
+          {/* 2 · Compact gauge card (score + trend) */}
+          <div className="ov2-gauge-card">
+            <div className="ov2-gauge-ring">
+              <Gauge value={gaugeScore} size={96} stroke={10} />
             </div>
-            <div className="right">
-              <span className={`badge badge-${getBandTone(gaugeScore)}`}>
-                {getBandLabel(gaugeScore)}
-              </span>
-            </div>
-          </div>
-
-          {/* Hero card */}
-          <div className="hero-v2">
-            {/* Gauge */}
-            <div className="hv-gauge">
-              <Gauge value={gaugeScore} size={140} stroke={14} />
-              <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "var(--ink-4)", marginBottom: 6 }}>
-                  Puntuación GEO
-                </div>
-                <span className={`badge badge-${getBandTone(gaugeScore)}`}>
-                  {getBandLabel(gaugeScore)}
-                </span>
-                {geoScoreLowConfidence && (
-                  <div style={{ marginTop: 8 }}>
-                    <span className="badge badge-warn" style={{ fontSize: 10.5 }}>
-                      {prominenceUnavailable
-                        ? "Confianza media: posición no disponible para este escaneo"
-                        : `Confianza ${confidenceLabels[geoScore?.confidence ?? "medium"] ?? geoScore?.confidence}`}
-                    </span>
-                  </div>
-                )}
-                {geoTrend.length >= 2 && (
-                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <Sparkline data={geoTrend} w={120} h={30} color="var(--brand-blue)" />
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      {gaugeDelta !== 0 ? (
-                        <Delta value={gaugeDelta} suffix=" pt" />
-                      ) : (
-                        <span className="delta flat">— sin cambio</span>
-                      )}
-                      <span className="stat-hint">vs. escaneo anterior</span>
-                    </div>
-                  </div>
-                )}
+            <div className="ov2-gauge-info">
+              <div className="ov2-gauge-lbl">Puntuación GEO</div>
+              <div className="ov2-gauge-badges">
+                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
+                {geoTrend.length >= 2 && gaugeDelta !== 0 && <Delta value={gaugeDelta} suffix=" pt" />}
               </div>
-            </div>
-
-            <div className="hv-divider" />
-
-            {/* Composition */}
-            <div className="hv-compose">
-              <div className="hv-block-label">Cómo se compone tu puntuación</div>
-              {geoScore?.components ? (
-                [
-                  {
-                    l: "Presencia (mención)",
-                    c: geoScore.components.presence,
-                    color: "var(--brand-blue)",
-                    info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
-                  },
-                  { l: "Prominencia (posición)", c: geoScore.components.prominence, color: "#7c3aed" },
-                  // Label follows the stored composite's semantics: v2 runs
-                  // score standing as real share of voice (ADR 0015), while
-                  // legacy v1 runs stored 100 - presión competitiva — showing
-                  // the v2 label over a v1 value would misdescribe the number.
-                  geoScore.composite_version === "geo-score-v2"
-                    ? {
-                        l: "Cuota de voz",
-                        c: geoScore.components.standing,
-                        color: "#0d9488",
-                        info: "Qué parte de las menciones en las respuestas de IA son tuyas, frente a los competidores que monitorizas. Si ni tu marca ni tus competidores aparecen, este componente no puntúa (no hay voz que repartir)."
-                      }
-                    : { l: "Posición competitiva", c: geoScore.components.standing, color: "#0d9488" },
-                  {
-                    l: "Autoridad (citas)",
-                    c: geoScore.components.authority,
-                    color: "#e54563",
-                    info: "Cuántas respuestas incluyen una cita verificada (grounding) a tu propio dominio. A diferencia de la mención, esta señal sí depende de contenido real que publiques y puedas mejorar."
-                  }
-                ].map((row) => {
-                  const unavailable = row.c?.value === null || row.c?.value === undefined;
-                  const v = Math.min(100, Math.round(n(row.c?.value)));
-                  return (
-                    <div className="compose-row" key={row.l}>
-                      <div className="compose-top">
-                        <span className="compose-l">
-                          {row.l}
-                          {row.info && <InfoTip text={row.info} />}
-                        </span>
-                        <span className="compose-v tnum">
-                          {unavailable ? "—" : `${v}%`}
-                        </span>
-                      </div>
-                      {unavailable ? (
-                        <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>
-                          No disponible para este escaneo
-                        </div>
-                      ) : (
-                        <div className="sov-bar" style={{ height: 7 }}>
-                          <div className="sov-fill" style={{ width: `${v}%`, background: row.color }} />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
+              {geoTrend.length >= 2 ? (
+                <>
+                  <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
+                  <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
+                </>
               ) : (
-                [
-                  {
-                    l: "Tasa de mención",
-                    v: computedMentionRate,
-                    color: "var(--brand-blue)",
-                    info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
-                  },
-                  {
-                    l: "Tasa de cita",
-                    v: computedCitationRate,
-                    // computedCitationRate counts rows with ANY citation
-                    // (citation_found), not own-domain citations — this legacy
-                    // fallback only renders for runs scored before geo-score-v1,
-                    // whose data predates the own-domain distinction
-                    // (docs/adr/0013). The tooltip must describe that broader
-                    // measure, not the stricter authority definition
-                    // (docs/geo-methodology-audit-2026-07.md, finding 8).
-                    color: "#7c3aed",
-                    info: "Cuántas respuestas incluyen al menos una cita verificada (grounding) a alguna fuente, propia o de terceros. Este escaneo es anterior a la métrica actual de autoridad, que solo cuenta citas a tu propio dominio."
-                  },
-                  { l: "Presión competitiva", v: Math.min(100, competitorPressureScore), color: "#0d9488" }
-                ].map((c) => (
-                  <div className="compose-row" key={c.l}>
-                    <div className="compose-top">
-                      <span className="compose-l">
-                        {c.l}
-                        {c.info && <InfoTip text={c.info} />}
-                      </span>
-                      <span className="compose-v tnum">{c.v}%</span>
-                    </div>
-                    <div className="sov-bar" style={{ height: 7 }}>
-                      <div className="sov-fill" style={{ width: `${Math.min(100, c.v)}%`, background: c.color }} />
-                    </div>
-                  </div>
-                ))
+                <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
+              )}
+              {geoScoreLowConfidence && (
+                <div style={{ marginTop: 7 }}>
+                  <span className="badge badge-warn" style={{ fontSize: 10.5 }}>
+                    {prominenceUnavailable
+                      ? "Confianza media: posición no disponible"
+                      : `Confianza ${confidenceLabels[geoScore?.confidence ?? "medium"] ?? geoScore?.confidence}`}
+                  </span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* 3 · Compact KPI carousel */}
-          <div className="ov2-kpi-car" style={{ marginTop: 12 }}>
+          {/* 3 · Indicadores clave — KPI carousel */}
+          <div className="ov2-sec-lbl">Indicadores clave</div>
+          <div className="ov2-kpi-car">
             {[
               {
                 key: "mention",
@@ -919,45 +772,46 @@ export default async function ProjectDetailPage({
               }
             ].map((m) => (
               <div key={m.key} className="ov2-kpi">
-                <div className="ov2-kpi-label">
-                  {m.label}
-                  <InfoTip text={m.tip} />
-                </div>
+                <div className="ov2-kpi-k">{m.label}</div>
 
                 {m.key === "sentiment" ? (
                   <>
-                    <div className="ov2-kpi-value" style={{ fontSize: 18 }}>{m.value}</div>
-                    {sentimentTotal > 0 ? (
+                    <div
+                      className="ov2-kpi-v txt"
+                      style={{
+                        color:
+                          dominantSentiment === "positive"
+                            ? "var(--pos-ink)"
+                            : dominantSentiment === "negative"
+                              ? "var(--neg-ink)"
+                              : "var(--ink-2)"
+                      }}
+                    >
+                      {m.value}
+                    </div>
+                    {sentimentTotal > 0 && (
                       <>
                         <div className="ov2-senti-bar">
                           {sentimentCounts.positive > 0 && (
-                            <span style={{ width: `${(sentimentCounts.positive / sentimentTotal) * 100}%`, background: "var(--pos)" }} />
+                            <i style={{ flexGrow: sentimentCounts.positive, background: "var(--pos)" }} />
                           )}
-                          {sentimentCounts.neutral > 0 && (
-                            <span style={{ width: `${(sentimentCounts.neutral / sentimentTotal) * 100}%`, background: "var(--ink-4)" }} />
-                          )}
-                          {sentimentCounts.mixed > 0 && (
-                            <span style={{ width: `${(sentimentCounts.mixed / sentimentTotal) * 100}%`, background: "var(--warn-ink)" }} />
+                          {sentimentCounts.neutral + sentimentCounts.mixed > 0 && (
+                            <i style={{ flexGrow: sentimentCounts.neutral + sentimentCounts.mixed, background: "var(--line)" }} />
                           )}
                           {sentimentCounts.negative > 0 && (
-                            <span style={{ width: `${(sentimentCounts.negative / sentimentTotal) * 100}%`, background: "var(--neg-ink)" }} />
+                            <i style={{ flexGrow: sentimentCounts.negative, background: "var(--neg)" }} />
                           )}
                         </div>
-                        <div className="ov2-senti-legend">
-                          {sentimentCounts.positive > 0 && <span><i style={{ background: "var(--pos)" }} />{sentimentCounts.positive} pos.</span>}
-                          {sentimentCounts.neutral > 0 && <span><i style={{ background: "var(--ink-4)" }} />{sentimentCounts.neutral} neu.</span>}
-                          {sentimentCounts.mixed > 0 && <span><i style={{ background: "var(--warn-ink)" }} />{sentimentCounts.mixed} mix.</span>}
-                          {sentimentCounts.negative > 0 && <span><i style={{ background: "var(--neg-ink)" }} />{sentimentCounts.negative} neg.</span>}
+                        <div className="ov2-senti-cap">
+                          {Math.round((sentimentCounts.positive / sentimentTotal) * 100)}% · {sentimentTotal} resp.
                         </div>
                       </>
-                    ) : null}
+                    )}
                   </>
                 ) : m.isShare ? (
                   m.value !== null ? (
                     <>
-                      <div className="ov2-kpi-value">
-                        {m.value}<span className="unit">%</span>
-                      </div>
+                      <div className="ov2-kpi-v">{m.value}<small>%</small></div>
                       <div className="ov2-kpi-foot">
                         <span className={`badge ${
                           m.value > 50 ? "badge-pos" :
@@ -965,7 +819,7 @@ export default async function ProjectDetailPage({
                           m.value >= 15 ? "badge-neutral" :
                           m.value >= 5  ? "badge-warn" :
                           "badge-neg"
-                        }`} style={{ fontSize: 10.5 }}>
+                        }`} style={{ fontSize: 10 }}>
                           {m.value > 50 ? "Muy alto" :
                            m.value >= 30 ? "Alto" :
                            m.value >= 15 ? "Medio" :
@@ -975,16 +829,14 @@ export default async function ProjectDetailPage({
                       </div>
                     </>
                   ) : (
-                    <div className="ov2-kpi-value" style={{ color: "var(--ink-4)", fontSize: 16 }}>Sin datos</div>
+                    <div className="ov2-kpi-v txt" style={{ color: "var(--ink-4)" }}>Sin datos</div>
                   )
                 ) : (
                   <>
-                    <div className="ov2-kpi-value">
-                      {m.value}<span className="unit">{m.unit}</span>
-                    </div>
+                    <div className="ov2-kpi-v">{m.value}<small>{m.unit}</small></div>
                     <div className="ov2-kpi-foot">
                       {"band" in m && m.band ? (
-                        <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10.5 }}>
+                        <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10 }}>
                           {m.band.label}
                         </span>
                       ) : "hideDelta" in m && m.hideDelta ? null : m.delta !== 0 ? (
@@ -995,415 +847,169 @@ export default async function ProjectDetailPage({
                     </div>
                   </>
                 )}
-
-                {(m.key !== "sentiment" || sentimentTotal === 0) && (
-                  <div className="ov2-kpi-hint">{m.hint}</div>
-                )}
               </div>
             ))}
           </div>
 
-          {/* 4 · Dónde estás */}
-          <div className="section-head" style={{ marginTop: 28 }}>
-            <div className="section-title">Dónde estás</div>
-            <div className="section-desc">Cuota de voz en IA en tus prompts monitorizados</div>
-          </div>
-
-          <div className="grid-2-1">
-            {/* Unified competitive panorama: position + share of voice
-                (merges the previously-separate "Posición media de marca" and
-                competitor table sections — founder request, Task Intake
-                2026-07-23) with real favicons via faviconUrl(). */}
-            <div className="card">
-              <div className="card-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  Panorámica competitiva
-                  <InfoTip text="Posición media (según orden de aparición en las respuestas de IA) y cuota de voz de cada marca en tus prompts monitorizados. Las marcas no mencionadas en un prompt penalizan con la última posición posible." />
-                </div>
-                {competitors?.length ? (
-                  <span className="badge badge-neutral">{competitors.length} competidores</span>
-                ) : null}
-              </div>
-              {competitorRows.length > 0 ? (
-                <div style={{ padding: "10px 10px 12px" }}>
-                  {!brandPositionAvailable && (
-                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", padding: "0 6px 10px" }}>
-                      Posición media no disponible para este escaneo — disponible a partir del próximo.
-                    </div>
-                  )}
-                  {brandPositionLowConfidence && (
-                    <span className="badge badge-warn" style={{ margin: "0 6px 10px", width: "fit-content" }}>
-                      Pocos datos de posición — basado en {brandPositionPromptsWithData} prompt{brandPositionPromptsWithData === 1 ? "" : "s"}
-                    </span>
-                  )}
-                  {panoramaRows.map((row, i) => {
-                    const favicon = faviconUrl(row.domain);
-                    const barColor = row.isBrand ? "var(--brand-blue)" : COMPETITOR_COLORS[i % COMPETITOR_COLORS.length];
-                    return (
-                      <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
-                        <span className="ov2-cmp-rank">{i + 1}</span>
-                        {favicon ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-                          <img src={favicon} alt="" className="ov2-cmp-fav" width={24} height={24} loading="lazy" />
-                        ) : (
-                          <span className="fav" style={{ background: barColor, width: 24, height: 24, fontSize: 10 }}>
-                            {row.name.slice(0, 1).toUpperCase()}
-                          </span>
-                        )}
-                        <span className="ov2-cmp-name">
-                          {row.name}
-                          {row.isBrand && <span className="ov2-cmp-you-tag">Tú</span>}
-                        </span>
-                        {row.avgPosition !== null && (
-                          <span className="ov2-cmp-pos tnum">{row.avgPosition.toFixed(2)} pos.</span>
-                        )}
-                        <div className="ov2-cmp-bar">
-                          <span style={{ width: `${(row.sov / maxPanoramaSov) * 100}%`, background: barColor }} />
-                        </div>
-                        <span className="ov2-cmp-sov tnum">{row.sov}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div style={{ padding: "16px 18px" }}>
-                  <EmptyState
-                    title="Sin datos de competidores"
-                    description="Añade competidores para ver cómo se compara tu visibilidad en IA."
-                  />
-                  <Link
-                    href={`/dashboard/projects/${projectId}/competitors`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
-                  >
-                    Añadir competidores <Icon name="arrRight" size={13} />
-                  </Link>
-                </div>
-              )}
-            </div>
-
-            {/* Engine positioning */}
-            <div className="card">
-              <div className="card-head">
-                <div className="card-title">Posicionamiento por motores de IA</div>
-                <InfoTip text="Mención, citación y sentimiento de tu marca en cada motor de IA ejecutado en el último escaneo. Cada motor responde distinto — las brechas de cobertura en uno son una oportunidad." />
-              </div>
-              {engineBreakdown.length > 0 ? (
-                <>
-                  <div style={{ padding: "18px" }}>
-                    {engineBreakdown.map((e) => {
-                      const meta = getEngineMeta(e.provider);
-                      return (
-                        <div key={e.provider} className="ov2-eng-row">
-                          <span className="ov2-eng-ico" style={{ background: `${meta.color}1f`, color: meta.color }}>
-                            <EngineGlyph provider={e.provider} />
-                          </span>
-                          <div className="ov2-eng-body">
-                            <div className="ov2-eng-top">
-                              <span className="ov2-eng-name">{meta.label}</span>
-                              <span className="ov2-eng-pct tnum">{e.mentionRate}% mención</span>
-                            </div>
-                            <div className="sov-bar" style={{ height: 8 }}>
-                              <div className="sov-fill" style={{ width: `${e.mentionRate}%`, background: meta.color }} />
-                            </div>
-                            <div className="ov2-eng-meta">
-                              {/* Ungrounded engines (no web search) show no citation
-                                  text at all — founder decision on review; the
-                                  grounded/ungrounded distinction stays honest via
-                                  citationRate: null, it's just not verbalized here. */}
-                              {e.citationRate !== null && <span>{e.citationRate}% citación</span>}
-                              <span style={{ marginLeft: "auto" }}>
-                                {e.dominantSentiment ? (
-                                  <span
-                                    className={`badge ${
-                                      e.dominantSentiment === "positive"
-                                        ? "badge-pos"
-                                        : e.dominantSentiment === "negative"
-                                          ? "badge-neg"
-                                          : "badge-neutral"
-                                    }`}
-                                    style={{ fontSize: 10.5 }}
-                                  >
-                                    {sentimentLabels[e.dominantSentiment] ?? e.dominantSentiment}
-                                  </span>
-                                ) : (
-                                  <span style={{ color: "var(--ink-4)" }}>—</span>
-                                )}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {engineGap && engineGap.points >= 15 && (
-                    <div
-                      style={{
-                        borderTop: "1px solid var(--line-soft)",
-                        padding: "12px 18px",
-                        fontSize: 12.5,
-                        color: "var(--ink-3)",
-                        lineHeight: 1.5
-                      }}
-                    >
-                      Brecha de {engineGap.points} pts: tu marca aparece mucho más en{" "}
-                      <b style={{ color: "var(--ink)" }}>{getEngineMeta(engineGap.leader).label}</b> que en{" "}
-                      <b style={{ color: "var(--ink)" }}>{getEngineMeta(engineGap.laggard).label}</b>. Mejorar tu
-                      presencia en las fuentes que usa {getEngineMeta(engineGap.laggard).label} es tu mayor
-                      oportunidad multi-motor.
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div style={{ padding: "24px 18px" }}>
-                  <div className="section-empty">
-                    <div className="section-empty-title">Sin datos todavía</div>
-                    <div className="section-empty-desc">
-                      La distribución por motor de IA aparecerá aquí después de completar un escaneo.
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 5 · Oportunidades */}
-          <div className="section-head">
-            <div className="section-title">Oportunidades</div>
-            <div className="section-desc">Prompts donde ganan los competidores y puedes mejorar</div>
-          </div>
-
-          <div className="grid-2-1">
-            {/* Prompt opportunities */}
-            <div className="card">
-              <div className="card-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div className="card-title">Oportunidades de prompts</div>
-                {promptOpportunities.length > 0 && (
-                  <span className="badge badge-neutral">{promptOpportunities.length}</span>
-                )}
-                <InfoTip text="Prompts de tu último escaneo donde la IA menciona al menos un competidor pero no a tu marca — las consultas concretas donde hoy pierdes la respuesta. Cada una tiene su recomendación asociada en Recomendaciones." />
-              </div>
-              {promptOpportunities.length > 0 ? (
-                <div style={{ padding: "4px 0" }}>
-                  {promptOpportunities.map((op, i) => (
-                    <div
-                      key={op.prompt}
-                      style={{
-                        padding: "11px 18px",
-                        borderBottom: i < promptOpportunities.length - 1 ? "1px solid var(--line-soft)" : "none"
-                      }}
-                    >
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink-2)", lineHeight: 1.45 }}>
-                        {op.prompt}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                        <span style={{ fontSize: 11, color: "var(--ink-4)", fontWeight: 600 }}>
-                          {op.competitors.length === 1 ? "Gana" : "Ganan"}
-                        </span>
-                        {op.competitors.map((name) => (
-                          <span key={name} className="badge badge-neg" style={{ fontSize: 11 }}>
-                            {name}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ padding: "10px 18px 12px" }}>
-                    <Link
-                      href={`/dashboard/projects/${projectId}/recommendations`}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 650, color: "var(--accent)" }}
-                    >
-                      Ver las acciones para recuperarlos <Icon name="arrRight" size={13} />
-                    </Link>
-                  </div>
-                </div>
-              ) : (
-                <div style={{ padding: "16px 18px" }}>
-                  <div className="section-empty">
-                    <div className="section-empty-title">Sin oportunidades abiertas</div>
-                    <div className="section-empty-desc">
-                      En este escaneo no hay prompts donde un competidor aparezca y tu marca no. Si añades más prompts o competidores, aquí verás dónde te desplazan.
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Cited pages */}
-            <div className="card">
-              <div className="card-head" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div className="card-title">Páginas fuente más citadas</div>
-                {citedPages.length > 0 && (
-                  <span className="badge badge-neutral">{citedPages.length}</span>
-                )}
-              </div>
-              {citedPages.length > 0 ? (
-                <div style={{ padding: "4px 0" }}>
-                  {citedPages.map((p, i) => (
-                    <div
-                      key={p.display}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "11px 18px",
-                        borderBottom: i < citedPages.length - 1 ? "1px solid var(--line-soft)" : "none"
-                      }}
-                    >
-                      <span style={{ color: p.isYours ? "var(--accent)" : "var(--ink-4)", flexShrink: 0, display: "flex" }}>
-                        <Icon name={p.isYours ? "link" : "globe"} size={14} />
-                      </span>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div
-                          style={{
-                            fontFamily: "var(--mono)",
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            color: p.isYours ? "var(--accent-ink)" : "var(--ink-2)",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis"
-                          }}
-                        >
-                          {p.display}
-                        </div>
-                        <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>
-                          citada {p.count} {p.count === 1 ? "vez" : "veces"}
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <div className="tnum" style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>{p.count}</div>
-                        <div style={{ fontSize: 10, color: "var(--ink-4)", fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em" }}>citas</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ padding: "16px 18px" }}>
-                  <div className="section-empty">
-                    <div className="section-empty-title">Sin fuentes detectadas</div>
-                    <div className="section-empty-desc">
-                      Las páginas citadas por los motores de IA aparecerán aquí cuando el escaneo las extraiga.
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 6 · Qué hacer primero */}
-          <div className="section-head">
-            <div className="section-title">Qué hacer primero</div>
-            <div className="section-desc">Acciones ordenadas por impacto en la visibilidad en IA</div>
-            <div className="right">
-              <Link
-                href={`/dashboard/projects/${projectId}/recommendations`}
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
-              >
-                Abrir todas las recomendaciones <Icon name="arrRight" size={13} />
-              </Link>
-            </div>
-          </div>
-
-          {latestRecommendations?.length ? (
-            <div className="recs-3col">
-              {latestRecommendations.map((rec) => {
-                const evidence = rec.evidence_json && typeof rec.evidence_json === "object"
-                  ? (rec.evidence_json as { why_this_matters?: string })
-                  : {};
-                const priority = (rec.priority_rank ?? 1) <= 2 ? "high" : (rec.priority_rank ?? 1) <= 4 ? "med" : "low";
+          {/* 4 · Posicionamiento por motores de IA */}
+          <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
+          <div className="card" style={{ padding: 14 }}>
+            {engineBreakdown.length > 0 ? (
+              engineBreakdown.map((e) => {
+                const meta = getEngineMeta(e.provider);
                 return (
-                  <Link
-                    key={rec.id}
-                    href={`/dashboard/projects/${projectId}/recommendations`}
-                    className="rec-card-preview"
-                  >
-                    <div className="rec-meta">
-                      <span className={`rec-rank ${priority}`}>{rec.priority_rank}</span>
-                      <span className={`badge badge-${priority === "high" ? "neg" : priority === "med" ? "warn" : "neutral"}`}>
-                        Prioridad {priorityLabels[priority] ?? priority}
+                  <div key={e.provider} className="ov2-engbar">
+                    <span className="nm">
+                      <span className="ov2-eng-ico" style={{ color: meta.color }}>
+                        <EngineGlyph provider={e.provider} />
                       </span>
-                      {rec.recommendation_type && (
-                        <span className="badge badge-outline">{rec.recommendation_type.replaceAll("_", " ")}</span>
-                      )}
+                      {meta.label}
+                    </span>
+                    <div className="track">
+                      <i style={{ width: `${e.mentionRate}%`, background: meta.color }} />
                     </div>
-                    <div className="rec-title">{rec.title}</div>
-                    {evidence.why_this_matters && (
-                      <p style={{ fontSize: 12, color: "var(--ink-3)", lineHeight: 1.55, flexGrow: 1 }}>
-                        {String(evidence.why_this_matters).slice(0, 140)}{String(evidence.why_this_matters).length > 140 ? "…" : ""}
-                      </p>
-                    )}
-                    <div className="rec-metrics">
-                      <div className="rmetric">
-                        <div className="l">Impacto</div>
-                        <div className="v"><DotMeter n={impactEffortToN(rec.impact ?? "low")} tone="h" /></div>
-                      </div>
-                      <div className="rmetric">
-                        <div className="l">Esfuerzo</div>
-                        <div className="v"><DotMeter n={impactEffortToN(rec.effort ?? "low")} tone="m" /></div>
-                      </div>
-                      <div style={{ marginLeft: "auto", textAlign: "right" }}>
-                        <div className="l" style={{ fontSize: 10, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
-                          Confianza
-                        </div>
-                        <div className="tnum" style={{ fontSize: 13, fontWeight: 750, marginTop: 4 }}>
-                          {confidenceToPercent(rec.confidence ?? "low")}%
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
+                    <span className="v">{e.mentionRate}%</span>
+                  </div>
                 );
-              })}
-            </div>
-          ) : (
-            <div className="section-empty">
-              <div className="section-empty-title">Sin recomendaciones activas</div>
-              <div className="section-empty-desc">Las recomendaciones se generan al completar un escaneo con suficiente evidencia.</div>
-            </div>
-          )}
-
-          {/* Oportunidades — visual summary of the Recomendaciones section
-              (founder request). Headline number is the REAL count of active
-              recommendations for this run (activeRecommendationsCount, a
-              dedicated count query) — no invented "potential points" (Task
-              Intake 2026-07-23, Option A: real score-impact estimation is a
-              separate, not-yet-scoped future phase). */}
-          {latestRecommendations?.length ? (
-            <div className="ov2-opps" style={{ marginTop: 16 }}>
-              <div className="ov2-opps-hero">
-                <div className="ov2-opps-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
-                <div className="ov2-opps-l">
-                  {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "acción activa" : "acciones activas"}
-                  <br />para mejorar tu puntuación GEO
-                </div>
+              })
+            ) : (
+              <div style={{ fontSize: 12.5, color: "var(--ink-4)", textAlign: "center", padding: "6px 0" }}>
+                Aparecerá aquí después de completar un escaneo.
               </div>
-              <div className="ov2-opps-list">
-                {latestRecommendations.map((rec) => {
-                  const priority = (rec.priority_rank ?? 1) <= 2 ? "high" : (rec.priority_rank ?? 1) <= 4 ? "med" : "low";
-                  const dotColor = priority === "high" ? "var(--p-high)" : priority === "med" ? "var(--p-med)" : "var(--p-low)";
+            )}
+          </div>
+
+          {/* 5 · Panorámica competitiva */}
+          <div className="ov2-sec-lbl">
+            Panorámica competitiva
+            {competitors?.length ? (
+              <Link href={`/dashboard/projects/${projectId}/competitors`}>Ver todo</Link>
+            ) : null}
+          </div>
+          {competitorRows.length > 0 ? (
+            <>
+              {brandPositionAvailable && posbarsData.length > 0 && (
+                <div className="card" style={{ padding: "13px 13px 4px" }}>
+                  <div className="ov2-pm-lbl">Tu posición media</div>
+                  <div className="ov2-pm-val">
+                    {brandRank ?? "—"}<small> / {totalRanked}</small>
+                  </div>
+                  <div className="ov2-posbars">
+                    {posbarsData.map((b, i) => (
+                      <div key={`${b.name}-${i}`} className={`b ${b.isBrand ? "you" : ""}`} style={{ height: b.height }}>
+                        <span>{b.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="card" style={{ marginTop: brandPositionAvailable && posbarsData.length > 0 ? 9 : 0 }}>
+                {competitiveList.map((row) => {
+                  const favicon = faviconUrl(row.domain);
+                  const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
                   return (
-                    <div key={rec.id} className="ov2-opps-item">
-                      <span className="ov2-opps-dot" style={{ background: dotColor }} />
-                      <span className="ov2-opps-title">{rec.title}</span>
+                    <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
+                      <span className="ov2-cmp-n">{row.rank ?? "·"}</span>
+                      {favicon ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
+                        <img src={favicon} alt="" className="ov2-cmp-fav" width={26} height={26} loading="lazy" />
+                      ) : (
+                        <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
+                          {row.name.slice(0, 1).toUpperCase()}
+                        </span>
+                      )}
+                      <div className="ov2-cmp-nm">
+                        <div className="t">
+                          {row.name}
+                          {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
+                        </div>
+                      </div>
+                      <div className="ov2-cmp-sov">
+                        <div className="track">
+                          <i style={{ width: `${(row.sov / maxPanoramaSov) * 100}%`, background: barColor }} />
+                        </div>
+                        <div className="pct">{row.sov}%</div>
+                      </div>
+                      {row.avgPosition !== null ? (
+                        <span className="ov2-cmp-sc">{row.avgPosition.toFixed(2)}<small> pos</small></span>
+                      ) : (
+                        <span className="ov2-cmp-sc" style={{ color: "var(--ink-4)" }}>—</span>
+                      )}
                     </div>
                   );
                 })}
               </div>
-              <Link href={`/dashboard/projects/${projectId}/recommendations`} className="ov2-opps-cta">
-                Ver todas las recomendaciones <Icon name="arrRight" size={13} />
+            </>
+          ) : (
+            <div className="card" style={{ padding: "16px 18px" }}>
+              <EmptyState
+                title="Sin datos de competidores"
+                description="Añade competidores para ver cómo se compara tu visibilidad en IA."
+              />
+              <Link
+                href={`/dashboard/projects/${projectId}/competitors`}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
+              >
+                Añadir competidores <Icon name="arrRight" size={13} />
               </Link>
             </div>
-          ) : null}
+          )}
 
-          {/* Link to scan detail */}
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
-            <Link
-              href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun!.id}`}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-            >
-              Ver detalle del escaneo
-              <Icon name="arrRight" size={13} />
-            </Link>
-          </div>
+          {/* 6 · Oportunidades — resumen visual de Recomendaciones.
+              Contenido REAL: nº de recomendaciones activas + cuántas son de
+              alta prioridad. Sin "puntos potenciales" inventados (Task Intake
+              2026-07-23, Opción A: la estimación real de impacto en puntuación
+              es una fase futura, aún sin diseñar). */}
+          {latestRecommendations?.length ? (
+            <>
+              <div className="ov2-sec-lbl">
+                Oportunidades
+                <Link href={`/dashboard/projects/${projectId}/recommendations`}>
+                  Ver todo <Icon name="arrRight" size={13} />
+                </Link>
+              </div>
+              <div className="card ov2-opps">
+                <div className="ov2-opps-hero">
+                  <div className="ov2-opps-gain">
+                    <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
+                    <div className="ov2-opps-gain-l">
+                      {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="ov2-opps-h">
+                      {highPriorityCount > 0
+                        ? `${highPriorityCount} ${highPriorityCount === 1 ? "acción" : "acciones"} de alta prioridad`
+                        : "Acciones priorizadas para ti"}
+                    </div>
+                    <div className="ov2-opps-s">
+                      {topCompetitor && topCompetitor.mentionRate > computedMentionRate
+                        ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
+                        : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
+                    </div>
+                  </div>
+                </div>
+                <div className="ov2-opps-list">
+                  {latestRecommendations.map((rec) => {
+                    const priority = (rec.priority_rank ?? 1) <= 2 ? "high" : (rec.priority_rank ?? 1) <= 4 ? "med" : "low";
+                    const dotColor = priority === "high" ? "var(--p-high)" : priority === "med" ? "var(--p-med)" : "var(--p-low)";
+                    const impact = (rec.impact ?? "low").toLowerCase();
+                    const impactLabel = impact === "high" ? "Alto" : impact === "medium" || impact === "med" ? "Medio" : "Bajo";
+                    return (
+                      <div key={rec.id} className="ov2-opp">
+                        <span className="ov2-opp-dot" style={{ background: dotColor }} />
+                        <span className="ov2-opp-t">{rec.title}</span>
+                        <span className="ov2-opp-r">Impacto {impactLabel.toLowerCase()}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <Link href={`/dashboard/projects/${projectId}/recommendations`} className="ov2-opps-cta">
+                  Ver todas las recomendaciones <Icon name="arrRight" size={13} />
+                </Link>
+              </div>
+            </>
+          ) : null}
         </div>
       ) : (
         /* ===== EMPTY STATE ===== */
