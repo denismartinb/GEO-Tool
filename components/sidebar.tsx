@@ -98,7 +98,7 @@ export function Sidebar({
       <aside className="sb" ref={asideRef} tabIndex={-1}>
         <div className="sb-brand">
           <div>
-            <BrandLogo size={18} />
+            <BrandLogo size={22} />
             <div className="brand-sub">Espacio de visibilidad en IA</div>
           </div>
           <button type="button" className="sb-close" onClick={handleClose} aria-label="Cerrar menú">

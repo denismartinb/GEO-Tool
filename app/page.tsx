@@ -10,6 +10,7 @@ import { Gauge } from "@/components/ui/gauge";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
+import { useTypewriter } from "@/components/ui/use-typewriter";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 
 /**
@@ -220,30 +221,35 @@ function ProductShot() {
   );
 }
 
+const HERO_DOMAIN_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
+
 export default function HomePage() {
   const router = useRouter();
   const [domain, setDomain] = useState("");
+  const [isDomainFocused, setIsDomainFocused] = useState(false);
+  const typedPlaceholder = useTypewriter(HERO_DOMAIN_SAMPLES, !isDomainFocused && domain === "");
 
   const goToSignup = () => router.push("/signup");
   const goToLogin = () => router.push("/login");
 
+  const NAV_LINKS = [
+    { href: "#producto", label: "Producto" },
+    { href: "#como", label: "Cómo funciona" },
+    { href: "#recomendaciones", label: "Recomendaciones" },
+    { href: "/geo", label: "Qué es GEO" },
+    { href: "/pricing", label: "Precios" },
+    { href: "/blog", label: "Blog" }
+  ];
+
   return (
     <div className="lp">
-      {/* NAV */}
-      <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav
-            links={[
-              { href: "#producto", label: "Producto" },
-              { href: "#como", label: "Cómo funciona" },
-              { href: "#recomendaciones", label: "Recomendaciones" },
-              { href: "/geo", label: "Qué es GEO" },
-              { href: "/pricing", label: "Precios" },
-              { href: "/blog", label: "Blog" }
-            ]}
-          />
+      {/* HERO — nav + promo strip integrated into the same gradient ground
+          (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
+      <header className="lp-hero lp-hero--home" id="producto">
+        <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
+        <nav className="lp-nav lp-nav--hero">
           <div className="lp-logo">
-            <BrandLogo size={18} />
+            <BrandLogo size={22} />
           </div>
           <div className="lp-nav-links">
             <a href="#producto">Producto</a>
@@ -254,42 +260,55 @@ export default function HomePage() {
             <Link href="/blog">Blog</Link>
           </div>
           <div className="lp-nav-right">
-            <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
-            <button className="btn btn-primary btn-sm" onClick={goToSignup}>Prueba gratis</button>
+            <button className="lp-nav-btn" onClick={goToLogin}>Iniciar sesión</button>
+            <button className="lp-nav-btn lp-nav-btn--primary" onClick={goToSignup}>Prueba gratis</button>
           </div>
+          <MarketingMobileNav
+            links={NAV_LINKS}
+            twoLine
+            fromRight
+            ctas={
+              <>
+                <button type="button" className="lp-cta-soft" onClick={goToLogin}>Iniciar sesión</button>
+                <button type="button" className="lp-cta" onClick={goToSignup}>Prueba gratis</button>
+              </>
+            }
+          />
         </nav>
-      </div>
 
-      {/* HERO */}
-      <header className="lp-hero" id="producto">
-        <div className="onb-aurora">
-          <div className="ring" /><div className="ring r2" />
-          <div className="blob blob-1" /><div className="blob blob-2" />
-          <div className="blob blob-3" /><div className="blob blob-4" />
-        </div>
         <div className="lp-hero-content">
-          <span className="lp-eyebrow"><Icon name="sparkles" size={14} />Generative Engine Optimization</span>
           <h1 className="lp-h1">
-            De la visibilidad en IA<br /><span className="grad">a la implementación</span>
+            Que la IA <span className="lp-h1-accent">hable de tu marca</span>
           </h1>
           <p className="lp-lead">
             Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y exactamente
             qué cambiar primero. Análisis claro, acciones que puedes ejecutar.
           </p>
           <div className="lp-hero-form">
-            <div className="domain-bar">
-              <Icon name="globe" size={18} className="domain-globe" />
+            <div className="lp-field">
+              <Icon name="globe" size={18} className="lp-field-ico" />
               <input
-                className="domain-input"
+                className="lp-field-input"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && goToSignup()}
-                placeholder="introduce tu dominio"
+                onFocus={() => setIsDomainFocused(true)}
+                onBlur={() => setIsDomainFocused(false)}
+                placeholder={isDomainFocused || domain ? "Escribe tu sitio web" : ""}
                 spellCheck={false}
               />
-              <button className="btn btn-primary onb-cta" onClick={goToSignup}>
+              {!isDomainFocused && !domain && (
+                <span className="lp-field-ghost" aria-hidden="true">
+                  {typedPlaceholder}
+                  <span className="type-caret" />
+                </span>
+              )}
+            </div>
+            <div className="lp-hero-actions">
+              <button className="lp-cta" onClick={goToSignup}>
                 Analiza gratis <Icon name="arrRight" size={16} />
               </button>
+              <a className="lp-cta-soft" href="#como">Ver cómo funciona</a>
             </div>
           </div>
         </div>
@@ -458,7 +477,7 @@ export default function HomePage() {
         <div className="lp-inner">
           <div className="row1">
             <div className="lp-logo">
-              <BrandLogo size={16} />
+              <BrandLogo size={19} />
             </div>
             <div className="links">
               <a href="#producto">Producto</a>

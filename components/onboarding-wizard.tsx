@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
+import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { sanitizePromptLineText } from "@/lib/projects/project-form";
@@ -80,44 +81,6 @@ function isValidDomain(value: string) {
     .replace(/\/.*$/, "");
 
   return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(domain);
-}
-
-// Pequeño typewriter para el placeholder del input de dominio.
-// Port literal de onboarding.jsx líneas 21-47 (estado/efectos puros de React).
-function useTypewriter(words: string[], active: boolean) {
-  const [txt, setTxt] = useState("");
-  const st = useRef({ w: 0, c: 0, del: false });
-  useEffect(() => {
-    if (!active) return;
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      const s = st.current;
-      const word = words[s.w % words.length];
-      if (!s.del) {
-        s.c++;
-        setTxt(word.slice(0, s.c));
-        if (s.c >= word.length) {
-          s.del = true;
-          timer = setTimeout(tick, 1400);
-          return;
-        }
-        timer = setTimeout(tick, 95);
-      } else {
-        s.c--;
-        setTxt(word.slice(0, s.c));
-        if (s.c <= 0) {
-          s.del = false;
-          s.w++;
-          timer = setTimeout(tick, 280);
-          return;
-        }
-        timer = setTimeout(tick, 45);
-      }
-    };
-    timer = setTimeout(tick, 600);
-    return () => clearTimeout(timer);
-  }, [active, words]);
-  return txt;
 }
 
 // Banderitas mini (mismas que onboarding.jsx) — solo los códigos definidos en

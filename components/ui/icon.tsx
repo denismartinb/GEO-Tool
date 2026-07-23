@@ -154,6 +154,7 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     menu: <path d="M3 6h18M3 12h18M3 18h18" />,
+    menu2: <path d="M4 8h16M4 16h16" />,
     x: <path d="M18 6 6 18M6 6l12 12" />,
     card: (
       <>
