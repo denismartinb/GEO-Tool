@@ -1075,30 +1075,6 @@ export default async function ProjectDetailPage({
         )
       )}
 
-      {/* ===== QUICK LINKS ===== */}
-      <div style={{ display: "flex", gap: 16, marginTop: 32, paddingTop: 20, borderTop: "1px solid var(--line-soft)" }}>
-        <Link
-          href={`/dashboard/projects/${projectId}/prompts`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="prompts" size={14} />
-          Gestionar prompts ({prompts?.length ?? 0} activos)
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/competitors`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="competitors" size={14} />
-          Gestionar competidores ({competitors?.length ?? 0} activos)
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/runs`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
-        >
-          <Icon name="runs" size={14} />
-          Ver escaneos ({runs?.length ?? 0})
-        </Link>
-      </div>
     </div>
   );
 }
