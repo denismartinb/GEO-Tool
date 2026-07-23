@@ -647,7 +647,7 @@ export default async function ProjectDetailPage({
                 )}
                 {geoTrend.length >= 2 && (
                   <div style={{ marginTop: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <Sparkline data={geoTrend} w={120} h={30} color="var(--accent)" />
+                    <Sparkline data={geoTrend} w={120} h={30} color="var(--brand-blue)" />
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {gaugeDelta !== 0 ? (
                         <Delta value={gaugeDelta} suffix=" pt" />
@@ -671,7 +671,7 @@ export default async function ProjectDetailPage({
                   {
                     l: "Presencia (mención)",
                     c: geoScore.components.presence,
-                    color: "var(--accent)",
+                    color: "var(--brand-blue)",
                     info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
                   },
                   { l: "Prominencia (posición)", c: geoScore.components.prominence, color: "#7c3aed" },
@@ -724,7 +724,7 @@ export default async function ProjectDetailPage({
                   {
                     l: "Tasa de mención",
                     v: computedMentionRate,
-                    color: "var(--accent)",
+                    color: "var(--brand-blue)",
                     info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
                   },
                   {
@@ -769,7 +769,7 @@ export default async function ProjectDetailPage({
                 unit: "%",
                 trend: visTrend,
                 delta: visDelta,
-                color: "var(--accent)",
+                color: "var(--brand-blue)",
                 hint: "Prompts donde aparece tu marca.",
                 tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
                 isShare: false as const
@@ -931,7 +931,7 @@ export default async function ProjectDetailPage({
                         <span
                           className="fav"
                           style={{
-                            background: entry.is_brand ? "var(--accent)" : COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
+                            background: entry.is_brand ? "var(--brand-blue)" : COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
                             width: 22,
                             height: 22,
                             fontSize: 10
@@ -990,14 +990,14 @@ export default async function ProjectDetailPage({
                           <div className="ent">
                             <span
                               className="fav"
-                              style={{ background: "var(--accent)", fontSize: 11, fontWeight: 800 }}
+                              style={{ background: "var(--brand-blue)", fontSize: 11, fontWeight: 800 }}
                             >
                               {project.brand.slice(0, 1).toUpperCase()}
                             </span>
                             <div>
                               <div className="nm">
                                 {project.brand}
-                                <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700, marginLeft: 6 }}>Tú</span>
+                                <span style={{ fontSize: 11, color: "var(--brand-blue)", fontWeight: 700, marginLeft: 6 }}>Tú</span>
                               </div>
                               <div className="dm">{project.domain}</div>
                             </div>
@@ -1013,7 +1013,7 @@ export default async function ProjectDetailPage({
                                 className="sov-fill"
                                 style={{
                                   width: maxMentionRate > 0 ? `${(computedMentionRate / maxMentionRate) * 100}%` : "0%",
-                                  background: "var(--accent)"
+                                  background: "var(--brand-blue)"
                                 }}
                               />
                             </div>
@@ -1069,7 +1069,7 @@ export default async function ProjectDetailPage({
                   />
                   <Link
                     href={`/dashboard/projects/${projectId}/competitors`}
-                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
                   >
                     Añadir competidores <Icon name="arrRight" size={13} />
                   </Link>
@@ -1216,7 +1216,7 @@ export default async function ProjectDetailPage({
                   <div style={{ padding: "10px 18px 12px" }}>
                     <Link
                       href={`/dashboard/projects/${projectId}/recommendations`}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 650, color: "var(--accent)" }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 650, color: "var(--brand-blue)" }}
                     >
                       Ver las acciones para recuperarlos <Icon name="arrRight" size={13} />
                     </Link>
@@ -1255,7 +1255,7 @@ export default async function ProjectDetailPage({
                         borderBottom: i < citedPages.length - 1 ? "1px solid var(--line-soft)" : "none"
                       }}
                     >
-                      <span style={{ color: p.isYours ? "var(--accent)" : "var(--ink-4)", flexShrink: 0, display: "flex" }}>
+                      <span style={{ color: p.isYours ? "var(--brand-blue)" : "var(--ink-4)", flexShrink: 0, display: "flex" }}>
                         <Icon name={p.isYours ? "link" : "globe"} size={14} />
                       </span>
                       <div style={{ minWidth: 0, flex: 1 }}>
@@ -1264,7 +1264,7 @@ export default async function ProjectDetailPage({
                             fontFamily: "var(--mono)",
                             fontSize: 11.5,
                             fontWeight: 600,
-                            color: p.isYours ? "var(--accent-ink)" : "var(--ink-2)",
+                            color: p.isYours ? "var(--brand-blue)" : "var(--ink-2)",
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis"
@@ -1303,7 +1303,7 @@ export default async function ProjectDetailPage({
             <div className="right">
               <Link
                 href={`/dashboard/projects/${projectId}/recommendations`}
-                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 650, color: "var(--accent)" }}
+                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
               >
                 Abrir todas las recomendaciones <Icon name="arrRight" size={13} />
               </Link>
@@ -1393,7 +1393,7 @@ export default async function ProjectDetailPage({
             }}>
               <div style={{
                 width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
-                background: "var(--accent-soft)", display: "grid", placeItems: "center", color: "var(--accent)"
+                background: "rgba(37,99,235,.1)", display: "grid", placeItems: "center", color: "var(--brand-blue)"
               }}>
                 <Icon name="overview" size={24} />
               </div>

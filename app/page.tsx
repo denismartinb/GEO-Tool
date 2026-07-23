@@ -25,7 +25,7 @@ const SHOT_COMPONENTS: Array<{ l: string; v: number; color: string; info?: strin
   {
     l: "Presencia (mención)",
     v: 92,
-    color: "var(--accent)",
+    color: "var(--brand-blue)",
     info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
   },
   { l: "Prominencia (posición)", v: 68, color: "#7c3aed" },
@@ -62,7 +62,7 @@ const SHOT_METRICS: Array<{
     unit: "%",
     trend: [78, 82, 85, 88, 90, 92],
     delta: 4,
-    color: "var(--accent)",
+    color: "var(--brand-blue)",
     hint: "Prompts donde aparece tu marca."
   },
   {
@@ -156,7 +156,7 @@ function ProductShot() {
             </div>
             <Badge tone="pos">Franja «competitivo»</Badge>
             <div style={{ marginTop: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <Sparkline data={SHOT_SCORE_TREND} w={100} h={26} color="var(--accent)" />
+              <Sparkline data={SHOT_SCORE_TREND} w={100} h={26} color="var(--brand-blue)" />
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Delta value={7} suffix=" pt" />
                 <span className="stat-hint">vs. escaneo anterior</span>

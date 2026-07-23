@@ -31,7 +31,7 @@ export function Gauge({ value, max = 100, size = 132, stroke = 13, label = "/ 10
     return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r.toFixed(2)} ${r.toFixed(2)} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
   }
 
-  const bandColor = value >= 70 ? "var(--pos)" : value >= 40 ? "var(--accent)" : "var(--warn)";
+  const bandColor = value >= 70 ? "var(--pos)" : value >= 40 ? "var(--brand-blue)" : "var(--warn)";
   const gid = `gg${uid}`;
 
   return (
@@ -39,7 +39,7 @@ export function Gauge({ value, max = 100, size = 132, stroke = 13, label = "/ 10
       <svg width={size} height={size}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#6d5ef0" />
+            <stop offset="0%" stopColor="var(--brand-blue-2)" />
             <stop offset="100%" stopColor={bandColor} />
           </linearGradient>
         </defs>
