@@ -13,7 +13,7 @@ export default async function SignupConfirmPage({
     <main className="auth-bg">
       <div className="auth-card">
         <div className="auth-logo">
-          <BrandLogo size={20} />
+          <BrandLogo size={24} />
         </div>
 
         <h1 className="auth-title">Confirma tu email</h1>

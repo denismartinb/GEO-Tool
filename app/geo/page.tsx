@@ -150,7 +150,7 @@ export default function GeoExplainerPage() {
         <nav className="lp-nav">
           <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} />
           <Link href="/" className="lp-logo">
-            <BrandLogo size={18} />
+            <BrandLogo size={22} />
           </Link>
           <div className="lp-nav-links">
             {NAV_LINKS.map((l) => (
@@ -394,7 +394,7 @@ export default function GeoExplainerPage() {
         <div className="lp-inner">
           <div className="row1">
             <Link href="/" className="lp-logo">
-              <BrandLogo size={16} />
+              <BrandLogo size={19} />
             </Link>
             <div className="links">
               <Link href="/#producto">Producto</Link>

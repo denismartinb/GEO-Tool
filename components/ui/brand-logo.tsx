@@ -42,7 +42,12 @@ export function BrandMark({ size = 28, onDark = false }: BrandProps) {
 }
 
 export function BrandLogo({ size = 22, onDark = false }: BrandProps) {
-  const vb = onDark ? "0 0 1119 342" : "0 0 1111 342";
+  // Cropped to exclude the "GENERATIVE ENGINE OPTIMIZATION" tagline row that
+  // ships fused into the same compound path as the wordmark in the source
+  // pack (barely visible, but the viewBox included its vertical space) — it
+  // was making the logo render undersized (size maps to the full viewBox
+  // height) and, at small sizes, an illegible smear under "Genscore".
+  const vb = onDark ? "0 0 1119 254" : "0 0 1111 254";
   const ink = onDark ? INK_ON_DARK : INK;
   const [, , vbW, vbH] = vb.split(" ").map(Number);
   return (

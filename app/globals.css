@@ -544,7 +544,7 @@ a {
 @media (max-width: 480px) {
   /* Same logo-size trim as the marketing nav/sidebar (founder feedback) on
      narrow phones, where auth-bg's own padding already tightens up. */
-  .auth-logo .brand-logo-svg { height: 18px; width: auto; }
+  .auth-logo .brand-logo-svg { height: 21px; width: auto; }
 }
 .auth-h1 { font-size: 25px; font-weight: 800; letter-spacing: -.02em; }
 .auth-sub { font-size: 14.5px; color: var(--ink-3); margin-top: 6px; }
@@ -2890,7 +2890,7 @@ textarea.add-prompts-text-input {
      (founder feedback) — drop it a couple of px alongside the rest of the
      mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
      it instead of stretching at the desktop-computed pixel width. */
-  .lp-logo .brand-logo-svg { height: 16px; width: auto; }
+  .lp-logo .brand-logo-svg { height: 19px; width: auto; }
   /* .lp-hero has no side padding of its own (relies on centered max-width
      content) — without this, .lp-hero-content's heading/lead text runs flush
      to the viewport edge below 900px. */
@@ -3222,7 +3222,7 @@ textarea.add-prompts-text-input {
 
   /* Same logo-size trim as the marketing nav (founder feedback) — applies
      to the sidebar's mobile drawer. */
-  .sb-brand .brand-logo-svg { height: 16px; width: auto; }
+  .sb-brand .brand-logo-svg { height: 19px; width: auto; }
 
   /* --- Scrim --- */
   .mob-scrim {
