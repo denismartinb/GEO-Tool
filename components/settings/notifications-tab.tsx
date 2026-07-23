@@ -21,7 +21,7 @@ const ROWS: { key: NotificationKey; title: string; desc: string; comingSoon?: bo
   { key: "competitor", title: "Movimientos de competidores", desc: "Cuando un competidor te adelanta o pierde posiciones", comingSoon: true },
   { key: "recs", title: "Nuevas recomendaciones", desc: "Cuando se generan acciones prioritarias para tu marca", comingSoon: true },
   { key: "scan", title: "Escaneos completados", desc: "Aviso cada vez que termina un escaneo", comingSoon: true },
-  { key: "product", title: "Novedades de producto", desc: "Mejoras y nuevas funciones de GEO Studio", comingSoon: true, last: true }
+  { key: "product", title: "Novedades de producto", desc: "Mejoras y nuevas funciones de GenScore", comingSoon: true, last: true }
 ];
 
 // visibility (Fase 6a) and weekly (Fase 6b) are persisted server-side; the
