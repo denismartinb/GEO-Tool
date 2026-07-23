@@ -74,9 +74,12 @@ genérico de "ondas").
 | Positivo / negativo | `--pos` / `--neg` | `#15915a` / `#d23b48` | Sin cambios, solo semántica de datos |
 
 Recomendación asociada: retirar progresivamente los degradados decorativos de
-marca en favor de tinta plana + acento. El degradado de `.brand-mark` ya se
-retiró en BRAND-2 (la clase se eliminó del CSS); `.avatar` sigue pendiente y
-queda para Fase 4. Los degradados quedan para fondos de marketing (hero, OG),
+marca en favor de tinta plana + acento. El degradado de `.brand-mark` se
+retiró en BRAND-2; el de `.avatar` se retiró en BRAND-4 (tinta plana
+`--accent-soft`/`--accent-ink`, igual que `.proj-favicon`). Los degradados
+decorativos de marketing (testimonios) quedan pendientes de revisión — no es
+un error, es una decisión de criterio de marca para una fase aparte. Los
+degradados de fondo de héroe/OG se mantienen, esos sí son intencionados,
 no para el símbolo.
 
 ---
@@ -126,7 +129,15 @@ neutra y legible.
 - **Fase 3 — BRAND-3 (metadata + emails):** `openGraph`/`twitter` en
   `app/layout.tsx` apuntando a `genscore-og.png`; cabecera con logo en los
   emails de Resend. Pendiente de aprobación.
-- **Fase 4 — polish (P3):** avatar sin degradado, revisión de estados vacíos
-  y microcopy de marca. Pendiente de aprobación.
+- **Fase 4 — BRAND-4 (✅ implementado):** armonización visual tras la
+  auditoría UX/UI post-v2 — copy retirado "GEO Studio"→"GenScore"
+  (`components/settings/notifications-tab.tsx`), el ámbar de marca dejó de
+  usarse como color de UI (`plan-billing-section.tsx` usa `--warn`/
+  `--warn-ink` en vez de `#f59e0b`), `.avatar` sin degradado (tinta plana,
+  igual criterio que `.proj-favicon`), y el arranque del degradado de la
+  gauge del Overview (`components/ui/gauge.tsx`) alineado al índigo exacto
+  de la G (`#6d5ef0`). Pendiente para una fase aparte, con decisión de
+  criterio del fundador: punto ámbar en la gauge del score, y revisión de
+  los degradados de testimonios en marketing.
 
 Cada fase pasa por Task Intake ligero + Human Gate como siempre.

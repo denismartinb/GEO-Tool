@@ -43,12 +43,12 @@ function UsageRow({
         <div className="run-bar">
           <div
             className="run-bar-fill"
-            style={{ width: `${pct}%`, background: atCap ? "#f59e0b" : "var(--accent)" }}
+            style={{ width: `${pct}%`, background: atCap ? "var(--warn)" : "var(--accent)" }}
           />
         </div>
       </div>
       {atCap && (
-        <p className="flex items-center gap-1.5 text-xs font-medium text-[#92600a]">
+        <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--warn-ink)]">
           <Icon name="alertCircle" size={13} />
           Cerca del límite del plan
         </p>
