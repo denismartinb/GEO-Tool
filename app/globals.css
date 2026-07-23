@@ -1208,6 +1208,198 @@ a {
 .why-b { font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
 
 /* ============================================================
+   BRAND-5b — Overview redesign (Task Intake approved 2026-07-23):
+   insight banner, KPI carousel, engine bars, unified competitive
+   panorama, oportunidades summary. All-new `.ov2-*` classes —
+   `.summary`/`.wide-stat`/`.metrics-2col`/`.tbl`/`.fav`/`.bp-*`/
+   `.recs-3col` etc. stay untouched (shared with competitors,
+   prompts, citations, recommendations and runs pages — verified
+   via grep before this change). `.fav` itself is still reused
+   as-is (not edited) as the no-favicon fallback avatar.
+   ============================================================ */
+.ov2-insight {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  background: linear-gradient(135deg, rgba(37, 99, 235, .07), rgba(79, 123, 255, .02));
+  border: 1px solid rgba(37, 99, 235, .18);
+  border-radius: var(--r-xl);
+}
+.ov2-insight-ico {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: #fff;
+}
+.ov2-insight-txt {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+.ov2-insight-txt b { color: var(--ink); font-weight: 700; }
+
+.ov2-kpi-car {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+}
+.ov2-kpi-car::-webkit-scrollbar { height: 5px; }
+.ov2-kpi-car::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+.ov2-kpi {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  width: 208px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ov2-kpi-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-4);
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.ov2-kpi-value {
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--ink);
+  line-height: 1;
+}
+.ov2-kpi-value .unit { font-size: 12.5px; font-weight: 600; color: var(--ink-3); margin-left: 2px; }
+.ov2-kpi-hint { font-size: 11px; color: var(--ink-4); line-height: 1.4; }
+.ov2-kpi-foot { display: flex; align-items: center; gap: 6px; }
+
+.ov2-senti-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 99px;
+  overflow: hidden;
+  background: var(--surface-sunk);
+}
+.ov2-senti-bar span { height: 100%; }
+.ov2-senti-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  color: var(--ink-3);
+}
+.ov2-senti-legend i { width: 6px; height: 6px; border-radius: 2px; display: inline-block; margin-right: 3px; }
+
+.ov2-eng-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 16px; }
+.ov2-eng-row:last-child { margin-bottom: 0; }
+.ov2-eng-ico {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+}
+.ov2-eng-body { flex: 1; min-width: 0; }
+.ov2-eng-top { display: flex; align-items: baseline; gap: 6px; margin-bottom: 7px; }
+.ov2-eng-name { font-size: 13px; font-weight: 650; color: var(--ink); }
+.ov2-eng-pct { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.ov2-eng-meta { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 11.5px; color: var(--ink-3); }
+
+.ov2-cmp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  border-radius: var(--r-md);
+}
+.ov2-cmp-row.you { background: rgba(37, 99, 235, .07); }
+.ov2-cmp-rank { font-size: 11px; font-weight: 700; color: var(--ink-4); width: 14px; text-align: center; flex-shrink: 0; }
+.ov2-cmp-fav {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line-soft);
+}
+.ov2-cmp-name {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-cmp-row.you .ov2-cmp-name { font-weight: 750; }
+.ov2-cmp-you-tag { font-size: 10.5px; font-weight: 700; color: var(--brand-blue); margin-left: 6px; }
+.ov2-cmp-pos { font-size: 12px; font-weight: 700; color: var(--ink-3); width: 46px; text-align: right; flex-shrink: 0; }
+.ov2-cmp-bar { flex: 0 0 64px; height: 6px; border-radius: 99px; background: var(--surface-sunk); overflow: hidden; }
+.ov2-cmp-bar span { display: block; height: 100%; border-radius: 99px; }
+.ov2-cmp-sov { font-size: 12px; font-weight: 750; color: var(--ink); width: 36px; text-align: right; flex-shrink: 0; }
+
+.ov2-opps {
+  display: flex;
+  gap: 22px;
+  padding: 22px 24px;
+  background: linear-gradient(135deg, var(--brand-ink) 0%, #16233d 100%);
+  border-radius: var(--r-xl);
+  color: #fff;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ov2-opps-hero {
+  flex: 0 0 auto;
+  text-align: center;
+  padding-right: 22px;
+  border-right: 1px solid rgba(255, 255, 255, .12);
+}
+.ov2-opps-n { font-size: 40px; font-weight: 800; letter-spacing: -.03em; line-height: 1; color: var(--brand-blue-2); }
+.ov2-opps-l { font-size: 11.5px; color: rgba(247, 248, 251, .65); margin-top: 4px; font-weight: 600; line-height: 1.4; }
+.ov2-opps-list { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 9px; }
+.ov2-opps-item { display: flex; align-items: center; gap: 9px; font-size: 13px; color: rgba(247, 248, 251, .9); }
+.ov2-opps-dot { width: 7px; height: 7px; border-radius: 99px; flex-shrink: 0; }
+.ov2-opps-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov2-opps-cta {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+@media (max-width: 860px) {
+  .ov2-opps { flex-direction: column; align-items: stretch; }
+  .ov2-opps-hero {
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+    padding-right: 0;
+    padding-bottom: 14px;
+    width: 100%;
+  }
+}
+
+/* ============================================================
    Overview — page header (title + scan action row)
    ============================================================ */
 .ov-header {

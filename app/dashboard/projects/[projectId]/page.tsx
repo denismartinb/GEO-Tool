@@ -151,6 +151,54 @@ function isOwnDomain(domain: string | null | undefined, projectDomain: string): 
   return d === own || d.endsWith(`.${own}`);
 }
 
+/**
+ * Real favicon via an external favicon service — pure frontend <img>, no
+ * crawler and no new schema (Task Intake, 2026-07-23: founder-approved
+ * "recuperando favicons"). Sends the domain to Google on every page load;
+ * disclosed in that Task Intake report.
+ */
+function faviconUrl(domain: string | null | undefined): string | null {
+  if (!domain) return null;
+  const clean = domain.trim().toLowerCase().replace(/^www\./, "");
+  if (!clean) return null;
+  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(clean)}&sz=64`;
+}
+
+/**
+ * Simplified, non-literal glyphs for each engine (Overview "Posicionamiento
+ * por motores de IA") — not a pixel copy of any provider's mark, just a
+ * recognizable stand-in per engine so the block reads at a glance.
+ */
+function EngineGlyph({ provider }: { provider: string }) {
+  switch (provider) {
+    case "gemini":
+      return (
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor">
+          <path d="M12 2c.9 4.2 2.9 7.1 7 8-4.1.9-6.1 3.8-7 8-.9-4.2-2.9-7.1-7-8 4.1-.9 6.1-3.8 7-8Z" />
+        </svg>
+      );
+    case "openai":
+      return (
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.6">
+          <circle cx="12" cy="6" r="3" />
+          <circle cx="17.2" cy="9" r="3" />
+          <circle cx="17.2" cy="15" r="3" />
+          <circle cx="12" cy="18" r="3" />
+          <circle cx="6.8" cy="15" r="3" />
+          <circle cx="6.8" cy="9" r="3" />
+        </svg>
+      );
+    case "claude":
+      return (
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <path d="M12 3v18M4.5 7.5l15 9M4.5 16.5l15-9" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 /* ---- page ---- */
 
 export default async function ProjectDetailPage({
@@ -232,7 +280,8 @@ export default async function ProjectDetailPage({
     { data: latestScore },
     { data: allPromptResults },
     { data: latestRecommendations },
-    { data: trendHistoryDesc }
+    { data: trendHistoryDesc },
+    { count: activeRecommendationsCount }
   ] = latestCompletedRun
     ? await Promise.all([
         supabase
@@ -260,9 +309,18 @@ export default async function ProjectDetailPage({
           .select("visibility_score, citation_score, competitor_gap_score, created_at, details_json")
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
-          .limit(7)
+          .limit(7),
+        // Real total (not just the top-3 fetched above) for the Oportunidades
+        // summary card's headline number — Task Intake 2026-07-23, Option A:
+        // ship without any invented "potential points", real counts only.
+        supabase
+          .from("recommendations")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId)
+          .eq("run_id", latestCompletedRun.id)
+          .eq("status", "active")
       ])
-    : [{ data: null }, { data: null }, { data: null }, { data: null }];
+    : [{ data: null }, { data: null }, { data: null }, { data: null }, { count: null }];
 
   // The trend window is the LAST 7 scored runs; the query fetches them
   // newest-first (descending + limit) and this reversal restores chronological
@@ -344,10 +402,6 @@ export default async function ProjectDetailPage({
       totalCitations: totalResolved
     };
   })();
-
-  /* ---- trend sparklines ---- */
-  const visTrend = trendHistory.map((r) => n(r.visibility_score));
-  const gapTrend = trendHistory.map((r) => n(r.competitor_gap_score));
 
   // GEO Score history for the gauge (audit phase B, finding 10). Pre-composite
   // runs fall back to visibility_score inside getEffectiveGeoScore — the same
@@ -456,7 +510,6 @@ export default async function ProjectDetailPage({
   });
 
   const brandSov = totalForSov > 0 ? Math.round((brandMentions / totalForSov) * 100) : 0;
-  const maxMentionRate = Math.max(computedMentionRate, ...competitorRows.map((c) => c.mentionRate));
 
   /* ---- prompt opportunities (audit phase D, finding 3) ----
    * Prompts where at least one competitor is mentioned in the AI answer and
@@ -505,9 +558,55 @@ export default async function ProjectDetailPage({
     (a, b) => n(a.avg_position) - n(b.avg_position)
   );
   const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
-  const ownBrandPosition = brandPositionRanking.find((e) => e.is_brand);
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
+
+  /* ---- unified competitive panorama (position + share of voice) ----
+   * Merges the two previously-separate real sections (brand position
+   * ranking + competitor SOV table) into one list, per founder request
+   * (Task Intake 2026-07-23). When brand_position isn't available for this
+   * scan, falls back to the SOV-only ordering the table already used.
+   */
+  type PanoramaRow = {
+    key: string;
+    name: string;
+    domain: string | null;
+    isBrand: boolean;
+    avgPosition: number | null;
+    sov: number;
+  };
+  const panoramaRows: PanoramaRow[] = brandPositionAvailable
+    ? brandPositionRanking.map((entry, i) => {
+        if (entry.is_brand) {
+          return {
+            key: "brand",
+            name: project.brand,
+            domain: project.domain,
+            isBrand: true,
+            avgPosition: n(entry.avg_position),
+            sov: brandSov
+          };
+        }
+        const match = competitorRows.find(
+          (c) => c.name.toLowerCase().trim() === (entry.name ?? "").toLowerCase().trim()
+        );
+        return {
+          key: entry.name ?? `pos-${i}`,
+          name: entry.name ?? "—",
+          domain: match?.domain ?? null,
+          isBrand: false,
+          avgPosition: n(entry.avg_position),
+          sov: match?.sov ?? 0
+        };
+      })
+    : [
+        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, sov: brandSov },
+        ...competitorRows
+          .slice()
+          .sort((a, b) => b.mentionRate - a.mentionRate)
+          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov }))
+      ];
+  const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
 
   /* ---- render ---- */
   return (
@@ -568,12 +667,12 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <>
-          {/* 1 · Executive summary banner */}
-          <div className="summary">
-            <div className="summary-ico">
+          {/* 1 · Executive summary / insight banner */}
+          <div className="ov2-insight">
+            <div className="ov2-insight-ico">
               <Icon name="sparkles" size={18} />
             </div>
-            <p className="summary-txt">
+            <p className="ov2-insight-txt">
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
               <b>{brandMentions} de {totalResults} prompts</b> ({computedMentionRate}%), con una{" "}
               <b>puntuación GEO de {gaugeScore}/100</b>.
@@ -647,7 +746,7 @@ export default async function ProjectDetailPage({
                 )}
                 {geoTrend.length >= 2 && (
                   <div style={{ marginTop: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                    <Sparkline data={geoTrend} w={120} h={30} color="var(--accent)" />
+                    <Sparkline data={geoTrend} w={120} h={30} color="var(--brand-blue)" />
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       {gaugeDelta !== 0 ? (
                         <Delta value={gaugeDelta} suffix=" pt" />
@@ -671,7 +770,7 @@ export default async function ProjectDetailPage({
                   {
                     l: "Presencia (mención)",
                     c: geoScore.components.presence,
-                    color: "var(--accent)",
+                    color: "var(--brand-blue)",
                     info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
                   },
                   { l: "Prominencia (posición)", c: geoScore.components.prominence, color: "#7c3aed" },
@@ -724,7 +823,7 @@ export default async function ProjectDetailPage({
                   {
                     l: "Tasa de mención",
                     v: computedMentionRate,
-                    color: "var(--accent)",
+                    color: "var(--brand-blue)",
                     info: "Cuántas respuestas de la IA nombran tu marca. Puede venir de lo que el modelo ya sabe de ti por su entrenamiento — no implica que tenga tu web como fuente."
                   },
                   {
@@ -759,17 +858,15 @@ export default async function ProjectDetailPage({
             </div>
           </div>
 
-          {/* 3 · 4 wide metric cards */}
-          <div className="metrics-2col" style={{ marginTop: 12 }}>
+          {/* 3 · Compact KPI carousel */}
+          <div className="ov2-kpi-car" style={{ marginTop: 12 }}>
             {[
               {
                 key: "mention",
                 label: "Tasa de mención",
                 value: computedMentionRate,
                 unit: "%",
-                trend: visTrend,
                 delta: visDelta,
-                color: "var(--accent)",
                 hint: "Prompts donde aparece tu marca.",
                 tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
                 isShare: false as const
@@ -779,9 +876,7 @@ export default async function ProjectDetailPage({
                 label: "Cuota de Citas",
                 value: citationShareResult.share,
                 unit: "%",
-                trend: [] as number[],
                 delta: 0,
-                color: "#7c3aed",
                 hint: citationShareResult.share !== null
                   ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
                   : "Sin citas grounding resueltas en este escaneo.",
@@ -793,9 +888,7 @@ export default async function ProjectDetailPage({
                 label: "Presión competitiva",
                 value: competitorPressureScore,
                 unit: "%",
-                trend: gapTrend,
                 delta: gapDelta,
-                color: "#e54563",
                 hint: "Prompts donde aparece un competidor pero tu marca no.",
                 invert: true,
                 tip: "Mide en qué porcentaje de tus prompts aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
@@ -815,9 +908,7 @@ export default async function ProjectDetailPage({
                   ? sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1)
                   : "Sin datos",
                 unit: "",
-                trend: [] as number[],
                 delta: 0,
-                color: "#0d9488",
                 hint:
                   sentimentTotal > 0
                     ? `${sentimentBreakdown} · sobre ${sentimentTotal} ${sentimentTotal === 1 ? "respuesta" : "respuestas"} con tu marca.`
@@ -827,239 +918,152 @@ export default async function ProjectDetailPage({
                 hideDelta: true as const
               }
             ].map((m) => (
-              <div key={m.key} className="wide-stat">
-                <div className="ws-left">
-                  <div className="stat-label">
-                    {m.label}
-                    <InfoTip text={m.tip} />
-                  </div>
-                  {m.isShare ? (
-                    /* Citation share: special rendering — may be null */
-                    m.value !== null ? (
+              <div key={m.key} className="ov2-kpi">
+                <div className="ov2-kpi-label">
+                  {m.label}
+                  <InfoTip text={m.tip} />
+                </div>
+
+                {m.key === "sentiment" ? (
+                  <>
+                    <div className="ov2-kpi-value" style={{ fontSize: 18 }}>{m.value}</div>
+                    {sentimentTotal > 0 ? (
                       <>
-                        <div className="stat-value tnum">
-                          {m.value}<span className="unit">%</span>
-                        </div>
-                        <div style={{ marginTop: 4 }}>
-                          <span className={`badge ${
-                            m.value > 50 ? "badge-pos" :
-                            m.value >= 30 ? "badge-accent" :
-                            m.value >= 15 ? "badge-neutral" :
-                            m.value >= 5  ? "badge-warn" :
-                            "badge-neg"
-                          }`} style={{ fontSize: 11 }}>
-                            {m.value > 50 ? "Muy alto" :
-                             m.value >= 30 ? "Alto" :
-                             m.value >= 15 ? "Medio" :
-                             m.value >= 5  ? "Bajo" :
-                             "Muy bajo"}
-                          </span>
-                        </div>
-                        <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 6 }}>{m.hint}</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="stat-value tnum" style={{ color: "var(--ink-4)", fontSize: 20 }}>Sin datos</div>
-                        <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
-                      </>
-                    )
-                  ) : (
-                    /* Standard metric rendering */
-                    <>
-                      <div className="stat-value tnum">
-                        {m.value}<span className="unit">{m.unit}</span>
-                      </div>
-                      {"band" in m && m.band ? (
-                        <div style={{ marginTop: 4 }}>
-                          <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 11 }}>
-                            {m.band.label}
-                          </span>
-                        </div>
-                      ) : null}
-                      {"hideDelta" in m && m.hideDelta ? null : (
-                        <div className="ws-delta">
-                          {m.delta !== 0 ? (
-                            <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
-                          ) : (
-                            <span className="delta flat">— sin cambio</span>
+                        <div className="ov2-senti-bar">
+                          {sentimentCounts.positive > 0 && (
+                            <span style={{ width: `${(sentimentCounts.positive / sentimentTotal) * 100}%`, background: "var(--pos)" }} />
                           )}
-                          <span className="stat-hint">vs. escaneo anterior</span>
+                          {sentimentCounts.neutral > 0 && (
+                            <span style={{ width: `${(sentimentCounts.neutral / sentimentTotal) * 100}%`, background: "var(--ink-4)" }} />
+                          )}
+                          {sentimentCounts.mixed > 0 && (
+                            <span style={{ width: `${(sentimentCounts.mixed / sentimentTotal) * 100}%`, background: "var(--warn-ink)" }} />
+                          )}
+                          {sentimentCounts.negative > 0 && (
+                            <span style={{ width: `${(sentimentCounts.negative / sentimentTotal) * 100}%`, background: "var(--neg-ink)" }} />
+                          )}
                         </div>
-                      )}
-                      <p style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>{m.hint}</p>
+                        <div className="ov2-senti-legend">
+                          {sentimentCounts.positive > 0 && <span><i style={{ background: "var(--pos)" }} />{sentimentCounts.positive} pos.</span>}
+                          {sentimentCounts.neutral > 0 && <span><i style={{ background: "var(--ink-4)" }} />{sentimentCounts.neutral} neu.</span>}
+                          {sentimentCounts.mixed > 0 && <span><i style={{ background: "var(--warn-ink)" }} />{sentimentCounts.mixed} mix.</span>}
+                          {sentimentCounts.negative > 0 && <span><i style={{ background: "var(--neg-ink)" }} />{sentimentCounts.negative} neg.</span>}
+                        </div>
+                      </>
+                    ) : null}
+                  </>
+                ) : m.isShare ? (
+                  m.value !== null ? (
+                    <>
+                      <div className="ov2-kpi-value">
+                        {m.value}<span className="unit">%</span>
+                      </div>
+                      <div className="ov2-kpi-foot">
+                        <span className={`badge ${
+                          m.value > 50 ? "badge-pos" :
+                          m.value >= 30 ? "badge-accent" :
+                          m.value >= 15 ? "badge-neutral" :
+                          m.value >= 5  ? "badge-warn" :
+                          "badge-neg"
+                        }`} style={{ fontSize: 10.5 }}>
+                          {m.value > 50 ? "Muy alto" :
+                           m.value >= 30 ? "Alto" :
+                           m.value >= 15 ? "Medio" :
+                           m.value >= 5  ? "Bajo" :
+                           "Muy bajo"}
+                        </span>
+                      </div>
                     </>
-                  )}
-                </div>
-                <div className="ws-spark">
-                  {m.trend.length >= 2 ? (
-                    <Sparkline data={m.trend} w={160} h={64} color={m.color} />
                   ) : (
-                    <div style={{ width: 160, height: 64, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <span style={{ fontSize: 11, color: "var(--ink-4)" }}>Sin tendencia aún</span>
+                    <div className="ov2-kpi-value" style={{ color: "var(--ink-4)", fontSize: 16 }}>Sin datos</div>
+                  )
+                ) : (
+                  <>
+                    <div className="ov2-kpi-value">
+                      {m.value}<span className="unit">{m.unit}</span>
                     </div>
-                  )}
-                </div>
+                    <div className="ov2-kpi-foot">
+                      {"band" in m && m.band ? (
+                        <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10.5 }}>
+                          {m.band.label}
+                        </span>
+                      ) : "hideDelta" in m && m.hideDelta ? null : m.delta !== 0 ? (
+                        <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                      ) : (
+                        <span className="delta flat">— sin cambio</span>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {(m.key !== "sentiment" || sentimentTotal === 0) && (
+                  <div className="ov2-kpi-hint">{m.hint}</div>
+                )}
               </div>
             ))}
           </div>
 
-          {/* 3c · Posición media de marca */}
-          <div className="wide-stat wide-stat--position" style={{ marginTop: 12 }}>
-            <div className="ws-left" style={{ width: "100%" }}>
-              <div className="stat-label">
-                Posición media de marca
-                <InfoTip text="Posición media en la que aparece tu marca respecto a los competidores mencionados en las respuestas de la IA, según el orden de aparición (1 = mencionada primero/más prominente). Las marcas no mencionadas en un prompt penalizan con la última posición posible." />
-              </div>
-              {brandPositionAvailable ? (
-                <>
-                  <div className="stat-value tnum">
-                    {ownBrandPosition ? ownBrandPosition.avg_position?.toFixed(2) : brandPosition?.brand_avg_position?.toFixed(2)}
-                    <span className="unit">pos. media</span>
-                  </div>
-                  <p className="stat-hint" style={{ marginTop: -2 }}>
-                    Tu posición media entre las marcas mencionadas en las respuestas de IA.
-                  </p>
-                  {brandPositionLowConfidence && (
-                    <span className="badge badge-warn" style={{ marginTop: 4, width: "fit-content" }}>
-                      Pocos datos — basado en {brandPositionPromptsWithData} prompt{brandPositionPromptsWithData === 1 ? "" : "s"}
-                    </span>
-                  )}
-                  <div className="bp-ranking">
-                    {brandPositionRanking.map((entry, i) => (
-                      <div key={entry.name ?? i} className={`bp-row ${entry.is_brand ? "you" : ""}`}>
-                        <span className="bp-rank">{i + 1}</span>
-                        <span
-                          className="fav"
-                          style={{
-                            background: entry.is_brand ? "var(--accent)" : COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
-                            width: 22,
-                            height: 22,
-                            fontSize: 10
-                          }}
-                        >
-                          {(entry.name ?? "?").slice(0, 1).toUpperCase()}
-                        </span>
-                        <span className="bp-name">
-                          {entry.name}
-                          {entry.is_brand && <span className="bp-you-tag">Tú</span>}
-                        </span>
-                        <span className="bp-pos tnum">{n(entry.avg_position).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="section-empty" style={{ padding: "14px 12px", marginTop: 4 }}>
-                  <div className="section-empty-desc">
-                    Posición media no disponible para este escaneo — disponible a partir del próximo escaneo.
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
           {/* 4 · Dónde estás */}
-          <div className="section-head">
+          <div className="section-head" style={{ marginTop: 28 }}>
             <div className="section-title">Dónde estás</div>
             <div className="section-desc">Cuota de voz en IA en tus prompts monitorizados</div>
           </div>
 
           <div className="grid-2-1">
-            {/* Competitive table */}
+            {/* Unified competitive panorama: position + share of voice
+                (merges the previously-separate "Posición media de marca" and
+                competitor table sections — founder request, Task Intake
+                2026-07-23) with real favicons via faviconUrl(). */}
             <div className="card">
               <div className="card-head" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
-                <div className="card-title">Panorámica competitiva</div>
+                <div className="card-title" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  Panorámica competitiva
+                  <InfoTip text="Posición media (según orden de aparición en las respuestas de IA) y cuota de voz de cada marca en tus prompts monitorizados. Las marcas no mencionadas en un prompt penalizan con la última posición posible." />
+                </div>
                 {competitors?.length ? (
                   <span className="badge badge-neutral">{competitors.length} competidores</span>
                 ) : null}
               </div>
               {competitorRows.length > 0 ? (
-                <div style={{ padding: "4px 6px 6px" }}>
-                  <table className="tbl">
-                    <thead>
-                      <tr>
-                        <th>Marca</th>
-                        <th className="num">Mención</th>
-                        <th>Cuota de voz en IA</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* Brand row */}
-                      <tr className="you">
-                        <td>
-                          <div className="ent">
-                            <span
-                              className="fav"
-                              style={{ background: "var(--accent)", fontSize: 11, fontWeight: 800 }}
-                            >
-                              {project.brand.slice(0, 1).toUpperCase()}
-                            </span>
-                            <div>
-                              <div className="nm">
-                                {project.brand}
-                                <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700, marginLeft: 6 }}>Tú</span>
-                              </div>
-                              <div className="dm">{project.domain}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="num">
-                          <b className="tnum">{computedMentionRate}%</b>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div className="sov-bar">
-                              <div
-                                className="sov-fill"
-                                style={{
-                                  width: maxMentionRate > 0 ? `${(computedMentionRate / maxMentionRate) * 100}%` : "0%",
-                                  background: "var(--accent)"
-                                }}
-                              />
-                            </div>
-                            <span className="tnum" style={{ fontSize: 12, fontWeight: 700, width: 32, textAlign: "right" }}>
-                              {brandSov}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                      {/* Competitor rows */}
-                      {competitorRows.map((c) => (
-                        <tr key={c.name} className="hoverable">
-                          <td>
-                            <div className="ent">
-                              <span className="fav" style={{ background: c.color }}>
-                                {c.initial}
-                              </span>
-                              <div>
-                                <div className="nm">{c.name}</div>
-                                <div className="dm">{c.domain}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="num">
-                            <b className="tnum">{c.mentionRate}%</b>
-                          </td>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                              <div className="sov-bar">
-                                <div
-                                  className="sov-fill"
-                                  style={{
-                                    width: maxMentionRate > 0 ? `${(c.mentionRate / maxMentionRate) * 100}%` : "0%",
-                                    background: c.color
-                                  }}
-                                />
-                              </div>
-                              <span className="tnum" style={{ fontSize: 12, fontWeight: 700, width: 32, textAlign: "right" }}>
-                                {c.sov}%
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div style={{ padding: "10px 10px 12px" }}>
+                  {!brandPositionAvailable && (
+                    <div style={{ fontSize: 11.5, color: "var(--ink-4)", padding: "0 6px 10px" }}>
+                      Posición media no disponible para este escaneo — disponible a partir del próximo.
+                    </div>
+                  )}
+                  {brandPositionLowConfidence && (
+                    <span className="badge badge-warn" style={{ margin: "0 6px 10px", width: "fit-content" }}>
+                      Pocos datos de posición — basado en {brandPositionPromptsWithData} prompt{brandPositionPromptsWithData === 1 ? "" : "s"}
+                    </span>
+                  )}
+                  {panoramaRows.map((row, i) => {
+                    const favicon = faviconUrl(row.domain);
+                    const barColor = row.isBrand ? "var(--brand-blue)" : COMPETITOR_COLORS[i % COMPETITOR_COLORS.length];
+                    return (
+                      <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
+                        <span className="ov2-cmp-rank">{i + 1}</span>
+                        {favicon ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
+                          <img src={favicon} alt="" className="ov2-cmp-fav" width={24} height={24} loading="lazy" />
+                        ) : (
+                          <span className="fav" style={{ background: barColor, width: 24, height: 24, fontSize: 10 }}>
+                            {row.name.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                        <span className="ov2-cmp-name">
+                          {row.name}
+                          {row.isBrand && <span className="ov2-cmp-you-tag">Tú</span>}
+                        </span>
+                        {row.avgPosition !== null && (
+                          <span className="ov2-cmp-pos tnum">{row.avgPosition.toFixed(2)} pos.</span>
+                        )}
+                        <div className="ov2-cmp-bar">
+                          <span style={{ width: `${(row.sov / maxPanoramaSov) * 100}%`, background: barColor }} />
+                        </div>
+                        <span className="ov2-cmp-sov tnum">{row.sov}%</span>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <div style={{ padding: "16px 18px" }}>
@@ -1077,10 +1081,10 @@ export default async function ProjectDetailPage({
               )}
             </div>
 
-            {/* LLM distribution */}
+            {/* Engine positioning */}
             <div className="card">
               <div className="card-head">
-                <div className="card-title">Distribución por motor de IA</div>
+                <div className="card-title">Posicionamiento por motores de IA</div>
                 <InfoTip text="Mención, citación y sentimiento de tu marca en cada motor de IA ejecutado en el último escaneo. Cada motor responde distinto — las brechas de cobertura en uno son una oportunidad." />
               </div>
               {engineBreakdown.length > 0 ? (
@@ -1089,53 +1093,43 @@ export default async function ProjectDetailPage({
                     {engineBreakdown.map((e) => {
                       const meta = getEngineMeta(e.provider);
                       return (
-                        <div key={e.provider} style={{ marginBottom: 16 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 7 }}>
-                            <span style={{ width: 9, height: 9, borderRadius: 3, background: meta.color }} />
-                            <span style={{ fontSize: 13, fontWeight: 650 }}>{meta.label}</span>
-                            <span
-                              className="tnum"
-                              style={{ marginLeft: "auto", fontSize: 12, color: "var(--ink-3)", fontWeight: 600 }}
-                            >
-                              {e.mentionRate}% mención
-                            </span>
-                          </div>
-                          <div className="sov-bar" style={{ height: 9 }}>
-                            <div className="sov-fill" style={{ width: `${e.mentionRate}%`, background: meta.color }} />
-                          </div>
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              marginTop: 6,
-                              fontSize: 12,
-                              color: "var(--ink-3)"
-                            }}
-                          >
-                            {/* Ungrounded engines (no web search) show no citation
-                                text at all — founder decision on review; the
-                                grounded/ungrounded distinction stays honest via
-                                citationRate: null, it's just not verbalized here. */}
-                            {e.citationRate !== null && <span>{e.citationRate}% citación</span>}
-                            <span style={{ marginLeft: "auto" }}>
-                              {e.dominantSentiment ? (
-                                <span
-                                  className={`badge ${
-                                    e.dominantSentiment === "positive"
-                                      ? "badge-pos"
-                                      : e.dominantSentiment === "negative"
-                                        ? "badge-neg"
-                                        : "badge-neutral"
-                                  }`}
-                                  style={{ fontSize: 10.5 }}
-                                >
-                                  {sentimentLabels[e.dominantSentiment] ?? e.dominantSentiment}
-                                </span>
-                              ) : (
-                                <span style={{ color: "var(--ink-4)" }}>—</span>
-                              )}
-                            </span>
+                        <div key={e.provider} className="ov2-eng-row">
+                          <span className="ov2-eng-ico" style={{ background: `${meta.color}1f`, color: meta.color }}>
+                            <EngineGlyph provider={e.provider} />
+                          </span>
+                          <div className="ov2-eng-body">
+                            <div className="ov2-eng-top">
+                              <span className="ov2-eng-name">{meta.label}</span>
+                              <span className="ov2-eng-pct tnum">{e.mentionRate}% mención</span>
+                            </div>
+                            <div className="sov-bar" style={{ height: 8 }}>
+                              <div className="sov-fill" style={{ width: `${e.mentionRate}%`, background: meta.color }} />
+                            </div>
+                            <div className="ov2-eng-meta">
+                              {/* Ungrounded engines (no web search) show no citation
+                                  text at all — founder decision on review; the
+                                  grounded/ungrounded distinction stays honest via
+                                  citationRate: null, it's just not verbalized here. */}
+                              {e.citationRate !== null && <span>{e.citationRate}% citación</span>}
+                              <span style={{ marginLeft: "auto" }}>
+                                {e.dominantSentiment ? (
+                                  <span
+                                    className={`badge ${
+                                      e.dominantSentiment === "positive"
+                                        ? "badge-pos"
+                                        : e.dominantSentiment === "negative"
+                                          ? "badge-neg"
+                                          : "badge-neutral"
+                                    }`}
+                                    style={{ fontSize: 10.5 }}
+                                  >
+                                    {sentimentLabels[e.dominantSentiment] ?? e.dominantSentiment}
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "var(--ink-4)" }}>—</span>
+                                )}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
@@ -1366,6 +1360,39 @@ export default async function ProjectDetailPage({
               <div className="section-empty-desc">Las recomendaciones se generan al completar un escaneo con suficiente evidencia.</div>
             </div>
           )}
+
+          {/* Oportunidades — visual summary of the Recomendaciones section
+              (founder request). Headline number is the REAL count of active
+              recommendations for this run (activeRecommendationsCount, a
+              dedicated count query) — no invented "potential points" (Task
+              Intake 2026-07-23, Option A: real score-impact estimation is a
+              separate, not-yet-scoped future phase). */}
+          {latestRecommendations?.length ? (
+            <div className="ov2-opps" style={{ marginTop: 16 }}>
+              <div className="ov2-opps-hero">
+                <div className="ov2-opps-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
+                <div className="ov2-opps-l">
+                  {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "acción activa" : "acciones activas"}
+                  <br />para mejorar tu puntuación GEO
+                </div>
+              </div>
+              <div className="ov2-opps-list">
+                {latestRecommendations.map((rec) => {
+                  const priority = (rec.priority_rank ?? 1) <= 2 ? "high" : (rec.priority_rank ?? 1) <= 4 ? "med" : "low";
+                  const dotColor = priority === "high" ? "var(--p-high)" : priority === "med" ? "var(--p-med)" : "var(--p-low)";
+                  return (
+                    <div key={rec.id} className="ov2-opps-item">
+                      <span className="ov2-opps-dot" style={{ background: dotColor }} />
+                      <span className="ov2-opps-title">{rec.title}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <Link href={`/dashboard/projects/${projectId}/recommendations`} className="ov2-opps-cta">
+                Ver todas las recomendaciones <Icon name="arrRight" size={13} />
+              </Link>
+            </div>
+          ) : null}
 
           {/* Link to scan detail */}
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
