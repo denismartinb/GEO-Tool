@@ -666,7 +666,7 @@ export default async function ProjectDetailPage({
 
       {/* ===== DATA STATE ===== */}
       {hasData ? (
-        <>
+        <div className="ov2-scope">
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
@@ -1404,7 +1404,7 @@ export default async function ProjectDetailPage({
               <Icon name="arrRight" size={13} />
             </Link>
           </div>
-        </>
+        </div>
       ) : (
         /* ===== EMPTY STATE ===== */
         activeRun ? (

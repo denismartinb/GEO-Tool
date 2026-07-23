@@ -37,17 +37,27 @@
      ============================================================ */
   --brand-ink: #0b1426;
   --brand-ink-on-dark: #f7f8fb;
+  --brand-ink-2: #3b4759;
+  --brand-ink-3: #5b6b82;
+  --brand-ink-4: #98a2b3;
   --brand-blue: #2563eb;
   --brand-blue-2: #4f7bff;
+  --brand-blue-soft: rgba(37, 99, 235, .10);
+  --brand-blue-soft-2: rgba(37, 99, 235, .16);
   --brand-cyan: #09c5d6;
   --brand-warm: #ffb020;
   --brand-canvas: #f7f8fb;
   --brand-surface: #ffffff;
   --brand-canvas-dark: #081223;
   --brand-surface-dark: #0f1c33;
+  --brand-line: #e7eaf0;
+  --brand-line-soft: #eef1f6;
   --brand-muted: #5b6b82;
   --brand-pos: #15915a;
+  --brand-pos-soft: #e7f6ee;
   --brand-neg: #d23b48;
+  --brand-neg-soft: #fdecee;
+  --brand-shadow-card: 0 1px 2px rgba(11, 20, 38, .04), 0 6px 18px rgba(11, 20, 38, .05);
   /* --font-display (Bricolage Grotesque) and --font-body (Figtree) are
      injected on <html> by next/font/google in app/layout.tsx — not
      redeclared here. */
@@ -1216,7 +1226,67 @@ a {
    prompts, citations, recommendations and runs pages — verified
    via grep before this change). `.fav` itself is still reused
    as-is (not edited) as the no-favicon fallback avatar.
-   ============================================================ */
+
+   2026-07-23 follow-up (founder: "no se parece en nada al
+   prototipo, impleméntalo pixel perfect"): the structure above was
+   right but never actually switched Overview onto the v3 palette/
+   type system — `.card`/`.wide-stat`/`.tbl`/`.stat-value` etc. still
+   read the OLD `--ink`/`--accent`/`--line` tokens because `body`
+   stays on Hanken Grotesk / the pre-BRAND-5b grays for every other
+   dashboard page (Prompts, Competitors, Recommendations, Runs,
+   Settings all share `.page`/`.card`, so those can't be repainted
+   globally without redesigning pages explicitly out of scope).
+   `.ov2-scope` re-points the SAME custom-property names its
+   descendants already consume — CSS variables resolve per DOM
+   subtree, so `.card`/`.wide-stat`/`.tbl`/`Gauge`/`Delta`/`DotMeter`
+   (none of which are edited here) automatically repaint in v3 colors
+   for any instance rendered inside this wrapper, while every other
+   page keeps reading the unmodified `:root` values. */
+.ov2-scope {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+}
+.ov2-scope .card,
+.ov2-scope .hero-v2,
+.ov2-scope .ov2-insight,
+.ov2-scope .ov2-kpi,
+.ov2-scope .wide-stat,
+.ov2-scope .ov2-opps {
+  box-shadow: var(--brand-shadow-card);
+}
+.ov2-scope .section-title,
+.ov2-scope .card-title,
+.ov2-scope .gauge-num,
+.ov2-scope .ov2-kpi-value,
+.ov2-scope .compose-v,
+.ov2-scope .stat-value,
+.ov2-scope .ov2-opps-n,
+.ov2-scope .ov2-cmp-sov,
+.ov2-scope .ov2-cmp-pos {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+}
+/* `.card-title` carries zero base styling anywhere in this file (every page
+   that uses it relies on inherited body text) — give it real weight/size
+   here, scoped, rather than fixing the shared base rule for every page. */
+.ov2-scope .card-title {
+  font-size: 14px;
+  color: var(--ink);
+}
+
 .ov2-insight {
   display: flex;
   gap: 14px;
