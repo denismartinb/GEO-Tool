@@ -27,6 +27,30 @@
   --sidebar-w: 248px;
   --header-h: 61px;
   color-scheme: light;
+
+  /* ============================================================
+     BRAND-5a — Genscore v3 tokens (docs/brand/brand-guidelines.md).
+     Not wired into any component yet — BRAND-5b repaints the app onto
+     these, replacing the --ink/--accent/etc. set above. Kept alongside
+     rather than overwritten so this PR has zero visual diff outside the
+     logo/favicon/OG.
+     ============================================================ */
+  --brand-ink: #0b1426;
+  --brand-ink-on-dark: #f7f8fb;
+  --brand-blue: #2563eb;
+  --brand-blue-2: #4f7bff;
+  --brand-cyan: #09c5d6;
+  --brand-warm: #ffb020;
+  --brand-canvas: #f7f8fb;
+  --brand-surface: #ffffff;
+  --brand-canvas-dark: #081223;
+  --brand-surface-dark: #0f1c33;
+  --brand-muted: #5b6b82;
+  --brand-pos: #15915a;
+  --brand-neg: #d23b48;
+  /* --font-display (Bricolage Grotesque) and --font-body (Figtree) are
+     injected on <html> by next/font/google in app/layout.tsx — not
+     redeclared here. */
 }
 
 body {
