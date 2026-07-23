@@ -285,6 +285,13 @@ a {
   align-items: center;
   gap: 14px;
   padding: 0 22px;
+  /* BRAND-5b shell zone: cascades to WorkspaceTopbar + NotificationBell +
+     the "Cerrar sesión" Button (Tailwind's preflight resets form elements
+     to font: inherit). .meta-pill/.scan-status also render inside here
+     but are shared with the Overview page and runs/prompts/competitors
+     tables (outside .dash-header) — their color stays untouched until
+     those zones, this only affects the typeface via inheritance. */
+  font-family: var(--font-body), "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* Mobile-only header controls, hidden on desktop */
@@ -2416,7 +2423,7 @@ textarea.add-prompts-text-input {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--brand-blue);
   border: 1.5px solid var(--surface);
 }
 
@@ -2451,7 +2458,7 @@ textarea.add-prompts-text-input {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--brand-blue);
   font-size: 12px;
   font-weight: 650;
   cursor: pointer;
@@ -2521,7 +2528,7 @@ textarea.add-prompts-text-input {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--brand-blue);
   flex-shrink: 0;
 }
 
