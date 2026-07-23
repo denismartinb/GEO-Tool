@@ -45,14 +45,15 @@ async function sendEmail(to: string, subject: string, html: string): Promise<voi
 const FONT_STACK =
   "'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
+// Real brand mark (BRAND-1/BRAND-2, docs/brand/brand-guidelines.md), not the
+// old placeholder square. The lockup's indigo gradient + amber score dot is
+// an inline SVG in the app (components/ui/brand-logo.tsx), but inline SVG
+// doesn't render at all in Outlook desktop — this is a rasterized PNG of the
+// same asset (public/brand/genscore-logo-white.svg) hosted at a stable
+// production URL instead, which every email client supports via <img>.
 const HEADER_ROW = `
   <tr><td style="background:#1e1b4e;padding:22px 34px;">
-    <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-      <td style="width:30px;vertical-align:middle;">
-        <div style="width:30px;height:30px;border-radius:8px;background:#4f46e5;color:#ffffff;font-weight:800;font-size:15px;text-align:center;line-height:30px;">G</div>
-      </td>
-      <td style="padding-left:11px;vertical-align:middle;color:#ffffff;font-weight:800;font-size:16px;letter-spacing:-.01em;">GenScore</td>
-    </tr></table>
+    <img src="https://www.genscore.es/brand/genscore-logo-white-email.png" width="140" height="24" alt="GenScore" style="display:block;border:0;outline:none;height:24px;width:140px;">
   </td></tr>`;
 
 const SUPPORT_FOOTER = `¿Dudas? Escríbenos a <a href="mailto:soporte@genscore.es" style="color:#4f46e5;text-decoration:none;font-weight:600;">soporte@genscore.es</a>.<br>GenScore · Visibilidad de marca en respuestas de IA · genscore.es`;

@@ -27,3 +27,20 @@ Both files hardcode the same colors/fonts/spacing as
 helpers, because Supabase templates can't import our TS module — they're a
 separate rendering path. If the brand system in `transactional.ts` changes,
 update these two files by hand to match.
+
+## Logo asset
+
+The header in all 8 Resend emails and both Supabase templates is
+`<img src="https://www.genscore.es/brand/genscore-logo-white-email.png">` —
+a rasterized PNG of `public/brand/genscore-logo-white.svg` (BRAND-1/BRAND-2,
+`docs/brand/brand-guidelines.md`). Inline SVG (what `components/ui/
+brand-logo.tsx` uses in the app) doesn't render in Outlook desktop, so every
+email uses this raster copy instead, at a stable production URL every email
+client can load via `<img>`.
+
+**This means the logo only appears once that PNG is live in production** —
+these Supabase templates (and any Resend email sent from a preview deploy)
+will show a broken image icon until this branch is deployed. Regenerate the
+PNG only if `genscore-logo-white.svg` changes (it was rendered at 2x via a
+headless-Chromium screenshot of the SVG, not hand-drawn — see the
+branded-emails PR history for the exact command).

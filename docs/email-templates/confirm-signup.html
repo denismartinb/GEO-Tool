@@ -13,6 +13,14 @@
   Keep this file's styling in sync by hand with the brand system in
   lib/email/transactional.ts (wrap/eyebrow/heading/button helpers) — this
   is a separate Supabase-hosted template, not reachable by that code.
+
+  Header logo: <img> pointing at https://www.genscore.es/brand/
+  genscore-logo-white-email.png — a rasterized PNG of public/brand/
+  genscore-logo-white.svg (BRAND-1/BRAND-2, docs/brand/brand-guidelines.md).
+  Inline SVG (what the app itself uses) doesn't render in Outlook desktop,
+  so this raster copy is the email-safe equivalent. This file only works
+  correctly once that PNG is live in production — it's an absolute URL,
+  Supabase can't reach a repo path directly.
 -->
 <!doctype html>
 <html lang="es" xmlns="http://www.w3.org/1999/xhtml">
@@ -40,12 +48,7 @@
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" class="em-card" style="width:600px;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e8eaef;font-family:'Hanken Grotesk',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
       <tr><td style="background:#1e1b4e;padding:22px 34px;">
-        <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="width:30px;vertical-align:middle;">
-            <div style="width:30px;height:30px;border-radius:8px;background:#4f46e5;color:#ffffff;font-weight:800;font-size:15px;text-align:center;line-height:30px;">G</div>
-          </td>
-          <td style="padding-left:11px;vertical-align:middle;color:#ffffff;font-weight:800;font-size:16px;letter-spacing:-.01em;">GenScore</td>
-        </tr></table>
+        <img src="https://www.genscore.es/brand/genscore-logo-white-email.png" width="140" height="24" alt="GenScore" style="display:block;border:0;outline:none;height:24px;width:140px;">
       </td></tr>
 
       <tr><td class="em-px" style="padding:36px 34px 6px;">
@@ -59,7 +62,7 @@
           </td>
         </tr></table>
 
-        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#6b7385;">Si el botón no funciona, copia y pega este enlace en tu navegador:<br><a href="{{ .ConfirmationURL }}" style="color:#4f46e5;word-break:break-all;">{{ .ConfirmationURL }}</a></p>
+        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#6b7385;">¿No funciona el botón? <a href="{{ .ConfirmationURL }}" style="color:#4f46e5;font-weight:600;text-decoration:underline;">Confirma tu cuenta desde aquí</a>.</p>
       </td></tr>
 
       <tr><td class="em-px" style="padding:24px 34px 30px;">
