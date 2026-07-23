@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { ProcessFlow } from "@/components/blog/process-flow";
 
@@ -149,8 +150,7 @@ export default function GeoExplainerPage() {
         <nav className="lp-nav">
           <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} />
           <Link href="/" className="lp-logo">
-            <div className="brand-mark"><Icon name="resonance" size={17} /></div>
-            <div className="brand-name">GenScore</div>
+            <BrandLogo size={18} />
           </Link>
           <div className="lp-nav-links">
             {NAV_LINKS.map((l) => (
@@ -394,8 +394,7 @@ export default function GeoExplainerPage() {
         <div className="lp-inner">
           <div className="row1">
             <Link href="/" className="lp-logo">
-              <div className="brand-mark"><Icon name="resonance" size={16} /></div>
-              <div className="brand-name">GenScore</div>
+              <BrandLogo size={16} />
             </Link>
             <div className="links">
               <Link href="/#producto">Producto</Link>

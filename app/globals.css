@@ -187,22 +187,8 @@ a {
   border-bottom: 1px solid var(--line-soft);
 }
 
-.brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: linear-gradient(150deg, var(--accent) 0%, #6d63f0 100%);
-  display: grid;
-  place-items: center;
-  color: #fff;
-}
-
-.brand-name {
-  font-weight: 700;
-  font-size: 15px;
-}
-
 .brand-sub {
+  margin-top: 2px;
   font-size: 11px;
   color: var(--ink-4);
 }
@@ -531,6 +517,11 @@ a {
    Auth v2 — Flujo recuperación contraseña (GEO Suite 8)
    ============================================================ */
 .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; }
+@media (max-width: 480px) {
+  /* Same logo-size trim as the marketing nav/sidebar (founder feedback) on
+     narrow phones, where auth-bg's own padding already tightens up. */
+  .auth-logo .brand-logo-svg { height: 18px; width: auto; }
+}
 .auth-h1 { font-size: 25px; font-weight: 800; letter-spacing: -.02em; }
 .auth-sub { font-size: 14.5px; color: var(--ink-3); margin-top: 6px; }
 .auth-form { margin-top: 24px; display: flex; flex-direction: column; gap: 16px; }
@@ -2696,7 +2687,6 @@ textarea.add-prompts-text-input {
 .lp-nav-wrap { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.82); backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line-soft); }
 .lp-nav { max-width: 1180px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 12px; }
 .lp-logo { display: flex; align-items: center; gap: 10px; }
-.lp-logo .brand-name { font-size: 16px; }
 .lp-nav-links { display: flex; align-items: center; gap: 4px; margin-left: 22px; }
 .lp-nav-links a { padding: 7px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .lp-nav-links a:hover { background: var(--surface-2); color: var(--ink); }
@@ -2872,6 +2862,11 @@ textarea.add-prompts-text-input {
     margin-left: -6px;
   }
   .lp-burger:hover { background: var(--surface-2); }
+  /* Logo reads oversized once the nav collapses to just burger + wordmark
+     (founder feedback) — drop it a couple of px alongside the rest of the
+     mobile nav layout. width:auto lets the intrinsic viewBox ratio rescale
+     it instead of stretching at the desktop-computed pixel width. */
+  .lp-logo .brand-logo-svg { height: 16px; width: auto; }
   /* .lp-hero has no side padding of its own (relies on centered max-width
      content) — without this, .lp-hero-content's heading/lead text runs flush
      to the viewport edge below 900px. */
@@ -3002,10 +2997,12 @@ textarea.add-prompts-text-input {
 
 /* ============================================================
    Citations page (Páginas citadas) — adapted from design reference
-   styles.css .cit-* / .pr-* rules. Multi-engine columns and the
-   reviews/community/media source taxonomy from the prototype were
-   dropped: we only run Gemini and have no crawler to verify source
-   types, so sources are classified as brand / competitor / other.
+   styles.css .cit-* / .pr-* rules. The reviews/community/media source
+   taxonomy from the prototype was dropped: we have no crawler to verify
+   source types, so sources are classified as brand / competitor / other.
+   Per-engine attribution (ENGINES-VALUE-2) was added on top of that:
+   each cited domain/URL shows which grounded engine(s) — Gemini,
+   ChatGPT — actually cited it (see .cit-prow's "Motores" column below).
    ============================================================ */
 .pr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
 .pr-search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: #fff; flex: 1; max-width: 320px; }
@@ -3035,12 +3032,23 @@ textarea.add-prompts-text-input {
 .cit-url .ico { flex: 0 0 auto; }
 
 .cit-detail { padding: 4px 18px 16px 40px; }
-.cit-detail-head { display: grid; grid-template-columns: 1fr 130px 70px; gap: 14px; padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
+.cit-detail-head { display: grid; grid-template-columns: 1fr minmax(0, 74px) 130px 70px; gap: 14px; padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
 .cit-detail-head .num { text-align: right; }
-.cit-prow { display: grid; grid-template-columns: 1fr 130px 70px; gap: 14px; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); margin-bottom: 7px; }
+/* "Motores" track is minmax(0, 74px) — not a bare 74px — because a bare
+   fixed length still lets the track grow past it to fit a grid item's
+   automatic min-width (content-based) when 2+ engine chips don't fit side
+   by side; minmax(0, …) caps it and forces the chips to wrap instead
+   (founder-reported overflow, 2026-07-19). */
+.cit-prow { display: grid; grid-template-columns: 1fr minmax(0, 74px) 130px 70px; gap: 14px; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); margin-bottom: 7px; }
 .cit-prow .num { text-align: right; }
 .cit-pq { font-size: 12.5px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 8px; line-height: 1.35; }
 .cit-pq .ico { flex: 0 0 auto; }
+/* Groups the engine chips / category badge / citation count into one row.
+   display: contents on desktop keeps them as independent grid items (same
+   4-column layout as before); the mobile override below turns this into an
+   actual flex row instead. */
+.cit-prow-meta { display: contents; }
+.cit-prow-meta-label { display: none; }
 
 /* The 4-/3-column grids below only fit comfortably on wide viewports —
    below 760px the fixed track widths (150+140+70px) force a horizontal
@@ -3072,12 +3080,49 @@ textarea.add-prompts-text-input {
   }
 
   .cit-prow {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    /* stretch (the default) — NOT flex-start — is required here: it forces
+       .cit-pq to the full row width so its ellipsis/overflow:hidden can
+       actually clamp the long inline citation URL instead of letting the
+       row grow to the text's natural width and overflow the viewport
+       (founder-reported regression, 2026-07-19). */
+    align-items: stretch;
     gap: 6px;
+    padding: 12px 14px;
   }
 
   .cit-prow .num {
     text-align: left;
+  }
+
+  .cit-prow .cit-pq {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Engine chips, category badge, and citation count render as one wrapped
+     row instead of three unlabeled stacked lines (founder review,
+     2026-07-19: the colored chip, "Otra fuente", and the bare number read as
+     meaningless in isolation once the desktop-only column header
+     disappears). */
+  .cit-prow-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .cit-prow-meta-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-4);
   }
 }
 
@@ -3150,6 +3195,10 @@ textarea.add-prompts-text-input {
     display: block;
     margin-top: 6px;
   }
+
+  /* Same logo-size trim as the marketing nav (founder feedback) — applies
+     to the sidebar's mobile drawer. */
+  .sb-brand .brand-logo-svg { height: 16px; width: auto; }
 
   /* --- Scrim --- */
   .mob-scrim {

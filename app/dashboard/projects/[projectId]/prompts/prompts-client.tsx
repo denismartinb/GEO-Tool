@@ -102,13 +102,11 @@ function EngineChips({ engines }: { engines: ResultRow[] }) {
       {sorted.map((r) => {
         const meta = getEngineMeta(r.provider);
         const baseStyle: React.CSSProperties = {
-          width: 18,
-          height: 18,
-          borderRadius: 5,
-          fontSize: 10,
+          padding: "2px 8px",
+          borderRadius: 999,
+          fontSize: 10.5,
           fontWeight: 700,
-          display: "grid",
-          placeItems: "center",
+          whiteSpace: "nowrap",
           flexShrink: 0,
         };
 
@@ -119,7 +117,7 @@ function EngineChips({ engines }: { engines: ResultRow[] }) {
               title={`${meta.label}: marca mencionada`}
               style={{ ...baseStyle, background: meta.color, color: "#fff" }}
             >
-              {meta.short}
+              {meta.label}
             </span>
           );
         }
@@ -136,7 +134,7 @@ function EngineChips({ engines }: { engines: ResultRow[] }) {
                 color: meta.color,
               }}
             >
-              {meta.short}
+              {meta.label}
             </span>
           );
         }
@@ -153,7 +151,7 @@ function EngineChips({ engines }: { engines: ResultRow[] }) {
               color: "var(--ink-4)",
             }}
           >
-            {meta.short}
+            {meta.label}
           </span>
         );
       })}
