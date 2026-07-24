@@ -31,11 +31,6 @@ const actLinks = [
   { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" as null | string },
 ];
 
-const accountLinks = [
-  { href: "/dashboard/settings/profile", label: "Ajustes de cuenta", icon: "settings" },
-  { href: "/dashboard/settings/billing", label: "Plan y facturación", icon: "card" },
-];
-
 function getProjectId(pathname: string) {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
 }
@@ -197,24 +192,6 @@ export function Sidebar({
               {count > 0 && (
                 <span className="nav-count hide-collapsed">{count}</span>
               )}
-            </Link>
-          );
-        })}
-
-        <div className="nav-group-label hide-collapsed">Cuenta</div>
-        {accountLinks.map((link) => {
-          const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
-
-          return (
-            <Link
-              key={link.label}
-              href={link.href}
-              className={`nav-item ${active ? "active" : ""}`}
-              onClick={handleNavSelect}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon name={link.icon} size={17} />
-              <span className="hide-collapsed">{link.label}</span>
             </Link>
           );
         })}
