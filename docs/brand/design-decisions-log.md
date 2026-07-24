@@ -145,6 +145,22 @@ Decisiones finales:
   mismo array de filas (`panoramaRows`) — antes podían mostrar conjuntos de
   entidades distintos (bug real, no decisión de marca, pero afecta
   directamente a la fiabilidad visual del bloque).
+- **Emparejamiento de nombres tolerante a acentos/puntuación**
+  (`normalizeEntityName`, PR #258) entre `brand_position.ranking` y
+  `project_competitors.name` — la igualdad exacta previa perdía el
+  `domain` real de la fila ante cualquier variación de formato.
+- **Dominio de competidores históricos** (PR #258): el panorama resuelve
+  favicon a partir de una lectura adicional sin filtro `is_active` cuando
+  el match activo falla — un dominio real no desaparece porque se
+  desactive el tracking. `sov` se mantiene en 0 para ese caso (no hay
+  cifra de cuota de voz vigente para una entidad ya no trackeada); la
+  query activa que alimenta SOV/menciones/"Ver todo" no se toca.
+- **Aviso de escaneo desfasado** (PR #258): banner (reutiliza el patrón
+  `.feedback` warn ya existente, no un componente nuevo) cuando NINGÚN
+  competidor activo aparece en el ranking del último escaneo — gateado a
+  mismatch completo, no "cambió uno", para no disparar en falso ante un
+  cambio normal de un competidor suelto. Incluye CTA real "Volver a
+  escanear" (`ScanTriggerButton`).
 
 Pendiente / roto conocido:
 - **Bug de tokens CSS sin definir**: `--p-high` / `--p-med` / `--p-low` se
@@ -154,18 +170,11 @@ Pendiente / roto conocido:
   corrigió solo dentro del bloque Oportunidades (que ya no usa esos
   tokens, ver arriba) — el mismo bug sigue vivo en `DotMeter` y en
   `.rec-card-preview` de Recomendaciones. No agendado todavía.
-- **Escaneo desfasado vs. lista de competidores activa**: cuando la lista
-  de competidores trackeados cambia después del último escaneo, el
-  panorama sigue mostrando el ranking congelado del escaneo antiguo, con
-  nombres que ya no existen en `project_competitors` activos — sin
-  favicon/SOV resolubles para esas filas. Diagnosticado 2026-07-24 (caso
-  real: proyecto Ikea). Dos mejoras futuras registradas en
-  `docs/director-strategy.md` (sección "Detected gap — stale-scan
-  competitive panorama"): resolver dominio también para competidores
-  inactivos/históricos, y avisar en el Overview cuando el escaneo mostrado
-  está desfasado respecto a la lista de competidores actual. Ninguna
-  implementada todavía — desbloqueo inmediato es simplemente relanzar el
-  escaneo.
+- El mismo patrón de igualdad exacta (pre-`normalizeEntityName`) sigue
+  vivo en `competitorMentionCounts` (tasa de mención/SOV agregado de la
+  tabla de competidores) — deliberadamente fuera de alcance de PR #258
+  porque tocar esos números requiere validar el impacto en scoring por
+  separado, no solo en presentación.
 
 ---
 
