@@ -154,13 +154,20 @@ Decisiones finales:
   el match activo falla — un dominio real no desaparece porque se
   desactive el tracking. `sov` se mantiene en 0 para ese caso (no hay
   cifra de cuota de voz vigente para una entidad ya no trackeada); la
-  query activa que alimenta SOV/menciones/"Ver todo" no se toca.
-- **Aviso de escaneo desfasado** (PR #258): banner (reutiliza el patrón
-  `.feedback` warn ya existente, no un componente nuevo) cuando NINGÚN
-  competidor activo aparece en el ranking del último escaneo — gateado a
-  mismatch completo, no "cambió uno", para no disparar en falso ante un
-  cambio normal de un competidor suelto. Incluye CTA real "Volver a
-  escanear" (`ScanTriggerButton`).
+  query activa que alimenta SOV/menciones/"Ver todo" no se toca. Correcto
+  en diseño, pero no ayuda si el competidor fue directamente borrado (sin
+  desactivar) — ver nota en "Pendiente/roto conocido".
+- **Aviso de "competidor no trackeado visible"** (PR #258, corregido tras
+  ver datos reales — ver `docs/director-strategy.md` para el detalle
+  completo): primer intento comparaba el conjunto completo de nombres
+  activos contra el ranking, gateado a solapamiento cero — umbral
+  equivocado para una lista que se REDUCE (no se sustituye), así que
+  nunca disparaba pese al síntoma visible. Sustituido por
+  `panoramaHasUntrackedEntity`: comprueba directamente si alguna fila
+  no-marca ya renderizada en el panorama se queda sin dominio resoluble.
+  Señal exacta sobre lo que se ve en pantalla, no una heurística sobre
+  todo el conjunto. Incluye CTA real "Volver a escanear"
+  (`ScanTriggerButton`).
 
 Pendiente / roto conocido:
 - **Bug de tokens CSS sin definir**: `--p-high` / `--p-med` / `--p-low` se
@@ -175,6 +182,14 @@ Pendiente / roto conocido:
   tabla de competidores) — deliberadamente fuera de alcance de PR #258
   porque tocar esos números requiere validar el impacto en scoring por
   separado, no solo en presentación.
+- **No hay gestión de competidores post-creación en la app**: descubierto
+  al diagnosticar el caso Ikea. `createCompetitor`/`updateCompetitor`/
+  `deactivateCompetitor` existen en `actions.ts` pero no están conectadas
+  a ninguna UI real — la página de Competidores es de solo lectura. Los
+  cambios a la lista de un proyecto ya creado solo se pueden hacer editando
+  Supabase directamente, lo que además borra el rastro histórico (no queda
+  ninguna fila desactivada que recuperar). No es una decisión de marca,
+  pero es un gap de producto real que vale la pena que el fundador conozca.
 
 ---
 
