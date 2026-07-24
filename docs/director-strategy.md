@@ -282,38 +282,42 @@ pass against `states.jsx` before it's worth a Task Intake.
 
 ## Detected gap — stale-scan competitive panorama (founder report, 2026-07-24)
 
-Root-caused, not yet scheduled. Founder reported missing favicons + 0% SOV
-for some entries in the Overview's "Panorámica competitiva" block (Ikea
-project). Root cause is NOT the entity-name matching bug PR #258 fixed
-(that fix is real and merged-worthy on its own, just didn't address this
-case): the block renders `brand_position.ranking`, a snapshot frozen at
-the *latest completed scan's* time. When the founder later edited Ikea's
+**Status: root-caused AND both follow-ups implemented (PR #258, same day).**
+Founder reported missing favicons + 0% SOV for some entries in the
+Overview's "Panorámica competitiva" block (Ikea project). Root cause was
+NOT the entity-name matching bug PR #258 also fixed (that fix is real and
+independently correct — accents/punctuation drift between what Gemini
+extracts and the stored competitor name — it just didn't explain THIS
+case): the block renders `brand_position.ranking`, a snapshot frozen at the
+*latest completed scan's* time. When the founder later edited Ikea's
 tracked competitor list (Elfa/Lazy Bag/Sklum/Kave Home → Conforama/Leroy
 Merlin/Maisons du Monde/JYSK/El Corte Inglés) without re-scanning, the
-frozen ranking still names the old competitors, which no longer exist in
-`project_competitors` filtered `is_active = true` — so the panorama's
-domain/favicon lookup (`app/dashboard/projects/[projectId]/page.tsx`,
-`competitorRows`) can never resolve them. Immediate unblock for the founder
-is simply running a new scan (no code change needed) — see the two
-follow-up product improvements below for the general case.
+frozen ranking still named the old competitors, absent from
+`project_competitors` filtered `is_active = true`.
 
-**P2 — resolve domain for historical (inactive) competitors in the
-panorama:** widen the panorama's competitor lookup beyond
-`.eq("is_active", true)` so a stale ranking can still show the right
-favicon/SOV for competitors that were tracked at scan time but have since
-been deactivated/replaced. Contained to `page.tsx`'s `competitorRows`/
-`panoramaRows` construction; no schema change. Needs Task Intake (touches
-the Overview's competitive data presentation) before implementation.
+- **✅ Resolve domain for historical (inactive) competitors in the
+  panorama.** Added an unfiltered (`app/dashboard/projects/[projectId]/
+  page.tsx`) read of `project_competitors` (`everTrackedCompetitorRows`,
+  active + inactive), used ONLY as a fallback in `panoramaRows`' domain
+  resolution when the active-only match misses — a domain doesn't stop
+  being real just because tracking was turned off. `sov` intentionally
+  stays 0 for a historical-only match (no current share-of-voice figure for
+  an untracked entity). The existing active-only `competitors` query is
+  untouched, so SOV totals/mention counts/"Ver todo" still correctly scope
+  to current tracking only.
+- **✅ "Stale scan" banner.** `staleCompetitorSnapshot` compares the
+  normalized active-competitor-name set against the normalized non-brand
+  entity names in `brand_position.ranking`; gated on a **complete**
+  mismatch (zero overlap), not "at least one changed", so a normal
+  single-competitor swap between scans never triggers a false warning —
+  only a full list replacement does, which is what actually happened here.
+  When true, renders a warn-toned notice (reuses the existing `.feedback`
+  warn pattern, not a new component) at the top of the Overview's data
+  state with a real "Volver a escanear" CTA (`ScanTriggerButton`, disabled
+  while a scan is already running).
 
-**P2 — surface a "stale scan" signal when the tracked competitor set has
-changed since the last completed scan:** broader UX addition — detect when
-the *currently active* competitor list diverges from the set embedded in
-`brand_position.ranking`, and show an explicit banner/notice (e.g. "estos
-datos son de un escaneo con una lista de competidores distinta a la
-actual — vuelve a escanear para actualizar") rather than silently
-rendering stale names. Bigger blast radius (new comparison logic, copy,
-possibly reused elsewhere runs are shown) — needs Task Intake and explicit
-scoping of which screens it applies to before implementation.
+No schema/RLS change; no new provider/Gemini call. `pnpm test` 710/710,
+`pnpm run validate` green.
 
 ---
 

@@ -257,31 +257,41 @@ export default async function ProjectDetailPage({
   // Reconciliation itself is decided from the already-fetched `runs` below
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, domain, brand, country, language, created_at")
-      .eq("id", projectId)
-      .eq("is_archived", false)
-      .single(),
-    supabase
-      .from("project_prompts")
-      .select("id, prompt_text, category, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_runs")
-      .select(RUNS_SELECT)
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-  ]);
+  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }, { data: everTrackedCompetitors }] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name, domain, brand, country, language, created_at")
+        .eq("id", projectId)
+        .eq("is_archived", false)
+        .single(),
+      supabase
+        .from("project_prompts")
+        .select("id, prompt_text, category, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      // Active-only `competitors` above correctly scopes the "current
+      // tracking" table (SOV totals, mention counts, "Ver todo" link) — but
+      // brand_position.ranking (below) is a snapshot frozen at the LATEST
+      // completed scan's time, which may name competitors since deactivated
+      // if the tracked list changed after that scan ran. This separate,
+      // unfiltered read exists ONLY to resolve favicon/SOV for those
+      // historical entities in the panorama match (panoramaRows below) —
+      // never used for any "active competitor" count or total.
+      supabase.from("project_competitors").select("name, domain").eq("project_id", projectId)
+    ]);
 
   if (!project) notFound();
 
@@ -508,6 +518,11 @@ export default async function ProjectDetailPage({
 
   const brandSov = totalForSov > 0 ? Math.round((brandMentions / totalForSov) * 100) : 0;
 
+  // Unfiltered (active + inactive) competitor rows, read-only fallback used
+  // solely to resolve a real, already-stored domain for panorama entities
+  // that fall outside the current active list — see panoramaRows below.
+  const everTrackedCompetitorRows = everTrackedCompetitors ?? [];
+
   const hasData = Boolean(latestCompletedRun && latestScore);
 
   /* ---- brand position (Phase A) ---- */
@@ -558,10 +573,17 @@ export default async function ProjectDetailPage({
         }
         const entryKey = normalizeEntityName(entry.name);
         const match = competitorRows.find((c) => normalizeEntityName(c.name) === entryKey);
+        // Domain resolution falls back to the unfiltered historical read
+        // when the entity isn't in the currently active list (e.g. the
+        // ranking is a snapshot from a scan that ran before the tracked
+        // competitor list changed) — a domain doesn't stop being real just
+        // because tracking was later turned off. sov stays 0 for this case:
+        // there's no current share-of-voice figure for an untracked entity.
+        const historicalMatch = match ? null : everTrackedCompetitorRows.find((c) => normalizeEntityName(c.name) === entryKey);
         return {
           key: entry.name ?? `pos-${i}`,
           name: entry.name ?? "—",
-          domain: match?.domain ?? null,
+          domain: match?.domain ?? historicalMatch?.domain ?? null,
           isBrand: false,
           avgPosition: n(entry.avg_position),
           sov: match?.sov ?? 0,
@@ -576,6 +598,26 @@ export default async function ProjectDetailPage({
           .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov, rank: null }))
       ];
   const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
+
+  /* ---- stale competitor snapshot detection ----
+   * brand_position.ranking is frozen at the LATEST completed scan's time.
+   * If every currently active competitor is absent from that ranking, the
+   * tracked list was very likely swapped wholesale after that scan ran —
+   * the panorama (and the rest of this scan's competitive numbers) reflect
+   * a competitor set that no longer matches what's configured today.
+   * Gated on a COMPLETE mismatch (not "at least one changed") so adding or
+   * retiring a single competitor between scans — the normal case — never
+   * triggers a false warning; only a full list swap does.
+   */
+  const rankingCompetitorKeys = brandPositionAvailable
+    ? new Set(brandPositionRanking.filter((entry) => !entry.is_brand).map((entry) => normalizeEntityName(entry.name)))
+    : new Set<string>();
+  const activeCompetitorKeys = new Set(competitorRows.map((c) => normalizeEntityName(c.name)));
+  const staleCompetitorSnapshot =
+    brandPositionAvailable &&
+    rankingCompetitorKeys.size > 0 &&
+    activeCompetitorKeys.size > 0 &&
+    ![...activeCompetitorKeys].some((key) => rankingCompetitorKeys.has(key));
 
   /* ---- position-media summary + bars (real brand_position data) ----
    * "Tu posición media X / N" = brand's rank among the ranked entities.
@@ -728,6 +770,19 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
+          {staleCompetitorSnapshot && (
+            <div
+              className="feedback"
+              style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}
+            >
+              <p style={{ fontWeight: 650 }}>
+                Este análisis usa una lista de competidores distinta a la actual — cambiaste los
+                competidores trackeados después de este escaneo. Vuelve a escanear para actualizar
+                los datos.
+              </p>
+              <ScanTriggerButton projectId={projectId} label="Volver a escanear" disabled={Boolean(activeRun)} />
+            </div>
+          )}
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
