@@ -300,8 +300,7 @@ a {
 
 /* Mobile-only header controls, hidden on desktop */
 .hdr-burger,
-.hdr-title-mobile,
-.hdr-meta-wrap,
+.hdr-brand-mobile,
 .sb-close {
   display: none;
 }
@@ -3697,42 +3696,21 @@ textarea.add-prompts-text-input {
     display: none;
   }
 
-  .hdr-title-mobile-row {
+  /* Clean centered brand logo. A full-width overlay layer (below the safe
+     area, above the header content row) flex-centers the wordmark so it
+     stays optically centered regardless of the burger (left) / bell (right)
+     cluster widths. pointer-events:none keeps the burger and bell beneath it
+     fully clickable. */
+  .hdr-brand-mobile {
     display: flex;
     align-items: center;
-    gap: 6px;
-    min-width: 0;
-  }
-
-  .hdr-title-mobile {
-    display: block;
-    font-size: 13.5px;
-    font-weight: 700;
-    color: var(--ink);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    min-width: 0;
-    flex: 0 1 auto;
-  }
-
-  .hdr-scan-pill {
-    flex: 0 0 auto;
-    font-size: 10.5px;
-    font-weight: 650;
-    color: var(--ink-3);
-    white-space: nowrap;
-  }
-
-  .hdr-sub-mobile {
-    display: block;
-    font-size: 11px;
-    font-weight: 550;
-    color: var(--ink-4);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 1px;
+    justify-content: center;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: env(safe-area-inset-top);
+    bottom: 0;
+    pointer-events: none;
   }
 
   .hdr-meta,
@@ -3747,60 +3725,6 @@ textarea.add-prompts-text-input {
   .dash-header-actions .meta,
   .dash-header-actions form {
     display: none;
-  }
-
-  /* --- Header "globe" meta button + popover --- */
-  .hdr-meta-wrap {
-    display: block;
-    position: relative;
-    flex: 0 0 auto;
-  }
-
-  .hdr-metabtn {
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    background: none;
-    border: 1px solid transparent;
-    color: var(--ink-2);
-    cursor: pointer;
-  }
-
-  .hdr-metabtn:hover {
-    background: var(--surface-2);
-  }
-
-  .hdr-metabtn.on {
-    background: var(--surface-2);
-    border-color: var(--ink-4);
-    color: var(--ink);
-  }
-
-  .hdr-meta-panel {
-    position: absolute;
-    top: calc(100% + 7px);
-    right: 8px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: var(--r-lg);
-    box-shadow: var(--sh-pop);
-    padding: 8px;
-    min-width: 210px;
-    z-index: 210;
-    animation: menuIn 0.14s ease;
-  }
-
-  .hmp-row {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 8px 10px;
-    border-radius: var(--r-sm);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--ink-2);
   }
 
   /* --- Grid reflow to single column --- */
@@ -3881,8 +3805,7 @@ textarea.add-prompts-text-input {
     transition: none;
   }
 
-  .mob-scrim,
-  .hdr-meta-panel {
+  .mob-scrim {
     animation: none;
   }
 }

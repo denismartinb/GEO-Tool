@@ -1,8 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
+import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
 
 type WorkspaceProject = {
@@ -33,45 +33,22 @@ function getProjectId(pathname: string) {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
 }
 
-// Same short-date pattern already used for the "Escaneado" badge on the
-// Escaneos page (app/dashboard/projects/[projectId]/runs/page.tsx).
-function formatShortDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return new Date(value).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
-}
-
 export function WorkspaceTopbar({
   projects,
-  latestScanStatusByProject,
-  latestScanDateByProject
+  latestScanStatusByProject
 }: {
   projects: WorkspaceProject[];
   latestScanStatusByProject: Record<string, string>;
-  latestScanDateByProject: Record<string, string | null>;
 }) {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
   const project = projects.find((item) => item.id === projectId) ?? null;
-  const { mobileNavOpen, setMobileNavOpen, metaOpen, setMetaOpen, navTriggerRef } = useMobileShell();
-  const metaPanelRef = useRef<HTMLDivElement | null>(null);
+  const { mobileNavOpen, setMobileNavOpen, navTriggerRef } = useMobileShell();
 
   const section = project
     ? routeLabels.find((route) => pathname.includes(route.suffix))?.label ?? "Visión general"
     : null;
   const status = project ? latestScanStatusByProject[project.id] : undefined;
-  const mobileTitle = project ? (section ?? "Visión general") : "Espacio de trabajo";
-  const mobileScanDate = project ? formatShortDate(latestScanDateByProject[project.id]) : null;
-
-  useEffect(() => {
-    if (!metaOpen) return;
-    function onPointerDown(event: MouseEvent) {
-      if (!metaPanelRef.current?.contains(event.target as Node)) {
-        setMetaOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [metaOpen, setMetaOpen]);
 
   return (
     <>
@@ -86,11 +63,18 @@ export function WorkspaceTopbar({
         <Icon name="menu" size={20} />
       </button>
 
+      {/* Mobile-only: clean centered brand logo. The section/domain context
+          lives in each page's own sticky header, so the app-level mobile
+          header stays purely navigational (burger · logo · bell) instead of
+          duplicating that info (founder decision 2026-07-24). */}
+      <div className="hdr-brand-mobile" aria-hidden="true">
+        <BrandLogo size={20} />
+      </div>
+
       {!project ? (
         <div className="hdr-titlewrap">
           <div className="hdr-crumb">GenScore</div>
           <div className="hdr-title">Espacio de trabajo</div>
-          <div className="hdr-title-mobile">{mobileTitle}</div>
         </div>
       ) : (
         <div className="workspace-context">
@@ -99,13 +83,6 @@ export function WorkspaceTopbar({
               <b>{project.name}</b> · {section}
             </div>
             <div className="hdr-title">{project.domain}</div>
-            <div className="hdr-title-mobile-row">
-              <div className="hdr-title-mobile">{mobileTitle}</div>
-              {mobileScanDate ? <span className="hdr-scan-pill">Escaneado {mobileScanDate}</span> : null}
-            </div>
-            <div className="hdr-sub-mobile">
-              {project.name} · {project.domain}
-            </div>
           </div>
           <div className="hdr-meta">
             <span className="meta-pill">
@@ -125,36 +102,6 @@ export function WorkspaceTopbar({
           </div>
         </div>
       )}
-
-      {project ? (
-        <div className="hdr-meta-wrap" ref={metaPanelRef}>
-          <button
-            type="button"
-            className={`hdr-metabtn ${metaOpen ? "on" : ""}`}
-            aria-label="Ver detalles del dominio"
-            aria-expanded={metaOpen}
-            onClick={() => setMetaOpen(!metaOpen)}
-          >
-            <Icon name="globe" size={18} />
-          </button>
-          {metaOpen ? (
-            <div className="hdr-meta-panel">
-              <div className="hmp-row">
-                <Icon name="link" size={15} />
-                {project.domain}
-              </div>
-              <div className="hmp-row">
-                <Icon name="globe" size={15} />
-                {project.country}
-              </div>
-              <div className="hmp-row">
-                <Icon name="lang" size={15} />
-                {project.language}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </>
   );
 }
