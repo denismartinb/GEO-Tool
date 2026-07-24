@@ -1,3 +1,5 @@
+import { EXTRACTION_VERSION } from "@/lib/scan/constants";
+
 export const SCORING_VERSION = "phase9-geo-score-v2";
 
 export type ScoreInputRow = {
@@ -26,7 +28,33 @@ export type ScoreInputRow = {
    * (always-grounded) behavior.
    */
   provider?: string | null;
+  /**
+   * scan_prompt_results.extraction_version at extraction time (lib/scan/
+   * constants.ts). Optional for backward compatibility with existing call
+   * sites/tests that don't pass it — a missing version is treated as
+   * current (no gate applied), matching pre-SCAN-TRACKED-SET-1 behavior for
+   * callers that haven't been updated to pass it. See
+   * hasUntrustedCompetitorSet below for why this exists.
+   */
+  extraction_version?: string | null;
 };
+
+/**
+ * True when at least one row in this run was extracted BEFORE
+ * SCAN-TRACKED-SET-1 (docs/adr/0018) — i.e. extracted_json.competitors may
+ * contain entities the model surfaced on its own rather than the project's
+ * actual tracked list. Runs almost always share one extraction_version
+ * (all rows are extracted together right after the scan), so this gates at
+ * the run level: computing brand_position/standing over a MIX of
+ * trustworthy and contaminated rows would silently launder the old data's
+ * bias into new-looking numbers, which is worse than dropping the
+ * components entirely for that run. A future backfill (SCAN-TRACKED-SET-2)
+ * bumps every row's extraction_version, which resolves this cleanly without
+ * further code changes here.
+ */
+function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
+  return results.some((row) => row.extraction_version != null && row.extraction_version !== EXTRACTION_VERSION);
+}
 
 /**
  * Providers whose generation call includes real grounding (Gemini via Google
@@ -256,6 +284,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   const totalResults = results.length;
   const projectDomainNormalized = projectDomain ? normalizeDomain(projectDomain) : "";
   const safeTotal = Math.max(totalResults, 1);
+  const untrustedCompetitorSet = hasUntrustedCompetitorSet(results);
 
   const extractedResultsCount = results.filter((row) => row.extracted_json && typeof row.extracted_json === "object").length;
   const extractionErrorCount = results.filter((row) => row.extraction_error).length;
@@ -337,7 +366,10 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     return acc;
   }, {});
 
-  const brandPosition = computeBrandPosition(results, totalResults);
+  // Never compute a position ranking from a competitor set that may be
+  // contaminated with entities the model surfaced on its own rather than
+  // the project's actual tracked list — see hasUntrustedCompetitorSet.
+  const brandPosition = untrustedCompetitorSet ? null : computeBrandPosition(results, totalResults);
 
   // --- GEO Score composite (ADR 0008, revised by ADR 0015) ---
   const COMPOSITE_VERSION = "geo-score-v2";
@@ -359,8 +391,19 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // citation_score_any_domain.
   const standingV1 = clamp(0, 100, 100 - competitorGapScore);
   const sovDenominator = brandMentionedCount + totalCompetitorMentions;
+  // A run with zero TRACKED competitors (brandPosition.total_entities <= 1,
+  // i.e. only the brand itself) has no voice to share by construction — a
+  // brand_mentioned-only denominator would fabricate a perfect 100 exactly
+  // like the empty-market case ADR 0015 already eliminated for the
+  // zero-denominator path below. This is distinct from "competitors are
+  // tracked but weren't mentioned this run" (a real, valid 100).
+  const hasNoTrackedCompetitors = brandPosition !== null && brandPosition.total_entities <= 1;
   const standingScore: number | null =
-    sovDenominator > 0 ? round2((brandMentionedCount / sovDenominator) * 100) : null;
+    untrustedCompetitorSet || hasNoTrackedCompetitors
+      ? null
+      : sovDenominator > 0
+        ? round2((brandMentionedCount / sovDenominator) * 100)
+        : null;
 
   let prominenceScore: number | null = null;
   if (brandPosition && brandPosition.brand_avg_position !== null && brandPosition.total_entities > 0) {
@@ -404,14 +447,24 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
         presence: { value: presenceScore, weight: round2(0.4 / geoScoreWeightSum) },
         prominence:
           prominenceScore === null
-            ? { value: null, weight: 0, reason: "brand_position absent (pre-grounded-position-v1 run)" }
+            ? {
+                value: null,
+                weight: 0,
+                reason: untrustedCompetitorSet
+                  ? "competitor set not yet reconciled for this run (pre-tracked-set-v1 extraction, docs/adr/0018)"
+                  : "brand_position absent (pre-grounded-position-v1 run)"
+              }
             : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
         standing:
           standingScore === null
             ? {
                 value: null,
                 weight: 0,
-                reason: "no brand or tracked-competitor mentions in this run (share-of-voice denominator is 0, ADR 0015)"
+                reason: untrustedCompetitorSet
+                  ? "competitor set not yet reconciled for this run (pre-tracked-set-v1 extraction, docs/adr/0018)"
+                  : hasNoTrackedCompetitors
+                    ? "no competitors tracked for this project (nothing to share voice with, docs/adr/0018)"
+                    : "no brand or tracked-competitor mentions in this run (share-of-voice denominator is 0, ADR 0015)"
               }
             : { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
         authority:

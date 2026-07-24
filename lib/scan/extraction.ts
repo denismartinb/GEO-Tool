@@ -7,7 +7,101 @@ import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
-import type { GroundedCitation } from "@/lib/extraction/schema";
+import type { ExtractionOutput, GroundedCitation } from "@/lib/extraction/schema";
+
+/**
+ * Tolerant name-match key for reconciling a model-returned competitor name
+ * against the project's tracked list — mirrors normalizeEntityName in
+ * app/dashboard/projects/[projectId]/page.tsx (duplicated rather than
+ * shared: that's a Next.js page module, this is a server-only pipeline
+ * module with a different bundling boundary).
+ */
+function normalizeCompetitorName(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Reconciles the model's freeform `competitors[]` output against the
+ * project's actual tracked list (competitors_snapshot) before persistence,
+ * so `extracted_json.competitors` — and everything scored from it
+ * (mentioned_competitors_count, brand_position, standing) — can never
+ * contain an entity the user didn't choose to track. See
+ * docs/adr/0018-tracked-competitor-set-reconciliation.md for the full
+ * rationale (this was root-caused from a real production case: a tracked
+ * list of 5 competitors produced a 21-entity position ranking, with
+ * untracked entities structurally favored because they skip the
+ * not-mentioned penalty tracked-but-unmentioned competitors receive).
+ *
+ * - A tracked competitor the model returned keeps its mentioned/evidence/
+ *   position, but the persisted `name` is the project's own canonical
+ *   spelling (not whatever variant the model echoed back), so downstream
+ *   exact-name matching against project_competitors.name stays reliable.
+ * - A tracked competitor the model omitted is materialized as
+ *   `{mentioned: false, evidence: [], position: null}` — defends against
+ *   the model spending its attention on other brands instead of reporting
+ *   an explicit non-mention for a tracked one.
+ * - Any model-returned entity that is NOT in the tracked list is moved into
+ *   `other_brands_mentioned` (deduped against what the model already put
+ *   there) — never silently dropped. This field is intentionally NOT capped
+ *   at the model-facing prompt's "up to 5" limit once merged with spillover;
+ *   only the request to the model is capped.
+ *
+ * Positions are then re-densified (1..k, no gaps) over the entities that
+ * actually survive reconciliation (brand + reconciled competitors),
+ * preserving their relative order from the model's original ranking.
+ * Required because dropping spillover entities from that ranking otherwise
+ * leaves gaps (e.g. 1, 3, 9) that corrupt computeBrandPosition's per-entity
+ * average (lib/scoring/run-scoring.ts) — a tracked competitor surviving at
+ * position 9 out of 6 total entities is an internally inconsistent object,
+ * not just a filtered one.
+ */
+export function reconcileExtractedCompetitors(
+  data: ExtractionOutput,
+  trackedCompetitorNames: readonly string[]
+): ExtractionOutput {
+  const trackedKeys = trackedCompetitorNames.map(normalizeCompetitorName);
+  const modelByKey = new Map(data.competitors.map((c) => [normalizeCompetitorName(c.name), c] as const));
+
+  const reconciledCompetitors = trackedCompetitorNames.map((name, i) => {
+    const match = modelByKey.get(trackedKeys[i]);
+    return match ? { ...match, name } : { name, mentioned: false, evidence: [], position: null };
+  });
+
+  const trackedKeySet = new Set(trackedKeys);
+  const spillover = data.competitors
+    .filter((c) => !trackedKeySet.has(normalizeCompetitorName(c.name)))
+    .map((c) => c.name);
+  const otherBrandsMentioned = Array.from(new Set([...data.other_brands_mentioned, ...spillover]));
+
+  const mentionedRefs: Array<{ ref: "brand" | number; originalPosition: number }> = [];
+  if (data.brand.mentioned && data.brand.position !== null) {
+    mentionedRefs.push({ ref: "brand", originalPosition: data.brand.position });
+  }
+  reconciledCompetitors.forEach((c, i) => {
+    if (c.mentioned && c.position !== null) mentionedRefs.push({ ref: i, originalPosition: c.position });
+  });
+  mentionedRefs.sort((a, b) => a.originalPosition - b.originalPosition);
+
+  let brandPosition: number | null = data.brand.mentioned ? data.brand.position : null;
+  const competitorPositions = reconciledCompetitors.map((c) => (c.mentioned ? c.position : null));
+  mentionedRefs.forEach((entry, index) => {
+    const denseRank = index + 1;
+    if (entry.ref === "brand") brandPosition = denseRank;
+    else competitorPositions[entry.ref] = denseRank;
+  });
+
+  return {
+    ...data,
+    brand: { ...data.brand, position: brandPosition },
+    competitors: reconciledCompetitors.map((c, i) => ({ ...c, position: competitorPositions[i] })),
+    other_brands_mentioned: otherBrandsMentioned
+  };
+}
 
 /**
  * Best-effort domain extraction from a URL. Never throws — returns null on
@@ -150,12 +244,16 @@ async function extractAndPersistRow(input: {
           ? await extractOpenAIStructuredData(extractionArgs)
           : await extractGeminiStructuredData(extractionArgs);
 
-    const mentionedCompetitorsCount = extracted.data.competitors.filter((c) => c.mentioned).length;
+    // SCAN-TRACKED-SET-1: never persist an entity in `competitors` that the
+    // user didn't choose to track — see reconcileExtractedCompetitors above.
+    const reconciledData = reconcileExtractedCompetitors(extracted.data, competitors);
+
+    const mentionedCompetitorsCount = reconciledData.competitors.filter((c) => c.mentioned).length;
 
     const groundingChunks = row.raw_response_json?.grounding_chunks ?? [];
     const citations = await buildGroundedCitations({
       groundingChunks,
-      inlineCitations: extracted.data.citations.map((c) => ({
+      inlineCitations: reconciledData.citations.map((c) => ({
         url: c.url,
         domain: c.domain,
         label: c.label
@@ -176,12 +274,12 @@ async function extractAndPersistRow(input: {
     await service
       .from("scan_prompt_results")
       .update({
-        brand_mentioned: extracted.data.brand.mentioned,
+        brand_mentioned: reconciledData.brand.mentioned,
         citation_found: citationsCount > 0,
         mentioned_competitors_count: mentionedCompetitorsCount,
         citations_count: citationsCount,
-        sentiment: extracted.data.sentiment,
-        extracted_json: { ...extracted.data, citations },
+        sentiment: reconciledData.sentiment,
+        extracted_json: { ...reconciledData, citations },
         extraction_version: EXTRACTION_VERSION,
         extraction_error: null
       })

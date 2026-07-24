@@ -28,8 +28,18 @@ export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
  * from "grounded-v1" means prior runs (without position data) are
  * distinguishable: run_scores.details_json.brand_position is only present
  * for runs scored from "grounded-position-v1" extractions — see the ADR.
+ *
+ * "tracked-set-v1" (SCAN-TRACKED-SET-1, docs/adr/0018) — extracted_json.
+ * competitors is now reconciled against the project's tracked competitor
+ * list (reconcileExtractedCompetitors, lib/scan/extraction.ts) instead of
+ * persisting the model's freeform output as-is: entities the model surfaced
+ * on its own no longer pollute brand_position / mentioned_competitors_count
+ * / standing. Rows with an OLDER extraction_version can have a
+ * contaminated competitor set — lib/scoring/run-scoring.ts drops
+ * prominence/standing to null for any run containing such a row rather than
+ * computing on it silently. No backfill in this phase (SCAN-TRACKED-SET-2).
  */
-export const EXTRACTION_VERSION = "negative-drivers-v1";
+export const EXTRACTION_VERSION = "tracked-set-v1";
 
 /**
  * "neutral-sim-v1" — marks scan_prompt_results whose
