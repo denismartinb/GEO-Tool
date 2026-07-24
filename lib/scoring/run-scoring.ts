@@ -1,6 +1,6 @@
 export const SCORING_VERSION = "phase9-geo-score-v2";
 
-type ScoreInputRow = {
+export type ScoreInputRow = {
   id: string;
   prompt_text_snapshot: string;
   brand_mentioned: boolean;
@@ -499,6 +499,193 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       ...(geoScore ? { geo_score: geoScore } : {})
     }
   };
+}
+
+/* ============================================================
+   RECS-POTENTIAL-1 — real "potential score points" per recommendation
+   (docs/adr/0016-recommendation-potential-points.md).
+
+   Methodology (validated by geo-strategy, 2026-07-23): recompute the SAME
+   composite via computeRunScoresFromResults over a counterfactual copy of
+   the real per-prompt rows — never a percentage×weight shortcut, which
+   ignores weight renormalization and misattributes which component a
+   recommendation actually moves. Every number here is traceable to real
+   scoring + real evidence_json.affected_prompt_ids; nothing is invented.
+   ============================================================ */
+
+/**
+ * Which score component a recommendation type's counterfactual moves.
+ * Types with no entry here are NOT quantifiable — no evidence-1:1 gap
+ * exists to map them to a single component (see the ADR for the full
+ * rationale per type), so they get a qualitative impact badge instead of a
+ * point number, never a fabricated one.
+ */
+const RECOMMENDATION_POTENTIAL_KIND: Record<string, "presence" | "prominence" | "authority"> = {
+  increase_brand_visibility: "presence",
+  close_competitor_gap: "presence",
+  increase_brand_prominence: "prominence",
+  add_citation_block: "authority",
+  pursue_citation_sources: "authority"
+};
+
+export function isQuantifiableRecommendationType(recommendationType: string): boolean {
+  return recommendationType in RECOMMENDATION_POTENTIAL_KIND;
+}
+
+type CounterfactualMutation = {
+  promptIds: ReadonlySet<string>;
+  kind: "presence" | "prominence" | "authority";
+};
+
+/**
+ * Deep-clones only the affected rows and applies the counterfactual
+ * "best case" for each mutation kind — never mutates the input array/rows.
+ * - presence: brand_mentioned -> true (also feeds standing/share-of-voice
+ *   for free, since standing = brand_mentioned_count / (brand_mentioned_count
+ *   + total_competitor_mentions) — no separate standing mutation needed).
+ * - prominence: the brand's extracted_json entity becomes { mentioned:
+ *   true, position: 1 } (best possible rank) for that prompt.
+ * - authority: injects a synthetic own-domain grounding citation into
+ *   extracted_json.citations, but ONLY on grounded-provider rows (ADR
+ *   0012) — an ungrounded row can never produce a real citation, so the
+ *   counterfactual must respect the same structural ceiling the real
+ *   scoring does.
+ */
+function applyCounterfactualMutations(
+  results: ScoreInputRow[],
+  mutations: readonly CounterfactualMutation[],
+  projectDomain: string
+): ScoreInputRow[] {
+  const domain = projectDomain ? normalizeDomain(projectDomain) : "";
+  const kindsByRowId = new Map<string, Set<CounterfactualMutation["kind"]>>();
+  for (const mutation of mutations) {
+    for (const id of mutation.promptIds) {
+      const kinds = kindsByRowId.get(id) ?? new Set<CounterfactualMutation["kind"]>();
+      kinds.add(mutation.kind);
+      kindsByRowId.set(id, kinds);
+    }
+  }
+
+  return results.map((row) => {
+    const kinds = kindsByRowId.get(row.id);
+    if (!kinds) return row;
+    let mutated = row;
+
+    if (kinds.has("presence")) {
+      mutated = { ...mutated, brand_mentioned: true };
+    }
+
+    if (kinds.has("prominence")) {
+      const extracted = mutated.extracted_json;
+      if (extracted && typeof extracted === "object" && "brand" in extracted) {
+        mutated = {
+          ...mutated,
+          extracted_json: { ...(extracted as Record<string, unknown>), brand: { mentioned: true, position: 1 } }
+        };
+      }
+    }
+
+    if (kinds.has("authority") && domain && isGroundedRow(mutated)) {
+      const alreadyOwn = hasOwnDomainCitation(mutated, domain);
+      if (!alreadyOwn) {
+        const base =
+          mutated.extracted_json && typeof mutated.extracted_json === "object"
+            ? (mutated.extracted_json as Record<string, unknown>)
+            : {};
+        const existingCitations = readCitations(mutated.extracted_json);
+        mutated = {
+          ...mutated,
+          citation_found: true,
+          extracted_json: {
+            ...base,
+            citations: [...existingCitations, { source: "grounding" as const, domain: projectDomain }]
+          }
+        };
+      }
+    }
+
+    return mutated;
+  });
+}
+
+function extractGeoScore(output: RunScoreOutput): number | null {
+  const details = output.details_json as { geo_score?: { score?: number } };
+  return typeof details.geo_score?.score === "number" ? details.geo_score.score : null;
+}
+
+export type PotentialPointsResult = {
+  /** Optimistic ceiling, in geo_score points — never negative. */
+  deltaPoints: number;
+};
+
+/**
+ * Standalone "hasta +X pt" for ONE recommendation: recomputes the real
+ * composite with only THIS recommendation's affected prompts resolved.
+ * Returns null (render a qualitative badge instead, never a number) when:
+ * the type isn't quantifiable, there are no affected prompts, this run has
+ * no geo-score-v2 composite yet (pre-ADR-0015 run, no backfill), or the
+ * run's confidence is "low" — a point estimate over a low-confidence sample
+ * is false precision (RECS-POTENTIAL-1 confidence gate).
+ */
+export function computeRecommendationPotentialPoints(
+  results: ScoreInputRow[],
+  projectDomain: string,
+  recommendationType: string,
+  affectedPromptIds: readonly string[]
+): PotentialPointsResult | null {
+  const kind = RECOMMENDATION_POTENTIAL_KIND[recommendationType];
+  if (!kind || affectedPromptIds.length === 0) return null;
+
+  const real = computeRunScoresFromResults(results, projectDomain);
+  if (real.confidence === "low") return null;
+  const realScore = extractGeoScore(real);
+  if (realScore === null) return null;
+
+  const mutatedResults = applyCounterfactualMutations(
+    results,
+    [{ promptIds: new Set(affectedPromptIds), kind }],
+    projectDomain
+  );
+  const counterfactualScore = extractGeoScore(computeRunScoresFromResults(mutatedResults, projectDomain));
+  if (counterfactualScore === null) return null;
+
+  return { deltaPoints: round2(Math.max(0, counterfactualScore - realScore)) };
+}
+
+/**
+ * Joint "hasta +Y pt" ceiling across MULTIPLE recommendations at once — the
+ * UNION of their affected-prompt mutations, rescored ONCE. This is what the
+ * Oportunidades header total must use instead of summing standalone deltas:
+ * two recommendations can share affected prompts (e.g. the same
+ * brand-absent prompt drives both increase_brand_visibility and
+ * close_competitor_gap), and summing would double-count that overlap,
+ * overstating the real reachable ceiling. Operating on the union collapses
+ * the overlap for free, so `joint.deltaPoints <= Σ(standalone deltas)`
+ * always holds.
+ */
+export function computeJointPotentialPoints(
+  results: ScoreInputRow[],
+  projectDomain: string,
+  recommendations: ReadonlyArray<{ recommendationType: string; affectedPromptIds: readonly string[] }>
+): PotentialPointsResult | null {
+  const mutations: CounterfactualMutation[] = [];
+  for (const rec of recommendations) {
+    const kind = RECOMMENDATION_POTENTIAL_KIND[rec.recommendationType];
+    if (!kind || rec.affectedPromptIds.length === 0) continue;
+    mutations.push({ promptIds: new Set(rec.affectedPromptIds), kind });
+  }
+  if (mutations.length === 0) return null;
+
+  const real = computeRunScoresFromResults(results, projectDomain);
+  if (real.confidence === "low") return null;
+  const realScore = extractGeoScore(real);
+  if (realScore === null) return null;
+
+  const mutatedResults = applyCounterfactualMutations(results, mutations, projectDomain);
+  const counterfactualScore = extractGeoScore(computeRunScoresFromResults(mutatedResults, projectDomain));
+  if (counterfactualScore === null) return null;
+
+  return { deltaPoints: round2(Math.max(0, counterfactualScore - realScore)) };
 }
 
 /**
