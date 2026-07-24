@@ -4,7 +4,9 @@ import { useState } from "react";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
 import { DeletePromptButton } from "@/app/dashboard/projects/[projectId]/prompts/delete-prompt-button";
 import { InfoTip } from "@/components/ui/info-tip";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { Icon } from "@/components/ui/icon";
+import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 
 type Competitor = {
   id: string;
@@ -14,6 +16,8 @@ type Competitor = {
 
 type Props = {
   projectId: string;
+  projectDomain: string;
+  projectBrand: string;
   results: ResultRow[];
   competitors: Competitor[];
   onClose: () => void;
@@ -42,6 +46,12 @@ const sentimentLabels: Record<string, string> = {
   unknown: "Neutral",
 };
 
+function sentimentBadgeClass(s: string | null | undefined): string {
+  if (s === "positive") return "badge-pos";
+  if (s === "negative") return "badge-neg";
+  return "badge-neutral";
+}
+
 type Tab = "resumen" | "respuestas";
 
 /**
@@ -60,6 +70,10 @@ function citationDisplayLabel(cite: {
   if (cite.domain) return cite.domain;
   if (cite.source === "grounding") return cite.title?.trim() || "Fuente sin resolver";
   return cite.url ?? "—";
+}
+
+function normalizeDomain(domain: string): string {
+  return domain.trim().toLowerCase().replace(/^www\./, "");
 }
 
 function parseExtracted(raw: unknown): ExtractedJson | null {
@@ -88,7 +102,27 @@ function dominantSentiment(rows: ResultRow[]): string | null {
   return dominant;
 }
 
-export function PromptDrawer({ projectId, results, competitors, onClose }: Props) {
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Highlights literal occurrences of the brand name inside a raw model
+ * response — real substring matching against `project.brand`, not an
+ * invented heuristic. Case-insensitive; renders as plain text with no
+ * matches when the brand name is empty or doesn't appear.
+ */
+function highlightBrand(text: string, brand: string): React.ReactNode {
+  const trimmed = brand.trim();
+  if (!trimmed) return text;
+  const parts = text.split(new RegExp(`(${escapeRegExp(trimmed)})`, "gi"));
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    part.toLowerCase() === trimmed.toLowerCase() ? <mark key={i}>{part}</mark> : part
+  );
+}
+
+export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumen");
 
   if (!results.length) return null;
@@ -129,6 +163,9 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
       combinedCitations.push(cite);
     }
   }
+  const hasOwnCitation = combinedCitations.some(
+    (c) => c.domain && normalizeDomain(c.domain) === normalizeDomain(projectDomain)
+  );
 
   const brandRow = {
     name: "Tu marca",
@@ -158,9 +195,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
     return a.name.localeCompare(b.name);
   });
 
-  const uniqueProviderLabels = Array.from(
-    new Set(results.map((r) => getEngineMeta(r.provider).label))
-  );
+  const category = results[0].category;
 
   return (
     <>
@@ -172,7 +207,7 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
       />
 
       {/* Drawer */}
-      <div className="prompt-drawer" role="dialog" aria-modal="true">
+      <div className="prompt-drawer pr2-scope" role="dialog" aria-modal="true">
         {/* Header */}
         <div className="drawer-header">
           <div
@@ -183,17 +218,19 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
               gap: 12,
             }}
           >
-            <p
-              style={{
-                fontSize: 13,
-                color: "var(--ink)",
-                lineHeight: 1.5,
-                fontWeight: 500,
-                flex: 1,
-              }}
-            >
-              {results[0].prompt_text_snapshot ?? "Prompt"}
-            </p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {category ? <span className="drawer-tag">{category}</span> : null}
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "var(--ink)",
+                  lineHeight: 1.45,
+                  fontWeight: 600,
+                }}
+              >
+                {results[0].prompt_text_snapshot ?? "Prompt"}
+              </p>
+            </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
               {results[0].prompt_id ? (
                 <DeletePromptButton projectId={projectId} promptId={results[0].prompt_id} onDeleted={onClose} />
@@ -201,13 +238,17 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
               <button
                 onClick={onClose}
                 style={{
-                  background: "none",
+                  display: "grid",
+                  placeItems: "center",
+                  width: 26,
+                  height: 26,
+                  borderRadius: "var(--r-sm)",
+                  background: "var(--surface-sunk)",
                   border: "none",
                   cursor: "pointer",
-                  fontSize: 18,
+                  fontSize: 16,
                   color: "var(--ink-4)",
                   lineHeight: 1,
-                  padding: "2px 4px",
                 }}
                 aria-label="Cerrar"
               >
@@ -236,465 +277,182 @@ export function PromptDrawer({ projectId, results, competitors, onClose }: Props
         {/* Body */}
         <div className="drawer-body">
           {tab === "resumen" && (
-            <div>
-              {/* Presencia de marca */}
-              <div className="aside-card">
-                <div className="ac-title" style={{ display: "flex", alignItems: "center" }}>
-                  Presencia de tu marca en este prompt
-                  <InfoTip text="Mencionada: la IA nombra tu marca por lo que ya sabe de ella (fame), sin depender de tu web. Citada: la respuesta incluye una fuente verificada apuntando a tu propio dominio — solo esta segunda señal depende de contenido que publiques." />
-                </div>
-                <div style={{ display: "flex", gap: 24, marginTop: 8 }}>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 800,
-                        color: brandMentioned
-                          ? "var(--pos-ink)"
-                          : "var(--neg-ink)",
-                      }}
-                    >
-                      {brandMentioned ? "Sí" : "No"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--ink-4)",
-                        fontWeight: 600,
-                        marginTop: 2,
-                      }}
-                    >
-                      mencionada
-                    </div>
+            <>
+              {/* Presencia: mencionada vs. citada */}
+              <div className="pr2-presence">
+                <div className="pr2-presence-cell">
+                  <div className="big" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
+                    {brandMentioned ? "Sí" : "No"}
                   </div>
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 800,
-                        color: citationFound
-                          ? "var(--accent-ink)"
-                          : "var(--ink-4)",
-                      }}
-                    >
-                      {citationFound ? "Sí" : "No"}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: "var(--ink-4)",
-                        fontWeight: 600,
-                        marginTop: 2,
-                      }}
-                    >
-                      citada
-                    </div>
+                  <div className="lbl">Mencionada</div>
+                  <div className="hint">La IA te nombra por lo que ya sabe de tu marca, sin depender de tu web.</div>
+                </div>
+                <div className="pr2-presence-cell">
+                  <div className="big" style={{ color: citationFound ? "var(--accent-ink)" : "var(--ink-4)" }}>
+                    {citationFound ? "Sí" : "No"}
+                  </div>
+                  <div className="lbl">
+                    Citada <InfoTip text="La respuesta incluye una fuente verificada apuntando a tu propio dominio — la única señal de estas dos que depende de contenido que publiques." />
+                  </div>
+                  <div className="hint">
+                    {citationFound
+                      ? "Al menos una fuente usada es tuya."
+                      : "Ninguna fuente usada en este prompt es tu dominio."}
                   </div>
                 </div>
               </div>
 
-              {/* Brand Ranking Table */}
-              <div
-                style={{
-                  marginBottom: 16,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--ink-4)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                Ranking de marcas
-              </div>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 13,
-                  marginBottom: 20,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      #
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Marca
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "center",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Sentimiento
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "right",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Cobertura
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {allRows.map((row, i) => (
-                    <tr
-                      key={row.name}
-                      style={{ borderBottom: "1px solid var(--line)" }}
-                    >
-                      <td
-                        style={{
-                          padding: "8px",
-                          color: "var(--ink-3)",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
-                      >
-                        {i + 1}
-                      </td>
-                      <td style={{ padding: "8px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 20,
-                              height: 20,
-                              borderRadius: 5,
-                              background: row.isOwn
-                                ? "var(--accent)"
-                                : "var(--surface-sunk)",
-                              border: "1px solid var(--line)",
-                              display: "grid",
-                              placeItems: "center",
-                              fontSize: 9,
-                              fontWeight: 800,
-                              color: row.isOwn ? "#fff" : "var(--ink-3)",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {row.name[0].toUpperCase()}
-                          </div>
-                          <span
-                            style={{
-                              fontWeight: row.isOwn ? 700 : 500,
-                              color: "var(--ink)",
-                            }}
-                          >
-                            {row.name}
-                            {row.isOwn && (
-                              <span
-                                style={{
-                                  marginLeft: 4,
-                                  fontSize: 10,
-                                  color: "var(--accent)",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                Tú
-                              </span>
-                            )}
+              {/* Por motor */}
+              <div>
+                <p className="ac-title">Por motor</p>
+                <div className="aside-card">
+                  {results.map((r) => {
+                    const meta = getEngineMeta(r.provider);
+                    return (
+                      <div key={r.id} className="pr2-erow">
+                        <span className="pr2-eav" style={{ color: meta.color }}>
+                          <EngineGlyph provider={normalizeProvider(r.provider)} />
+                        </span>
+                        <span className="pr2-erow-name">{meta.label}</span>
+                        <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
+                          {r.brand_mentioned ? "Mencionada" : "Ausente"}
+                        </span>
+                        {r.sentiment ? (
+                          <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
+                            {sentimentLabels[r.sentiment] ?? r.sentiment}
                           </span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "8px", textAlign: "center" }}>
+                        ) : null}
+                        <span className="pr2-erow-cit">
+                          {r.citations_count ?? 0} {r.citations_count === 1 ? "cita" : "citas"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Ranking de marcas */}
+              <div>
+                <p className="ac-title">Ranking de marcas</p>
+                <div className="aside-card">
+                  {allRows.map((row, i) => (
+                    <div key={row.name} className={`pr2-rk${row.isOwn ? " you" : ""}`}>
+                      <span className="pr2-rk-n">{i + 1}</span>
+                      <span className="pr2-rk-av">{row.name[0].toUpperCase()}</span>
+                      <span className="pr2-rk-name">
+                        {row.name}
+                        {row.isOwn && <span className="pr2-rk-tag">Tú</span>}
                         {row.isOwn && row.sentiment ? (
-                          <span
-                            className={`badge ${
-                              row.sentiment === "positive"
-                                ? "badge-pos"
-                                : row.sentiment === "negative"
-                                  ? "badge-neg"
-                                  : "badge-neutral"
-                            }`}
-                          >
+                          <span className={`badge ${sentimentBadgeClass(row.sentiment)}`} style={{ fontSize: 10, padding: "1px 7px" }}>
                             {sentimentLabels[row.sentiment] ?? row.sentiment}
                           </span>
-                        ) : (
-                          <span
-                            style={{ color: "var(--ink-4)", fontSize: 12 }}
-                          >
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: "8px", textAlign: "right" }}>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            fontSize: 13,
-                            color: row.mentioned
-                              ? "var(--pos-ink)"
-                              : "var(--ink-4)",
-                          }}
-                        >
-                          {row.mentioned ? "100%" : "0%"}
-                        </span>
-                      </td>
-                    </tr>
+                        ) : null}
+                      </span>
+                      <span className="pr2-rk-cov" style={{ color: row.mentioned ? "var(--pos-ink)" : "var(--ink-4)" }}>
+                        {row.mentioned ? "100%" : "0%"}
+                      </span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
 
               {/* Evidencias de la marca */}
               {brandEvidence.length > 0 && (
-                <div className="aside-card">
-                  <div className="ac-title">Evidencias de mención</div>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 16,
-                      fontSize: 13,
-                      color: "var(--ink-2)",
-                      lineHeight: 1.6,
-                    }}
-                  >
+                <div>
+                  <p className="ac-title">Evidencias de mención</p>
+                  <div className="aside-card">
                     {brandEvidence.map((ev, i) => (
-                      <li key={i}>{ev}</li>
+                      <p key={i} className="pr2-evi">
+                        «{ev}»
+                      </p>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
               {/* Citas */}
               {combinedCitations.length > 0 && (
-                <div className="aside-card">
-                  <div className="ac-title">
-                    Citas ({combinedCitations.length})
-                  </div>
-                  <ul
-                    style={{
-                      margin: 0,
-                      paddingLeft: 0,
-                      listStyle: "none",
-                      fontSize: 12,
-                      color: "var(--ink-3)",
-                    }}
-                  >
+                <div>
+                  <p className="ac-title">Fuentes usadas ({combinedCitations.length})</p>
+                  <div className="aside-card">
                     {combinedCitations.map((cite, i) => (
-                      <li
-                        key={i}
-                        style={{
-                          padding: "4px 0",
-                          borderBottom: "1px solid var(--line-soft)",
-                        }}
-                      >
-                        <span style={{ fontWeight: 600, color: "var(--ink-2)" }}>
-                          {citationDisplayLabel(cite)}
-                        </span>
-                      </li>
+                      <div key={i} className="pr2-cit">
+                        <Icon name="globe" size={13} />
+                        <span className="pr2-cit-d">{citationDisplayLabel(cite)}</span>
+                      </div>
                     ))}
-                  </ul>
+                    {!hasOwnCitation && (
+                      <p className="pr2-cit-note">
+                        <b>Ninguna es {projectDomain}</b> — por eso «Citada: No». Publicar contenido que la IA
+                        use como fuente es tu palanca aquí.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
-            </div>
+            </>
           )}
 
           {tab === "respuestas" && (
-            <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  color: "var(--ink-4)",
-                  marginBottom: 12,
-                }}
-              >
-                Analizado con {uniqueProviderLabels.join(" y ")}.
-              </p>
-
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 13,
-                  marginBottom: 16,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Motor de IA
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Marca
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Sentimiento
-                    </th>
-                    <th
-                      style={{
-                        textAlign: "left",
-                        padding: "4px 8px",
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "var(--ink-4)",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Fecha
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map((r) => (
-                    <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td style={{ padding: "8px" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 20,
-                              height: 20,
-                              borderRadius: 5,
-                              background: getEngineMeta(r.provider).color,
-                              display: "grid",
-                              placeItems: "center",
-                              color: "#fff",
-                              fontSize: 9,
-                              fontWeight: 800,
-                            }}
-                          >
-                            {getEngineMeta(r.provider).short}
-                          </div>
-                          <span style={{ fontWeight: 600 }}>
-                            {getEngineMeta(r.provider).label}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ padding: "8px" }}>
-                        <span
-                          className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}
-                        >
-                          {r.brand_mentioned ? "Sí" : "No"}
-                        </span>
-                      </td>
-                      <td style={{ padding: "8px" }}>
-                        {r.sentiment ? (
-                          <span
-                            className={`badge ${
-                              r.sentiment === "positive"
-                                ? "badge-pos"
-                                : r.sentiment === "negative"
-                                  ? "badge-neg"
-                                  : "badge-neutral"
-                            }`}
-                          >
-                            {sentimentLabels[r.sentiment] ?? r.sentiment}
-                          </span>
-                        ) : (
-                          <span style={{ color: "var(--ink-4)" }}>—</span>
-                        )}
-                      </td>
-                      <td
-                        style={{
-                          padding: "8px",
-                          color: "var(--ink-3)",
-                          fontSize: 12,
-                        }}
-                      >
-                        Hoy
-                      </td>
+            <>
+              <div className="aside-card">
+                <table className="pr2-rtbl">
+                  <thead>
+                    <tr>
+                      <th>Motor</th>
+                      <th>Marca</th>
+                      <th>Sentimiento</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {results.map((r) => {
+                      const meta = getEngineMeta(r.provider);
+                      return (
+                        <tr key={r.id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span className="pr2-eav" style={{ width: 20, height: 20, color: meta.color }}>
+                                <EngineGlyph provider={normalizeProvider(r.provider)} />
+                              </span>
+                              {meta.label}
+                            </div>
+                          </td>
+                          <td>
+                            <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
+                              {r.brand_mentioned ? "Sí" : "No"}
+                            </span>
+                          </td>
+                          <td>
+                            {r.sentiment ? (
+                              <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
+                                {sentimentLabels[r.sentiment] ?? r.sentiment}
+                              </span>
+                            ) : (
+                              <span style={{ color: "var(--ink-4)" }}>—</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
               {results.map(
                 (r) =>
                   r.raw_response_text && (
-                    <div key={r.id} className="resp-full" style={{ marginBottom: 12 }}>
-                      <div
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: "var(--ink-4)",
-                          marginBottom: 6,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                        }}
-                      >
-                        {getEngineMeta(r.provider).label}
+                    <div key={r.id} className="resp-full">
+                      <div className="eng-head">
+                        <span className="pr2-eav" style={{ width: 20, height: 20, color: getEngineMeta(r.provider).color }}>
+                          <EngineGlyph provider={normalizeProvider(r.provider)} />
+                        </span>
+                        <span className="nm">{getEngineMeta(r.provider).label}</span>
                       </div>
-                      <div className="body" style={{ whiteSpace: "pre-wrap" }}>
-                        {r.raw_response_text}
-                      </div>
+                      <div className="body">{highlightBrand(r.raw_response_text, projectBrand)}</div>
                     </div>
                   )
               )}
-            </div>
+            </>
           )}
         </div>
       </div>
