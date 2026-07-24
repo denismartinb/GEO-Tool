@@ -173,6 +173,26 @@ function faviconUrl(domain: string | null | undefined): string | null {
 }
 
 /**
+ * Loose entity-name match key for reconciling a per-scan Gemini extraction
+ * name (brand_position.ranking entry.name, echoed back by the model rather
+ * than copied verbatim — lib/llm/gemini.ts's extraction prompt names but
+ * doesn't force it) against the tracked project_competitors row it refers
+ * to. A plain toLowerCase().trim() equality silently drops the match (and
+ * with it the row's real, always-present domain — see
+ * competitors_domain_len_chk in supabase/migrations/0001_v0_schema.sql) on
+ * any accent/punctuation drift between the two, e.g. "IKEA" vs "Ikea" is
+ * already handled, but "Lazy Bag®" vs "Lazy Bag" is not.
+ */
+function normalizeEntityName(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
  * Simplified, non-literal glyphs for each engine (Overview "Posicionamiento
  * por motores de IA") — not a pixel copy of any provider's mark, just a
  * recognizable stand-in per engine so the block reads at a glance.
@@ -536,9 +556,8 @@ export default async function ProjectDetailPage({
             rank: i + 1
           };
         }
-        const match = competitorRows.find(
-          (c) => c.name.toLowerCase().trim() === (entry.name ?? "").toLowerCase().trim()
-        );
+        const entryKey = normalizeEntityName(entry.name);
+        const match = competitorRows.find((c) => normalizeEntityName(c.name) === entryKey);
         return {
           key: entry.name ?? `pos-${i}`,
           name: entry.name ?? "—",
