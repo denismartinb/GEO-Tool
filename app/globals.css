@@ -3697,6 +3697,13 @@ textarea.add-prompts-text-input {
     display: none;
   }
 
+  .hdr-title-mobile-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
   .hdr-title-mobile {
     display: block;
     font-size: 13.5px;
@@ -3705,6 +3712,27 @@ textarea.add-prompts-text-input {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  .hdr-scan-pill {
+    flex: 0 0 auto;
+    font-size: 10.5px;
+    font-weight: 650;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .hdr-sub-mobile {
+    display: block;
+    font-size: 11px;
+    font-weight: 550;
+    color: var(--ink-4);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 1px;
   }
 
   .hdr-meta,

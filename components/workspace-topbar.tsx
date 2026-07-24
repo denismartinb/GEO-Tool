@@ -33,12 +33,21 @@ function getProjectId(pathname: string) {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
 }
 
+// Same short-date pattern already used for the "Escaneado" badge on the
+// Escaneos page (app/dashboard/projects/[projectId]/runs/page.tsx).
+function formatShortDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return new Date(value).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
+
 export function WorkspaceTopbar({
   projects,
-  latestScanStatusByProject
+  latestScanStatusByProject,
+  latestScanDateByProject
 }: {
   projects: WorkspaceProject[];
   latestScanStatusByProject: Record<string, string>;
+  latestScanDateByProject: Record<string, string | null>;
 }) {
   const pathname = usePathname();
   const projectId = getProjectId(pathname);
@@ -51,6 +60,7 @@ export function WorkspaceTopbar({
     : null;
   const status = project ? latestScanStatusByProject[project.id] : undefined;
   const mobileTitle = project ? (section ?? "Visión general") : "Espacio de trabajo";
+  const mobileScanDate = project ? formatShortDate(latestScanDateByProject[project.id]) : null;
 
   useEffect(() => {
     if (!metaOpen) return;
@@ -89,7 +99,13 @@ export function WorkspaceTopbar({
               <b>{project.name}</b> · {section}
             </div>
             <div className="hdr-title">{project.domain}</div>
-            <div className="hdr-title-mobile">{mobileTitle}</div>
+            <div className="hdr-title-mobile-row">
+              <div className="hdr-title-mobile">{mobileTitle}</div>
+              {mobileScanDate ? <span className="hdr-scan-pill">Escaneado {mobileScanDate}</span> : null}
+            </div>
+            <div className="hdr-sub-mobile">
+              {project.name} · {project.domain}
+            </div>
           </div>
           <div className="hdr-meta">
             <span className="meta-pill">

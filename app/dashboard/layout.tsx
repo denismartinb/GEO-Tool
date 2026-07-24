@@ -17,6 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     competitorCountByProject,
     recommendationCountByProject,
     latestScanStatusByProject,
+    latestScanDateByProject,
     recentCompletedRuns,
     recentPromptsAdded
   } = await getWorkspaceCounters();
@@ -36,6 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <WorkspaceTopbar
             projects={projects ?? []}
             latestScanStatusByProject={latestScanStatusByProject}
+            latestScanDateByProject={latestScanDateByProject}
           />
           <div className="dash-header-actions">
             <div className="meta">{user.email}</div>
