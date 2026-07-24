@@ -770,6 +770,25 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
+          {/* TEMP DEBUG — remove before merge. Diagnosing why favicons/aviso
+              don't show on the Ikea preview despite the fix. */}
+          <pre style={{ background: "#111", color: "#0f0", fontSize: 11, padding: 12, marginBottom: 16, overflowX: "auto", whiteSpace: "pre-wrap" }}>
+            {JSON.stringify(
+              {
+                brandPositionAvailable,
+                competitorRows: competitorRows.map((c) => ({ name: c.name, domain: c.domain })),
+                everTrackedCompetitorRows: everTrackedCompetitorRows.map((c) => ({ name: c.name, domain: c.domain })),
+                rankingNonBrandNames: brandPositionAvailable
+                  ? brandPositionRanking.filter((e) => !e.is_brand).map((e) => e.name)
+                  : [],
+                activeCompetitorKeysArr: [...activeCompetitorKeys],
+                rankingCompetitorKeysArr: [...rankingCompetitorKeys],
+                staleCompetitorSnapshot
+              },
+              null,
+              2
+            )}
+          </pre>
           {staleCompetitorSnapshot && (
             <div
               className="feedback"
