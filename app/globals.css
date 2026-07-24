@@ -3747,22 +3747,27 @@ textarea.add-prompts-text-input {
     padding-bottom: calc(28px + env(safe-area-inset-bottom));
   }
 
-  /* --- Per-page sticky header (project name + scan status/CTA) --- */
+  /* --- Per-page sticky header (project name + scan status/CTA) ---
+     Compact: the scan pill sits top-right on the same row as the title
+     block instead of dropping to its own full-width row at the bottom
+     (founder feedback 2026-07-24: the pill was "innecesariamente abajo",
+     making the header too tall). */
   .ov-sticky-header {
-    flex-wrap: wrap;
-    align-items: flex-end;
-    margin: -22px -20px 16px;
-    padding: 12px 20px;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 10px;
+    margin: -22px -20px 14px;
+    padding: 9px 20px;
   }
 
   .ov-sticky-left {
-    flex-wrap: wrap;
+    flex: 1;
     min-width: 0;
   }
 
   .ov-sticky-right {
-    width: 100%;
     justify-content: flex-end;
+    flex-shrink: 0;
   }
 
   /* --- Onboarding: domain bar (input + country + continue) --- */
