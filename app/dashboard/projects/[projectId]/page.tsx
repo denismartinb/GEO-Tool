@@ -599,26 +599,6 @@ export default async function ProjectDetailPage({
       ];
   const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
 
-  /* ---- stale competitor snapshot detection ----
-   * brand_position.ranking is frozen at the LATEST completed scan's time.
-   * If every currently active competitor is absent from that ranking, the
-   * tracked list was very likely swapped wholesale after that scan ran —
-   * the panorama (and the rest of this scan's competitive numbers) reflect
-   * a competitor set that no longer matches what's configured today.
-   * Gated on a COMPLETE mismatch (not "at least one changed") so adding or
-   * retiring a single competitor between scans — the normal case — never
-   * triggers a false warning; only a full list swap does.
-   */
-  const rankingCompetitorKeys = brandPositionAvailable
-    ? new Set(brandPositionRanking.filter((entry) => !entry.is_brand).map((entry) => normalizeEntityName(entry.name)))
-    : new Set<string>();
-  const activeCompetitorKeys = new Set(competitorRows.map((c) => normalizeEntityName(c.name)));
-  const staleCompetitorSnapshot =
-    brandPositionAvailable &&
-    rankingCompetitorKeys.size > 0 &&
-    activeCompetitorKeys.size > 0 &&
-    ![...activeCompetitorKeys].some((key) => rankingCompetitorKeys.has(key));
-
   /* ---- position-media summary + bars (real brand_position data) ----
    * "Tu posición media X / N" = brand's rank among the ranked entities.
    * Bars encode avg_position (lower = better = taller). Only when
@@ -652,6 +632,24 @@ export default async function ProjectDetailPage({
       return { name: r.name, isBrand: r.isBrand, height };
     });
   })();
+
+  /* ---- untracked competitor visible in the panorama ----
+   * brand_position.ranking is frozen at the LATEST completed scan's time,
+   * so it can rank a competitor that was tracked back then but has since
+   * been removed. That's NOT the same as "the whole list changed" — real
+   * case (2026-07-24, proyecto Ikea): the tracked list SHRANK from ~17
+   * competitors down to 5, so the still-active 5 remain fully present
+   * inside the old ranking (a "some overlap" check finds nothing wrong),
+   * yet the top-5-by-position podium happens to surface exactly the
+   * dropped ones (their old rank was simply better). The honest signal
+   * isn't "did the set change" — it's "is anything actually shown right
+   * now unresolvable", which panoramaRows' domain lookup (active match →
+   * historical fallback, see above) already answers: a non-brand row
+   * still stuck at domain === null means it was removed from tracking
+   * entirely, not merely deactivated (no favicon to recover for it,
+   * either — see everTrackedCompetitorRows above).
+   */
+  const panoramaHasUntrackedEntity = panoramaListRows.some((row) => !row.isBrand && row.domain === null);
 
   // Real, honest content for the Oportunidades summary card (Task Intake
   // 2026-07-23, Option A): total active recommendations + how many are
@@ -770,34 +768,14 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
-          {/* TEMP DEBUG — remove before merge. Diagnosing why favicons/aviso
-              don't show on the Ikea preview despite the fix. */}
-          <pre style={{ background: "#111", color: "#0f0", fontSize: 11, padding: 12, marginBottom: 16, overflowX: "auto", whiteSpace: "pre-wrap" }}>
-            {JSON.stringify(
-              {
-                brandPositionAvailable,
-                competitorRows: competitorRows.map((c) => ({ name: c.name, domain: c.domain })),
-                everTrackedCompetitorRows: everTrackedCompetitorRows.map((c) => ({ name: c.name, domain: c.domain })),
-                rankingNonBrandNames: brandPositionAvailable
-                  ? brandPositionRanking.filter((e) => !e.is_brand).map((e) => e.name)
-                  : [],
-                activeCompetitorKeysArr: [...activeCompetitorKeys],
-                rankingCompetitorKeysArr: [...rankingCompetitorKeys],
-                staleCompetitorSnapshot
-              },
-              null,
-              2
-            )}
-          </pre>
-          {staleCompetitorSnapshot && (
+          {panoramaHasUntrackedEntity && (
             <div
               className="feedback"
               style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}
             >
               <p style={{ fontWeight: 650 }}>
-                Este análisis usa una lista de competidores distinta a la actual — cambiaste los
-                competidores trackeados después de este escaneo. Vuelve a escanear para actualizar
-                los datos.
+                Este escaneo incluye competidores que ya no están en tu lista trackeada — se muestran
+                con sus datos de entonces. Vuelve a escanear para actualizar la panorámica competitiva.
               </p>
               <ScanTriggerButton projectId={projectId} label="Volver a escanear" disabled={Boolean(activeRun)} />
             </div>

@@ -280,20 +280,34 @@ pass against `states.jsx` before it's worth a Task Intake.
 
 ---
 
-## Detected gap — stale-scan competitive panorama (founder report, 2026-07-24)
+## Detected gap — untracked competitors surfacing in the panorama (founder report, 2026-07-24)
 
-**Status: root-caused AND both follow-ups implemented (PR #258, same day).**
+**Status: root-caused AND both follow-ups implemented (PR #258, same day) —
+diagnosis corrected mid-implementation after live data disagreed with the
+first hypothesis (kept below for the record, see "Diagnosis correction").**
 Founder reported missing favicons + 0% SOV for some entries in the
 Overview's "Panorámica competitiva" block (Ikea project). Root cause was
 NOT the entity-name matching bug PR #258 also fixed (that fix is real and
 independently correct — accents/punctuation drift between what Gemini
 extracts and the stored competitor name — it just didn't explain THIS
 case): the block renders `brand_position.ranking`, a snapshot frozen at the
-*latest completed scan's* time. When the founder later edited Ikea's
-tracked competitor list (Elfa/Lazy Bag/Sklum/Kave Home → Conforama/Leroy
-Merlin/Maisons du Monde/JYSK/El Corte Inglés) without re-scanning, the
-frozen ranking still named the old competitors, absent from
-`project_competitors` filtered `is_active = true`.
+*latest completed scan's* time.
+
+**Real shape of the data** (confirmed via a temporary debug dump on the PR
+preview, not guessed): Ikea's tracked competitor list wasn't swapped
+wholesale — it **shrank** from ~17 tracked competitors down to 5 (Leroy
+Merlin, Maisons du Monde, Conforama, JYSK, El Corte Inglés). All 5 survivors
+are still present inside the old 17-entity ranking, so a "did the active set
+fully disappear from the ranking" check finds nothing wrong. But the
+top-5-by-position podium the panorama renders happens to surface exactly
+the *removed* ones (Elfa, Lazy Bag, Sklum, Kave Home ranked best by position
+in that old scan) — pure luck of which subset ranked highest, not a full
+mismatch. `project_competitors` has no soft-delete/history for the removed
+rows either (confirmed: `createCompetitor`/`updateCompetitor`/
+`deactivateCompetitor` server actions in `actions.ts` exist but are wired to
+zero real UI — the Competitors page is read-only — so the list was edited
+directly in Supabase, and the removed rows are simply gone, not
+deactivated).
 
 - **✅ Resolve domain for historical (inactive) competitors in the
   panorama.** Added an unfiltered (`app/dashboard/projects/[projectId]/
@@ -301,20 +315,30 @@ frozen ranking still named the old competitors, absent from
   active + inactive), used ONLY as a fallback in `panoramaRows`' domain
   resolution when the active-only match misses — a domain doesn't stop
   being real just because tracking was turned off. `sov` intentionally
-  stays 0 for a historical-only match (no current share-of-voice figure for
-  an untracked entity). The existing active-only `competitors` query is
-  untouched, so SOV totals/mention counts/"Ver todo" still correctly scope
-  to current tracking only.
-- **✅ "Stale scan" banner.** `staleCompetitorSnapshot` compares the
-  normalized active-competitor-name set against the normalized non-brand
-  entity names in `brand_position.ranking`; gated on a **complete**
-  mismatch (zero overlap), not "at least one changed", so a normal
-  single-competitor swap between scans never triggers a false warning —
-  only a full list replacement does, which is what actually happened here.
-  When true, renders a warn-toned notice (reuses the existing `.feedback`
-  warn pattern, not a new component) at the top of the Overview's data
-  state with a real "Volver a escanear" CTA (`ScanTriggerButton`, disabled
-  while a scan is already running).
+  stays 0 for a historical-only match. Correct in design, but **can't help
+  the Ikea case specifically**: the removed rows aren't deactivated, they're
+  gone, so there's nothing left to fall back to for Elfa/Lazy Bag/Sklum/Kave
+  Home. It DOES help the general case where a competitor is properly
+  deactivated rather than deleted.
+- **✅ "Untracked competitor visible" banner** — corrected design.
+  First attempt (`staleCompetitorSnapshot`) compared the full active-name
+  set against the full ranking-name set, gated on **zero overlap** — wrong
+  threshold for a shrinking (not swapping) list, so it never fired here
+  despite the visible symptom. Replaced with `panoramaHasUntrackedEntity`:
+  true when any non-brand row actually rendered in the panorama
+  (`panoramaListRows`, the same top-5 + brand's-own-row set the bars and
+  list both read from) has `domain === null` after both the active and
+  historical lookups miss — i.e. a direct check on what's actually on
+  screen, not a heuristic about the whole list. Renders a warn-toned notice
+  (reuses the existing `.feedback` warn pattern) with a real "Volver a
+  escanear" CTA (`ScanTriggerButton`, disabled while a scan is already
+  running).
+
+**Diagnosis correction, for the record:** the first pass assumed a total
+list replacement and wrote `docs/brand/design-decisions-log.md` accordingly;
+that text was corrected in the same PR once the real (shrinking-list) shape
+of the data was confirmed via the temporary debug dump — never shipped past
+the PR review stage.
 
 No schema/RLS change; no new provider/Gemini call. `pnpm test` 710/710,
 `pnpm run validate` green.
