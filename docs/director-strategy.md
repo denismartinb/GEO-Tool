@@ -280,6 +280,43 @@ pass against `states.jsx` before it's worth a Task Intake.
 
 ---
 
+## Detected gap — stale-scan competitive panorama (founder report, 2026-07-24)
+
+Root-caused, not yet scheduled. Founder reported missing favicons + 0% SOV
+for some entries in the Overview's "Panorámica competitiva" block (Ikea
+project). Root cause is NOT the entity-name matching bug PR #258 fixed
+(that fix is real and merged-worthy on its own, just didn't address this
+case): the block renders `brand_position.ranking`, a snapshot frozen at
+the *latest completed scan's* time. When the founder later edited Ikea's
+tracked competitor list (Elfa/Lazy Bag/Sklum/Kave Home → Conforama/Leroy
+Merlin/Maisons du Monde/JYSK/El Corte Inglés) without re-scanning, the
+frozen ranking still names the old competitors, which no longer exist in
+`project_competitors` filtered `is_active = true` — so the panorama's
+domain/favicon lookup (`app/dashboard/projects/[projectId]/page.tsx`,
+`competitorRows`) can never resolve them. Immediate unblock for the founder
+is simply running a new scan (no code change needed) — see the two
+follow-up product improvements below for the general case.
+
+**P2 — resolve domain for historical (inactive) competitors in the
+panorama:** widen the panorama's competitor lookup beyond
+`.eq("is_active", true)` so a stale ranking can still show the right
+favicon/SOV for competitors that were tracked at scan time but have since
+been deactivated/replaced. Contained to `page.tsx`'s `competitorRows`/
+`panoramaRows` construction; no schema change. Needs Task Intake (touches
+the Overview's competitive data presentation) before implementation.
+
+**P2 — surface a "stale scan" signal when the tracked competitor set has
+changed since the last completed scan:** broader UX addition — detect when
+the *currently active* competitor list diverges from the set embedded in
+`brand_position.ranking`, and show an explicit banner/notice (e.g. "estos
+datos son de un escaneo con una lista de competidores distinta a la
+actual — vuelve a escanear para actualizar") rather than silently
+rendering stale names. Bigger blast radius (new comparison logic, copy,
+possibly reused elsewhere runs are shown) — needs Task Intake and explicit
+scoping of which screens it applies to before implementation.
+
+---
+
 ## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
 
 Founder direction (verbatim intent): recommendations must become **more
