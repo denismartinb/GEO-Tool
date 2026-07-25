@@ -2,6 +2,13 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { getUsageSummary } from "@/lib/billing";
 import { createProject, generateMorePrompts, suggestProjectSetup } from "../actions";
 
+// COMPETITOR-GROUNDING-1: suggestProjectSetup/createProject now fetch the
+// domain's homepage and run a grounded (google_search) Gemini call before
+// suggesting competitors — slower than the previous domain-only guess and
+// past the Vercel Hobby plan's 10s default (docs/environment-contract.md),
+// same reasoning as the scan route's maxDuration (ADR 0003).
+export const maxDuration = 60;
+
 export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const params = await searchParams;
   const errorMessages: Record<string, string> = {

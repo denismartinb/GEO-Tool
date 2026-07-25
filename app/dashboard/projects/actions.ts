@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
 import {
@@ -30,6 +31,14 @@ export type ProjectSetupSuggestion = {
  * Generate (real Gemini) the suggested competitors + prompts for a domain so the
  * onboarding wizard can show them for the user to edit before creating the
  * project. Returns data to the client; does not persist anything.
+ *
+ * COMPETITOR-GROUNDING-1: first resolves a business profile from the
+ * domain's own homepage (lib/projects/business-profile.ts) — without it,
+ * suggestCompetitors/suggestPrompts have nothing to reason from but the
+ * domain string, which produces wrong results for any business the model
+ * doesn't already know from training data (i.e. most SMEs — see
+ * docs/adr/0020-grounded-business-profile.md). When the business can't be
+ * identified, returns the honest empty result instead of guessing.
  */
 export async function suggestProjectSetup(input: { domain: string; country: string }): Promise<ProjectSetupSuggestion> {
   const { supabase, user } = await requireUser();
@@ -50,9 +59,19 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   // allows when a lower-tier plan's cap is below that.
   const promptLimit = Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS);
 
+  const context = await resolveBusinessContext({ domain, country, language }).catch(
+    () => ({ status: "unidentified" }) as const
+  );
+
+  if (context.status === "unidentified") {
+    return { ok: false, brand, language, competitors: [], prompts: [] };
+  }
+
   const [competitors, prompts] = await Promise.all([
-    suggestCompetitors({ brand, domain, country, language, limit: MAX_INITIAL_COMPETITORS }).catch(() => []),
-    suggestPrompts({ brand, domain, country, language, limit: promptLimit }).catch(() => [])
+    suggestCompetitors({ brand, domain, country, language, profile: context.profile, limit: MAX_INITIAL_COMPETITORS }).catch(
+      () => []
+    ),
+    suggestPrompts({ brand, domain, country, language, profile: context.profile, limit: promptLimit }).catch(() => [])
   ]);
 
   return {
@@ -176,29 +195,59 @@ export async function createProject(formData: FormData) {
   }
 
   // Competitors and prompts are suggested by the system (real Gemini) when the
-  // user does not provide them explicitly. No fake fallbacks: if Gemini yields
-  // nothing, we persist nothing and surface an honest state.
+  // user does not provide them explicitly (e.g. wizard was skipped or
+  // submitted empty). No fake fallbacks: if Gemini yields nothing, we persist
+  // nothing and surface an honest state. Both suggestions now require a
+  // business profile (see resolveBusinessContext) — computed once here and
+  // reused for whichever of the two is actually missing, instead of guessing
+  // from the domain string (docs/adr/0020-grounded-business-profile.md).
   let initialCompetitors = parsedForm.value.initialCompetitors;
-  if (!initialCompetitors.length) {
-    try {
-      const suggested = await suggestCompetitors({ brand, domain, country, language, limit: MAX_INITIAL_COMPETITORS });
-      initialCompetitors = suggested.slice(0, MAX_INITIAL_COMPETITORS);
-    } catch {
-      initialCompetitors = [];
-    }
-  }
-
   let initialPrompts = parsedForm.value.initialPrompts;
-  if (!initialPrompts.length) {
-    try {
-      const suggested = await suggestPrompts({ brand, domain, country, language, limit: MAX_INITIAL_PROMPTS });
-      initialPrompts = suggested.slice(0, MAX_INITIAL_PROMPTS).map((prompt, index) => ({
-        prompt_text: prompt.text,
-        category: prompt.category,
-        sort_order: index
-      }));
-    } catch {
-      initialPrompts = [];
+
+  if (!initialCompetitors.length || !initialPrompts.length) {
+    const context = await resolveBusinessContext({
+      domain,
+      country,
+      language,
+      userDescription: parsedForm.value.businessDescription
+    }).catch(() => ({ status: "unidentified" }) as const);
+
+    if (context.status === "identified") {
+      if (!initialCompetitors.length) {
+        try {
+          const suggested = await suggestCompetitors({
+            brand,
+            domain,
+            country,
+            language,
+            profile: context.profile,
+            limit: MAX_INITIAL_COMPETITORS
+          });
+          initialCompetitors = suggested.slice(0, MAX_INITIAL_COMPETITORS);
+        } catch {
+          initialCompetitors = [];
+        }
+      }
+
+      if (!initialPrompts.length) {
+        try {
+          const suggested = await suggestPrompts({
+            brand,
+            domain,
+            country,
+            language,
+            profile: context.profile,
+            limit: MAX_INITIAL_PROMPTS
+          });
+          initialPrompts = suggested.slice(0, MAX_INITIAL_PROMPTS).map((prompt, index) => ({
+            prompt_text: prompt.text,
+            category: prompt.category,
+            sort_order: index
+          }));
+        } catch {
+          initialPrompts = [];
+        }
+      }
     }
   }
 

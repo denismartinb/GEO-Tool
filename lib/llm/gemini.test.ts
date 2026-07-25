@@ -4,8 +4,12 @@ import {
   generateGeminiVisibilityAnswer,
   rewriteRecommendation,
   auditDomainContent,
+  inferBusinessProfile,
+  suggestCompetitors,
+  suggestPrompts,
   GeminiConfigError,
-  GeminiTimeoutError
+  GeminiTimeoutError,
+  type BusinessProfile
 } from "./gemini";
 
 const ORIGINAL_ENV = { ...process.env };
@@ -632,5 +636,330 @@ describe("auditDomainContent (WEB-AUDIT-DQ query derivation)", () => {
     const result = await auditDomainContent(auditInput);
     expect(result.groundingChunks).toEqual([{ uri: "https://redirect/abc", title: "Equipaje de mano" }]);
     expect(result.text).toBe("Página encontrada.");
+  });
+});
+
+// COMPETITOR-GROUNDING-1 (docs/adr/0020-grounded-business-profile.md): these
+// three describe blocks replace the domain-only suggestion path with an
+// evidence/profile-driven one. See lib/projects/business-profile.test.ts for
+// the evidence-fetching layer these functions consume.
+describe("inferBusinessProfile", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  const okEvidence = {
+    status: "ok" as const,
+    title: "iFinanciera",
+    description: "Consultoría especializada en dirección financiera de empresas y finanzas corporativas.",
+    headings: ["Financial Business Management"],
+    excerpt: "Consultoria especializada en dirección financiera de empresas y finanzas corporativas. Mejoramos PYMES."
+  };
+
+  it("returns null when GEMINI_API_KEY is missing (never throws)", async () => {
+    delete process.env.GEMINI_API_KEY;
+
+    const result = await inferBusinessProfile({
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      evidence: okEvidence
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("sends the evidence and does NOT enable google_search grounding (fast JSON call)", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  what_it_sells: "Consultoría de dirección financiera para pymes",
+                  sector: "Servicios profesionales",
+                  sub_sector: "Consultoría financiera B2B",
+                  business_model: "b2b",
+                  target_customer: "Pymes",
+                  geographic_scope: "España",
+                  size_estimate: "Pequeña consultoría boutique",
+                  confidence: "high"
+                })
+              }
+            ]
+          }
+        }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await inferBusinessProfile({
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      evidence: okEvidence
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    expect(body.tools).toBeUndefined();
+    expect(body.generationConfig.responseMimeType).toBe("application/json");
+    expect(body.contents[0].parts[0].text).toContain(okEvidence.description);
+    expect(body.contents[0].parts[0].text).not.toMatch(/well-known/i);
+
+    expect(result).toEqual<BusinessProfile>({
+      whatItSells: "Consultoría de dirección financiera para pymes",
+      sector: "Servicios profesionales",
+      subSector: "Consultoría financiera B2B",
+      businessModel: "b2b",
+      targetCustomer: "Pymes",
+      geographicScope: "España",
+      sizeEstimate: "Pequeña consultoría boutique",
+      confidence: "high"
+    });
+  });
+
+  it("includes a user-provided description in the prompt when given", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  what_it_sells: "x",
+                  sector: "x",
+                  sub_sector: "x",
+                  business_model: "unknown",
+                  target_customer: "x",
+                  geographic_scope: "x",
+                  size_estimate: "x",
+                  confidence: "medium"
+                })
+              }
+            ]
+          }
+        }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await inferBusinessProfile({
+      domain: "sinweb.com",
+      country: "ES",
+      language: "es",
+      evidence: { status: "unavailable" },
+      userDescription: "Somos una consultoría de dirección financiera para pymes."
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    expect(body.contents[0].parts[0].text).toContain("Somos una consultoría de dirección financiera para pymes.");
+  });
+
+  it("returns null when the response fails schema validation", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ nonsense: true }) }] } }]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await inferBusinessProfile({
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      evidence: okEvidence
+    });
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("suggestCompetitors (grounded, business-profile-driven)", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  const financialProfile: BusinessProfile = {
+    whatItSells: "Consultoría de dirección financiera para pymes",
+    sector: "Servicios profesionales",
+    subSector: "Consultoría financiera B2B",
+    businessModel: "b2b",
+    targetCustomer: "Pymes",
+    geographicScope: "España",
+    sizeEstimate: "Pequeña consultoría boutique",
+    confidence: "high"
+  };
+
+  it("enables google_search grounding and sends the profile instead of asking for well-known brands", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  competitors: [{ name: "Consultora Rival", domain: "consultorarival.es" }]
+                })
+              }
+            ]
+          }
+        }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await suggestCompetitors({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    expect(body.tools).toEqual([{ google_search: {} }]);
+    expect(body.generationConfig.responseMimeType).toBeUndefined();
+    const promptText = body.contents[0].parts[0].text as string;
+    expect(promptText).not.toMatch(/well-known/i);
+    expect(promptText).toContain(financialProfile.sector);
+    expect(promptText).toContain(financialProfile.subSector);
+    expect(promptText).toMatch(/comparable size/i);
+  });
+
+  it("parses a JSON response wrapped in a ```json code fence (grounded responses aren't always bare JSON)", async () => {
+    const fenced = "```json\n" + JSON.stringify({ competitors: [{ name: "Consultora Rival", domain: "consultorarival.es" }] }) + "\n```";
+    const fetchMock = mockFetchOnce({ candidates: [{ content: { parts: [{ text: fenced }] } }] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await suggestCompetitors({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual([{ name: "Consultora Rival", domain: "consultorarival.es" }]);
+  });
+
+  it("still excludes the brand's own domain and dedupes", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  competitors: [
+                    { name: "iFinanciera", domain: "ifinanciera.es" },
+                    { name: "Rival", domain: "rival.es" },
+                    { name: "Rival duplicado", domain: "rival.es" }
+                  ]
+                })
+              }
+            ]
+          }
+        }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await suggestCompetitors({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual([{ name: "Rival", domain: "rival.es" }]);
+  });
+
+  it("returns [] (never throws) when the Gemini call fails", async () => {
+    const fetchMock = mockFetchOnce({}, 500);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await suggestCompetitors({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe("suggestPrompts (business-profile-driven)", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  const financialProfile: BusinessProfile = {
+    whatItSells: "Consultoría de dirección financiera para pymes",
+    sector: "Servicios profesionales",
+    subSector: "Consultoría financiera B2B",
+    businessModel: "b2b",
+    targetCustomer: "Pymes",
+    geographicScope: "España",
+    sizeEstimate: "Pequeña consultoría boutique",
+    confidence: "high"
+  };
+
+  it("includes the business profile in the prompt (not just brand/domain)", async () => {
+    const fetchMock = mockFetchOnce({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                text: JSON.stringify({
+                  prompts: [
+                    { text: "¿Cuál es la mejor consultoría de dirección financiera para pymes?", category: "Comparación" }
+                  ]
+                })
+              }
+            ]
+          }
+        }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await suggestPrompts({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+    expect(promptText).toContain(financialProfile.whatItSells);
+    expect(promptText).toContain(financialProfile.sector);
+    expect(promptText).toContain(financialProfile.targetCustomer);
   });
 });
