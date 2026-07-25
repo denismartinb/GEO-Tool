@@ -130,7 +130,6 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
   const extractedList = results.map((r) => parseExtracted(r.extracted_json));
 
   const brandMentioned = results.some((r) => r.brand_mentioned);
-  const citationFound = results.some((r) => r.citation_found);
   const brandEvidence = Array.from(
     new Set(extractedList.flatMap((e) => e?.brand?.evidence ?? []))
   );
@@ -306,14 +305,14 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <div className="hint">La IA te nombra por lo que ya sabe de tu marca, sin depender de tu web.</div>
                 </div>
                 <div className="pr2-presence-cell">
-                  <div className="big" style={{ color: citationFound ? "var(--accent-ink)" : "var(--ink-4)" }}>
-                    {citationFound ? "Sí" : "No"}
+                  <div className="big" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>
+                    {hasOwnCitation ? "Sí" : "No"}
                   </div>
                   <div className="lbl">
-                    Citada <InfoTip text="La respuesta incluye una fuente verificada apuntando a tu propio dominio — la única señal de estas dos que depende de contenido que publiques." />
+                    Citada <InfoTip text="Que la IA use fuentes reales (grounding) no basta: 'Citada' exige que al menos una de esas fuentes sea tu propio dominio — la única de estas dos señales que depende de contenido que publiques." />
                   </div>
                   <div className="hint">
-                    {citationFound
+                    {hasOwnCitation
                       ? "Al menos una fuente usada es tuya."
                       : "Ninguna fuente usada en este prompt es tu dominio."}
                   </div>
