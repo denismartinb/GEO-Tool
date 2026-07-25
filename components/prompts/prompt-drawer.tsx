@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
 import { DeletePromptButton } from "@/app/dashboard/projects/[projectId]/prompts/delete-prompt-button";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -148,23 +148,33 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     }
   }
 
-  const combinedCitations: Array<{
-    url?: string | null;
-    domain?: string | null;
-    title?: string | null;
-    source?: "grounding" | "inline";
-  }> = [];
-  const seenCitationKeys = new Set<string>();
-  for (const ext of extractedList) {
+  // Evidence and citations organized by engine (founder feedback 2026-07-24:
+  // a flat list merged across engines was harder to scan than one grouped by
+  // motor). Each engine keeps its own de-duplicated citation list — the same
+  // source cited by two engines legitimately appears once under each.
+  const engineGroups = results.map((r, i) => {
+    const ext = extractedList[i];
+    const evidence = ext?.brand?.evidence ?? [];
+    const citations: Array<{
+      url?: string | null;
+      domain?: string | null;
+      title?: string | null;
+      source?: "grounding" | "inline";
+    }> = [];
+    const seen = new Set<string>();
     for (const cite of ext?.citations ?? []) {
       const key = (cite.domain ?? cite.title ?? cite.url ?? "").toLowerCase();
-      if (!key || seenCitationKeys.has(key)) continue;
-      seenCitationKeys.add(key);
-      combinedCitations.push(cite);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      citations.push(cite);
     }
-  }
-  const hasOwnCitation = combinedCitations.some(
-    (c) => c.domain && normalizeDomain(c.domain) === normalizeDomain(projectDomain)
+    return { row: r, meta: getEngineMeta(r.provider), evidence, citations };
+  });
+  const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0);
+  const citationGroups = engineGroups.filter((g) => g.citations.length > 0);
+  const totalCitations = citationGroups.reduce((sum, g) => sum + g.citations.length, 0);
+  const hasOwnCitation = engineGroups.some((g) =>
+    g.citations.some((c) => c.domain && normalizeDomain(c.domain) === normalizeDomain(projectDomain))
   );
 
   const brandRow = {
@@ -356,30 +366,55 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                 </div>
               </div>
 
-              {/* Evidencias de la marca */}
-              {brandEvidence.length > 0 && (
+              {/* Evidencias de la marca, agrupadas por motor */}
+              {evidenceGroups.length > 0 && (
                 <div>
                   <p className="ac-title">Evidencias de mención</p>
                   <div className="aside-card">
-                    {brandEvidence.map((ev, i) => (
-                      <p key={i} className="pr2-evi">
-                        «{ev}»
-                      </p>
+                    {evidenceGroups.map((g) => (
+                      <Fragment key={g.row.id}>
+                        <div className="pr2-eng-group-h">
+                          <span className="pr2-eav" style={{ width: 18, height: 18, color: g.meta.color }}>
+                            <EngineGlyph provider={normalizeProvider(g.row.provider)} />
+                          </span>
+                          <span className="nm">{g.meta.label}</span>
+                        </div>
+                        {g.evidence.map((ev, i) => (
+                          <p key={i} className="pr2-evi">
+                            «{ev}»
+                          </p>
+                        ))}
+                      </Fragment>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Citas */}
-              {combinedCitations.length > 0 && (
+              {/* Fuentes usadas, agrupadas por motor. No son necesariamente
+                  páginas que citen la marca — son las páginas que la IA usó
+                  (búsqueda/grounding) para construir su respuesta. */}
+              {citationGroups.length > 0 && (
                 <div>
-                  <p className="ac-title">Fuentes usadas ({combinedCitations.length})</p>
+                  <p className="ac-title">
+                    Fuentes usadas ({totalCitations}){" "}
+                    <InfoTip text="Páginas que la IA usó para construir esta respuesta (búsqueda o grounding) — no implica que hablen de tu marca en concreto. Que una sea tu dominio es lo que cuenta como 'Citada'." />
+                  </p>
                   <div className="aside-card">
-                    {combinedCitations.map((cite, i) => (
-                      <div key={i} className="pr2-cit">
-                        <Icon name="globe" size={13} />
-                        <span className="pr2-cit-d">{citationDisplayLabel(cite)}</span>
-                      </div>
+                    {citationGroups.map((g) => (
+                      <Fragment key={g.row.id}>
+                        <div className="pr2-eng-group-h">
+                          <span className="pr2-eav" style={{ width: 18, height: 18, color: g.meta.color }}>
+                            <EngineGlyph provider={normalizeProvider(g.row.provider)} />
+                          </span>
+                          <span className="nm">{g.meta.label}</span>
+                        </div>
+                        {g.citations.map((cite, i) => (
+                          <div key={i} className="pr2-cit">
+                            <Icon name="globe" size={13} />
+                            <span className="pr2-cit-d">{citationDisplayLabel(cite)}</span>
+                          </div>
+                        ))}
+                      </Fragment>
                     ))}
                     {!hasOwnCitation && (
                       <p className="pr2-cit-note">
