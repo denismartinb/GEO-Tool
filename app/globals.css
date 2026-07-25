@@ -2821,18 +2821,27 @@ textarea.add-prompts-text-input {
 .pr2-cit { display: flex; align-items: center; gap: 9px; padding: 9px 14px; border-bottom: 1px solid var(--line-soft); }
 .pr2-cit:last-child { border-bottom: none; }
 .pr2-cit-d { font-size: 12px; color: var(--ink-2); font-weight: 600; flex: 1; font-family: "JetBrains Mono", ui-monospace, monospace; }
+/* The project's own domain, when it appears among a motor's sources — sorted
+   first within its group (see prompt-drawer.tsx) and shaded so it doesn't
+   get lost among the rest. */
+.pr2-cit.own { background: var(--brand-blue-soft); }
+.pr2-cit.own .pr2-cit-d { color: var(--brand-blue); font-weight: 700; }
 .pr2-cit-note { font-size: 11px; color: var(--ink-3); line-height: 1.5; padding: 10px 14px; background: var(--surface-2); border-top: 1px solid var(--line-soft); }
 .pr2-cit-note b { color: var(--neg-ink); font-weight: 700; }
 
 /* Sub-group header used to organize evidence quotes / citations by engine
    within a single aside-card (founder feedback 2026-07-24: these read
-   better grouped per motor than merged into one flat list). */
+   better grouped per motor than merged into one flat list). Made
+   deliberately heavier than a regular row — bigger borderless glyph, bolder
+   label — so it reads unmistakably as a section divider, not just another
+   list item (founder feedback 2026-07-25: didn't read as a section). */
 .pr2-eng-group-h {
-  display: flex; align-items: center; gap: 7px; padding: 9px 14px;
-  background: var(--surface-2); border-bottom: 1px solid var(--line-soft);
+  display: flex; align-items: center; gap: 9px; padding: 11px 14px;
+  background: var(--surface-sunk); border-bottom: 1px solid var(--line);
 }
 .pr2-eng-group-h:not(:first-child) { border-top: 1px solid var(--line); }
-.pr2-eng-group-h .nm { font-size: 10px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); }
+.pr2-eng-group-h .ico { width: 22px; height: 22px; flex: 0 0 auto; display: grid; place-items: center; }
+.pr2-eng-group-h .nm { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-2); }
 
 /* Respuestas tab */
 .pr2-rtbl { width: 100%; border-collapse: collapse; }

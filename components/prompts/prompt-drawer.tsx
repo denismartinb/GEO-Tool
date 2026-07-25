@@ -168,6 +168,14 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
       seen.add(key);
       citations.push(cite);
     }
+    // The project's own domain, when this engine used it, goes first — it's
+    // the one source in the list that's actually yours.
+    citations.sort((a, b) => {
+      const aOwn = a.domain && normalizeDomain(a.domain) === normalizeDomain(projectDomain);
+      const bOwn = b.domain && normalizeDomain(b.domain) === normalizeDomain(projectDomain);
+      if (aOwn === bOwn) return 0;
+      return aOwn ? -1 : 1;
+    });
     return { row: r, meta: getEngineMeta(r.provider), evidence, citations };
   });
   const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0);
@@ -374,7 +382,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                     {evidenceGroups.map((g) => (
                       <Fragment key={g.row.id}>
                         <div className="pr2-eng-group-h">
-                          <span className="pr2-eav" style={{ width: 18, height: 18, color: g.meta.color }}>
+                          <span className="ico" style={{ color: g.meta.color }}>
                             <EngineGlyph provider={normalizeProvider(g.row.provider)} />
                           </span>
                           <span className="nm">{g.meta.label}</span>
@@ -403,17 +411,22 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                     {citationGroups.map((g) => (
                       <Fragment key={g.row.id}>
                         <div className="pr2-eng-group-h">
-                          <span className="pr2-eav" style={{ width: 18, height: 18, color: g.meta.color }}>
+                          <span className="ico" style={{ color: g.meta.color }}>
                             <EngineGlyph provider={normalizeProvider(g.row.provider)} />
                           </span>
                           <span className="nm">{g.meta.label}</span>
                         </div>
-                        {g.citations.map((cite, i) => (
-                          <div key={i} className="pr2-cit">
-                            <Icon name="globe" size={13} />
-                            <span className="pr2-cit-d">{citationDisplayLabel(cite)}</span>
-                          </div>
-                        ))}
+                        {g.citations.map((cite, i) => {
+                          const isOwn =
+                            cite.domain && normalizeDomain(cite.domain) === normalizeDomain(projectDomain);
+                          return (
+                            <div key={i} className={`pr2-cit${isOwn ? " own" : ""}`}>
+                              <Icon name="globe" size={13} />
+                              <span className="pr2-cit-d">{citationDisplayLabel(cite)}</span>
+                              {isOwn && <span className="pr2-rk-tag">Tú</span>}
+                            </div>
+                          );
+                        })}
                       </Fragment>
                     ))}
                     {!hasOwnCitation && (
