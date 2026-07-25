@@ -394,18 +394,15 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
               {/* Presencia: mencionada vs. citada */}
               <div className="pr2-presence">
                 <div className="pr2-presence-cell">
-                  <div className="big" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
-                    {brandMentioned ? "Sí" : "No"}
+                  <div className="stmt" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
+                    {brandMentioned ? "La IA menciona tu marca" : "La IA no menciona tu marca"}
                   </div>
-                  <div className="lbl">Mencionada</div>
                   <div className="hint">La IA te nombra por lo que ya sabe de tu marca, sin depender de tu web.</div>
                 </div>
                 <div className="pr2-presence-cell">
-                  <div className="big" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>
-                    {hasOwnCitation ? "Sí" : "No"}
-                  </div>
-                  <div className="lbl">
-                    Citada <InfoTip text="Que la IA use fuentes reales (grounding) no basta: 'Citada' exige que al menos una de esas fuentes sea tu propio dominio — la única de estas dos señales que depende de contenido que publiques." />
+                  <div className="stmt" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>
+                    {hasOwnCitation ? "La IA cita tu web" : "La IA no cita tu web"}{" "}
+                    <InfoTip text="Que la IA use fuentes reales (grounding) no basta: exige que al menos una de esas fuentes sea tu propio dominio — la única de estas dos señales que depende de contenido que publiques." />
                   </div>
                   <div className="hint">
                     {hasOwnCitation
