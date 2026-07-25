@@ -430,7 +430,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <div className="stmt" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
                     {brandMentioned ? "La IA menciona tu marca" : "La IA no menciona tu marca"}
                   </div>
-                  <div className="hint">La IA te nombra por lo que ya sabe de tu marca, sin depender de tu web.</div>
+                  <div className="hint">La IA te nombra por lo que ya sabe de tu marca, no por tu web.</div>
                 </div>
                 <div className="pr2-presence-cell">
                   <div className="stmt" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>
@@ -440,7 +440,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <div className="hint">
                     {hasOwnCitation
                       ? "Al menos una fuente usada es tuya."
-                      : "Ninguna fuente usada en este prompt es tu dominio."}
+                      : "La IA responde sin citar tu web ni tu contenido."}
                   </div>
                 </div>
               </div>
