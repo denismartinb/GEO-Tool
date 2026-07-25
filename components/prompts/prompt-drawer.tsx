@@ -7,6 +7,11 @@ import { InfoTip } from "@/components/ui/info-tip";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
+// Same domain-matching helpers the Citations page and run-scoring use, so
+// "Citada" here can never disagree with own_citation_share / citation_score
+// over what counts as the project's own domain (they were diverging: this
+// drawer compared with strict equality, missing subdomains).
+import { normalizeDomain, isSameOrSubdomain } from "@/lib/citations/aggregate-citations";
 
 type Competitor = {
   id: string;
@@ -72,8 +77,11 @@ function citationDisplayLabel(cite: {
   return cite.url ?? "—";
 }
 
-function normalizeDomain(domain: string): string {
-  return domain.trim().toLowerCase().replace(/^www\./, "");
+/** True when a citation's domain belongs to the project (exact or subdomain). */
+function isOwnDomain(citationDomain: string | null | undefined, projectDomain: string): boolean {
+  const raw = citationDomain?.trim();
+  if (!raw) return false;
+  return isSameOrSubdomain(normalizeDomain(raw), normalizeDomain(projectDomain));
 }
 
 function parseExtracted(raw: unknown): ExtractedJson | null {
@@ -170,8 +178,8 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     // The project's own domain, when this engine used it, goes first — it's
     // the one source in the list that's actually yours.
     citations.sort((a, b) => {
-      const aOwn = a.domain && normalizeDomain(a.domain) === normalizeDomain(projectDomain);
-      const bOwn = b.domain && normalizeDomain(b.domain) === normalizeDomain(projectDomain);
+      const aOwn = isOwnDomain(a.domain, projectDomain);
+      const bOwn = isOwnDomain(b.domain, projectDomain);
       if (aOwn === bOwn) return 0;
       return aOwn ? -1 : 1;
     });
@@ -181,7 +189,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
   const citationGroups = engineGroups.filter((g) => g.citations.length > 0);
   const totalCitations = citationGroups.reduce((sum, g) => sum + g.citations.length, 0);
   const hasOwnCitation = engineGroups.some((g) =>
-    g.citations.some((c) => c.domain && normalizeDomain(c.domain) === normalizeDomain(projectDomain))
+    g.citations.some((c) => isOwnDomain(c.domain, projectDomain))
   );
 
   const brandRow = {
@@ -417,7 +425,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                         </div>
                         {g.citations.map((cite, i) => {
                           const isOwn =
-                            cite.domain && normalizeDomain(cite.domain) === normalizeDomain(projectDomain);
+                            isOwnDomain(cite.domain, projectDomain);
                           return (
                             <div key={i} className={`pr2-cit${isOwn ? " own" : ""}`}>
                               <Icon name="globe" size={13} />

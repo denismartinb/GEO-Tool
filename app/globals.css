@@ -2758,6 +2758,18 @@ textarea.add-prompts-text-input {
   flex-direction: column;
   gap: 16px;
 }
+/* Root cause of the "respuestas cortadas" bug: .drawer-body is a flex
+   column, and its children (.aside-card, .resp-full) set overflow:hidden
+   for their rounded corners. Per the flexbox spec a flex item's automatic
+   minimum size only applies while overflow is `visible` — with
+   overflow:hidden it resolves to 0, so the default flex-shrink:1 let those
+   cards compress below their content height and clip the text inside.
+   Pinning flex-shrink:0 makes each card keep its natural height and lets
+   .drawer-body scroll instead, which is what should have been scrolling
+   all along. */
+.drawer-body > * {
+  flex-shrink: 0;
+}
 
 /* Resumen tab — presence (mencionada vs. citada) */
 .pr2-presence { display: flex; gap: 10px; }
