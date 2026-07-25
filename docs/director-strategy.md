@@ -280,6 +280,56 @@ pass against `states.jsx` before it's worth a Task Intake.
 
 ---
 
+## SCAN-TRACKED-SET-1 — untracked competitors polluting scoring (founder report, 2026-07-24)
+
+**Status: Fase 1 implemented (docs/adr/0018), pending Human Gate.** Founder
+reported a fresh scan (project Ikea, 5 tracked competitors) producing a
+21-entity position ranking with untracked brands (Sklum, Brico Depôt,
+BANNI, Lefties Home) outranking the brand itself. Root-caused: the
+extraction pipeline persisted the model's `competitors[]` output verbatim,
+with nothing enforcing that it only contained the project's actual tracked
+competitors. Consulted `geo-strategy` before implementing — see docs/adr/
+0018 for the full methodological dictamen (confirmed the diagnosis, and
+corrected the initial hypothesis: the main damage is untracked entities
+gaining a **structural ranking advantage** by skipping the not-mentioned
+penalty tracked-but-unmentioned entities receive, not primarily the SOV
+depression I'd first assumed).
+
+Fase 1 (this phase): `reconcileExtractedCompetitors` (`lib/scan/
+extraction.ts`) reconciles the model's output against `competitors_snapshot`
+before persistence — tracked-and-returned entities keep their data, tracked-
+and-omitted entities are materialized as explicit non-mentions, anything
+else moves to `other_brands_mentioned`. Positions re-densified after
+reconciliation. `standing` guarded against fabricating 100 for projects with
+zero tracked competitors. Prompt hardened (defense in depth) across all
+three providers. `EXTRACTION_VERSION` bumped to `"tracked-set-v1"`;
+`computeRunScoresFromResults` drops `prominence`/`standing` to `null` for
+any run containing a pre-fix row rather than computing over a possibly-
+contaminated set. No schema/RLS changes. `pnpm test` 722/722,
+`pnpm run validate` green.
+
+**Deferred, not yet approved:**
+- **SCAN-TRACKED-SET-2 (backfill):** existing `scan_prompt_results`/
+  `run_scores` keep contaminated data until this runs. Deterministic, no LLM
+  calls needed (reconciliation is a pure function of `extracted_json.
+  competitors` + `competitors_snapshot`, both already persisted per row).
+  Needs its own Task Intake: dry-run deriving aggregate score drift first,
+  provenance (`recomputed_from`) on every rewritten `run_scores` row, and a
+  check against `lib/scan/score-alert.ts`'s composite_version comparison
+  gate (backfilling the full history avoids creating an artificial cohort
+  boundary that would silently mute legitimate alerts).
+- **`prominence` incentive-compatibility ADR:** the formula rewards tracking
+  fewer, more-consistently-mentioned competitors — needs real multi-project
+  distribution data before redesigning, same reasoning ADR 0015 §5 used to
+  defer the score-band recalibration. See docs/adr/0018 "Deferred".
+- **No in-app competitor management UI** (found while diagnosing the
+  earlier stale-scan case, 2026-07-24): `createCompetitor`/
+  `updateCompetitor`/`deactivateCompetitor` exist in `actions.ts` but
+  aren't wired to any screen — competitor list changes only happen via
+  direct Supabase edits today. Logged in `docs/brand/design-decisions-log.md`.
+
+---
+
 ## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
 
 Founder direction (verbatim intent): recommendations must become **more

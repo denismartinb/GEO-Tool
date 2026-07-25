@@ -185,6 +185,8 @@ export async function extractClaudeStructuredData(input: {
   "notes": string[]
 }
 
+For "competitors": return EXACTLY one entry per name listed under Competitors below, in that same order — never add, omit, or rename any of them. Include an entry even if that competitor is not mentioned at all (mentioned: false, evidence: [], position: null). Never add an entry for any brand that is not in the Competitors list, even if it appears in the response text — put those under "other_brands_mentioned" instead.
+
 For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.
 
 For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories. Up to 5 entries, each a short canonical name. Empty array [] if none.`;

@@ -1,4 +1,4 @@
-# ADR 0018 — Brand-domain matching across TLDs
+# ADR 0019 — Brand-domain matching across TLDs
 
 **Status:** Accepted
 **Date:** 2026-07-25

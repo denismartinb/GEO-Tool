@@ -896,6 +896,135 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
   });
 });
 
+describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/0018)", () => {
+  /** Row with a valid brand_position shape: brand + N competitors, each with mentioned/position. */
+  function trackedRow(overrides: {
+    id: string;
+    brand_mentioned?: boolean;
+    mentioned_competitors_count?: number;
+    brand?: { mentioned: boolean; position: number | null };
+    competitors?: Array<{ name: string; mentioned: boolean; position: number | null }>;
+    extraction_version?: string | null;
+  }): ScoreInputRow {
+    const { id, brand_mentioned = false, mentioned_competitors_count = 0, brand, competitors, extraction_version } = overrides;
+    return row({
+      id,
+      brand_mentioned,
+      mentioned_competitors_count,
+      brand_snapshot: "MiMarca",
+      extraction_version,
+      extracted_json: {
+        brand: brand ?? { mentioned: brand_mentioned, position: brand_mentioned ? 1 : null },
+        competitors: (competitors ?? []).map((c) => ({ name: c.name, mentioned: c.mentioned, position: c.position }))
+      }
+    });
+  }
+
+  it("drops standing to null (not a fabricated 100) when the project tracks zero competitors, even though the brand is mentioned every prompt", () => {
+    // Real production bug this guards against: brandMentionedCount /
+    // (brandMentionedCount + 0) = 100% "share of voice" against nobody.
+    const results = [
+      trackedRow({ id: "1", brand_mentioned: true, brand: { mentioned: true, position: 1 }, competitors: [] }),
+      trackedRow({ id: "2", brand_mentioned: true, brand: { mentioned: true, position: 1 }, competitors: [] })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+    const brandPosition = result.details_json.brand_position as { total_entities: number };
+    const geoScore = result.details_json.geo_score as {
+      inputs_used: string[];
+      components: Record<string, { value: number | null; reason?: string }>;
+    };
+
+    expect(brandPosition.total_entities).toBe(1);
+    expect(geoScore.components.standing.value).toBeNull();
+    expect(geoScore.components.standing.reason).toContain("no competitors tracked");
+    expect(geoScore.inputs_used).not.toContain("standing");
+  });
+
+  it("still awards a real 100 standing when competitors ARE tracked but never mentioned (not the zero-tracked case)", () => {
+    const results = [
+      trackedRow({
+        id: "1",
+        brand_mentioned: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }]
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+    const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
+
+    expect(geoScore.components.standing.value).toBe(100);
+  });
+
+  it("drops prominence and standing to null for a run containing a pre-tracked-set-v1 row, instead of computing over a possibly-contaminated competitor set", () => {
+    const results = [
+      trackedRow({
+        id: "1",
+        brand_mentioned: true,
+        mentioned_competitors_count: 3,
+        brand: { mentioned: true, position: 2 },
+        competitors: [{ name: "Competitor", mentioned: true, position: 1 }],
+        extraction_version: "negative-drivers-v1" // pre-fix
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.details_json.brand_position).toBeUndefined();
+    const geoScore = result.details_json.geo_score as {
+      inputs_used: string[];
+      components: Record<string, { value: number | null; reason?: string }>;
+    };
+    expect(geoScore.components.prominence).toMatchObject({ value: null });
+    expect(geoScore.components.prominence.reason).toContain("docs/adr/0018");
+    expect(geoScore.components.standing).toMatchObject({ value: null });
+    expect(geoScore.components.standing.reason).toContain("docs/adr/0018");
+    expect(geoScore.inputs_used).not.toContain("prominence");
+    expect(geoScore.inputs_used).not.toContain("standing");
+  });
+
+  it("computes normally when every row's extraction_version matches the current EXTRACTION_VERSION", () => {
+    const results = [
+      trackedRow({
+        id: "1",
+        brand_mentioned: true,
+        mentioned_competitors_count: 0,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }],
+        extraction_version: "tracked-set-v1"
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+    const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
+
+    expect(geoScore.components.prominence.value).not.toBeNull();
+    expect(geoScore.components.standing.value).toBe(100);
+  });
+
+  it("leaves pre-existing (extraction_version-less) call sites unaffected — no gate applied when the field is absent", () => {
+    // Backward compatibility: callers that don't pass extraction_version
+    // (e.g. not-yet-updated tests or call sites) get the pre-SCAN-TRACKED-SET-1
+    // behavior, not a spurious drop.
+    const results = [
+      trackedRow({
+        id: "1",
+        brand_mentioned: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }]
+        // extraction_version omitted entirely
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+    const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
+
+    expect(geoScore.components.prominence.value).not.toBeNull();
+    expect(geoScore.components.standing.value).toBe(100);
+  });
+});
+
 describe("getEffectiveGeoScore", () => {
   it("prefers the composite geo_score.score when present", () => {
     const score = getEffectiveGeoScore({
