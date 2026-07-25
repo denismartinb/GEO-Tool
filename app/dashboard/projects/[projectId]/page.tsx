@@ -305,7 +305,7 @@ export default async function ProjectDetailPage({
           supabase
             .from("scan_prompt_results")
             .select(
-              "id, prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider, mentioned_competitors_count, citations_count, extraction_error, brand_snapshot"
+              "id, prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider, mentioned_competitors_count, citations_count, extraction_error, brand_snapshot, extraction_version"
             )
             .eq("project_id", projectId)
             .eq("run_id", latestCompletedRun.id)
@@ -617,7 +617,8 @@ export default async function ProjectDetailPage({
     extracted_json: r.extracted_json,
     extraction_error: r.extraction_error,
     brand_snapshot: r.brand_snapshot,
-    provider: r.provider
+    provider: r.provider,
+    extraction_version: r.extraction_version
   }));
 
   const potentialPointsByRecId = new Map<string, number | null>();

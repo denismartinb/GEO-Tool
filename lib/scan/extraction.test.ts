@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { runStructuredExtractionForRun } from "./extraction";
+import { reconcileExtractedCompetitors, runStructuredExtractionForRun } from "./extraction";
 import { EXTRACTION_VERSION } from "./constants";
+import type { ExtractionOutput } from "@/lib/extraction/schema";
 
 vi.mock("@/lib/llm/gemini", () => ({
   extractGeminiStructuredData: vi.fn()
@@ -341,5 +342,160 @@ describe("runStructuredExtractionForRun", () => {
     expect(update.extraction_error).toBe("Gemini extraction JSON failed schema validation.");
     expect(update.extraction_version).toBeUndefined();
     expect(update.citations_count).toBeUndefined();
+  });
+
+  it("moves an untracked competitor into other_brands_mentioned instead of persisting it as a competitor", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: { data: [baseRow({ competitors_snapshot: [{ name: "Globex" }] })], error: null },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput({
+        competitors: [
+          { name: "Globex", mentioned: true, evidence: ["Globex is mentioned"], position: 2 },
+          // The model surfaced a brand that was never tracked — real
+          // production case (SCAN-TRACKED-SET-1): this must not survive
+          // into the persisted competitors array.
+          { name: "Initech", mentioned: true, evidence: ["Initech too"], position: 1 }
+        ]
+      }),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    const extractedJson = update0(updateCalls);
+    expect(extractedJson.competitors.map((c) => c.name)).toEqual(["Globex"]);
+    expect(extractedJson.other_brands_mentioned).toContain("Initech");
+    // Only tracked-and-mentioned competitors count toward the persisted
+    // scalar that feeds standing/competitor_gap_score.
+    expect(updateCalls[0].mentioned_competitors_count).toBe(1);
+  });
+
+  it("materializes a tracked competitor the model omitted as explicitly not-mentioned", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [baseRow({ competitors_snapshot: [{ name: "Globex" }, { name: "Umbrella" }] })],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      // The model only reported on "Globex" — "Umbrella" (tracked) is
+      // absent from its output entirely, not explicitly not-mentioned.
+      data: baseExtractionOutput({ competitors: [{ name: "Globex", mentioned: false, evidence: [], position: null }] }),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    const extractedJson = update0(updateCalls);
+    expect(extractedJson.competitors).toEqual([
+      { name: "Globex", mentioned: false, evidence: [], position: null },
+      { name: "Umbrella", mentioned: false, evidence: [], position: null }
+    ]);
+  });
+});
+
+/** Narrow the update payload's extracted_json to the shape these tests assert against. */
+function update0(updateCalls: Array<Record<string, unknown>>) {
+  return updateCalls[0].extracted_json as {
+    competitors: Array<{ name: string; mentioned: boolean; evidence: string[]; position: number | null }>;
+    other_brands_mentioned: string[];
+  };
+}
+
+describe("reconcileExtractedCompetitors", () => {
+  function baseData(overrides: Partial<ExtractionOutput> = {}): ExtractionOutput {
+    return {
+      brand: { mentioned: true, display_name_found: "Acme", evidence: [], position: 1 },
+      competitors: [],
+      citations: [],
+      sentiment: "neutral",
+      sentiment_drivers: [],
+      other_brands_mentioned: [],
+      summary: "",
+      confidence: "high",
+      notes: [],
+      ...overrides
+    };
+  }
+
+  it("keeps a tracked competitor's mentioned/evidence/position untouched when the model returns it", () => {
+    const data = baseData({
+      competitors: [{ name: "Globex", mentioned: true, evidence: ["seen"], position: 2 }]
+    });
+
+    const result = reconcileExtractedCompetitors(data, ["Globex"]);
+
+    expect(result.competitors).toEqual([{ name: "Globex", mentioned: true, evidence: ["seen"], position: 2 }]);
+  });
+
+  it("matches a tracked competitor tolerant of accents/case/punctuation, keeping the tracked canonical name", () => {
+    const data = baseData({
+      competitors: [{ name: "Lazy Bag®", mentioned: true, evidence: [], position: 1 }]
+    });
+
+    const result = reconcileExtractedCompetitors(data, ["Lazy Bag"]);
+
+    // baseData()'s brand is also mentioned at (tied) original position 1,
+    // so after re-densification the brand keeps rank 1 and Lazy Bag is 2.
+    expect(result.competitors).toEqual([{ name: "Lazy Bag", mentioned: true, evidence: [], position: 2 }]);
+  });
+
+  it("moves an entity outside the tracked list into other_brands_mentioned, deduped against existing entries", () => {
+    const data = baseData({
+      competitors: [{ name: "Initech", mentioned: true, evidence: [], position: 1 }],
+      other_brands_mentioned: ["Initech", "Hooli"]
+    });
+
+    const result = reconcileExtractedCompetitors(data, []);
+
+    expect(result.competitors).toEqual([]);
+    expect(result.other_brands_mentioned.sort()).toEqual(["Hooli", "Initech"]);
+  });
+
+  it("re-densifies positions (1..k, no gaps) after dropping untracked entities, preserving relative order", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Acme", evidence: [], position: 2 },
+      competitors: [
+        { name: "Globex", mentioned: true, evidence: [], position: 5 },
+        { name: "Initech", mentioned: true, evidence: [], position: 1 } // untracked, ranked first
+      ]
+    });
+
+    // Tracked: Globex + Umbrella (Umbrella never mentioned by the model).
+    const result = reconcileExtractedCompetitors(data, ["Globex", "Umbrella"]);
+
+    // Initech (untracked, was rank 1) is dropped, so Acme moves from 2 -> 1
+    // and Globex from 5 -> 2. Umbrella stays unmentioned (null).
+    expect(result.brand.position).toBe(1);
+    expect(result.competitors).toEqual([
+      { name: "Globex", mentioned: true, evidence: [], position: 2 },
+      { name: "Umbrella", mentioned: false, evidence: [], position: null }
+    ]);
+  });
+
+  it("returns an empty competitors array (all spillover) when the project tracks no competitors", () => {
+    const data = baseData({
+      competitors: [{ name: "Whoever", mentioned: true, evidence: [], position: 1 }]
+    });
+
+    const result = reconcileExtractedCompetitors(data, []);
+
+    expect(result.competitors).toEqual([]);
+    expect(result.other_brands_mentioned).toContain("Whoever");
   });
 });
