@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
+import { faviconUrl } from "@/lib/domains/favicon";
 
 type WorkspaceProject = {
   id: string;
@@ -108,7 +109,12 @@ export function Sidebar({
           title="Ver escaneos de este dominio"
           onClick={handleNavSelect}
         >
-          <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
+          {faviconUrl(project.domain) ? (
+            // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
+            <img src={faviconUrl(project.domain)!} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
+          ) : (
+            <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
+          )}
           <div className="proj-meta">
             <div className="proj-name">{project.name}</div>
             <div className="proj-dom">{project.domain}</div>

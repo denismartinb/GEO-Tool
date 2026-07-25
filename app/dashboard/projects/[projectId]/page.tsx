@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/empty-state";
 import { Gauge } from "@/components/ui/gauge";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
+import { faviconUrl } from "@/lib/domains/favicon";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
@@ -158,19 +159,6 @@ function affectedPromptIds(evidenceJson: unknown): string[] {
   if (!evidenceJson || typeof evidenceJson !== "object") return [];
   const ids = (evidenceJson as Record<string, unknown>).affected_prompt_ids;
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
-}
-
-/**
- * Real favicon via an external favicon service — pure frontend <img>, no
- * crawler and no new schema (Task Intake, 2026-07-23: founder-approved
- * "recuperando favicons"). Sends the domain to Google on every page load;
- * disclosed in that Task Intake report.
- */
-function faviconUrl(domain: string | null | undefined): string | null {
-  if (!domain) return null;
-  const clean = domain.trim().toLowerCase().replace(/^www\./, "");
-  if (!clean) return null;
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(clean)}&sz=64`;
 }
 
 /* ---- page ---- */

@@ -158,6 +158,10 @@ a {
   color: var(--ink-2);
   font-size: 12px;
   font-weight: 700;
+  /* Same class doubles as the <img> favicon (real brand icon, mirrors
+     Overview's panorama favicons) and the letter-initial fallback div —
+     object-fit only affects the <img> case. */
+  object-fit: cover;
 }
 
 .proj-meta {
