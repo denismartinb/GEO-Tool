@@ -282,10 +282,13 @@ pass against `states.jsx` before it's worth a Task Intake.
 
 ## SCAN-TRACKED-SET-1 — untracked competitors polluting scoring (founder report, 2026-07-24)
 
-**Status: Fase 1 implemented (docs/adr/0018), pending Human Gate.** Founder
-reported a fresh scan (project Ikea, 5 tracked competitors) producing a
-21-entity position ranking with untracked brands (Sklum, Brico Depôt,
-BANNI, Lefties Home) outranking the brand itself. Root-caused: the
+**Status: Fase 1 shipped and merged (PR #261, docs/adr/0018), verified live
+on a fresh Ikea scan** — "Tu posición media" went from a false 1/21 to the
+correct 1/6 (marca + 5 competidores trackeados), no untracked brands in the
+podium or the panorama. Founder reported a fresh scan (project Ikea, 5
+tracked competitors) producing a 21-entity position ranking with untracked
+brands (Sklum, Brico Depôt, BANNI, Lefties Home) outranking the brand
+itself. Root-caused: the
 extraction pipeline persisted the model's `competitors[]` output verbatim,
 with nothing enforcing that it only contained the project's actual tracked
 competitors. Consulted `geo-strategy` before implementing — see docs/adr/
@@ -308,16 +311,25 @@ any run containing a pre-fix row rather than computing over a possibly-
 contaminated set. No schema/RLS changes. `pnpm test` 722/722,
 `pnpm run validate` green.
 
-**Deferred, not yet approved:**
-- **SCAN-TRACKED-SET-2 (backfill):** existing `scan_prompt_results`/
-  `run_scores` keep contaminated data until this runs. Deterministic, no LLM
-  calls needed (reconciliation is a pure function of `extracted_json.
-  competitors` + `competitors_snapshot`, both already persisted per row).
-  Needs its own Task Intake: dry-run deriving aggregate score drift first,
-  provenance (`recomputed_from`) on every rewritten `run_scores` row, and a
-  check against `lib/scan/score-alert.ts`'s composite_version comparison
-  gate (backfilling the full history avoids creating an artificial cohort
-  boundary that would silently mute legitimate alerts).
+**SCAN-TRACKED-SET-2 (backfill) — dry-run phase implemented, Task Intake
+approved 2026-07-24 for the dry-run only; the write pass is a separate,
+not-yet-built follow-up.** `lib/scan/backfill-tracked-competitor-set.ts`
+(fully unit-tested pure logic + I/O orchestration) + the thin CLI wrapper
+`scripts/backfill-tracked-competitor-set.ts` (`pnpm run
+backfill:tracked-competitor-set:dry-run`) reuse `reconcileExtractedCompetitors`
+and `computeRunScoresFromResults` verbatim to compute, for every historical
+run, what the backfill WOULD change — rows touched, geo_score delta,
+prominence/standing null-flip direction — without writing anything. No
+`update()`/`upsert()` call exists anywhere in this phase. Requires real
+`SUPABASE_SERVICE_ROLE_KEY` to actually run against production data (not
+available in the agent sandbox — the founder needs to run the dry-run and
+share the aggregate report before the write pass gets built). Existing
+`scan_prompt_results`/`run_scores` keep contaminated data until the write
+pass ships. Still to design when the write pass is scoped: provenance
+(`recomputed_from`) on every rewritten `run_scores` row, and a check against
+`lib/scan/score-alert.ts`'s composite_version comparison gate (backfilling
+the full history avoids creating an artificial cohort boundary that would
+silently mute legitimate alerts).
 - **`prominence` incentive-compatibility ADR:** the formula rewards tracking
   fewer, more-consistently-mentioned competitors — needs real multi-project
   distribution data before redesigning, same reasoning ADR 0015 §5 used to

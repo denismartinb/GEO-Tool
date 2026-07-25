@@ -1,11 +1,14 @@
 # ADR 0018 — Reconcile extracted competitors against the tracked set
 
 **Date:** 2026-07-24
-**Status:** Accepted (Fase 1 — SCAN-TRACKED-SET-1). Backfill of historical
-runs (SCAN-TRACKED-SET-2) and the `prominence` configurability problem
-(§ "Deferred") are separate, not-yet-approved phases.
+**Status:** Accepted. Fase 1 (SCAN-TRACKED-SET-1) shipped and merged (PR
+#261), verified live on a fresh scan. SCAN-TRACKED-SET-2's dry-run (Fase
+2a) is implemented — see `lib/scan/backfill-tracked-competitor-set.ts`; its
+write pass (Fase 2b) and the `prominence` configurability problem
+(§ "Deferred") remain separate, not-yet-approved phases.
 **Deciders:** Founder + Director (Task Intake SCAN-TRACKED-SET-1 approved
-2026-07-24, methodology validated by the geo-strategy agent)
+2026-07-24, methodology validated by the geo-strategy agent; Task Intake
+SCAN-TRACKED-SET-2 dry-run approved 2026-07-24)
 
 ---
 
@@ -147,21 +150,28 @@ gated in this phase (see "Deferred").
 - Raw model output is never discarded: `raw_response_text` has no
   retention/purge policy anywhere in the codebase, so the pre-reconciliation
   extraction is always re-derivable if ever needed for auditing.
-- **No backfill in this phase.** Existing `scan_prompt_results` /
-  `run_scores` rows keep their contaminated `extracted_json.competitors`
-  and already-computed `standing`/`brand_position` until SCAN-TRACKED-SET-2.
-  The precedent set by ADR 0008/0013/0015 ("no backfill") does **not**
-  apply here: those ADRs changed a metric's *definition*, and the old
-  values remained valid computations of the *previous* definition — kept
-  labeled for comparison. This bug is different: the code violated the
+- **No backfill in Fase 1.** Existing `scan_prompt_results` / `run_scores`
+  rows keep their contaminated `extracted_json.competitors` and
+  already-computed `standing`/`brand_position` until SCAN-TRACKED-SET-2's
+  write pass ships. The precedent set by ADR 0008/0013/0015 ("no backfill")
+  does **not** apply here: those ADRs changed a metric's *definition*, and
+  the old values remained valid computations of the *previous* definition —
+  kept labeled for comparison. This bug is different: the code violated the
   definition it already documented (`standing = ... tracked competitor
   mentions`, this same file). The historical values are not "v1 of
   standing" — they are not a valid computation of anything, so they cannot
-  be kept and labeled the way v1 values were. SCAN-TRACKED-SET-2 (separate
-  Task Intake) will recompute them deterministically — the reconciliation
-  is a pure function of two fields already persisted per row
-  (`extracted_json.competitors`, `competitors_snapshot`), so no LLM calls
-  are needed for the backfill itself.
+  be kept and labeled the way v1 values were. SCAN-TRACKED-SET-2 recomputes
+  them deterministically — the reconciliation is a pure function of two
+  fields already persisted per row (`extracted_json.competitors`,
+  `competitors_snapshot`), so no LLM calls are needed for the backfill
+  itself. Its **dry-run** (read-only: scans every run, reports what would
+  change, writes nothing) is implemented in
+  `lib/scan/backfill-tracked-competitor-set.ts` / `scripts/
+  backfill-tracked-competitor-set.ts`. The **write pass** is a deliberately
+  separate follow-up, gated on the founder reviewing the dry-run's real
+  output (no Supabase service-role credentials are available in the agent
+  sandbox this was built in, so the dry-run has only been verified against
+  mocked data — the founder needs to run it for real).
 - `mentioned_competitors_count`, `brand_position`, `standing`,
   `competitor_gap_score` for any run extracted before this ships remain
   exactly as unreliable as described above until that backfill runs.

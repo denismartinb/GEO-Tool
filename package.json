@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate": "pnpm run build && pnpm run typecheck && pnpm run lint"
+    "validate": "pnpm run build && pnpm run typecheck && pnpm run lint",
+    "backfill:tracked-competitor-set:dry-run": "tsx --tsconfig scripts/tsconfig.json scripts/backfill-tracked-competitor-set.ts"
   },
   "dependencies": {
     "@mdx-js/loader": "^3.1.1",
@@ -38,6 +39,7 @@
     "eslint-config-next": "16.2.6",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3",
     "vitest": "^3.2.6"
   }
