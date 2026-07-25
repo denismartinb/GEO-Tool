@@ -1,4 +1,16 @@
-# NOTIF-1 — Notificaciones reales (diseño técnico)
+# NOTIF-SERVER — Notificaciones reales (diseño técnico)
+
+Corresponde a **ASYNC-SCAN-1 fase 1b** del plan de lanzamiento
+(`docs/launch-plan.md`, fila 9), registrada allí como "notificaciones
+server-side, schema+RLS, pendiente de su propio Task Intake, a diseñar junto a
+Fase 6". Este documento es ese diseño.
+
+Relación con **ALERTS-1 / Fase 6** (ya hecha): aquella entregó las
+notificaciones **por email** (alerta de caída de score, resumen semanal) y las
+preferencias de `/dashboard/settings/notifications`. Esta entrega las
+notificaciones **in-app**. Comparten catálogo conceptual y, en la fase 3,
+compartirán también los toggles de preferencias — que es justo lo que pedía la
+nota de Fase 6 sobre "diseñar las notificaciones una sola vez".
 
 Estado: **diseño aprobado por el fundador 2026-07-25** (las tres decisiones de
 arquitectura). La implementación va por fases; cada fase necesita su propio
