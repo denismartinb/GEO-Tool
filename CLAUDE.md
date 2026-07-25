@@ -228,6 +228,18 @@ assets and are not renamed. Do not blindly paste prototype code. Do not
 introduce prototype-only state as real product behavior. The public product
 name is GenScore, not the prototype's "Lumira" naming (see top of this file).
 
+**Brand identity history.** `docs/brand/brand-guidelines.md` is the identity
+system (logo, palette, typography, usage rules). `docs/brand/
+design-decisions-log.md` is the running, per-zone historical log of layout/UX
+decisions already implemented and approved (landing, consola general,
+cabeceras/menú, Overview, and future zones/screens). Before proposing or
+implementing anything that touches brand/layout/navigation, check that log
+first — do not reopen or silently contradict a decision already recorded
+there. When a design/brand phase ships, add an entry to that log in the same
+PR (what was decided, why, what's still pending or known-broken) — mark
+superseded decisions as such rather than deleting them, mirroring how
+`docs/adr/` handles technical decisions.
+
 ---
 
 ## GitHub / Agentic Reporting

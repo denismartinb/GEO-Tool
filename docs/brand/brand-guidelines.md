@@ -6,6 +6,12 @@
 > vez de Hanken Grotesk). BRAND-5a (este PR) trae los activos, el favicon,
 > las fuentes y los tokens; **la UI y los emails siguen sin repintar hasta
 > BRAND-5b/5c** — ver "Plan de adopción".
+>
+> Este documento es el **sistema** (logo, paleta, tipografía, reglas de
+> uso). El histórico de decisiones de layout/UX ya implementadas por
+> pantalla (landing, consola, cabeceras/menú, Overview…) vive en
+> `docs/brand/design-decisions-log.md` — consultarlo antes de reabrir o
+> contradecir una decisión ya tomada.
 
 ---
 
@@ -169,10 +175,13 @@ logo (imagen), no el texto.
   sigue activa), tokens `--brand-*` añadidos junto a los existentes,
   Open Graph/Twitter conectados. Cero cambio visual fuera de
   logo/favicon/OG.
-- **Fase 5b — BRAND-5b:** repintar la UI completa (paleta `--ink`/`--accent`
-  → tokens `--brand-*`, tipografía Hanken → Figtree/Bricolage) por zonas:
-  auth → shell/sidebar → Overview → tablas → billing → landing/legal. Retira
-  el import de Hanken Grotesk. Pendiente de aprobación.
+- **Fase 5b — BRAND-5b (🔶 en curso, por zonas):** repintar la UI completa
+  (paleta `--ink`/`--accent` → tokens `--brand-*`, tipografía Hanken →
+  Figtree/Bricolage) por zonas: auth → shell/sidebar → Overview → tablas →
+  billing → landing/legal. Retira el import de Hanken Grotesk cuando la
+  última zona esté migrada. **Overview (✅) y cabeceras/menú de consola
+  (✅, PR #257)** ya implementados — detalle decisión a decisión en
+  `docs/brand/design-decisions-log.md` §2–4. Resto de zonas pendientes.
 - **Fase 5c — BRAND-5c:** actualizar los 8 emails de Resend (`lib/email/
   transactional.ts`) y las 2 plantillas de Supabase Auth
   (`docs/email-templates/`) a la v3 — nueva cabecera (`genscore-logo-white-
