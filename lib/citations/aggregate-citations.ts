@@ -1,4 +1,9 @@
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
+import { isBrandDomain, isSameOrSubdomain, normalizeDomain } from "@/lib/domains/brand-domain";
+
+// Re-exported so existing importers of these helpers keep working while
+// lib/domains/brand-domain.ts stays the single definition (BRAND-DOMAIN-1).
+export { isSameOrSubdomain, normalizeDomain };
 
 /**
  * Pure aggregation over scan_prompt_results rows for the Citations page.
@@ -88,20 +93,6 @@ type Citation = NonNullable<ExtractedJson["citations"]>[number];
 function parseExt(raw: unknown): ExtractedJson {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as ExtractedJson;
-}
-
-export function normalizeDomain(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-}
-
-export function isSameOrSubdomain(domain: string, root: string): boolean {
-  if (!domain || !root) return false;
-  return domain === root || domain.endsWith(`.${root}`);
 }
 
 /**
@@ -257,9 +248,12 @@ export function aggregateCitations(input: {
 
       let category: CitationCategory = "third_party";
       if (domain) {
-        if (isSameOrSubdomain(domain, projectDomain)) {
+        // Brand-level ownership (BRAND-DOMAIN-1): an ikea.com citation on an
+        // ikea.es project is the brand's, not a third party. Same rule for
+        // tracked competitors, so conforama.com counts for conforama.es.
+        if (isBrandDomain(domain, projectDomain)) {
           category = "brand";
-        } else if (competitorDomains.some((c) => isSameOrSubdomain(domain, c.domain))) {
+        } else if (competitorDomains.some((c) => isBrandDomain(domain, c.domain))) {
           category = "competitor";
         }
       }

@@ -1,3 +1,5 @@
+import { isBrandDomain, normalizeDomain } from "@/lib/domains/brand-domain";
+
 export const SCORING_VERSION = "phase9-geo-score-v2";
 
 export type ScoreInputRow = {
@@ -51,20 +53,6 @@ function isGroundedRow(row: ScoreInputRow): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
 }
 
-function normalizeDomain(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/.*$/, "");
-}
-
-function isSameOrSubdomain(domain: string, root: string): boolean {
-  if (!domain || !root) return false;
-  return domain === root || domain.endsWith(`.${root}`);
-}
-
 type ExtractedCitation = {
   domain?: string | null;
   source?: "grounding" | "inline";
@@ -79,10 +67,12 @@ function readCitations(value: unknown): ExtractedCitation[] {
 
 /**
  * True when a row's extracted_json contains at least one real grounding
- * citation (docs/adr/0004) whose domain exactly matches, or is a subdomain
- * of, the project's own domain. Mirrors the own_citation_share domain-match
- * logic (docs/adr/0010) — see docs/adr/0013-own-domain-citation-score.md for
- * why citation_score now requires this instead of "any citation present".
+ * citation (docs/adr/0004) whose domain belongs to the brand — the same
+ * host, a subdomain of it, or the same brand on another TLD (BRAND-DOMAIN-1,
+ * lib/domains/brand-domain.ts: an ikea.com citation counts for an ikea.es
+ * project). Mirrors the own_citation_share domain-match logic
+ * (docs/adr/0010) — see docs/adr/0013-own-domain-citation-score.md for why
+ * citation_score requires this instead of "any citation present".
  */
 function hasOwnDomainCitation(row: ScoreInputRow, projectDomainNormalized: string): boolean {
   if (!projectDomainNormalized) return false;
@@ -90,7 +80,7 @@ function hasOwnDomainCitation(row: ScoreInputRow, projectDomainNormalized: strin
     if (citation.source !== "grounding") continue;
     const rawDomain = citation.domain?.trim();
     if (!rawDomain) continue;
-    if (isSameOrSubdomain(normalizeDomain(rawDomain), projectDomainNormalized)) return true;
+    if (isBrandDomain(rawDomain, projectDomainNormalized)) return true;
   }
   return false;
 }
