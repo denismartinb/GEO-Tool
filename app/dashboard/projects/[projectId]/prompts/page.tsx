@@ -239,6 +239,7 @@ export default async function PromptsPage({
               <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
                 {project.domain}
               </span>
+              <span className="meta-pill">{project.country}/{project.language}</span>
             </div>
           </div>
         </div>
@@ -262,17 +263,6 @@ export default async function PromptsPage({
               Escaneo en curso
             </span>
           ) : null}
-          <AddPromptsButton
-            projectId={projectId}
-            disabled={Boolean(activeRun) || atPromptLimit}
-            disabledReason={
-              activeRun
-                ? "Espera a que termine el escaneo en curso."
-                : atPromptLimit
-                  ? feedbackErrorMessages.prompt_limit_reached
-                  : undefined
-            }
-          />
         </div>
       </header>
 
@@ -428,6 +418,8 @@ export default async function PromptsPage({
         ) : (
           <PromptsClient
             projectId={projectId}
+            projectDomain={project.domain}
+            projectBrand={project.brand}
             results={sortedResults}
             hasTopics={hasTopics}
             topicGroups={topicGroups}
@@ -435,6 +427,14 @@ export default async function PromptsPage({
             totalPrompts={totalPrompts}
             scannedPrompts={scannedPrompts}
             totalTopics={totalTopics}
+            addPromptsDisabled={Boolean(activeRun) || atPromptLimit}
+            addPromptsDisabledReason={
+              activeRun
+                ? "Espera a que termine el escaneo en curso."
+                : atPromptLimit
+                  ? feedbackErrorMessages.prompt_limit_reached
+                  : undefined
+            }
           />
         )}
       </div>

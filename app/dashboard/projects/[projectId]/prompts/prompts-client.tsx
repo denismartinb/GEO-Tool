@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
-import { InfoTip } from "@/components/ui/info-tip";
 import { Icon } from "@/components/ui/icon";
+import { Gauge } from "@/components/ui/gauge";
+import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
+import { AddPromptsButton } from "./add-prompts-button";
 import type { ResultRow, TopicGroup } from "./page";
 
 type Competitor = {
@@ -15,6 +17,8 @@ type Competitor = {
 
 type PromptsClientProps = {
   projectId: string;
+  projectDomain: string;
+  projectBrand: string;
   results: ResultRow[];
   hasTopics: boolean;
   topicGroups: TopicGroup[];
@@ -22,6 +26,8 @@ type PromptsClientProps = {
   totalPrompts: number;
   scannedPrompts: number;
   totalTopics: number;
+  addPromptsDisabled: boolean;
+  addPromptsDisabledReason?: string;
 };
 
 type ExtractedCompetitor = { name?: string; mentioned?: boolean };
@@ -48,6 +54,12 @@ function sentimentLabel(s: string | null): string {
     unknown: "Neutral",
   };
   return s ? (map[s] ?? s) : "—";
+}
+
+function sentimentBadgeClass(s: string | null): string {
+  if (s === "positive") return "badge-pos";
+  if (s === "negative") return "badge-neg";
+  return "badge-neutral";
 }
 
 function parseExtracted(raw: unknown): ExtractedJsonShape {
@@ -88,70 +100,47 @@ function mentionedCompetitorsUnion(rows: ResultRow[]): number {
   return names.size;
 }
 
-// Prompt × engine matrix (ENGINES-VALUE-1): one chip per EXISTING row for
-// this prompt, never an invented one for an engine with no row (absence of a
-// row means "no data", not "brand absent"). Alphabetical order by normalized
-// provider keeps the column stable across rows with different engines present.
-function EngineChips({ engines }: { engines: ResultRow[] }) {
-  const sorted = [...engines].sort((a, b) =>
-    normalizeProvider(a.provider).localeCompare(normalizeProvider(b.provider))
-  );
-
+// Every configured engine gets a chip, including ones with no row at all for
+// this prompt (nodata state) — this is the only place that needs to know
+// about engines beyond what `engines` already covers, so it takes the full
+// per-provider set from the caller instead of inferring it from one row.
+function EngineChipsWithGaps({
+  engines,
+  allProviders,
+}: {
+  engines: ResultRow[];
+  allProviders: string[];
+}) {
+  const byProvider = new Map(engines.map((r) => [normalizeProvider(r.provider), r]));
   return (
-    <div style={{ display: "flex", gap: 4 }}>
-      {sorted.map((r) => {
-        const meta = getEngineMeta(r.provider);
-        const baseStyle: React.CSSProperties = {
-          padding: "2px 8px",
-          borderRadius: 999,
-          fontSize: 10.5,
-          fontWeight: 700,
-          whiteSpace: "nowrap",
-          flexShrink: 0,
-        };
-
-        if (r.brand_mentioned === true) {
+    <div style={{ display: "flex", gap: 5 }}>
+      {allProviders.map((p) => {
+        const row = byProvider.get(p);
+        const meta = getEngineMeta(p);
+        if (!row) {
           return (
-            <span
-              key={r.id}
-              title={`${meta.label}: marca mencionada`}
-              style={{ ...baseStyle, background: meta.color, color: "#fff" }}
-            >
-              {meta.label}
+            <span key={p} className="pr2-eng nodata" title={`${meta.label}: sin datos en este escaneo`}>
+              <EngineGlyph provider={p} />
             </span>
           );
         }
-
-        if (r.brand_mentioned === false) {
-          return (
-            <span
-              key={r.id}
-              title={`${meta.label}: marca ausente`}
-              style={{
-                ...baseStyle,
-                background: "transparent",
-                border: `1.5px solid ${meta.color}`,
-                color: meta.color,
-              }}
-            >
-              {meta.label}
-            </span>
-          );
-        }
-
-        // brand_mentioned === null → failed/unextracted row for this engine.
+        const dot =
+          row.brand_mentioned === true ? "pos" : row.brand_mentioned === false ? "neg" : null;
         return (
           <span
-            key={r.id}
-            title={`${meta.label}: sin datos en este escaneo`}
-            style={{
-              ...baseStyle,
-              background: "transparent",
-              border: "1.5px solid var(--ink-4)",
-              color: "var(--ink-4)",
-            }}
+            key={p}
+            className="pr2-eng"
+            style={{ color: meta.color }}
+            title={
+              row.brand_mentioned === true
+                ? `${meta.label}: marca mencionada`
+                : row.brand_mentioned === false
+                  ? `${meta.label}: marca ausente`
+                  : `${meta.label}: sin datos en este escaneo`
+            }
           >
-            {meta.label}
+            <EngineGlyph provider={p} />
+            {dot ? <span className={`pr2-eng-dot ${dot}`} /> : null}
           </span>
         );
       })}
@@ -188,8 +177,49 @@ function groupByPrompt(rows: ResultRow[]): PromptGroup[] {
   });
 }
 
+function matchesQuery(text: string | null, query: string): boolean {
+  if (!query) return true;
+  return (text ?? "").toLowerCase().includes(query.toLowerCase());
+}
+
+function PromptRow({
+  group,
+  indent,
+  allProviders,
+  onClick,
+}: {
+  group: PromptGroup;
+  indent: boolean;
+  allProviders: string[];
+  onClick: () => void;
+}) {
+  return (
+    <div className="pr2-prow" style={indent ? { paddingLeft: 34 } : undefined} onClick={onClick}>
+      <div className="pr2-prow-main">
+        <div className="pr2-prow-text">{group.promptText ?? "—"}</div>
+        <div className="pr2-prow-tags">
+          <span className={`badge ${group.brandMentioned ? "badge-pos" : "badge-neg"}`}>
+            {group.brandMentioned ? "Mencionada" : "Ausente"}
+          </span>
+          <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`}>
+            {sentimentLabel(group.sentimentDominant)}
+          </span>
+          <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
+            {group.competitorsCount} competidores · {group.citationsTotal} citas
+          </span>
+        </div>
+      </div>
+      <div className="pr2-prow-engs">
+        <EngineChipsWithGaps engines={group.engines} allProviders={allProviders} />
+      </div>
+    </div>
+  );
+}
+
 export function PromptsClient({
   projectId,
+  projectDomain,
+  projectBrand,
   results,
   hasTopics,
   topicGroups,
@@ -197,16 +227,26 @@ export function PromptsClient({
   totalPrompts,
   scannedPrompts,
   totalTopics,
+  addPromptsDisabled,
+  addPromptsDisabledReason,
 }: PromptsClientProps) {
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
-  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(
-    () => new Set(topicGroups.map((g) => g.category))
-  );
+  const [expandedTopics, setExpandedTopics] = useState<Set<string>>(() => new Set());
+  const [query, setQuery] = useState("");
 
   const selectedEngineResults =
     selectedPromptId !== null
       ? results.filter((r) => (r.prompt_id ?? r.id) === selectedPromptId)
       : [];
+
+  // Every provider that appears anywhere in this run — used so every prompt
+  // row shows the same fixed set of engine chips (including a "sin datos"
+  // chip for an engine that didn't run on that specific prompt), instead of
+  // a column count that shifts row to row.
+  const allProviders = useMemo(
+    () => Array.from(new Set(results.map((r) => normalizeProvider(r.provider)))).sort(),
+    [results]
+  );
 
   const flatGroups = groupByPrompt(results).sort((a, b) => {
     if (a.brandMentioned === b.brandMentioned) return 0;
@@ -219,9 +259,23 @@ export function PromptsClient({
   const scannedGroups = flatGroups.length;
   const brandPresent = flatGroups.filter((g) => g.brandMentioned).length;
   const brandAbsent = scannedGroups - brandPresent;
+  const presentPct = scannedGroups > 0 ? Math.round((brandPresent / scannedGroups) * 100) : 0;
   const rankedTopics = [...topicGroups].sort((a, b) => b.visibilidad - a.visibilidad);
   const bestTopic = rankedTopics[0] ?? null;
   const worstTopic = rankedTopics.length > 1 ? rankedTopics[rankedTopics.length - 1] : null;
+
+  const filteredTopicGroups = hasTopics
+    ? topicGroups
+        .map((g) => ({
+          ...g,
+          results: g.results.filter(
+            (r) => matchesQuery(r.prompt_text_snapshot, query) || matchesQuery(g.category, query)
+          ),
+        }))
+        .filter((g) => g.results.length > 0 || matchesQuery(g.category, query))
+    : [];
+
+  const filteredFlatGroups = flatGroups.filter((g) => matchesQuery(g.promptText, query));
 
   function toggleTopic(cat: string) {
     setExpandedTopics((prev) => {
@@ -235,52 +289,75 @@ export function PromptsClient({
     });
   }
 
+  const addButton = (
+    <AddPromptsButton
+      projectId={projectId}
+      disabled={addPromptsDisabled}
+      disabledReason={addPromptsDisabledReason}
+    />
+  );
+
   return (
-    <>
-      {/* Summary banner — unified with Overview / Citations / Recommendations */}
-      <div className="summary mt8" style={{ marginBottom: 16 }}>
-        <div className="summary-ico">
-          <Icon name="prompts" size={20} />
+    <div className="pr2-scope pr2-page">
+      {/* Insight banner */}
+      <div className="pr2-insight">
+        <div className="pr2-insight-ico">
+          <Icon name="sparkles" size={16} />
         </div>
-        <div className="summary-txt" style={{ flex: 1 }}>
-          GenScore monitoriza{" "}
-          <b>{totalPrompts} {totalPrompts === 1 ? "prompt" : "prompts"}</b>
-          {hasTopics ? (
-            <>
-              {" "}agrupados en <b>{totalTopics} topics</b>
-            </>
-          ) : null}
-          .
+        <p className="pr2-insight-txt">
+          GenScore monitoriza <b>{totalPrompts} {totalPrompts === 1 ? "prompt" : "prompts"}</b>
+          {hasTopics ? <> en <b>{totalTopics} topics</b></> : null}.{" "}
           {scannedGroups > 0 ? (
             <>
-              {" "}Tu marca aparece en <b>{brandPresent} de {scannedGroups}</b>
-              {scannedPrompts < totalPrompts ? " escaneados" : ""}
-              {brandAbsent > 0 ? (
+              Tu marca aparece en <b>{brandPresent} de {scannedGroups}</b> ({presentPct}%)
+              {scannedPrompts < totalPrompts ? " escaneados" : ""}.
+              {hasTopics && bestTopic && worstTopic && bestTopic.category !== worstTopic.category ? (
                 <>
-                  ; en{" "}
-                  <span className="hl-neg">
-                    {brandAbsent} {brandAbsent === 1 ? "sigue ausente" : "siguen ausentes"}
-                  </span>
-                  , donde la IA responde sin nombrarte.
+                  {" "}Fuerte en <b>«{bestTopic.category}»</b> ({bestTopic.visibilidad}%), floja en{" "}
+                  <b>«{worstTopic.category}»</b> ({worstTopic.visibilidad}%).
                 </>
-              ) : (
-                <>
-                  {" "}—{" "}
-                  <span className="hl-pos">presente en todos los escaneados</span>.
-                </>
-              )}
+              ) : null}
             </>
           ) : (
-            <> Aún no hay resultados de escaneo para estos prompts.</>
+            "Aún no hay resultados de escaneo para estos prompts."
           )}
-          {hasTopics && bestTopic && worstTopic && bestTopic.category !== worstTopic.category ? (
-            <>
-              {" "}Tu topic más fuerte es «{bestTopic.category}» ({bestTopic.visibilidad}%); el más
-              flojo, «{worstTopic.category}» ({worstTopic.visibilidad}%).
-            </>
-          ) : null}
-        </div>
+        </p>
       </div>
+
+      {/* Toolbar: real search (filters the list below) + add prompts. No
+          filter tabs for category/engine — Prompts has no such filter today,
+          so we don't render controls that look interactive but do nothing. */}
+      <div className="pr2-toolbar">
+        <label className="pr2-search">
+          <Icon name="search" size={14} />
+          <input
+            type="text"
+            placeholder="Buscar prompt…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Buscar prompt"
+          />
+        </label>
+        {addButton}
+      </div>
+
+      {/* Proportion summary — static, real data already computed above */}
+      {scannedGroups > 0 && (
+        <div className="card pr2-split">
+          <div className="pr2-split-top">
+            <span>Visibilidad del conjunto</span>
+            <b>{presentPct}%</b>
+          </div>
+          <div className="pr2-split-bar">
+            <i style={{ width: `${presentPct}%`, background: "var(--brand-pos)" }} />
+            <i style={{ width: `${100 - presentPct}%`, background: "var(--brand-neg)" }} />
+          </div>
+          <div className="pr2-split-legend">
+            <span><span className="d" style={{ background: "var(--brand-pos)" }} />{brandPresent} con visibilidad</span>
+            <span><span className="d" style={{ background: "var(--brand-neg)" }} />{brandAbsent} sin visibilidad</span>
+          </div>
+        </div>
+      )}
 
       {/* Modo flat sin topics */}
       {!hasTopics && (
@@ -292,258 +369,106 @@ export function PromptsClient({
               padding: "12px 16px",
               fontSize: 13,
               color: "var(--ink-3)",
-              marginBottom: 16,
+              marginTop: 16,
             }}
           >
             Tus prompts no tienen topics asignados todavía. Cuando GenScore genere
             topics automáticamente, aparecerán agrupados aquí.
           </div>
 
+          <p className="pr2-sec-lbl">Prompts</p>
           <div className="card">
-            <div className="tbl-wrap">
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th style={{ paddingLeft: 16 }}>Prompt</th>
-                  <th>
-                    Marca
-                    <InfoTip text="Que la IA nombre tu marca no depende de tu contenido — puede venir solo de lo que el modelo ya sabe de ella. 'Citas', a la derecha, es la señal que sí depende de páginas tuyas que la IA usó como fuente." />
-                  </th>
-                  <th>Motores</th>
-                  <th className="num">Competidores</th>
-                  <th className="num">Citas</th>
-                  <th>Sentimiento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {flatGroups.map((g) => (
-                  <tr
-                    key={g.key}
-                    className="hoverable"
-                    onClick={() => setSelectedPromptId(g.key)}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <td style={{ paddingLeft: 16, maxWidth: 360 }}>
-                      <span
-                        style={{
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                          fontSize: 13,
-                          color: "var(--ink)",
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        {g.promptText ?? "—"}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${g.brandMentioned ? "badge-pos" : "badge-neg"}`}
-                      >
-                        {g.brandMentioned ? "Mencionada" : "Ausente"}
-                      </span>
-                    </td>
-                    <td>
-                      <EngineChips engines={g.engines} />
-                    </td>
-                    <td className="num">{g.competitorsCount}</td>
-                    <td className="num">{g.citationsTotal}</td>
-                    <td>
-                      {g.sentimentDominant ? (
-                        <span
-                          className={`badge ${
-                            g.sentimentDominant === "positive"
-                              ? "badge-pos"
-                              : g.sentimentDominant === "negative"
-                                ? "badge-neg"
-                                : "badge-neutral"
-                          }`}
-                        >
-                          {sentimentLabel(g.sentimentDominant)}
-                        </span>
-                      ) : (
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            {filteredFlatGroups.length === 0 ? (
+              <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
+                Ningún prompt coincide con «{query}».
+              </p>
+            ) : (
+              filteredFlatGroups.map((g) => (
+                <PromptRow
+                  key={g.key}
+                  group={g}
+                  indent={false}
+                  allProviders={allProviders}
+                  onClick={() => setSelectedPromptId(g.key)}
+                />
+              ))
+            )}
           </div>
         </>
       )}
 
-      {/* Modo Topics */}
+      {/* Modo Topics — acordeón: anillo de visibilidad real (Gauge) por
+          topic, prompts desplegables al pulsar. */}
       {hasTopics && (
         <>
+          <p className="pr2-sec-lbl">Topics</p>
           <div className="card">
-            <div className="tbl-wrap">
-            <table className="tbl topics-tbl">
-              <thead>
-                <tr>
-                  <th style={{ paddingLeft: 16 }}>Topic / Prompt</th>
-                  <th className="num">Visibilidad</th>
-                  <th className="num">Menciones</th>
-                  <th>
-                    Marca
-                    <InfoTip text="Que la IA nombre tu marca no depende de tu contenido — puede venir solo de lo que el modelo ya sabe de ella. 'Citas', a la derecha, es la señal que sí depende de páginas tuyas que la IA usó como fuente." />
-                  </th>
-                  <th>Motores</th>
-                  <th className="num">Citas</th>
-                  <th>Sentimiento</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topicGroups.map((group) => (
+            {filteredTopicGroups.length === 0 ? (
+              <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
+                Ningún topic o prompt coincide con «{query}».
+              </p>
+            ) : (
+              filteredTopicGroups.map((group) => {
+                const isOpen = expandedTopics.has(group.category) || query.trim().length > 0;
+                const promptsInTopic = groupByPrompt(group.results);
+                return (
                   <React.Fragment key={`topic-${group.category}`}>
-                    <tr
-                      className="topic-row"
+                    <div
+                      className={`pr2-trow${isOpen ? " open" : ""}`}
                       onClick={() => toggleTopic(group.category)}
-                      style={{ cursor: "pointer" }}
                     >
-                      <td style={{ paddingLeft: 16 }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 8,
-                          }}
-                        >
-                          <span className="topic-chevron">
-                            {expandedTopics.has(group.category) ? "▾" : "▸"}
+                      <div className="pr2-ring">
+                        <Gauge value={group.visibilidad} size={46} stroke={6} label="" />
+                      </div>
+                      <div className="pr2-trow-main">
+                        <div className="pr2-trow-title">
+                          <span className={`pr2-chev${isOpen ? " down" : ""}`}>
+                            <Icon name="chevRight" size={15} />
                           </span>
-                          <span className="topic-label">{group.category}</span>
-                          <span className="nav-count" style={{ marginLeft: 4 }}>
-                            {group.results.length}
-                          </span>
+                          {group.category}
                         </div>
-                      </td>
-                      <td className="num">
-                        <span style={{ fontWeight: 700, fontSize: 13 }}>
-                          {group.visibilidad}%
-                        </span>
-                      </td>
-                      <td className="num">
-                        <span style={{ fontWeight: 700, fontSize: 13 }}>
-                          {group.menciones}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontSize: 12.5, color: "var(--ink-2)" }}>
-                          {group.menciones}/{group.results.length}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ color: "var(--ink-4)" }}>—</span>
-                      </td>
-                      <td className="num">
-                        {group.citasTotal > 0 ? (
-                          <span style={{ fontWeight: 700, fontSize: 13 }}>{group.citasTotal}</span>
-                        ) : (
-                          <span style={{ color: "var(--ink-4)" }}>0</span>
-                        )}
-                      </td>
-                      <td>
-                        {group.sentimentDominant ? (
-                          <span
-                            className={`badge ${
-                              group.sentimentDominant === "positive"
-                                ? "badge-pos"
-                                : group.sentimentDominant === "negative"
-                                  ? "badge-neg"
-                                  : "badge-neutral"
-                            }`}
-                          >
+                        <div className="pr2-trow-meta">
+                          {/* Deduped prompt count, not the raw per-engine row
+                              count (a prompt answered by 2 engines has 2 rows
+                              in group.results but is still 1 prompt). */}
+                          {promptsInTopic.length} {promptsInTopic.length === 1 ? "prompt" : "prompts"}
+                          <span className="pr2-trow-sep" />
+                          <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ fontSize: 10.5, padding: "1px 7px" }}>
                             {sentimentLabel(group.sentimentDominant)}
                           </span>
-                        ) : (
-                          <span style={{ color: "var(--ink-4)" }}>—</span>
-                        )}
-                      </td>
-                    </tr>
-                    {expandedTopics.has(group.category) &&
-                      groupByPrompt(group.results).map((g) => (
-                        <tr
+                        </div>
+                      </div>
+                      <div className="pr2-trow-mentions">
+                        <div className="v">{group.menciones}</div>
+                        <div className="k">menciones</div>
+                      </div>
+                    </div>
+                    {isOpen &&
+                      promptsInTopic.map((g) => (
+                        <PromptRow
                           key={g.key}
-                          className="prompt-row hoverable"
+                          group={g}
+                          indent
+                          allProviders={allProviders}
                           onClick={() => setSelectedPromptId(g.key)}
-                          style={{ cursor: "pointer" }}
-                        >
-                          <td style={{ paddingLeft: 36 }}>
-                            <span
-                              style={{
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                                fontSize: 13,
-                                color: "var(--ink)",
-                                lineHeight: 1.45,
-                              }}
-                            >
-                              {g.promptText ?? "—"}
-                            </span>
-                          </td>
-                          <td className="num">
-                            <span style={{ color: "var(--ink-4)" }}>—</span>
-                          </td>
-                          <td className="num">
-                            <span style={{ color: "var(--ink-4)" }}>—</span>
-                          </td>
-                          <td>
-                            <span
-                              className={`badge ${g.brandMentioned ? "badge-pos" : "badge-neg"}`}
-                            >
-                              {g.brandMentioned ? "Mencionada" : "Ausente"}
-                            </span>
-                          </td>
-                          <td>
-                            <EngineChips engines={g.engines} />
-                          </td>
-                          <td className="num">
-                            {g.citationsTotal > 0 ? (
-                              g.citationsTotal
-                            ) : (
-                              <span style={{ color: "var(--ink-4)" }}>0</span>
-                            )}
-                          </td>
-                          <td>
-                            {g.sentimentDominant ? (
-                              <span
-                                className={`badge ${
-                                  g.sentimentDominant === "positive"
-                                    ? "badge-pos"
-                                    : g.sentimentDominant === "negative"
-                                      ? "badge-neg"
-                                      : "badge-neutral"
-                                }`}
-                              >
-                                {sentimentLabel(g.sentimentDominant)}
-                              </span>
-                            ) : (
-                              <span style={{ color: "var(--ink-4)" }}>—</span>
-                            )}
-                          </td>
-                        </tr>
+                        />
                       ))}
                   </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-            </div>
+                );
+              })
+            )}
           </div>
         </>
       )}
 
       <PromptDrawer
         projectId={projectId}
+        projectDomain={projectDomain}
+        projectBrand={projectBrand}
         results={selectedEngineResults}
         competitors={competitors}
         onClose={() => setSelectedPromptId(null)}
       />
-    </>
+    </div>
   );
 }

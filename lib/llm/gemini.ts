@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/schema";
 import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
+import { isBrandDomain } from "@/lib/domains/brand-domain";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 // Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
@@ -520,7 +521,10 @@ export async function suggestCompetitors(input: {
     if (!name || name.length > 120) continue;
     if (!domain || domain.length < 3 || domain.length > 255) continue;
     if (!domain.includes(".")) continue;
-    if (domain === ownDomain) continue;
+    // BRAND-DOMAIN-1: never suggest the brand's own site as its competitor,
+    // including the same brand on another TLD (ikea.com for an ikea.es
+    // project) — strict equality used to let those through.
+    if (isBrandDomain(domain, ownDomain)) continue;
     if (seen.has(domain)) continue;
     seen.add(domain);
     out.push({ name, domain });
