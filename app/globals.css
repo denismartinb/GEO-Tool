@@ -2877,7 +2877,6 @@ textarea.add-prompts-text-input {
   font-size: 12.5px;
   color: var(--ink-2);
   line-height: 1.65;
-  white-space: pre-wrap;
   /* Raw model responses routinely contain long unbroken tokens (full
      markdown-link URLs). Without this, a single long URL overflows the
      card's width instead of wrapping — and since .resp-full clips with
@@ -2886,6 +2885,18 @@ textarea.add-prompts-text-input {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+/* Markdown-lite (prompt-drawer.tsx renderFormattedResponse): providers
+   return raw markdown syntax (**bold**, "* item" lists) that read as noise
+   as plain text — structured here instead of dumped as one pre-wrap blob. */
+.resp-full .body p.pr2-md-p { margin: 0 0 10px; }
+.resp-full .body ul.pr2-md-list,
+.resp-full .body ol.pr2-md-list { margin: 0 0 10px; padding-left: 19px; }
+.resp-full .body .pr2-md-p:last-child,
+.resp-full .body .pr2-md-list:last-child { margin-bottom: 0; }
+.resp-full .body li { margin-bottom: 4px; }
+.resp-full .body li:last-child { margin-bottom: 0; }
+.resp-full .body strong { color: var(--ink); font-weight: 700; }
+.resp-full .body .pr2-md-link { color: var(--brand-blue); text-decoration: underline; text-underline-offset: 2px; }
 .resp-full .body mark { background: var(--pos-soft); color: var(--pos-ink); font-weight: 700; padding: 0 2px; border-radius: 3px; }
 
 /* ============================================================

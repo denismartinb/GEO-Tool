@@ -122,6 +122,102 @@ function highlightBrand(text: string, brand: string): React.ReactNode {
   );
 }
 
+/** Only ever link http(s) URLs — a raw model response is untrusted text, and
+ * a `javascript:`/other scheme slipping into an href would be a real XSS
+ * vector, not just a formatting nit. */
+function isSafeHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+type InlineToken =
+  | { type: "text"; value: string }
+  | { type: "bold"; value: string }
+  | { type: "link"; label: string; url: string };
+
+function tokenizeInline(line: string): InlineToken[] {
+  const tokens: InlineToken[] = [];
+  const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line))) {
+    if (m.index > last) tokens.push({ type: "text", value: line.slice(last, m.index) });
+    if (m[1] !== undefined) tokens.push({ type: "link", label: m[1], url: m[2] });
+    else if (m[3] !== undefined) tokens.push({ type: "bold", value: m[3] });
+    last = re.lastIndex;
+  }
+  if (last < line.length) tokens.push({ type: "text", value: line.slice(last) });
+  return tokens;
+}
+
+function renderInline(line: string, brand: string): React.ReactNode {
+  return tokenizeInline(line).map((t, i) => {
+    if (t.type === "link") {
+      return isSafeHttpUrl(t.url) ? (
+        <a key={i} href={t.url} target="_blank" rel="noopener noreferrer" className="pr2-md-link">
+          {highlightBrand(t.label, brand)}
+        </a>
+      ) : (
+        <Fragment key={i}>{highlightBrand(t.label, brand)}</Fragment>
+      );
+    }
+    if (t.type === "bold") {
+      return <strong key={i}>{highlightBrand(t.value, brand)}</strong>;
+    }
+    return <Fragment key={i}>{highlightBrand(t.value, brand)}</Fragment>;
+  });
+}
+
+/**
+ * Minimal, dependency-free markdown-lite for raw LLM responses (bold,
+ * bullet/numbered lists, paragraphs, links) — these come back as literal
+ * markdown syntax (`**bold**`, `* item`) that read as noise as plain text.
+ * Not a general markdown renderer: just the handful of constructs the
+ * providers actually emit in these answers.
+ */
+function renderFormattedResponse(text: string, brand: string): React.ReactNode {
+  const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+
+  return blocks.map((block, blockIndex) => {
+    const lines = block.split("\n").filter((l) => l.trim().length > 0);
+    const isBulletList = lines.every((l) => /^\s*[-*]\s+/.test(l));
+    const isNumberedList = !isBulletList && lines.every((l) => /^\s*\d+[.)]\s+/.test(l));
+
+    if (isBulletList) {
+      return (
+        <ul key={blockIndex} className="pr2-md-list">
+          {lines.map((l, i) => (
+            <li key={i}>{renderInline(l.replace(/^\s*[-*]\s+/, ""), brand)}</li>
+          ))}
+        </ul>
+      );
+    }
+    if (isNumberedList) {
+      return (
+        <ol key={blockIndex} className="pr2-md-list">
+          {lines.map((l, i) => (
+            <li key={i}>{renderInline(l.replace(/^\s*\d+[.)]\s+/, ""), brand)}</li>
+          ))}
+        </ol>
+      );
+    }
+    return (
+      <p key={blockIndex} className="pr2-md-p">
+        {lines.map((l, i) => (
+          <Fragment key={i}>
+            {i > 0 && <br />}
+            {renderInline(l, brand)}
+          </Fragment>
+        ))}
+      </p>
+    );
+  });
+}
+
 export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("resumen");
 
@@ -495,7 +591,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                         </span>
                         <span className="nm">{getEngineMeta(r.provider).label}</span>
                       </div>
-                      <div className="body">{highlightBrand(r.raw_response_text, projectBrand)}</div>
+                      <div className="body">{renderFormattedResponse(r.raw_response_text, projectBrand)}</div>
                     </div>
                   )
               )}
