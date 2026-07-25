@@ -2891,7 +2891,13 @@ textarea.add-prompts-text-input {
 .resp-full .body ul.pr2-md-list,
 .resp-full .body ol.pr2-md-list { margin: 0 0 10px; padding-left: 19px; }
 .resp-full .body .pr2-md-p:last-child,
-.resp-full .body .pr2-md-list:last-child { margin-bottom: 0; }
+.resp-full .body .pr2-md-list:last-child,
+.resp-full .body .pr2-md-h:last-child { margin-bottom: 0; }
+/* Claude's ATX headings (`#`, `##`) get the same bold-section-title
+   treatment Gemini/ChatGPT already get for free from **bold** — see
+   renderFormattedResponse. Not a real heading size jump, just enough
+   weight to read as a section break within the card. */
+.resp-full .body p.pr2-md-h { margin: 2px 0 6px; font-weight: 800; color: var(--ink); }
 .resp-full .body li { margin-bottom: 4px; }
 .resp-full .body li:last-child { margin-bottom: 0; }
 .resp-full .body strong { color: var(--ink); font-weight: 700; }

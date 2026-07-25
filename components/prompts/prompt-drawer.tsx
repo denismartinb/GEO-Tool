@@ -179,43 +179,76 @@ function renderInline(line: string, brand: string): React.ReactNode {
  * Not a general markdown renderer: just the handful of constructs the
  * providers actually emit in these answers.
  */
+/** Renders a heading-free block: bullet list, numbered list, or paragraph. */
+function renderBlock(lines: string[], key: number, brand: string): React.ReactNode {
+  const isBulletList = lines.every((l) => /^\s*[-*]\s+/.test(l));
+  const isNumberedList = !isBulletList && lines.every((l) => /^\s*\d+[.)]\s+/.test(l));
+
+  if (isBulletList) {
+    return (
+      <ul key={key} className="pr2-md-list">
+        {lines.map((l, i) => (
+          <li key={i}>{renderInline(l.replace(/^\s*[-*]\s+/, ""), brand)}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (isNumberedList) {
+    return (
+      <ol key={key} className="pr2-md-list">
+        {lines.map((l, i) => (
+          <li key={i}>{renderInline(l.replace(/^\s*\d+[.)]\s+/, ""), brand)}</li>
+        ))}
+      </ol>
+    );
+  }
+  return (
+    <p key={key} className="pr2-md-p">
+      {lines.map((l, i) => (
+        <Fragment key={i}>
+          {i > 0 && <br />}
+          {renderInline(l, brand)}
+        </Fragment>
+      ))}
+    </p>
+  );
+}
+
+/**
+ * Providers don't agree on how they mark up a section title: Gemini/ChatGPT
+ * tend to bold it inline (`**Aspectos a tener en cuenta:**`, already handled
+ * by renderInline's bold token), Claude uses ATX headings (`# `, `## `).
+ * Without this, Claude's raw responses showed literal `#`/`##` characters
+ * instead of the bold section titles the other engines got for free.
+ * Rendered as a bold line, not a real <h*> tag — these are relative to the
+ * model's own answer, not the page's heading outline, and providers don't
+ * even agree on a consistent depth for the same kind of title.
+ */
 function renderFormattedResponse(text: string, brand: string): React.ReactNode {
   const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
+  const nodes: React.ReactNode[] = [];
+  let key = 0;
 
-  return blocks.map((block, blockIndex) => {
+  for (const block of blocks) {
     const lines = block.split("\n").filter((l) => l.trim().length > 0);
-    const isBulletList = lines.every((l) => /^\s*[-*]\s+/.test(l));
-    const isNumberedList = !isBulletList && lines.every((l) => /^\s*\d+[.)]\s+/.test(l));
+    if (lines.length === 0) continue;
 
-    if (isBulletList) {
-      return (
-        <ul key={blockIndex} className="pr2-md-list">
-          {lines.map((l, i) => (
-            <li key={i}>{renderInline(l.replace(/^\s*[-*]\s+/, ""), brand)}</li>
-          ))}
-        </ul>
+    const headingMatch = lines[0].match(/^#{1,6}\s+(.*)$/);
+    if (headingMatch) {
+      nodes.push(
+        <p key={key++} className="pr2-md-h">
+          {renderInline(headingMatch[1], brand)}
+        </p>
       );
+      const rest = lines.slice(1);
+      if (rest.length > 0) nodes.push(renderBlock(rest, key++, brand));
+      continue;
     }
-    if (isNumberedList) {
-      return (
-        <ol key={blockIndex} className="pr2-md-list">
-          {lines.map((l, i) => (
-            <li key={i}>{renderInline(l.replace(/^\s*\d+[.)]\s+/, ""), brand)}</li>
-          ))}
-        </ol>
-      );
-    }
-    return (
-      <p key={blockIndex} className="pr2-md-p">
-        {lines.map((l, i) => (
-          <Fragment key={i}>
-            {i > 0 && <br />}
-            {renderInline(l, brand)}
-          </Fragment>
-        ))}
-      </p>
-    );
-  });
+
+    nodes.push(renderBlock(lines, key++, brand));
+  }
+
+  return nodes;
 }
 
 export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
