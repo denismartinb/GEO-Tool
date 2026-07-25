@@ -428,7 +428,10 @@ export function PromptsClient({
                           {group.category}
                         </div>
                         <div className="pr2-trow-meta">
-                          {group.results.length} {group.results.length === 1 ? "prompt" : "prompts"}
+                          {/* Deduped prompt count, not the raw per-engine row
+                              count (a prompt answered by 2 engines has 2 rows
+                              in group.results but is still 1 prompt). */}
+                          {promptsInTopic.length} {promptsInTopic.length === 1 ? "prompt" : "prompts"}
                           <span className="pr2-trow-sep" />
                           <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ fontSize: 10.5, padding: "1px 7px" }}>
                             {sentimentLabel(group.sentimentDominant)}
