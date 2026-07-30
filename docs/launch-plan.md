@@ -1669,6 +1669,51 @@ scans. Reabre ADR-0003; schema + RLS + scheduler → aprobación explícita.
 
 ---
 
+## Hallazgo P0 no planeado — recomendaciones por-prompt marcadas "resueltas" sin motivo (RECS-DEDUPE-1, 2026-07-30)
+
+Encontrado por el fundador al probar en vivo la fase 1a de NOTIF-SERVER: un
+único escaneo generó una notificación `gap_resolved` con `count: 20` — 20
+"brechas cerradas" de golpe, todas del tipo `increase_brand_visibility`
+("Consigue aparecer en..."). No se había arreglado nada.
+
+**Causa raíz:** las dos reglas de recomendación por-prompt
+(`increase_brand_visibility`, `add_citation_block` en
+`lib/recommendations/recommendation-engine.ts`) construían su `dedupe_key`
+con el id de la fila de `scan_prompt_results`, que es un UUID nuevo **en
+cada escaneo** (cada run inserta filas nuevas). RECS-3 (migración
+`0010_recommendations_history.sql`) interpreta un `dedupe_key` que no
+recurre como "la brecha se resolvió" — así que cada escaneo marcaba como
+resueltas *todas* las brechas por-prompt del escaneo anterior, sin
+importar si el problema seguía ahí. Bug preexistente a NOTIF-SERVER (ya
+afectaba en silencio a "recent wins" en la página de Recomendaciones); la
+notificación nueva solo le puso megáfono.
+
+**Corregido:** las dos reglas ahora usan `project_prompts.id` (columna
+`prompt_id`, ya disponible en la misma query, estable entre escaneos —
+`row.prompt_id` en `lib/scan/executor.ts`), con fallback al id de fila
+solo si el prompt fue borrado de la lista de seguimiento después. 2 tests
+nuevos en `recommendation-engine.test.ts` (misma `prompt_id` → mismo
+`dedupe_key` entre dos llamadas simulando dos escaneos; fallback correcto
+cuando `promptId` es `null`). 739/739 tests, `pnpm run validate` limpio.
+
+**Transición de una sola vez esperada:** el primer escaneo tras mergear
+esto mostrará una ola de "resueltas" (las del formato de clave antiguo,
+que ya no coinciden con nada) y "nuevas" (las del formato nuevo, a
+`consecutive_runs_open = 1`) — es el efecto del cambio de formato de
+clave, no un bug nuevo. A partir del segundo escaneo, el conteo debería
+reflejar la realidad.
+
+**Sin migración ni cambio de schema/RLS** — lógica de aplicación pura.
+`lib/notifications/emit.ts` (PR #264, NOTIF-SERVER-1a) no necesita ningún
+cambio: en cuanto esto se mergee, `gap_resolved`/`gap_pending` empiezan a
+ser veraces solas.
+
+**Siguiente:** el fundador confirma con dos escaneos reales seguidos sobre
+el mismo proyecto (sin cambiar nada) que las brechas por-prompt que siguen
+abiertas ya NO aparecen como "resueltas" la segunda vez.
+
+---
+
 ## ⏰ MODEL-PIN — deadline duro 2026-10-16
 
 `gemini-2.5-flash` (ADR-0009) tiene cutover anunciado el **2026-10-16**. Si
