@@ -451,6 +451,41 @@ validate` green.
 
 ---
 
+## COMPETITOR-GROUNDING-2 — persisted business profile, computed lazily (founder-approved 2026-07-30)
+
+**Status: Implemented, pending Human Gate.** Closes the gap COMPETITOR-
+GROUNDING-1 (PR #265) declared explicitly deferred: the `BusinessProfile`
+inferred from a domain's homepage was computed once during onboarding
+suggestion and discarded, so "Añadir prompts" (post-creation,
+`lib/projects/add-prompts.ts`) stayed just as blind (brand/domain strings
+only) as `suggestCompetitors`/`suggestPrompts` were before ADR 0020.
+
+Design (see docs/adr/0022): nullable `projects.business_profile jsonb`
+(migration 0022, no backfill, no RLS change needed). Investigated the actual
+creation flow first — `createProject` only computes a profile in its
+existing fallback branch (wizard skipped/submitted empty), since the common
+wizard-completed path already arrives with competitors/prompts filled in and
+never recomputes one. Threading the profile through the wizard's hidden
+fields for the common path was considered and rejected as more surface/risk
+than benefit (see ADR 0022). Instead: `createProject`'s existing fallback
+persists the profile it already computes (zero new Gemini calls); `addPromptsCore`
+now selects `business_profile`, uses it directly when cached, or — for
+`mode !== "manual"` — resolves it once and caches it back (best-effort, never
+blocking generation on a cache-write failure); `generateAddedPrompts`
+(`lib/llm/gemini.ts`) gained an optional `profile?: BusinessProfile` param,
+purely additive (absent = identical prompt to before this phase). Most new
+projects still get `business_profile: null` at creation and compute-and-cache
+it lazily on first "Añadir prompts" use, never blocking project creation.
+`pnpm test` 809/809, `pnpm run validate` green.
+
+**Known gap, declared not fixed:** `createProject`'s new `business_profile`
+field in the insert is verified by code review + typecheck only — that
+server action has no unit-test harness (uses `redirect()`, no extracted
+"Core" function), a pre-existing gap from before this phase, not introduced
+by it.
+
+---
+
 ## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
 
 Founder direction (verbatim intent): recommendations must become **more

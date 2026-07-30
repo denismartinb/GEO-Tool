@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
-import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import { generateAddedPrompts, suggestCompetitors, suggestPrompts, type BusinessProfile } from "@/lib/llm/gemini";
 import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
@@ -203,6 +203,12 @@ export async function createProject(formData: FormData) {
   // from the domain string (docs/adr/0020-grounded-business-profile.md).
   let initialCompetitors = parsedForm.value.initialCompetitors;
   let initialPrompts = parsedForm.value.initialPrompts;
+  // COMPETITOR-GROUNDING-2 (docs/adr/0022): persisted below alongside the
+  // new project row when this fallback path actually computed one — the
+  // common wizard-filled path never reaches here, so most new projects still
+  // get their profile lazily on first "Añadir prompts" use instead
+  // (lib/projects/add-prompts.ts). Never required; null is a normal state.
+  let resolvedBusinessProfile: BusinessProfile | null = null;
 
   if (!initialCompetitors.length || !initialPrompts.length) {
     const context = await resolveBusinessContext({
@@ -213,6 +219,7 @@ export async function createProject(formData: FormData) {
     }).catch(() => ({ status: "unidentified" }) as const);
 
     if (context.status === "identified") {
+      resolvedBusinessProfile = context.profile;
       if (!initialCompetitors.length) {
         try {
           const suggested = await suggestCompetitors({
@@ -259,7 +266,8 @@ export async function createProject(formData: FormData) {
       domain,
       brand,
       country,
-      language
+      language,
+      business_profile: resolvedBusinessProfile
     })
     .select("id")
     .single();
