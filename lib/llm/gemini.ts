@@ -469,6 +469,157 @@ function normalizeDomain(value: string): string {
     .trim();
 }
 
+/**
+ * Extracts JSON from a Gemini response that could NOT be requested with
+ * `responseMimeType: "application/json"` — the API rejects that option when
+ * combined with `tools: [{ google_search: {} }]` (400), so grounded calls
+ * ask for JSON via instruction text only. Search-grounded responses
+ * sometimes wrap the JSON in a ```json fence despite being told not to.
+ */
+function parseLenientJson(text: string): unknown {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = (fenced ? fenced[1] : trimmed).trim();
+  return JSON.parse(candidate);
+}
+
+/**
+ * Like generateGeminiJson, but with google_search grounding enabled — used
+ * where the model needs real-world lookup (e.g. finding actual competitor
+ * names/domains) rather than reasoning over given context alone. See
+ * parseLenientJson for why this can't use responseMimeType: "application/json".
+ */
+async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
+
+  const model = getGeminiModel();
+  const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptBlock }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+      })
+    },
+    GEMINI_CALL_TIMEOUT_MS
+  );
+
+  if (!response.ok) {
+    throw new Error(getGeminiApiError(response.status));
+  }
+
+  const data = (await response.json()) as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+
+  const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+  if (!text) {
+    throw new Error("Gemini suggestion returned empty JSON.");
+  }
+
+  try {
+    return parseLenientJson(text);
+  } catch {
+    throw new Error("Gemini suggestion returned invalid JSON.");
+  }
+}
+
+export type BusinessProfile = {
+  whatItSells: string;
+  sector: string;
+  subSector: string;
+  businessModel: "b2b" | "b2c" | "both" | "unknown";
+  targetCustomer: string;
+  geographicScope: string;
+  sizeEstimate: string;
+  /** "low" means Gemini itself judged the evidence insufficient to profile this business — callers must not use a low-confidence profile to suggest competitors/prompts unless the user supplied their own description. */
+  confidence: "low" | "medium" | "high";
+};
+
+const businessProfileResponseSchema = z.object({
+  what_it_sells: z.string(),
+  sector: z.string(),
+  sub_sector: z.string(),
+  business_model: z.enum(["b2b", "b2c", "both", "unknown"]),
+  target_customer: z.string(),
+  geographic_scope: z.string(),
+  size_estimate: z.string(),
+  confidence: z.enum(["low", "medium", "high"])
+});
+
+export type HomepageEvidenceInput =
+  | { status: "ok"; title: string; description: string; headings: string[]; excerpt: string }
+  | { status: "unavailable" };
+
+/**
+ * Turns homepage evidence (+ optional user-provided description) into a
+ * structured business profile — what suggestCompetitors/suggestPrompts now
+ * require instead of guessing from the domain string alone (see
+ * docs/adr/0020-grounded-business-profile.md). Returns null (never a
+ * fabricated profile) on any failure — callers must treat that as "could not
+ * identify the business", not fall back to blind suggestion.
+ */
+export async function inferBusinessProfile(input: {
+  domain: string;
+  country: string;
+  language: string;
+  evidence: HomepageEvidenceInput;
+  userDescription?: string;
+}): Promise<BusinessProfile | null> {
+  const evidenceBlock =
+    input.evidence.status === "ok"
+      ? [
+          `Homepage title: ${input.evidence.title || "(none)"}`,
+          `Homepage meta description: ${input.evidence.description || "(none)"}`,
+          input.evidence.headings.length
+            ? `Homepage headings: ${input.evidence.headings.join(" | ")}`
+            : "Homepage headings: (none)",
+          `Homepage visible text excerpt: ${input.evidence.excerpt || "(none)"}`
+        ].join("\n")
+      : "Homepage content could not be fetched or was empty.";
+
+  const promptBlock = [
+    "You are a business analyst. Determine what this specific business actually does, using ONLY the evidence given below.",
+    'Do NOT guess from the domain name\'s spelling or morphology (e.g. a domain containing "gen" is not necessarily about generators; a domain containing "financiera" is not necessarily a consumer lender). Base your answer strictly on the evidence.',
+    `Return ONLY valid JSON with this exact shape: { "what_it_sells": string, "sector": string, "sub_sector": string, "business_model": "b2b"|"b2c"|"both"|"unknown", "target_customer": string, "geographic_scope": string, "size_estimate": string, "confidence": "low"|"medium"|"high" }.`,
+    `Set "confidence" to "low" ONLY if the evidence is genuinely insufficient to tell what this business does (e.g. an empty or parked page, no usable description). Use "medium" or "high" whenever the evidence gives a clear picture, even if some fields require reasonable inference from context.`,
+    "",
+    `Domain: ${input.domain}`,
+    `Market/country: ${input.country}`,
+    `Language: ${input.language}`,
+    ...(input.userDescription?.trim() ? [`Business description provided by the owner: ${input.userDescription.trim()}`] : []),
+    "",
+    evidenceBlock
+  ].join("\n");
+
+  let raw: unknown;
+  try {
+    raw = await generateGeminiJson(promptBlock);
+  } catch {
+    return null;
+  }
+
+  const parsed = businessProfileResponseSchema.safeParse(raw);
+  if (!parsed.success) return null;
+
+  return {
+    whatItSells: parsed.data.what_it_sells,
+    sector: parsed.data.sector,
+    subSector: parsed.data.sub_sector,
+    businessModel: parsed.data.business_model,
+    targetCustomer: parsed.data.target_customer,
+    geographicScope: parsed.data.geographic_scope,
+    sizeEstimate: parsed.data.size_estimate,
+    confidence: parsed.data.confidence
+  };
+}
+
 export type SuggestedCompetitor = { name: string; domain: string };
 
 const competitorsResponseSchema = z.object({
@@ -484,30 +635,50 @@ const competitorsResponseSchema = z.object({
 
 /**
  * Real Gemini-backed suggestion of direct competitors for a brand/domain.
- * Returns deduplicated, schema-safe rows ready to persist in project_competitors.
- * Never throws on partial/garbage items — it filters them out.
+ * Requires a `profile` (lib/projects/business-profile.ts's
+ * resolveBusinessContext) so the model reasons from actual evidence of what
+ * the business does instead of guessing from the domain string alone — see
+ * docs/adr/0020-grounded-business-profile.md for why the previous
+ * domain-only version produced e.g. generator manufacturers for
+ * "genscore.es" and consumer lenders for "ifinanciera.es". Uses google_search
+ * grounding so small/regional competitors the model has no training-data
+ * knowledge of can still be found. Returns deduplicated, schema-safe rows
+ * ready to persist in project_competitors. Never throws on partial/garbage
+ * items — it filters them out.
  */
 export async function suggestCompetitors(input: {
   brand: string;
   domain: string;
   country: string;
   language: string;
+  profile: BusinessProfile;
   limit?: number;
 }): Promise<SuggestedCompetitor[]> {
   const limit = Math.min(Math.max(input.limit ?? 5, 1), 8);
   const promptBlock = [
-    "You are a GEO market analyst. Identify the most relevant DIRECT competitors of the given brand.",
-    `Return ONLY valid JSON with this exact shape: { "competitors": [{ "name": string, "domain": string }] }.`,
-    `List up to ${limit} real, well-known direct competitors in the same category and market.`,
+    "You are a GEO market analyst. Use Google Search to find the most relevant DIRECT competitors of this specific business.",
+    `Return ONLY valid JSON with this exact shape: { "competitors": [{ "name": string, "domain": string }] }. Respond with JSON only — no markdown, no commentary, no code fences.`,
+    `List up to ${limit} real competitors operating in the same sector, sub-sector, business model and geographic scope described below.`,
+    "Prioritize competitors of a COMPARABLE size and market position, including regional or local players — do NOT default to large, globally famous category leaders unless they genuinely compete for the same customers in the same market.",
     "Use the competitor's real root domain (no https://, no www., no path). Do not include the brand itself.",
     "",
-    `Brand: ${input.brand}`,
-    `Brand domain: ${input.domain}`,
+    `Business: ${input.brand} (${input.domain})`,
+    `What it sells: ${input.profile.whatItSells}`,
+    `Sector / sub-sector: ${input.profile.sector} / ${input.profile.subSector}`,
+    `Business model: ${input.profile.businessModel}`,
+    `Target customer: ${input.profile.targetCustomer}`,
+    `Geographic scope: ${input.profile.geographicScope}`,
+    `Estimated size: ${input.profile.sizeEstimate}`,
     `Market/country: ${input.country}`,
     `Language: ${input.language}`
   ].join("\n");
 
-  const raw = await generateGeminiJson(promptBlock);
+  let raw: unknown;
+  try {
+    raw = await generateGroundedGeminiJson(promptBlock);
+  } catch {
+    return [];
+  }
   const parsed = competitorsResponseSchema.safeParse(raw);
   if (!parsed.success) return [];
 
@@ -547,26 +718,32 @@ const promptsResponseSchema = z.object({
 
 /**
  * Real Gemini-backed suggestion of high-intent prompts a user would ask an AI
- * assistant where the brand could plausibly appear. Returns deduplicated,
- * schema-safe prompts (text 10..300 chars) with a topic category from the
- * fixed taxonomy, ready to persist in project_prompts.
+ * assistant where the brand could plausibly appear. Requires a `profile`
+ * (same rationale as suggestCompetitors — see
+ * docs/adr/0020-grounded-business-profile.md) so prompts target the
+ * business's actual sector/customer instead of whatever the domain string
+ * happens to suggest. Returns deduplicated, schema-safe prompts (text
+ * 10..300 chars) with a topic category from the fixed taxonomy, ready to
+ * persist in project_prompts.
  */
 export async function suggestPrompts(input: {
   brand: string;
   domain: string;
   country: string;
   language: string;
+  profile: BusinessProfile;
   limit?: number;
 }): Promise<Array<{ text: string; category: PromptCategory }>> {
   const limit = Math.min(Math.max(input.limit ?? 10, 1), 15);
   const categoryList = PROMPT_CATEGORIES.map((category) => `"${category}"`).join(", ");
   const promptBlock = [
     "You are a GEO research analyst. Generate the most relevant questions real potential customers",
-    "would ask an AI assistant (ChatGPT, Gemini, Perplexity) where the given brand could appear in the answer.",
+    "would ask an AI assistant (ChatGPT, Gemini, Perplexity) where this specific business could appear in the answer.",
     `Return ONLY valid JSON with this exact shape: { "prompts": [{ "text": string, "category": string }] }.`,
     `Produce exactly ${limit} distinct prompts. Mix informational, commercial and transactional intent.`,
     `Write each "text" in the target language. Each "text" must be a natural question of 10 to 200 characters.`,
     "Do NOT mention the brand name in the prompts; they must be brand-neutral discovery questions.",
+    "Every prompt must be about the business described below — its actual sector, what it sells and its target customer — not whatever the domain name might otherwise suggest.",
     "",
     `For "category", choose EXACTLY one of these fixed Spanish labels (verbatim, do NOT translate or alter them,`,
     `regardless of the target language): ${categoryList}.`,
@@ -579,8 +756,11 @@ export async function suggestPrompts(input: {
     `- "Casos de uso": use cases, scenarios, or "best for X" questions.`,
     `Use at least 3 different categories across the full set of prompts; do not put everything in one bucket.`,
     "",
-    `Brand: ${input.brand}`,
-    `Brand domain: ${input.domain}`,
+    `Business: ${input.brand} (${input.domain})`,
+    `What it sells: ${input.profile.whatItSells}`,
+    `Sector / sub-sector: ${input.profile.sector} / ${input.profile.subSector}`,
+    `Business model: ${input.profile.businessModel}`,
+    `Target customer: ${input.profile.targetCustomer}`,
     `Market/country: ${input.country}`,
     `Target language: ${input.language}`
   ].join("\n");
