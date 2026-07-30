@@ -176,7 +176,7 @@ export async function extractClaudeStructuredData(input: {
   const schemaInstruction = `Return ONLY valid JSON with this exact shape — no markdown fences, no prose:
 {
   "brand": { "mentioned": boolean, "display_name_found": string|null, "evidence": string[], "position": number|null },
-  "competitors": [{ "name": string, "mentioned": boolean, "evidence": string[], "position": number|null }],
+  "competitors": [{ "name": string, "mentioned": boolean, "display_name_found": string|null, "evidence": string[], "position": number|null }],
   "citations": [{ "url": string|null, "domain": string|null, "label": string|null, "evidence": string|null }],
   "sentiment": "positive"|"neutral"|"negative"|"mixed"|"unknown",
   "other_brands_mentioned": string[],
@@ -185,7 +185,13 @@ export async function extractClaudeStructuredData(input: {
   "notes": string[]
 }
 
-For "competitors": return EXACTLY one entry per name listed under Competitors below, in that same order — never add, omit, or rename any of them. Include an entry even if that competitor is not mentioned at all (mentioned: false, evidence: [], position: null). Never add an entry for any brand that is not in the Competitors list, even if it appears in the response text — put those under "other_brands_mentioned" instead.
+For "mentioned" (brand and every competitor): set to true ONLY if that entity's name — or an unambiguous variant of it (abbreviation, different capitalization, with/without a legal suffix) — genuinely appears as text in the response below. NEVER set "mentioned": true because the response is merely about the same topic, product category, or industry as that entity — topical relevance is not a mention. If in doubt, use false.
+
+For "display_name_found": the EXACT substring of the response text you are relying on to justify "mentioned": true — copy it character-for-character from the response, do not paraphrase, translate, or normalize it. Use null when "mentioned" is false.
+
+For "evidence": one or more short EXACT quotes (verbatim substrings of the response text, not paraphrased or summarized) that show the mention in context. Empty array [] when "mentioned" is false.
+
+For "competitors": return EXACTLY one entry per name listed under Competitors below, in that same order — never add, omit, or rename any of them. Include an entry even if that competitor is not mentioned at all (mentioned: false, display_name_found: null, evidence: [], position: null). Never add an entry for any brand that is not in the Competitors list, even if it appears in the response text — put those under "other_brands_mentioned" instead.
 
 For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.
 

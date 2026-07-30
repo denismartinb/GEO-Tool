@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EXTRACTION_VERSION } from "@/lib/scan/constants";
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
@@ -992,7 +993,7 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
         mentioned_competitors_count: 0,
         brand: { mentioned: true, position: 1 },
         competitors: [{ name: "Competitor", mentioned: false, position: null }],
-        extraction_version: "tracked-set-v1"
+        extraction_version: EXTRACTION_VERSION
       })
     ];
 

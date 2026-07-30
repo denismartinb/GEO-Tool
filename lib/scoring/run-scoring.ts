@@ -41,17 +41,21 @@ export type ScoreInputRow = {
 };
 
 /**
- * True when at least one row in this run was extracted BEFORE
- * SCAN-TRACKED-SET-1 (docs/adr/0018) — i.e. extracted_json.competitors may
- * contain entities the model surfaced on its own rather than the project's
- * actual tracked list. Runs almost always share one extraction_version
- * (all rows are extracted together right after the scan), so this gates at
- * the run level: computing brand_position/standing over a MIX of
- * trustworthy and contaminated rows would silently launder the old data's
- * bias into new-looking numbers, which is worse than dropping the
- * components entirely for that run. A future backfill (SCAN-TRACKED-SET-2)
- * bumps every row's extraction_version, which resolves this cleanly without
- * further code changes here.
+ * True when at least one row in this run predates the CURRENT
+ * EXTRACTION_VERSION — a general staleness gate, not specific to one fix.
+ * Two independent extraction-quality concerns have bumped this version so
+ * far, and both are covered by the same check: SCAN-TRACKED-SET-1 (docs/
+ * adr/0018) — extracted_json.competitors may contain entities the model
+ * surfaced on its own rather than the project's actual tracked list — and
+ * MENTION-VERIFY-1 (docs/adr/0021) — brand.mentioned/competitors[].mentioned
+ * may be unverified (possibly hallucinated) rather than checked against the
+ * raw response text. Runs almost always share one extraction_version (all
+ * rows are extracted together right after the scan), so this gates at the
+ * run level: computing brand_position/standing over a MIX of trustworthy and
+ * stale rows would silently launder the old data's bias into new-looking
+ * numbers, which is worse than dropping the components entirely for that
+ * run. A future backfill bumps every row's extraction_version, which
+ * resolves this cleanly without further code changes here.
  */
 function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
   return results.some((row) => row.extraction_version != null && row.extraction_version !== EXTRACTION_VERSION);
@@ -440,7 +444,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
                 value: null,
                 weight: 0,
                 reason: untrustedCompetitorSet
-                  ? "competitor set not yet reconciled for this run (pre-tracked-set-v1 extraction, docs/adr/0018)"
+                  ? "extraction predates the current pipeline version — competitor-set reconciliation and/or mention verification may be incomplete for this run (docs/adr/0018, docs/adr/0021)"
                   : "brand_position absent (pre-grounded-position-v1 run)"
               }
             : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
@@ -450,7 +454,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
                 value: null,
                 weight: 0,
                 reason: untrustedCompetitorSet
-                  ? "competitor set not yet reconciled for this run (pre-tracked-set-v1 extraction, docs/adr/0018)"
+                  ? "extraction predates the current pipeline version — competitor-set reconciliation and/or mention verification may be incomplete for this run (docs/adr/0018, docs/adr/0021)"
                   : hasNoTrackedCompetitors
                     ? "no competitors tracked for this project (nothing to share voice with, docs/adr/0018)"
                     : "no brand or tracked-competitor mentions in this run (share-of-voice denominator is 0, ADR 0015)"
