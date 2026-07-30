@@ -894,6 +894,10 @@ export async function executePendingScan({
         },
         promptResults: completedPromptResults.map((row) => ({
           id: row.id,
+          // RECS-DEDUPE-1: the prompt's own stable id (project_prompts.id),
+          // separate from `id` above (this run's scan_prompt_results row) —
+          // lets the engine's per-prompt gap dedupeKey survive across runs.
+          promptId: row.prompt_id,
           prompt_text_snapshot: row.prompt_text_snapshot,
           brand_mentioned: row.brand_mentioned,
           citation_found: row.citation_found,

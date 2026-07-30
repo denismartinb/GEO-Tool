@@ -15,6 +15,16 @@ type RunScoreInput = {
 
 type PromptResultInput = {
   id: string;
+  /**
+   * project_prompts.id (RECS-DEDUPE-1) — stable across scan runs, unlike
+   * `id` above (scan_prompt_results.id, a fresh row per run). Used to build
+   * a per-prompt gap's dedupeKey so the SAME open gap is recognized as
+   * still-open across runs instead of looking "resolved" every time purely
+   * because its underlying result row got a new id. Null only when the
+   * prompt was later deleted from project_prompts (on delete set null) —
+   * see lib/scan/executor.ts.
+   */
+  promptId?: string | null;
   prompt_text_snapshot: string;
   brand_mentioned: boolean;
   citation_found: boolean;
@@ -465,6 +475,14 @@ function perPromptGapCards(opts: {
     const ev = promptEvidence(result);
     const hasCompetitor = ev.competitors.length > 0;
     const label = shortPrompt(result.prompt_text_snapshot);
+    // RECS-DEDUPE-1: identify the gap by the PROMPT, not by this run's result
+    // row — result.id is a fresh scan_prompt_results.id every run, so keying
+    // on it made every per-prompt gap look "resolved" on the very next scan
+    // regardless of whether anything actually changed. Falls back to
+    // result.id only when promptId is null (the prompt was later deleted
+    // from project_prompts) — dedupe stability degrades for that one row,
+    // which no longer matters since it won't be scanned again either.
+    const stableId = result.promptId ?? result.id;
 
     if (!result.brand_mentioned && !hasCompetitor) {
       cards.push({
@@ -473,7 +491,7 @@ function perPromptGapCards(opts: {
           "Tu marca no aparece en la respuesta de IA a esta consulta y ningún competidor concreto la domina todavía. Refuerza el contenido y las señales de marca específicas para esta búsqueda.",
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
-        dedupeKey: `increase_brand_visibility:${result.id}`,
+        dedupeKey: `increase_brand_visibility:${stableId}`,
         impact: "medium",
         effort: "medium",
         confidence: runScore.confidence,
@@ -497,7 +515,7 @@ function perPromptGapCards(opts: {
           "La IA menciona tu marca en esta consulta pero no cita tu dominio como fuente. Añade un bloque factual y citable que la IA pueda referenciar directamente.",
         rule_id: "rule_citations_001",
         recommendation_type: "add_citation_block",
-        dedupeKey: `add_citation_block:${result.id}`,
+        dedupeKey: `add_citation_block:${stableId}`,
         impact: "medium",
         effort: "low",
         confidence: runScore.confidence,

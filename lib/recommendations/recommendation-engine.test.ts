@@ -683,6 +683,32 @@ describe("generateRecommendationsForRun", () => {
     expect(new Set(keys).size).toBe(keys.length);
   });
 
+  it("RECS-DEDUPE-1: keys a per-prompt gap by the prompt's own stable id, not the scan result row id, so the same open gap survives across runs", () => {
+    // Same prompt, same underlying gap, but a different scan_prompt_results
+    // row id each run (as real runs produce) — only promptId matches.
+    const runOne = run([
+      prompt({ id: "run1-result-a", promptId: "prompt-stable-1", prompt_text_snapshot: "best running shoes", brand_mentioned: false })
+    ]);
+    const runTwo = run([
+      prompt({ id: "run2-result-b", promptId: "prompt-stable-1", prompt_text_snapshot: "best running shoes", brand_mentioned: false })
+    ]);
+
+    const keyOne = runOne.find((r) => r.recommendation_type === "increase_brand_visibility")!.dedupe_key;
+    const keyTwo = runTwo.find((r) => r.recommendation_type === "increase_brand_visibility")!.dedupe_key;
+
+    expect(keyOne).toBe(keyTwo);
+    expect(keyOne).toBe("increase_brand_visibility:prompt-stable-1");
+  });
+
+  it("RECS-DEDUPE-1: falls back to the result row id when promptId is null (prompt later deleted from project_prompts)", () => {
+    const recs = run([
+      prompt({ id: "orphan-result", promptId: null, prompt_text_snapshot: "a prompt whose project_prompts row is gone", brand_mentioned: false })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "increase_brand_visibility")!;
+    expect(rec.dedupe_key).toBe("increase_brand_visibility:orphan-result");
+  });
+
   it("maps recommendation types to the right UI category", () => {
     expect(categoryForType("improve_citation_readiness")).toBe("authority");
     expect(categoryForType("add_citation_block")).toBe("authority");
