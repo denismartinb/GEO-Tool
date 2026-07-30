@@ -330,6 +330,58 @@ contaminated set. No schema/RLS changes. `pnpm test` 722/722,
 
 ---
 
+## COMPETITOR-GROUNDING-1 — wrong competitors/prompts for SMEs (founder report, 2026-07-25)
+
+**Status: Phase A implemented, pending Human Gate.** Founder tested onboarding
+against SME/agency-sized domains — the product's actual target market, not
+the large brands it had been smoke tested against — and got nonsense:
+`genscore.es` (a GEO visibility tool) suggested generator manufacturers
+(Himoinsa, Gesan, Inmesol, SDMO, Cummins); `ifinanciera.es` (a financial-
+management consultancy for SMEs) suggested consumer fast-loan lenders
+(Cofidis, Vivus, Creditea, QueBueno, Wandoo).
+
+Root cause: `suggestCompetitors`/`suggestPrompts` (`lib/llm/gemini.ts`) were
+domain-only, closed-book Gemini calls with no `google_search` grounding —
+the only informative input was `brand`, itself just the capitalized domain
+label. For a brand present in the model's training data (IKEA, Zara) this
+works; for an SME with no training-data footprint, the model has nothing to
+reason from but the domain string and decomposes it morphologically
+("gen" → generators, "financiera" → consumer credit). The same blind inputs
+feed prompt suggestion too, so a wrong inference contaminates the first
+scan and every metric derived from it, not just one onboarding screen.
+
+Phase A (this phase, see docs/adr/0020): fetches the domain's own homepage
+(`lib/projects/business-profile.ts`'s `fetchHomepageEvidence`, reusing
+`fetchPageSafely` unmodified — one page, not a crawler), infers a structured
+`BusinessProfile` from that evidence (`inferBusinessProfile`), then requires
+that profile for `suggestCompetitors` (now `google_search`-grounded,
+explicitly asking for comparable-size/regional competitors instead of
+"well-known" ones) and `suggestPrompts`. Honest failure
+(`resolveBusinessContext` returns `"unidentified"`) when there's no evidence
+and no user description, or Gemini itself reports low confidence — the
+wizard falls back to its existing manual-entry state rather than guessing.
+`export const maxDuration = 60` added to `app/dashboard/projects/new/
+page.tsx` (previously unset, defaulting to Vercel Hobby's 10s) since the new
+flow does meaningfully more I/O. No schema/RLS changes. `pnpm test` 754/754,
+`pnpm run validate` green.
+
+**Deferred, not yet approved:**
+- **COMPETITOR-GROUNDING-2 (persist the profile):** would let re-suggestion,
+  the post-creation "Añadir prompts" flow (`generateAddedPrompts`), and
+  future re-scans reuse the profile instead of re-deriving it. Needs a
+  `projects` schema migration — its own approval per `CLAUDE.md`.
+- **`generateAddedPrompts` stays domain-only** — it backs both the wizard's
+  "Generar N más" and the persisted-project "Añadir prompts" screen, and the
+  latter has no profile without the schema work above.
+- **No manual "describe your business" UI field** — `resolveBusinessContext`
+  already accepts an optional `userDescription` and `createProject` already
+  threads the pre-existing (previously dead) `businessDescription` form
+  field through to it, but no wizard input populates it yet. Scoped out to
+  keep this phase to the inference pipeline; adding the field is a small,
+  separate UX-alignment-reviewed change.
+
+---
+
 ## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25, amended 2026-07-30)
 
 **Status: Implemented (two passes), pending Human Gate.** Founder tested `genscore.es` (a
