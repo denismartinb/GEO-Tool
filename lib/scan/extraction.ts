@@ -35,26 +35,54 @@ function normalizeForSubstringMatch(value: string): string {
     .trim();
 }
 
+/**
+ * True when `claimed` plausibly names the same entity as `realName` \u2014 reuses
+ * normalizeCompetitorName's token-normalization (tolerant of accents/case/
+ * legal-entity symbols like "\u00ae") and accepts either string containing the
+ * other, so "Iberia" plausibly matches "Iberia L\u00edneas A\u00e9reas" in both
+ * directions. This is the check that closes the gap a substring-of-raw-text
+ * check alone leaves open (MENTION-VERIFY-1 follow-up, docs/adr/0021): a
+ * model can claim `display_name_found: "tu marca"` \u2014 a generic phrase that
+ * genuinely appears in the response \u2014 for a response that never names the
+ * actual brand at all. Requiring the claim to also resemble the real entity
+ * name catches that: "tu marca" does not plausibly match "GenScore".
+ */
+function namesPlausiblyMatch(claimed: string, realName: string): boolean {
+  const claimedKey = normalizeCompetitorName(claimed);
+  const realKey = normalizeCompetitorName(realName);
+  if (!claimedKey || !realKey) return false;
+  return claimedKey.includes(realKey) || realKey.includes(claimedKey);
+}
+
 type MentionEntity = { mentioned: boolean; display_name_found: string | null; evidence: string[]; position: number | null };
 
 /**
- * Downgrades `mentioned: true` to an explicit non-mention when the model's
- * own claimed `display_name_found` is empty or isn't actually a (normalized)
- * substring of the raw response text \u2014 MENTION-VERIFY-1, docs/adr/0021.
- * Root cause this defends against: extraction models across all three
- * providers can mark an entity "mentioned" from topical/semantic similarity
- * rather than its name genuinely appearing in the text (observed in
- * production: "GenScore" \u2014 a brand whose name reads as a generic description
- * of its own product category \u2014 flagged as mentioned in a ChatGPT response
- * that never contained the string "GenScore" at all, with a fabricated
- * "evidence" quote to match). Checking the model's own claimed
- * `display_name_found` (rather than requiring the canonical tracked name
- * verbatim) still tolerates genuine spelling/capitalization variants.
+ * Downgrades `mentioned: true` to an explicit non-mention unless the model's
+ * own claimed `display_name_found` BOTH (a) plausibly names `realName` (the
+ * entity this row is actually supposed to be about \u2014 the project's real
+ * brand, or the competitor's own returned name) and (b) is actually a
+ * (normalized) substring of the raw response text \u2014 MENTION-VERIFY-1,
+ * docs/adr/0021. Root cause this defends against: extraction models across
+ * all three providers can mark an entity "mentioned" from topical/semantic
+ * similarity rather than its name genuinely appearing in the text. Two
+ * distinct failure modes were observed in production for "GenScore" \u2014 a
+ * brand whose name reads as a generic description of its own product
+ * category \u2014 and both are needed together to close the gap:
+ * 1. A response never mentioning the brand at all, with a fabricated
+ *    `display_name_found`/evidence that ISN'T in the raw text (caught by
+ *    check (b) alone).
+ * 2. A response that generically referenced "your brand"/"tu marca" (the
+ *    literal category the user asked about, not GenScore itself), where the
+ *    model set `display_name_found: "tu marca"` \u2014 genuinely present in the
+ *    text, so check (b) alone lets it through. Check (a) catches this: "tu
+ *    marca" does not plausibly name "GenScore".
  */
-function verifyMention<T extends MentionEntity>(entity: T, normalizedRawText: string): T {
+function verifyMention<T extends MentionEntity>(entity: T, realName: string, normalizedRawText: string): T {
   if (!entity.mentioned) return entity;
   const claimed = entity.display_name_found?.trim();
-  if (claimed && normalizedRawText.includes(normalizeForSubstringMatch(claimed))) {
+  const isPlausibleName = Boolean(claimed) && namesPlausiblyMatch(claimed as string, realName);
+  const isInRawText = Boolean(claimed) && normalizedRawText.includes(normalizeForSubstringMatch(claimed as string));
+  if (isPlausibleName && isInRawText) {
     return entity;
   }
   return { ...entity, mentioned: false, display_name_found: null, evidence: [], position: null };
@@ -66,14 +94,18 @@ function verifyMention<T extends MentionEntity>(entity: T, normalizedRawText: st
  * position re-densification already treats `mentioned`/`position` as the
  * source of truth for ranking, so a mention downgraded here is automatically
  * re-ranked correctly by the existing reconciliation pass without any
- * duplicated logic.
+ * duplicated logic. Competitors are checked against their OWN model-returned
+ * `name` (not yet reconciled to the tracked canonical spelling \u2014 that
+ * happens afterward) since that's the entity this specific row claims to be
+ * about; reconciliation separately handles matching that name to the
+ * project's tracked list regardless of this function's verdict.
  */
-export function verifyExtractedMentions(data: ExtractionOutput, rawResponseText: string): ExtractionOutput {
+export function verifyExtractedMentions(data: ExtractionOutput, rawResponseText: string, brand: string): ExtractionOutput {
   const normalizedRawText = normalizeForSubstringMatch(rawResponseText);
   return {
     ...data,
-    brand: verifyMention(data.brand, normalizedRawText),
-    competitors: data.competitors.map((competitor) => verifyMention(competitor, normalizedRawText))
+    brand: verifyMention(data.brand, brand, normalizedRawText),
+    competitors: data.competitors.map((competitor) => verifyMention(competitor, competitor.name, normalizedRawText))
   };
 }
 
@@ -297,12 +329,12 @@ async function extractAndPersistRow(input: {
           : await extractGeminiStructuredData(extractionArgs);
 
     // MENTION-VERIFY-1: downgrade any "mentioned: true" the model can't back
-    // up with a display_name_found that's actually in the raw response text
-    // — see verifyExtractedMentions above. Must run BEFORE reconciliation so
-    // reconcileExtractedCompetitors' position re-densification sees the
-    // verified mentioned/position values, not the model's raw (possibly
-    // hallucinated) ones.
-    const verifiedData = verifyExtractedMentions(extracted.data, rawResponseText);
+    // up with a display_name_found that both plausibly names the brand AND
+    // is actually in the raw response text — see verifyExtractedMentions
+    // above. Must run BEFORE reconciliation so reconcileExtractedCompetitors'
+    // position re-densification sees the verified mentioned/position values,
+    // not the model's raw (possibly hallucinated) ones.
+    const verifiedData = verifyExtractedMentions(extracted.data, rawResponseText, row.brand_snapshot);
 
     // SCAN-TRACKED-SET-1: never persist an entity in `competitors` that the
     // user didn't choose to track — see reconcileExtractedCompetitors above.

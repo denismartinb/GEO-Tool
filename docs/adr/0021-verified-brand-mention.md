@@ -1,7 +1,7 @@
 # ADR 0021 — Verified brand/competitor mention (MENTION-VERIFY-1)
 
 **Status:** Accepted
-**Date:** 2026-07-25
+**Date:** 2026-07-25 (amended 2026-07-30 — see "Follow-up" below)
 **Deciders:** Founder (approved MENTION-VERIFY-1 Task Intake) + Director
 
 ---
@@ -130,6 +130,46 @@ judgment call.
   scoped strictly to the three structured-extraction functions and their
   shared downstream pipeline.
 
+## Follow-up (2026-07-30) — substring-of-raw-text alone was not enough
+
+The founder smoke-tested the preview immediately after the first version of
+this fix shipped and reproduced the same 23%-style inflation on a different
+prompt: `visibility_score` still counted a mention that never named
+"GenScore". The "Evidencias de mención" panel showed why — for a prompt
+asking about the cost of "a service that analyzes your brand's presence in
+conversational search" (a generic description of GenScore's own category,
+essentially echoing the user's own question back), ChatGPT's answer only
+ever talked about "tu marca" ("your brand") in the abstract. The extraction
+model set `display_name_found: "tu marca"` — which genuinely IS a substring
+of the raw response text, so the first version of `verifyMention` (checking
+only "is the claimed text actually in the response") judged it verified and
+kept `mentioned: true`.
+
+The gap: verifying that the model's claim is *textually present* is
+necessary but not sufficient — it says nothing about whether the claimed
+text actually *names the entity in question*. A model can be internally
+consistent (the exact phrase it points to really is in the response) while
+still being wrong that the phrase constitutes a mention of the brand.
+
+**Fix:** `verifyMention` now requires BOTH conditions before trusting
+`mentioned: true`:
+1. `namesPlausiblyMatch(display_name_found, realName)` — the claimed text
+   must itself plausibly name the real entity (brand's actual name for
+   brand rows; the competitor's own model-returned `name` for competitor
+   rows), using the same tolerant token-normalization
+   (`normalizeCompetitorName`) reconciliation already uses elsewhere in this
+   file for accent/case/legal-symbol-insensitive name comparison. "tu marca"
+   does not plausibly match "GenScore"; "GénScore" does.
+2. The existing substring-of-raw-text check (unchanged) — the claimed text
+   must actually appear in the response, not just resemble the brand name
+   in the abstract.
+
+Both together close the loophole: a fabricated claim fails (2); a genuine
+phrase that doesn't actually name the brand fails (1). `verifyExtractedMentions`
+now takes the project's real `brand` name as a parameter (threaded from
+`row.brand_snapshot` in `extractAndPersistRow`) to make check (1) possible
+for the brand entity.
+
 ## Consequences
 
 **Positive.** `brand_mentioned`/`mentioned_competitors_count` — and every
@@ -138,15 +178,18 @@ topical relevance with an actual textual mention. The failure mode is now
 caught deterministically (testable without a live LLM call) rather than
 depending on prompt wording alone.
 
-**Accepted risk.** The substring check is strict: if a genuine mention's
+**Accepted risk.** Both checks (substring-of-raw-text and
+`namesPlausiblyMatch`) are strict: if a genuine mention's
 `display_name_found` differs meaningfully from how the entity actually
 appears in the text (e.g. the model paraphrases instead of quoting despite
-Layer 2's instruction), it will be downgraded as a false negative rather
-than trusted. This trades a small risk of under-counting real mentions for
-eliminating the observed, more damaging failure of fabricating them —
-consistent with the product's "no fake metrics" principle. Layer 2's
-prompt hardening is the main mitigation for this risk; there is no
-backfill to fix it retroactively for rows already downgraded.
+Layer 2's instruction), or is a real but distant variant
+`namesPlausiblyMatch`'s substring-either-direction rule doesn't recognize,
+it will be downgraded as a false negative rather than trusted. This trades
+a small risk of under-counting real mentions for eliminating the observed,
+more damaging failure of fabricating them — consistent with the product's
+"no fake metrics" principle. Layer 2's prompt hardening is the main
+mitigation for this risk; there is no backfill to fix it retroactively for
+rows already downgraded.
 
 **No historical fix.** Existing runs (like the founder's own `genscore.es`
 history) keep their old, unverified numbers until a new scan runs. The

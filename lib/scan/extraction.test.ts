@@ -434,6 +434,7 @@ describe("runStructuredExtractionForRun", () => {
       selectResult: {
         data: [
           baseRow({
+            brand_snapshot: "GenScore",
             raw_response_text:
               "Un análisis de rendimiento de marca basado en inteligencia artificial es valioso para empresas de diversos sectores."
           })
@@ -469,11 +470,59 @@ describe("runStructuredExtractionForRun", () => {
     expect(extractedJson.brand).toEqual({ mentioned: false, display_name_found: null, evidence: [], position: null });
   });
 
-  it("MENTION-VERIFY-1: keeps brand_mentioned true when the claimed display_name_found genuinely appears in the raw response text", async () => {
+  it("MENTION-VERIFY-1 follow-up: persists brand_mentioned false when display_name_found is a generic phrase genuinely in the text but not a plausible brand name — the exact production case (2026-07-30)", async () => {
+    // The response only generically described "your brand's presence in
+    // conversational search" (echoing the user's own question) without ever
+    // naming "GenScore". The model set display_name_found: "tu marca" —
+    // which DOES appear in the raw text, so verifying substring-presence
+    // alone (the first MENTION-VERIFY-1 pass) was not enough; this is what
+    // the namesPlausiblyMatch check closes.
     const updateCalls: Array<Record<string, unknown>> = [];
     const service = createServiceMock({
       selectResult: {
-        data: [baseRow({ raw_response_text: "GenScore is a solid GEO visibility tool for small businesses." })],
+        data: [
+          baseRow({
+            brand_snapshot: "GenScore",
+            raw_response_text:
+              "Existen servicios que analizan la presencia de tu marca en la búsqueda conversacional, con distintos costes."
+          })
+        ],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput({
+        brand: {
+          mentioned: true,
+          display_name_found: "tu marca",
+          evidence: ["analizan la presencia de tu marca en la búsqueda conversacional"],
+          position: 1
+        }
+      }),
+      model: "gemini-2.5-flash"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(updateCalls[0].brand_mentioned).toBe(false);
+  });
+
+  it("MENTION-VERIFY-1: keeps brand_mentioned true when the claimed display_name_found genuinely names the brand and appears in the raw response text", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          baseRow({
+            brand_snapshot: "GenScore",
+            raw_response_text: "GenScore is a solid GEO visibility tool for small businesses."
+          })
+        ],
         error: null
       },
       updateCalls
@@ -527,7 +576,7 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       }
     });
 
-    const result = verifyExtractedMentions(data, "This response never names the brand at all.");
+    const result = verifyExtractedMentions(data, "This response never names the brand at all.", "GenScore");
 
     expect(result.brand).toEqual({ mentioned: false, display_name_found: null, evidence: [], position: null });
   });
@@ -537,7 +586,32 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       brand: { mentioned: true, display_name_found: null, evidence: ["some evidence"], position: 1 }
     });
 
-    const result = verifyExtractedMentions(data, "GenScore is mentioned right here.");
+    const result = verifyExtractedMentions(data, "GenScore is mentioned right here.", "GenScore");
+
+    expect(result.brand).toEqual({ mentioned: false, display_name_found: null, evidence: [], position: null });
+  });
+
+  it("downgrades a mention whose display_name_found genuinely appears in the text but does not plausibly name the real brand — the exact production case (2026-07-30)", () => {
+    // The response never named "GenScore" at all — it just generically
+    // described "your brand's presence in conversational search" (echoing
+    // the user's own question). The extraction model set
+    // display_name_found: "tu marca", which DOES appear in the raw text
+    // (so the substring-only check alone would wrongly keep this mentioned),
+    // but "tu marca" is not a plausible name for "GenScore".
+    const data = baseData({
+      brand: {
+        mentioned: true,
+        display_name_found: "tu marca",
+        evidence: ["analizan la presencia de tu marca en la búsqueda conversacional"],
+        position: 1
+      }
+    });
+
+    const result = verifyExtractedMentions(
+      data,
+      "Existen servicios que analizan la presencia de tu marca en la búsqueda conversacional, con distintos costes.",
+      "GenScore"
+    );
 
     expect(result.brand).toEqual({ mentioned: false, display_name_found: null, evidence: [], position: null });
   });
@@ -552,7 +626,7 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       }
     });
 
-    const result = verifyExtractedMentions(data, "  genscore   is a great tool.");
+    const result = verifyExtractedMentions(data, "  genscore   is a great tool.", "GenScore");
 
     expect(result.brand).toEqual({
       mentioned: true,
@@ -567,12 +641,12 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       brand: { mentioned: false, display_name_found: null, evidence: [], position: null }
     });
 
-    const result = verifyExtractedMentions(data, "irrelevant text");
+    const result = verifyExtractedMentions(data, "irrelevant text", "GenScore");
 
     expect(result.brand).toEqual({ mentioned: false, display_name_found: null, evidence: [], position: null });
   });
 
-  it("applies the same verification to every competitor independently", () => {
+  it("applies the same verification to every competitor independently, against each competitor's own returned name", () => {
     const data = baseData({
       competitors: [
         { name: "RealCompetitor", mentioned: true, display_name_found: "RealCompetitor", evidence: ["seen"], position: 1 },
@@ -580,7 +654,7 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       ]
     });
 
-    const result = verifyExtractedMentions(data, "RealCompetitor is a solid choice.");
+    const result = verifyExtractedMentions(data, "RealCompetitor is a solid choice.", "GenScore");
 
     expect(result.competitors).toEqual([
       { name: "RealCompetitor", mentioned: true, display_name_found: "RealCompetitor", evidence: ["seen"], position: 1 },

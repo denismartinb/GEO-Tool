@@ -330,9 +330,9 @@ contaminated set. No schema/RLS changes. `pnpm test` 722/722,
 
 ---
 
-## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25)
+## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25, amended 2026-07-30)
 
-**Status: Implemented, pending Human Gate.** Founder tested `genscore.es` (a
+**Status: Implemented (two passes), pending Human Gate.** Founder tested `genscore.es` (a
 brand-new product, essentially zero online footprint) and got "% de mención"
 = 23% when it should be 0% — the brand is never genuinely mentioned in any
 collected AI response. The "Evidencias de mención" panel showed why: for one
@@ -363,8 +363,23 @@ topical relevance; "evidence"/"display_name_found" must be verbatim quotes.
 `hasUntrustedCompetitorSet` was already a general staleness check, not
 specific to ADR 0018 — automatically extends `prominence`/`standing`/
 `geo_score`-confidence null-gating to any run with a pre-fix row, with no
-new run-scoring code. No schema/RLS changes, no backfill. `pnpm test`
-747/747, `pnpm run validate` green.
+new run-scoring code. No schema/RLS changes, no backfill.
+
+**Follow-up found on the founder's own preview smoke (2026-07-30):** the
+first pass wasn't enough. A prompt about the cost of "a service that
+analyzes your brand's presence in conversational search" (essentially
+echoing GenScore's own category back at the model) got a ChatGPT answer
+that only ever talked about "tu marca" ("your brand") in the abstract,
+never naming GenScore. The extraction model set `display_name_found: "tu
+marca"` — which genuinely IS a substring of the raw response, so the
+first version's substring-only check wrongly kept it `mentioned: true`.
+Fix: `verifyMention` now ALSO requires `display_name_found` to plausibly
+NAME the real entity (`namesPlausiblyMatch`, reusing the same tolerant
+token-normalization `reconcileExtractedCompetitors` already uses) —
+"tu marca" does not plausibly match "GenScore". Both checks (substring-
+present AND plausible-name) are now required together; regression test
+added reproducing this exact case. `pnpm test` 749/749, `pnpm run
+validate` green.
 
 **Deliberately NOT done (see ADR 0021 for the full reasoning):**
 - **`visibility_score`/`competitor_gap_score` themselves are NOT nulled**
