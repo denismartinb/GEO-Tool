@@ -207,6 +207,33 @@ describe("runDailyCronScan", () => {
     expect(createPendingScanRunForCron).not.toHaveBeenCalled();
   });
 
+  it("still skips a project scanned well within the drift-adjusted interval (20h ago)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 20 * HOUR_MS).toISOString() }]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "p1", status: "skipped_recent" }]);
+    expect(createPendingScanRunForCron).not.toHaveBeenCalled();
+  });
+
+  it("scans a project last run 23h45m ago instead of skipping it to a zero-margin 24h boundary (cron-drift regression)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "p1" }],
+      scanRuns: [
+        { project_id: "p1", status: "completed", created_at: new Date(nowMs - (23 * HOUR_MS + 45 * 60_000)).toISOString() }
+      ]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual([{ projectId: "p1", status: "scanned" }]);
+  });
+
   it("skips a project with 3 consecutive failed runs (failure streak)", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
     const service = fakeServiceClient({

@@ -46,6 +46,23 @@ const RECURRING_INTERVAL_MS_BY_PLAN: Record<string, number> = {
 };
 
 /**
+ * Vercel Hobby fires `/api/cron/weekly-scans` at a fixed wall-clock time, but
+ * a given project's actual scan `created_at` lands a few minutes to tens of
+ * minutes after that (candidate-eligibility queries, `BATCH_CONCURRENCY`
+ * queue position, or a deep link in the self-chaining sweep). Comparing
+ * "now - interval" against yesterday's exact `created_at` with a zero-margin
+ * interval means that lag alone can push the comparison to the wrong side of
+ * the boundary every other firing — a project scans, drifts a few minutes
+ * later than the fixed cron time, gets skipped the next day for being just
+ * under the interval, then catches up and repeats, producing an every-other-
+ * day cadence instead of daily/weekly (see founder report: a project last
+ * scanned two days apart instead of one). Subtracting a safety margin well
+ * above any realistic drift keeps eligibility anchored to the cron's fixed
+ * firing time instead of drifting with it.
+ */
+const CRON_DRIFT_SAFETY_MARGIN_MS = 2 * 60 * 60 * 1000;
+
+/**
  * How many projects are scanned concurrently within a single cron
  * invocation. Each individual scan already parallelizes its own per-prompt
  * Gemini calls (see ADR 0003 addendum), so this is a second, smaller layer
@@ -266,7 +283,7 @@ export async function runDailyCronScan({
         .limit(FAILURE_STREAK_LIMIT);
 
       const planId = planIdByOwnerId.get(project.owner_user_id as string) ?? "pro";
-      const intervalMs = RECURRING_INTERVAL_MS_BY_PLAN[planId] ?? DAY_MS;
+      const intervalMs = (RECURRING_INTERVAL_MS_BY_PLAN[planId] ?? DAY_MS) - CRON_DRIFT_SAFETY_MARGIN_MS;
       const cutoffIso = new Date(Date.now() - intervalMs).toISOString();
 
       return { id: project.id, recentRuns: recentRuns ?? [], cutoffIso };
