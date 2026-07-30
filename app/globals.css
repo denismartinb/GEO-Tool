@@ -2938,20 +2938,22 @@ textarea.add-prompts-text-input {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 1.5px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-3);
+  border: 1.5px solid var(--brand-line);
+  background: var(--brand-surface);
+  color: var(--brand-ink-3);
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .header-bell:hover {
-  background: var(--surface-2);
-  color: var(--ink-2);
+  background: var(--brand-canvas);
+  color: var(--brand-ink-2);
 }
 
 /* ============================================================
    Notification bell + dropdown panel (header, all screens)
+   Repainted to brand v3 tokens (NOTIF-SERVER-1b) — this block used to be
+   the one corner of the app still on the pre-BRAND-5b indigo (--accent).
    ============================================================ */
 .notif-bell-wrap {
   position: relative;
@@ -2967,8 +2969,8 @@ textarea.add-prompts-text-input {
   width: 9px;
   height: 9px;
   border-radius: 999px;
-  background: var(--accent);
-  border: 1.5px solid var(--surface);
+  background: var(--brand-blue);
+  border: 1.5px solid var(--brand-surface);
 }
 
 .notif-panel {
@@ -2978,8 +2980,8 @@ textarea.add-prompts-text-input {
   z-index: 210;
   width: 320px;
   max-width: calc(100vw - 32px);
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
   border-radius: var(--r-lg);
   box-shadow: var(--sh-pop);
   overflow: hidden;
@@ -2991,20 +2993,24 @@ textarea.add-prompts-text-input {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
-  font-size: 13.5px;
-  font-weight: 750;
-  color: var(--ink);
-  border-bottom: 1px solid var(--line-soft);
+  padding: 14px 16px 10px;
+}
+
+.notif-panel-title {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--brand-ink);
+  letter-spacing: -0.005em;
 }
 
 .notif-mark-read {
   background: none;
   border: none;
   padding: 0;
-  color: var(--accent);
-  font-size: 12px;
-  font-weight: 650;
+  color: var(--brand-blue);
+  font-size: 11.5px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -3012,39 +3018,98 @@ textarea.add-prompts-text-input {
   text-decoration: underline;
 }
 
+.notif-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--brand-line-soft);
+}
+
+.notif-tab {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-ink-4);
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.notif-tab:hover {
+  color: var(--brand-ink-2);
+}
+
+.notif-tab.active {
+  color: var(--brand-blue);
+  background: var(--brand-blue-soft);
+}
+
+.notif-tab-count {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--brand-blue);
+  border-radius: 999px;
+  padding: 1px 5px;
+}
+
+.notif-day-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--brand-ink-4);
+  padding: 10px 16px 4px;
+}
+
 .notif-empty {
   padding: 18px 14px;
   font-size: 12.5px;
-  color: var(--ink-4);
+  color: var(--brand-ink-4);
   text-align: center;
 }
 
 .notif-list {
-  max-height: 320px;
+  max-height: 360px;
   overflow-y: auto;
 }
 
 .notif-item {
   display: flex;
-  gap: 10px;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line-soft);
+  gap: 11px;
+  padding: 10px 16px;
+  color: inherit;
+  text-decoration: none;
 }
 
-.notif-item:last-child {
-  border-bottom: none;
+.notif-item + .notif-item {
+  border-top: 1px solid var(--brand-line-soft);
+}
+
+.notif-item-link:hover {
+  background: var(--brand-canvas);
 }
 
 .notif-item-icon {
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: 999px;
-  background: var(--pos-soft);
-  color: var(--pos-ink);
   flex: 0 0 auto;
 }
+
+.notif-icon-pos { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.notif-icon-neg { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.notif-icon-blue { background: var(--brand-blue-soft); color: var(--brand-blue); }
+/* --brand-warm/--brand-cyan fail AA contrast as icon strokes on their own
+   soft background — darkened stroke colors here, soft token kept only for
+   the background (docs/specs/notifications/notifications-v1.md 6.2). */
+.notif-icon-warm { background: rgba(255, 176, 32, .16); color: #a15c00; }
+.notif-icon-cyan { background: rgba(9, 197, 214, .12); color: #0a8f9c; }
 
 .notif-item-body {
   min-width: 0;
@@ -3056,31 +3121,181 @@ textarea.add-prompts-text-input {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: 750;
+  color: var(--brand-ink);
 }
 
 .notif-item-time {
   margin-left: auto;
   font-size: 11px;
   font-weight: 600;
-  color: var(--ink-4);
+  color: var(--brand-ink-4);
   flex-shrink: 0;
 }
 
 .notif-unread-dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--brand-blue);
   flex-shrink: 0;
 }
 
+.notif-item-target {
+  font-size: 11.5px;
+  color: var(--brand-ink-3);
+  margin-top: 1px;
+}
+
 .notif-item-desc {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   font-size: 12px;
-  color: var(--ink-3);
+  color: var(--brand-ink-3);
   line-height: 1.45;
+}
+
+.notif-panel-foot {
+  padding: 10px 16px;
+  text-align: center;
+  border-top: 1px solid var(--brand-line-soft);
+}
+
+.notif-panel-foot a {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--brand-blue);
+  text-decoration: none;
+}
+
+.notif-panel-foot a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Full "/dashboard/notifications" page — reuses .notif-tabs/.notif-tab/
+   .notif-day-label/.notif-icon-* from the bell panel above; only the
+   row layout itself (wider, more breathing room) gets its own classes.
+   ============================================================ */
+.notif-page-card {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--brand-shadow-card);
+  overflow: hidden;
+}
+
+.notif-page-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px 14px;
+}
+
+.notif-page-head h1 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--brand-ink);
+  margin: 0;
+}
+
+.notif-page-mark-read {
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--brand-blue);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.notif-page-mark-read:hover {
+  text-decoration: underline;
+}
+
+.notif-page-card .notif-tabs {
+  padding: 0 22px 12px;
+}
+
+.notif-page-card .notif-day-label {
+  padding: 16px 22px 6px;
+}
+
+.notif-page-empty {
+  padding: 40px 22px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--brand-ink-4);
+}
+
+.notif-row {
+  display: flex;
+  gap: 13px;
+  padding: 13px 22px;
+  align-items: flex-start;
+  color: inherit;
+  text-decoration: none;
+}
+
+.notif-row + .notif-row {
+  border-top: 1px solid var(--brand-line-soft);
+}
+
+a.notif-row:hover {
+  background: var(--brand-canvas);
+}
+
+.notif-row-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+
+.notif-row-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.notif-row-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 750;
+  color: var(--brand-ink);
+}
+
+.notif-row-time {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--brand-ink-4);
+  flex-shrink: 0;
+}
+
+.notif-row-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--brand-blue);
+  flex-shrink: 0;
+}
+
+.notif-row-target {
+  font-size: 12.5px;
+  color: var(--brand-ink-3);
+  margin-top: 1px;
+}
+
+.notif-row-desc {
+  font-size: 12.5px;
+  color: var(--brand-ink-3);
+  margin: 5px 0 0;
+  line-height: 1.5;
 }
 
 /* ============================================================

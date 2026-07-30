@@ -12,6 +12,16 @@
  */
 export type NotificationSeverity = "success" | "info" | "warning" | "critical";
 
+/**
+ * Row limits for the two read surfaces (NOTIF-SERVER-1b). Kept here — not in
+ * lib/project-workspace.ts, which has `import "server-only"` — because
+ * components/notification-bell.tsx (a Client Component) needs
+ * NOTIFICATIONS_BELL_LIMIT too, and a value import from a server-only module
+ * breaks the client/server boundary at build time.
+ */
+export const NOTIFICATIONS_BELL_LIMIT = 15;
+export const NOTIFICATIONS_PAGE_LIMIT = 50;
+
 export type NotificationPayloadByType = {
   scan_completed: {
     runId: string;

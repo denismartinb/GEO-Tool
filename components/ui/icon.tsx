@@ -113,6 +113,29 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
       </>
     ),
     trendUp: <path d="M3 17l4-5 4 3 4-6 4 4" />,
+    trendDown: <path d="M3 7l4 5 4-3 4 6 4-4" />,
+    flag: (
+      <>
+        <path d="M6 21V3.5" />
+        <path d="M6 4.5h11.5l-2.4 3.9 2.4 3.9H6z" />
+      </>
+    ),
+    hourglass: (
+      <>
+        <path d="M7.5 3h9M7.5 21h9" />
+        <path d="M9 3v3.2c0 1.9 3 3.4 3 5.3 0-1.9 3-3.4 3-5.3V3" />
+        <path d="M9 21v-3.2c0-1.9 3-3.4 3-5.3 0 1.9 3 3.4 3 5.3V21" />
+      </>
+    ),
+    robot: (
+      <>
+        <rect x="3.5" y="8" width="17" height="11.5" rx="3.5" />
+        <path d="M12 8V4.8" />
+        <circle cx="12" cy="3.4" r="1.4" />
+        <path d="M8.8 12.8v1.4M15.2 12.8v1.4" />
+        <path d="M9.8 16.8h4.4" />
+      </>
+    ),
     bolt: <path d="M13 2L4.09 12.96A1 1 0 0 0 5 14.5h6.5L10 22l9.94-10.96A1 1 0 0 0 19 9.5H12.5z" />,
     link: (
       <>
