@@ -361,12 +361,43 @@ function makeScanPromptResultsTable(existingProviders: string[] = []) {
   return { inserted, table: builder };
 }
 
+type NotificationCall = {
+  owner_user_id: string;
+  project_id: string | null;
+  type: string;
+  severity: string;
+  dedupe_key: string;
+  payload_json: Record<string, unknown>;
+};
+
+/**
+ * Fake `notifications` table covering exactly the shape emitNotification
+ * issues (`service.from("notifications").upsert(row, options)`), recording
+ * every call for assertions. `behavior: "error"/"throws"` lets a test prove
+ * emission failures never affect the run's own outcome (NOTIF-SERVER-1a
+ * fail-soft requirement) without emitNotification's own unit tests
+ * (lib/notifications/emit.test.ts) needing to be duplicated here.
+ */
+function makeNotificationsTable(behavior: "ok" | "error" | "throws" = "ok") {
+  const calls: NotificationCall[] = [];
+  const table = {
+    upsert: (row: NotificationCall, _options?: Record<string, unknown>) => {
+      calls.push({ ...row });
+      if (behavior === "throws") throw new Error("connection reset");
+      if (behavior === "error") return Promise.resolve({ error: { message: "constraint violation" } });
+      return Promise.resolve({ error: null });
+    }
+  };
+  return { calls, table };
+}
+
 function buildClients(
   {
     promptJobMaxAttempts,
     previousRunId = null,
     previousRecommendationRows = [],
-    ownerPlan
+    ownerPlan,
+    notificationsBehavior = "ok"
   }: {
     promptJobMaxAttempts: number;
     previousRunId?: string | null;
@@ -376,6 +407,7 @@ function buildClients(
      *  resolvePlan falls back to the default plan ("pro", caps.engines: 2), same as
      *  every test written before this option existed. */
     ownerPlan?: string;
+    notificationsBehavior?: "ok" | "error" | "throws";
   },
   existingProviders: string[] = []
 ) {
@@ -421,6 +453,7 @@ function buildClients(
   const scanRunsTable = makeScanRunsTable(previousRunId);
   const scanPromptResultsTable = makeScanPromptResultsTable(existingProviders);
   const recommendationsTable = makeRecommendationsTable(previousRecommendationRows);
+  const notificationsTable = makeNotificationsTable(notificationsBehavior);
 
   const service = {
     from(table: string) {
@@ -428,6 +461,7 @@ function buildClients(
       if (table === "scan_runs") return scanRunsTable;
       if (table === "scan_prompt_results") return scanPromptResultsTable.table;
       if (table === "recommendations") return recommendationsTable.table;
+      if (table === "notifications") return notificationsTable.table;
       if (table === "profiles") {
         return {
           select: () => ({
@@ -497,7 +531,7 @@ function buildClients(
     }
   } as unknown as SupabaseClient;
 
-  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable, recommendationsTable };
+  return { service, supabase, jobsTable, scanRunsTable, scanPromptResultsTable, recommendationsTable, notificationsTable };
 }
 
 const SUCCESS_RESPONSE = {
@@ -980,6 +1014,316 @@ describe("executePendingScan — recommendation history across runs (RECS-3)", (
     const genuinelyFixedRow = recommendationsTable.rows.find((r) => r.id === "old-genuinely-fixed")!;
     expect(genuinelyFixedRow.status).toBe("resolved");
     expect(genuinelyFixedRow.resolved_in_run_id).toBe(RUN_ID);
+  });
+});
+
+describe("executePendingScan — notifications (NOTIF-SERVER-1a)", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+  });
+
+  const PREVIOUS_RUN_ID = "77777777-7777-7777-7777-777777777777";
+
+  it("emits scan_completed, keyed to this run's own id, once the run is marked completed", async () => {
+    const { service, supabase, notificationsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const scanCompleted = notificationsTable.calls.filter((c) => c.type === "scan_completed");
+    expect(scanCompleted).toHaveLength(1);
+    expect(scanCompleted[0]).toMatchObject({
+      owner_user_id: OWNER_ID,
+      project_id: PROJECT_ID,
+      severity: "success",
+      dedupe_key: `scan_completed:${RUN_ID}`
+    });
+    expect(scanCompleted[0].payload_json).toMatchObject({ runId: RUN_ID, promptsProcessed: 1 });
+  });
+
+  it("emits scan_failed when no jobs exist for the run (the non-catch-block failure path)", async () => {
+    const { supabase } = buildClients({ promptJobMaxAttempts: 3 });
+    const notificationsTable = makeNotificationsTable();
+    const service = {
+      from(table: string) {
+        if (table === "jobs") {
+          return {
+            select: () => ({
+              eq: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) })
+            })
+          };
+        }
+        if (table === "notifications") return notificationsTable.table;
+        return noopTable();
+      }
+    } as unknown as ServiceClient;
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).rejects.toThrow();
+
+    expect(notificationsTable.calls).toHaveLength(1);
+    expect(notificationsTable.calls[0]).toMatchObject({
+      type: "scan_failed",
+      owner_user_id: OWNER_ID,
+      dedupe_key: `scan_failed:${RUN_ID}`
+    });
+    expect(notificationsTable.calls[0].payload_json.errorSummary).toBe("No se han encontrado jobs para el escaneo.");
+  });
+
+  it("emits scan_failed via the generic catch-all path (e.g. a terminal GeminiConfigError)", async () => {
+    const { GeminiConfigError } = await vi.importActual<typeof import("@/lib/llm/gemini")>("@/lib/llm/gemini");
+    generateGeminiVisibilityAnswer.mockRejectedValue(new GeminiConfigError("Missing GEMINI_API_KEY"));
+
+    const { service, supabase, notificationsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).rejects.toThrow();
+
+    const scanFailed = notificationsTable.calls.filter((c) => c.type === "scan_failed");
+    expect(scanFailed).toHaveLength(1);
+    expect(scanFailed[0].dedupe_key).toBe(`scan_failed:${RUN_ID}`);
+  });
+
+  it("aggregates every gap resolved this run into a single gap_resolved notification, not one per gap", async () => {
+    // Current run's engine output no longer contains any of the 3
+    // previously-open gaps, so all 3 resolve in the same run.
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([]);
+
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      previousRunId: PREVIOUS_RUN_ID,
+      previousRecommendationRows: [
+        {
+          id: "r1",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-a",
+          consecutive_runs_open: 1,
+          resolved_in_run_id: null,
+          title: "Cierra brecha A"
+        },
+        {
+          id: "r2",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-b",
+          consecutive_runs_open: 1,
+          resolved_in_run_id: null,
+          title: "Cierra brecha B"
+        },
+        {
+          id: "r3",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-c",
+          consecutive_runs_open: 1,
+          resolved_in_run_id: null,
+          title: "Cierra brecha C"
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const resolved = notificationsTable.calls.filter((c) => c.type === "gap_resolved");
+    expect(resolved).toHaveLength(1);
+    expect(resolved[0].dedupe_key).toBe(`gap_resolved:${RUN_ID}`);
+    expect(resolved[0].payload_json).toMatchObject({ runId: RUN_ID, count: 3 });
+    expect((resolved[0].payload_json.sampleTitles as string[]).length).toBeLessThanOrEqual(3);
+  });
+
+  it("emits gap_pending exactly when a gap crosses 3 consecutive open runs", async () => {
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Recupera terreno frente a Orange",
+        description: "desc",
+        rule_id: "rule_competitor_gap_001",
+        recommendation_type: "close_competitor_gap",
+        impact: "high",
+        effort: "medium",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "close_competitor_gap:orange"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      previousRunId: PREVIOUS_RUN_ID,
+      previousRecommendationRows: [
+        {
+          id: "r1",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "close_competitor_gap:orange",
+          consecutive_runs_open: 2,
+          resolved_in_run_id: null,
+          title: "Recupera terreno frente a Orange"
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const pending = notificationsTable.calls.filter((c) => c.type === "gap_pending");
+    expect(pending).toHaveLength(1);
+    expect(pending[0].dedupe_key).toBe(`gap_pending:${PROJECT_ID}:close_competitor_gap:orange`);
+    expect(pending[0].payload_json).toMatchObject({ consecutiveRuns: 3, impact: "high" });
+  });
+
+  it("does not re-emit gap_pending once a gap is already past the crossing run (consecutive_runs_open going 3 -> 4)", async () => {
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Recupera terreno frente a Orange",
+        description: "desc",
+        rule_id: "rule_competitor_gap_001",
+        recommendation_type: "close_competitor_gap",
+        impact: "high",
+        effort: "medium",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "close_competitor_gap:orange"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      previousRunId: PREVIOUS_RUN_ID,
+      previousRecommendationRows: [
+        {
+          id: "r1",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "close_competitor_gap:orange",
+          consecutive_runs_open: 3,
+          resolved_in_run_id: null,
+          title: "Recupera terreno frente a Orange"
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(notificationsTable.calls.filter((c) => c.type === "gap_pending")).toHaveLength(0);
+  });
+
+  it("emits at most one gap_pending when two gaps cross the threshold together, preferring the higher-impact one", async () => {
+    vi.mocked(generateRecommendationsForRun).mockReturnValueOnce([
+      {
+        priority_rank: 1,
+        title: "Gap de impacto medio",
+        description: "desc",
+        rule_id: "rule_visibility_001",
+        recommendation_type: "increase_brand_visibility",
+        impact: "medium",
+        effort: "medium",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "gap-medium"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number],
+      {
+        priority_rank: 2,
+        title: "Gap de impacto alto",
+        description: "desc",
+        rule_id: "rule_competitor_gap_001",
+        recommendation_type: "close_competitor_gap",
+        impact: "high",
+        effort: "medium",
+        confidence: "high",
+        source_type: "rule",
+        evidence_json: {},
+        dedupe_key: "gap-high"
+      } as unknown as ReturnType<typeof generateRecommendationsForRun>[number]
+    ]);
+
+    const { service, supabase, notificationsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      previousRunId: PREVIOUS_RUN_ID,
+      previousRecommendationRows: [
+        {
+          id: "r1",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-medium",
+          consecutive_runs_open: 2,
+          resolved_in_run_id: null,
+          title: "Gap de impacto medio"
+        },
+        {
+          id: "r2",
+          run_id: PREVIOUS_RUN_ID,
+          project_id: PROJECT_ID,
+          status: "active",
+          dedupe_key: "gap-high",
+          consecutive_runs_open: 2,
+          resolved_in_run_id: null,
+          title: "Gap de impacto alto"
+        }
+      ]
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const pending = notificationsTable.calls.filter((c) => c.type === "gap_pending");
+    expect(pending).toHaveLength(1);
+    expect(pending[0].dedupe_key).toBe(`gap_pending:${PROJECT_ID}:gap-high`);
+  });
+
+  it("resolves the notification owner from the project, never from the run — the field the cron path leaves null", async () => {
+    // buildClients' scan_runs fake never returns triggered_by_user_id at all
+    // (only id/project_id/status/total_prompts), which is structurally
+    // identical to a cron-triggered run, where that column is genuinely null
+    // (0008_recurring_scans.sql). If emission ever started reading it, this
+    // test would have nothing to read and would fail loudly instead of
+    // silently dropping the notification the way the real cron path would.
+    const { service, supabase, notificationsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(notificationsTable.calls.length).toBeGreaterThan(0);
+    for (const call of notificationsTable.calls) {
+      expect(call.owner_user_id).toBe(OWNER_ID);
+    }
+  });
+
+  it("a notification emission failure never changes the run's own completed outcome", async () => {
+    const { service, supabase, jobsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      notificationsBehavior: "throws"
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    expect(finalizeJob.status).toBe("completed");
   });
 });
 

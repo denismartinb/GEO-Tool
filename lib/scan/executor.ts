@@ -24,6 +24,14 @@ import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/li
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+import { emitNotification } from "@/lib/notifications/emit";
+import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "@/lib/notifications/dedupe-keys";
+
+// gap_resolved's sampleTitles (NOTIF-SERVER-1a) needs each previous-run
+// recommendation's title, which PreviousRecommendationRow (RECS-3) doesn't
+// carry — extended locally rather than widening that shared type for one
+// caller.
+type PreviousRecommendationRowWithTitle = PreviousRecommendationRow & { title: string };
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -555,15 +563,25 @@ export async function executePendingScan({
   ]);
 
   if (jobsError || !jobsRaw?.length) {
+    const noJobsErrorSummary = "No se han encontrado jobs para el escaneo.";
     await service
       .from("scan_runs")
       .update({
         status: "failed",
-        error_summary: "No se han encontrado jobs para el escaneo.",
+        error_summary: noJobsErrorSummary,
         finished_at: new Date().toISOString()
       })
       .eq("id", runId)
       .eq("project_id", projectId);
+
+    await emitNotification(service, {
+      ownerUserId: project.owner_user_id as string,
+      projectId,
+      type: "scan_failed",
+      severity: "critical",
+      dedupeKey: scanFailedKey(runId),
+      payload: { runId, errorSummary: noJobsErrorSummary }
+    });
 
     throw new ProjectActionError("scan_failed");
   }
@@ -859,6 +877,15 @@ export async function executePendingScan({
       currentRow: { visibility_score: scores.visibility_score, details_json: scores.details_json }
     });
 
+    // Hoisted out of the try block below so the scan_completed notification
+    // (emitted later, once the run is actually marked completed) can still
+    // report a best-effort payload even if recommendation generation throws —
+    // these stay at their fail-soft defaults (0 / null) in that case, rather
+    // than the notification not firing at all.
+    let newRecommendationsCount = 0;
+    let resolvedGapsCount = 0;
+    let previousVisibilityScore: number | null = null;
+
     // Fail-soft: derived recommendations must never sink an otherwise-successful
     // scan. The real scan work (answers + scores) is already persisted above; if
     // recommendation generation or persistence throws, log it and still complete
@@ -905,6 +932,7 @@ export async function executePendingScan({
           category: row.prompt_id ? categoryByPromptId.get(row.prompt_id) ?? null : null
         }))
       });
+      newRecommendationsCount = recommendationRows.length;
 
       // RECS-3 ("memory" between scans): identify the immediately preceding
       // COMPLETED run of this project via scan_runs (not by filtering
@@ -924,14 +952,25 @@ export async function executePendingScan({
         .limit(1)
         .maybeSingle();
 
-      let previousRows: PreviousRecommendationRow[] = [];
+      let previousRows: PreviousRecommendationRowWithTitle[] = [];
       if (previousRunRow?.id) {
+        // scan_completed's visibilityDelta (NOTIF-SERVER-1a): reuses the
+        // previous-completed-run lookup above rather than re-querying for
+        // it, only adding this one small follow-up read of that run's own
+        // score.
+        const { data: previousScoreRow } = await service
+          .from("run_scores")
+          .select("visibility_score")
+          .eq("run_id", previousRunRow.id as string)
+          .maybeSingle();
+        previousVisibilityScore = previousScoreRow ? Number(previousScoreRow.visibility_score) : null;
+
         const { data: previousRowsRaw } = await service
           .from("recommendations")
-          .select("dedupe_key, status, consecutive_runs_open")
+          .select("dedupe_key, status, consecutive_runs_open, title")
           .eq("project_id", projectId)
           .eq("run_id", previousRunRow.id as string);
-        previousRows = (previousRowsRaw ?? []) as PreviousRecommendationRow[];
+        previousRows = (previousRowsRaw ?? []) as PreviousRecommendationRowWithTitle[];
       }
 
       const { resolvedDedupeKeys, consecutiveRunsByDedupeKey } = computeRecommendationTransition({
@@ -957,6 +996,26 @@ export async function executePendingScan({
             projectId,
             runId,
             message: resolveError.message
+          });
+        } else {
+          resolvedGapsCount = resolvedDedupeKeys.length;
+          // One aggregated notification for every gap closed this run, not
+          // one per gap (docs/specs/notifications/notifications-v1.md 4.3) —
+          // three brechas cerradas a la vez is one good-news notification,
+          // not three.
+          const titleByDedupeKey = new Map(previousRows.map((row) => [row.dedupe_key, row.title]));
+          const sampleTitles = resolvedDedupeKeys
+            .map((key) => titleByDedupeKey.get(key))
+            .filter((title): title is string => Boolean(title))
+            .slice(0, 3);
+
+          await emitNotification(service, {
+            ownerUserId: project.owner_user_id as string,
+            projectId,
+            type: "gap_resolved",
+            severity: "success",
+            dedupeKey: gapResolvedKey(runId),
+            payload: { runId, count: resolvedGapsCount, sampleTitles }
           });
         }
       }
@@ -1003,6 +1062,35 @@ export async function executePendingScan({
             consecutive_runs_open: consecutiveRunsByDedupeKey.get(rec.dedupe_key) ?? 1
           }))
         );
+      }
+
+      // gap_pending: fire exactly on the run where a gap CROSSES 3
+      // consecutive open runs (not >=3) — the intent is explicit in code,
+      // not left resting only on the dedupe unique index. At most one per
+      // scan: several gaps crossing at once is real, but three nudges in one
+      // notification list is noise, so only the highest-impact one is worth
+      // surfacing (tie-broken by priority_rank ascending, i.e. the engine's
+      // own severity ordering).
+      const GAP_PENDING_THRESHOLD = 3;
+      const IMPACT_WEIGHT: Record<"low" | "medium" | "high", number> = { low: 1, medium: 2, high: 3 };
+      const crossingThreshold = recommendationRows
+        .filter((rec) => (consecutiveRunsByDedupeKey.get(rec.dedupe_key) ?? 1) === GAP_PENDING_THRESHOLD)
+        .sort((a, b) => IMPACT_WEIGHT[b.impact] - IMPACT_WEIGHT[a.impact] || a.priority_rank - b.priority_rank);
+
+      if (crossingThreshold.length > 0) {
+        const pendingRec = crossingThreshold[0];
+        await emitNotification(service, {
+          ownerUserId: project.owner_user_id as string,
+          projectId,
+          type: "gap_pending",
+          severity: "warning",
+          dedupeKey: gapPendingKey(projectId, pendingRec.dedupe_key),
+          payload: {
+            recommendationTitle: pendingRec.title,
+            consecutiveRuns: GAP_PENDING_THRESHOLD,
+            impact: pendingRec.impact
+          }
+        });
       }
     } catch (recommendationError) {
       // The scan itself succeeded; only the derived recommendations failed.
@@ -1051,6 +1139,26 @@ export async function executePendingScan({
       })
       .eq("id", runId)
       .eq("project_id", projectId);
+
+    // Emitted only after the run's own status update above is durable — a
+    // notification must never describe a state that hasn't actually landed.
+    await emitNotification(service, {
+      ownerUserId: project.owner_user_id as string,
+      projectId,
+      type: "scan_completed",
+      severity: "success",
+      dedupeKey: scanCompletedKey(runId),
+      payload: {
+        runId,
+        promptsProcessed: totalSuccessCount ?? 0,
+        providers,
+        visibilityScore: scores.visibility_score,
+        visibilityDelta:
+          previousVisibilityScore !== null ? scores.visibility_score - previousVisibilityScore : null,
+        newRecommendations: newRecommendationsCount,
+        resolvedGaps: resolvedGapsCount
+      }
+    });
   } catch (error) {
     const errorSummary = getSanitizedScanError(error);
 
@@ -1095,6 +1203,15 @@ export async function executePendingScan({
       })
       .eq("id", runId)
       .eq("project_id", projectId);
+
+    await emitNotification(service, {
+      ownerUserId: project.owner_user_id as string,
+      projectId,
+      type: "scan_failed",
+      severity: "critical",
+      dedupeKey: scanFailedKey(runId),
+      payload: { runId, errorSummary }
+    });
 
     throw new ProjectActionError("scan_failed");
   }
