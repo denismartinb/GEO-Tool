@@ -221,13 +221,51 @@ para datos que caben en una. Decisiones finales:
   estira a ocupar el hueco (columnas de grid con ancho fijo, no `auto`).
 
 Pendiente / roto conocido:
-- Prompts (`.pr2-page`, PROMPTS-REDESIGN-1) tiene el mismo bug de columna
-  fija a 460px sin desktop — deliberadamente fuera de esta fase
-  (`PROMPTS-DESKTOP-1`, sin fecha). El resto de zonas (Competidores,
-  Páginas citadas, Recomendaciones, Auditoría web, Escaneos) siguen en el
-  layout pre-BRAND-5b (`.page`, 1320px) y no tienen este bug, pero por eso
-  la consola hoy mezcla dos comportamientos de ancho — inconsistencia
-  conocida, no corregida en este PR.
+- Prompts (`.pr2-page`, PROMPTS-REDESIGN-1) tenía el mismo bug de columna
+  fija a 460px sin desktop — corregido en `PROMPTS-DESKTOP-1`, ver §5. El
+  resto de zonas (Competidores, Páginas citadas, Recomendaciones, Auditoría
+  web, Escaneos) siguen en el layout pre-BRAND-5b (`.page`, 1320px) y no
+  tienen este bug, pero por eso la consola hoy mezcla dos comportamientos
+  de ancho — inconsistencia conocida, no corregida en este PR.
+
+---
+
+## 5. Página de Prompts
+
+**Estado: v3 implementado (PR #260); capa de escritorio añadida en
+PROMPTS-DESKTOP-1.**
+
+**PROMPTS-DESKTOP-1 (2026-07-30, Task Intake aprobado el mismo día):**
+mismo bug que OV-DESKTOP-1 (§4) — `.pr2-page` fija a 460px sin ninguna
+media query de escritorio. A diferencia de Overview, Prompts no tiene
+ningún elemento recortado (no hay carrusel): el único problema es una
+columna estrecha y cada fila de prompt envolviéndose en 2 líneas cuando
+sobra ancho. Decisiones finales:
+- Todas las reglas nuevas viven dentro de `@media (min-width: 900px|
+  1200px|1600px)` — byte-idéntico por debajo de 900px (mismo método de
+  verificación que §4: render con y sin el bloque, diff de la captura).
+- ≥900px: columna a 640px (mismo tramo tablet que Overview, para que la
+  consola lea como un solo sistema de anchos).
+- ≥1200px: columna a 900px — cada fila de prompt cabe en una línea sin
+  envolver, las etiquetas dejan de apilarse debajo del texto. El buscador
+  (`.pr2-search`) se topa a 360px en vez de estirarse sin límite junto al
+  botón — mismo patrón ya usado en `.pr-search` (toolbar de Citations).
+- ≥1600px: tope 1000px, no crece sin límite en monitores ultra-anchos.
+- Mecanismo: solo CSS, sin wrappers nuevos en JSX — a diferencia de
+  Overview, esta pantalla es una sola lista (acordeón de topics o lista
+  plana), no varios widgets distintos, así que no hace falta ninguna
+  reestructuración de grid.
+
+Pendiente / roto conocido:
+- El drawer de detalle de prompt (`.prompt-drawer`, `prompt-drawer.tsx`)
+  sigue siendo un full-screen takeover (`position: fixed; inset: 0`)
+  también en escritorio — decisión explícita del fundador del
+  2026-07-24 (comentario en `app/globals.css` junto a `.prompt-drawer`):
+  se probó y se descartó un panel lateral de 520px/95vw por dejar una
+  franja gris del fondo atenuado. No se ha reabierto esa decisión aquí;
+  en escritorio el drawer sigue ocupando toda la pantalla, lo cual puede
+  sentirse pesado en monitores grandes — vale la pena que el fundador lo
+  sepa, pero no se ha tocado sin su aprobación explícita.
 
 ---
 

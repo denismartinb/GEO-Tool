@@ -1745,6 +1745,31 @@ a {
 .pr2-eng-dot.neg { background: var(--brand-neg); }
 
 /* ============================================================
+   PROMPTS-DESKTOP-1 — Prompts desktop layout (Task Intake approved
+   2026-07-30, see docs/brand/design-decisions-log.md). Same bug as
+   OV-DESKTOP-1: PROMPTS-REDESIGN-1 shipped `.pr2-page` as a fixed 460px
+   phone-width column with no desktop media query. Unlike Overview,
+   Prompts has no clipped element (no carousel) — the only problem is
+   dead space and each prompt row wrapping to 2 lines when width is
+   available, so the fix here is column width + row breathing room only,
+   no structural JSX wrappers needed (this page is a single list, not
+   several distinct widgets). Every rule lives inside a min-width query —
+   verified byte-identical below 900px against the current mobile render.
+   ============================================================ */
+@media (min-width: 900px) {
+  .pr2-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .pr2-page { max-width: 900px; }
+  /* Same cap pattern as `.pr-search` (Citations toolbar) — an unbounded
+     search input just stretches awkwardly next to a small button. */
+  .pr2-search { max-width: 360px; }
+}
+@media (min-width: 1600px) {
+  .pr2-page { max-width: 1000px; }
+}
+
+/* ============================================================
    Overview — page header (title + scan action row)
    ============================================================ */
 .ov-header {
