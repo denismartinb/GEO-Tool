@@ -2,6 +2,9 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
+
+export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
 export async function requireActiveProject(projectId: string) {
   const { supabase } = await requireUser();
@@ -25,28 +28,53 @@ export type WorkspaceProjectSummary = {
   language: string;
 };
 
-export type RecentCompletedRun = {
-  runId: string;
-  projectId: string;
-  domain: string;
-  finishedAt: string;
-  promptsProcessed: number;
+/**
+ * A row from the `notifications` table (NOTIF-SERVER-1a,
+ * supabase/migrations/0021_notifications.sql), written server-side at the
+ * moment each event happens — see lib/notifications/emit.ts. Rendered into
+ * copy by lib/notifications/render.ts, which needs the raw `payloadJson`
+ * plus `projectId` (to resolve the project's domain from `projects`, already
+ * loaded below, at zero extra query cost).
+ */
+export type WorkspaceNotification = {
+  id: string;
+  type: string;
+  severity: string;
+  projectId: string | null;
+  payloadJson: unknown;
+  readAt: string | null;
+  createdAt: string;
 };
 
 /**
- * One notification entry per distinct `project_prompts.created_at` timestamp
- * (i.e. per insert statement) — `now()` is stable for the whole statement in
- * a single Postgres transaction, so every row from one batched insert (the
- * "Añadir prompts" flow, or the plain single-prompt form) shares the exact
- * same value, letting us recover "N prompts added at once" without a schema
- * change or a dedicated notifications table.
+ * The bell only ever shows the most recent NOTIFICATIONS_BELL_LIMIT
+ * notifications — a deliberate one-query-or-nothing tradeoff (docs/specs/
+ * notifications/notifications-v1.md section 5.1), not an oversight. The
+ * unread count is derived from these same rows, so if all
+ * NOTIFICATIONS_BELL_LIMIT are unread the badge reads "15+" instead of the
+ * true count — see components/notification-bell.tsx.
  */
-export type RecentPromptsAdded = {
-  projectId: string;
-  domain: string;
-  addedAt: string;
-  count: number;
+type NotificationSelectRow = {
+  id: string;
+  type: string;
+  severity: string;
+  project_id: string | null;
+  payload_json: unknown;
+  read_at: string | null;
+  created_at: string;
 };
+
+function mapNotificationRow(n: NotificationSelectRow): WorkspaceNotification {
+  return {
+    id: n.id,
+    type: n.type,
+    severity: n.severity,
+    projectId: n.project_id,
+    payloadJson: n.payload_json,
+    readAt: n.read_at,
+    createdAt: n.created_at
+  };
+}
 
 export type WorkspaceCounters = {
   projects: WorkspaceProjectSummary[];
@@ -58,8 +86,7 @@ export type WorkspaceCounters = {
   latestScanDateByProject: Record<string, string | null>;
   latestScoreByProject: Record<string, number | null>;
   scoreDeltaByProject: Record<string, number | null>;
-  recentCompletedRuns: RecentCompletedRun[];
-  recentPromptsAdded: RecentPromptsAdded[];
+  notifications: WorkspaceNotification[];
 };
 
 /**
@@ -100,8 +127,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     { data: completedRuns },
     { data: allRecs },
     { data: scores },
-    { data: recentRuns },
-    { data: recentPromptRows }
+    { data: notificationRows }
   ] = await Promise.all([
     supabase
       .from("projects")
@@ -134,18 +160,14 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       .select("project_id, run_id, visibility_score, created_at")
       .order("created_at", { ascending: false })
       .limit(WORKSPACE_RECENCY_QUERY_LIMIT),
+    // No .eq("owner_user_id", ...) — the notifications_select_owner RLS
+    // policy (migration 0021) already scopes this to the current user, same
+    // as every other query in this function relies on RLS for scoping.
     supabase
-      .from("scan_runs")
-      .select("id, project_id, finished_at, successful_prompts")
-      .eq("status", "completed")
-      .order("finished_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("project_prompts")
-      .select("project_id, created_at")
-      .eq("is_active", true)
+      .from("notifications")
+      .select("id, type, severity, project_id, payload_json, read_at, created_at")
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(NOTIFICATIONS_BELL_LIMIT)
   ]);
 
   const latestScanStatusByProject = (runs ?? []).reduce<Record<string, string>>((statuses, run) => {
@@ -199,37 +221,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     scoreDeltaByProject[projectId] = seen.length >= 2 ? seen[0] - seen[1] : null;
   }
 
-  const domainByProject = (projects ?? []).reduce<Record<string, string>>((acc, p) => {
-    acc[p.id] = p.domain;
-    return acc;
-  }, {});
-
-  const recentCompletedRuns: RecentCompletedRun[] = (recentRuns ?? [])
-    .filter((r) => r.finished_at && domainByProject[r.project_id])
-    .map((r) => ({
-      runId: r.id,
-      projectId: r.project_id,
-      domain: domainByProject[r.project_id],
-      finishedAt: r.finished_at as string,
-      promptsProcessed: r.successful_prompts ?? 0
-    }));
-
-  const promptBatchCounts = new Map<string, number>();
-  for (const p of recentPromptRows ?? []) {
-    const key = `${p.project_id}|${p.created_at}`;
-    promptBatchCounts.set(key, (promptBatchCounts.get(key) ?? 0) + 1);
-  }
-
-  const recentPromptsAdded: RecentPromptsAdded[] = Array.from(promptBatchCounts.entries())
-    .map(([key, count]) => {
-      const separatorIndex = key.indexOf("|");
-      const projectId = key.slice(0, separatorIndex);
-      const addedAt = key.slice(separatorIndex + 1);
-      return { projectId, domain: domainByProject[projectId], addedAt, count };
-    })
-    .filter((p) => p.domain)
-    .sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1))
-    .slice(0, 5);
+  const notifications: WorkspaceNotification[] = (notificationRows ?? []).map(mapNotificationRow);
 
   return {
     projects: projects ?? [],
@@ -241,7 +233,34 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     latestScanDateByProject,
     latestScoreByProject,
     scoreDeltaByProject,
-    recentCompletedRuns,
-    recentPromptsAdded
+    notifications
+  };
+}
+
+/**
+ * Data for the full `/dashboard/notifications` page (NOTIF-SERVER-1b) — a
+ * separate, lighter query than getWorkspaceCounters (just projects +
+ * notifications, no counters), since the page shows up to
+ * NOTIFICATIONS_PAGE_LIMIT rows rather than the bell's 15.
+ */
+export async function getNotificationsPageData(): Promise<{
+  projects: WorkspaceProjectSummary[];
+  notifications: WorkspaceNotification[];
+}> {
+  const { supabase } = await requireUser();
+
+  const [{ data: projects }, { data: notificationRows }] = await Promise.all([
+    supabase.from("projects").select("id, name, domain, country, language").eq("is_archived", false),
+    // No .eq("owner_user_id", ...) — notifications_select_owner RLS scopes this already.
+    supabase
+      .from("notifications")
+      .select("id, type, severity, project_id, payload_json, read_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(NOTIFICATIONS_PAGE_LIMIT)
+  ]);
+
+  return {
+    projects: projects ?? [],
+    notifications: (notificationRows ?? []).map(mapNotificationRow)
   };
 }
