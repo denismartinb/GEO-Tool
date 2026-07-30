@@ -697,6 +697,11 @@ export default async function ProjectDetailPage({
             </p>
           </div>
 
+          {/* Hero band (OV-DESKTOP-1): score card + KPI block. `.ov2-hero` is
+              `display: contents` below 1200px, so this wrapper has no effect
+              on the mobile stacked flow — it only becomes a 2-col grid on
+              desktop (app/globals.css). */}
+          <div className="ov2-hero">
           {/* 2 · Compact gauge card (score + trend) */}
           <div className="ov2-gauge-card">
             <div className="ov2-gauge-ring">
@@ -729,6 +734,7 @@ export default async function ProjectDetailPage({
           </div>
 
           {/* 3 · Indicadores clave — KPI carousel */}
+          <div className="ov2-hero-kpis">
           <div className="ov2-sec-lbl">Indicadores clave</div>
           <div className="ov2-kpi-car">
             {[
@@ -868,7 +874,15 @@ export default async function ProjectDetailPage({
               </div>
             ))}
           </div>
+          </div>
+          </div>
 
+          {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
+              `display: contents` default as `.ov2-hero` above — no effect on
+              mobile, becomes a 2-col grid with `.ov2-rail` following the
+              analysis column on desktop. */}
+          <div className="ov2-cols">
+          <div className="ov2-main">
           {/* 4 · Posicionamiento por motores de IA */}
           <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
           <div className="card" style={{ padding: 18 }}>
@@ -972,7 +986,9 @@ export default async function ProjectDetailPage({
               </Link>
             </div>
           )}
+          </div>
 
+          <div className="ov2-rail">
           {/* 6 · Oportunidades — resumen visual de Recomendaciones.
               Cabecera: "hasta +Y pt" real (RECS-POTENTIAL-1, docs/adr/0017)
               cuando hay recomendaciones cuantificables y confianza
@@ -1055,6 +1071,8 @@ export default async function ProjectDetailPage({
               </div>
             </>
           ) : null}
+          </div>
+          </div>
         </div>
       ) : (
         /* ===== EMPTY STATE ===== */
