@@ -25,6 +25,58 @@ function normalizeCompetitorName(value: string | null | undefined): string {
     .trim();
 }
 
+/** Case/diacritic-insensitive, whitespace-collapsed normalization for substring matching against raw response text \u2014 deliberately NOT token-normalized like normalizeCompetitorName above, since this needs to find a phrase inside a larger text, not compare two names for equality. */
+function normalizeForSubstringMatch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+type MentionEntity = { mentioned: boolean; display_name_found: string | null; evidence: string[]; position: number | null };
+
+/**
+ * Downgrades `mentioned: true` to an explicit non-mention when the model's
+ * own claimed `display_name_found` is empty or isn't actually a (normalized)
+ * substring of the raw response text \u2014 MENTION-VERIFY-1, docs/adr/0021.
+ * Root cause this defends against: extraction models across all three
+ * providers can mark an entity "mentioned" from topical/semantic similarity
+ * rather than its name genuinely appearing in the text (observed in
+ * production: "GenScore" \u2014 a brand whose name reads as a generic description
+ * of its own product category \u2014 flagged as mentioned in a ChatGPT response
+ * that never contained the string "GenScore" at all, with a fabricated
+ * "evidence" quote to match). Checking the model's own claimed
+ * `display_name_found` (rather than requiring the canonical tracked name
+ * verbatim) still tolerates genuine spelling/capitalization variants.
+ */
+function verifyMention<T extends MentionEntity>(entity: T, normalizedRawText: string): T {
+  if (!entity.mentioned) return entity;
+  const claimed = entity.display_name_found?.trim();
+  if (claimed && normalizedRawText.includes(normalizeForSubstringMatch(claimed))) {
+    return entity;
+  }
+  return { ...entity, mentioned: false, display_name_found: null, evidence: [], position: null };
+}
+
+/**
+ * Applies `verifyMention` to the brand and every competitor in one pass.
+ * Must run BEFORE `reconcileExtractedCompetitors` (below) \u2014 that function's
+ * position re-densification already treats `mentioned`/`position` as the
+ * source of truth for ranking, so a mention downgraded here is automatically
+ * re-ranked correctly by the existing reconciliation pass without any
+ * duplicated logic.
+ */
+export function verifyExtractedMentions(data: ExtractionOutput, rawResponseText: string): ExtractionOutput {
+  const normalizedRawText = normalizeForSubstringMatch(rawResponseText);
+  return {
+    ...data,
+    brand: verifyMention(data.brand, normalizedRawText),
+    competitors: data.competitors.map((competitor) => verifyMention(competitor, normalizedRawText))
+  };
+}
+
 /**
  * Reconciles the model's freeform `competitors[]` output against the
  * project's actual tracked list (competitors_snapshot) before persistence,
@@ -69,7 +121,7 @@ export function reconcileExtractedCompetitors(
 
   const reconciledCompetitors = trackedCompetitorNames.map((name, i) => {
     const match = modelByKey.get(trackedKeys[i]);
-    return match ? { ...match, name } : { name, mentioned: false, evidence: [], position: null };
+    return match ? { ...match, name } : { name, mentioned: false, display_name_found: null, evidence: [], position: null };
   });
 
   const trackedKeySet = new Set(trackedKeys);
@@ -244,9 +296,17 @@ async function extractAndPersistRow(input: {
           ? await extractOpenAIStructuredData(extractionArgs)
           : await extractGeminiStructuredData(extractionArgs);
 
+    // MENTION-VERIFY-1: downgrade any "mentioned: true" the model can't back
+    // up with a display_name_found that's actually in the raw response text
+    // — see verifyExtractedMentions above. Must run BEFORE reconciliation so
+    // reconcileExtractedCompetitors' position re-densification sees the
+    // verified mentioned/position values, not the model's raw (possibly
+    // hallucinated) ones.
+    const verifiedData = verifyExtractedMentions(extracted.data, rawResponseText);
+
     // SCAN-TRACKED-SET-1: never persist an entity in `competitors` that the
     // user didn't choose to track — see reconcileExtractedCompetitors above.
-    const reconciledData = reconcileExtractedCompetitors(extracted.data, competitors);
+    const reconciledData = reconcileExtractedCompetitors(verifiedData, competitors);
 
     const mentionedCompetitorsCount = reconciledData.competitors.filter((c) => c.mentioned).length;
 

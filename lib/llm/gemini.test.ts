@@ -4,6 +4,7 @@ import {
   generateGeminiVisibilityAnswer,
   rewriteRecommendation,
   auditDomainContent,
+  extractGeminiStructuredData,
   GeminiConfigError,
   GeminiTimeoutError
 } from "./gemini";
@@ -632,5 +633,51 @@ describe("auditDomainContent (WEB-AUDIT-DQ query derivation)", () => {
     const result = await auditDomainContent(auditInput);
     expect(result.groundingChunks).toEqual([{ uri: "https://redirect/abc", title: "Equipaje de mano" }]);
     expect(result.text).toBe("Página encontrada.");
+  });
+});
+
+describe("extractGeminiStructuredData — MENTION-VERIFY-1 (docs/adr/0021)", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+  });
+
+  it("instructs the model that topical relevance is not a mention, and requests display_name_found per competitor", async () => {
+    const extractionJson = {
+      brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is great"], position: 1 },
+      competitors: [{ name: "Globex", mentioned: false, display_name_found: null, evidence: [], position: null }],
+      citations: [],
+      sentiment: "positive",
+      sentiment_drivers: [],
+      other_brands_mentioned: [],
+      summary: "Acme looks great.",
+      confidence: "high",
+      notes: []
+    };
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: JSON.stringify(extractionJson) }] } }],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractGeminiStructuredData({
+      brand: "Acme",
+      competitors: ["Globex"],
+      rawResponseText: "Acme is a great CRM.",
+      promptText: "What is the best CRM?"
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).toMatch(/topical relevance is not a mention/i);
+    expect(promptText).toMatch(/EXACT substring of the response text/i);
+    expect(promptText).toContain('"display_name_found": string|null');
   });
 });

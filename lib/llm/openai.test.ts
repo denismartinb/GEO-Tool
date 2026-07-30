@@ -263,4 +263,19 @@ describe("extractOpenAIStructuredData", () => {
 
     await expect(extractOpenAIStructuredData(extractionInput())).rejects.toThrow("quota or rate limit");
   });
+
+  it("MENTION-VERIFY-1: instructs the model that topical relevance is not a mention, and requests display_name_found per competitor", async () => {
+    const fetchMock = mockFetchOnce(responsesApiResult(JSON.stringify(validExtractionJson())));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractOpenAIStructuredData(extractionInput());
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.input as string;
+
+    expect(promptText).toMatch(/topical relevance is not a mention/i);
+    expect(promptText).toMatch(/EXACT substring of the response text/i);
+    expect(promptText).toContain('"display_name_found": string|null');
+  });
 });

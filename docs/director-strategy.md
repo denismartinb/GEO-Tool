@@ -330,6 +330,60 @@ contaminated set. No schema/RLS changes. `pnpm test` 722/722,
 
 ---
 
+## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25)
+
+**Status: Implemented, pending Human Gate.** Founder tested `genscore.es` (a
+brand-new product, essentially zero online footprint) and got "% de mención"
+= 23% when it should be 0% — the brand is never genuinely mentioned in any
+collected AI response. The "Evidencias de mención" panel showed why: for one
+ChatGPT response, the persisted evidence was a generic sentence about "brand
+performance analysis with AI" that never contains the string "GenScore" —
+`brand.mentioned` was fabricated, not real.
+
+Root cause (see docs/adr/0021): all three structured-extraction call sites
+(`extractGeminiStructuredData`, `extractClaudeStructuredData`,
+`extractOpenAIStructuredData`) share one prompt shape that asks for
+`"mentioned": boolean`/`"evidence": string[]` but never required "mentioned"
+to be based on the entity's name genuinely appearing as text — so a model
+can conflate topical/category relevance with an actual mention (especially
+for "GenScore", a name that reads as a generic description of its own
+product category) and fabricate a matching "evidence" quote. Identical
+defect for `competitors[].mentioned` at the same call sites — not
+brand-specific.
+
+Fix, two layers: (1) new `verifyExtractedMentions` (`lib/scan/
+extraction.ts`), run before `reconcileExtractedCompetitors` (ADR 0018),
+downgrades any `mentioned: true` whose claimed `display_name_found` isn't
+actually a substring of the raw response text — added `display_name_found`
+to competitors too (`lib/extraction/schema.ts`, JSON-shape change, no
+migration) for parity with brand. (2) hardened all three providers' prompts
+(defense in depth): "mentioned" requires literal textual presence, never
+topical relevance; "evidence"/"display_name_found" must be verbatim quotes.
+`EXTRACTION_VERSION` bumped to `"verified-mention-v1"`, which — since
+`hasUntrustedCompetitorSet` was already a general staleness check, not
+specific to ADR 0018 — automatically extends `prominence`/`standing`/
+`geo_score`-confidence null-gating to any run with a pre-fix row, with no
+new run-scoring code. No schema/RLS changes, no backfill. `pnpm test`
+747/747, `pnpm run validate` green.
+
+**Deliberately NOT done (see ADR 0021 for the full reasoning):**
+- **`visibility_score`/`competitor_gap_score` themselves are NOT nulled**
+  for stale-version runs, unlike the original Task Intake's stated plan.
+  Reconsidered after finding `computeRunScoresFromResults` only ever runs
+  once per scan execution (never recomputed against historical rows) — the
+  gate would only protect a narrow within-run mixed-version edge case
+  (partial retry straddling a deploy), while making these two fields
+  nullable ripples into 8+ consumer files (Overview, runs pages, weekly
+  digest, score alerts, recommendation engine). Every new scan's
+  `brand_mentioned` is already correct at write time via Layer 1 regardless
+  — that's what actually fixes the founder's reported number. This mirrors
+  the exact boundary ADR 0018 itself already drew (it never touched these
+  two fields either).
+- **No backfill (MENTION-VERIFY-2):** the founder's own `genscore.es`
+  history keeps its old, unverified number until a new scan runs.
+
+---
+
 ## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
 
 Founder direction (verbatim intent): recommendations must become **more

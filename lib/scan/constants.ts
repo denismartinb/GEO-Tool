@@ -38,8 +38,31 @@ export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
  * contaminated competitor set — lib/scoring/run-scoring.ts drops
  * prominence/standing to null for any run containing such a row rather than
  * computing on it silently. No backfill in this phase (SCAN-TRACKED-SET-2).
+ *
+ * "verified-mention-v1" (MENTION-VERIFY-1, docs/adr/0021) — brand.mentioned
+ * and competitors[].mentioned are now verified against the raw response text
+ * (verifyExtractedMentions, lib/scan/extraction.ts) before persistence,
+ * instead of trusting the extraction model's "mentioned: true" claim as-is.
+ * Root cause: the extraction prompt (shared shape across
+ * extractGeminiStructuredData/extractClaudeStructuredData/
+ * extractOpenAIStructuredData) never required "mentioned" to be based on the
+ * entity's name genuinely appearing in the text, so a topically-relevant but
+ * brand-silent response could be flagged as a mention with fabricated
+ * "evidence" — observed in production for a brand whose name reads as a
+ * generic description of its own product category. Bumping this version
+ * means `hasUntrustedCompetitorSet` (lib/scoring/run-scoring.ts) — already
+ * keyed on any extraction_version mismatch, not specifically ADR 0018's
+ * concern — now ALSO drops prominence/standing/geo_score-confidence to null
+ * for any run containing a pre-this-fix row, for free, with no new gating
+ * code. `visibility_score`/`competitor_gap_score` themselves are NOT nulled:
+ * consistent with the boundary ADR 0018 itself already drew (it never
+ * touched these two fields either), and every NEW scan's brand_mentioned is
+ * already verified at write time regardless — see docs/adr/0021 for why a
+ * broader nullable-everywhere gate was considered and rejected as
+ * disproportionate to a narrow within-run mixed-version edge case. No
+ * backfill in this phase (MENTION-VERIFY-2).
  */
-export const EXTRACTION_VERSION = "tracked-set-v1";
+export const EXTRACTION_VERSION = "verified-mention-v1";
 
 /**
  * "neutral-sim-v1" — marks scan_prompt_results whose

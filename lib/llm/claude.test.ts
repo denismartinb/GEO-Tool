@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { generateClaudeVisibilityAnswer, ClaudeConfigError, ClaudeTimeoutError } from "./claude";
+import { generateClaudeVisibilityAnswer, extractClaudeStructuredData, ClaudeConfigError, ClaudeTimeoutError } from "./claude";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -156,5 +156,48 @@ describe("generateClaudeVisibilityAnswer", () => {
     await expectation;
 
     vi.useRealTimers();
+  });
+});
+
+describe("extractClaudeStructuredData — MENTION-VERIFY-1 (docs/adr/0021)", () => {
+  beforeEach(() => {
+    process.env.ANTHROPIC_API_KEY = "test-key";
+    delete process.env.ANTHROPIC_MODEL;
+  });
+
+  afterEach(() => {
+    process.env = { ...ORIGINAL_ENV };
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("instructs the model that topical relevance is not a mention, and requests display_name_found per competitor", async () => {
+    const extractionJson = {
+      brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is great"], position: 1 },
+      competitors: [{ name: "Globex", mentioned: false, display_name_found: null, evidence: [], position: null }],
+      citations: [],
+      sentiment: "positive",
+      other_brands_mentioned: [],
+      summary: "Acme looks great.",
+      confidence: "high",
+      notes: []
+    };
+    const fetchMock = mockFetchOnce(anthropicResponse(JSON.stringify(extractionJson)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractClaudeStructuredData({
+      brand: "Acme",
+      competitors: ["Globex"],
+      rawResponseText: "Acme is a great CRM.",
+      promptText: "What is the best CRM?"
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.messages[0].content as string;
+
+    expect(promptText).toMatch(/topical relevance is not a mention/i);
+    expect(promptText).toMatch(/EXACT substring of the response text/i);
+    expect(promptText).toContain('"display_name_found": string|null');
   });
 });

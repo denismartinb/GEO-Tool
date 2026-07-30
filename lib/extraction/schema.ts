@@ -47,6 +47,15 @@ const positionSchema = z.number().int().positive().nullable();
 export const extractionCompetitorSchema = z.object({
   name: z.string(),
   mentioned: z.boolean(),
+  /**
+   * The literal name/variant the model claims to have found in the response
+   * text for this competitor — same field and same purpose as brand's below
+   * (MENTION-VERIFY-1, docs/adr/0021): `verifyExtractedMentions`
+   * (lib/scan/extraction.ts) checks this claim against the actual raw
+   * response text before trusting `mentioned: true`. `.default(null)` so
+   * extracted_json persisted before this field existed still parses.
+   */
+  display_name_found: z.string().nullable().default(null),
   evidence: z.array(z.string()),
   position: positionSchema
 });
@@ -54,6 +63,15 @@ export const extractionCompetitorSchema = z.object({
 export const extractionOutputSchema = z.object({
   brand: z.object({
     mentioned: z.boolean(),
+    /**
+     * The literal name/variant the model claims to have found in the
+     * response text. `verifyExtractedMentions` (lib/scan/extraction.ts,
+     * MENTION-VERIFY-1, docs/adr/0021) checks this claim against the actual
+     * raw response text and downgrades `mentioned: true` to an explicit
+     * non-mention when it's empty or isn't actually present — defends
+     * against extraction hallucinating a mention from topical/semantic
+     * similarity rather than the brand's name genuinely appearing.
+     */
     display_name_found: z.string().nullable(),
     evidence: z.array(z.string()),
     position: positionSchema
