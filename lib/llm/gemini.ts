@@ -837,6 +837,13 @@ const addPromptsCategorizationSchema = z.object({
  * project already has active. Returns `[]` (never throws) if Gemini's
  * response fails schema validation, matching `suggestPrompts`/
  * `suggestCompetitors`'s fail-soft convention.
+ *
+ * COMPETITOR-GROUNDING-2 (docs/adr/0022): optional `profile` — the same
+ * `BusinessProfile` `suggestPrompts` already requires (docs/adr/0020) — adds
+ * real business context to "auto"/"keywords" generation instead of reasoning
+ * from brand/domain strings alone. Absent (existing projects with no
+ * persisted profile yet) means behavior identical to before this phase —
+ * this is a purely additive parameter, never a hard requirement.
  */
 export async function generateAddedPrompts(input: {
   mode: AddPromptsMode;
@@ -849,6 +856,7 @@ export async function generateAddedPrompts(input: {
   keywords?: string[];
   manualPrompts?: string[];
   limit?: number;
+  profile?: BusinessProfile;
 }): Promise<GeneratedPromptCandidate[]> {
   const categoryHints = input.existingCategories.map((category) => category.trim()).filter(Boolean).join(", ") || "none yet";
 
@@ -916,7 +924,17 @@ export async function generateAddedPrompts(input: {
     `Brand: ${input.brand}`,
     `Brand domain: ${input.domain}`,
     `Market/country: ${input.country}`,
-    `Target language: ${input.language}`
+    `Target language: ${input.language}`,
+    ...(input.profile
+      ? [
+          "",
+          "Every prompt must be about the business described below — its actual sector, what it sells and its target customer — not whatever the domain name might otherwise suggest.",
+          `What it sells: ${input.profile.whatItSells}`,
+          `Sector / sub-sector: ${input.profile.sector} / ${input.profile.subSector}`,
+          `Business model: ${input.profile.businessModel}`,
+          `Target customer: ${input.profile.targetCustomer}`
+        ]
+      : [])
   ].join("\n");
 
   const raw = await generateGeminiJson(promptBlock);

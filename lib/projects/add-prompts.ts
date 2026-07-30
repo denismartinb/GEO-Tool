@@ -2,7 +2,8 @@ import "server-only";
 
 import { z } from "zod";
 import { getPlanForUser } from "@/lib/billing";
-import { generateAddedPrompts, type AddPromptsMode, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
+import { generateAddedPrompts, type AddPromptsMode, type BusinessProfile, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
+import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 import { getActionErrorCode } from "@/lib/scan/errors";
@@ -16,6 +17,75 @@ const ADD_PROMPTS_GENERATION_LIMIT = 5;
 const MIN_PROMPT_LENGTH = 10;
 const MAX_PROMPT_LENGTH = 300;
 const MAX_CATEGORY_LENGTH = 100;
+
+const persistedBusinessProfileSchema = z.object({
+  whatItSells: z.string(),
+  sector: z.string(),
+  subSector: z.string(),
+  businessModel: z.enum(["b2b", "b2c", "both", "unknown"]),
+  targetCustomer: z.string(),
+  geographicScope: z.string(),
+  sizeEstimate: z.string(),
+  confidence: z.enum(["low", "medium", "high"])
+});
+
+/** Defensively parses projects.business_profile (jsonb) — never throws, returns null on anything malformed/absent. */
+function parsePersistedBusinessProfile(raw: unknown): BusinessProfile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const parsed = persistedBusinessProfileSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * COMPETITOR-GROUNDING-2 (docs/adr/0022): resolves the business profile this
+ * project should use for prompt generation, computing and persisting it
+ * lazily on first use rather than requiring it at project-creation time.
+ * `mode: "manual"` never needs it (no new prompt text is generated, only
+ * categorization of the user's own text) so callers should skip this
+ * entirely for that mode. Never blocks the caller: any failure to resolve
+ * or persist a profile simply returns null, and generateAddedPrompts falls
+ * back to its pre-existing blind (brand/domain-only) behavior.
+ */
+async function resolveAndCacheBusinessProfile(input: {
+  projectId: string;
+  ownerUserId: string;
+  domain: string;
+  country: string;
+  language: string;
+  existingProfile: unknown;
+  supabase: AuthenticatedContext["supabase"];
+}): Promise<BusinessProfile | null> {
+  const cached = parsePersistedBusinessProfile(input.existingProfile);
+  if (cached) return cached;
+
+  const context = await resolveBusinessContext({
+    domain: input.domain,
+    country: input.country,
+    language: input.language
+  }).catch(() => ({ status: "unidentified" }) as const);
+
+  if (context.status === "unidentified") return null;
+
+  // Best-effort cache write — a failure here must not block prompt
+  // generation for this call; the next "Añadir prompts" invocation simply
+  // recomputes it again. Scoped by id + owner_user_id per
+  // .claude/rules/server-actions.md, even though this row was already
+  // ownership-verified earlier in addPromptsCore.
+  const { error: cacheError } = await input.supabase
+    .from("projects")
+    .update({ business_profile: context.profile })
+    .eq("id", input.projectId)
+    .eq("owner_user_id", input.ownerUserId);
+
+  if (cacheError) {
+    console.warn("[add-prompts] business_profile cache write failed", {
+      project_id: input.projectId,
+      message: cacheError.message
+    });
+  }
+
+  return context.profile;
+}
 
 export const addPromptsInputSchema = z.object({
   projectId: z.string().uuid(),
@@ -70,7 +140,7 @@ export async function addPromptsCore({
 }): Promise<AddPromptsResult> {
   const { data: project, error: projectError } = await supabase
     .from("projects")
-    .select("id, brand, domain, country, language, is_archived")
+    .select("id, brand, domain, country, language, is_archived, business_profile")
     .eq("id", projectId)
     .eq("owner_user_id", user.id)
     .maybeSingle();
@@ -145,6 +215,22 @@ export async function addPromptsCore({
     )
   ];
 
+  // COMPETITOR-GROUNDING-2 (docs/adr/0022): "manual" only categorizes the
+  // user's own text (no new prompt text generated), so it has no use for a
+  // business profile — skip resolving/caching one for that mode entirely.
+  const profile =
+    mode === "manual"
+      ? undefined
+      : ((await resolveAndCacheBusinessProfile({
+          projectId,
+          ownerUserId: user.id,
+          domain: project.domain,
+          country: project.country,
+          language: project.language,
+          existingProfile: project.business_profile,
+          supabase
+        })) ?? undefined);
+
   // Any Gemini failure (timeout, rate limit, malformed response, missing API
   // key) must never surface as a raw, unhandled server-action exception —
   // .claude/rules/server-actions.md. Mirrors the try/catch already used
@@ -161,7 +247,8 @@ export async function addPromptsCore({
       existingCategories,
       keywords: mode === "keywords" ? normalizedKeywords : undefined,
       manualPrompts: mode === "manual" ? normalizedManualPrompts : undefined,
-      limit: ADD_PROMPTS_GENERATION_LIMIT
+      limit: ADD_PROMPTS_GENERATION_LIMIT,
+      profile
     });
   } catch (error) {
     // error.message here is always one of the fixed, pre-sanitized strings

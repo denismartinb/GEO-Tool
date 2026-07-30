@@ -397,6 +397,46 @@ describe("generateAddedPrompts", () => {
     expect(result).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  const SAMPLE_PROFILE: BusinessProfile = {
+    whatItSells: "CRM para pymes",
+    sector: "Software",
+    subSector: "CRM B2B",
+    businessModel: "b2b",
+    targetCustomer: "Pymes",
+    geographicScope: "España",
+    sizeEstimate: "Pequeña empresa",
+    confidence: "high"
+  };
+
+  it("auto mode: includes the business profile in the prompt when provided (COMPETITOR-GROUNDING-2, docs/adr/0022)", async () => {
+    const fetchMock = mockGeminiJson({ prompts: [{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateAddedPrompts(addPromptsInput({ profile: SAMPLE_PROFILE }));
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).toContain(SAMPLE_PROFILE.whatItSells);
+    expect(promptText).toContain(SAMPLE_PROFILE.sector);
+    expect(promptText).toContain(SAMPLE_PROFILE.targetCustomer);
+  });
+
+  it("auto mode: prompt is unchanged (no business-profile section) when profile is omitted — regression for existing projects with no cached profile", async () => {
+    const fetchMock = mockGeminiJson({ prompts: [{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }] });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateAddedPrompts(addPromptsInput());
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.contents[0].parts[0].text as string;
+
+    expect(promptText).not.toMatch(/What it sells:/);
+    expect(promptText).not.toMatch(/Sector \/ sub-sector:/);
+  });
 });
 
 function rewriteInput(overrides: Partial<Parameters<typeof rewriteRecommendation>[0]> = {}) {
