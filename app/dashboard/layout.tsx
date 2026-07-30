@@ -37,7 +37,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
             latestScanStatusByProject={latestScanStatusByProject}
           />
           <div className="dash-header-actions">
-            <div className="meta">{user.email}</div>
             <NotificationBell notifications={notifications} projects={projects ?? []} />
             <form action={signOut}>
               <Button variant="outline" type="submit">
