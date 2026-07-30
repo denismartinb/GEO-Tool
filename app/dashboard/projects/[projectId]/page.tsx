@@ -682,10 +682,10 @@ export default async function ProjectDetailPage({
                   <span className="hl-pos">mayor visibilidad</span> frente a tus competidores.
                 </>
               )}
-              {latestRecommendations?.length ? (
+              {highPriorityCount > 0 ? (
                 <>
                   {" "}GenScore ha priorizado{" "}
-                  <b>{latestRecommendations.length} {latestRecommendations.length === 1 ? "acción" : "acciones"}</b>{" "}
+                  <b>{highPriorityCount} {highPriorityCount === 1 ? "acción" : "acciones"} de alta prioridad</b>{" "}
                   para mejorar tu presencia en las respuestas de IA.
                 </>
               ) : null}
