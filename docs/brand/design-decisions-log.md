@@ -232,8 +232,8 @@ Pendiente / roto conocido:
 
 ## 5. Página de Prompts
 
-**Estado: v3 implementado (PR #260); capa de escritorio añadida en
-PROMPTS-DESKTOP-1.**
+**Estado: v3 implementado (PR #260); capa de escritorio en
+PROMPTS-DESKTOP-1 + PROMPTS-DESKTOP-2.**
 
 **PROMPTS-DESKTOP-1 (2026-07-30, Task Intake aprobado el mismo día):**
 mismo bug que OV-DESKTOP-1 (§4) — `.pr2-page` fija a 460px sin ninguna
@@ -246,26 +246,53 @@ sobra ancho. Decisiones finales:
   verificación que §4: render con y sin el bloque, diff de la captura).
 - ≥900px: columna a 640px (mismo tramo tablet que Overview, para que la
   consola lea como un solo sistema de anchos).
-- ≥1200px: columna a 900px — cada fila de prompt cabe en una línea sin
-  envolver, las etiquetas dejan de apilarse debajo del texto. El buscador
+- ≥1200px: cada fila de prompt cabe en una línea sin envolver, las
+  etiquetas dejan de apilarse debajo del texto. El buscador
   (`.pr2-search`) se topa a 360px en vez de estirarse sin límite junto al
   botón — mismo patrón ya usado en `.pr-search` (toolbar de Citations).
-- ≥1600px: tope 1000px, no crece sin límite en monitores ultra-anchos.
 - Mecanismo: solo CSS, sin wrappers nuevos en JSX — a diferencia de
   Overview, esta pantalla es una sola lista (acordeón de topics o lista
   plana), no varios widgets distintos, así que no hace falta ninguna
   reestructuración de grid.
+- **Superseded por PROMPTS-DESKTOP-2** (abajo): los topes ≥1200px/≥1600px
+  de esta fase eran 900px/1000px, ajustados de forma independiente para
+  esta pantalla.
+
+**PROMPTS-DESKTOP-2 (2026-07-30, Task Intake aprobado el mismo día,
+founder con captura real de la pantalla estirada):**
+- **Ancho de columna igualado al de Overview.** El fundador pidió
+  explícitamente que Prompts use "el mismo ancho que la pantalla
+  principal... para tener consistencia" — los topes ≥1200px/≥1600px de
+  PROMPTS-DESKTOP-1 (900px/1000px) se sustituyen por los mismos valores
+  exactos de `.ov2-scope` (1200px/1280px), en vez de un ajuste
+  independiente por pantalla. **Pendiente explícito, no asumido aquí:**
+  el resto de la consola (Competidores, Páginas citadas, Recomendaciones,
+  Auditoría web, Escaneos) sigue en el sistema `.page` a 1320px — igualar
+  de verdad *toda* la consola exige decidir hacia qué ancho converge el
+  sistema entero y tocar esas 5 pantallas; no se ha hecho sin que el
+  fundador lo confirme primero.
+- **El drawer de detalle de prompt pasa a panel lateral en escritorio**
+  (`min-width: 900px`): ancla a la derecha, `width: min(880px, 64vw)` con
+  mínimo 560px (~58% a 1512px, dentro del 50-75% pedido), fondo atenuado
+  visible a la izquierda. **Supersede parcialmente**, solo para
+  escritorio, la decisión del 2026-07-24 (mismo comentario en
+  `app/globals.css`) que descartó un panel lateral de 520px/95vw por
+  dejar una franja gris — aquella prueba mezclaba un ancho fijo con un
+  tope de viewport sin diferenciar por tamaño de pantalla; esta vez es
+  un ancho real en porcentaje, con `min-width` explícito, y **solo
+  aplica a partir de 900px** — en móvil el drawer sigue siendo
+  full-screen exactamente como se decidió entonces (verificado
+  byte-idéntico). Motivo del cambio: el fundador reportó con una
+  captura real que el contenido (filas de ranking, tabla por motor),
+  diseñado para una columna de ~460-900px, quedaba "muy estirado y
+  demasiado poco contenido" al ocupar el 100% del ancho en una pantalla
+  grande.
 
 Pendiente / roto conocido:
-- El drawer de detalle de prompt (`.prompt-drawer`, `prompt-drawer.tsx`)
-  sigue siendo un full-screen takeover (`position: fixed; inset: 0`)
-  también en escritorio — decisión explícita del fundador del
-  2026-07-24 (comentario en `app/globals.css` junto a `.prompt-drawer`):
-  se probó y se descartó un panel lateral de 520px/95vw por dejar una
-  franja gris del fondo atenuado. No se ha reabierto esa decisión aquí;
-  en escritorio el drawer sigue ocupando toda la pantalla, lo cual puede
-  sentirse pesado en monitores grandes — vale la pena que el fundador lo
-  sepa, pero no se ha tocado sin su aprobación explícita.
+- Unificar el ancho de todas las páginas de consola (`.page`/1320px) con
+  el sistema `.ov2-scope`/`.pr2-page` (1200/1280px) — señalado en
+  PROMPTS-DESKTOP-2 arriba, sin fecha, pendiente de que el fundador
+  decida el ancho estándar final.
 
 ---
 

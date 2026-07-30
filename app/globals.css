@@ -1755,18 +1755,30 @@ a {
    no structural JSX wrappers needed (this page is a single list, not
    several distinct widgets). Every rule lives inside a min-width query —
    verified byte-identical below 900px against the current mobile render.
+
+   PROMPTS-DESKTOP-2 follow-up (Task Intake approved 2026-07-30, founder:
+   "debe ocupar el mismo ancho que la pantalla principal ... para tener
+   consistencia"): the 900/1200/1600px column caps below were originally
+   900/1000px, independently tuned for this page — the founder asked for
+   the *same* width as `.ov2-scope` (Overview) instead, so the console
+   reads as one consistent system rather than two similarly-but-not-quite
+   matching columns. Changed to match `.ov2-scope` exactly (640/1200/
+   1280px). Unifying the *other* console pages (Competitors, Citations,
+   Recommendations, Web Audit, Runs — still on the older `.page`/1320px
+   system) to this same width is explicitly out of scope here; it needs
+   its own decision on which width the whole console converges to.
    ============================================================ */
 @media (min-width: 900px) {
   .pr2-page { max-width: 640px; }
 }
 @media (min-width: 1200px) {
-  .pr2-page { max-width: 900px; }
+  .pr2-page { max-width: 1200px; }
   /* Same cap pattern as `.pr-search` (Citations toolbar) — an unbounded
      search input just stretches awkwardly next to a small button. */
   .pr2-search { max-width: 360px; }
 }
 @media (min-width: 1600px) {
-  .pr2-page { max-width: 1000px; }
+  .pr2-page { max-width: 1280px; }
 }
 
 /* ============================================================
@@ -2831,10 +2843,23 @@ textarea.add-prompts-text-input {
   background: rgba(11, 20, 38, 0.45);
   backdrop-filter: blur(2px);
 }
-/* Full-screen takeover, not a side panel (founder feedback 2026-07-24: the
-   520px/95vw right-anchored panel left a persistent gray sliver of the
-   dimmed page on the left edge, reading as a lateral shift rather than a
-   clean full-screen open). Close (×) stays pinned in the header, at top. */
+/* Full-screen takeover on mobile, not a side panel (founder feedback
+   2026-07-24: the 520px/95vw right-anchored panel left a persistent gray
+   sliver of the dimmed page on the left edge, reading as a lateral shift
+   rather than a clean full-screen open). Close (×) stays pinned in the
+   header, at top.
+
+   PROMPTS-DESKTOP-2 (2026-07-30, Task Intake approved same day) partially
+   supersedes the note above **for desktop only**: the founder reported the
+   full-screen drawer reading as "muy estirado y demasiado poco contenido"
+   on a wide screen (real screenshot) — content built for a ~460-900px
+   column (aside-card rows, ranking table) stretched edge-to-edge with
+   awkward dead space. Below 900px this element is untouched (still
+   full-screen, still the 2026-07-24 decision). At ≥900px it becomes a
+   right-anchored panel at a real percentage width (not the rejected fixed
+   520px/95vw hybrid), so the dimmed page stays visibly in context to the
+   left — this is what was asked for, not a re-litigation of the mobile
+   case. */
 .prompt-drawer {
   position: fixed;
   inset: 0;
@@ -2843,6 +2868,15 @@ textarea.add-prompts-text-input {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+@media (min-width: 900px) {
+  .prompt-drawer {
+    left: auto;
+    width: min(880px, 64vw);
+    min-width: 560px;
+    border-left: 1px solid var(--line);
+    box-shadow: -20px 0 60px rgba(15, 23, 41, 0.20);
+  }
 }
 .drawer-header {
   flex-shrink: 0;
