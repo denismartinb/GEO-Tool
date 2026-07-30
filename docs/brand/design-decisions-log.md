@@ -191,6 +191,44 @@ Pendiente / roto conocido:
   ninguna fila desactivada que recuperar). No es una decisión de marca,
   pero es un gap de producto real que vale la pena que el fundador conozca.
 
+**OV-DESKTOP-1 (2026-07-30, Task Intake aprobado el mismo día):** BRAND-5b
+(entrada anterior) implementó `.ov2-scope` como una columna fija de 460px
+(`max-width: 460px; margin: 0 auto`) sin ninguna media query de escritorio
+— el fundador reportó con captura real que en ~1512px de ancho la columna
+usaba solo un 38% del espacio, con la 4.ª tarjeta del carrusel de KPIs
+(`.ov2-kpi-car`) recortada visualmente y ~1,8 pantallas de scroll vertical
+para datos que caben en una. Decisiones finales:
+- Todas las reglas nuevas viven dentro de `@media (min-width: 900px|1200px|
+  1600px)` — por debajo de 900px el CSS aplicado es **byte-idéntico** al de
+  BRAND-5b (verificado renderizando la página con y sin este bloque a
+  390px y diffeando el output). El diseño mobile aprobado no se reabre.
+- ≥900px: la columna sube a 640px y `.ov2-kpi-car` pasa de carrusel con
+  scroll a rejilla 2×2 (arregla el recorte reportado).
+- ≥1200px: layout de consola en dos partes — banda superior (panel de
+  score a la izquierda + los 4 KPIs como bloque 2×2 a la derecha, en vez
+  de apilados bajo el gauge) y dos columnas debajo (motores + panorámica
+  a la izquierda, "Oportunidades" como raíl fijo `position: sticky` a la
+  derecha, seasoned como el patrón "acción a la vista mientras analizas").
+  Techo de columna en 1200px, y 1280px en pantallas ≥1600px — no crece sin
+  límite en monitores ultra-anchos.
+- Mecanismo: 4 wrappers nuevos en JSX (`.ov2-hero`, `.ov2-hero-kpis`,
+  `.ov2-cols`, `.ov2-main`/`.ov2-rail`), todos `display: contents` por
+  defecto — cero efecto en el flujo mobile, se convierten en grid solo
+  dentro de las media queries de escritorio. Mismo principio de
+  "remapeo/wrapper sin tocar el componente" que `.ov2-scope` (§2).
+- Verificado el caso sin recomendaciones activas: `.ov2-rail` queda vacío
+  pero la rejilla de 2 columnas no se rompe ni la columna de análisis se
+  estira a ocupar el hueco (columnas de grid con ancho fijo, no `auto`).
+
+Pendiente / roto conocido:
+- Prompts (`.pr2-page`, PROMPTS-REDESIGN-1) tiene el mismo bug de columna
+  fija a 460px sin desktop — deliberadamente fuera de esta fase
+  (`PROMPTS-DESKTOP-1`, sin fecha). El resto de zonas (Competidores,
+  Páginas citadas, Recomendaciones, Auditoría web, Escaneos) siguen en el
+  layout pre-BRAND-5b (`.page`, 1320px) y no tienen este bug, pero por eso
+  la consola hoy mezcla dos comportamientos de ancho — inconsistencia
+  conocida, no corregida en este PR.
+
 ---
 
 ## Cómo mantener este documento

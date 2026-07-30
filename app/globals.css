@@ -1488,6 +1488,120 @@ a {
 }
 
 /* ============================================================
+   OV-DESKTOP-1 — Overview desktop layout (Task Intake approved
+   2026-07-30, see docs/brand/design-decisions-log.md §4). BRAND-5b
+   shipped `.ov2-scope` as a fixed 460px phone-width column with no
+   min-width query at all, so desktop rendered the same single narrow
+   column centered in the page (~62% dead space at 1512px) with the 4th
+   KPI card clipped by the mobile carousel. Every rule below lives inside
+   a min-width query, so <900px stays byte-identical to what shipped —
+   verified by diffing a static render of this page at 390px with and
+   without this block. The four structural wrappers added in page.tsx
+   (.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main/.ov2-rail) default to
+   `display: contents` so they have zero effect on the mobile flow and
+   only become grid containers at the desktop breakpoints.
+   ============================================================ */
+.ov2-hero, .ov2-hero-kpis, .ov2-cols, .ov2-main, .ov2-rail { display: contents; }
+
+/* Tablet / small laptop: still one column, just not phone-width */
+@media (min-width: 900px) {
+  .ov2-scope { max-width: 640px; }
+
+  .ov2-kpi-car {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    overflow: visible;
+  }
+  .ov2-kpi { width: auto; }
+}
+
+/* Desktop: two-column console */
+@media (min-width: 1200px) {
+  .ov2-scope { max-width: 1200px; }
+
+  .ov2-insight { padding: 17px 20px; }
+  .ov2-insight-txt { font-size: 14px; max-width: 92ch; }
+
+  /* Hero band: score card on the left, the 4 KPIs as a 2x2 block on the
+     right instead of stacked full-width under the gauge. */
+  .ov2-hero {
+    display: grid;
+    grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+    margin-top: 16px;
+  }
+  .ov2-hero > .ov2-gauge-card {
+    margin-top: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px 26px;
+  }
+  .ov2-hero > .ov2-gauge-card .ov2-gauge-ring { align-self: center; }
+  .ov2-hero > .ov2-gauge-card .ov2-gauge-info { flex: 0 0 auto; width: 100%; }
+  .ov2-hero-kpis { display: flex; flex-direction: column; }
+  .ov2-hero-kpis .ov2-sec-lbl { margin: 0 2px 10px; }
+  .ov2-hero-kpis .ov2-kpi-car { flex: 1; }
+  .ov2-hero-kpis .ov2-kpi { display: flex; flex-direction: column; justify-content: center; }
+
+  /* Analysis column (engines + panorama) + sticky action rail (oportunidades) */
+  .ov2-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+    margin-top: 4px;
+  }
+  .ov2-main, .ov2-rail { display: block; min-width: 0; }
+  .ov2-main > .ov2-sec-lbl:first-child,
+  .ov2-rail > .ov2-sec-lbl:first-child { margin-top: 26px; }
+  /* 60px clears the sticky page header (.ov-sticky-header) while the rail
+     follows the (usually taller) analysis column during scroll. */
+  .ov2-rail { position: sticky; top: 60px; }
+
+  /* Engine bars: extra width goes to label room, not to bar stretch */
+  .ov2-engbar { margin-bottom: 17px; }
+  .ov2-engbar .nm { width: 118px; font-size: 13px; }
+  .ov2-engbar .track { height: 9px; }
+  .ov2-engbar .v { font-size: 13.5px; width: 40px; }
+
+  /* Panorama: readable proportions at the ~700px analysis-column width */
+  .ov2-posbars { height: 86px; margin: 10px 0 30px; gap: 12px; }
+  .ov2-posbars .b span { font-size: 10.5px; }
+  .ov2-pm-val { font-size: 26px; }
+  .ov2-cmp-row { padding: 14px 18px; gap: 14px; }
+  .ov2-cmp-fav, .ov2-cmp-row .fav { width: 30px !important; height: 30px !important; border-radius: 9px; }
+  .ov2-cmp-nm .t { font-size: 13.5px; }
+  .ov2-cmp-sov { width: 132px; }
+  .ov2-cmp-sov .pct { font-size: 10.5px; }
+  .ov2-cmp-sc { font-size: 14px; width: 62px; }
+
+  /* Oportunidades reads as a rail card, not a full-width strip. The
+     narrower column would truncate more titles than the phone layout
+     does, so rail items wrap to a 2nd line instead of a harder ellipsis. */
+  .ov2-opps-hero { padding: 18px 18px 16px; }
+  .ov2-opp { padding: 12px 13px; align-items: flex-start; }
+  .ov2-opp-dot { margin-top: 5px; }
+  .ov2-opp-t { white-space: normal; line-height: 1.4; align-items: flex-start; }
+  .ov2-opp-t span {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .ov2-opp-quick { margin-top: 2px; }
+  .ov2-opp-r { padding-top: 1px; }
+}
+
+/* Wide desktop: a little more breathing room, no new structure */
+@media (min-width: 1600px) {
+  .ov2-scope { max-width: 1280px; }
+}
+
+/* ============================================================
    Prompts — v3 restyle (PROMPTS-REDESIGN-1)
 
    Same rollout mechanism as `.ov2-scope` (docs/brand/design-decisions-
