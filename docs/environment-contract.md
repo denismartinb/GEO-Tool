@@ -280,6 +280,38 @@ SCAN_CONTINUE_SECRET=any-random-string
 
 ---
 
+### Agentic user pilot (UX-PILOT-1)
+
+Consumed only by `tests/pilot/**` and `scripts/pilot.mjs`. **Never set these in
+Vercel** — they are credentials for driving the deployed app from outside, not
+runtime configuration, and the app itself must never read them.
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `PILOT_EMAIL` | Yes, to run the pilot | Local `.env.local` + agent session env | Email of the dedicated pilot account |
+| `PILOT_PASSWORD` | Yes, to run the pilot | Local `.env.local` + agent session env | Password for that account |
+| `PILOT_BASE_URL` | Yes (or `--url`) | Injected per run | `https://<preview>.vercel.app` |
+| `PILOT_PROJECT_ID` | No | Local `.env.local` | Project uuid; auto-discovered when unset |
+| `PILOT_CHROMIUM_PATH` | No | Local | Absolute path to a Chromium binary |
+
+The pilot account must be a **dedicated user, not the founder's own**, and must
+be seeded with at least one project that already has completed scans — the
+UX-PILOT-1 journeys are read-only and cannot create their own data.
+
+`tests/pilot/support/env.ts` redacts `PILOT_EMAIL` / `PILOT_PASSWORD` from every
+error message and finding before it can reach a log, a Playwright report, or a
+PR comment. That is defence in depth, not permission to be careless: never echo
+them, never pass them as command-line arguments (they land in shell history and
+in process listings), and never paste them into chat.
+
+**Egress requirement:** the pilot must be able to reach the preview host. Claude
+Code's remote environment (`Default — trusted network access`) blocks
+`*.vercel.app` at the egress proxy (`403` on CONNECT), so pilots currently run
+from the founder's local CLI session. The harness reports
+`PILOT INCONCLUSIVE` (exit 78) rather than a false pass when it cannot connect.
+
+---
+
 ## Checklist before smoke test
 
 - [ ] All required Vercel env vars are set and non-empty (check in Vercel → Settings → Environment Variables)
@@ -291,3 +323,5 @@ SCAN_CONTINUE_SECRET=any-random-string
 - [ ] A fresh deploy was triggered after any env var change
 - [ ] Gemini model id is still served (validate against API before smoke — see ADR 0002)
 - [ ] If testing Google sign-in: Google provider enabled in Supabase with valid Client ID/Secret, and the URL under test is in Supabase's Redirect URLs allow-list
+- [ ] `PILOT_EMAIL` / `PILOT_PASSWORD` are set in the environment running the pilot, and the pilot account has a seeded project with completed scans
+- [ ] The environment running the pilot can actually reach the preview host (a `PILOT INCONCLUSIVE` verdict is never a pass)

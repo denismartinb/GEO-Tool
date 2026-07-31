@@ -108,10 +108,30 @@ All non-trivial work follows this flow:
 6. Open PR.
 7. Post or rely on AGENTIC handoff.
 8. Let automated Claude QA run.
-9. Wait for Human Gate before merge.
+9. **Run the agentic user pilot** (`ux-pilot`) against the Vercel preview.
+10. Wait for Human Gate before merge.
 
 **Never commit directly to `main`. Never force-push without approval. Never
 auto-merge. Human Gate is always manual.**
+
+---
+
+## Agentic User Pilot (mandatory before Human Gate)
+
+Before the founder is asked to look at anything, the `ux-pilot` agent must open
+the PR's Vercel preview, log in with the pilot account, walk the affected
+screens at 375 / 768 / 1280 px, **look at the screenshots**, and judge them
+against the PR's acceptance criteria. See `docs/agentic-user-pilot.md`.
+
+- `PILOT PASS` → the PR may go to the Human Gate.
+- `PILOT FAIL` → the Director iterates. The founder is not involved.
+- `PILOT INCONCLUSIVE` → the PR **may not** be presented as verified. Say
+  exactly which criteria are unverified and why.
+
+**Never report a pass for something the pilot did not see.** An unreachable
+preview, a failed login, or a blocked egress policy is INCONCLUSIVE, never PASS.
+The pilot is strictly read-only: no scan launches, no project creation or
+deletion, no writing forms, no billing flows.
 
 ---
 
@@ -123,8 +143,9 @@ Human Gate is always manual. It asks:
 2. Was the implemented scope correct?
 3. Did validation pass? Did tests pass?
 4. Did Claude QA accept?
-5. Are there product risks?
-6. Should this merge now?
+5. **Did the agentic user pilot pass, and what did it leave unverified?**
+6. Are there product risks?
+7. Should this merge now?
 
 Only after Human Gate may a PR be merged.
 
@@ -216,6 +237,10 @@ pnpm test
 pnpm run validate
 git diff --check
 bash scripts/agentic-handoff-check.sh
+
+# Agentic user pilot (against the PR's Vercel preview)
+pnpm pilot --url https://<preview>.vercel.app
+pnpm pilot:selfcheck    # proves the pilot harness can still pass AND fail
 ```
 
 ---
@@ -272,7 +297,8 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `data-guardian.md` | Schema, RLS, auth, data integrity (plan mode) |
 | `ux-alignment.md` | Design reference comparison, gap lists (plan mode) |
 | `frontend.md` | Next.js UI implementation |
-| `qa.md` | Regression gate before Human Gate |
+| `qa.md` | Static regression gate before Human Gate |
+| `ux-pilot.md` | **Agentic user test** — drives the real preview as a user before Human Gate |
 | `test-architect.md` | Test strategy and Vitest coverage |
 | `reliability.md` | Scan lifecycle, stuck scans, timeouts, cancellation |
 | `platform-deploy.md` | Vercel config, env vars, model pinning |
@@ -297,6 +323,7 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `adr/0001-record-architecture-decisions.md` | ADR process |
 | `adr/0002-gemini-model-pinning.md` | Gemini model pinned to versioned id |
 | `adr/0003-sync-scan-execution-and-maxduration.md` | Sync scans + maxDuration=60 |
+| `agentic-user-pilot.md` | **Agentic user test** — how the pilot runs, verdicts, scope guard, limits |
 | `agentic-*.md` | Existing agentic pipeline docs (handoff, QA, delivery) |
 
 ---
