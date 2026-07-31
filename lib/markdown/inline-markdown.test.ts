@@ -164,6 +164,45 @@ describe("the founder's reported ChatGPT answer", () => {
   });
 });
 
+/**
+ * The invariant that actually matters for the "Respuestas" tab, asserted
+ * across every wrapping shape the providers are known to emit rather than
+ * only the one last reported. Two rounds were lost to fixing one shape at a
+ * time (line-wrapped, then bold-wrapped); this matrix is the guard against a
+ * third.
+ */
+describe("no markdown syntax leaks into the visible transcript", () => {
+  const URL = "https://www.google.com/maps/search/Alberdiderma%2C+Madrid?utm_source=openai";
+  const shapes: Array<[string, string]> = [
+    ["plain link", `[Alberdiderma](${URL})`],
+    ["bold-wrapped link", `**[Alberdiderma](${URL})**`],
+    ["italic-wrapped link", `_[Alberdiderma](${URL})_`],
+    ["bold label inside link", `[**Alberdiderma**](${URL})`],
+    ["line-wrapped link", `[Alberdiderma]\n(${URL})`],
+    ["bold and line-wrapped", `**[Alberdiderma]\n(${URL})**`],
+    ["blank-line-wrapped link", `[Alberdiderma]\n\n(${URL})`],
+    ["bullet item", `- [Alberdiderma](${URL})`],
+    ["bold bullet item", `- **[Alberdiderma](${URL})**`],
+    ["numbered item", `1. [Alberdiderma](${URL})`],
+    ["heading", `## [Alberdiderma](${URL})`],
+    ["link inside a sentence", `Destaca [Alberdiderma](${URL}) en Madrid.`],
+    ["two links in one line", `[A](${URL}) y [Alberdiderma](${URL})`],
+  ];
+
+  it.each(shapes)("%s", (_name, source) => {
+    const visible = visibleText(tokensOf(source));
+    expect(visible).not.toContain("google.com");
+    expect(visible).not.toContain("utm_source");
+    expect(visible).not.toContain("](");
+    expect(visible).not.toContain("**");
+    expect(visible).toContain("Alberdiderma");
+  });
+
+  it.each(shapes)("%s — exposes the URL as a real link target", (_name, source) => {
+    expect(collectLinks(tokensOf(source)).map((l) => l.url)).toContain(URL);
+  });
+});
+
 describe("parseMarkdownBlocks", () => {
   it("classifies bullet lists and strips their markers", () => {
     expect(parseMarkdownBlocks("- uno\n- dos")).toEqual([
