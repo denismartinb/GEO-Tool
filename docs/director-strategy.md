@@ -382,9 +382,9 @@ flow does meaningfully more I/O. No schema/RLS changes. `pnpm test` 754/754,
 
 ---
 
-## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25, amended 2026-07-30)
+## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25, amended 2026-07-30 x2)
 
-**Status: Implemented (two passes), pending Human Gate.** Founder tested `genscore.es` (a
+**Status: Implemented (three passes), Human Gate pending on the third.** Founder tested `genscore.es` (a
 brand-new product, essentially zero online footprint) and got "% de mención"
 = 23% when it should be 0% — the brand is never genuinely mentioned in any
 collected AI response. The "Evidencias de mención" panel showed why: for one
@@ -432,6 +432,21 @@ token-normalization `reconcileExtractedCompetitors` already uses) —
 present AND plausible-name) are now required together; regression test
 added reproducing this exact case. `pnpm test` 749/749, `pnpm run
 validate` green.
+
+**Third pass (2026-07-30), found smoke-testing a real dermatology-clinic
+project ("Alberdiderma"):** a genuinely verified mention (the brand's name
+really was in the response, as a markdown link) still displayed a
+fabricated "evidence" quote — one that actually described a *different*
+clinic listed above it in the same AI answer. Root cause: `verifyMention`
+validated the mention (`display_name_found`) but never validated each
+`evidence[]` entry independently — the model can get one field right and
+the other wrong. Fix: once a mention passes verification, every quote in
+its `evidence` array is now checked individually against the raw text
+(same substring check, applied per-quote); quotes that aren't genuinely
+present are dropped, which can leave `mentioned: true` with `evidence: []`
+— the UI already hides the evidence panel entirely when empty, so this is
+the honest "no evidence to show" state, not a wrong one. `pnpm test`
+813/813, `pnpm run validate` green. See docs/adr/0021's "Follow-up 2".
 
 **Deliberately NOT done (see ADR 0021 for the full reasoning):**
 - **`visibility_score`/`competitor_gap_score` themselves are NOT nulled**
