@@ -11,6 +11,7 @@ import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
 import { isBrandDomain } from "@/lib/domains/brand-domain";
+import { parseMarkdownBlocks, tokenizeInline } from "@/lib/markdown/inline-markdown";
 
 type Competitor = {
   id: string;
@@ -134,29 +135,6 @@ function isSafeHttpUrl(url: string): boolean {
   }
 }
 
-type InlineToken =
-  | { type: "text"; value: string }
-  | { type: "bold"; value: string }
-  | { type: "link"; label: string; url: string };
-
-function tokenizeInline(line: string): InlineToken[] {
-  const tokens: InlineToken[] = [];
-  // Some providers (observed with OpenAI) emit a space — or even a line break —
-  // between the `]` and `(` of a markdown link; `\s*` tolerates that instead of
-  // falling through to raw "[label] (url)" text.
-  const re = /\[([^\]]+)\]\s*\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(line))) {
-    if (m.index > last) tokens.push({ type: "text", value: line.slice(last, m.index) });
-    if (m[1] !== undefined) tokens.push({ type: "link", label: m[1], url: m[2] });
-    else if (m[3] !== undefined) tokens.push({ type: "bold", value: m[3] });
-    last = re.lastIndex;
-  }
-  if (last < line.length) tokens.push({ type: "text", value: line.slice(last) });
-  return tokens;
-}
-
 /** Splits a token's text on embedded newlines, rendering each break as <br/>. */
 function renderTextWithLineBreaks(value: string, brand: string, keyPrefix: string): React.ReactNode {
   const parts = value.split("\n");
@@ -188,82 +166,57 @@ function renderInline(line: string, brand: string): React.ReactNode {
     if (t.type === "bold") {
       return <strong key={i}>{renderTextWithLineBreaks(t.value, brand, `bold-${i}`)}</strong>;
     }
+    if (t.type === "italic") {
+      return <em key={i}>{renderTextWithLineBreaks(t.value, brand, `italic-${i}`)}</em>;
+    }
     return <Fragment key={i}>{renderTextWithLineBreaks(t.value, brand, `text-${i}`)}</Fragment>;
   });
 }
 
 /**
- * Minimal, dependency-free markdown-lite for raw LLM responses (bold,
- * bullet/numbered lists, paragraphs, links) — these come back as literal
- * markdown syntax (`**bold**`, `* item`) that read as noise as plain text.
- * Not a general markdown renderer: just the handful of constructs the
- * providers actually emit in these answers.
- */
-/** Renders a heading-free block: bullet list, numbered list, or paragraph. */
-function renderBlock(lines: string[], key: number, brand: string): React.ReactNode {
-  const isBulletList = lines.every((l) => /^\s*[-*]\s+/.test(l));
-  const isNumberedList = !isBulletList && lines.every((l) => /^\s*\d+[.)]\s+/.test(l));
-
-  if (isBulletList) {
-    return (
-      <ul key={key} className="pr2-md-list">
-        {lines.map((l, i) => (
-          <li key={i}>{renderInline(l.replace(/^\s*[-*]\s+/, ""), brand)}</li>
-        ))}
-      </ul>
-    );
-  }
-  if (isNumberedList) {
-    return (
-      <ol key={key} className="pr2-md-list">
-        {lines.map((l, i) => (
-          <li key={i}>{renderInline(l.replace(/^\s*\d+[.)]\s+/, ""), brand)}</li>
-        ))}
-      </ol>
-    );
-  }
-  return (
-    <p key={key} className="pr2-md-p">
-      {renderInline(lines.join("\n"), brand)}
-    </p>
-  );
-}
-
-/**
- * Providers don't agree on how they mark up a section title: Gemini/ChatGPT
- * tend to bold it inline (`**Aspectos a tener en cuenta:**`, already handled
- * by renderInline's bold token), Claude uses ATX headings (`# `, `## `).
- * Without this, Claude's raw responses showed literal `#`/`##` characters
- * instead of the bold section titles the other engines got for free.
- * Rendered as a bold line, not a real <h*> tag — these are relative to the
- * model's own answer, not the page's heading outline, and providers don't
- * even agree on a consistent depth for the same kind of title.
+ * Renders a raw model response as markdown-lite. Block classification and
+ * inline tokenization live in `lib/markdown/inline-markdown.ts` (unit-tested
+ * there); this function only maps the parsed blocks onto JSX.
+ *
+ * Headings render as a bold line, not a real <h*> tag — they are relative to
+ * the model's own answer, not the page's heading outline, and providers don't
+ * agree on a consistent depth for the same kind of title.
  */
 function renderFormattedResponse(text: string, brand: string): React.ReactNode {
-  const blocks = text.split(/\n\s*\n/).map((b) => b.trim()).filter(Boolean);
-  const nodes: React.ReactNode[] = [];
-  let key = 0;
-
-  for (const block of blocks) {
-    const lines = block.split("\n").filter((l) => l.trim().length > 0);
-    if (lines.length === 0) continue;
-
-    const headingMatch = lines[0].match(/^#{1,6}\s+(.*)$/);
-    if (headingMatch) {
-      nodes.push(
-        <p key={key++} className="pr2-md-h">
-          {renderInline(headingMatch[1], brand)}
+  return parseMarkdownBlocks(text).map((block, key) => {
+    if (block.type === "heading") {
+      return (
+        <p key={key} className="pr2-md-h">
+          {renderInline(block.lines[0], brand)}
         </p>
       );
-      const rest = lines.slice(1);
-      if (rest.length > 0) nodes.push(renderBlock(rest, key++, brand));
-      continue;
     }
-
-    nodes.push(renderBlock(lines, key++, brand));
-  }
-
-  return nodes;
+    if (block.type === "bullets") {
+      return (
+        <ul key={key} className="pr2-md-list">
+          {block.lines.map((l, i) => (
+            <li key={i}>{renderInline(l, brand)}</li>
+          ))}
+        </ul>
+      );
+    }
+    if (block.type === "numbered") {
+      return (
+        <ol key={key} className="pr2-md-list">
+          {block.lines.map((l, i) => (
+            <li key={i}>{renderInline(l, brand)}</li>
+          ))}
+        </ol>
+      );
+    }
+    // Paragraph: tokenize the whole block at once (lines rejoined) so a
+    // construct spanning a line boundary isn't severed before parsing.
+    return (
+      <p key={key} className="pr2-md-p">
+        {renderInline(block.lines.join("\n"), brand)}
+      </p>
+    );
+  });
 }
 
 export function PromptDrawer({ projectId, projectDomain, projectBrand, results, competitors, onClose }: Props) {
