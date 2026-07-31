@@ -544,6 +544,51 @@ counted in their citation numbers.
 
 ---
 
+## MARKDOWN-RENDER-1 — raw markdown links shown as literal text in "Respuestas" (founder report, 2026-07-31)
+
+**Status: Implemented, pending Human Gate.** After the citation-noise fix
+above shipped, the founder kept seeing the full `google.com/maps/search/...`
+URL in the prompt drawer's "Respuestas" tab and reported it as still broken.
+It was a **third, unrelated root cause**: the citation filter governs which
+URLs count as citations (scoring, "Fuentes usadas"), never how the raw
+transcript itself is displayed — the transcript must always be shown
+verbatim, so no filter could have changed it.
+
+The actual bug was in the markdown-lite renderer: OpenAI wraps long citation
+URLs onto their own line, emitting `[Clínica ...]\n(https://...)`, and
+`tokenizeInline`'s regex required `]` and `(` to be adjacent. The link never
+tokenized, so the whole construct fell through to plain text and the reader
+saw raw brackets plus the full URL. Confirmed by replaying the founder's
+verbatim response through the parser: 0 links detected before the fix, 2
+after.
+
+Fix, in two commits on the same PR:
+1. The regex now tolerates whitespace (space or newline) between `]` and
+   `(`; `renderInline` accepts multi-line input and renders embedded
+   newlines as `<br/>`, so the paragraph branch can tokenize a whole block
+   at once instead of per line — a construct spanning a line boundary is no
+   longer severed before parsing.
+2. Parser extracted to `lib/markdown/inline-markdown.ts` with 18 unit tests
+   (the founder's verbatim ChatGPT answer is a fixture). This logic had
+   lived inline in a component with **zero test coverage**, which is why the
+   bug shipped unnoticed in the first place. `normalizeMarkdownSource` also
+   rejoins a label/target pair separated by a blank line (which the block
+   splitter would otherwise tear apart), restricted to parentheticals that
+   actually open a URL so ordinary prose is untouched. Italic (`_text_`)
+   support added — `_Madrid, España_` was rendering with literal
+   underscores in the same screenshot — with a word-boundary check so an
+   underscore inside a bare URL (`?utm_source=openai`) can't open an italic
+   run.
+
+`pnpm test` 834/834, `pnpm run validate` green.
+
+**Process note:** the founder's first retest of the fix used a screenshot
+taken 11 minutes *before* the corresponding Vercel preview finished
+building, costing a full round trip. Handoffs should state that the preview
+must show as Ready, not just that a commit was pushed.
+
+---
+
 ## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
 
 Founder direction (verbatim intent): recommendations must become **more

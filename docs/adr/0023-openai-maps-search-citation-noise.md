@@ -103,3 +103,47 @@ pattern), not a semantic understanding of "is this a real citation." A
 future Maps URL shape not covered here (e.g. a shortened/redirected variant)
 could still slip through; this is the same class of residual risk the
 inline-citation fix already accepted for the equivalent case.
+
+---
+
+## Follow-up — the same URL, a third and unrelated root cause (2026-07-31)
+
+After this filter shipped, the founder still saw the full
+`google.com/maps/search/...` URL in the prompt drawer's **"Respuestas"** tab
+and reported the fix as ineffective. It was neither a miss in this filter
+nor in MENTION-VERIFY-1.
+
+**The scope of this ADR is citation *counting*, not transcript *display*.**
+The filter decides which URLs become citations — feeding `citations_count`,
+`citation_found`, the Citations page and "Fuentes usadas". The "Respuestas"
+tab shows the model's raw answer, which must always be rendered verbatim:
+no citation filter can (or should) alter it. The two surfaces were being
+conflated because the same URL appears on both.
+
+The display bug was in the markdown-lite renderer. OpenAI wraps long
+citation URLs onto their own line:
+
+```
+[Clínica Dermatológica Madrid De Felipe]
+(https://www.google.com/maps/search/...?utm_source=openai)
+```
+
+`tokenizeInline`'s link regex required `]` and `(` to be adjacent, so this
+never tokenized as a link and the entire construct fell through to plain
+text — raw brackets and full URL, exactly what the founder was reporting.
+Replaying the founder's verbatim response through the parser: **0 links
+detected before, 2 after.**
+
+Fixed by tolerating whitespace between `]` and `(`, letting `renderInline`
+accept multi-line input (so a construct spanning a line boundary is not
+severed before parsing), and extracting the parser to
+`lib/markdown/inline-markdown.ts` with unit tests. The logic previously
+lived inline in `components/prompts/prompt-drawer.tsx` with no test
+coverage at all, which is the reason the bug shipped unnoticed; the
+founder's verbatim answer is now a regression fixture. See
+`docs/director-strategy.md` → MARKDOWN-RENDER-1.
+
+**Lesson worth keeping:** when a user reports "the same problem again"
+after a fix, verify which surface they are looking at before assuming the
+fix missed a case. Three distinct root causes (fabricated evidence, citation
+counting, transcript rendering) presented as one identical-looking symptom.
