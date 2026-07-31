@@ -500,10 +500,15 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
               </div>
 
               {/* Evidencias de la marca, agrupadas por motor. El nombre de la
-                  marca va en el propio título — leída suelta, una cita
-                  genérica ("especialistas en X, atención personalizada...")
-                  no deja claro a qué negocio se refiere (founder feedback,
-                  2026-07-31). */}
+                  marca va tanto en el título de la sección como delante de
+                  cada cita individual — leída suelta, una cita genérica
+                  ("especialistas en X, atención personalizada...") no deja
+                  claro a qué negocio se refiere, y con varios motores/citas
+                  en la misma tarjeta el título solo no basta (founder
+                  feedback, 2026-07-31). El corchete es una anotación nuestra,
+                  fuera de las comillas — nunca se añade dentro de la cita
+                  textual, que sigue siendo exactamente lo verificado contra
+                  la respuesta real (MENTION-VERIFY-1). */}
               {evidenceGroups.length > 0 && (
                 <div>
                   <p className="ac-title">Evidencias de mención de {projectBrand}</p>
@@ -518,7 +523,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                         </div>
                         {g.evidence.map((ev, i) => (
                           <p key={i} className="pr2-evi">
-                            «{ev}»
+                            <strong style={{ fontStyle: "normal" }}>[{projectBrand}]</strong> «{ev}»
                           </p>
                         ))}
                       </Fragment>
