@@ -82,10 +82,24 @@ function verifyMention<T extends MentionEntity>(entity: T, realName: string, nor
   const claimed = entity.display_name_found?.trim();
   const isPlausibleName = Boolean(claimed) && namesPlausiblyMatch(claimed as string, realName);
   const isInRawText = Boolean(claimed) && normalizedRawText.includes(normalizeForSubstringMatch(claimed as string));
-  if (isPlausibleName && isInRawText) {
-    return entity;
+  if (!isPlausibleName || !isInRawText) {
+    return { ...entity, mentioned: false, display_name_found: null, evidence: [], position: null };
   }
-  return { ...entity, mentioned: false, display_name_found: null, evidence: [], position: null };
+
+  // MENTION-VERIFY-1 follow-up 2 (docs/adr/0021 addendum, 2026-07-30): the
+  // mention itself being verified does NOT mean every individual `evidence`
+  // quote is real — observed in production: a genuinely mentioned brand
+  // (its name really was in the text) whose displayed "evidence" was a
+  // fabricated/mismatched sentence that actually described a DIFFERENT
+  // entity in the same list (e.g. a competing clinic listed above it).
+  // Each quote is checked independently against the raw text; only quotes
+  // that are themselves real survive. An entity can end up verified as
+  // mentioned with an empty evidence array — the UI already omits the
+  // evidence panel entirely when it's empty, which is the honest outcome
+  // (no evidence shown) rather than a wrong one (fabricated evidence shown).
+  const verifiedEvidence = entity.evidence.filter((quote) => normalizedRawText.includes(normalizeForSubstringMatch(quote)));
+
+  return { ...entity, evidence: verifiedEvidence };
 }
 
 /**

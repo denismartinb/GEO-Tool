@@ -170,6 +170,36 @@ now takes the project's real `brand` name as a parameter (threaded from
 `row.brand_snapshot` in `extractAndPersistRow`) to make check (1) possible
 for the brand entity.
 
+## Follow-up 2 (2026-07-30) — a verified mention can still carry fabricated evidence
+
+Founder smoke-tested a real dermatology-clinic project ("Alberdiderma") after
+the two fixes above and found a third variant: the brand's own mention was
+genuine this time — its name really did appear in the response, as a
+markdown link — so `verifyMention`'s `display_name_found` check correctly
+kept `mentioned: true`. But the "Evidencias de mención" panel showed a quote
+("Centro dermatológico de referencia con más de 20 años de experiencia...")
+that never appears anywhere in the raw response — it actually describes a
+*different* clinic listed above it in the same AI answer. The extraction
+model attributed the wrong descriptive sentence to the right entity.
+
+The gap: `verifyMention` validated the mention itself (via
+`display_name_found`) but never validated the `evidence[]` array
+independently — an entity can be genuinely mentioned while still carrying
+one or more fabricated/mismatched evidence quotes, since the model
+generates `evidence` as a separate field from `display_name_found` and can
+get one right and the other wrong.
+
+**Fix:** once an entity's mention passes verification, `verifyMention` now
+also filters its `evidence` array, keeping only quotes that are themselves
+a (normalized) substring of the raw response text — same
+`normalizeForSubstringMatch` check already used for `display_name_found`,
+just applied per-quote instead of once. An entity can end up with
+`mentioned: true` and `evidence: []` if every quote it offered turns out to
+be fabricated — the UI (`components/prompts/prompt-drawer.tsx`) already
+filters out any engine group with an empty `evidence` array before
+rendering the "Evidencias de mención" panel, so this renders as no evidence
+shown for that engine, not a wrong one.
+
 ## Consequences
 
 **Positive.** `brand_mentioned`/`mentioned_competitors_count` — and every
