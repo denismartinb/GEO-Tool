@@ -35,6 +35,38 @@ delegated it back to the human. That is the exact loop this phase closes.
 8. Human Gate            → only with PILOT PASS + preview URL + "qué probar"
 ```
 
+## First-time setup (local machine)
+
+The pilot must run somewhere with network access to `*.vercel.app` — today,
+that means the founder's own machine, not Claude Code's remote/web sessions
+(see "Known limits" below).
+
+```bash
+git switch claude/human-gate-workflow-utotif && git pull
+pnpm install                        # pulls in @playwright/test
+pnpm exec playwright install chromium   # one-time; not needed inside the
+                                         # agent sandbox, which ships a
+                                         # prebuilt Chromium already
+```
+
+Add to `.env.local` (gitignored, same file every other local var lives in):
+
+```
+PILOT_EMAIL=...
+PILOT_PASSWORD=...
+```
+
+`scripts/pilot.mjs` loads `.env.local` itself — no extra export step, no
+shell profile changes. `PILOT_PROJECT_ID` is optional; leave it unset to let
+the pilot pick the first project on the account, or pin it if you want the
+journeys to always inspect the same one.
+
+Then prove the harness itself works before trusting it against a real preview:
+
+```bash
+pnpm pilot:selfcheck
+```
+
 ## Running it
 
 ```bash
@@ -42,6 +74,25 @@ pnpm pilot --url https://<preview>.vercel.app   # primary interface
 pnpm pilot --pr 276                             # convenience, needs GITHUB_TOKEN
 pnpm pilot:selfcheck                            # proves the harness still works
 ```
+
+For a new PR: open it, find the Vercel bot's comment, copy the `Preview` link
+once it shows `Ready`, and run `pnpm pilot --url <that-link>`. The verdict and
+the reasoning behind it should also be posted to the PR as a
+`<!-- agentic:ux-pilot-result -->` comment (see the Report format in
+`.claude/agents/ux-pilot.md`) — the founder should never have to re-derive it
+from raw terminal output.
+
+**Two ways to get this running on every PR, not just this one:**
+
+- **Manual today, on any PR:** copy the preview URL and run `pnpm pilot --url
+  ...` yourself. Works right now, no further setup.
+- **Agentic, via the Director:** ask the Director to run the pilot as part of
+  its normal PR loop. This only works when the Director itself is running
+  from a session with network access to `*.vercel.app` — a local Claude Code
+  CLI session on your machine. A Claude Code **remote/web** session cannot do
+  this (its egress proxy blocks the preview host by policy — see "Known
+  limits"), so a remote-session Director will report `PILOT INCONCLUSIVE` and
+  ask you to run it locally instead, exactly like it did on PR #279.
 
 Exit codes are the verdict:
 

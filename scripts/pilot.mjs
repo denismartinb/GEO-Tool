@@ -21,6 +21,30 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync } from "node:fs";
 
+/**
+ * Loads `.env.local` (matching the convention every other script in this repo
+ * follows — see docs/environment-contract.md) into process.env, without
+ * overwriting variables the caller already set. This is a standalone script,
+ * not a Next.js process, so nothing loads it automatically otherwise.
+ *
+ * Deliberately minimal: KEY=VALUE per line, no export keyword, no expansion,
+ * no multiline values — matches the flat shape already used in .env.example.
+ */
+function loadDotEnvLocal(path = ".env.local") {
+  if (!existsSync(path)) return;
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (process.env[key] !== undefined) continue;
+    process.env[key] = trimmed.slice(eq + 1).trim();
+  }
+}
+
+loadDotEnvLocal();
+
 const EXIT_PASS = 0;
 const EXIT_FAIL = 1;
 const EXIT_INCONCLUSIVE = 78;
