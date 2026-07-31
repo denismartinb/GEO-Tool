@@ -1908,6 +1908,18 @@ a {
 .user-chip:hover { background: var(--surface-2); }
 .avatar { width: 28px; height: 28px; border-radius: 999px; background: rgba(37,99,235,.1); color: var(--brand-blue); display: grid; place-items: center; font-weight: 700; font-size: 11px; flex-shrink: 0; }
 
+/* Plan badge under the sidebar email (Fase B, Task Intake approved
+   2026-07-31): only rendered for a real paid plan (current_plan resolved via
+   getPlanForUser, which already downgrades an expired reverse-trial to
+   "free") — Free renders nothing, per founder decision. */
+.sb-plan-badge {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;
+  padding: 2px 7px 2px 6px; border-radius: 999px;
+  background: rgba(37,99,235,.1); color: var(--brand-blue);
+  font-size: 10px; font-weight: 700; line-height: 1.5;
+}
+.sb-plan-badge svg { flex: 0 0 auto; }
+
 /* ============================================================
    Overview — responsive tweaks
    ============================================================ */
