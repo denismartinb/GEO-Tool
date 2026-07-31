@@ -1782,8 +1782,15 @@ a {
     margin-top: 4px;
   }
   .pr2-main, .pr2-rail { display: block; min-width: 0; }
-  .pr2-main { grid-column: 1; }
-  .pr2-rail { grid-column: 2; }
+  /* grid-row:1 on both is required, not decorative: .pr2-rail (column 2)
+     comes before .pr2-main (column 1) in the DOM, and CSS Grid's sparse
+     auto-placement only moves its cursor forward — placing .pr2-rail at
+     row 1/col 2 first pushes the column-1 cursor position past .pr2-main's
+     column, so without an explicit row it gets auto-placed onto row 2
+     instead of sitting beside the rail. Reproduced and confirmed against
+     the live component (not just this file) before adding this. */
+  .pr2-main { grid-column: 1; grid-row: 1; }
+  .pr2-rail { grid-column: 2; grid-row: 1; }
   /* 60px clears the sticky page header (.ov-sticky-header), same offset
      as .ov2-rail on Overview. */
   .pr2-rail { position: sticky; top: 60px; }
