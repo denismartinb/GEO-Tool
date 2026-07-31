@@ -1651,14 +1651,18 @@ a {
   color: var(--ink-4); margin: 22px 2px 10px;
 }
 
-/* List card header: section label + (≥1200px only) search. Below that, the
-   search is hidden here (.pr2-search-listhead) and .pr2-sec-lbl keeps the
-   same position/margin it always had as a standalone label. */
+/* List card header: section label + (≥1200px only) search + add prompts.
+   Below that breakpoint both actions are hidden here (.pr2-search-listhead,
+   .pr2-add-listhead — the toolbar above carries them instead) and
+   .pr2-sec-lbl keeps the same position/margin it always had as a
+   standalone label. */
 .pr2-listhead {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   flex-wrap: wrap;
 }
 .pr2-listhead .pr2-sec-lbl { margin: 22px 0 10px; }
+.pr2-listhead-actions { display: flex; align-items: center; gap: 10px; }
+.pr2-add-listhead { display: none; }
 
 /* 5 · Topic accordion */
 .pr2-ring { position: relative; flex: 0 0 auto; }
@@ -1755,31 +1759,39 @@ a {
 }
 
 /* ============================================================
-   PROMPTS-DESKTOP-3 — visibility rail + search relocated into the list
-   header (Task Intake approved 2026-07-31). At ≥1200px the "Visibilidad
-   del conjunto" card gets its own 360px rail instead of stacking
-   full-width above the topic list, and the search moves from the toolbar
-   into the list card's own header (.pr2-listhead) so it isn't left next
-   to a wide empty gap once max-width:360px (above) stops it from
-   stretching to fill the toolbar. Same `display: contents` mechanism as
-   OV-DESKTOP-1's `.ov2-cols`/`.ov2-main`/`.ov2-rail` — zero effect below
-   1200px, .pr2-rail is placed via explicit grid-column rather than DOM
-   order so mobile/tablet keep the card's original position (above the
-   list, not after it).
+   PROMPTS-DESKTOP-3 — visibility rail + search/add-prompts relocated into
+   the list header (Task Intake approved 2026-07-31). At ≥1200px the
+   "Visibilidad del conjunto" card gets its own 360px rail instead of
+   stacking full-width above the topic list, and the search + "Añadir
+   prompts" move from the standalone toolbar into the list card's own
+   header (.pr2-listhead) — search so it isn't left next to a wide empty
+   gap once max-width:360px (above) stops it from stretching to fill the
+   toolbar, add-prompts so the toolbar row doesn't stay around empty once
+   it has nothing else in it (founder: more compact). Same
+   `display: contents` mechanism as OV-DESKTOP-1's
+   `.ov2-cols`/`.ov2-main`/`.ov2-rail` — zero effect below 1200px,
+   .pr2-rail is placed via explicit grid-column rather than DOM order so
+   mobile/tablet keep the card's original position (above the list, not
+   after it).
    ============================================================ */
 .pr2-cols, .pr2-main, .pr2-rail { display: contents; }
 
 @media (min-width: 1200px) {
-  .pr2-search-toolbar { display: none; }
+  /* Both toolbar controls move into .pr2-listhead at this width — hide the
+     whole row instead of leaving it empty (founder: more compact). */
+  .pr2-toolbar { display: none; }
   .pr2-search-listhead { display: flex; }
-  .pr2-toolbar { justify-content: flex-end; }
+  .pr2-add-listhead { display: inline-flex; }
 
   .pr2-cols {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
     gap: 20px;
     align-items: start;
-    margin-top: 4px;
+    /* .pr2-toolbar (with its own 14px margin-top) is hidden at this width,
+       so .pr2-cols now follows the insight banner directly — replace that
+       spacing here instead of leaving it too tight. */
+    margin-top: 16px;
   }
   .pr2-main, .pr2-rail { display: block; min-width: 0; }
   /* grid-row:1 on both is required, not decorative: .pr2-rail (column 2)

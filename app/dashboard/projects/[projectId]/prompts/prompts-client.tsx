@@ -324,13 +324,13 @@ export function PromptsClient({
         </p>
       </div>
 
-      {/* Toolbar: real search, visible below the desktop rail breakpoint
-          (≥1200px it moves into the list card's own header — .pr2-listhead
-          below — so it isn't stranded next to a wide empty gap once the
-          visibility card gets its own 360px rail). Add prompts stays here
-          at every width. No filter tabs for category/engine — Prompts has
-          no such filter today, so we don't render controls that look
-          interactive but do nothing. */}
+      {/* Toolbar: search + add prompts, below the desktop rail breakpoint.
+          At ≥1200px this whole row hides — both controls move into the
+          list card's own header (.pr2-listhead below) so the page doesn't
+          spend a whole row on them once there's room to fold it into the
+          list header instead (founder: more compact). No filter tabs for
+          category/engine — Prompts has no such filter today, so we don't
+          render controls that look interactive but do nothing. */}
       <div className="pr2-toolbar">
         <label className="pr2-search pr2-search-toolbar">
           <Icon name="search" size={14} />
@@ -342,7 +342,7 @@ export function PromptsClient({
             aria-label="Buscar prompt"
           />
         </label>
-        {addButton}
+        <span className="pr2-add-toolbar">{addButton}</span>
       </div>
 
       <div className="pr2-cols">
@@ -390,16 +390,19 @@ export function PromptsClient({
 
               <div className="pr2-listhead">
                 <span className="pr2-sec-lbl">Prompts</span>
-                <label className="pr2-search pr2-search-listhead">
-                  <Icon name="search" size={14} />
-                  <input
-                    type="text"
-                    placeholder="Buscar prompt…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    aria-label="Buscar prompt"
-                  />
-                </label>
+                <div className="pr2-listhead-actions">
+                  <label className="pr2-search pr2-search-listhead">
+                    <Icon name="search" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Buscar prompt…"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      aria-label="Buscar prompt"
+                    />
+                  </label>
+                  <span className="pr2-add-listhead">{addButton}</span>
+                </div>
               </div>
               <div className="card">
                 {filteredFlatGroups.length === 0 ? (
@@ -427,16 +430,19 @@ export function PromptsClient({
             <>
               <div className="pr2-listhead">
                 <span className="pr2-sec-lbl">Topics</span>
-                <label className="pr2-search pr2-search-listhead">
-                  <Icon name="search" size={14} />
-                  <input
-                    type="text"
-                    placeholder="Buscar prompt…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    aria-label="Buscar prompt"
-                  />
-                </label>
+                <div className="pr2-listhead-actions">
+                  <label className="pr2-search pr2-search-listhead">
+                    <Icon name="search" size={14} />
+                    <input
+                      type="text"
+                      placeholder="Buscar prompt…"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      aria-label="Buscar prompt"
+                    />
+                  </label>
+                  <span className="pr2-add-listhead">{addButton}</span>
+                </div>
               </div>
               <div className="card">
                 {filteredTopicGroups.length === 0 ? (
