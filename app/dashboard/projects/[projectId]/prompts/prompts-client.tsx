@@ -324,11 +324,15 @@ export function PromptsClient({
         </p>
       </div>
 
-      {/* Toolbar: real search (filters the list below) + add prompts. No
-          filter tabs for category/engine — Prompts has no such filter today,
-          so we don't render controls that look interactive but do nothing. */}
+      {/* Toolbar: real search, visible below the desktop rail breakpoint
+          (≥1200px it moves into the list card's own header — .pr2-listhead
+          below — so it isn't stranded next to a wide empty gap once the
+          visibility card gets its own 360px rail). Add prompts stays here
+          at every width. No filter tabs for category/engine — Prompts has
+          no such filter today, so we don't render controls that look
+          interactive but do nothing. */}
       <div className="pr2-toolbar">
-        <label className="pr2-search">
+        <label className="pr2-search pr2-search-toolbar">
           <Icon name="search" size={14} />
           <input
             type="text"
@@ -341,125 +345,159 @@ export function PromptsClient({
         {addButton}
       </div>
 
-      {/* Proportion summary — static, real data already computed above */}
-      {scannedGroups > 0 && (
-        <div className="card pr2-split">
-          <div className="pr2-split-top">
-            <span>Visibilidad del conjunto</span>
-            <b>{presentPct}%</b>
+      <div className="pr2-cols">
+        {/* Proportion summary — static, real data already computed above.
+            Rendered before .pr2-main so mobile/tablet keeps its original
+            document order (split card above the list); the ≥1200px grid
+            below places it in its own 360px column via explicit
+            grid-column, independent of DOM order. */}
+        {scannedGroups > 0 && (
+          <div className="pr2-rail">
+            <div className="card pr2-split">
+              <div className="pr2-split-top">
+                <span>Visibilidad del conjunto</span>
+                <b>{presentPct}%</b>
+              </div>
+              <div className="pr2-split-bar">
+                <i style={{ width: `${presentPct}%`, background: "var(--brand-pos)" }} />
+                <i style={{ width: `${100 - presentPct}%`, background: "var(--brand-neg)" }} />
+              </div>
+              <div className="pr2-split-legend">
+                <span><span className="d" style={{ background: "var(--brand-pos)" }} />{brandPresent} con visibilidad</span>
+                <span><span className="d" style={{ background: "var(--brand-neg)" }} />{brandAbsent} sin visibilidad</span>
+              </div>
+            </div>
           </div>
-          <div className="pr2-split-bar">
-            <i style={{ width: `${presentPct}%`, background: "var(--brand-pos)" }} />
-            <i style={{ width: `${100 - presentPct}%`, background: "var(--brand-neg)" }} />
-          </div>
-          <div className="pr2-split-legend">
-            <span><span className="d" style={{ background: "var(--brand-pos)" }} />{brandPresent} con visibilidad</span>
-            <span><span className="d" style={{ background: "var(--brand-neg)" }} />{brandAbsent} sin visibilidad</span>
-          </div>
+        )}
+
+        <div className="pr2-main">
+          {/* Modo flat sin topics */}
+          {!hasTopics && (
+            <>
+              <div
+                style={{
+                  border: "1.5px dashed var(--line-strong)",
+                  borderRadius: 10,
+                  padding: "12px 16px",
+                  fontSize: 13,
+                  color: "var(--ink-3)",
+                  marginTop: 16,
+                }}
+              >
+                Tus prompts no tienen topics asignados todavía. Cuando GenScore genere
+                topics automáticamente, aparecerán agrupados aquí.
+              </div>
+
+              <div className="pr2-listhead">
+                <span className="pr2-sec-lbl">Prompts</span>
+                <label className="pr2-search pr2-search-listhead">
+                  <Icon name="search" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Buscar prompt…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    aria-label="Buscar prompt"
+                  />
+                </label>
+              </div>
+              <div className="card">
+                {filteredFlatGroups.length === 0 ? (
+                  <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
+                    Ningún prompt coincide con «{query}».
+                  </p>
+                ) : (
+                  filteredFlatGroups.map((g) => (
+                    <PromptRow
+                      key={g.key}
+                      group={g}
+                      indent={false}
+                      allProviders={allProviders}
+                      onClick={() => setSelectedPromptId(g.key)}
+                    />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Modo Topics — acordeón: anillo de visibilidad real (Gauge) por
+              topic, prompts desplegables al pulsar. */}
+          {hasTopics && (
+            <>
+              <div className="pr2-listhead">
+                <span className="pr2-sec-lbl">Topics</span>
+                <label className="pr2-search pr2-search-listhead">
+                  <Icon name="search" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Buscar prompt…"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    aria-label="Buscar prompt"
+                  />
+                </label>
+              </div>
+              <div className="card">
+                {filteredTopicGroups.length === 0 ? (
+                  <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
+                    Ningún topic o prompt coincide con «{query}».
+                  </p>
+                ) : (
+                  filteredTopicGroups.map((group) => {
+                    const isOpen = expandedTopics.has(group.category) || query.trim().length > 0;
+                    const promptsInTopic = groupByPrompt(group.results);
+                    return (
+                      <React.Fragment key={`topic-${group.category}`}>
+                        <div
+                          className={`pr2-trow${isOpen ? " open" : ""}`}
+                          onClick={() => toggleTopic(group.category)}
+                        >
+                          <div className="pr2-ring">
+                            <Gauge value={group.visibilidad} size={46} stroke={6} label="" />
+                          </div>
+                          <div className="pr2-trow-main">
+                            <div className="pr2-trow-title">
+                              <span className={`pr2-chev${isOpen ? " down" : ""}`}>
+                                <Icon name="chevRight" size={15} />
+                              </span>
+                              {group.category}
+                            </div>
+                            <div className="pr2-trow-meta">
+                              {/* Deduped prompt count, not the raw per-engine row
+                                  count (a prompt answered by 2 engines has 2 rows
+                                  in group.results but is still 1 prompt). */}
+                              {promptsInTopic.length} {promptsInTopic.length === 1 ? "prompt" : "prompts"}
+                              <span className="pr2-trow-sep" />
+                              <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ fontSize: 10.5, padding: "1px 7px" }}>
+                                {sentimentLabel(group.sentimentDominant)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="pr2-trow-mentions">
+                            <div className="v">{group.menciones}</div>
+                            <div className="k">menciones</div>
+                          </div>
+                        </div>
+                        {isOpen &&
+                          promptsInTopic.map((g) => (
+                            <PromptRow
+                              key={g.key}
+                              group={g}
+                              indent
+                              allProviders={allProviders}
+                              onClick={() => setSelectedPromptId(g.key)}
+                            />
+                          ))}
+                      </React.Fragment>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
         </div>
-      )}
-
-      {/* Modo flat sin topics */}
-      {!hasTopics && (
-        <>
-          <div
-            style={{
-              border: "1.5px dashed var(--line-strong)",
-              borderRadius: 10,
-              padding: "12px 16px",
-              fontSize: 13,
-              color: "var(--ink-3)",
-              marginTop: 16,
-            }}
-          >
-            Tus prompts no tienen topics asignados todavía. Cuando GenScore genere
-            topics automáticamente, aparecerán agrupados aquí.
-          </div>
-
-          <p className="pr2-sec-lbl">Prompts</p>
-          <div className="card">
-            {filteredFlatGroups.length === 0 ? (
-              <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
-                Ningún prompt coincide con «{query}».
-              </p>
-            ) : (
-              filteredFlatGroups.map((g) => (
-                <PromptRow
-                  key={g.key}
-                  group={g}
-                  indent={false}
-                  allProviders={allProviders}
-                  onClick={() => setSelectedPromptId(g.key)}
-                />
-              ))
-            )}
-          </div>
-        </>
-      )}
-
-      {/* Modo Topics — acordeón: anillo de visibilidad real (Gauge) por
-          topic, prompts desplegables al pulsar. */}
-      {hasTopics && (
-        <>
-          <p className="pr2-sec-lbl">Topics</p>
-          <div className="card">
-            {filteredTopicGroups.length === 0 ? (
-              <p style={{ padding: 16, fontSize: 13, color: "var(--ink-4)" }}>
-                Ningún topic o prompt coincide con «{query}».
-              </p>
-            ) : (
-              filteredTopicGroups.map((group) => {
-                const isOpen = expandedTopics.has(group.category) || query.trim().length > 0;
-                const promptsInTopic = groupByPrompt(group.results);
-                return (
-                  <React.Fragment key={`topic-${group.category}`}>
-                    <div
-                      className={`pr2-trow${isOpen ? " open" : ""}`}
-                      onClick={() => toggleTopic(group.category)}
-                    >
-                      <div className="pr2-ring">
-                        <Gauge value={group.visibilidad} size={46} stroke={6} label="" />
-                      </div>
-                      <div className="pr2-trow-main">
-                        <div className="pr2-trow-title">
-                          <span className={`pr2-chev${isOpen ? " down" : ""}`}>
-                            <Icon name="chevRight" size={15} />
-                          </span>
-                          {group.category}
-                        </div>
-                        <div className="pr2-trow-meta">
-                          {/* Deduped prompt count, not the raw per-engine row
-                              count (a prompt answered by 2 engines has 2 rows
-                              in group.results but is still 1 prompt). */}
-                          {promptsInTopic.length} {promptsInTopic.length === 1 ? "prompt" : "prompts"}
-                          <span className="pr2-trow-sep" />
-                          <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ fontSize: 10.5, padding: "1px 7px" }}>
-                            {sentimentLabel(group.sentimentDominant)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="pr2-trow-mentions">
-                        <div className="v">{group.menciones}</div>
-                        <div className="k">menciones</div>
-                      </div>
-                    </div>
-                    {isOpen &&
-                      promptsInTopic.map((g) => (
-                        <PromptRow
-                          key={g.key}
-                          group={g}
-                          indent
-                          allProviders={allProviders}
-                          onClick={() => setSelectedPromptId(g.key)}
-                        />
-                      ))}
-                  </React.Fragment>
-                );
-              })
-            )}
-          </div>
-        </>
-      )}
+      </div>
 
       <PromptDrawer
         projectId={projectId}

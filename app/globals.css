@@ -1625,6 +1625,12 @@ a {
 .pr2-search input::placeholder { color: var(--ink-4); }
 .pr2-search svg { flex: 0 0 auto; color: var(--ink-4); }
 
+/* The search input is rendered twice (same controlled `query` state) so it
+   can live in the toolbar below the desktop rail breakpoint and inside the
+   list card's own header at ≥1200px, without a JS-side breakpoint check.
+   Only one copy is ever visible/in the a11y tree at a time. */
+.pr2-search-listhead { display: none; }
+
 /* 3 · Proportion summary — static data card (real scannedGroups/brandPresent
    split already computed server-side), not a filter. */
 .pr2-split { padding: 14px 15px; margin-top: 12px; }
@@ -1644,6 +1650,15 @@ a {
   font-size: 11px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase;
   color: var(--ink-4); margin: 22px 2px 10px;
 }
+
+/* List card header: section label + (≥1200px only) search. Below that, the
+   search is hidden here (.pr2-search-listhead) and .pr2-sec-lbl keeps the
+   same position/margin it always had as a standalone label. */
+.pr2-listhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  flex-wrap: wrap;
+}
+.pr2-listhead .pr2-sec-lbl { margin: 22px 0 10px; }
 
 /* 5 · Topic accordion */
 .pr2-ring { position: relative; flex: 0 0 auto; }
@@ -1737,6 +1752,42 @@ a {
 }
 @media (min-width: 1600px) {
   .pr2-page { max-width: 1280px; }
+}
+
+/* ============================================================
+   PROMPTS-DESKTOP-3 — visibility rail + search relocated into the list
+   header (Task Intake approved 2026-07-31). At ≥1200px the "Visibilidad
+   del conjunto" card gets its own 360px rail instead of stacking
+   full-width above the topic list, and the search moves from the toolbar
+   into the list card's own header (.pr2-listhead) so it isn't left next
+   to a wide empty gap once max-width:360px (above) stops it from
+   stretching to fill the toolbar. Same `display: contents` mechanism as
+   OV-DESKTOP-1's `.ov2-cols`/`.ov2-main`/`.ov2-rail` — zero effect below
+   1200px, .pr2-rail is placed via explicit grid-column rather than DOM
+   order so mobile/tablet keep the card's original position (above the
+   list, not after it).
+   ============================================================ */
+.pr2-cols, .pr2-main, .pr2-rail { display: contents; }
+
+@media (min-width: 1200px) {
+  .pr2-search-toolbar { display: none; }
+  .pr2-search-listhead { display: flex; }
+  .pr2-toolbar { justify-content: flex-end; }
+
+  .pr2-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 20px;
+    align-items: start;
+    margin-top: 4px;
+  }
+  .pr2-main, .pr2-rail { display: block; min-width: 0; }
+  .pr2-main { grid-column: 1; }
+  .pr2-rail { grid-column: 2; }
+  /* 60px clears the sticky page header (.ov-sticky-header), same offset
+     as .ov2-rail on Overview. */
+  .pr2-rail { position: sticky; top: 60px; }
+  .pr2-rail .pr2-split { margin-top: 0; }
 }
 
 /* ============================================================
