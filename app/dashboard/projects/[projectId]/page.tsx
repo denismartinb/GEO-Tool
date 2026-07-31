@@ -38,12 +38,6 @@ const statusLabels: Record<string, string> = {
   cancelled: "cancelado"
 };
 
-const confidenceLabels: Record<string, string> = {
-  low: "baja",
-  medium: "media",
-  high: "alta"
-};
-
 const sentimentLabels: Record<string, string> = {
   positive: "positivo",
   neutral: "neutral",
@@ -312,9 +306,6 @@ export default async function ProjectDetailPage({
   // Fallback to legacy visibility_score for runs scored before geo-score-v1
   // existed (no backfill, per ADR 0008).
   const gaugeScore = Math.round(geoScore?.score ?? visibilityScore);
-  const geoScoreLowConfidence = Boolean(geoScore) && geoScore?.confidence !== "high";
-  const prominenceComponent = geoScore?.components?.prominence;
-  const prominenceUnavailable = Boolean(geoScore) && (prominenceComponent?.value === null || prominenceComponent?.value === undefined);
 
   const computedMentionRate = allPromptResults?.length
     ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
@@ -720,15 +711,6 @@ export default async function ProjectDetailPage({
                 </>
               ) : (
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
-              )}
-              {geoScoreLowConfidence && (
-                <div style={{ marginTop: 7 }}>
-                  <span className="badge badge-warn" style={{ fontSize: 10.5 }}>
-                    {prominenceUnavailable
-                      ? "Confianza media: posición no disponible"
-                      : `Confianza ${confidenceLabels[geoScore?.confidence ?? "medium"] ?? geoScore?.confidence}`}
-                  </span>
-                </div>
               )}
             </div>
           </div>

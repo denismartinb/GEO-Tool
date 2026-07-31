@@ -1703,23 +1703,17 @@ a {
 .pr2-prow-tags { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .pr2-prow-engs { display: flex; gap: 5px; flex: 0 0 auto; }
 
-/* Engine glyph chip: real EngineGlyph icon, full brand color when this
-   engine has a row for the prompt, muted/grayscale when it doesn't (absence
-   of data — ENGINES-VALUE-1 semantics, never rendered as "brand absent"). */
+/* Engine glyph chip (Task Intake 2026-07-31): only rendered for engines that
+   mentioned the brand, so it's a plain "who mentioned you" pill — real
+   brand color, bigger glyph, and the engine's name so it reads at a glance
+   instead of relying on a tiny, hard-to-place icon. */
 .pr2-eng {
-  position: relative;
-  display: inline-grid; place-items: center; width: 19px; height: 19px; padding: 3px;
-  border-radius: 6px; background: var(--surface-sunk); flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 6px;
+  border-radius: 999px; background: color-mix(in srgb, currentColor 12%, var(--surface-sunk));
+  flex: 0 0 auto; font-size: 11px; font-weight: 700; white-space: nowrap;
 }
-/* No row for this engine on this prompt (absence of data, never rendered
-   as "brand absent" — mirrors the old EngineChips semantics). */
-.pr2-eng.nodata { opacity: .38; filter: grayscale(65%); }
-/* Mentioned / absent corner dot — keeps the 3-state signal (mentioned /
-   absent / no data) the lettered EngineChips used to carry via color+border,
-   now that the chip itself always shows the engine's real brand icon. */
-.pr2-eng-dot { position: absolute; bottom: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; border: 1.5px solid var(--surface); }
-.pr2-eng-dot.pos { background: var(--brand-pos); }
-.pr2-eng-dot.neg { background: var(--brand-neg); }
+.pr2-eng svg { width: 15px; height: 15px; }
+.pr2-eng-nm { color: var(--ink-2); }
 
 /* ============================================================
    PROMPTS-DESKTOP-1 — Prompts desktop layout (Task Intake approved
