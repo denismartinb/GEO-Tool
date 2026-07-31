@@ -104,22 +104,53 @@ function extractMessageText(data: ResponsesApiResult): { text: string; annotatio
 }
 
 /**
+ * True for a Google Maps/Search URL that OpenAI's `web_search` tool attaches
+ * as a citation when it has no direct business URL to cite — e.g.
+ * `https://www.google.com/maps/search/Alberdiderma%2C+Madrid%2C+Espa%C3%B1a?utm_source=openai`
+ * — observed live (founder report, 2026-07-31): for local-business queries
+ * ("dermatólogo en Madrid"), EVERY result in the answer cited a Maps search
+ * link instead of the clinic's own site. This is a "couldn't find a direct
+ * page, here's a search shortcut" fallback, not content the model actually
+ * read, so it must never count as a real citation — same reasoning already
+ * applied to the equivalent noisy inline-citation case (`resolveCitation`,
+ * lib/citations/aggregate-citations.ts, founder review 2026-07-19).
+ *
+ * Deliberately narrower than "any google.com grounding citation is noise":
+ * that module has an explicit, tested case where a genuine grounding
+ * citation whose real content happens to be hosted on google.com (e.g. a
+ * Google Shopping listing) is kept, not filtered. Only the Maps/plain-search
+ * URL *shapes* are excluded here, before they ever reach that pipeline.
+ */
+function isGoogleMapsSearchNoise(rawUrl: string): boolean {
+  try {
+    const url = new URL(rawUrl);
+    const hostname = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (hostname !== "google.com") return false;
+    return url.pathname.startsWith("/maps/search") || url.pathname === "/search";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Generates a brand-neutral visibility answer using OpenAI's Responses API
  * with the `web_search` tool enabled, so results carry real grounding
  * citations (`url_citation` annotations) — unlike Claude's implementation,
  * which has no web search and is always ungrounded. Returns the same
  * GeminiVisibilityResponse shape (including groundingChunks) so the executor
  * and the downstream scoring/extraction pipeline can treat every provider
- * uniformly.
+ * uniformly. Google Maps/Search noise citations (see
+ * `isGoogleMapsSearchNoise`) are filtered out before they become
+ * groundingChunks at all.
  *
- * `url_citation.url` is already the real destination page (not a redirect
- * wrapper like Gemini's `vertexaisearch.cloud.google.com` grounding chunks),
- * so callers must NOT run these through
- * `lib/scan/citation-resolution.ts::resolveGroundingRedirects` — that would
- * add an unnecessary live fetch to an arbitrary third-party URL for every
- * citation. This is called out here because wiring this provider into
- * `lib/scan/extraction.ts` (not done yet — this module is not active in the
- * executor's provider list) will need a provider-aware branch for that
+ * `url_citation.url` is (with that one exception) already the real
+ * destination page (not a redirect wrapper like Gemini's
+ * `vertexaisearch.cloud.google.com` grounding chunks), so callers must NOT
+ * run these through `lib/scan/citation-resolution.ts::resolveGroundingRedirects`
+ * — that would add an unnecessary live fetch to an arbitrary third-party URL
+ * for every citation. This is called out here because wiring this provider
+ * into `lib/scan/extraction.ts` (not done yet — this module is not active in
+ * the executor's provider list) will need a provider-aware branch for that
  * reason.
  */
 export async function generateOpenAIVisibilityAnswer(input: {
@@ -196,6 +227,7 @@ export async function generateOpenAIVisibilityAnswer(input: {
 
   const groundingChunks = annotations
     .filter((a): a is ResponsesOutputTextAnnotation & { url: string } => a.type === "url_citation" && Boolean(a.url))
+    .filter((a) => !isGoogleMapsSearchNoise(a.url))
     .map((a) => ({ uri: a.url, title: a.title }));
 
   return {

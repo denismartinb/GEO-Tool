@@ -499,10 +499,14 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                 </div>
               </div>
 
-              {/* Evidencias de la marca, agrupadas por motor */}
+              {/* Evidencias de la marca, agrupadas por motor. El nombre de la
+                  marca va en el propio título — leída suelta, una cita
+                  genérica ("especialistas en X, atención personalizada...")
+                  no deja claro a qué negocio se refiere (founder feedback,
+                  2026-07-31). */}
               {evidenceGroups.length > 0 && (
                 <div>
-                  <p className="ac-title">Evidencias de mención</p>
+                  <p className="ac-title">Evidencias de mención de {projectBrand}</p>
                   <div className="aside-card">
                     {evidenceGroups.map((g) => (
                       <Fragment key={g.row.id}>

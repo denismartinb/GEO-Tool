@@ -501,6 +501,49 @@ by it.
 
 ---
 
+## OPENAI-CITATION-NOISE-1 — Google Maps/Search fallback links counted as real citations (founder report, 2026-07-31)
+
+**Status: Implemented, pending Human Gate.** Founder reviewing a real
+ChatGPT response (project "Alberdiderma", dermatology clinic) flagged the
+citation URLs as looking "wrong": every clinic listed, including the
+project's own brand, was cited via
+`google.com/maps/search/{name}%2C+Madrid...?utm_source=openai` — a Google
+Maps search shortcut, not the clinic's real site. `lib/llm/openai.ts`
+treated these as final, real destination URLs (`groundingUrlsAreFinal:
+true`), so they resolved to `domain: "google.com"` at `confidence: "high"`
+— counted toward `citations_count`/`citation_found` and shown as a "source"
+on the Citations page and prompt drawer, none of which is true (the model
+found no real page to cite).
+
+This mirrors a fix already shipped for the equivalent *inline*-citation case
+(`resolveCitation`, `lib/citations/aggregate-citations.ts`, founder review
+2026-07-19) — but that fix's own comment assumed grounding citations are
+always genuine, which held for Gemini (resolved through real redirects) but
+not for OpenAI's `url_citation`, which can BE the Maps link directly.
+
+Fix (docs/adr/0023): new `isGoogleMapsSearchNoise` in `lib/llm/openai.ts`
+filters `google.com`/`www.google.com` URLs whose path is `/maps/search/...`
+or a plain `/search` — dropped before they ever become a `groundingChunk`,
+so every downstream consumer (scoring, Citations page, prompt drawer) is
+protected automatically. Deliberately narrower than "any google.com
+grounding citation is noise" — a genuine citation hosted on google.com (e.g.
+Google Shopping) is untouched, keeping `aggregate-citations.ts`'s existing
+tested distinction intact.
+
+**Same report, separate root cause — UI fix bundled in:** the founder also
+flagged that a *genuinely verified* evidence quote ("Especialistas en
+dermatología médica y estética...") doesn't itself name the brand when read
+in isolation. Not a data bug (MENTION-VERIFY-1 already confirmed this quote
+is real) — a labeling gap. Fixed with a one-line JSX change
+(`components/prompts/prompt-drawer.tsx`): the evidence section header now
+reads "Evidencias de mención de {projectBrand}" instead of an unlabeled
+"Evidencias de mención". `pnpm test` 816/816, `pnpm run validate` green.
+
+**No backfill:** existing persisted rows keep any Maps-search noise already
+counted in their citation numbers.
+
+---
+
 ## Recommendations Asset roadmap — RECS-ASSET (approved 2026-06-27)
 
 Founder direction (verbatim intent): recommendations must become **more
