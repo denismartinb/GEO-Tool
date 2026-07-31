@@ -125,8 +125,12 @@ function EngineChipsWithGaps({
 }) {
   const byProvider = new Map(engines.map((r) => [normalizeProvider(r.provider), r]));
   const mentioning = allProviders.filter((p) => byProvider.get(p)?.brand_mentioned === true);
+  // Fragment, not a wrapper div: `.pr2-prow-engs` is itself the flex
+  // container, and an inner flex box would trap the pills in a non-wrapping
+  // line. Rendering nothing when no engine mentioned the brand also lets
+  // `.pr2-prow-engs:empty` collapse the row's stacked gap on mobile.
   return (
-    <div style={{ display: "flex", gap: 6 }}>
+    <>
       {mentioning.map((p) => {
         const meta = getEngineMeta(p);
         return (
@@ -136,7 +140,7 @@ function EngineChipsWithGaps({
           </span>
         );
       })}
-    </div>
+    </>
   );
 }
 

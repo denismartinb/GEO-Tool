@@ -1689,31 +1689,66 @@ a {
 .pr2-chev { color: var(--ink-4); flex: 0 0 auto; transition: transform .15s; display: flex; }
 .pr2-chev.down { transform: rotate(90deg); }
 
+/* Prompt row (redesigned 2026-07-31, founder screenshot): named engine pills
+   are ~250px of unshrinkable width for a 3-engine prompt, so the old
+   single-line `[main | engines]` flex row squeezed the prompt text — the
+   row's primary content — into an unreadable ~90px column on a phone. Mobile
+   now stacks: the text always owns the full width, and the pills get their
+   own line below the badges. The side-by-side row returns at ≥900px, where
+   there's genuinely room for both. */
 .pr2-prow {
-  display: flex; align-items: center; gap: 11px; padding: 11px 14px 11px 18px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 7px;
+  padding: 12px 14px 13px 18px;
   border-bottom: 1px solid var(--line-soft); background: var(--surface); cursor: pointer;
 }
 .pr2-prow:last-child { border-bottom: none; }
 .pr2-prow:hover { background: var(--surface-2); }
-.pr2-prow-main { flex: 1; min-width: 0; }
+.pr2-prow-main { min-width: 0; }
 .pr2-prow-text {
-  font-size: 12.5px; color: var(--ink); line-height: 1.4; font-weight: 500;
+  font-size: 13px; color: var(--ink); line-height: 1.45; font-weight: 500;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.pr2-prow-tags { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-.pr2-prow-engs { display: flex; gap: 5px; flex: 0 0 auto; }
+.pr2-prow-tags { display: flex; align-items: center; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+/* Wraps rather than overflowing: a 4th engine would drop to a second line
+   instead of pushing the row wider than the viewport. */
+.pr2-prow-engs { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+/* "Ausente" prompts render no pills — collapse the container so it doesn't
+   leave a stray gap under the badges. */
+.pr2-prow-engs:empty { display: none; }
 
 /* Engine glyph chip (Task Intake 2026-07-31): only rendered for engines that
    mentioned the brand, so it's a plain "who mentioned you" pill — real
    brand color, bigger glyph, and the engine's name so it reads at a glance
-   instead of relying on a tiny, hard-to-place icon. */
+   instead of relying on a tiny, hard-to-place icon. Sized so all three
+   (Claude + Gemini + ChatGPT ≈ 250px) still share one line inside an
+   indented row on a 360px viewport. */
 .pr2-eng {
-  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 6px;
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px 4px 7px;
   border-radius: 999px; background: color-mix(in srgb, currentColor 12%, var(--surface-sunk));
   flex: 0 0 auto; font-size: 11px; font-weight: 700; white-space: nowrap;
 }
-.pr2-eng svg { width: 15px; height: 15px; }
+.pr2-eng svg { width: 14px; height: 14px; flex: 0 0 auto; }
 .pr2-eng-nm { color: var(--ink-2); }
+
+/* Back to one line at 1200px — deliberately NOT at 900px, where `.pr2-page`
+   is still a 640px column: measured there, a 3-engine row can't fit text and
+   pills side by side and the pills wrap to two ragged lines. 1200px is also
+   where the page already gains its rail layout, so the row switches shape at
+   a breakpoint the page actually changes at. `flex: 0 1 auto` + max-width
+   (vs. the old `flex: 0 0 auto`) is the real fix: pills may now shrink
+   instead of starving the text column. */
+@media (min-width: 1200px) {
+  .pr2-prow { flex-direction: row; align-items: center; gap: 14px; padding: 11px 14px 11px 18px; }
+  /* `flex-basis: 0` (not auto) so the text column absorbs the leftover space
+     and is the side that yields — with `auto` both columns shrink in
+     proportion to their content and the pills wrap to a second line even
+     though the row has room. min-width:0 lets it actually shrink. */
+  .pr2-prow-main { flex: 1 1 0; min-width: 0; }
+  .pr2-prow-tags { margin-top: 6px; }
+  /* max-width caps this at ~half the row so a future 4th/5th engine wraps
+     its own pills instead of starving the text again. */
+  .pr2-prow-engs { flex: 0 0 auto; justify-content: flex-end; max-width: 46%; }
+}
 
 /* ============================================================
    PROMPTS-DESKTOP-1 — Prompts desktop layout (Task Intake approved
