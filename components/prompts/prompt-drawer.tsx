@@ -141,7 +141,10 @@ type InlineToken =
 
 function tokenizeInline(line: string): InlineToken[] {
   const tokens: InlineToken[] = [];
-  const re = /\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
+  // Some providers (observed with OpenAI) emit a space — or even a line break —
+  // between the `]` and `(` of a markdown link; `\s*` tolerates that instead of
+  // falling through to raw "[label] (url)" text.
+  const re = /\[([^\]]+)\]\s*\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
   let last = 0;
   let m: RegExpExecArray | null;
   while ((m = re.exec(line))) {
@@ -154,21 +157,38 @@ function tokenizeInline(line: string): InlineToken[] {
   return tokens;
 }
 
+/** Splits a token's text on embedded newlines, rendering each break as <br/>. */
+function renderTextWithLineBreaks(value: string, brand: string, keyPrefix: string): React.ReactNode {
+  const parts = value.split("\n");
+  return parts.map((part, i) => (
+    <Fragment key={`${keyPrefix}-${i}`}>
+      {i > 0 && <br />}
+      {highlightBrand(part, brand)}
+    </Fragment>
+  ));
+}
+
+/**
+ * Renders one or more lines of inline markdown (bold/links/plain text). Accepts
+ * a multi-line string (joined with "\n") rather than requiring one call per
+ * line, so a link split across a line boundary by the caller is still
+ * tokenized as a single string and doesn't get severed at the newline.
+ */
 function renderInline(line: string, brand: string): React.ReactNode {
   return tokenizeInline(line).map((t, i) => {
     if (t.type === "link") {
       return isSafeHttpUrl(t.url) ? (
         <a key={i} href={t.url} target="_blank" rel="noopener noreferrer" className="pr2-md-link">
-          {highlightBrand(t.label, brand)}
+          {renderTextWithLineBreaks(t.label, brand, `link-${i}`)}
         </a>
       ) : (
-        <Fragment key={i}>{highlightBrand(t.label, brand)}</Fragment>
+        <Fragment key={i}>{renderTextWithLineBreaks(t.label, brand, `linktext-${i}`)}</Fragment>
       );
     }
     if (t.type === "bold") {
-      return <strong key={i}>{highlightBrand(t.value, brand)}</strong>;
+      return <strong key={i}>{renderTextWithLineBreaks(t.value, brand, `bold-${i}`)}</strong>;
     }
-    return <Fragment key={i}>{highlightBrand(t.value, brand)}</Fragment>;
+    return <Fragment key={i}>{renderTextWithLineBreaks(t.value, brand, `text-${i}`)}</Fragment>;
   });
 }
 
@@ -204,12 +224,7 @@ function renderBlock(lines: string[], key: number, brand: string): React.ReactNo
   }
   return (
     <p key={key} className="pr2-md-p">
-      {lines.map((l, i) => (
-        <Fragment key={i}>
-          {i > 0 && <br />}
-          {renderInline(l, brand)}
-        </Fragment>
-      ))}
+      {renderInline(lines.join("\n"), brand)}
     </p>
   );
 }
