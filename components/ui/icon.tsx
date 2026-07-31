@@ -271,6 +271,38 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <circle cx="12" cy="12" r="9" />
         <path d="M12 7v5l3.5 2" />
       </>
+    ),
+    sentimentPos: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="8.7" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15.3" cy="10" r="1" fill="currentColor" stroke="none" />
+        <path d="M8 14.2c1 1.5 2.4 2.3 4 2.3s3-.8 4-2.3" />
+      </>
+    ),
+    sentimentNeutral: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="8.7" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15.3" cy="10" r="1" fill="currentColor" stroke="none" />
+        <path d="M8.3 15.3h7.4" />
+      </>
+    ),
+    sentimentNeg: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="8.7" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15.3" cy="10" r="1" fill="currentColor" stroke="none" />
+        <path d="M8 16.3c1-1.5 2.4-2.3 4-2.3s3 .8 4 2.3" />
+      </>
+    ),
+    sentimentMixed: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <circle cx="8.7" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15.3" cy="10" r="1" fill="currentColor" stroke="none" />
+        <path d="M8 14.5c.8-1 1.7-1 2.5 0s1.7 1 2.5 0 1.7-1 2.5 0" />
+      </>
     )
   };
 

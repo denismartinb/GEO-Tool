@@ -128,6 +128,52 @@ describe("generateOpenAIVisibilityAnswer", () => {
     expect(result.groundingChunks).toBeUndefined();
   });
 
+  it("filters out Google Maps search citations (fallback shortcut, not a real cited page) — founder report 2026-07-31", async () => {
+    const fetchMock = mockFetchOnce(
+      responsesApiResult("Recomiendo estas clínicas.", {
+        annotations: [
+          {
+            type: "url_citation",
+            url: "https://www.google.com/maps/search/Alberdiderma%2C+Madrid%2C+Espa%C3%B1a?utm_source=openai",
+            title: "Alberdiderma"
+          },
+          { type: "url_citation", url: "https://alberdiderma.es/tratamientos", title: "Tratamientos" }
+        ]
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateOpenAIVisibilityAnswer(visibilityInput());
+
+    expect(result.groundingChunks).toEqual([{ uri: "https://alberdiderma.es/tratamientos", title: "Tratamientos" }]);
+  });
+
+  it("filters out a plain google.com/search citation the same way", async () => {
+    const fetchMock = mockFetchOnce(
+      responsesApiResult("Recomiendo esta clínica.", {
+        annotations: [{ type: "url_citation", url: "https://www.google.com/search?q=Alberdiderma+Madrid", title: "Alberdiderma" }]
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateOpenAIVisibilityAnswer(visibilityInput());
+
+    expect(result.groundingChunks).toBeUndefined();
+  });
+
+  it("does not filter a genuine citation merely hosted elsewhere on google.com (e.g. Google Shopping), only the Maps/plain-search shapes", async () => {
+    const fetchMock = mockFetchOnce(
+      responsesApiResult("Puedes comprarlo aquí.", {
+        annotations: [{ type: "url_citation", url: "https://www.google.com/shopping/product/12345", title: "Google Shopping" }]
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await generateOpenAIVisibilityAnswer(visibilityInput());
+
+    expect(result.groundingChunks).toEqual([{ uri: "https://www.google.com/shopping/product/12345", title: "Google Shopping" }]);
+  });
+
   it("throws on empty response content", async () => {
     const fetchMock = mockFetchOnce(responsesApiResult(""));
     vi.stubGlobal("fetch", fetchMock);
