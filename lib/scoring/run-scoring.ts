@@ -41,10 +41,10 @@ export type ScoreInputRow = {
 };
 
 /**
- * True when at least one row in this run predates the CURRENT
- * EXTRACTION_VERSION — a general staleness gate, not specific to one fix.
- * Two independent extraction-quality concerns have bumped this version so
- * far, and both are covered by the same check: SCAN-TRACKED-SET-1 (docs/
+ * True when at least one row in this run was genuinely extracted under an
+ * OLD pipeline version — a staleness gate, not specific to one fix. Two
+ * independent extraction-quality concerns have bumped this version so far,
+ * and both are covered by the same check: SCAN-TRACKED-SET-1 (docs/
  * adr/0018) — extracted_json.competitors may contain entities the model
  * surfaced on its own rather than the project's actual tracked list — and
  * MENTION-VERIFY-1 (docs/adr/0021) — brand.mentioned/competitors[].mentioned
@@ -56,9 +56,28 @@ export type ScoreInputRow = {
  * numbers, which is worse than dropping the components entirely for that
  * run. A future backfill bumps every row's extraction_version, which
  * resolves this cleanly without further code changes here.
+ *
+ * Requires `extracted_json` to be present, not just a version mismatch —
+ * `extraction_version` defaults to `'v1'` at row-insert time (migration
+ * 0001) and only advances to the current EXTRACTION_VERSION once that row's
+ * extraction actually succeeds (lib/scan/extraction.ts). A row whose
+ * extraction failed or is still pending never gets that update, so without
+ * this guard a single transient per-prompt extraction failure — an
+ * ordinary, expected occurrence, not evidence of a legacy pipeline — was
+ * nulling brand_position for the ENTIRE run, including every other row that
+ * extracted correctly (found via a real production case: a brand-new
+ * project's first scan, fully populated mention/SOV data, zero position
+ * data). A row with no extracted_json contributes nothing to
+ * computeBrandPosition either way (it's skipped there), so it can't be
+ * "untrusted" — there's no data from it to distrust.
  */
 function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
-  return results.some((row) => row.extraction_version != null && row.extraction_version !== EXTRACTION_VERSION);
+  return results.some(
+    (row) =>
+      row.extraction_version != null &&
+      row.extraction_version !== EXTRACTION_VERSION &&
+      row.extracted_json != null
+  );
 }
 
 /**

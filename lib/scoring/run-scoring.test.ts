@@ -985,6 +985,39 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
     expect(geoScore.inputs_used).not.toContain("standing");
   });
 
+  it("still computes prominence/standing from the well-extracted rows when one row's extraction simply never completed (extraction_version stuck at the DB default 'v1', extracted_json null) — a single transient extraction failure must not blank out an otherwise-good run", () => {
+    const results = [
+      trackedRow({
+        id: "1",
+        brand_mentioned: true,
+        mentioned_competitors_count: 1,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: true, position: 2 }],
+        extraction_version: EXTRACTION_VERSION
+      }),
+      // Simulates lib/scan/extraction.ts's failure path: extraction_version
+      // stays at the schema default ('v1', migration 0001) because the
+      // success branch that advances it to EXTRACTION_VERSION never ran.
+      row({
+        id: "2",
+        brand_mentioned: false,
+        extraction_version: "v1",
+        extracted_json: null,
+        extraction_error: "llm_call_failed"
+      })
+    ];
+
+    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+
+    expect(result.details_json.brand_position).toBeDefined();
+    const geoScore = result.details_json.geo_score as {
+      inputs_used: string[];
+      components: Record<string, { value: number | null }>;
+    };
+    expect(geoScore.components.prominence.value).not.toBeNull();
+    expect(geoScore.inputs_used).toContain("prominence");
+  });
+
   it("computes normally when every row's extraction_version matches the current EXTRACTION_VERSION", () => {
     const results = [
       trackedRow({
