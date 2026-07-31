@@ -3561,6 +3561,43 @@ a.notif-row:hover {
 .firstscan-banner .fb-d b { font-family: var(--mono); font-weight: 600; }
 
 /* ============================================================
+   Data-maturity banner (DATA-MATURITY-1) — full-bleed strip under the
+   dashboard header, above .dash-content, rendered by app/dashboard/
+   layout.tsx. Same visual grammar as the public "prueba gratis" band:
+   thin, chrome-like, never competing with the page's own H1.
+   ============================================================ */
+.dmb-band { display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 7px 22px;
+  background: linear-gradient(90deg, var(--accent-soft), #fbfbff 62%); border-bottom: 1px solid var(--accent-soft-2);
+  font-size: 13px; flex: 0 0 auto; }
+.dmb-ico { width: 20px; height: 20px; flex: 0 0 auto; color: var(--accent); display: grid; place-items: center; }
+.dmb-txt { color: var(--ink-2); min-width: 0; }
+.dmb-txt b { color: var(--ink); font-weight: 700; }
+.dmb-sp { flex: 1; }
+.dmb-meter { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.dmb-count { font-size: 12px; font-weight: 700; color: var(--accent-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dmb-segs { display: flex; gap: 3px; }
+.dmb-seg { width: 16px; height: 5px; border-radius: 999px; background: var(--accent-soft-2); }
+.dmb-seg.on { background: var(--accent); }
+.dmb-eta { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.dmb-cta { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: var(--r-sm);
+  background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 650; box-shadow: 0 1px 2px var(--accent-ring);
+  flex: 0 0 auto; border: 0; cursor: pointer; }
+.dmb-cta:hover { background: var(--accent-700); }
+.dmb-cta.ghost { background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); box-shadow: none; }
+.dmb-cta.ghost:hover { background: var(--surface-2); color: var(--ink); }
+.dmb-x { color: var(--ink-4); flex: 0 0 auto; display: grid; place-items: center; width: 20px; height: 20px;
+  background: none; border: 0; padding: 0; cursor: pointer; }
+.dmb-x:hover { color: var(--ink-2); }
+.dmb-band.is-flat { background: var(--surface-2); border-bottom-color: var(--line); }
+.dmb-band.is-flat .dmb-ico { color: var(--ink-3); }
+
+@media (max-width: 760px) {
+  .dmb-band { flex-wrap: wrap; padding: 8px 14px; gap: 4px 10px; }
+  .dmb-txt { font-size: 12.5px; flex-basis: 100%; }
+  .dmb-meter { flex-basis: 100%; }
+}
+
+/* ============================================================
    Add-domain wizard shell (D1 — copied literally from design
    reference styles.css, see /tmp/geo_design/geo-suite/project/styles.css
    lines 640-711 and 789-832)
