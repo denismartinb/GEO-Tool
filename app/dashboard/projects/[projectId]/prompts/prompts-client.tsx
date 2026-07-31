@@ -62,6 +62,16 @@ function sentimentBadgeClass(s: string | null): string {
   return "badge-neutral";
 }
 
+// Space-efficient icon paired with the sentiment badge text (founder request:
+// text alone is easy to skim past; a glyph makes positive/neutral/negative/
+// mixed readable at a glance without adding a second text badge).
+function sentimentIconName(s: string | null): string {
+  if (s === "positive") return "sentimentPos";
+  if (s === "negative") return "sentimentNeg";
+  if (s === "mixed") return "sentimentMixed";
+  return "sentimentNeutral";
+}
+
 function parseExtracted(raw: unknown): ExtractedJsonShape {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   return raw as ExtractedJsonShape;
@@ -100,10 +110,12 @@ function mentionedCompetitorsUnion(rows: ResultRow[]): number {
   return names.size;
 }
 
-// Every configured engine gets a chip, including ones with no row at all for
-// this prompt (nodata state) — this is the only place that needs to know
-// about engines beyond what `engines` already covers, so it takes the full
-// per-provider set from the caller instead of inferring it from one row.
+// Only engines that actually mentioned the brand get a chip here (Task
+// Intake 2026-07-31: the old per-engine mention dot read as a stray
+// notification badge, and the row already leads with the "Mencionada" /
+// "Ausente" badge for the overall prompt — so the gap/absent states don't
+// need their own chip). Citation-per-engine is intentionally not shown here;
+// that signal is being surfaced in Recommendations instead.
 function EngineChipsWithGaps({
   engines,
   allProviders,
@@ -112,39 +124,23 @@ function EngineChipsWithGaps({
   allProviders: string[];
 }) {
   const byProvider = new Map(engines.map((r) => [normalizeProvider(r.provider), r]));
+  const mentioning = allProviders.filter((p) => byProvider.get(p)?.brand_mentioned === true);
+  // Fragment, not a wrapper div: `.pr2-prow-engs` is itself the flex
+  // container, and an inner flex box would trap the pills in a non-wrapping
+  // line. Rendering nothing when no engine mentioned the brand also lets
+  // `.pr2-prow-engs:empty` collapse the row's stacked gap on mobile.
   return (
-    <div style={{ display: "flex", gap: 5 }}>
-      {allProviders.map((p) => {
-        const row = byProvider.get(p);
+    <>
+      {mentioning.map((p) => {
         const meta = getEngineMeta(p);
-        if (!row) {
-          return (
-            <span key={p} className="pr2-eng nodata" title={`${meta.label}: sin datos en este escaneo`}>
-              <EngineGlyph provider={p} />
-            </span>
-          );
-        }
-        const dot =
-          row.brand_mentioned === true ? "pos" : row.brand_mentioned === false ? "neg" : null;
         return (
-          <span
-            key={p}
-            className="pr2-eng"
-            style={{ color: meta.color }}
-            title={
-              row.brand_mentioned === true
-                ? `${meta.label}: marca mencionada`
-                : row.brand_mentioned === false
-                  ? `${meta.label}: marca ausente`
-                  : `${meta.label}: sin datos en este escaneo`
-            }
-          >
+          <span key={p} className="pr2-eng" style={{ color: meta.color }} title={`${meta.label}: marca mencionada`}>
             <EngineGlyph provider={p} />
-            {dot ? <span className={`pr2-eng-dot ${dot}`} /> : null}
+            <span className="pr2-eng-nm">{meta.label}</span>
           </span>
         );
       })}
-    </div>
+    </>
   );
 }
 
@@ -201,7 +197,8 @@ function PromptRow({
           <span className={`badge ${group.brandMentioned ? "badge-pos" : "badge-neg"}`}>
             {group.brandMentioned ? "Mencionada" : "Ausente"}
           </span>
-          <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`}>
+          <span className={`badge ${sentimentBadgeClass(group.sentimentDominant)}`} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+            <Icon name={sentimentIconName(group.sentimentDominant)} size={12} />
             {sentimentLabel(group.sentimentDominant)}
           </span>
           <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
@@ -239,10 +236,9 @@ export function PromptsClient({
       ? results.filter((r) => (r.prompt_id ?? r.id) === selectedPromptId)
       : [];
 
-  // Every provider that appears anywhere in this run — used so every prompt
-  // row shows the same fixed set of engine chips (including a "sin datos"
-  // chip for an engine that didn't run on that specific prompt), instead of
-  // a column count that shifts row to row.
+  // Every provider that appears anywhere in this run — the candidate pool
+  // EngineChipsWithGaps filters down to only the engines that mentioned the
+  // brand on that specific prompt.
   const allProviders = useMemo(
     () => Array.from(new Set(results.map((r) => normalizeProvider(r.provider)))).sort(),
     [results]
