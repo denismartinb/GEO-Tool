@@ -3608,6 +3608,12 @@ a.notif-row:hover {
 .dmb-seg { width: 16px; height: 5px; border-radius: 999px; background: var(--accent-soft-2); }
 .dmb-seg.on { background: var(--accent); }
 .dmb-eta { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+/* The no_tracking CTA is a <button> inside a <form> (server action), so the
+   flex item .dmb-band actually lays out is the <form>, not .dmb-cta itself
+   — without this the form was free to shrink between ~761-768px (past the
+   760px stack breakpoint but still too narrow for the full row), squashing
+   the button and wrapping its label inside the fixed 28px height. */
+.dmb-band form { flex: 0 0 auto; }
 .dmb-cta { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: var(--r-sm);
   background: var(--accent); color: #fff; font-size: 12.5px; font-weight: 650; box-shadow: 0 1px 2px var(--accent-ring);
   flex: 0 0 auto; border: 0; cursor: pointer; }
