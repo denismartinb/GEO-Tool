@@ -232,10 +232,9 @@ export function PromptsClient({
       ? results.filter((r) => (r.prompt_id ?? r.id) === selectedPromptId)
       : [];
 
-  // Every provider that appears anywhere in this run — used so every prompt
-  // row shows the same fixed set of engine chips (including a "sin datos"
-  // chip for an engine that didn't run on that specific prompt), instead of
-  // a column count that shifts row to row.
+  // Every provider that appears anywhere in this run — the candidate pool
+  // EngineChipsWithGaps filters down to only the engines that mentioned the
+  // brand on that specific prompt.
   const allProviders = useMemo(
     () => Array.from(new Set(results.map((r) => normalizeProvider(r.provider)))).sort(),
     [results]
