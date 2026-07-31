@@ -3,74 +3,115 @@ import {
   normalizeMarkdownSource,
   parseMarkdownBlocks,
   tokenizeInline,
+  visibleText,
+  type InlineToken,
 } from "@/lib/markdown/inline-markdown";
 
+const text = (value: string): InlineToken => ({ type: "text", value });
+
 /**
- * The founder's real ChatGPT answer (project "Alberdiderma"), reproduced
- * verbatim from the reported screenshot: OpenAI's web_search wraps each long
- * Maps citation so the `[label]` and the `(url)` land on separate lines. This
- * exact shape rendered as raw brackets + full URL before the fix.
+ * The founder's real ChatGPT answer (project "Alberdiderma"), reproduced from
+ * the reported screenshots. Two provider quirks combine here, and each one on
+ * its own was enough to leak raw markdown into the transcript:
+ *   1. the link is wrapped in bold (`**[label](url)**`);
+ *   2. long URLs get emitted on their own line, after the `]`.
  */
-const OPENAI_WRAPPED_LINKS = `Para tratar el acné severo en Madrid, puedes considerar las siguientes clínicas dermatológicas especializadas:
+const OPENAI_CITED_LISTING = `Para tratar el acné severo en Madrid, existen varias clínicas dermatológicas especializadas:
 
-[Clínica Dermatológica Madrid De Felipe]
-(https://www.google.com/maps/search/Cl%C3%ADnica+Dermatol%C3%B3gica+Madrid+De+Felipe%2C+Madrid%2C+Espa%C3%B1a?utm_source=openai)
+**[Clínica Dermatológica Madrid De Felipe]
+(https://www.google.com/maps/search/Cl%C3%ADnica+Dermatol%C3%B3gica+Madrid+De+Felipe%2C+Madrid%2C+Espa%C3%B1a?utm_source=openai)**
 _Madrid, España_
-Con más de 30 años de experiencia, ofrecen tratamientos integrales para el acné.
+Con más de 30 años de experiencia, esta clínica se especializa en dermatología integral.
 
-[Alberdiderma]
-(https://www.google.com/maps/search/Alberdiderma%2C+Madrid%2C+Espa%C3%B1a?utm_source=openai)
+**[Alberdiderma | Clínica Dermatológica en Madrid](https://www.google.com/maps/search/Alberdiderma+%7C+Cl%C3%ADnica+Dermatol%C3%B3gica+en+Madrid%2C+Madrid%2C+Espa%C3%B1a?utm_source=openai)**
 _Madrid, España_
 Centro dermatológico de referencia con más de 20 años de experiencia.`;
 
-function linksOf(text: string) {
-  return parseMarkdownBlocks(text)
-    .flatMap((b) => tokenizeInline(b.lines.join("\n")))
-    .filter((t) => t.type === "link");
+function tokensOf(source: string): InlineToken[] {
+  return parseMarkdownBlocks(source).flatMap((b) => tokenizeInline(b.lines.join("\n")));
+}
+
+function collectLinks(tokens: InlineToken[]): Array<{ label: string; url: string }> {
+  return tokens.flatMap((t) => {
+    if (t.type === "link") return [{ label: visibleText(t.label), url: t.url }, ...collectLinks(t.label)];
+    if (t.type === "bold" || t.type === "italic") return collectLinks(t.children);
+    return [];
+  });
 }
 
 describe("tokenizeInline — links", () => {
   it("parses a plain markdown link", () => {
     expect(tokenizeInline("Ver [Alberdiderma](https://alberdiderma.com) aquí")).toEqual([
-      { type: "text", value: "Ver " },
-      { type: "link", label: "Alberdiderma", url: "https://alberdiderma.com" },
-      { type: "text", value: " aquí" },
+      text("Ver "),
+      { type: "link", label: [text("Alberdiderma")], url: "https://alberdiderma.com" },
+      text(" aquí"),
     ]);
   });
 
   it("parses a link with a space between ] and (", () => {
     expect(tokenizeInline("[Alberdiderma] (https://alberdiderma.com)")).toEqual([
-      { type: "link", label: "Alberdiderma", url: "https://alberdiderma.com" },
+      { type: "link", label: [text("Alberdiderma")], url: "https://alberdiderma.com" },
     ]);
   });
 
   it("parses a link split across a line break between ] and (", () => {
     expect(tokenizeInline("[Alberdiderma]\n(https://alberdiderma.com)")).toEqual([
-      { type: "link", label: "Alberdiderma", url: "https://alberdiderma.com" },
+      { type: "link", label: [text("Alberdiderma")], url: "https://alberdiderma.com" },
+    ]);
+  });
+});
+
+describe("tokenizeInline — nesting", () => {
+  /**
+   * Regression: a flat tokenizer lets the bold run (which starts earlier, and
+   * so wins as the leftmost match) swallow the whole link, rendering
+   * "[label](url)" as literal bold text. This is the exact shape OpenAI emits
+   * for cited business listings.
+   */
+  it("parses a link wrapped in bold as a real link inside the bold run", () => {
+    expect(tokenizeInline("**[Alberdiderma](https://alberdiderma.com)**")).toEqual([
+      {
+        type: "bold",
+        children: [{ type: "link", label: [text("Alberdiderma")], url: "https://alberdiderma.com" }],
+      },
     ]);
   });
 
-  it("never leaves the raw URL as visible text once the link is parsed", () => {
-    const tokens = tokenizeInline("[Alberdiderma]\n(https://www.google.com/maps/search/x?utm_source=openai)");
-    const visibleText = tokens
-      .filter((t) => t.type === "text")
-      .map((t) => (t.type === "text" ? t.value : ""))
-      .join("");
-    expect(visibleText).not.toContain("google.com");
-    expect(visibleText).not.toContain("[");
+  it("parses bold inside a link label", () => {
+    expect(tokenizeInline("[**Alberdiderma**](https://alberdiderma.com)")).toEqual([
+      {
+        type: "link",
+        label: [{ type: "bold", children: [text("Alberdiderma")] }],
+        url: "https://alberdiderma.com",
+      },
+    ]);
+  });
+
+  it("parses italic nested inside bold", () => {
+    expect(tokenizeInline("**muy _importante_**")).toEqual([
+      {
+        type: "bold",
+        children: [text("muy "), { type: "italic", children: [text("importante")] }],
+      },
+    ]);
+  });
+
+  it("stops recursing at the depth limit instead of looping", () => {
+    const tokens = tokenizeInline("**a **b **c **d **e [f](https://f.com)** ** ** ** **");
+    expect(visibleText(tokens)).toContain("f");
   });
 });
 
 describe("tokenizeInline — emphasis", () => {
   it("parses bold", () => {
     expect(tokenizeInline("**Aspectos a tener en cuenta:**")).toEqual([
-      { type: "bold", value: "Aspectos a tener en cuenta:" },
+      { type: "bold", children: [text("Aspectos a tener en cuenta:")] },
     ]);
   });
 
   it("parses italic at a word boundary", () => {
     expect(tokenizeInline("_Madrid, España_")).toEqual([
-      { type: "italic", value: "Madrid, España" },
+      { type: "italic", children: [text("Madrid, España")] },
     ]);
   });
 
@@ -95,32 +136,35 @@ describe("normalizeMarkdownSource", () => {
   });
 
   it("leaves a bracketed phrase followed by a plain parenthetical untouched", () => {
-    const text = "Un array [1, 2]\n\n(y un comentario aparte)";
-    expect(normalizeMarkdownSource(text)).toBe(text);
+    const source = "Un array [1, 2]\n\n(y un comentario aparte)";
+    expect(normalizeMarkdownSource(source)).toBe(source);
+  });
+});
+
+describe("the founder's reported ChatGPT answer", () => {
+  it("recovers every cited link, bold-wrapped and line-wrapped alike", () => {
+    expect(collectLinks(tokensOf(OPENAI_CITED_LISTING)).map((l) => l.label)).toEqual([
+      "Clínica Dermatológica Madrid De Felipe",
+      "Alberdiderma | Clínica Dermatológica en Madrid",
+    ]);
+  });
+
+  it("leaks no raw URL, bracket or underscore into the visible transcript", () => {
+    const visible = visibleText(tokensOf(OPENAI_CITED_LISTING));
+    expect(visible).not.toContain("google.com");
+    expect(visible).not.toContain("utm_source");
+    expect(visible).not.toContain("[");
+    expect(visible).not.toContain("]");
+    expect(visible).not.toContain("**");
+    expect(visible).not.toContain("_Madrid");
+  });
+
+  it("keeps the brand name readable as the link label", () => {
+    expect(visibleText(tokensOf(OPENAI_CITED_LISTING))).toContain("Alberdiderma");
   });
 });
 
 describe("parseMarkdownBlocks", () => {
-  it("recovers every wrapped link in the founder's reported ChatGPT answer", () => {
-    const links = linksOf(OPENAI_WRAPPED_LINKS);
-    expect(links.map((l) => (l.type === "link" ? l.label : ""))).toEqual([
-      "Clínica Dermatológica Madrid De Felipe",
-      "Alberdiderma",
-    ]);
-  });
-
-  it("leaves no raw google.com URL or bracket visible in that answer", () => {
-    const visibleText = parseMarkdownBlocks(OPENAI_WRAPPED_LINKS)
-      .flatMap((b) => tokenizeInline(b.lines.join("\n")))
-      .filter((t) => t.type === "text")
-      .map((t) => (t.type === "text" ? t.value : ""))
-      .join("");
-    expect(visibleText).not.toContain("google.com");
-    expect(visibleText).not.toContain("utm_source");
-    expect(visibleText).not.toContain("[");
-    expect(visibleText).not.toContain("_Madrid");
-  });
-
   it("classifies bullet lists and strips their markers", () => {
     expect(parseMarkdownBlocks("- uno\n- dos")).toEqual([
       { type: "bullets", lines: ["uno", "dos"] },

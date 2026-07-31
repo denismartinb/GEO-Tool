@@ -580,12 +580,32 @@ Fix, in two commits on the same PR:
    underscore inside a bare URL (`?utm_source=openai`) can't open an italic
    run.
 
-`pnpm test` 834/834, `pnpm run validate` green.
+**Second root cause in the same renderer — nesting (found on retest):** with
+the above deployed, the founder retested and the URLs were *still* raw. The
+tell was in the screenshot itself: the leaked `[label]` and `(url)` rendered
+**in bold**, darker than the surrounding paragraph. OpenAI wraps these cited
+listings in bold — `**[label](url)**` — and the tokenizer was flat. Regex
+alternation picks the *leftmost* match, so the bold run (starting two
+characters earlier) swallowed the entire link and emitted it as literal text
+inside a `<strong>`. Fixed by making `tokenizeInline` recursive: `bold`,
+`italic` and link labels now hold child tokens instead of a raw string, and
+the renderer recurses to match, with a depth cap (4) as a loop guard. New
+`visibleText()` helper makes "no raw URL leaks into the transcript" directly
+assertable, and the founder's answer is now a fixture covering both quirks
+at once (bold-wrapped *and* line-wrapped).
 
-**Process note:** the founder's first retest of the fix used a screenshot
-taken 11 minutes *before* the corresponding Vercel preview finished
-building, costing a full round trip. Handoffs should state that the preview
-must show as Ready, not just that a commit was pushed.
+`pnpm test` 838/838, `pnpm run validate` green.
+
+**Process notes — two rounds lost, both avoidable:**
+1. The founder's first retest used a screenshot taken 11 minutes *before*
+   the corresponding Vercel preview finished building. Handoffs must state
+   that the preview has to show as **Ready**, not just that a commit was
+   pushed.
+2. The first fix was shipped after verifying the regex against a
+   *reconstructed* sample rather than the real stored `raw_response`. That
+   sample happened to omit the bold wrapper, so it confirmed a real bug but
+   masked the dominant one. When a rendering bug is reported, reproduce from
+   the persisted row, not from a hand-typed approximation of the screenshot.
 
 ---
 

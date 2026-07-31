@@ -143,7 +143,26 @@ coverage at all, which is the reason the bug shipped unnoticed; the
 founder's verbatim answer is now a regression fixture. See
 `docs/director-strategy.md` → MARKDOWN-RENDER-1.
 
-**Lesson worth keeping:** when a user reports "the same problem again"
-after a fix, verify which surface they are looking at before assuming the
-fix missed a case. Three distinct root causes (fabricated evidence, citation
-counting, transcript rendering) presented as one identical-looking symptom.
+**A second cause in the same renderer — nesting.** With the above deployed
+the URLs were still raw, and the screenshot said why: the leaked `[label]`
+and `(url)` were rendered **in bold**. OpenAI wraps these cited listings as
+`**[label](url)**`, and the tokenizer was flat — regex alternation takes the
+leftmost match, so the bold run (two characters earlier) swallowed the whole
+link and emitted it as literal text inside a `<strong>`. `tokenizeInline` is
+now recursive: bold, italic and link labels hold child tokens, the renderer
+recurses to match, and a depth cap guards against pathological input. A
+`visibleText()` helper makes the real invariant — *no raw URL ever reaches
+the visible transcript* — directly assertable in tests.
+
+**Lessons worth keeping:**
+1. When a user reports "the same problem again" after a fix, verify which
+   surface they are looking at before assuming the fix missed a case. Three
+   distinct root causes (fabricated evidence, citation counting, transcript
+   rendering) presented as one identical-looking symptom.
+2. Reproduce rendering bugs from the persisted `raw_response`, not from a
+   hand-typed approximation of the screenshot. The reconstruction used for
+   the first fix omitted the bold wrapper, which confirmed a genuine bug
+   while hiding the dominant one and cost an extra round trip.
+3. Assert on what the reader sees, not on whether one construct parsed.
+   "0 links before, 2 after" looked conclusive and still shipped a broken
+   screen; "the visible text contains no `google.com`" would not have.

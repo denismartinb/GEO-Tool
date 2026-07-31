@@ -13,9 +13,9 @@
 
 export type InlineToken =
   | { type: "text"; value: string }
-  | { type: "bold"; value: string }
-  | { type: "italic"; value: string }
-  | { type: "link"; label: string; url: string };
+  | { type: "bold"; children: InlineToken[] }
+  | { type: "italic"; children: InlineToken[] }
+  | { type: "link"; label: InlineToken[]; url: string };
 
 /**
  * Pulls a markdown link whose label and target were emitted on separate lines
@@ -37,12 +37,23 @@ export function normalizeMarkdownSource(text: string): string {
   return text.replace(/\]\s*\n\s*\((?=(?:https?:\/\/|www\.))/g, "](");
 }
 
+/** Deepest nesting we parse before treating the remainder as literal text. */
+const MAX_NESTING_DEPTH = 4;
+
 /**
  * Tokenizes inline markdown. Accepts a multi-line string: newlines inside a
  * `text` token are preserved for the caller to render as line breaks, so a
  * construct spanning a line boundary is not severed before it is parsed.
+ *
+ * **Nesting is parsed recursively.** Providers routinely wrap a link in bold
+ * (`**[label](url)**`, OpenAI's usual shape for a list of cited businesses).
+ * A flat tokenizer mis-handles this: regex alternation picks the *leftmost*
+ * match, so the bold run — which starts two characters earlier — swallows the
+ * whole link and renders it as literal `[label](url)` text in bold. Recursing
+ * into each container's content is what makes the inner link a real link.
  */
-export function tokenizeInline(input: string): InlineToken[] {
+export function tokenizeInline(input: string, depth = 0): InlineToken[] {
+  if (depth >= MAX_NESTING_DEPTH) return input ? [{ type: "text", value: input }] : [];
   const tokens: InlineToken[] = [];
   // Alternatives, in precedence order:
   //   1. link   — `[label](url)`; `\s*` tolerates a space or newline between
@@ -60,18 +71,47 @@ export function tokenizeInline(input: string): InlineToken[] {
   while ((m = re.exec(input))) {
     if (m.index > last) tokens.push({ type: "text", value: input.slice(last, m.index) });
     if (m[1] !== undefined) {
-      tokens.push({ type: "link", label: m[1], url: m[2] });
+      tokens.push({ type: "link", label: tokenizeInline(m[1], depth + 1), url: m[2] });
     } else if (m[3] !== undefined) {
-      tokens.push({ type: "bold", value: m[3] });
+      tokens.push({ type: "bold", children: tokenizeInline(m[3], depth + 1) });
     } else {
       if (m[4]) tokens.push({ type: "text", value: m[4] });
-      tokens.push({ type: "italic", value: m[5] });
+      tokens.push({ type: "italic", children: tokenizeInline(m[5], depth + 1) });
     }
     last = re.lastIndex;
   }
 
   if (last < input.length) tokens.push({ type: "text", value: input.slice(last) });
-  return tokens;
+  return mergeAdjacentText(tokens);
+}
+
+/**
+ * Collapses consecutive text tokens into one. The italic rule re-emits its
+ * leading boundary character as its own token, which would otherwise split a
+ * run of plain text into fragments and produce needless React nodes.
+ */
+function mergeAdjacentText(tokens: InlineToken[]): InlineToken[] {
+  const merged: InlineToken[] = [];
+  for (const token of tokens) {
+    const previous = merged[merged.length - 1];
+    if (token.type === "text" && previous?.type === "text") {
+      merged[merged.length - 1] = { type: "text", value: previous.value + token.value };
+    } else {
+      merged.push(token);
+    }
+  }
+  return merged;
+}
+
+/**
+ * The text a reader actually sees for a token tree — link labels included,
+ * link *targets* excluded. A raw URL showing up here means a link failed to
+ * parse and its markdown is leaking into the visible transcript.
+ */
+export function visibleText(tokens: InlineToken[]): string {
+  return tokens
+    .map((t) => (t.type === "text" ? t.value : visibleText(t.type === "link" ? t.label : t.children)))
+    .join("");
 }
 
 export type MarkdownBlock =

@@ -11,6 +11,7 @@ import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
 import { isBrandDomain } from "@/lib/domains/brand-domain";
+import type { InlineToken } from "@/lib/markdown/inline-markdown";
 import { parseMarkdownBlocks, tokenizeInline } from "@/lib/markdown/inline-markdown";
 
 type Competitor = {
@@ -147,30 +148,41 @@ function renderTextWithLineBreaks(value: string, brand: string, keyPrefix: strin
 }
 
 /**
- * Renders one or more lines of inline markdown (bold/links/plain text). Accepts
- * a multi-line string (joined with "\n") rather than requiring one call per
- * line, so a link split across a line boundary by the caller is still
- * tokenized as a single string and doesn't get severed at the newline.
+ * Renders a parsed inline-markdown token tree. Containers (bold, italic, link
+ * label) hold child tokens rather than a raw string — providers nest these
+ * freely, e.g. OpenAI's `**[label](url)**` — so rendering recurses.
  */
-function renderInline(line: string, brand: string): React.ReactNode {
-  return tokenizeInline(line).map((t, i) => {
+function renderTokens(tokens: InlineToken[], brand: string, keyPrefix: string): React.ReactNode {
+  return tokens.map((t, i) => {
+    const key = `${keyPrefix}-${i}`;
     if (t.type === "link") {
+      const label = renderTokens(t.label, brand, `${key}l`);
       return isSafeHttpUrl(t.url) ? (
-        <a key={i} href={t.url} target="_blank" rel="noopener noreferrer" className="pr2-md-link">
-          {renderTextWithLineBreaks(t.label, brand, `link-${i}`)}
+        <a key={key} href={t.url} target="_blank" rel="noopener noreferrer" className="pr2-md-link">
+          {label}
         </a>
       ) : (
-        <Fragment key={i}>{renderTextWithLineBreaks(t.label, brand, `linktext-${i}`)}</Fragment>
+        <Fragment key={key}>{label}</Fragment>
       );
     }
     if (t.type === "bold") {
-      return <strong key={i}>{renderTextWithLineBreaks(t.value, brand, `bold-${i}`)}</strong>;
+      return <strong key={key}>{renderTokens(t.children, brand, `${key}b`)}</strong>;
     }
     if (t.type === "italic") {
-      return <em key={i}>{renderTextWithLineBreaks(t.value, brand, `italic-${i}`)}</em>;
+      return <em key={key}>{renderTokens(t.children, brand, `${key}i`)}</em>;
     }
-    return <Fragment key={i}>{renderTextWithLineBreaks(t.value, brand, `text-${i}`)}</Fragment>;
+    return <Fragment key={key}>{renderTextWithLineBreaks(t.value, brand, key)}</Fragment>;
   });
+}
+
+/**
+ * Renders one or more lines of inline markdown. Accepts a multi-line string
+ * (joined with "\n") rather than requiring one call per line, so a construct
+ * split across a line boundary by the caller is still tokenized as a single
+ * string and doesn't get severed at the newline.
+ */
+function renderInline(line: string, brand: string): React.ReactNode {
+  return renderTokens(tokenizeInline(line), brand, "t");
 }
 
 /**
