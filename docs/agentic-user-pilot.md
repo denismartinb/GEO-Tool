@@ -121,12 +121,32 @@ should be visibly broken, not quietly green.
 ### How a remote agent session uses it
 
 A Claude Code remote/web session cannot open the preview itself (its egress
-proxy blocks `*.vercel.app`), but it *can* reach `api.github.com` and
-`objects.githubusercontent.com`. So the split is:
+proxy blocks `*.vercel.app`). So the work splits:
 
 1. GitHub's runner drives the browser and captures the screenshots.
-2. The agent downloads the `pilot-screenshots` artifact and **looks at them**,
-   then judges against the PR's acceptance criteria.
+2. The agent fetches those screenshots and **looks at them**, then judges
+   against the PR's acceptance criteria.
+
+**Do not try to download the Actions artifact from an agent session.** Artifacts
+(upload-artifact v4) are served from `*.blob.core.windows.net`, which the egress
+proxy rejects at CONNECT — verified, not assumed. The artifact exists for humans
+clicking through the Actions UI.
+
+Agents read the evidence over git, which already works through the proxy:
+
+```bash
+git fetch origin pilot-evidence/pr-<N>
+git checkout FETCH_HEAD -- screens findings.jsonl summary.md   # or: git show FETCH_HEAD:screens/desktop--overview.png
+```
+
+The workflow force-pushes one orphan commit per run to
+`pilot-evidence/pr-<N>`, so evidence is replaced rather than accumulated and
+superseded blobs become unreachable for garbage collection. Those branches are
+disposable — never merge one, and deleting them is always safe.
+
+Note that these screenshots are of a logged-in test account's screens and live
+in the repository's branches, visible to anyone with repo access. That is why
+the pilot account must be a dedicated test account with no real data.
 
 The mechanical half runs where there is network; the judgement half runs where
 there is a model. Neither half is skipped.

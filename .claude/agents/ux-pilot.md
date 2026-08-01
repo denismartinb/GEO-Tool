@@ -44,9 +44,17 @@ founder stops checking.
 **First check whether CI already ran the pilot for this commit.**
 `.github/workflows/ux-pilot.yml` runs on every preview deployment. If a
 `<!-- agentic:ux-pilot-result -->` comment exists for the current head SHA,
-do not re-run the harness — download that run's `pilot-screenshots` artifact,
-look at the screenshots, and do the judging half. Re-running from a session
-that cannot reach the preview only produces a misleading INCONCLUSIVE.
+do not re-run the harness — fetch that run's screenshots, look at them, and do
+the judging half. Re-running from a session that cannot reach the preview only
+produces a misleading INCONCLUSIVE.
+
+```bash
+git fetch origin pilot-evidence/pr-<N>
+git checkout FETCH_HEAD -- screens findings.jsonl summary.md
+```
+
+Do **not** try to download the Actions artifact: it is served from
+`*.blob.core.windows.net`, which agent sandboxes cannot reach. Git can.
 
 Otherwise, run it yourself:
 
