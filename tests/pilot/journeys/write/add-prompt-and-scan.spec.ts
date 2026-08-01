@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  assertNoTestPromptsRemain,
   assertSingleManualPromptDraft,
   buildTestPromptText,
   captureStep,
@@ -160,6 +161,10 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
 
     const swept = await sweepTestPrompts(page, projectId);
     expect(swept, "expected to clean up at least the prompt this run just created").toBeGreaterThan(0);
+
+    // The count above says an action happened; this says the project is
+    // actually clean. Only the second one is the property worth guaranteeing.
+    await assertNoTestPromptsRemain(page, projectId);
     await captureStep(page, "prompts-after-cleanup");
   });
 });

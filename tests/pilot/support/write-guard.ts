@@ -239,7 +239,15 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
   let deleted = 0;
 
   for (let i = 0; i < MAX_SWEEPS; i += 1) {
-    await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
+    // The cache-busting param matters: Next's App Router serves the client-side
+    // RSC cache on repeat navigations to the same URL, so a plain re-`goto`
+    // after a delete can render the list exactly as it was before it. Observed
+    // live — a run reported having swept a prompt while the page still listed
+    // it, and two runs' debris survived a sweep that believed it had succeeded.
+    // The page ignores unknown search params.
+    await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=${Date.now()}-${i}`, {
+      waitUntil: "domcontentloaded"
+    });
 
     // "Añadir prompts" only exists once the real page renders, so it is a
     // reliable signal that the loading skeleton is gone and the list below can
@@ -289,6 +297,33 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
   }
 
   return deleted;
+}
+
+/**
+ * The invariant that actually matters after cleanup: the write-project carries
+ * no pilot debris at all.
+ *
+ * `sweepTestPrompts` returning a positive count is not the same claim — a run
+ * once deleted one prompt, reported success, and left two behind. Asserting the
+ * end state instead of the action is what makes "cleaned up" mean cleaned up.
+ */
+export async function assertNoTestPromptsRemain(page: Page, projectId: string): Promise<void> {
+  await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=verify-${Date.now()}`, {
+    waitUntil: "domcontentloaded"
+  });
+  await waitForContent(page, [
+    () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
+    () => page.getByText(/no hay prompts activos/i).isVisible()
+  ]);
+
+  const remaining = await page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).count();
+  if (remaining > 0) {
+    await captureStep(page, "cleanup-left-debris");
+    throw new Error(
+      `La limpieza dejó ${remaining} prompt(s) de prueba en el proyecto de escritura. ` +
+        "Cada pasada consume cupo del plan, así que esto no puede darse por bueno."
+    );
+  }
 }
 
 /**
