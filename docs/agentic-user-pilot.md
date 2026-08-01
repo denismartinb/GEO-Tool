@@ -232,11 +232,19 @@ cap and a cleanup strategy.
 
 - **Signup with email confirmation is not pilotable** — no mailbox. Stays a
   manual founder smoke.
-- **Egress-restricted environments cannot run it.** Claude Code's remote
-  environment (`Default — trusted network access`) blocks `*.vercel.app` at the
-  egress proxy (`403` on CONNECT), so pilots must run from an environment that
-  can reach the preview — today, the founder's local CLI session. The harness
-  returns INCONCLUSIVE rather than guessing.
+- **Egress-restricted environments cannot run it directly.** Claude Code's
+  remote environment (`Default — trusted network access`) blocks `*.vercel.app`
+  at the egress proxy (`403` on CONNECT). This is why the CI workflow exists:
+  GitHub's runner drives the browser and the agent judges the screenshots it
+  publishes. A remote session that tries to run the harness itself gets
+  INCONCLUSIVE, correctly.
+
+- **Preview deployments are protected.** Verified live 2026-08-01: Vercel
+  Deployment Protection redirects every preview URL to `vercel.com/login`
+  (`Login – Vercel`), including for CI. The pilot needs `PILOT_VERCEL_BYPASS`
+  (Vercel → Settings → Deployment Protection → Protection Bypass for
+  Automation) to get through; without it every run reports INCONCLUSIVE at the
+  login step. Protection stays on for human visitors.
 - **Single account only.** The pilot cannot prove tenant isolation; that stays
   with `data-guardian`.
 

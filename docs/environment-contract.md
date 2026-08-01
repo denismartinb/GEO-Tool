@@ -306,9 +306,33 @@ in process listings), and never paste them into chat.
 
 **Egress requirement:** the pilot must be able to reach the preview host. Claude
 Code's remote environment (`Default — trusted network access`) blocks
-`*.vercel.app` at the egress proxy (`403` on CONNECT), so pilots currently run
-from the founder's local CLI session. The harness reports
-`PILOT INCONCLUSIVE` (exit 78) rather than a false pass when it cannot connect.
+`*.vercel.app` at the egress proxy (`403` on CONNECT), which is why the pilot
+runs in GitHub Actions (`.github/workflows/ux-pilot.yml`) rather than from an
+agent session. The harness reports `PILOT INCONCLUSIVE` (exit 78) rather than a
+false pass when it cannot connect.
+
+**Vercel Deployment Protection is ON for previews** (verified live 2026-08-01:
+every preview URL redirects to `vercel.com/login`). The pilot therefore needs a
+bypass token, stored as the GitHub Actions secret `PILOT_VERCEL_BYPASS` and
+generated at Vercel → Settings → Deployment Protection → *Protection Bypass for
+Automation*. `playwright.config.ts` sends it as `x-vercel-protection-bypass`.
+Protection remains enabled for human visitors. Without this secret the pilot
+cannot reach the app at all — it is not optional in practice, despite being
+optional in code.
+
+### GitHub Actions secrets (pilot)
+
+These live in GitHub, not Vercel: Settings → Secrets and variables → Actions.
+
+| Secret | Required | Notes |
+|---|---|---|
+| `PILOT_EMAIL` | Yes | Dedicated pilot account |
+| `PILOT_PASSWORD` | Yes | Password for that account |
+| `PILOT_VERCEL_BYPASS` | Yes in practice | Vercel automation bypass token |
+| `PILOT_PROJECT_ID` | No | Pins which project the journeys inspect |
+
+Every pilot run prints which of these are present (booleans only, never values)
+in its PR comment, so a missing one is diagnosable without repo admin access.
 
 ---
 
