@@ -205,7 +205,18 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
   for (let i = 0; i < MAX_SWEEPS; i += 1) {
     await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
 
-    const search = page.getByLabel("Buscar prompt").first();
+    // The prompts page renders the same "Buscar prompt" input up to three
+    // times and shows only one per breakpoint: `.pr2-toolbar` below 1200px,
+    // `.pr2-search-listhead` at or above it (app/globals.css). Taking `.first()`
+    // grabs whichever is first in the DOM — hidden at desktop width, where this
+    // journey runs — and `fill()` then waits for visibility until it times out.
+    const search = page.getByLabel("Buscar prompt").filter({ visible: true }).first();
+
+    // A project whose first scan has not completed yet renders `ScanInProgress`
+    // instead of the prompt list, so there is no search box and, by definition,
+    // no leftover test prompts to sweep.
+    if (!(await search.isVisible().catch(() => false))) return deleted;
+
     await search.fill(PILOT_TEST_PROMPT_MARKER);
     // The list filters client-side with no loading state to await; give React
     // a beat to re-render before reading the result.

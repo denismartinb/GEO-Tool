@@ -153,6 +153,11 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
   });
 
   await test.step("cleanup: remove the prompt this run created", async () => {
+    // The prompt list (and with it the search box the sweep drives) is replaced
+    // by ScanInProgress while a run is active, so settle first — otherwise
+    // cleanup would silently find nothing and leave its own prompt behind.
+    await waitForNoActiveRun(page, projectId);
+
     const swept = await sweepTestPrompts(page, projectId);
     expect(swept, "expected to clean up at least the prompt this run just created").toBeGreaterThan(0);
     await captureStep(page, "prompts-after-cleanup");
