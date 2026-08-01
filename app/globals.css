@@ -1962,8 +1962,16 @@ a {
 
 /* Opportunities */
 .cit2-opps-list { display: flex; flex-direction: column; gap: 2px; margin: -4px -2px 0; }
-.cit2-opp-row { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid var(--line-soft); }
-.cit2-opp-row:last-child { border-bottom: 0; }
+.cit2-opp-item { border-bottom: 1px solid var(--line-soft); }
+.cit2-opp-item:last-child { border-bottom: 0; }
+.cit2-opp-item.open { background: var(--surface-2); }
+/* Same interactive row treatment as .cit2-rowmain — clicking an opportunity
+   expands the same prompt/evidence panel as the full list below (founder
+   request, 2026-08-01: the two tables must behave identically). */
+.cit2-opp-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 6px;
+  background: none; border: none; text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
 .cit2-opp-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .cit2-opp-domain { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink); }
 .cit2-opp-why { font-size: 10.5px; color: var(--ink-3); }
@@ -2011,8 +2019,24 @@ a {
 .cit2-chev { color: var(--ink-4); flex: 0 0 auto; display: flex; }
 .cit2-detail { padding: 4px 14px 14px 51px; }
 .cit2-detail-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 6px; }
-.cit2-detail-list { margin: 0; padding-left: 16px; font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+.cit2-detail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cit2-detail-list > li { border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.cit2-detail-list > li:first-child { border-top: 0; padding-top: 0; }
+.cit2-detail-prompt { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.cit2-detail-prompt .cit2-echip { flex: 0 0 auto; margin-top: 1px; }
+/* The model's actual answer to that prompt — real evidence, not a
+   fabricated excerpt. Scrollable rather than truncated, so a long answer
+   never gets cut off mid-sentence; capped height keeps one prompt's evidence
+   from dwarfing the rest of the panel. */
+.cit2-detail-evidence {
+  margin-top: 6px; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 8px; font-size: 12px; line-height: 1.55; color: var(--ink-3);
+  max-height: 140px; overflow-y: auto; white-space: pre-wrap;
+}
 .cit2-detail-empty, .cit2-list-empty { padding: 14px 4px; color: var(--ink-4); font-size: 12.5px; }
+/* Opportunities rows use a smaller avatar (.cit2-fav.sm) than the full list,
+   so their detail panel indents less to stay visually under the avatar. */
+.cit2-opp-item .cit2-detail { padding-left: 38px; }
 .cit2-list-empty { text-align: center; padding: 36px; }
 
 /* Desktop layout — list + sticky opportunities rail. Same display:contents

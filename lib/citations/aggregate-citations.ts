@@ -40,7 +40,11 @@ export type CitationRow = {
   /** Untracked brands named in the answers this page was cited in. */
   otherBrands: string[];
   cited: number;
-  prompts: Array<{ text: string; brandMentioned: boolean }>;
+  /** One entry per (prompt, provider) that cited this page. `rawResponseText`
+   * is the model's actual answer to that prompt — the real "why was this
+   * cited" evidence, not a fabricated excerpt. `null` for rows persisted
+   * before raw_response_text was selected on this page's query. */
+  prompts: Array<{ text: string; brandMentioned: boolean; provider: string; rawResponseText: string | null }>;
   /** Order: grounded engines first, then cited desc. Never invented. */
   engines: CitationEngine[];
 };
@@ -114,6 +118,7 @@ export type CitationInputRow = {
   brand_mentioned: boolean | null;
   extracted_json: unknown;
   provider: string | null;
+  raw_response_text: string | null;
 };
 
 type ExtractedJson = {
@@ -273,7 +278,7 @@ export function aggregateCitations(input: {
     brandMentionedNo: number;
     competitors: Set<string>;
     otherBrands: Set<string>;
-    prompts: Array<{ text: string; brandMentioned: boolean }>;
+    prompts: Array<{ text: string; brandMentioned: boolean; provider: string; rawResponseText: string | null }>;
     engines: Map<string, number>;
   };
 
@@ -362,7 +367,7 @@ export function aggregateCitations(input: {
       else row.brandMentionedNo += 1;
       for (const name of mentionedCompetitors) row.competitors.add(name);
       for (const name of mentionedOtherBrands) row.otherBrands.add(name);
-      row.prompts.push({ text: promptText, brandMentioned });
+      row.prompts.push({ text: promptText, brandMentioned, provider, rawResponseText: result.raw_response_text });
       row.engines.set(provider, (row.engines.get(provider) ?? 0) + 1);
 
       let groupCitation = group.citations.get(key);

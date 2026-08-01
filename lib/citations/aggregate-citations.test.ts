@@ -13,6 +13,7 @@ function row(overrides: Partial<CitationInputRow> = {}): CitationInputRow {
     brand_mentioned: false,
     extracted_json: {},
     provider: null,
+    raw_response_text: null,
     ...overrides
   };
 }
@@ -526,5 +527,46 @@ describe("aggregateCitations", () => {
     const pctSum = sourceTypeBreakdown.reduce((sum, s) => sum + s.pct, 0);
     expect(pctSum).toBeGreaterThanOrEqual(99);
     expect(pctSum).toBeLessThanOrEqual(101);
+  });
+
+  it("14. citationRows[].prompts carries provider + raw_response_text — the real evidence for expanding a row in the UI", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        prompt_id: "p1",
+        prompt_text_snapshot: "What is the best telco?",
+        provider: "gemini",
+        raw_response_text: "Movistar is a strong option for fibre in Spain.",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      }),
+      row({
+        prompt_id: "p1",
+        prompt_text_snapshot: "What is the best telco?",
+        provider: "openai",
+        raw_response_text: "I'd recommend checking Movistar and Orange.",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(citationRows).toHaveLength(1);
+    expect(citationRows[0].prompts).toEqual([
+      {
+        text: "What is the best telco?",
+        brandMentioned: false,
+        provider: "gemini",
+        rawResponseText: "Movistar is a strong option for fibre in Spain."
+      },
+      {
+        text: "What is the best telco?",
+        brandMentioned: false,
+        provider: "openai",
+        rawResponseText: "I'd recommend checking Movistar and Orange."
+      }
+    ]);
   });
 });

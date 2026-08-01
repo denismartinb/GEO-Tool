@@ -527,6 +527,24 @@ no cambia — el recorte es solo de presentación en `SourceDonut`. Si no queda
 nada clasificado (0 fuentes reconocidas), el bloque entero se oculta en vez
 de mostrar un donut vacío.
 
+**Segunda revisión del fundador (2026-08-01, captura adicional).** Dos
+cambios más, mismo PR:
+
+- **Copy**: "N páginas citadas en el último escaneo" → "N páginas citadas en
+  los prompts escaneados" — más preciso sobre qué agrega el número.
+- **Las dos tablas ahora se comportan igual**: hasta esta revisión, solo la
+  lista completa era expandible (mostraba los prompts que citaron esa
+  página al hacer click); el bloque de Oportunidades era estático. Ahora
+  ambas filas son botones que expanden el mismo panel de detalle
+  (`PromptEvidenceList`, componente compartido). Además, el panel pasa de
+  listar solo el texto del prompt a mostrar **la evidencia real**: la
+  respuesta completa del modelo (`scan_prompt_results.raw_response_text`,
+  seleccionada ahora en `citations/page.tsx` y propagada a través de
+  `aggregateCitations` en `CitationRow.prompts[].rawResponseText`), no un
+  fragmento inventado. Deduplicado por (motor, texto del prompt) — el mismo
+  prompt respondido por dos motores distintos son dos evidencias reales
+  distintas, no una sola.
+
 **Gate reforzado a raíz de esta revisión:** `.claude/agents/ux-pilot.md` gana
 una **checklist de fidelidad de diseño** de 6 puntos (¿se añadió algo no
 aprobado? ¿falta algo? ¿hay etiquetas que un usuario nuevo no sabría definir?

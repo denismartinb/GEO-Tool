@@ -89,10 +89,50 @@ function EngineChips({ engines }: { engines: CitationEngine[] }) {
   );
 }
 
+/**
+ * Shared expand-panel content: which prompts cited this page, and — the real
+ * "why was this cited" evidence — the model's actual answer to each one.
+ * Used by both tables on this screen (the full list and the opportunities
+ * shortlist), so clicking a row behaves identically in either place (founder
+ * request, 2026-08-01).
+ *
+ * Deduped by (provider, text): the same prompt can be answered by two
+ * engines with two different responses, and both are genuine evidence —
+ * deduping by text alone would silently drop one engine's answer.
+ */
+function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
+  const unique = Array.from(new Map(prompts.map((p) => [`${p.provider}::${p.text}`, p])).values());
+
+  if (unique.length === 0) {
+    return <div className="cit2-detail-empty">Sin prompts asociados.</div>;
+  }
+
+  return (
+    <>
+      <div className="cit2-detail-lbl">Citada al responder estos prompts</div>
+      <ul className="cit2-detail-list">
+        {unique.map((p, i) => {
+          const meta = getEngineMeta(p.provider);
+          return (
+            <li key={i}>
+              <div className="cit2-detail-prompt">
+                <span>{p.text}</span>
+                <span className="cit2-echip" style={{ background: meta.color }}>
+                  {meta.label}
+                </span>
+              </div>
+              {p.rawResponseText && <div className="cit2-detail-evidence">{p.rawResponseText}</div>}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
 function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: boolean; onToggle: () => void }) {
   const { domain, path } = pageDisplay(row);
   const badge = typeBadge(row);
-  const uniquePrompts = Array.from(new Map(row.prompts.map((p) => [p.text, p])).values());
 
   return (
     <div className={`cit2-row${open ? " open" : ""}`}>
@@ -120,18 +160,7 @@ function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: bool
       </button>
       {open && (
         <div className="cit2-detail">
-          {uniquePrompts.length > 0 ? (
-            <>
-              <div className="cit2-detail-lbl">Citada al responder estos prompts</div>
-              <ul className="cit2-detail-list">
-                {uniquePrompts.map((p, i) => (
-                  <li key={i}>{p.text}</li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <div className="cit2-detail-empty">Sin prompts asociados.</div>
-          )}
+          <PromptEvidenceList prompts={row.prompts} />
         </div>
       )}
     </div>
@@ -254,6 +283,7 @@ function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
 
 function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow[]; projectId: string; brandLabel: string }) {
   const [showAll, setShowAll] = useState(false);
+  const [open, setOpen] = useState<string | null>(null);
   const visible = showAll ? rows : rows.slice(0, 5);
 
   return (
@@ -275,20 +305,42 @@ function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow
       ) : (
         <>
           <div className="cit2-opps-list">
-            {visible.map((row) => (
-              <div className="cit2-opp-row" key={row.id}>
-                <span className="cit2-fav sm" style={{ background: avatarColor(row.domain) }}>
-                  {avatarInitial(row)}
-                </span>
-                <span className="cit2-opp-body">
-                  <span className="cit2-opp-domain">{row.domain}</span>
-                  <span className="cit2-opp-why">
-                    Cita a <b>{row.competitors.slice(0, 2).join(", ") || "un competidor"}</b> ·{" "}
-                    {row.engines.length} {row.engines.length === 1 ? "motor" : "motores"}
-                  </span>
-                </span>
-              </div>
-            ))}
+            {/* Same click-to-expand behavior as the full list below (founder
+                request, 2026-08-01): a row here is a real CitationRow, so it
+                carries the same prompts/evidence — no reason the two tables
+                should behave differently. */}
+            {visible.map((row) => {
+              const isOpen = open === row.id;
+              return (
+                <div className={`cit2-opp-item${isOpen ? " open" : ""}`} key={row.id}>
+                  <button
+                    type="button"
+                    className="cit2-opp-row"
+                    onClick={() => setOpen((o) => (o === row.id ? null : row.id))}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="cit2-fav sm" style={{ background: avatarColor(row.domain) }}>
+                      {avatarInitial(row)}
+                    </span>
+                    <span className="cit2-opp-body">
+                      <span className="cit2-opp-domain">{row.domain}</span>
+                      <span className="cit2-opp-why">
+                        Cita a <b>{row.competitors.slice(0, 2).join(", ") || "un competidor"}</b> ·{" "}
+                        {row.engines.length} {row.engines.length === 1 ? "motor" : "motores"}
+                      </span>
+                    </span>
+                    <span className="cit2-chev" style={isOpen ? undefined : { transform: "rotate(180deg)" }}>
+                      <Icon name={isOpen ? "chevDown" : "chevronLeft"} size={14} />
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="cit2-detail">
+                      <PromptEvidenceList prompts={row.prompts} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           {rows.length > 5 && (
             <button type="button" className="cit2-btn-mini cit2-btn-block" onClick={() => setShowAll((s) => !s)}>
@@ -388,7 +440,7 @@ export function CitationsClient({
           <div className="cit2-listtitle">
             <div className="cit2-blk-eyebrow">Todas las fuentes · lista completa</div>
             <div className="cit2-blk-t">
-              {totalUrls} {totalUrls === 1 ? "página citada" : "páginas citadas"} en el último escaneo
+              {totalUrls} {totalUrls === 1 ? "página citada" : "páginas citadas"} en los prompts escaneados
             </div>
           </div>
           <div className="cit2-toolbar">

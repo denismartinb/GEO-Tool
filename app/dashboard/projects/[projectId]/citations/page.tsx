@@ -62,7 +62,9 @@ export default async function CitationsPage({
     ? await Promise.all([
         supabase
           .from("scan_prompt_results")
-          .select("id, prompt_id, prompt_text_snapshot, brand_mentioned, extracted_json, provider")
+          .select(
+            "id, prompt_id, prompt_text_snapshot, brand_mentioned, extracted_json, provider, raw_response_text"
+          )
           .eq("project_id", projectId)
           .eq("run_id", latestRun.id)
           .eq("status", "completed"),
