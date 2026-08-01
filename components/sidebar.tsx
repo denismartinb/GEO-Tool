@@ -42,6 +42,8 @@ export function Sidebar({
   competitorCountByProject,
   recommendationCountByProject,
   userEmail,
+  planId,
+  planName,
   signOutAction
 }: {
   projects: WorkspaceProject[];
@@ -49,6 +51,9 @@ export function Sidebar({
   competitorCountByProject: Record<string, number>;
   recommendationCountByProject: Record<string, number>;
   userEmail: string;
+  /** Effective plan (post reverse-trial-expiry check, see lib/billing.ts:getPlanForUser) — "free" renders no badge, founder decision 2026-07-31. */
+  planId: string;
+  planName: string;
   signOutAction: () => Promise<void>;
 }) {
   const pathname = usePathname();
@@ -230,6 +235,12 @@ export function Sidebar({
             >
               {userEmail}
             </div>
+            {planId !== "free" && (
+              <span className="sb-plan-badge">
+                <Icon name="crown" size={10} />
+                {planName}
+              </span>
+            )}
           </div>
         </Link>
         <form action={signOutAction} className="sb-signout">

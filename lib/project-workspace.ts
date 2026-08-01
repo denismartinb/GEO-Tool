@@ -3,6 +3,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
+import type { Plan } from "@/app/pricing/plans-data";
 import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
@@ -153,6 +154,8 @@ export type WorkspaceCounters = {
   latestScoreByProject: Record<string, number | null>;
   scoreDeltaByProject: Record<string, number | null>;
   dataMaturityByProject: Record<string, DataMaturityState>;
+  /** Account plan, already fetched once here for `dataMaturityByProject` — exposed so callers (e.g. the sidebar's plan badge) don't issue a second `getPlanForUser` round trip. */
+  plan: Plan;
   notifications: WorkspaceNotification[];
 };
 
@@ -313,6 +316,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     latestScoreByProject,
     dataMaturityByProject,
     scoreDeltaByProject,
+    plan,
     notifications
   };
 }

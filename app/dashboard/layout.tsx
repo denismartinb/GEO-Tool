@@ -19,6 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     recommendationCountByProject,
     latestScanStatusByProject,
     dataMaturityByProject,
+    plan,
     notifications
   } = await getWorkspaceCounters();
 
@@ -30,6 +31,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         competitorCountByProject={competitorCountByProject}
         recommendationCountByProject={recommendationCountByProject}
         userEmail={user.email ?? ""}
+        planId={plan.id}
+        planName={plan.name}
         signOutAction={signOut}
       />
       <div className="dash-main">
