@@ -49,11 +49,26 @@ export function readPilotEnv(): PilotEnv {
  * report, or a PR comment. The pilot's output is published to GitHub, so this
  * is the last line of defence against leaking the pilot account's password.
  */
+/**
+ * Substrings shorter than this are not redacted. A 1–5 character "secret" would
+ * match inside ordinary words and corrupt the very diagnostics this harness
+ * depends on — observed live: a one-character test password turned
+ * "deployment" into "deplo«redacted»ment" in a failure message.
+ *
+ * Real credentials are far longer than this, so nothing meaningful is left
+ * exposed. A secret this short is not protectable by string replacement anyway.
+ */
+const MIN_REDACTABLE_LENGTH = 6;
+
 export function redact(text: string): string {
   const password = process.env.PILOT_PASSWORD;
   const email = process.env.PILOT_EMAIL;
   let safe = text;
-  if (password) safe = safe.split(password).join("«redacted-password»");
-  if (email) safe = safe.split(email).join("«redacted-email»");
+  if (password && password.length >= MIN_REDACTABLE_LENGTH) {
+    safe = safe.split(password).join("«redacted-password»");
+  }
+  if (email && email.length >= MIN_REDACTABLE_LENGTH) {
+    safe = safe.split(email).join("«redacted-email»");
+  }
   return safe;
 }

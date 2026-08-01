@@ -60,6 +60,17 @@ export default defineConfig({
   reporter: [["list"], ["json", { outputFile: ".pilot/report.json" }]],
   use: {
     baseURL: process.env.PILOT_BASE_URL,
+    // Vercel Deployment Protection puts an SSO wall in front of preview
+    // deployments. When a bypass token is configured, this header lets the
+    // pilot through without disabling protection for human visitors.
+    ...(process.env.PILOT_VERCEL_BYPASS
+      ? {
+          extraHTTPHeaders: {
+            "x-vercel-protection-bypass": process.env.PILOT_VERCEL_BYPASS,
+            "x-vercel-set-bypass-cookie": "true"
+          }
+        }
+      : {}),
     // Screenshots are the pilot's primary evidence: the agent reads these PNGs
     // back with vision and judges them, so capture unconditionally.
     screenshot: "on",

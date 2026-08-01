@@ -1,7 +1,36 @@
-import { expect, test as setup } from "@playwright/test";
+import { mkdirSync } from "node:fs";
+import { expect, type Page, test as setup } from "@playwright/test";
 import { readPilotEnv, redact } from "./env";
 
 const AUTH_STATE_PATH = ".pilot/auth.json";
+
+/**
+ * Captures what the browser is actually looking at, into the same directory the
+ * evidence branch publishes.
+ *
+ * This exists because a login failure is the one case where a remote agent
+ * session is completely blind: Actions artifacts AND job logs are both served
+ * from hosts an agent sandbox cannot reach, so the PR comment is the only
+ * channel left. Without the page's title and URL in the failure message, a
+ * Vercel protection wall and a genuinely broken login page look identical.
+ */
+async function describeCurrentPage(page: Page, label: string): Promise<string> {
+  mkdirSync(".pilot/screens", { recursive: true });
+  await page
+    .screenshot({ path: `.pilot/screens/auth--${label}.png`, fullPage: true })
+    .catch(() => undefined);
+
+  const title = await page.title().catch(() => "(sin título)");
+  const bodyText = await page
+    .locator("body")
+    .innerText()
+    .catch(() => "");
+  const excerpt = bodyText.replace(/\s+/g, " ").trim().slice(0, 200);
+
+  return redact(
+    `URL final: ${page.url()} | título: "${title}" | texto: "${excerpt}"`
+  );
+}
 
 /**
  * Logs the pilot account in once and persists the Supabase session cookies, so
@@ -18,10 +47,16 @@ setup("authenticate as the pilot user", async ({ page }) => {
 
   await page.goto("/login");
 
-  await expect(
-    page.locator("#email"),
-    "login form did not render — the deployment may be unreachable or gated"
-  ).toBeVisible();
+  const emailField = page.locator("#email");
+  if (!(await emailField.isVisible().catch(() => false))) {
+    const seen = await describeCurrentPage(page, "login-not-rendered");
+    throw new Error(
+      `El formulario de login no renderizó. ${seen}\n` +
+        "Si el título o el texto mencionan Vercel/Authentication, es la " +
+        "Deployment Protection del preview, no un fallo del producto: " +
+        "desactívala para Preview o define PILOT_VERCEL_BYPASS."
+    );
+  }
 
   await page.locator("#email").fill(env.email);
   await page.locator("#password").fill(env.password);
@@ -37,10 +72,11 @@ setup("authenticate as the pilot user", async ({ page }) => {
   const currentUrl = page.url();
   if (!/\/dashboard(\/|$|\?)/.test(currentUrl)) {
     const feedback = await page.locator(".feedback.error").first().textContent().catch(() => null);
+    const seen = await describeCurrentPage(page, "login-rejected");
     throw new Error(
       redact(
-        `Pilot login failed. Landed on ${currentUrl}. ` +
-          (feedback ? `Form error: ${feedback.trim()}` : "No form error shown.")
+        `El login del piloto falló. ${seen}` +
+          (feedback ? ` | error del formulario: "${feedback.trim()}"` : " | sin error en el formulario.")
       )
     );
   }

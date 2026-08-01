@@ -62,6 +62,13 @@ const UNREACHABLE_SIGNATURES = [
   /ENOTFOUND|ECONNREFUSED|EAI_AGAIN/i,
   /CONNECT tunnel failed/i,
   /Timeout .* exceeded.*goto/i,
+  // The pilot reached a server but never got the product: a Vercel protection
+  // wall, a gated preview, or credentials the app rejected. None of these are
+  // product defects, and classifying them as FAIL would send someone debugging
+  // application code over what is actually a settings or secrets problem.
+  /El formulario de login no renderizó/i,
+  /El login del piloto falló/i,
+  /Missing pilot credentials/i,
   /deployment may be unreachable or gated/i
 ];
 
