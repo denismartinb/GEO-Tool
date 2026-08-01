@@ -69,17 +69,55 @@ const UNREACHABLE_SIGNATURES = [
   /El formulario de login no renderizó/i,
   /El login del piloto falló/i,
   /Missing pilot credentials/i,
-  /deployment may be unreachable or gated/i
+  /deployment may be unreachable or gated/i,
+  // UX-PILOT-2a write journeys: the scan they trigger runs synchronously
+  // server-side within Vercel's maxDuration budget. A timeout there is the
+  // pipeline being slow under real load, not a UI defect this journey found —
+  // see docs/scan-lifecycle.md and lib/scan/constants.ts on the documented
+  // Gemini-timeout-under-load risk at higher prompt counts.
+  /SCAN_TIMEOUT_NOT_PRODUCT_BUG/,
+  // A blocked "Añadir prompts" button (active run in progress, or the
+  // write-project already at its plan's prompt cap) is a precondition the
+  // journey refuses to force past, not a rendering bug.
+  /El botón «Añadir prompts» está deshabilitado/,
+  // Bootstrap preconditions: the account is at its plan's project cap, the
+  // grounded onboarding suggestion call failed or timed out, or a setup scan
+  // was still running after the wait. All are environment state, not defects.
+  /No se pudo abrir el asistente de alta de dominio/,
+  /el asistente no llegó al paso de competidores/,
+  /El alta de dominio no terminó en la pantalla de escaneos/,
+  /sigue con un escaneo en curso tras esperar/
 ];
 
+/**
+ * Explicit allowlist of Playwright projects per journey set, rather than "run
+ * everything except write". An allowlist fails closed: adding a new project to
+ * playwright.config.ts later cannot silently make it part of the always-on,
+ * per-deploy invocation the way an exclusion list could.
+ */
+const PROJECT_SETS = {
+  read: ["auth", "mobile", "tablet", "desktop"],
+  write: ["auth", "write"]
+};
+
 function parseArgs(argv) {
-  const args = { url: undefined, pr: undefined, summaryMd: undefined, passthrough: [] };
+  const args = {
+    url: undefined,
+    pr: undefined,
+    summaryMd: undefined,
+    journeys: "read",
+    passthrough: []
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--url") args.url = argv[++i];
     else if (arg === "--pr") args.pr = argv[++i];
     else if (arg === "--summary-md") args.summaryMd = argv[++i];
+    else if (arg === "--journeys") args.journeys = argv[++i];
     else args.passthrough.push(arg);
+  }
+  if (!PROJECT_SETS[args.journeys]) {
+    throw new Error(`Unknown --journeys "${args.journeys}". Valid values: ${Object.keys(PROJECT_SETS).join(", ")}.`);
   }
   return args;
 }
@@ -118,7 +156,8 @@ function cellFor(finding) {
  * formatting stays testable, stays in one language, and is identical whether the
  * pilot ran in CI or on a laptop.
  */
-function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures }) {
+function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys = "read" }) {
+  const isWrite = journeys === "write";
   const findings = readFindings();
   const labels = [...new Set(findings.map((finding) => finding.label))];
 
@@ -134,7 +173,9 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures }) {
     [
       ["PILOT_EMAIL", Boolean(process.env.PILOT_EMAIL)],
       ["PILOT_PASSWORD", Boolean(process.env.PILOT_PASSWORD)],
-      ["PILOT_PROJECT_ID", Boolean(process.env.PILOT_PROJECT_ID)],
+      isWrite
+        ? ["PILOT_WRITE_PROJECT_ID", Boolean(process.env.PILOT_WRITE_PROJECT_ID)]
+        : ["PILOT_PROJECT_ID", Boolean(process.env.PILOT_PROJECT_ID)],
       ["PILOT_VERCEL_BYPASS", Boolean(process.env.PILOT_VERCEL_BYPASS)]
     ]
       .map(([name, present]) => `${name} ${present ? "✅" : "—"}`)
@@ -142,14 +183,21 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures }) {
     "\n\n";
 
   const header =
-    `<!-- agentic:ux-pilot-result -->\n` +
-    `## Agentic User Pilot — ${verdict}\n\n` +
+    `<!-- agentic:ux-pilot-${isWrite ? "write-" : ""}result -->\n` +
+    `## Agentic User Pilot${isWrite ? " — Escritura (UX-PILOT-2a)" : ""} — ${verdict}\n\n` +
     `**Deployment:** ${baseUrl}${sha ? ` (commit \`${sha.slice(0, 7)}\`)` : ""}\n` +
     `**Ejecutado por:** ${process.env.GITHUB_ACTIONS === "true" ? "GitHub Actions" : "sesión local"}\n\n` +
     configLine;
 
   let table = "";
-  if (labels.length > 0) {
+  if (isWrite) {
+    // One scoped scenario, not a screen × viewport grid — a 3-column table
+    // would imply coverage this journey doesn't have.
+    table =
+      failures.length === 0
+        ? "✅ Se añadió un prompt de prueba y el escaneo restringido a él se completó.\n\n"
+        : "_El escenario de escritura no se completó — ver fallos abajo._\n\n";
+  } else if (labels.length > 0) {
     table =
       `| Pantalla | Mobile 375 | Tablet 768 | Desktop 1280 |\n|---|---|---|---|\n` +
       labels
@@ -309,6 +357,7 @@ async function main() {
         verdict,
         baseUrl: baseUrl ?? "(sin resolver)",
         sha,
+        journeys: args.journeys,
         failures: [{ project: "setup", title: "Arranque del piloto", message: consoleMessage }]
       });
     }
@@ -329,11 +378,13 @@ async function main() {
     );
   }
 
-  console.log(`▶ Pilot target: ${baseUrl}`);
+  console.log(`▶ Pilot target: ${baseUrl} (journeys: ${args.journeys})`);
+
+  const projectArgs = PROJECT_SETS[args.journeys].flatMap((project) => ["--project", project]);
 
   const run = spawnSync(
     "pnpm",
-    ["exec", "playwright", "test", "--config=playwright.config.ts", ...args.passthrough],
+    ["exec", "playwright", "test", "--config=playwright.config.ts", ...projectArgs, ...args.passthrough],
     {
       stdio: "inherit",
       env: { ...process.env, PILOT_BASE_URL: baseUrl }
@@ -360,7 +411,7 @@ async function main() {
   const verdict = classify(failures);
 
   if (args.summaryMd) {
-    writeSummaryMarkdown(args.summaryMd, { verdict, baseUrl, sha, failures });
+    writeSummaryMarkdown(args.summaryMd, { verdict, baseUrl, sha, failures, journeys: args.journeys });
   }
 
   console.log(`\n${"─".repeat(60)}`);

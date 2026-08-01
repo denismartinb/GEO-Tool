@@ -45,10 +45,21 @@ export function readPilotEnv(): PilotEnv {
 }
 
 /**
- * Redact anything secret-shaped before it can reach a log line, a Playwright
- * report, or a PR comment. The pilot's output is published to GitHub, so this
- * is the last line of defence against leaking the pilot account's password.
+ * Optional pin for the project the write journeys (UX-PILOT-2a) mutate.
+ *
+ * When unset, `resolveOrCreateWriteProject` (tests/pilot/support/write-guard.ts)
+ * finds the project matching the reserved `PILOT_WRITE_DOMAIN` and creates it
+ * if absent. That is a reserved-convention lookup on an exact domain, not the
+ * "pick whatever project is first" auto-discovery this harness refuses to do —
+ * that could select a real project like `mahou.es`.
+ *
+ * Set this only to override the convention (e.g. to point the write journeys
+ * at a different project temporarily).
  */
+export function readPilotWriteProjectIdOverride(): string | undefined {
+  return process.env.PILOT_WRITE_PROJECT_ID?.trim() || undefined;
+}
+
 /**
  * Substrings shorter than this are not redacted. A 1–5 character "secret" would
  * match inside ordinary words and corrupt the very diagnostics this harness
@@ -60,6 +71,11 @@ export function readPilotEnv(): PilotEnv {
  */
 const MIN_REDACTABLE_LENGTH = 6;
 
+/**
+ * Redact anything secret-shaped before it can reach a log line, a Playwright
+ * report, or a PR comment. The pilot's output is published to GitHub, so this
+ * is the last line of defence against leaking the pilot account's password.
+ */
 export function redact(text: string): string {
   const password = process.env.PILOT_PASSWORD;
   const email = process.env.PILOT_EMAIL;

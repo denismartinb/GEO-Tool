@@ -101,6 +101,27 @@ export default defineConfig({
         isMobile: false,
         storageState: ".pilot/auth.json"
       }
-    }))
+    })),
+    {
+      // UX-PILOT-2a. Deliberately excluded from every automatic invocation:
+      // scripts/pilot.mjs only adds this project to the run when explicitly
+      // asked for `--journeys write` (see PROJECT_SETS there). The always-on
+      // per-deploy workflow never passes that flag, so this project simply
+      // does not exist as far as that workflow is concerned. A single
+      // viewport is enough — this journey verifies behaviour, not layout.
+      name: "write",
+      testMatch: "**/journeys/write/*.spec.ts",
+      dependencies: ["auth"],
+      // Longer than the global 60s: the scan this journey triggers runs
+      // synchronously server-side, bounded by Vercel's own maxDuration=60,
+      // plus UI round-trip time on top of that.
+      timeout: 90_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: VIEWPORTS[2].width, height: VIEWPORTS[2].height },
+        isMobile: false,
+        storageState: ".pilot/auth.json"
+      }
+    }
   ]
 });

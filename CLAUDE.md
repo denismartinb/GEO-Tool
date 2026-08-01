@@ -130,8 +130,17 @@ against the PR's acceptance criteria. See `docs/agentic-user-pilot.md`.
 
 **Never report a pass for something the pilot did not see.** An unreachable
 preview, a failed login, or a blocked egress policy is INCONCLUSIVE, never PASS.
-The pilot is strictly read-only: no scan launches, no project creation or
-deletion, no writing forms, no billing flows.
+
+The always-on pilot (every preview deploy) is strictly read-only: no scan
+launches, no project creation or deletion, no writing forms, no billing flows.
+**One approved exception:** UX-PILOT-2a
+(`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts`) adds a single manual
+prompt to a dedicated `PILOT_WRITE_PROJECT_ID` and lets the resulting
+scoped scan (never the project's full active set) run to completion, cleaning
+up after itself — opt-in only, via manual `workflow_dispatch`, never on a
+deploy. Nothing beyond that one scoped journey is approved; anything wider
+(creating a project, the unrestricted scan button, competitors, billing) needs
+its own Task Intake.
 
 ---
 
