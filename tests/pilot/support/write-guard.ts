@@ -1,4 +1,27 @@
+import { mkdirSync } from "node:fs";
 import { type Page, expect } from "@playwright/test";
+
+/**
+ * Captures a named, full-page screenshot into the directory the evidence
+ * branch publishes.
+ *
+ * The write journey drives the product through the same clicks a founder
+ * would, so its screenshots are a genuine visual record of the create-domain
+ * and add-prompt flows — the parts the read-only pilot can never show. Naming
+ * them by step (rather than relying on Playwright's automatic end-of-test
+ * capture) is what makes them reviewable afterwards.
+ */
+let stepCounter = 0;
+export async function captureStep(page: Page, name: string): Promise<void> {
+  stepCounter += 1;
+  mkdirSync(".pilot/screens", { recursive: true });
+  await page
+    .screenshot({
+      path: `.pilot/screens/write-${String(stepCounter).padStart(2, "0")}--${name}.png`,
+      fullPage: true
+    })
+    .catch(() => undefined);
+}
 
 /**
  * Every prompt the write journeys create carries this marker, in the position
@@ -85,6 +108,7 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
   }
 
   await domainField.fill(PILOT_WRITE_DOMAIN);
+  await captureStep(page, "wizard-domain");
   await page.getByRole("button", { name: /^continuar$/i }).click();
 
   // Step 1 (competitors) appears only after the grounded suggestion call
@@ -93,7 +117,12 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
     page.getByRole("button", { name: /continuar a prompts/i }),
     "el asistente no llegó al paso de competidores — la sugerencia de Gemini falló o tardó demasiado"
   ).toBeVisible({ timeout: 90_000 });
+  // Real Gemini output, worth seeing: this is the product's actual competitor
+  // suggestion for a domain it has never analysed before.
+  await captureStep(page, "wizard-competitors-suggested");
   await page.getByRole("button", { name: /continuar a prompts/i }).click();
+
+  await captureStep(page, "wizard-prompts-suggested");
 
   // Trim to a single prompt: creation scans every prompt that survives here,
   // and this is the only place that cost is bounded.
@@ -112,9 +141,12 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
     );
   }
 
+  await captureStep(page, "wizard-trimmed-to-one-prompt");
   await page.getByRole("button", { name: /crear dominio y escanear/i }).click();
 
   await page.waitForURL(/\/dashboard\/projects\/[^/]+\/runs/, { timeout: 90_000 }).catch(() => undefined);
+
+  await captureStep(page, "project-created-runs-page");
 
   const created = page.url().match(/\/dashboard\/projects\/([^/?#]+)\/runs/)?.[1];
   if (!created) {

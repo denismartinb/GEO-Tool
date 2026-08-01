@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   assertSingleManualPromptDraft,
   buildTestPromptText,
+  captureStep,
   resolveOrCreateWriteProject,
   sweepTestPrompts,
   waitForNoActiveRun
@@ -76,9 +77,12 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     );
   }
 
+  await captureStep(page, "prompts-before");
+
   await test.step("open the add-prompts modal and switch to manual mode", async () => {
     await addButton.click();
     await expect(page.getByRole("dialog")).toBeVisible();
+    await captureStep(page, "add-prompts-methods");
     await page.getByText("Manual", { exact: true }).click();
   });
 
@@ -88,6 +92,7 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
 
     const draftCount = await page.locator(".add-prompts-manual-item").count();
     assertSingleManualPromptDraft(draftCount);
+    await captureStep(page, "manual-prompt-drafted");
   });
 
   await test.step("submit — this synchronously runs a real, scoped scan", async () => {
@@ -133,14 +138,23 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
         "sin esta frase no hay garantía textual de que el coste se limitó a 1 prompt"
     ).toBeVisible();
 
-    await page.screenshot({
-      path: ".pilot/screens/write--add-prompt-and-scan.png",
-      fullPage: true
-    });
+    await captureStep(page, "scan-confirmed-on-prompts");
+  });
+
+  await test.step("verify the scan's result reached the founder-facing screens", async () => {
+    // The point of the whole journey: a scan that completes but never shows up
+    // in the product is still a broken product. These two screens are where a
+    // founder would look for the new data.
+    await page.goto(`/dashboard/projects/${projectId}/runs`, { waitUntil: "domcontentloaded" });
+    await captureStep(page, "runs-after-scan");
+
+    await page.goto(`/dashboard/projects/${projectId}`, { waitUntil: "domcontentloaded" });
+    await captureStep(page, "overview-after-scan");
   });
 
   await test.step("cleanup: remove the prompt this run created", async () => {
     const swept = await sweepTestPrompts(page, projectId);
     expect(swept, "expected to clean up at least the prompt this run just created").toBeGreaterThan(0);
+    await captureStep(page, "prompts-after-cleanup");
   });
 });
