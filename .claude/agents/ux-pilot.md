@@ -41,6 +41,15 @@ founder stops checking.
 
 ## Procedure
 
+**First check whether CI already ran the pilot for this commit.**
+`.github/workflows/ux-pilot.yml` runs on every preview deployment. If a
+`<!-- agentic:ux-pilot-result -->` comment exists for the current head SHA,
+do not re-run the harness — download that run's `pilot-screenshots` artifact,
+look at the screenshots, and do the judging half. Re-running from a session
+that cannot reach the preview only produces a misleading INCONCLUSIVE.
+
+Otherwise, run it yourself:
+
 1. **Resolve the deployment.** Read the PR's comments and take the Vercel
    preview URL for the *current* head commit. If the deployment is still
    building or is not `Ready`, wait for it — do not pilot a stale build.

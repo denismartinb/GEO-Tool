@@ -82,17 +82,62 @@ the reasoning behind it should also be posted to the PR as a
 `.claude/agents/ux-pilot.md`) — the founder should never have to re-derive it
 from raw terminal output.
 
-**Two ways to get this running on every PR, not just this one:**
+## Automatic runs in CI (UX-PILOT-1b)
 
-- **Manual today, on any PR:** copy the preview URL and run `pnpm pilot --url
-  ...` yourself. Works right now, no further setup.
-- **Agentic, via the Director:** ask the Director to run the pilot as part of
-  its normal PR loop. This only works when the Director itself is running
-  from a session with network access to `*.vercel.app` — a local Claude Code
-  CLI session on your machine. A Claude Code **remote/web** session cannot do
-  this (its egress proxy blocks the preview host by policy — see "Known
-  limits"), so a remote-session Director will report `PILOT INCONCLUSIVE` and
-  ask you to run it locally instead, exactly like it did on PR #279.
+`.github/workflows/ux-pilot.yml` runs the pilot on **every Vercel preview
+deployment**, so the gate no longer depends on which kind of session the founder
+is working from.
+
+How it is wired:
+
+- **Trigger:** `deployment_status`, filtered to `state == 'success'` and
+  `environment == 'Preview'`. Verified against this repo — Vercel publishes real
+  GitHub Deployments and puts the preview URL in `environment_url`, so nothing
+  scrapes bot comments.
+- **Never `pull_request_target`.** That event would expose the pilot account's
+  credentials to code from any fork. `deployment_status` runs only against
+  commits already deployed from this repo.
+- **Output:** a `<!-- agentic:ux-pilot-result -->` comment with the verdict and a
+  per-screen × per-viewport table, plus a `pilot-screenshots` artifact
+  (screenshots, `findings.jsonl`, `report.json`), retained 14 days.
+- **Check status:** green only on `PILOT PASS`. Both `PILOT FAIL` and
+  `PILOT INCONCLUSIVE` fail the check — an INCONCLUSIVE run must never look
+  like a pass.
+
+### Required repository secrets
+
+Settings → Secrets and variables → Actions:
+
+| Secret | Required | Notes |
+|---|---|---|
+| `PILOT_EMAIL` | Yes | Dedicated pilot account |
+| `PILOT_PASSWORD` | Yes | Password for that account |
+| `PILOT_PROJECT_ID` | No | Pins the project the journeys inspect |
+
+Until these exist, every run reports `PILOT INCONCLUSIVE` with "missing pilot
+credentials" and the check goes red. That is intended: a gate that cannot run
+should be visibly broken, not quietly green.
+
+### How a remote agent session uses it
+
+A Claude Code remote/web session cannot open the preview itself (its egress
+proxy blocks `*.vercel.app`), but it *can* reach `api.github.com` and
+`objects.githubusercontent.com`. So the split is:
+
+1. GitHub's runner drives the browser and captures the screenshots.
+2. The agent downloads the `pilot-screenshots` artifact and **looks at them**,
+   then judges against the PR's acceptance criteria.
+
+The mechanical half runs where there is network; the judgement half runs where
+there is a model. Neither half is skipped.
+
+### The three ways to run it
+
+| Way | When |
+|---|---|
+| **CI, automatic** | Every preview deploy. No action needed once the secrets exist. |
+| **Local, manual** | `pnpm pilot --url ...` — fastest feedback while iterating. |
+| **Director, agentic** | Only from a session that can reach `*.vercel.app` (a local CLI session). A remote-session Director reports `PILOT INCONCLUSIVE` and defers to the CI run. |
 
 Exit codes are the verdict:
 
