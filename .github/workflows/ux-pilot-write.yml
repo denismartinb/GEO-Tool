@@ -1,0 +1,197 @@
+name: Agentic User Pilot (write)
+
+# UX-PILOT-2a. Deliberately NOT triggered by deployment_status like
+# .github/workflows/ux-pilot.yml — this journey writes a real prompt into a
+# real project and launches a real (scoped) scan against Gemini/OpenAI/Claude.
+# Running it on every preview deploy would mean an unbounded number of real
+# LLM calls per PR. It only runs when explicitly asked for, via
+# workflow_dispatch, against a PR number.
+#
+# Same fork-safety reasoning as ux-pilot.yml: no pull_request_target, this job
+# holds real credentials and writes to a real project.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "Pull request number whose preview to test"
+        required: true
+        type: number
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # Global, not per-PR or per-SHA: every write run mutates the SAME dedicated
+  # write-project (PILOT_WRITE_PROJECT_ID). Two runs at once would race on its
+  # "one active run" precondition and could corrupt each other's cleanup.
+  # Queue rather than cancel — cancelling mid-run could skip the cleanup step
+  # and leave a test prompt (and a real scan run) behind.
+  group: ux-pilot-write
+  cancel-in-progress: false
+
+jobs:
+  pilot-write:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Resolve the pull request and its deployed commit
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          sha="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
+          if [ -z "$sha" ] || [ "$sha" = "null" ]; then
+            echo "::error::Could not resolve a head commit for PR #${PR_NUMBER}."
+            exit 1
+          fi
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the Preview deployment for that commit
+        id: deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          set -euo pipefail
+          deployment_id="$(gh api "repos/${GITHUB_REPOSITORY}/deployments?sha=${SHA}&environment=Preview&per_page=1" \
+            --jq '.[0].id // empty')"
+          if [ -z "$deployment_id" ]; then
+            echo "::error::No Preview deployment found for commit ${SHA}. Has Vercel finished deploying this PR?"
+            exit 1
+          fi
+          url="$(gh api "repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=1" \
+            --jq '.[0] | select(.state == "success") | .environment_url // empty')"
+          if [ -z "$url" ]; then
+            echo "::error::Latest status for deployment ${deployment_id} is not a successful Preview. Wait for it to finish."
+            exit 1
+          fi
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.sha }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the write journey
+        id: run
+        continue-on-error: true
+        env:
+          PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
+          PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
+          PILOT_WRITE_PROJECT_ID: ${{ secrets.PILOT_WRITE_PROJECT_ID }}
+          PILOT_COMMIT_SHA: ${{ steps.pr.outputs.sha }}
+          PILOT_PR_NUMBER: ${{ inputs.pr_number }}
+          PILOT_VERCEL_BYPASS: ${{ secrets.PILOT_VERCEL_BYPASS }}
+        run: |
+          set +e
+          node scripts/pilot.mjs \
+            --url "${{ steps.deploy.outputs.url }}" \
+            --journeys write \
+            --summary-md .pilot/summary.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload screenshots and signals
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-write-screenshots
+          path: |
+            .pilot/screens/
+            .pilot/output/
+            .pilot/findings.jsonl
+            .pilot/report.json
+            .pilot/summary.md
+          retention-days: 14
+          if-no-files-found: warn
+
+      # Separate branch suffix from the read-only pilot's pilot-evidence/pr-<N>
+      # so a write run and the always-on read-only run never clobber each
+      # other's evidence, even if they happen close together.
+      - name: Publish screenshots to an evidence branch
+        if: hashFiles('.pilot/**') != ''
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          SHA: ${{ steps.pr.outputs.sha }}
+        run: |
+          set -euo pipefail
+          branch="pilot-evidence/pr-${PR_NUMBER}-write"
+          staging="$(mktemp -d)"
+          cp -r .pilot/screens "$staging/screens" 2>/dev/null || true
+          cp -r .pilot/output "$staging/output" 2>/dev/null || true
+          cp .pilot/findings.jsonl "$staging/" 2>/dev/null || true
+          cp .pilot/summary.md "$staging/" 2>/dev/null || true
+          printf 'Write-pilot evidence for PR #%s at commit %s\n\nGenerated by .github/workflows/ux-pilot-write.yml. Force-pushed each run.\n' \
+            "$PR_NUMBER" "$SHA" > "$staging/README.md"
+
+          cd "$staging"
+          git init -q
+          git checkout -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "write-pilot evidence: PR #${PR_NUMBER} @ ${SHA}"
+          git push -q --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$branch"
+          echo "Evidence pushed to ${branch}"
+
+      - name: Post the verdict on the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          if [ ! -f .pilot/summary.md ]; then
+            printf '%s\n' \
+              '<!-- agentic:ux-pilot-write-result -->' \
+              '## Agentic User Pilot — Escritura (UX-PILOT-2a) — PILOT INCONCLUSIVE' \
+              '' \
+              'El runner terminó sin producir un resumen. Revisa los logs del workflow.' \
+              '' \
+              '---' \
+              '_Generated by [Claude Code](https://claude.ai/code)_' > .pilot/summary.md
+          fi
+          gh pr comment "$PR_NUMBER" --body-file .pilot/summary.md
+
+      - name: Fail the run unless the write journey passed
+        env:
+          EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          case "$EXIT_CODE" in
+            0)
+              echo "PILOT PASS (write)"
+              ;;
+            78)
+              # Same rule as the read-only pilot: a run that never saw the
+              # product must never read as a pass, even in a manually
+              # triggered, non-merge-gating workflow like this one.
+              echo "::error::PILOT INCONCLUSIVE (write) — see the PR comment."
+              exit 1
+              ;;
+            *)
+              echo "::error::PILOT FAIL (write) — see the PR comment and the pilot-write-screenshots artifact."
+              exit 1
+              ;;
+          esac

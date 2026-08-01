@@ -45,10 +45,25 @@ export function readPilotEnv(): PilotEnv {
 }
 
 /**
- * Redact anything secret-shaped before it can reach a log line, a Playwright
- * report, or a PR comment. The pilot's output is published to GitHub, so this
- * is the last line of defence against leaking the pilot account's password.
+ * The write journeys (UX-PILOT-2a) need a project the pilot is allowed to
+ * mutate. Unlike `readPilotEnv().projectId`, there is deliberately NO
+ * auto-discovery fallback here: guessing which of the account's projects is
+ * safe to write into is exactly the kind of assumption that corrupts a real
+ * project's data. The founder must create a dedicated write-project once and
+ * pin it explicitly.
  */
+export function readPilotWriteProjectId(): string {
+  const id = process.env.PILOT_WRITE_PROJECT_ID?.trim();
+  if (!id) {
+    throw new Error(
+      "PILOT_WRITE_PROJECT_ID is not set. Write journeys refuse to guess a " +
+        "project to mutate — set this to a dedicated pilot write-project " +
+        "(see docs/agentic-user-pilot.md, UX-PILOT-2a)."
+    );
+  }
+  return id;
+}
+
 /**
  * Substrings shorter than this are not redacted. A 1–5 character "secret" would
  * match inside ordinary words and corrupt the very diagnostics this harness
@@ -60,6 +75,11 @@ export function readPilotEnv(): PilotEnv {
  */
 const MIN_REDACTABLE_LENGTH = 6;
 
+/**
+ * Redact anything secret-shaped before it can reach a log line, a Playwright
+ * report, or a PR comment. The pilot's output is published to GitHub, so this
+ * is the last line of defence against leaking the pilot account's password.
+ */
 export function redact(text: string): string {
   const password = process.env.PILOT_PASSWORD;
   const email = process.env.PILOT_EMAIL;

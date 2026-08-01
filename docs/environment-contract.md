@@ -292,6 +292,7 @@ runtime configuration, and the app itself must never read them.
 | `PILOT_PASSWORD` | Yes, to run the pilot | Local `.env.local` + agent session env | Password for that account |
 | `PILOT_BASE_URL` | Yes (or `--url`) | Injected per run | `https://<preview>.vercel.app` |
 | `PILOT_PROJECT_ID` | No | Local `.env.local` | Project uuid; auto-discovered when unset |
+| `PILOT_WRITE_PROJECT_ID` | Only for the UX-PILOT-2a write journey | Local `.env.local` + GitHub secret | Project uuid — **no auto-discovery**, must be a dedicated write-project |
 | `PILOT_CHROMIUM_PATH` | No | Local | Absolute path to a Chromium binary |
 
 The pilot account must be a **dedicated user, not the founder's own**, and must
@@ -329,7 +330,12 @@ These live in GitHub, not Vercel: Settings → Secrets and variables → Actions
 | `PILOT_EMAIL` | Yes | Dedicated pilot account |
 | `PILOT_PASSWORD` | Yes | Password for that account |
 | `PILOT_VERCEL_BYPASS` | Yes in practice | Vercel automation bypass token |
-| `PILOT_PROJECT_ID` | No | Pins which project the journeys inspect |
+| `PILOT_PROJECT_ID` | No | Pins which project the read-only journeys inspect |
+| `PILOT_WRITE_PROJECT_ID` | Only if the UX-PILOT-2a write workflow is used | A **dedicated** project — see `docs/agentic-user-pilot.md` for its requirements (plan headroom, no conflicting active run, never the read-only pilot's own project) |
+
+`PILOT_WRITE_PROJECT_ID` is read only by `.github/workflows/ux-pilot-write.yml`
+(`workflow_dispatch`, fired manually per PR) — never by the always-on
+`ux-pilot.yml`, which never launches a real scan.
 
 Every pilot run prints which of these are present (booleans only, never values)
 in its PR comment, so a missing one is diagnosable without repo admin access.
