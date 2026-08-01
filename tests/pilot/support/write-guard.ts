@@ -205,36 +205,42 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
   for (let i = 0; i < MAX_SWEEPS; i += 1) {
     await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
 
-    // The prompts page renders the same "Buscar prompt" input up to three
-    // times and shows only one per breakpoint: `.pr2-toolbar` below 1200px,
-    // `.pr2-search-listhead` at or above it (app/globals.css). Taking `.first()`
-    // grabs whichever is first in the DOM — hidden at desktop width, where this
-    // journey runs — and `fill()` then waits for visibility until it times out.
-    const search = page.getByLabel("Buscar prompt").filter({ visible: true }).first();
-
-    // A project whose first scan has not completed yet renders `ScanInProgress`
-    // instead of the prompt list, so there is no search box and, by definition,
-    // no leftover test prompts to sweep.
-    if (!(await search.isVisible().catch(() => false))) return deleted;
-
-    await search.fill(PILOT_TEST_PROMPT_MARKER);
-    // The list filters client-side with no loading state to await; give React
-    // a beat to re-render before reading the result.
-    await page.waitForTimeout(300);
-
+    // Deliberately does NOT drive the "Buscar prompt" box. That input is
+    // rendered up to three times and shown one per breakpoint, is a controlled
+    // React input, and filters client-side — three dependencies this sweep does
+    // not need. The write-project holds a handful of prompts, so scanning the
+    // rendered list directly is both simpler and strictly more reliable.
     const row = page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).first();
-    if (!(await row.isVisible().catch(() => false))) break;
+
+    if (!(await row.isVisible().catch(() => false))) {
+      if (deleted === 0) {
+        // Nothing found on the first pass is the one case worth photographing:
+        // either the project genuinely has no test prompts (fine) or the list
+        // is not rendering as expected (a finding). Without this the caller
+        // only ever sees "swept 0" with no way to tell which.
+        await captureStep(page, `sweep-found-nothing-pass-${i + 1}`);
+      }
+      break;
+    }
 
     await row.click();
-    const drawer = page.getByRole("dialog");
-    await expect(drawer, "prompt drawer did not open for a matched test prompt").toBeVisible();
+
+    // Two different elements carry role="dialog" here — the prompt drawer
+    // (.prompt-drawer) and the delete confirmation (.modal-overlay/.modal-card).
+    // getByRole("dialog") matches both once the modal opens, so target the
+    // classes explicitly rather than letting strict mode fail on the ambiguity.
+    const drawer = page.locator(".prompt-drawer");
+    await expect(drawer, "el panel del prompt no se abrió al hacer clic en la fila").toBeVisible();
 
     await drawer.getByLabel("Borrar prompt").click();
-    await page.getByRole("button", { name: /^borrar prompt$/i }).click();
 
-    // DeletePromptButton's onDeleted closes the drawer; wait for that instead
-    // of a fixed sleep so the next iteration starts from a settled list.
-    await expect(drawer).toBeHidden({ timeout: 10_000 });
+    const confirm = page.locator(".modal-card");
+    await expect(confirm, "no apareció el modal de confirmación de borrado").toBeVisible();
+    await confirm.getByRole("button", { name: /^borrar prompt$/i }).click();
+
+    // DeletePromptButton's onDeleted closes the drawer; wait for that rather
+    // than a fixed sleep so the next pass starts from a settled list.
+    await expect(drawer).toBeHidden({ timeout: 15_000 });
     deleted += 1;
   }
 
