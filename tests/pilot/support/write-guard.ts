@@ -48,6 +48,29 @@ export const PILOT_TEST_PROMPT_MARKER = "[PILOT-TEST]";
 export const PILOT_WRITE_DOMAIN = "mozilla.org";
 
 /**
+ * Waits for a route's real content to replace its `loading.tsx` skeleton.
+ *
+ * Every dashboard route in this app ships a Next.js loading skeleton, and
+ * `domcontentloaded` fires while that skeleton is still on screen. Reading a
+ * list straight after `goto` therefore reports "nothing here" for a page that
+ * simply has not rendered yet — which is exactly how two consecutive write runs
+ * concluded there were no prompts to clean up while the sidebar counter plainly
+ * said otherwise.
+ *
+ * Waits for any of the passed anchors; each caller names something only the
+ * real, settled page renders.
+ */
+export async function waitForContent(page: Page, anchors: Array<() => Promise<boolean>>): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    for (const isReady of anchors) {
+      if (await isReady().catch(() => false)) return;
+    }
+    await page.waitForTimeout(250);
+  }
+}
+
+/**
  * Waits until the write-project has no scan in progress.
  *
  * Both project creation and the add-prompts flow launch real scans, and the
@@ -65,6 +88,11 @@ export async function waitForNoActiveRun(
   while (Date.now() < deadline) {
     await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
     const addButton = page.getByRole("button", { name: /añadir prompts/i }).first();
+    // The button does not exist while the loading skeleton is up, so without
+    // settling first this would read "still busy" from a page that had simply
+    // not rendered. The 5s poll below papered over it; being explicit is what
+    // keeps this loop honest about what it is measuring.
+    await waitForContent(page, [() => addButton.isVisible()]);
     if (await addButton.isEnabled().catch(() => false)) return true;
     await page.waitForTimeout(5_000);
   }
@@ -93,6 +121,14 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
   if (pinned) return pinned;
 
   await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+
+  // Higher stakes than the sweep's version of this wait: reading the projects
+  // list before it renders would conclude the write-project does not exist and
+  // create a second one.
+  await waitForContent(page, [
+    () => page.locator('a[href^="/dashboard/projects/"]').first().isVisible(),
+    () => page.getByRole("link", { name: /nuevo dominio|crear/i }).first().isVisible()
+  ]);
 
   const existing = await findProjectIdByDomain(page);
   if (existing) return existing;
@@ -199,35 +235,105 @@ export function buildTestPromptText(runId: string): string {
  * matching rows must not turn this into an infinite loop.
  */
 export async function sweepTestPrompts(page: Page, projectId: string): Promise<number> {
-  const MAX_SWEEPS = 10;
+  const MAX_SWEEPS = 12;
   let deleted = 0;
 
-  for (let i = 0; i < MAX_SWEEPS; i += 1) {
-    await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
+  const openList = async (tag: string) => {
+    // The cache-busting param matters: Next's App Router serves the client-side
+    // RSC cache on repeat navigations to the same URL, so a plain re-`goto`
+    // after a delete can render the list exactly as it was before it.
+    // The page ignores unknown search params.
+    await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=${tag}`, {
+      waitUntil: "domcontentloaded"
+    });
+    // "Añadir prompts" only exists once the real page renders, so it is a
+    // reliable signal that the loading skeleton is gone.
+    await waitForContent(page, [
+      () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
+      () => page.getByText(/no hay prompts activos/i).isVisible()
+    ]);
+  };
 
-    const search = page.getByLabel("Buscar prompt").first();
-    await search.fill(PILOT_TEST_PROMPT_MARKER);
-    // The list filters client-side with no loading state to await; give React
-    // a beat to re-render before reading the result.
-    await page.waitForTimeout(300);
+  await openList(`sweep-${Date.now()}`);
 
-    const row = page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).first();
-    if (!(await row.isVisible().catch(() => false))) break;
+  // Iterates by index rather than repeatedly deleting `.first()`. Deleting a
+  // prompt deactivates it, but the list is rendered from the last scan's
+  // results, so its row stays on screen until a later scan drops it — always
+  // targeting the first match would re-delete the same already-inactive prompt
+  // and never reach the others.
+  const total = await page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).count();
+
+  if (total === 0) {
+    await captureStep(page, "sweep-found-nothing");
+    return 0;
+  }
+
+  for (let i = 0; i < Math.min(total, MAX_SWEEPS); i += 1) {
+    if (i > 0) await openList(`sweep-${Date.now()}-${i}`);
+
+    const row = page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).nth(i);
+    if (!(await row.isVisible().catch(() => false))) continue;
 
     await row.click();
-    const drawer = page.getByRole("dialog");
-    await expect(drawer, "prompt drawer did not open for a matched test prompt").toBeVisible();
 
-    await drawer.getByLabel("Borrar prompt").click();
-    await page.getByRole("button", { name: /^borrar prompt$/i }).click();
+    // Two different elements carry role="dialog" here — the prompt drawer
+    // (.prompt-drawer) and the delete confirmation (.modal-overlay/.modal-card).
+    // getByRole("dialog") matches both once the modal opens, so target the
+    // classes explicitly rather than letting strict mode fail on the ambiguity.
+    const drawer = page.locator(".prompt-drawer");
+    if (!(await drawer.isVisible().catch(() => false))) continue;
 
-    // DeletePromptButton's onDeleted closes the drawer; wait for that instead
-    // of a fixed sleep so the next iteration starts from a settled list.
-    await expect(drawer).toBeHidden({ timeout: 10_000 });
+    const deleteButton = drawer.getByLabel("Borrar prompt");
+    if (!(await deleteButton.isVisible().catch(() => false))) continue;
+    await deleteButton.click();
+
+    const confirm = page.locator(".modal-card");
+    await expect(confirm, "no apareció el modal de confirmación de borrado").toBeVisible();
+    await confirm.getByRole("button", { name: /^borrar prompt$/i }).click();
+
+    // DeletePromptButton's onDeleted closes the drawer; wait for that rather
+    // than a fixed sleep so the next pass starts from a settled page.
+    await expect(drawer).toBeHidden({ timeout: 15_000 });
     deleted += 1;
   }
 
   return deleted;
+}
+
+/**
+ * Reads the project's ACTIVE prompt count — the number that consumes
+ * `plan.caps.prompts` — from the product's own "GenScore monitoriza N prompts"
+ * line (`totalPrompts`, which the page derives from `is_active = true`).
+ *
+ * Counting rendered rows would measure the wrong thing: the prompt list is
+ * built from the last scan's results, so a deactivated prompt keeps its row
+ * until a later scan drops it. Two runs' worth of confusion came from treating
+ * a lingering row as un-deleted quota.
+ */
+export async function readActivePromptCount(page: Page, projectId: string): Promise<number> {
+  await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=count-${Date.now()}`, {
+    waitUntil: "domcontentloaded"
+  });
+  await waitForContent(page, [
+    () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
+    () => page.getByText(/no hay prompts activos/i).isVisible()
+  ]);
+
+  if (await page.getByText(/no hay prompts activos/i).isVisible().catch(() => false)) return 0;
+
+  const summary = await page
+    .getByText(/GenScore monitoriza/i)
+    .first()
+    .innerText()
+    .catch(() => "");
+  const match = summary.match(/monitoriza\s+(\d+)/i);
+  if (!match) {
+    await captureStep(page, "active-prompt-count-unreadable");
+    throw new Error(
+      `No se pudo leer el número de prompts activos. Texto encontrado: "${summary.slice(0, 120)}"`
+    );
+  }
+  return Number(match[1]);
 }
 
 /**

@@ -3,8 +3,10 @@ import {
   assertSingleManualPromptDraft,
   buildTestPromptText,
   captureStep,
+  readActivePromptCount,
   resolveOrCreateWriteProject,
   sweepTestPrompts,
+  waitForContent,
   waitForNoActiveRun
 } from "../../support/write-guard";
 
@@ -52,13 +54,19 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     return id;
   });
 
-  await test.step("cleanup: sweep any test prompts left by a previous run", async () => {
-    const swept = await sweepTestPrompts(page, projectId);
-    if (swept > 0) {
-      // eslint-disable-next-line no-console
-      console.log(`Swept ${swept} leftover pilot test prompt(s) before starting.`);
+  const baselinePromptCount = await test.step(
+    "cleanup: sweep any test prompts left by a previous run, then record the baseline",
+    async () => {
+      const swept = await sweepTestPrompts(page, projectId);
+      if (swept > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`Swept ${swept} leftover pilot test prompt(s) before starting.`);
+      }
+      // Recorded AFTER the opening sweep so leftover debris from an earlier
+      // failed run is never baked into the baseline as if it belonged there.
+      return readActivePromptCount(page, projectId);
     }
-  });
+  );
 
   await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
 
@@ -145,16 +153,49 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     // The point of the whole journey: a scan that completes but never shows up
     // in the product is still a broken product. These two screens are where a
     // founder would look for the new data.
+    //
+    // Each capture waits for real content first. Screenshotting straight after
+    // `goto` photographs the route's loading skeleton — which is what the first
+    // passing run did, producing an "overview-after-scan" image showing nothing
+    // but grey placeholders. Evidence that cannot be read is not evidence.
     await page.goto(`/dashboard/projects/${projectId}/runs`, { waitUntil: "domcontentloaded" });
+    await waitForContent(page, [
+      () => page.getByText(/completado|en curso|pendiente|fallido/i).first().isVisible()
+    ]);
     await captureStep(page, "runs-after-scan");
 
     await page.goto(`/dashboard/projects/${projectId}`, { waitUntil: "domcontentloaded" });
+    await waitForContent(page, [
+      () => page.getByText(/puntuación geo/i).first().isVisible(),
+      () => page.getByText(/tasa de mención/i).first().isVisible()
+    ]);
+    await expect(
+      page.getByText(/puntuación geo/i).first(),
+      "Visión general no mostró la puntuación GEO tras el escaneo"
+    ).toBeVisible();
     await captureStep(page, "overview-after-scan");
   });
 
   await test.step("cleanup: remove the prompt this run created", async () => {
+    // The prompt list (and with it the search box the sweep drives) is replaced
+    // by ScanInProgress while a run is active, so settle first — otherwise
+    // cleanup would silently find nothing and leave its own prompt behind.
+    await waitForNoActiveRun(page, projectId);
+
     const swept = await sweepTestPrompts(page, projectId);
     expect(swept, "expected to clean up at least the prompt this run just created").toBeGreaterThan(0);
+
+    // The real invariant: the project's ACTIVE prompt count — the number that
+    // consumes plan.caps.prompts — is back where it started. Counting rendered
+    // rows would measure the wrong thing, since a deleted prompt keeps its row
+    // until a later scan drops it.
+    const afterCleanup = await readActivePromptCount(page, projectId);
+    expect(
+      afterCleanup,
+      `la limpieza no devolvió el cupo de prompts activos a su valor inicial ` +
+        `(${baselinePromptCount}); cada pasada que deja residuo consume cupo del plan`
+    ).toBe(baselinePromptCount);
+
     await captureStep(page, "prompts-after-cleanup");
   });
 });
