@@ -26,7 +26,8 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
-  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"]
+  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
+  [`/dashboard/projects/${PROJECT_ID}/citations`, "Páginas citadas"]
 ]);
 
 function html(title, body) {

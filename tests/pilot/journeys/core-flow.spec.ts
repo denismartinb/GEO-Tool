@@ -81,3 +81,14 @@ test("scan history screen renders", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs");
   assertPageIsHealthy(findings);
 });
+
+test("citations screen renders", async ({ page }, testInfo) => {
+  const id = await projectId(page);
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    `/dashboard/projects/${id}/citations`,
+    "citations"
+  );
+  assertPageIsHealthy(findings);
+});
