@@ -45,23 +45,19 @@ export function readPilotEnv(): PilotEnv {
 }
 
 /**
- * The write journeys (UX-PILOT-2a) need a project the pilot is allowed to
- * mutate. Unlike `readPilotEnv().projectId`, there is deliberately NO
- * auto-discovery fallback here: guessing which of the account's projects is
- * safe to write into is exactly the kind of assumption that corrupts a real
- * project's data. The founder must create a dedicated write-project once and
- * pin it explicitly.
+ * Optional pin for the project the write journeys (UX-PILOT-2a) mutate.
+ *
+ * When unset, `resolveOrCreateWriteProject` (tests/pilot/support/write-guard.ts)
+ * finds the project matching the reserved `PILOT_WRITE_DOMAIN` and creates it
+ * if absent. That is a reserved-convention lookup on an exact domain, not the
+ * "pick whatever project is first" auto-discovery this harness refuses to do —
+ * that could select a real project like `mahou.es`.
+ *
+ * Set this only to override the convention (e.g. to point the write journeys
+ * at a different project temporarily).
  */
-export function readPilotWriteProjectId(): string {
-  const id = process.env.PILOT_WRITE_PROJECT_ID?.trim();
-  if (!id) {
-    throw new Error(
-      "PILOT_WRITE_PROJECT_ID is not set. Write journeys refuse to guess a " +
-        "project to mutate — set this to a dedicated pilot write-project " +
-        "(see docs/agentic-user-pilot.md, UX-PILOT-2a)."
-    );
-  }
-  return id;
+export function readPilotWriteProjectIdOverride(): string | undefined {
+  return process.env.PILOT_WRITE_PROJECT_ID?.trim() || undefined;
 }
 
 /**

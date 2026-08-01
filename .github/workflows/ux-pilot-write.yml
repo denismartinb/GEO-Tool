@@ -100,6 +100,8 @@ jobs:
         env:
           PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
           PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
+          # Optional override. When unset (the normal case) the journey finds
+          # the project matching PILOT_WRITE_DOMAIN and creates it on first run.
           PILOT_WRITE_PROJECT_ID: ${{ secrets.PILOT_WRITE_PROJECT_ID }}
           PILOT_COMMIT_SHA: ${{ steps.pr.outputs.sha }}
           PILOT_PR_NUMBER: ${{ inputs.pr_number }}

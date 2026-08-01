@@ -80,7 +80,13 @@ const UNREACHABLE_SIGNATURES = [
   // write-project already at its plan's prompt cap) is a precondition the
   // journey refuses to force past, not a rendering bug.
   /El botón «Añadir prompts» está deshabilitado/,
-  /PILOT_WRITE_PROJECT_ID is not set/
+  // Bootstrap preconditions: the account is at its plan's project cap, the
+  // grounded onboarding suggestion call failed or timed out, or a setup scan
+  // was still running after the wait. All are environment state, not defects.
+  /No se pudo abrir el asistente de alta de dominio/,
+  /el asistente no llegó al paso de competidores/,
+  /El alta de dominio no terminó en la pantalla de escaneos/,
+  /sigue con un escaneo en curso tras esperar/
 ];
 
 /**

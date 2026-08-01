@@ -282,23 +282,41 @@ Triggering it in CI is manual: `.github/workflows/ux-pilot-write.yml`
 `mcp__github__actions_run_trigger` (`run_workflow`) — only when a PR's
 acceptance criteria genuinely require exercising the write path.
 
-### Required secret
+### The write-project: self-bootstrapping, no secret required
 
-| Secret | Required | Notes |
-|---|---|---|
-| `PILOT_WRITE_PROJECT_ID` | Yes, for the write journey only | A **dedicated** project the founder creates once for this purpose |
+The journey mutates the project whose domain is `PILOT_WRITE_DOMAIN`
+(`tests/pilot/support/write-guard.ts`, currently `mozilla.org`) and **creates it
+through the real onboarding wizard if it does not exist**. Nobody has to prepare
+anything by hand — same self-healing philosophy as `sweepTestPrompts`.
 
-Requirements for that project, because the journey refuses to guess or work
-around any of them:
+Why this is not the auto-discovery the read-only pilot deliberately refuses:
+matching an exact reserved domain nobody would track for real cannot select the
+wrong project. "Pick the first project on the account" could have selected
+`mahou.es`; this cannot.
 
-- On a plan with headroom under `plan.caps.prompts` — the journey adds one
-  prompt per run and needs room for it.
-- Not mid-scan when a run fires — the "Añadir prompts" button is disabled while
-  a run is active, and the journey treats that as `PILOT INCONCLUSIVE`
-  (a real precondition, not a bug) rather than waiting it out or forcing past
-  it.
-- Not shared with the read-only pilot's project — keeps a write run from ever
-  perturbing the screenshots the always-on pilot's baseline relies on.
+The domain is chosen to be real (the wizard fetches its homepage to ground its
+suggestions, so an invented domain fails), stable, non-commercial, and with zero
+overlap with the founder's actual market — obviously a test artifact to anyone
+looking at the projects list.
+
+**Bootstrap cost, one-off:** the wizard's first step runs real grounded Gemini
+calls for competitors and prompts — that *is* the product's onboarding, and
+driving it any other way wouldn't test it. Creation then scans whatever prompts
+survive, so the journey trims the suggested set to exactly **one** before
+submitting. Roughly 5–6 LLM calls total, once. Subsequent runs skip all of this.
+
+`PILOT_WRITE_PROJECT_ID` still exists as an **optional** override, for pointing
+the write journeys at a different project temporarily.
+
+Preconditions the journey reports rather than forces past (all
+`PILOT INCONCLUSIVE`):
+
+- The account is at its plan's project cap, so the wizard can't open.
+- The grounded suggestion call fails or times out.
+- A scan is still running after the bounded wait — both project creation and
+  add-prompts launch real scans, and "Añadir prompts" is disabled while one is
+  active. `waitForNoActiveRun` waits it out first, so this only fires if the
+  pipeline is genuinely stuck.
 
 ### Verdict classification specific to this journey
 

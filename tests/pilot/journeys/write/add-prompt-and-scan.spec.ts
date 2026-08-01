@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { readPilotWriteProjectId } from "../../support/env";
 import {
   assertSingleManualPromptDraft,
   buildTestPromptText,
-  sweepTestPrompts
+  resolveOrCreateWriteProject,
+  sweepTestPrompts,
+  waitForNoActiveRun
 } from "../../support/write-guard";
 
 /**
@@ -33,9 +34,22 @@ test.describe.configure({ mode: "serial" });
 test("adding one manual prompt launches a scan restricted to it, and the founder sees real data", async ({
   page
 }) => {
-  const projectId = readPilotWriteProjectId();
   const runId = `${Date.now()}`;
   const promptText = buildTestPromptText(runId);
+
+  const projectId = await test.step("resolve (or bootstrap) the dedicated write-project", async () => {
+    const id = await resolveOrCreateWriteProject(page);
+    // Creation launches its own scan; the add-prompts button stays disabled
+    // while it runs, so wait it out rather than reporting a false blocker.
+    const free = await waitForNoActiveRun(page, id);
+    if (!free) {
+      throw new Error(
+        "El proyecto de escritura sigue con un escaneo en curso tras esperar. " +
+          "No se fuerza — reintenta cuando haya terminado."
+      );
+    }
+    return id;
+  });
 
   await test.step("cleanup: sweep any test prompts left by a previous run", async () => {
     const swept = await sweepTestPrompts(page, projectId);
