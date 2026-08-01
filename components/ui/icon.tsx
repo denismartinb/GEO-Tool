@@ -272,6 +272,12 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <path d="M12 7v5l3.5 2" />
       </>
     ),
+    crown: (
+      <>
+        <path d="M3.5 8.5 7 12l5-7 5 7 3.5-3.5V17a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1V8.5Z" />
+        <path d="M6 20.5h12" />
+      </>
+    ),
     sentimentPos: (
       <>
         <circle cx="12" cy="12" r="9" />

@@ -2,6 +2,8 @@ import "server-only";
 
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { getPlanForUser } from "@/lib/billing";
+import type { Plan } from "@/app/pricing/plans-data";
 import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
@@ -76,6 +78,71 @@ function mapNotificationRow(n: NotificationSelectRow): WorkspaceNotification {
   };
 }
 
+/**
+ * DATA-MATURITY-1: how many completed scans a project needs before its
+ * trend/comparison surfaces (sparkline, delta, competitor trend) are treated
+ * as done — matches the "Escaneo N de 5" banner shown until then. Not tied
+ * to `run-scoring.ts`'s per-run `confidence` (that's about sample size
+ * *within* one run's results, already high on day one for a healthy scan);
+ * this is about *cross-run* history, which needs multiple completed runs no
+ * matter how confident any single one is.
+ */
+export const DATA_MATURITY_TARGET_SCANS = 5;
+
+export type DataMaturityState =
+  | { kind: "hidden" }
+  | { kind: "free" }
+  | { kind: "no_tracking" }
+  | { kind: "accumulating"; completed: number; target: number; cadenceUnit: "días" | "semanas"; etaCount: number };
+
+/**
+ * Pure decision function behind the data-maturity banner (`components/
+ * data-maturity-banner.tsx`). Kept side-effect-free and separate from the
+ * Supabase fetch in `getWorkspaceCounters` so every branch is unit-testable
+ * without mocking a client — the DB/plan inputs are already computed there.
+ *
+ * Order matters: an active run and a full 5-scan history both fully hide the
+ * banner (checked first) before the plan/tracking branches, which only ever
+ * apply to a project with a real, terminal, partial history.
+ */
+export function computeDataMaturity({
+  completedScans,
+  latestStatus,
+  recurringEnabled,
+  planId
+}: {
+  completedScans: number;
+  latestStatus: string | null | undefined;
+  recurringEnabled: boolean;
+  planId: string;
+}): DataMaturityState {
+  const hasActiveRun = latestStatus === "pending" || latestStatus === "running";
+  if (hasActiveRun) return { kind: "hidden" };
+
+  // No completed scan yet (project brand-new, or every attempt so far
+  // failed): nothing real to report, and `setRecurringScans` itself refuses
+  // to enable tracking without a completed run — showing the "no_tracking"
+  // CTA here would offer an action that fails.
+  if (completedScans <= 0) return { kind: "hidden" };
+
+  if (completedScans >= DATA_MATURITY_TARGET_SCANS) return { kind: "hidden" };
+
+  if (planId === "free") return { kind: "free" };
+
+  if (!recurringEnabled) return { kind: "no_tracking" };
+
+  return {
+    kind: "accumulating",
+    completed: completedScans,
+    target: DATA_MATURITY_TARGET_SCANS,
+    // Starter is the only weekly-cadence plan (lib/scan/cron.ts,
+    // RECURRING_INTERVAL_MS_BY_PLAN) — free never reaches this branch
+    // (returned above), so every other plan id scans daily.
+    cadenceUnit: planId === "starter" ? "semanas" : "días",
+    etaCount: DATA_MATURITY_TARGET_SCANS - completedScans
+  };
+}
+
 export type WorkspaceCounters = {
   projects: WorkspaceProjectSummary[];
   promptCountByProject: Record<string, number>;
@@ -86,6 +153,9 @@ export type WorkspaceCounters = {
   latestScanDateByProject: Record<string, string | null>;
   latestScoreByProject: Record<string, number | null>;
   scoreDeltaByProject: Record<string, number | null>;
+  dataMaturityByProject: Record<string, DataMaturityState>;
+  /** Account plan, already fetched once here for `dataMaturityByProject` — exposed so callers (e.g. the sidebar's plan badge) don't issue a second `getPlanForUser` round trip. */
+  plan: Plan;
   notifications: WorkspaceNotification[];
 };
 
@@ -117,7 +187,7 @@ const WORKSPACE_RECENCY_QUERY_LIMIT = 1000;
  * with the same shape instead of duplicating the aggregation logic.
  */
 export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const [
     { data: projects },
@@ -127,11 +197,12 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     { data: completedRuns },
     { data: allRecs },
     { data: scores },
-    { data: notificationRows }
+    { data: notificationRows },
+    plan
   ] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, name, domain, country, language")
+      .select("id, name, domain, country, language, recurring_scans_enabled")
       .eq("is_archived", false)
       .order("created_at", { ascending: false }),
     supabase
@@ -167,7 +238,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       .from("notifications")
       .select("id, type, severity, project_id, payload_json, read_at, created_at")
       .order("created_at", { ascending: false })
-      .limit(NOTIFICATIONS_BELL_LIMIT)
+      .limit(NOTIFICATIONS_BELL_LIMIT),
+    getPlanForUser(supabase, user.id)
   ]);
 
   const latestScanStatusByProject = (runs ?? []).reduce<Record<string, string>>((statuses, run) => {
@@ -223,6 +295,16 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
 
   const notifications: WorkspaceNotification[] = (notificationRows ?? []).map(mapNotificationRow);
 
+  const dataMaturityByProject: Record<string, DataMaturityState> = {};
+  for (const project of projects ?? []) {
+    dataMaturityByProject[project.id] = computeDataMaturity({
+      completedScans: completedRunCountByProject[project.id] ?? 0,
+      latestStatus: latestScanStatusByProject[project.id],
+      recurringEnabled: Boolean(project.recurring_scans_enabled),
+      planId: plan.id
+    });
+  }
+
   return {
     projects: projects ?? [],
     promptCountByProject,
@@ -232,7 +314,9 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     latestScanStatusByProject,
     latestScanDateByProject,
     latestScoreByProject,
+    dataMaturityByProject,
     scoreDeltaByProject,
+    plan,
     notifications
   };
 }

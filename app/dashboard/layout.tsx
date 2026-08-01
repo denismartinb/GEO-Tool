@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { NotificationBell } from "@/components/notification-bell";
+import { DataMaturityBanner } from "@/components/data-maturity-banner";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
@@ -17,6 +18,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     competitorCountByProject,
     recommendationCountByProject,
     latestScanStatusByProject,
+    dataMaturityByProject,
+    plan,
     notifications
   } = await getWorkspaceCounters();
 
@@ -28,6 +31,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         competitorCountByProject={competitorCountByProject}
         recommendationCountByProject={recommendationCountByProject}
         userEmail={user.email ?? ""}
+        planId={plan.id}
+        planName={plan.name}
         signOutAction={signOut}
       />
       <div className="dash-main">
@@ -46,6 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </form>
           </div>
         </header>
+        <DataMaturityBanner dataMaturityByProject={dataMaturityByProject} />
         <main className="dash-content">{children}</main>
       </div>
     </MobileShellProvider>

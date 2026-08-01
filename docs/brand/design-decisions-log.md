@@ -296,7 +296,61 @@ Pendiente / roto conocido:
 
 ---
 
-## 6. Verificación visual de las pantallas (UX-PILOT-1, 2026-07-31)
+## 6. Banda de madurez de datos (DATA-MATURITY-1, 2026-07-31)
+
+**Origen:** el fundador señaló que hasta acumular varios escaneos no hay
+tendencias/comparativas estadísticamente fiables, y el producto no lo
+comunicaba — la KPI de tendencia en Overview salía vacía sin explicación,
+leyendo como fallo en vez de progreso.
+
+Decisiones:
+- **Banda a sangre bajo la cabecera** (`.dmb-band`, 42px, una línea),
+  renderizada una sola vez en `app/dashboard/layout.tsx` — no una tarjeta
+  dentro del contenido, ni un `layout.tsx` nuevo a nivel de proyecto. Misma
+  gramática visual que la banda pública "prueba 7 días Pro gratis": se lee
+  como chrome de consola, no compite con el H1 de cada pantalla. Reutiliza
+  el `usePathname()` + regex de projectId que ya usa `WorkspaceTopbar` para
+  saber en qué proyecto está el usuario.
+- **Umbral: 5 escaneos completados**, no días — la cadencia real depende del
+  plan (diaria en Pro/Agencia/trial, semanal en Starter, `lib/scan/cron.ts`),
+  así que contar escaneos es lo único que no miente entre planes. El
+  contador ("Escaneo N de 5") y el medidor de segmentos vienen de
+  `completedRunCountByProject`, ya calculado en `getWorkspaceCounters`; el
+  "~N días"/"~N semanas" es la única estimación, derivada de la cadencia del
+  plan, nunca una constante fija.
+- **Copy no promete análisis en curso.** Se descartó "tu dominio se está
+  analizando" (la propuesta inicial del fundador): con un GEO Score real ya
+  en pantalla, esa frase se contradice con lo que el usuario está viendo. El
+  copy final es "Tu histórico se está construyendo — las tendencias y la
+  comparativa con tus competidores ganan fiabilidad con cada escaneo",
+  válido tanto para cadencia diaria como semanal sin repetir la cadencia en
+  dos sitios (el chip de ETA ya la dice).
+- **Cuatro estados + dos silencios**, ver `lib/project-workspace.ts`
+  (`computeDataMaturity`, función pura y testeada): acumulando (Pro/Agencia/
+  Starter con seguimiento activo), sin seguimiento (CTA para activarlo —
+  ver bloqueante abajo), Free (sin promesa de serie, único estado
+  descartable), y oculta permanentemente al llegar a 5 escaneos o mientras
+  hay un escaneo en curso (`firstscan-banner` ya cubre ese caso; duplicar
+  mensajes de estado se descartó explícitamente).
+- **Alternativa descartada:** tarjeta dentro del contenido
+  (`.dmb-card`, reutilizando el lenguaje visual de `.firstscan-banner`) —
+  cabe más copy pero ocupa 74px permanentes en cada pantalla y compite con
+  el H1; no es la banda de consola que se pidió.
+
+**Bloqueante conocido, fuera de esta fase:** el estado "sin seguimiento"
+existe porque `recurring_scans_enabled` nace en `false`
+(`0008_recurring_scans.sql`) — un proyecto nuevo no acumula historial por sí
+solo hasta que el usuario activa el toggle (o la banda lo activa por él vía
+el CTA, que reutiliza la server action `setRecurringScans` ya existente).
+Activar el seguimiento por defecto en proyectos nuevos es una fase aparte
+(`SCAN-DEFAULT-ON-1`): migración de schema + cambio de comportamiento del
+scheduler, gates de CLAUDE.md, necesita su propia aprobación. Esta banda
+funciona igual antes y después de ese cambio — el día que se apruebe, el
+estado "sin seguimiento" simplemente deja de aparecer, sin tocar código.
+
+---
+
+## 7. Verificación visual de las pantallas (UX-PILOT-1, 2026-07-31)
 
 **Estado: gate agéntico activo, ejecución local.**
 
@@ -333,6 +387,8 @@ Pendiente / roto conocido:
   tiene buzón); sigue siendo smoke manual del fundador.
 
 Referencias: `docs/agentic-user-pilot.md`, `.claude/agents/ux-pilot.md`.
+
+---
 
 ## Cómo mantener este documento
 

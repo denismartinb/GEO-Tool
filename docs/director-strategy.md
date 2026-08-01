@@ -382,9 +382,9 @@ flow does meaningfully more I/O. No schema/RLS changes. `pnpm test` 754/754,
 
 ---
 
-## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25, amended 2026-07-30)
+## MENTION-VERIFY-1 — fabricated brand mentions inflating visibility_score (founder report, 2026-07-25, amended 2026-07-30 x2)
 
-**Status: Implemented (two passes), pending Human Gate.** Founder tested `genscore.es` (a
+**Status: Implemented (three passes), Human Gate pending on the third.** Founder tested `genscore.es` (a
 brand-new product, essentially zero online footprint) and got "% de mención"
 = 23% when it should be 0% — the brand is never genuinely mentioned in any
 collected AI response. The "Evidencias de mención" panel showed why: for one
@@ -432,6 +432,21 @@ token-normalization `reconcileExtractedCompetitors` already uses) —
 present AND plausible-name) are now required together; regression test
 added reproducing this exact case. `pnpm test` 749/749, `pnpm run
 validate` green.
+
+**Third pass (2026-07-30), found smoke-testing a real dermatology-clinic
+project ("Alberdiderma"):** a genuinely verified mention (the brand's name
+really was in the response, as a markdown link) still displayed a
+fabricated "evidence" quote — one that actually described a *different*
+clinic listed above it in the same AI answer. Root cause: `verifyMention`
+validated the mention (`display_name_found`) but never validated each
+`evidence[]` entry independently — the model can get one field right and
+the other wrong. Fix: once a mention passes verification, every quote in
+its `evidence` array is now checked individually against the raw text
+(same substring check, applied per-quote); quotes that aren't genuinely
+present are dropped, which can leave `mentioned: true` with `evidence: []`
+— the UI already hides the evidence panel entirely when empty, so this is
+the honest "no evidence to show" state, not a wrong one. `pnpm test`
+813/813, `pnpm run validate` green. See docs/adr/0021's "Follow-up 2".
 
 **Deliberately NOT done (see ADR 0021 for the full reasoning):**
 - **`visibility_score`/`competitor_gap_score` themselves are NOT nulled**
@@ -483,6 +498,114 @@ field in the insert is verified by code review + typecheck only — that
 server action has no unit-test harness (uses `redirect()`, no extracted
 "Core" function), a pre-existing gap from before this phase, not introduced
 by it.
+
+---
+
+## OPENAI-CITATION-NOISE-1 — Google Maps/Search fallback links counted as real citations (founder report, 2026-07-31)
+
+**Status: Implemented, pending Human Gate.** Founder reviewing a real
+ChatGPT response (project "Alberdiderma", dermatology clinic) flagged the
+citation URLs as looking "wrong": every clinic listed, including the
+project's own brand, was cited via
+`google.com/maps/search/{name}%2C+Madrid...?utm_source=openai` — a Google
+Maps search shortcut, not the clinic's real site. `lib/llm/openai.ts`
+treated these as final, real destination URLs (`groundingUrlsAreFinal:
+true`), so they resolved to `domain: "google.com"` at `confidence: "high"`
+— counted toward `citations_count`/`citation_found` and shown as a "source"
+on the Citations page and prompt drawer, none of which is true (the model
+found no real page to cite).
+
+This mirrors a fix already shipped for the equivalent *inline*-citation case
+(`resolveCitation`, `lib/citations/aggregate-citations.ts`, founder review
+2026-07-19) — but that fix's own comment assumed grounding citations are
+always genuine, which held for Gemini (resolved through real redirects) but
+not for OpenAI's `url_citation`, which can BE the Maps link directly.
+
+Fix (docs/adr/0023): new `isGoogleMapsSearchNoise` in `lib/llm/openai.ts`
+filters `google.com`/`www.google.com` URLs whose path is `/maps/search/...`
+or a plain `/search` — dropped before they ever become a `groundingChunk`,
+so every downstream consumer (scoring, Citations page, prompt drawer) is
+protected automatically. Deliberately narrower than "any google.com
+grounding citation is noise" — a genuine citation hosted on google.com (e.g.
+Google Shopping) is untouched, keeping `aggregate-citations.ts`'s existing
+tested distinction intact.
+
+**Same report, separate root cause — UI fix bundled in:** the founder also
+flagged that a *genuinely verified* evidence quote ("Especialistas en
+dermatología médica y estética...") doesn't itself name the brand when read
+in isolation. Not a data bug (MENTION-VERIFY-1 already confirmed this quote
+is real) — a labeling gap. Fixed with a one-line JSX change
+(`components/prompts/prompt-drawer.tsx`): the evidence section header now
+reads "Evidencias de mención de {projectBrand}" instead of an unlabeled
+"Evidencias de mención". `pnpm test` 816/816, `pnpm run validate` green.
+
+**No backfill:** existing persisted rows keep any Maps-search noise already
+counted in their citation numbers.
+
+---
+
+## MARKDOWN-RENDER-1 — raw markdown links shown as literal text in "Respuestas" (founder report, 2026-07-31)
+
+**Status: Implemented, pending Human Gate.** After the citation-noise fix
+above shipped, the founder kept seeing the full `google.com/maps/search/...`
+URL in the prompt drawer's "Respuestas" tab and reported it as still broken.
+It was a **third, unrelated root cause**: the citation filter governs which
+URLs count as citations (scoring, "Fuentes usadas"), never how the raw
+transcript itself is displayed — the transcript must always be shown
+verbatim, so no filter could have changed it.
+
+The actual bug was in the markdown-lite renderer: OpenAI wraps long citation
+URLs onto their own line, emitting `[Clínica ...]\n(https://...)`, and
+`tokenizeInline`'s regex required `]` and `(` to be adjacent. The link never
+tokenized, so the whole construct fell through to plain text and the reader
+saw raw brackets plus the full URL. Confirmed by replaying the founder's
+verbatim response through the parser: 0 links detected before the fix, 2
+after.
+
+Fix, in two commits on the same PR:
+1. The regex now tolerates whitespace (space or newline) between `]` and
+   `(`; `renderInline` accepts multi-line input and renders embedded
+   newlines as `<br/>`, so the paragraph branch can tokenize a whole block
+   at once instead of per line — a construct spanning a line boundary is no
+   longer severed before parsing.
+2. Parser extracted to `lib/markdown/inline-markdown.ts` with 18 unit tests
+   (the founder's verbatim ChatGPT answer is a fixture). This logic had
+   lived inline in a component with **zero test coverage**, which is why the
+   bug shipped unnoticed in the first place. `normalizeMarkdownSource` also
+   rejoins a label/target pair separated by a blank line (which the block
+   splitter would otherwise tear apart), restricted to parentheticals that
+   actually open a URL so ordinary prose is untouched. Italic (`_text_`)
+   support added — `_Madrid, España_` was rendering with literal
+   underscores in the same screenshot — with a word-boundary check so an
+   underscore inside a bare URL (`?utm_source=openai`) can't open an italic
+   run.
+
+**Second root cause in the same renderer — nesting (found on retest):** with
+the above deployed, the founder retested and the URLs were *still* raw. The
+tell was in the screenshot itself: the leaked `[label]` and `(url)` rendered
+**in bold**, darker than the surrounding paragraph. OpenAI wraps these cited
+listings in bold — `**[label](url)**` — and the tokenizer was flat. Regex
+alternation picks the *leftmost* match, so the bold run (starting two
+characters earlier) swallowed the entire link and emitted it as literal text
+inside a `<strong>`. Fixed by making `tokenizeInline` recursive: `bold`,
+`italic` and link labels now hold child tokens instead of a raw string, and
+the renderer recurses to match, with a depth cap (4) as a loop guard. New
+`visibleText()` helper makes "no raw URL leaks into the transcript" directly
+assertable, and the founder's answer is now a fixture covering both quirks
+at once (bold-wrapped *and* line-wrapped).
+
+`pnpm test` 838/838, `pnpm run validate` green.
+
+**Process notes — two rounds lost, both avoidable:**
+1. The founder's first retest used a screenshot taken 11 minutes *before*
+   the corresponding Vercel preview finished building. Handoffs must state
+   that the preview has to show as **Ready**, not just that a commit was
+   pushed.
+2. The first fix was shipped after verifying the regex against a
+   *reconstructed* sample rather than the real stored `raw_response`. That
+   sample happened to omit the bold wrapper, so it confirmed a real bug but
+   masked the dominant one. When a rendering bug is reported, reproduce from
+   the persisted row, not from a hand-typed approximation of the screenshot.
 
 ---
 

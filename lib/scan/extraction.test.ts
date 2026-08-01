@@ -69,7 +69,7 @@ function baseRow(overrides: Record<string, unknown> = {}) {
 
 function baseExtractionOutput(overrides: Record<string, unknown> = {}) {
   return {
-    brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is great"], position: 1 },
+    brand: { mentioned: true, display_name_found: "Acme", evidence: ["Acme is a great brand"], position: 1 },
     competitors: [{ name: "Globex", mentioned: false, display_name_found: null, evidence: [], position: null }],
     citations: [],
     sentiment: "positive" as const,
@@ -368,11 +368,11 @@ describe("runStructuredExtractionForRun", () => {
     vi.mocked(extractGeminiStructuredData).mockResolvedValue({
       data: baseExtractionOutput({
         competitors: [
-          { name: "Globex", mentioned: true, display_name_found: "Globex", evidence: ["Globex is mentioned"], position: 2 },
+          { name: "Globex", mentioned: true, display_name_found: "Globex", evidence: ["better than Globex"], position: 2 },
           // The model surfaced a brand that was never tracked — real
           // production case (SCAN-TRACKED-SET-1): this must not survive
           // into the persisted competitors array.
-          { name: "Initech", mentioned: true, display_name_found: "Initech", evidence: ["Initech too"], position: 1 }
+          { name: "Initech", mentioned: true, display_name_found: "Initech", evidence: ["or Initech"], position: 1 }
         ]
       }),
       model: "gemini-2.0-flash-001"
@@ -616,12 +616,12 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
     expect(result.brand).toEqual({ mentioned: false, display_name_found: null, evidence: [], position: null });
   });
 
-  it("keeps a verified mention untouched, case/diacritic/whitespace-insensitively", () => {
+  it("keeps a verified mention (and its genuinely-present evidence) untouched, case/diacritic/whitespace-insensitively", () => {
     const data = baseData({
       brand: {
         mentioned: true,
         display_name_found: "GénScore",
-        evidence: ["quote"],
+        evidence: ["genscore is a great tool"],
         position: 1
       }
     });
@@ -631,7 +631,7 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
     expect(result.brand).toEqual({
       mentioned: true,
       display_name_found: "GénScore",
-      evidence: ["quote"],
+      evidence: ["genscore is a great tool"],
       position: 1
     });
   });
@@ -649,7 +649,13 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
   it("applies the same verification to every competitor independently, against each competitor's own returned name", () => {
     const data = baseData({
       competitors: [
-        { name: "RealCompetitor", mentioned: true, display_name_found: "RealCompetitor", evidence: ["seen"], position: 1 },
+        {
+          name: "RealCompetitor",
+          mentioned: true,
+          display_name_found: "RealCompetitor",
+          evidence: ["RealCompetitor is a solid choice"],
+          position: 1
+        },
         { name: "FabricatedCompetitor", mentioned: true, display_name_found: "FabricatedCompetitor", evidence: ["seen"], position: 2 }
       ]
     });
@@ -657,9 +663,58 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
     const result = verifyExtractedMentions(data, "RealCompetitor is a solid choice.", "GenScore");
 
     expect(result.competitors).toEqual([
-      { name: "RealCompetitor", mentioned: true, display_name_found: "RealCompetitor", evidence: ["seen"], position: 1 },
+      {
+        name: "RealCompetitor",
+        mentioned: true,
+        display_name_found: "RealCompetitor",
+        evidence: ["RealCompetitor is a solid choice"],
+        position: 1
+      },
       { name: "FabricatedCompetitor", mentioned: false, display_name_found: null, evidence: [], position: null }
     ]);
+  });
+
+  it("MENTION-VERIFY-1 follow-up 2 (docs/adr/0021 addendum): keeps mentioned:true but drops an individual evidence quote that doesn't itself appear in the raw text — the exact production case (2026-07-30, Alberdiderma)", () => {
+    // The brand's own name genuinely appears in the response (a real
+    // markdown link), so display_name_found verification correctly keeps
+    // mentioned: true — but the model's "evidence" quote for this entity was
+    // a fabricated/mismatched sentence that never appears anywhere in the
+    // raw text (it actually described a different clinic in the same list).
+    const data = baseData({
+      brand: {
+        mentioned: true,
+        display_name_found: "Alberdiderma",
+        evidence: ["Centro dermatológico de referencia con más de 20 años de experiencia"],
+        position: 2
+      }
+    });
+
+    const rawText =
+      "[Clínica Dermatológica Madrid De Felipe](https://maps.example/1)\n" +
+      "Con más de 30 años de experiencia, ofrecen tratamientos integrales para el acné.\n\n" +
+      "[Alberdiderma](https://maps.example/2)\n" +
+      "Especialistas en dermatología médica y estética, brindan atención personalizada para el acné con protocolos médicos actualizados.";
+
+    const result = verifyExtractedMentions(data, rawText, "Alberdiderma");
+
+    expect(result.brand.mentioned).toBe(true);
+    expect(result.brand.evidence).toEqual([]);
+  });
+
+  it("keeps only the evidence entries that are genuinely present, when a mentioned entity has a mix of real and fabricated quotes", () => {
+    const data = baseData({
+      brand: {
+        mentioned: true,
+        display_name_found: "Alberdiderma",
+        evidence: ["Alberdiderma es una buena opción", "una frase completamente inventada que no aparece"],
+        position: 1
+      }
+    });
+
+    const result = verifyExtractedMentions(data, "Alberdiderma es una buena opción para tratar el acné.", "Alberdiderma");
+
+    expect(result.brand.mentioned).toBe(true);
+    expect(result.brand.evidence).toEqual(["Alberdiderma es una buena opción"]);
   });
 });
 
