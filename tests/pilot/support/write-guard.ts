@@ -60,7 +60,7 @@ export const PILOT_WRITE_DOMAIN = "mozilla.org";
  * Waits for any of the passed anchors; each caller names something only the
  * real, settled page renders.
  */
-async function waitForContent(page: Page, anchors: Array<() => Promise<boolean>>): Promise<void> {
+export async function waitForContent(page: Page, anchors: Array<() => Promise<boolean>>): Promise<void> {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     for (const isReady of anchors) {

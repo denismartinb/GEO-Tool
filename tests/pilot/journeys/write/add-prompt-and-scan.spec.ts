@@ -6,6 +6,7 @@ import {
   readActivePromptCount,
   resolveOrCreateWriteProject,
   sweepTestPrompts,
+  waitForContent,
   waitForNoActiveRun
 } from "../../support/write-guard";
 
@@ -152,10 +153,26 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     // The point of the whole journey: a scan that completes but never shows up
     // in the product is still a broken product. These two screens are where a
     // founder would look for the new data.
+    //
+    // Each capture waits for real content first. Screenshotting straight after
+    // `goto` photographs the route's loading skeleton — which is what the first
+    // passing run did, producing an "overview-after-scan" image showing nothing
+    // but grey placeholders. Evidence that cannot be read is not evidence.
     await page.goto(`/dashboard/projects/${projectId}/runs`, { waitUntil: "domcontentloaded" });
+    await waitForContent(page, [
+      () => page.getByText(/completado|en curso|pendiente|fallido/i).first().isVisible()
+    ]);
     await captureStep(page, "runs-after-scan");
 
     await page.goto(`/dashboard/projects/${projectId}`, { waitUntil: "domcontentloaded" });
+    await waitForContent(page, [
+      () => page.getByText(/puntuación geo/i).first().isVisible(),
+      () => page.getByText(/tasa de mención/i).first().isVisible()
+    ]);
+    await expect(
+      page.getByText(/puntuación geo/i).first(),
+      "Visión general no mostró la puntuación GEO tras el escaneo"
+    ).toBeVisible();
     await captureStep(page, "overview-after-scan");
   });
 
