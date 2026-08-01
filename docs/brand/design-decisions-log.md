@@ -291,8 +291,13 @@ founder con captura real de la pantalla estirada):**
 Pendiente / roto conocido:
 - Unificar el ancho de todas las páginas de consola (`.page`/1320px) con
   el sistema `.ov2-scope`/`.pr2-page` (1200/1280px) — señalado en
-  PROMPTS-DESKTOP-2 arriba, sin fecha, pendiente de que el fundador
-  decida el ancho estándar final.
+  PROMPTS-DESKTOP-2 arriba. **Decidido en CITATIONS-REDESIGN-1 (ver §8):
+  640/1200/1280px (los valores exactos de `.ov2-scope`/`.pr2-page`) es
+  ahora el ancho estándar oficial para toda pantalla de consola nueva o
+  rediseñada** — deja de ser una elección por pantalla. Migrar las
+  pantallas que aún no lo usan (Competidores, Recomendaciones, Auditoría
+  web, Escaneos) no se hace retroactivamente en este PR; cada una migra
+  cuando le toque su propio rediseño.
 
 ---
 
@@ -387,6 +392,100 @@ Pendiente / roto conocido:
   tiene buzón); sigue siendo smoke manual del fundador.
 
 Referencias: `docs/agentic-user-pilot.md`, `.claude/agents/ux-pilot.md`.
+
+---
+
+## 8. Página de Páginas citadas (CITATIONS-REDESIGN-1, 2026-08-01)
+
+**Estado: implementado, Fase A (Task Intake aprobado el mismo día).**
+
+**Origen:** auditoría de código encontró que la pantalla calculaba
+`citationRows` (el ranking real de páginas citadas, con motor/categoría/
+prompts) y `opportunityRows` (fuentes de terceros que citan a un rival y no
+a la marca) enteros en el servidor y **nunca los pasaba al cliente** — la
+UI solo mostraba una tabla agrupada por prompt, y del banner de
+oportunidades únicamente se usaba `.length`. El fundador aportó además el
+artículo de Semrush *"What Are AI Citations & How Do I Get Them?"* (30 jul
+2025), cuya distinción **primera parte vs. terceros** (y si esos terceros
+mencionan la marca favorablemente o a un rival en su lugar — su informe
+"Source Impact Analysis") se adoptó como el marco de la sección de
+"impacto", en vez de un esquema propio.
+
+Decisiones finales:
+
+- **Ancho de consola: adopta `.cit2-scope`/`.cit2-page`, los mismos valores
+  exactos que `.ov2-scope`/`.pr2-page`** (460px base, 640px ≥900px, 1200px
+  ≥1200px, 1280px ≥1600px) — mismo mecanismo de wrapper con remapeo de
+  variables CSS. Por decisión explícita del fundador, **este ancho pasa a
+  ser el estándar de toda pantalla de consola futura**, no una elección por
+  pantalla (ver nota en §5 "Pendiente/roto conocido").
+- **Tira de KPIs compacta**, una sola fila de seis celdas sin tarjeta
+  individual por métrica (descartado un primer borrador con tarjetas
+  grandes tipo `.ov2-kpi`, por pedir del fundador "más compacta"):
+  Respuestas con cita, Citas totales, Citas propias, Páginas tuyas citadas,
+  Dominios únicos, Puntuación de citas. "Respuestas con cita" rescata
+  `citation_score_any_domain` (`run_scores.details_json`), que ya se
+  calculaba y no se mostraba en ninguna pantalla.
+- **Barra de "Impacto"**: tuyas / terceros a favor / terceros en contra /
+  competidores / neutras, sobre el total de citas (no de páginas) —
+  implementación pura y testeada en `aggregateCitations` (`impactBreakdown`,
+  `lib/citations/aggregate-citations.ts`). "A favor"/"en contra" se derivan
+  del `brandMentioned`/`competitors[]` que la fila ya tenía; es una
+  clasificación a nivel de página (todas las citas de esa página caen en un
+  único cubo), no por cada cita individual — documentado así en el propio
+  tipo `ImpactBreakdown` para no reclamar más precisión de la que hay.
+- **Donut de tipo de fuente**: clasificador determinista y acotado
+  (`lib/citations/source-type.ts`, `classifySourceType`) — lista curada de
+  dominios conocidos (Reddit/Quora/StackOverflow → comunidad; Wikipedia →
+  enciclopedia; Trustpilot/G2/Rastreator/Kelisto… → comparador; Xataka/
+  El País/ABC… → medio). Todo lo no reconocido cae en **"Sin clasificar"**,
+  visible como su propio porcentaje — nunca repartido a ojo entre las
+  demás categorías ni adivinado. Deliberadamente no exhaustivo: se amplía
+  con datos reales, no se intenta cubrir todo de entrada.
+- **Bloque de Oportunidades rescatado**: rescata `opportunityRows`
+  (fuentes de terceros que citan a un rival y no a la marca), antes
+  descartado tras calcularse. Enlaza a Auditoría web (`/web-audit`) al
+  final — primer puente real entre las dos pantallas de diagnóstico, sin
+  cruzar datos entre ellas todavía (eso sería su propia fase).
+- **Fix de datos**: `resolveCitation` vaciaba la URL de *toda* cita
+  `source: "grounding"` — una regla escrita para el redirect de Vertex de
+  Gemini que también se llevaba por delante las URLs reales de ChatGPT
+  (`url_citation`, ya la página final, nunca un redirect). Ahora se
+  distingue por host: si la URL de la cita pertenece de verdad al dominio
+  resuelto, se conserva y se usa como clave de deduplicación por página
+  (como ya hacían las citas inline); si no (el redirect de Gemini), sigue
+  vaciándose y deduplicando por dominio, sin cambio de comportamiento ahí.
+- **Estado vacío reescrito** ("Este escaneo respondió sin citar fuentes"):
+  el copy anterior ("Sin citas detectadas") leía como fallo del producto.
+  Que un LLM responda desde su conocimiento preentrenado sin consultar la
+  web es comportamiento normal, no un error — el artículo de Semrush lo
+  documenta explícitamente. El copy ahora lo dice así.
+- **Fila de página expandible**: al tocar una fila se listan los prompts
+  (deduplicados) que la citaron — sustituye a la tabla agrupada por prompt
+  que era la vista principal antes de este PR.
+- **Avatar de dominio**: inicial sobre color determinista por hash del
+  dominio (mismo criterio que el fallback de favicon del grid de dominios
+  en Escaneos), no un fetch en vivo de favicon — evita el estado roto de
+  una imagen que no carga para un dominio arbitrario citado por la IA.
+
+Descartado explícitamente (para no reabrirlo sin motivo nuevo):
+- **Gráfico de tendencia de cuota de citas** — estaba en el primer borrador
+  (alternativa "C" del artifact de exploración) pero necesita histórico
+  multi-escaneo y sus propios estados vacíos (no fiable con &lt;5 escaneos,
+  mismo umbral que la banda de madurez de datos, DATA-MATURITY-1). Movido a
+  **CITATIONS-TREND-1**, fase separada, todavía no implementada.
+- **Persistir la página exacta de Gemini** (hoy solo se resuelve y guarda
+  el dominio, aunque el pipeline sí resuelve la URL final antes de
+  descartarla) — cambio en `lib/scan/extraction.ts`, fuera de esta fase
+  por tocar el pipeline de escaneo; solo aplicaría a escaneos futuros.
+
+Pendiente / roto conocido:
+- El nombre "Páginas citadas" es, para las citas de Gemini, técnicamente
+  "Dominios citados" hasta que se implemente la persistencia de URL exacta
+  de arriba — se mantiene el nombre existente por ahora.
+- Unificar el resto de la consola (Competidores, Recomendaciones, Auditoría
+  web, Escaneos) al nuevo ancho estándar: no se hace en este PR, cada
+  pantalla migra en su propio rediseño (ver nota en §5).
 
 ---
 
