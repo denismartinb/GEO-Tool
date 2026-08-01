@@ -48,6 +48,29 @@ export const PILOT_TEST_PROMPT_MARKER = "[PILOT-TEST]";
 export const PILOT_WRITE_DOMAIN = "mozilla.org";
 
 /**
+ * Waits for a route's real content to replace its `loading.tsx` skeleton.
+ *
+ * Every dashboard route in this app ships a Next.js loading skeleton, and
+ * `domcontentloaded` fires while that skeleton is still on screen. Reading a
+ * list straight after `goto` therefore reports "nothing here" for a page that
+ * simply has not rendered yet — which is exactly how two consecutive write runs
+ * concluded there were no prompts to clean up while the sidebar counter plainly
+ * said otherwise.
+ *
+ * Waits for any of the passed anchors; each caller names something only the
+ * real, settled page renders.
+ */
+async function waitForContent(page: Page, anchors: Array<() => Promise<boolean>>): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    for (const isReady of anchors) {
+      if (await isReady().catch(() => false)) return;
+    }
+    await page.waitForTimeout(250);
+  }
+}
+
+/**
  * Waits until the write-project has no scan in progress.
  *
  * Both project creation and the add-prompts flow launch real scans, and the
@@ -65,6 +88,11 @@ export async function waitForNoActiveRun(
   while (Date.now() < deadline) {
     await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
     const addButton = page.getByRole("button", { name: /añadir prompts/i }).first();
+    // The button does not exist while the loading skeleton is up, so without
+    // settling first this would read "still busy" from a page that had simply
+    // not rendered. The 5s poll below papered over it; being explicit is what
+    // keeps this loop honest about what it is measuring.
+    await waitForContent(page, [() => addButton.isVisible()]);
     if (await addButton.isEnabled().catch(() => false)) return true;
     await page.waitForTimeout(5_000);
   }
@@ -93,6 +121,14 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
   if (pinned) return pinned;
 
   await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+
+  // Higher stakes than the sweep's version of this wait: reading the projects
+  // list before it renders would conclude the write-project does not exist and
+  // create a second one.
+  await waitForContent(page, [
+    () => page.locator('a[href^="/dashboard/projects/"]').first().isVisible(),
+    () => page.getByRole("link", { name: /nuevo dominio|crear/i }).first().isVisible()
+  ]);
 
   const existing = await findProjectIdByDomain(page);
   if (existing) return existing;
@@ -204,6 +240,14 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
 
   for (let i = 0; i < MAX_SWEEPS; i += 1) {
     await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
+
+    // "Añadir prompts" only exists once the real page renders, so it is a
+    // reliable signal that the loading skeleton is gone and the list below can
+    // be trusted.
+    await waitForContent(page, [
+      () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
+      () => page.getByText(/no hay prompts activos/i).isVisible()
+    ]);
 
     // Deliberately does NOT drive the "Buscar prompt" box. That input is
     // rendered up to three times and shown one per breakpoint, is a controlled
