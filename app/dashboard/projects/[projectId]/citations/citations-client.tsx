@@ -139,17 +139,25 @@ function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: bool
   );
 }
 
-function ImpactBar({ breakdown }: { breakdown: ImpactBreakdown }) {
+function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; brandLabel: string }) {
   const total = breakdown.own + breakdown.favorable + breakdown.adverse + breakdown.competitor + breakdown.neutral;
   const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
 
-  const segments: Array<{ key: keyof ImpactBreakdown; className: string }> = [
-    { key: "own", className: "s-own" },
-    { key: "favorable", className: "s-fav" },
-    { key: "adverse", className: "s-adv" },
-    { key: "competitor", className: "s-comp" },
-    { key: "neutral", className: "s-neu" }
+  // Every bucket gets an explicit legend line when it has citations — a
+  // dominant bucket (in real scan data, usually "Neutras": third-party
+  // pages that mention neither the brand nor a tracked competitor) must
+  // never render as an unexplained block of color (found via ux-pilot
+  // reviewing a real preview, 2026-08-01: 73% of a project's citations
+  // fell in "neutral" and the bar shipped with only 2 of 5 buckets
+  // explained).
+  const segments: Array<{ key: keyof ImpactBreakdown; className: string; label: string }> = [
+    { key: "own", className: "s-own", label: `Páginas de ${brandLabel}` },
+    { key: "favorable", className: "s-fav", label: "Terceros que te mencionan" },
+    { key: "adverse", className: "s-adv", label: "Terceros que mencionan a un rival y no a ti" },
+    { key: "competitor", className: "s-comp", label: "Páginas de un competidor" },
+    { key: "neutral", className: "s-neu", label: "Terceros que no mencionan ni tu marca ni a un rival" }
   ];
+  const present = segments.filter((s) => breakdown[s.key] > 0);
 
   return (
     <div className="cit2-block">
@@ -157,24 +165,19 @@ function ImpactBar({ breakdown }: { breakdown: ImpactBreakdown }) {
         Impacto de {total} {total === 1 ? "cita" : "citas"}
       </div>
       <div className="cit2-split">
-        {segments.map(
-          (s) =>
-            breakdown[s.key] > 0 && (
-              <div key={s.key} className={s.className} style={{ flex: pct(breakdown[s.key]) }}>
-                {pct(breakdown[s.key]) >= 9 ? `${Math.round(pct(breakdown[s.key]))}%` : ""}
-              </div>
-            )
-        )}
+        {present.map((s) => (
+          <div key={s.key} className={s.className} style={{ flex: pct(breakdown[s.key]) }}>
+            {pct(breakdown[s.key]) >= 9 ? `${Math.round(pct(breakdown[s.key]))}%` : ""}
+          </div>
+        ))}
       </div>
       <div className="cit2-split-key">
-        <span>
-          <i className="fav" />
-          Terceros que te mencionan
-        </span>
-        <span>
-          <i className="adv" />
-          Terceros que mencionan a un rival y no a ti
-        </span>
+        {present.map((s) => (
+          <span key={s.key}>
+            <i className={s.className} />
+            {s.label}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -383,7 +386,7 @@ export function CitationsClient({
         </div>
       )}
 
-      <ImpactBar breakdown={impactBreakdown} />
+      <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
       <SourceDonut breakdown={sourceTypeBreakdown} />
 
       <div className="cit2-cols">

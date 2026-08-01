@@ -1925,15 +1925,16 @@ a {
 /* Impact bar */
 .cit2-split { display: flex; height: 32px; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); }
 .cit2-split > div { display: grid; place-items: center; font-size: 10.5px; font-weight: 750; color: #fff; overflow: hidden; min-width: 2px; }
-.cit2-split .s-own { background: var(--cit-own); }
-.cit2-split .s-fav { background: var(--cit-fav); }
-.cit2-split .s-adv { background: var(--cit-adv); }
-.cit2-split .s-comp { background: var(--cit-comp); }
-.cit2-split .s-neu { background: var(--cit-neu); }
+/* Shared by both the bar segments (.cit2-split > div) and the legend dots
+   (.cit2-split-key i) — every bucket that appears in the bar gets a legend
+   entry in the same color, dynamically (see ImpactBar in citations-client.tsx). */
+.s-own { background: var(--cit-own); }
+.s-fav { background: var(--cit-fav); }
+.s-adv { background: var(--cit-adv); }
+.s-comp { background: var(--cit-comp); }
+.s-neu { background: var(--cit-neu); }
 .cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
 .cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 6px; }
-.cit2-split-key i.fav { background: var(--cit-fav); }
-.cit2-split-key i.adv { background: var(--cit-adv); }
 
 /* Source-type donut */
 .cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
