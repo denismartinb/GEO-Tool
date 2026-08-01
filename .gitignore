@@ -8,3 +8,8 @@ tsconfig.tsbuildinfo
 Documentacion/
 *.log
 .claude/worktrees/
+# Agentic user pilot evidence: screenshots, auth session, findings, reports.
+# Contains a live Supabase session — must never be committed.
+.pilot/
+playwright-report/
+test-results/

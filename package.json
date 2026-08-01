@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "pilot": "node scripts/pilot.mjs",
+    "pilot:selfcheck": "node scripts/pilot-selfcheck.mjs",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run lint"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@types/mdx": "^2.0.14",
     "@types/node": "^20.17.46",
     "@types/react": "^19.0.12",

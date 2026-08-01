@@ -21,7 +21,7 @@ Purpose: find breakages before the Human Gate.
 - Confirm no forbidden areas were touched.
 - Confirm no fake product behavior was introduced.
 - Confirm error states are safe.
-- **Run a visual layout check** whenever any frontend file is touched (see below).
+- **Hand frontend changes to the `ux-pilot` agent** for live verification (see below).
 
 ## Must always check
 
@@ -35,76 +35,30 @@ Purpose: find breakages before the Human Gate.
 - PR labels;
 - Claude QA result.
 
-## Frontend visual check (mandatory when frontend files change)
+## Frontend live check (mandatory when frontend files change)
 
 Trigger: any change to `app/**`, `components/**`, `app/globals.css`, or any
 `.tsx` / `.css` file.
 
-Use Playwright (Chromium is pre-installed at `PLAYWRIGHT_BROWSERS_PATH`) to
-open the affected pages at three viewport widths and verify layout integrity.
-Check at minimum the pages touched by the PR; also check the Overview and
-Recommendations pages as regression anchors.
+**Do not run this yourself.** Live verification belongs to the `ux-pilot` agent,
+which the Director dispatches after the PR's Vercel preview is deployed. Your job
+is to *require* it: if this PR touches frontend files, your report must state
+that a pilot run is outstanding, and the Director must not advance to the Human
+Gate on a `PILOT FAIL` or a `PILOT INCONCLUSIVE`.
 
-**Viewports to check:**
+Why it moved out of this agent: the check documented here previously targeted
+`http://localhost:3000` with a `require('playwright')` snippet, and Playwright
+was not a dependency of this repo. It threw on every invocation, and even had it
+run, it had no Supabase session and would have been redirected to `/login` on
+every authenticated route. It was a gate that could never fail — the worst kind.
+See `docs/agentic-user-pilot.md`.
 
-| Label   | Width × Height |
-|---------|----------------|
-| Mobile  | 375 × 812      |
-| Tablet  | 768 × 1024     |
-| Desktop | 1280 × 800     |
+What you still own, because it is static and cheap:
 
-**What to verify at each viewport:**
-
-1. No horizontal page scroll (page width ≤ viewport width).
-2. No content clipped or hidden behind the viewport edge (text, buttons, cards).
-3. Navigation and sticky header render correctly and are not overlapping content.
-4. Cards, grids, and tables reflow gracefully — no broken column layouts.
-5. Filter/tab bars: labels stay on a single line or scroll horizontally without
-   wrapping to multiple lines.
-6. Buttons and interactive elements are fully visible and tappable.
-7. No obviously broken empty states or missing content.
-
-**How to run (inline Playwright script):**
-
-```bash
-node -e "
-const { chromium } = require('playwright');
-(async () => {
-  const browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_BROWSERS_PATH + '/chromium' });
-  const viewports = [
-    { label: 'Mobile',  width: 375,  height: 812  },
-    { label: 'Tablet',  width: 768,  height: 1024 },
-    { label: 'Desktop', width: 1280, height: 800  },
-  ];
-  const pages = [
-    '/dashboard/projects/<projectId>',
-    '/dashboard/projects/<projectId>/recommendations',
-  ];
-  for (const vp of viewports) {
-    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
-    const page = await ctx.newPage();
-    for (const path of pages) {
-      await page.goto('http://localhost:3000' + path);
-      const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
-      if (scrollWidth > vp.width + 2) {
-        console.error(vp.label + ' OVERFLOW on ' + path + ': scrollWidth=' + scrollWidth);
-      } else {
-        console.log(vp.label + ' OK on ' + path);
-      }
-    }
-    await ctx.close();
-  }
-  await browser.close();
-})();
-"
-```
-
-If the dev server is not running, start it with `pnpm dev` in the background
-before running the script, and kill it after.
-
-Report the result for each viewport and page. Any overflow or layout breakage
-at any viewport is a **BLOCKED** verdict unless the PR scope explicitly covers
-only non-visual backend work.
+- confirm the PR's frontend changes are covered by the pilot's journeys, and say
+  so explicitly if a touched screen has no journey;
+- flag any layout-risky change (unshrinkable rows, fixed widths, non-wrapping
+  flex) so the pilot knows what to look at closely.
 
 ## Verdicts
 

@@ -1,0 +1,201 @@
+name: Agentic User Pilot
+
+# Runs the read-only user pilot against every Vercel preview deployment, so the
+# gate no longer depends on which kind of session the founder happens to be
+# working from. Claude Code's remote/web sessions cannot reach *.vercel.app
+# (egress policy), but GitHub's runners can — the agent then downloads the
+# screenshots artifact and does the visual judging.
+#
+# Verified against this repo: Vercel publishes real GitHub Deployments with
+# environment "Preview" and the preview URL in `environment_url`, so no comment
+# scraping is needed.
+#
+# Deliberately triggered by `deployment_status` and NOT `pull_request_target`:
+# this job holds the pilot account's credentials, and pull_request_target would
+# expose them to code from any fork.
+
+on:
+  deployment_status:
+
+permissions:
+  # `contents: write` is needed only to publish screenshots to a
+  # `pilot-evidence/**` branch — see "Publish screenshots" below. This job never
+  # pushes to main and never touches product branches.
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: ux-pilot-${{ github.event.deployment.sha }}
+  cancel-in-progress: true
+
+jobs:
+  pilot:
+    # Preview deployments only, and only once Vercel reports success. Production
+    # deployments are never piloted: the journeys log in as a real user and this
+    # phase has no business touching production.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the deployed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.deployment.sha }}
+
+      - name: Resolve the pull request for this deployment
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.deployment.sha }}
+        run: |
+          set -euo pipefail
+          number="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" \
+            --jq 'map(select(.state == "open")) | .[0].number // empty')"
+          if [ -z "$number" ]; then
+            echo "No open PR for ${SHA}; nothing to report on."
+          fi
+          echo "number=${number}" >> "$GITHUB_OUTPUT"
+
+      - name: Stop early when the deployment has no open PR
+        if: steps.pr.outputs.number == ''
+        run: echo "Skipping pilot — deployment is not attached to an open pull request."
+
+      - name: Set up pnpm
+        if: steps.pr.outputs.number != ''
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        if: steps.pr.outputs.number != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        if: steps.pr.outputs.number != ''
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        if: steps.pr.outputs.number != ''
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the pilot
+        id: run
+        if: steps.pr.outputs.number != ''
+        continue-on-error: true
+        env:
+          PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
+          PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
+          PILOT_PROJECT_ID: ${{ secrets.PILOT_PROJECT_ID }}
+          PILOT_COMMIT_SHA: ${{ github.event.deployment.sha }}
+          PILOT_PR_NUMBER: ${{ steps.pr.outputs.number }}
+          # Optional. Only needed if Vercel Deployment Protection stays enabled
+          # for preview deployments.
+          PILOT_VERCEL_BYPASS: ${{ secrets.PILOT_VERCEL_BYPASS }}
+        run: |
+          set +e
+          node scripts/pilot.mjs \
+            --url "${{ github.event.deployment_status.environment_url }}" \
+            --summary-md .pilot/summary.md
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload screenshots and signals
+        if: steps.pr.outputs.number != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-screenshots
+          path: |
+            .pilot/screens/
+            .pilot/findings.jsonl
+            .pilot/report.json
+            .pilot/summary.md
+          # Long enough to review a PR, short enough not to accumulate. These
+          # are screenshots of a logged-in session's screens.
+          retention-days: 14
+          if-no-files-found: warn
+
+      # Actions artifacts are served from *.blob.core.windows.net, which agent
+      # sandboxes cannot reach (verified: the egress proxy 403s the CONNECT).
+      # The artifact above is for humans; this branch is how an agent session
+      # gets the screenshots, because git already works through that proxy.
+      #
+      # Force-pushed as a single orphan commit per PR, so evidence is replaced
+      # rather than accumulated and old blobs become unreachable for GC.
+      # Runs even when the pilot failed before capturing journey screenshots:
+      # a login failure is exactly when the evidence matters most, and job logs
+      # are served from a host agent sandboxes cannot reach either.
+      - name: Publish screenshots to an evidence branch
+        if: steps.pr.outputs.number != '' && hashFiles('.pilot/**') != ''
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          SHA: ${{ github.event.deployment.sha }}
+        run: |
+          set -euo pipefail
+          branch="pilot-evidence/pr-${PR_NUMBER}"
+          staging="$(mktemp -d)"
+          cp -r .pilot/screens "$staging/screens" 2>/dev/null || true
+          # Playwright's own failure screenshots and traces live here; they are
+          # the only evidence when the run died before any journey ran.
+          cp -r .pilot/output "$staging/output" 2>/dev/null || true
+          cp .pilot/findings.jsonl "$staging/" 2>/dev/null || true
+          cp .pilot/summary.md "$staging/" 2>/dev/null || true
+          printf 'Pilot evidence for PR #%s at commit %s\n\nGenerated by .github/workflows/ux-pilot.yml. Force-pushed each run.\n' \
+            "$PR_NUMBER" "$SHA" > "$staging/README.md"
+
+          cd "$staging"
+          git init -q
+          git checkout -q -b "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "pilot evidence: PR #${PR_NUMBER} @ ${SHA}"
+          git push -q --force \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" \
+            "$branch"
+          echo "Evidence pushed to ${branch}"
+
+      - name: Post the verdict on the pull request
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          set -euo pipefail
+          if [ ! -f .pilot/summary.md ]; then
+            printf '%s\n' \
+              '<!-- agentic:ux-pilot-result -->' \
+              '## Agentic User Pilot — PILOT INCONCLUSIVE' \
+              '' \
+              'El runner terminó sin producir un resumen. Revisa los logs del workflow.' \
+              '' \
+              '---' \
+              '_Generated by [Claude Code](https://claude.ai/code)_' > .pilot/summary.md
+          fi
+          gh pr comment "$PR_NUMBER" --body-file .pilot/summary.md
+
+      - name: Fail the check unless the pilot passed
+        if: steps.pr.outputs.number != ''
+        env:
+          EXIT_CODE: ${{ steps.run.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          case "$EXIT_CODE" in
+            0)
+              echo "PILOT PASS"
+              ;;
+            78)
+              # An INCONCLUSIVE run must never show up as a green check. The
+              # whole point of this gate is that "verified" means verified.
+              echo "PILOT INCONCLUSIVE — the pilot never saw the product." >&2
+              exit 1
+              ;;
+            *)
+              echo "PILOT FAIL — see the PR comment and the pilot-screenshots artifact." >&2
+              exit 1
+              ;;
+          esac

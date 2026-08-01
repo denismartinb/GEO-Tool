@@ -350,6 +350,46 @@ estado "sin seguimiento" simplemente deja de aparecer, sin tocar código.
 
 ---
 
+## 7. Verificación visual de las pantallas (UX-PILOT-1, 2026-07-31)
+
+**Estado: gate agéntico activo, ejecución local.**
+
+Decisiones finales:
+- Toda pantalla que cambie en un PR se verifica **en el preview real de
+  Vercel, con sesión iniciada**, por el agente `ux-pilot`, antes de pedirle
+  nada al fundador. La comparación visual deja de ser trabajo manual del
+  fundador y pasa a ser un paso obligatorio del pipeline.
+- Los tres viewports de referencia del producto quedan fijados como
+  contrato de verificación: **375 / 768 / 1280 px**. Son los mismos que ya
+  documentaba `qa.md`; ahora existen como configuración ejecutable
+  (`playwright.config.ts`) y no sólo como prosa.
+- Anclas de regresión fijas en cada pasada: Visión general, Prompts,
+  Competidores, Recomendaciones y Escaneos — aunque el PR no las toque.
+- El agente **mira las capturas** (visión) además de comprobar overflow
+  horizontal, errores de consola y respuestas HTTP ≥400. La decisión
+  explícita es que las aserciones cubren lo que una máquina puede saber con
+  certeza, y el juicio de "esto se ve mal / esto no es lo que se pidió" lo
+  mantiene el agente.
+- Se retira el "frontend visual check" de `qa.md`: apuntaba a `localhost`,
+  hacía `require('playwright')` con Playwright sin instalar, y no tenía
+  sesión de Supabase. Era un gate que no podía fallar nunca — **superseded
+  por esta entrada**.
+
+Pendiente / roto conocido:
+- El entorno remoto de Claude Code no puede alcanzar `*.vercel.app` (bloqueo
+  de egress, `403` en CONNECT), así que la pasada del piloto se ejecuta hoy
+  desde la sesión local del fundador. El harness devuelve
+  `PILOT INCONCLUSIVE`, nunca un falso verde.
+- Fase read-only: el piloto no lanza escaneos ni crea/borra proyectos. Las
+  pantallas que sólo se pueden verificar escribiendo (crear proyecto, editar
+  prompts, lanzar escaneo) siguen sin cobertura hasta UX-PILOT-2.
+- El alta con confirmación por email no es verificable por el piloto (no
+  tiene buzón); sigue siendo smoke manual del fundador.
+
+Referencias: `docs/agentic-user-pilot.md`, `.claude/agents/ux-pilot.md`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
