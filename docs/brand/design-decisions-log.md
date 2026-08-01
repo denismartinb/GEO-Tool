@@ -513,6 +513,20 @@ ver la pantalla con un escaneo real, correcciones aplicadas en el mismo PR:
   distinguía qué era cada tabla porque tenían formatos distintos y ningún
   rótulo que dijera qué subconjunto mostraban.
 
+**Decisión final sobre el donut (2026-08-01):** el fundador zanjó la pregunta
+abierta ("Otras webs 88%" hacía el donut casi inútil) — **"Otras webs" se
+retira del donut por completo**, no se oculta el bloque cuando la cobertura
+es baja. Los porcentajes restantes se recalculan como cuota del subconjunto
+**clasificado**, no del total de citas, así que las porciones siempre suman
+100% y el gráfico se mantiene legible aunque la mayoría de dominios reales
+sea long tail sin reconocer. Framing explícito del fundador: "se trata de
+dar un insight al usuario, no pasa nada porque no sea un dato exacto" — una
+simplificación deliberada y aprobada por producto, no una imprecisión
+colada. `sourceTypeBreakdown` (la agregación pura, con "unknown" incluido)
+no cambia — el recorte es solo de presentación en `SourceDonut`. Si no queda
+nada clasificado (0 fuentes reconocidas), el bloque entero se oculta en vez
+de mostrar un donut vacío.
+
 **Gate reforzado a raíz de esta revisión:** `.claude/agents/ux-pilot.md` gana
 una **checklist de fidelidad de diseño** de 6 puntos (¿se añadió algo no
 aprobado? ¿falta algo? ¿hay etiquetas que un usuario nuevo no sabría definir?

@@ -205,10 +205,22 @@ function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
                 ? "enc"
                 : "unk";
 
+  // "Otras webs" (unclassified) is deliberately excluded from this chart —
+  // founder decision, 2026-08-01: the donut exists to give a read on WHICH
+  // recognizable source families cite you, not to account for every last
+  // citation. Recomputed as a share of the CLASSIFIED subset (not of all
+  // citations), so the wedges always sum to 100% and stay legible even when
+  // most of the real domain list is long-tail and unrecognized — an honest
+  // relative read, not a claim about the true share of total citations.
+  const classified = breakdown.filter((s) => s.type !== "unknown" && s.cited > 0);
+  const classifiedTotal = classified.reduce((sum, s) => sum + s.cited, 0);
+  if (classifiedTotal === 0) return null;
+
+  const withColorVar = classified
+    .map((s) => ({ ...s, colorClass: colorClass(s.type), pct: Math.round((s.cited / classifiedTotal) * 100) }))
+    .sort((a, b) => b.cited - a.cited);
+
   let acc = 0;
-  const withColorVar = breakdown
-    .filter((s) => s.pct > 0)
-    .map((s) => ({ ...s, colorClass: colorClass(s.type) }));
   const stops = withColorVar
     .map((s) => {
       const from = acc;
@@ -225,17 +237,15 @@ function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
           className="cit2-donut"
           style={{ background: `conic-gradient(${stops})` }}
           role="img"
-          aria-label="Reparto de citas por tipo de fuente"
+          aria-label="Reparto de citas por tipo de fuente, entre las fuentes reconocidas"
         />
         <div className="cit2-donut-key">
-          {withColorVar
-            .filter((s) => s.cited > 0)
-            .map((s) => (
-              <span key={s.type}>
-                <i className={s.colorClass} />
-                {s.label} <b>{s.pct}%</b>
-              </span>
-            ))}
+          {withColorVar.map((s) => (
+            <span key={s.type}>
+              <i className={s.colorClass} />
+              {s.label} <b>{s.pct}%</b>
+            </span>
+          ))}
         </div>
       </div>
     </div>
