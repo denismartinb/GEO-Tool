@@ -456,7 +456,12 @@ describe("aggregateCitations", () => {
       })
     ];
 
-    const { impactBreakdown } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+    const { impactBreakdown, citationRows } = aggregateCitations({
+      rows,
+      projectDomain,
+      competitorDomains,
+      promptCategoryMap
+    });
 
     expect(impactBreakdown).toEqual({
       own: 1,
@@ -466,8 +471,15 @@ describe("aggregateCitations", () => {
       competitor: 1,
       neutral: 1
     });
-    const total = Object.values(impactBreakdown).reduce((sum, n) => sum + n, 0);
-    expect(total).toBe(6);
+
+    // Load-bearing invariant, not a restatement of the line above: every
+    // citation must land in exactly one bucket, so the buckets must sum to
+    // the same number the page shows as "Citas totales". A UI that divides
+    // by a hand-maintained subset of buckets renders percentages over 100%
+    // (real regression, 2026-08-01).
+    const bucketTotal = Object.values(impactBreakdown).reduce((sum, n) => sum + n, 0);
+    const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
+    expect(bucketTotal).toBe(totalCited);
   });
 
   it("13. a tracked competitor mention outranks other_brands_mentioned — the row stays 'adverse', never double-counted", () => {

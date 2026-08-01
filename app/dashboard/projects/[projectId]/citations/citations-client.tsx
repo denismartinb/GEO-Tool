@@ -139,7 +139,13 @@ function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: bool
 }
 
 function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; brandLabel: string }) {
-  const total = breakdown.own + breakdown.favorable + breakdown.adverse + breakdown.competitor + breakdown.neutral;
+  // Summed over every bucket present on the object, NOT a hand-written list of
+  // keys: the hand-written version silently went stale the moment a sixth
+  // bucket (`otherBrands`) was added, and shipped a bar reading "100%" and
+  // "267%" over a total that excluded it (caught by the ux-pilot design
+  // checklist, 2026-08-01). Adding a bucket must never again require
+  // remembering to update a second place.
+  const total = Object.values(breakdown).reduce((sum, n) => sum + n, 0);
   const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
 
   // Every bucket gets an explicit legend line when it has citations — a
