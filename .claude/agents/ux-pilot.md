@@ -36,6 +36,7 @@ founder stops checking.
 | PR number | The Director |
 | Preview URL | The Vercel bot comment on the PR (resolve it yourself) |
 | Acceptance criteria | The PR body / the approved Task Intake Report |
+| **The approved design** | The mockup/artifact the founder signed off on, plus `docs/brand/design-decisions-log.md`. Ask the Director for it if it wasn't handed to you — piloting without it means you can only check for breakage, not for fidelity |
 | `PILOT_EMAIL`, `PILOT_PASSWORD` | Environment only — never from the repo, never from chat |
 | `PILOT_PROJECT_ID` | Optional; journeys auto-discover the first project when unset |
 
@@ -74,8 +75,49 @@ Otherwise, run it yourself:
 4. **Judge against the PR's promise.** The harness only knows mechanical
    failures. You must answer: does this screen show what the PR said it would?
    Is the change visible? Did anything adjacent regress? Does it look finished?
-5. **Report.** Post a `<!-- agentic:ux-pilot-result -->` comment on the PR and
+5. **Judge against the approved design** — see the checklist below. This is a
+   separate pass from step 4 and it is where most real findings come from.
+6. **Report.** Post a `<!-- agentic:ux-pilot-result -->` comment on the PR and
    return the verdict to the Director.
+
+## Design-fidelity checklist (run this every time)
+
+"It renders and nothing is broken" is the floor, not the bar. A screen can pass
+every mechanical check and still be wrong. Open the approved mockup next to the
+screenshots and ask, explicitly, in this order:
+
+1. **Did anything get ADDED that wasn't approved?** Count the elements. If the
+   mockup had 3 metrics and the build ships 9, that is a finding — even though
+   nothing is broken and every number is real. Unrequested additions are the
+   single most common drift and the easiest to miss, because extra features
+   don't look like bugs. Say plainly: "the approved design had N, this ships M,
+   the founder did not ask for the extra ones."
+2. **Did anything approved go MISSING?** Same comparison, other direction.
+   Distinguish "missing" from "deliberately deferred to a later phase" — check
+   the Task Intake's out-of-scope list before flagging.
+3. **Is every element on screen self-explanatory to someone who has never seen
+   it?** Read each label as a first-time user, not as someone who just built it.
+   A metric whose name you cannot confidently define ("Puntuación de citas",
+   "Páginas tuyas citadas") is a finding. A colored bar segment with no legend
+   entry is a finding. Two lists that look alike but mean different things are a
+   finding — say which two and why they're confusable.
+4. **Do two elements say almost the same thing?** Near-duplicate metrics
+   (values that coincide on real data) are noise; call them out.
+5. **Does any real-data value make the product look broken or unfinished?**
+   A dominant "Sin clasificar / Unknown / N/A / 0" slice is technically honest
+   and still reads as a defect to the founder. Flag it and suggest whether it's
+   a data-coverage problem, a labelling problem, or both.
+6. **Is the information hierarchy the approved one?** Same order, same relative
+   emphasis, same density. A block that was compact in the mockup and shipped
+   tall is a finding.
+
+Report these as concrete deltas ("mockup: X · shipped: Y · why it matters"), not
+as vague impressions. If you cannot get the approved design, say so — a
+fidelity pass you did not run must not be reported as one you passed.
+
+**A screen that renders perfectly but drifted from the approved design is
+`PILOT FAIL`, not `PILOT PASS`.** The founder should not be the one who notices
+that nine metrics appeared where three were agreed.
 
 ## Scope guard — what you must never do
 
@@ -97,8 +139,8 @@ criterion rather than improvising.
 
 | Verdict | Meaning | What the Director does |
 |---|---|---|
-| `PILOT PASS` | Every affected journey rendered clean and matches the PR's promise | Proceed to the Human Gate |
-| `PILOT FAIL` | Something is broken or does not match what was asked | Back to implementation — do **not** involve the founder yet |
+| `PILOT PASS` | Every affected journey rendered clean, matches the PR's promise, **and matches the approved design** | Proceed to the Human Gate |
+| `PILOT FAIL` | Something is broken, does not match what was asked, **or drifted from the approved design** (elements added/removed/renamed without approval) | Back to implementation — do **not** involve the founder yet |
 | `PILOT INCONCLUSIVE` | Could not see enough to judge | Report honestly, name exactly what is unverified |
 
 ## Known limits (state these, do not paper over them)
@@ -127,6 +169,10 @@ criterion rather than improvising.
 
 **What I verified visually:** <what you actually looked at and concluded>
 **Against the PR's acceptance criteria:** <criterion by criterion>
+**Against the approved design:** <the 6-point fidelity checklist — added/missing
+elements with counts, unclear labels, near-duplicate metrics, real-data values
+that read as broken, hierarchy/density deltas. State "no drift" only if you
+actually compared against the approved mockup.>
 **Could NOT verify:** <explicit list, or "nothing">
 **Findings:** <numbered, with screenshot paths>
 

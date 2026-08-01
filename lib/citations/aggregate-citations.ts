@@ -37,6 +37,8 @@ export type CitationRow = {
   category: CitationCategory;
   brandMentioned: "yes" | "no" | "na";
   competitors: string[];
+  /** Untracked brands named in the answers this page was cited in. */
+  otherBrands: string[];
   cited: number;
   prompts: Array<{ text: string; brandMentioned: boolean }>;
   /** Order: grounded engines first, then cited desc. Never invented. */
@@ -91,6 +93,7 @@ export type ImpactBreakdown = {
   own: number;
   favorable: number;
   adverse: number;
+  otherBrands: number;
   competitor: number;
   neutral: number;
 };
@@ -116,6 +119,12 @@ export type CitationInputRow = {
 type ExtractedJson = {
   brand?: { mentioned?: boolean };
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
+  /** Brands the AI named that are NEITHER the project brand NOR a tracked
+   * competitor (lib/extraction/schema.ts). Lets the impact split tell
+   * "cited a page that pushes some other brand" apart from "cited a page
+   * that named nobody at all" — two very different situations that both
+   * used to collapse into a single "neutral" bucket. */
+  other_brands_mentioned?: string[];
   citations?: Array<{
     url?: string | null;
     domain?: string | null;
@@ -263,6 +272,7 @@ export function aggregateCitations(input: {
     brandMentionedYes: number;
     brandMentionedNo: number;
     competitors: Set<string>;
+    otherBrands: Set<string>;
     prompts: Array<{ text: string; brandMentioned: boolean }>;
     engines: Map<string, number>;
   };
@@ -291,6 +301,9 @@ export function aggregateCitations(input: {
     const mentionedCompetitors = (ext.competitors ?? [])
       .filter((c) => c.mentioned && c.name)
       .map((c) => c.name as string);
+    const mentionedOtherBrands = (ext.other_brands_mentioned ?? []).filter(
+      (name): name is string => typeof name === "string" && name.trim().length > 0
+    );
 
     const groupKey = result.prompt_id ?? `text:${promptText.toLowerCase()}`;
     let group = promptGroupsAgg.get(groupKey);
@@ -337,6 +350,7 @@ export function aggregateCitations(input: {
           brandMentionedYes: 0,
           brandMentionedNo: 0,
           competitors: new Set(),
+          otherBrands: new Set(),
           prompts: [],
           engines: new Map()
         };
@@ -347,6 +361,7 @@ export function aggregateCitations(input: {
       if (brandMentioned) row.brandMentionedYes += 1;
       else row.brandMentionedNo += 1;
       for (const name of mentionedCompetitors) row.competitors.add(name);
+      for (const name of mentionedOtherBrands) row.otherBrands.add(name);
       row.prompts.push({ text: promptText, brandMentioned });
       row.engines.set(provider, (row.engines.get(provider) ?? 0) + 1);
 
@@ -387,6 +402,7 @@ export function aggregateCitations(input: {
           ? "yes"
           : "no") as CitationRow["brandMentioned"],
       competitors: Array.from(row.competitors),
+      otherBrands: Array.from(row.otherBrands),
       cited: row.cited,
       prompts: row.prompts,
       engines: sortEngines(row.engines)
@@ -429,7 +445,14 @@ export function aggregateCitations(input: {
     }))
     .sort((a, b) => providerOrder.indexOf(a.provider) - providerOrder.indexOf(b.provider));
 
-  const impactBreakdown: ImpactBreakdown = { own: 0, favorable: 0, adverse: 0, competitor: 0, neutral: 0 };
+  const impactBreakdown: ImpactBreakdown = {
+    own: 0,
+    favorable: 0,
+    adverse: 0,
+    otherBrands: 0,
+    competitor: 0,
+    neutral: 0
+  };
   const sourceTypeCited = new Map<SourceTypeSlice["type"], number>();
 
   for (const row of citationRows) {
@@ -447,6 +470,12 @@ export function aggregateCitations(input: {
       typeKey = classifySourceType(row.domain);
     } else if (row.competitors.length > 0) {
       bucket = "adverse";
+      typeKey = classifySourceType(row.domain);
+    } else if (row.otherBrands.length > 0) {
+      // Named some brand, just not one we track. Materially different from
+      // "named nobody": these pages ARE pushing somebody, they're simply
+      // pushing a company outside the tracked competitor set.
+      bucket = "otherBrands";
       typeKey = classifySourceType(row.domain);
     } else {
       bucket = "neutral";

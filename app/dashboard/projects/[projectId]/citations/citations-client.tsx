@@ -8,7 +8,6 @@ import { classifySourceType, SOURCE_TYPE_LABEL } from "@/lib/citations/source-ty
 import type {
   CitationEngine,
   CitationRow,
-  EngineTotal,
   ImpactBreakdown,
   SourceTypeSlice
 } from "@/lib/citations/aggregate-citations";
@@ -154,8 +153,9 @@ function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; bran
     { key: "own", className: "s-own", label: `Páginas de ${brandLabel}` },
     { key: "favorable", className: "s-fav", label: "Terceros que te mencionan" },
     { key: "adverse", className: "s-adv", label: "Terceros que mencionan a un rival y no a ti" },
+    { key: "otherBrands", className: "s-oth", label: "Terceros que mencionan otras marcas" },
     { key: "competitor", className: "s-comp", label: "Páginas de un competidor" },
-    { key: "neutral", className: "s-neu", label: "Terceros que no mencionan ni tu marca ni a un rival" }
+    { key: "neutral", className: "s-neu", label: "Terceros que no mencionan ninguna marca" }
   ];
   const present = segments.filter((s) => breakdown[s.key] > 0);
 
@@ -242,6 +242,11 @@ function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow
 
   return (
     <div className="cit2-block cit2-opps">
+      {/* The two lists on this screen were reported as indistinguishable
+          (founder, 2026-08-01). Both now carry an explicit eyebrow saying
+          which subset they show, so "a shortlist of outreach targets" can't
+          be mistaken for "the full list of cited pages" below it. */}
+      <div className="cit2-blk-eyebrow">Oportunidades · subconjunto</div>
       <div className="cit2-blk-t">
         {rows.length > 0
           ? `${rows.length} ${rows.length === 1 ? "fuente cita" : "fuentes citan"} a un rival y no a ${brandLabel}`
@@ -292,10 +297,7 @@ export function CitationsClient({
   sourceTypeBreakdown,
   totalUrls,
   totalCited,
-  uniqueDomains,
   yours,
-  engineTotals,
-  citationScore,
   citationRateAnyDomain,
   brandLabel
 }: {
@@ -306,10 +308,7 @@ export function CitationsClient({
   sourceTypeBreakdown: SourceTypeSlice[];
   totalUrls: number;
   totalCited: number;
-  uniqueDomains: number;
   yours: number;
-  engineTotals: EngineTotal[];
-  citationScore: number | null;
   citationRateAnyDomain: number | null;
   brandLabel: string;
 }) {
@@ -338,7 +337,12 @@ export function CitationsClient({
 
   return (
     <div className="cit2-scope cit2-page">
-      {/* KPI strip */}
+      {/* KPI strip — deliberately three metrics, matching the approved
+          mockup. An earlier build shipped six here plus a per-engine line;
+          the founder cut it back (2026-08-01): "Puntuación de citas" already
+          lives on Visión general, "Páginas tuyas citadas" was near-identical
+          to "Citas propias" in every real scan, and "Dominios únicos" is
+          answered better by the list's own tab counts. */}
       <div className="cit2-kpis">
         <div>
           <div className="cit2-k">Respuestas con cita</div>
@@ -355,36 +359,7 @@ export function CitationsClient({
           <div className="cit2-k">Citas propias</div>
           <div className="cit2-v">{impactBreakdown.own}</div>
         </div>
-        <div>
-          <div className="cit2-k">Páginas tuyas citadas</div>
-          <div className="cit2-v">{yours}</div>
-        </div>
-        <div>
-          <div className="cit2-k">Dominios únicos</div>
-          <div className="cit2-v">{uniqueDomains}</div>
-        </div>
-        <div>
-          <div className="cit2-k">Puntuación de citas</div>
-          <div className="cit2-v">
-            {citationScore !== null ? Math.round(citationScore) : "—"}
-            {citationScore !== null && <small>/100</small>}
-          </div>
-        </div>
       </div>
-
-      {engineTotals.length > 0 && (
-        <div className="cit2-engtotals">
-          {engineTotals.map((e) => {
-            const meta = getEngineMeta(e.provider);
-            return (
-              <span key={e.provider}>
-                <i style={{ background: meta.color }} />
-                {meta.label} citó {e.domains} {e.domains === 1 ? "fuente" : "fuentes"}
-              </span>
-            );
-          })}
-        </div>
-      )}
 
       <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
       <SourceDonut breakdown={sourceTypeBreakdown} />
@@ -394,6 +369,12 @@ export function CitationsClient({
           <OpportunitiesBlock rows={opportunityRows} projectId={projectId} brandLabel={brandLabel} />
         </div>
         <div className="cit2-main">
+          <div className="cit2-listtitle">
+            <div className="cit2-blk-eyebrow">Todas las fuentes · lista completa</div>
+            <div className="cit2-blk-t">
+              {totalUrls} {totalUrls === 1 ? "página citada" : "páginas citadas"} en el último escaneo
+            </div>
+          </div>
           <div className="cit2-toolbar">
             <div className="cit2-search">
               <Icon name="search" size={15} />

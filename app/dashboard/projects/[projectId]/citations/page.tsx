@@ -83,7 +83,7 @@ export default async function CitationsPage({
     .map((c) => ({ name: c.name, domain: normalizeDomain(c.domain ?? "") }))
     .filter((c) => c.domain.length > 0);
 
-  const { citationRows, hasStructuredCitations, engineTotals, impactBreakdown, sourceTypeBreakdown } =
+  const { citationRows, hasStructuredCitations, impactBreakdown, sourceTypeBreakdown } =
     aggregateCitations({
       rows: (results ?? []) as CitationInputRow[],
       projectDomain: project.domain ?? "",
@@ -94,7 +94,6 @@ export default async function CitationsPage({
   const totalUrls = citationRows.length;
   const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
   const yours = citationRows.filter((r) => r.category === "brand").length;
-  const uniqueDomains = new Set(citationRows.map((r) => r.domain).filter(Boolean)).size;
   // Only neutral/third-party domains are actionable outreach targets.
   // Competitor domains (already tracked in project_competitors) are excluded:
   // a brand will never earn a citation on a rival's own site. Unresolved
@@ -210,10 +209,7 @@ export default async function CitationsPage({
           sourceTypeBreakdown={sourceTypeBreakdown}
           totalUrls={totalUrls}
           totalCited={totalCited}
-          uniqueDomains={uniqueDomains}
           yours={yours}
-          engineTotals={engineTotals}
-          citationScore={score?.citation_score ?? null}
           citationRateAnyDomain={citationRateAnyDomain}
           brandLabel={project.brand}
         />

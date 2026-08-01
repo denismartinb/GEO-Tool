@@ -437,7 +437,18 @@ describe("aggregateCitations", () => {
           citations: [{ source: "grounding", domain: "adverse-third-party.com", title: "Adverse" }]
         }
       }),
-      // Third party, neither brand nor a tracked competitor mentioned → neutral.
+      // Third party, no brand and no TRACKED competitor, but the answer did
+      // name some other brand → otherBrands, not neutral.
+      row({
+        provider: "gemini",
+        brand_mentioned: false,
+        extracted_json: {
+          other_brands_mentioned: ["Untracked Telco"],
+          citations: [{ source: "grounding", domain: "other-brands-third-party.com", title: "Other brands" }]
+        }
+      }),
+      // Third party, no brand, no tracked competitor, no other brand at
+      // all → genuinely neutral.
       row({
         provider: "gemini",
         brand_mentioned: false,
@@ -447,9 +458,35 @@ describe("aggregateCitations", () => {
 
     const { impactBreakdown } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
 
-    expect(impactBreakdown).toEqual({ own: 1, favorable: 1, adverse: 1, competitor: 1, neutral: 1 });
+    expect(impactBreakdown).toEqual({
+      own: 1,
+      favorable: 1,
+      adverse: 1,
+      otherBrands: 1,
+      competitor: 1,
+      neutral: 1
+    });
     const total = Object.values(impactBreakdown).reduce((sum, n) => sum + n, 0);
-    expect(total).toBe(5);
+    expect(total).toBe(6);
+  });
+
+  it("13. a tracked competitor mention outranks other_brands_mentioned — the row stays 'adverse', never double-counted", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        provider: "gemini",
+        brand_mentioned: false,
+        extracted_json: {
+          competitors: [{ name: "Rival", mentioned: true }],
+          other_brands_mentioned: ["Some Other Brand"],
+          citations: [{ source: "grounding", domain: "both-signals.com", title: "Both" }]
+        }
+      })
+    ];
+
+    const { impactBreakdown } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(impactBreakdown.adverse).toBe(1);
+    expect(impactBreakdown.otherBrands).toBe(0);
   });
 
   it("12. sourceTypeBreakdown classifies third-party rows via classifySourceType and own/competitor via category, percentages sum to ~100", () => {

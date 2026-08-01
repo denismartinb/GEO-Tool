@@ -1872,6 +1872,10 @@ a {
   --cit-own: var(--accent);
   --cit-fav: var(--pos-ink);
   --cit-adv: #c2410c;
+  /* "Other brands" sits between adverse and neutral in meaning, and gets an
+     amber-ish tone that reads as "worth knowing" without the alarm of the
+     competitor red. Not the brand's reserved logo amber (#FFB020). */
+  --cit-oth: #b45309;
   --cit-comp: #c0392b;
   --cit-neu: var(--ink-4);
   --cit-com: #c2410c;
@@ -1921,6 +1925,12 @@ a {
    citation list all share this shell. */
 .cit2-block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--brand-shadow-card); padding: 15px 16px; margin-top: 12px; }
 .cit2-blk-t { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 14.5px; letter-spacing: -.01em; color: var(--ink); margin-bottom: 10px; }
+/* Eyebrow above a block title, naming WHICH subset of the data the block
+   shows. Added after the founder reported the opportunities list and the
+   full citation list were indistinguishable from each other. */
+.cit2-blk-eyebrow { font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px; }
+.cit2-listtitle { margin-top: 12px; }
+.cit2-listtitle .cit2-blk-t { margin-bottom: 0; }
 
 /* Impact bar */
 .cit2-split { display: flex; height: 32px; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); }
@@ -1931,6 +1941,7 @@ a {
 .s-own { background: var(--cit-own); }
 .s-fav { background: var(--cit-fav); }
 .s-adv { background: var(--cit-adv); }
+.s-oth { background: var(--cit-oth); }
 .s-comp { background: var(--cit-comp); }
 .s-neu { background: var(--cit-neu); }
 .cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }

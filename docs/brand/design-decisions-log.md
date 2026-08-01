@@ -479,6 +479,49 @@ Descartado explícitamente (para no reabrirlo sin motivo nuevo):
   descartarla) — cambio en `lib/scan/extraction.ts`, fuera de esta fase
   por tocar el pipeline de escaneo; solo aplicaría a escaneos futuros.
 
+**Revisión del fundador sobre datos reales (2026-08-01, movistar.es).** Tras
+ver la pantalla con un escaneo real, correcciones aplicadas en el mismo PR:
+
+- **Tira de KPIs: de 6 métricas a 3.** El mockup aprobado tenía 3; la
+  implementación había subido a 6 (más una línea de totales por motor) sin
+  pedirlo — deriva de alcance, señalada explícitamente por el fundador. Se
+  quedan **Respuestas con cita · Citas totales · Citas propias**. Retiradas:
+  *Puntuación de citas* (ya vive en Visión general, duplicarla aquí confunde),
+  *Páginas tuyas citadas* (numéricamente casi idéntica a "Citas propias" en
+  todos los escaneos reales) y *Dominios únicos* (los contadores de las
+  pestañas de la lista ya responden eso mejor).
+- **Retirada la línea "Gemini citó N fuentes · ChatGPT citó M"** — no estaba
+  en el diseño aprobado.
+- **Bucket "neutras" partido en dos, usando `other_brands_mentioned`**
+  (campo que ya existía en `lib/extraction/schema.ts`, poblado por la
+  extracción y hasta ahora sin usar en esta pantalla): "Terceros que
+  mencionan otras marcas" (la respuesta nombró alguna marca, solo que no
+  trackeada) vs. "Terceros que no mencionan ninguna marca". El fundador pidió
+  renombrar el bucket a "otros competidores"; se implementó como "otras
+  marcas" porque es lo que el dato afirma de verdad — un competidor no
+  trackeado no está verificado como competidor. Un competidor **trackeado**
+  siempre gana sobre este bucket (test 13), así que nunca hay doble conteo.
+- **"Sin clasificar" → "Otras webs"** y lista curada de dominios ampliada de
+  ~30 a ~90 entradas (medios españoles e internacionales, comparadores,
+  redes/comunidades). El fundador reportó un 55% "Sin clasificar" que "da muy
+  mala imagen": el problema era mitad cobertura, mitad etiqueta — la etiqueta
+  sugería fallo del producto cuando describe un grupo real de long tail. La
+  lista sigue siendo deliberadamente no exhaustiva y lo no reconocido nunca se
+  adivina.
+- **Eyebrow en las dos listas** (`.cit2-blk-eyebrow`): "Oportunidades ·
+  subconjunto" y "Todas las fuentes · lista completa". El fundador no
+  distinguía qué era cada tabla porque tenían formatos distintos y ningún
+  rótulo que dijera qué subconjunto mostraban.
+
+**Gate reforzado a raíz de esta revisión:** `.claude/agents/ux-pilot.md` gana
+una **checklist de fidelidad de diseño** de 6 puntos (¿se añadió algo no
+aprobado? ¿falta algo? ¿hay etiquetas que un usuario nuevo no sabría definir?
+¿métricas casi duplicadas? ¿algún valor real que se lea como producto roto?
+¿la jerarquía es la aprobada?) y la regla explícita de que **una pantalla que
+renderiza perfecta pero se ha desviado del diseño aprobado es `PILOT FAIL`,
+no `PILOT PASS`**. El piloto había dado PASS a esta pantalla sin detectar que
+tenía el doble de métricas que el mockup firmado.
+
 Pendiente / roto conocido:
 - El nombre "Páginas citadas" es, para las citas de Gemini, técnicamente
   "Dominios citados" hasta que se implemente la persistencia de URL exacta
