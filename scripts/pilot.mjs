@@ -126,11 +126,27 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures }) {
     findings.map((finding) => [`${finding.viewport}::${finding.label}`, finding])
   );
 
+  // Booleans only, never values. Without this, a missing *optional* secret is
+  // invisible: the run just fails at the same wall with no hint that the thing
+  // meant to get through it was never configured.
+  const configLine =
+    `**Configuración detectada:** ` +
+    [
+      ["PILOT_EMAIL", Boolean(process.env.PILOT_EMAIL)],
+      ["PILOT_PASSWORD", Boolean(process.env.PILOT_PASSWORD)],
+      ["PILOT_PROJECT_ID", Boolean(process.env.PILOT_PROJECT_ID)],
+      ["PILOT_VERCEL_BYPASS", Boolean(process.env.PILOT_VERCEL_BYPASS)]
+    ]
+      .map(([name, present]) => `${name} ${present ? "✅" : "—"}`)
+      .join(" · ") +
+    "\n\n";
+
   const header =
     `<!-- agentic:ux-pilot-result -->\n` +
     `## Agentic User Pilot — ${verdict}\n\n` +
     `**Deployment:** ${baseUrl}${sha ? ` (commit \`${sha.slice(0, 7)}\`)` : ""}\n` +
-    `**Ejecutado por:** ${process.env.GITHUB_ACTIONS === "true" ? "GitHub Actions" : "sesión local"}\n\n`;
+    `**Ejecutado por:** ${process.env.GITHUB_ACTIONS === "true" ? "GitHub Actions" : "sesión local"}\n\n` +
+    configLine;
 
   let table = "";
   if (labels.length > 0) {
