@@ -235,45 +235,44 @@ export function buildTestPromptText(runId: string): string {
  * matching rows must not turn this into an infinite loop.
  */
 export async function sweepTestPrompts(page: Page, projectId: string): Promise<number> {
-  const MAX_SWEEPS = 10;
+  const MAX_SWEEPS = 12;
   let deleted = 0;
 
-  for (let i = 0; i < MAX_SWEEPS; i += 1) {
+  const openList = async (tag: string) => {
     // The cache-busting param matters: Next's App Router serves the client-side
     // RSC cache on repeat navigations to the same URL, so a plain re-`goto`
-    // after a delete can render the list exactly as it was before it. Observed
-    // live — a run reported having swept a prompt while the page still listed
-    // it, and two runs' debris survived a sweep that believed it had succeeded.
+    // after a delete can render the list exactly as it was before it.
     // The page ignores unknown search params.
-    await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=${Date.now()}-${i}`, {
+    await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=${tag}`, {
       waitUntil: "domcontentloaded"
     });
-
     // "Añadir prompts" only exists once the real page renders, so it is a
-    // reliable signal that the loading skeleton is gone and the list below can
-    // be trusted.
+    // reliable signal that the loading skeleton is gone.
     await waitForContent(page, [
       () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
       () => page.getByText(/no hay prompts activos/i).isVisible()
     ]);
+  };
 
-    // Deliberately does NOT drive the "Buscar prompt" box. That input is
-    // rendered up to three times and shown one per breakpoint, is a controlled
-    // React input, and filters client-side — three dependencies this sweep does
-    // not need. The write-project holds a handful of prompts, so scanning the
-    // rendered list directly is both simpler and strictly more reliable.
-    const row = page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).first();
+  await openList(`sweep-${Date.now()}`);
 
-    if (!(await row.isVisible().catch(() => false))) {
-      if (deleted === 0) {
-        // Nothing found on the first pass is the one case worth photographing:
-        // either the project genuinely has no test prompts (fine) or the list
-        // is not rendering as expected (a finding). Without this the caller
-        // only ever sees "swept 0" with no way to tell which.
-        await captureStep(page, `sweep-found-nothing-pass-${i + 1}`);
-      }
-      break;
-    }
+  // Iterates by index rather than repeatedly deleting `.first()`. Deleting a
+  // prompt deactivates it, but the list is rendered from the last scan's
+  // results, so its row stays on screen until a later scan drops it — always
+  // targeting the first match would re-delete the same already-inactive prompt
+  // and never reach the others.
+  const total = await page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).count();
+
+  if (total === 0) {
+    await captureStep(page, "sweep-found-nothing");
+    return 0;
+  }
+
+  for (let i = 0; i < Math.min(total, MAX_SWEEPS); i += 1) {
+    if (i > 0) await openList(`sweep-${Date.now()}-${i}`);
+
+    const row = page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).nth(i);
+    if (!(await row.isVisible().catch(() => false))) continue;
 
     await row.click();
 
@@ -282,16 +281,18 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
     // getByRole("dialog") matches both once the modal opens, so target the
     // classes explicitly rather than letting strict mode fail on the ambiguity.
     const drawer = page.locator(".prompt-drawer");
-    await expect(drawer, "el panel del prompt no se abrió al hacer clic en la fila").toBeVisible();
+    if (!(await drawer.isVisible().catch(() => false))) continue;
 
-    await drawer.getByLabel("Borrar prompt").click();
+    const deleteButton = drawer.getByLabel("Borrar prompt");
+    if (!(await deleteButton.isVisible().catch(() => false))) continue;
+    await deleteButton.click();
 
     const confirm = page.locator(".modal-card");
     await expect(confirm, "no apareció el modal de confirmación de borrado").toBeVisible();
     await confirm.getByRole("button", { name: /^borrar prompt$/i }).click();
 
     // DeletePromptButton's onDeleted closes the drawer; wait for that rather
-    // than a fixed sleep so the next pass starts from a settled list.
+    // than a fixed sleep so the next pass starts from a settled page.
     await expect(drawer).toBeHidden({ timeout: 15_000 });
     deleted += 1;
   }
@@ -300,15 +301,17 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
 }
 
 /**
- * The invariant that actually matters after cleanup: the write-project carries
- * no pilot debris at all.
+ * Reads the project's ACTIVE prompt count — the number that consumes
+ * `plan.caps.prompts` — from the product's own "GenScore monitoriza N prompts"
+ * line (`totalPrompts`, which the page derives from `is_active = true`).
  *
- * `sweepTestPrompts` returning a positive count is not the same claim — a run
- * once deleted one prompt, reported success, and left two behind. Asserting the
- * end state instead of the action is what makes "cleaned up" mean cleaned up.
+ * Counting rendered rows would measure the wrong thing: the prompt list is
+ * built from the last scan's results, so a deactivated prompt keeps its row
+ * until a later scan drops it. Two runs' worth of confusion came from treating
+ * a lingering row as un-deleted quota.
  */
-export async function assertNoTestPromptsRemain(page: Page, projectId: string): Promise<void> {
-  await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=verify-${Date.now()}`, {
+export async function readActivePromptCount(page: Page, projectId: string): Promise<number> {
+  await page.goto(`/dashboard/projects/${projectId}/prompts?pilot=count-${Date.now()}`, {
     waitUntil: "domcontentloaded"
   });
   await waitForContent(page, [
@@ -316,14 +319,21 @@ export async function assertNoTestPromptsRemain(page: Page, projectId: string): 
     () => page.getByText(/no hay prompts activos/i).isVisible()
   ]);
 
-  const remaining = await page.getByText(PILOT_TEST_PROMPT_MARKER, { exact: false }).count();
-  if (remaining > 0) {
-    await captureStep(page, "cleanup-left-debris");
+  if (await page.getByText(/no hay prompts activos/i).isVisible().catch(() => false)) return 0;
+
+  const summary = await page
+    .getByText(/GenScore monitoriza/i)
+    .first()
+    .innerText()
+    .catch(() => "");
+  const match = summary.match(/monitoriza\s+(\d+)/i);
+  if (!match) {
+    await captureStep(page, "active-prompt-count-unreadable");
     throw new Error(
-      `La limpieza dejó ${remaining} prompt(s) de prueba en el proyecto de escritura. ` +
-        "Cada pasada consume cupo del plan, así que esto no puede darse por bueno."
+      `No se pudo leer el número de prompts activos. Texto encontrado: "${summary.slice(0, 120)}"`
     );
   }
+  return Number(match[1]);
 }
 
 /**

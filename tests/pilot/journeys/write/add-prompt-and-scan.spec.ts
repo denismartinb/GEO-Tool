@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 import {
-  assertNoTestPromptsRemain,
   assertSingleManualPromptDraft,
   buildTestPromptText,
   captureStep,
+  readActivePromptCount,
   resolveOrCreateWriteProject,
   sweepTestPrompts,
   waitForNoActiveRun
@@ -53,13 +53,19 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     return id;
   });
 
-  await test.step("cleanup: sweep any test prompts left by a previous run", async () => {
-    const swept = await sweepTestPrompts(page, projectId);
-    if (swept > 0) {
-      // eslint-disable-next-line no-console
-      console.log(`Swept ${swept} leftover pilot test prompt(s) before starting.`);
+  const baselinePromptCount = await test.step(
+    "cleanup: sweep any test prompts left by a previous run, then record the baseline",
+    async () => {
+      const swept = await sweepTestPrompts(page, projectId);
+      if (swept > 0) {
+        // eslint-disable-next-line no-console
+        console.log(`Swept ${swept} leftover pilot test prompt(s) before starting.`);
+      }
+      // Recorded AFTER the opening sweep so leftover debris from an earlier
+      // failed run is never baked into the baseline as if it belonged there.
+      return readActivePromptCount(page, projectId);
     }
-  });
+  );
 
   await page.goto(`/dashboard/projects/${projectId}/prompts`, { waitUntil: "domcontentloaded" });
 
@@ -162,9 +168,17 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     const swept = await sweepTestPrompts(page, projectId);
     expect(swept, "expected to clean up at least the prompt this run just created").toBeGreaterThan(0);
 
-    // The count above says an action happened; this says the project is
-    // actually clean. Only the second one is the property worth guaranteeing.
-    await assertNoTestPromptsRemain(page, projectId);
+    // The real invariant: the project's ACTIVE prompt count — the number that
+    // consumes plan.caps.prompts — is back where it started. Counting rendered
+    // rows would measure the wrong thing, since a deleted prompt keeps its row
+    // until a later scan drops it.
+    const afterCleanup = await readActivePromptCount(page, projectId);
+    expect(
+      afterCleanup,
+      `la limpieza no devolvió el cupo de prompts activos a su valor inicial ` +
+        `(${baselinePromptCount}); cada pasada que deja residuo consume cupo del plan`
+    ).toBe(baselinePromptCount);
+
     await captureStep(page, "prompts-after-cleanup");
   });
 });
