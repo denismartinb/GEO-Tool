@@ -879,61 +879,6 @@ export default async function CompetitorsPage({
             </div>
           </div>
         ) : null}
-
-        {/* Footer links */}
-        <div
-          style={{
-            display: "flex",
-            gap: 20,
-            marginTop: 28,
-            paddingTop: 18,
-            borderTop: "1px solid var(--line-soft)",
-            flexWrap: "wrap"
-          }}
-        >
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              fontSize: 13,
-              color: "var(--ink-3)",
-              fontWeight: 600
-            }}
-          >
-            <Icon name="overview" size={13} />
-            Visión general
-          </Link>
-          <Link
-            href={`/dashboard/projects/${projectId}/runs`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              fontSize: 13,
-              color: "var(--ink-3)",
-              fontWeight: 600
-            }}
-          >
-            <Icon name="runs" size={13} />
-            Historial de escaneos
-          </Link>
-          <Link
-            href={`/dashboard/projects/${projectId}/prompts`}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-              fontSize: 13,
-              color: "var(--ink-3)",
-              fontWeight: 600
-            }}
-          >
-            <Icon name="prompts" size={13} />
-            Prompts
-          </Link>
-        </div>
         </>
         )}
       </div>

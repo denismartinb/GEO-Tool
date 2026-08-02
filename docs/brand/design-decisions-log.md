@@ -1040,6 +1040,34 @@ más, con capturas reales de dispositivo:
    escaneos nuevos — los resultados ya guardados no se reprocesan
    retroactivamente, igual que el resto del histórico de escaneos.
 
+**Tercera revisión del fundador sobre el preview (2026-08-02).**
+
+1. **Enlaces de pie de página eliminados.** La pantalla tenía un bloque
+   "Visión general / Historial de escaneos / Prompts" al final, heredado del
+   layout previo al rediseño — redundante con la navegación lateral y
+   ausente en el resto de pantallas v2 (Citas, Prompts). Eliminado.
+2. **"Sigue saliendo lo mismo tras volver a escanear" — causa raíz
+   identificada, sin implementar todavía.** `computeEmergingBrands`
+   (`lib/competitors/emerging-brands.ts`) cuenta, por marca, el número de
+   **prompts distintos** en los que aparece — pero sobre **todo el
+   histórico de escaneos completados del proyecto**, igual que la cuota de
+   voz y "Terreno por tema" (comentario en `page.tsx`: "cumulative, same
+   population as the podium/matrix"). Ese conteo es acumulativo y no puede
+   bajar: si un prompt ya llevó a AliExpress a "6 de 7" en un escaneo
+   anterior al fix de EMERGING-BRANDS-GROUNDING-1, ese "6" queda fijado para
+   siempre — un escaneo nuevo solo puede añadir prompts a la cuenta, nunca
+   quitarlos, así que sobre el mismo conjunto de prompts ya contaminado
+   volver a escanear no cambia nada visible. El fix de grounding evita que
+   el ruido **crezca** en escaneos futuros; no limpia el que ya había antes
+   del fix. Esto no se ha corregido aún porque cambia una decisión de
+   diseño ya documentada (ventana acumulativa, consistente con el resto de
+   la página) y toca el flujo de competidores — pendiente de decidir con el
+   fundador entre: (a) acotar "marcas emergentes" al último escaneo
+   completado en vez de a todo el histórico, que resolvería esto de
+   inmediato y encaja mejor con la semántica de "emergente"; o (b) añadir un
+   "descartar" manual por marca (requeriría persistir estado nuevo). Sin
+   tocar código de negocio hasta que el fundador elija.
+
 ---
 
 ## Cómo mantener este documento
