@@ -143,9 +143,10 @@ only evidence of what the product does when someone *uses* it. Read them.
 
 For each interaction capture, ask:
 
-1. **Did it do anything at all?** `findings.jsonl` marks `outcome: "dead"`
-   when a control changed nothing. A control that looks clickable and isn't is
-   always a finding, never a flake to shrug at.
+1. **Did it do anything at all?** `interactions.jsonl` (a separate file from
+   `findings.jsonl`, which only carries page-load signals) marks
+   `outcome: "dead"` when a control changed nothing. A control that looks
+   clickable and isn't is always a finding, never a flake to shrug at.
 2. **Did what appeared actually appear WELL?** This is the one a passing
    assertion will not catch for you. A revealed panel/tooltip/menu can be
    "visible" to the DOM and still be: clipped by a parent, running off the

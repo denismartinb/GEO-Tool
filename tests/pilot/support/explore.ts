@@ -44,7 +44,16 @@ import { redact } from "./env";
  * touch, so "not covered" never masquerades as "verified".
  */
 
-const FINDINGS_PATH = ".pilot/findings.jsonl";
+/**
+ * Interaction findings live in their OWN file, not in `findings.jsonl`.
+ * `scripts/pilot.mjs` builds the per-screen verdict table by grouping
+ * `findings.jsonl` on `finding.label`; interaction records have no `label`,
+ * so writing them there rendered a phantom `undefined` row in the PR comment
+ * (first real run, 2026-08-02). Separate files also keep the two concerns
+ * legible: one is "did the screen load", the other is "what did its controls
+ * do".
+ */
+const INTERACTIONS_PATH = ".pilot/interactions.jsonl";
 const SCREENS_DIR = ".pilot/screens";
 
 /**
@@ -83,8 +92,17 @@ const EXPLORABLE = [
 const DESTRUCTIVE_TEXT =
   /\b(elimin|borrar|borra|delete|remov|desactiv|cancel|lanz|escane|scan|guard|sav(e|ar)|crear|creat|añad|add|nuev|new|envi|submit|pag(ar|o)|pay|suscrib|subscri|upgrade|downgrade|invit|desconect|cerrar sesi|sign ?out|log ?out|restablec|reset|reintent|retry)/i;
 
-/** Cap so a screen with hundreds of rows cannot blow the 60s test budget. */
-const MAX_INTERACTIONS_PER_SCREEN = 8;
+/**
+ * Budgets. The first real run blew the 60s per-test timeout on the citations
+ * screen at 375px — 32 list rows plus tabs plus tooltips, each with a
+ * full-page screenshot of a very tall mobile page. Both limits below exist so
+ * a long screen degrades to "fewer controls exercised" (visible in the
+ * evidence, since every skipped control is still recorded) rather than to a
+ * failed run that verifies nothing at all.
+ */
+const MAX_INTERACTIONS_PER_SCREEN = 4;
+/** Hard stop well inside Playwright's 60s per-test timeout. */
+const SWEEP_BUDGET_MS = 25_000;
 
 export interface InteractionFinding {
   screen: string;
@@ -106,7 +124,7 @@ function slug(text: string): string {
 
 function record(finding: InteractionFinding): void {
   mkdirSync(".pilot", { recursive: true });
-  appendFileSync(FINDINGS_PATH, `${JSON.stringify({ kind: "interaction", ...finding })}\n`);
+  appendFileSync(INTERACTIONS_PATH, `${JSON.stringify({ kind: "interaction", ...finding })}\n`);
 }
 
 /**
@@ -173,11 +191,14 @@ export async function exploreInteractions(
   };
   page.on("console", onConsole);
 
+  const startedAt = Date.now();
+
   try {
     const candidates = page.locator(EXPLORABLE);
     const total = Math.min(await candidates.count(), MAX_INTERACTIONS_PER_SCREEN);
 
     for (let i = 0; i < total; i++) {
+      if (Date.now() - startedAt > SWEEP_BUDGET_MS) break;
       const el = candidates.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
 
@@ -222,7 +243,12 @@ export async function exploreInteractions(
       if (changed || introducedOverflow) {
         screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(screen)}--x${i + 1}-${slug(control)}.png`;
         mkdirSync(SCREENS_DIR, { recursive: true });
-        await page.screenshot({ path: screenshot, fullPage: true });
+        // Viewport-sized, NOT fullPage: the control was scrolled into view
+        // above, so the revealed state is on screen, and a full-page capture
+        // of a very tall mobile list is what pushed the first real run past
+        // its timeout. The page-level captures (visitAsUser) stay fullPage —
+        // those are for judging the whole screen.
+        await page.screenshot({ path: screenshot });
         await testInfo.attach(`${screen} → ${control} (${testInfo.project.name})`, {
           path: screenshot,
           contentType: "image/png"
@@ -243,7 +269,10 @@ export async function exploreInteractions(
 
       // Restore the default state where the control was a toggle, so the next
       // candidate is exercised from a clean baseline rather than compounding.
-      if (changed) {
+      // Skipped once the budget is spent — leaving a panel open costs nothing
+      // (the page is re-navigated for the next screen anyway) whereas
+      // overrunning the timeout loses the whole run's evidence.
+      if (changed && Date.now() - startedAt <= SWEEP_BUDGET_MS) {
         await el.click({ timeout: 5_000 }).catch(() => undefined);
         await page.waitForTimeout(150);
       }
