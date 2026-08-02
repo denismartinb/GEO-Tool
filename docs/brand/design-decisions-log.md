@@ -661,6 +661,32 @@ escala y solo cubre lo que alguien se acordó de escribir.
   375/768/1280**, y que una comprobación hecha en un solo ancho está
   *no verificada* en los otros dos.
 
+**Historial de fallos del propio piloto (para que no se repitan).** Cada uno
+costó una iteración y dejó una regla o un test detrás:
+
+| # | Fallo | Por qué pasó | Qué lo impide ahora |
+|---|---|---|---|
+| 1 | `PILOT PASS` sobre una pantalla que el harness nunca visitó | No existía journey para `/citations`; el verde era real para lo que probó, y se leyó como cobertura de lo que no | Journey de citations añadido; el doc del agente obliga a decir qué NO se cubrió |
+| 2 | Barra de impacto con leyenda incompleta (2 de 5 buckets) | Las etiquetas estaban escritas a mano y no seguían a los datos | Leyenda derivada de los buckets con datos |
+| 3 | Porcentajes sumando 267% | Se añadió un sexto bucket y el divisor del total, escrito a mano, se quedó obsoleto | Total derivado de `Object.values`; test del invariante buckets = citas totales |
+| 4 | KPIs partidos 2+1 en móvil | `flex-basis: 140px` desbordaba a 375px | `flex-basis: 0`; checklist punto 6 (densidad/jerarquía) |
+| 5 | "Verificado" sin haber probado el clic | Una captura del estado cerrado no puede demostrar una interacción | Test real de hover/clic con `expect().toBeVisible()`; helper `captureInteraction` |
+| 6 | Tooltip recortado que pasaba `toBeVisible()` | Un elemento cortado sigue siendo "visible" para el DOM | `assertFullyVisible`: afirma no-recortado y dentro del viewport |
+| 7 | Deny-list que no rechazaba "Eliminar proyecto" | `\belimina\b` no casa con "Eliminar" | Stems anclados al inicio; decoy permanente en la fixture |
+| 8 | Timeout de 60s en el primer barrido real | 32 filas × capturas de página completa en móvil | Tope de 4 interacciones, presupuesto de 25s, capturas de viewport |
+| 9 | Fila fantasma `undefined` en la tabla del PR | Los registros de interacción no tienen `label` y contaminaban `findings.jsonl` | Fichero propio `interactions.jsonl` |
+
+**Propuestas de mejora obligatorias (2026-08-02).** A petición explícita del
+fundador ("que sugiera cambios antes de entregarme algo SIEMPRE"), todo
+informe del piloto termina con una sección **"Mejoras propuestas"**: mínimo
+tres, concretas y accionables, ordenadas por valor, marcando `[barato]` las
+que son solo copy o CSS. Nunca vacía, tampoco en un PASS — una sección vacía
+significa que el piloto pasó las checklists sin aplicar criterio, y el
+Director la devuelve. El Director **incorpora las baratas antes del Human
+Gate** y sube el resto con recomendación; queda escrito en
+`.claude/agents/director.md`, `CLAUDE.md` (§Agentic User Pilot y §Human Gate,
+que gana la pregunta 6) y `docs/agentic-user-pilot.md`.
+
 ---
 
 ## Cómo mantener este documento

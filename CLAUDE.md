@@ -120,18 +120,35 @@ auto-merge. Human Gate is always manual.**
 
 Before the founder is asked to look at anything, the `ux-pilot` agent must open
 the PR's Vercel preview, log in with the pilot account, walk the affected
-screens at 375 / 768 / 1280 px, **look at the screenshots**, and judge them
-against the PR's acceptance criteria. See `docs/agentic-user-pilot.md`.
+screens at 375 / 768 / 1280 px, **interact with them**, **look at the
+screenshots**, and judge them. See `docs/agentic-user-pilot.md`.
 
 - `PILOT PASS` → the PR may go to the Human Gate.
 - `PILOT FAIL` → the Director iterates. The founder is not involved.
 - `PILOT INCONCLUSIVE` → the PR **may not** be presented as verified. Say
   exactly which criteria are unverified and why.
 
+It judges against four things, not one:
+
+1. the PR's acceptance criteria;
+2. the **approved design** — anything added, removed or renamed without
+   approval is `PILOT FAIL`, even if nothing is broken;
+3. an **interaction checklist** — the harness sweeps every safe in-page control
+   and captures the result, so a dead control, a reveal that renders clipped or
+   off-viewport, or an interaction that breaks the layout is a finding;
+4. a **UX quality bar** — is this actually good, not just correct.
+
+**Every pilot report ends with concrete proposed improvements, minimum three,
+even on a PASS.** The Director folds in the cheap ones (copy/CSS) before the
+Human Gate and surfaces the rest with a recommendation. An empty proposals
+section means the pilot ran checklists without judgement — it goes back.
+
 **Never report a pass for something the pilot did not see.** An unreachable
 preview, a failed login, or a blocked egress policy is INCONCLUSIVE, never PASS.
+Interaction-gated behaviour no assertion covered is "unverified", not "verified".
 The pilot is strictly read-only: no scan launches, no project creation or
-deletion, no writing forms, no billing flows.
+deletion, no writing forms, no billing flows — enforced in code by an
+allow-list, not by convention.
 
 ---
 
@@ -144,8 +161,9 @@ Human Gate is always manual. It asks:
 3. Did validation pass? Did tests pass?
 4. Did Claude QA accept?
 5. **Did the agentic user pilot pass, and what did it leave unverified?**
-6. Are there product risks?
-7. Should this merge now?
+6. **What did the pilot propose improving, and what was folded in already?**
+7. Are there product risks?
+8. Should this merge now?
 
 Only after Human Gate may a PR be merged.
 
