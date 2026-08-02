@@ -14,8 +14,13 @@ export function generateStaticParams() {
   return GLOSSARY_TERMS.map((t) => ({ termino: t.slug }));
 }
 
-export function generateMetadata({ params }: { params: { termino: string } }): Metadata {
-  const entry = GLOSSARY_TERMS.find((t) => t.slug === params.termino);
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ termino: string }>;
+}): Promise<Metadata> {
+  const { termino } = await params;
+  const entry = GLOSSARY_TERMS.find((t) => t.slug === termino);
   if (!entry) return {};
   return {
     title: `¿Qué es ${entry.term}? — Glosario GEO — Genscore`,
@@ -24,8 +29,9 @@ export function generateMetadata({ params }: { params: { termino: string } }): M
   };
 }
 
-export default function GlosarioTerminoPage({ params }: { params: { termino: string } }) {
-  const entry = GLOSSARY_TERMS.find((t) => t.slug === params.termino);
+export default async function GlosarioTerminoPage({ params }: { params: Promise<{ termino: string }> }) {
+  const { termino } = await params;
+  const entry = GLOSSARY_TERMS.find((t) => t.slug === termino);
   if (!entry) notFound();
 
   const paragraphs = entry.longDefinition.split("\n\n");
