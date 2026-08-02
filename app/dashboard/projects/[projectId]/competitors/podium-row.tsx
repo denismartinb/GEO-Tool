@@ -52,19 +52,19 @@ export function PodiumRow({
           <Icon name="arrRight" size={12} />
         </div>
         <div className="cm2-rank-dm">{row.domain}</div>
-        <div className="cm2-rank-bar-wrap">
-          <div className="cm2-rank-bar">
-            <div style={{ width: `${(row.sov / maxSov) * 100}%`, background: row.barColor, height: "100%", borderRadius: 99 }} />
-          </div>
-        </div>
       </div>
-      <div className="cm2-rank-extra">
+      <div className="cm2-rank-extra men">
         <div className="v">{row.mentionRate}%</div>
         <div className="l">Mención</div>
       </div>
-      <div className="cm2-rank-extra">
+      <div className="cm2-rank-extra cit">
         <div className="v">{row.citationRate}%</div>
         <div className="l">Cita</div>
+      </div>
+      <div className="cm2-rank-bar-wrap">
+        <div className="cm2-rank-bar">
+          <div style={{ width: `${(row.sov / maxSov) * 100}%`, background: row.barColor, height: "100%", borderRadius: 99 }} />
+        </div>
       </div>
       <div className="cm2-rank-r">
         <div className="cm2-rank-sov">

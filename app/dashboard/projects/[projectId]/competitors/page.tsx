@@ -656,19 +656,19 @@ export default async function CompetitorsPage({
                       <span className="cm2-rank-you-tag">Tú</span>
                     </div>
                     <div className="cm2-rank-dm">{project.domain}</div>
-                    <div className="cm2-rank-bar-wrap">
-                      <div className="cm2-rank-bar">
-                        <div style={{ width: `${(brandSov / maxSov) * 100}%`, background: "var(--brand-blue)", height: "100%", borderRadius: 99 }} />
-                      </div>
-                    </div>
                   </div>
-                  <div className="cm2-rank-extra">
+                  <div className="cm2-rank-extra men">
                     <div className="v">{brandMentionRate}%</div>
                     <div className="l">Mención</div>
                   </div>
-                  <div className="cm2-rank-extra">
+                  <div className="cm2-rank-extra cit">
                     <div className="v">{brandCitationRate}%</div>
                     <div className="l">Cita</div>
+                  </div>
+                  <div className="cm2-rank-bar-wrap">
+                    <div className="cm2-rank-bar">
+                      <div style={{ width: `${(brandSov / maxSov) * 100}%`, background: "var(--brand-blue)", height: "100%", borderRadius: 99 }} />
+                    </div>
                   </div>
                   <div className="cm2-rank-r">
                     <div className="cm2-rank-sov">
