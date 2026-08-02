@@ -507,6 +507,11 @@ export function CitationsClient({
             <div className="cit2-blk-t">
               {totalUrls} {totalUrls === 1 ? "página citada" : "páginas citadas"} en los prompts escaneados
             </div>
+            {/* The list has always been sorted by citation count, but nothing
+                on screen said so — a reader could reasonably assume it was
+                chronological or alphabetical. Stated here because the table's
+                own header row (`.cit2-listhead`) is `display: none`. */}
+            {totalUrls > 1 && <div className="cit2-listhint">De más a menos citada</div>}
           </div>
           <div className="cit2-toolbar">
             <div className="cit2-search">
@@ -514,16 +519,26 @@ export function CitationsClient({
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar página o dominio…" />
             </div>
             <div className="cit2-tabs">
-              {(Object.keys(CATEGORY_TAB_LABEL) as Array<"all" | CitationRow["category"]>).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`cit2-tab${tab === key ? " on" : ""}`}
-                  onClick={() => setTab(key)}
-                >
-                  {CATEGORY_TAB_LABEL[key]} {tabCounts[key]}
-                </button>
-              ))}
+              {/* A tab whose count is 0 is disabled rather than hidden: the
+                  count itself is information worth keeping ("you have no
+                  pages of your own here" is the point of this screen), but
+                  clicking it only ever led to an empty list — a dead end
+                  dressed as a filter. */}
+              {(Object.keys(CATEGORY_TAB_LABEL) as Array<"all" | CitationRow["category"]>).map((key) => {
+                const empty = tabCounts[key] === 0;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={`cit2-tab${tab === key ? " on" : ""}${empty ? " empty" : ""}`}
+                    onClick={() => setTab(key)}
+                    disabled={empty}
+                    title={empty ? "Ninguna página en esta categoría" : undefined}
+                  >
+                    {CATEGORY_TAB_LABEL[key]} {tabCounts[key]}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
