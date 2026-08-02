@@ -798,7 +798,83 @@ de producción (movistar.es), no una propuesta del piloto:
    pantalla a la que ir por el menú. Al perder su único consumidor, la prop
    `projectId` se retiró en cascada de `OpportunitiesBlock`, `CitationsClient`
    y de la llamada en `page.tsx` en vez de dejarla sin usar.
-## 9. Página de Competidores (COMP-REDESIGN-1)
+
+---
+
+## 9. Emails transaccionales — repintado a v3 (BRAND-5c, 2026-08-02)
+
+**Estado: implementado.**
+
+**Origen:** BRAND-5c estaba pendiente desde BRAND-5a — los 8 emails de Resend
+y las 2 plantillas de Supabase Auth seguían en la paleta índigo v2
+(`#4f46e5`/`#1e1b4e`) mientras el resto del producto ya había migrado. El
+fundador aportó una hoja de estilo de sesión de diseño externa con la
+cabecera objetivo (600×120, lockup + tagline + colores email-safe) y aprobó
+las cuatro decisiones abiertas de la propuesta (`docs/brand/
+email-design-proposal.md` §4) tal cual recomendado.
+
+Decisiones finales:
+- **Cabecera blanca**, no banda navy — lockup completo (símbolo + wordmark)
+  más el tagline "GENERATIVE ENGINE OPTIMIZATION" horneado como texto raster
+  bajo el wordmark (el pack de marca no lo trae como trazado vectorial), más
+  la "G fantasma" sangrando por el borde derecho, y una regla de 3px en
+  `#2563EB` cerrando la banda para que la tarjeta no arranque flotando sobre
+  fondo blanco.
+- **Ámbar retirado como color de aviso.** El email de bajada de score y la
+  píldora negativa del resumen semanal usaban ámbar/naranja
+  (`#b45309`/`#fef7ed`) para una caída — mismo error de criterio que ya se
+  corrigió una vez en la UI en BRAND-4 ("el ámbar es solo el punto del
+  logo"). Pasan a rojo de datos `#D23B48`/`#FDECEE`, con píldora de delta
+  (▼ N pts) igual que en Overview.
+- **Emojis fuera** de titulares y asuntos (🎉, 📊) — la v3 se definió como
+  "azul/navy más seria y analítica" tras el feedback de que la v2 se sentía
+  "poco profesional"; el emoji tiraba en la dirección contraria.
+- **"GenScore" se mantiene** en el cuerpo de los emails — la propuesta
+  original planteaba cambiarlo a "Genscore" citando la guía de marca §1, pero
+  esa entrada describe el logotipo (trazado SVG), no el nombre en texto
+  corrido; `CLAUDE.md` fija "GenScore" como la marca de cara al usuario en
+  toda la superficie de producto (landing, legal, dashboard). Corregido antes
+  de implementar.
+- **Código OTP del magic-link a JetBrains Mono** (con fallback monoespaciado
+  de sistema) — es la tipografía de datos de la marca, y aquí un dígito mal
+  leído bloquea el login.
+
+**Dos bugs reales encontrados y corregidos durante la implementación** (no
+estaban en el alcance original, pero afectaban directamente el motivo por el
+que se pidió esta fase — "el logo se cargaba cortado"):
+
+1. **El PNG de cabecera v2 (`genscore-logo-white-email.png`) ya venía
+   pre-recortado.** Sus píxeles reales eran 958×164 (ratio 5.84), que no
+   coincide con el ratio del lockup completo (1111:254 = 4.41) — la captura
+   original que generó ese asset ya excluía parte del símbolo antes de
+   llegar a producción; no era un problema de cómo el `<img>` lo mostraba.
+   El activo nuevo (`genscore-email-header.png`, 1200×240) se genera
+   renderizando los SVG de marca reales sobre un lienzo cuyo tamaño de
+   captura coincide exactamente con el lienzo diseñado, así que no hay
+   ventana de recorte distinta al contenido.
+2. **Una cabecera a ancho de imagen fijo rompía el email responsive.** Al
+   sustituir el logo pequeño (140×24, nunca competía con nada) por un banner
+   a todo el ancho de la tarjeta con `width:600px;height:120px` fijos en el
+   `style`, la imagen se convertía en el contenido más ancho de la tabla y
+   anulaba silenciosamente el `@media (max-width:600px){.em-card{width:100%
+   !important}}` que hace responsive el email — sin ningún error visible,
+   el email simplemente dejaba de encogerse en móvil. Corregido con la
+   técnica de imagen fluida estándar en email
+   (`width:100%;max-width:600px;height:auto`). Verificado renderizando el
+   HTML real (no la maqueta) a ~375px de viewport con Playwright, no solo a
+   ancho de escritorio — el flag `--window-size` de Chromium headless en
+   modo CLI resultó ser poco fiable para esta verificación en este entorno
+   y dio falsos negativos/positivos intermitentes; `page.setViewportSize`
+   vía Playwright fue el método fiable.
+
+Referencias: `docs/brand/email-design-proposal.md` (propuesta completa,
+incluye §7-8 con el detalle de generación del PNG),
+`docs/email-templates/README.md` (por qué el `<img>` no puede llevar ancho
+fijo).
+
+---
+
+## 10. Página de Competidores (COMP-REDESIGN-1)
 
 **Estado: implementado (Fase A+B en un único PR, aprobado explícitamente por
 el fundador el 2026-08-02 — ver Task Intake en el hilo del PR).**
