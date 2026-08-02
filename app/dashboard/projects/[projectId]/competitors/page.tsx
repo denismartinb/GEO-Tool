@@ -749,7 +749,10 @@ export default async function CompetitorsPage({
                       <div className="cm2-pos-list">
                         <div className="cm2-pos-list-hd">
                           Posición media · último escaneo
-                          <InfoTip text="Puesto medio en el que la IA nombra a cada marca. Los prompts donde una marca no aparece cuentan como el último puesto, así que una marca poco mencionada tiene una media alta aunque salga primera cuando aparece. Más bajo es mejor; puede haber empates." />
+                          {/* Kept short on purpose: InfoTip renders its text as the
+                              element's aria-label, and a screen reader announces that
+                              in one breath. */}
+                          <InfoTip text="Puesto medio en que la IA nombra cada marca. No aparecer cuenta como último puesto, así que salir poco sube la media. Más bajo es mejor." />
                         </div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
