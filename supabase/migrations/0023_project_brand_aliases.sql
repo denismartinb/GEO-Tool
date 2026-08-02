@@ -24,9 +24,15 @@
 -- at row level, and those policies already cover every column on the row.
 --
 -- Apply manually in the Supabase SQL editor, after 0022.
+--
+-- Idempotent on purpose, unlike earlier migrations in this folder. Applying
+-- this by hand from a phone over a mobile connection produced a "Load failed
+-- (api.supabase.com)" — a transport error, not a SQL error, which leaves the
+-- applier unable to tell whether the statements ran. A migration that is
+-- applied manually must be safe to re-run from an unknown state.
 
 alter table public.projects
-  add column brand_aliases text[] not null default '{}';
+  add column if not exists brand_aliases text[] not null default '{}';
 
 comment on column public.projects.brand_aliases is
   'Alternative names that count as a mention of the brand: products, trade names and variants. E.g. Mozilla -> {Firefox, Firefox Focus, Thunderbird}. Consumed by verifyMention (lib/scan/extraction.ts, ADR 0021).';
@@ -36,14 +42,19 @@ comment on column public.projects.brand_aliases is
 -- for the whole project (every alias is another comparison per entity, per
 -- prompt). Enforced here rather than only in application code so no future
 -- write path can bypass it.
-alter table public.projects
-  add constraint projects_brand_aliases_bounded check (
-    array_length(brand_aliases, 1) is null
-    or (
-      array_length(brand_aliases, 1) <= 25
-      and 120 >= (select max(length(a)) from unnest(brand_aliases) as a)
-    )
-  );
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'projects_brand_aliases_bounded') then
+    alter table public.projects
+      add constraint projects_brand_aliases_bounded check (
+        array_length(brand_aliases, 1) is null
+        or (
+          array_length(brand_aliases, 1) <= 25
+          and 120 >= (select max(length(a)) from unnest(brand_aliases) as a)
+        )
+      );
+  end if;
+end $$;
 
 -- Per-scan snapshot, same pattern as brand_snapshot / competitors_snapshot
 -- (0001_v0_schema.sql). Persisted scores are never recomputed for historical
@@ -52,7 +63,7 @@ alter table public.projects
 -- indistinguishable from a real change in visibility, which is precisely the
 -- unexplained-jump problem this whole phase exists to remove.
 alter table public.scan_prompt_results
-  add column brand_aliases_snapshot text[] not null default '{}';
+  add column if not exists brand_aliases_snapshot text[] not null default '{}';
 
 comment on column public.scan_prompt_results.brand_aliases_snapshot is
   'projects.brand_aliases as it stood when this scan ran. Frozen like brand_snapshot/competitors_snapshot so history stays interpretable after the alias list changes.';

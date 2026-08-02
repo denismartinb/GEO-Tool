@@ -101,8 +101,25 @@ and the length bar; the denylist only catches common category nouns those two
 would let through. Mitigation is that `brand_aliases` is ordinary
 user-editable project data, not an invisible internal.
 
-**Not covered here.** Existing projects keep `brand_aliases = '{}'` until
-derived — there is no backfill, consistent with ADR 0018/0021. An existing
-project's aliases are not yet derived on any path other than creation; a
-lazy compute-and-cache on first scan (mirroring `business_profile` in ADR
-0022) is the natural follow-up and is **not** in this change.
+**Lazy derivation for existing projects (1b, founder-approved 2026-08-02).**
+Creation-time derivation alone would leave every pre-existing project at
+`'{}'` — including the founder's own Mozilla project, the one that surfaced
+the bug. `ensureBrandAliasesDerived` (`lib/projects/ensure-brand-aliases.ts`)
+derives on first scan, with two deliberate choices:
+
+- **`brand_aliases_derived_at` (migration 0024)** distinguishes "never
+  derived" from "derived, and the answer was none". The second is the common
+  case; without the stamp, every scan of every alias-less brand would re-fetch
+  its homepage and re-call Gemini forever to rediscover nothing.
+- **It runs at scan LAUNCH, not inside `executePendingScan`.** The executor
+  shares a ~60s Vercel budget across every prompt's LLM call (ADR 0003);
+  spending part of it on a homepage fetch plus a Gemini call could push a full
+  run past its ceiling. Launch is a separate request.
+
+It never throws and never blocks a scan: on failure the run is scored without
+aliases (today's behavior) and `derived_at` stays null so the next scan
+retries, rather than caching a failure as "this brand has no aliases".
+
+Still no backfill of historical `run_scores`/`scan_prompt_results`, consistent
+with ADR 0018/0021 — a project's existing scans keep the numbers they were
+computed with, and the corrected measurement starts from its next scan.
