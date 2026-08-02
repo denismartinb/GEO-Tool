@@ -57,7 +57,9 @@ const PUBLIC_PAGES = new Map([
   ["/geo", "GEO — Genscore"],
   ["/privacidad", "Privacidad — Genscore"],
   ["/cookies", "Cookies — Genscore"],
-  ["/terminos", "Términos — Genscore"]
+  ["/terminos", "Términos — Genscore"],
+  ["/glosario", "Glosario GEO — Genscore"],
+  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
 ]);
 
 // Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and

@@ -3,18 +3,23 @@ import sitemap from "./sitemap";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 
 describe("sitemap", () => {
-  it("gives every static route a fixed real date, not the current request time", () => {
+  it("gives every static route a fixed date string, not the current request time", () => {
     const entries = sitemap();
-    const now = new Date();
-    const staticEntries = entries.slice(0, entries.length - BLOG_POSTS.length);
+    const blogUrls = new Set(BLOG_POSTS.map((post) => `https://www.genscore.es/blog/${post.slug}`));
+    const staticEntries = entries.filter((e) => !blogUrls.has(e.url));
 
     expect(staticEntries.length).toBeGreaterThan(0);
     for (const entry of staticEntries) {
       const lastModified = entry.lastModified as Date;
-      // A real historical date is always at least a day before "now" — this
-      // is what would fail if lastModified were `new Date()` evaluated at
-      // request time (GROWTH-2 Fase 2.1 regression guard).
-      expect(now.getTime() - lastModified.getTime()).toBeGreaterThan(24 * 60 * 60 * 1000);
+      // `new Date("YYYY-MM-DD")` always parses to exact UTC midnight;
+      // `new Date()` evaluated live essentially never does. Checking for
+      // midnight (rather than "is in the past") is what actually catches a
+      // route regressing to request-time `new Date()` even on the same day
+      // its hardcoded date is bumped (GROWTH-2 Fase 2.1 regression guard).
+      expect(lastModified.getUTCHours(), `${entry.url}: not UTC midnight`).toBe(0);
+      expect(lastModified.getUTCMinutes(), `${entry.url}: not UTC midnight`).toBe(0);
+      expect(lastModified.getUTCSeconds(), `${entry.url}: not UTC midnight`).toBe(0);
+      expect(lastModified.getUTCMilliseconds(), `${entry.url}: not UTC midnight`).toBe(0);
     }
   });
 

@@ -77,6 +77,23 @@ test("/terminos renders and has its own canonical", async ({ page }, testInfo) =
   await assertCanonical(page, "/terminos");
 });
 
+test("/glosario renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/glosario", "glosario");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/glosario");
+});
+
+test("/comparativas/genscore-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-otterly",
+    "comparativas-genscore-vs-otterly"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-otterly");
+});
+
 test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {
   const response = await page.request.get("/feed.xml");
   expect(response.status(), "/feed.xml no respondió 200").toBe(200);

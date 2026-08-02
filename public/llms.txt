@@ -3,13 +3,15 @@
 > GenScore mide y mejora cómo aparece una marca en las respuestas de
 > asistentes de IA (ChatGPT, Gemini, Claude): GEO (Generative Engine
 > Optimization). Escanea prompts reales de tu categoría, calcula un GEO
-> Score compuesto (presencia, prominencia, posición competitiva y
-> autoridad) y genera recomendaciones concretas para mejorar.
+> Score compuesto (presencia, prominencia, cuota de voz y autoridad) y
+> genera recomendaciones concretas para mejorar.
 
 ## Producto
 
-- [Precios](https://www.genscore.es/pricing): planes Free, Starter, Pro y Agency.
+- [Precios](https://www.genscore.es/pricing): planes Free, Starter, Pro y Agencia.
 - [Prueba gratis](https://www.genscore.es/signup): registro con 7 días de prueba de Pro.
+- [Glosario GEO](https://www.genscore.es/glosario): términos clave explicados en una frase.
+- [Genscore vs Otterly](https://www.genscore.es/comparativas/genscore-vs-otterly): comparativa honesta con herramientas de visibilidad en IA.
 
 ## Blog
 
