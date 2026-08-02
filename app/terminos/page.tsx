@@ -3,7 +3,8 @@ import Link from "next/link";
 import { LegalPageShell } from "@/components/legal-page-shell";
 
 export const metadata: Metadata = {
-  title: "Términos del Servicio — GenScore"
+  title: "Términos del Servicio — GenScore",
+  alternates: { canonical: "https://www.genscore.es/terminos" }
 };
 
 export default function TerminosPage() {

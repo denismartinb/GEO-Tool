@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BlogCover } from "@/components/blog/blog-cover";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 
 export const metadata: Metadata = {
-  title: "Blog — GenScore",
-  description: "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA."
+  title: "Blog — Genscore",
+  description: "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
+  alternates: { canonical: "https://www.genscore.es/blog" }
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
@@ -14,6 +16,12 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
 export default function BlogIndexPage() {
   return (
     <BlogPageShell>
+      <BreadcrumbSchema
+        items={[
+          { name: "Inicio", url: "https://www.genscore.es" },
+          { name: "Blog", url: "https://www.genscore.es/blog" }
+        ]}
+      />
       <h1 className="lp-h2">Blog</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
         GEO (Generative Engine Optimization): metodología, guías y análisis.
