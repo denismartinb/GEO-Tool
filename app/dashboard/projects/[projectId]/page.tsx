@@ -20,6 +20,14 @@ import {
   isQuantifiableRecommendationType,
   type ScoreInputRow
 } from "@/lib/scoring/run-scoring";
+import {
+  computeMentionInterval,
+  hasSufficientSample,
+  MIN_RESPONSES_FOR_BAND,
+  readComparableRun,
+  resolveDelta,
+  type DeltaVerdict
+} from "@/lib/scoring/score-reliability";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
@@ -359,6 +367,37 @@ export default async function ProjectDetailPage({
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
   const gaugeDelta = geoTrend.length >= 2 ? gaugeScore - geoTrend[geoTrend.length - 2] : 0;
 
+  /* ---- GEO-SCORE-RELIABILITY-1 — precision and comparability ----
+   * Every "vs. escaneo anterior" number above is a raw subtraction of two
+   * persisted rows. Whether it means anything depends on two things the page
+   * previously never checked: whether this run carries enough AI responses to
+   * support the claim, and whether the two runs measured the same thing at
+   * all (same methodology version, same surviving components, same engines,
+   * same sample size). `resolveDelta` is the single decision point for both,
+   * so the gauge and the KPI cards cannot disagree about what is assertable.
+   *
+   * When there is no previous run the verdict is null and nothing is
+   * rendered — that is the pre-existing "≥2 escaneos" behavior, unchanged.
+   */
+  const currentRun = readComparableRun(latestScore?.details_json);
+  const previousRun = prevScore ? readComparableRun(prevScore.details_json) : null;
+  const mentionInterval = computeMentionInterval(brandMentions, totalResults);
+  const sampleSufficient = hasSufficientSample(totalResults);
+  const resolve = (value: number): DeltaVerdict | null =>
+    previousRun ? resolveDelta(value, currentRun, previousRun) : null;
+  const gaugeDeltaVerdict = geoTrend.length >= 2 ? resolve(gaugeDelta) : null;
+  const visDeltaVerdict = resolve(visDelta);
+  const gapDeltaVerdict = resolve(gapDelta);
+
+  /** Human-readable reason a delta was withheld, for the caption under the gauge. */
+  const deltaWithheldNote = (verdict: DeltaVerdict | null): string | null => {
+    if (!verdict || verdict.kind === "publish") return null;
+    if (verdict.kind === "insufficient_sample") {
+      return `Sin comparación: ${verdict.responses} ${verdict.responses === 1 ? "respuesta" : "respuestas"} de IA en este escaneo (hacen falta ${MIN_RESPONSES_FOR_BAND}).`;
+    }
+    return `Sin comparación: ${verdict.reason}.`;
+  };
+
   /* ---- sentiment KPI (audit phase B, finding 6) ----
    * Distribution of the sentiment the AI expresses ABOUT THE BRAND in the
    * latest scan, computed only over answers where the brand is actually
@@ -652,8 +691,12 @@ export default async function ProjectDetailPage({
               <Icon name="sparkles" size={18} />
             </div>
             <p className="ov2-insight-txt">
+              {/* "prompts" here counted prompt × engine rows, not prompts: a
+                  project with 1 prompt scanned on 3 engines read "3 de 3
+                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1). */}
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
-              <b>{brandMentions} de {totalResults} prompts</b> ({computedMentionRate}%), con una{" "}
+              <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
+              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
               <b>puntuación GEO de {gaugeScore}/100</b>.
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
@@ -701,13 +744,31 @@ export default async function ProjectDetailPage({
             <div className="ov2-gauge-info">
               <div className="ov2-gauge-lbl">Puntuación GEO</div>
               <div className="ov2-gauge-badges">
-                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                {geoTrend.length >= 2 && gaugeDelta !== 0 && <Delta value={gaugeDelta} suffix=" pt" />}
+                {/* The qualitative band asserts where the brand sits on a
+                    70/40 scale. Below MIN_RESPONSES_FOR_BAND responses a
+                    single AI answer moves the score by more than 7 points, so
+                    the band is not a claim the sample can support — the score
+                    itself is still shown, only its interpretation is withheld. */}
+                {sampleSufficient ? (
+                  <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
+                ) : (
+                  <span
+                    className="badge badge-warn"
+                    title={`Este escaneo analizó ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA. Por debajo de ${MIN_RESPONSES_FOR_BAND}, una sola respuesta mueve la puntuación más de 7 puntos, así que no clasificamos la franja ni comparamos con el escaneo anterior. Añade prompts o motores para estrechar el margen.`}
+                  >
+                    Muestra insuficiente
+                  </span>
+                )}
+                {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
+                  <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
+                )}
               </div>
               {geoTrend.length >= 2 ? (
                 <>
                   <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
-                  <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
+                  <div className="ov2-gauge-trend-cap">
+                    {deltaWithheldNote(gaugeDeltaVerdict) ?? `Últimos ${geoTrend.length} escaneos`}
+                  </div>
                 </>
               ) : (
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
@@ -725,9 +786,11 @@ export default async function ProjectDetailPage({
                 label: "Tasa de mención",
                 value: computedMentionRate,
                 unit: "%",
-                delta: visDelta,
-                hint: "Prompts donde aparece tu marca.",
-                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
+                deltaVerdict: visDeltaVerdict,
+                hint: mentionInterval
+                  ? `${brandMentions} de ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA · margen ±${Math.round(mentionInterval.marginPoints)} pt (95%).`
+                  : "Respuestas de IA donde aparece tu marca.",
+                tip: "Porcentaje de respuestas de IA en las que tu marca aparece mencionada, sobre el total de respuestas del escaneo (prompts × motores). El margen es el intervalo de confianza de Wilson al 95%: con pocas respuestas, el valor real puede estar en cualquier punto de ese rango. Se estrecha añadiendo prompts o motores.",
                 isShare: false as const
               },
               {
@@ -735,7 +798,6 @@ export default async function ProjectDetailPage({
                 label: "Cuota de Citas",
                 value: citationShareResult.share,
                 unit: "%",
-                delta: 0,
                 hint: citationShareResult.share !== null
                   ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
                   : "Sin citas grounding resueltas en este escaneo.",
@@ -747,12 +809,18 @@ export default async function ProjectDetailPage({
                 label: "Presión competitiva",
                 value: competitorPressureScore,
                 unit: "%",
-                delta: gapDelta,
-                hint: "Prompts donde aparece un competidor pero tu marca no.",
+                deltaVerdict: gapDeltaVerdict,
+                hint: "Respuestas de IA donde aparece un competidor pero tu marca no.",
                 invert: true,
-                tip: "Mide en qué porcentaje de tus prompts aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
+                tip: "Mide en qué porcentaje de las respuestas de IA aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
                 isShare: false as const,
-                band: getCompetitivePressureBand(competitorPressureScore)
+                // Same sample gate as the GEO gauge's band: "Presión
+                // competitiva: Baja" is a qualitative claim about the market,
+                // and over <10 AI responses it rests on one or two answers.
+                // Gating one band and not the other would just move the false
+                // precision to the card next door. Falls through to the
+                // delta verdict below, which renders the honest absence.
+                band: sampleSufficient ? getCompetitivePressureBand(competitorPressureScore) : undefined
               },
               {
                 // Sentiment replaces the old "Confianza" card (audit phase B,
@@ -767,7 +835,6 @@ export default async function ProjectDetailPage({
                   ? sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1)
                   : "Sin datos",
                 unit: "",
-                delta: 0,
                 hint:
                   sentimentTotal > 0
                     ? `${sentimentBreakdown} · sobre ${sentimentTotal} ${sentimentTotal === 1 ? "respuesta" : "respuestas"} con tu marca.`
@@ -845,8 +912,16 @@ export default async function ProjectDetailPage({
                         <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10 }}>
                           {m.band.label}
                         </span>
-                      ) : "hideDelta" in m && m.hideDelta ? null : m.delta !== 0 ? (
-                        <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                      ) : "hideDelta" in m && m.hideDelta ? null : !("deltaVerdict" in m) || m.deltaVerdict === null ? null : m.deltaVerdict.kind !== "publish" ? (
+                        // Never "— sin cambio" here: a delta we refuse to
+                        // assert is not evidence of stability, and rendering
+                        // it as one is the same false claim in the opposite
+                        // direction (GEO-SCORE-RELIABILITY-1).
+                        <span className="delta flat" title={deltaWithheldNote(m.deltaVerdict) ?? undefined}>
+                          — sin comparación
+                        </span>
+                      ) : m.deltaVerdict.value !== 0 ? (
+                        <Delta value={m.deltaVerdict.value} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
                       ) : (
                         <span className="delta flat">— sin cambio</span>
                       )}

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
+import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
@@ -448,23 +449,34 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
     expect(result.details_json.total_results).toBe(20);
   });
 
-  it("is medium with 5..19 fully-extracted results (was high before geo-score-v2 — ADR 0015)", () => {
-    const results = Array.from({ length: 5 }, (_, i) => row({ id: String(i) }));
+  it("is medium from MIN_RESPONSES_FOR_BAND up to 19 fully-extracted results", () => {
+    for (const size of [MIN_RESPONSES_FOR_BAND, 19]) {
+      const results = Array.from({ length: size }, (_, i) => row({ id: String(i) }));
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+      const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
-    expect(result.confidence).toBe("medium");
+      expect(result.confidence).toBe("medium");
+    }
   });
 
-  it("is medium with >=2 and <5 fully-extracted results", () => {
-    const results = [row({ id: "1" }), row({ id: "2" })];
+  it("is low below MIN_RESPONSES_FOR_BAND even with perfect extraction (GEO-SCORE-RELIABILITY-1)", () => {
+    // Previously 2..4 results were "medium" and 5..19 were "medium" too, so a
+    // 2-response run and a 19-response run were presented identically. Below
+    // MIN_RESPONSES_FOR_BAND a single AI answer moves the mention rate by
+    // >=10 points, which no amount of extraction quality compensates for —
+    // the limit is the sample, not the parsing.
+    for (const size of [2, 3, 5, MIN_RESPONSES_FOR_BAND - 1]) {
+      const results = Array.from({ length: size }, (_, i) => row({ id: String(i) }));
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
+      const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
-    expect(result.confidence).toBe("medium");
+      expect(result.confidence).toBe("low");
+      expect(result.details_json.extraction_error_count).toBe(0);
+      expect(result.details_json.extracted_results_count).toBe(size);
+    }
   });
 
-  it("is low with a single fully-extracted result (below the medium threshold of 2)", () => {
+  it("is low with a single fully-extracted result", () => {
     const results = [row({ id: "1" })];
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
@@ -1113,9 +1125,10 @@ describe("isQuantifiableRecommendationType", () => {
 });
 
 describe("computeRecommendationPotentialPoints", () => {
-  // 10 fully-extracted, error-free rows -> confidence "medium" (2..19 clean
-  // results), so every scenario below clears the confidence gate on its own
-  // merits and isolates the counterfactual math being tested.
+  // 10 fully-extracted, error-free rows -> confidence "medium"
+  // (MIN_RESPONSES_FOR_BAND..19 clean results), so every scenario below
+  // clears the confidence gate on its own merits and isolates the
+  // counterfactual math being tested.
   function baseline(): ReturnType<typeof row>[] {
     const mentioned = Array.from({ length: 5 }, (_, i) =>
       row({
@@ -1276,9 +1289,12 @@ describe("computeRecommendationPotentialPoints", () => {
 });
 
 describe("computeJointPotentialPoints", () => {
+  // 8 mentioned + the two gap rows below = MIN_RESPONSES_FOR_BAND rows, so
+  // the run clears the confidence gate and these tests exercise the union/
+  // overlap math rather than the gate (which has its own tests above).
   function baseline(): ReturnType<typeof row>[] {
     return [
-      ...Array.from({ length: 5 }, (_, i) =>
+      ...Array.from({ length: MIN_RESPONSES_FOR_BAND - 2 }, (_, i) =>
         row({
         brand_snapshot: "MiMarca",
           id: `mentioned-${i}`,
