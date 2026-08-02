@@ -139,7 +139,35 @@ async function domSignature(page: Page): Promise<string> {
       const style = window.getComputedStyle(el);
       return style.display !== "none" && style.visibility !== "hidden" && el.offsetParent !== null;
     });
-    return `${visible.length}:${document.body.innerText.length}:${document.documentElement.scrollHeight}`;
+
+    // Class-attribute fingerprint. Load-bearing, not belt-and-braces: the
+    // mobile nav drawer opens by toggling a class that slides it in with a
+    // `transform`. Element counts, text length and scroll height are all
+    // identical before and after, so the first version of this signature
+    // reported the hamburger as a DEAD control on every screen — and then,
+    // believing it dead, never clicked it closed, leaving a full-screen
+    // scrim over the page that swallowed every subsequent click and marked
+    // those dead too. One blind spot, 21 false findings (first clean run,
+    // 2026-08-02). Any class toggle now registers as a change.
+    let classSig = 0;
+    for (const el of Array.from(document.querySelectorAll("[class]"))) {
+      const value = el.getAttribute("class") ?? "";
+      for (let i = 0; i < value.length; i++) classSig = (classSig * 31 + value.charCodeAt(i)) >>> 0;
+    }
+
+    // Same reasoning for disclosure state, which is often the only thing that
+    // changes when a control expands something already in the DOM.
+    const expanded = Array.from(document.querySelectorAll("[aria-expanded]"))
+      .map((el) => el.getAttribute("aria-expanded"))
+      .join("");
+
+    return [
+      visible.length,
+      document.body.innerText.length,
+      document.documentElement.scrollHeight,
+      classSig,
+      expanded
+    ].join(":");
   });
 }
 
@@ -275,6 +303,14 @@ export async function exploreInteractions(
       if (changed && Date.now() - startedAt <= SWEEP_BUDGET_MS) {
         await el.click({ timeout: 5_000 }).catch(() => undefined);
         await page.waitForTimeout(150);
+      } else if (!changed) {
+        // Belt-and-braces against the cascade described in `domSignature`:
+        // if a control opened something this signature still cannot see, an
+        // overlay left on screen would swallow every later click and mark
+        // the rest of the screen dead. Escape costs nothing and dismisses
+        // drawers, popovers and dialogs.
+        await page.keyboard.press("Escape").catch(() => undefined);
+        await page.waitForTimeout(100);
       }
     }
   } finally {
