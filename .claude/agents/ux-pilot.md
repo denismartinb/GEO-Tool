@@ -38,7 +38,8 @@ founder stops checking.
 | Acceptance criteria | The PR body / the approved Task Intake Report |
 | **The approved design** | The mockup/artifact the founder signed off on, plus `docs/brand/design-decisions-log.md`. Ask the Director for it if it wasn't handed to you — piloting without it means you can only check for breakage, not for fidelity |
 | `PILOT_EMAIL`, `PILOT_PASSWORD` | Environment only — never from the repo, never from chat |
-| `PILOT_PROJECT_ID` | Optional; journeys auto-discover the first project when unset |
+| `PILOT_PROJECT_ID` | Optional; read-only journeys auto-discover the first project when unset |
+| `PILOT_WRITE_PROJECT_ID` | Required only for the UX-PILOT-2a write journey; no auto-discovery — never guess |
 
 ## Procedure
 
@@ -227,7 +228,8 @@ that nine metrics appeared where three were agreed.
 ## Scope guard — what you must never do
 
 The pilot account writes to the **same Supabase project as production**, and
-scans cost real money against Gemini / OpenAI / Anthropic. In UX-PILOT-1 you are
+scans cost real money against Gemini / OpenAI / Anthropic. The default,
+always-on pilot (`.github/workflows/ux-pilot.yml`, every preview deploy) is
 **read-only**:
 
 - Never launch a scan.
@@ -236,9 +238,22 @@ scans cost real money against Gemini / OpenAI / Anthropic. In UX-PILOT-1 you are
 - Never touch billing or Stripe checkout.
 - Never echo `PILOT_EMAIL` or `PILOT_PASSWORD` into a log, a comment, or a file.
 
-Write journeys need their own approved phase (UX-PILOT-2). If a PR cannot be
-verified without a write, say so and return `PILOT INCONCLUSIVE` for that
-criterion rather than improvising.
+**One exception exists, and only one: UX-PILOT-2a**
+(`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts`). It adds exactly one
+manual prompt via the real UI, which by construction
+(`lib/projects/add-prompts.ts`'s `onlyPromptIds`) launches a scan scoped to that
+one prompt only — never the project's full active set — against a dedicated
+`PILOT_WRITE_PROJECT_ID` the founder created for this purpose, and cleans up the
+prompt it created afterward. It is opt-in only, via
+`.github/workflows/ux-pilot-write.yml` (`workflow_dispatch`, never on a
+deploy) — you (or the Director) trigger it deliberately when a PR's acceptance
+criteria genuinely require exercising the write path, not by default.
+
+Anything beyond that one scoped journey — creating a project, editing an
+existing prompt, the unrestricted "Lanzar escaneo" button, competitors, billing
+— has **no approved phase yet**. If a PR's acceptance criteria need one of
+those to verify, say so and return `PILOT INCONCLUSIVE` for that criterion
+rather than improvising a write path nobody reviewed.
 
 ## Verdicts
 

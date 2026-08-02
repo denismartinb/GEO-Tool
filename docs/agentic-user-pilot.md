@@ -293,8 +293,106 @@ cost real money. This phase is therefore strictly read-only:
 - no writing forms;
 - no billing flows.
 
-Write journeys are UX-PILOT-2 and need their own approval, with an explicit cost
-cap and a cleanup strategy.
+Write journeys need their own approval, with an explicit cost cap and a
+cleanup strategy — see UX-PILOT-2a below for the one that has one.
+
+## UX-PILOT-2a — the one write journey (opt-in, not automatic)
+
+`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts` exercises the part of
+the core flow read-only journeys structurally cannot: adding a prompt and
+watching a scan actually run and complete. It is the closest thing to a
+regression test for the P0 that used to matter most here — a scan stuck in
+`pending`.
+
+**Why it's safe to run against a real project, unlike a naive "launch a scan"
+journey would be:**
+
+The journey adds exactly **one** manual prompt through the real "Añadir
+prompts" UI. `lib/projects/add-prompts.ts` launches the resulting scan with
+`onlyPromptIds` set to just that new prompt — by construction, never the
+project's full active set (up to `MAX_REAL_SCAN_PROMPTS` × active engines,
+~30 LLM calls). Cost per run is ~1 prompt × active engines, and the UI's own
+confirmation copy ("Se ha lanzado un escaneo restringido a estos prompts
+nuevos") is asserted on directly, so the cost-cap claim is verified against the
+product's own text, not just trusted.
+
+The prompt it creates is cleaned up (soft-deleted via the real "Borrar
+prompt" UI) at the end of every run, and a sweep at the **start** of every run
+removes any test prompt a previous, crashed run left behind — so a failure
+never permanently eats into the write-project's prompt-count limit
+(`plan.caps.prompts`) across repeated runs. All test prompts carry a
+`[PILOT-TEST]` marker for exactly this reason.
+
+**What it does NOT do:** create or delete a project, edit or deactivate any of
+the founder's real prompts, touch competitors or billing, or use the
+unrestricted "Lanzar escaneo" button. Any of those needs its own approved
+phase — not a quiet extension of this one.
+
+### Why it's opt-in, not part of the automatic per-deploy pilot
+
+A real scan costs real money against Gemini / OpenAI / Anthropic. Running it on
+every preview deploy of every PR would be an unbounded, silently growing bill.
+So this journey lives in its own Playwright project (`write`), which
+`scripts/pilot.mjs` only includes when explicitly asked:
+
+```bash
+pnpm pilot --url <preview-url> --journeys write   # local
+```
+
+`.github/workflows/ux-pilot.yml` (the always-on one) never passes
+`--journeys write`, and its default (`read`) explicitly enumerates
+`auth, mobile, tablet, desktop` — an allowlist, not "everything except write" —
+so adding more Playwright projects later can't silently make them part of the
+automatic run either.
+
+Triggering it in CI is manual: `.github/workflows/ux-pilot-write.yml`
+(`workflow_dispatch`, input `pr_number`). Fire it — from the Actions UI, or via
+`mcp__github__actions_run_trigger` (`run_workflow`) — only when a PR's
+acceptance criteria genuinely require exercising the write path.
+
+### The write-project: self-bootstrapping, no secret required
+
+The journey mutates the project whose domain is `PILOT_WRITE_DOMAIN`
+(`tests/pilot/support/write-guard.ts`, currently `mozilla.org`) and **creates it
+through the real onboarding wizard if it does not exist**. Nobody has to prepare
+anything by hand — same self-healing philosophy as `sweepTestPrompts`.
+
+Why this is not the auto-discovery the read-only pilot deliberately refuses:
+matching an exact reserved domain nobody would track for real cannot select the
+wrong project. "Pick the first project on the account" could have selected
+`mahou.es`; this cannot.
+
+The domain is chosen to be real (the wizard fetches its homepage to ground its
+suggestions, so an invented domain fails), stable, non-commercial, and with zero
+overlap with the founder's actual market — obviously a test artifact to anyone
+looking at the projects list.
+
+**Bootstrap cost, one-off:** the wizard's first step runs real grounded Gemini
+calls for competitors and prompts — that *is* the product's onboarding, and
+driving it any other way wouldn't test it. Creation then scans whatever prompts
+survive, so the journey trims the suggested set to exactly **one** before
+submitting. Roughly 5–6 LLM calls total, once. Subsequent runs skip all of this.
+
+`PILOT_WRITE_PROJECT_ID` still exists as an **optional** override, for pointing
+the write journeys at a different project temporarily.
+
+Preconditions the journey reports rather than forces past (all
+`PILOT INCONCLUSIVE`):
+
+- The account is at its plan's project cap, so the wizard can't open.
+- The grounded suggestion call fails or times out.
+- A scan is still running after the bounded wait — both project creation and
+  add-prompts launch real scans, and "Añadir prompts" is disabled while one is
+  active. `waitForNoActiveRun` waits it out first, so this only fires if the
+  pipeline is genuinely stuck.
+
+### Verdict classification specific to this journey
+
+The scan launched by "Añadir prompts" runs synchronously, server-side, bounded
+by Vercel's `maxDuration=60`. A timeout there is documented pipeline behavior
+under load (`lib/scan/constants.ts`'s note on `MAX_REAL_SCAN_PROMPTS`,
+`docs/scan-lifecycle.md`), not a UI defect this journey found — it's classified
+as `PILOT INCONCLUSIVE`, same as a blocked button, never `PILOT FAIL`.
 
 ## Known limits
 
@@ -315,6 +413,12 @@ cap and a cleanup strategy.
   login step. Protection stays on for human visitors.
 - **Single account only.** The pilot cannot prove tenant isolation; that stays
   with `data-guardian`.
+- **UX-PILOT-2a exercises one prompt, not real load.** It proves a scan can
+  complete end-to-end, but with a single active prompt it does not reproduce
+  the concurrency of a full `MAX_REAL_SCAN_PROMPTS`-sized scan across every
+  active engine — which is exactly where the documented Gemini-timeout risk
+  lives. A stuck-scan-under-real-load regression needs a different phase, with
+  its own explicit cost budget.
 
 ## Harness self-check
 
