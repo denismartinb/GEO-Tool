@@ -494,8 +494,38 @@ export function CitationsClient({
         </div>
       </div>
 
-      <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
-      <SourceDonut breakdown={sourceTypeBreakdown} />
+      {/* "Citas propias: 0" is the most important number on this screen and,
+          on its own, a dead end — it states a problem and offers no next
+          step (own UX review, 2026-08-02). This line only appears when the
+          count is actually 0, and says nothing the data doesn't support. */}
+      {totalCited > 0 && impactBreakdown.own === 0 && (
+        <div className="cit2-zero">
+          <Icon name="info" size={15} />
+          <span>
+            Ninguna de las {totalCited} citas apunta a {brandLabel}.{" "}
+            {opportunityRows.length > 0 ? (
+              <>
+                Las <b>{opportunityRows.length} fuentes</b> de «Oportunidades» son terceros que la IA ya
+                cita y donde todavía no apareces — es por donde se empieza.
+              </>
+            ) : (
+              <>
+                Revisa en <b>Auditoría web</b> si tus páginas son accesibles y citables para los motores
+                de IA.
+              </>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Impact split and source-type donut sit side by side from 900px:
+          both answer "how are the citations distributed", so as two stacked
+          full-width cards they read as competing blocks rather than one
+          section (own UX review, 2026-08-02). */}
+      <div className="cit2-dist">
+        <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
+        <SourceDonut breakdown={sourceTypeBreakdown} />
+      </div>
 
       <div className="cit2-cols">
         <div className="cit2-rail">

@@ -1941,6 +1941,31 @@ a {
 /* Generic block card — Impact bar / source-type donut / opportunities /
    citation list all share this shell. */
 .cit2-block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--brand-shadow-card); padding: 15px 16px; margin-top: 12px; }
+
+/* Impact split + source-type donut: one distribution section, not two
+   competing full-width cards stacked on top of each other. Side by side from
+   900px; on a phone they stay stacked (nothing else fits) but the donut is
+   trimmed so the pair costs less than two full screenfuls. */
+.cit2-dist { display: grid; gap: 12px; }
+@media (min-width: 900px) {
+  .cit2-dist { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+  .cit2-dist > .cit2-block { margin-top: 12px; }
+}
+@media (max-width: 899px) {
+  .cit2-dist .cit2-donut { width: 78px; height: 78px; }
+  .cit2-dist .cit2-donut-wrap { gap: 14px; }
+}
+
+/* The "no citations point at you" line: states the fact and the next step,
+   instead of leaving a 0 on screen with nothing to do about it. */
+.cit2-zero {
+  display: flex; align-items: flex-start; gap: 9px; margin-top: 12px;
+  padding: 11px 14px; border-radius: var(--r-md);
+  background: var(--accent-soft); border: 1px solid var(--accent-ring);
+  font-size: 12.5px; line-height: 1.5; color: var(--ink-2);
+}
+.cit2-zero svg { flex: 0 0 auto; margin-top: 1px; color: var(--accent); }
+.cit2-zero b { color: var(--ink); font-weight: 750; }
 .cit2-blk-t { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 14.5px; letter-spacing: -.01em; color: var(--ink); margin-bottom: 10px; }
 /* Eyebrow above a block title, naming WHICH subset of the data the block
    shows. Added after the founder reported the opportunities list and the
@@ -1992,7 +2017,12 @@ a {
   background: none; border: none; text-align: left; cursor: pointer; font: inherit; color: inherit;
 }
 .cit2-opp-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.cit2-opp-domain { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--ink); }
+/* Same treatment as a domain in the main list (`.cit2-u b`): mono + accent.
+   The two tables were rendering the same kind of value two different ways —
+   blue-with-path in the list, plain ink in the rail — so a reader had to
+   re-learn what a domain looks like moving between them (own UX review,
+   2026-08-02). */
+.cit2-opp-domain { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); }
 .cit2-opp-why { font-size: 10.5px; color: var(--ink-3); }
 .cit2-opp-why b { color: var(--neg-ink); }
 .cit2-opps-empty { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }

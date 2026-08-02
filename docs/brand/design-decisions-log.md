@@ -676,6 +676,31 @@ costó una iteración y dejó una regla o un test detrás:
 | 8 | Timeout de 60s en el primer barrido real | 32 filas × capturas de página completa en móvil | Tope de 4 interacciones, presupuesto de 25s, capturas de viewport |
 | 9 | Fila fantasma `undefined` en la tabla del PR | Los registros de interacción no tienen `label` y contaminaban `findings.jsonl` | Fichero propio `interactions.jsonl` |
 
+**Primera aplicación del listón de UX a la propia pantalla (2026-08-02).**
+Aplicando la checklist nueva a Páginas citadas salieron cinco mejoras; el
+fundador pidió implementar las cinco:
+
+1. **Pestañas con contador 0 deshabilitadas** en vez de ocultas — el 0 es
+   información (es justo el punto de la pantalla), pero pulsarlas solo
+   llevaba a una lista vacía: un callejón sin salida disfrazado de filtro.
+2. **Orden de la lista explícito** ("De más a menos citada"). Siempre estuvo
+   ordenada por número de citas y nada lo decía; la cabecera propia de la
+   tabla es `display: none`, así que va bajo el título del bloque.
+3. **"Citas propias: 0" deja de ser un callejón sin salida.** Es el número
+   más importante de la pantalla y no ofrecía ningún siguiente paso. Ahora,
+   solo cuando es realmente 0, aparece una línea que enlaza el hecho con la
+   acción: las fuentes de «Oportunidades» si las hay, o Auditoría web si no.
+   No afirma nada que el dato no sostenga.
+4. **La barra de impacto y el donut dejan de competir.** Ambos responden a
+   "cómo se reparten las citas", y apilados a ancho completo se leían como
+   dos bloques rivales. Desde 900px van lado a lado como una sola sección
+   (`.cit2-dist`); en móvil siguen apilados —no cabe otra cosa— pero el
+   donut se reduce para que el par no cueste dos pantallas enteras.
+5. **Tipografía del dominio unificada** entre la lista y el raíl de
+   oportunidades. El mismo tipo de dato se renderizaba de dos formas (mono
+   azul con ruta en la lista, mono tinta sin ruta en el raíl), obligando a
+   reaprender qué es un dominio al pasar de una tabla a otra.
+
 **Propuestas de mejora obligatorias (2026-08-02).** A petición explícita del
 fundador ("que sugiera cambios antes de entregarme algo SIEMPRE"), todo
 informe del piloto termina con una sección **"Mejoras propuestas"**: mínimo
