@@ -120,6 +120,35 @@ export interface InteractionFinding {
   screenshot?: string;
 }
 
+/**
+ * Max characters kept for a control's human label. Playwright derives an
+ * attachment's on-disk filename from the name passed to `testInfo.attach`, so
+ * an unbounded label becomes an unbounded filename and the copy fails with
+ * ENAMETOOLONG (255-byte limit on ext4) — which surfaces as a PILOT FAIL that
+ * has nothing to do with the product.
+ *
+ * Real case (PR #295): the web-audit global-score tooltip carries a ~230-char
+ * `aria-label` ("Media simple de tus señales disponibles: cobertura de
+ * temas…"). The `textContent()` branch below was already capped at 60, but
+ * the `aria-label` branch was not, so only elements labelled that way could
+ * trigger it. Accented characters make it worse — "ñ"/"é"/"→" are 2–3 bytes
+ * each in UTF-8, so the byte limit is hit well before the character count
+ * suggests.
+ */
+const MAX_CONTROL_LABEL = 60;
+
+/**
+ * The label used for a control in findings and in attachment names, bounded
+ * so it can always be turned into a filename. Exported for its unit test —
+ * the failure it prevents only reproduces on a real deployment with a
+ * long-labelled control, which is exactly the kind of thing that should not
+ * need a full pilot run to verify.
+ */
+export function controlLabel(ariaLabel: string | null, textContent: string | null, fallback: string): string {
+  const candidate = (ariaLabel ?? "").trim() || (textContent ?? "").trim() || fallback;
+  return candidate.slice(0, MAX_CONTROL_LABEL);
+}
+
 function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 }
@@ -245,10 +274,11 @@ export async function exploreInteractions(
       const el = candidates.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
 
-      const control =
-        (await el.getAttribute("aria-label")) ||
-        ((await el.textContent()) ?? "").trim().slice(0, 60) ||
-        `${screen} control #${i + 1}`;
+      const control = controlLabel(
+        await el.getAttribute("aria-label"),
+        await el.textContent(),
+        `${screen} control #${i + 1}`
+      );
 
       const refusal = await refuseReason(el).catch(() => "could not inspect element");
       if (refusal) {
