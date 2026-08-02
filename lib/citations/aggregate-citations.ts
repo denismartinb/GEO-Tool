@@ -1,5 +1,6 @@
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import { isBrandDomain, isSameOrSubdomain, normalizeDomain } from "@/lib/domains/brand-domain";
+import { classifySourceType, SOURCE_TYPE_LABEL, type SourceType } from "@/lib/citations/source-type";
 
 // Re-exported so existing importers of these helpers keep working while
 // lib/domains/brand-domain.ts stays the single definition (BRAND-DOMAIN-1).
@@ -36,8 +37,29 @@ export type CitationRow = {
   category: CitationCategory;
   brandMentioned: "yes" | "no" | "na";
   competitors: string[];
+  /** Untracked brands named in the answers this page was cited in. */
+  otherBrands: string[];
   cited: number;
-  prompts: Array<{ text: string; brandMentioned: boolean }>;
+  /** One entry per (prompt, provider) that cited this page. `rawResponseText`
+   * is the model's actual answer to that prompt — the real "why was this
+   * cited" evidence, not a fabricated excerpt. `null` for rows persisted
+   * before raw_response_text was selected on this page's query.
+   * `competitors`/`otherBrands` are scoped to THIS specific (prompt,
+   * provider) result — unlike the row-level `competitors`/`otherBrands`
+   * above, which are unioned across every prompt that ever cited this page.
+   * A row can be classified "adverse" (cites a competitor) from ONE
+   * prompt's extraction while most of its other prompts mention no brand at
+   * all; showing the per-entry names is what lets a founder looking at the
+   * expanded evidence actually see WHICH answer backs that classification,
+   * instead of a row-level claim with no visible attribution. */
+  prompts: Array<{
+    text: string;
+    brandMentioned: boolean;
+    provider: string;
+    rawResponseText: string | null;
+    competitors: string[];
+    otherBrands: string[];
+  }>;
   /** Order: grounded engines first, then cited desc. Never invented. */
   engines: CitationEngine[];
 };
@@ -69,17 +91,60 @@ export type EngineTotal = {
   cites: number;
 };
 
+/**
+ * "Impact" of the citations, per Semrush's first-party/third-party framing
+ * ("What Are AI Citations & How Do I Get Them?", 30 jul 2025): a third-party
+ * citation is not neutral — it matters whether the same answer also
+ * mentioned the brand ("favorable" exposure, using our existing
+ * brand-mention signal as the honest proxy we have — this is presence, not
+ * verified sentiment) or a tracked competitor instead ("adverse").
+ * `own`/`competitor` reuse the existing category split; `favorable`/
+ * `adverse`/`neutral` only apply to third_party rows, using the same
+ * row-level `brandMentioned`/`competitors` signal CitationRow already
+ * exposes. A row's FULL cited count is attributed to a single bucket based
+ * on that page's aggregate signal across the prompts that cited it — not
+ * resolved per individual citation event, since we don't track
+ * brand/competitor mentions at that granularity. Totals still sum to
+ * `totalCited` ("share of the 1,284 citations"), just bucketed per page
+ * rather than per citation event.
+ */
+export type ImpactBreakdown = {
+  own: number;
+  favorable: number;
+  adverse: number;
+  otherBrands: number;
+  competitor: number;
+  neutral: number;
+};
+
+/** One slice of the source-type donut: a classifySourceType bucket, plus the
+ * two category-derived pseudo-types (own/competitor), with its share of
+ * total cited count. */
+export type SourceTypeSlice = {
+  type: SourceType | "own" | "competitor";
+  label: string;
+  cited: number;
+  pct: number;
+};
+
 export type CitationInputRow = {
   prompt_id: string | null;
   prompt_text_snapshot: string | null;
   brand_mentioned: boolean | null;
   extracted_json: unknown;
   provider: string | null;
+  raw_response_text: string | null;
 };
 
 type ExtractedJson = {
   brand?: { mentioned?: boolean };
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
+  /** Brands the AI named that are NEITHER the project brand NOR a tracked
+   * competitor (lib/extraction/schema.ts). Lets the impact split tell
+   * "cited a page that pushes some other brand" apart from "cited a page
+   * that named nobody at all" — two very different situations that both
+   * used to collapse into a single "neutral" bucket. */
+  other_brands_mentioned?: string[];
   citations?: Array<{
     url?: string | null;
     domain?: string | null;
@@ -96,15 +161,41 @@ function parseExt(raw: unknown): ExtractedJson {
 }
 
 /**
+ * True when `url`'s host genuinely belongs to `domain` — i.e. `url` is the
+ * real destination page, not a redirect wrapper on a different host.
+ *
+ * This is what separates the two providers that both persist
+ * `source: "grounding"` citations (lib/scan/extraction.ts): Gemini's
+ * `citation.url` is ALWAYS the raw vertexaisearch.cloud.google.com redirect
+ * (never the resolved destination — only `citation.domain` gets resolved,
+ * per docs/adr/0006), while OpenAI's `url_citation` annotations are already
+ * the final page URL (lib/llm/openai.ts, `groundingUrlsAreFinal`), so its
+ * host matches `domain` and this returns true.
+ */
+function isRealDestinationUrl(url: string, domain: string): boolean {
+  try {
+    const host = normalizeDomain(new URL(url).hostname);
+    return isSameOrSubdomain(host, domain) || isSameOrSubdomain(domain, host);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Resolves a single raw citation into its display/dedup identity.
  *
  * Per docs/adr/0006-grounding-redirect-resolution.md, the raw
- * vertexaisearch.cloud.google.com redirect (`citation.url` for
- * source: "grounding") must never be shown or used as a dedup key — multiple
- * grounding chunks resolving to the same domain are the same cited page and
- * must aggregate into one entry, not one per ephemeral redirect. Inline
- * citations keep their real URL as both display and key since each one is a
- * distinct, genuine page link.
+ * vertexaisearch.cloud.google.com redirect must never be shown or used as a
+ * dedup key — multiple Gemini grounding chunks resolving to the same domain
+ * are the same cited page and must aggregate into one entry, not one per
+ * ephemeral redirect. That rule was previously applied to EVERY
+ * source: "grounding" citation regardless of provider, which also discarded
+ * OpenAI's `citation.url` — already a real, final page URL, never a
+ * redirect (CITATIONS-REDESIGN-1). `isRealDestinationUrl` tells the two
+ * apart: a real per-page URL is kept and used as the dedup key (same rule
+ * inline citations already follow below), so distinct OpenAI-cited pages on
+ * the same domain don't collapse into one row; a redirect-only citation
+ * (Gemini) keeps the prior domain-level dedup, unchanged.
  */
 export function resolveCitation(
   citation: Citation
@@ -114,7 +205,10 @@ export function resolveCitation(
   if (citation.source === "grounding") {
     if (rawDomain) {
       const domain = normalizeDomain(rawDomain);
-      return { key: domain, title: citation.title?.trim() || domain, url: "", domain };
+      const rawUrl = citation.url?.trim();
+      const url = rawUrl && isRealDestinationUrl(rawUrl, domain) ? rawUrl : "";
+      const key = url || domain;
+      return { key, title: citation.title?.trim() || url || domain, url, domain };
     }
     const label = citation.title?.trim() || "Fuente sin resolver";
     return { key: `unresolved:${label.toLowerCase()}`, title: label, url: "", domain: "" };
@@ -182,6 +276,8 @@ export function aggregateCitations(input: {
   promptGroups: PromptGroup[];
   hasStructuredCitations: boolean;
   engineTotals: EngineTotal[];
+  impactBreakdown: ImpactBreakdown;
+  sourceTypeBreakdown: SourceTypeSlice[];
 } {
   const { rows, competitorDomains, promptCategoryMap } = input;
   const projectDomain = normalizeDomain(input.projectDomain ?? "");
@@ -196,7 +292,15 @@ export function aggregateCitations(input: {
     brandMentionedYes: number;
     brandMentionedNo: number;
     competitors: Set<string>;
-    prompts: Array<{ text: string; brandMentioned: boolean }>;
+    otherBrands: Set<string>;
+    prompts: Array<{
+      text: string;
+      brandMentioned: boolean;
+      provider: string;
+      rawResponseText: string | null;
+      competitors: string[];
+      otherBrands: string[];
+    }>;
     engines: Map<string, number>;
   };
 
@@ -224,6 +328,9 @@ export function aggregateCitations(input: {
     const mentionedCompetitors = (ext.competitors ?? [])
       .filter((c) => c.mentioned && c.name)
       .map((c) => c.name as string);
+    const mentionedOtherBrands = (ext.other_brands_mentioned ?? []).filter(
+      (name): name is string => typeof name === "string" && name.trim().length > 0
+    );
 
     const groupKey = result.prompt_id ?? `text:${promptText.toLowerCase()}`;
     let group = promptGroupsAgg.get(groupKey);
@@ -270,6 +377,7 @@ export function aggregateCitations(input: {
           brandMentionedYes: 0,
           brandMentionedNo: 0,
           competitors: new Set(),
+          otherBrands: new Set(),
           prompts: [],
           engines: new Map()
         };
@@ -280,7 +388,15 @@ export function aggregateCitations(input: {
       if (brandMentioned) row.brandMentionedYes += 1;
       else row.brandMentionedNo += 1;
       for (const name of mentionedCompetitors) row.competitors.add(name);
-      row.prompts.push({ text: promptText, brandMentioned });
+      for (const name of mentionedOtherBrands) row.otherBrands.add(name);
+      row.prompts.push({
+        text: promptText,
+        brandMentioned,
+        provider,
+        rawResponseText: result.raw_response_text,
+        competitors: mentionedCompetitors,
+        otherBrands: mentionedOtherBrands
+      });
       row.engines.set(provider, (row.engines.get(provider) ?? 0) + 1);
 
       let groupCitation = group.citations.get(key);
@@ -320,6 +436,7 @@ export function aggregateCitations(input: {
           ? "yes"
           : "no") as CitationRow["brandMentioned"],
       competitors: Array.from(row.competitors),
+      otherBrands: Array.from(row.otherBrands),
       cited: row.cited,
       prompts: row.prompts,
       engines: sortEngines(row.engines)
@@ -362,5 +479,56 @@ export function aggregateCitations(input: {
     }))
     .sort((a, b) => providerOrder.indexOf(a.provider) - providerOrder.indexOf(b.provider));
 
-  return { citationRows, promptGroups, hasStructuredCitations, engineTotals };
+  const impactBreakdown: ImpactBreakdown = {
+    own: 0,
+    favorable: 0,
+    adverse: 0,
+    otherBrands: 0,
+    competitor: 0,
+    neutral: 0
+  };
+  const sourceTypeCited = new Map<SourceTypeSlice["type"], number>();
+
+  for (const row of citationRows) {
+    let bucket: keyof ImpactBreakdown;
+    let typeKey: SourceTypeSlice["type"];
+
+    if (row.category === "brand") {
+      bucket = "own";
+      typeKey = "own";
+    } else if (row.category === "competitor") {
+      bucket = "competitor";
+      typeKey = "competitor";
+    } else if (row.brandMentioned === "yes") {
+      bucket = "favorable";
+      typeKey = classifySourceType(row.domain);
+    } else if (row.competitors.length > 0) {
+      bucket = "adverse";
+      typeKey = classifySourceType(row.domain);
+    } else if (row.otherBrands.length > 0) {
+      // Named some brand, just not one we track. Materially different from
+      // "named nobody": these pages ARE pushing somebody, they're simply
+      // pushing a company outside the tracked competitor set.
+      bucket = "otherBrands";
+      typeKey = classifySourceType(row.domain);
+    } else {
+      bucket = "neutral";
+      typeKey = classifySourceType(row.domain);
+    }
+
+    impactBreakdown[bucket] += row.cited;
+    sourceTypeCited.set(typeKey, (sourceTypeCited.get(typeKey) ?? 0) + row.cited);
+  }
+
+  const sourceTypeTotal = Array.from(sourceTypeCited.values()).reduce((sum, n) => sum + n, 0);
+  const sourceTypeBreakdown: SourceTypeSlice[] = Array.from(sourceTypeCited.entries())
+    .map(([type, cited]) => ({
+      type,
+      label: type === "own" ? "Tuyas" : type === "competitor" ? "Competidores" : SOURCE_TYPE_LABEL[type],
+      cited,
+      pct: sourceTypeTotal > 0 ? Math.round((cited / sourceTypeTotal) * 100) : 0
+    }))
+    .sort((a, b) => b.cited - a.cited);
+
+  return { citationRows, promptGroups, hasStructuredCitations, engineTotals, impactBreakdown, sourceTypeBreakdown };
 }

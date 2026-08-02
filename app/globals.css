@@ -1860,6 +1860,331 @@ a {
 }
 
 /* ============================================================
+   Citations page (Páginas citadas) — CITATIONS-REDESIGN-1
+   (Task Intake approved 2026-08-01). Adopts the SAME rollout mechanism as
+   .ov2-scope/.pr2-scope (a wrapper that re-points shared token names) AND
+   their exact width convention (460px base, 640px ≥900px, 1200px ≥1200px,
+   1280px ≥1600px) — per founder decision this is now the STANDARD width
+   for every future console screen, not a per-screen tuning; see
+   docs/brand/design-decisions-log.md. Replaces the prompt-grouped table
+   this page previously rendered — the old cit- / pr-toolbar / pr-search /
+   cit-select rules below (Citations page section, pre-redesign) are dead
+   and removed in the same PR.
+   ============================================================ */
+.cit2-scope {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+
+  /* Citation-specific accents — encode data categories (impact/source-type),
+     not UI chrome, so they live scoped to this page rather than :root. */
+  --cit-own: var(--accent);
+  --cit-fav: var(--pos-ink);
+  --cit-adv: #c2410c;
+  /* "Other brands" sits between adverse and neutral in meaning, and gets an
+     amber-ish tone that reads as "worth knowing" without the alarm of the
+     competitor red. Not the brand's reserved logo amber (#FFB020). */
+  --cit-oth: #b45309;
+  --cit-comp: #c0392b;
+  --cit-neu: var(--ink-4);
+  --cit-com: #c2410c;
+  --cit-rev: #6d28d9;
+  --cit-med: #0b7285;
+  --cit-enc: #4338ca;
+  --cit-unk: var(--ink-4);
+}
+.cit2-scope .card { box-shadow: var(--brand-shadow-card); }
+.cit2-page { max-width: 460px; margin: 0 auto; }
+
+@media (min-width: 900px) {
+  .cit2-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .cit2-page { max-width: 1200px; }
+  .cit2-search { max-width: 360px; }
+}
+@media (min-width: 1600px) {
+  .cit2-page { max-width: 1280px; }
+}
+
+/* KPI strip — one compact row of six cells, no per-metric card (founder
+   feedback 2026-08-01: individual big KPI cards read as too tall for six
+   numbers). Wraps into a short grid on narrow viewports instead of forcing
+   an impossible single line. */
+/* Three metrics on ONE row at every width, matching the approved mockup. An
+   earlier `flex: 1 1 140px` basis overflowed a 375px viewport and wrapped to
+   2+1, leaving a half-empty cell (caught by the ux-pilot fidelity checklist,
+   point 6 — density/hierarchy drift). `flex-basis: 0` divides the row evenly
+   instead, and the label is allowed to wrap to a second line rather than
+   being ellipsised into "Respuestas con cit…". */
+/* No `overflow: hidden` here, deliberately: the KPI labels carry `.info-tip`
+   tooltips whose bubble is positioned ABOVE the trigger, and clipping the
+   strip clipped the bubble in half — the pilot's own interaction screenshot
+   caught it (2026-08-02). The Playwright assertion still passed, because a
+   clipped element is technically "visible"; only looking at the capture
+   showed it. The cells have no background of their own (transparent, with a
+   border-right divider), so nothing actually needs clipping at the rounded
+   corners. */
+.cit2-kpis { position: relative; display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); margin-top: 4px; }
+/* The KPI tooltips anchor to the STRIP, not to their own 14px trigger, and
+   open downward. Two reasons, both caught from the pilot's interaction
+   captures rather than from reading the CSS:
+   1. Upward + a clipped parent cut the bubble in half (see above).
+   2. The bubble is a fixed 220px; anchored to the trigger, the last KPI's
+      bubble ran past the right edge on a 375px viewport, which would have
+      introduced horizontal overflow the moment a user hovered it.
+   Spanning the strip (left:0/right:0) is immune to both at every width. */
+.cit2-kpis .info-tip { position: static; }
+.cit2-kpis .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
+.cit2-kpis > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line-soft); }
+.cit2-kpis > div:last-child { border-right: 0; }
+.cit2-k { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }
+.cit2-v {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-weight: 800; font-size: 19px; letter-spacing: -.03em; line-height: 1.3;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.cit2-v.blue { color: var(--accent); }
+.cit2-v small { font-size: 12px; color: var(--ink-4); font-weight: 700; }
+
+/* Generic block card — Impact bar / source-type donut / opportunities /
+   citation list all share this shell. */
+.cit2-block { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--brand-shadow-card); padding: 15px 16px; margin-top: 12px; }
+
+/* Impact split + source-type donut: one distribution section, not two
+   competing full-width cards stacked on top of each other. Side by side from
+   900px; on a phone they stay stacked (nothing else fits) but the donut is
+   trimmed so the pair costs less than two full screenfuls. */
+.cit2-dist { display: grid; gap: 12px; }
+@media (min-width: 900px) {
+  /* `stretch`, not `start`: sized to content the two cards ended up ~35px
+     apart at 1280px, which reads as a ragged edge rather than one section
+     (own review of the pilot capture, 2026-08-02). */
+  .cit2-dist { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: stretch; }
+  .cit2-dist > .cit2-block { margin-top: 12px; }
+}
+@media (max-width: 899px) {
+  .cit2-dist .cit2-donut { width: 78px; height: 78px; }
+  .cit2-dist .cit2-donut-wrap { gap: 14px; }
+}
+
+/* The "no citations point at you" line: states the fact and the next step,
+   instead of leaving a 0 on screen with nothing to do about it. */
+.cit2-zero {
+  display: flex; align-items: flex-start; gap: 9px; margin-top: 12px;
+  padding: 11px 14px; border-radius: var(--r-md);
+  background: var(--accent-soft); border: 1px solid var(--accent-ring);
+  font-size: 12.5px; line-height: 1.5; color: var(--ink-2);
+}
+.cit2-zero svg { flex: 0 0 auto; margin-top: 1px; color: var(--accent); }
+.cit2-zero b { color: var(--ink); font-weight: 750; }
+.cit2-blk-t { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 14.5px; letter-spacing: -.01em; color: var(--ink); margin-bottom: 10px; }
+/* Eyebrow above a block title, naming WHICH subset of the data the block
+   shows. Added after the founder reported the opportunities list and the
+   full citation list were indistinguishable from each other. */
+.cit2-blk-eyebrow { font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px; }
+.cit2-listtitle { margin-top: 12px; }
+.cit2-listtitle .cit2-blk-t { margin-bottom: 0; }
+
+/* Impact bar */
+.cit2-split { display: flex; height: 32px; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); }
+.cit2-split > div { display: grid; place-items: center; font-size: 10.5px; font-weight: 750; color: #fff; overflow: hidden; min-width: 2px; }
+/* Shared by both the bar segments (.cit2-split > div) and the legend dots
+   (.cit2-split-key i) — every bucket that appears in the bar gets a legend
+   entry in the same color, dynamically (see ImpactBar in citations-client.tsx). */
+.s-own { background: var(--cit-own); }
+.s-fav { background: var(--cit-fav); }
+.s-adv { background: var(--cit-adv); }
+.s-oth { background: var(--cit-oth); }
+.s-comp { background: var(--cit-comp); }
+.s-neu { background: var(--cit-neu); }
+.cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
+.cit2-split-key span { display: inline-flex; align-items: center; gap: 5px; }
+.cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+/* Source-type donut */
+.cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.cit2-donut { width: 96px; height: 96px; border-radius: 999px; flex: 0 0 auto; -webkit-mask: radial-gradient(circle, transparent 46%, #000 47%); mask: radial-gradient(circle, transparent 46%, #000 47%); }
+.cit2-donut-key { font-size: 11.5px; color: var(--ink-3); display: grid; gap: 6px; }
+.cit2-donut-key b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.cit2-donut-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 7px; }
+.cit2-donut-key i.own { background: var(--cit-own); }
+.cit2-donut-key i.comp { background: var(--cit-comp); }
+.cit2-donut-key i.com { background: var(--cit-com); }
+.cit2-donut-key i.rev { background: var(--cit-rev); }
+.cit2-donut-key i.med { background: var(--cit-med); }
+.cit2-donut-key i.enc { background: var(--cit-enc); }
+.cit2-donut-key i.unk { background: var(--cit-unk); }
+
+/* Opportunities */
+.cit2-opps-list { display: flex; flex-direction: column; gap: 2px; margin: -4px -2px 0; }
+.cit2-opp-item { border-bottom: 1px solid var(--line-soft); }
+.cit2-opp-item:last-child { border-bottom: 0; }
+.cit2-opp-item.open { background: var(--surface-2); }
+/* Same interactive row treatment as .cit2-rowmain — clicking an opportunity
+   expands the same prompt/evidence panel as the full list below (founder
+   request, 2026-08-01: the two tables must behave identically). */
+.cit2-opp-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 6px;
+  background: none; border: none; text-align: left; cursor: pointer; font: inherit; color: inherit;
+}
+.cit2-opp-body { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+/* Same treatment as a domain in the main list (`.cit2-u b`): mono + accent.
+   The two tables were rendering the same kind of value two different ways —
+   blue-with-path in the list, plain ink in the rail — so a reader had to
+   re-learn what a domain looks like moving between them (own UX review,
+   2026-08-02). */
+.cit2-opp-domain { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent); }
+.cit2-opp-why { font-size: 10.5px; color: var(--ink-3); }
+.cit2-opp-why b { color: var(--neg-ink); }
+.cit2-opps-empty { font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+.cit2-btn-mini { font-size: 11px; font-weight: 750; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 8px; padding: 7px 10px; white-space: nowrap; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 5px; text-decoration: none; }
+.cit2-btn-mini:hover { filter: brightness(0.96); }
+.cit2-btn-mini:disabled { opacity: .4; cursor: default; }
+.cit2-btn-mini:disabled:hover { filter: none; }
+.cit2-btn-block { width: 100%; margin-top: 10px; }
+/* Pagination replaces the old "expand all in place" toggle: a fixed-height
+   control regardless of how many opportunities there are, instead of a rail
+   that grows without bound (founder review, 2026-08-02). */
+.cit2-opp-pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.cit2-opp-pager-status { font-size: 11px; font-weight: 650; color: var(--ink-4); white-space: nowrap; }
+
+/* Toolbar */
+.cit2-toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+.cit2-search { flex: 1; min-width: 180px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 11px; padding: 9px 12px; color: var(--ink-4); }
+.cit2-search input { flex: 1; border: none; outline: none; background: none; font-size: 13px; color: var(--ink); font-family: inherit; }
+.cit2-search input::placeholder { color: var(--ink-4); }
+.cit2-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+.cit2-tab { font-size: 11.5px; font-weight: 700; padding: 7px 11px; border-radius: 999px; color: var(--ink-3); background: var(--surface-2); border: 1px solid transparent; white-space: nowrap; cursor: pointer; }
+/* Count kept legible, affordance removed: an empty category is information,
+   but clicking it only ever produced an empty list. */
+.cit2-tab.empty { opacity: .45; cursor: default; }
+.cit2-listhint { font-size: 11px; color: var(--ink-4); margin-top: 3px; }
+.cit2-tab.on { background: var(--accent-soft); color: var(--accent); }
+/* Confirms how many rows a search/tab filter actually left, next to the box
+   that just changed the list. Absent at rest (no filter active) — the list
+   title above already carries the unfiltered total. */
+.cit2-filtercount { font-size: 11px; color: var(--ink-4); margin-top: 6px; }
+
+/* Citation list */
+.cit2-list { padding: 0; }
+.cit2-listhead { display: none; }
+.cit2-row { border-bottom: 1px solid var(--line-soft); }
+.cit2-row:last-child { border-bottom: 0; }
+.cit2-row.open { background: var(--surface-2); }
+.cit2-rowmain { display: flex; align-items: center; gap: 11px; width: 100%; padding: 12px 14px; background: none; border: none; text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.cit2-fav { width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto; display: grid; place-items: center; font-size: 10.5px; font-weight: 800; color: #fff; font-family: var(--font-display), "Bricolage Grotesque", sans-serif; }
+.cit2-fav.sm { width: 22px; height: 22px; font-size: 9.5px; }
+.cit2-urlcell { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cit2-u { font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 600; word-break: break-all; line-height: 1.35; }
+.cit2-u b { color: var(--accent); font-weight: 700; }
+.cit2-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cit2-tchip { font-size: 9.5px; font-weight: 700; border-radius: 999px; padding: 2px 7px; white-space: nowrap; border: 1px solid var(--line); }
+.cit2-tchip.ty-own { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.cit2-tchip.ty-comp { background: var(--neg-soft); color: var(--neg-ink); border-color: transparent; }
+.cit2-tchip.ty-com { background: rgba(194, 65, 12, .1); color: var(--cit-com); border-color: transparent; }
+.cit2-tchip.ty-rev { background: rgba(109, 40, 217, .1); color: var(--cit-rev); border-color: transparent; }
+.cit2-tchip.ty-med { background: rgba(11, 114, 133, .1); color: var(--cit-med); border-color: transparent; }
+.cit2-tchip.ty-enc { background: rgba(67, 56, 202, .1); color: var(--cit-enc); border-color: transparent; }
+.cit2-tchip.ty-unk { background: transparent; color: var(--ink-4); border-style: dashed; }
+.cit2-cites { text-align: right; font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 15px; letter-spacing: -.02em; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.cit2-cites small { display: block; font-family: var(--font-body), "Figtree", sans-serif; font-size: 9px; font-weight: 650; color: var(--ink-4); letter-spacing: 0; }
+.cit2-chev { color: var(--ink-4); flex: 0 0 auto; display: flex; }
+.cit2-detail { padding: 4px 14px 14px 51px; }
+.cit2-detail-lbl { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 6px; }
+.cit2-detail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cit2-detail-list > li { border-top: 1px solid var(--line-soft); padding-top: 8px; }
+.cit2-detail-list > li:first-child { border-top: 0; padding-top: 0; }
+.cit2-detail-prompt { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+/* What THIS specific answer named (a tracked competitor / another brand) —
+   makes the row-level "Cita a X" claim checkable against a real, attributed
+   answer instead of a label with no visible source. */
+.cit2-detail-mentions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.cit2-mtag { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.cit2-mtag.comp { background: var(--neg-soft); color: var(--neg-ink); }
+.cit2-mtag.oth { background: rgba(180, 83, 9, .1); color: var(--cit-oth); }
+/* The model's actual answer to that prompt — real evidence, not a
+   fabricated excerpt. Scrollable rather than truncated, so a long answer
+   never gets cut off mid-sentence; capped height keeps one prompt's evidence
+   from dwarfing the rest of the panel. */
+.cit2-detail-evidence {
+  margin-top: 6px; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 8px; font-size: 12px; line-height: 1.55; color: var(--ink-3);
+  max-height: 140px; overflow-y: auto; overflow-wrap: anywhere; word-break: break-word;
+}
+/* Markdown-lite (components/ui/formatted-response.tsx) — same rules as the
+   prompts drawer's .resp-full .body, same raw provider text and rendering
+   component, just a smaller card (founder review, 2026-08-02: evidence here
+   used to be a plain-text dump with literal `**bold**` / `* item` syntax). */
+.cit2-detail-evidence p.pr2-md-p { margin: 0 0 8px; }
+.cit2-detail-evidence ul.pr2-md-list,
+.cit2-detail-evidence ol.pr2-md-list { margin: 0 0 8px; padding-left: 17px; }
+.cit2-detail-evidence .pr2-md-p:last-child,
+.cit2-detail-evidence .pr2-md-list:last-child,
+.cit2-detail-evidence .pr2-md-h:last-child { margin-bottom: 0; }
+.cit2-detail-evidence p.pr2-md-h { margin: 0 0 5px; font-weight: 800; color: var(--ink-2); }
+.cit2-detail-evidence li { margin-bottom: 3px; }
+.cit2-detail-evidence li:last-child { margin-bottom: 0; }
+.cit2-detail-evidence strong { color: var(--ink-2); font-weight: 700; }
+.cit2-detail-evidence .pr2-md-link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.cit2-detail-evidence mark { background: var(--pos-soft); color: var(--pos-ink); font-weight: 700; padding: 0 2px; border-radius: 3px; }
+.cit2-detail-empty, .cit2-list-empty { padding: 14px 4px; color: var(--ink-4); font-size: 12.5px; }
+/* Opportunities rows use a smaller avatar (.cit2-fav.sm) than the full list,
+   so their detail panel indents less to stay visually under the avatar. */
+.cit2-opp-item .cit2-detail { padding-left: 38px; }
+.cit2-list-empty { text-align: center; padding: 36px; }
+
+/* Desktop layout — list + sticky opportunities rail. Same display:contents
+   mechanism as .pr2-cols/.pr2-main/.pr2-rail above (docs/brand/design-
+   decisions-log.md §5): zero effect below 1200px, and .cit2-rail is placed
+   via explicit grid-column rather than DOM order so mobile/tablet keep the
+   opportunities card in its natural reading position (right after the
+   impact/donut blocks), not wherever the grid would otherwise want it. */
+.cit2-cols, .cit2-main, .cit2-rail { display: contents; }
+
+@media (min-width: 1200px) {
+  .cit2-cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 20px;
+    align-items: start;
+    margin-top: 12px;
+  }
+  .cit2-main, .cit2-rail { display: block; min-width: 0; }
+  .cit2-main { grid-column: 1; grid-row: 1; }
+  .cit2-rail { grid-column: 2; grid-row: 1; position: sticky; top: 60px; }
+  .cit2-toolbar { margin-top: 0; }
+
+  /* Denser row variant: at 1280px each row cost ~65px (12px padding × 2 +
+     26px avatar-driven content), so only ~3 rows cleared the fold before the
+     page scrolled (founder review, 2026-08-02). Desktop has room to spare
+     horizontally but not vertically once the two-column layout kicks in —
+     tighter padding and smaller avatar/type/count text buy back ~12px per
+     row without dropping any information a row shows. */
+  .cit2-rowmain { padding: 8px 14px; gap: 9px; }
+  .cit2-list .cit2-fav { width: 22px; height: 22px; font-size: 9.5px; }
+  .cit2-list .cit2-urlcell { gap: 3px; }
+  .cit2-list .cit2-u { font-size: 11.5px; }
+  .cit2-list .cit2-tchip { font-size: 9px; padding: 1.5px 6px; }
+  .cit2-list .cit2-cites { font-size: 13.5px; }
+  /* Detail panel indent tracks the smaller avatar (14px pad + 22px avatar +
+     9px gap), matching the same logic as .cit2-opp-item .cit2-detail below. */
+  .cit2-list .cit2-detail { padding-left: 45px; }
+}
+
+/* ============================================================
    Overview — page header (title + scan action row)
    ============================================================ */
 .ov-header {
@@ -4231,137 +4556,6 @@ a.notif-row:hover {
 @media (max-width: 620px) {
   .price-cards { grid-template-columns: 1fr; }
   .price-anchor { flex-direction: column; }
-}
-
-/* ============================================================
-   Citations page (Páginas citadas) — adapted from design reference
-   styles.css .cit-* / .pr-* rules. The reviews/community/media source
-   taxonomy from the prototype was dropped: we have no crawler to verify
-   source types, so sources are classified as brand / competitor / other.
-   Per-engine attribution (ENGINES-VALUE-2) was added on top of that:
-   each cited domain/URL shows which grounded engine(s) — Gemini,
-   ChatGPT — actually cited it (see .cit-prow's "Motores" column below).
-   ============================================================ */
-.pr-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-.pr-search { display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: #fff; flex: 1; max-width: 320px; }
-.pr-search input { border: none; outline: none; background: transparent; font-size: 13px; width: 100%; color: var(--ink); }
-.pr-search .ico { color: var(--ink-4); }
-
-.cit-select { height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink-2); }
-.cit-select:hover { border-color: var(--ink-4); }
-
-.cit-head { display: grid; grid-template-columns: minmax(220px,2.2fr) 150px 140px 70px; gap: 14px; align-items: center; padding: 11px 18px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); border-bottom: 1px solid var(--line-soft); }
-.cit-head .c { text-align: center; }
-.cit-head .num { text-align: right; }
-
-.cit-card { border-bottom: 1px solid var(--line-soft); }
-.cit-card:last-child { border-bottom: none; }
-.cit-card.open { background: var(--surface-2); }
-
-.cit-row { display: grid; grid-template-columns: minmax(220px,2.2fr) 150px 140px 70px; gap: 14px; align-items: center; padding: 13px 18px; cursor: pointer; }
-.cit-row:hover { background: var(--surface-2); }
-.cit-row .c { text-align: center; }
-.cit-row .num { text-align: right; }
-
-.cit-urlcell { display: flex; align-items: flex-start; gap: 9px; min-width: 0; }
-.cit-exp { background: none; border: none; color: var(--ink-4); padding: 2px 0 0; flex: 0 0 auto; cursor: pointer; }
-.cit-title { font-size: 13.5px; font-weight: 650; color: var(--ink); line-height: 1.35; }
-.cit-url { font-family: var(--mono); font-size: 11px; color: var(--ink-4); margin-top: 3px; display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cit-url .ico { flex: 0 0 auto; }
-
-.cit-detail { padding: 4px 18px 16px 40px; }
-.cit-detail-head { display: grid; grid-template-columns: 1fr minmax(0, 74px) 130px 70px; gap: 14px; padding: 8px 14px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
-.cit-detail-head .num { text-align: right; }
-/* "Motores" track is minmax(0, 74px) — not a bare 74px — because a bare
-   fixed length still lets the track grow past it to fit a grid item's
-   automatic min-width (content-based) when 2+ engine chips don't fit side
-   by side; minmax(0, …) caps it and forces the chips to wrap instead
-   (founder-reported overflow, 2026-07-19). */
-.cit-prow { display: grid; grid-template-columns: 1fr minmax(0, 74px) 130px 70px; gap: 14px; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-sm); margin-bottom: 7px; }
-.cit-prow .num { text-align: right; }
-.cit-pq { font-size: 12.5px; font-weight: 600; color: var(--ink-2); display: flex; align-items: center; gap: 8px; line-height: 1.35; }
-.cit-pq .ico { flex: 0 0 auto; }
-/* Groups the engine chips / category badge / citation count into one row.
-   display: contents on desktop keeps them as independent grid items (same
-   4-column layout as before); the mobile override below turns this into an
-   actual flex row instead. */
-.cit-prow-meta { display: contents; }
-.cit-prow-meta-label { display: none; }
-
-/* The 4-/3-column grids below only fit comfortably on wide viewports —
-   below 760px the fixed track widths (150+140+70px) force a horizontal
-   scroll on the prompt table. Collapse to a stacked flex layout instead. */
-@media (max-width: 760px) {
-  .cit-head,
-  .cit-detail-head {
-    display: none;
-  }
-
-  .cit-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 8px 16px;
-  }
-
-  .cit-row .cit-urlcell {
-    flex: 1 1 100%;
-  }
-
-  .cit-row .c,
-  .cit-row .num {
-    text-align: left;
-  }
-
-  .cit-detail {
-    padding: 4px 16px 16px;
-  }
-
-  .cit-prow {
-    display: flex;
-    flex-direction: column;
-    /* stretch (the default) — NOT flex-start — is required here: it forces
-       .cit-pq to the full row width so its ellipsis/overflow:hidden can
-       actually clamp the long inline citation URL instead of letting the
-       row grow to the text's natural width and overflow the viewport
-       (founder-reported regression, 2026-07-19). */
-    align-items: stretch;
-    gap: 6px;
-    padding: 12px 14px;
-  }
-
-  .cit-prow .num {
-    text-align: left;
-  }
-
-  .cit-prow .cit-pq {
-    width: 100%;
-    min-width: 0;
-  }
-
-  /* Engine chips, category badge, and citation count render as one wrapped
-     row instead of three unlabeled stacked lines (founder review,
-     2026-07-19: the colored chip, "Otra fuente", and the bare number read as
-     meaningless in isolation once the desktop-only column header
-     disappears). */
-  .cit-prow-meta {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    width: 100%;
-  }
-
-  .cit-prow-meta-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-4);
-  }
 }
 
 /* ============================================================

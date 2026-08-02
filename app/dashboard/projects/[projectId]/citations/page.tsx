@@ -12,6 +12,13 @@ import {
   type CitationRow
 } from "@/lib/citations/aggregate-citations";
 
+/** Subset of run_scores.details_json this page reads — same access pattern
+ * as the Overview page (app/dashboard/projects/[projectId]/page.tsx). */
+type CitationScoreDetails = {
+  citation_score_any_domain?: number;
+  citation_by_provider?: Record<string, { total: number; citation_found_count: number }>;
+};
+
 export default async function CitationsPage({
   params
 }: {
@@ -55,13 +62,15 @@ export default async function CitationsPage({
     ? await Promise.all([
         supabase
           .from("scan_prompt_results")
-          .select("id, prompt_id, prompt_text_snapshot, brand_mentioned, extracted_json, provider")
+          .select(
+            "id, prompt_id, prompt_text_snapshot, brand_mentioned, extracted_json, provider, raw_response_text"
+          )
           .eq("project_id", projectId)
           .eq("run_id", latestRun.id)
           .eq("status", "completed"),
         supabase
           .from("run_scores")
-          .select("citation_score")
+          .select("citation_score, details_json")
           .eq("project_id", projectId)
           .eq("run_id", latestRun.id)
           .maybeSingle()
@@ -76,12 +85,13 @@ export default async function CitationsPage({
     .map((c) => ({ name: c.name, domain: normalizeDomain(c.domain ?? "") }))
     .filter((c) => c.domain.length > 0);
 
-  const { citationRows, promptGroups, hasStructuredCitations, engineTotals } = aggregateCitations({
-    rows: (results ?? []) as CitationInputRow[],
-    projectDomain: project.domain ?? "",
-    competitorDomains,
-    promptCategoryMap
-  });
+  const { citationRows, hasStructuredCitations, impactBreakdown, sourceTypeBreakdown } =
+    aggregateCitations({
+      rows: (results ?? []) as CitationInputRow[],
+      projectDomain: project.domain ?? "",
+      competitorDomains,
+      promptCategoryMap
+    });
 
   const totalUrls = citationRows.length;
   const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
@@ -90,13 +100,26 @@ export default async function CitationsPage({
   // Competitor domains (already tracked in project_competitors) are excluded:
   // a brand will never earn a citation on a rival's own site. Unresolved
   // grounding citations (no domain) are excluded too: there's no address to
-  // reach out to. Ranked by number of distinct engines citing the domain
-  // first (ENGINES-VALUE-2), then by cited count — a source both Gemini and
+  // reach out to. `competitors.length > 0` requires an actually TRACKED
+  // competitor to have been named in the evidence — founder review,
+  // 2026-08-02: rows that only mentioned an untracked "other brand" were
+  // slipping in here too, padding the list and forcing the row's "Cita a un
+  // competidor" fallback text to paper over having nothing real to name.
+  // Ranked by number of distinct engines citing the domain first
+  // (ENGINES-VALUE-2), then by cited count — a source both Gemini and
   // ChatGPT cite is a stronger outreach target than one only one engine uses.
   const opportunityRows: CitationRow[] = citationRows
-    .filter((r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain)
+    .filter(
+      (r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain && r.competitors.length > 0
+    )
     .sort(compareOpportunityRows);
-  const opportunities = opportunityRows.length;
+
+  const scoreDetails =
+    score?.details_json && typeof score.details_json === "object"
+      ? (score.details_json as CitationScoreDetails)
+      : {};
+  const citationRateAnyDomain =
+    typeof scoreDetails.citation_score_any_domain === "number" ? scoreDetails.citation_score_any_domain : null;
 
   const lastScanDate = latestRun
     ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
@@ -171,11 +194,11 @@ export default async function CitationsPage({
         </div>
       ) : !hasStructuredCitations ? (
         <div className="section-empty" style={{ marginTop: 20 }}>
-          <div className="section-empty-title">Sin citas detectadas en el último escaneo</div>
+          <div className="section-empty-title">Este escaneo respondió sin citar fuentes</div>
           <div className="section-empty-desc">
-            La IA no devolvió URLs o dominios identificables al responder los prompts de este
-            escaneo. Esto puede pasar si las respuestas no incluyen fuentes — vuelve a comprobarlo
-            tras el próximo escaneo.
+            No es un fallo: una IA no siempre busca en la web para responder. Cuando contesta desde
+            lo que ya sabe (sin consultar el buscador), no hay ninguna URL que citar. Vuelve a
+            comprobarlo tras el próximo escaneo.
           </div>
           <Link
             href={`/dashboard/projects/${projectId}/runs/${latestRun.id}`}
@@ -188,13 +211,14 @@ export default async function CitationsPage({
         </div>
       ) : (
         <CitationsClient
-          promptGroups={promptGroups}
+          citationRows={citationRows}
+          opportunityRows={opportunityRows}
+          impactBreakdown={impactBreakdown}
+          sourceTypeBreakdown={sourceTypeBreakdown}
           totalUrls={totalUrls}
           totalCited={totalCited}
           yours={yours}
-          opportunities={opportunities}
-          engineTotals={engineTotals}
-          citationScore={score?.citation_score ?? null}
+          citationRateAnyDomain={citationRateAnyDomain}
           brandLabel={project.brand}
         />
       )}

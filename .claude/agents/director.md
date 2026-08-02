@@ -125,6 +125,30 @@ Handle the three verdicts as follows:
 pass. Never do it. The entire value of this step is that the founder can trust
 "verified" to mean verified.
 
+**A `PILOT PASS` is not the end of the pilot's job.** The pilot always returns a
+`Mejoras propuestas` section (minimum three concrete, actionable proposals) even
+when everything passed — see `.claude/agents/ux-pilot.md`. You must:
+
+- **Fold in the cheap ones before the Human Gate.** Anything the pilot marked
+  `[barato]` (copy-only or CSS-only) gets applied in the current PR, not
+  deferred. The founder should not receive a PR carrying known, trivially
+  fixable rough edges.
+- **Surface the rest in the hand-off**, with your recommendation on each: do it
+  now, do it next phase, or discard with a reason. Never drop them silently.
+- **Reject an empty proposals section.** A pilot report with no proposals means
+  the pilot ran the checklists without applying judgement — send it back rather
+  than treating it as a clean bill of health.
+
+**The pilot must interact, not just look.** It sweeps every safe in-page control
+on each affected screen and captures the resulting state
+(`tests/pilot/support/explore.ts`). If a PR's change sits behind a control the
+sweep skipped or never reached, that change is **unverified** — say so; a green
+page-load table does not cover it.
+
+**Every check and every piece of evidence covers 375 / 768 / 1280.** A finding
+confirmed at one width only is unverified at the other two, and must be reported
+that way.
+
 Promote long, autonomous iterations: keep specialists working until the
 deliverable is debugged and tested. The human's time is reserved for product
 decisions, manual smoke tests, Task Intake approval, and the Human Gate.
@@ -140,9 +164,13 @@ include, in castellano:
 3. **What the pilot already verified, and what it could not.** The founder should
    arrive at the preview knowing which parts are already confirmed working and
    which parts genuinely need their eyes. If the pilot could not verify
-   something, say so — do not let it pass silently as checked.
+   something, say so — do not let it pass silently as checked. Interaction-gated
+   behaviour (a tooltip's text, an expanded panel's contents) that no assertion
+   covered belongs in "could not verify", never in "verified".
+4. **The pilot's proposed improvements**, with which ones you already applied
+   and your recommendation on the rest.
 
-Never ask for a smoke test or Human Gate approval without all three.
+Never ask for a smoke test or Human Gate approval without all four.
 
 ### 5. Ownership of the deliverable quality bar
 
