@@ -1,9 +1,12 @@
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 import { DOCS_NAV } from "@/lib/docs/nav";
+import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 
 const SITE_URL = "https://www.genscore.es";
 const DOCS_LAST_MODIFIED = "2026-08-02";
+/** GROWTH-2 Fase 2.6b: date each /glosario/<termino> page was added. */
+const GLOSSARY_LAST_MODIFIED = "2026-08-02";
 
 /**
  * Real last-meaningful-change date per static route (GROWTH-2 Fase 2.1) —
@@ -43,5 +46,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }))
   );
 
-  return [...staticRoutes, ...blogRoutes, ...docsRoutes];
+  const glossaryRoutes = GLOSSARY_TERMS.map((t) => ({
+    url: `${SITE_URL}/glosario/${t.slug}`,
+    lastModified: new Date(GLOSSARY_LAST_MODIFIED)
+  }));
+
+  return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes];
 }
