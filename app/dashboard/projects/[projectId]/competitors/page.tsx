@@ -8,7 +8,11 @@ import { ManageCompetitorsPanel } from "./manage-competitors-panel";
 import { PromptGapSection } from "./prompt-gap-section";
 import { EmergingBrandsSection } from "./emerging-brands-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
-import { computeEntityEngineBreakdown, type EntityEngineBreakdown } from "@/lib/competitors/engine-share";
+import {
+  computeEntityEngineBreakdown,
+  filterComparableEngines,
+  type EntityEngineBreakdown
+} from "@/lib/competitors/engine-share";
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeEmergingBrands } from "@/lib/competitors/emerging-brands";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
@@ -398,18 +402,11 @@ export default async function CompetitorsPage({
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
   const brandFavicon = faviconUrl(project.domain);
 
-  // Engine columns worth showing: an engine where NOBODY (not the brand, not
-  // a single competitor) was ever mentioned adds a column of zeros that tells
-  // the user nothing — drop it entirely rather than render dead space
-  // (founder feedback). This is a display filter only: the engine ran and its
-  // 0% is real, it's just not comparative information. The per-entity rates
-  // themselves are untouched, still computed over each engine's own row total
-  // (docs/specs/engines-value-3.md §7).
-  const matrixEngines = brandEngineBreakdown.filter((brandEngine) => {
-    if (brandEngine.mentionRate > 0) return true;
-    return competitorRows.some(
-      (c) => (c.engineBreakdown.find((e) => e.provider === brandEngine.provider)?.mentionRate ?? 0) > 0
-    );
+  // Engine columns worth showing — see filterComparableEngines
+  // (lib/competitors/engine-share.ts) for the rule and its tests.
+  const matrixEngines = filterComparableEngines({
+    brandBreakdown: brandEngineBreakdown,
+    competitorBreakdowns: competitorRows.map((c) => c.engineBreakdown)
   });
 
   // Latest avg position per entity, read from the same run_scores ranking the

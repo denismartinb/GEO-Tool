@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeEntityEngineBreakdown,
+  filterComparableEngines,
+  type EntityEngineBreakdown,
   type EntityEngineInputRow,
   type ExtractedJsonLike
 } from "@/lib/competitors/engine-share";
@@ -100,5 +102,60 @@ describe("computeEntityEngineBreakdown", () => {
     expect(result).toHaveLength(1);
     expect(result[0].provider).toBe("gemini");
     expect(result[0].mentionRate).toBe(50);
+  });
+});
+
+describe("filterComparableEngines", () => {
+  function eng(provider: string, mentionRate: number): EntityEngineBreakdown {
+    return { provider, mentions: mentionRate > 0 ? 1 : 0, mentionRate };
+  }
+
+  it("1. an engine where nobody was mentioned is dropped", () => {
+    const result = filterComparableEngines({
+      brandBreakdown: [eng("gemini", 44), eng("openai", 0), eng("claude", 44)],
+      competitorBreakdowns: [
+        [eng("gemini", 30), eng("openai", 0), eng("claude", 20)],
+        [eng("gemini", 10), eng("openai", 0), eng("claude", 5)]
+      ]
+    });
+    expect(result.map((e) => e.provider)).toEqual(["gemini", "claude"]);
+  });
+
+  it("2. an engine where only a COMPETITOR was mentioned is kept — that's a real gap, not dead space", () => {
+    const result = filterComparableEngines({
+      brandBreakdown: [eng("gemini", 40), eng("openai", 0)],
+      competitorBreakdowns: [[eng("gemini", 10), eng("openai", 55)]]
+    });
+    expect(result.map((e) => e.provider)).toEqual(["gemini", "openai"]);
+  });
+
+  it("3. an engine where only the BRAND was mentioned is kept", () => {
+    const result = filterComparableEngines({
+      brandBreakdown: [eng("gemini", 40), eng("claude", 12)],
+      competitorBreakdowns: [[eng("gemini", 10), eng("claude", 0)]]
+    });
+    expect(result.map((e) => e.provider)).toEqual(["gemini", "claude"]);
+  });
+
+  it("4. all engines at zero for everyone → empty (caller's >=2 guard then hides the matrix)", () => {
+    const result = filterComparableEngines({
+      brandBreakdown: [eng("gemini", 0), eng("openai", 0)],
+      competitorBreakdowns: [[eng("gemini", 0), eng("openai", 0)]]
+    });
+    expect(result).toEqual([]);
+  });
+
+  it("5. no competitors at all → falls back to the brand's own non-zero engines", () => {
+    const result = filterComparableEngines({
+      brandBreakdown: [eng("gemini", 40), eng("openai", 0)],
+      competitorBreakdowns: []
+    });
+    expect(result.map((e) => e.provider)).toEqual(["gemini"]);
+  });
+
+  it("6. surviving engines keep their original order and values untouched", () => {
+    const brandBreakdown = [eng("gemini", 44), eng("openai", 0), eng("claude", 44)];
+    const result = filterComparableEngines({ brandBreakdown, competitorBreakdowns: [] });
+    expect(result).toEqual([brandBreakdown[0], brandBreakdown[2]]);
   });
 });
