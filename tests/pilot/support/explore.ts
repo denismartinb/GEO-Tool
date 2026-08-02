@@ -100,7 +100,9 @@ const DESTRUCTIVE_TEXT =
  * evidence, since every skipped control is still recorded) rather than to a
  * failed run that verifies nothing at all.
  */
-const MAX_INTERACTIONS_PER_SCREEN = 4;
+/** Overridable so `pnpm pilot:selfcheck` can raise it and still reach the
+ * fixture's safety decoys, which deliberately sit past the production cap. */
+const MAX_INTERACTIONS_PER_SCREEN = Number(process.env.PILOT_MAX_INTERACTIONS ?? 4);
 /** Hard stop well inside Playwright's 60s per-test timeout. */
 const SWEEP_BUDGET_MS = 25_000;
 
@@ -195,7 +197,20 @@ async function refuseReason(el: import("@playwright/test").Locator): Promise<str
   // A same-page anchor (#hash) is fine; anything else navigates away and would
   // take the explorer off the screen it is supposed to be exercising.
   if (info.href && !info.href.startsWith("#")) return `navigates away (${info.href})`;
-  if (DESTRUCTIVE_TEXT.test(info.name)) return `destructive/write-looking label: "${info.name.slice(0, 40)}"`;
+
+  // The text check only applies to something that reads like an ACTION LABEL.
+  // A real destructive control is labelled "Eliminar", not with a paragraph —
+  // and matching long prose produced three pure false refusals on the first
+  // clean run (2026-08-02): a prompt whose own text ends "seguro de borrar",
+  // a recommendation card titled "Añadir bloque de…", and the "Citas totales"
+  // tooltip, refused for containing "escaneados". Each cost real coverage.
+  // Above this length the element is content, not a command, and the
+  // structural guards above — which are the actual safety net — still apply.
+  const ACTION_LABEL_MAX = 60;
+  const looksLikeActionLabel = info.name.length > 0 && info.name.length <= ACTION_LABEL_MAX;
+  if (looksLikeActionLabel && DESTRUCTIVE_TEXT.test(info.name)) {
+    return `destructive/write-looking label: "${info.name.slice(0, 40)}"`;
+  }
   return null;
 }
 
