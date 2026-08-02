@@ -801,6 +801,79 @@ de producción (movistar.es), no una propuesta del piloto:
 
 ---
 
+## 9. Página de Auditoría web (WEB-AUDIT-ISSUES-1, 2026-08-02)
+
+**Estado: fase 1 (derivador) implementada y mergeada (PR #288). Fase 2 (esta
+entrada) implementada, pendiente de Human Gate.**
+
+**Origen:** tres rondas de artefactos de diseño con el fundador. La primera
+propuso tres direcciones (A/B/C); el fundador eligió **B — la auditoría como
+registro de problemas** porque "una auditoría web es para encontrar
+problemas técnicos". La segunda ronda, a petición explícita del fundador,
+resolvió el solapamiento real con Recomendaciones que ya existía en
+producción (la misma tarjeta de recomendación se embebía en las dos
+pantallas — WEB-AUDIT-R5 — sin que el usuario pudiera saber si era la misma
+acción o dos). La tercera, tras el comentario del fundador "creo que resumen
+y problemas pueden ser la misma", fusionó las pestañas.
+
+**El reparto (decisión central de toda la fase):**
+> La Auditoría **arregla tu web** (problemas técnicos, se resuelven en la
+> propia página). Recomendaciones **consigue que te citen** (trabajo de
+> contenido, con su propio ciclo de vida).
+
+Decisiones finales:
+
+1. **Tres pestañas, no tres+**: `problemas` (portada por defecto, fusiona lo
+   que antes eran "Resumen" y "Salud técnica"), `correcto` (nueva, petición
+   directa del fundador), `paginas` (renombrada desde "tecnica", contenido
+   sin cambios). "Evolución" deja de ser pestaña propia y pasa a bloque al
+   pie de Problemas — mismo contenido, sin cambios de UI.
+2. **`RecCard` retirado de esta página.** La fila de Plan de acción que antes
+   embebía la tarjeta interactiva completa de Recomendaciones (WEB-AUDIT-R5)
+   ahora muestra un badge plano "✓ En tu plan" + enlace — misma información
+   (rationale, competidores citados), una sola tarjeta real en todo el
+   producto. Esto simplificó bastante la carga de datos: desaparece el join
+   con `generated_solutions` que solo servía para el estado "Propuesta
+   generada" de `RecCard`.
+3. **Nueva pestaña Correcto**: espejo de la lista de problemas, pero de
+   comprobaciones que YA pasan (`lib/web-audit/issues.ts`'s `passing`).
+   Cero backend nuevo — son datos que el derivador ya calculaba y la UI
+   tiraba. Tachado + check verde, con el alcance real ("10 de 10 páginas
+   indexables"), nunca un "bien" genérico.
+4. **Puntos potenciales sólo sobre lo técnico.** "Si arreglas los N
+   problemas técnicos: X → Y (calculado)" usa el `pointDelta`/
+   `projectedReadinessScore` exactos de `issues.ts` — nunca una cifra sobre
+   el score global, que mezcla contenido (no controlable) con técnica.
+5. **Sistema de anchura de consola** (`.wa2-scope`/`.wa2-page`): mismo
+   mecanismo y mismos valores que `.ov2-scope`/`.cit2-scope`
+   (460px→640px≥900px→1200px≥1200px→1280px≥1600px) — el estándar oficial
+   desde CITATIONS-REDESIGN-1 (§8), no una elección nueva por pantalla.
+   Envuelve todo el contenido bajo la cabecera sticky, que se queda en el
+   sistema de tokens compartido sin repintar (misma anidación que
+   `citations-client.tsx`).
+6. **Históricos de auditoría técnica ampliados de 1 a 8 filas** — antes esta
+   página sólo cargaba el último snapshot técnico; la mini-tendencia de
+   críticos/avisos y el delta de score en "Problemas" necesitaban más.
+
+Pendiente / roto conocido:
+
+- **"Lo que ya funciona" (temas de contenido citados) sigue en Problemas**,
+  no se fusionó con la pestaña Correcto en esta fase — decisión de alcance
+  explícita para no mezclar el derivador técnico con el de contenido en el
+  mismo PR. Candidato a fase futura si se quiere una sola pantalla de "todo
+  lo que va bien".
+- **No hay journey de pilot dedicado** para las pestañas nuevas — el
+  journey genérico de `core-flow.spec.ts` ("web audit screen renders") ya
+  visita `/web-audit` y ejercita sus controles vía `exploreInteractions`,
+  pero no verifica interacciones específicas (como sí hace el de Citations
+  para tooltips/expansión de fila). Se añadirá si el pilot señala algo
+  concreto que verificar.
+- Fases 3 (arreglos copiables, generador de `llms.txt`) y 4 (verificación
+  automática, detección de regresión) del plan original de 4 fases siguen
+  sin empezar — cada una necesita su propio Human Gate antes de continuar.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

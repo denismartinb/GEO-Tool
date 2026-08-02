@@ -23,7 +23,6 @@ import {
   type ActionItem,
   type ActionItemKind
 } from "@/lib/web-audit/action-plan";
-import { parseGeneratedSolution, type GeneratedSolution } from "@/lib/recommendations/generated-solution";
 import { RunAuditButton } from "./run-audit-button";
 import { RunTechnicalAuditButton } from "./run-technical-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
@@ -31,7 +30,6 @@ import {
   AuditTabsProvider,
   AuditTabBar,
   AuditTabPanel,
-  GoToTabButton,
   QuadrantButton,
   ActionFilterBar,
   ActionRowVisibility,
@@ -39,10 +37,17 @@ import {
   type ActionFilterId,
   type ActionFilterCount
 } from "./audit-tabs";
-import { RecCard, type Recommendation } from "../recommendations/recommendations-client";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
 import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
+import {
+  buildTechnicalIssuesReport,
+  type TechnicalIssue,
+  type TechnicalIssuesReport,
+  type TechnicalPassingCheck,
+  type IssueCheckKey,
+  type IssueSeverity
+} from "@/lib/web-audit/issues";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -127,6 +132,160 @@ function freshnessLabel(status: "fresh" | "aging" | "stale" | "unknown"): string
     default:
       return "Sin fecha detectada";
   }
+}
+
+/**
+ * Presentation-layer labels/guidance for lib/web-audit/issues.ts's technical
+ * checks (WEB-AUDIT-ISSUES-1 fase 2). Deterministic, aggregate-level text —
+ * same rationale as buildPageCheckGuidance (no LLM, no interpretation), just
+ * phrased for "N pages fail this" instead of one page's own detail.
+ */
+const CHECK_META: Record<IssueCheckKey, { label: string; guidance: string; unit: "página" | "bot" }> = {
+  structured_data: {
+    label: "Datos estructurados",
+    guidance: "Añade datos estructurados (JSON-LD) con un @type reconocido por los motores de IA: Article, FAQPage, HowTo, Product, Organization…",
+    unit: "página"
+  },
+  single_h1: { label: "Un solo <h1> por página", guidance: "Usa un único <h1> en cada página afectada.", unit: "página" },
+  two_h2: { label: "Al menos dos <h2>", guidance: "Añade al menos dos <h2> que estructuren la respuesta.", unit: "página" },
+  answer_first_intro: {
+    label: "Intro respuesta-primero",
+    guidance: "Añade un párrafo de al menos 200 caracteres justo después del título que responda directamente a la pregunta principal.",
+    unit: "página"
+  },
+  title_length: { label: "Título con longitud válida", guidance: "Ajusta el <title> a entre 15 y 70 caracteres.", unit: "página" },
+  description_length: {
+    label: "Meta description con longitud válida",
+    guidance: "Ajusta la meta description a entre 50 y 160 caracteres.",
+    unit: "página"
+  },
+  open_graph: { label: "Etiquetas Open Graph", guidance: "Añade etiquetas Open Graph (og:title y og:description).", unit: "página" },
+  noindex: {
+    label: "Página indexable",
+    guidance: 'Quita la etiqueta <meta name="robots" content="noindex"> — mientras esté, ni Google ni los motores de IA pueden indexar la página.',
+    unit: "página"
+  },
+  canonical: {
+    label: "Canonical propio",
+    guidance: 'Añade o corrige el <link rel="canonical"> para que apunte a esta misma URL en tu dominio.',
+    unit: "página"
+  },
+  hreflang: {
+    label: "Hreflang",
+    guidance: 'Si estas páginas tienen versiones en otros idiomas o países, añade etiquetas <link rel="alternate" hreflang="...">.',
+    unit: "página"
+  },
+  list_or_table: {
+    label: "Listas o tablas",
+    guidance: "Añade listas o tablas que estructuren la información — los motores de IA citan con más frecuencia contenido en ese formato.",
+    unit: "página"
+  },
+  content_length: {
+    label: "Contenido sustancial",
+    guidance: "Amplía el contenido visible de la página — los motores de IA prefieren respuestas sustanciales.",
+    unit: "página"
+  },
+  freshness: {
+    label: "Contenido actualizado",
+    guidance: "Actualiza el contenido y refresca su fecha de modificación (dateModified en el JSON-LD, o una etiqueta de última modificación).",
+    unit: "página"
+  },
+  bot_blocked: { label: "Acceso de bots de IA", guidance: "Revisa tu robots.txt y quita la regla que bloquea a este motor.", unit: "bot" },
+  llms_txt_missing: {
+    label: "llms.txt",
+    guidance: "Publica un fichero llms.txt en la raíz de tu dominio con una guía de lectura para los modelos de IA.",
+    unit: "página"
+  },
+  sitemap_missing: { label: "sitemap.xml", guidance: "Publica un sitemap.xml en la raíz de tu dominio.", unit: "página" }
+};
+
+function pluralizeUnit(unit: "página" | "bot", count: number): string {
+  if (unit === "bot") return count === 1 ? "bot" : "bots";
+  return count === 1 ? "página" : "páginas";
+}
+
+const SEVERITY_META: Record<IssueSeverity, { label: string; stripe: string; badgeClass: string }> = {
+  critical: { label: "Crítico", stripe: "var(--wa-crit)", badgeClass: "badge-neg" },
+  warning: { label: "Aviso", stripe: "var(--warn)", badgeClass: "badge-warn" },
+  improvement: { label: "Mejora", stripe: "var(--wa-improve)", badgeClass: "badge-neutral" }
+};
+
+const SINGLE_FACT_CHECKS = new Set<IssueCheckKey>(["llms_txt_missing", "sitemap_missing"]);
+
+/** One technical problem, collapsed by default (same `.wa-details` pattern PageAuditRow already uses) — severity + scope always visible, the fix and affected pages one tap away. */
+function IssueRow({ issue }: { issue: TechnicalIssue }) {
+  const meta = CHECK_META[issue.check];
+  const sev = SEVERITY_META[issue.severity];
+  const scopeLabel = SINGLE_FACT_CHECKS.has(issue.check)
+    ? "No encontrado"
+    : `${issue.affectedCount} de ${issue.applicableCount} ${pluralizeUnit(meta.unit, issue.applicableCount)}`;
+
+  return (
+    <details className="wa-details">
+      <summary>
+        <span className="wa2-issue-stripe" style={{ background: sev.stripe }} aria-hidden="true" />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span className={`badge ${sev.badgeClass}`} style={{ fontSize: 10 }}>
+              {sev.label}
+            </span>
+            <span style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)" }}>{meta.label}</span>
+          </div>
+          <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 2 }}>{scopeLabel}</div>
+        </div>
+        {issue.pointDelta !== null && (
+          <span className="badge badge-accent" style={{ fontSize: 10.5, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+            +{issue.pointDelta.toFixed(1).replace(".", ",")} pt
+          </span>
+        )}
+        <span className="wa-chev">
+          <Icon name="chevDown" size={14} />
+        </span>
+      </summary>
+      <div className="wa-details-body">
+        <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 8px", lineHeight: 1.5 }}>{meta.guidance}</p>
+        {issue.affectedLabels.length > 0 && (
+          <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
+            {issue.affectedLabels.slice(0, 12).map((label) => (
+              <li
+                key={label}
+                style={{
+                  fontSize: 11,
+                  color: "var(--ink-4)",
+                  fontFamily: label.startsWith("http") ? "var(--mono)" : undefined,
+                  overflowWrap: "anywhere"
+                }}
+              >
+                {label}
+              </li>
+            ))}
+            {issue.affectedLabels.length > 12 && (
+              <li style={{ fontSize: 11, color: "var(--ink-4)" }}>y {issue.affectedLabels.length - 12} más…</li>
+            )}
+          </ul>
+        )}
+      </div>
+    </details>
+  );
+}
+
+/** Mirror of IssueRow for a check that's already passing (WEB-AUDIT-ISSUES-1 fase 2, founder-requested "Correcto" tab) — same data issues.ts already computes, just never shown before. */
+function PassingRow({ passing }: { passing: TechnicalPassingCheck }) {
+  const meta = CHECK_META[passing.check];
+  const scopeLabel = SINGLE_FACT_CHECKS.has(passing.check)
+    ? "Encontrado"
+    : `${passing.passedCount} de ${passing.applicableCount} ${pluralizeUnit(meta.unit, passing.applicableCount)}`;
+  return (
+    <div className="wa2-passing-row">
+      <span className="wa2-check-icon">
+        <Icon name="check" size={12} />
+      </span>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink-3)", textDecoration: "line-through" }}>{meta.label}</div>
+        <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{scopeLabel}</div>
+      </div>
+    </div>
+  );
 }
 
 function CheckDot({ ok, label }: { ok: boolean; label: string }) {
@@ -485,10 +644,10 @@ function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: 
   );
 }
 
-// WEB-AUDIT-R5: a matched recommendation now embeds its own interactive
-// RecCard (see ActionPlanRow) instead of deep-linking out — this only ever
-// points at the generic Recomendaciones page, for topics with no matching
-// recommendation type in the engine at all.
+// Every Plan de acción row links out to Recomendaciones (WEB-AUDIT-ISSUES-1
+// fase 2) — a matched row's link reads "Ver en Recomendaciones" and its
+// header carries the "En tu plan" badge; an unmatched row's plain "Ver
+// recomendaciones" is the same href, just without either.
 function genericRecommendationsHref(projectId: string): string {
   return `/dashboard/projects/${projectId}/recommendations`;
 }
@@ -526,35 +685,28 @@ function ActionNumberChip({ index, kind }: { index: number; kind: ActionItemKind
 }
 
 /**
- * One row of the Plan de acción (WEB-AUDIT-R5, self-contained per founder
- * request 2026-07-16). When a real recommendation matches this topic (only
- * add_citation_block/increase_brand_visibility ever can — see the query in
- * the page component), embed the SAME interactive `RecCard` used on the
- * Recomendaciones page: its own evidence, "Generar propuesta con IA", and
- * "Marcar como hecho" all work right here, no navigation required. When no
- * real recommendation matches (content_gap/open_opportunity/unverified_cited
- * have no matching type in the engine yet), keep the synthesized
- * "Sugerencia" box — plain text and a generic link, never a fake button on
- * something that isn't a trackable recommendation.
- *
- * The number chip + kind badge sit in a header ABOVE the content box in
- * BOTH cases (founder report 2026-07-17: with the chip sitting beside the
- * box only for the synthesized case, `RecCard` — which owns its own full-
- * width border and can't have a sibling merged into it — rendered visibly
- * narrower and offset from the synthesized box next to it). Keeping the
- * chip entirely outside either box means the box itself is always the row's
- * full available width, whichever branch renders.
+ * One row of the Plan de acción. Reworked in WEB-AUDIT-ISSUES-1 fase 2
+ * (founder-approved 2026-08-02, "reparto" decision): this page no longer
+ * embeds the interactive `RecCard` a matched recommendation used to render
+ * (WEB-AUDIT-R5) — that was the exact "misma tarjeta en dos sitios"
+ * duplication the founder flagged as confusing (is this the same action as
+ * the one in Recomendaciones, or two?). The rule now: the Auditoría fixes
+ * TECHNICAL problems in place; content work (this row) lives once, in
+ * Recomendaciones, with its own ciclo de vida. A matched row gets a plain
+ * "✓ En tu plan" badge instead of a second copy of the card — same
+ * información (topic, rationale, competitors), one fewer place claiming to
+ * own the action.
  */
 function ActionPlanRow({
   item,
   index,
   projectId,
-  recommendation
+  hasMatchingRecommendation
 }: {
   item: ActionItem;
   index: number;
   projectId: string;
-  recommendation: Recommendation | null;
+  hasMatchingRecommendation: boolean;
 }) {
   const meta = ACTION_KIND_META[item.kind];
 
@@ -563,30 +715,26 @@ function ActionPlanRow({
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
         <ActionNumberChip index={index} kind={item.kind} />
         <span className={`badge ${meta.badgeClass}`}>{meta.label}</span>
-        {/* The topic text only needs to appear here for the synthesized case
-            — a matched recommendation's own title (inside RecCard) already
-            names the topic, repeating it in the header would be redundant. */}
-        {!recommendation && (
-          <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
-            {item.topic}
+        <span style={{ fontSize: 13, fontWeight: 650, color: "var(--ink)", minWidth: 0, overflowWrap: "anywhere" }}>
+          {item.topic}
+        </span>
+        {hasMatchingRecommendation && (
+          <span className="badge badge-accent" style={{ marginLeft: "auto", fontSize: 10.5, flexShrink: 0 }}>
+            ✓ En tu plan
           </span>
         )}
       </div>
-      {recommendation ? (
-        <RecCard rec={recommendation} projectId={projectId} />
-      ) : (
-        <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-          <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
-          {item.competitors.length > 0 && (
-            <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
-              La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
-            </p>
-          )}
-          <Link href={genericRecommendationsHref(projectId)} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
-            Ver recomendaciones →
-          </Link>
-        </div>
-      )}
+      <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
+        <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: "0 0 6px" }}>{item.rationale}</p>
+        {item.competitors.length > 0 && (
+          <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "0 0 6px" }}>
+            La IA cita a: <strong style={{ color: "var(--ink-2)" }}>{item.competitors.join(", ")}</strong>
+          </p>
+        )}
+        <Link href={genericRecommendationsHref(projectId)} style={{ fontSize: 12, fontWeight: 650, color: "var(--accent)" }}>
+          {hasMatchingRecommendation ? "Ver en Recomendaciones →" : "Ver recomendaciones →"}
+        </Link>
+      </div>
     </div>
   );
 }
@@ -742,24 +890,51 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     .order("created_at", { ascending: false })
     .limit(12);
 
-  // WEB-AUDIT-2: latest technical-audit snapshot, if any. Rendered as-is —
-  // this page never re-triggers the audit itself, only the button does
-  // (lib/web-audit/technical-audit.ts owns the cache/rate-limit rules).
-  const { data: technicalSnapshotRow } = canAudit
+  // WEB-AUDIT-2: technical-audit snapshots, most recent first. Rendered
+  // as-is — this page never re-triggers the audit itself, only the button
+  // does (lib/web-audit/technical-audit.ts owns the cache/rate-limit rules).
+  //
+  // WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): widened from
+  // a single row to the last 8 — the "Problemas" tab's críticos/avisos
+  // mini-trend and the readiness-score delta both need more than the latest
+  // snapshot, which nothing on this page loaded before this phase.
+  const { data: technicalHistoryRows } = canAudit
     ? await supabase
         .from("web_audit_snapshots")
         .select("readiness_score, pages, bots, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-    : { data: null };
-  const technicalSnapshot = technicalSnapshotRow as {
+        .limit(8)
+    : { data: [] };
+  const technicalHistory = (technicalHistoryRows ?? []) as Array<{
     readiness_score: number | null;
     pages: PageAuditEntry[];
     bots: BotAccessReport;
     created_at: string;
-  } | null;
+  }>;
+  const technicalSnapshot = technicalHistory[0] ?? null;
+
+  // Pure aggregation (lib/web-audit/issues.ts, WEB-AUDIT-ISSUES-1 fase 1) run
+  // over each loaded snapshot — cheap, no I/O, no new query per point. Series
+  // are chronological (oldest → newest) for the sparkline, matching how
+  // `trend`/Sparkline already read elsewhere on this page.
+  const technicalReportsNewestFirst = technicalHistory.map((snap) => ({
+    createdAt: snap.created_at,
+    report: buildTechnicalIssuesReport(snap.pages, snap.bots)
+  }));
+  const currentTechnicalReport: TechnicalIssuesReport | null = technicalReportsNewestFirst[0]?.report ?? null;
+  const previousTechnicalReport: TechnicalIssuesReport | null = technicalReportsNewestFirst[1]?.report ?? null;
+  const technicalReportsChronological = [...technicalReportsNewestFirst].reverse();
+  const criticalSeries: Array<number | null> = technicalReportsChronological.map(
+    (t) => t.report.issues.filter((i) => i.severity === "critical").length
+  );
+  const warningSeries: Array<number | null> = technicalReportsChronological.map(
+    (t) => t.report.issues.filter((i) => i.severity === "warning").length
+  );
+  const technicalScoreDelta =
+    currentTechnicalReport?.actualReadinessScore != null && previousTechnicalReport?.actualReadinessScore != null
+      ? currentTechnicalReport.actualReadinessScore - previousTechnicalReport.actualReadinessScore
+      : null;
 
   // WEB-AUDIT-CHAIN: detect a campaign left "running" for the current scan
   // (from a previous batch, whether the user is still on this page or came
@@ -912,51 +1087,30 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // unverified_cited topics genuinely have no matching recommendation yet;
   // that's a real gap in the engine's rule set, not a bug in this join.
   //
-  // WEB-AUDIT-R5 (founder-approved 2026-07-16): the Plan de acción now embeds
-  // the SAME interactive RecCard the Recomendaciones page renders — "Generar
-  // propuesta con IA" and "Marcar como hecho" work in place, so the query
-  // widened from {id, title, description} to every column RecCard reads.
+  // WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): the Plan de
+  // acción no longer embeds `RecCard` for a matched row (WEB-AUDIT-R5,
+  // retired below) — only the recommendation's id is needed now, to render
+  // a plain "En tu plan" badge instead. The wider RecCard-shaped query and
+  // its generated_solutions join are gone with it; a shrunk `id, run_id,
+  // evidence_json` select is all this page needs.
   //
-  // Bug fix (founder report 2026-07-18): "Ver recomendación" stopped
-  // rendering inline. Root cause — lib/scan/executor.ts supersedes every
-  // OTHER run's "active" recommendations project-wide the instant any new
-  // scan completes (exactly one run ever holds "active" at a time), but the
+  // Bug fix (founder report 2026-07-18, still applies): filter by
+  // `status = "active"` alone, never by `run_id = latestMap.scanId` — the
   // domain-coverage audit behind `latestMap` is a separate, manually
   // triggered action that can lag behind the latest scan (see
-  // `auditedScanDate`'s own scanId-mismatch guard just above, which already
-  // anticipated this). Filtering matchedRecs by `run_id = latestMap.scanId`
-  // silently returned nothing whenever the two fell out of sync — a very
-  // common state, not an edge case — so every row fell back to the plain
-  // link. `status = "active"` alone is the correct, staleness-proof filter;
-  // the evidence's scan_prompt_results id is resolved to a promptId via a
-  // query scoped to each recommendation's own `run_id`, never assumed to
-  // equal `latestMap.scanId`.
+  // `auditedScanDate`'s own scanId-mismatch guard above), so a scanId filter
+  // silently returns nothing whenever the two fall out of sync, which is the
+  // common state, not an edge case.
   const { data: matchedRecs } = latestMap
     ? await supabase
         .from("recommendations")
-        .select(
-          "id, run_id, priority_rank, title, description, recommendation_type, impact, effort, confidence, status, source_type, evidence_json, consecutive_runs_open"
-        )
+        .select("id, run_id, evidence_json")
         .eq("project_id", projectId)
         .in("recommendation_type", ["add_citation_block", "increase_brand_visibility"])
         .eq("status", "active")
     : { data: [] };
 
-  type MatchedRecRow = {
-    id: string;
-    run_id: string;
-    priority_rank: number;
-    title: string;
-    description: string;
-    recommendation_type: string;
-    impact: string;
-    effort: string;
-    confidence: string;
-    status: string;
-    source_type: string;
-    evidence_json: unknown;
-    consecutive_runs_open: number | null;
-  };
+  type MatchedRecRow = { id: string; run_id: string; evidence_json: unknown };
 
   const matchedRecRows = (matchedRecs ?? []) as MatchedRecRow[];
   const matchedRecRunIds = Array.from(new Set(matchedRecRows.map((r) => r.run_id)));
@@ -973,67 +1127,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     if (row.prompt_id) resultIdToPromptIdForRecs.set(row.id, row.prompt_id);
   }
 
-  // Founder report: "Ver recomendación →" sent the founder to a
-  // decontextualized Recomendaciones page with no explanation of the
-  // problem or the fix right where they were looking. A matched real
-  // recommendation now renders inline via RecCard instead of a link.
-  // `coverageOverlay` is intentionally left null here — computing it needs
-  // the same coverage-overlay join lib/recommendations/coverage-overlay.ts
-  // performs, out of scope for this first cut; RecCard renders its normal
-  // (non-enriched) state without it, never a fake one.
-  const recommendationByPromptId = new Map<string, Recommendation>();
+  const recommendationIdByPromptId = new Map<string, string>();
   for (const rec of matchedRecRows) {
     const evidence = rec.evidence_json as { affected_prompt_details?: Array<{ id: string }> } | null;
     const resultId = evidence?.affected_prompt_details?.[0]?.id;
     if (!resultId) continue;
     const promptId = resultIdToPromptIdForRecs.get(resultId);
-    if (!promptId || recommendationByPromptId.has(promptId)) continue;
-    recommendationByPromptId.set(promptId, {
-      id: rec.id,
-      priority_rank: rec.priority_rank,
-      title: rec.title,
-      description: rec.description,
-      recommendation_type: rec.recommendation_type,
-      impact: rec.impact,
-      effort: rec.effort,
-      confidence: rec.confidence,
-      status: rec.status,
-      source_type: rec.source_type,
-      evidence_json: rec.evidence_json as Recommendation["evidence_json"],
-      consecutive_runs_open: rec.consecutive_runs_open ?? undefined,
-      solution: null,
-      coverageOverlay: null
-    });
-  }
-
-  // Same pattern recommendations/page.tsx uses to attach the latest
-  // sanitized AI-generated solution (if any) — the embedded RecCard needs it
-  // to show "Propuesta generada" instead of the "Generar propuesta" button.
-  const matchedRecIds = Array.from(recommendationByPromptId.values()).map((r) => r.id);
-  if (matchedRecIds.length > 0) {
-    const { data: solutionRows } = await supabase
-      .from("generated_solutions")
-      .select("recommendation_id, sanitized_content, created_at")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .eq("is_sanitized", true)
-      .in("recommendation_id", matchedRecIds)
-      .order("created_at", { ascending: false });
-
-    const solutionByRecId = new Map<string, GeneratedSolution>();
-    for (const row of (solutionRows ?? []) as Array<{ recommendation_id: string; sanitized_content: string | null }>) {
-      // Newest-first order means the first row seen per recommendation wins.
-      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
-      const parsed = parseGeneratedSolution(row.sanitized_content);
-      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
-    }
-    for (const rec of recommendationByPromptId.values()) {
-      rec.solution = solutionByRecId.get(rec.id) ?? null;
-    }
-  }
-
-  const recommendationIdByPromptId = new Map<string, string>();
-  for (const [promptId, rec] of recommendationByPromptId) {
+    if (!promptId || recommendationIdByPromptId.has(promptId)) continue;
     recommendationIdByPromptId.set(promptId, rec.id);
   }
 
@@ -1085,7 +1185,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   ];
 
   const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;
-  const allowedBotsCount = technicalSnapshot ? technicalSnapshot.bots.bots.filter((b) => b.allowed).length : 0;
 
   return (
     <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAudit}>
@@ -1121,6 +1220,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           <RunAuditButton canAudit={canAudit} />
         </div>
       </div>
+
+      {/* WEB-AUDIT-ISSUES-1 fase 2: v3 repaint + the founder-approved
+          640/1200/1280px console width standard (CITATIONS-REDESIGN-1,
+          docs/brand/design-decisions-log.md §5), same mechanism as
+          .ov2-scope/.cit2-scope — re-points the shared token names so every
+          unedited `.card`/badge/etc. inside repaints automatically. Wraps
+          everything below the sticky header, which stays on the shared
+          chrome untouched, matching this repo's established nesting. */}
+      <div className="wa2-scope wa2-page">
 
       {/* A campaign can be left "running" server-side while the account's
           plan lapses mid-audit (e.g. downgraded via Stripe billing) — the
@@ -1287,19 +1395,123 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           <AuditTabBar />
 
           {/* ─── Resumen ─── */}
-          <AuditTabPanel id="resumen">
-            {/* Plan de acción — the first actionable thing after the verdict,
-                closing the "¿y ahora qué hago?" the matrix on its own leaves
-                open (WEB-AUDIT-ACTION), the protagonist of the default tab
-                (WEB-AUDIT-R1) and now fully self-contained (WEB-AUDIT-R5,
-                founder-approved 2026-07-16): a matched real recommendation
-                embeds its own interactive RecCard right here — Generar
-                propuesta / Marcar como hecho work in place, no navigation
-                required. `id="action-plan"` is the matrix's scroll target
-                (audit-tabs.tsx). "Ver todas las acciones" only appears while
-                filter === "all" (founder-approved 2026-07-17) — with a
-                specific filter active, every matching row is already shown
-                directly; see PlanExpander. */}
+          <AuditTabPanel id="problemas">
+            {/* Salud técnica GEO — la lista de problemas (WEB-AUDIT-ISSUES-1
+                fase 2, founder-approved 2026-08-02): "una auditoría web es
+                para encontrar problemas técnicos" fue la lectura del
+                fundador sobre los mockups, así que esta lista —no el antiguo
+                resumen de una línea— abre ahora la pestaña. Cada fila sale
+                de los checks reales por página/bot de lib/web-audit/issues.ts,
+                ordenados por severidad; el delta de puntos de cada una es la
+                ganancia exacta de score al arreglar solo ESE check (ver la
+                cabecera de ese módulo para el porqué es exacto, no una
+                estimación). */}
+            {currentTechnicalReport ? (
+              <>
+                {currentTechnicalReport.totalPointPotential > 0 && (
+                  <div
+                    className="card"
+                    style={{ marginTop: 12, padding: "14px 16px", background: "var(--pos-soft)", border: "1px solid transparent" }}
+                  >
+                    <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".03em", color: "var(--pos-ink)", textTransform: "uppercase" }}>
+                      Si arreglas los {currentTechnicalReport.issues.length}{" "}
+                      {currentTechnicalReport.issues.length === 1 ? "problema técnico" : "problemas técnicos"}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+                      <span style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", color: "var(--ink)", fontVariantNumeric: "tabular-nums" }}>
+                        {currentTechnicalReport.actualReadinessScore}
+                      </span>
+                      <Icon name="arrRight" size={16} />
+                      <span
+                        style={{ fontSize: 26, fontWeight: 800, letterSpacing: "-.02em", color: "var(--pos-ink)", fontVariantNumeric: "tabular-nums" }}
+                      >
+                        {currentTechnicalReport.projectedReadinessScore}
+                      </span>
+                      <span className="badge badge-pos" style={{ marginLeft: "auto", fontSize: 10.5, background: "var(--surface)" }}>
+                        calculado
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11.5, color: "var(--ink-2)", margin: "6px 0 0" }}>
+                      Suma exacta de los puntos de salud técnica que hoy pierdes. No incluye contenido: eso depende de
+                      que la IA decida citarte.
+                    </p>
+                  </div>
+                )}
+
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div
+                    style={{
+                      padding: "13px 16px 0",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      flexWrap: "wrap",
+                      gap: 8
+                    }}
+                  >
+                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Problemas técnicos</div>
+                    {technicalScoreDelta !== null && technicalScoreDelta !== 0 && (
+                      <span style={{ fontSize: 11.5, fontWeight: 650, display: "flex", alignItems: "center", gap: 4 }}>
+                        <Delta value={technicalScoreDelta} suffix=" pt" /> desde la auditoría anterior
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "12px 16px 0" }}>
+                    <div>
+                      <span
+                        style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}
+                      >
+                        Críticos
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: "var(--wa-crit)", fontVariantNumeric: "tabular-nums" }}>
+                          {currentTechnicalReport.issues.filter((i) => i.severity === "critical").length}
+                        </span>
+                        <Sparkline values={criticalSeries} color="var(--wa-crit)" />
+                      </div>
+                    </div>
+                    <div>
+                      <span
+                        style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}
+                      >
+                        Avisos
+                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                        <span style={{ fontSize: 22, fontWeight: 800, color: "var(--warn)", fontVariantNumeric: "tabular-nums" }}>
+                          {currentTechnicalReport.issues.filter((i) => i.severity === "warning").length}
+                        </span>
+                        <Sparkline values={warningSeries} color="var(--warn)" />
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {currentTechnicalReport.issues.length > 0 ? (
+                      currentTechnicalReport.issues.map((issue) => <IssueRow key={issue.check} issue={issue} />)
+                    ) : (
+                      <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                        Ningún problema técnico detectado en la última auditoría.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  Todavía no has auditado la salud técnica de tu web.{" "}
+                  {canAudit ? "Se comprueba automáticamente al pulsar «Auditar ahora»." : ""}
+                </p>
+              </div>
+            )}
+
+            {/* Plan de acción — el lado de contenido ("consigue que te citen")
+                del reparto con Recomendaciones (WEB-AUDIT-ISSUES-1 fase 2;
+                ver la cabecera de ActionPlanRow para el porqué completo).
+                `id="action-plan"` es el destino de scroll de la matriz
+                (audit-tabs.tsx). "Ver todas las acciones" solo aparece con
+                filter === "all" (founder-approved 2026-07-17) — con un
+                filtro concreto activo, cada fila que coincide ya se muestra
+                directamente; ver PlanExpander. */}
             <div className="card" style={{ marginTop: 12 }} id="action-plan">
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750 }}>Plan de acción</div>
@@ -1320,7 +1532,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                             item={item}
                             index={i + 1}
                             projectId={projectId}
-                            recommendation={recommendationByPromptId.get(item.promptId) ?? null}
+                            hasMatchingRecommendation={recommendationIdByPromptId.has(item.promptId)}
                           />
                         </ActionRowVisibility>
                       ))}
@@ -1330,7 +1542,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                             item={item}
                             index={i + 4}
                             projectId={projectId}
-                            recommendation={recommendationByPromptId.get(item.promptId) ?? null}
+                            hasMatchingRecommendation={recommendationIdByPromptId.has(item.promptId)}
                           />
                         </ActionRowVisibility>
                       ))}
@@ -1450,94 +1662,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             </div>
 
-            {/* Compact technical status — one line per signal; the detail
-                lives once, in its own tab. Expanded only when something is
-                actually wrong (a blocked bot deserves attention; seven green
-                "Permitido" rows don't). */}
-            <div className="card" style={{ marginTop: 12 }}>
-              <div style={{ padding: "13px 16px 14px", display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>Salud técnica</span>
-                  <span style={{ fontSize: 12, color: "var(--ink-3)", flex: 1, minWidth: 0 }}>
-                    {technicalSnapshot
-                      ? technicalSnapshot.readiness_score === null
-                        ? "Ninguna página clave se pudo analizar en la última auditoría técnica."
-                        : `${technicalSnapshot.readiness_score} / 100 · media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"} · ${formatDate(technicalSnapshot.created_at)}`
-                      : "Todavía no has auditado la salud técnica de tu web."}
-                  </span>
-                  <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 12.5, fontWeight: 700 }}>Bots de IA</span>
-                  <span style={{ fontSize: 12, color: "var(--ink-3)", flex: 1, minWidth: 0 }}>
-                    {technicalSnapshot ? (
-                      <>
-                        {allowedBotsCount} / {technicalSnapshot.bots.bots.length} con acceso
-                        {technicalSnapshot.bots.bots.some((b) => !b.allowed) &&
-                          ` · bloqueado: ${technicalSnapshot.bots.bots.filter((b) => !b.allowed).map((b) => b.agent).join(", ")}`}
-                        {" · llms.txt "}
-                        {technicalSnapshot.bots.llmsTxtFound ? "encontrado ✓" : "no encontrado"}
-                      </>
-                    ) : (
-                      "Se comprueban con la auditoría técnica (robots.txt y llms.txt)."
-                    )}
-                  </span>
-                  <GoToTabButton tab="tecnica">Ver detalle →</GoToTabButton>
-                </div>
-              </div>
-            </div>
-          </AuditTabPanel>
-
-          {/* ─── Salud técnica ─── */}
-          <AuditTabPanel id="tecnica">
-            {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
-                AI-bot access, independent from the Gemini-driven coverage
-                audit. */}
-            <div className="section-head" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
-              <div>
-                <div className="section-title">Salud técnica GEO</div>
-                <div className="section-desc">
-                  {technicalSnapshot
-                    ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
-                    : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
-                </div>
-              </div>
-              <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
-            </div>
-            {technicalSnapshot && new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
-              <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 8 }}>
-                Los criterios técnicos se ampliaron el 13 jul 2026 (canonical, indexabilidad, hreflang, listas/tablas,
-                contenido, Open Graph). Esta auditoría es de antes de ese cambio — vuelve a auditar para comparar con
-                los criterios actuales.
-              </p>
-            )}
-            {technicalSnapshot ? (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
-                <div className="card">
-                  <div style={{ padding: "13px 16px 0" }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
-                    <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                      Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA. Toca una
-                      página para ver qué mejorar.
-                    </div>
-                  </div>
-                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
-                    {technicalSnapshot.pages.map((page, i) => (
-                      <PageAuditRow key={`${page.url}-${i}`} page={page} />
-                    ))}
-                  </div>
-                </div>
-                <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
-              </div>
-            ) : (
-              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
-                Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
-              </p>
-            )}
-          </AuditTabPanel>
-
-          {/* ─── Evolución ─── */}
-          <AuditTabPanel id="evolucion">
+            {/* Evolución — trasladada aquí desde su antigua pestaña propia,
+                ahora retirada (WEB-AUDIT-ISSUES-1 fase 2): "¿voy mejorando?"
+                es la pregunta natural justo después de la lista de arriba,
+                no un destino aparte. Mismo contenido, sin cambios. */}
             {trend.length >= 2 ? (
               <div className="card" style={{ marginTop: 16 }}>
                 <div style={{ padding: "13px 16px 0" }}>
@@ -1622,6 +1750,103 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             )}
           </AuditTabPanel>
+
+          {/* ─── Correcto ─── */}
+          <AuditTabPanel id="correcto">
+            {/* Founder request (2026-08-02, tras ver los mockups): "me
+                gustaría una sección... donde tenga tachado y con el check de
+                verificado todo lo que el usuario tiene bien porque eso da la
+                sensación de tienes cosas bien, pero tienes que mejorar
+                otras". Cero backend nuevo — issues.ts ya calcula qué checks
+                pasan, esta pestaña sólo enseña lo que hoy se descartaba. */}
+            {currentTechnicalReport ? (
+              <>
+                <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".03em", color: "var(--pos-ink)", textTransform: "uppercase" }}>
+                    Comprobaciones superadas
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: "var(--pos-ink)", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
+                    {currentTechnicalReport.passing.reduce((sum, p) => sum + p.passedCount, 0)}
+                    <span style={{ fontSize: 14, fontWeight: 650, color: "var(--ink-4)" }}>
+                      {" "}
+                      / {currentTechnicalReport.passing.reduce((sum, p) => sum + p.applicableCount, 0)}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "8px 0 0" }}>
+                    Tu web hace bien la mayoría de las cosas que comprobamos. Lo que falla está en la pestaña
+                    Problemas.
+                  </p>
+                </div>
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div style={{ padding: "13px 16px 16px", display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+                    {currentTechnicalReport.passing.length > 0 ? (
+                      currentTechnicalReport.passing.map((p) => <PassingRow key={p.check} passing={p} />)
+                    ) : (
+                      <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                        Ninguna comprobación superada todavía en la última auditoría.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
+                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                  Todavía no has auditado la salud técnica de tu web.
+                </p>
+              </div>
+            )}
+          </AuditTabPanel>
+
+          {/* ─── Páginas ─── */}
+          <AuditTabPanel id="paginas">
+            {/* Salud técnica GEO (WEB-AUDIT-2): deterministic per-page checks +
+                AI-bot access, independent from the Gemini-driven coverage
+                audit. Renamed from "tecnica" (WEB-AUDIT-ISSUES-1 fase 2) —
+                content unchanged, this is still the page-by-page detail the
+                aggregated Problemas/Correcto lists summarize. */}
+            <div className="section-head" style={{ marginTop: 16, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 10 }}>
+              <div>
+                <div className="section-title">Salud técnica GEO</div>
+                <div className="section-desc">
+                  {technicalSnapshot
+                    ? `Comprobado ${formatDate(technicalSnapshot.created_at)}`
+                    : "Comprueba si tus páginas son técnicamente citables por la IA y si sus bots pueden rastrear tu web."}
+                </div>
+              </div>
+              <RunTechnicalAuditButton projectId={projectId} canAudit={canAudit} />
+            </div>
+            {technicalSnapshot && new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
+              <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 8 }}>
+                Los criterios técnicos se ampliaron el 13 jul 2026 (canonical, indexabilidad, hreflang, listas/tablas,
+                contenido, Open Graph). Esta auditoría es de antes de ese cambio — vuelve a auditar para comparar con
+                los criterios actuales.
+              </p>
+            )}
+            {technicalSnapshot ? (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 12, marginTop: 12 }}>
+                <div className="card">
+                  <div style={{ padding: "13px 16px 0" }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 750 }}>Salud técnica GEO por página</div>
+                    <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                      Hasta {technicalSnapshot.pages.length} páginas clave: portada, páginas verificadas y páginas citadas por la IA. Toca una
+                      página para ver qué mejorar.
+                    </div>
+                  </div>
+                  <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+                    {technicalSnapshot.pages.map((page, i) => (
+                      <PageAuditRow key={`${page.url}-${i}`} page={page} />
+                    ))}
+                  </div>
+                </div>
+                <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
+              </div>
+            ) : (
+              <p style={{ fontSize: 12.5, color: "var(--ink-3)", marginTop: 8 }}>
+                Todavía no has auditado la salud técnica de tu web. Hasta 5 auditorías al día por proyecto.
+              </p>
+            )}
+          </AuditTabPanel>
         </AuditTabsProvider>
       )}
 
@@ -1650,6 +1875,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           <Icon name="recs" size={13} />
           Recomendaciones
         </Link>
+      </div>
       </div>
     </div>
     </WebAuditProvider>

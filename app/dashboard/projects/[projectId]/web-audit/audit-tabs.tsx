@@ -12,13 +12,26 @@ import { createContext, useContext, useState, type CSSProperties, type ReactNode
  *
  * WEB-AUDIT-R5 (founder-approved 2026-07-16) removed the standalone
  * "Contenido" tab — every actionable topic now lives exactly once, inside
- * the Plan de acción on Resumen (with a real, interactive recommendation
- * card embedded when one matches). The opportunity matrix still acts as
+ * the Plan de acción on Resumen. The opportunity matrix still acts as
  * navigation, but now filters the Plan de acción list IN PLACE (same tab,
  * scrolled into view) instead of switching tabs — see `applyActionFilter`.
+ *
+ * WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02, design artifact
+ * "Auditoría web — opción B especificada" rev. 4): "Resumen" and the old
+ * "Salud técnica" tab merge into one "Problemas" tab — the founder's own
+ * read after seeing the mockups was "creo que resumen y problemas pueden
+ * ser la misma", and every one of the old Resumen's four blocks (veredicto,
+ * plan de acción, matriz, evolución) turned out to belong either in
+ * Problemas' header or at its foot, not in a tab of its own. "Evolución"
+ * stops being a separate tab too, folding into the foot of Problemas —
+ * "¿voy mejorando?" is the natural next question right after the list, not
+ * a destination on its own. A new "Correcto" tab is the founder-requested
+ * mirror: the checks that already pass, tachados with their check verde,
+ * so the page reads as a balance and not just a wall of failures. "Páginas"
+ * (renamed from "tecnica") keeps its per-page table + bots panel unchanged.
  */
 
-export type AuditTabId = "resumen" | "tecnica" | "evolucion";
+export type AuditTabId = "problemas" | "correcto" | "paginas";
 
 /**
  * "no_content" is the combined bottom-left matrix quadrant
@@ -58,7 +71,7 @@ function useAuditTabs(): AuditTabsState {
 }
 
 export function AuditTabsProvider({ children }: { children: ReactNode }) {
-  const [tab, setTab] = useState<AuditTabId>("resumen");
+  const [tab, setTab] = useState<AuditTabId>("problemas");
   const [filter, setFilter] = useState<ActionFilterId>("all");
 
   function applyActionFilter(nextFilter: ActionFilterId) {
@@ -84,9 +97,9 @@ export function AuditTabsProvider({ children }: { children: ReactNode }) {
 }
 
 const TAB_LABELS: Array<{ id: AuditTabId; label: string }> = [
-  { id: "resumen", label: "Plan de acción" },
-  { id: "tecnica", label: "Salud técnica" },
-  { id: "evolucion", label: "Evolución" }
+  { id: "problemas", label: "Problemas" },
+  { id: "correcto", label: "Correcto" },
+  { id: "paginas", label: "Páginas" }
 ];
 
 export function AuditTabBar() {
@@ -119,30 +132,6 @@ export function AuditTabPanel({ id, children }: { id: AuditTabId; children: Reac
     <div role="tabpanel" hidden={tab !== id}>
       {children}
     </div>
-  );
-}
-
-/** Small "ver →" navigation affordance used by the Resumen one-liners. */
-export function GoToTabButton({ tab, children }: { tab: AuditTabId; children: ReactNode }) {
-  const { setTab } = useAuditTabs();
-  return (
-    <button
-      type="button"
-      onClick={() => setTab(tab)}
-      style={{
-        background: "none",
-        border: "none",
-        padding: 0,
-        font: "inherit",
-        fontSize: 12,
-        fontWeight: 650,
-        color: "var(--accent)",
-        cursor: "pointer",
-        whiteSpace: "nowrap"
-      }}
-    >
-      {children}
-    </button>
   );
 }
 
