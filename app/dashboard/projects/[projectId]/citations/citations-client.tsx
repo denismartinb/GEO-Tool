@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
+import { FormattedResponse } from "@/components/ui/formatted-response";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { classifySourceType, SOURCE_TYPE_LABEL } from "@/lib/citations/source-type";
 import type {
@@ -101,7 +102,7 @@ function EngineChips({ engines }: { engines: CitationEngine[] }) {
  * engines with two different responses, and both are genuine evidence —
  * deduping by text alone would silently drop one engine's answer.
  */
-function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
+function PromptEvidenceList({ prompts, brand }: { prompts: CitationRow["prompts"]; brand: string }) {
   const unique = Array.from(new Map(prompts.map((p) => [`${p.provider}::${p.text}`, p])).values());
 
   if (unique.length === 0) {
@@ -150,7 +151,16 @@ function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
                   ))}
                 </div>
               )}
-              {p.rawResponseText && <div className="cit2-detail-evidence">{p.rawResponseText}</div>}
+              {/* Same markdown-lite rendering as the prompts drawer (founder
+                  review, 2026-08-02): raw provider text carries literal
+                  `**bold**` / `* item` markdown, which read as noise as
+                  plain text. Same shared component, same raw text — just a
+                  smaller card here. */}
+              {p.rawResponseText && (
+                <div className="cit2-detail-evidence">
+                  <FormattedResponse text={p.rawResponseText} brand={brand} />
+                </div>
+              )}
             </li>
           );
         })}
@@ -159,7 +169,17 @@ function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
   );
 }
 
-function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: boolean; onToggle: () => void }) {
+function CitationRowItem({
+  row,
+  open,
+  onToggle,
+  brandLabel
+}: {
+  row: CitationRow;
+  open: boolean;
+  onToggle: () => void;
+  brandLabel: string;
+}) {
   const { domain, path } = pageDisplay(row);
   const badge = typeBadge(row);
   // "Otras webs" (ty-unk) is the default bucket for anything not curated in
@@ -196,7 +216,7 @@ function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: bool
       </button>
       {open && (
         <div className="cit2-detail">
-          <PromptEvidenceList prompts={row.prompts} />
+          <PromptEvidenceList prompts={row.prompts} brand={brandLabel} />
         </div>
       )}
     </div>
@@ -356,10 +376,17 @@ function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
   );
 }
 
+const OPP_PAGE_SIZE = 5;
+
 function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow[]; projectId: string; brandLabel: string }) {
-  const [showAll, setShowAll] = useState(false);
+  const [page, setPage] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
-  const visible = showAll ? rows : rows.slice(0, 5);
+  const pageCount = Math.max(1, Math.ceil(rows.length / OPP_PAGE_SIZE));
+  // Clamp rather than reset to 0: a page that's now out of range (e.g. the
+  // underlying row set shrank) falls back to the last real page instead of
+  // silently jumping the reader back to the top.
+  const currentPage = Math.min(page, pageCount - 1);
+  const visible = rows.slice(currentPage * OPP_PAGE_SIZE, currentPage * OPP_PAGE_SIZE + OPP_PAGE_SIZE);
 
   return (
     <div className="cit2-block cit2-opps">
@@ -400,7 +427,7 @@ function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow
                     <span className="cit2-opp-body">
                       <span className="cit2-opp-domain">{row.domain}</span>
                       <span className="cit2-opp-why">
-                        Cita a <b>{row.competitors.slice(0, 2).join(", ") || "un competidor"}</b> ·{" "}
+                        Cita a <b>{row.competitors.slice(0, 2).join(", ")}</b> ·{" "}
                         {row.engines.length} {row.engines.length === 1 ? "motor" : "motores"}
                       </span>
                     </span>
@@ -410,17 +437,42 @@ function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow
                   </button>
                   {isOpen && (
                     <div className="cit2-detail">
-                      <PromptEvidenceList prompts={row.prompts} />
+                      <PromptEvidenceList prompts={row.prompts} brand={brandLabel} />
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-          {rows.length > 5 && (
-            <button type="button" className="cit2-btn-mini cit2-btn-block" onClick={() => setShowAll((s) => !s)}>
-              {showAll ? "Ver menos" : `Ver las ${rows.length}`}
-            </button>
+          {/* Paginated, not "expand all in place" (founder review,
+              2026-08-02): a project with many opportunities used to dump
+              every row into the DOM at once with no height limit, growing
+              the rail past the fold indefinitely. Five at a time keeps the
+              rail a predictable size regardless of how long the list is. */}
+          {pageCount > 1 && (
+            <div className="cit2-opp-pager">
+              <button
+                type="button"
+                className="cit2-btn-mini"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+              >
+                <Icon name="chevronLeft" size={13} />
+                Anterior
+              </button>
+              <span className="cit2-opp-pager-status">
+                Página {currentPage + 1} de {pageCount}
+              </span>
+              <button
+                type="button"
+                className="cit2-btn-mini"
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={currentPage === pageCount - 1}
+              >
+                Siguiente
+                <Icon name="chevRight" size={13} />
+              </button>
+            </div>
           )}
         </>
       )}
@@ -612,6 +664,7 @@ export function CitationsClient({
                 row={row}
                 open={open === row.id}
                 onToggle={() => setOpen((o) => (o === row.id ? null : row.id))}
+                brandLabel={brandLabel}
               />
             ))}
             {filtered.length === 0 && <div className="cit2-list-empty">No hay páginas con estos filtros.</div>}

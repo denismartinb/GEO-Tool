@@ -752,6 +752,37 @@ pero ahora cada pastilla es corta y el `flex-wrap` existente las reparte en
 líneas. Sirve tanto a la lista completa como al raíl de oportunidades, que
 comparten el mismo componente (`PromptEvidenceList`).
 
+**Tercera vuelta: paginación, filtro de oportunidades y formateo de
+evidencia (2026-08-02).** Feedback directo del fundador sobre datos reales
+de producción (movistar.es), no una propuesta del piloto:
+
+1. **Paginación real en vez de expandir todo en el sitio.** El botón
+   "Ver las N" metía las N filas en el DOM de golpe, sin límite de alto —
+   con proyectos grandes el raíl podía crecer indefinidamente. Ahora son
+   páginas de 5 con "Anterior/Siguiente" y "Página X de Y": el raíl mide lo
+   mismo tenga el proyecto 8 oportunidades o 80.
+2. **Oportunidades solo si citan a un competidor TRACKEADO.** El filtro de
+   `opportunityRows` (`page.tsx`) comprobaba `category === "third_party" &&
+   brandMentioned === "no"` pero no `competitors.length > 0` — colaba filas
+   donde solo se mencionaba una "otra marca" no trackeada, o ninguna marca
+   en absoluto, y la fila recurría al texto genérico "Cita a un competidor"
+   para disimular que no había ningún competidor real que nombrar (visible
+   en capturas reales: `highspeedinternet.com` mencionaba "WiFi Analyzer,
+   NetSpot..." — herramientas, no competidores — y aun así aparecía como
+   oportunidad). Con `competitors.length > 0` añadido al filtro, la tabla
+   solo lista fuentes que de verdad citan a un competidor trackeado, y el
+   fallback "un competidor" se elimina por inalcanzable.
+3. **Formateo de evidencia como en Prompts.** El texto crudo del modelo se
+   volcaba como texto plano — `**negrita**`, listas con `*`, etc. aparecían
+   literalmente. El renderer markdown-lite que ya existía para el drawer de
+   Prompts (`parseMarkdownBlocks`/`tokenizeInline` de
+   `lib/markdown/inline-markdown.ts`, antes vivía inline en
+   `prompt-drawer.tsx`) se extrajo a un componente compartido
+   (`components/ui/formatted-response.tsx`, `<FormattedResponse text brand
+   />`) y ambas pantallas lo usan ahora — misma lógica de parseo, mismas
+   reglas de qué se resalta en negrita/listas/enlaces, un único sitio si
+   hay que arreglar algo del parseo en el futuro.
+
 ---
 
 ## Cómo mantener este documento

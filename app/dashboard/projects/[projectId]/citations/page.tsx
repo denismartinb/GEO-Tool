@@ -100,11 +100,18 @@ export default async function CitationsPage({
   // Competitor domains (already tracked in project_competitors) are excluded:
   // a brand will never earn a citation on a rival's own site. Unresolved
   // grounding citations (no domain) are excluded too: there's no address to
-  // reach out to. Ranked by number of distinct engines citing the domain
-  // first (ENGINES-VALUE-2), then by cited count — a source both Gemini and
+  // reach out to. `competitors.length > 0` requires an actually TRACKED
+  // competitor to have been named in the evidence — founder review,
+  // 2026-08-02: rows that only mentioned an untracked "other brand" were
+  // slipping in here too, padding the list and forcing the row's "Cita a un
+  // competidor" fallback text to paper over having nothing real to name.
+  // Ranked by number of distinct engines citing the domain first
+  // (ENGINES-VALUE-2), then by cited count — a source both Gemini and
   // ChatGPT cite is a stronger outreach target than one only one engine uses.
   const opportunityRows: CitationRow[] = citationRows
-    .filter((r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain)
+    .filter(
+      (r) => r.category === "third_party" && r.brandMentioned === "no" && r.domain && r.competitors.length > 0
+    )
     .sort(compareOpportunityRows);
 
   const scoreDetails =
