@@ -41,6 +41,15 @@ export const MIN_ALIAS_LENGTH = 4;
 
 /** Mirrors the `projects_brand_aliases_bounded` check in migration 0023. */
 export const MAX_ALIASES = 25;
+
+/**
+ * Per-alias length cap. Unlike MAX_ALIASES this is enforced HERE ONLY —
+ * Postgres rejects a subquery in a CHECK constraint, and there is no
+ * subquery-free immutable way to bound the longest element of a text[] (see
+ * migration 0023's header). A direct SQL write could therefore store a longer
+ * alias than this; every application write path goes through
+ * selectVerifiableAliases and cannot.
+ */
 export const MAX_ALIAS_LENGTH = 120;
 
 /**

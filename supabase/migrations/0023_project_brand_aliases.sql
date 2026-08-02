@@ -38,20 +38,34 @@ comment on column public.projects.brand_aliases is
   'Alternative names that count as a mention of the brand: products, trade names and variants. E.g. Mozilla -> {Firefox, Firefox Focus, Thunderbird}. Consumed by verifyMention (lib/scan/extraction.ts, ADR 0021).';
 
 -- Defensive bound: the list is proposed by an LLM during onboarding and then
--- edited by the user. Uncapped, one long junk alias degrades mention matching
--- for the whole project (every alias is another comparison per entity, per
+-- edited by the user. Uncapped, a runaway list degrades mention matching for
+-- the whole project (every alias is another comparison per entity, per
 -- prompt). Enforced here rather than only in application code so no future
 -- write path can bypass it.
+--
+-- COUNT ONLY, deliberately. The first version of this constraint also bounded
+-- each element's length with
+--   120 >= (select max(length(a)) from unnest(brand_aliases) as a)
+-- which Postgres rejects outright: "cannot use subquery in check constraint"
+-- (SQLSTATE 0A000). There is no subquery-free, provably IMMUTABLE builtin for
+-- "longest element of a text[]" — array_to_string and array-to-text casts go
+-- through element output functions and are not immutable, so they are not
+-- usable in a CHECK either, and wrapping the subquery in a custom IMMUTABLE
+-- function would add a schema object whose later redefinition silently stops
+-- being re-validated against existing rows.
+--
+-- So the per-alias length cap (MAX_ALIAS_LENGTH = 120) lives only in
+-- lib/projects/brand-aliases.ts. That is a real, accepted reduction in
+-- enforcement: a direct SQL write could store one very long alias. The count
+-- cap — the bound that actually protects matching cost — remains enforced by
+-- the database.
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'projects_brand_aliases_bounded') then
     alter table public.projects
       add constraint projects_brand_aliases_bounded check (
         array_length(brand_aliases, 1) is null
-        or (
-          array_length(brand_aliases, 1) <= 25
-          and 120 >= (select max(length(a)) from unnest(brand_aliases) as a)
-        )
+        or array_length(brand_aliases, 1) <= 25
       );
   end if;
 end $$;

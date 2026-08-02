@@ -50,9 +50,21 @@ taken after are **indistinguishable from a real change in visibility** — the
 product would be manufacturing exactly the unexplained jump this whole phase
 exists to eliminate.
 
-A DB-level `check` bounds the list at 25 aliases of ≤120 chars, enforced in
-the schema rather than only in application code so no future write path can
-bypass it.
+A DB-level `check` bounds the list at **25 aliases**, enforced in the schema
+so no future write path can bypass it.
+
+The count is all the database enforces. The first version of that constraint
+also bounded each element's length via `(select max(length(a)) from
+unnest(brand_aliases) as a)`, which Postgres rejects: *"cannot use subquery in
+check constraint"* (SQLSTATE 0A000) — found when the founder applied the
+migration by hand. There is no subquery-free, provably IMMUTABLE builtin for
+"longest element of a `text[]`", and a custom IMMUTABLE wrapper would add a
+schema object whose later redefinition stops being re-validated against
+existing rows. The per-alias length cap (`MAX_ALIAS_LENGTH = 120`) therefore
+lives only in `lib/projects/brand-aliases.ts`. Accepted reduction in
+enforcement: a direct SQL write could store one very long alias; the bound
+that actually protects matching cost — how many aliases exist — stays in the
+database.
 
 ### 2. `verifyMention` matches a SET of names
 
