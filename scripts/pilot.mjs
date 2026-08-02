@@ -148,6 +148,16 @@ function cellFor(finding) {
   }
   if (finding.failedRequests?.length) problems.push(`${finding.failedRequests.length} req ≥400`);
   if (finding.consoleErrors?.length) problems.push(`${finding.consoleErrors.length} err consola`);
+  // Both of these were invisible to this table when they were introduced, so
+  // a screen could fail the run and still be rendered as ✅ here — the exact
+  // "green mark that does not mean verified" problem the content check exists
+  // to kill. Observed on PR #289: the table showed web-audit ✅ across three
+  // viewports while the failure list underneath said it never rendered.
+  // Anything that can fail `assertPageIsHealthy` must be able to colour a cell.
+  if (finding.renderedRealContent === false) problems.push("estado vacío, sin contenido real");
+  if (finding.headerInteractiveControls?.length) {
+    problems.push(`${finding.headerInteractiveControls.length} control(es) en la cabecera`);
+  }
   return problems.length === 0 ? "✅" : `❌ ${problems.join(", ")}`;
 }
 
