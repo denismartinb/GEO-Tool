@@ -32,6 +32,7 @@ export default function GeoScoreMethodologyPage() {
       </p>
 
       <h2>Los cuatro componentes</h2>
+      <div className="docs-table-wrap">
       <table>
         <tbody>
           <tr>
@@ -61,6 +62,7 @@ export default function GeoScoreMethodologyPage() {
           </tr>
         </tbody>
       </table>
+      </div>
 
       <h2>Qué pasa cuando falta un componente</h2>
       <p>
@@ -83,8 +85,8 @@ export default function GeoScoreMethodologyPage() {
 
       <h2>Franjas de madurez</h2>
       <p>
-        El indicador visual usa dos umbrales (70 y 40) para clasificar el score como "consolidado",
-        "en desarrollo" o "inicial". Son los mismos umbrales desde el lanzamiento; recalibrarlos con datos
+        El indicador visual usa dos umbrales (70 y 40) para clasificar el score como «competitivo»,
+        «emergente» o «inicial». Son los mismos umbrales desde el lanzamiento; recalibrarlos con datos
         reales de más proyectos es un trabajo pendiente y explícitamente aparte.
       </p>
     </DocsPageShell>

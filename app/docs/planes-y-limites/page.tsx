@@ -33,6 +33,7 @@ export default function PlanesYLimitesPage() {
       </p>
 
       <h2>Límites por plan</h2>
+      <div className="docs-table-wrap">
       <table>
         <tbody>
           <tr>
@@ -53,6 +54,7 @@ export default function PlanesYLimitesPage() {
           ))}
         </tbody>
       </table>
+      </div>
 
       <h2>Qué cambia al subir de plan</h2>
       <ul>

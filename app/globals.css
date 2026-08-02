@@ -4401,8 +4401,9 @@ a.notif-row:hover {
 .docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
 .docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
 .docs-content li { margin-bottom: 6px; line-height: 1.6; }
-.docs-content table { width: 100%; border-collapse: collapse; margin: 0 0 24px; font-size: 14px; }
-.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
+.docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
+.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .docs-content th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .docs-index-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
 .docs-index-card { display: block; border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; background: var(--surface); }
