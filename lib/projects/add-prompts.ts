@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, type AddPromptsMode, type BusinessProfile, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
-import { resolveBusinessContext } from "@/lib/projects/business-profile";
+import { parsePersistedBusinessProfile, resolveBusinessContext } from "@/lib/projects/business-profile";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 import { getActionErrorCode } from "@/lib/scan/errors";
@@ -17,24 +17,6 @@ const ADD_PROMPTS_GENERATION_LIMIT = 5;
 const MIN_PROMPT_LENGTH = 10;
 const MAX_PROMPT_LENGTH = 300;
 const MAX_CATEGORY_LENGTH = 100;
-
-const persistedBusinessProfileSchema = z.object({
-  whatItSells: z.string(),
-  sector: z.string(),
-  subSector: z.string(),
-  businessModel: z.enum(["b2b", "b2c", "both", "unknown"]),
-  targetCustomer: z.string(),
-  geographicScope: z.string(),
-  sizeEstimate: z.string(),
-  confidence: z.enum(["low", "medium", "high"])
-});
-
-/** Defensively parses projects.business_profile (jsonb) — never throws, returns null on anything malformed/absent. */
-function parsePersistedBusinessProfile(raw: unknown): BusinessProfile | null {
-  if (!raw || typeof raw !== "object") return null;
-  const parsed = persistedBusinessProfileSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
-}
 
 /**
  * COMPETITOR-GROUNDING-2 (docs/adr/0022): resolves the business profile this

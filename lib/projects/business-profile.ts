@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 import { fetchPageSafely } from "@/lib/web-audit/fetch-page";
 import { inferBusinessProfile, type BusinessProfile } from "@/lib/llm/gemini";
 
@@ -82,6 +83,29 @@ export async function fetchHomepageEvidence(domain: string): Promise<HomepageEvi
   }
 
   return { status: "ok", title, description, headings, excerpt };
+}
+
+const persistedBusinessProfileSchema = z.object({
+  whatItSells: z.string(),
+  sector: z.string(),
+  subSector: z.string(),
+  businessModel: z.enum(["b2b", "b2c", "both", "unknown"]),
+  targetCustomer: z.string(),
+  geographicScope: z.string(),
+  sizeEstimate: z.string(),
+  confidence: z.enum(["low", "medium", "high"])
+});
+
+/**
+ * Defensively parses `projects.business_profile` (jsonb) — never throws,
+ * returns null on anything malformed/absent. Shared by every reader of the
+ * cached profile (prompt suggestion, and — EMERGING-BRANDS-GROUNDING-1 —
+ * scan extraction), so the persisted shape only has one source of truth.
+ */
+export function parsePersistedBusinessProfile(raw: unknown): BusinessProfile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const parsed = persistedBusinessProfileSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 export type BusinessContextResult = { status: "identified"; profile: BusinessProfile } | { status: "unidentified" };

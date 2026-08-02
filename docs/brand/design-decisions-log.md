@@ -1000,6 +1000,46 @@ en el mismo PR, todas sobre datos reales:
    valorar "una tabla de la posición media de los competidores": leer quién
    va delante ahora mismo no debería exigir seguir la línea de un gráfico.
 
+**Segunda revisión del fundador sobre el preview (2026-08-02).** Tres puntos
+más, con capturas reales de dispositivo:
+
+1. **"Tarjeta superpuesta con la card"** en la captura del proyecto Movistar:
+   el círculo oscuro que tapa la fila "Alternativas" de Terreno por tema
+   **no es de GenScore** — no existe ningún botón flotante en el código de
+   esta pantalla (ni en ningún `.cm2-*`), y se confirmó comparando la
+   evidencia real del pilot (`pilot-evidence/pr-285` en el commit de este
+   fix) contra las capturas del fundador: el círculo aparece en el mismo
+   sitio en el pilot headless, sin que el código lo pinte. Es el widget de
+   feedback/toolbar que Vercel inyecta sobre los preview deployments para
+   revisores autenticados — no está en producción y no es responsabilidad de
+   este repo. No se ha tocado CSS para "arreglarlo" porque no hay nada que
+   arreglar en el producto.
+2. **Leyenda en "Terreno por tema".** Las dos barras por fila (marca propia
+   vs. líder del tema) no se entendían sin leer el código de color de
+   memoria. Añadida una leyenda fija al pie de la card —"Tu marca" /
+   "Competidor"— reutilizando el patrón `.cm2-gaplegend` ya existente en
+   Brecha de prompts (punto + etiqueta), en vez de inventar un componente
+   nuevo.
+3. **Competidores sugeridos sin relación con el negocio real
+   (EMERGING-BRANDS-GROUNDING-1).** "Marcas que aparecen y no sigues"
+   recomendaba AliExpress/Carrefour/eBay/El Corte Inglés/Decathlon para
+   Mozilla (un navegador) porque `other_brands_mentioned` (extracción de
+   cada respuesta IA, `lib/llm/gemini.ts` + `claude.ts` + `openai.ts`) solo
+   comprobaba "¿este nombre aparece en el texto y no es la marca ni un
+   competidor?", sin ninguna noción de categoría de negocio. Corregido
+   reutilizando **el mismo mecanismo que ya usa la sugerencia de prompts**
+   (COMPETITOR-GROUNDING-2, ADR 0022): el `business_profile` (jsonb) que ya
+   se cachea en `projects` en el onboarding se lee — nunca se recalcula
+   durante un escaneo, para no añadir una llamada a Gemini a la ruta crítica
+   de escaneo — y, si existe, añade una frase de contexto de sector
+   (`otherBrandsRelevanceHint`, `lib/llm/gemini.ts`) a la instrucción de
+   extracción de las tres integraciones, pidiendo excluir marcas de una
+   categoría claramente distinta aunque aparezcan literalmente en el texto.
+   Parámetro puramente aditivo (`profile?: BusinessProfile`): un proyecto sin
+   perfil cacheado se comporta exactamente igual que antes. Solo afecta a
+   escaneos nuevos — los resultados ya guardados no se reprocesan
+   retroactivamente, igual que el resto del histórico de escaneos.
+
 ---
 
 ## Cómo mantener este documento

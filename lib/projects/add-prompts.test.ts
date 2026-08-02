@@ -15,9 +15,13 @@ vi.mock("@/lib/scan/launch", () => ({
   launchScan: (...args: unknown[]) => launchScanMock(...args)
 }));
 
-vi.mock("@/lib/projects/business-profile", () => ({
-  resolveBusinessContext: (...args: unknown[]) => resolveBusinessContextMock(...args)
-}));
+vi.mock("@/lib/projects/business-profile", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/projects/business-profile")>();
+  return {
+    ...actual,
+    resolveBusinessContext: (...args: unknown[]) => resolveBusinessContextMock(...args)
+  };
+});
 
 const SAMPLE_PROFILE = {
   whatItSells: "CRM para pymes",

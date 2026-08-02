@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateOpenAIVisibilityAnswer, extractOpenAIStructuredData, OpenAIConfigError, OpenAITimeoutError } from "./openai";
+import type { BusinessProfile } from "./gemini";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -323,5 +324,29 @@ describe("extractOpenAIStructuredData", () => {
     expect(promptText).toMatch(/topical relevance is not a mention/i);
     expect(promptText).toMatch(/EXACT substring of the response text/i);
     expect(promptText).toContain('"display_name_found": string|null');
+  });
+
+  it("EMERGING-BRANDS-GROUNDING-1: includes a sector-relevance hint in other_brands_mentioned instructions when a profile is provided", async () => {
+    const profile: BusinessProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c",
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high"
+    };
+    const fetchMock = mockFetchOnce(responsesApiResult(JSON.stringify(validExtractionJson())));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractOpenAIStructuredData({ ...extractionInput(), profile });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.input as string;
+
+    expect(promptText).toMatch(/plausible competitors or alternatives/i);
+    expect(promptText).toContain("sector: software");
   });
 });

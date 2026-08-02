@@ -860,6 +860,16 @@ export default async function CompetitorsPage({
                         </div>
                       </div>
                     ))}
+                    <div className="cm2-gaplegend">
+                      <span>
+                        <span className="d" style={{ background: "var(--brand-blue)" }} />
+                        Tu marca
+                      </span>
+                      <span>
+                        <span className="d" style={{ background: "var(--ink-4)" }} />
+                        Competidor
+                      </span>
+                    </div>
                   </div>
                 </>
               )}
