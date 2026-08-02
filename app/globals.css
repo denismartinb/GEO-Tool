@@ -1911,7 +1911,7 @@ a {
 .cit2-kpis { display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); overflow: hidden; margin-top: 4px; }
 .cit2-kpis > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line-soft); }
 .cit2-kpis > div:last-child { border-right: 0; }
-.cit2-k { font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }
+.cit2-k { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }
 .cit2-v {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
   font-weight: 800; font-size: 19px; letter-spacing: -.03em; line-height: 1.3;
@@ -1944,7 +1944,8 @@ a {
 .s-comp { background: var(--cit-comp); }
 .s-neu { background: var(--cit-neu); }
 .cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
-.cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; margin-right: 6px; }
+.cit2-split-key span { display: inline-flex; align-items: center; gap: 5px; }
+.cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 
 /* Source-type donut */
 .cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
@@ -2024,6 +2025,13 @@ a {
 .cit2-detail-list > li:first-child { border-top: 0; padding-top: 0; }
 .cit2-detail-prompt { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
 .cit2-detail-prompt .cit2-echip { flex: 0 0 auto; margin-top: 1px; }
+/* What THIS specific answer named (a tracked competitor / another brand) —
+   makes the row-level "Cita a X" claim checkable against a real, attributed
+   answer instead of a label with no visible source. */
+.cit2-detail-mentions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+.cit2-mtag { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.cit2-mtag.comp { background: var(--neg-soft); color: var(--neg-ink); }
+.cit2-mtag.oth { background: rgba(180, 83, 9, .1); color: var(--cit-oth); }
 /* The model's actual answer to that prompt — real evidence, not a
    fabricated excerpt. Scrollable rather than truncated, so a long answer
    never gets cut off mid-sentence; capped height keeps one prompt's evidence

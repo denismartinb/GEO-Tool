@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { InfoTip } from "@/components/ui/info-tip";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { classifySourceType, SOURCE_TYPE_LABEL } from "@/lib/citations/source-type";
 import type {
@@ -121,6 +122,22 @@ function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
                   {meta.label}
                 </span>
               </div>
+              {/* What THIS specific answer named — scoped to this one
+                  (prompt, provider) result, not the row-level union. Makes a
+                  row's "Cita a un competidor" claim checkable against the
+                  actual evidence right below it, instead of a row-wide
+                  label with no visible source (founder review, 2026-08-01:
+                  a claim with no attributable answer read as unsubstantiated). */}
+              {(p.competitors.length > 0 || p.otherBrands.length > 0) && (
+                <div className="cit2-detail-mentions">
+                  {p.competitors.length > 0 && (
+                    <span className="cit2-mtag comp">Menciona a {p.competitors.join(", ")}</span>
+                  )}
+                  {p.otherBrands.length > 0 && (
+                    <span className="cit2-mtag oth">Menciona {p.otherBrands.join(", ")} (marca no trackeada)</span>
+                  )}
+                </div>
+              )}
               {p.rawResponseText && <div className="cit2-detail-evidence">{p.rawResponseText}</div>}
             </li>
           );
@@ -184,13 +201,51 @@ function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; bran
   // reviewing a real preview, 2026-08-01: 73% of a project's citations
   // fell in "neutral" and the bar shipped with only 2 of 5 buckets
   // explained).
-  const segments: Array<{ key: keyof ImpactBreakdown; className: string; label: string }> = [
-    { key: "own", className: "s-own", label: `Páginas de ${brandLabel}` },
-    { key: "favorable", className: "s-fav", label: "Terceros que te mencionan" },
-    { key: "adverse", className: "s-adv", label: "Terceros que mencionan a un rival y no a ti" },
-    { key: "otherBrands", className: "s-oth", label: "Terceros que mencionan otras marcas" },
-    { key: "competitor", className: "s-comp", label: "Páginas de un competidor" },
-    { key: "neutral", className: "s-neu", label: "Terceros que no mencionan ninguna marca" }
+  // Labels + tooltips reworded 2026-08-01 (founder review): "Terceros que
+  // mencionan a un rival y no a ti" and "Terceros que mencionan otras
+  // marcas" read as the same bucket at a glance. The distinction is real —
+  // one is a TRACKED competitor, the other is any other brand the AI
+  // happened to name — but only the tooltip actually explains it; the
+  // label alone wasn't carrying that weight.
+  const segments: Array<{ key: keyof ImpactBreakdown; className: string; label: string; tooltip: string }> = [
+    {
+      key: "own",
+      className: "s-own",
+      label: `Páginas de ${brandLabel}`,
+      tooltip: `Páginas de tu propio dominio (${brandLabel}) citadas por la IA.`
+    },
+    {
+      key: "favorable",
+      className: "s-fav",
+      label: "Terceros que te mencionan",
+      tooltip: "La respuesta que citó esta página también mencionó tu marca."
+    },
+    {
+      key: "adverse",
+      className: "s-adv",
+      label: "Terceros que mencionan a un competidor tuyo",
+      tooltip:
+        "La respuesta mencionó a uno de los competidores que trackeas, sin mencionar tu marca — distinto de 'otras marcas', que no son competidores que sigas."
+    },
+    {
+      key: "otherBrands",
+      className: "s-oth",
+      label: "Terceros que mencionan otra marca",
+      tooltip:
+        "La respuesta mencionó alguna marca que no es la tuya ni uno de tus competidores trackeados — puede ser un competidor real que aún no sigues, u otra empresa sin relación."
+    },
+    {
+      key: "competitor",
+      className: "s-comp",
+      label: "Páginas de un competidor",
+      tooltip: "La propia página citada pertenece al dominio de uno de tus competidores trackeados."
+    },
+    {
+      key: "neutral",
+      className: "s-neu",
+      label: "Terceros que no mencionan ninguna marca",
+      tooltip: "La respuesta que citó esta página no mencionó tu marca ni ninguna otra marca reconocible."
+    }
   ];
   const present = segments.filter((s) => breakdown[s.key] > 0);
 
@@ -211,6 +266,7 @@ function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; bran
           <span key={s.key}>
             <i className={s.className} />
             {s.label}
+            <InfoTip text={s.tooltip} />
           </span>
         ))}
       </div>
@@ -413,18 +469,27 @@ export function CitationsClient({
           answered better by the list's own tab counts. */}
       <div className="cit2-kpis">
         <div>
-          <div className="cit2-k">Respuestas con cita</div>
+          <div className="cit2-k">
+            Respuestas con cita
+            <InfoTip text="% de respuestas de motores con búsqueda real (Gemini, ChatGPT) que citaron alguna fuente al responder, sea cual sea el dominio citado." />
+          </div>
           <div className="cit2-v blue">
             {citationRateAnyDomain !== null ? Math.round(citationRateAnyDomain) : "—"}
             {citationRateAnyDomain !== null && <small>%</small>}
           </div>
         </div>
         <div>
-          <div className="cit2-k">Citas totales</div>
+          <div className="cit2-k">
+            Citas totales
+            <InfoTip text="Cuántas veces, en total, la IA citó alguna página al responder los prompts escaneados — sumando todas las páginas citadas." />
+          </div>
           <div className="cit2-v">{totalCited}</div>
         </div>
         <div>
-          <div className="cit2-k">Citas propias</div>
+          <div className="cit2-k">
+            Citas propias
+            <InfoTip text={`De esas citas totales, cuántas apuntan a una página de ${brandLabel}.`} />
+          </div>
           <div className="cit2-v">{impactBreakdown.own}</div>
         </div>
       </div>

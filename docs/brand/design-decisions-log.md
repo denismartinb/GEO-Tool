@@ -554,6 +554,44 @@ renderiza perfecta pero se ha desviado del diseño aprobado es `PILOT FAIL`,
 no `PILOT PASS`**. El piloto había dado PASS a esta pantalla sin detectar que
 tenía el doble de métricas que el mockup firmado.
 
+**Tercera revisión del fundador (2026-08-01, captura de movistar.es).**
+
+- **Tooltips en los 3 KPIs** (`InfoTip`, mismo componente ya usado en la
+  columna "Marca mencionada" de Prompts) explicando qué mide cada uno —
+  "Respuestas con cita" (% de respuestas de motores con búsqueda real que
+  citaron algo), "Citas totales" (suma sobre todas las páginas), "Citas
+  propias" (cuántas de esas citas son de `${brandLabel}`).
+- **Reetiquetado + tooltips en la leyenda de "Impacto"**: "Terceros que
+  mencionan a un rival y no a ti" y "Terceros que mencionan otras marcas"
+  se reportaron como indistinguibles a simple vista. Renombrados a
+  "Terceros que mencionan a un competidor tuyo" (marca trackeada) vs.
+  "Terceros que mencionan otra marca" (marca no trackeada — puede ser un
+  competidor real que aún no sigues), cada uno con su tooltip explicando la
+  diferencia. Aplicado el mismo tratamiento a las 6 etiquetas del bucket,
+  no solo a las dos confusas, por consistencia.
+- **Atribución por prompt en el panel de evidencia**: el fundador expandió
+  una fila con la etiqueta "Cita a un competidor" y la evidencia mostrada
+  (la respuesta real del modelo) no mencionaba ningún rival — un caso
+  reproducible de reclamo sin sustento visible. Causa: `row.competitors`
+  se calculaba como unión de TODOS los prompts que citaron esa página; una
+  fila con 5 prompts podía llevar la etiqueta "cita a un competidor" por
+  uno solo de ellos, mientras el panel enseñaba evidencia de cualquiera de
+  los 5 sin decir cuál. Arreglado: `CitationRow.prompts[]` ahora lleva
+  `competitors`/`otherBrands` por entrada (scoped a ese `(prompt, provider)`
+  concreto, no la unión de la fila), y el panel muestra una etiqueta
+  "Menciona a X" / "Menciona X (marca no trackeada)" justo encima de la
+  respuesta que la respalda — o ninguna etiqueta si esa respuesta en
+  concreto no mencionó ninguna marca.
+- **Hallazgo NO corregido en este PR, señalado al fundador explícitamente**:
+  con la atribución por prompt ya visible, si el chip "Menciona a X" sigue
+  apareciendo en una entrada cuya respuesta visiblemente no nombra a X, el
+  problema ya no es de esta pantalla — es que `verifyMention`
+  (`lib/scan/extraction.ts`, MENTION-VERIFY-1, ADR-0021) no está
+  descartando esa mención pese a exigir un substring match contra el texto
+  crudo. Investigarlo requiere tocar el pipeline de extracción/scoring,
+  fuera del alcance de un rediseño de UI y de las áreas que este documento
+  puede aprobar por su cuenta — necesita su propia fase con Task Intake.
+
 Pendiente / roto conocido:
 - El nombre "Páginas citadas" es, para las citas de Gemini, técnicamente
   "Dominios citados" hasta que se implemente la persistencia de URL exacta
@@ -561,6 +599,10 @@ Pendiente / roto conocido:
 - Unificar el resto de la consola (Competidores, Recomendaciones, Auditoría
   web, Escaneos) al nuevo ancho estándar: no se hace en este PR, cada
   pantalla migra en su propio rediseño (ver nota en §5).
+- **Posible fuga de `verifyMention`** (ver arriba) — la atribución por
+  prompt ahora hace este tipo de caso visible y reproducible; si vuelve a
+  aparecer, es una pista real para investigar el pipeline, no un fallo de
+  esta pantalla.
 
 ---
 

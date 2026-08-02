@@ -43,8 +43,23 @@ export type CitationRow = {
   /** One entry per (prompt, provider) that cited this page. `rawResponseText`
    * is the model's actual answer to that prompt — the real "why was this
    * cited" evidence, not a fabricated excerpt. `null` for rows persisted
-   * before raw_response_text was selected on this page's query. */
-  prompts: Array<{ text: string; brandMentioned: boolean; provider: string; rawResponseText: string | null }>;
+   * before raw_response_text was selected on this page's query.
+   * `competitors`/`otherBrands` are scoped to THIS specific (prompt,
+   * provider) result — unlike the row-level `competitors`/`otherBrands`
+   * above, which are unioned across every prompt that ever cited this page.
+   * A row can be classified "adverse" (cites a competitor) from ONE
+   * prompt's extraction while most of its other prompts mention no brand at
+   * all; showing the per-entry names is what lets a founder looking at the
+   * expanded evidence actually see WHICH answer backs that classification,
+   * instead of a row-level claim with no visible attribution. */
+  prompts: Array<{
+    text: string;
+    brandMentioned: boolean;
+    provider: string;
+    rawResponseText: string | null;
+    competitors: string[];
+    otherBrands: string[];
+  }>;
   /** Order: grounded engines first, then cited desc. Never invented. */
   engines: CitationEngine[];
 };
@@ -278,7 +293,14 @@ export function aggregateCitations(input: {
     brandMentionedNo: number;
     competitors: Set<string>;
     otherBrands: Set<string>;
-    prompts: Array<{ text: string; brandMentioned: boolean; provider: string; rawResponseText: string | null }>;
+    prompts: Array<{
+      text: string;
+      brandMentioned: boolean;
+      provider: string;
+      rawResponseText: string | null;
+      competitors: string[];
+      otherBrands: string[];
+    }>;
     engines: Map<string, number>;
   };
 
@@ -367,7 +389,14 @@ export function aggregateCitations(input: {
       else row.brandMentionedNo += 1;
       for (const name of mentionedCompetitors) row.competitors.add(name);
       for (const name of mentionedOtherBrands) row.otherBrands.add(name);
-      row.prompts.push({ text: promptText, brandMentioned, provider, rawResponseText: result.raw_response_text });
+      row.prompts.push({
+        text: promptText,
+        brandMentioned,
+        provider,
+        rawResponseText: result.raw_response_text,
+        competitors: mentionedCompetitors,
+        otherBrands: mentionedOtherBrands
+      });
       row.engines.set(provider, (row.engines.get(provider) ?? 0) + 1);
 
       let groupCitation = group.citations.get(key);

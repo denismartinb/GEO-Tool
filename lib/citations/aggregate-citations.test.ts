@@ -559,14 +559,56 @@ describe("aggregateCitations", () => {
         text: "What is the best telco?",
         brandMentioned: false,
         provider: "gemini",
-        rawResponseText: "Movistar is a strong option for fibre in Spain."
+        rawResponseText: "Movistar is a strong option for fibre in Spain.",
+        competitors: [],
+        otherBrands: []
       },
       {
         text: "What is the best telco?",
         brandMentioned: false,
         provider: "openai",
-        rawResponseText: "I'd recommend checking Movistar and Orange."
+        rawResponseText: "I'd recommend checking Movistar and Orange.",
+        competitors: [],
+        otherBrands: []
       }
     ]);
+  });
+
+  it("15. prompts[].competitors/otherBrands are scoped per (prompt, provider) result, not unioned across the whole row — this is what lets the UI show WHICH specific answer backs a row-level 'cites a competitor' claim", () => {
+    const rows: CitationInputRow[] = [
+      // This prompt's extraction names a tracked competitor.
+      row({
+        prompt_id: "p1",
+        prompt_text_snapshot: "Who offers the best fibre deals?",
+        provider: "gemini",
+        raw_response_text: "Rival is a solid choice for fibre.",
+        extracted_json: {
+          competitors: [{ name: "Rival", mentioned: true }],
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      }),
+      // A different prompt cites the SAME page but mentions no brand at
+      // all — the row-level `competitors` set is still non-empty (from the
+      // first prompt), but THIS entry must not inherit that name.
+      row({
+        prompt_id: "p2",
+        prompt_text_snapshot: "How do I troubleshoot my home wifi?",
+        provider: "gemini",
+        raw_response_text: "Restart your router and check the cables.",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(citationRows).toHaveLength(1);
+    const row1 = citationRows[0].prompts.find((p) => p.text === "Who offers the best fibre deals?")!;
+    const row2 = citationRows[0].prompts.find((p) => p.text === "How do I troubleshoot my home wifi?")!;
+    expect(row1.competitors).toEqual(["Rival"]);
+    expect(row2.competitors).toEqual([]);
+    // The row-level aggregate (unchanged behavior) still unions across both.
+    expect(citationRows[0].competitors).toEqual(["Rival"]);
   });
 });
