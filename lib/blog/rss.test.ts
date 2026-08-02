@@ -8,7 +8,8 @@ const posts: BlogPost[] = [
     title: "El primero & <especial>",
     description: "Descripción \"con comillas\".",
     datePublished: "2026-01-01",
-    coverIcon: "compass"
+    coverIcon: "compass",
+    cluster: "fundamentos"
   },
   {
     slug: "segundo",
@@ -16,7 +17,8 @@ const posts: BlogPost[] = [
     description: "Otra descripción.",
     datePublished: "2026-06-01",
     coverIcon: "target",
-    metaDescription: "Meta description específica."
+    metaDescription: "Meta description específica.",
+    cluster: "medicion"
   }
 ];
 

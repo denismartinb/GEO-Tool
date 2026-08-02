@@ -1,6 +1,7 @@
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
 
@@ -122,6 +123,9 @@ Las empresas que empiecen a medir esa visibilidad antes tendrán una ventaja par
 <p>¿Quieres saber cómo aparece tu marca en ChatGPT, Gemini o Claude?</p>
 <a href="/signup" className="btn btn-primary">Prueba gratis</a>
 </div>
+
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
 
 </div>
 
