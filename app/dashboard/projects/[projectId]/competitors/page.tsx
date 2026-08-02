@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
@@ -359,10 +360,17 @@ export default async function CompetitorsPage({
 
   /* COMP-REDESIGN-1: marcas emergentes — other_brands_mentioned surfaced for the first time (ADR 0018's Ikea case). */
   const emergingBrands = computeEmergingBrands({
-    rows: results.map((r) => ({ extracted_json: r.extracted_json })),
+    rows: results.map((r) => ({ promptId: r.prompt_id as string | null, extracted_json: r.extracted_json })),
     brandName: project.brand,
     trackedCompetitorNames: configuredCompetitors.map((c) => c.name)
   });
+
+  // Denominator for "en N de M prompts" — distinct prompts actually analyzed
+  // across the runs the emerging-brand counts are computed over, so the two
+  // numbers always come from the same population.
+  const analyzedPromptCount = new Set(
+    results.map((r) => r.prompt_id as string | null).filter((id): id is string => Boolean(id))
+  ).size;
 
   /* Position trend: brand + active competitors' avg_position across completed runs */
   const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
@@ -412,20 +420,42 @@ export default async function CompetitorsPage({
   // Latest avg position per entity, read from the same run_scores ranking the
   // trend chart plots — surfaced as a compact ranked list beside the chart so
   // the current standing is legible without reading a line's endpoint.
+  //
+  // Two things this number is NOT, both of which read as bugs otherwise
+  // (founder caught both on real data):
+  //  - It is not a 1..N leaderboard slot. It is a mean over prompts where a
+  //    prompt that never mentioned the entity contributes a penalty of
+  //    (total entities + 1) — docs/adr/0005 + computeBrandPosition in
+  //    lib/scoring/run-scoring.ts. On a project mentioned in few prompts the
+  //    best value is legitimately ~4, never 1.
+  //  - It is not guaranteed distinct. Several entities genuinely tie, so
+  //    ranks use standard competition ranking (1, 2, 2, 2, 5) instead of a
+  //    running counter that would print 2/3/4 next to three identical values.
   const latestTrendPoint = trendData.length > 0 ? trendData[trendData.length - 1] : null;
-  const latestPositions = latestTrendPoint
-    ? [
-        { key: "brand", label: project.brand, isBrand: true, position: latestTrendPoint.values.brand ?? null },
-        ...competitorRows.map((c) => ({
-          key: c.id,
-          label: c.name,
-          isBrand: false,
-          position: latestTrendPoint.values[c.id] ?? null
-        }))
-      ]
-        .filter((entry) => entry.position != null)
-        .sort((a, b) => (a.position as number) - (b.position as number))
-    : [];
+  const latestPositions = (() => {
+    if (!latestTrendPoint) return [];
+    const sorted = [
+      { key: "brand", label: project.brand, isBrand: true, position: latestTrendPoint.values.brand ?? null },
+      ...competitorRows.map((c) => ({
+        key: c.id,
+        label: c.name,
+        isBrand: false,
+        position: latestTrendPoint.values[c.id] ?? null
+      }))
+    ]
+      .filter((entry): entry is typeof entry & { position: number } => entry.position != null)
+      .sort((a, b) => a.position - b.position);
+
+    let lastPosition: number | null = null;
+    let lastRank = 0;
+    return sorted.map((entry, index) => {
+      if (lastPosition === null || entry.position !== lastPosition) {
+        lastRank = index + 1;
+        lastPosition = entry.position;
+      }
+      return { ...entry, rank: lastRank };
+    });
+  })();
 
   // Rendered in exactly one place: inside the desktop rail next to the trend
   // chart when there's a full competitive picture, or as its own standalone
@@ -437,7 +467,11 @@ export default async function CompetitorsPage({
     emergingBrands.length > 0 ? (
       <>
         <div className="cm2-sec-lbl">Marcas que aparecen y no sigues</div>
-        <EmergingBrandsSection projectId={projectId} brands={emergingBrands} />
+        <EmergingBrandsSection
+          projectId={projectId}
+          brands={emergingBrands}
+          analyzedPromptCount={analyzedPromptCount}
+        />
       </>
     ) : null;
 
@@ -713,12 +747,15 @@ export default async function CompetitorsPage({
                     </div>
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
-                        <div className="cm2-pos-list-hd">Posición media · último escaneo</div>
-                        {latestPositions.map((entry, i) => (
+                        <div className="cm2-pos-list-hd">
+                          Posición media · último escaneo
+                          <InfoTip text="Puesto medio en el que la IA nombra a cada marca. Los prompts donde una marca no aparece cuentan como el último puesto, así que una marca poco mencionada tiene una media alta aunque salga primera cuando aparece. Más bajo es mejor; puede haber empates." />
+                        </div>
+                        {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
-                            <span className="cm2-pos-n">{i + 1}</span>
+                            <span className="cm2-pos-n">{entry.rank}</span>
                             <span className="cm2-pos-nm">{entry.label}</span>
-                            <span className="cm2-pos-v">{(entry.position as number).toFixed(2)}</span>
+                            <span className="cm2-pos-v">{entry.position.toFixed(2)}</span>
                           </div>
                         ))}
                       </div>

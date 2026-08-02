@@ -8,19 +8,28 @@
  * (>=2 occurrences to filter noise, not reused directly because that
  * function is private to the recommendation engine's own gap-detection
  * pipeline and returns a different shape).
+ *
+ * Counts DISTINCT PROMPTS, never rows. One row is one (prompt × engine ×
+ * run), so a project with 2 prompts scanned by 3 engines over 3 runs has 18
+ * rows — counting those and labelling the result "en N prompts" overstated
+ * the evidence by ~9x (founder caught this on real data: "Carrefour · en 18
+ * prompts" on a project with 2 prompts).
  */
 
 export type EmergingBrandInputRow = {
+  /** scan_prompt_results.prompt_id — rows without one cannot be attributed to a prompt and are skipped. */
+  promptId: string | null;
   extracted_json: unknown;
 };
 
 export type EmergingBrand = {
   name: string;
-  occurrences: number;
+  /** Number of distinct prompts this brand was named in. */
+  promptCount: number;
 };
 
 const DEFAULT_LIMIT = 5;
-const MIN_OCCURRENCES = 2;
+const MIN_PROMPTS = 2;
 
 function parseOtherBrands(raw: unknown): string[] {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
@@ -44,26 +53,26 @@ export function computeEmergingBrands(input: {
   const trackedKeys = new Set(input.trackedCompetitorNames.map(normKey));
   const limit = input.limit ?? DEFAULT_LIMIT;
 
-  const byKey = new Map<string, { name: string; occurrences: number }>();
+  // key -> { display name, set of distinct prompt ids }
+  const byKey = new Map<string, { name: string; prompts: Set<string> }>();
 
   for (const row of input.rows) {
-    const names = parseOtherBrands(row.extracted_json);
-    // A brand named twice by different engines for the SAME prompt result
-    // row can't happen (one row = one engine's response), so no per-row dedup needed.
-    for (const raw of names) {
+    if (!row.promptId) continue;
+    for (const raw of parseOtherBrands(row.extracted_json)) {
       const key = normKey(raw);
       if (!key || key === brandKey || trackedKeys.has(key)) continue;
       const entry = byKey.get(key);
       if (entry) {
-        entry.occurrences += 1;
+        entry.prompts.add(row.promptId);
       } else {
-        byKey.set(key, { name: raw.trim(), occurrences: 1 });
+        byKey.set(key, { name: raw.trim(), prompts: new Set([row.promptId]) });
       }
     }
   }
 
   return Array.from(byKey.values())
-    .filter((entry) => entry.occurrences >= MIN_OCCURRENCES)
-    .sort((a, b) => b.occurrences - a.occurrences)
+    .map((entry) => ({ name: entry.name, promptCount: entry.prompts.size }))
+    .filter((entry) => entry.promptCount >= MIN_PROMPTS)
+    .sort((a, b) => b.promptCount - a.promptCount || a.name.localeCompare(b.name))
     .slice(0, limit);
 }

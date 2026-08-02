@@ -14,7 +14,15 @@ import { followBrandAction } from "../actions";
  * we surface that honestly and point at "Gestionar" rather than falling back
  * to an inline domain field, which is exactly what this replaced.
  */
-function FollowRow({ projectId, brand }: { projectId: string; brand: EmergingBrand }) {
+function FollowRow({
+  projectId,
+  brand,
+  analyzedPromptCount
+}: {
+  projectId: string;
+  brand: EmergingBrand;
+  analyzedPromptCount: number;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -41,7 +49,8 @@ function FollowRow({ projectId, brand }: { projectId: string; brand: EmergingBra
           <span className="cm2-rank-nm-txt">{brand.name}</span>
         </div>
         <div className="cm2-emg-meta">
-          En {brand.occurrences} {brand.occurrences === 1 ? "prompt" : "prompts"}
+          En {brand.promptCount} de {analyzedPromptCount}{" "}
+          {analyzedPromptCount === 1 ? "prompt" : "prompts"}
         </div>
         {error ? <div className="cm2-emg-err">{error}</div> : null}
       </div>
@@ -59,12 +68,28 @@ function FollowRow({ projectId, brand }: { projectId: string; brand: EmergingBra
   );
 }
 
-export function EmergingBrandsSection({ projectId, brands }: { projectId: string; brands: EmergingBrand[] }) {
+export function EmergingBrandsSection({
+  projectId,
+  brands,
+  analyzedPromptCount
+}: {
+  projectId: string;
+  brands: EmergingBrand[];
+  analyzedPromptCount: number;
+}) {
   return (
     <div className="card">
-      <div className="cm2-emg-intro">La IA las menciona en tus prompts y no las sigues todavía.</div>
+      <div className="cm2-emg-intro">
+        La IA las menciona al responder tus prompts y no las sigues todavía. No todas serán
+        competidores: revísalo antes de seguir a una.
+      </div>
       {brands.map((brand) => (
-        <FollowRow key={brand.name} projectId={projectId} brand={brand} />
+        <FollowRow
+          key={brand.name}
+          projectId={projectId}
+          brand={brand}
+          analyzedPromptCount={analyzedPromptCount}
+        />
       ))}
     </div>
   );
