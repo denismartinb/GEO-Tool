@@ -190,6 +190,68 @@ export async function captureInteraction(page: Page, testInfo: TestInfo, label: 
 }
 
 /**
+ * Asserts a revealed element is not just "visible" to Playwright but actually
+ * legible to a human: fully inside the viewport horizontally, and not clipped
+ * by an ancestor's `overflow: hidden`.
+ *
+ * Why this exists: `expect(bubble).toBeVisible()` passed for a KPI tooltip
+ * that was rendering half-cut behind its own card (`overflow: hidden` on the
+ * parent). The assertion was green and the UX was broken — only looking at
+ * the capture caught it (founder, 2026-08-02: "no solo pruebe que sale, sino
+ * que sale bien"). That class of defect is mechanically detectable, so it
+ * belongs in an assertion rather than in a human's judgement.
+ */
+export async function assertFullyVisible(
+  page: Page,
+  selector: string,
+  description: string
+): Promise<void> {
+  const geometry = await page.locator(selector).first().evaluate((node: Element) => {
+    const rect = node.getBoundingClientRect();
+    let clippedBy: string | null = null;
+    for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+      const style = window.getComputedStyle(parent);
+      if (style.overflow === "visible" && style.overflowX === "visible" && style.overflowY === "visible") continue;
+      const parentRect = parent.getBoundingClientRect();
+      const escapes =
+        rect.top < parentRect.top - 1 ||
+        rect.bottom > parentRect.bottom + 1 ||
+        rect.left < parentRect.left - 1 ||
+        rect.right > parentRect.right + 1;
+      if (escapes) {
+        clippedBy = `${parent.tagName.toLowerCase()}.${parent.className || "(no class)"}`.slice(0, 80);
+        break;
+      }
+    }
+    return {
+      left: rect.left,
+      right: rect.right,
+      width: rect.width,
+      height: rect.height,
+      viewportWidth: window.innerWidth,
+      clippedBy
+    };
+  });
+
+  expect(
+    geometry.width > 0 && geometry.height > 0,
+    `${description}: revealed element has zero size — nothing actually appeared`
+  ).toBe(true);
+
+  expect(
+    geometry.clippedBy,
+    `${description}: revealed element is clipped by an ancestor with overflow hidden (${geometry.clippedBy}) — ` +
+      `it is "visible" to the DOM but cut off on screen`
+  ).toBeNull();
+
+  expect(
+    geometry.left >= -1 && geometry.right <= geometry.viewportWidth + 1,
+    `${description}: revealed element runs outside the viewport horizontally ` +
+      `(${Math.round(geometry.left)}…${Math.round(geometry.right)}px vs ${geometry.viewportWidth}px wide)`
+  ).toBe(true);
+}
+
+/**
  * Resolves the project the journeys should exercise: the pinned
  * `PILOT_PROJECT_ID` when set, otherwise the first project on the pilot
  * account. Discovery keeps the pilot working on a fresh pilot account without

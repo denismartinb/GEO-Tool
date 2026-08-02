@@ -1908,7 +1908,25 @@ a {
    point 6 — density/hierarchy drift). `flex-basis: 0` divides the row evenly
    instead, and the label is allowed to wrap to a second line rather than
    being ellipsised into "Respuestas con cit…". */
-.cit2-kpis { display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); overflow: hidden; margin-top: 4px; }
+/* No `overflow: hidden` here, deliberately: the KPI labels carry `.info-tip`
+   tooltips whose bubble is positioned ABOVE the trigger, and clipping the
+   strip clipped the bubble in half — the pilot's own interaction screenshot
+   caught it (2026-08-02). The Playwright assertion still passed, because a
+   clipped element is technically "visible"; only looking at the capture
+   showed it. The cells have no background of their own (transparent, with a
+   border-right divider), so nothing actually needs clipping at the rounded
+   corners. */
+.cit2-kpis { position: relative; display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); margin-top: 4px; }
+/* The KPI tooltips anchor to the STRIP, not to their own 14px trigger, and
+   open downward. Two reasons, both caught from the pilot's interaction
+   captures rather than from reading the CSS:
+   1. Upward + a clipped parent cut the bubble in half (see above).
+   2. The bubble is a fixed 220px; anchored to the trigger, the last KPI's
+      bubble ran past the right edge on a 375px viewport, which would have
+      introduced horizontal overflow the moment a user hovered it.
+   Spanning the strip (left:0/right:0) is immune to both at every width. */
+.cit2-kpis .info-tip { position: static; }
+.cit2-kpis .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
 .cit2-kpis > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line-soft); }
 .cit2-kpis > div:last-child { border-right: 0; }
 .cit2-k { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }

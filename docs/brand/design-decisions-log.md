@@ -620,6 +620,47 @@ mínimos (`.info-tip`/`.cit2-row`/`.cit2-opp-item` con toggle real) para que
 `pnpm pilot:selfcheck` siga probando este camino también sin depender de
 un preview real.
 
+**Explorador genérico de interacciones + criterio UX (UX-PILOT-1c,
+2026-08-02).** El fundador pidió que el piloto pudiera "hacer clicks en
+cualquier sitio" y que tuviera criterio: "no solo pruebe que sale, sino que
+sale bien y que la UX es la óptima". Escribir un test a medida por feature no
+escala y solo cubre lo que alguien se acordó de escribir.
+
+- Nuevo `tests/pilot/support/explore.ts`: **descubre** los controles seguros
+  de cada pantalla, los ejercita y captura el estado resultante. Produce tres
+  hallazgos que una máquina sí puede afirmar con certeza: `dead` (se pulsó y
+  no cambió nada en el DOM), `introducedOverflow` (la interacción rompió el
+  layout) y errores de consola por interacción. Conectado a las 9 pantallas
+  del journey, en los 3 viewports.
+- **Seguridad primero**: el explorador es allow-list (solo patrones que son
+  estado local de UI), y además rechaza todo lo que esté dentro de un
+  `<form>`, sea `submit`, navegue fuera, o cuyo nombre accesible parezca
+  destructivo. Lo rechazado se registra como `skipped` con motivo — nunca se
+  descarta en silencio, para que "no cubierto" no se lea como "verificado".
+- **Bug de seguridad encontrado por la propia fixture**: la primera versión
+  de la deny-list usaba `\belimina\b`, que **no** casa con "Eliminar" (la `r`
+  rompe el word boundary), así que el decoy "Eliminar proyecto" fue pulsado
+  en vez de rechazado. Contra el Supabase real eso es exactamente el
+  accidente que la lista existe para evitar. Corregido a stems anclados solo
+  al inicio de palabra; sobre-rechazar es la dirección correcta de fallo.
+- **Nueva aserción `assertFullyVisible`** (`tests/pilot/support/journey.ts`):
+  un elemento revelado no basta con que sea "visible" para el DOM — se afirma
+  que no está recortado por un ancestro con `overflow: hidden` ni se sale del
+  viewport. Nace de un caso real: el tooltip de los KPIs pasaba
+  `toBeVisible()` mientras se renderizaba cortado por su propia tarjeta.
+- **Bug de producto encontrado por esa captura**: `.cit2-kpis` tenía
+  `overflow: hidden`, que partía la burbuja del tooltip por la mitad (peor en
+  móvil, donde solo se leía la última línea). Además la burbuja medía 220px
+  fijos anclada al icono, así que la del último KPI se habría salido por la
+  derecha en 375px al abrirla. Ambos corregidos: el tooltip se ancla ahora a
+  la tira completa y abre hacia abajo.
+- `.claude/agents/ux-pilot.md` gana una **checklist de interacción** (6
+  puntos) y un **listón de calidad UX** (8 puntos de juicio, no de
+  aserción) — incluido "¿lo enviarías a un cliente de pago?" — más una
+  sección que fija que **toda comprobación y toda evidencia van siempre a
+  375/768/1280**, y que una comprobación hecha en un solo ancho está
+  *no verificada* en los otros dos.
+
 ---
 
 ## Cómo mantener este documento

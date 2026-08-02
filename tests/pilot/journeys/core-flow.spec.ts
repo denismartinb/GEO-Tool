@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser } from "../support/journey";
+import {
+  assertFullyVisible,
+  assertPageIsHealthy,
+  captureInteraction,
+  resolveProjectId,
+  visitAsUser
+} from "../support/journey";
+import { exploreInteractions } from "../support/explore";
 
 /**
  * UX-PILOT-1 read-only journey over the core flow surfaces.
@@ -11,6 +18,13 @@ import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser 
  *   - submit any form that writes to Supabase.
  * Write journeys are a separate, separately-approved phase (UX-PILOT-2).
  * See `docs/agentic-user-pilot.md`.
+ *
+ * Every screen additionally gets an interaction sweep (`exploreInteractions`,
+ * UX-PILOT-1c): the pilot no longer stops at "it rendered", it exercises the
+ * safe in-page controls it finds and captures each resulting state, so the
+ * agent has evidence of what a screen does when a user actually uses it — not
+ * just what it looks like sitting still. That module enforces the same scope
+ * guard above with an allow-list; see its header before widening anything.
  */
 
 test.describe.configure({ mode: "serial" });
@@ -25,6 +39,7 @@ async function projectId(page: Parameters<typeof resolveProjectId>[0]): Promise<
 test("dashboard home renders for a logged-in user", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/dashboard", "dashboard");
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "dashboard");
 });
 
 test("projects list renders at least one project", async ({ page }, testInfo) => {
@@ -35,12 +50,14 @@ test("projects list renders at least one project", async ({ page }, testInfo) =>
     page.locator('a[href^="/dashboard/projects/"]').first(),
     "pilot account shows no project — seed it before trusting this run"
   ).toBeVisible();
+  await exploreInteractions(page, testInfo, "projects-list");
 });
 
 test("project overview renders real scan data", async ({ page }, testInfo) => {
   const id = await projectId(page);
   const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, "overview");
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "overview");
 });
 
 test("prompts screen renders", async ({ page }, testInfo) => {
@@ -52,6 +69,7 @@ test("prompts screen renders", async ({ page }, testInfo) => {
     "prompts"
   );
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "prompts");
 });
 
 test("competitors screen renders", async ({ page }, testInfo) => {
@@ -63,6 +81,7 @@ test("competitors screen renders", async ({ page }, testInfo) => {
     "competitors"
   );
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "competitors");
 });
 
 test("recommendations screen renders", async ({ page }, testInfo) => {
@@ -74,12 +93,14 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
     "recommendations"
   );
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "recommendations");
 });
 
 test("scan history screen renders", async ({ page }, testInfo) => {
   const id = await projectId(page);
   const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs");
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "runs");
 });
 
 test("citations screen renders", async ({ page }, testInfo) => {
@@ -91,6 +112,19 @@ test("citations screen renders", async ({ page }, testInfo) => {
     "citations"
   );
   assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "citations");
+});
+
+test("web audit screen renders", async ({ page }, testInfo) => {
+  const id = await projectId(page);
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    `/dashboard/projects/${id}/web-audit`,
+    "web-audit"
+  );
+  assertPageIsHealthy(findings);
+  await exploreInteractions(page, testInfo, "web-audit");
 });
 
 /**
@@ -113,15 +147,23 @@ test("citations KPI tooltip and row expand actually work, not just render their 
   );
   assertPageIsHealthy(findings);
 
-  // 1. KPI tooltip: hover reveals the bubble (pure CSS :hover, no JS).
-  const infoTip = page.locator(".cit2-kpis .info-tip").first();
-  await expect(infoTip, "no info-tip icon next to the KPI strip").toBeVisible();
-  await infoTip.hover();
-  await expect(
-    page.locator(".cit2-kpis .info-tip-bubble").first(),
-    "hovering the KPI info-tip did not reveal its tooltip bubble"
-  ).toBeVisible();
-  await captureInteraction(page, testInfo, "citations-tooltip-open");
+  // 1. KPI tooltips: hover reveals the bubble (pure CSS :hover, no JS), and
+  //    the bubble must be legible — not clipped by its card, not running off
+  //    the viewport. EVERY tip is checked, not just the first: the last KPI's
+  //    bubble is the one most likely to overflow the right edge on a narrow
+  //    viewport, so testing only `.first()` would have missed exactly the
+  //    case worth catching.
+  const infoTips = page.locator(".cit2-kpis .info-tip");
+  const tipCount = await infoTips.count();
+  expect(tipCount, "no info-tip icons found next to the KPI strip").toBeGreaterThan(0);
+
+  for (let i = 0; i < tipCount; i++) {
+    await infoTips.nth(i).hover();
+    const bubble = page.locator(".cit2-kpis .info-tip-bubble").nth(i);
+    await expect(bubble, `hovering KPI info-tip #${i + 1} did not reveal its tooltip`).toBeVisible();
+    await assertFullyVisible(page, `.cit2-kpis .info-tip-bubble >> nth=${i}`, `KPI tooltip #${i + 1}`);
+    if (i === 0) await captureInteraction(page, testInfo, "citations-tooltip-open");
+  }
 
   // 2. Full list row expands to show the prompt/evidence panel on click.
   const firstRow = page.locator(".cit2-rowmain").first();

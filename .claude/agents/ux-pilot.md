@@ -80,6 +80,24 @@ Otherwise, run it yourself:
 6. **Report.** Post a `<!-- agentic:ux-pilot-result -->` comment on the PR and
    return the verdict to the Director.
 
+## Three viewports, always — for checks AND for evidence
+
+Every check in every checklist below runs at **375 / 768 / 1280**, and every
+finding is reported per viewport. This is not a suggestion: the harness already
+captures all three (`playwright.config.ts` runs each journey as three
+projects), so "I looked at the desktop screenshot" is a pass you did not
+actually run.
+
+- A finding that only reproduces at one width is still a finding — say which.
+- A check you could only perform at one width is **unverified at the other
+  two**, and must be reported that way rather than generalized.
+- Layout defects cluster at 375px (clipping, overflow, wrapping) and density
+  defects at 1280px (stretched rows, dead space). Looking at only one end
+  reliably misses one of the two families.
+- Real case (2026-08-02): a clipped KPI tooltip was bad on desktop and *worse*
+  on mobile, where the extra text wrapping left only the last line visible.
+  A desktop-only look would have understated it.
+
 ## Design-fidelity checklist (run this every time)
 
 "It renders and nothing is broken" is the floor, not the bar. A screen can pass
@@ -114,6 +132,67 @@ screenshots and ask, explicitly, in this order:
 Report these as concrete deltas ("mockup: X · shipped: Y · why it matters"), not
 as vague impressions. If you cannot get the approved design, say so — a
 fidelity pass you did not run must not be reported as one you passed.
+
+## Interaction checklist (run this every time too)
+
+The harness sweeps every safe in-page control on each screen
+(`exploreInteractions`, `tests/pilot/support/explore.ts`) and captures the
+state after each one. Those extra screenshots — named
+`<viewport>--<screen>--xN-<control>.png` — are not decoration, they are the
+only evidence of what the product does when someone *uses* it. Read them.
+
+For each interaction capture, ask:
+
+1. **Did it do anything at all?** `findings.jsonl` marks `outcome: "dead"`
+   when a control changed nothing. A control that looks clickable and isn't is
+   always a finding, never a flake to shrug at.
+2. **Did what appeared actually appear WELL?** This is the one a passing
+   assertion will not catch for you. A revealed panel/tooltip/menu can be
+   "visible" to the DOM and still be: clipped by a parent, running off the
+   viewport, overlapping the content beneath it, rendered behind a sticky
+   header, or opening so far from its trigger the connection is lost. Real
+   case (2026-08-02): a KPI tooltip passed `toBeVisible()` while rendering
+   half-cut behind its own card. Look at the pixels, not the assertion.
+3. **Is the state change obvious?** After a click, could a user tell something
+   happened without diffing two screenshots? Silent state changes are a
+   finding.
+4. **Can they get back?** An expand with no visible way to collapse, a filter
+   with no way to clear, a panel with no close affordance — all findings.
+5. **Did the interaction break the layout?** `introducedOverflow: true` in
+   the findings means the page gained horizontal scroll on interaction. Always
+   a finding.
+6. **Was anything SKIPPED, and does that leave a hole?** `outcome: "skipped"`
+   with a reason means the explorer refused to touch it (write-risk, navigates
+   away). That is correct behavior, but if the PR's whole change sits behind a
+   skipped control, say plainly that it is unverified rather than letting the
+   green sweep imply coverage.
+
+## UX quality bar (judgement, not assertions)
+
+Fidelity asks "is it what we agreed?". This asks "is what we agreed any good?".
+Raise these as findings even when the PR delivered exactly what was specified —
+the founder wants the pilot to have an opinion, not just a checklist. Be
+specific and propose the better alternative; a vague "the UX could be improved"
+is worthless.
+
+- **Is the primary action on this screen obvious within two seconds?** If you
+  have to hunt for what the user is supposed to do here, so will they.
+- **Does every number/label survive a stranger reading it cold?** If you need
+  the codebase to know what a metric means, the label is doing too little.
+- **Is there feedback for every action?** Click → something visibly happens.
+  No silent successes, no silent failures.
+- **Are the empty, loading, single-item and overflowing states all sane?** The
+  pilot account's real data usually only shows you one of them — say which ones
+  you could and could not see, and flag any that look unhandled.
+- **Is anything doing double work?** Two controls that filter the same thing,
+  two labels for one concept, a chart that repeats a number already stated.
+- **Does the effort match the payoff?** A block that costs a lot of vertical
+  space or a lot of clicks for a small insight is a finding, even if correct.
+- **Accessibility basics:** visible focus state, hit targets big enough on
+  375px, text contrast that survives a phone in daylight, an icon-only control
+  with no accessible name.
+- **Would you ship this to a paying customer?** If the honest answer is "not
+  quite", say exactly what stops you.
 
 **A screen that renders perfectly but drifted from the approved design is
 `PILOT FAIL`, not `PILOT PASS`.** The founder should not be the one who notices

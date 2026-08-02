@@ -32,7 +32,8 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
-  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"]
+  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
+  [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
 
 // Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and
@@ -74,6 +75,16 @@ function citationsPage() {
       <button type="button" class="cit2-opp-row">fixture-opportunity.example</button>
       <div class="cit2-detail">Prompt y evidencia de prueba.</div>
     </div>
+    <!-- Deliberate dead control: looks interactive, does nothing. The
+         explorer must report it as outcome:"dead". Present in BOTH fixture
+         modes on purpose — it proves the detector works, and it is the
+         explorer's report (not the run's exit code) that carries it, so it
+         must not flip the healthy fixture to FAIL. -->
+    <button type="button" data-pilot-explore class="fixture-dead-control">Control muerto de prueba</button>
+    <!-- Deliberate write-looking control: the explorer must REFUSE this one
+         (outcome:"skipped") rather than click it. Guards the scope rule that
+         keeps the pilot away from anything that could hit Supabase. -->
+    <button type="button" data-pilot-explore>Eliminar proyecto</button>
     <script>${CITATIONS_SCRIPT}</script>`;
 }
 
