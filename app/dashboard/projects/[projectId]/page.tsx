@@ -763,13 +763,23 @@ export default async function ProjectDetailPage({
                   <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
                 )}
               </div>
-              {geoTrend.length >= 2 ? (
+              {/* The sparkline is the delta in graphical form: a line joining
+                  the last N scores asserts a trend between them just as
+                  literally as "+44 pt" does. Drawing a rising line directly
+                  under the words "sin comparación" would contradict them in
+                  the more persuasive medium — the founder's original report
+                  was a screenshot of exactly that rise. So the line is
+                  withheld under the same condition as the number, and the
+                  caption says why instead. */}
+              {geoTrend.length >= 2 && gaugeDeltaVerdict?.kind === "publish" ? (
                 <>
                   <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
-                  <div className="ov2-gauge-trend-cap">
-                    {deltaWithheldNote(gaugeDeltaVerdict) ?? `Últimos ${geoTrend.length} escaneos`}
-                  </div>
+                  <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
                 </>
+              ) : geoTrend.length >= 2 ? (
+                <div className="ov2-gauge-trend-cap">
+                  {deltaWithheldNote(gaugeDeltaVerdict) ?? `Últimos ${geoTrend.length} escaneos`}
+                </div>
               ) : (
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
               )}
@@ -886,6 +896,17 @@ export default async function ProjectDetailPage({
                     <>
                       <div className="ov2-kpi-v">{m.value}<small>%</small></div>
                       <div className="ov2-kpi-foot">
+                        {/* Same sample gate as the GEO band and the
+                            competitive-pressure band: "Muy bajo" is a
+                            qualitative verdict, and over <10 responses it
+                            rests on one or two cited pages. Gating three
+                            bands on this screen and leaving the fourth would
+                            just be arbitrary. */}
+                        {!sampleSufficient ? (
+                          <span className="delta flat" title={`Calculado sobre ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA — muestra insuficiente para clasificar.`}>
+                            — muestra insuficiente
+                          </span>
+                        ) : (
                         <span className={`badge ${
                           m.value > 50 ? "badge-pos" :
                           m.value >= 30 ? "badge-accent" :
@@ -899,6 +920,7 @@ export default async function ProjectDetailPage({
                            m.value >= 5  ? "Bajo" :
                            "Muy bajo"}
                         </span>
+                        )}
                       </div>
                     </>
                   ) : (
