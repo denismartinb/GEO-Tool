@@ -62,6 +62,16 @@ const PUBLIC_PAGES = new Map([
   ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
 ]);
 
+// GROWTH-2 Fase 2.3 (tests/pilot/journeys/docs-pages.spec.ts): same idea as
+// PUBLIC_PAGES above, kept as a separate map/function because these pages
+// also need a sidebar with an `active` link — the journey asserts on it.
+const DOCS_SLUGS = [
+  "empezar/primer-escaneo",
+  "informes/overview",
+  "metodologia/geo-score",
+  "planes-y-limites"
+];
+
 // Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and
 // .cit2-row/.cit2-opp-item (click-to-toggle "open") classes from
 // app/globals.css — just enough for the interaction test's selectors and
@@ -163,6 +173,20 @@ function publicHtml(path, title) {
 </head><body><h1>${title}</h1><p>contenido</p>${overflow}</body></html>`;
 }
 
+function docsPage(path, title) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const sidebar = DOCS_SLUGS.map(
+    (slug) => `<a href="/docs/${slug}" class="${path === `/docs/${slug}` ? "active" : ""}">${slug}</a>`
+  ).join("");
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}${path}">
+<title>${title}</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${title}</h1><nav>${sidebar}</nav><p>contenido</p>${overflow}</body></html>`;
+}
+
 function feedXml() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
@@ -221,6 +245,18 @@ const server = createServer((request, response) => {
   if (PUBLIC_PAGES.has(path)) {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(publicHtml(path, PUBLIC_PAGES.get(path)));
+    return;
+  }
+
+  if (path === "/docs") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(docsPage(path, "Documentación — Genscore"));
+    return;
+  }
+
+  if (DOCS_SLUGS.some((slug) => path === `/docs/${slug}`)) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(docsPage(path, `${path.slice(6)} — Genscore`));
     return;
   }
 

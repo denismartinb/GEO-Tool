@@ -13,6 +13,14 @@
 - [Glosario GEO](https://www.genscore.es/glosario): términos clave explicados en una frase.
 - [Genscore vs Otterly](https://www.genscore.es/comparativas/genscore-vs-otterly): comparativa honesta con herramientas de visibilidad en IA.
 
+## Docs
+
+- [Documentación](https://www.genscore.es/docs): índice.
+- [Tu primer escaneo](https://www.genscore.es/docs/empezar/primer-escaneo)
+- [Informe Overview](https://www.genscore.es/docs/informes/overview)
+- [Metodología del GEO Score](https://www.genscore.es/docs/metodologia/geo-score)
+- [Planes y límites](https://www.genscore.es/docs/planes-y-limites)
+
 ## Blog
 
 - [Qué es el GEO Score y cómo se calcula](https://www.genscore.es/blog/que-es-el-geo-score): metodología del GEO Score compuesto.

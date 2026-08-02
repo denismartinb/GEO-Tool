@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import sitemap from "./sitemap";
 import { BLOG_POSTS } from "@/lib/blog/posts";
+import { DOCS_NAV } from "@/lib/docs/nav";
 
 describe("sitemap", () => {
-  it("gives every static route a fixed date string, not the current request time", () => {
+  it("gives every static and docs route a fixed date string, not the current request time", () => {
     const entries = sitemap();
     const blogUrls = new Set(BLOG_POSTS.map((post) => `https://www.genscore.es/blog/${post.slug}`));
     const staticEntries = entries.filter((e) => !blogUrls.has(e.url));
@@ -29,6 +30,16 @@ describe("sitemap", () => {
       const entry = entries.find((e) => e.url === `https://www.genscore.es/blog/${post.slug}`);
       expect(entry).toBeDefined();
       expect((entry!.lastModified as Date).toISOString().slice(0, 10)).toBe(post.datePublished);
+    }
+  });
+
+  it("includes every /docs page from DOCS_NAV", () => {
+    const entries = sitemap();
+    const urls = new Set(entries.map((e) => e.url));
+    for (const section of DOCS_NAV) {
+      for (const docPage of section.pages) {
+        expect(urls.has(`https://www.genscore.es/docs/${docPage.slug}`)).toBe(true);
+      }
     }
   });
 

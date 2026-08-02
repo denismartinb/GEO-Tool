@@ -1,0 +1,58 @@
+# Calendario de contenido — GROWTH-2
+
+> Ledger de ejecución del motor de contenido SEO+GEO. Mismo protocolo que
+> `docs/launch-plan.md`: una fila por pieza, cada PR que la publique o la
+> toque actualiza su fila en el mismo PR. El "por qué" y las reglas de
+> redacción viven en `docs/content-strategy.md`; esto es solo estado.
+
+Estados: 🔲 Pendiente · 🟡 En curso · ✅ Publicado · 🔁 Refrescado
+
+---
+
+## Capa A — Documentación pública (`/docs`)
+
+Primer slice deliberadamente pequeño (Fase 2.3a) — no las ~10 páginas del
+mapa completo de una vez. El resto del mapa (`/docs/informes/prompts`,
+`/competidores`, `/citations`, `/recomendaciones`, `/metodologia/motores-y-
+cobertura`, `/metodologia/ciclo-de-escaneo`) se añade en PRs pequeñas
+posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
+
+| # | Ruta | Keyword primaria | Estado | PR |
+|---|---|---|---|---|
+| A1 | `/docs` (índice) | — | 🔲 Pendiente | — |
+| A2 | `/docs/empezar/primer-escaneo` | primer escaneo genscore | 🔲 Pendiente | — |
+| A3 | `/docs/informes/overview` | informe overview genscore | 🔲 Pendiente | — |
+| A4 | `/docs/metodologia/geo-score` | geo score metodología | 🔲 Pendiente | — |
+| A5 | `/docs/planes-y-limites` | planes genscore límites | 🔲 Pendiente | — |
+
+## Capa C — Páginas de decisión (Fase 2.4)
+
+| # | Ruta | Keyword primaria | Estado | PR |
+|---|---|---|---|---|
+| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | 🔲 Pendiente | — |
+| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | 🔲 Pendiente | — |
+| C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | 🔲 Pendiente | — |
+
+## Capa D — Glosario (Fase 2.4)
+
+| # | Ruta | Keyword primaria | Estado | PR |
+|---|---|---|---|---|
+| D1 | `/glosario` (índice + primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | 🔲 Pendiente | — |
+
+## Capa B — Hubs del blog (Fase 2.5)
+
+Reestructuración de `/blog` en 4 clusters (fundamentos, medición, playbooks,
+sectores) — no piezas nuevas en sí, sino arquitectura + 2-3 artículos nuevos
+del cluster "playbooks" (el que hoy no existe y tiene más demanda
+transaccional).
+
+| # | Qué | Estado | PR |
+|---|---|---|---|
+| B1 | Arquitectura de clusters + páginas pilar + enlazado interno + redirects si aplica | 🔲 Pendiente | — |
+| B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | 🔲 Pendiente | — |
+| B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | 🔲 Pendiente | — |
+
+## Capa E — Observatorio
+
+Requiere Task Intake y aprobación propia (coste de escaneos + metodología
+publicada). No planificado en este calendario hasta esa aprobación.
