@@ -566,6 +566,78 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
     };
   }
 
+  /* ---- GEO-SCORE-BRAND-IDENTITY-1: a brand is not one name ---- */
+
+  // Verbatim from the founder's real 2026-08-02 scan of mozilla.org. All
+  // three engines recommended Firefox; the brand only counted at all because
+  // each answer happened to also write the parent company's name in passing.
+  const CLAUDE_RESPONSE_WITHOUT_PARENT_NAME =
+    "Firefox\nOfrece proteccion de rastreo mejorada de forma predeterminada y tiene configuracion granular de privacidad. " +
+    "Firefox es probablemente la mejor opcion equilibrada: excelente privacidad y codigo abierto.";
+
+  it("counts the brand when the AI recommends its product by name (the Mozilla case)", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Firefox", evidence: [], position: 1 }
+    });
+
+    const withoutAliases = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla");
+    const withAliases = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", ["Firefox"]);
+
+    // This is the defect: an answer that recommends Firefox twice scored the
+    // brand as absent, because "Firefox" does not plausibly name "Mozilla".
+    expect(withoutAliases.brand.mentioned).toBe(false);
+    expect(withAliases.brand.mentioned).toBe(true);
+    expect(withAliases.brand.position).toBe(1);
+  });
+
+  it("still requires the claimed name to be in the raw text — an alias cannot manufacture a mention", () => {
+    // The safety property. Aliases loosen check (a) of ADR 0021; check (b) is
+    // untouched, so an alias for a product the answer never mentions is still
+    // a non-mention.
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Thunderbird", evidence: [], position: 1 }
+    });
+
+    const result = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", [
+      "Firefox",
+      "Thunderbird"
+    ]);
+
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("keeps matching the brand's own name when aliases are present", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Mozilla", evidence: [], position: 2 }
+    });
+
+    const result = verifyExtractedMentions(data, "El navegador esta desarrollado por Mozilla.", "Mozilla", ["Firefox"]);
+
+    expect(result.brand.mentioned).toBe(true);
+  });
+
+  it("ignores blank aliases instead of matching everything", () => {
+    // An empty alias would make namesPlausiblyMatch trivially true and switch
+    // verification off entirely for that project.
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "algo sin relacion", evidence: [], position: 1 }
+    });
+
+    const result = verifyExtractedMentions(data, "algo sin relacion aparece aqui.", "Mozilla", ["", "   "]);
+
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("does not apply brand aliases to competitors", () => {
+    const data = baseData({
+      competitors: [{ name: "Brave", mentioned: true, display_name_found: "Firefox", evidence: [], position: 1 }]
+    });
+
+    const result = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", ["Firefox"]);
+
+    expect(result.competitors[0].mentioned).toBe(false);
+  });
+
   it("downgrades a brand mention whose display_name_found is not present in the raw text", () => {
     const data = baseData({
       brand: {

@@ -1,6 +1,7 @@
 import "server-only";
 import { fetchPageSafely } from "@/lib/web-audit/fetch-page";
-import { inferBusinessProfile, type BusinessProfile } from "@/lib/llm/gemini";
+import { inferBrandAliases, inferBusinessProfile, type BusinessProfile } from "@/lib/llm/gemini";
+import { selectVerifiableAliases } from "@/lib/projects/brand-aliases";
 
 /**
  * COMPETITOR-GROUNDING-1: gives Gemini real evidence of what a business
@@ -121,4 +122,44 @@ export async function resolveBusinessContext(input: {
   if (profile.confidence === "low" && !hasUserDescription) return { status: "unidentified" };
 
   return { status: "identified", profile };
+}
+
+/**
+ * Derives the project's brand aliases from its own homepage evidence
+ * (GEO-SCORE-BRAND-IDENTITY-1). Automatic, per the founder's decision
+ * (2026-08-02): no manual step is required to get a correct measurement, and
+ * a brand whose product carries the name — Mozilla/Firefox — is mis-measured
+ * from its very first scan without one.
+ *
+ * Two-stage on purpose, mirroring how the rest of this pipeline treats model
+ * output: `inferBrandAliases` PROPOSES from the fetched evidence, and
+ * `selectVerifiableAliases` DISPOSES — dropping anything absent from that
+ * same evidence, generic, too short, or over the cap. The model never gets to
+ * write directly into something that moves the score.
+ *
+ * Returns [] on any failure or when the brand genuinely has no distinct
+ * product name, which is the common and correct case. Never throws: alias
+ * derivation is an enhancement to measurement, and failing it must never
+ * block project creation or a scan.
+ */
+export async function deriveBrandAliases(input: { brand: string; domain: string }): Promise<string[]> {
+  const evidence = await fetchHomepageEvidence(input.domain).catch(() => ({ status: "unavailable" }) as const);
+  if (evidence.status !== "ok") return [];
+
+  const proposed = await inferBrandAliases({
+    brand: input.brand,
+    domain: input.domain,
+    evidence
+  }).catch(() => [] as string[]);
+
+  if (!proposed.length) return [];
+
+  // The evidence the aliases are verified against is the same block the model
+  // was shown — an alias it produced from memory rather than from the page
+  // has nothing to match here and is dropped.
+  const evidenceText = [evidence.title, evidence.description, ...evidence.headings, evidence.excerpt]
+    .filter(Boolean)
+    .join("\n");
+
+  return selectVerifiableAliases(proposed, input.brand, evidenceText).accepted;
 }

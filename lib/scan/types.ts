@@ -53,6 +53,8 @@ export type ScanPromptResultRow = {
   } | null;
   prompt_text_snapshot: string;
   brand_snapshot: string;
+  /** projects.brand_aliases frozen at scan time (GEO-SCORE-BRAND-IDENTITY-1). Optional for rows written before migration 0023. */
+  brand_aliases_snapshot?: string[] | null;
   competitors_snapshot: Array<{ name?: string }> | null;
   provider: string;
   status: string;

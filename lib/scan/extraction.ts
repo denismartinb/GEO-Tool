@@ -76,11 +76,23 @@ type MentionEntity = { mentioned: boolean; display_name_found: string | null; ev
  *    model set `display_name_found: "tu marca"` \u2014 genuinely present in the
  *    text, so check (b) alone lets it through. Check (a) catches this: "tu
  *    marca" does not plausibly name "GenScore".
+ *
+ * `realNames` is a SET, not a single string (GEO-SCORE-BRAND-IDENTITY-1): a
+ * brand is not one name. The project "Mozilla" is genuinely mentioned when
+ * the AI recommends "Firefox", but check (a) against the tracked string alone
+ * rejected it — measured on the founder's real scan, all three engines
+ * recommended Firefox and only counted because they happened to also write
+ * the parent company's name in passing. The claim only has to plausibly name
+ * ONE of the entity's known names; check (b) is unchanged and still applies,
+ * so an alias cannot manufacture a mention out of text that isn't there.
+ * Competitors pass a single-element set (their own model-returned name) —
+ * aliases are a brand-level concept, tracked per project.
  */
-function verifyMention<T extends MentionEntity>(entity: T, realName: string, normalizedRawText: string): T {
+function verifyMention<T extends MentionEntity>(entity: T, realNames: readonly string[], normalizedRawText: string): T {
   if (!entity.mentioned) return entity;
   const claimed = entity.display_name_found?.trim();
-  const isPlausibleName = Boolean(claimed) && namesPlausiblyMatch(claimed as string, realName);
+  const isPlausibleName =
+    Boolean(claimed) && realNames.some((name) => name.trim() && namesPlausiblyMatch(claimed as string, name));
   const isInRawText = Boolean(claimed) && normalizedRawText.includes(normalizeForSubstringMatch(claimed as string));
   if (!isPlausibleName || !isInRawText) {
     return { ...entity, mentioned: false, display_name_found: null, evidence: [], position: null };
@@ -114,12 +126,21 @@ function verifyMention<T extends MentionEntity>(entity: T, realName: string, nor
  * about; reconciliation separately handles matching that name to the
  * project's tracked list regardless of this function's verdict.
  */
-export function verifyExtractedMentions(data: ExtractionOutput, rawResponseText: string, brand: string): ExtractionOutput {
+export function verifyExtractedMentions(
+  data: ExtractionOutput,
+  rawResponseText: string,
+  brand: string,
+  brandAliases: readonly string[] = []
+): ExtractionOutput {
   const normalizedRawText = normalizeForSubstringMatch(rawResponseText);
+  // The brand's own name always counts, aliases are additive, and blanks are
+  // dropped — an empty alias would make namesPlausiblyMatch trivially true
+  // against anything, turning the whole verification off for that project.
+  const brandNames = [brand, ...brandAliases].map((name) => name?.trim()).filter((name): name is string => Boolean(name));
   return {
     ...data,
-    brand: verifyMention(data.brand, brand, normalizedRawText),
-    competitors: data.competitors.map((competitor) => verifyMention(competitor, competitor.name, normalizedRawText))
+    brand: verifyMention(data.brand, brandNames, normalizedRawText),
+    competitors: data.competitors.map((competitor) => verifyMention(competitor, [competitor.name], normalizedRawText))
   };
 }
 
@@ -348,7 +369,12 @@ async function extractAndPersistRow(input: {
     // above. Must run BEFORE reconciliation so reconcileExtractedCompetitors'
     // position re-densification sees the verified mentioned/position values,
     // not the model's raw (possibly hallucinated) ones.
-    const verifiedData = verifyExtractedMentions(extracted.data, rawResponseText, row.brand_snapshot);
+    const verifiedData = verifyExtractedMentions(
+      extracted.data,
+      rawResponseText,
+      row.brand_snapshot,
+      row.brand_aliases_snapshot ?? []
+    );
 
     // SCAN-TRACKED-SET-1: never persist an entity in `competitors` that the
     // user didn't choose to track — see reconcileExtractedCompetitors above.
@@ -412,7 +438,7 @@ export async function runStructuredExtractionForRun(input: {
   const { data: rows, error } = await input.service
     .from("scan_prompt_results")
     .select(
-      "id, raw_response_text, raw_response_json, prompt_text_snapshot, brand_snapshot, competitors_snapshot, provider, status, extraction_version"
+      "id, raw_response_text, raw_response_json, prompt_text_snapshot, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, provider, status, extraction_version"
     )
     .eq("project_id", input.projectId)
     .eq("run_id", input.runId)
