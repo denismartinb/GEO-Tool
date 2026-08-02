@@ -51,7 +51,7 @@ export default function GenscoreVsOtterlyPage() {
         </p>
 
         <h2>Comparativa</h2>
-        <div className="docs-table-wrap">
+        <div className="cmp-table-wrap">
           <table>
             <tbody>
               <tr>
