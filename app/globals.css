@@ -4383,6 +4383,41 @@ a.notif-row:hover {
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
 
+/* GROWTH-2 Fase 2.3: /docs sidebar layout. */
+.docs-layout { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }
+.docs-side { display: flex; flex-direction: column; gap: 4px; flex: none; width: 100%; }
+.docs-side-home { font-weight: 700; font-size: 14px; color: var(--ink); padding: 6px 10px; border-radius: var(--r-sm); }
+.docs-side-home.active { background: var(--surface-2); }
+.docs-side-section { margin-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+.docs-side-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); padding: 6px 10px 4px; }
+.docs-side a { display: block; font-size: 14px; color: var(--ink-2); padding: 6px 10px; border-radius: var(--r-sm); }
+.docs-side a:hover { background: var(--surface-2); color: var(--ink); }
+.docs-side a.active { background: var(--surface-2); color: var(--accent); font-weight: 600; }
+.docs-content { max-width: 720px; min-width: 0; }
+.docs-content h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 8px; }
+.docs-content .docs-updated { font-size: 13px; color: var(--ink-4); margin: 0 0 28px; }
+.docs-content h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 32px 0 12px; }
+.docs-content h2:first-of-type { margin-top: 0; }
+.docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
+.docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
+.docs-content li { margin-bottom: 6px; line-height: 1.6; }
+.docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
+.docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
+.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.docs-content th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
+.docs-index-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
+.docs-index-card { display: block; border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; background: var(--surface); }
+.docs-index-card:hover { border-color: var(--accent); }
+.docs-index-card .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.docs-index-card h3 { font-size: 16px; margin: 4px 0 6px; }
+.docs-index-card p { font-size: 13.5px; color: var(--ink-3); margin: 0; }
+
+@media (min-width: 860px) {
+  .docs-layout { flex-direction: row; gap: 48px; }
+  .docs-side { width: 220px; position: sticky; top: 96px; }
+  .docs-index-grid { grid-template-columns: 1fr 1fr; }
+}
+
 .geo-breakdown { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 .geo-breakdown-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
 .geo-breakdown-label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
