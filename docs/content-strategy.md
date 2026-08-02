@@ -63,9 +63,14 @@ explícita y evaluación de coste antes de escribir una línea.
 
 ## 3. Fuera del dominio (no es código, pero es parte del plan)
 
-El ~97% de las citas en motores generativos vienen de medios ganados que no
-son de primer nivel (listados, fichas de software, foros, comunidades). Esto
-no lo ejecuta ningún agente — es trabajo del fundador:
+Según una investigación de mercado de Profound (citada en Nick Lafferty,
+["The 13 Best AEO & GEO Tools for Marketers"](https://nicklafferty.com/blog/best-aeo-geo-tools-for-marketers-2026/),
+2026), el ~97% de las citas en motores generativos vienen de medios ganados
+que no son de primer nivel (listados, fichas de software, foros,
+comunidades). Es una cifra de un tercero del propio sector GEO, no un dato
+propio de Genscore — se usa aquí como orientación de dirección estratégica,
+no como hecho verificado de forma independiente. Esto no lo ejecuta ningún
+agente — es trabajo del fundador:
 
 - Entrar en los rankings/listicles de herramientas GEO que ya se publican.
 - Fichas en G2/Capterra.
