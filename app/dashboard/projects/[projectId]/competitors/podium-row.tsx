@@ -1,7 +1,6 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
 import type { CompetitorRowData } from "./page";
 
@@ -78,16 +77,6 @@ export function PodiumRow({
             {Math.abs(row.deltaPoints) === 1 ? "" : "s"}
           </div>
         ) : null}
-        {row.engineBreakdown.length >= 2 && (
-          <div style={{ fontSize: 10, color: "var(--ink-4)", marginTop: 4, textAlign: "right" }}>
-            {row.engineBreakdown.map((e, idx) => (
-              <span key={e.provider}>
-                {idx > 0 && " · "}
-                {getEngineMeta(e.provider).label} {e.mentionRate}%
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

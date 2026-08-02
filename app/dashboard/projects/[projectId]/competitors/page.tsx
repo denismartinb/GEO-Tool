@@ -643,16 +643,6 @@ export default async function CompetitorsPage({
                         {Math.abs(sovDeltas.brand.deltaPoints)} pt{Math.abs(sovDeltas.brand.deltaPoints) === 1 ? "" : "s"}
                       </div>
                     ) : null}
-                    {brandEngineBreakdown.length >= 2 && (
-                      <div style={{ fontSize: 10, color: "var(--ink-4)", marginTop: 4, textAlign: "right" }}>
-                        {brandEngineBreakdown.map((e, idx) => (
-                          <span key={e.provider}>
-                            {idx > 0 && " · "}
-                            {getEngineMeta(e.provider).label} {e.mentionRate}%
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 
