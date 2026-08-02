@@ -10,6 +10,8 @@
 
 - [Precios](https://www.genscore.es/pricing): planes Free, Starter, Pro y Agencia.
 - [Prueba gratis](https://www.genscore.es/signup): registro con 7 días de prueba de Pro.
+- [Glosario GEO](https://www.genscore.es/glosario): términos clave explicados en una frase.
+- [Genscore vs Otterly](https://www.genscore.es/comparativas/genscore-vs-otterly): comparativa honesta con herramientas de visibilidad en IA.
 
 ## Docs
 

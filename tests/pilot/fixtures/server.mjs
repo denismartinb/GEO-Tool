@@ -57,7 +57,9 @@ const PUBLIC_PAGES = new Map([
   ["/geo", "GEO — Genscore"],
   ["/privacidad", "Privacidad — Genscore"],
   ["/cookies", "Cookies — Genscore"],
-  ["/terminos", "Términos — Genscore"]
+  ["/terminos", "Términos — Genscore"],
+  ["/glosario", "Glosario GEO — Genscore"],
+  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
 ]);
 
 // GROWTH-2 Fase 2.3 (tests/pilot/journeys/docs-pages.spec.ts): same idea as

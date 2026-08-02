@@ -4351,6 +4351,16 @@ a.notif-row:hover {
 .legal-body p { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin: 0 0 14px; }
 .legal-body ul { margin: 0 0 14px; padding-left: 20px; }
 .legal-body li { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 6px; }
+
+/* GROWTH-2 Fase 2.4: comparison table on /comparativas/*. Self-contained
+   (not reused from .docs-table-wrap/.tbl-wrap) — this branch predates the
+   /docs sidebar CSS from Fase 2.3, and .tbl-wrap pairs with a .tbl class
+   this table doesn't use. QA (PR #292) caught the table rendering with zero
+   styling and no horizontal-scroll safety net before this was added. */
+.cmp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 24px; }
+.cmp-table-wrap table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.cmp-table-wrap th, .cmp-table-wrap td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cmp-table-wrap th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .legal-body strong { color: var(--ink); font-weight: 650; }
 .legal-body a { color: var(--accent-ink); font-weight: 600; }
 
