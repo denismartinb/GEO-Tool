@@ -48,7 +48,7 @@ transaccional).
 
 | # | Qué | Estado | PR |
 |---|---|---|---|
-| B1a | Taxonomía de clusters (`cluster` en `lib/blog/posts.ts`), índice reagrupado, enlazado interno "Sigue leyendo" entre posts del mismo cluster | ✅ Hecho | — |
+| B1a | Taxonomía de clusters (`cluster` en `lib/blog/posts.ts`), índice reagrupado, enlazado interno "Sigue leyendo" entre posts del mismo cluster | ✅ Hecho | #294 |
 | B1b | Páginas pilar dedicadas por cluster + redirects si cambian rutas | 🔲 Pendiente | — |
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | 🔲 Pendiente | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | 🔲 Pendiente | — |
