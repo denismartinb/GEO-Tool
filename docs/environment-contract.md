@@ -177,6 +177,36 @@ founder, not something the app reads from Vercel:
 Without steps 1–3, the "Continuar con Google" button on `/login` and
 `/signup` fails with a mapped error and never reaches Google.
 
+#### Consent-screen branding shows the Supabase host, not GenScore (known, open)
+
+Google's account chooser and consent screen display
+`<project-ref>.supabase.co` — "Iniciar sesión en hrhugnd….supabase.co",
+"Google permitirá que hrhugnd….supabase.co acceda a esta información sobre ti"
+— instead of the GenScore name and logo.
+
+**This is not a misconfiguration.** The OAuth consent screen branding (app
+name, logo, home page, privacy policy, terms) was filled in on 2026-08-02 and
+Google *is* reading it: the Privacy Policy and Terms links rendered on the
+consent screen are ours. What Google will not do is replace the destination
+host with the app name, because the `redirect_uri` points at Supabase's
+callback (step 1 above), not at a domain we own.
+
+Submitting the app for Google verification does not fix it either: Google
+requires proof of ownership of the domain it displays, and `*.supabase.co`
+cannot be verified in Search Console.
+
+Two real fixes, both out of scope until the go-live checklist in
+`docs/launch-plan.md` Fase 4:
+
+| Option | Cost | Implication |
+|---|---|---|
+| Supabase **Custom Domains** add-on | ~$10/mo, requires Pro (~$25/mo) | No code. Auth moves to `auth.genscore.es`; branding then resolves because the domain is ours and verifiable. **Preferred** — the free tier pauses projects on inactivity, so Pro is needed at launch regardless |
+| `supabase.auth.signInWithIdToken` via Google Identity Services | €0 | Replaces the `signInWithOAuth` redirect in `app/login/actions.ts:47` with a client-side flow, so Google's UI shows `genscore.es`. Touches auth → **needs its own Task Intake**; also requires nonce handling, the Client ID in Supabase's "Authorized Client IDs", and re-verifying SSR session sync |
+
+Classified **P2** (cosmetic trust wrinkle at signup, flow works). Do not touch
+the auth flow for this before launch — broken auth is P0, an unpolished
+consent-screen host is not.
+
 ### Observability and analytics (PLATFORM-COMMERCIAL-1)
 
 | Variable | Required | Where | Expected shape |
