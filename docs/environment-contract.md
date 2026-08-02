@@ -198,6 +198,49 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
+### Search Console y Bing Webmaster Tools (GROWTH-2 Fase 2.1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `GOOGLE_SITE_VERIFICATION` | No | Vercel + local `.env.local` | El token del `<meta name="google-site-verification" ...>`, **solo el valor del atributo `content`**, no la etiqueta completa |
+
+Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
+`<meta>` de verificación cuando la variable existe (`verification.google` en el
+`Metadata` de Next) — sin la variable, la etiqueta no se renderiza y nada se
+rompe.
+
+**Runbook — dar de alta la propiedad en Search Console (fundador, ~3 minutos):**
+
+1. Entra en [Google Search Console](https://search.google.com/search-console)
+   con la cuenta de Google del negocio.
+2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`
+   (no uses el tipo "dominio", que exige verificación DNS y es más lento).
+3. Elige el método **etiqueta HTML**. Search Console muestra algo como:
+   `<meta name="google-site-verification" content="AbC123..." />`.
+4. Copia **solo el valor de `content`** (el string `AbC123...`, sin comillas).
+5. En Vercel → Project Settings → Environment Variables, añade
+   `GOOGLE_SITE_VERIFICATION` con ese valor, en el entorno de producción.
+   Redeploy.
+6. Vuelve a Search Console y pulsa "Verificar". Si falla: confirma que el
+   deploy de producción ya tiene la variable (no un preview) y que el meta
+   tag aparece en el `<head>` de `https://www.genscore.es` (ver código
+   fuente de la página, buscar `google-site-verification`).
+7. Una vez verificado, en Search Console → Sitemaps, envía
+   `https://www.genscore.es/sitemap.xml`.
+
+**Runbook — Bing Webmaster Tools (opcional, recomendado):**
+
+1. Entra en [Bing Webmaster Tools](https://www.bing.com/webmasters) con una
+   cuenta Microsoft.
+2. Usa la opción "Importar desde Google Search Console" — reutiliza la
+   verificación ya hecha, sin token nuevo que gestionar.
+3. Envía el mismo `sitemap.xml`.
+
+Por qué importa Bing aparte de su propio buscador: la búsqueda de ChatGPT se
+ha apoyado históricamente en el índice de Bing, así que este paso no es solo
+"SEO clásico" — también alimenta la visibilidad en motores generativos
+(GROWTH-2, `docs/launch-plan.md` Fase 7).
+
 ### Billing (BILLING-STRIPE-1)
 
 | Variable | Required | Where | Expected shape |

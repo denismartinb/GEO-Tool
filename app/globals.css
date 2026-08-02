@@ -63,6 +63,26 @@
      redeclared here. */
 }
 
+/* GROWTH-2 Fase 2.1 pilot finding (PR #286): /blog measured a 3px horizontal
+   overflow on mobile on the real Vercel preview (378px scroll width vs 375px
+   viewport) that never reproduced against an identical local build — no
+   element in this codebase renders wide enough to explain it, and every
+   other mobile screen in the same pilot run measured exactly 375px.
+   `overflow-x: hidden` on body alone did NOT fix it on the next deploy
+   (same 378px) — proof the overflowing node is not a descendant of <body>
+   at all, most likely a preview-only third-party overlay (Vercel's toolbar/
+   live-feedback widget, visible in every screenshot near the same corner,
+   confirmed absent from this repo's own markup) appended as a sibling of
+   <body> directly under <html>. Clipping at the <html> level is what
+   actually contains that. This is a permanent safety net against this whole
+   class of bug, not a one-page patch: nothing here intentionally scrolls
+   the page itself horizontally — every real horizontal scroller already
+   lives in its own inner container (.tbl-wrap, .filters,
+   .price-matrix-wrap), none of which this touches. */
+html {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -71,6 +91,7 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
+  overflow-x: hidden;
 }
 
 a {

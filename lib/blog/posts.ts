@@ -1,9 +1,10 @@
 /**
- * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b) — used
- * by the index page, the sitemap, and each post's own <title>/description/
- * JSON-LD (via ArticleSchema), so the same title/description/date never has
- * to be typed out in more than one place. Adding a post = one entry here +
- * one new app/blog/<slug>/page.mdx file.
+ * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b, SEO
+ * fields added in GROWTH-2 Fase 2.1) — used by the index page, the sitemap,
+ * the RSS feed, and each post's own <title>/description/JSON-LD (via
+ * ArticleSchema), so the same title/description/date never has to be typed
+ * out in more than one place. Adding a post = one entry here + one new
+ * app/blog/<slug>/page.mdx file.
  */
 export type BlogPost = {
   slug: string;
@@ -14,6 +15,12 @@ export type BlogPost = {
   coverIcon: string;
   /** Path under /public to a real cover image (public/blog/<slug>/cover.png). When set, BlogCover renders this instead of the icon+gradient fallback. */
   coverImage?: string;
+  /** Optional <title> override for search engines when it should differ from the on-page `title` (e.g. shorter, keyword-first). Falls back to `title` via getSeoTitle(). */
+  seoTitle?: string;
+  /** Optional meta description override, kept under ~160 chars for SERP snippets. Falls back to `description` via getMetaDescription(). */
+  metaDescription?: string;
+  /** The single primary keyword this URL targets — used by the content calendar and the SEO/GEO research agent to avoid two posts competing for the same query. Not rendered on the page. */
+  primaryKeyword?: string;
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -23,7 +30,8 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
-    coverIcon: "trendUp"
+    coverIcon: "trendUp",
+    primaryKeyword: "geo score"
   },
   {
     slug: "que-es-geo-generative-engine-optimization",
@@ -32,7 +40,8 @@ export const BLOG_POSTS: BlogPost[] = [
       "Descubre qué es el GEO, cómo funciona y por qué las marcas necesitan optimizar su presencia en ChatGPT, Gemini y Claude.",
     datePublished: "2026-07-13",
     coverIcon: "compass",
-    coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.png"
+    coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.png",
+    primaryKeyword: "qué es geo"
   },
   {
     slug: "como-elegir-prompts-monitorizar-marca-ia",
@@ -41,7 +50,8 @@ export const BLOG_POSTS: BlogPost[] = [
       "Aprende una metodología práctica para seleccionar los prompts que realmente reflejan cómo tus clientes preguntan a ChatGPT y Gemini.",
     datePublished: "2026-07-13",
     coverIcon: "target",
-    coverImage: "/blog/como-elegir-prompts-monitorizar-marca-ia/cover.png"
+    coverImage: "/blog/como-elegir-prompts-monitorizar-marca-ia/cover.png",
+    primaryKeyword: "prompts para monitorizar marca en ia"
   },
   {
     slug: "como-elegir-competidores-analisis-geo",
@@ -50,7 +60,8 @@ export const BLOG_POSTS: BlogPost[] = [
       "Elegir mal a tus competidores puede distorsionar todo tu análisis GEO. Aprende una metodología para compararte con las marcas correctas.",
     datePublished: "2026-07-13",
     coverIcon: "layers",
-    coverImage: "/blog/como-elegir-competidores-analisis-geo/cover.png"
+    coverImage: "/blog/como-elegir-competidores-analisis-geo/cover.png",
+    primaryKeyword: "competidores análisis geo"
   },
   {
     slug: "genscore-vs-herramientas-geo",
@@ -59,10 +70,21 @@ export const BLOG_POSTS: BlogPost[] = [
       "Muchas herramientas GEO muestran qué ocurre. GenScore busca ayudarte a decidir qué hacer después. Descubre en qué se diferencian.",
     datePublished: "2026-07-13",
     coverIcon: "refresh",
-    coverImage: "/blog/genscore-vs-herramientas-geo/cover.png"
+    coverImage: "/blog/genscore-vs-herramientas-geo/cover.png",
+    primaryKeyword: "herramientas geo"
   }
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
   return BLOG_POSTS.find((p) => p.slug === slug);
+}
+
+/** <title> for search engines: `seoTitle` when set, otherwise `title`. */
+export function getSeoTitle(post: BlogPost): string {
+  return post.seoTitle ?? post.title;
+}
+
+/** Meta description for search engines: `metaDescription` when set, otherwise `description`. */
+export function getMetaDescription(post: BlogPost): string {
+  return post.metaDescription ?? post.description;
 }

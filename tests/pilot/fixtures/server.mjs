@@ -25,6 +25,7 @@ import { createServer } from "node:http";
 const SESSION_COOKIE = "pilot_fixture_session";
 const BREAK_MODE = process.env.PILOT_FIXTURE_BREAK ?? "";
 const PROJECT_ID = "fixture-project";
+const SITE_URL = "https://www.genscore.es";
 
 const AUTHED_PAGES = new Map([
   ["/dashboard", "Panel"],
@@ -35,6 +36,28 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
   [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
   [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
+]);
+
+// GROWTH-2 Fase 2.1 (tests/pilot/journeys/public-pages.spec.ts): unlike
+// AUTHED_PAGES above, these need no session — the real routes are public.
+// Each fixture page carries the same <link rel="canonical"> shape the real
+// pages ship, so that journey's mechanical assertions have something real to
+// check against instead of 404ing on this stand-in server.
+const BLOG_SLUGS = [
+  "que-es-el-geo-score",
+  "que-es-geo-generative-engine-optimization",
+  "como-elegir-prompts-monitorizar-marca-ia",
+  "como-elegir-competidores-analisis-geo",
+  "genscore-vs-herramientas-geo"
+];
+
+const PUBLIC_PAGES = new Map([
+  ["/blog", "Blog — Genscore"],
+  ...BLOG_SLUGS.map((slug) => [`/blog/${slug}`, `${slug} — Genscore`]),
+  ["/geo", "GEO — Genscore"],
+  ["/privacidad", "Privacidad — Genscore"],
+  ["/cookies", "Cookies — Genscore"],
+  ["/terminos", "Términos — Genscore"]
 ]);
 
 // Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and
@@ -127,6 +150,22 @@ function html(title, body) {
 </head><body><h1>${title}</h1>${body}${overflow}</body></html>`;
 }
 
+function publicHtml(path, title) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}${path}">
+<title>${title}</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${title}</h1><p>contenido</p>${overflow}</body></html>`;
+}
+
+function feedXml() {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
+}
+
 function loginPage() {
   return html(
     "Bienvenido de nuevo",
@@ -168,6 +207,18 @@ const server = createServer((request, response) => {
   if (path === "/login") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(loginPage());
+    return;
+  }
+
+  if (path === "/feed.xml") {
+    response.writeHead(200, { "Content-Type": "application/rss+xml; charset=utf-8" });
+    response.end(feedXml());
+    return;
+  }
+
+  if (PUBLIC_PAGES.has(path)) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(publicHtml(path, PUBLIC_PAGES.get(path)));
     return;
   }
 

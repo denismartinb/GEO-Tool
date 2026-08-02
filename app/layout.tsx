@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { OrganizationSchema } from "@/components/seo/organization-schema";
 
 // TODO(BRAND-5b): Hanken Grotesk is the outgoing UI typeface (BRAND-5,
 // docs/brand/brand-guidelines.md) — still loaded and wired to --font-sans so
@@ -64,7 +65,13 @@ export const metadata: Metadata = {
     title: "Genscore",
     description: "Espacio de visibilidad de marca en motores de IA",
     images: ["/brand/genscore-og.png"]
-  }
+  },
+  // GROWTH-2 Fase 2.1: Search Console ownership verification. Mirrors the
+  // Sentry/PostHog pattern — no-op (tag omitted entirely) until the founder
+  // creates the property and sets the env var, see docs/environment-contract.md.
+  ...(process.env.GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+    : {})
 };
 
 export const viewport: Viewport = {
@@ -77,6 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`${sans.variable} ${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
+        <OrganizationSchema />
         <PostHogProvider>{children}</PostHogProvider>
       </body>
     </html>

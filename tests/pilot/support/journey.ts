@@ -30,11 +30,42 @@ export interface PageFindings {
   scrollWidth: number;
   viewportWidth: number;
   horizontalOverflow: boolean;
+  /** Populated only when horizontalOverflow is true — see findOverflowCulprits(). */
+  overflowCulprits: string[];
   consoleErrors: string[];
   failedRequests: string[];
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
   screenshot: string;
+}
+
+/**
+ * Identifies which element(s) actually extend past the viewport's right
+ * edge when a page fails the horizontal-overflow check, instead of leaving
+ * the reviewer to guess from a screenshot alone. Deliberately walks every
+ * element in the document (not `document.body *`) — a third-party overlay
+ * a preview host injects can be appended as a sibling of <body> directly
+ * under <html>, outside where an app-level fix could ever reach it, and
+ * that distinction is exactly what a screenshot cannot show.
+ */
+async function findOverflowCulprits(page: Page, viewportWidth: number): Promise<string[]> {
+  return page.evaluate((width) => {
+    const results: string[] = [];
+    for (const el of document.querySelectorAll("*")) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) continue;
+      if (rect.right <= width + 2) continue;
+      const id = el.id ? `#${el.id}` : "";
+      const cls = el.className && typeof el.className === "string" ? `.${el.className.trim().split(/\s+/).join(".")}` : "";
+      const parent = el.parentElement;
+      const parentDesc = parent ? `${parent.tagName.toLowerCase()}${parent.id ? `#${parent.id}` : ""}` : "(none)";
+      results.push(
+        `${el.tagName.toLowerCase()}${id}${cls} — right:${Math.round(rect.right)}px left:${Math.round(rect.left)}px, parent:${parentDesc}`
+      );
+      if (results.length >= 5) break;
+    }
+    return results;
+  }, viewportWidth);
 }
 
 function slug(text: string): string {
@@ -106,6 +137,8 @@ export async function visitAsUser(
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const finalUrl = page.url();
     const bouncedToLogin = /\/login/.test(finalUrl) && !path.includes("/login");
+    // 2px of slack absorbs sub-pixel rounding without hiding a real overflow.
+    const horizontalOverflow = scrollWidth > viewport.width + 2;
 
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
@@ -118,8 +151,8 @@ export async function visitAsUser(
       finalUrl: redact(finalUrl),
       scrollWidth,
       viewportWidth: viewport.width,
-      // 2px of slack absorbs sub-pixel rounding without hiding a real overflow.
-      horizontalOverflow: scrollWidth > viewport.width + 2,
+      horizontalOverflow,
+      overflowCulprits: horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [],
       consoleErrors,
       failedRequests,
       thirdPartyFailures,
@@ -154,7 +187,10 @@ export function assertPageIsHealthy(findings: PageFindings): void {
   expect(
     findings.horizontalOverflow,
     `${findings.label} @ ${findings.viewport}: horizontal overflow — ` +
-      `scrollWidth ${findings.scrollWidth}px > viewport ${findings.viewportWidth}px`
+      `scrollWidth ${findings.scrollWidth}px > viewport ${findings.viewportWidth}px` +
+      (findings.overflowCulprits.length
+        ? `\nCulprit(s):\n  ${findings.overflowCulprits.join("\n  ")}`
+        : "")
   ).toBe(false);
 
   expect(
