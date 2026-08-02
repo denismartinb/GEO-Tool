@@ -1,6 +1,7 @@
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { ProcessFlow } from "@/components/blog/process-flow";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
@@ -101,6 +102,9 @@ Por eso merece la pena dedicar tiempo a diseñar esa base. Es el equivalente a e
 <p>¿Quieres saber si estás monitorizando los prompts adecuados?</p>
 <a href="/signup" className="btn btn-primary">Prueba gratis</a>
 </div>
+
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
 
 </div>
 
