@@ -22,6 +22,36 @@ const IGNORED_CONSOLE_PATTERNS: RegExp[] = [
 /** Third-party hosts whose failures are recorded but never fail the journey. */
 const THIRD_PARTY_HOSTS = /posthog|sentry|stripe|google|gstatic|vercel-insights|vitals/i;
 
+/**
+ * What must be on screen for a page to count as actually verified.
+ *
+ * Exists because of a real, expensive miss (2026-08-02): the pilot reported
+ * `PILOT PASS` with a full row of ✅ for `web-audit` across all three
+ * viewports on a PR that redesigned that entire screen — while every
+ * screenshot showed the same empty state ("Todavía no has auditado tu web"),
+ * because the pilot account's project had no audit data. Nothing in the
+ * harness distinguished "the redesigned screen rendered correctly" from "a
+ * placeholder rendered correctly", so a green check certified nothing and the
+ * founder found the real defects by hand.
+ *
+ * A screen whose real content never rendered is UNVERIFIED, and the pilot's
+ * own first principle ("never report PASS for something you did not see")
+ * means unverified must be loud, not silent.
+ */
+export interface ContentAnchor {
+  /** CSS selector that must resolve to a visible element. */
+  selector?: string;
+  /** Visible text that must appear somewhere on the page. */
+  text?: RegExp;
+}
+
+export interface ContentExpectation {
+  /** Human-readable: what the anchors below prove is on screen. Quoted in the failure. */
+  describedAs: string;
+  /** Any ONE of these being visible is enough — screens legitimately vary. */
+  anyOf: ContentAnchor[];
+}
+
 export interface PageFindings {
   label: string;
   path: string;
@@ -35,6 +65,14 @@ export interface PageFindings {
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
   screenshot: string;
+  /**
+   * null when the journey declared no expectation for this screen; true/false
+   * when it did. `false` means the page loaded fine and showed nothing worth
+   * judging — an empty state, a plan gate, a skeleton that never resolved.
+   */
+  renderedRealContent: boolean | null;
+  /** Echoes `ContentExpectation.describedAs`, so the JSONL says what was expected. */
+  expectedContent: string | null;
   /**
    * Interactive controls (button/link/input/select) found inside the shared
    * sticky header (`.ov-sticky-header`). Mechanical, not judgement: the
@@ -73,7 +111,8 @@ export async function visitAsUser(
   page: Page,
   testInfo: TestInfo,
   path: string,
-  label: string
+  label: string,
+  expectation?: ContentExpectation
 ): Promise<PageFindings> {
   const consoleErrors: string[] = [];
   const failedRequests: string[] = [];
@@ -120,6 +159,29 @@ export async function visitAsUser(
     const finalUrl = page.url();
     const bouncedToLogin = /\/login/.test(finalUrl) && !path.includes("/login");
 
+    // Checked BEFORE the screenshot so a failure and its evidence describe the
+    // same moment.
+    let renderedRealContent: boolean | null = null;
+    if (expectation) {
+      renderedRealContent = false;
+      for (const anchor of expectation.anyOf) {
+        if (anchor.selector) {
+          const hit = await page.locator(anchor.selector).first().isVisible().catch(() => false);
+          if (hit) {
+            renderedRealContent = true;
+            break;
+          }
+        }
+        if (anchor.text) {
+          const hit = await page.getByText(anchor.text).first().isVisible().catch(() => false);
+          if (hit) {
+            renderedRealContent = true;
+            break;
+          }
+        }
+      }
+    }
+
     const headerInteractiveControls = await page.evaluate(() => {
       const header = document.querySelector(".ov-sticky-header");
       if (!header) return [];
@@ -148,6 +210,8 @@ export async function visitAsUser(
       thirdPartyFailures,
       bouncedToLogin,
       screenshot,
+      renderedRealContent,
+      expectedContent: expectation?.describedAs ?? null,
       headerInteractiveControls
     };
 
@@ -197,6 +261,24 @@ export function assertPageIsHealthy(findings: PageFindings): void {
       `(badges/pills only) — docs/brand/design-decisions-log.md §3. Found interactive ` +
       `control(s) inside .ov-sticky-header, which belong in the page body instead.`
   ).toEqual([]);
+
+  // Deliberately the LAST assertion: the ones above describe a broken screen,
+  // this one describes a screen the pilot never got to judge. Both fail the
+  // run, but only this one is fixed by seeding data rather than by changing
+  // product code, so it should not mask a real defect above it.
+  if (findings.renderedRealContent !== null) {
+    expect(
+      findings.renderedRealContent,
+      `${findings.label} @ ${findings.viewport}: the page loaded without errors but never ` +
+        `rendered ${findings.expectedContent} — this is an empty state, a plan gate, or an ` +
+        `unresolved skeleton, NOT the screen this journey exists to verify. Reporting it as ` +
+        `passing would certify a placeholder (real incident, 2026-08-02: a full-screen redesign ` +
+        `shipped with a green pilot because every capture showed "Todavía no has auditado tu web"). ` +
+        `Fix by seeding the pilot account with real data — run the "Agentic User Pilot (write)" ` +
+        `workflow, whose seed journey creates a project, scans it and audits it. ` +
+        `See docs/agentic-user-pilot.md § "Datos reales".`
+    ).toBe(true);
+  }
 }
 
 /**

@@ -96,6 +96,19 @@ results.push(
     expectedExit: 1
   })
 );
+// The regression this exists for is not hypothetical: on 2026-08-02 the pilot
+// reported PILOT PASS, with ✅ on all three viewports, for a PR that redesigned
+// the whole web-audit screen — because the pilot account had no data and every
+// capture showed an empty state. Nothing was broken, so nothing failed. This
+// case pins that hole shut: screens that load perfectly and show placeholders
+// must FAIL, not pass.
+results.push(
+  await runCase({
+    label: "empty-state fixture (loads clean, shows placeholders) → PILOT FAIL",
+    breakMode: "empty",
+    expectedExit: 1
+  })
+);
 
 const allPassed = results.every(Boolean);
 console.log(allPassed ? "\nPilot harness self-check PASSED" : "\nPilot harness self-check FAILED");

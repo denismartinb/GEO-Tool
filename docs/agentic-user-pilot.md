@@ -35,6 +35,47 @@ delegated it back to the human. That is the exact loop this phase closes.
 8. Human Gate            → only with PILOT PASS + preview URL + "qué probar"
 ```
 
+## Dos precondiciones sin las cuales el pilot no significa nada
+
+Añadidas el 2026-08-02 tras un fallo real y caro: el pilot reportó
+`PILOT PASS` con ✅ en las tres viewports para un PR que rediseñaba entera la
+pantalla de Auditoría web. Nada estaba roto — y nada de lo que el PR prometía
+llegó a renderizarse. El fundador encontró a mano seis desviaciones de diseño
+que el pilot había certificado como correctas.
+
+Las dos causas raíz eran precondiciones ausentes, no defectos del harness. **Se
+comprueban en cada PR que pase por el pilot.**
+
+### 1 · La maqueta aprobada vive en el repo
+
+`docs/design-reference/<FASE>/`. **Un enlace a un artefacto de chat no vale
+como input**: ni el runner de GitHub Actions ni una sesión de agente futura
+pueden abrirlo, así que el checklist de fidelidad de diseño de
+`.claude/agents/ux-pilot.md` (6 puntos: qué se añadió, qué falta, claridad,
+duplicados, valores que parecen rotos, jerarquía) no es que falle — es que
+no tiene con qué comparar, y su ausencia es silenciosa.
+
+**Regla: cuando el fundador aprueba un diseño por artefacto, ese HTML se
+commitea en el mismo PR que lo implementa.** Sin eso, el PR no está listo para
+el pilot, igual que no lo estaría sin tests.
+
+### 2 · La cuenta piloto tiene datos reales
+
+Casi toda la consola está detrás de "este proyecto tiene al menos un escaneo /
+una auditoría". Un proyecto vacío hace que cada pantalla renderice su estado
+vacío, que carga perfectamente: cero errores de consola, cero peticiones
+fallidas, cero overflow. Mecánicamente indistinguible de un éxito.
+
+Dos mecanismos, uno que lo detecta y otro que lo arregla:
+
+- **Detección** — cada journey declara qué contenido real prueba que la
+  pantalla se renderizó (`ContentExpectation` en
+  `tests/pilot/support/journey.ts`). Si no aparece, `assertPageIsHealthy`
+  falla con un mensaje que dice exactamente cómo sembrar los datos. El caso
+  `empty` de `pnpm pilot:selfcheck` fija este agujero: un fixture que carga
+  limpio y muestra placeholders **debe** dar FAIL.
+- **Arreglo** — el journey de siembra (`write/seed-web-audit.spec.ts`, abajo).
+
 ## First-time setup (local machine)
 
 The pilot must run somewhere with network access to `*.vercel.app` — today,
@@ -296,7 +337,48 @@ cost real money. This phase is therefore strictly read-only:
 Write journeys need their own approval, with an explicit cost cap and a
 cleanup strategy — see UX-PILOT-2a below for the one that has one.
 
-## UX-PILOT-2a — the one write journey (opt-in, not automatic)
+## UX-PILOT-2b — sembrar la auditoría web (`write/seed-web-audit.spec.ts`)
+
+Aprobado el 2026-08-02 por el fundador, en respuesta directa al fallo descrito
+arriba: *"que ux pilot pueda crear proyectos, lanzar auditorías, y todo lo que
+necesite para hacer siempre las pruebas"*.
+
+**Qué hace:** deja el proyecto piloto con una auditoría web real, para que
+todas las pantallas de `/web-audit` rendericen datos de verdad en cada pasada
+posterior del pilot de solo-lectura, en vez de su estado vacío.
+
+**Por qué esto arregla el problema para toda la consola, no solo para
+Auditoría web:** el pilot de solo-lectura auto-descubre el primer proyecto de
+la cuenta, que es exactamente el mismo proyecto reservado
+(`PILOT_WRITE_DOMAIN` = `mozilla.org`) que los journeys de escritura crean.
+Sembrarlo una vez cambia lo que ve *cada* journey de lectura, para siempre.
+
+**Se salta a sí mismo.** Si el proyecto ya tiene auditoría, verifica y sale sin
+auditar. No es una optimización: el producto tiene un límite real de 5
+auditorías/día por proyecto (`DEFAULT_SNAPSHOT_RATE_LIMIT`,
+`checkGenerationRateLimit`), así que re-auditar en cada pasada agotaría el cupo
+en unos pocos pushes y el pilot empezaría a fallar por motivos ajenos al
+producto. Para re-auditar a propósito (p. ej. tras tocar el pipeline de
+auditoría): `PILOT_FORCE_AUDIT=1`.
+
+**Coste real:** el proyecto de escritura se crea recortado a un solo prompt, y
+la unidad de trabajo de la auditoría de cobertura es una llamada grounded a
+Gemini por prompt activo. Así que una auditoría completa ahí es ~1 llamada LLM,
+no las ~30 de un proyecto real. La mitad técnica (page checks + robots/llms) es
+HTTP determinista, sin LLM, tope de 10 páginas.
+
+**Orden de ejecución:** Playwright ordena los ficheros alfabéticamente y el
+proyecto `write` corre con `workers: 1`, así que
+`add-prompt-and-scan.spec.ts` (que garantiza que existe un escaneo completado)
+va antes que `seed-web-audit.spec.ts` (que lo necesita). Si alguna vez se
+renombran, hay que preservar ese orden.
+
+**Cuándo lanzarlo:** cuando el pilot de solo-lectura falle diciendo que una
+pantalla no renderizó contenido real. El mensaje de error nombra este workflow.
+Es un `workflow_dispatch` manual (`Agentic User Pilot (write)`), nunca
+automático en un deploy.
+
+## UX-PILOT-2a — adding a prompt and running a scoped scan (opt-in)
 
 `tests/pilot/journeys/write/add-prompt-and-scan.spec.ts` exercises the part of
 the core flow read-only journeys structurally cannot: adding a prompt and

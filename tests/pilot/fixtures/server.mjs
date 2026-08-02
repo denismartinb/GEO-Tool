@@ -147,6 +147,60 @@ function projectsPage() {
   );
 }
 
+/**
+ * Minimal stand-ins for the "this screen has real data" anchors each read-only
+ * journey declares via `ContentExpectation` (tests/pilot/support/journey.ts).
+ *
+ * The fixture used to serve a generic `<p>contenido</p>` for every authed
+ * page, which was fine while the harness only checked for breakage. It is not
+ * fine now: `assertPageIsHealthy` fails a screen that renders no real content,
+ * so a fixture serving placeholders would make the "healthy fixture must
+ * PASS" half of `pnpm pilot:selfcheck` fail for the right reason on the wrong
+ * subject. Modelling a project WITH data is also simply more honest — an
+ * empty account is the state the pilot must refuse, not the state it
+ * self-checks against.
+ *
+ * Deliberately the smallest markup that satisfies each anchor; this is not an
+ * attempt to mirror the real screens.
+ */
+function screenBody(path) {
+  // `empty` reproduces the exact production state that made the pilot lie on
+  // 2026-08-02: every screen loads cleanly, with no console error, no failed
+  // request and no overflow — and shows a placeholder instead of the product.
+  // The self-check asserts the pilot FAILS here; a harness that passes this
+  // fixture has lost the only defence against certifying an empty account.
+  if (BREAK_MODE === "empty") {
+    return "<p>Todavía no has auditado tu web</p>";
+  }
+
+  if (path === `/dashboard/projects/${PROJECT_ID}`) {
+    return "<h2>Puntuación GEO</h2><p>62 / 100</p><p>Tasa de mención 40%</p>";
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/prompts`) {
+    return '<p>GenScore monitoriza 3 prompts activos</p><div class="pr2-page">Prompt de prueba</div>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/competitors`) {
+    return '<table class="tbl"><tr><td>fixture-rival.example</td><td>Cuota de voz 22%</td></tr></table>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/recommendations`) {
+    return '<h2>Backlog de acciones</h2><div class="rec-card">Recomendación de prueba</div>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/runs`) {
+    return "<p>Escaneo del 1 ago 2026 — Completado</p>";
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/web-audit`) {
+    // The tablist is exactly what the web-audit journey anchors on, because
+    // the real tabs only exist once the project has a coverage audit.
+    return `<div role="tablist" aria-label="Secciones de la auditoría">
+        <button role="tab" aria-selected="true">Problemas</button>
+        <button role="tab" aria-selected="false">Correcto</button>
+        <button role="tab" aria-selected="false">Páginas</button>
+      </div>
+      <p>4 páginas sin datos estructurados</p>`;
+  }
+  return "<p>contenido</p>";
+}
+
 function isAuthenticated(request) {
   return (request.headers.cookie ?? "").includes(`${SESSION_COOKIE}=1`);
 }
@@ -193,7 +247,7 @@ const server = createServer((request, response) => {
     response.end(
       path === "/dashboard/projects"
         ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", "<p>contenido</p>")
+        : html(AUTHED_PAGES.get(path) ?? "", screenBody(path))
     );
     return;
   }

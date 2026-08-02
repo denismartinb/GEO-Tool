@@ -55,7 +55,10 @@ test("projects list renders at least one project", async ({ page }, testInfo) =>
 
 test("project overview renders real scan data", async ({ page }, testInfo) => {
   const id = await projectId(page);
-  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, "overview");
+  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, "overview", {
+    describedAs: "la puntuación GEO del último escaneo",
+    anyOf: [{ text: /puntuación geo/i }, { text: /tasa de mención/i }]
+  });
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "overview");
 });
@@ -66,7 +69,11 @@ test("prompts screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/prompts`,
-    "prompts"
+    "prompts",
+    {
+      describedAs: "la lista de prompts monitorizados",
+      anyOf: [{ text: /GenScore monitoriza/i }, { selector: ".pr2-page" }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "prompts");
@@ -78,7 +85,11 @@ test("competitors screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/competitors`,
-    "competitors"
+    "competitors",
+    {
+      describedAs: "la tabla de competidores con datos del escaneo",
+      anyOf: [{ selector: ".tbl" }, { text: /cuota de voz|share of voice/i }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "competitors");
@@ -90,7 +101,11 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/recommendations`,
-    "recommendations"
+    "recommendations",
+    {
+      describedAs: "el backlog de acciones generado por el último escaneo",
+      anyOf: [{ text: /backlog de acciones/i }, { selector: ".rec-card" }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "recommendations");
@@ -98,7 +113,10 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
 
 test("scan history screen renders", async ({ page }, testInfo) => {
   const id = await projectId(page);
-  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs");
+  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs", {
+    describedAs: "al menos un escaneo en el historial",
+    anyOf: [{ text: /completado|en curso|pendiente|fallido/i }]
+  });
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "runs");
 });
@@ -109,7 +127,11 @@ test("citations screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/citations`,
-    "citations"
+    "citations",
+    {
+      describedAs: "la lista de páginas citadas",
+      anyOf: [{ selector: ".cit2-page" }, { selector: ".cit2-row" }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "citations");
@@ -121,7 +143,15 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/web-audit`,
-    "web-audit"
+    "web-audit",
+    {
+      // The tabs only exist once `summary` does — i.e. once the project has a
+      // real coverage audit. Anchoring here is exactly what would have turned
+      // the 2026-08-02 false PASS into a loud failure: every capture that day
+      // showed the "Todavía no has auditado tu web" card instead of these.
+      describedAs: "las pestañas de la auditoría (Problemas · Correcto · Páginas)",
+      anyOf: [{ selector: '[role="tablist"]' }, { text: /problemas técnicos/i }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "web-audit");

@@ -146,17 +146,49 @@ section means the pilot ran checklists without judgement — it goes back.
 **Never report a pass for something the pilot did not see.** An unreachable
 preview, a failed login, or a blocked egress policy is INCONCLUSIVE, never PASS.
 Interaction-gated behaviour no assertion covered is "unverified", not "verified".
+**A screen that loads cleanly but renders an empty state has not been seen
+either** — journeys declare what real content proves the screen rendered
+(`ContentExpectation`), and a placeholder fails the run. This is not a
+hypothetical: on 2026-08-02 a full redesign of Auditoría web shipped with a
+green pilot and ✅ on three viewports because the pilot account had no audit
+data, so every capture showed "Todavía no has auditado tu web".
 
-The always-on pilot (every preview deploy) is strictly read-only: no scan
-launches, no project creation or deletion, no writing forms, no billing flows —
-enforced in code by an allow-list, not by convention. **One approved
-exception:** UX-PILOT-2a (`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts`)
-adds a single manual prompt to a dedicated `PILOT_WRITE_PROJECT_ID` and lets
-the resulting scoped scan (never the project's full active set) run to
-completion, cleaning up after itself — opt-in only, via manual
-`workflow_dispatch`, never on a deploy. Nothing beyond that one scoped journey
-is approved; anything wider (creating a project, the unrestricted scan button,
-competitors, billing) needs its own Task Intake.
+**Two mandatory inputs before a pilot run can mean anything** (both were
+missing in that incident, which is why it produced a meaningless pass):
+
+1. **The approved design must live in the repo**, at
+   `docs/design-reference/<FASE>/`. A chat-artifact URL is not an input: CI
+   runners and future agent sessions cannot open it, so the design-fidelity
+   half of the pilot silently never runs. **When the founder approves a design
+   by artifact, that HTML is committed in the same PR that implements it.**
+2. **The pilot account must hold real data.** See the seeding rules below.
+
+### Pilot write scope (expanded 2026-08-02, founder-approved)
+
+The always-on pilot (every preview deploy) stays strictly **read-only**: no
+scan launches, no project creation, no writing forms, no billing — enforced in
+code by an allow-list, not by convention.
+
+Write journeys live in `tests/pilot/journeys/write/`, run **only** under
+`--journeys write` (never on a deploy), and are approved to do whatever the
+pilot genuinely needs to have real data to test against — create the dedicated
+write-project, scan it, audit it. Their guard is not a shorter list of allowed
+actions but **three structural rules**, and any new write journey must keep all
+three:
+
+- **Dedicated target.** Only the reserved `PILOT_WRITE_DOMAIN` project
+  (`mozilla.org`), matched by exact domain. Never auto-discovery, never a real
+  customer domain.
+- **Bounded cost.** The write-project is created trimmed to one prompt, so a
+  scan or an audit there is ~1 LLM call, not ~30. Anything that would scale
+  with a real project's prompt count needs its cost cap stated in the journey.
+- **Idempotent and self-healing.** Seeding skips itself when the data already
+  exists (the product's real 5/day rate limits are the binding constraint, not
+  money), and anything created that consumes a plan cap is cleaned up.
+
+Still out of scope without their own Task Intake: billing/Stripe flows,
+deleting projects, and anything touching a project other than the reserved
+write-project.
 
 ---
 
