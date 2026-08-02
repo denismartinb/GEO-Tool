@@ -35,6 +35,19 @@ export interface PageFindings {
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
   screenshot: string;
+  /**
+   * Interactive controls (button/link/input/select) found inside the shared
+   * sticky header (`.ov-sticky-header`). Mechanical, not judgement: the
+   * header is documented shared chrome across every console page
+   * (docs/brand/design-decisions-log.md §3 — "el contexto vive entero en el
+   * sticky-header... título de sección + pill de fecha", never an action).
+   * Real case (2026-08-02, WEB-AUDIT-ISSUES-1 fase 2): a page shipped an
+   * "Auditar ahora" button in its header and neither the automated pilot nor
+   * a design-fidelity read caught it, because nothing mechanically checked
+   * for it — this exists so that class of regression fails on its own from
+   * now on, on every page, without needing anyone to notice a screenshot.
+   */
+  headerInteractiveControls: string[];
 }
 
 function slug(text: string): string {
@@ -107,6 +120,16 @@ export async function visitAsUser(
     const finalUrl = page.url();
     const bouncedToLogin = /\/login/.test(finalUrl) && !path.includes("/login");
 
+    const headerInteractiveControls = await page.evaluate(() => {
+      const header = document.querySelector(".ov-sticky-header");
+      if (!header) return [];
+      const controls = header.querySelectorAll("button, a[href], input, select, textarea");
+      return Array.from(controls).map((el) => {
+        const text = (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+        return `${el.tagName.toLowerCase()}${text ? `:"${text}"` : ""}`;
+      });
+    });
+
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
     await page.screenshot({ path: screenshot, fullPage: true });
@@ -124,7 +147,8 @@ export async function visitAsUser(
       failedRequests,
       thirdPartyFailures,
       bouncedToLogin,
-      screenshot
+      screenshot,
+      headerInteractiveControls
     };
 
     recordFindings(findings);
@@ -165,6 +189,13 @@ export function assertPageIsHealthy(findings: PageFindings): void {
   expect(
     findings.consoleErrors,
     `${findings.label}: console errors`
+  ).toEqual([]);
+
+  expect(
+    findings.headerInteractiveControls,
+    `${findings.label}: the shared sticky header must stay purely informational ` +
+      `(badges/pills only) — docs/brand/design-decisions-log.md §3. Found interactive ` +
+      `control(s) inside .ov-sticky-header, which belong in the page body instead.`
   ).toEqual([]);
 }
 

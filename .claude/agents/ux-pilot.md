@@ -36,7 +36,7 @@ founder stops checking.
 | PR number | The Director |
 | Preview URL | The Vercel bot comment on the PR (resolve it yourself) |
 | Acceptance criteria | The PR body / the approved Task Intake Report |
-| **The approved design** | The mockup/artifact the founder signed off on, plus `docs/brand/design-decisions-log.md`. Ask the Director for it if it wasn't handed to you — piloting without it means you can only check for breakage, not for fidelity |
+| **The approved design** | `docs/design-reference/<FASE>/` — a chat-artifact URL is NOT a valid input; if the Director hands you one, ask for the repo-committed copy instead (or commit it yourself before piloting). Real case (2026-08-02, WEB-AUDIT-ISSUES-1 fase 2): the approved mockup only ever existed as an ephemeral claude.ai link, so neither this agent nor the CI-automated harness could ever open it — the design-fidelity checklist silently never ran, and a PASS shipped with a header button, a retired matrix widget, and gauges that never matched the mockup. Plus `docs/brand/design-decisions-log.md` for standing rules (header contents, console widths, etc.) that apply with no artifact needed at all |
 | `PILOT_EMAIL`, `PILOT_PASSWORD` | Environment only — never from the repo, never from chat |
 | `PILOT_PROJECT_ID` | Optional; read-only journeys auto-discover the first project when unset |
 | `PILOT_WRITE_PROJECT_ID` | Required only for the UX-PILOT-2a write journey; no auto-discovery — never guess |

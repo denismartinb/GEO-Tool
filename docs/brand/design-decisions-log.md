@@ -872,6 +872,65 @@ Pendiente / roto conocido:
   automática, detección de regresión) del plan original de 4 fases siguen
   sin empezar — cada una necesita su propio Human Gate antes de continuar.
 
+**Revisión del fundador tras el Human Gate (2026-08-02):** el preview real
+(proyecto Movistar) no se parecía al artefacto aprobado en varios puntos
+concretos — gauge del héroe distinto, botón "Auditar ahora" en la cabecera
+compartida, dos botones de auditoría distintos, matriz de oportunidad que
+nunca estuvo en el mockup, Plan de acción que no debía vivir aquí, Evolución
+asomando con una sola auditoría. Todo corregido en el mismo PR. Detalle:
+
+- **Gauge del héroe**: sustituido el SVG a medida por el componente
+  `Gauge` compartido (`components/ui/gauge.tsx`, degradado + numeral
+  Bricolage) — el mismo que usa Overview. Añadida `.wa2-scope .gauge-num`
+  en `globals.css`, mismo patrón que `.ov2-scope`/`.cit2-scope`.
+- **Cabecera**: el botón se retira de `.ov-sticky-header` — confirmado
+  contra el código real de Citations/Prompts que ninguna cabecera v3 lleva
+  controles interactivos, sólo badges/pills pasivos (§3). El botón único
+  se mueve al cuerpo.
+- **Un solo botón de auditoría**: retirado "Auditar salud técnica" de
+  Páginas — "Auditar ahora" ya dispara la auditoría técnica en el mismo
+  clic desde WEB-AUDIT-R2 (piggyback en `web-audit-context.tsx`), así que
+  el segundo botón nunca fue una función distinta.
+- **Matriz de oportunidad y Plan de acción retirados por completo** de
+  Auditoría web. Efecto secundario real, documentado en el código: los
+  temas `content_gap`/`open_opportunity`/`capture` no tienen hoy ninguna
+  recomendación real que los cubra en el motor de reglas — su guía
+  sintetizada se queda sin sitio en el producto hasta que se decida si
+  migra a Recomendaciones. Gap conocido, no resuelto especulativamente.
+- **Evolución** (gráfico + historial) oculta por completo con menos de dos
+  auditorías — antes sólo el gráfico se ocultaba.
+
+**Por qué el pilot automático no lo detectó — diagnóstico y arreglo
+(mismo día):** dos causas raíz confirmadas leyendo `.claude/agents/
+ux-pilot.md`, `.github/workflows/ux-pilot.yml` y `tests/pilot/support/*`,
+no supuestas:
+
+1. **El artefacto de diseño aprobado sólo existía como enlace efímero de
+   claude.ai** — ni el harness automático de CI ni una sesión de agente
+   futura podían abrirlo, así que el checklist de fidelidad de diseño de
+   `ux-pilot.md` (6 puntos: añadidos, desaparecidos, claridad, duplicados,
+   valores que parecen rotos, jerarquía) nunca llegó a ejecutarse contra
+   nada — no es que fallara, es que no tenía con qué comparar. **Arreglo**:
+   el artefacto rev. 4 aprobado se copió a
+   `docs/design-reference/web-audit-issues-1/` en este mismo PR, y
+   `ux-pilot.md` ahora exige explícitamente una ruta del repo, nunca un
+   enlace de chat, como input de "diseño aprobado".
+2. **El proyecto que usa la cuenta piloto (Mozilla, sin
+   `PILOT_PROJECT_ID` fijado) no tiene ninguna auditoría completada** —
+   toda la sección nueva vive detrás de ese gate (`!summary`), así que ni
+   el sweep de interacciones ni ninguna captura llegaron a ver Problemas/
+   Correcto/Páginas, sólo el estado vacío. Sigue sin arreglar — necesita
+   que el proyecto piloto tenga datos reales, algo que sólo el fundador
+   puede sembrar (o una fase de journey de escritura scoped, como
+   UX-PILOT-2a, con su propia aprobación).
+
+Además, se añadió un check mecánico nuevo en `tests/pilot/support/
+journey.ts` (`headerInteractiveControls`, parte de `assertPageIsHealthy`):
+falla automáticamente si CUALQUIER página futura mete un control
+interactivo dentro de `.ov-sticky-header`, sin depender de que un agente
+o un humano lo note en una captura. `pnpm pilot:selfcheck` verificado en
+verde tras el cambio.
+
 ---
 
 ## Cómo mantener este documento

@@ -1,0 +1,1043 @@
+<title>Auditoría web — opción B especificada</title>
+
+<style>
+  /* Modo claro siempre. Los tokens se repiten idénticos bajo el media query
+     de sistema y bajo ambos data-theme para que ni el SO ni el toggle del
+     visor puedan pasar la página a oscuro. */
+  :root {
+    color-scheme: light;
+    --ink: #0B1426;
+    --ink-2: #24344d;
+    --ink-3: #5B6B82;
+    --ink-4: #8695a9;
+    --canvas: #F4F6FA;
+    --surface: #FFFFFF;
+    --surface-2: #EEF2F8;
+    --line: #DDE4EE;
+    --line-soft: #E9EEF6;
+    --blue: #2563EB;
+    --blue-2: #4F7BFF;
+    --blue-soft: #E6EDFE;
+    --cyan: #09C5D6;
+    --pos: #15915A;
+    --pos-soft: #E2F3EA;
+    --warn: #C2570C;
+    --warn-soft: #FCEDE1;
+    --neg: #D23B48;
+    --neg-soft: #FBE7E9;
+    --violet: #6D46C8;
+    --violet-soft: #EEE8FB;
+    --shadow: 0 1px 2px rgba(11,20,38,.05), 0 8px 28px -18px rgba(11,20,38,.35);
+
+    --display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: light;
+      --ink: #0B1426; --ink-2: #24344d; --ink-3: #5B6B82; --ink-4: #8695a9;
+      --canvas: #F4F6FA; --surface: #FFFFFF; --surface-2: #EEF2F8;
+      --line: #DDE4EE; --line-soft: #E9EEF6;
+      --blue: #2563EB; --blue-2: #4F7BFF; --blue-soft: #E6EDFE; --cyan: #09C5D6;
+      --pos: #15915A; --pos-soft: #E2F3EA;
+      --warn: #C2570C; --warn-soft: #FCEDE1;
+      --neg: #D23B48; --neg-soft: #FBE7E9;
+      --violet: #6D46C8; --violet-soft: #EEE8FB;
+      --shadow: 0 1px 2px rgba(11,20,38,.05), 0 8px 28px -18px rgba(11,20,38,.35);
+    }
+  }
+
+  :root[data-theme="dark"],
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --ink: #0B1426; --ink-2: #24344d; --ink-3: #5B6B82; --ink-4: #8695a9;
+    --canvas: #F4F6FA; --surface: #FFFFFF; --surface-2: #EEF2F8;
+    --line: #DDE4EE; --line-soft: #E9EEF6;
+    --blue: #2563EB; --blue-2: #4F7BFF; --blue-soft: #E6EDFE; --cyan: #09C5D6;
+    --pos: #15915A; --pos-soft: #E2F3EA;
+    --warn: #C2570C; --warn-soft: #FCEDE1;
+    --neg: #D23B48; --neg-soft: #FBE7E9;
+    --violet: #6D46C8; --violet-soft: #EEE8FB;
+    --shadow: 0 1px 2px rgba(11,20,38,.05), 0 8px 28px -18px rgba(11,20,38,.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; background: var(--canvas); color: var(--ink-2);
+    font-family: var(--body); font-size: 16px; line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px 96px; }
+  .col { max-width: 68ch; }
+
+  h1, h2, h3, h4 { font-family: var(--display); color: var(--ink); text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(30px, 5.2vw, 46px); font-weight: 800; letter-spacing: -.035em; line-height: 1.06; }
+  h2 { font-size: clamp(21px, 3vw, 27px); font-weight: 780; letter-spacing: -.028em; line-height: 1.18; }
+  h3 { font-size: 18px; font-weight: 720; letter-spacing: -.02em; line-height: 1.3; }
+  h4 { font-size: 14.5px; font-weight: 700; letter-spacing: -.01em; }
+
+  p { margin: 0; }
+  a { color: var(--blue); }
+  strong { color: var(--ink); font-weight: 650; }
+
+  code {
+    font-family: var(--mono); font-size: .88em; background: var(--surface-2);
+    border-radius: 5px; padding: 1px 5px; color: var(--ink);
+  }
+
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; font-weight: 600;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4);
+  }
+
+  .lede { font-size: 18.5px; line-height: 1.55; color: var(--ink-2); }
+  .small { font-size: 13.5px; line-height: 1.55; color: var(--ink-3); }
+
+  header.masthead { padding: 72px 0 40px; display: flex; flex-direction: column; gap: 18px; }
+  .masthead .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+  section.block { padding: 52px 0 0; display: flex; flex-direction: column; gap: 22px; }
+
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .stack-sm { display: flex; flex-direction: column; gap: 8px; }
+
+  .sec-head { display: flex; flex-direction: column; gap: 8px; padding-top: 22px; border-top: 2px solid var(--ink); }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px; border-radius: 999px;
+    padding: 3px 11px; font-size: 12px; font-weight: 620;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-3); white-space: nowrap;
+  }
+  .pill.blue { background: var(--blue-soft); border-color: transparent; color: var(--blue); }
+  .pill.pos { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
+  .pill.warn { background: var(--warn-soft); border-color: transparent; color: var(--warn); }
+  .pill.neg { background: var(--neg-soft); border-color: transparent; color: var(--neg); }
+  .pill.violet { background: var(--violet-soft); border-color: transparent; color: var(--violet); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: var(--shadow); padding: 20px 22px;
+  }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: stretch; }
+  @media (max-width: 820px) { .split { grid-template-columns: 1fr; } }
+
+  .territory {
+    border: 1px solid var(--line); border-radius: 14px; background: var(--surface);
+    padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow);
+  }
+  .territory.diag { border-top: 3px solid var(--blue); }
+  .territory.work { border-top: 3px solid var(--violet); }
+
+  ul.owns { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  ul.owns li {
+    display: grid; grid-template-columns: 14px 1fr; gap: 9px;
+    font-size: 13.5px; line-height: 1.45; color: var(--ink-2);
+  }
+  ul.owns li::before { content: "▪"; color: var(--ink-4); line-height: 1.3; }
+
+  ul.findings { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  ul.findings li {
+    display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: baseline;
+    padding: 13px 0; border-bottom: 1px solid var(--line-soft);
+  }
+  ul.findings li:first-child { border-top: 1px solid var(--line-soft); }
+
+  .sev {
+    font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: .1em;
+    text-transform: uppercase; padding: 2px 7px; border-radius: 4px; justify-self: start;
+  }
+  .sev.ok { background: var(--pos-soft); color: var(--pos); }
+  .sev.no { background: var(--neg-soft); color: var(--neg); }
+  .sev.mid { background: var(--warn-soft); color: var(--warn); }
+
+  .calc {
+    background: var(--ink); color: #E8EEF8; border-radius: 14px; padding: 22px 24px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .calc h3 { color: #fff; }
+  .calc .eyebrow { color: #7E93B4; }
+  .calc-line {
+    font-family: var(--mono); font-size: 14px; line-height: 1.9;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline;
+  }
+  .calc-line b { color: #fff; font-weight: 700; }
+  .calc-line .res { color: #6FE0A8; font-weight: 700; }
+  .calc p { color: #B9C7DC; }
+  .calc .note { font-size: 13px; line-height: 1.55; border-top: 1px solid #223354; padding-top: 12px; }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-4); font-weight: 600; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { color: var(--ink); font-weight: 620; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 650; }
+  tfoot td { background: var(--surface-2); font-weight: 700; color: var(--ink); border-top: 1px solid var(--line); }
+
+  .callout {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--blue);
+    border-radius: 0 12px 12px 0; padding: 18px 20px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .callout.warn { border-left-color: var(--warn); }
+  .callout.violet { border-left-color: var(--violet); }
+  .callout.pos { border-left-color: var(--pos); }
+
+  ul.ticks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+  ul.ticks li { display: grid; grid-template-columns: 18px 1fr; gap: 10px; font-size: 14.5px; line-height: 1.5; }
+  ul.ticks .m { font-weight: 700; line-height: 1.45; }
+  ul.ticks .m.add { color: var(--pos); }
+  ul.ticks .m.rm { color: var(--neg); }
+  ul.ticks .m.eq { color: var(--ink-4); }
+
+  .screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 30px; align-items: start; }
+  .screen { display: flex; flex-direction: column; gap: 12px; }
+
+  .phone {
+    width: 372px; max-width: 100%;
+    border: 9px solid var(--ink); border-radius: 34px;
+    background: var(--canvas); overflow: hidden;
+    box-shadow: 0 24px 60px -34px rgba(11,20,38,.7);
+  }
+
+  .ph-status {
+    display: flex; justify-content: space-between; padding: 8px 18px 3px;
+    font-size: 11px; font-weight: 650; color: var(--ink); font-family: var(--mono);
+  }
+
+  .ph-top {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 8px 14px 10px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .ph-burger { display: flex; flex-direction: column; gap: 3px; }
+  .ph-burger i { display: block; width: 15px; height: 1.8px; background: var(--ink); border-radius: 2px; }
+  .ph-brand { display: flex; align-items: center; gap: 5px; font-weight: 780; color: var(--ink); font-size: 15px; letter-spacing: -.03em; }
+  .ph-brand b { color: var(--blue); font-weight: 780; }
+  .ph-mark { width: 16px; height: 16px; border-radius: 50%; border: 3px solid var(--ink); position: relative; }
+  .ph-mark::after { content: ""; position: absolute; top: -1px; right: -1px; width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+  .ph-bell { justify-self: end; width: 13px; height: 14px; border: 1.8px solid var(--ink); border-radius: 7px 7px 3px 3px; border-bottom-width: 0; position: relative; }
+  .ph-bell::after { content: ""; position: absolute; left: -3px; right: -3px; bottom: -2px; height: 1.8px; background: var(--ink); border-radius: 2px; }
+
+  .ph-body { padding: 14px 13px 16px; display: flex; flex-direction: column; gap: 11px; background: var(--canvas); }
+
+  .ph-h { font-family: var(--display); font-size: 20px; font-weight: 800; letter-spacing: -.03em; color: var(--ink); }
+  .ph-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-3); }
+  .ph-sub b { color: var(--ink); font-weight: 750; font-size: 12.5px; }
+
+  .ph-utabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); padding: 0 2px; }
+  .ph-utabs span {
+    font-size: 13px; font-weight: 620; color: var(--ink-4);
+    padding: 6px 0 8px; border-bottom: 2.5px solid transparent; white-space: nowrap;
+  }
+  .ph-utabs span.on { color: var(--blue); border-bottom-color: var(--blue); font-weight: 720; }
+
+  .ph-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .ph-card.flush { padding: 0; overflow: hidden; gap: 0; }
+
+  .ph-label { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); }
+  .ph-t { font-size: 12.5px; font-weight: 720; color: var(--ink); letter-spacing: -.01em; }
+  .ph-p { font-size: 11px; color: var(--ink-3); line-height: 1.45; }
+  .ph-mono { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); }
+
+  .ph-gauge-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 4px 0 2px; }
+  .ph-gauge-cap { font-size: 12.5px; font-weight: 620; color: var(--ink-3); }
+
+  .ph-tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; border-top: 1px solid var(--line-soft); padding-top: 11px; }
+  .ph-tri > div { display: flex; flex-direction: column; gap: 3px; }
+  .ph-tri-n { font-family: var(--display); font-size: 16px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+  .ph-duo { display: grid; grid-template-columns: 1fr 1px 1fr; gap: 12px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+  .ph-duo .sep { background: var(--line-soft); }
+  .ph-duo-n { font-family: var(--display); font-size: 27px; font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1.05; }
+
+  .ph-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .ph-chip {
+    font-size: 10.5px; font-weight: 640; border-radius: 999px; padding: 3px 9px;
+    border: 1px solid var(--line); color: var(--ink-3); background: var(--surface); white-space: nowrap;
+  }
+  .ph-chip.on { border-color: transparent; background: var(--blue-soft); color: var(--blue); }
+  .ph-chip.okon { border-color: transparent; background: var(--pos-soft); color: var(--pos); }
+
+  .ph-row { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-bottom: 1px solid var(--line-soft); }
+  .ph-row:last-child { border-bottom: 0; }
+
+  .ph-stripe { width: 3px; align-self: stretch; border-radius: 3px; flex-shrink: 0; }
+  .ph-stripe.neg { background: var(--neg); }
+  .ph-stripe.warn { background: var(--warn); }
+  .ph-stripe.pos { background: var(--pos); }
+  .ph-stripe.blue { background: var(--blue); }
+  .ph-stripe.violet { background: var(--violet); }
+
+  .ph-check {
+    width: 17px; height: 17px; border-radius: 50%; background: var(--pos-soft); color: var(--pos);
+    display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; flex-shrink: 0;
+  }
+
+  .ph-num { font-family: var(--display); font-weight: 800; letter-spacing: -.04em; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .ph-metric { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+
+  .ph-bar { height: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .ph-bar > i { display: block; height: 100%; border-radius: 4px; }
+
+  .ph-cta {
+    display: block; text-align: center; font-size: 11.5px; font-weight: 700;
+    background: var(--blue); color: #fff; border-radius: 9px; padding: 9px;
+  }
+  .ph-cta.ghost { background: var(--surface); color: var(--blue); border: 1px solid var(--line); }
+
+  .ph-code {
+    font-family: var(--mono); font-size: 9.5px; line-height: 1.55; color: #C7D6EE;
+    background: var(--ink); border-radius: 9px; padding: 10px 11px; overflow-x: auto; white-space: pre;
+  }
+  .ph-code b { color: #6FE0A8; font-weight: 400; }
+
+  .ph-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 10px; color: var(--ink-3); font-weight: 620; }
+  .ph-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: 0; }
+
+  .ph-tabbar { display: flex; justify-content: space-around; padding: 10px 0 12px; border-top: 1px solid var(--line); background: var(--surface); }
+  .ph-tabbar i { width: 17px; height: 17px; border-radius: 5px; background: var(--surface-2); display: block; }
+  .ph-tabbar i.on { background: var(--blue); }
+
+  .caption { font-size: 12.5px; color: var(--ink-3); max-width: 372px; line-height: 1.5; }
+  .caption b { color: var(--ink); font-weight: 700; }
+
+  .tabmap { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .tabmap > div {
+    border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .tabmap .n { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); }
+  .tabmap.gone > div { background: var(--surface-2); border-style: dashed; opacity: .85; }
+
+  footer.foot {
+    margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--ink-4); display: flex; flex-direction: column; gap: 6px;
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">GenScore · Auditoría web · rev. 4 · 2 ago 2026</p>
+    <h1>Opción B, especificada:<br>la auditoría como registro<br>de problemas</h1>
+    <p class="lede col">Sí: <strong>Resumen y Problemas son la misma pantalla</strong>. En cuanto la
+      unidad de la sección es el problema, un resumen aparte es el resumen de un resumen. Con eso la
+      sección baja a tres pestañas y la portada pasa a ser la propia lista.</p>
+    <div class="meta">
+      <span class="pill blue"><span class="dot"></span>Dirección B aprobada</span>
+      <span class="pill">Tres pestañas: Problemas · Correcto · Páginas</span>
+      <span class="pill">Mockups con datos ilustrativos</span>
+    </div>
+  </header>
+
+  <hr class="rule">
+
+  <!-- ============ 1. LA FUSIÓN ============ -->
+  <section class="block">
+    <div class="sec-head col">
+      <p class="eyebrow">Tu última pregunta</p>
+      <h2>Qué era el Resumen y por qué desaparece</h2>
+    </div>
+
+    <div class="col stack">
+      <p>El Resumen que traía de la estructura vieja iba a contener cuatro cosas. Las miré una a una
+        y ninguna justifica una pestaña propia:</p>
+      <ul class="ticks">
+        <li><span class="m eq">→</span><span><strong>El veredicto</strong> (score, delta, desglose en
+          contenido, citas y técnica): sube a la cabecera de Problemas. Ahí deja de ser un titular
+          solitario y pasa a ser el contexto de la lista que viene justo debajo.</span></li>
+        <li><span class="m rm">×</span><span><strong>El plan de acción de contenido</strong>: ya no
+          vive aquí. Es trabajo de Recomendaciones y en la auditoría queda como un recuento con
+          enlace.</span></li>
+        <li><span class="m rm">×</span><span><strong>La matriz 2×2</strong>: eran cuatro recuentos que
+          servían de filtro. Ahora los filtros son los chips de la propia lista.</span></li>
+        <li><span class="m eq">→</span><span><strong>La evolución</strong>: baja al pie de Problemas.
+          Se lee justo después de la lista, que es cuando surge la pregunta «¿pero voy mejorando?».</span></li>
+      </ul>
+    </div>
+
+    <div class="stack">
+      <h3 class="col">Cómo queda la navegación</h3>
+      <div class="tabmap">
+        <div>
+          <span class="n">Portada · por defecto</span>
+          <h4>Problemas</h4>
+          <p class="small">Veredicto, potencial calculado, la lista con severidad y arreglo, el
+            recuento de contenido y la evolución al pie.</p>
+        </div>
+        <div>
+          <span class="n">Segunda</span>
+          <h4>Correcto</h4>
+          <p class="small">Las comprobaciones superadas, tachadas y con su alcance real. Absorbe «Lo
+            que ya funciona».</p>
+        </div>
+        <div>
+          <span class="n">Tercera</span>
+          <h4>Páginas</h4>
+          <p class="small">La tabla técnica página a página que ya existe, ahora filtrable desde
+            cualquier problema.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="stack">
+      <h4 class="col">Y lo que se retira</h4>
+      <div class="tabmap gone">
+        <div>
+          <span class="n">Retirada</span>
+          <h4>Resumen</h4>
+          <p class="small">Su contenido se reparte entre la cabecera de Problemas y Recomendaciones.</p>
+        </div>
+        <div>
+          <span class="n">Retirada como pestaña</span>
+          <h4>Evolución</h4>
+          <p class="small">Pasa a bloque al pie de Problemas: gráfico de series e historial de
+            auditorías, sin cambiar lo que muestra.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn col">
+      <h4>Un coste que hay que anotar</h4>
+      <p class="small">La cabecera nueva enseña <strong>delta y tendencia de la salud técnica</strong>
+        («▲7 pt vs. 11 jul», las curvas de críticos y avisos). Hoy la página sólo carga el
+        <em>último</em> snapshot técnico —&nbsp;por eso el mosaico de técnica no tiene curva y las de
+        cobertura sí. Los snapshots anteriores están guardados y el índice para leerlos ya existe,
+        así que es una consulta más, no un dato nuevo. Pequeño, pero no gratis: lo digo ahora y no
+        cuando aparezca en el PR.</p>
+    </div>
+  </section>
+
+  <!-- ============ 2. LAS PANTALLAS ============ -->
+  <section class="block">
+    <div class="sec-head col">
+      <p class="eyebrow">Las pantallas</p>
+      <h2>Cómo queda la sección</h2>
+    </div>
+
+    <div class="screens">
+
+      <!-- PANTALLA 1: PROBLEMAS (portada) -->
+      <div class="screen">
+        <div class="phone">
+          <div class="ph-status"><span>9:41</span><span>▮▮▮ ▮</span></div>
+          <div class="ph-top">
+            <span class="ph-burger"><i></i><i></i><i></i></span>
+            <span class="ph-brand"><span class="ph-mark"></span>en<b>score</b></span>
+            <span class="ph-bell"></span>
+          </div>
+          <div class="ph-body">
+            <div class="stack-sm" style="gap:7px;">
+              <div class="ph-h">Auditoría web</div>
+              <div class="ph-sub"><b>Vodafone</b>
+                <span class="ph-chip" style="font-family:var(--mono);">vodafone.es</span>
+                <span class="ph-chip" style="background:var(--pos-soft);border-color:transparent;color:var(--pos);">18 jul</span>
+              </div>
+            </div>
+
+            <div class="ph-utabs">
+              <span class="on">Problemas</span><span>Correcto</span><span>Páginas</span>
+            </div>
+
+            <!-- veredicto -->
+            <div class="ph-card">
+              <div class="ph-gauge-wrap">
+                <span class="ph-gauge-cap">Preparación GEO</span>
+                <svg viewBox="0 0 200 112" width="196" height="110" aria-label="Preparación GEO 62 sobre 100">
+                  <defs>
+                    <linearGradient id="g1" x1="0" y1="1" x2="1" y2="0">
+                      <stop offset="0%" stop-color="#2563EB"></stop>
+                      <stop offset="100%" stop-color="#4F7BFF"></stop>
+                    </linearGradient>
+                  </defs>
+                  <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#DDE4EE" stroke-width="19" stroke-linecap="round"></path>
+                  <path d="M20 100 A80 80 0 0 1 158 55" fill="none" stroke="url(#g1)" stroke-width="19" stroke-linecap="round"></path>
+                  <text x="100" y="94" text-anchor="middle" font-size="46" font-weight="800" fill="#2563EB" style="font-family:var(--display);letter-spacing:-.05em;">62</text>
+                </svg>
+                <span class="pill pos" style="font-size:11px;">▲ 4 pt vs. 11 jul</span>
+              </div>
+
+              <div class="ph-tri">
+                <div>
+                  <span class="ph-label">Contenido</span>
+                  <span class="ph-tri-n">23<span style="font-size:11px;color:var(--ink-4);">/31</span></span>
+                  <div class="ph-bar" style="height:4px;"><i style="width:74%;background:var(--blue);"></i></div>
+                </div>
+                <div>
+                  <span class="ph-label">Te citan</span>
+                  <span class="ph-tri-n">15<span style="font-size:11px;color:var(--ink-4);">/23</span></span>
+                  <div class="ph-bar" style="height:4px;"><i style="width:65%;background:var(--pos);"></i></div>
+                </div>
+                <div>
+                  <span class="ph-label">Técnica</span>
+                  <span class="ph-tri-n">71<span style="font-size:11px;color:var(--ink-4);">/100</span></span>
+                  <div class="ph-bar" style="height:4px;"><i style="width:71%;background:var(--cyan);"></i></div>
+                </div>
+              </div>
+
+              <div class="ph-duo">
+                <div class="stack-sm" style="gap:3px;">
+                  <span class="ph-label">Críticos</span>
+                  <span class="ph-duo-n" style="color:var(--neg);">3</span>
+                  <span class="ph-p" style="color:var(--pos);font-weight:650;">▼ 2 desde la anterior</span>
+                  <svg viewBox="0 0 120 32" width="100%" height="32" preserveAspectRatio="none" aria-label="Problemas críticos: tendencia descendente">
+                    <defs><linearGradient id="fN" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#D23B48" stop-opacity=".3"></stop>
+                      <stop offset="100%" stop-color="#D23B48" stop-opacity="0"></stop>
+                    </linearGradient></defs>
+                    <path d="M2 7 L32 12 L62 11 L92 20 L118 25 L118 32 L2 32 Z" fill="url(#fN)"></path>
+                    <path d="M2 7 L32 12 L62 11 L92 20 L118 25" fill="none" stroke="#D23B48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <circle cx="118" cy="25" r="3" fill="#D23B48"></circle>
+                  </svg>
+                </div>
+                <span class="sep"></span>
+                <div class="stack-sm" style="gap:3px;">
+                  <span class="ph-label">Avisos</span>
+                  <span class="ph-duo-n" style="color:var(--warn);">7</span>
+                  <span class="ph-p" style="color:var(--warn);font-weight:650;">▲ 1 desde la anterior</span>
+                  <svg viewBox="0 0 120 32" width="100%" height="32" preserveAspectRatio="none" aria-label="Avisos: tendencia ascendente">
+                    <defs><linearGradient id="fW" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#C2570C" stop-opacity=".3"></stop>
+                      <stop offset="100%" stop-color="#C2570C" stop-opacity="0"></stop>
+                    </linearGradient></defs>
+                    <path d="M2 24 L32 20 L62 22 L92 13 L118 8 L118 32 L2 32 Z" fill="url(#fW)"></path>
+                    <path d="M2 24 L32 20 L62 22 L92 13 L118 8" fill="none" stroke="#C2570C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    <circle cx="118" cy="8" r="3" fill="#C2570C"></circle>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- potencial -->
+            <div class="ph-card" style="background:var(--pos-soft);border-color:transparent;">
+              <span class="ph-label" style="color:var(--pos);">Si arreglas los 10 problemas técnicos</span>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="ph-num" style="font-size:31px;">71</span>
+                <svg viewBox="0 0 26 16" width="22" height="14" aria-hidden="true">
+                  <path d="M1 8 H20 M15 3 L23 8 L15 13" fill="none" stroke="#15915A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <span class="ph-num" style="font-size:31px;color:var(--pos);">94</span>
+                <span class="pill pos" style="font-size:10.5px;margin-left:auto;background:#fff;">calculado</span>
+              </div>
+              <span class="ph-p" style="color:var(--ink-2);">Suma exacta de los puntos de salud
+                técnica que hoy pierdes. No incluye contenido: eso depende de que la IA decida
+                citarte.</span>
+            </div>
+
+            <div class="ph-chips">
+              <span class="ph-chip on">Todos 10</span>
+              <span class="ph-chip">Nuevos 2</span>
+              <span class="ph-chip">Técnica 8</span>
+              <span class="ph-chip">Bots 2</span>
+            </div>
+
+            <!-- lista -->
+            <div class="ph-card flush">
+              <div class="ph-row"><span class="ph-stripe neg"></span>
+                <div class="ph-metric">
+                  <span class="ph-t">4 páginas sin datos estructurados</span>
+                  <span class="ph-p">Sin JSON-LD reconocible</span>
+                </div>
+                <div style="text-align:right;">
+                  <span class="pill neg" style="font-size:10px;padding:2px 6px;">+6,0 pt</span>
+                  <div class="ph-mono" style="margin-top:2px;">nuevo</div>
+                </div>
+              </div>
+              <div class="ph-row"><span class="ph-stripe neg"></span>
+                <div class="ph-metric">
+                  <span class="ph-t">llms.txt no encontrado</span>
+                  <span class="ph-p">Sin guía de lectura para modelos de IA</span>
+                </div>
+                <span class="ph-mono">Arreglar →</span>
+              </div>
+              <div class="ph-row"><span class="ph-stripe warn"></span>
+                <div class="ph-metric">
+                  <span class="ph-t">6 páginas sin descripción válida</span>
+                  <span class="ph-p">Fuera del rango de 50–160 caracteres</span>
+                </div>
+                <span class="pill warn" style="font-size:10px;padding:2px 6px;">+3,0 pt</span>
+              </div>
+              <div class="ph-row"><span class="ph-stripe warn"></span>
+                <div class="ph-metric">
+                  <span class="ph-t">3 páginas sin fecha detectable</span>
+                  <span class="ph-p">La IA no puede juzgar si están vigentes</span>
+                </div>
+                <span class="pill warn" style="font-size:10px;padding:2px 6px;">+2,4 pt</span>
+              </div>
+              <div class="ph-row"><span class="ph-stripe blue"></span>
+                <div class="ph-metric">
+                  <span class="ph-t">2 páginas sin listas ni tablas</span>
+                  <span class="ph-p">El formato que más se cita textualmente</span>
+                </div>
+                <span class="pill blue" style="font-size:10px;padding:2px 6px;">+2,0 pt</span>
+              </div>
+              <div style="padding:10px 13px 13px;"><span class="ph-cta ghost">Ver los 10 problemas</span></div>
+            </div>
+
+            <!-- contenido -->
+            <div class="ph-card" style="border-style:dashed;">
+              <span class="ph-label" style="color:var(--violet);">Contenido</span>
+              <span class="ph-t">8 temas sin página propia</span>
+              <span class="ph-p">La IA cita a un rival en 5 de ellos. Esto no se arregla tocando el
+                HTML: se trabaja desde Recomendaciones.</span>
+              <span class="ph-cta ghost">Ver en Recomendaciones →</span>
+            </div>
+
+            <!-- evolución al pie -->
+            <div class="ph-card">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span class="ph-t">Evolución</span>
+                <span class="ph-mono">5 auditorías</span>
+              </div>
+              <div class="ph-legend">
+                <span><i style="background:var(--blue);"></i>Contenido</span>
+                <span><i style="background:var(--pos);"></i>Te citan</span>
+                <span><i style="background:var(--cyan);"></i>Técnica</span>
+              </div>
+              <svg viewBox="0 0 300 84" width="100%" height="84" aria-label="Evolución de contenido, citas y salud técnica en las últimas cinco auditorías">
+                <line x1="6" y1="20" x2="294" y2="20" stroke="#E9EEF6" stroke-width="1"></line>
+                <line x1="6" y1="46" x2="294" y2="46" stroke="#E9EEF6" stroke-width="1"></line>
+                <line x1="6" y1="72" x2="294" y2="72" stroke="#E9EEF6" stroke-width="1"></line>
+                <polyline points="10,46 81,40 152,34 223,28 290,22" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                <polyline points="10,62 81,58 152,60 223,50 290,42" fill="none" stroke="#15915A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                <polyline points="10,52 81,54 152,48 223,38 290,30" fill="none" stroke="#09C5D6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></polyline>
+                <circle cx="290" cy="22" r="3.5" fill="#2563EB"></circle>
+                <circle cx="290" cy="42" r="3.5" fill="#15915A"></circle>
+                <circle cx="290" cy="30" r="3.5" fill="#09C5D6"></circle>
+              </svg>
+              <div style="display:flex;justify-content:space-between;">
+                <span class="ph-mono">27 jun</span><span class="ph-mono">18 jul</span>
+              </div>
+              <span class="ph-cta ghost">Ver historial completo</span>
+            </div>
+          </div>
+          <div class="ph-tabbar"><i></i><i></i><i></i><i></i><i class="on"></i></div>
+        </div>
+        <p class="caption"><b>Problemas — la portada.</b> Veredicto arriba como contexto, no como
+          titular; la lista es la protagonista; contenido y evolución cierran. Todo lo que era
+          Resumen, sin una pestaña que lo repita.</p>
+      </div>
+
+      <!-- PANTALLA 2: CORRECTO -->
+      <div class="screen">
+        <div class="phone">
+          <div class="ph-status"><span>9:41</span><span>▮▮▮ ▮</span></div>
+          <div class="ph-top">
+            <span class="ph-burger"><i></i><i></i><i></i></span>
+            <span class="ph-brand"><span class="ph-mark"></span>en<b>score</b></span>
+            <span class="ph-bell"></span>
+          </div>
+          <div class="ph-body">
+            <div class="stack-sm" style="gap:7px;">
+              <div class="ph-h">Auditoría web</div>
+              <div class="ph-sub"><b>Vodafone</b>
+                <span class="ph-chip" style="font-family:var(--mono);">vodafone.es</span>
+                <span class="ph-chip" style="background:var(--pos-soft);border-color:transparent;color:var(--pos);">18 jul</span>
+              </div>
+            </div>
+
+            <div class="ph-utabs">
+              <span>Problemas</span><span class="on">Correcto</span><span>Páginas</span>
+            </div>
+
+            <div class="ph-card" style="border-color:var(--pos);">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div class="ph-metric">
+                  <span class="ph-label" style="color:var(--pos);">Comprobaciones superadas</span>
+                  <div style="display:flex;align-items:baseline;gap:4px;margin-top:2px;">
+                    <span class="ph-num" style="font-size:34px;color:var(--pos);">41</span>
+                    <span class="ph-num" style="font-size:17px;color:var(--ink-4);">/ 60</span>
+                  </div>
+                </div>
+                <svg viewBox="0 0 44 44" width="44" height="44" aria-label="41 de 60 comprobaciones superadas">
+                  <circle cx="22" cy="22" r="18" fill="none" stroke="#DDE4EE" stroke-width="7"></circle>
+                  <circle cx="22" cy="22" r="18" fill="none" stroke="#15915A" stroke-width="7"
+                          stroke-dasharray="77 113" stroke-linecap="round" transform="rotate(-90 22 22)"></circle>
+                </svg>
+              </div>
+              <div class="ph-bar"><i style="width:68%;background:var(--pos);"></i></div>
+              <span class="ph-p">Tu web hace bien la mayoría de las cosas. Lo que falla está en
+                Problemas.</span>
+            </div>
+
+            <div class="ph-chips">
+              <span class="ph-chip okon">Todo 41</span>
+              <span class="ph-chip">Técnica 28</span>
+              <span class="ph-chip">Bots 8</span>
+              <span class="ph-chip">Contenido 5</span>
+            </div>
+
+            <div class="ph-card flush">
+              <div style="padding:13px 13px 9px;"><span class="ph-t" style="font-size:13.5px;">Técnica</span></div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Páginas indexables</span>
+                  <span class="ph-p">10 de 10 · sin noindex</span>
+                </div>
+                <span class="ph-mono" style="color:var(--pos);">10 pt</span>
+              </div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Canonical propio</span>
+                  <span class="ph-p">10 de 10 · apunta a tu dominio</span>
+                </div>
+                <span class="ph-mono" style="color:var(--pos);">5 pt</span>
+              </div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Un solo H1 por página</span>
+                  <span class="ph-p">9 de 10</span>
+                </div>
+                <span class="ph-mono" style="color:var(--pos);">5 pt</span>
+              </div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Títulos con longitud válida</span>
+                  <span class="ph-p">10 de 10 · entre 15 y 70 caracteres</span>
+                </div>
+                <span class="ph-mono" style="color:var(--pos);">5 pt</span>
+              </div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Contenido sustancial</span>
+                  <span class="ph-p">8 de 10 · más de 300 palabras</span>
+                </div>
+                <span class="ph-mono" style="color:var(--pos);">10 pt</span>
+              </div>
+            </div>
+
+            <div class="ph-card flush">
+              <div style="padding:13px 13px 9px;"><span class="ph-t" style="font-size:13.5px;">Acceso de bots de IA</span></div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">7 de 7 bots permitidos</span>
+                  <span class="ph-p">ChatGPT · Gemini · Perplexity · Claude · Copilot</span>
+                </div>
+              </div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">sitemap.xml encontrado</span>
+                  <span class="ph-p">Accesible en la raíz</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ph-card flush">
+              <div style="padding:13px 13px 9px;"><span class="ph-t" style="font-size:13.5px;">Contenido que la IA ya cita</span></div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Tarifas móviles sin permanencia</span>
+                  <span class="ph-p">Citada en 3 de los últimos 3 escaneos</span>
+                </div>
+              </div>
+              <div class="ph-row"><span class="ph-check">✓</span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="color:var(--ink-3);text-decoration:line-through;">Cómo cambiar de compañía</span>
+                  <span class="ph-p">Citada en 2 de los últimos 3 escaneos</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="ph-tabbar"><i></i><i></i><i></i><i></i><i class="on"></i></div>
+        </div>
+        <p class="caption"><b>Correcto.</b> Datos que ya calculamos y hoy tiramos. Cada línea con su
+          alcance real, no un «bien» genérico.</p>
+      </div>
+
+      <!-- PANTALLA 3: ARREGLO -->
+      <div class="screen">
+        <div class="phone">
+          <div class="ph-status"><span>9:41</span><span>▮▮▮ ▮</span></div>
+          <div class="ph-top">
+            <span class="ph-burger"><i></i><i></i><i></i></span>
+            <span class="ph-brand"><span class="ph-mark"></span>en<b>score</b></span>
+            <span class="ph-bell"></span>
+          </div>
+          <div class="ph-body">
+            <div class="ph-sub" style="gap:5px;"><span class="ph-mono">← Problemas</span></div>
+
+            <div class="stack-sm" style="gap:5px;">
+              <span class="pill neg" style="font-size:11px;">Crítico · +6,0 pt</span>
+              <div class="ph-h" style="font-size:18px;">4 páginas sin datos estructurados</div>
+              <span class="ph-p">Sin JSON-LD, la IA tiene que adivinar de qué trata cada página en
+                vez de leerlo declarado.</span>
+            </div>
+
+            <div class="ph-card flush">
+              <div style="padding:12px 13px 8px;"><span class="ph-t">Páginas afectadas</span></div>
+              <div class="ph-row"><span class="ph-stripe neg"></span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="font-family:var(--mono);font-size:11px;font-weight:600;">/fibra-optica/fibra-fttr</span>
+                  <span class="ph-p">Página de producto · 62/100</span>
+                </div>
+              </div>
+              <div class="ph-row"><span class="ph-stripe neg"></span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="font-family:var(--mono);font-size:11px;font-weight:600;">/moviles/</span>
+                  <span class="ph-p">Página de producto · 58/100</span>
+                </div>
+              </div>
+              <div class="ph-row"><span class="ph-stripe neg"></span>
+                <div class="ph-metric">
+                  <span class="ph-t" style="font-family:var(--mono);font-size:11px;font-weight:600;">/tv/</span>
+                  <span class="ph-p">Página de producto · 66/100</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="ph-card">
+              <span class="ph-label">Cómo se arregla</span>
+              <span class="ph-p">Pega este bloque en el <code style="font-size:10px;">&lt;head&gt;</code>
+                de cada página. Está relleno con los datos reales que ya hemos leído de la tuya.</span>
+              <div class="ph-code">&lt;script type="application/ld+json"&gt;
+{
+  "@context": "https://schema.org",
+  "@type": <b>"Product"</b>,
+  "name": <b>"Fibra FTTR"</b>,
+  "url": <b>"https://vodafone.es/…"</b>,
+  "brand": <b>"Vodafone"</b>,
+  "dateModified": <b>"2026-07-14"</b>
+}
+&lt;/script&gt;</div>
+              <div style="display:flex;gap:7px;">
+                <span class="ph-cta" style="flex:1;">Copiar bloque</span>
+                <span class="ph-cta ghost" style="flex:1;">Descargar los 4</span>
+              </div>
+            </div>
+
+            <div class="ph-card" style="background:var(--surface-2);border-color:transparent;">
+              <span class="ph-label">Cuando lo hayas publicado</span>
+              <span class="ph-p" style="color:var(--ink-2);">No hace falta que marques nada. La
+                siguiente auditoría vuelve a leer estas 4 páginas y, si el bloque está, el problema
+                pasa solo a <strong style="color:var(--pos);">Correcto</strong> con su fecha de
+                verificación.</span>
+            </div>
+          </div>
+          <div class="ph-tabbar"><i></i><i></i><i></i><i></i><i class="on"></i></div>
+        </div>
+        <p class="caption"><b>El arreglo.</b> Aquí la auditoría deja de ser un informe. Nadie marca
+          casillas: se publica y la medición lo confirma sola.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 3. EL REPARTO ============ -->
+  <section class="block">
+    <div class="sec-head col">
+      <p class="eyebrow">Acordado</p>
+      <h2>Dónde vive cada cosa</h2>
+    </div>
+
+    <div class="callout violet col">
+      <p style="font-size:18px;line-height:1.5;color:var(--ink);font-weight:600;">La Auditoría
+        <strong>arregla tu web</strong>. Recomendaciones <strong>consigue que te citen</strong>.</p>
+    </div>
+
+    <div class="split">
+      <div class="territory diag">
+        <span class="pill blue"><span class="dot"></span>Auditoría web</span>
+        <h3>Arreglos técnicos</h3>
+        <p class="small">Tocas el HTML o subes un fichero. Es objetivo, se hace en una tarde y la
+          siguiente auditoría lo comprueba sola.</p>
+        <ul class="owns">
+          <li>Datos estructurados que faltan</li>
+          <li>Títulos, descripciones y Open Graph</li>
+          <li>H1, H2 e intro respuesta-primero</li>
+          <li>noindex, canonical, hreflang</li>
+          <li>Listas, tablas y contenido corto</li>
+          <li>Fechas no detectables</li>
+          <li>Bots bloqueados, llms.txt, sitemap</li>
+        </ul>
+        <p class="small" style="border-top:1px solid var(--line-soft);padding-top:10px;">
+          <strong>Se resuelven aquí mismo</strong>, con el arreglo copiable dentro del problema.</p>
+      </div>
+
+      <div class="territory work">
+        <span class="pill violet"><span class="dot"></span>Recomendaciones</span>
+        <h3>Trabajo de contenido</h3>
+        <p class="small">Escribes una página, tardas semanas y el resultado depende de que la IA
+          decida citarte. Necesita seguimiento y evidencia.</p>
+        <ul class="owns">
+          <li>Publicar una página que no existe</li>
+          <li>Optimizar una página para que la citen</li>
+          <li>Competir por un tema que gana un rival</li>
+          <li>Narrativa negativa, FAQ, comparativas</li>
+          <li>Propuesta generada con IA y reescritura</li>
+        </ul>
+        <p class="small" style="border-top:1px solid var(--line-soft);padding-top:10px;">
+          <strong>Viven allí, con su ciclo de vida.</strong> La auditoría sólo los cuenta y enlaza.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. LA ARITMÉTICA ============ -->
+  <section class="block">
+    <div class="sec-head col">
+      <p class="eyebrow">Acordado</p>
+      <h2>Por qué los puntos son ciertos</h2>
+    </div>
+
+    <p class="col">El score de una página es una suma fija de comprobaciones. Éstos son los pesos
+      reales, hoy, en producción:</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Comprobación</th>
+            <th scope="col">Puntos</th>
+            <th scope="col">Cómo se reparten</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Indexabilidad</td><td class="num">20</td><td>10 sin noindex · 5 canonical propio · 5 hreflang</td></tr>
+          <tr><td>Citabilidad</td><td class="num">20</td><td>10 listas o tablas · 10 contenido ≥ 300 palabras</td></tr>
+          <tr><td>Datos estructurados</td><td class="num">15</td><td>Todo o nada: JSON-LD de un tipo reconocido</td></tr>
+          <tr><td>Formato respuesta-primero</td><td class="num">15</td><td>5 un solo H1 · 5 dos o más H2 · 5 intro directa</td></tr>
+          <tr><td>Metadatos</td><td class="num">15</td><td>5 título · 5 descripción · 5 Open Graph</td></tr>
+          <tr><td>Frescura</td><td class="num">15</td><td>15 si ≤ 6 meses · 8 si ≤ 18 meses · 0 si más</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Total por página</td><td class="num">100</td><td>La salud técnica es la media de las páginas analizadas</td></tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div class="calc">
+      <p class="eyebrow">Ejemplo con los números del mockup</p>
+      <h3>«4 páginas sin datos estructurados» → +6 puntos</h3>
+      <div class="calc-line">
+        <span>4 páginas × <b>15 pt</b> ÷ 10 páginas analizadas</span>
+        <span>=</span>
+        <span class="res">+6,0 pt de salud técnica</span>
+      </div>
+      <div class="calc-line">
+        <span>6 páginas sin descripción × <b>5 pt</b> ÷ 10</span>
+        <span>=</span>
+        <span class="res">+3,0 pt</span>
+      </div>
+      <p class="note">No es una estimación ni un modelo: es la definición del score. Si arreglas eso,
+        el número sube exactamente eso.</p>
+      <p class="note"><strong>Excepción:</strong> la frescura de una página sin fecha detectable no
+        suma linealmente —&nbsp;el score se recalcula sobre otra base para no penalizar lo que no se
+        puede saber. Sigue siendo exacto, pero ahí mostraría el resultado ya resuelto, no la fórmula.</p>
+    </div>
+
+    <div class="callout warn col">
+      <h4>Y por eso el potencial sólo se muestra en lo técnico</h4>
+      <p class="small">Que la IA te cite tras publicar una página no lo controla nadie. Un «62 → 78»
+        global sería medio verdad y medio apuesta. En contenido hay recuento y evidencia, sin número.</p>
+    </div>
+
+    <div class="col stack">
+      <h3>Y por qué el tachado es honesto</h3>
+    </div>
+
+    <ul class="findings col">
+      <li><span class="sev ok">Fiable</span>
+        <div><strong>Todo lo técnico de página.</strong> Volvemos a leer la misma URL con la misma
+          comprobación: antes no había JSON-LD, ahora sí. Es la misma medición repetida.</div></li>
+      <li><span class="sev ok">Fiable</span>
+        <div><strong>llms.txt, robots.txt y sitemap.</strong> Presencia de fichero y lectura de
+          reglas. Verificación perfecta.</div></li>
+      <li><span class="sev mid">Con condición</span>
+        <div><strong>Sólo si la página se vuelve a analizar.</strong> Si se cae del conjunto o no
+          carga, el estado es «no comprobado en esta auditoría», nunca «resuelto». Un problema no se
+          tacha por desaparecer del radar.</div></li>
+      <li><span class="sev no">No fiable</span>
+        <div><strong>«Ahora la IA ya te cita».</strong> El grounding es un sensor ruidoso. Aquí un
+          sello de resuelto sería mentira: como mucho, «te cita en 2 de los últimos 3 escaneos».</div></li>
+    </ul>
+  </section>
+
+  <!-- ============ 5. CONSTRUCCIÓN ============ -->
+  <section class="block">
+    <div class="sec-head col">
+      <p class="eyebrow">Construcción</p>
+      <h2>En qué orden lo haría</h2>
+    </div>
+
+    <p class="col">Cuatro fases, cada una usable por sí sola. Ninguna necesita migración.</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Fase</th>
+            <th scope="col">Qué entrega</th>
+            <th scope="col">Riesgo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1 · Derivador</td>
+            <td>El módulo puro que convierte 10 páginas × 9 comprobaciones en problemas agregados con
+              severidad, alcance y puntos exactos, y en su lista espejo de comprobaciones superadas.
+              Con tests. Sin tocar la UI.</td>
+            <td>Bajo</td>
+          </tr>
+          <tr>
+            <td>2 · Problemas y Correcto</td>
+            <td>Las pestañas nuevas, la portada fusionada con veredicto y evolución al pie, el
+              potencial técnico calculado, la serie histórica de snapshots, el repintado v3 y la capa
+              de escritorio. Aquí desaparece la tarjeta duplicada.</td>
+            <td>Medio — calibrar severidad</td>
+          </tr>
+          <tr>
+            <td>3 · Arreglos</td>
+            <td>El detalle de cada problema con su fragmento copiable, el generador de
+              <code>llms.txt</code> y las reglas de robots.</td>
+            <td>Bajo</td>
+          </tr>
+          <tr>
+            <td>4 · Verificación</td>
+            <td>El sello «resuelto y verificado» con fecha y antes/después, sólo sobre lo técnico, más
+              el aviso de regresión.</td>
+            <td>Medio — identidad del problema entre auditorías</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ 6. SIGUIENTE PASO ============ -->
+  <section class="block">
+    <div class="sec-head col">
+      <p class="eyebrow">Siguiente paso</p>
+      <h2>Listo para el Task Intake</h2>
+    </div>
+
+    <div class="col stack">
+      <p>Con la fusión de Resumen y Problemas queda cerrado el diseño. Si te vale esta portada,
+        arranco el <strong>Task Intake de la fase 1</strong>: el derivador con sus tests, sin tocar
+        una sola pantalla —&nbsp;el trozo que se puede revisar de verdad antes de que nada cambie de
+        aspecto.</p>
+      <p class="small">Único punto abierto: si «Correcto» debe ser pestaña propia o un bloque
+        plegable al pie de Problemas. La dejo como pestaña porque con 41 líneas dentro de la portada
+        el scroll se dispara, pero se cambia sin coste si al verlo prefieres lo contrario.</p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p><strong>Nota sobre los mockups.</strong> Vodafone, vodafone.es, las URLs y todas las cifras
+      son ilustrativos, elegidos para enseñar el layout con datos verosímiles. No proceden de ninguna
+      auditoría real. Los pesos del score de la tabla sí son los reales de producción.</p>
+    <p>Propuesta de diseño para GenScore · sección Auditoría web · rev. 4, 2 de agosto de 2026. Nada
+      de lo descrito está implementado.</p>
+  </footer>
+
+</div>
