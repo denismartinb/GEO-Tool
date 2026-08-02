@@ -358,18 +358,26 @@ export default async function CompetitorsPage({
         })
       : [];
 
-  /* COMP-REDESIGN-1: marcas emergentes — other_brands_mentioned surfaced for the first time (ADR 0018's Ikea case). */
+  /* COMP-REDESIGN-1: marcas emergentes — other_brands_mentioned surfaced for
+     the first time (ADR 0018's Ikea case). Scoped to the latest completed
+     run only (EMERGING-BRANDS-WINDOW-1, founder decision 2026-08-02): the
+     old cumulative-history population meant a brand's "en N de M prompts"
+     count could only ever grow, never shrink, so a name that had already
+     racked up mentions before EMERGING-BRANDS-GROUNDING-1 shipped stayed
+     stuck at the same count forever — a rescan could never clear it. Latest
+     run only means the count reflects the AI's *current* answers. */
+  const latestRunResults = latestCompletedRun ? results.filter((r) => r.run_id === latestCompletedRun.id) : [];
   const emergingBrands = computeEmergingBrands({
-    rows: results.map((r) => ({ promptId: r.prompt_id as string | null, extracted_json: r.extracted_json })),
+    rows: latestRunResults.map((r) => ({ promptId: r.prompt_id as string | null, extracted_json: r.extracted_json })),
     brandName: project.brand,
     trackedCompetitorNames: configuredCompetitors.map((c) => c.name)
   });
 
   // Denominator for "en N de M prompts" — distinct prompts actually analyzed
-  // across the runs the emerging-brand counts are computed over, so the two
-  // numbers always come from the same population.
+  // in the SAME population the emerging-brand counts are computed over (the
+  // latest completed run), so the two numbers always agree.
   const analyzedPromptCount = new Set(
-    results.map((r) => r.prompt_id as string | null).filter((id): id is string => Boolean(id))
+    latestRunResults.map((r) => r.prompt_id as string | null).filter((id): id is string => Boolean(id))
   ).size;
 
   /* Position trend: brand + active competitors' avg_position across completed runs */

@@ -1046,27 +1046,26 @@ más, con capturas reales de dispositivo:
    "Visión general / Historial de escaneos / Prompts" al final, heredado del
    layout previo al rediseño — redundante con la navegación lateral y
    ausente en el resto de pantallas v2 (Citas, Prompts). Eliminado.
-2. **"Sigue saliendo lo mismo tras volver a escanear" — causa raíz
-   identificada, sin implementar todavía.** `computeEmergingBrands`
-   (`lib/competitors/emerging-brands.ts`) cuenta, por marca, el número de
-   **prompts distintos** en los que aparece — pero sobre **todo el
-   histórico de escaneos completados del proyecto**, igual que la cuota de
-   voz y "Terreno por tema" (comentario en `page.tsx`: "cumulative, same
-   population as the podium/matrix"). Ese conteo es acumulativo y no puede
-   bajar: si un prompt ya llevó a AliExpress a "6 de 7" en un escaneo
-   anterior al fix de EMERGING-BRANDS-GROUNDING-1, ese "6" queda fijado para
-   siempre — un escaneo nuevo solo puede añadir prompts a la cuenta, nunca
-   quitarlos, así que sobre el mismo conjunto de prompts ya contaminado
-   volver a escanear no cambia nada visible. El fix de grounding evita que
-   el ruido **crezca** en escaneos futuros; no limpia el que ya había antes
-   del fix. Esto no se ha corregido aún porque cambia una decisión de
-   diseño ya documentada (ventana acumulativa, consistente con el resto de
-   la página) y toca el flujo de competidores — pendiente de decidir con el
-   fundador entre: (a) acotar "marcas emergentes" al último escaneo
-   completado en vez de a todo el histórico, que resolvería esto de
-   inmediato y encaja mejor con la semántica de "emergente"; o (b) añadir un
-   "descartar" manual por marca (requeriría persistir estado nuevo). Sin
-   tocar código de negocio hasta que el fundador elija.
+2. **"Sigue saliendo lo mismo tras volver a escanear" (EMERGING-BRANDS-WINDOW-1)
+   — corregido, opción (a).** Causa raíz: `computeEmergingBrands` contaba,
+   por marca, el número de **prompts distintos** en los que aparece — pero
+   sobre **todo el histórico de escaneos completados del proyecto**, igual
+   que la cuota de voz y "Terreno por tema" (`page.tsx`: "cumulative, same
+   population as the podium/matrix"). Ese conteo era acumulativo y no podía
+   bajar: si un prompt ya había llevado a AliExpress a "6 de 7" antes del
+   fix de EMERGING-BRANDS-GROUNDING-1, ese "6" quedaba fijado para siempre
+   — un escaneo nuevo solo podía añadir prompts a la cuenta, nunca
+   quitarlos. El fundador eligió la opción (a): acotar "marcas emergentes"
+   al **último escaneo completado**, no a todo el histórico — encaja mejor
+   con la semántica de "emergente" (algo que la IA dice ahora, no algo que
+   dijo hace meses) y ya es el patrón que usa "Brecha de prompts" en esta
+   misma pantalla. Implementado filtrando `results` por
+   `run_id === latestCompletedRun.id` antes de pasarlo tanto a
+   `computeEmergingBrands` como al denominador "en N de M prompts", para que
+   ambos números sigan viniendo de la misma población. No toca
+   `lib/competitors/emerging-brands.ts` (la función ya era agnóstica a qué
+   filas recibe) ni la cuota de voz / Terreno por tema / matriz, que siguen
+   siendo acumulativas por diseño.
 
 ---
 
