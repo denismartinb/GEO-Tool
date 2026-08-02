@@ -83,7 +83,18 @@ function citationsPage() {
     <div class="cit2-kpis">
       <div class="cit2-k">
         Respuestas con cita
-        <span class="info-tip" tabindex="0">
+        <!-- The long aria-label is deliberate: it reproduces the real
+             production incident (2026-08-02, ENAMETOOLONG) where an
+             accessible .info-tip's unbounded aria-label sailed into a
+             Playwright attachment name uncapped. explore.ts must cap it
+             regardless of source, or this fixture's own selfcheck run
+             reproduces the crash on a screen the explorer is supposed to
+             pass cleanly. -->
+        <span
+          class="info-tip"
+          tabindex="0"
+          aria-label="Media simple de tus señales disponibles: cobertura de temas, temas implementados, citados por la IA, y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media."
+        >
           <span class="info-tip-icon">i</span>
           <span class="info-tip-bubble">Tooltip de prueba de la fixture</span>
         </span>

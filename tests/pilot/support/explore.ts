@@ -245,10 +245,24 @@ export async function exploreInteractions(
       const el = candidates.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
 
+      // Both sources feed the same cap. A first version only sliced the
+      // textContent branch, so an aria-label — unbounded, and often the
+      // longer, more descriptive string on an accessible .info-tip — sailed
+      // through untouched into `testInfo.attach(...)`'s name. Playwright
+      // uses that name to build a real file path when it copies attachments
+      // into its output/report directories, and a >200-char label blew past
+      // the filesystem's name-length limit (ENAMETOOLONG, first real run
+      // with `.info-tip` aria-labels in production, 2026-08-02) — a harness
+      // bug, not a product one: a long, descriptive aria-label is correct
+      // accessibility practice.
       const control =
-        (await el.getAttribute("aria-label")) ||
-        ((await el.textContent()) ?? "").trim().slice(0, 60) ||
-        `${screen} control #${i + 1}`;
+        (
+          (await el.getAttribute("aria-label")) ||
+          (await el.textContent()) ||
+          ""
+        )
+          .trim()
+          .slice(0, 60) || `${screen} control #${i + 1}`;
 
       const refusal = await refuseReason(el).catch(() => "could not inspect element");
       if (refusal) {
