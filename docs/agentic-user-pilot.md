@@ -326,6 +326,35 @@ under load (`lib/scan/constants.ts`'s note on `MAX_REAL_SCAN_PROMPTS`,
 `docs/scan-lifecycle.md`), not a UI defect this journey found — it's classified
 as `PILOT INCONCLUSIVE`, same as a blocked button, never `PILOT FAIL`.
 
+## GROWTH-2 Fase 2.1 — public-pages journey (read-only, part of the default set)
+
+`tests/pilot/journeys/public-pages.spec.ts` covers the public/SEO surfaces
+shipped in GROWTH-2 Fase 2.1: the blog (index + 5 posts), `/geo`, the legal
+pages, and `/feed.xml`. No config change was needed — it matches the same
+`**/journeys/*.spec.ts` pattern as `core-flow.spec.ts`, so it is automatically
+part of the `mobile`/`tablet`/`desktop` projects and therefore already
+included in the default `read` journey set (`scripts/pilot.mjs`) and in the
+always-on `.github/workflows/ux-pilot.yml` run on every future preview.
+
+Beyond the generic health checks (`assertPageIsHealthy` — layout overflow,
+console errors, failed requests, no silent bounce to `/login`), it asserts
+the two things specific to this phase: each page's own `<link
+rel="canonical">` matches its expected absolute URL, and the blog pages'
+`<title>` ends in "— Genscore". `/feed.xml` is checked separately via
+`page.request.get` (it is XML, not a page to screenshot) for a 200 status, an
+XML content type, and a well-formed `<rss version="2.0">` body linking back
+to at least one post.
+
+Does not cover `/` or `/pricing` — both are client components that cannot
+export per-page `metadata` yet (see `docs/launch-plan.md`, Fase 7b ledger).
+Add them here once a future phase gives them their own canonical.
+
+**`tests/pilot/fixtures/server.mjs` was extended to match**: it now serves
+minimal stand-ins for these same public routes (with the same canonical/title
+shape) so `pnpm pilot:selfcheck` keeps proving the harness works end to end —
+without this, the new journey would 404 against the fixture and the
+self-check would report a false `PILOT FAIL` on every run.
+
 ## Known limits
 
 - **Signup with email confirmation is not pilotable** — no mailbox. Stays a
