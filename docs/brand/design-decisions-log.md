@@ -783,6 +783,22 @@ de producción (movistar.es), no una propuesta del piloto:
    reglas de qué se resalta en negrita/listas/enlaces, un único sitio si
    hay que arreglar algo del parseo en el futuro.
 
+**Cuarta vuelta: fuera badge de motor y botón de Auditoría web
+(2026-08-02).** Dos recortes directos del fundador:
+
+1. **Badge de motor (Gemini/ChatGPT) eliminado en toda la pantalla.**
+   Vivía en dos sitios — `EngineChips` en cada fila de la lista completa, y
+   una pastilla por prompt en el panel de evidencia — ambos removidos junto
+   con el componente `EngineChips` y las clases CSS `.cit2-echip`/
+   `.cit2-engs`, ya muertas tras el cambio. El contador "· N motor(es)" del
+   raíl de Oportunidades no es un badge de motor concreto y se queda igual.
+2. **Botón "Abrir Auditoría web" eliminado** del final del bloque de
+   Oportunidades. La mención en prosa a "Auditoría web" dentro del aviso de
+   "0 citas propias" se queda — no es un botón, es solo el nombre de la
+   pantalla a la que ir por el menú. Al perder su único consumidor, la prop
+   `projectId` se retiró en cascada de `OpportunitiesBlock`, `CitationsClient`
+   y de la llamada en `page.tsx` en vez de dejarla sin usar.
+
 ---
 
 ## Cómo mantener este documento

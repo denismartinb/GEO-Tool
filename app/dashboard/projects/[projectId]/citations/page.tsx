@@ -211,7 +211,6 @@ export default async function CitationsPage({
         </div>
       ) : (
         <CitationsClient
-          projectId={projectId}
           citationRows={citationRows}
           opportunityRows={opportunityRows}
           impactBreakdown={impactBreakdown}

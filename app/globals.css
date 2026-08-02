@@ -2034,7 +2034,6 @@ a {
 .cit2-btn-mini:disabled { opacity: .4; cursor: default; }
 .cit2-btn-mini:disabled:hover { filter: none; }
 .cit2-btn-block { width: 100%; margin-top: 10px; }
-.cit2-opps-audit { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
 /* Pagination replaces the old "expand all in place" toggle: a fixed-height
    control regardless of how many opportunities there are, instead of a rail
    that grows without bound (founder review, 2026-08-02). */
@@ -2071,8 +2070,6 @@ a {
 .cit2-u { font-family: var(--mono); font-size: 12px; color: var(--ink); font-weight: 600; word-break: break-all; line-height: 1.35; }
 .cit2-u b { color: var(--accent); font-weight: 700; }
 .cit2-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.cit2-engs { display: flex; gap: 4px; flex-wrap: wrap; min-width: 0; }
-.cit2-echip { font-size: 9.5px; font-weight: 750; color: #fff; border-radius: 999px; padding: 2px 7px; white-space: nowrap; }
 .cit2-tchip { font-size: 9.5px; font-weight: 700; border-radius: 999px; padding: 2px 7px; white-space: nowrap; border: 1px solid var(--line); }
 .cit2-tchip.ty-own { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .cit2-tchip.ty-comp { background: var(--neg-soft); color: var(--neg-ink); border-color: transparent; }
@@ -2089,8 +2086,7 @@ a {
 .cit2-detail-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .cit2-detail-list > li { border-top: 1px solid var(--line-soft); padding-top: 8px; }
 .cit2-detail-list > li:first-child { border-top: 0; padding-top: 0; }
-.cit2-detail-prompt { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
-.cit2-detail-prompt .cit2-echip { flex: 0 0 auto; margin-top: 1px; }
+.cit2-detail-prompt { display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
 /* What THIS specific answer named (a tracked competitor / another brand) —
    makes the row-level "Cita a X" claim checkable against a real, attributed
    answer instead of a label with no visible source. */
@@ -2160,7 +2156,7 @@ a {
   .cit2-list .cit2-fav { width: 22px; height: 22px; font-size: 9.5px; }
   .cit2-list .cit2-urlcell { gap: 3px; }
   .cit2-list .cit2-u { font-size: 11.5px; }
-  .cit2-list .cit2-tchip, .cit2-list .cit2-echip { font-size: 9px; padding: 1.5px 6px; }
+  .cit2-list .cit2-tchip { font-size: 9px; padding: 1.5px 6px; }
   .cit2-list .cit2-cites { font-size: 13.5px; }
   /* Detail panel indent tracks the smaller avatar (14px pad + 22px avatar +
      9px gap), matching the same logic as .cit2-opp-item .cit2-detail below. */

@@ -1,18 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
 import { FormattedResponse } from "@/components/ui/formatted-response";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { classifySourceType, SOURCE_TYPE_LABEL } from "@/lib/citations/source-type";
-import type {
-  CitationEngine,
-  CitationRow,
-  ImpactBreakdown,
-  SourceTypeSlice
-} from "@/lib/citations/aggregate-citations";
+import type { CitationRow, ImpactBreakdown, SourceTypeSlice } from "@/lib/citations/aggregate-citations";
 
 export type { CitationRow };
 
@@ -70,27 +63,6 @@ function typeBadge(row: CitationRow): { label: string; className: string } {
   return { label: SOURCE_TYPE_LABEL[type], className: classByType[type] };
 }
 
-function EngineChips({ engines }: { engines: CitationEngine[] }) {
-  if (engines.length === 0) return null;
-  return (
-    <div className="cit2-engs">
-      {engines.map((e) => {
-        const meta = getEngineMeta(e.provider);
-        return (
-          <span
-            key={e.provider}
-            className="cit2-echip"
-            style={{ background: meta.color }}
-            title={`Citado por ${meta.label}: ${e.cited} ${e.cited === 1 ? "vez" : "veces"}`}
-          >
-            {meta.label}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
 /**
  * Shared expand-panel content: which prompts cited this page, and — the real
  * "why was this cited" evidence — the model's actual answer to each one.
@@ -114,14 +86,10 @@ function PromptEvidenceList({ prompts, brand }: { prompts: CitationRow["prompts"
       <div className="cit2-detail-lbl">Citada al responder estos prompts</div>
       <ul className="cit2-detail-list">
         {unique.map((p, i) => {
-          const meta = getEngineMeta(p.provider);
           return (
             <li key={i}>
               <div className="cit2-detail-prompt">
                 <span>{p.text}</span>
-                <span className="cit2-echip" style={{ background: meta.color }}>
-                  {meta.label}
-                </span>
               </div>
               {/* What THIS specific answer named — scoped to this one
                   (prompt, provider) result, not the row-level union. Makes a
@@ -201,10 +169,11 @@ function CitationRowItem({
             <b>{domain}</b>
             {path}
           </span>
-          <span className="cit2-meta">
-            {showBadge && <span className={`cit2-tchip ${badge.className}`}>{badge.label}</span>}
-            <EngineChips engines={row.engines} />
-          </span>
+          {showBadge && (
+            <span className="cit2-meta">
+              <span className={`cit2-tchip ${badge.className}`}>{badge.label}</span>
+            </span>
+          )}
         </span>
         <span className="cit2-cites">
           {row.cited}
@@ -378,7 +347,7 @@ function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
 
 const OPP_PAGE_SIZE = 5;
 
-function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow[]; projectId: string; brandLabel: string }) {
+function OpportunitiesBlock({ rows, brandLabel }: { rows: CitationRow[]; brandLabel: string }) {
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<string | null>(null);
   const pageCount = Math.max(1, Math.ceil(rows.length / OPP_PAGE_SIZE));
@@ -476,16 +445,11 @@ function OpportunitiesBlock({ rows, projectId, brandLabel }: { rows: CitationRow
           )}
         </>
       )}
-      <Link href={`/dashboard/projects/${projectId}/web-audit`} className="cit2-btn-mini cit2-btn-block cit2-opps-audit">
-        Abrir Auditoría web
-        <Icon name="arrRight" size={13} />
-      </Link>
     </div>
   );
 }
 
 export function CitationsClient({
-  projectId,
   citationRows,
   opportunityRows,
   impactBreakdown,
@@ -496,7 +460,6 @@ export function CitationsClient({
   citationRateAnyDomain,
   brandLabel
 }: {
-  projectId: string;
   citationRows: CitationRow[];
   opportunityRows: CitationRow[];
   impactBreakdown: ImpactBreakdown;
@@ -600,7 +563,7 @@ export function CitationsClient({
 
       <div className="cit2-cols">
         <div className="cit2-rail">
-          <OpportunitiesBlock rows={opportunityRows} projectId={projectId} brandLabel={brandLabel} />
+          <OpportunitiesBlock rows={opportunityRows} brandLabel={brandLabel} />
         </div>
         <div className="cit2-main">
           <div className="cit2-listtitle">
