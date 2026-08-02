@@ -2117,7 +2117,11 @@ a {
 .cm2-pos-card { padding: 16px 16px 10px; }
 .cm2-pos-chart { min-width: 0; }
 .cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+/* inline-flex keeps the InfoTip glyph on the label's own line — as plain
+   inline content after an uppercase, letter-spaced label it wrapped onto a
+   second line by itself. */
 .cm2-pos-list-hd {
+  display: flex; align-items: center; gap: 5px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: 6px;
 }
