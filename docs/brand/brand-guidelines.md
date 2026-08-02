@@ -184,10 +184,11 @@ logo (imagen), no el texto.
   `docs/brand/design-decisions-log.md` §2–4. Resto de zonas pendientes.
 - **Fase 5c — BRAND-5c:** actualizar los 8 emails de Resend (`lib/email/
   transactional.ts`) y las 2 plantillas de Supabase Auth
-  (`docs/email-templates/`) a la v3 — nueva cabecera (`genscore-logo-white-
-  email.png` regenerado desde `genscore-logo-white.svg` v3), colores
-  email-safe `#0B1426 · #2563EB · #FFB020 · #FFFFFF`. Pendiente de
-  aprobación.
+  (`docs/email-templates/`) a la v3 — nueva cabecera (600 × 120 regenerada
+  desde el lockup v3), colores email-safe `#0B1426 · #2563EB · #FFB020 ·
+  #FFFFFF`. **Propuesta detallada en `docs/brand/email-design-proposal.md`,
+  con la maqueta visual de los 10 emails en `docs/brand/email-preview/
+  index.html`.** Pendiente de aprobación.
 - **Fase 5d — dark mode de producto (opcional, fuera de esta serie):** los
   tokens `--brand-canvas-dark`/`--brand-surface-dark` ya están definidos,
   pero la app hoy es solo modo claro (`color-scheme: light`). Proyecto
