@@ -3,367 +3,637 @@
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
-import type {
-  CitationEngine,
-  CitationRow,
-  EngineTotal,
-  PromptCitation,
-  PromptGroup
-} from "@/lib/citations/aggregate-citations";
+import { FormattedResponse } from "@/components/ui/formatted-response";
+import { classifySourceType, SOURCE_TYPE_LABEL } from "@/lib/citations/source-type";
+import type { CitationRow, ImpactBreakdown, SourceTypeSlice } from "@/lib/citations/aggregate-citations";
 
-export type { CitationRow, PromptCitation, PromptGroup };
+export type { CitationRow };
 
-const CATEGORY_LABEL: Record<CitationRow["category"], string> = {
-  brand: "Tu marca",
-  competitor: "Competidor",
-  third_party: "Otra fuente"
+const CATEGORY_TAB_LABEL: Record<"all" | CitationRow["category"], string> = {
+  all: "Todas",
+  brand: "Tuyas",
+  competitor: "Competidores",
+  third_party: "Terceros"
 };
 
-const CATEGORY_BADGE: Record<CitationRow["category"], string> = {
-  brand: "badge badge-accent",
-  competitor: "badge badge-neg",
-  third_party: "badge badge-neutral"
-};
+// Same idea as the domain-grid favicon fallback (Escaneos page): a
+// deterministic color per domain so the list reads at a glance without a
+// live favicon fetch (and its broken-image edge cases) for every cited page.
+const AVATAR_COLORS = ["#2563EB", "#0d9488", "#d9772b", "#9333a8", "#C0392B", "#6D28D9", "#0B7285", "#C2410C"];
 
-function BrandMentioned({ value }: { value: boolean }) {
-  if (value) {
-    return (
-      <span className="badge badge-pos">
-        <Icon name="check" size={11} />
-        Sí
-      </span>
-    );
+function avatarColor(seed: string): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function avatarInitial(row: CitationRow): string {
+  const label = (row.domain || row.title || "?").replace(/^www\./, "");
+  return label.slice(0, 1).toUpperCase();
+}
+
+/** Splits a row into its displayable domain + path, preferring the real
+ * per-page URL when we have one (OpenAI) over the bare domain (Gemini,
+ * grounding-only — see aggregate-citations.ts's isRealDestinationUrl). */
+function pageDisplay(row: CitationRow): { domain: string; path: string } {
+  if (row.url) {
+    try {
+      const u = new URL(row.url);
+      const domain = u.hostname.replace(/^www\./, "");
+      const path = u.pathname === "/" ? "" : u.pathname;
+      return { domain, path };
+    } catch {
+      // fall through to the domain-only branch below
+    }
   }
-  return (
-    <span className="badge badge-neg">
-      <Icon name="info" size={11} />
-      No
-    </span>
-  );
+  return { domain: row.domain || row.title, path: "" };
+}
+
+function typeBadge(row: CitationRow): { label: string; className: string } {
+  if (row.category === "brand") return { label: "Tuya", className: "ty-own" };
+  if (row.category === "competitor") return { label: "Competidor", className: "ty-comp" };
+  const type = classifySourceType(row.domain);
+  const classByType = {
+    community: "ty-com",
+    encyclopedia: "ty-enc",
+    comparator: "ty-rev",
+    media: "ty-med",
+    unknown: "ty-unk"
+  } as const;
+  return { label: SOURCE_TYPE_LABEL[type], className: classByType[type] };
 }
 
 /**
- * Compact per-engine chips for a cited domain/URL — same visual language as
- * the "Motores" column in prompts-client.tsx (pill badge, meta.label on
- * meta.color; full engine name rather than a single-letter initial, per
- * founder review 2026-07-19 — an unlabeled colored letter read as
- * meaningless). Unlike that column, chips here are ALWAYS solid: a citation
- * from an engine either happened or it didn't, there's no "absent" state to
- * render hollow. Only engines that actually cited this domain appear —
- * Claude (no web search) simply never shows up here, its absence is never
- * asserted (docs/specs/engines-value-2.md §honesty rule).
+ * Shared expand-panel content: which prompts cited this page, and — the real
+ * "why was this cited" evidence — the model's actual answer to each one.
+ * Used by both tables on this screen (the full list and the opportunities
+ * shortlist), so clicking a row behaves identically in either place (founder
+ * request, 2026-08-01).
+ *
+ * Deduped by (provider, text): the same prompt can be answered by two
+ * engines with two different responses, and both are genuine evidence —
+ * deduping by text alone would silently drop one engine's answer.
  */
-function EngineChips({ engines }: { engines: CitationEngine[] }) {
-  if (engines.length === 0) return null;
+function PromptEvidenceList({ prompts, brand }: { prompts: CitationRow["prompts"]; brand: string }) {
+  const unique = Array.from(new Map(prompts.map((p) => [`${p.provider}::${p.text}`, p])).values());
+
+  if (unique.length === 0) {
+    return <div className="cit2-detail-empty">Sin prompts asociados.</div>;
+  }
+
   return (
-    <div style={{ display: "flex", gap: 4, flexWrap: "wrap", minWidth: 0 }}>
-      {engines.map((e) => {
-        const meta = getEngineMeta(e.provider);
-        return (
-          <span
-            key={e.provider}
-            title={`Citado por ${meta.label}: ${e.cited} ${e.cited === 1 ? "vez" : "veces"}`}
-            style={{
-              padding: "2px 8px",
-              borderRadius: 999,
-              fontSize: 10.5,
-              fontWeight: 700,
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              background: meta.color,
-              color: "#fff"
-            }}
-          >
-            {meta.label}
-          </span>
-        );
-      })}
-    </div>
+    <>
+      <div className="cit2-detail-lbl">Citada al responder estos prompts</div>
+      <ul className="cit2-detail-list">
+        {unique.map((p, i) => {
+          return (
+            <li key={i}>
+              <div className="cit2-detail-prompt">
+                <span>{p.text}</span>
+              </div>
+              {/* What THIS specific answer named — scoped to this one
+                  (prompt, provider) result, not the row-level union. Makes a
+                  row's "Cita a un competidor" claim checkable against the
+                  actual evidence right below it, instead of a row-wide
+                  label with no visible source (founder review, 2026-08-01:
+                  a claim with no attributable answer read as unsubstantiated).
+                  One pill PER name, not one joined-by-commas pill: a single
+                  `white-space: nowrap` pill listing five brands ran off the
+                  edge of the 320px opportunities rail — genuinely past the
+                  viewport, not just visually tight (caught in the ux-pilot's
+                  own search-filter evidence, 2026-08-02, a state the earlier
+                  row-expand capture happened not to reach). Separate pills
+                  wrap via the container's existing `flex-wrap`, which was
+                  already built for this shape. */}
+              {(p.competitors.length > 0 || p.otherBrands.length > 0) && (
+                <div className="cit2-detail-mentions">
+                  {p.competitors.map((name, ci) => (
+                    <span key={`comp-${ci}`} className="cit2-mtag comp">
+                      Menciona a {name}
+                    </span>
+                  ))}
+                  {p.otherBrands.map((name, oi) => (
+                    <span key={`oth-${oi}`} className="cit2-mtag oth">
+                      Menciona {name} (marca no trackeada)
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Same markdown-lite rendering as the prompts drawer (founder
+                  review, 2026-08-02): raw provider text carries literal
+                  `**bold**` / `* item` markdown, which read as noise as
+                  plain text. Same shared component, same raw text — just a
+                  smaller card here. */}
+              {p.rawResponseText && (
+                <div className="cit2-detail-evidence">
+                  <FormattedResponse text={p.rawResponseText} brand={brand} />
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
 
-function PromptGroupCard({
-  group,
+function CitationRowItem({
+  row,
   open,
-  onToggle
+  onToggle,
+  brandLabel
 }: {
-  group: PromptGroup;
+  row: CitationRow;
   open: boolean;
   onToggle: () => void;
+  brandLabel: string;
 }) {
+  const { domain, path } = pageDisplay(row);
+  const badge = typeBadge(row);
+  // "Otras webs" (ty-unk) is the default bucket for anything not curated in
+  // source-type.ts, and in real data it covers almost every third-party row —
+  // repeating it on every single line adds noise without adding information;
+  // the donut above already tells that aggregate story. Brand/competitor/
+  // classified types (community, comparator, media, encyclopedia) stay,
+  // since those ARE worth knowing per row (own UX review, 2026-08-02).
+  const showBadge = badge.className !== "ty-unk";
+
   return (
-    <div className={`cit-card${open ? " open" : ""}`}>
-      <div className="cit-row" onClick={onToggle}>
-        <div className="cit-urlcell">
-          <button type="button" className="cit-exp" aria-label={open ? "Contraer" : "Expandir"}>
-            {open ? (
-              <Icon name="chevDown" size={15} />
-            ) : (
-              <span style={{ display: "inline-flex", transform: "rotate(180deg)" }}>
-                <Icon name="chevronLeft" size={15} />
-              </span>
-            )}
-          </button>
-          <div style={{ minWidth: 0 }}>
-            <div className="cit-title">{group.promptText}</div>
-            <div className="cit-url" style={{ gap: 6 }}>
-              <Icon name="layers" size={11} />
-              {group.topic ?? "Sin topic asignado"}
-            </div>
-          </div>
-        </div>
-        <div className="c">
-          <BrandMentioned value={group.brandMentioned} />
-        </div>
-        <div>
-          {group.citedUrls > 0 ? (
-            <span style={{ fontSize: 12.5, color: "var(--ink-3)", fontWeight: 600 }}>
-              {group.citedUrls} {group.citedUrls === 1 ? "URL" : "URLs"}
-            </span>
-          ) : (
-            <span style={{ fontSize: 12, color: "var(--ink-4)" }}>Sin citas</span>
-          )}
-        </div>
-        <div className="num">
-          <span className="tnum" style={{ fontWeight: 800, fontSize: 15 }}>
-            {group.totalCites}
+    <div className={`cit2-row${open ? " open" : ""}`}>
+      <button type="button" className="cit2-rowmain" onClick={onToggle} aria-expanded={open}>
+        <span className="cit2-fav" style={{ background: avatarColor(row.domain || row.title) }}>
+          {avatarInitial(row)}
+        </span>
+        <span className="cit2-urlcell">
+          <span className="cit2-u">
+            <b>{domain}</b>
+            {path}
           </span>
-        </div>
-      </div>
-      {open && (
-        <div className="cit-detail">
-          {group.citations.length > 0 ? (
-            <>
-              <div className="cit-detail-head">
-                <span>URL</span>
-                <span>Motores</span>
-                <span>Categoría</span>
-                <span className="num">Citas</span>
-              </div>
-              {group.citations.map((c, i) => (
-                <div className="cit-prow" key={i}>
-                  <div className="cit-pq" style={{ minWidth: 0 }}>
-                    <Icon name="link" size={13} />
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap"
-                      }}
-                    >
-                      {c.title}
-                      {c.url && c.url !== c.title && (
-                        <span style={{ color: "var(--ink-4)", marginLeft: 6 }}>{c.url}</span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="cit-prow-meta">
-                    {/* "Motores" text label is invisible on desktop (the
-                        .cit-detail-head column header already says it) and
-                        only shows on mobile, where that header row is
-                        hidden — without it the colored engine chip reads as
-                        an unexplained icon (founder review, 2026-07-19). */}
-                    {c.engines.length > 0 && <span className="cit-prow-meta-label">Motores</span>}
-                    <EngineChips engines={c.engines} />
-                    {/* "Citado por" is invisible on desktop (the column
-                        header already says "Categoría") and only shows on
-                        mobile, where that header is hidden — without it a
-                        bare "Otra fuente"/"Competidor" badge doesn't say
-                        what it's describing (founder review, 2026-07-19). */}
-                    <span className="cit-prow-meta-label">Citado por</span>
-                    <span className={CATEGORY_BADGE[c.category]}>{CATEGORY_LABEL[c.category]}</span>
-                    <span className="num tnum" style={{ fontWeight: 700 }}>
-                      {c.cited} {c.cited === 1 ? "cita" : "citas"}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </>
-          ) : (
-            <div style={{ padding: "14px 4px", color: "var(--ink-4)", fontSize: 12.5 }}>
-              La IA no citó ninguna fuente al responder este prompt.
-            </div>
+          {showBadge && (
+            <span className="cit2-meta">
+              <span className={`cit2-tchip ${badge.className}`}>{badge.label}</span>
+            </span>
           )}
+        </span>
+        <span className="cit2-cites">
+          {row.cited}
+          <small>{row.cited === 1 ? "cita" : "citas"}</small>
+        </span>
+        <span className="cit2-chev" style={open ? undefined : { transform: "rotate(180deg)" }}>
+          <Icon name={open ? "chevDown" : "chevronLeft"} size={15} />
+        </span>
+      </button>
+      {open && (
+        <div className="cit2-detail">
+          <PromptEvidenceList prompts={row.prompts} brand={brandLabel} />
         </div>
       )}
     </div>
   );
 }
 
+function ImpactBar({ breakdown, brandLabel }: { breakdown: ImpactBreakdown; brandLabel: string }) {
+  // Summed over every bucket present on the object, NOT a hand-written list of
+  // keys: the hand-written version silently went stale the moment a sixth
+  // bucket (`otherBrands`) was added, and shipped a bar reading "100%" and
+  // "267%" over a total that excluded it (caught by the ux-pilot design
+  // checklist, 2026-08-01). Adding a bucket must never again require
+  // remembering to update a second place.
+  const total = Object.values(breakdown).reduce((sum, n) => sum + n, 0);
+  const pct = (n: number) => (total > 0 ? (n / total) * 100 : 0);
+
+  // Every bucket gets an explicit legend line when it has citations — a
+  // dominant bucket (in real scan data, usually "Neutras": third-party
+  // pages that mention neither the brand nor a tracked competitor) must
+  // never render as an unexplained block of color (found via ux-pilot
+  // reviewing a real preview, 2026-08-01: 73% of a project's citations
+  // fell in "neutral" and the bar shipped with only 2 of 5 buckets
+  // explained).
+  // Labels + tooltips reworded 2026-08-01 (founder review): "Terceros que
+  // mencionan a un rival y no a ti" and "Terceros que mencionan otras
+  // marcas" read as the same bucket at a glance. The distinction is real —
+  // one is a TRACKED competitor, the other is any other brand the AI
+  // happened to name — but only the tooltip actually explains it; the
+  // label alone wasn't carrying that weight.
+  const segments: Array<{ key: keyof ImpactBreakdown; className: string; label: string; tooltip: string }> = [
+    {
+      key: "own",
+      className: "s-own",
+      label: `Páginas de ${brandLabel}`,
+      tooltip: `Páginas de tu propio dominio (${brandLabel}) citadas por la IA.`
+    },
+    {
+      key: "favorable",
+      className: "s-fav",
+      label: "Terceros que te mencionan",
+      tooltip: "La respuesta que citó esta página también mencionó tu marca."
+    },
+    {
+      key: "adverse",
+      className: "s-adv",
+      label: "Terceros que mencionan a un competidor tuyo",
+      tooltip:
+        "La respuesta mencionó a uno de los competidores que trackeas, sin mencionar tu marca — distinto de 'otras marcas', que no son competidores que sigas."
+    },
+    {
+      key: "otherBrands",
+      className: "s-oth",
+      label: "Terceros que mencionan otra marca",
+      tooltip:
+        "La respuesta mencionó alguna marca que no es la tuya ni uno de tus competidores trackeados — puede ser un competidor real que aún no sigues, u otra empresa sin relación."
+    },
+    {
+      key: "competitor",
+      className: "s-comp",
+      label: "Páginas de un competidor",
+      tooltip: "La propia página citada pertenece al dominio de uno de tus competidores trackeados."
+    },
+    {
+      key: "neutral",
+      className: "s-neu",
+      label: "Terceros que no mencionan ninguna marca",
+      tooltip: "La respuesta que citó esta página no mencionó tu marca ni ninguna otra marca reconocible."
+    }
+  ];
+  const present = segments.filter((s) => breakdown[s.key] > 0);
+
+  return (
+    <div className="cit2-block">
+      <div className="cit2-blk-t">
+        Impacto de {total} {total === 1 ? "cita" : "citas"}
+      </div>
+      <div className="cit2-split">
+        {present.map((s) => (
+          <div key={s.key} className={s.className} style={{ flex: pct(breakdown[s.key]) }}>
+            {pct(breakdown[s.key]) >= 9 ? `${Math.round(pct(breakdown[s.key]))}%` : ""}
+          </div>
+        ))}
+      </div>
+      <div className="cit2-split-key">
+        {present.map((s) => (
+          <span key={s.key}>
+            <i className={s.className} />
+            {s.label}
+            <InfoTip text={s.tooltip} />
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SourceDonut({ breakdown }: { breakdown: SourceTypeSlice[] }) {
+  const colorClass = (type: SourceTypeSlice["type"]) =>
+    type === "own"
+      ? "own"
+      : type === "competitor"
+        ? "comp"
+        : type === "community"
+          ? "com"
+          : type === "comparator"
+            ? "rev"
+            : type === "media"
+              ? "med"
+              : type === "encyclopedia"
+                ? "enc"
+                : "unk";
+
+  // "Otras webs" (unclassified) is deliberately excluded from this chart —
+  // founder decision, 2026-08-01: the donut exists to give a read on WHICH
+  // recognizable source families cite you, not to account for every last
+  // citation. Recomputed as a share of the CLASSIFIED subset (not of all
+  // citations), so the wedges always sum to 100% and stay legible even when
+  // most of the real domain list is long-tail and unrecognized — an honest
+  // relative read, not a claim about the true share of total citations.
+  const classified = breakdown.filter((s) => s.type !== "unknown" && s.cited > 0);
+  const classifiedTotal = classified.reduce((sum, s) => sum + s.cited, 0);
+  if (classifiedTotal === 0) return null;
+
+  const withColorVar = classified
+    .map((s) => ({ ...s, colorClass: colorClass(s.type), pct: Math.round((s.cited / classifiedTotal) * 100) }))
+    .sort((a, b) => b.cited - a.cited);
+
+  let acc = 0;
+  const stops = withColorVar
+    .map((s) => {
+      const from = acc;
+      acc += s.pct;
+      return `var(--cit-${s.colorClass}) ${from}% ${acc}%`;
+    })
+    .join(", ");
+
+  return (
+    <div className="cit2-block">
+      <div className="cit2-blk-t">Qué tipo de fuente te cita</div>
+      <div className="cit2-donut-wrap">
+        <div
+          className="cit2-donut"
+          style={{ background: `conic-gradient(${stops})` }}
+          role="img"
+          aria-label="Reparto de citas por tipo de fuente, entre las fuentes reconocidas"
+        />
+        <div className="cit2-donut-key">
+          {withColorVar.map((s) => (
+            <span key={s.type}>
+              <i className={s.colorClass} />
+              {s.label} <b>{s.pct}%</b>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const OPP_PAGE_SIZE = 5;
+
+function OpportunitiesBlock({ rows, brandLabel }: { rows: CitationRow[]; brandLabel: string }) {
+  const [page, setPage] = useState(0);
+  const [open, setOpen] = useState<string | null>(null);
+  const pageCount = Math.max(1, Math.ceil(rows.length / OPP_PAGE_SIZE));
+  // Clamp rather than reset to 0: a page that's now out of range (e.g. the
+  // underlying row set shrank) falls back to the last real page instead of
+  // silently jumping the reader back to the top.
+  const currentPage = Math.min(page, pageCount - 1);
+  const visible = rows.slice(currentPage * OPP_PAGE_SIZE, currentPage * OPP_PAGE_SIZE + OPP_PAGE_SIZE);
+
+  return (
+    <div className="cit2-block cit2-opps">
+      {/* The two lists on this screen were reported as indistinguishable
+          (founder, 2026-08-01). Both now carry an explicit eyebrow saying
+          which subset they show, so "a shortlist of outreach targets" can't
+          be mistaken for "the full list of cited pages" below it. */}
+      <div className="cit2-blk-eyebrow">Oportunidades · subconjunto</div>
+      <div className="cit2-blk-t">
+        {rows.length > 0
+          ? `${rows.length} ${rows.length === 1 ? "fuente cita" : "fuentes citan"} a un rival y no a ${brandLabel}`
+          : "Sin oportunidades pendientes"}
+      </div>
+      {rows.length === 0 ? (
+        <div className="cit2-opps-empty">
+          Ninguna fuente de terceros cita a un competidor sin citar también a {brandLabel}.
+        </div>
+      ) : (
+        <>
+          <div className="cit2-opps-list">
+            {/* Same click-to-expand behavior as the full list below (founder
+                request, 2026-08-01): a row here is a real CitationRow, so it
+                carries the same prompts/evidence — no reason the two tables
+                should behave differently. */}
+            {visible.map((row) => {
+              const isOpen = open === row.id;
+              return (
+                <div className={`cit2-opp-item${isOpen ? " open" : ""}`} key={row.id}>
+                  <button
+                    type="button"
+                    className="cit2-opp-row"
+                    onClick={() => setOpen((o) => (o === row.id ? null : row.id))}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="cit2-fav sm" style={{ background: avatarColor(row.domain) }}>
+                      {avatarInitial(row)}
+                    </span>
+                    <span className="cit2-opp-body">
+                      <span className="cit2-opp-domain">{row.domain}</span>
+                      <span className="cit2-opp-why">
+                        Cita a <b>{row.competitors.slice(0, 2).join(", ")}</b> ·{" "}
+                        {row.engines.length} {row.engines.length === 1 ? "motor" : "motores"}
+                      </span>
+                    </span>
+                    <span className="cit2-chev" style={isOpen ? undefined : { transform: "rotate(180deg)" }}>
+                      <Icon name={isOpen ? "chevDown" : "chevronLeft"} size={14} />
+                    </span>
+                  </button>
+                  {isOpen && (
+                    <div className="cit2-detail">
+                      <PromptEvidenceList prompts={row.prompts} brand={brandLabel} />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {/* Paginated, not "expand all in place" (founder review,
+              2026-08-02): a project with many opportunities used to dump
+              every row into the DOM at once with no height limit, growing
+              the rail past the fold indefinitely. Five at a time keeps the
+              rail a predictable size regardless of how long the list is. */}
+          {pageCount > 1 && (
+            <div className="cit2-opp-pager">
+              <button
+                type="button"
+                className="cit2-btn-mini"
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={currentPage === 0}
+              >
+                <Icon name="chevronLeft" size={13} />
+                Anterior
+              </button>
+              <span className="cit2-opp-pager-status">
+                Página {currentPage + 1} de {pageCount}
+              </span>
+              <button
+                type="button"
+                className="cit2-btn-mini"
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={currentPage === pageCount - 1}
+              >
+                Siguiente
+                <Icon name="chevRight" size={13} />
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 export function CitationsClient({
-  promptGroups,
+  citationRows,
+  opportunityRows,
+  impactBreakdown,
+  sourceTypeBreakdown,
   totalUrls,
   totalCited,
   yours,
-  opportunities,
-  engineTotals,
-  citationScore,
+  citationRateAnyDomain,
   brandLabel
 }: {
-  promptGroups: PromptGroup[];
+  citationRows: CitationRow[];
+  opportunityRows: CitationRow[];
+  impactBreakdown: ImpactBreakdown;
+  sourceTypeBreakdown: SourceTypeSlice[];
   totalUrls: number;
   totalCited: number;
   yours: number;
-  opportunities: number;
-  engineTotals: EngineTotal[];
-  citationScore: number | null;
+  citationRateAnyDomain: number | null;
   brandLabel: string;
 }) {
-  const [open, setOpen] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [topicFilter, setTopicFilter] = useState("all");
+  const [tab, setTab] = useState<"all" | CitationRow["category"]>("all");
+  const [open, setOpen] = useState<string | null>(null);
 
-  const topics = Array.from(new Set(promptGroups.map((g) => g.topic).filter((t): t is string => Boolean(t))));
+  const competitorCount = citationRows.filter((r) => r.category === "competitor").length;
+  const thirdPartyCount = totalUrls - yours - competitorCount;
+  const tabCounts: Record<"all" | CitationRow["category"], number> = {
+    all: totalUrls,
+    brand: yours,
+    competitor: competitorCount,
+    third_party: thirdPartyCount
+  };
 
-  const filtered = promptGroups.filter((g) => {
-    if (topicFilter !== "all" && g.topic !== topicFilter) return false;
+  const filtered = citationRows.filter((r) => {
+    if (tab !== "all" && r.category !== tab) return false;
     if (q) {
       const needle = q.toLowerCase();
-      const matchesPrompt = g.promptText.toLowerCase().includes(needle);
-      const matchesCitation = g.citations.some(
-        (c) => c.title.toLowerCase().includes(needle) || c.domain.toLowerCase().includes(needle)
-      );
-      if (!matchesPrompt && !matchesCitation) return false;
+      const hay = `${r.domain} ${r.title} ${r.url}`.toLowerCase();
+      if (!hay.includes(needle)) return false;
     }
     return true;
   });
 
   return (
-    <>
-      {/* Summary banner */}
-      <div className="summary mt8" style={{ alignItems: "center" }}>
-        <div className="summary-ico">
-          <Icon name="cite" size={20} />
+    <div className="cit2-scope cit2-page">
+      {/* KPI strip — deliberately three metrics, matching the approved
+          mockup. An earlier build shipped six here plus a per-engine line;
+          the founder cut it back (2026-08-01): "Puntuación de citas" already
+          lives on Visión general, "Páginas tuyas citadas" was near-identical
+          to "Citas propias" in every real scan, and "Dominios únicos" is
+          answered better by the list's own tab counts. */}
+      <div className="cit2-kpis">
+        <div>
+          <div className="cit2-k">
+            Respuestas con cita
+            <InfoTip text="% de respuestas de motores con búsqueda real (Gemini, ChatGPT) que citaron alguna fuente al responder, sea cual sea el dominio citado." />
+          </div>
+          <div className="cit2-v blue">
+            {citationRateAnyDomain !== null ? Math.round(citationRateAnyDomain) : "—"}
+            {citationRateAnyDomain !== null && <small>%</small>}
+          </div>
         </div>
-        <div className="summary-txt" style={{ flex: 1 }}>
-          GenScore encontró <b>{totalUrls}</b> {totalUrls === 1 ? "URL distinta" : "URLs distintas"}{" "}
-          citadas por la IA al responder tus prompts (<b>{totalCited}</b>{" "}
-          {totalCited === 1 ? "cita" : "citas"} en total).
-          {totalUrls > 0 && (
-            <>
-              {" "}
-              {yours === 0 ? (
-                <>
-                  <span className="hl-neg">Ninguna es tuya</span> — todas refuerzan a competidores
-                  o a otras fuentes.
-                </>
-              ) : yours === totalUrls ? (
-                <>
-                  <span className="hl-pos">Todas son tuyas</span>: dominas las fuentes que la IA
-                  usa para responder.
-                </>
-              ) : (
-                <>
-                  Solo <span className="hl-neg">{yours} {yours === 1 ? "es tuya" : "son tuyas"}</span>;
-                  {" "}el resto refuerzan a competidores o a otras fuentes.
-                </>
-              )}
-            </>
-          )}
-          {citationScore !== null && (
-            <> Tu puntuación de citas es <b>{citationScore}/100</b>.</>
-          )}
-          {opportunities > 0 && (
-            <>
-              {" "}Hay <b>{opportunities} {opportunities === 1 ? "fuente" : "fuentes"}</b> que citan a
-              un rival y no a {brandLabel}: tu lista de contactos para empezar a aparecer.
-            </>
-          )}
-          {engineTotals.length > 0 && (
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 6 }}>
-              {engineTotals.map((e) => {
-                const meta = getEngineMeta(e.provider);
+        <div>
+          <div className="cit2-k">
+            Citas totales
+            <InfoTip text="Cuántas veces, en total, la IA citó alguna página al responder los prompts escaneados — sumando todas las páginas citadas." />
+          </div>
+          <div className="cit2-v">{totalCited}</div>
+        </div>
+        <div>
+          <div className="cit2-k">
+            Citas propias
+            <InfoTip text={`De esas citas totales, cuántas apuntan a una página de ${brandLabel}.`} />
+          </div>
+          <div className="cit2-v">{impactBreakdown.own}</div>
+        </div>
+      </div>
+
+      {/* "Citas propias: 0" is the most important number on this screen and,
+          on its own, a dead end — it states a problem and offers no next
+          step (own UX review, 2026-08-02). This line only appears when the
+          count is actually 0, and says nothing the data doesn't support. */}
+      {totalCited > 0 && impactBreakdown.own === 0 && (
+        <div className="cit2-zero">
+          <Icon name="info" size={15} />
+          <span>
+            Ninguna de las {totalCited} citas apunta a {brandLabel}.{" "}
+            {opportunityRows.length > 0 ? (
+              <>
+                Las <b>{opportunityRows.length} fuentes</b> de «Oportunidades» son terceros que la IA ya
+                cita y donde todavía no apareces — es por donde se empieza.
+              </>
+            ) : (
+              <>
+                Revisa en <b>Auditoría web</b> si tus páginas son accesibles y citables para los motores
+                de IA.
+              </>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* Impact split and source-type donut sit side by side from 900px:
+          both answer "how are the citations distributed", so as two stacked
+          full-width cards they read as competing blocks rather than one
+          section (own UX review, 2026-08-02). */}
+      <div className="cit2-dist">
+        <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
+        <SourceDonut breakdown={sourceTypeBreakdown} />
+      </div>
+
+      <div className="cit2-cols">
+        <div className="cit2-rail">
+          <OpportunitiesBlock rows={opportunityRows} brandLabel={brandLabel} />
+        </div>
+        <div className="cit2-main">
+          <div className="cit2-listtitle">
+            <div className="cit2-blk-eyebrow">Todas las fuentes · lista completa</div>
+            <div className="cit2-blk-t">
+              {totalUrls} {totalUrls === 1 ? "página citada" : "páginas citadas"} en los prompts escaneados
+            </div>
+            {/* The list has always been sorted by citation count, but nothing
+                on screen said so — a reader could reasonably assume it was
+                chronological or alphabetical. Stated here because the table's
+                own header row (`.cit2-listhead`) is `display: none`. */}
+            {totalUrls > 1 && <div className="cit2-listhint">De más a menos citada</div>}
+          </div>
+          <div className="cit2-toolbar">
+            <div className="cit2-search">
+              <Icon name="search" size={15} />
+              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar página o dominio…" />
+            </div>
+            <div className="cit2-tabs">
+              {/* A tab whose count is 0 is disabled rather than hidden: the
+                  count itself is information worth keeping ("you have no
+                  pages of your own here" is the point of this screen), but
+                  clicking it only ever led to an empty list — a dead end
+                  dressed as a filter. */}
+              {(Object.keys(CATEGORY_TAB_LABEL) as Array<"all" | CitationRow["category"]>).map((key) => {
+                const empty = tabCounts[key] === 0;
                 return (
-                  <span
-                    key={e.provider}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      fontSize: 12,
-                      color: "var(--ink-3)",
-                      fontWeight: 600
-                    }}
+                  <button
+                    key={key}
+                    type="button"
+                    className={`cit2-tab${tab === key ? " on" : ""}${empty ? " empty" : ""}`}
+                    onClick={() => setTab(key)}
+                    disabled={empty}
+                    title={empty ? "Ninguna página en esta categoría" : undefined}
                   >
-                    <span
-                      style={{
-                        width: 16,
-                        height: 16,
-                        borderRadius: 4,
-                        background: meta.color,
-                        color: "#fff",
-                        fontSize: 9,
-                        fontWeight: 700,
-                        display: "grid",
-                        placeItems: "center",
-                        flexShrink: 0
-                      }}
-                    >
-                      {meta.short}
-                    </span>
-                    {meta.label} citó {e.domains} {e.domains === 1 ? "fuente" : "fuentes"}
-                  </span>
+                    {CATEGORY_TAB_LABEL[key]} {tabCounts[key]}
+                  </button>
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Toolbar */}
-      <div className="pr-toolbar" style={{ marginTop: 16 }}>
-        <div className="pr-search">
-          <Icon name="search" size={15} />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar por prompt, dominio o URL…"
-          />
-        </div>
-        <select
-          className="cit-select"
-          value={topicFilter}
-          onChange={(e) => setTopicFilter(e.target.value)}
-        >
-          <option value="all">Todos los topics</option>
-          {topics.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-        <div style={{ marginLeft: "auto" }} />
-        <span style={{ fontSize: 12.5, color: "var(--ink-4)", fontWeight: 600 }}>
-          {filtered.length} {filtered.length === 1 ? "prompt" : "prompts"}
-        </span>
-      </div>
-
-      {/* Table */}
-      <div className="card">
-        <div className="cit-head">
-          <span>Prompt</span>
-          <span className="c" style={{ display: "inline-flex", alignItems: "center" }}>
-            Marca mencionada
-            <InfoTip text="Que la IA nombre tu marca no depende de tus URLs citadas — puede venir solo de lo que el modelo ya sabe de ella. Las columnas de citas, a la derecha, son la señal que sí depende de contenido tuyo que la IA usó como fuente." />
-          </span>
-          <span>URLs citadas</span>
-          <span className="num">Citas</span>
-        </div>
-        {filtered.map((group) => (
-          <PromptGroupCard
-            key={group.id}
-            group={group}
-            open={open === group.id}
-            onToggle={() => setOpen((o) => (o === group.id ? null : group.id))}
-          />
-        ))}
-        {filtered.length === 0 && (
-          <div style={{ padding: 36, textAlign: "center", color: "var(--ink-4)", fontSize: 13 }}>
-            No hay prompts con estos filtros.
           </div>
-        )}
+          {/* The search box narrowed the list silently — no confirmation of
+              how many of the 32 rows actually matched (founder review,
+              2026-08-02: "Escribes algo y la lista se acorta sin confirmar
+              cuántas quedan"). Only shown once a filter is actually active;
+              at rest the list title above already states the full count. */}
+          {filtered.length !== citationRows.length && (
+            <div className="cit2-filtercount">
+              {filtered.length} de {citationRows.length} {citationRows.length === 1 ? "página" : "páginas"}
+            </div>
+          )}
+
+          <div className="cit2-block cit2-list">
+            <div className="cit2-listhead">
+              <span>Página citada</span>
+              <span>Citas</span>
+            </div>
+            {filtered.map((row) => (
+              <CitationRowItem
+                key={row.id}
+                row={row}
+                open={open === row.id}
+                onToggle={() => setOpen((o) => (o === row.id ? null : row.id))}
+                brandLabel={brandLabel}
+              />
+            ))}
+            {filtered.length === 0 && <div className="cit2-list-empty">No hay páginas con estos filtros.</div>}
+          </div>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

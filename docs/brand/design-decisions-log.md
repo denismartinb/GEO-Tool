@@ -291,8 +291,13 @@ founder con captura real de la pantalla estirada):**
 Pendiente / roto conocido:
 - Unificar el ancho de todas las páginas de consola (`.page`/1320px) con
   el sistema `.ov2-scope`/`.pr2-page` (1200/1280px) — señalado en
-  PROMPTS-DESKTOP-2 arriba, sin fecha, pendiente de que el fundador
-  decida el ancho estándar final.
+  PROMPTS-DESKTOP-2 arriba. **Decidido en CITATIONS-REDESIGN-1 (ver §8):
+  640/1200/1280px (los valores exactos de `.ov2-scope`/`.pr2-page`) es
+  ahora el ancho estándar oficial para toda pantalla de consola nueva o
+  rediseñada** — deja de ser una elección por pantalla. Migrar las
+  pantallas que aún no lo usan (Competidores, Recomendaciones, Auditoría
+  web, Escaneos) no se hace retroactivamente en este PR; cada una migra
+  cuando le toque su propio rediseño.
 
 ---
 
@@ -387,6 +392,412 @@ Pendiente / roto conocido:
   tiene buzón); sigue siendo smoke manual del fundador.
 
 Referencias: `docs/agentic-user-pilot.md`, `.claude/agents/ux-pilot.md`.
+
+---
+
+## 8. Página de Páginas citadas (CITATIONS-REDESIGN-1, 2026-08-01)
+
+**Estado: implementado, Fase A (Task Intake aprobado el mismo día).**
+
+**Origen:** auditoría de código encontró que la pantalla calculaba
+`citationRows` (el ranking real de páginas citadas, con motor/categoría/
+prompts) y `opportunityRows` (fuentes de terceros que citan a un rival y no
+a la marca) enteros en el servidor y **nunca los pasaba al cliente** — la
+UI solo mostraba una tabla agrupada por prompt, y del banner de
+oportunidades únicamente se usaba `.length`. El fundador aportó además el
+artículo de Semrush *"What Are AI Citations & How Do I Get Them?"* (30 jul
+2025), cuya distinción **primera parte vs. terceros** (y si esos terceros
+mencionan la marca favorablemente o a un rival en su lugar — su informe
+"Source Impact Analysis") se adoptó como el marco de la sección de
+"impacto", en vez de un esquema propio.
+
+Decisiones finales:
+
+- **Ancho de consola: adopta `.cit2-scope`/`.cit2-page`, los mismos valores
+  exactos que `.ov2-scope`/`.pr2-page`** (460px base, 640px ≥900px, 1200px
+  ≥1200px, 1280px ≥1600px) — mismo mecanismo de wrapper con remapeo de
+  variables CSS. Por decisión explícita del fundador, **este ancho pasa a
+  ser el estándar de toda pantalla de consola futura**, no una elección por
+  pantalla (ver nota en §5 "Pendiente/roto conocido").
+- **Tira de KPIs compacta**, una sola fila de seis celdas sin tarjeta
+  individual por métrica (descartado un primer borrador con tarjetas
+  grandes tipo `.ov2-kpi`, por pedir del fundador "más compacta"):
+  Respuestas con cita, Citas totales, Citas propias, Páginas tuyas citadas,
+  Dominios únicos, Puntuación de citas. "Respuestas con cita" rescata
+  `citation_score_any_domain` (`run_scores.details_json`), que ya se
+  calculaba y no se mostraba en ninguna pantalla.
+- **Barra de "Impacto"**: tuyas / terceros a favor / terceros en contra /
+  competidores / neutras, sobre el total de citas (no de páginas) —
+  implementación pura y testeada en `aggregateCitations` (`impactBreakdown`,
+  `lib/citations/aggregate-citations.ts`). "A favor"/"en contra" se derivan
+  del `brandMentioned`/`competitors[]` que la fila ya tenía; es una
+  clasificación a nivel de página (todas las citas de esa página caen en un
+  único cubo), no por cada cita individual — documentado así en el propio
+  tipo `ImpactBreakdown` para no reclamar más precisión de la que hay.
+- **Donut de tipo de fuente**: clasificador determinista y acotado
+  (`lib/citations/source-type.ts`, `classifySourceType`) — lista curada de
+  dominios conocidos (Reddit/Quora/StackOverflow → comunidad; Wikipedia →
+  enciclopedia; Trustpilot/G2/Rastreator/Kelisto… → comparador; Xataka/
+  El País/ABC… → medio). Todo lo no reconocido cae en **"Sin clasificar"**,
+  visible como su propio porcentaje — nunca repartido a ojo entre las
+  demás categorías ni adivinado. Deliberadamente no exhaustivo: se amplía
+  con datos reales, no se intenta cubrir todo de entrada.
+- **Bloque de Oportunidades rescatado**: rescata `opportunityRows`
+  (fuentes de terceros que citan a un rival y no a la marca), antes
+  descartado tras calcularse. Enlaza a Auditoría web (`/web-audit`) al
+  final — primer puente real entre las dos pantallas de diagnóstico, sin
+  cruzar datos entre ellas todavía (eso sería su propia fase).
+- **Fix de datos**: `resolveCitation` vaciaba la URL de *toda* cita
+  `source: "grounding"` — una regla escrita para el redirect de Vertex de
+  Gemini que también se llevaba por delante las URLs reales de ChatGPT
+  (`url_citation`, ya la página final, nunca un redirect). Ahora se
+  distingue por host: si la URL de la cita pertenece de verdad al dominio
+  resuelto, se conserva y se usa como clave de deduplicación por página
+  (como ya hacían las citas inline); si no (el redirect de Gemini), sigue
+  vaciándose y deduplicando por dominio, sin cambio de comportamiento ahí.
+- **Estado vacío reescrito** ("Este escaneo respondió sin citar fuentes"):
+  el copy anterior ("Sin citas detectadas") leía como fallo del producto.
+  Que un LLM responda desde su conocimiento preentrenado sin consultar la
+  web es comportamiento normal, no un error — el artículo de Semrush lo
+  documenta explícitamente. El copy ahora lo dice así.
+- **Fila de página expandible**: al tocar una fila se listan los prompts
+  (deduplicados) que la citaron — sustituye a la tabla agrupada por prompt
+  que era la vista principal antes de este PR.
+- **Avatar de dominio**: inicial sobre color determinista por hash del
+  dominio (mismo criterio que el fallback de favicon del grid de dominios
+  en Escaneos), no un fetch en vivo de favicon — evita el estado roto de
+  una imagen que no carga para un dominio arbitrario citado por la IA.
+
+Descartado explícitamente (para no reabrirlo sin motivo nuevo):
+- **Gráfico de tendencia de cuota de citas** — estaba en el primer borrador
+  (alternativa "C" del artifact de exploración) pero necesita histórico
+  multi-escaneo y sus propios estados vacíos (no fiable con &lt;5 escaneos,
+  mismo umbral que la banda de madurez de datos, DATA-MATURITY-1). Movido a
+  **CITATIONS-TREND-1**, fase separada, todavía no implementada.
+- **Persistir la página exacta de Gemini** (hoy solo se resuelve y guarda
+  el dominio, aunque el pipeline sí resuelve la URL final antes de
+  descartarla) — cambio en `lib/scan/extraction.ts`, fuera de esta fase
+  por tocar el pipeline de escaneo; solo aplicaría a escaneos futuros.
+
+**Revisión del fundador sobre datos reales (2026-08-01, movistar.es).** Tras
+ver la pantalla con un escaneo real, correcciones aplicadas en el mismo PR:
+
+- **Tira de KPIs: de 6 métricas a 3.** El mockup aprobado tenía 3; la
+  implementación había subido a 6 (más una línea de totales por motor) sin
+  pedirlo — deriva de alcance, señalada explícitamente por el fundador. Se
+  quedan **Respuestas con cita · Citas totales · Citas propias**. Retiradas:
+  *Puntuación de citas* (ya vive en Visión general, duplicarla aquí confunde),
+  *Páginas tuyas citadas* (numéricamente casi idéntica a "Citas propias" en
+  todos los escaneos reales) y *Dominios únicos* (los contadores de las
+  pestañas de la lista ya responden eso mejor).
+- **Retirada la línea "Gemini citó N fuentes · ChatGPT citó M"** — no estaba
+  en el diseño aprobado.
+- **Bucket "neutras" partido en dos, usando `other_brands_mentioned`**
+  (campo que ya existía en `lib/extraction/schema.ts`, poblado por la
+  extracción y hasta ahora sin usar en esta pantalla): "Terceros que
+  mencionan otras marcas" (la respuesta nombró alguna marca, solo que no
+  trackeada) vs. "Terceros que no mencionan ninguna marca". El fundador pidió
+  renombrar el bucket a "otros competidores"; se implementó como "otras
+  marcas" porque es lo que el dato afirma de verdad — un competidor no
+  trackeado no está verificado como competidor. Un competidor **trackeado**
+  siempre gana sobre este bucket (test 13), así que nunca hay doble conteo.
+- **"Sin clasificar" → "Otras webs"** y lista curada de dominios ampliada de
+  ~30 a ~90 entradas (medios españoles e internacionales, comparadores,
+  redes/comunidades). El fundador reportó un 55% "Sin clasificar" que "da muy
+  mala imagen": el problema era mitad cobertura, mitad etiqueta — la etiqueta
+  sugería fallo del producto cuando describe un grupo real de long tail. La
+  lista sigue siendo deliberadamente no exhaustiva y lo no reconocido nunca se
+  adivina.
+- **Eyebrow en las dos listas** (`.cit2-blk-eyebrow`): "Oportunidades ·
+  subconjunto" y "Todas las fuentes · lista completa". El fundador no
+  distinguía qué era cada tabla porque tenían formatos distintos y ningún
+  rótulo que dijera qué subconjunto mostraban.
+
+**Decisión final sobre el donut (2026-08-01):** el fundador zanjó la pregunta
+abierta ("Otras webs 88%" hacía el donut casi inútil) — **"Otras webs" se
+retira del donut por completo**, no se oculta el bloque cuando la cobertura
+es baja. Los porcentajes restantes se recalculan como cuota del subconjunto
+**clasificado**, no del total de citas, así que las porciones siempre suman
+100% y el gráfico se mantiene legible aunque la mayoría de dominios reales
+sea long tail sin reconocer. Framing explícito del fundador: "se trata de
+dar un insight al usuario, no pasa nada porque no sea un dato exacto" — una
+simplificación deliberada y aprobada por producto, no una imprecisión
+colada. `sourceTypeBreakdown` (la agregación pura, con "unknown" incluido)
+no cambia — el recorte es solo de presentación en `SourceDonut`. Si no queda
+nada clasificado (0 fuentes reconocidas), el bloque entero se oculta en vez
+de mostrar un donut vacío.
+
+**Segunda revisión del fundador (2026-08-01, captura adicional).** Dos
+cambios más, mismo PR:
+
+- **Copy**: "N páginas citadas en el último escaneo" → "N páginas citadas en
+  los prompts escaneados" — más preciso sobre qué agrega el número.
+- **Las dos tablas ahora se comportan igual**: hasta esta revisión, solo la
+  lista completa era expandible (mostraba los prompts que citaron esa
+  página al hacer click); el bloque de Oportunidades era estático. Ahora
+  ambas filas son botones que expanden el mismo panel de detalle
+  (`PromptEvidenceList`, componente compartido). Además, el panel pasa de
+  listar solo el texto del prompt a mostrar **la evidencia real**: la
+  respuesta completa del modelo (`scan_prompt_results.raw_response_text`,
+  seleccionada ahora en `citations/page.tsx` y propagada a través de
+  `aggregateCitations` en `CitationRow.prompts[].rawResponseText`), no un
+  fragmento inventado. Deduplicado por (motor, texto del prompt) — el mismo
+  prompt respondido por dos motores distintos son dos evidencias reales
+  distintas, no una sola.
+
+**Gate reforzado a raíz de esta revisión:** `.claude/agents/ux-pilot.md` gana
+una **checklist de fidelidad de diseño** de 6 puntos (¿se añadió algo no
+aprobado? ¿falta algo? ¿hay etiquetas que un usuario nuevo no sabría definir?
+¿métricas casi duplicadas? ¿algún valor real que se lea como producto roto?
+¿la jerarquía es la aprobada?) y la regla explícita de que **una pantalla que
+renderiza perfecta pero se ha desviado del diseño aprobado es `PILOT FAIL`,
+no `PILOT PASS`**. El piloto había dado PASS a esta pantalla sin detectar que
+tenía el doble de métricas que el mockup firmado.
+
+**Tercera revisión del fundador (2026-08-01, captura de movistar.es).**
+
+- **Tooltips en los 3 KPIs** (`InfoTip`, mismo componente ya usado en la
+  columna "Marca mencionada" de Prompts) explicando qué mide cada uno —
+  "Respuestas con cita" (% de respuestas de motores con búsqueda real que
+  citaron algo), "Citas totales" (suma sobre todas las páginas), "Citas
+  propias" (cuántas de esas citas son de `${brandLabel}`).
+- **Reetiquetado + tooltips en la leyenda de "Impacto"**: "Terceros que
+  mencionan a un rival y no a ti" y "Terceros que mencionan otras marcas"
+  se reportaron como indistinguibles a simple vista. Renombrados a
+  "Terceros que mencionan a un competidor tuyo" (marca trackeada) vs.
+  "Terceros que mencionan otra marca" (marca no trackeada — puede ser un
+  competidor real que aún no sigues), cada uno con su tooltip explicando la
+  diferencia. Aplicado el mismo tratamiento a las 6 etiquetas del bucket,
+  no solo a las dos confusas, por consistencia.
+- **Atribución por prompt en el panel de evidencia**: el fundador expandió
+  una fila con la etiqueta "Cita a un competidor" y la evidencia mostrada
+  (la respuesta real del modelo) no mencionaba ningún rival — un caso
+  reproducible de reclamo sin sustento visible. Causa: `row.competitors`
+  se calculaba como unión de TODOS los prompts que citaron esa página; una
+  fila con 5 prompts podía llevar la etiqueta "cita a un competidor" por
+  uno solo de ellos, mientras el panel enseñaba evidencia de cualquiera de
+  los 5 sin decir cuál. Arreglado: `CitationRow.prompts[]` ahora lleva
+  `competitors`/`otherBrands` por entrada (scoped a ese `(prompt, provider)`
+  concreto, no la unión de la fila), y el panel muestra una etiqueta
+  "Menciona a X" / "Menciona X (marca no trackeada)" justo encima de la
+  respuesta que la respalda — o ninguna etiqueta si esa respuesta en
+  concreto no mencionó ninguna marca.
+- **Hallazgo NO corregido en este PR, señalado al fundador explícitamente**:
+  con la atribución por prompt ya visible, si el chip "Menciona a X" sigue
+  apareciendo en una entrada cuya respuesta visiblemente no nombra a X, el
+  problema ya no es de esta pantalla — es que `verifyMention`
+  (`lib/scan/extraction.ts`, MENTION-VERIFY-1, ADR-0021) no está
+  descartando esa mención pese a exigir un substring match contra el texto
+  crudo. Investigarlo requiere tocar el pipeline de extracción/scoring,
+  fuera del alcance de un rediseño de UI y de las áreas que este documento
+  puede aprobar por su cuenta — necesita su propia fase con Task Intake.
+
+Pendiente / roto conocido:
+- El nombre "Páginas citadas" es, para las citas de Gemini, técnicamente
+  "Dominios citados" hasta que se implemente la persistencia de URL exacta
+  de arriba — se mantiene el nombre existente por ahora.
+- Unificar el resto de la consola (Competidores, Recomendaciones, Auditoría
+  web, Escaneos) al nuevo ancho estándar: no se hace en este PR, cada
+  pantalla migra en su propio rediseño (ver nota en §5).
+- **Posible fuga de `verifyMention`** (ver arriba) — la atribución por
+  prompt ahora hace este tipo de caso visible y reproducible; si vuelve a
+  aparecer, es una pista real para investigar el pipeline, no un fallo de
+  esta pantalla.
+
+**Harness del pilot ampliado para probar interacción, no solo render
+(2026-08-02).** El fundador pidió pruebas de que el clic en el tooltip y en
+las filas expandibles funcionaba de verdad, no solo que el icono/chevron
+renderizaba — una captura de la pantalla cerrada nunca puede demostrar eso.
+Nuevo test `tests/pilot/journeys/core-flow.spec.ts` ("citations KPI tooltip
+and row expand actually work"): hace hover real sobre un `.info-tip` y
+afirma que la burbuja se hace visible, hace clic real en una fila de cada
+tabla y afirma que `.cit2-detail` aparece — con `expect(...).toBeVisible()`,
+no solo una captura. Si la interacción no funciona, el test falla de verdad,
+no queda como una captura silenciosa del estado cerrado. Nuevo helper
+`captureInteraction` en `tests/pilot/support/journey.ts` para las capturas
+mid-interacción. `tests/pilot/fixtures/server.mjs` gana el marcado y JS
+mínimos (`.info-tip`/`.cit2-row`/`.cit2-opp-item` con toggle real) para que
+`pnpm pilot:selfcheck` siga probando este camino también sin depender de
+un preview real.
+
+**Explorador genérico de interacciones + criterio UX (UX-PILOT-1c,
+2026-08-02).** El fundador pidió que el piloto pudiera "hacer clicks en
+cualquier sitio" y que tuviera criterio: "no solo pruebe que sale, sino que
+sale bien y que la UX es la óptima". Escribir un test a medida por feature no
+escala y solo cubre lo que alguien se acordó de escribir.
+
+- Nuevo `tests/pilot/support/explore.ts`: **descubre** los controles seguros
+  de cada pantalla, los ejercita y captura el estado resultante. Produce tres
+  hallazgos que una máquina sí puede afirmar con certeza: `dead` (se pulsó y
+  no cambió nada en el DOM), `introducedOverflow` (la interacción rompió el
+  layout) y errores de consola por interacción. Conectado a las 9 pantallas
+  del journey, en los 3 viewports.
+- **Seguridad primero**: el explorador es allow-list (solo patrones que son
+  estado local de UI), y además rechaza todo lo que esté dentro de un
+  `<form>`, sea `submit`, navegue fuera, o cuyo nombre accesible parezca
+  destructivo. Lo rechazado se registra como `skipped` con motivo — nunca se
+  descarta en silencio, para que "no cubierto" no se lea como "verificado".
+- **Bug de seguridad encontrado por la propia fixture**: la primera versión
+  de la deny-list usaba `\belimina\b`, que **no** casa con "Eliminar" (la `r`
+  rompe el word boundary), así que el decoy "Eliminar proyecto" fue pulsado
+  en vez de rechazado. Contra el Supabase real eso es exactamente el
+  accidente que la lista existe para evitar. Corregido a stems anclados solo
+  al inicio de palabra; sobre-rechazar es la dirección correcta de fallo.
+- **Nueva aserción `assertFullyVisible`** (`tests/pilot/support/journey.ts`):
+  un elemento revelado no basta con que sea "visible" para el DOM — se afirma
+  que no está recortado por un ancestro con `overflow: hidden` ni se sale del
+  viewport. Nace de un caso real: el tooltip de los KPIs pasaba
+  `toBeVisible()` mientras se renderizaba cortado por su propia tarjeta.
+- **Bug de producto encontrado por esa captura**: `.cit2-kpis` tenía
+  `overflow: hidden`, que partía la burbuja del tooltip por la mitad (peor en
+  móvil, donde solo se leía la última línea). Además la burbuja medía 220px
+  fijos anclada al icono, así que la del último KPI se habría salido por la
+  derecha en 375px al abrirla. Ambos corregidos: el tooltip se ancla ahora a
+  la tira completa y abre hacia abajo.
+- `.claude/agents/ux-pilot.md` gana una **checklist de interacción** (6
+  puntos) y un **listón de calidad UX** (8 puntos de juicio, no de
+  aserción) — incluido "¿lo enviarías a un cliente de pago?" — más una
+  sección que fija que **toda comprobación y toda evidencia van siempre a
+  375/768/1280**, y que una comprobación hecha en un solo ancho está
+  *no verificada* en los otros dos.
+
+**Historial de fallos del propio piloto (para que no se repitan).** Cada uno
+costó una iteración y dejó una regla o un test detrás:
+
+| # | Fallo | Por qué pasó | Qué lo impide ahora |
+|---|---|---|---|
+| 1 | `PILOT PASS` sobre una pantalla que el harness nunca visitó | No existía journey para `/citations`; el verde era real para lo que probó, y se leyó como cobertura de lo que no | Journey de citations añadido; el doc del agente obliga a decir qué NO se cubrió |
+| 2 | Barra de impacto con leyenda incompleta (2 de 5 buckets) | Las etiquetas estaban escritas a mano y no seguían a los datos | Leyenda derivada de los buckets con datos |
+| 3 | Porcentajes sumando 267% | Se añadió un sexto bucket y el divisor del total, escrito a mano, se quedó obsoleto | Total derivado de `Object.values`; test del invariante buckets = citas totales |
+| 4 | KPIs partidos 2+1 en móvil | `flex-basis: 140px` desbordaba a 375px | `flex-basis: 0`; checklist punto 6 (densidad/jerarquía) |
+| 5 | "Verificado" sin haber probado el clic | Una captura del estado cerrado no puede demostrar una interacción | Test real de hover/clic con `expect().toBeVisible()`; helper `captureInteraction` |
+| 6 | Tooltip recortado que pasaba `toBeVisible()` | Un elemento cortado sigue siendo "visible" para el DOM | `assertFullyVisible`: afirma no-recortado y dentro del viewport |
+| 7 | Deny-list que no rechazaba "Eliminar proyecto" | `\belimina\b` no casa con "Eliminar" | Stems anclados al inicio; decoy permanente en la fixture |
+| 8 | Timeout de 60s en el primer barrido real | 32 filas × capturas de página completa en móvil | Tope de 4 interacciones, presupuesto de 25s, capturas de viewport |
+| 9 | Fila fantasma `undefined` en la tabla del PR | Los registros de interacción no tienen `label` y contaminaban `findings.jsonl` | Fichero propio `interactions.jsonl` |
+
+**Primera aplicación del listón de UX a la propia pantalla (2026-08-02).**
+Aplicando la checklist nueva a Páginas citadas salieron cinco mejoras; el
+fundador pidió implementar las cinco:
+
+1. **Pestañas con contador 0 deshabilitadas** en vez de ocultas — el 0 es
+   información (es justo el punto de la pantalla), pero pulsarlas solo
+   llevaba a una lista vacía: un callejón sin salida disfrazado de filtro.
+2. **Orden de la lista explícito** ("De más a menos citada"). Siempre estuvo
+   ordenada por número de citas y nada lo decía; la cabecera propia de la
+   tabla es `display: none`, así que va bajo el título del bloque.
+3. **"Citas propias: 0" deja de ser un callejón sin salida.** Es el número
+   más importante de la pantalla y no ofrecía ningún siguiente paso. Ahora,
+   solo cuando es realmente 0, aparece una línea que enlaza el hecho con la
+   acción: las fuentes de «Oportunidades» si las hay, o Auditoría web si no.
+   No afirma nada que el dato no sostenga.
+4. **La barra de impacto y el donut dejan de competir.** Ambos responden a
+   "cómo se reparten las citas", y apilados a ancho completo se leían como
+   dos bloques rivales. Desde 900px van lado a lado como una sola sección
+   (`.cit2-dist`); en móvil siguen apilados —no cabe otra cosa— pero el
+   donut se reduce para que el par no cueste dos pantallas enteras.
+5. **Tipografía del dominio unificada** entre la lista y el raíl de
+   oportunidades. El mismo tipo de dato se renderizaba de dos formas (mono
+   azul con ruta en la lista, mono tinta sin ruta en el raíl), obligando a
+   reaprender qué es un dominio al pasar de una tabla a otra.
+
+**Propuestas de mejora obligatorias (2026-08-02).** A petición explícita del
+fundador ("que sugiera cambios antes de entregarme algo SIEMPRE"), todo
+informe del piloto termina con una sección **"Mejoras propuestas"**: mínimo
+tres, concretas y accionables, ordenadas por valor, marcando `[barato]` las
+que son solo copy o CSS. Nunca vacía, tampoco en un PASS — una sección vacía
+significa que el piloto pasó las checklists sin aplicar criterio, y el
+Director la devuelve. El Director **incorpora las baratas antes del Human
+Gate** y sube el resto con recomendación; queda escrito en
+`.claude/agents/director.md`, `CLAUDE.md` (§Agentic User Pilot y §Human Gate,
+que gana la pregunta 6) y `docs/agentic-user-pilot.md`.
+
+**Tres mejoras baratas más (2026-08-02).** Segunda vuelta sobre la misma
+propuesta, ya con las 5 anteriores en producción; el fundador pidió
+implementar las tres:
+
+1. **[barato] Contador de resultados filtrados.** El buscador acortaba la
+   lista sin decir cuántas quedaban de las 32. Ahora, solo cuando un filtro
+   (búsqueda o pestaña) reduce el resultado, aparece "X de Y páginas" junto
+   a la barra de herramientas; en reposo no se repite el total que ya dice
+   el título del bloque.
+2. **[barato] "Otras webs" dejó de repetirse en cada fila.** Es el cajón por
+   defecto de `classifySourceType` y en datos reales cubre casi todas las
+   filas de terceros — como etiqueta por fila no aportaba nada que el donut
+   de arriba no contara ya mejor en conjunto. Se suprime solo esa etiqueta
+   (`ty-unk`) fila a fila; "Tuya", "Competidor" y los tipos SÍ clasificados
+   (comunidad, comparador, medio, enciclopedia) se siguen mostrando, porque
+   esos sí son información real por fila.
+3. **Variante compacta de fila en escritorio.** Cada fila costaba ~65px
+   (relleno 12px × 2 + favicon de 26px + dos líneas de texto), así que a
+   1280px solo cabían ~3 filas antes de que la página necesitara scroll.
+   Desde 1200px (el mismo punto de corte donde entra la columna de
+   oportunidades) el relleno baja a 8px, el favicon a 22px y el texto se
+   reduce un punto — sin quitar ningún dato de la fila, solo el aire
+   sobrante que sí sobraba en una pantalla ancha.
+
+**Bug real encontrado por el propio piloto, no propuesto por él (2026-08-02).**
+El nuevo paso de búsqueda del piloto (evidencia real de la mejora #1) dejó
+por accidente el panel de una fila de Oportunidades abierto de una
+interacción anterior, y esa captura mostró un chip de atribución cortado
+literalmente en el borde del viewport en el raíl estrecho (320px en
+escritorio). Causa: `Menciona a {competitors.join(", ")}` metía TODOS los
+nombres en una sola pastilla `white-space: nowrap` — con varios nombres
+("Amazon, El Corte Inglés, Carrefour, AliExpress, Miravia") la pastilla era
+más ancha que su contenedor y no podía envolver internamente. El contenedor
+(`.cit2-detail-mentions`) ya tenía `flex-wrap: wrap` — estaba pensado para
+varias pastillas pequeñas, no para una gigante. Arreglado: una pastilla por
+nombre en vez de una pastilla por lista; el ancho de la columna no cambió,
+pero ahora cada pastilla es corta y el `flex-wrap` existente las reparte en
+líneas. Sirve tanto a la lista completa como al raíl de oportunidades, que
+comparten el mismo componente (`PromptEvidenceList`).
+
+**Tercera vuelta: paginación, filtro de oportunidades y formateo de
+evidencia (2026-08-02).** Feedback directo del fundador sobre datos reales
+de producción (movistar.es), no una propuesta del piloto:
+
+1. **Paginación real en vez de expandir todo en el sitio.** El botón
+   "Ver las N" metía las N filas en el DOM de golpe, sin límite de alto —
+   con proyectos grandes el raíl podía crecer indefinidamente. Ahora son
+   páginas de 5 con "Anterior/Siguiente" y "Página X de Y": el raíl mide lo
+   mismo tenga el proyecto 8 oportunidades o 80.
+2. **Oportunidades solo si citan a un competidor TRACKEADO.** El filtro de
+   `opportunityRows` (`page.tsx`) comprobaba `category === "third_party" &&
+   brandMentioned === "no"` pero no `competitors.length > 0` — colaba filas
+   donde solo se mencionaba una "otra marca" no trackeada, o ninguna marca
+   en absoluto, y la fila recurría al texto genérico "Cita a un competidor"
+   para disimular que no había ningún competidor real que nombrar (visible
+   en capturas reales: `highspeedinternet.com` mencionaba "WiFi Analyzer,
+   NetSpot..." — herramientas, no competidores — y aun así aparecía como
+   oportunidad). Con `competitors.length > 0` añadido al filtro, la tabla
+   solo lista fuentes que de verdad citan a un competidor trackeado, y el
+   fallback "un competidor" se elimina por inalcanzable.
+3. **Formateo de evidencia como en Prompts.** El texto crudo del modelo se
+   volcaba como texto plano — `**negrita**`, listas con `*`, etc. aparecían
+   literalmente. El renderer markdown-lite que ya existía para el drawer de
+   Prompts (`parseMarkdownBlocks`/`tokenizeInline` de
+   `lib/markdown/inline-markdown.ts`, antes vivía inline en
+   `prompt-drawer.tsx`) se extrajo a un componente compartido
+   (`components/ui/formatted-response.tsx`, `<FormattedResponse text brand
+   />`) y ambas pantallas lo usan ahora — misma lógica de parseo, mismas
+   reglas de qué se resalta en negrita/listas/enlaces, un único sitio si
+   hay que arreglar algo del parseo en el futuro.
+
+**Cuarta vuelta: fuera badge de motor y botón de Auditoría web
+(2026-08-02).** Dos recortes directos del fundador:
+
+1. **Badge de motor (Gemini/ChatGPT) eliminado en toda la pantalla.**
+   Vivía en dos sitios — `EngineChips` en cada fila de la lista completa, y
+   una pastilla por prompt en el panel de evidencia — ambos removidos junto
+   con el componente `EngineChips` y las clases CSS `.cit2-echip`/
+   `.cit2-engs`, ya muertas tras el cambio. El contador "· N motor(es)" del
+   raíl de Oportunidades no es un badge de motor concreto y se queda igual.
+2. **Botón "Abrir Auditoría web" eliminado** del final del bloque de
+   Oportunidades. La mención en prosa a "Auditoría web" dentro del aviso de
+   "0 citas propias" se queda — no es un botón, es solo el nombre de la
+   pantalla a la que ir por el menú. Al perder su único consumidor, la prop
+   `projectId` se retiró en cascada de `OpportunitiesBlock`, `CitationsClient`
+   y de la llamada en `page.tsx` en vez de dejarla sin usar.
 
 ---
 
