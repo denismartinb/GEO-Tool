@@ -16,7 +16,18 @@ on:
       pr_number:
         description: "Pull request number whose preview to test"
         required: true
-        type: number
+        # Deliberately "string", not "number". A workflow_dispatch "number"
+        # input gets coerced to a float before ${{ inputs.pr_number }} is
+        # interpolated, so a whole number like 289 renders as "289.0" —
+        # confirmed on run 30761284900 (2026-08-02): PILOT_PR_NUMBER and
+        # PR_NUMBER both arrived as "289.0". The "Resolve the pull request"
+        # gh api call tolerated the suffix, but the final `gh pr comment
+        # "289.0"` did not ("no pull requests found for branch \"289.0\""),
+        # so the run's verdict comment never landed on the PR even though
+        # all 3 write journeys had already passed. pr_number is only ever
+        # interpolated into API paths, env vars, and branch names — never
+        # used arithmetically — so "string" removes the coercion for free.
+        type: string
 
 permissions:
   contents: write
