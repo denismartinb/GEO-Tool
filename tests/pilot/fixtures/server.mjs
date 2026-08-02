@@ -11,6 +11,12 @@
  * Run with PILOT_FIXTURE_BREAK=overflow to make every page overflow
  * horizontally, which must flip the verdict to PILOT FAIL. That negative case
  * is the point: a gate that cannot fail is not a gate.
+ *
+ * The citations page also carries a few real .cit2-* class names (info-tip,
+ * row/detail toggle) so the "tooltip and row expand actually work" journey
+ * (core-flow.spec.ts) can run against the fixture too, not just against a
+ * real deployment — proving the CLICK/HOVER mechanics of the harness itself
+ * work, independent of whether a live Vercel preview is reachable.
  */
 
 import { createServer } from "node:http";
@@ -26,9 +32,50 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
-  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
-  [`/dashboard/projects/${PROJECT_ID}/citations`, "Páginas citadas"]
+  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"]
 ]);
+
+// Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and
+// .cit2-row/.cit2-opp-item (click-to-toggle "open") classes from
+// app/globals.css — just enough for the interaction test's selectors and
+// assertions to hold, not a copy of the real styling.
+const CITATIONS_STYLE = `
+  .info-tip { position: relative; display: inline-block; cursor: help; }
+  .info-tip-bubble { position: absolute; display: none; background: #111; color: #fff; padding: 4px 8px; }
+  .info-tip:hover .info-tip-bubble, .info-tip:focus .info-tip-bubble { display: block; }
+  .cit2-detail { display: none; }
+  .cit2-row.open .cit2-detail, .cit2-opp-item.open .cit2-detail { display: block; }
+`;
+const CITATIONS_SCRIPT = `
+  document.querySelectorAll(".cit2-rowmain, .cit2-opp-row").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      btn.closest(".cit2-row, .cit2-opp-item").classList.toggle("open");
+    });
+  });
+`;
+
+function citationsPage() {
+  return `<style>${CITATIONS_STYLE}</style>
+    <div class="cit2-kpis">
+      <div class="cit2-k">
+        Respuestas con cita
+        <span class="info-tip" tabindex="0">
+          <span class="info-tip-icon">i</span>
+          <span class="info-tip-bubble">Tooltip de prueba de la fixture</span>
+        </span>
+      </div>
+      <div class="cit2-v">50%</div>
+    </div>
+    <div class="cit2-row">
+      <button type="button" class="cit2-rowmain">fixture-page.example</button>
+      <div class="cit2-detail">Prompt y evidencia de prueba.</div>
+    </div>
+    <div class="cit2-opp-item">
+      <button type="button" class="cit2-opp-row">fixture-opportunity.example</button>
+      <div class="cit2-detail">Prompt y evidencia de prueba.</div>
+    </div>
+    <script>${CITATIONS_SCRIPT}</script>`;
+}
 
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
@@ -81,6 +128,18 @@ const server = createServer((request, response) => {
   if (path === "/login") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(loginPage());
+    return;
+  }
+
+  const citationsPath = `/dashboard/projects/${PROJECT_ID}/citations`;
+  if (path === citationsPath) {
+    if (!isAuthenticated(request)) {
+      response.writeHead(303, { Location: "/login" });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(html("Páginas citadas", citationsPage()));
     return;
   }
 

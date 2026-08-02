@@ -604,6 +604,22 @@ Pendiente / roto conocido:
   aparecer, es una pista real para investigar el pipeline, no un fallo de
   esta pantalla.
 
+**Harness del pilot ampliado para probar interacción, no solo render
+(2026-08-02).** El fundador pidió pruebas de que el clic en el tooltip y en
+las filas expandibles funcionaba de verdad, no solo que el icono/chevron
+renderizaba — una captura de la pantalla cerrada nunca puede demostrar eso.
+Nuevo test `tests/pilot/journeys/core-flow.spec.ts` ("citations KPI tooltip
+and row expand actually work"): hace hover real sobre un `.info-tip` y
+afirma que la burbuja se hace visible, hace clic real en una fila de cada
+tabla y afirma que `.cit2-detail` aparece — con `expect(...).toBeVisible()`,
+no solo una captura. Si la interacción no funciona, el test falla de verdad,
+no queda como una captura silenciosa del estado cerrado. Nuevo helper
+`captureInteraction` en `tests/pilot/support/journey.ts` para las capturas
+mid-interacción. `tests/pilot/fixtures/server.mjs` gana el marcado y JS
+mínimos (`.info-tip`/`.cit2-row`/`.cit2-opp-item` con toggle real) para que
+`pnpm pilot:selfcheck` siga probando este camino también sin depender de
+un preview real.
+
 ---
 
 ## Cómo mantener este documento

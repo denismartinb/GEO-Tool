@@ -169,6 +169,27 @@ export function assertPageIsHealthy(findings: PageFindings): void {
 }
 
 /**
+ * Captures the CURRENT page state — mid-interaction, no navigation — as
+ * real evidence rather than a claim. Use this after a hover/click that
+ * reveals something a plain page-load screenshot can never show (a tooltip
+ * bubble, an expanded detail panel): pair it with a Playwright `expect(...)
+ * .toBeVisible()` on the revealed element first, so the test actually FAILS
+ * if the interaction doesn't work, instead of silently screenshotting a
+ * closed state and letting it pass for "verified" (founder request,
+ * 2026-08-02: "quiero la evidencia de que verificaste el click").
+ */
+export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
+  const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
+  mkdirSync(SCREENS_DIR, { recursive: true });
+  await page.screenshot({ path: screenshot, fullPage: true });
+  await testInfo.attach(`${label} (${testInfo.project.name})`, {
+    path: screenshot,
+    contentType: "image/png"
+  });
+  return screenshot;
+}
+
+/**
  * Resolves the project the journeys should exercise: the pinned
  * `PILOT_PROJECT_ID` when set, otherwise the first project on the pilot
  * account. Discovery keeps the pilot working on a fresh pilot account without

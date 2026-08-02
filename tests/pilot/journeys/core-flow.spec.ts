@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { assertPageIsHealthy, resolveProjectId, visitAsUser } from "../support/journey";
+import { assertPageIsHealthy, captureInteraction, resolveProjectId, visitAsUser } from "../support/journey";
 
 /**
  * UX-PILOT-1 read-only journey over the core flow surfaces.
@@ -91,4 +91,57 @@ test("citations screen renders", async ({ page }, testInfo) => {
     "citations"
   );
   assertPageIsHealthy(findings);
+});
+
+/**
+ * Real proof, not a claim: hovers/clicks and ASSERTS the revealed element
+ * appears (Playwright fails the test otherwise), then captures that exact
+ * mid-interaction state — a tooltip bubble and an expanded evidence panel
+ * that a plain page-load screenshot can never show. Added 2026-08-02 after
+ * the founder asked for evidence the click-to-expand/tooltip behavior
+ * actually works, not just that the trigger icons render.
+ */
+test("citations KPI tooltip and row expand actually work, not just render their triggers", async ({
+  page
+}, testInfo) => {
+  const id = await projectId(page);
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    `/dashboard/projects/${id}/citations`,
+    "citations"
+  );
+  assertPageIsHealthy(findings);
+
+  // 1. KPI tooltip: hover reveals the bubble (pure CSS :hover, no JS).
+  const infoTip = page.locator(".cit2-kpis .info-tip").first();
+  await expect(infoTip, "no info-tip icon next to the KPI strip").toBeVisible();
+  await infoTip.hover();
+  await expect(
+    page.locator(".cit2-kpis .info-tip-bubble").first(),
+    "hovering the KPI info-tip did not reveal its tooltip bubble"
+  ).toBeVisible();
+  await captureInteraction(page, testInfo, "citations-tooltip-open");
+
+  // 2. Full list row expands to show the prompt/evidence panel on click.
+  const firstRow = page.locator(".cit2-rowmain").first();
+  await expect(firstRow, "full citation list is empty — cannot verify row expand").toBeVisible();
+  await firstRow.click();
+  await expect(
+    page.locator(".cit2-row.open .cit2-detail").first(),
+    "clicking a citation row did not open its detail panel"
+  ).toBeVisible();
+  await captureInteraction(page, testInfo, "citations-row-expanded");
+
+  // 3. Opportunities row must behave identically (founder request,
+  //    2026-08-01) — same click, same panel, on the other table.
+  const firstOppRow = page.locator(".cit2-opp-row").first();
+  if ((await firstOppRow.count()) > 0) {
+    await firstOppRow.click();
+    await expect(
+      page.locator(".cit2-opp-item.open .cit2-detail").first(),
+      "clicking an opportunities row did not open its detail panel"
+    ).toBeVisible();
+    await captureInteraction(page, testInfo, "citations-opportunity-expanded");
+  }
 });
