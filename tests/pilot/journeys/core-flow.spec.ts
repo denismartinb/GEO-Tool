@@ -186,4 +186,29 @@ test("citations KPI tooltip and row expand actually work, not just render their 
     ).toBeVisible();
     await captureInteraction(page, testInfo, "citations-opportunity-expanded");
   }
+
+  // 4. Search narrows the list AND says how many rows matched (founder
+  //    review, 2026-08-02: "escribes algo y la lista se acorta sin confirmar
+  //    cuántas quedan"). The explorer's click sweep never types into inputs,
+  //    so this is the only evidence this specific fix actually works —
+  //    without it, the count text existing in the JSX would be unverified.
+  // `:visible` (a Playwright selector extension, not vanilla CSS), not a bare
+  // DOM count: the real page removes filtered-out rows from the tree, but the
+  // fixture only toggles them hidden — asserting on visibility holds for both.
+  const rowCountBefore = await page.locator(".cit2-row:visible").count();
+  const searchInput = page.locator(".cit2-search input");
+  await expect(searchInput, "citations search input not found").toBeVisible();
+  // A substring unlikely to match every row, so the list — and the count —
+  // actually change; falls back gracefully if the fixture/project has zero
+  // rows containing "co".
+  await searchInput.fill("co");
+  const filterCount = page.locator(".cit2-filtercount");
+  const rowCountAfter = await page.locator(".cit2-row:visible").count();
+  if (rowCountAfter !== rowCountBefore && rowCountAfter > 0) {
+    await expect(filterCount, "filtering the list did not show a result count").toBeVisible();
+    await expect(filterCount).toContainText(`${rowCountAfter} de ${rowCountBefore}`);
+    await captureInteraction(page, testInfo, "citations-search-filtered");
+  }
+  await searchInput.fill("");
+  await expect(filterCount, "clearing the search did not hide the result count again").toBeHidden();
 });

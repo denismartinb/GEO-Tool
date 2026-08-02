@@ -13,10 +13,11 @@
  * is the point: a gate that cannot fail is not a gate.
  *
  * The citations page also carries a few real .cit2-* class names (info-tip,
- * row/detail toggle) so the "tooltip and row expand actually work" journey
- * (core-flow.spec.ts) can run against the fixture too, not just against a
- * real deployment — proving the CLICK/HOVER mechanics of the harness itself
- * work, independent of whether a live Vercel preview is reachable.
+ * row/detail toggle, search + result count) so the "tooltip and row expand
+ * actually work" journey (core-flow.spec.ts) can run against the fixture too,
+ * not just against a real deployment — proving the CLICK/HOVER/TYPE mechanics
+ * of the harness itself work, independent of whether a live Vercel preview is
+ * reachable.
  */
 
 import { createServer } from "node:http";
@@ -53,6 +54,28 @@ const CITATIONS_SCRIPT = `
       btn.closest(".cit2-row, .cit2-opp-item").classList.toggle("open");
     });
   });
+  (function () {
+    var input = document.querySelector(".cit2-search input");
+    if (!input) return;
+    var rows = Array.prototype.slice.call(document.querySelectorAll(".cit2-row"));
+    var total = rows.length;
+    var count = document.querySelector(".cit2-filtercount");
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      var visible = 0;
+      rows.forEach(function (row) {
+        var match = !q || row.textContent.toLowerCase().indexOf(q) !== -1;
+        row.style.display = match ? "" : "none";
+        if (match) visible++;
+      });
+      if (q && visible !== total) {
+        count.textContent = visible + " de " + total;
+        count.style.display = "";
+      } else {
+        count.style.display = "none";
+      }
+    });
+  })();
 `;
 
 function citationsPage() {
@@ -67,8 +90,14 @@ function citationsPage() {
       </div>
       <div class="cit2-v">50%</div>
     </div>
+    <div class="cit2-search"><input type="text" placeholder="Buscar página o dominio…" /></div>
+    <div class="cit2-filtercount" style="display:none"></div>
     <div class="cit2-row">
-      <button type="button" class="cit2-rowmain">fixture-page.example</button>
+      <button type="button" class="cit2-rowmain">fixture-company.example</button>
+      <div class="cit2-detail">Prompt y evidencia de prueba.</div>
+    </div>
+    <div class="cit2-row">
+      <button type="button" class="cit2-rowmain">fixture-other.example</button>
       <div class="cit2-detail">Prompt y evidencia de prueba.</div>
     </div>
     <div class="cit2-opp-item">
