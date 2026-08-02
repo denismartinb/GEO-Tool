@@ -3,14 +3,24 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
-import { CompetitorRow } from "./competitor-row";
+import { PodiumRow } from "./podium-row";
+import { ManageCompetitorsPanel } from "./manage-competitors-panel";
+import { PromptGapSection } from "./prompt-gap-section";
+import { EmergingBrandsSection } from "./emerging-brands-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
 import { computeEntityEngineBreakdown, type EntityEngineBreakdown } from "@/lib/competitors/engine-share";
+import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
+import { computeEmergingBrands } from "@/lib/competitors/emerging-brands";
+import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
+import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 /* ---- Helpers ---- */
 
-const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563", "#c47e12"];
+// Sequential blue scale by rank (docs/brand/brand-guidelines.md §1: the
+// brand blue is reserved for "you", competitors read as a secondary scale
+// instead of the old rainbow COMPETITOR_COLORS palette).
+const RANK_COLORS = ["#0f2f6e", "#1a4494", "#1e4fb8", "#4f8bef", "#8fb6f6", "#98a2b3"];
 
 export type CompetitorRowData = {
   id: string;
@@ -23,6 +33,7 @@ export type CompetitorRowData = {
   mentionRate: number;
   citationRate: number;
   promptCount: number; // unique runs where seen
+  deltaPoints: number | null;
   // ENGINES-VALUE-3: per-engine mention breakdown, only rendered when it
   // has >= 2 entries (see docs/specs/engines-value-3.md Paso C).
   engineBreakdown: EntityEngineBreakdown[];
@@ -87,8 +98,8 @@ export default async function CompetitorsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) */
-  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }] = await Promise.all([
+  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) + active prompts (for topic map) */
+  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }, { data: projectPrompts }] = await Promise.all([
     supabase
       .from("project_competitors")
       .select("id, name, domain, is_active, created_at")
@@ -106,14 +117,20 @@ export default async function CompetitorsPage({
       .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
-      .limit(5)
+      .limit(5),
+    supabase.from("project_prompts").select("id, category").eq("project_id", projectId).eq("is_active", true)
   ]);
 
   const configuredCompetitors = competitors ?? [];
+  const activeCompetitors = configuredCompetitors.filter((c) => c.is_active);
+  const inactiveCompetitors = configuredCompetitors.filter((c) => !c.is_active);
   const completedRuns = allRuns ?? [];
   const completedRunIds = completedRuns.map((r) => r.id);
   const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
   const latestCompletedRun = completedRuns[0] ?? null;
+  const previousCompletedRun = completedRuns[1] ?? null;
+
+  const promptCategoryMap = new Map((projectPrompts ?? []).map((p) => [p.id, p.category as string | null]));
 
   /* 2. Prompt results across ALL completed runs + per-run brand position scores */
   const [{ data: allResults }, { data: runScores }] =
@@ -121,7 +138,7 @@ export default async function CompetitorsPage({
       ? await Promise.all([
           supabase
             .from("scan_prompt_results")
-            .select("extracted_json, run_id, provider")
+            .select("extracted_json, run_id, provider, prompt_id, prompt_text_snapshot")
             .eq("project_id", projectId)
             .eq("status", "completed")
             .in("run_id", completedRunIds),
@@ -227,9 +244,19 @@ export default async function CompetitorsPage({
     isEntityMentioned: (ext) => Boolean(ext.brand?.mentioned)
   });
 
+  // COMP-REDESIGN-1: scan-over-scan delta, a deliberately separate metric
+  // from the cumulative SoV above — see lib/competitors/sov-delta.ts header.
+  const sovDeltas = latestCompletedRun
+    ? computeSovDeltas({
+        rows: results.map((r) => ({ runId: r.run_id as string, extracted_json: r.extracted_json })),
+        latestRunId: latestCompletedRun.id,
+        previousRunId: previousCompletedRun?.id ?? null,
+        trackedCompetitors: configuredCompetitors
+      })
+    : null;
+
   // Build competitor rows
-  const competitorRows: CompetitorRowData[] = configuredCompetitors
-    .filter((c) => c.is_active)
+  const competitorRows: CompetitorRowData[] = activeCompetitors
     .map((c, i) => {
       const key = normKey(c.name);
       const mentions = competitorMentionMap.get(key) ?? 0;
@@ -251,13 +278,14 @@ export default async function CompetitorsPage({
         id: c.id,
         name: c.name,
         domain: c.domain,
-        color: COMPETITOR_COLORS[i % COMPETITOR_COLORS.length],
+        color: RANK_COLORS[i % RANK_COLORS.length],
         initial: getInitial(c.name),
         mentions,
         sov,
         mentionRate,
         citationRate,
         promptCount,
+        deltaPoints: sovDeltas?.competitors.get(key)?.deltaPoints ?? null,
         engineBreakdown
       };
     })
@@ -287,6 +315,42 @@ export default async function CompetitorsPage({
     if (points < 20) return null;
     return { strongest, weakest, points };
   })();
+
+  /* COMP-REDESIGN-1: brecha de prompts (latest completed run only — see
+     lib/competitors/prompt-gap.ts header for why). */
+  const promptGapSummary =
+    latestCompletedRun && activeCompetitors.length > 0
+      ? computePromptGapSummary({
+          rows: results
+            .filter((r) => r.run_id === latestCompletedRun.id)
+            .map((r) => ({
+              id: `${r.prompt_id}-${r.provider ?? "gemini"}`,
+              promptId: r.prompt_id as string | null,
+              promptText: (r.prompt_text_snapshot as string | null) ?? "",
+              topic: r.prompt_id ? promptCategoryMap.get(r.prompt_id as string) ?? null : null,
+              provider: r.provider as string | null,
+              extracted_json: r.extracted_json
+            })),
+          activeCompetitors
+        })
+      : null;
+
+  /* COMP-REDESIGN-1: terreno por tema (cumulative, same population as the podium/matrix). */
+  const topicComparison =
+    activeCompetitors.length > 0
+      ? computeTopicComparison({
+          rows: results.map((r) => ({ promptId: r.prompt_id as string | null, extracted_json: r.extracted_json })),
+          promptCategoryMap,
+          activeCompetitors
+        })
+      : [];
+
+  /* COMP-REDESIGN-1: marcas emergentes — other_brands_mentioned surfaced for the first time (ADR 0018's Ikea case). */
+  const emergingBrands = computeEmergingBrands({
+    rows: results.map((r) => ({ extracted_json: r.extracted_json })),
+    brandName: project.brand,
+    trackedCompetitorNames: configuredCompetitors.map((c) => c.name)
+  });
 
   /* Position trend: brand + active competitors' avg_position across completed runs */
   const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
@@ -323,91 +387,250 @@ export default async function CompetitorsPage({
     .filter((v): v is number => v != null);
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
-  // With more than 3 completed scans there's enough trend history to be worth
-  // surfacing before the static table.
-  const chartAboveTable = completedRuns.length > 3;
+  const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
 
-  const competitorTableSection =
-    configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
+  // Rendered in exactly one place: inside the desktop rail next to the trend
+  // chart when there's a full competitive picture, or as its own standalone
+  // block when the user has scan data but hasn't configured any active
+  // competitor yet — precisely the case where "here's who the AI already
+  // mentions" is most useful (closes the gap ADR 0018's Ikea case
+  // documented: untracked rivals showing up with nowhere to act on them).
+  const emergingBrandsBlock =
+    emergingBrands.length > 0 ? (
       <>
-        <div className="section-head">
-          <div className="section-title">Panorámica competitiva · cuota de voz en IA</div>
-          <div className="section-desc">
-            Basado en{" "}
-            <b style={{ color: "var(--ink-2)" }}>
-              {completedRuns.length} {completedRuns.length === 1 ? "escaneo completado" : "escaneos completados"}
-            </b>{" "}
-            · {totalResultsCount} prompts analizados
+        <div className="cm2-sec-lbl">Marcas que aparecen y no sigues</div>
+        <EmergingBrandsSection projectId={projectId} brands={emergingBrands} />
+      </>
+    ) : null;
+
+  return (
+    <div className="cm2-scope">
+      <div className="page cm2-page">
+        {/* Sticky header */}
+        <div className="ov-sticky-header">
+          <div className="ov-sticky-left">
+            <div>
+              <p className="kicker" style={{ marginBottom: 2 }}>Competidores</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span
+                  style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
+                >
+                  {project.name}
+                </span>
+                <span className="badge badge-neutral">
+                  {activeCompetitors.length} {activeCompetitors.length === 1 ? "competidor" : "competidores"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="ov-sticky-right">
+            {latestCompletedRun && (
+              <span className="badge badge-pos" style={{ fontSize: 11 }}>
+                Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                  .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
+              </span>
+            )}
+            {activeRun && completedRuns.length > 0 ? (
+              <span className="scan-status">
+                <span className="dot run" />
+                Escaneo en curso
+              </span>
+            ) : null}
+            <ManageCompetitorsPanel
+              projectId={projectId}
+              activeCompetitors={activeCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
+              inactiveCompetitors={inactiveCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
+            />
           </div>
         </div>
 
-        <div className="card">
-          <div style={{ padding: "6px 6px 4px", overflowX: "auto" }}>
-            <table className="tbl">
-              <thead>
-                <tr>
-                  <th>Marca</th>
-                  <th className="num">Mención</th>
-                  <th className="num">Cita</th>
-                  <th>Cuota de voz en IA</th>
-                  <th className="num">Prompts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Brand (you) row — always first */}
-                <tr className="you">
-                  <td>
-                    <div className="ent">
-                      <span
-                        className="fav"
-                        style={{ background: "var(--accent)" }}
-                      >
-                        {getInitial(project.brand)}
-                      </span>
-                      <div>
-                        <div className="nm">
-                          {project.brand}
-                          <span
-                            style={{
-                              fontSize: 11,
-                              color: "var(--accent)",
-                              fontWeight: 700,
-                              marginLeft: 6
-                            }}
-                          >
-                            Tú
-                          </span>
-                        </div>
-                        <div className="dm">{project.domain}</div>
+        {activeRun && completedRuns.length === 0 ? (
+          <ScanInProgress activeRun={activeRun} />
+        ) : (
+        <>
+        {/* Summary / insight banner */}
+        <div className="cm2-insight mt8">
+          <div className="cm2-insight-ico" aria-hidden="true">
+            <Icon name="users" size={15} />
+          </div>
+          <div className="cm2-insight-txt">
+            {!hasData ? (
+              <>
+                Sin datos de competencia todavía.{" "}
+                <Link href={`/dashboard/projects/${projectId}`} style={{ color: "var(--brand-blue)", fontWeight: 700 }}>
+                  Lanza el primer escaneo
+                </Link>{" "}
+                para ver cómo aparece tu marca frente a la competencia.
+              </>
+            ) : (
+              <>
+                <b>{project.brand}</b> aparece en{" "}
+                <span className={brandMentionRate >= 50 ? "" : "neg"}>
+                  <b>{brandMentionRate}% de los prompts</b>
+                </span>
+                {" "}analizados
+                {totalResultsCount > 0 && <> ({totalResultsCount} prompts en total)</>}.
+                {topCompetitor && topCompetitor.sov > brandSov ? (
+                  <>
+                    {" "}Tu competidor más fuerte es <b>{topCompetitor.name}</b>, con{" "}
+                    <span className="neg"><b>{topCompetitor.sov}% de cuota de voz</b></span>
+                    {promptGapSummary && promptGapSummary.counts.absent > 0 ? (
+                      <>
+                        {" "}y te desplaza en{" "}
+                        <span className="neg"><b>{promptGapSummary.counts.absent} de {promptGapSummary.totalPrompts} prompts</b></span>
+                        {" "}del último escaneo.
+                      </>
+                    ) : (
+                      "."
+                    )}
+                    {topCompetitorGap && (
+                      <>
+                        {" "}Su punto débil es <b>{getEngineMeta(topCompetitorGap.weakest.provider).label}</b>
+                        {" "}({topCompetitorGap.weakest.mentionRate}% frente a tu{" "}
+                        {brandEngineBreakdown.find((e) => e.provider === topCompetitorGap.weakest.provider)?.mentionRate ?? 0}%).
+                      </>
+                    )}
+                  </>
+                ) : topCompetitor ? (
+                  <>
+                    {" "}Lideras con <span style={{ color: "var(--pos)", fontWeight: 700 }}>{brandSov}% de cuota de voz</span>.
+                  </>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Empty: no competitors configured */}
+        {activeCompetitors.length === 0 ? (
+          <div style={{ marginTop: 14 }}>
+            <div className="cm2-sec-lbl">Panorámica competitiva</div>
+            <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "999px",
+                  background: "var(--surface-sunk)",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "var(--ink-3)",
+                  margin: "0 auto 16px"
+                }}
+              >
+                <Icon name="competitors" size={22} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
+                No hay competidores configurados
+              </div>
+              <div
+                style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
+              >
+                Usa &ldquo;Gestionar&rdquo; arriba para añadir el primer competidor y ver el análisis
+                comparativo de cuota de voz en IA.
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Empty: competitors configured but no completed runs */}
+        {activeCompetitors.length > 0 && completedRuns.length === 0 ? (
+          <div style={{ marginTop: 14 }}>
+            <div className="cm2-sec-lbl">Panorámica competitiva · cuota de voz en IA</div>
+            <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: "999px",
+                  background: "var(--surface-sunk)",
+                  display: "grid",
+                  placeItems: "center",
+                  color: "var(--ink-3)",
+                  margin: "0 auto 16px"
+                }}
+              >
+                <Icon name="resonance" size={22} />
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
+                Sin datos de competencia todavía
+              </div>
+              <div
+                style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
+              >
+                Las menciones y la cuota de voz de tus competidores aparecerán aquí tras completar el
+                primer escaneo real con Gemini.
+              </div>
+              <Link
+                href={`/dashboard/projects/${projectId}`}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 5,
+                  fontSize: 13,
+                  fontWeight: 650,
+                  color: "var(--brand-blue)"
+                }}
+              >
+                <Icon name="play" size={13} />
+                Lanzar escaneo desde visión general
+              </Link>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Emerging brands stand alone when there's no full competitive
+            picture yet (see emergingBrandsBlock definition above) — still
+            gated on having actual scan data, never shown from stale/empty
+            results. */}
+        {!hasCompetitiveData && hasData && emergingBrandsBlock ? (
+          <div style={{ marginTop: 20 }}>{emergingBrandsBlock}</div>
+        ) : null}
+
+        {hasCompetitiveData ? (
+          <div className="cm2-cols">
+            <div className="cm2-main">
+              {/* Podium */}
+              <div className="cm2-sec-lbl">Cuota de voz en IA</div>
+              <div className="card">
+                <div className="cm2-rank you">
+                  <span className="cm2-rank-n">1</span>
+                  <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
+                    {getInitial(project.brand)}
+                  </span>
+                  <div className="cm2-rank-main">
+                    <div className="cm2-rank-nm">
+                      {project.brand}
+                      <span className="cm2-rank-you-tag">Tú</span>
+                    </div>
+                    <div className="cm2-rank-dm">{project.domain}</div>
+                    <div className="cm2-rank-bar-wrap">
+                      <div className="cm2-rank-bar">
+                        <div style={{ width: `${(brandSov / maxSov) * 100}%`, background: "var(--brand-blue)", height: "100%", borderRadius: 99 }} />
                       </div>
                     </div>
-                  </td>
-                  <td className="num">
-                    <b className="tnum">{brandMentionRate}%</b>
-                  </td>
-                  <td className="num">
-                    <b className="tnum">{brandCitationRate}%</b>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div className="sov-bar comp-tbl-sov">
-                        <div
-                          className="sov-fill"
-                          style={{
-                            width: `${(brandSov / maxSov) * 100}%`,
-                            background: "var(--accent)"
-                          }}
-                        />
-                      </div>
-                      <span
-                        className="tnum"
-                        style={{ fontSize: 12, fontWeight: 700, width: 34, textAlign: "right" }}
-                      >
-                        {brandSov}%
-                      </span>
+                  </div>
+                  <div className="cm2-rank-extra">
+                    <div className="v">{brandMentionRate}%</div>
+                    <div className="l">Mención</div>
+                  </div>
+                  <div className="cm2-rank-extra">
+                    <div className="v">{brandCitationRate}%</div>
+                    <div className="l">Cita</div>
+                  </div>
+                  <div className="cm2-rank-r">
+                    <div className="cm2-rank-sov">
+                      {brandSov}
+                      <small>%</small>
                     </div>
+                    {sovDeltas?.brand.deltaPoints != null ? (
+                      <div className={`cm2-delta ${sovDeltas.brand.deltaPoints > 0 ? "up" : sovDeltas.brand.deltaPoints < 0 ? "dn" : "fl"}`}>
+                        {sovDeltas.brand.deltaPoints > 0 ? "▲" : sovDeltas.brand.deltaPoints < 0 ? "▼" : "—"}{" "}
+                        {Math.abs(sovDeltas.brand.deltaPoints)} pt{Math.abs(sovDeltas.brand.deltaPoints) === 1 ? "" : "s"}
+                      </div>
+                    ) : null}
                     {brandEngineBreakdown.length >= 2 && (
-                      <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 4 }}>
+                      <div style={{ fontSize: 10, color: "var(--ink-4)", marginTop: 4, textAlign: "right" }}>
                         {brandEngineBreakdown.map((e, idx) => (
                           <span key={e.provider}>
                             {idx > 0 && " · "}
@@ -416,359 +639,192 @@ export default async function CompetitorsPage({
                         ))}
                       </div>
                     )}
-                  </td>
-                  <td className="num">
-                    <span className="tnum" style={{ color: "var(--ink-2)" }}>
-                      {brandMentions}
-                    </span>
-                  </td>
-                </tr>
+                  </div>
+                </div>
 
-                {/* Competitor rows */}
-                {competitorRows.map((c) => (
-                  <CompetitorRow key={c.id} projectId={projectId} row={c} maxSov={maxSov} />
+                {competitorRows.map((c, i) => (
+                  <PodiumRow key={c.id} projectId={projectId} row={c} rank={i + 2} maxSov={maxSov} />
                 ))}
-
-                {/* If no active competitors */}
-                {competitorRows.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={5}
-                      style={{ textAlign: "center", padding: "28px 20px", color: "var(--ink-4)", fontSize: 13 }}
-                    >
-                      No hay competidores activos configurados.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footnote */}
-          <div
-            style={{
-              padding: "10px 16px",
-              borderTop: "1px solid var(--line-soft)",
-              fontSize: 11.5,
-              color: "var(--ink-4)",
-              lineHeight: 1.5
-            }}
-          >
-            <b>Mención</b>: % de prompts donde aparece la marca.{" "}
-            <b>Cita</b>: % de prompts donde el dominio es fuente citada.{" "}
-            <b>Cuota de voz</b>: menciones propias / (menciones marca + Σ menciones competidores).{" "}
-            <b>Prompts</b>: total de respuestas donde se menciona al competidor.
-          </div>
-
-          {/* ENGINES-VALUE-3 Paso D: gap insight for the leading competitor */}
-          {topCompetitorGap && (
-            <div
-              style={{
-                borderTop: "1px solid var(--line-soft)",
-                padding: "12px 16px",
-                fontSize: 12.5,
-                color: "var(--ink-3)",
-                lineHeight: 1.5
-              }}
-            >
-              <b style={{ color: "var(--ink)" }}>{topCompetitor.name}</b> concentra su presencia en{" "}
-              <b style={{ color: "var(--ink)" }}>{getEngineMeta(topCompetitorGap.strongest.provider).label}</b>{" "}
-              ({topCompetitorGap.strongest.mentionRate}%) mucho más que en{" "}
-              <b style={{ color: "var(--ink)" }}>{getEngineMeta(topCompetitorGap.weakest.provider).label}</b>{" "}
-              ({topCompetitorGap.weakest.mentionRate}%) — ahí es donde compite menos y es tu mejor
-              oportunidad de defensa.
-            </div>
-          )}
-        </div>
-
-        {/* No detections */}
-        {competitorRows.every((c) => c.mentions === 0) && (
-          <div
-            className="section-empty"
-            style={{ marginTop: 14 }}
-          >
-            <div className="section-empty-title">
-              Ningún competidor fue mencionado en los escaneos analizados
-            </div>
-            <div className="section-empty-desc">
-              Revisa si los prompts son suficientemente comparativos o ajusta la lista de
-              competidores en el onboarding.
-            </div>
-          </div>
-        )}
-      </>
-    ) : null;
-
-  const positionTrendSection =
-    configuredCompetitors.length > 0 && completedRuns.length > 0 ? (
-      <div style={{ marginTop: chartAboveTable ? 0 : 24 }}>
-        <div className="section-head">
-          <div className="section-title">Evolución de la posición media</div>
-          <div className="section-desc">
-            Posición media en el ranking de marcas mencionadas por escaneo · #1 es la mejor posición
-          </div>
-        </div>
-
-        <div className="card" style={{ padding: "16px 16px 8px" }}>
-          {hasTrendData ? (
-            <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
-          ) : (
-            <div style={{ padding: "32px 20px", textAlign: "center" }}>
-              <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                Disponible a partir de 2 escaneos completados con datos de posición.
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-    ) : null;
 
-  return (
-    <div className="page">
-      {/* Sticky header */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Competidores</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span
-                style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}
-              >
-                {project.name}
-              </span>
-              <span className="badge badge-neutral">
-                {configuredCompetitors.filter((c) => c.is_active).length} competidores
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="ov-sticky-right">
-          {latestCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
-          {activeRun && completedRuns.length > 0 ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
-        </div>
-      </div>
+              {/* No detections */}
+              {competitorRows.every((c) => c.mentions === 0) && (
+                <div className="section-empty" style={{ marginTop: 14 }}>
+                  <div className="section-empty-title">
+                    Ningún competidor fue mencionado en los escaneos analizados
+                  </div>
+                  <div className="section-empty-desc">
+                    Revisa si los prompts son suficientemente comparativos o ajusta la lista de
+                    competidores con &ldquo;Gestionar&rdquo;.
+                  </div>
+                </div>
+              )}
 
-      {activeRun && completedRuns.length === 0 ? (
-        <ScanInProgress activeRun={activeRun} />
-      ) : (
-      <>
-      {/* Summary banner */}
-      <div className="summary mt8">
-        <div className="summary-ico">
-          <Icon name="competitors" size={20} />
-        </div>
-        <p className="summary-txt">
-          {!hasData ? (
-            <>
-              Sin datos de competencia todavía.{" "}
-              <Link
-                href={`/dashboard/projects/${projectId}`}
-                style={{ color: "var(--accent)", fontWeight: 700 }}
-              >
-                Lanza el primer escaneo
-              </Link>{" "}
-              para ver cómo aparece tu marca frente a la competencia.
-            </>
-          ) : (
-            <>
-              <b>{project.brand}</b> aparece en{" "}
-              <b className={brandMentionRate >= 50 ? "" : "hl-neg"}>
-                {brandMentionRate}% de los prompts
-              </b>
-              {" "}analizados
-              {totalResultsCount > 0 && <> ({totalResultsCount} prompts en total)</>}.
-              {topCompetitor && topCompetitor.sov > brandSov ? (
+              {/* Brecha de prompts */}
+              {promptGapSummary && (
                 <>
-                  {" "}Tu competidor más fuerte es{" "}
-                  <b>{topCompetitor.name}</b> con{" "}
-                  <span className="hl-neg">{topCompetitor.sov}% de cuota de voz</span>.
+                  <div className="cm2-sec-lbl">
+                    Brecha de prompts
+                    <span style={{ fontWeight: 600, color: "var(--ink-4)" }}>{promptGapSummary.totalPrompts} prompts</span>
+                  </div>
+                  <PromptGapSection projectId={projectId} summary={promptGapSummary} />
                 </>
-              ) : topCompetitor ? (
+              )}
+
+              {/* Presencia por motor */}
+              {brandEngineBreakdown.length >= 2 && competitorRows.some((c) => c.engineBreakdown.length >= 2) ? (
                 <>
-                  {" "}Lideras con <span style={{ color: "var(--pos-ink)", fontWeight: 700 }}>{brandSov}% de cuota de voz</span>.
+                  <div className="cm2-sec-lbl">Presencia por motor · tasa de mención</div>
+                  <div className="card" style={{ paddingBottom: 6, overflowX: "auto" }}>
+                    <table className="cm2-mx">
+                      <thead>
+                        <tr>
+                          <th>Marca</th>
+                          {brandEngineBreakdown.map((e) => (
+                            <th key={e.provider}>{getEngineMeta(e.provider).label}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="you">
+                          <td>{project.brand}</td>
+                          {brandEngineBreakdown.map((e) => (
+                            <td key={e.provider}>
+                              <span className={`cm2-mxc h${Math.min(5, Math.floor(e.mentionRate / 17))}`}>{e.mentionRate}</span>
+                            </td>
+                          ))}
+                        </tr>
+                        {competitorRows.map((c) => (
+                          <tr key={c.id}>
+                            <td>{c.name}</td>
+                            {brandEngineBreakdown.map((brandE) => {
+                              const match = c.engineBreakdown.find((e) => e.provider === brandE.provider);
+                              const rate = match?.mentionRate ?? 0;
+                              return (
+                                <td key={brandE.provider}>
+                                  <span className={`cm2-mxc h${Math.min(5, Math.floor(rate / 17))}`}>{rate}</span>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </>
               ) : null}
-            </>
-          )}
-        </p>
-      </div>
+            </div>
 
-      {/* Empty: no competitors configured */}
-      {configuredCompetitors.length === 0 ? (
-        <div style={{ marginTop: 14 }}>
-          <div className="section-head">
-            <div className="section-title">Panorámica competitiva</div>
+            <div className="cm2-rail">
+              {/* Terreno por tema */}
+              {topicComparison.length > 0 && (
+                <>
+                  <div className="cm2-sec-lbl">Terreno por tema</div>
+                  <div className="card">
+                    {topicComparison.slice(0, 8).map((t) => (
+                      <div className="cm2-tp" key={t.topic}>
+                        <div className="cm2-tp-nm">
+                          {t.topic}
+                          {/* gap < 0 only happens when leaderRate > 0, which only happens when
+                              leaderName is set (lib/competitors/topic-comparison.ts) — safe to
+                              interpolate leaderName directly in that branch. */}
+                          <i>{t.gap > 0 ? "Lideras tú" : t.gap < 0 ? `Lidera ${t.leaderName}` : "Empate"}</i>
+                        </div>
+                        <div className="cm2-tp-bars">
+                          <div className="cm2-tp-b">
+                            <div style={{ width: `${t.brandRate}%`, background: "var(--brand-blue)", height: "100%", borderRadius: 99 }} />
+                          </div>
+                          <div className="cm2-tp-b">
+                            <div style={{ width: `${t.leaderRate}%`, background: "var(--ink-4)", height: "100%", borderRadius: 99 }} />
+                          </div>
+                        </div>
+                        <div className={`cm2-tp-v ${t.gap > 0 ? "up" : t.gap < 0 ? "dn" : ""}`}>
+                          {t.gap > 0 ? "+" : ""}
+                          {t.gap}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Marcas emergentes */}
+              {emergingBrandsBlock}
+
+              {/* Evolución de la posición media */}
+              <div className="cm2-sec-lbl">Evolución de la posición media</div>
+              <div className="card" style={{ padding: "16px 16px 8px" }}>
+                {hasTrendData ? (
+                  <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
+                ) : (
+                  <div style={{ padding: "32px 20px", textAlign: "center" }}>
+                    <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
+                      Disponible a partir de 2 escaneos completados con datos de posición.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: "999px",
-                background: "var(--surface-sunk)",
-                display: "grid",
-                placeItems: "center",
-                color: "var(--ink-3)",
-                margin: "0 auto 16px"
-              }}
-            >
-              <Icon name="competitors" size={22} />
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
-              No hay competidores configurados
-            </div>
-            <div
-              style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
-            >
-              Añade competidores durante el onboarding para ver el análisis comparativo de cuota de
-              voz en IA.
-            </div>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 13,
-                fontWeight: 650,
-                color: "var(--accent)"
-              }}
-            >
-              Volver a visión general
-              <Icon name="arrRight" size={13} />
-            </Link>
-          </div>
+        ) : null}
+
+        {/* Footer links */}
+        <div
+          style={{
+            display: "flex",
+            gap: 20,
+            marginTop: 28,
+            paddingTop: 18,
+            borderTop: "1px solid var(--line-soft)",
+            flexWrap: "wrap"
+          }}
+        >
+          <Link
+            href={`/dashboard/projects/${projectId}`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 13,
+              color: "var(--ink-3)",
+              fontWeight: 600
+            }}
+          >
+            <Icon name="overview" size={13} />
+            Visión general
+          </Link>
+          <Link
+            href={`/dashboard/projects/${projectId}/runs`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 13,
+              color: "var(--ink-3)",
+              fontWeight: 600
+            }}
+          >
+            <Icon name="runs" size={13} />
+            Historial de escaneos
+          </Link>
+          <Link
+            href={`/dashboard/projects/${projectId}/prompts`}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              fontSize: 13,
+              color: "var(--ink-3)",
+              fontWeight: 600
+            }}
+          >
+            <Icon name="prompts" size={13} />
+            Prompts
+          </Link>
         </div>
-      ) : null}
-
-      {/* Empty: competitors configured but no completed runs */}
-      {configuredCompetitors.length > 0 && completedRuns.length === 0 ? (
-        <div style={{ marginTop: 14 }}>
-          <div className="section-head">
-            <div className="section-title">Panorámica competitiva · cuota de voz en IA</div>
-          </div>
-          <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: "999px",
-                background: "var(--surface-sunk)",
-                display: "grid",
-                placeItems: "center",
-                color: "var(--ink-3)",
-                margin: "0 auto 16px"
-              }}
-            >
-              <Icon name="resonance" size={22} />
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
-              Sin datos de competencia todavía
-            </div>
-            <div
-              style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 380, margin: "0 auto 20px", lineHeight: 1.6 }}
-            >
-              Las menciones y la cuota de voz de tus competidores aparecerán aquí tras completar el
-              primer escaneo real con Gemini.
-            </div>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 5,
-                fontSize: 13,
-                fontWeight: 650,
-                color: "var(--accent)"
-              }}
-            >
-              <Icon name="play" size={13} />
-              Lanzar escaneo desde visión general
-            </Link>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Competitive table + position trend chart — chart leads once there's
-          enough scan history (>3 completed scans), table leads otherwise */}
-      {chartAboveTable ? (
-        <>
-          {positionTrendSection}
-          <div style={{ marginTop: 24 }}>{competitorTableSection}</div>
         </>
-      ) : (
-        <>
-          {competitorTableSection}
-          {positionTrendSection}
-        </>
-      )}
-
-      {/* Footer links */}
-      <div
-        style={{
-          display: "flex",
-          gap: 20,
-          marginTop: 28,
-          paddingTop: 18,
-          borderTop: "1px solid var(--line-soft)",
-          flexWrap: "wrap"
-        }}
-      >
-        <Link
-          href={`/dashboard/projects/${projectId}`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 13,
-            color: "var(--ink-3)",
-            fontWeight: 600
-          }}
-        >
-          <Icon name="overview" size={13} />
-          Visión general
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/runs`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 13,
-            color: "var(--ink-3)",
-            fontWeight: 600
-          }}
-        >
-          <Icon name="runs" size={13} />
-          Historial de escaneos
-        </Link>
-        <Link
-          href={`/dashboard/projects/${projectId}/prompts`}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 5,
-            fontSize: 13,
-            color: "var(--ink-3)",
-            fontWeight: 600
-          }}
-        >
-          <Icon name="prompts" size={13} />
-          Prompts
-        </Link>
+        )}
       </div>
-      </>
-      )}
     </div>
   );
 }

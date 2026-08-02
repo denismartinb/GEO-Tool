@@ -390,6 +390,97 @@ Referencias: `docs/agentic-user-pilot.md`, `.claude/agents/ux-pilot.md`.
 
 ---
 
+## 8. Página de Competidores (COMP-REDESIGN-1)
+
+**Estado: implementado (Fase A+B en un único PR, aprobado explícitamente por
+el fundador el 2026-08-02 — ver Task Intake en el hilo del PR).**
+
+**Origen:** el fundador pidió rediseñar Competidores a partir de dos
+documentos de referencia de Semrush (el blog "Why Are My Competitors Showing
+Up in AI Search and Not Us?" y la documentación del Competitor Research
+Report), pidiendo estudiar si la sección se podía "vitaminar" con información
+de valor nueva usando datos que ya tenemos.
+
+Decisiones finales:
+- **Repintado a v3** (`.cm2-scope`/`.cm2-page`), mismo mecanismo de remapeo
+  de variables que `.ov2-scope`/`.pr2-scope` (§2) y mismos anchos por
+  breakpoint que Overview/Prompts (460/640/1200/1280px) — Competidores
+  estaba en el sistema `.page`/1320px pre-BRAND-5b, la única pantalla de la
+  consola con scroll horizontal obligatorio en móvil (tabla de 5 columnas).
+  Se sustituye por un podio (fila-tarjeta) con revelación progresiva de
+  columnas por breakpoint, mismo componente en todos los tamaños.
+- **Taxonomía "Brecha de prompts"**: adapta el Missing/Weak/Strong/Shared/
+  Unique de Semrush a 5 categorías mutuamente excluyentes —
+  Ausente/Por detrás/Por delante/En exclusiva/Sin nadie —, derivadas
+  íntegramente de `extracted_json` ya persistido (sin llamada nueva a
+  Gemini, sin migración). Ámbito: **el último escaneo completado
+  únicamente** (no acumulado), porque "Ausente" está definido para coincidir
+  exactamente con la fórmula de `competitor_gap_score`
+  (`displacedPromptsCount`, ADR 0011/`lib/scoring/run-scoring.ts`) — mismo
+  criterio que ADR 0018 de no mostrar dos números con el mismo significado y
+  distinto valor en la misma pantalla. Test unitario (`lib/competitors/
+  prompt-gap.test.ts`, caso 11) verifica la paridad de fórmula.
+- **Delta escaneo-sobre-escaneo** junto a la cuota de voz acumulada de cada
+  fila: deliberadamente una métrica separada (compara solo el último escaneo
+  contra el anterior, `lib/competitors/sov-delta.ts`), nunca mezclada con el
+  número acumulado principal — incluso con precedente distinto, mismo
+  criterio de honestidad que ADR 0018.
+- **Matriz motor × marca** (tasa de mención por motor) sustituye el texto de
+  11px "Gemini 38% · ChatGPT 52%" bajo cada barra — reutiliza
+  `computeEntityEngineBreakdown` (ENGINES-VALUE-3) ya existente, solo cambia
+  la presentación.
+- **Terreno por tema**: compara tasa de mención propia vs. mejor competidor
+  activo por `project_prompts.category`, acumulado (mismo criterio que la
+  matriz), en el raíl de escritorio junto al gráfico de posición.
+- **Marcas emergentes**: primera vez que `other_brands_mentioned` (ya
+  extraído por los tres motores, usado hoy solo por recomendaciones/
+  auditoría web) se muestra en Competidores. Cierra el caso Ikea de ADR 0018
+  (Sklum/Brico Depôt/BANNI aparecían en el ranking sin que el usuario
+  pudiera hacer nada). Se muestra **fuera** del raíl de dos columnas (como
+  bloque independiente a ancho completo) cuando el proyecto todavía no tiene
+  ningún competidor activo — es precisamente el caso donde más ayuda a
+  arrancar, y quedaba oculto en la primera versión de esta fase por un gate
+  demasiado estricto (corregido antes de abrir el PR).
+- **Gestión de competidores** (alta/edición/baja): `createCompetitor`/
+  `updateCompetitor`/`deactivateCompetitor` llevaban meses en `actions.ts`
+  sin ninguna UI conectada (gap ya documentado en §4 de este log). Se
+  sustituyen por `createCompetitorAction`/`updateCompetitorAction`/
+  `deactivateCompetitorAction` (`lib/competitors/manage-competitors.ts`),
+  mismo patrón typed-input + `useTransition` que `addPrompts`/
+  `rewriteRecommendationAction` (sin FormData, sin redirect, error inline en
+  el modal). Añadir un dominio ya desactivado **reactiva** la fila existente
+  en vez de violar `competitors_project_domain_uniq`
+  (`0001_v0_schema.sql`) — flujo probado en `lib/competitors/
+  manage-competitors.test.ts`. Solo baja lógica (`is_active=false`), nunca
+  borrado duro.
+- **Decisión explícita de alcance (2026-08-02):** la gestión de
+  competidores entra en el **mismo PR** que el rediseño visual, por petición
+  directa del fundador — desviación del Task Intake original, que proponía
+  separarlas en Fase A (solo lectura) y Fase B (escritura).
+
+Pendiente / roto conocido:
+- **El piloto agéntico no puede verificar los flujos de escritura** de esta
+  fase (alta/edición/baja de competidores): sigue siendo de solo lectura
+  salvo la excepción UX-PILOT-2a (un único prompt manual). Esos flujos
+  vuelven `PILOT INCONCLUSIVE` y necesitan smoke manual del fundador.
+- **Página de Páginas citadas sin tocar.** El documento de Semrush describe
+  "Sources → Missing" (dominios que citan a un rival y nunca a ti) —
+  `aggregate-citations.ts` ya resuelve categoría `"competitor"` por dominio
+  pero descarta qué competidor hizo match. Analizado y documentado como
+  candidato (`CIT-GAP-1`) pero confirmado **fuera de alcance** por el
+  fundador (el pedido original de "vitaminar páginas citadas" era un
+  lapsus — el trabajo era solo Competidores).
+- **Emparejamiento de nombres sin normalizar acentos** (`COMP-MATCH-1`,
+  pendiente desde §4): esta fase no lo toca — sigue siendo `normKey()`
+  simple (trim + lowercase) en toda la página, sin `normalizeEntityName`
+  (PR #258). Mueve scoring real, necesita su propia validación.
+- Sin sentimiento por competidor: el esquema de extracción solo puntúa
+  `sentiment` de la marca propia, no de cada competidor — necesitaría
+  cambiar la extracción y re-escanear, fuera de alcance de un PR de
+  presentación.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

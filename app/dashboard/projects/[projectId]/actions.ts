@@ -31,17 +31,22 @@ import {
   executePendingScan,
   getActionErrorCode
 } from "@/lib/scan/scan-runner";
+import {
+  createCompetitorCore,
+  createCompetitorInputSchema,
+  deactivateCompetitorCore,
+  deactivateCompetitorInputSchema,
+  updateCompetitorCore,
+  updateCompetitorInputSchema,
+  type CreateCompetitorResult,
+  type DeactivateCompetitorResult,
+  type UpdateCompetitorResult
+} from "@/lib/competitors/manage-competitors";
 
 const promptCreateSchema = z.object({
   projectId: z.string().uuid(),
   promptText: z.string().min(10).max(3000),
   category: z.string().max(100).optional().or(z.literal(""))
-});
-
-const competitorCreateSchema = z.object({
-  projectId: z.string().uuid(),
-  name: z.string().min(1).max(120),
-  domain: z.string().min(3).max(255)
 });
 
 const scanExecuteSchema = z.object({
@@ -98,51 +103,81 @@ export async function deactivatePrompt(formData: FormData) {
   revalidatePath(`/dashboard/projects/${projectId}/prompts`);
 }
 
-export async function createCompetitor(formData: FormData) {
-  const payload = competitorCreateSchema.parse({
-    projectId: formData.get("projectId"),
-    name: formData.get("name"),
-    domain: formData.get("domain")
-  });
+/**
+ * Alta de competidor (COMP-REDESIGN-1). Called directly from the client via
+ * `useTransition`, same pattern as `addPrompts` — no FormData, no redirect,
+ * so the manage-competitor modal can show an inline error without a full
+ * navigation. There was no existing UI wired to competitor management
+ * before this, so this replaces the old FormData-based `createCompetitor`
+ * outright rather than preserving it as a second contract.
+ */
+export async function createCompetitorAction(input: {
+  projectId: string;
+  name: string;
+  domain: string;
+}): Promise<CreateCompetitorResult> {
+  const parsed = createCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
 
-  const { supabase } = await requireUser();
-  await supabase.from("project_competitors").insert({
-    project_id: payload.projectId,
-    name: payload.name,
-    domain: payload.domain
-  });
+  const { supabase, user } = await requireUser();
+  const result = await createCompetitorCore({ ...parsed.data, supabase, user });
 
-  revalidatePath(`/dashboard/projects/${payload.projectId}`);
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
 }
 
-export async function updateCompetitor(formData: FormData) {
-  const projectId = String(formData.get("projectId") ?? "");
-  const competitorId = String(formData.get("competitorId") ?? "");
-  const name = String(formData.get("name") ?? "");
-  const domain = String(formData.get("domain") ?? "");
+/** Edición de competidor (COMP-REDESIGN-1). Same call pattern as `createCompetitorAction`. */
+export async function updateCompetitorAction(input: {
+  projectId: string;
+  competitorId: string;
+  name: string;
+  domain: string;
+}): Promise<UpdateCompetitorResult> {
+  const parsed = updateCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
 
-  const { supabase } = await requireUser();
-  await supabase
-    .from("project_competitors")
-    .update({ name, domain })
-    .eq("id", competitorId)
-    .eq("project_id", projectId);
+  const { supabase, user } = await requireUser();
+  const result = await updateCompetitorCore({ ...parsed.data, supabase, user });
 
-  revalidatePath(`/dashboard/projects/${projectId}`);
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
 }
 
-export async function deactivateCompetitor(formData: FormData) {
-  const projectId = String(formData.get("projectId") ?? "");
-  const competitorId = String(formData.get("competitorId") ?? "");
+/**
+ * Baja de competidor (COMP-REDESIGN-1). Soft delete only (`is_active =
+ * false`) — hard delete of a tracked competitor is not part of this scope
+ * and stays off the list of things this action can do.
+ */
+export async function deactivateCompetitorAction(input: {
+  projectId: string;
+  competitorId: string;
+}): Promise<DeactivateCompetitorResult> {
+  const parsed = deactivateCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
 
-  const { supabase } = await requireUser();
-  await supabase
-    .from("project_competitors")
-    .update({ is_active: false })
-    .eq("id", competitorId)
-    .eq("project_id", projectId);
+  const { supabase, user } = await requireUser();
+  const result = await deactivateCompetitorCore({ ...parsed.data, supabase, user });
 
-  revalidatePath(`/dashboard/projects/${projectId}`);
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
 }
 
 export async function executeScan(formData: FormData) {
