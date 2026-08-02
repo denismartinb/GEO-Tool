@@ -79,7 +79,10 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-07-13",
     coverIcon: "compass",
     coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.png",
-    primaryKeyword: "qué es geo",
+    // Not "qué es geo" — /geo (app/geo/page.tsx) already owns that keyword as
+    // the commercial landing page. This post's real differentiator, and the
+    // bulk of its body, is the SEO-vs-GEO comparison (GROWTH-2 Fase 2.6a).
+    primaryKeyword: "geo vs seo",
     cluster: "fundamentos"
   },
   {
