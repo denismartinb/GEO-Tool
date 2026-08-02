@@ -71,6 +71,16 @@ body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
+  /* GROWTH-2 Fase 2.1 pilot finding (PR #286): the blog index measured a 3px
+     horizontal overflow on mobile in the real Vercel preview (378px scroll
+     width vs 375px viewport) that did not reproduce against an identical
+     local build — consistent with a sub-pixel rendering artifact from the
+     page's large blurred decorative background shapes (.onb-aurora), not a
+     structural layout bug (nothing here intentionally scrolls horizontally;
+     every real horizontal scroller in this file is scoped to its own inner
+     container, e.g. .tbl-wrap, .filters). This is a permanent safety net
+     against that whole class of bug, not a workaround for one page. */
+  overflow-x: hidden;
 }
 
 a {
