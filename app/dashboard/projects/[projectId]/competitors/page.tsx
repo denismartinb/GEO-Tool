@@ -398,6 +398,38 @@ export default async function CompetitorsPage({
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
   const brandFavicon = faviconUrl(project.domain);
 
+  // Engine columns worth showing: an engine where NOBODY (not the brand, not
+  // a single competitor) was ever mentioned adds a column of zeros that tells
+  // the user nothing — drop it entirely rather than render dead space
+  // (founder feedback). This is a display filter only: the engine ran and its
+  // 0% is real, it's just not comparative information. The per-entity rates
+  // themselves are untouched, still computed over each engine's own row total
+  // (docs/specs/engines-value-3.md §7).
+  const matrixEngines = brandEngineBreakdown.filter((brandEngine) => {
+    if (brandEngine.mentionRate > 0) return true;
+    return competitorRows.some(
+      (c) => (c.engineBreakdown.find((e) => e.provider === brandEngine.provider)?.mentionRate ?? 0) > 0
+    );
+  });
+
+  // Latest avg position per entity, read from the same run_scores ranking the
+  // trend chart plots — surfaced as a compact ranked list beside the chart so
+  // the current standing is legible without reading a line's endpoint.
+  const latestTrendPoint = trendData.length > 0 ? trendData[trendData.length - 1] : null;
+  const latestPositions = latestTrendPoint
+    ? [
+        { key: "brand", label: project.brand, isBrand: true, position: latestTrendPoint.values.brand ?? null },
+        ...competitorRows.map((c) => ({
+          key: c.id,
+          label: c.name,
+          isBrand: false,
+          position: latestTrendPoint.values[c.id] ?? null
+        }))
+      ]
+        .filter((entry) => entry.position != null)
+        .sort((a, b) => (a.position as number) - (b.position as number))
+    : [];
+
   // Rendered in exactly one place: inside the desktop rail next to the trend
   // chart when there's a full competitive picture, or as its own standalone
   // block when the user has scan data but hasn't configured any active
@@ -445,11 +477,6 @@ export default async function CompetitorsPage({
                 Escaneo en curso
               </span>
             ) : null}
-            <ManageCompetitorsPanel
-              projectId={projectId}
-              activeCompetitors={activeCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
-              inactiveCompetitors={inactiveCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
-            />
           </div>
         </div>
 
@@ -599,8 +626,19 @@ export default async function CompetitorsPage({
         {hasCompetitiveData ? (
           <div className="cm2-cols">
             <div className="cm2-main">
-              {/* Podium */}
-              <div className="cm2-sec-lbl">Cuota de voz en IA</div>
+              {/* Podium. "Gestionar" lives here, NOT in the sticky header —
+                  docs/brand/design-decisions-log.md §3.2 fixes that header as
+                  título + fecha + marca/dominio only, identical across every
+                  console screen; hanging a page-specific action off it broke
+                  that contract (founder feedback). */}
+              <div className="cm2-sec-lbl">
+                Cuota de voz en IA
+                <ManageCompetitorsPanel
+                  projectId={projectId}
+                  activeCompetitors={activeCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
+                  inactiveCompetitors={inactiveCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
+                />
+              </div>
               <div className="card">
                 <div className="cm2-rank you">
                   <span className="cm2-rank-n">1</span>
@@ -664,6 +702,40 @@ export default async function CompetitorsPage({
                 </div>
               )}
 
+              {/* Evolución de la posición media — sits directly under the
+                  share-of-voice podium (founder feedback: it was buried at the
+                  bottom of the desktop rail). The ranked list repeats the
+                  chart's endpoint as a readable number, so "who is ahead right
+                  now" doesn't require tracing a line. */}
+              <div className="cm2-sec-lbl">Evolución de la posición media</div>
+              <div className="card cm2-pos-card">
+                {hasTrendData ? (
+                  <>
+                    <div className="cm2-pos-chart">
+                      <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
+                    </div>
+                    {latestPositions.length > 0 ? (
+                      <div className="cm2-pos-list">
+                        <div className="cm2-pos-list-hd">Posición media · último escaneo</div>
+                        {latestPositions.map((entry, i) => (
+                          <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
+                            <span className="cm2-pos-n">{i + 1}</span>
+                            <span className="cm2-pos-nm">{entry.label}</span>
+                            <span className="cm2-pos-v">{(entry.position as number).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div style={{ padding: "32px 20px", textAlign: "center" }}>
+                    <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
+                      Disponible a partir de 2 escaneos completados con datos de posición.
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Brecha de prompts */}
               {promptGapSummary && (
                 <>
@@ -675,8 +747,11 @@ export default async function CompetitorsPage({
                 </>
               )}
 
-              {/* Presencia por motor */}
-              {brandEngineBreakdown.length >= 2 && competitorRows.some((c) => c.engineBreakdown.length >= 2) ? (
+              {/* Presencia por motor. Columns come from `matrixEngines`, which
+                  drops any engine nobody was mentioned in — an all-zero column
+                  is dead space, not a comparison (founder feedback). Needs >= 2
+                  surviving columns to still be a comparison at all. */}
+              {matrixEngines.length >= 2 ? (
                 <>
                   <div className="cm2-sec-lbl">Presencia por motor · tasa de mención</div>
                   <div className="card" style={{ paddingBottom: 6, overflowX: "auto" }}>
@@ -684,7 +759,7 @@ export default async function CompetitorsPage({
                       <thead>
                         <tr>
                           <th>Marca</th>
-                          {brandEngineBreakdown.map((e) => (
+                          {matrixEngines.map((e) => (
                             <th key={e.provider}>{getEngineMeta(e.provider).label}</th>
                           ))}
                         </tr>
@@ -692,7 +767,7 @@ export default async function CompetitorsPage({
                       <tbody>
                         <tr className="you">
                           <td>{project.brand}</td>
-                          {brandEngineBreakdown.map((e) => (
+                          {matrixEngines.map((e) => (
                             <td key={e.provider}>
                               <span className={`cm2-mxc h${Math.min(5, Math.floor(e.mentionRate / 17))}`}>{e.mentionRate}</span>
                             </td>
@@ -701,7 +776,7 @@ export default async function CompetitorsPage({
                         {competitorRows.map((c) => (
                           <tr key={c.id}>
                             <td>{c.name}</td>
-                            {brandEngineBreakdown.map((brandE) => {
+                            {matrixEngines.map((brandE) => {
                               const match = c.engineBreakdown.find((e) => e.provider === brandE.provider);
                               const rate = match?.mentionRate ?? 0;
                               return (
@@ -754,20 +829,6 @@ export default async function CompetitorsPage({
 
               {/* Marcas emergentes */}
               {emergingBrandsBlock}
-
-              {/* Evolución de la posición media */}
-              <div className="cm2-sec-lbl">Evolución de la posición media</div>
-              <div className="card" style={{ padding: "16px 16px 8px" }}>
-                {hasTrendData ? (
-                  <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
-                ) : (
-                  <div style={{ padding: "32px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                      Disponible a partir de 2 escaneos completados con datos de posición.
-                    </div>
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         ) : null}

@@ -722,6 +722,67 @@ const promptsResponseSchema = z.object({
     .default([])
 });
 
+const brandDomainResponseSchema = z.object({
+  domain: z.string().nullable().default(null)
+});
+
+/**
+ * Resolves the official root domain of a brand the AI already named
+ * (`other_brands_mentioned`), so "+ Seguir" on the Competitors page can add
+ * it to tracking without asking the user to type a domain by hand — the same
+ * "the system finds the domain, not the user" contract onboarding already
+ * has via `suggestCompetitors` (founder feedback, COMP-REDESIGN-1 review).
+ *
+ * Distinct from `suggestCompetitors`: that one DISCOVERS which brands compete
+ * with you; this one takes a brand name that's already known and only looks
+ * up its address. Uses the same google_search grounding so regional brands
+ * with no training-data footprint still resolve.
+ *
+ * Fail-soft by the same convention as `suggestCompetitors`: returns null on
+ * any API/parse failure or an implausible answer, and the caller falls back
+ * to asking the user. Never throws.
+ */
+export async function resolveBrandDomain(input: {
+  brandName: string;
+  country: string;
+  language: string;
+  /** The project's own domain — never resolve a "competitor" to the brand's own site. */
+  projectDomain: string;
+}): Promise<string | null> {
+  const name = input.brandName.trim();
+  if (!name || name.length > 120) return null;
+
+  const promptBlock = [
+    "You are a market analyst. Use Google Search to find the OFFICIAL website of the brand named below.",
+    `Return ONLY valid JSON with this exact shape: { "domain": string|null }. Respond with JSON only — no markdown, no commentary, no code fences.`,
+    "Use the brand's real root domain (no https://, no www., no path). Prefer the site that serves the market/country given below when the brand has several country sites.",
+    'If you cannot identify the brand with confidence, or it is not a real company/brand, return { "domain": null } — never guess a plausible-looking domain.',
+    "",
+    `Brand name: ${name}`,
+    `Market/country: ${input.country}`,
+    `Language: ${input.language}`
+  ].join("\n");
+
+  let raw: unknown;
+  try {
+    raw = await generateGroundedGeminiJson(promptBlock);
+  } catch {
+    return null;
+  }
+
+  const parsed = brandDomainResponseSchema.safeParse(raw);
+  if (!parsed.success || !parsed.data.domain) return null;
+
+  const domain = normalizeDomain(parsed.data.domain);
+  if (!domain || domain.length < 3 || domain.length > 255) return null;
+  if (!domain.includes(".")) return null;
+  // Same BRAND-DOMAIN-1 guard as suggestCompetitors: never resolve to the
+  // project's own site, including the same brand on another TLD.
+  if (isBrandDomain(domain, normalizeDomain(input.projectDomain))) return null;
+
+  return domain;
+}
+
 /**
  * Real Gemini-backed suggestion of high-intent prompts a user would ask an AI
  * assistant where the brand could plausibly appear. Requires a `profile`

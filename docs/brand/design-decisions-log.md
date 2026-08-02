@@ -887,6 +887,43 @@ Pendiente / roto conocido:
   cambiar la extracción y re-escanear, fuera de alcance de un PR de
   presentación.
 
+**Revisión del fundador sobre el preview (2026-08-02).** Cinco correcciones
+en el mismo PR, todas sobre datos reales:
+
+1. **"Gestionar" sale del sticky-header.** Se había colgado de
+   `.ov-sticky-right`, rompiendo el contrato de §3.2 de este mismo documento:
+   la cabecera de página es **idéntica en todas las pantallas de consola**
+   (título + pill de fecha + marca/dominio) y no admite acciones específicas
+   de una pantalla. Pasa a la etiqueta de sección "Cuota de voz en IA"
+   (`.cm2-manage-btn`). Anotado aquí porque fue una decisión ya tomada que
+   esta fase contradijo sin darse cuenta — exactamente lo que este log existe
+   para evitar.
+2. **Columnas de motor a cero se eliminan de la matriz.** Si ningún actor
+   (ni la marca ni ningún competidor) fue mencionado en un motor, esa columna
+   es espacio muerto, no una comparación. Filtro de presentación
+   (`matrixEngines`): las tasas por entidad no cambian y el 0% sigue siendo
+   real, simplemente no se pinta una columna que no informa. La matriz exige
+   ≥2 columnas supervivientes para seguir siendo comparativa.
+3. **"+ Seguir" en una línea.** El botón envolvía a dos líneas con el "+"
+   descentrado; ahora es `inline-flex` con `white-space: nowrap`.
+4. **El sistema resuelve el dominio, no el usuario.** "+ Seguir" pedía al
+   usuario teclear el dominio a mano, incoherente con el onboarding, que ya
+   los descubre solo. Nueva `resolveBrandDomain` (`lib/llm/gemini.ts`) —
+   búsqueda grounded del dominio oficial de una marca **ya nombrada** por la
+   IA, distinta de `suggestCompetitors` (que descubre *qué* marcas compiten;
+   ésta solo busca la dirección de una conocida). Mismo guardarraíl
+   BRAND-DOMAIN-1 (nunca resuelve al dominio propio) y misma convención
+   fail-soft. Si no se puede resolver, se dice claramente y se remite a
+   "Gestionar" — **nunca se inventa un dominio plausible**.
+   `followBrandCore` reutiliza `createCompetitorCore` tal cual, así que la
+   reactivación de una fila desactivada y el guardarraíl de duplicados se
+   comportan igual que en un alta manual.
+5. **Gráfico de posición media subido**, de la cola del raíl derecho a justo
+   debajo del podio de cuota de voz, y acompañado de una **lista ordenada con
+   la posición media del último escaneo** por marca — el fundador pidió
+   valorar "una tabla de la posición media de los competidores": leer quién
+   va delante ahora mismo no debería exigir seguir la línea de un gráfico.
+
 ---
 
 ## Cómo mantener este documento

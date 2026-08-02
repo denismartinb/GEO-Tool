@@ -4,6 +4,7 @@ import {
   createCompetitorCore,
   deactivateCompetitorCore,
   domainSchemaForTests,
+  followBrandCore,
   updateCompetitorCore
 } from "./manage-competitors";
 
@@ -273,6 +274,99 @@ describe("deactivateCompetitorCore", () => {
     expect(result.success).toBe(true);
     expect(competitors[0].is_active).toBe(false);
     expect(competitors).toHaveLength(1);
+  });
+});
+
+describe("followBrandCore", () => {
+  it("1. resolves the domain and creates the competitor — the caller never supplies a domain", async () => {
+    const { client, competitors } = makeFakeSupabase({});
+    const result = await followBrandCore({
+      projectId: PROJECT_ID,
+      name: "Sklum",
+      supabase: client,
+      user: USER,
+      resolveDomain: async () => "sklum.com"
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.competitor.domain).toBe("sklum.com");
+    expect(competitors).toHaveLength(1);
+  });
+
+  it("2. domain cannot be resolved → honest error, nothing persisted (never invents a domain)", async () => {
+    const { client, competitors } = makeFakeSupabase({});
+    const result = await followBrandCore({
+      projectId: PROJECT_ID,
+      name: "Marca Inexistente",
+      supabase: client,
+      user: USER,
+      resolveDomain: async () => null
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toMatch(/dominio/i);
+    expect(competitors).toHaveLength(0);
+  });
+
+  it("3. resolver throws → treated as unresolved, never propagates the raw failure", async () => {
+    const { client, competitors } = makeFakeSupabase({});
+    const result = await followBrandCore({
+      projectId: PROJECT_ID,
+      name: "Sklum",
+      supabase: client,
+      user: USER,
+      resolveDomain: async () => {
+        throw new Error("gemini exploded");
+      }
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).not.toMatch(/exploded/);
+    expect(competitors).toHaveLength(0);
+  });
+
+  it("4. resolver returns a malformed domain → rejected rather than persisted", async () => {
+    const { client, competitors } = makeFakeSupabase({});
+    const result = await followBrandCore({
+      projectId: PROJECT_ID,
+      name: "Sklum",
+      supabase: client,
+      user: USER,
+      resolveDomain: async () => "not a domain at all"
+    });
+    expect(result.success).toBe(false);
+    expect(competitors).toHaveLength(0);
+  });
+
+  it("5. project not owned → fails before the resolver is ever called (no wasted LLM call)", async () => {
+    const { client } = makeFakeSupabase({ project: null });
+    let called = false;
+    const result = await followBrandCore({
+      projectId: PROJECT_ID,
+      name: "Sklum",
+      supabase: client,
+      user: USER,
+      resolveDomain: async () => {
+        called = true;
+        return "sklum.com";
+      }
+    });
+    expect(result.success).toBe(false);
+    expect(called).toBe(false);
+  });
+
+  it("6. reuses createCompetitorCore's reactivation path for a previously deactivated domain", async () => {
+    const { client, competitors } = makeFakeSupabase({
+      competitors: [{ id: COMPETITOR_ID, project_id: PROJECT_ID, domain: "sklum.com", is_active: false, name: "Sklum" }]
+    });
+    const result = await followBrandCore({
+      projectId: PROJECT_ID,
+      name: "Sklum",
+      supabase: client,
+      user: USER,
+      resolveDomain: async () => "sklum.com"
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.reactivated).toBe(true);
+    expect(competitors).toHaveLength(1);
+    expect(competitors[0].is_active).toBe(true);
   });
 });
 

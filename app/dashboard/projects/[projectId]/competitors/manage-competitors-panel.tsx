@@ -268,8 +268,8 @@ export function ManageCompetitorsPanel({
 
   return (
     <>
-      <button type="button" className="badge badge-neutral" style={{ cursor: "pointer", border: "none" }} onClick={() => setOpen(true)}>
-        <Icon name="settings" size={11} />
+      <button type="button" className="cm2-manage-btn" onClick={() => setOpen(true)}>
+        <Icon name="settings" size={12} />
         Gestionar
       </button>
       {modal ? createPortal(modal, document.body) : null}
