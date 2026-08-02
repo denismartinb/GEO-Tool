@@ -186,7 +186,10 @@ function screenBody(path) {
     return '<h2>Backlog de acciones</h2><div class="rec-card">Recomendación de prueba</div>';
   }
   if (path === `/dashboard/projects/${PROJECT_ID}/runs`) {
-    return "<p>Escaneo del 1 ago 2026 — Completado</p>";
+    // A table, not prose: the journey anchors on `.run-tbl` because the real
+    // page's status text sits inside `.scan-status`, which globals.css hides
+    // below 900px. Keep this in sync with that anchor.
+    return `<table class="run-tbl"><tbody><tr><td>1</td><td>1 ago 2026</td><td>Completado</td></tr></tbody></table>`;
   }
   if (path === `/dashboard/projects/${PROJECT_ID}/web-audit`) {
     // The tablist is exactly what the web-audit journey anchors on, because

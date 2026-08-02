@@ -114,8 +114,20 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
 test("scan history screen renders", async ({ page }, testInfo) => {
   const id = await projectId(page);
   const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs", {
-    describedAs: "al menos un escaneo en el historial",
-    anyOf: [{ text: /completado|en curso|pendiente|fallido/i }]
+    // `.run-tbl` (the history table) and NOT the status text: the first
+    // version of this anchor matched /completado|en curso|.../, which on this
+    // page lives inside `.scan-status` — and globals.css hides that element
+    // entirely below 900px. The result was a mobile-only failure on a screen
+    // that renders perfectly at every width (caught by the pilot on its first
+    // real run, 2026-08-02).
+    //
+    // Rule for every anchor here: it must be (a) absent in the empty state,
+    // so it actually discriminates, and (b) visible at all three viewports,
+    // so it never reports a CSS breakpoint as missing data. Prefer a
+    // structural element that only exists with data over prose that a media
+    // query might hide.
+    describedAs: "la tabla del historial de escaneos",
+    anyOf: [{ selector: ".run-tbl" }]
   });
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "runs");
