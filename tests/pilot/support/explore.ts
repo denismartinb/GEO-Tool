@@ -295,22 +295,28 @@ export async function exploreInteractions(
       findings.push(finding);
       record(finding);
 
-      // Restore the default state where the control was a toggle, so the next
-      // candidate is exercised from a clean baseline rather than compounding.
-      // Skipped once the budget is spent — leaving a panel open costs nothing
-      // (the page is re-navigated for the next screen anyway) whereas
-      // overrunning the timeout loses the whole run's evidence.
-      if (changed && Date.now() - startedAt <= SWEEP_BUDGET_MS) {
-        await el.click({ timeout: 5_000 }).catch(() => undefined);
-        await page.waitForTimeout(150);
-      } else if (!changed) {
-        // Belt-and-braces against the cascade described in `domSignature`:
-        // if a control opened something this signature still cannot see, an
-        // overlay left on screen would swallow every later click and mark
-        // the rest of the screen dead. Escape costs nothing and dismisses
-        // drawers, popovers and dialogs.
+      // Restore the baseline before the next candidate, ESCAPE FIRST.
+      //
+      // The obvious "click it again to toggle it back" is not enough, and
+      // assuming it was cost a second round of false findings: the mobile nav
+      // trigger is open-only (`setMobileNavOpen(true)`, not a toggle), so
+      // clicking it again re-opened the drawer instead of closing it, leaving
+      // its full-screen scrim to swallow every later click on that screen —
+      // the notification bell then reported dead on all 9 screens, at mobile
+      // only, which read exactly like a real product bug and wasn't
+      // (2026-08-02).
+      //
+      // Escape is the reliable restore: drawers, popovers and dialogs all
+      // listen for it. The re-click is kept only as a fallback for controls
+      // that are genuine toggles and ignore Escape, and only when the page
+      // has not already returned to its baseline.
+      if (Date.now() - startedAt <= SWEEP_BUDGET_MS) {
         await page.keyboard.press("Escape").catch(() => undefined);
-        await page.waitForTimeout(100);
+        await page.waitForTimeout(150);
+        if (changed && (await domSignature(page)) !== before) {
+          await el.click({ timeout: 5_000 }).catch(() => undefined);
+          await page.waitForTimeout(150);
+        }
       }
     }
   } finally {
