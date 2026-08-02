@@ -2,6 +2,7 @@
 
 import { Icon } from "@/components/ui/icon";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { faviconUrl } from "@/lib/domains/favicon";
 import type { CompetitorRowData } from "./page";
 
 export function PodiumRow({
@@ -21,6 +22,8 @@ export function PodiumRow({
     window.location.href = `/dashboard/projects/${projectId}/prompts?competitor=${encodeURIComponent(row.name)}`;
   }
 
+  const favicon = faviconUrl(row.domain);
+
   return (
     <div
       className="cm2-rank"
@@ -36,18 +39,23 @@ export function PodiumRow({
       }}
     >
       <span className="cm2-rank-n">{rank}</span>
-      <span className="cm2-rank-fav" style={{ background: row.color }}>
-        {row.initial}
-      </span>
+      {favicon ? (
+        // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as Overview's panorama)
+        <img src={favicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
+      ) : (
+        <span className="cm2-rank-fav" style={{ background: row.favColor }}>
+          {row.initial}
+        </span>
+      )}
       <div className="cm2-rank-main">
         <div className="cm2-rank-nm">
-          {row.name}
+          <span className="cm2-rank-nm-txt">{row.name}</span>
           <Icon name="arrRight" size={12} />
         </div>
         <div className="cm2-rank-dm">{row.domain}</div>
         <div className="cm2-rank-bar-wrap">
           <div className="cm2-rank-bar">
-            <div style={{ width: `${(row.sov / maxSov) * 100}%`, background: row.color, height: "100%", borderRadius: 99 }} />
+            <div style={{ width: `${(row.sov / maxSov) * 100}%`, background: row.barColor, height: "100%", borderRadius: 99 }} />
           </div>
         </div>
       </div>

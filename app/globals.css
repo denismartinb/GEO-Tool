@@ -1869,7 +1869,7 @@ a {
   /* Sequential intensity scale for the engine × brand matrix (Paso C),
      derived from --brand-blue as the top step — a deliberate 6-step scale
      kept as named tokens instead of scattered hex literals. */
-  --cm2-h0: #eef1f7;
+  --cm2-h0: #f4f6fa;
   --cm2-h0-ink: var(--brand-ink-4);
   --cm2-h1: #e3ecfd;
   --cm2-h1-ink: #1e4fb8;
@@ -1945,9 +1945,17 @@ a {
   width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto; display: grid; place-items: center;
   color: #fff; font-size: 11.5px; font-weight: 750;
 }
+/* Real favicon (lib/domains/favicon.ts) — same treatment as Overview's
+   .ov2-cmp-fav, falls back to .cm2-rank-fav (initial letter) when the
+   domain is missing. */
+.cm2-rank-fav-img {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
+  object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
 .cm2-rank-main { flex: 1; min-width: 0; }
-.cm2-rank-nm { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; }
-.cm2-rank-dm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-top: 1px; }
+.cm2-rank-nm { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cm2-rank-nm-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cm2-rank-dm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cm2-rank-you-tag {
   font-size: 9.5px; font-weight: 750; color: var(--brand-blue); background: var(--brand-blue-soft-2);
   padding: 1px 6px; border-radius: 999px; flex: 0 0 auto;

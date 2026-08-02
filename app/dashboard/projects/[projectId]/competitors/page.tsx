@@ -14,19 +14,26 @@ import { computeEmergingBrands } from "@/lib/competitors/emerging-brands";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { faviconUrl } from "@/lib/domains/favicon";
 
 /* ---- Helpers ---- */
 
-// Sequential blue scale by rank (docs/brand/brand-guidelines.md §1: the
-// brand blue is reserved for "you", competitors read as a secondary scale
-// instead of the old rainbow COMPETITOR_COLORS palette).
-const RANK_COLORS = ["#0f2f6e", "#1a4494", "#1e4fb8", "#4f8bef", "#8fb6f6", "#98a2b3"];
+// Two-scale ranking palette by rank, replacing the old rainbow
+// COMPETITOR_COLORS (docs/brand/brand-guidelines.md §1: the brand blue is
+// reserved for "you"). Matches the approved design proposal exactly: the
+// favicon uses a richer, more saturated step that fades to neutral gray
+// past the top 2 rivals (keeps attention on the real threats), while the
+// SoV bar uses a separate, lighter step of the same scale so bars read as
+// a secondary signal, never competing visually with the brand's own bar.
+const RANK_FAV_COLORS = ["#0f2f6e", "#1a4494", "#5b6b82", "#5b6b82", "#98a2b3"];
+const RANK_BAR_COLORS = ["#4f8bef", "#8fb6f6", "#c3d8fb", "#c3d8fb", "#e3ecfd"];
 
 export type CompetitorRowData = {
   id: string;
   name: string;
   domain: string;
-  color: string;
+  favColor: string;
+  barColor: string;
   initial: string;
   mentions: number;
   sov: number;
@@ -278,7 +285,8 @@ export default async function CompetitorsPage({
         id: c.id,
         name: c.name,
         domain: c.domain,
-        color: RANK_COLORS[i % RANK_COLORS.length],
+        favColor: RANK_FAV_COLORS[i % RANK_FAV_COLORS.length],
+        barColor: RANK_BAR_COLORS[i % RANK_BAR_COLORS.length],
         initial: getInitial(c.name),
         mentions,
         sov,
@@ -364,7 +372,7 @@ export default async function CompetitorsPage({
 
   const trendSeries: TrendSeries[] = [
     { key: "brand", label: project.brand, color: "var(--accent)", isBrand: true },
-    ...competitorRows.map((c) => ({ key: c.id, label: c.name, color: c.color }))
+    ...competitorRows.map((c) => ({ key: c.id, label: c.name, color: c.barColor }))
   ];
 
   const trendData: TrendPoint[] = runsAsc.map((run) => {
@@ -388,6 +396,7 @@ export default async function CompetitorsPage({
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
+  const brandFavicon = faviconUrl(project.domain);
 
   // Rendered in exactly one place: inside the desktop rail next to the trend
   // chart when there's a full competitive picture, or as its own standalone
@@ -595,12 +604,17 @@ export default async function CompetitorsPage({
               <div className="card">
                 <div className="cm2-rank you">
                   <span className="cm2-rank-n">1</span>
-                  <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
-                    {getInitial(project.brand)}
-                  </span>
+                  {brandFavicon ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as Overview's panorama)
+                    <img src={brandFavicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
+                  ) : (
+                    <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
+                      {getInitial(project.brand)}
+                    </span>
+                  )}
                   <div className="cm2-rank-main">
                     <div className="cm2-rank-nm">
-                      {project.brand}
+                      <span className="cm2-rank-nm-txt">{project.brand}</span>
                       <span className="cm2-rank-you-tag">Tú</span>
                     </div>
                     <div className="cm2-rank-dm">{project.domain}</div>
