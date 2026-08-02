@@ -133,7 +133,7 @@ logo (imagen), no el texto.
 | 3 | Logo duplicado a mano en **10 sitios** (sidebar, landing, legal shell, blog shell, `geo`, `pricing` y las 4 pantallas de auth), con tamaños inconsistentes (16/17 px). En `signup` y `signup/confirm` el icono ni siquiera era el de marca: un SVG de ajustes (engranaje) copiado por error | P2 (P1 en signup/confirm por el icono incorrecto) | ✅ Resuelto en BRAND-2 — los 10 sitios usan `BrandLogo`/`BrandMark`; icono incorrecto corregido |
 | 4 | **Sin Open Graph / Twitter image** — los enlaces compartidos salen sin imagen | P1 para marketing | ✅ Resuelto en BRAND-5a — `openGraph`/`twitter` en `app/layout.tsx` → `genscore-og.png` |
 | 5 | La sección de confianza de la landing muestra **logos de empresas ficticias** ("Northwind", "Quantix", "Beltway"…) | **P1 — viola "no fake product behavior"** y es lo contrario de "marca contrastada" | ✅ Resuelto en BRAND-2 — sustituido por los motores de IA reales que analiza el producto (Gemini, ChatGPT, Claude) |
-| 6 | Emails transaccionales: marca solo texto plano | P3 | ✅ Resuelto (PR #242, fuera de esta serie de sesiones) — cabecera con logo real en los 8 emails de Resend + 2 plantillas de Supabase Auth. **Usa la v2** (índigo); actualizar a v3 = BRAND-5c |
+| 6 | Emails transaccionales: marca solo texto plano | P3 | ✅ Resuelto (PR #242) — cabecera con logo real en los 8 emails de Resend + 2 plantillas de Supabase Auth. ✅ Actualizados a v3 en BRAND-5c |
 | 7 | Paleta y tipografía v2 | Correctas para su momento | Sustituidas por v3 (azul/navy + Bricolage/Figtree) tras feedback del fundador — ver §2/§3 |
 
 ---
@@ -182,13 +182,18 @@ logo (imagen), no el texto.
   última zona esté migrada. **Overview (✅) y cabeceras/menú de consola
   (✅, PR #257)** ya implementados — detalle decisión a decisión en
   `docs/brand/design-decisions-log.md` §2–4. Resto de zonas pendientes.
-- **Fase 5c — BRAND-5c:** actualizar los 8 emails de Resend (`lib/email/
-  transactional.ts`) y las 2 plantillas de Supabase Auth
-  (`docs/email-templates/`) a la v3 — nueva cabecera (600 × 120 regenerada
-  desde el lockup v3), colores email-safe `#0B1426 · #2563EB · #FFB020 ·
-  #FFFFFF`. **Propuesta detallada en `docs/brand/email-design-proposal.md`,
-  con la maqueta visual de los 10 emails en `docs/brand/email-preview/
-  index.html`.** Pendiente de aprobación.
+- **Fase 5c — BRAND-5c (✅ implementado):** los 8 emails de Resend
+  (`lib/email/transactional.ts`) y las 2 plantillas de Supabase Auth
+  (`docs/email-templates/`) están en v3 — cabecera nueva
+  (`genscore-email-header.png`, 1200 × 240, generada desde el lockup v3 +
+  tagline horneado como raster), colores email-safe `#0B1426 · #2563EB ·
+  #FFB020 · #FFFFFF`, ámbar retirado de los avisos (bajada de score / píldora
+  negativa del resumen semanal pasan a rojo `#D23B48`, mismo criterio que
+  BRAND-4), emojis fuera de titulares y asuntos. Detalle completo en
+  `docs/brand/email-design-proposal.md` (incluye dos hallazgos de
+  implementación no previstos en la propuesta: el PNG v2 ya venía
+  pre-recortado, y una cabecera a ancho fijo rompía el `@media` que hace
+  responsive el email en móvil).
 - **Fase 5d — dark mode de producto (opcional, fuera de esta serie):** los
   tokens `--brand-canvas-dark`/`--brand-surface-dark` ya están definidos,
   pero la app hoy es solo modo claro (`color-scheme: light`). Proyecto

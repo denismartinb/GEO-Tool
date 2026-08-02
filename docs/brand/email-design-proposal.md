@@ -1,12 +1,28 @@
-# BRAND-5c — Propuesta de diseño de los emails de Genscore
+# BRAND-5c — Diseño de los emails de Genscore
 
-> **Estado: PROPUESTA. Nada implementado.** Ni `lib/email/transactional.ts` ni
-> `docs/email-templates/*.html` se han tocado: los emails que salen hoy siguen
-> en la identidad v2 (índigo). Este documento es el plan; la maqueta visual
-> está en `docs/brand/email-preview/index.html` (abrir en el navegador).
+> **Estado: ✅ implementado** (aprobadas las 4 decisiones de §4 tal cual
+> recomendado: cabecera blanca, ámbar fuera, emojis fuera, tagline incluido).
+> `lib/email/transactional.ts` (los 8 emails de Resend) y las 2 plantillas de
+> Supabase (`docs/email-templates/*.html`) están en la identidad v3. Este
+> documento describe la propuesta original y sigue siendo la referencia de
+> diseño; la maqueta de exploración previa a la implementación está en
+> `docs/brand/email-preview/index.html`.
 >
-> Contexto: `docs/brand/brand-guidelines.md` §5 lista la Fase 5c como
-> "pendiente de aprobación". Esto es esa fase, especificada.
+> **Dos hallazgos durante la implementación, no previstos en la propuesta:**
+> 1. El activo de cabecera anterior (`genscore-logo-white-email.png`, v2) no
+>    solo tenía la paleta antigua — sus píxeles ya venían recortados: 958×164
+>    (ratio 5.84) no coincide con el ratio real del lockup (1111:254 = 4.41),
+>    así que la captura original ya excluía parte del símbolo antes de
+>    llegar a producción. El nuevo activo (`genscore-email-header.png`,
+>    1200×240) se genera capturando exactamente su propio lienzo, sin ese
+>    descuadre — ver §7 más abajo para el detalle técnico.
+> 2. La cabecera nueva ocupa el ancho completo de la tarjeta (a diferencia
+>    del logo v2, que era pequeño); con un `<img>` de ancho fijo
+>    (`width:600px;height:120px`) eso bloqueaba el `@media (max-width:600px)`
+>    que hace responsive el email — el email dejaba de encogerse en móvil de
+>    forma silenciosa, sin ningún error visible. Corregido con la técnica de
+>    imagen fluida estándar en email (`width:100%;max-width:600px;
+>    height:auto`), documentado en `docs/email-templates/README.md`.
 
 ---
 
@@ -132,9 +148,17 @@ Se conserva el copy — no es una reescritura — salvo:
 
 - **fuera los emojis** de titulares (🎉, 📊) y de los asuntos. La v3 se definió
   como "azul/navy más seria y analítica" frente a una v2 que se sentía "poco
-  profesional"; un 🎉 en el H1 tira en la dirección contraria;
-- "GenScore" → **"Genscore"** (una sola palabra, sin camelCase, como fija la
-  guía §1). Hoy los emails escriben "GenScore" en asuntos, cuerpo y pie.
+  profesional"; un 🎉 en el H1 tira en la dirección contraria.
+
+**Corrección sobre el nombre:** una versión anterior de este documento
+proponía cambiar "GenScore" por "Genscore" en el cuerpo de los emails,
+citando la guía de marca §1 ("el wordmark 'Genscore', sin camelCase"). Es un
+error — esa entrada describe el *logotipo* (el trazado vectorial del SVG),
+no el nombre en texto corrido. `CLAUDE.md` fija explícitamente **"GenScore"**
+como "la marca mostrada a los usuarios" en toda la superficie de producto, y
+es lo que usan sin excepción la landing, `/pricing`, `/geo`, legal, y el
+propio dashboard (`grep -rn "GenScore" app/`). Los emails mantienen
+"GenScore" en el cuerpo — no se toca.
 
 ---
 
@@ -227,22 +251,57 @@ PNG del logo; `pnpm test && pnpm run validate` en verde.
 **Fuera de alcance** (necesitan su propia aprobación): el recordatorio "3 días
 antes de que acabe la prueba" (requiere schema + cron, ya marcado como
 pendiente en la guía); cualquier email nuevo; cambios de asunto más allá de
-quitar emojis y "GenScore"→"Genscore"; y el modo oscuro real del email
-(BRAND-5d va de la UI de producto, no de esto).
+quitar emojis; y el modo oscuro real del email (BRAND-5d va de la UI de
+producto, no de esto).
 
 ---
 
-## 7. Cómo ver la maqueta
+## 7. Maqueta de exploración (previa a la implementación)
 
 ```bash
 open docs/brand/email-preview/index.html     # macOS
 ```
 
-Es una página autocontenida: la paleta, la cabecera a tamaño real y los diez
-emails maquetados con el sistema propuesto. Las cifras y dominios son de
-ejemplo. La cabecera se muestra como SVG inline para que se vea sin desplegar
-nada; en producción sería el PNG.
+Página autocontenida usada para decidir el diseño antes de tocar código de
+producción: la paleta, la cabecera a tamaño real y los diez emails
+maquetados con el sistema propuesto. Las cifras y dominios son de ejemplo.
+La cabecera se muestra ahí como SVG inline para que se vea sin desplegar
+nada — el activo real de producción es el PNG descrito en §8.
 
 ---
 
-¿Apruebas este plan? No implementaré hasta que confirmes.
+## 8. Cómo se generó `genscore-email-header.png`
+
+El activo final (`public/brand/genscore-email-header.png`, 1200×240, ~8 KB)
+no es un export manual — se genera programáticamente a partir de los SVG de
+marca reales (`genscore-logo.svg`, `genscore-mark.svg`), para que quede
+trazable y regenerable:
+
+1. Se compone una página HTML con el lockup y la G fantasma posicionados
+   sobre un lienzo de exactamente 1200×240 (2x del tamaño de cabecera final,
+   600×120) — el mismo tamaño que se captura, sin ventana de recorte
+   distinta al lienzo real. Esto es lo que evita el bug del logo cortado del
+   activo v2: aquel PNG (958×164 px) tenía un ratio (5.84) que no coincide
+   con el ratio real del lockup (1111:254 = 4.41) — ya venía capturado con
+   un recorte que no correspondía al símbolo completo.
+2. El tagline "Generative Engine Optimization" se hornea como texto raster
+   (no como trazado SVG — el pack de marca no lo incluye como path) porque
+   los clientes de correo no cargan tipografías propias de forma fiable; una
+   vez es imagen, da igual.
+3. La captura se recorta a los 1200×240 exactos y se cuantiza a paleta de 64
+   colores con Pillow — el diseño es casi todo color plano, así que la
+   cuantización no introduce banding visible y el archivo pesa una tercera
+   parte de la versión sin optimizar.
+
+El `<img>` que consume este PNG en `transactional.ts` y en las dos
+plantillas de Supabase usa `width:100%;max-width:600px;height:auto` en el
+estilo (nunca `width:600px;height:120px` fijo) — ver
+`docs/email-templates/README.md` para por qué eso es obligatorio, no
+cosmético: con un ancho fijo, la imagen de cabecera fuerza a la tarjeta a un
+mínimo de 600px y el email deja de encogerse en móvil sin ningún error
+visible, solo un mensaje que no reordena.
+
+---
+
+**Aprobado e implementado** (A: cabecera blanca, B: ámbar fuera, C: emojis
+fuera, D: tagline incluido). Ver el PR de esta fase para el diff exacto.
