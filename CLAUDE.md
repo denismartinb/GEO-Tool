@@ -329,6 +329,8 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `reliability.md` | Scan lifecycle, stuck scans, timeouts, cancellation |
 | `platform-deploy.md` | Vercel config, env vars, model pinning |
 | `release.md` | GitHub workflow, PRs, merge safety |
+| `growth-content.md` | Organic-acquisition content: blog, docs/comparativas/glosario (GROWTH-2), marketing copy, lifecycle emails |
+| `seo-geo-research.md` | SEO/GEO market research — what to write next, prioritized briefs (plan mode) |
 
 ### Path-scoped rules (`.claude/rules/`)
 
@@ -344,6 +346,8 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 |---|---|
 | `director-strategy.md` | Long-term roadmap (H1/H2/H3), active work, completed phases |
 | `launch-plan.md` | **Commercial launch roadmap** — ordered phases + status ledger. Any session doing launch work MUST read it first and update its ledger in the same PR |
+| `content-strategy.md` | GROWTH-2 organic content architecture (5 layers), SEO+GEO writing rules, cadence |
+| `content-calendar.md` | GROWTH-2 content ledger — one row per piece, updated in the same PR that ships it |
 | `environment-contract.md` | All env vars, Vercel config, smoke checklist |
 | `scan-lifecycle.md` | Scan state machine and invariants |
 | `adr/0001-record-architecture-decisions.md` | ADR process |
