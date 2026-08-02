@@ -736,6 +736,22 @@ implementar las tres:
    reduce un punto — sin quitar ningún dato de la fila, solo el aire
    sobrante que sí sobraba en una pantalla ancha.
 
+**Bug real encontrado por el propio piloto, no propuesto por él (2026-08-02).**
+El nuevo paso de búsqueda del piloto (evidencia real de la mejora #1) dejó
+por accidente el panel de una fila de Oportunidades abierto de una
+interacción anterior, y esa captura mostró un chip de atribución cortado
+literalmente en el borde del viewport en el raíl estrecho (320px en
+escritorio). Causa: `Menciona a {competitors.join(", ")}` metía TODOS los
+nombres en una sola pastilla `white-space: nowrap` — con varios nombres
+("Amazon, El Corte Inglés, Carrefour, AliExpress, Miravia") la pastilla era
+más ancha que su contenedor y no podía envolver internamente. El contenedor
+(`.cit2-detail-mentions`) ya tenía `flex-wrap: wrap` — estaba pensado para
+varias pastillas pequeñas, no para una gigante. Arreglado: una pastilla por
+nombre en vez de una pastilla por lista; el ancho de la columna no cambió,
+pero ahora cada pastilla es corta y el `flex-wrap` existente las reparte en
+líneas. Sirve tanto a la lista completa como al raíl de oportunidades, que
+comparten el mismo componente (`PromptEvidenceList`).
+
 ---
 
 ## Cómo mantener este documento

@@ -127,15 +127,27 @@ function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
                   row's "Cita a un competidor" claim checkable against the
                   actual evidence right below it, instead of a row-wide
                   label with no visible source (founder review, 2026-08-01:
-                  a claim with no attributable answer read as unsubstantiated). */}
+                  a claim with no attributable answer read as unsubstantiated).
+                  One pill PER name, not one joined-by-commas pill: a single
+                  `white-space: nowrap` pill listing five brands ran off the
+                  edge of the 320px opportunities rail — genuinely past the
+                  viewport, not just visually tight (caught in the ux-pilot's
+                  own search-filter evidence, 2026-08-02, a state the earlier
+                  row-expand capture happened not to reach). Separate pills
+                  wrap via the container's existing `flex-wrap`, which was
+                  already built for this shape. */}
               {(p.competitors.length > 0 || p.otherBrands.length > 0) && (
                 <div className="cit2-detail-mentions">
-                  {p.competitors.length > 0 && (
-                    <span className="cit2-mtag comp">Menciona a {p.competitors.join(", ")}</span>
-                  )}
-                  {p.otherBrands.length > 0 && (
-                    <span className="cit2-mtag oth">Menciona {p.otherBrands.join(", ")} (marca no trackeada)</span>
-                  )}
+                  {p.competitors.map((name, ci) => (
+                    <span key={`comp-${ci}`} className="cit2-mtag comp">
+                      Menciona a {name}
+                    </span>
+                  ))}
+                  {p.otherBrands.map((name, oi) => (
+                    <span key={`oth-${oi}`} className="cit2-mtag oth">
+                      Menciona {name} (marca no trackeada)
+                    </span>
+                  ))}
                 </div>
               )}
               {p.rawResponseText && <div className="cit2-detail-evidence">{p.rawResponseText}</div>}
