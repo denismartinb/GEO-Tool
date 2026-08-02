@@ -1948,7 +1948,10 @@ a {
    trimmed so the pair costs less than two full screenfuls. */
 .cit2-dist { display: grid; gap: 12px; }
 @media (min-width: 900px) {
-  .cit2-dist { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+  /* `stretch`, not `start`: sized to content the two cards ended up ~35px
+     apart at 1280px, which reads as a ragged edge rather than one section
+     (own review of the pilot capture, 2026-08-02). */
+  .cit2-dist { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: stretch; }
   .cit2-dist > .cit2-block { margin-top: 12px; }
 }
 @media (max-width: 899px) {
