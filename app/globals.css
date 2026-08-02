@@ -2046,6 +2046,10 @@ a {
 .cit2-tab.empty { opacity: .45; cursor: default; }
 .cit2-listhint { font-size: 11px; color: var(--ink-4); margin-top: 3px; }
 .cit2-tab.on { background: var(--accent-soft); color: var(--accent); }
+/* Confirms how many rows a search/tab filter actually left, next to the box
+   that just changed the list. Absent at rest (no filter active) — the list
+   title above already carries the unfiltered total. */
+.cit2-filtercount { font-size: 11px; color: var(--ink-4); margin-top: 6px; }
 
 /* Citation list */
 .cit2-list { padding: 0; }
@@ -2122,6 +2126,22 @@ a {
   .cit2-main { grid-column: 1; grid-row: 1; }
   .cit2-rail { grid-column: 2; grid-row: 1; position: sticky; top: 60px; }
   .cit2-toolbar { margin-top: 0; }
+
+  /* Denser row variant: at 1280px each row cost ~65px (12px padding × 2 +
+     26px avatar-driven content), so only ~3 rows cleared the fold before the
+     page scrolled (founder review, 2026-08-02). Desktop has room to spare
+     horizontally but not vertically once the two-column layout kicks in —
+     tighter padding and smaller avatar/type/count text buy back ~12px per
+     row without dropping any information a row shows. */
+  .cit2-rowmain { padding: 8px 14px; gap: 9px; }
+  .cit2-list .cit2-fav { width: 22px; height: 22px; font-size: 9.5px; }
+  .cit2-list .cit2-urlcell { gap: 3px; }
+  .cit2-list .cit2-u { font-size: 11.5px; }
+  .cit2-list .cit2-tchip, .cit2-list .cit2-echip { font-size: 9px; padding: 1.5px 6px; }
+  .cit2-list .cit2-cites { font-size: 13.5px; }
+  /* Detail panel indent tracks the smaller avatar (14px pad + 22px avatar +
+     9px gap), matching the same logic as .cit2-opp-item .cit2-detail below. */
+  .cit2-list .cit2-detail { padding-left: 45px; }
 }
 
 /* ============================================================

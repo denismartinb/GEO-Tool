@@ -712,6 +712,30 @@ Gate** y sube el resto con recomendación; queda escrito en
 `.claude/agents/director.md`, `CLAUDE.md` (§Agentic User Pilot y §Human Gate,
 que gana la pregunta 6) y `docs/agentic-user-pilot.md`.
 
+**Tres mejoras baratas más (2026-08-02).** Segunda vuelta sobre la misma
+propuesta, ya con las 5 anteriores en producción; el fundador pidió
+implementar las tres:
+
+1. **[barato] Contador de resultados filtrados.** El buscador acortaba la
+   lista sin decir cuántas quedaban de las 32. Ahora, solo cuando un filtro
+   (búsqueda o pestaña) reduce el resultado, aparece "X de Y páginas" junto
+   a la barra de herramientas; en reposo no se repite el total que ya dice
+   el título del bloque.
+2. **[barato] "Otras webs" dejó de repetirse en cada fila.** Es el cajón por
+   defecto de `classifySourceType` y en datos reales cubre casi todas las
+   filas de terceros — como etiqueta por fila no aportaba nada que el donut
+   de arriba no contara ya mejor en conjunto. Se suprime solo esa etiqueta
+   (`ty-unk`) fila a fila; "Tuya", "Competidor" y los tipos SÍ clasificados
+   (comunidad, comparador, medio, enciclopedia) se siguen mostrando, porque
+   esos sí son información real por fila.
+3. **Variante compacta de fila en escritorio.** Cada fila costaba ~65px
+   (relleno 12px × 2 + favicon de 26px + dos líneas de texto), así que a
+   1280px solo cabían ~3 filas antes de que la página necesitara scroll.
+   Desde 1200px (el mismo punto de corte donde entra la columna de
+   oportunidades) el relleno baja a 8px, el favicon a 22px y el texto se
+   reduce un punto — sin quitar ningún dato de la fila, solo el aire
+   sobrante que sí sobraba en una pantalla ancha.
+
 ---
 
 ## Cómo mantener este documento

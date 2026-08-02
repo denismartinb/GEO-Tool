@@ -150,6 +150,13 @@ function PromptEvidenceList({ prompts }: { prompts: CitationRow["prompts"] }) {
 function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: boolean; onToggle: () => void }) {
   const { domain, path } = pageDisplay(row);
   const badge = typeBadge(row);
+  // "Otras webs" (ty-unk) is the default bucket for anything not curated in
+  // source-type.ts, and in real data it covers almost every third-party row —
+  // repeating it on every single line adds noise without adding information;
+  // the donut above already tells that aggregate story. Brand/competitor/
+  // classified types (community, comparator, media, encyclopedia) stay,
+  // since those ARE worth knowing per row (own UX review, 2026-08-02).
+  const showBadge = badge.className !== "ty-unk";
 
   return (
     <div className={`cit2-row${open ? " open" : ""}`}>
@@ -163,7 +170,7 @@ function CitationRowItem({ row, open, onToggle }: { row: CitationRow; open: bool
             {path}
           </span>
           <span className="cit2-meta">
-            <span className={`cit2-tchip ${badge.className}`}>{badge.label}</span>
+            {showBadge && <span className={`cit2-tchip ${badge.className}`}>{badge.label}</span>}
             <EngineChips engines={row.engines} />
           </span>
         </span>
@@ -571,6 +578,16 @@ export function CitationsClient({
               })}
             </div>
           </div>
+          {/* The search box narrowed the list silently — no confirmation of
+              how many of the 32 rows actually matched (founder review,
+              2026-08-02: "Escribes algo y la lista se acorta sin confirmar
+              cuántas quedan"). Only shown once a filter is actually active;
+              at rest the list title above already states the full count. */}
+          {filtered.length !== citationRows.length && (
+            <div className="cit2-filtercount">
+              {filtered.length} de {citationRows.length} {citationRows.length === 1 ? "página" : "páginas"}
+            </div>
+          )}
 
           <div className="cit2-block cit2-list">
             <div className="cit2-listhead">
