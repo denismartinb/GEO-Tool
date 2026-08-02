@@ -59,6 +59,11 @@ async function runCase({ label, breakMode, expectedExit }) {
         PILOT_EMAIL: "selfcheck@example.invalid",
         PILOT_PASSWORD: "selfcheck-not-a-real-password",
         PILOT_PROJECT_ID: "",
+        // Above the production cap on purpose: the fixture's safety decoys
+        // (a dead control and a destructive-looking one) sit past the first
+        // four explorable elements, and the whole point of the self-check is
+        // to prove the detector and the refusal still fire.
+        PILOT_MAX_INTERACTIONS: "8",
         NO_PROXY: "127.0.0.1,localhost",
         HTTPS_PROXY: "",
         HTTP_PROXY: ""

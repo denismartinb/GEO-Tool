@@ -13,6 +13,7 @@ function row(overrides: Partial<CitationInputRow> = {}): CitationInputRow {
     brand_mentioned: false,
     extracted_json: {},
     provider: null,
+    raw_response_text: null,
     ...overrides
   };
 }
@@ -343,5 +344,271 @@ describe("aggregateCitations", () => {
     // google.com — only the heuristic inline path is filtered.
     expect(citationRows.some((r) => r.title === "Google Shopping listing")).toBe(true);
     expect(citationRows).toHaveLength(2);
+  });
+
+  it("9. a grounding citation whose URL host matches its domain (OpenAI's real page URL) keeps the URL and dedups by page, not by domain", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        provider: "openai",
+        extracted_json: {
+          citations: [
+            {
+              source: "grounding",
+              url: "https://xataka.com/moviles/mejores-tarifas-2026",
+              domain: "xataka.com",
+              title: "Mejores tarifas 2026"
+            },
+            {
+              // A second, distinct real page on the same domain must stay a
+              // separate row — it is not the same cited page.
+              source: "grounding",
+              url: "https://xataka.com/moviles/otro-articulo",
+              domain: "xataka.com",
+              title: "Otro artículo"
+            }
+          ]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(citationRows).toHaveLength(2);
+    const page1 = citationRows.find((r) => r.id === "https://xataka.com/moviles/mejores-tarifas-2026")!;
+    expect(page1.url).toBe("https://xataka.com/moviles/mejores-tarifas-2026");
+    const page2 = citationRows.find((r) => r.id === "https://xataka.com/moviles/otro-articulo")!;
+    expect(page2.url).toBe("https://xataka.com/moviles/otro-articulo");
+  });
+
+  it("10. a grounding citation whose URL host is the Vertex redirect (Gemini) never surfaces that URL — domain-level dedup, unchanged", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        provider: "gemini",
+        extracted_json: {
+          citations: [
+            {
+              source: "grounding",
+              url: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AbCdEf123",
+              domain: "movistar.es",
+              title: "Movistar"
+            },
+            {
+              source: "grounding",
+              url: "https://vertexaisearch.cloud.google.com/grounding-api-redirect/GhIjKl456",
+              domain: "movistar.es",
+              title: "Movistar"
+            }
+          ]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(citationRows).toHaveLength(1);
+    expect(citationRows[0].id).toBe("movistar.es");
+    expect(citationRows[0].url).toBe("");
+    expect(citationRows[0].cited).toBe(2);
+  });
+
+  it("11. impactBreakdown attributes each row's full cited count to exactly one bucket, summing to totalCited", () => {
+    const rows: CitationInputRow[] = [
+      // Own page.
+      row({
+        provider: "gemini",
+        extracted_json: { citations: [{ source: "grounding", domain: "brand.com", title: "Brand" }] }
+      }),
+      // Competitor's own page.
+      row({
+        provider: "gemini",
+        extracted_json: { citations: [{ source: "grounding", domain: "rival.com", title: "Rival" }] }
+      }),
+      // Third party, brand mentioned in that same answer → favorable.
+      row({
+        provider: "gemini",
+        brand_mentioned: true,
+        extracted_json: { citations: [{ source: "grounding", domain: "favorable-third-party.com", title: "Favorable" }] }
+      }),
+      // Third party, competitor mentioned instead of brand → adverse.
+      row({
+        provider: "gemini",
+        brand_mentioned: false,
+        extracted_json: {
+          competitors: [{ name: "Rival", mentioned: true }],
+          citations: [{ source: "grounding", domain: "adverse-third-party.com", title: "Adverse" }]
+        }
+      }),
+      // Third party, no brand and no TRACKED competitor, but the answer did
+      // name some other brand → otherBrands, not neutral.
+      row({
+        provider: "gemini",
+        brand_mentioned: false,
+        extracted_json: {
+          other_brands_mentioned: ["Untracked Telco"],
+          citations: [{ source: "grounding", domain: "other-brands-third-party.com", title: "Other brands" }]
+        }
+      }),
+      // Third party, no brand, no tracked competitor, no other brand at
+      // all → genuinely neutral.
+      row({
+        provider: "gemini",
+        brand_mentioned: false,
+        extracted_json: { citations: [{ source: "grounding", domain: "neutral-third-party.com", title: "Neutral" }] }
+      })
+    ];
+
+    const { impactBreakdown, citationRows } = aggregateCitations({
+      rows,
+      projectDomain,
+      competitorDomains,
+      promptCategoryMap
+    });
+
+    expect(impactBreakdown).toEqual({
+      own: 1,
+      favorable: 1,
+      adverse: 1,
+      otherBrands: 1,
+      competitor: 1,
+      neutral: 1
+    });
+
+    // Load-bearing invariant, not a restatement of the line above: every
+    // citation must land in exactly one bucket, so the buckets must sum to
+    // the same number the page shows as "Citas totales". A UI that divides
+    // by a hand-maintained subset of buckets renders percentages over 100%
+    // (real regression, 2026-08-01).
+    const bucketTotal = Object.values(impactBreakdown).reduce((sum, n) => sum + n, 0);
+    const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
+    expect(bucketTotal).toBe(totalCited);
+  });
+
+  it("13. a tracked competitor mention outranks other_brands_mentioned — the row stays 'adverse', never double-counted", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        provider: "gemini",
+        brand_mentioned: false,
+        extracted_json: {
+          competitors: [{ name: "Rival", mentioned: true }],
+          other_brands_mentioned: ["Some Other Brand"],
+          citations: [{ source: "grounding", domain: "both-signals.com", title: "Both" }]
+        }
+      })
+    ];
+
+    const { impactBreakdown } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(impactBreakdown.adverse).toBe(1);
+    expect(impactBreakdown.otherBrands).toBe(0);
+  });
+
+  it("12. sourceTypeBreakdown classifies third-party rows via classifySourceType and own/competitor via category, percentages sum to ~100", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        provider: "gemini",
+        extracted_json: {
+          citations: [
+            { source: "grounding", domain: "brand.com", title: "Brand" },
+            { source: "grounding", domain: "rival.com", title: "Rival" },
+            { source: "grounding", domain: "reddit.com", title: "Reddit thread" },
+            { source: "grounding", domain: "some-unknown-blog.example", title: "Unknown" }
+          ]
+        }
+      })
+    ];
+
+    const { sourceTypeBreakdown } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    const byType = Object.fromEntries(sourceTypeBreakdown.map((s) => [s.type, s]));
+    expect(byType.own.cited).toBe(1);
+    expect(byType.competitor.cited).toBe(1);
+    expect(byType.community.cited).toBe(1);
+    expect(byType.unknown.cited).toBe(1);
+    const pctSum = sourceTypeBreakdown.reduce((sum, s) => sum + s.pct, 0);
+    expect(pctSum).toBeGreaterThanOrEqual(99);
+    expect(pctSum).toBeLessThanOrEqual(101);
+  });
+
+  it("14. citationRows[].prompts carries provider + raw_response_text — the real evidence for expanding a row in the UI", () => {
+    const rows: CitationInputRow[] = [
+      row({
+        prompt_id: "p1",
+        prompt_text_snapshot: "What is the best telco?",
+        provider: "gemini",
+        raw_response_text: "Movistar is a strong option for fibre in Spain.",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      }),
+      row({
+        prompt_id: "p1",
+        prompt_text_snapshot: "What is the best telco?",
+        provider: "openai",
+        raw_response_text: "I'd recommend checking Movistar and Orange.",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(citationRows).toHaveLength(1);
+    expect(citationRows[0].prompts).toEqual([
+      {
+        text: "What is the best telco?",
+        brandMentioned: false,
+        provider: "gemini",
+        rawResponseText: "Movistar is a strong option for fibre in Spain.",
+        competitors: [],
+        otherBrands: []
+      },
+      {
+        text: "What is the best telco?",
+        brandMentioned: false,
+        provider: "openai",
+        rawResponseText: "I'd recommend checking Movistar and Orange.",
+        competitors: [],
+        otherBrands: []
+      }
+    ]);
+  });
+
+  it("15. prompts[].competitors/otherBrands are scoped per (prompt, provider) result, not unioned across the whole row — this is what lets the UI show WHICH specific answer backs a row-level 'cites a competitor' claim", () => {
+    const rows: CitationInputRow[] = [
+      // This prompt's extraction names a tracked competitor.
+      row({
+        prompt_id: "p1",
+        prompt_text_snapshot: "Who offers the best fibre deals?",
+        provider: "gemini",
+        raw_response_text: "Rival is a solid choice for fibre.",
+        extracted_json: {
+          competitors: [{ name: "Rival", mentioned: true }],
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      }),
+      // A different prompt cites the SAME page but mentions no brand at
+      // all — the row-level `competitors` set is still non-empty (from the
+      // first prompt), but THIS entry must not inherit that name.
+      row({
+        prompt_id: "p2",
+        prompt_text_snapshot: "How do I troubleshoot my home wifi?",
+        provider: "gemini",
+        raw_response_text: "Restart your router and check the cables.",
+        extracted_json: {
+          citations: [{ source: "grounding", domain: "shared.com", title: "Shared" }]
+        }
+      })
+    ];
+
+    const { citationRows } = aggregateCitations({ rows, projectDomain, competitorDomains, promptCategoryMap });
+
+    expect(citationRows).toHaveLength(1);
+    const row1 = citationRows[0].prompts.find((p) => p.text === "Who offers the best fibre deals?")!;
+    const row2 = citationRows[0].prompts.find((p) => p.text === "How do I troubleshoot my home wifi?")!;
+    expect(row1.competitors).toEqual(["Rival"]);
+    expect(row2.competitors).toEqual([]);
+    // The row-level aggregate (unchanged behavior) still unions across both.
+    expect(citationRows[0].competitors).toEqual(["Rival"]);
   });
 });

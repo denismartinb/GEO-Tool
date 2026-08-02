@@ -203,17 +203,85 @@ Per screen, per viewport (375 / 768 / 1280):
 
 Evidence lands in `.pilot/` (gitignored — it contains a live Supabase session):
 
-- `.pilot/screens/<viewport>--<screen>.png`
-- `.pilot/findings.jsonl`
+- `.pilot/screens/<viewport>--<screen>.png` — page-load captures (full page)
+- `.pilot/screens/<viewport>--<screen>--xN-<control>.png` — post-interaction
+  captures (viewport-sized)
+- `.pilot/findings.jsonl` — page-load signals
+- `.pilot/interactions.jsonl` — interaction signals (separate file on purpose:
+  `scripts/pilot.mjs` groups `findings.jsonl` by `label` to build the per-screen
+  table, and label-less interaction records rendered a phantom `undefined` row)
 - `.pilot/report.json`
+
+## Interaction sweep (UX-PILOT-1c)
+
+`tests/pilot/support/explore.ts` discovers the safe in-page controls on each
+screen, exercises them, and records what happened. It exists because a pilot
+that only proves a screen *renders* will happily pass a control that does
+nothing — and writing a bespoke test per feature neither scales nor covers what
+nobody remembered to write.
+
+Three outcomes a machine can assert with certainty:
+
+| Outcome | Meaning |
+|---|---|
+| `changed` | The control did something; a capture of the new state is attached |
+| `dead` | Clicked, and nothing in the DOM changed — a control that looks interactive and isn't |
+| `skipped` | Refused for safety, with the reason recorded |
+
+Plus, per interaction: `introducedOverflow` (the interaction broke the layout)
+and `consoleErrors`.
+
+### Safety — read before widening any selector
+
+The pilot account is in the **same Supabase project as production** and scans
+cost real money. "Click everything" is indefensible there, so the explorer is
+allow-list-first: only patterns that are local UI state are considered at all,
+and anything inside a `<form>`, any submit button, anything that navigates away,
+and anything whose accessible name looks destructive is refused. Refusals are
+**recorded, never silent** — "not covered" must never read as "verified".
+
+Two lessons already paid for, both caught by the fixture rather than by
+production:
+
+- The deny-list's first version used `\belimina\b`, which does **not** match
+  "Eliminar" (the trailing `r` breaks the word boundary), so the decoy
+  "Eliminar proyecto" button was clicked instead of refused. Stems are now
+  anchored only at the start of a word. Over-refusing is the correct failure
+  direction: refusing a harmless control costs coverage, clicking a destructive
+  one costs data.
+- `tests/pilot/fixtures/server.mjs` carries a deliberate dead control and a
+  deliberate destructive-looking control, so `pnpm pilot:selfcheck` proves the
+  detector and the refusal both still work.
+
+### Budgets
+
+`MAX_INTERACTIONS_PER_SCREEN = 4` and a hard `SWEEP_BUDGET_MS = 25_000` per
+screen, well inside Playwright's 60s per-test timeout. The first real run blew
+that timeout on a 32-row citations list at 375px taking full-page screenshots;
+interaction captures are viewport-sized now. A long screen must degrade to
+"fewer controls exercised" — visible in the evidence — never to a failed run
+that verifies nothing.
+
+## Asserting a reveal is actually legible
+
+`assertFullyVisible` (`tests/pilot/support/journey.ts`) exists because
+`expect(bubble).toBeVisible()` passed for a KPI tooltip that was rendering
+half-cut behind its own card (`overflow: hidden` on the parent). The assertion
+was green and the UX was broken. It now also asserts the revealed element is not
+clipped by an ancestor and does not run outside the viewport — a class of defect
+that is mechanically detectable and therefore should never have depended on a
+human noticing it in a screenshot.
 
 ## What the harness does NOT check
 
-Whether the screen **looks right** and whether it matches **what the PR
-promised**. That is the `ux-pilot` agent's job: it reads the PNGs with vision and
-judges them against the acceptance criteria. The split is deliberate — assertions
-own what a machine can know for certain, the agent owns judgement, and neither
-pretends to do the other's work.
+Whether the screen **looks right**, whether it matches **what the PR promised**,
+and whether the UX is any **good**. That is the `ux-pilot` agent's job: it reads
+the PNGs with vision and judges them against the acceptance criteria, the
+approved design, an interaction checklist, and a UX quality bar — and it always
+returns concrete proposed improvements, even on a pass. See
+`.claude/agents/ux-pilot.md`. The split is deliberate — assertions own what a
+machine can know for certain, the agent owns judgement, and neither pretends to
+do the other's work.
 
 ## Scope guard (UX-PILOT-1)
 

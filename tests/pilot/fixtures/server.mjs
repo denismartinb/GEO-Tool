@@ -11,6 +11,13 @@
  * Run with PILOT_FIXTURE_BREAK=overflow to make every page overflow
  * horizontally, which must flip the verdict to PILOT FAIL. That negative case
  * is the point: a gate that cannot fail is not a gate.
+ *
+ * The citations page also carries a few real .cit2-* class names (info-tip,
+ * row/detail toggle, search + result count) so the "tooltip and row expand
+ * actually work" journey (core-flow.spec.ts) can run against the fixture too,
+ * not just against a real deployment — proving the CLICK/HOVER/TYPE mechanics
+ * of the harness itself work, independent of whether a live Vercel preview is
+ * reachable.
  */
 
 import { createServer } from "node:http";
@@ -26,8 +33,89 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
-  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"]
+  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
+  [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
+
+// Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and
+// .cit2-row/.cit2-opp-item (click-to-toggle "open") classes from
+// app/globals.css — just enough for the interaction test's selectors and
+// assertions to hold, not a copy of the real styling.
+const CITATIONS_STYLE = `
+  .info-tip { position: relative; display: inline-block; cursor: help; }
+  .info-tip-bubble { position: absolute; display: none; background: #111; color: #fff; padding: 4px 8px; }
+  .info-tip:hover .info-tip-bubble, .info-tip:focus .info-tip-bubble { display: block; }
+  .cit2-detail { display: none; }
+  .cit2-row.open .cit2-detail, .cit2-opp-item.open .cit2-detail { display: block; }
+`;
+const CITATIONS_SCRIPT = `
+  document.querySelectorAll(".cit2-rowmain, .cit2-opp-row").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      btn.closest(".cit2-row, .cit2-opp-item").classList.toggle("open");
+    });
+  });
+  (function () {
+    var input = document.querySelector(".cit2-search input");
+    if (!input) return;
+    var rows = Array.prototype.slice.call(document.querySelectorAll(".cit2-row"));
+    var total = rows.length;
+    var count = document.querySelector(".cit2-filtercount");
+    input.addEventListener("input", function () {
+      var q = input.value.trim().toLowerCase();
+      var visible = 0;
+      rows.forEach(function (row) {
+        var match = !q || row.textContent.toLowerCase().indexOf(q) !== -1;
+        row.style.display = match ? "" : "none";
+        if (match) visible++;
+      });
+      if (q && visible !== total) {
+        count.textContent = visible + " de " + total;
+        count.style.display = "";
+      } else {
+        count.style.display = "none";
+      }
+    });
+  })();
+`;
+
+function citationsPage() {
+  return `<style>${CITATIONS_STYLE}</style>
+    <div class="cit2-kpis">
+      <div class="cit2-k">
+        Respuestas con cita
+        <span class="info-tip" tabindex="0">
+          <span class="info-tip-icon">i</span>
+          <span class="info-tip-bubble">Tooltip de prueba de la fixture</span>
+        </span>
+      </div>
+      <div class="cit2-v">50%</div>
+    </div>
+    <div class="cit2-search"><input type="text" placeholder="Buscar página o dominio…" /></div>
+    <div class="cit2-filtercount" style="display:none"></div>
+    <div class="cit2-row">
+      <button type="button" class="cit2-rowmain">fixture-company.example</button>
+      <div class="cit2-detail">Prompt y evidencia de prueba.</div>
+    </div>
+    <div class="cit2-row">
+      <button type="button" class="cit2-rowmain">fixture-other.example</button>
+      <div class="cit2-detail">Prompt y evidencia de prueba.</div>
+    </div>
+    <div class="cit2-opp-item">
+      <button type="button" class="cit2-opp-row">fixture-opportunity.example</button>
+      <div class="cit2-detail">Prompt y evidencia de prueba.</div>
+    </div>
+    <!-- Deliberate dead control: looks interactive, does nothing. The
+         explorer must report it as outcome:"dead". Present in BOTH fixture
+         modes on purpose — it proves the detector works, and it is the
+         explorer's report (not the run's exit code) that carries it, so it
+         must not flip the healthy fixture to FAIL. -->
+    <button type="button" data-pilot-explore class="fixture-dead-control">Control muerto de prueba</button>
+    <!-- Deliberate write-looking control: the explorer must REFUSE this one
+         (outcome:"skipped") rather than click it. Guards the scope rule that
+         keeps the pilot away from anything that could hit Supabase. -->
+    <button type="button" data-pilot-explore>Eliminar proyecto</button>
+    <script>${CITATIONS_SCRIPT}</script>`;
+}
 
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
@@ -80,6 +168,18 @@ const server = createServer((request, response) => {
   if (path === "/login") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(loginPage());
+    return;
+  }
+
+  const citationsPath = `/dashboard/projects/${PROJECT_ID}/citations`;
+  if (path === citationsPath) {
+    if (!isAuthenticated(request)) {
+      response.writeHead(303, { Location: "/login" });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(html("Páginas citadas", citationsPage()));
     return;
   }
 
