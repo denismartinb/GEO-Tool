@@ -839,9 +839,20 @@ Decisiones de presentación (no de cálculo — el score no cambia):
   honesto del compuesto sin metodología nueva, y fabricarlo sería el mismo
   error de precisión falsa que esta fase elimina.
 
+- **Una card KPI que no puede sostener su afirmación se oculta entera**, no se
+  queda con un valor vacío. Aplica a "Sentimiento de marca", cuyo veredicto
+  ("Positivo") se calcula solo sobre las respuestas que mencionan la marca —
+  2 en el escaneo que destapó esto. Dejarla habría sido la única card de la
+  pantalla afirmando algo con seguridad mientras sus tres hermanas se callan.
+- **La card del gauge deja de estirarse hasta la altura del bloque de KPIs**
+  (`align-items: start` en `.ov2-hero`, ≥1200px). Antes la rellenaba la
+  sparkline; al retirarla en escaneos de muestra baja quedaba un gauge con
+  mucho aire debajo. Ajustarla al contenido funciona en los dos estados, no
+  solo en el que tiene tendencia.
+
 Pendiente conocido: con muestra suficiente pero identidad de marca mal
 resuelta, la pantalla sigue publicando con confianza un número equivocado.
-Eso es la Fase −1 (alias de marca), aún sin aprobar.
+Eso es la Fase −1 (alias de marca), en la PR #300.
 
 ## 9. Emails transaccionales — repintado a v3 (BRAND-5c, 2026-08-02)
 

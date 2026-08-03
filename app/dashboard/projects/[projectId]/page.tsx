@@ -860,7 +860,16 @@ export default async function ProjectDetailPage({
                 isShare: false as const,
                 hideDelta: true as const
               }
-            ].map((m) => (
+            ]
+              // A KPI that cannot support its own claim is hidden, not
+              // labelled (founder decision, 2026-08-03). "Sentimiento de
+              // marca: Positivo" is a qualitative verdict, and it is computed
+              // only over answers that actually mention the brand — 2 of them
+              // on the run that surfaced this. Left in, it would have been the
+              // only card on the screen still asserting something confident
+              // while its three siblings withheld.
+              .filter((m) => m.key !== "sentiment" || hasSufficientSample(sentimentTotal))
+              .map((m) => (
               <div key={m.key} className="ov2-kpi">
                 <div className="ov2-kpi-k">{m.label}</div>
 
