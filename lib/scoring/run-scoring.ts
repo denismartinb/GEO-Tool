@@ -590,7 +590,15 @@ const RECOMMENDATION_POTENTIAL_KIND: Record<string, "presence" | "prominence" | 
   close_competitor_gap: "presence",
   increase_brand_prominence: "prominence",
   add_citation_block: "authority",
-  pursue_citation_sources: "authority"
+  // RECS-REDESIGN-1 split the single source-gap rule into one card per source
+  // family (comparator / community / media). All four share the same
+  // counterfactual: the brand's domain becomes a grounded citation on the
+  // affected prompts, so they map to the same "authority" mutation the
+  // original rule used — no new scoring logic, just the new type names.
+  pursue_citation_sources: "authority",
+  pursue_comparator_sources: "authority",
+  pursue_community_sources: "authority",
+  pursue_media_sources: "authority"
 };
 
 export function isQuantifiableRecommendationType(recommendationType: string): boolean {

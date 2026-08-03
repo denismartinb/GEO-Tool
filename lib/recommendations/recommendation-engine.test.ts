@@ -421,10 +421,91 @@ describe("generateRecommendationsForRun", () => {
       })
     ]);
 
-    const rec = recs.find((r) => r.recommendation_type === "pursue_citation_sources");
+    // RECS-REDESIGN-1: the source gap is emitted per source FAMILY, so a
+    // reddit.com citation lands on the community card rather than the generic
+    // one — "answer this thread" and "pitch this magazine" are different jobs
+    // and no longer share a card.
+    const rec = recs.find((r) => r.recommendation_type === "pursue_community_sources");
     expect(rec).toBeDefined();
+    expect(rec!.evidence_json.source_family).toBe("community");
     expect(rec!.evidence_json.source_domains as string[]).toContain("reddit.com");
     expect(rec!.evidence_json.citation_domains as string[]).toContain("reddit.com");
+  });
+
+  it("splits the source gap into one card per source family instead of one generic PR card", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({
+          citations: [
+            { domain: "reddit.com", source: "grounding" },
+            { domain: "xataka.com", source: "grounding" }
+          ]
+        })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({
+          citations: [
+            { domain: "reddit.com", source: "grounding" },
+            { domain: "xataka.com", source: "grounding" }
+          ]
+        })
+      })
+    ]);
+
+    const community = recs.find((r) => r.recommendation_type === "pursue_community_sources");
+    const media = recs.find((r) => r.recommendation_type === "pursue_media_sources");
+    expect(community).toBeDefined();
+    expect(media).toBeDefined();
+    // Each card names only its own family's domains — the whole point of the split.
+    expect(community!.evidence_json.source_domains as string[]).toEqual(["reddit.com"]);
+    expect(media!.evidence_json.source_domains as string[]).toEqual(["xataka.com"]);
+    // And each carries its own bounded first step.
+    expect(community!.evidence_json.first_step).toBeTruthy();
+    expect(media!.evidence_json.first_step).not.toBe(community!.evidence_json.first_step);
+  });
+
+  it("never emits a source-gap card for encyclopedic sources — you cannot pitch yourself onto Wikipedia", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "wikipedia.org", source: "grounding" }] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "wikipedia.org", source: "grounding" }] })
+      })
+    ]);
+
+    expect(
+      recs.some((r) => (r.evidence_json.source_domains as string[] | undefined)?.includes("wikipedia.org"))
+    ).toBe(false);
+  });
+
+  it("gives every recommendation a bounded first step", () => {
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "q1", brand_mentioned: false }),
+      prompt({ id: "p2", prompt_text_snapshot: "q2", brand_mentioned: true, citation_found: false })
+    ]);
+
+    expect(recs.length).toBeGreaterThan(0);
+    for (const rec of recs) {
+      expect(typeof rec.evidence_json.first_step).toBe("string");
+      expect((rec.evidence_json.first_step as string).length).toBeGreaterThan(10);
+    }
   });
 
   it("ignores the brand's own cited domain and one-off sources for the PR gap (gap 8)", () => {
@@ -445,7 +526,7 @@ describe("generateRecommendationsForRun", () => {
       })
     ]);
 
-    expect(recs.some((r) => r.recommendation_type === "pursue_citation_sources")).toBe(false);
+    expect(recs.some((r) => r.recommendation_type.startsWith("pursue_"))).toBe(false);
   });
 
   it("generates an address_negative_narrative recommendation when prompts have negative/mixed sentiment (gap 9)", () => {
@@ -466,7 +547,7 @@ describe("generateRecommendationsForRun", () => {
 
     const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative");
     expect(rec).toBeDefined();
-    expect(rec!.title).toContain("percepción negativa");
+    expect(rec!.title).toContain("negativa");
     expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
   });
 
@@ -525,7 +606,7 @@ describe("generateRecommendationsForRun", () => {
 
     const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative");
     expect(rec).toBeDefined();
-    expect(rec!.title).toBe("Contrarresta la percepción negativa de tu marca en las respuestas de IA");
+    expect(rec!.title).toBe("Responde a la imagen negativa que da la IA de ti");
     expect(rec!.evidence_json.sentiment_drivers).toEqual([]);
   });
 
@@ -542,7 +623,7 @@ describe("generateRecommendationsForRun", () => {
 
     const rec = recs.find((r) => r.recommendation_type === "update_stale_content");
     expect(rec).toBeDefined();
-    expect(rec!.title).toContain("desactualizada");
+    expect(rec!.title).toContain("Actualiza");
     expect((rec!.evidence_json.affected_prompt_ids as string[])).toEqual(["p1"]);
   });
 
@@ -726,7 +807,10 @@ describe("generateRecommendationsForRun", () => {
 
   it("gives every emitted recommendation type a Spanish label instead of leaking the raw internal identifier", () => {
     expect(labelForType("add_citation_block")).toBe("Añadir bloque de cita");
-    expect(labelForType("pursue_citation_sources")).toBe("Perseguir fuentes de citación");
+    expect(labelForType("pursue_citation_sources")).toBe("Entrar en fuentes citadas");
+    expect(labelForType("pursue_comparator_sources")).toBe("Entrar en comparadores");
+    expect(labelForType("pursue_community_sources")).toBe("Entrar en comunidades");
+    expect(labelForType("pursue_media_sources")).toBe("Conseguir cobertura en medios");
     expect(labelForType("create_faq_section")).toBe("Crear sección de FAQ");
     expect(labelForType("increase_brand_visibility")).toBe("Aumentar visibilidad de marca");
     expect(labelForType("strengthen_brand_entity_clarity")).toBe("Reforzar claridad de marca");
@@ -744,6 +828,9 @@ describe("generateRecommendationsForRun", () => {
       "increase_brand_prominence",
       "increase_brand_visibility",
       "pursue_citation_sources",
+      "pursue_comparator_sources",
+      "pursue_community_sources",
+      "pursue_media_sources",
       "strengthen_brand_entity_clarity",
       "track_emerging_competitor",
       "update_stale_content"
@@ -853,12 +940,14 @@ describe("generateRecommendationsForRun", () => {
       })
     ]);
 
-    const rec = recs.find((r) => r.recommendation_type === "pursue_citation_sources");
+    const rec = recs.find((r) => r.recommendation_type === "pursue_community_sources");
     expect(rec).toBeDefined();
     expect(rec!.evidence_json.citation_pages).toEqual([
       { domain: "reddit.com", title: "Best furniture brands 2026", url: "https://reddit.com/r/furniture/best" }
     ]);
-    expect(rec!.description).toContain("Best furniture brands 2026");
+    // The specific page now drives the FIRST STEP rather than the diagnosis:
+    // "go and answer this exact thread" is an instruction, not a symptom.
+    expect(rec!.evidence_json.first_step).toContain("Best furniture brands 2026");
   });
 
   it("surfaces amplify_positive_pattern when the brand has winning prompts and an open gap elsewhere (N4)", () => {

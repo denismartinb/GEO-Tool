@@ -6,7 +6,54 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
+import {
+  computeJointPotentialPoints,
+  computeRecommendationPotentialPoints,
+  type ScoreInputRow,
+} from "@/lib/scoring/run-scoring";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
+
+/** Affected prompt ids off an evidence_json blob, defensively. */
+function affectedPromptIds(evidenceJson: unknown): string[] {
+  if (!evidenceJson || typeof evidenceJson !== "object") return [];
+  const ids = (evidenceJson as Record<string, unknown>).affected_prompt_ids;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
+}
+
+type GeoPillar = { key: string; label: string; value: number };
+
+/**
+ * The four GEO Score components, read from the run's already-persisted
+ * `details_json.geo_score.components` (ADR 0015). Any component the scorer
+ * dropped for lack of data (prominence without positions, authority without
+ * grounded rows) is simply absent here — never substituted with a zero, which
+ * would read as "you scored 0" instead of "not measurable this run".
+ */
+function readPillars(details: unknown): GeoPillar[] {
+  if (!details || typeof details !== "object") return [];
+  const geo = (details as Record<string, unknown>).geo_score;
+  if (!geo || typeof geo !== "object") return [];
+  const components = (geo as Record<string, unknown>).components;
+  if (!components || typeof components !== "object") return [];
+
+  const LABELS: Array<{ key: string; label: string }> = [
+    { key: "presence", label: "Presencia" },
+    { key: "prominence", label: "Prominencia" },
+    { key: "standing", label: "Cuota de voz" },
+    { key: "authority", label: "Autoridad" },
+  ];
+
+  const out: GeoPillar[] = [];
+  for (const { key, label } of LABELS) {
+    const raw = (components as Record<string, unknown>)[key];
+    const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>).value : null;
+    if (typeof value === "number" && Number.isFinite(value)) {
+      out.push({ key, label, value: Math.round(value) });
+    }
+  }
+  return out;
+}
 
 /**
  * Parses a `domain_coverage` generated_solutions row's sanitized_content
@@ -242,19 +289,95 @@ export default async function RecommendationsPage({
     }
   }
 
+  /* ---- RECS-REDESIGN-1: potential points on the Recomendaciones page ----
+   * These already existed (RECS-POTENTIAL-1 / ADR 0017) but only ever
+   * rendered in the Overview's Oportunidades block, so the page whose entire
+   * job is "what should I do" was the one page that never showed what each
+   * action is worth. Same counterfactual computation, same honest fallback:
+   * null for non-quantifiable types or a low-confidence run, in which case
+   * the card shows a qualitative impact instead of an invented number.
+   */
+  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }] = latestCompletedRun
+    ? await Promise.all([
+        supabase
+          .from("run_scores")
+          .select("details_json")
+          .eq("run_id", latestCompletedRun.id)
+          .maybeSingle(),
+        supabase
+          .from("scan_prompt_results")
+          .select(
+            "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, brand_snapshot, provider, extraction_version",
+          )
+          .eq("project_id", projectId)
+          .eq("run_id", latestCompletedRun.id),
+        // Bot access is project-level and already captured by the web audit —
+        // reused here read-only so a blocked AI crawler surfaces on the page
+        // where the user is deciding what to work on, not only inside the
+        // audit screen they may never open.
+        supabase
+          .from("web_audit_snapshots")
+          .select("bots, created_at")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }, { data: null }];
+
+  const pillars = readPillars((runScoreRow as { details_json?: unknown } | null)?.details_json);
+
+  const scoreInputRows: ScoreInputRow[] = ((allPromptResults ?? []) as ScoreInputRow[]).map((r) => ({
+    id: r.id,
+    prompt_text_snapshot: r.prompt_text_snapshot,
+    brand_mentioned: r.brand_mentioned,
+    citation_found: r.citation_found,
+    mentioned_competitors_count: r.mentioned_competitors_count ?? 0,
+    citations_count: r.citations_count ?? 0,
+    sentiment: r.sentiment,
+    extracted_json: r.extracted_json,
+    extraction_error: r.extraction_error,
+    brand_snapshot: r.brand_snapshot,
+    provider: r.provider,
+    extraction_version: r.extraction_version,
+  }));
+
   const recs: Recommendation[] = baseRecs.map((r) => ({
     ...r,
     solution: solutionByRecId.get(r.id) ?? null,
     coverageOverlay: coverageOverlayByRecId.get(r.id) ?? null,
+    potentialPoints:
+      scoreInputRows.length > 0
+        ? (computeRecommendationPotentialPoints(
+            scoreInputRows,
+            project.domain,
+            r.recommendation_type,
+            affectedPromptIds(r.evidence_json),
+          )?.deltaPoints ?? null)
+        : null,
   }));
 
-  // Computed stats
-  const highPriority = recs.filter((r) => r.priority_rank <= 3).length;
-  const quickWins = recs.filter(
-    (r) => r.impact === "high" && r.effort === "low",
-  ).length;
-  const total = recs.length;
+  // Joint ceiling across every active recommendation — never the sum of the
+  // per-card deltas, which double-counts prompts shared by two rules (ADR 0017 §3).
+  const jointPotential =
+    scoreInputRows.length > 0
+      ? computeJointPotentialPoints(
+          scoreInputRows,
+          project.domain,
+          recs.map((r) => ({
+            recommendationType: r.recommendation_type,
+            affectedPromptIds: affectedPromptIds(r.evidence_json),
+          })),
+        )
+      : null;
+  const jointPoints =
+    jointPotential && Math.round(jointPotential.deltaPoints) > 0 ? Math.round(jointPotential.deltaPoints) : null;
 
+  // Blocked AI crawlers = a hard ceiling on everything else on this page.
+  const botsReport = (auditRow as { bots: BotAccessReport | null } | null)?.bots ?? null;
+  const blockedBots = (botsReport?.bots ?? []).filter((b) => !b.allowed).map((b) => b.agent);
+
+  const total = recs.length;
   const latestRunFailed = latestRun?.status === "failed";
 
   const lastScanDate = latestCompletedRun
@@ -270,255 +393,129 @@ export default async function RecommendationsPage({
 
   return (
     <div className="page fade-in">
-      {/* Sticky header */}
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <span className="kicker">Actuar</span>
-          <span
-            style={{
-              width: 1,
-              height: 16,
-              background: "var(--line-strong)",
-              display: "inline-block",
-              margin: "0 2px",
-            }}
-          />
-          <span
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: "var(--ink)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-              maxWidth: 260,
-            }}
-          >
-            {project.domain}
-          </span>
-          {total > 0 && (
-            <span className="badge badge-accent">
-              {total} acciones
-            </span>
-          )}
-        </div>
-        <div className="ov-sticky-right">
+      <div className="rec2-scope">
+        {/* 1 · Head — title and the scan date, nothing else. The metadata row
+            (prompts / competitors / scans / score) that used to live here was
+            removed in the founder design review: it repeated the Overview and
+            pushed the first real action below the fold. */}
+        <div className="rec2-head">
+          <div style={{ minWidth: 0 }}>
+            <div className="rec2-kicker">Actuar</div>
+            <h1 className="rec2-h1">Recomendaciones</h1>
+          </div>
           {lastScanDate && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
+            <span className="badge badge-pos" style={{ fontSize: 11, flexShrink: 0 }}>
               Escaneado {lastScanDate}
             </span>
           )}
-          <button
-            type="button"
-            style={{
-              padding: "7px 14px",
-              fontSize: 13,
-              fontWeight: 600,
-              border: "1.5px solid var(--line)",
-              borderRadius: 8,
-              background: "var(--surface)",
-              color: "var(--ink-2)",
-              cursor: "default",
-            }}
-            disabled
-            aria-disabled="true"
-          >
-            Exportar plan
-          </button>
         </div>
-      </div>
 
-      {activeRun ? (
-        <ScanInProgress activeRun={activeRun} />
-      ) : (
-      <>
-      {/* Failed run notice */}
-      {latestRunFailed && latestCompletedRun && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "10px 14px",
-            background: "var(--warn-soft)",
-            border: "1px solid #f3d086",
-            borderRadius: "var(--r-md)",
-            fontSize: 13,
-            color: "var(--warn-ink)",
-            marginBottom: 16,
-          }}
-        >
-          <Icon name="info" size={14} />
-          El último escaneo falló. Se muestran recomendaciones del escaneo
-          anterior completado.
-        </div>
-      )}
-
-      {/* Summary banner — only if there are recs */}
-      {latestCompletedRun && recs.length > 0 && (
-        <div className="summary mt8" style={{ flexWrap: "wrap", rowGap: 10 }}>
-          <div className="summary-ico">
-            <Icon name="recs" size={20} />
-          </div>
-          <div className="summary-txt" style={{ flex: "1 1 150px" }}>
-            GenScore ha convertido tu último escaneo en{" "}
-            <b>{total} {total === 1 ? "acción concreta" : "acciones concretas"}</b> para{" "}
-            <b>{project.domain}</b>.
-            {highPriority > 0 ? (
-              <>
-                {" "}Empieza por las <b>{highPriority} de alta prioridad</b>: son las que más pueden
-                mover tu puntuación GEO.
-              </>
-            ) : (
-              <> Ninguna es de alta prioridad ahora mismo — son mejoras incrementales.</>
+        {activeRun ? (
+          <ScanInProgress activeRun={activeRun} />
+        ) : (
+          <>
+            {latestRunFailed && latestCompletedRun && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "10px 14px",
+                  background: "var(--warn-soft)",
+                  border: "1px solid #f3d086",
+                  borderRadius: "var(--r-md)",
+                  fontSize: 13,
+                  color: "var(--warn-ink)",
+                  marginBottom: 16,
+                }}
+              >
+                <Icon name="info" size={14} />
+                El último escaneo falló. Estas recomendaciones son del anterior.
+              </div>
             )}
-            {" "}Pulsa cualquier acción para ver la evidencia y el plan paso a paso.
-          </div>
-          <div
-            style={{
-              display: "flex",
-              gap: 16,
-              paddingLeft: 16,
-              borderLeft: "1px solid var(--line)",
-              alignItems: "center",
-              flex: "0 0 auto",
-            }}
-          >
-            <div style={{ textAlign: "center" }}>
-              <div
-                className="tnum"
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: "var(--neg)",
-                  lineHeight: 1,
-                }}
-              >
-                {highPriority}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--ink-4)",
-                  fontWeight: 600,
-                  marginTop: 3,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Alta prioridad
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div
-                className="tnum"
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: "var(--pos)",
-                  lineHeight: 1,
-                }}
-              >
-                {quickWins}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--ink-4)",
-                  fontWeight: 600,
-                  marginTop: 3,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Victorias rápidas
-              </div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div
-                className="tnum"
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: "var(--ink)",
-                  lineHeight: 1,
-                }}
-              >
-                {total}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--ink-4)",
-                  fontWeight: 600,
-                  marginTop: 3,
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Total
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Empty states */}
-      {!latestCompletedRun ? (
-        <div className="section-empty" style={{ marginTop: 20 }}>
-          <div className="section-empty-title">
-            {latestRunFailed
-              ? "El último escaneo falló"
-              : "Todavía no hay recomendaciones"}
-          </div>
-          <div className="section-empty-desc">
-            {latestRunFailed
-              ? "No hay un escaneo completado del que extraer recomendaciones. Revisa el dominio y vuelve a lanzar el análisis."
-              : "Las recomendaciones aparecerán después de completar el primer escaneo real con Gemini."}
-          </div>
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            className="btn btn-ghost btn-sm"
-            style={{ marginTop: 14, display: "inline-flex" }}
-          >
-            Volver a visión general
-            <Icon name="arrRight" size={14} />
-          </Link>
-        </div>
-      ) : recs.length === 0 ? (
-        <div className="section-empty" style={{ marginTop: 20 }}>
-          <div className="section-empty-title">No hay recomendaciones activas</div>
-          <div className="section-empty-desc">
-            Ninguna regla generó acciones para este escaneo. Puedes revisar el
-            detalle del escaneo para ver la evidencia.
-          </div>
-          <Link
-            href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
-            className="btn btn-ghost btn-sm"
-            style={{ marginTop: 14, display: "inline-flex" }}
-          >
-            Ver detalle del escaneo
-            <Icon name="arrRight" size={14} />
-          </Link>
-        </div>
-      ) : (
-        <>
-          {/* Section head */}
-          <div className="section-head" style={{ marginTop: 24 }}>
-            <div className="section-title">Backlog de acciones</div>
-            <div className="section-desc">
-              Pulsa cualquier acción para ver la evidencia
-            </div>
-          </div>
+            {/* 2 · Blocking finding, above everything: while an AI crawler is
+                blocked, the content actions below cannot pay off on that engine. */}
+            {blockedBots.length > 0 && (
+              <div className="rec2-blocker">
+                <Icon name="alert" size={16} />
+                <div style={{ minWidth: 0 }}>
+                  <div className="rec2-blocker-t">
+                    Tu web bloquea a {blockedBots.slice(0, 2).join(" y ")}
+                    {blockedBots.length > 2 ? ` y ${blockedBots.length - 2} más` : ""}
+                  </div>
+                  <div className="rec2-blocker-d">
+                    Esos motores no pueden leer tu contenido, así que no pueden citarte.{" "}
+                    <Link href={`/dashboard/projects/${projectId}/web-audit`} style={{ fontWeight: 700 }}>
+                      Ver cómo arreglarlo
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
 
-          {/* Client component handles filters + cards */}
-          <RecommendationsClient
-            recommendations={recs}
-            resolvedHistory={resolvedHistory}
-            recentWinsCount={recentWins.length}
-            projectId={projectId}
-          />
-        </>
-      )}
-      </>
-      )}
+            {/* 3 · Pillars — where the score stands, as context for the choices below. */}
+            {pillars.length > 0 && (
+              <div className="rec2-pillars">
+                {pillars.map((p) => (
+                  <div key={p.key} className="rec2-pillar">
+                    <div className="rec2-pillar-n">{p.label}</div>
+                    <div className="rec2-pillar-v">{p.value}</div>
+                    <div className="rec2-pillar-trk">
+                      <i style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!latestCompletedRun ? (
+              <div className="section-empty" style={{ marginTop: 20 }}>
+                <div className="section-empty-title">
+                  {latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}
+                </div>
+                <div className="section-empty-desc">
+                  {latestRunFailed
+                    ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
+                    : "Aparecerán en cuanto termine tu primer escaneo."}
+                </div>
+                <Link
+                  href={`/dashboard/projects/${projectId}`}
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginTop: 14, display: "inline-flex" }}
+                >
+                  Volver a visión general
+                  <Icon name="arrRight" size={14} />
+                </Link>
+              </div>
+            ) : recs.length === 0 ? (
+              <div className="section-empty" style={{ marginTop: 20 }}>
+                <div className="section-empty-title">Nada que corregir ahora mismo</div>
+                <div className="section-empty-desc">
+                  Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
+                </div>
+                <Link
+                  href={`/dashboard/projects/${projectId}/runs/${latestCompletedRun.id}`}
+                  className="btn btn-ghost btn-sm"
+                  style={{ marginTop: 14, display: "inline-flex" }}
+                >
+                  Ver detalle del escaneo
+                  <Icon name="arrRight" size={14} />
+                </Link>
+              </div>
+            ) : (
+              <RecommendationsClient
+                recommendations={recs}
+                resolvedHistory={resolvedHistory}
+                recentWinsCount={recentWins.length}
+                projectId={projectId}
+                jointPoints={jointPoints}
+                domain={project.domain}
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
