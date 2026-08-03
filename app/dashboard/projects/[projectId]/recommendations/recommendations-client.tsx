@@ -1008,7 +1008,29 @@ export function RecommendationsClient({
   // The plan: the highest-yield actions of this scan, in the order the engine
   // would tackle them. Computed before filtering — the plan is the scan's
   // answer to "what now", not a view of the current tab.
-  const plan = [...recommendations].sort((a, b) => planScore(b) - planScore(a)).slice(0, PLAN_SIZE);
+  //
+  // At most ONE per recommendation type. Without this the plan degenerates into
+  // the same rule three times on three different queries — seen on the real
+  // preview, where all three "priority actions" were "Te mencionan pero no
+  // citan tu dominio en …" with identical descriptions. That is the exact
+  // failure this redesign exists to remove, and it is worse in the highlighted
+  // block than anywhere else: three near-identical cards read as padding, not
+  // as a plan. Diversifying costs a little raw potential and buys three
+  // genuinely different pieces of work. If fewer than PLAN_SIZE distinct types
+  // exist, the remaining slots fall back to the next best regardless of type.
+  const ranked = [...recommendations].sort((a, b) => planScore(b) - planScore(a));
+  const seenTypes = new Set<string>();
+  const plan = ranked.filter((r) => {
+    if (seenTypes.has(r.recommendation_type)) return false;
+    seenTypes.add(r.recommendation_type);
+    return true;
+  }).slice(0, PLAN_SIZE);
+  if (plan.length < PLAN_SIZE) {
+    for (const rec of ranked) {
+      if (plan.length >= PLAN_SIZE) break;
+      if (!plan.includes(rec)) plan.push(rec);
+    }
+  }
   const planIds = new Set(plan.map((r) => r.id));
   const rest = recommendations.filter((r) => !planIds.has(r.id));
   const planPoints = Math.round(
