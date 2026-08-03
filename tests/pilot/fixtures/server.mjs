@@ -128,14 +128,43 @@ function citationsPage() {
     <script>${CITATIONS_SCRIPT}</script>`;
 }
 
+// Reproduces the EXACT clipping chain of the real console shell
+// (`.shell { height: 100vh; overflow: hidden }` > `.dash-main` (`min-height:
+// 0`, the flex-shrink trick) > `.dash-content { flex: 1; overflow-y: auto }`,
+// app/globals.css + app/dashboard/layout.tsx) so the "shell-clip" self-check
+// case below exercises the SAME structural bug journey.ts's
+// SHELL_CLIPPING_CLASSES fix targets — not a synthetic stand-in for it. A
+// wide marker and a marker 2000px below the fold both live inside
+// `.dash-content`; neither the document nor the plain-overflow fixture mode
+// above them ever sees either, only `.dash-content` does.
+const SHELL_CLIP_STYLE = `
+  .shell { height: 100vh; overflow: hidden; display: flex; }
+  .dash-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .dash-content { flex: 1; overflow-y: auto; padding: 16px; }
+`;
+
+function shellClipBody(title, body) {
+  return `<div class="shell"><div class="dash-main"><main class="dash-content">
+    <h1>${title}</h1>
+    ${body}
+    <div style="width:2200px" id="shell-clip-wide-marker">ancho fuera del shell</div>
+    <div style="height:2000px"></div>
+    <div id="shell-clip-fold-marker">marcador bajo el pliegue, solo visible si la captura ve el contenido real de .dash-content</div>
+  </main></div></div>`;
+}
+
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  // Only authed dashboard pages go through the real shell in production —
+  // login and 404 render outside it, so this must not wrap them either.
+  const isShellPage = BREAK_MODE === "shell-clip" && title !== "Bienvenido de nuevo" && title !== "No encontrado";
+  const content = isShellPage ? shellClipBody(title, body) : `<h1>${title}</h1>${body}${overflow}`;
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
-</head><body><h1>${title}</h1>${body}${overflow}</body></html>`;
+<style>body{margin:0;font-family:system-ui;padding:16px}${isShellPage ? SHELL_CLIP_STYLE : ""}</style>
+</head><body>${content}</body></html>`;
 }
 
 function loginPage() {

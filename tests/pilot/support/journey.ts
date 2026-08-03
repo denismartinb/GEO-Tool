@@ -98,6 +98,78 @@ function recordFindings(findings: PageFindings): void {
 }
 
 /**
+ * The console shell (`app/dashboard/layout.tsx` + `app/globals.css`) is
+ * `.shell { height: 100vh; overflow: hidden }` > `.dash-main` (a flex column
+ * with `min-height: 0`, the trick that lets its child actually shrink) >
+ * `.dash-content { flex: 1; overflow-y: auto }`. The PAGE never scrolls —
+ * `.dash-content` does, internally — so `document.documentElement` stays
+ * pinned at the viewport's own height no matter how long a screen's content
+ * is.
+ *
+ * That silently broke two things this harness claimed to do, discovered
+ * 2026-08-03 by reading PR #289's own captures by hand rather than trusting
+ * the checklist: `page.screenshot({ fullPage: true })` measures
+ * `document.documentElement`'s scroll box to decide how much to capture, so
+ * every "full page" screenshot this harness had ever taken of a dashboard
+ * screen was actually just the first viewport-height slice — 0/27 real
+ * findings had ever shown more than what fits above the fold. And
+ * `horizontalOverflow` compared `document.documentElement.scrollWidth` to
+ * the viewport, which can never trip: setting `overflow-y: auto` on
+ * `.dash-content` without an explicit `overflow-x` computes `overflow-x` to
+ * `auto` too (CSS overflow shorthand rules), so `.dash-content` clips and
+ * independently scrolls any horizontal overflow itself — it never reaches
+ * the document.
+ *
+ * Fix: before a fullPage capture, temporarily neutralize the three classes
+ * in this exact clipping chain (inline style, restored right after) so the
+ * document naturally grows to the content's real height; measure horizontal
+ * overflow against `.dash-content` directly instead of the document, since
+ * that element — not `document.documentElement` — is the actual clipping
+ * box on every dashboard screen.
+ */
+const SHELL_CLIPPING_CLASSES = [".shell", ".dash-main", ".dash-content"];
+
+async function expandShellForCapture(page: Page): Promise<void> {
+  await page.evaluate((selectors) => {
+    const w = window as unknown as { __pilotExpanded?: Array<{ el: HTMLElement; style: string }> };
+    w.__pilotExpanded = [];
+    for (const selector of selectors) {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (!el) continue;
+      w.__pilotExpanded.push({ el, style: el.getAttribute("style") ?? "" });
+      el.style.setProperty("overflow", "visible", "important");
+      el.style.setProperty("height", "auto", "important");
+      el.style.setProperty("max-height", "none", "important");
+    }
+  }, SHELL_CLIPPING_CLASSES);
+}
+
+async function restoreShellAfterCapture(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const w = window as unknown as { __pilotExpanded?: Array<{ el: HTMLElement; style: string }> };
+    for (const { el, style } of w.__pilotExpanded ?? []) {
+      if (style) el.setAttribute("style", style);
+      else el.removeAttribute("style");
+    }
+    w.__pilotExpanded = [];
+  });
+}
+
+/**
+ * A fullPage screenshot of whatever the console shell clips to its own
+ * scroll box. Shared by `visitAsUser` and `captureInteraction` so both kinds
+ * of capture see the same true content height, not just the first viewport.
+ */
+async function screenshotFullContent(page: Page, path: string): Promise<void> {
+  await expandShellForCapture(page);
+  try {
+    await page.screenshot({ path, fullPage: true });
+  } finally {
+    await restoreShellAfterCapture(page);
+  }
+}
+
+/**
  * Navigates to `path` as the logged-in pilot user, captures a full-page
  * screenshot, and collects the hard signals that can be judged mechanically.
  *
@@ -155,7 +227,15 @@ export async function visitAsUser(
     await page.waitForTimeout(1_000);
 
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    // `.dash-content` (see the SHELL_CLIPPING_CLASSES comment above), not
+    // document.documentElement — on a dashboard screen the document never
+    // overflows, `.dash-content` does, on its own independent axis. Still
+    // check the document too: non-console pages (/login) have no
+    // `.dash-content` and scroll normally.
+    const scrollWidth = await page.evaluate(() => {
+      const content = document.querySelector<HTMLElement>(".dash-content");
+      return Math.max(document.documentElement.scrollWidth, content?.scrollWidth ?? 0);
+    });
     const finalUrl = page.url();
     const bouncedToLogin = /\/login/.test(finalUrl) && !path.includes("/login");
 
@@ -194,7 +274,7 @@ export async function visitAsUser(
 
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
-    await page.screenshot({ path: screenshot, fullPage: true });
+    await screenshotFullContent(page, screenshot);
 
     const findings: PageFindings = {
       label,
@@ -294,7 +374,7 @@ export function assertPageIsHealthy(findings: PageFindings): void {
 export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
-  await page.screenshot({ path: screenshot, fullPage: true });
+  await screenshotFullContent(page, screenshot);
   await testInfo.attach(`${label} (${testInfo.project.name})`, {
     path: screenshot,
     contentType: "image/png"

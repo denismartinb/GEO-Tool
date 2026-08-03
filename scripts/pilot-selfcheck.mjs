@@ -109,6 +109,23 @@ results.push(
     expectedExit: 1
   })
 );
+// Pins the 2026-08-03 finding shut: on every real dashboard screen, the
+// element that actually scrolls and clips is `.dash-content`
+// (`.shell { height: 100vh; overflow: hidden }` above it), never
+// `document.documentElement` — so a wide element placed INSIDE `.dash-content`
+// (this fixture mode reproduces that exact CSS chain, see server.mjs) must
+// still flip the run to FAIL. Before the SHELL_CLIPPING_CLASSES fix in
+// journey.ts, this case passed clean: document.documentElement.scrollWidth
+// never saw it, because `.dash-content`'s own overflow-y:auto clips and
+// scrolls it independently. Revert that fix and this case is the one that
+// goes red.
+results.push(
+  await runCase({
+    label: "shell-clip fixture (overflow trapped inside .dash-content) → PILOT FAIL",
+    breakMode: "shell-clip",
+    expectedExit: 1
+  })
+);
 
 const allPassed = results.every(Boolean);
 console.log(allPassed ? "\nPilot harness self-check PASSED" : "\nPilot harness self-check FAILED");
