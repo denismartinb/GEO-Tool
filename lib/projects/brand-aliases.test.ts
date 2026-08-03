@@ -61,6 +61,35 @@ describe("selectVerifiableAliases", () => {
     expect(rejected).toEqual([{ alias: "Mozilla", reason: "same_as_brand" }]);
   });
 
+  it("rejects aliases that CONTAIN the brand — matching is bidirectional", () => {
+    // Real derived output for mozilla.org. Every one of these already matches
+    // through "Mozilla" itself in namesPlausiblyMatch, so keeping them changes
+    // no verdict and only crowds out the aliases that carry information.
+    const evidence =
+      "Mozilla VPN, Mozilla Monitor, Mozilla.ai, Mozilla Ventures, Mozilla Advertising, " +
+      "Mozilla Builders y Mozilla New Products. Tambien Firefox Relay, Thunderbird y MDN Plus.";
+    const { accepted, rejected } = selectVerifiableAliases(
+      [
+        "Mozilla VPN",
+        "Mozilla Monitor",
+        "Mozilla.ai",
+        "Mozilla Ventures",
+        "Mozilla Advertising",
+        "Mozilla Builders",
+        "Mozilla New Products",
+        "Firefox Relay",
+        "Thunderbird",
+        "MDN Plus"
+      ],
+      "Mozilla",
+      evidence
+    );
+
+    expect(accepted).toEqual(["Firefox Relay", "Thunderbird", "MDN Plus"]);
+    expect(rejected.every((r) => r.reason === "same_as_brand")).toBe(true);
+    expect(rejected).toHaveLength(7);
+  });
+
   it("is accent- and case-insensitive against the evidence", () => {
     const { accepted } = selectVerifiableAliases(["telefonica"], "Movistar", "Telefónica opera Movistar en España.");
     expect(accepted).toEqual(["telefonica"]);

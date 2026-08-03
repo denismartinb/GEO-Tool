@@ -97,6 +97,16 @@ The ≥4-character bar matters because `namesPlausiblyMatch` accepts substring
 matches in *either* direction: a 2–3 character alias would match inside a
 large fraction of unrelated words.
 
+That same bidirectionality is why an alias **containing** the brand is
+rejected as redundant, not just one the brand contains. Missed in the first
+version and caught on the first real derivation: mozilla.org produced fourteen
+aliases, seven of which — "Mozilla VPN", "Mozilla Monitor", "Mozilla.ai",
+"Mozilla Ventures", "Mozilla Advertising", "Mozilla Builders", "Mozilla New
+Products" — already matched through "Mozilla" itself and could never change a
+verdict. They crowded out the ones that carry the information the whole phase
+exists for (Firefox, Thunderbird, MDN Plus) and cost a comparison each, per
+entity, per prompt.
+
 ## Consequences
 
 **Positive.** A brand is measured by what it is actually called. The Mozilla

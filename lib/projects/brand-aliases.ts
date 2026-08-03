@@ -187,9 +187,19 @@ export function selectVerifiableAliases(
       reject("too_long");
       continue;
     }
-    // Already covered by the tracked brand string itself, or a substring of
-    // it — adding it changes nothing and only widens the matching surface.
-    if (key === brandKey || brandKey.includes(key)) {
+    // Already covered by the tracked brand string alone. `namesPlausiblyMatch`
+    // (lib/scan/extraction.ts) accepts a substring match in EITHER direction,
+    // so both of these are redundant and neither can ever change a verdict:
+    //   - an alias the brand contains  ("Mozilla" for brand "Mozilla Corp")
+    //   - an alias that contains the brand ("Mozilla VPN" for brand "Mozilla")
+    // The second was missed in the first version, and real derived output shows
+    // why it matters: mozilla.org produced "Mozilla VPN", "Mozilla Monitor",
+    // "Mozilla.ai", "Mozilla Ventures", "Mozilla Advertising", "Mozilla
+    // Builders" and "Mozilla New Products" — seven of fourteen entries that
+    // already matched via "Mozilla" itself, crowding out the ones that carry
+    // real information (Firefox, Thunderbird, MDN Plus) and spending a
+    // comparison each, per entity, per prompt.
+    if (key === brandKey || brandKey.includes(key) || key.includes(brandKey)) {
       reject("same_as_brand");
       continue;
     }
