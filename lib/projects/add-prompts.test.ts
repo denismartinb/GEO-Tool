@@ -5,7 +5,7 @@ import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 
 const generateAddedPromptsMock = vi.fn();
 const launchScanMock = vi.fn();
-const resolveBusinessContextMock = vi.fn();
+const resolveAndCacheBusinessProfileMock = vi.fn();
 
 vi.mock("@/lib/llm/gemini", () => ({
   generateAddedPrompts: (...args: unknown[]) => generateAddedPromptsMock(...args)
@@ -15,11 +15,16 @@ vi.mock("@/lib/scan/launch", () => ({
   launchScan: (...args: unknown[]) => launchScanMock(...args)
 }));
 
+// add-prompts depends on the SHARED resolve-and-cache helper, not on
+// resolveBusinessContext directly — mocking the export it actually imports
+// keeps this file testing add-prompts' own contract. The helper's internals
+// (cache hit, lazy resolve + persist, best-effort write failure) are covered
+// in lib/projects/business-profile.test.ts, where they now live.
 vi.mock("@/lib/projects/business-profile", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/projects/business-profile")>();
   return {
     ...actual,
-    resolveBusinessContext: (...args: unknown[]) => resolveBusinessContextMock(...args)
+    resolveAndCacheBusinessProfile: (...args: unknown[]) => resolveAndCacheBusinessProfileMock(...args)
   };
 });
 
@@ -182,11 +187,11 @@ describe("addPromptsCore", () => {
     nextId = 1;
     generateAddedPromptsMock.mockReset();
     launchScanMock.mockReset();
-    resolveBusinessContextMock.mockReset();
+    resolveAndCacheBusinessProfileMock.mockReset();
     // Default: no profile resolvable — matches every pre-COMPETITOR-GROUNDING-2
     // test's expectations (blind generateAddedPrompts call, no cache write).
     // Individual tests override this to exercise the identified/cached paths.
-    resolveBusinessContextMock.mockResolvedValue({ status: "unidentified" });
+    resolveAndCacheBusinessProfileMock.mockResolvedValue(null);
   });
 
   it("auto mode: persists generated prompts and launches a scan restricted to the new ids", async () => {
@@ -488,53 +493,56 @@ describe("addPromptsCore", () => {
   });
 
   describe("COMPETITOR-GROUNDING-2: business profile reuse (docs/adr/0022)", () => {
-    it("uses an already-cached business_profile without calling resolveBusinessContext again", async () => {
+    it("passes the resolved profile straight into generateAddedPrompts", async () => {
       const { addPromptsCore } = await import("@/lib/projects/add-prompts");
       generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }]);
       launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
+      resolveAndCacheBusinessProfileMock.mockResolvedValue(SAMPLE_PROFILE);
 
-      const { client, projectUpdateCalls } = makeFakeSupabase({
-        project: { ...PROJECT, business_profile: SAMPLE_PROFILE },
-        activePrompts: []
-      });
-
-      await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
-
-      expect(resolveBusinessContextMock).not.toHaveBeenCalled();
-      expect(projectUpdateCalls).toHaveLength(0);
-      const callArgs = generateAddedPromptsMock.mock.calls[0][0];
-      expect(callArgs.profile).toEqual(SAMPLE_PROFILE);
-    });
-
-    it("lazily resolves and persists a profile when none is cached yet, and uses it for this same call", async () => {
-      const { addPromptsCore } = await import("@/lib/projects/add-prompts");
-      generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }]);
-      launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
-      resolveBusinessContextMock.mockResolvedValue({ status: "identified", profile: SAMPLE_PROFILE });
-
-      const { client, projectUpdateCalls } = makeFakeSupabase({
+      const { client } = makeFakeSupabase({
         project: { ...PROJECT, business_profile: null },
         activePrompts: []
       });
 
       await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
 
-      expect(resolveBusinessContextMock).toHaveBeenCalledWith(
-        expect.objectContaining({ domain: PROJECT.domain, country: PROJECT.country, language: PROJECT.language })
+      expect(resolveAndCacheBusinessProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          projectId: PROJECT.id,
+          ownerUserId: USER.id,
+          domain: PROJECT.domain,
+          country: PROJECT.country,
+          language: PROJECT.language
+        })
       );
-      expect(projectUpdateCalls).toHaveLength(1);
-      expect(projectUpdateCalls[0]).toMatchObject({ business_profile: SAMPLE_PROFILE });
-      const callArgs = generateAddedPromptsMock.mock.calls[0][0];
-      expect(callArgs.profile).toEqual(SAMPLE_PROFILE);
+      expect(generateAddedPromptsMock.mock.calls[0][0].profile).toEqual(SAMPLE_PROFILE);
     });
 
-    it("keeps today's blind behavior (no profile, no cache write) when the business can't be identified", async () => {
+    it("hands the row's cached profile to the resolver, so a cached one is reused rather than recomputed", async () => {
       const { addPromptsCore } = await import("@/lib/projects/add-prompts");
       generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }]);
       launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
-      resolveBusinessContextMock.mockResolvedValue({ status: "unidentified" });
+      resolveAndCacheBusinessProfileMock.mockResolvedValue(SAMPLE_PROFILE);
 
-      const { client, projectUpdateCalls } = makeFakeSupabase({
+      const { client } = makeFakeSupabase({
+        project: { ...PROJECT, business_profile: SAMPLE_PROFILE },
+        activePrompts: []
+      });
+
+      await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+      expect(resolveAndCacheBusinessProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({ existingProfile: SAMPLE_PROFILE })
+      );
+    });
+
+    it("keeps today's blind behavior when the business can't be identified", async () => {
+      const { addPromptsCore } = await import("@/lib/projects/add-prompts");
+      generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }]);
+      launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
+      resolveAndCacheBusinessProfileMock.mockResolvedValue(null);
+
+      const { client } = makeFakeSupabase({
         project: { ...PROJECT, business_profile: null },
         activePrompts: []
       });
@@ -542,17 +550,15 @@ describe("addPromptsCore", () => {
       const result = await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
 
       expect(result.success).toBe(true);
-      expect(projectUpdateCalls).toHaveLength(0);
-      const callArgs = generateAddedPromptsMock.mock.calls[0][0];
-      expect(callArgs.profile).toBeUndefined();
+      expect(generateAddedPromptsMock.mock.calls[0][0].profile).toBeUndefined();
     });
 
-    it("never calls resolveBusinessContext for manual mode, regardless of a missing profile", async () => {
+    it("never resolves a profile for manual mode, regardless of a missing one", async () => {
       const { addPromptsCore } = await import("@/lib/projects/add-prompts");
       generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuánto cuesta el plan Pro?", category: "Precio y planes" }]);
       launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
 
-      const { client, projectUpdateCalls } = makeFakeSupabase({
+      const { client } = makeFakeSupabase({
         project: { ...PROJECT, business_profile: null },
         activePrompts: []
       });
@@ -565,29 +571,8 @@ describe("addPromptsCore", () => {
         user: USER
       });
 
-      expect(resolveBusinessContextMock).not.toHaveBeenCalled();
-      expect(projectUpdateCalls).toHaveLength(0);
-      const callArgs = generateAddedPromptsMock.mock.calls[0][0];
-      expect(callArgs.profile).toBeUndefined();
-    });
-
-    it("still succeeds (using the freshly-resolved profile) even if the best-effort cache write fails", async () => {
-      const { addPromptsCore } = await import("@/lib/projects/add-prompts");
-      generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }]);
-      launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
-      resolveBusinessContextMock.mockResolvedValue({ status: "identified", profile: SAMPLE_PROFILE });
-
-      const { client, setForceProjectUpdateError } = makeFakeSupabase({
-        project: { ...PROJECT, business_profile: null },
-        activePrompts: []
-      });
-      setForceProjectUpdateError(true);
-
-      const result = await addPromptsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
-
-      expect(result.success).toBe(true);
-      const callArgs = generateAddedPromptsMock.mock.calls[0][0];
-      expect(callArgs.profile).toEqual(SAMPLE_PROFILE);
+      expect(resolveAndCacheBusinessProfileMock).not.toHaveBeenCalled();
+      expect(generateAddedPromptsMock.mock.calls[0][0].profile).toBeUndefined();
     });
   });
 });

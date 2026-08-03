@@ -2093,7 +2093,9 @@ a {
 .cm2-tp-v.dn { color: var(--brand-neg); }
 .cm2-tp-v.up { color: var(--pos); }
 
-/* 7 · Marcas emergentes (other_brands_mentioned) */
+/* 7 · Competidores sugeridos (COMPETITOR-SUGGESTIONS-1).
+   Row layout is shared with the block this replaced ("Marcas que aparecen y
+   no sigues"), which is why the class prefix stays .cm2-emg. */
 .cm2-emg { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line-soft); }
 .cm2-emg:first-child { border-top: none; }
 .cm2-emg-intro { padding: 11px 13px 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
@@ -2111,6 +2113,25 @@ a {
 }
 .cm2-btn-mini svg { flex: 0 0 auto; display: block; }
 .cm2-btn-mini:disabled { opacity: .55; cursor: default; }
+
+/* Suggestion states: the grounded lookup is fetched after paint, so the block
+   is on screen from the first render and needs a real loading/empty/error
+   presence rather than collapsing to nothing. */
+.cm2-sug-skel { padding: 11px 13px 13px; }
+.cm2-sug-skel-txt { display: block; font-size: 11px; color: var(--ink-4); font-weight: 600; margin-bottom: 10px; }
+.cm2-sug-skel-row { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.cm2-sug-skel-fav { width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto; }
+.cm2-sug-skel-bar { height: 9px; border-radius: 99px; flex: 1; }
+.cm2-sug-skel-fav,
+.cm2-sug-skel-bar { background: var(--surface-sunk); animation: cm2SugPulse 1.3s ease-in-out infinite; }
+@keyframes cm2SugPulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+.cm2-sug-msg { padding: 12px 13px; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.cm2-sug-msg.cm2-emg-err { color: var(--brand-neg); margin-top: 0; }
+.cm2-sug-foot { padding: 11px 13px; border-top: 1px solid var(--line-soft); display: flex; }
+@media (prefers-reduced-motion: reduce) {
+  .cm2-sug-skel-fav,
+  .cm2-sug-skel-bar { animation: none; }
+}
 
 /* 7b · Evolución de la posición media + ranked list of current standings.
    Stacked on phones, chart-beside-list once there's room. */

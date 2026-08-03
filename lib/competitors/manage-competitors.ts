@@ -48,16 +48,6 @@ export const deactivateCompetitorInputSchema = z.object({
   competitorId: z.string().uuid()
 });
 
-/**
- * "+ Seguir" on an emerging brand: only the name is known (it came from
- * `other_brands_mentioned`), the system resolves the domain itself — the
- * user never types one (founder feedback, COMP-REDESIGN-1 review).
- */
-export const followBrandInputSchema = z.object({
-  projectId: z.string().uuid(),
-  name: nameSchema
-});
-
 export type CompetitorRecord = { id: string; name: string; domain: string };
 
 export type CreateCompetitorResult =
@@ -70,8 +60,6 @@ export type DeactivateCompetitorResult = { success: true } | { success: false; e
 
 const GENERIC_WRITE_FAILURE = "No se pudo guardar el cambio. Inténtalo de nuevo en unos minutos.";
 const PROJECT_NOT_FOUND = "No se ha encontrado el proyecto.";
-const DOMAIN_NOT_RESOLVED =
-  "No hemos podido identificar el dominio de esta marca. Añádela desde «Gestionar» indicando el dominio.";
 
 async function verifyProjectOwnership(
   supabase: AuthenticatedContext["supabase"],
@@ -86,50 +74,6 @@ async function verifyProjectOwnership(
     .eq("is_archived", false)
     .maybeSingle();
   return Boolean(data);
-}
-
-/**
- * "+ Seguir" on an emerging brand. Resolves the domain via the injected
- * `resolveDomain` (Gemini, grounded — same source onboarding uses) and then
- * reuses `createCompetitorCore` verbatim, so reactivation of a previously
- * deactivated row, the duplicate guard and the ownership check all behave
- * identically to a manual add. `resolveDomain` is injected rather than
- * imported so this stays unit-testable without stubbing the LLM module.
- *
- * Honest failure: when the domain can't be resolved we say so and point at
- * the manual path — we never invent a plausible-looking domain, and never
- * persist a competitor with a made-up address.
- */
-export async function followBrandCore(input: {
-  projectId: string;
-  name: string;
-  supabase: AuthenticatedContext["supabase"];
-  user: AuthenticatedContext["user"];
-  resolveDomain: (brandName: string) => Promise<string | null>;
-}): Promise<CreateCompetitorResult> {
-  const { projectId, name, supabase, user, resolveDomain } = input;
-
-  if (!(await verifyProjectOwnership(supabase, projectId, user.id))) {
-    return { success: false, error: PROJECT_NOT_FOUND };
-  }
-
-  let domain: string | null = null;
-  try {
-    domain = await resolveDomain(name);
-  } catch {
-    domain = null;
-  }
-
-  if (!domain) {
-    return { success: false, error: DOMAIN_NOT_RESOLVED };
-  }
-
-  const parsedDomain = domainSchema.safeParse(domain);
-  if (!parsedDomain.success) {
-    return { success: false, error: DOMAIN_NOT_RESOLVED };
-  }
-
-  return createCompetitorCore({ projectId, name, domain: parsedDomain.data, supabase, user });
 }
 
 export async function createCompetitorCore(input: {

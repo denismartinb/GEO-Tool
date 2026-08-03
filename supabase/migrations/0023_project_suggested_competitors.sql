@@ -1,0 +1,31 @@
+-- 0023_project_suggested_competitors.sql
+--
+-- Phase: COMPETITOR-SUGGESTIONS-1 (founder-approved 2026-08-03)
+--
+-- Purpose: cache the grounded competitor suggestions shown on the Competitors
+-- page. The suggestions come from `suggestCompetitors` (lib/llm/gemini.ts) —
+-- the same Google-Search-grounded call onboarding uses — which takes several
+-- seconds and costs a Gemini request. The founder asked for the block to be
+-- permanently available ("que aparezcan otros competidores sugeridos para
+-- seguir siempre"), and recomputing it on every page render would make the
+-- screen slow and expensive, so the result is cached here.
+--
+-- Shape (validated defensively on read, never trusted):
+--   { "computedAt": "<ISO 8601>", "items": [{ "name": string, "domain": string }] }
+--
+-- The cached list is stored RAW — already-tracked competitors are filtered out
+-- at read time, not at write time. That way following a suggestion removes it
+-- from the list without needing cache invalidation, and un-following brings it
+-- back.
+--
+-- Nullable, no backfill: existing projects have suggested_competitors = null,
+-- which every consumer treats as "not computed yet" (lazy compute-and-cache on
+-- first use, exactly like business_profile in 0022 — never a hard requirement,
+-- and a resolution failure is surfaced honestly rather than faked). No RLS
+-- change needed: projects' existing owner-scoped row policies already cover
+-- every column on the row, this one included.
+--
+-- Apply manually in the Supabase SQL editor, after 0022.
+
+alter table public.projects
+  add column suggested_competitors jsonb null;

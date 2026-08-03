@@ -7,7 +7,7 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { PodiumRow } from "./podium-row";
 import { ManageCompetitorsPanel } from "./manage-competitors-panel";
 import { PromptGapSection } from "./prompt-gap-section";
-import { EmergingBrandsSection } from "./emerging-brands-section";
+import { SuggestedCompetitorsSection } from "./suggested-competitors-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
 import {
   computeEntityEngineBreakdown,
@@ -15,7 +15,6 @@ import {
   type EntityEngineBreakdown
 } from "@/lib/competitors/engine-share";
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
-import { computeEmergingBrands } from "@/lib/competitors/emerging-brands";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
@@ -358,28 +357,6 @@ export default async function CompetitorsPage({
         })
       : [];
 
-  /* COMP-REDESIGN-1: marcas emergentes — other_brands_mentioned surfaced for
-     the first time (ADR 0018's Ikea case). Scoped to the latest completed
-     run only (EMERGING-BRANDS-WINDOW-1, founder decision 2026-08-02): the
-     old cumulative-history population meant a brand's "en N de M prompts"
-     count could only ever grow, never shrink, so a name that had already
-     racked up mentions before EMERGING-BRANDS-GROUNDING-1 shipped stayed
-     stuck at the same count forever — a rescan could never clear it. Latest
-     run only means the count reflects the AI's *current* answers. */
-  const latestRunResults = latestCompletedRun ? results.filter((r) => r.run_id === latestCompletedRun.id) : [];
-  const emergingBrands = computeEmergingBrands({
-    rows: latestRunResults.map((r) => ({ promptId: r.prompt_id as string | null, extracted_json: r.extracted_json })),
-    brandName: project.brand,
-    trackedCompetitorNames: configuredCompetitors.map((c) => c.name)
-  });
-
-  // Denominator for "en N de M prompts" — distinct prompts actually analyzed
-  // in the SAME population the emerging-brand counts are computed over (the
-  // latest completed run), so the two numbers always agree.
-  const analyzedPromptCount = new Set(
-    latestRunResults.map((r) => r.prompt_id as string | null).filter((id): id is string => Boolean(id))
-  ).size;
-
   /* Position trend: brand + active competitors' avg_position across completed runs */
   const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
   for (const rs of runScores ?? []) {
@@ -465,23 +442,17 @@ export default async function CompetitorsPage({
     });
   })();
 
-  // Rendered in exactly one place: inside the desktop rail next to the trend
-  // chart when there's a full competitive picture, or as its own standalone
-  // block when the user has scan data but hasn't configured any active
-  // competitor yet — precisely the case where "here's who the AI already
-  // mentions" is most useful (closes the gap ADR 0018's Ikea case
-  // documented: untracked rivals showing up with nowhere to act on them).
-  const emergingBrandsBlock =
-    emergingBrands.length > 0 ? (
-      <>
-        <div className="cm2-sec-lbl">Marcas que aparecen y no sigues</div>
-        <EmergingBrandsSection
-          projectId={projectId}
-          brands={emergingBrands}
-          analyzedPromptCount={analyzedPromptCount}
-        />
-      </>
-    ) : null;
+  // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
+  // this is unconditional — it derives from the business profile, not from
+  // scan output, so it has something to say even before the first scan and
+  // never appears/disappears depending on what the last run happened to
+  // extract (founder, 2026-08-03).
+  const suggestedCompetitorsBlock = (
+    <>
+      <div className="cm2-sec-lbl">Competidores sugeridos</div>
+      <SuggestedCompetitorsSection projectId={projectId} />
+    </>
+  );
 
   return (
     <div className="cm2-scope">
@@ -654,12 +625,11 @@ export default async function CompetitorsPage({
           </div>
         ) : null}
 
-        {/* Emerging brands stand alone when there's no full competitive
-            picture yet (see emergingBrandsBlock definition above) — still
-            gated on having actual scan data, never shown from stale/empty
-            results. */}
-        {!hasCompetitiveData && hasData && emergingBrandsBlock ? (
-          <div style={{ marginTop: 20 }}>{emergingBrandsBlock}</div>
+        {/* Suggestions stand alone whenever there is no full competitive
+            picture yet — the case where "who should I even be tracking?" is
+            the most useful thing this screen can answer. */}
+        {!hasCompetitiveData ? (
+          <div style={{ marginTop: 20 }}>{suggestedCompetitorsBlock}</div>
         ) : null}
 
         {hasCompetitiveData ? (
@@ -882,8 +852,8 @@ export default async function CompetitorsPage({
                 </>
               )}
 
-              {/* Marcas emergentes */}
-              {emergingBrandsBlock}
+              {/* Competidores sugeridos */}
+              {suggestedCompetitorsBlock}
             </div>
           </div>
         ) : null}
