@@ -99,7 +99,8 @@ type ExtractedJsonPartial = {
 type BrandPositionEntry = {
   name?: string;
   is_brand?: boolean;
-  avg_position?: number;
+  avg_position_when_mentioned?: number | null;
+  mention_rate?: number;
   mention_count?: number;
 };
 
@@ -107,7 +108,7 @@ type BrandPositionDetails = {
   prompts_with_position_data?: number;
   total_entities?: number;
   ranking?: BrandPositionEntry[];
-  brand_avg_position?: number;
+  brand_avg_position_when_mentioned?: number | null;
   confidence?: string;
 };
 
@@ -480,9 +481,17 @@ export default async function ProjectDetailPage({
   const brandPosition = scoreDetails.brand_position;
   const brandPositionPromptsWithData = n(brandPosition?.prompts_with_position_data);
   const brandPositionAvailable = Boolean(brandPosition) && brandPositionPromptsWithData > 0;
-  const brandPositionRanking = [...(brandPosition?.ranking ?? [])].sort(
-    (a, b) => n(a.avg_position) - n(b.avg_position)
-  );
+  // Ordered by rank WHEN MENTIONED, best first; entities the AI never named
+  // have no rank at all and sort last rather than being given a fabricated
+  // one (geo-score-v3 — see docs/adr/0026).
+  const brandPositionRanking = [...(brandPosition?.ranking ?? [])].sort((a, b) => {
+    const pa = a.avg_position_when_mentioned;
+    const pb = b.avg_position_when_mentioned;
+    if (pa == null && pb == null) return 0;
+    if (pa == null) return 1;
+    if (pb == null) return -1;
+    return pa - pb;
+  });
   const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
@@ -499,6 +508,7 @@ export default async function ProjectDetailPage({
     domain: string | null;
     isBrand: boolean;
     avgPosition: number | null;
+    mentionRate: number | null;
     sov: number;
     /** Real rank among ranked entities (1-based), or null when unavailable. */
     rank: number | null;
@@ -517,7 +527,8 @@ export default async function ProjectDetailPage({
             name: project.brand,
             domain: project.domain,
             isBrand: true,
-            avgPosition: n(entry.avg_position),
+            avgPosition: entry.avg_position_when_mentioned ?? null,
+            mentionRate: entry.mention_rate ?? null,
             sov: brandSov,
             rank: i + 1
           };
@@ -530,23 +541,26 @@ export default async function ProjectDetailPage({
           name: entry.name ?? "—",
           domain: match?.domain ?? null,
           isBrand: false,
-          avgPosition: n(entry.avg_position),
+          avgPosition: entry.avg_position_when_mentioned ?? null,
+          mentionRate: entry.mention_rate ?? null,
           sov: match?.sov ?? 0,
           rank: i + 1
         };
       })
     : [
-        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, sov: brandSov, rank: null },
+        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, mentionRate: null, sov: brandSov, rank: null },
         ...competitorRows
           .slice()
           .sort((a, b) => b.mentionRate - a.mentionRate)
-          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov, rank: null }))
+          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, mentionRate: null, sov: c.sov, rank: null }))
       ];
   const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
 
   /* ---- position-media summary + bars (real brand_position data) ----
-   * "Tu posición media X / N" = brand's rank among the ranked entities.
-   * Bars encode avg_position (lower = better = taller). Only when
+   * "Tu puesto cuando apareces X / N" = brand's rank among the entities the
+   * AI actually named. Bars encode avg_position_when_mentioned (lower =
+   * better = taller); an entity the AI never named has no rank and is not
+   * ranked at all (geo-score-v3, docs/adr/0026). Only when
    * brand_position is available for this scan; otherwise the panorama
    * shows the SOV ranking list alone.
    */
@@ -565,15 +579,22 @@ export default async function ProjectDetailPage({
       : topPanoramaRows;
 
   const posbarsData = (() => {
-    if (!brandPositionAvailable || topPanoramaRows.length === 0) return [];
-    const positions = topPanoramaRows.map((r) => n(r.avgPosition));
+    if (!brandPositionAvailable) return [];
+    // Only entities that actually have a rank. Under geo-score-v3 an entity
+    // the AI never named has `avgPosition: null` — coercing that to 0 would
+    // draw it as the best-placed brand on the chart, which is the exact
+    // inversion of the truth.
+    const ranked = topPanoramaRows.filter(
+      (r): r is typeof r & { avgPosition: number } => r.avgPosition !== null
+    );
+    if (ranked.length === 0) return [];
+    const positions = ranked.map((r) => r.avgPosition);
     const maxPos = Math.max(...positions);
     const minPos = Math.min(...positions);
     const range = maxPos - minPos;
-    return topPanoramaRows.map((r) => {
-      const pos = n(r.avgPosition);
-      // Lower avg_position (better) → taller bar. Flat range → uniform height.
-      const height = range > 0 ? 20 + ((maxPos - pos) / range) * 40 : 40;
+    return ranked.map((r) => {
+      // Lower rank-when-mentioned (better) → taller bar. Flat range → uniform.
+      const height = range > 0 ? 20 + ((maxPos - r.avgPosition) / range) * 40 : 40;
       return { name: r.name, isBrand: r.isBrand, height };
     });
   })();
@@ -1015,7 +1036,7 @@ export default async function ProjectDetailPage({
             <>
               {brandPositionAvailable && posbarsData.length > 0 && (
                 <div className="card" style={{ padding: "17px 16px 6px" }}>
-                  <div className="ov2-pm-lbl">Tu posición media</div>
+                  <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
                   <div className="ov2-pm-val">
                     {brandRank ?? "—"}<small> / {totalRanked}</small>
                   </div>
@@ -1056,9 +1077,9 @@ export default async function ProjectDetailPage({
                         <div className="pct">{row.sov}%</div>
                       </div>
                       {row.avgPosition !== null ? (
-                        <span className="ov2-cmp-sc">{row.avgPosition.toFixed(2)}<small> pos</small></span>
+                        <span className="ov2-cmp-sc">{row.avgPosition.toFixed(2)}<small>º</small></span>
                       ) : (
-                        <span className="ov2-cmp-sc" style={{ color: "var(--ink-4)" }}>—</span>
+                        <span className="ov2-cmp-sc" style={{ color: "var(--ink-4)" }} title="La IA no la nombró en este escaneo, así que no tiene puesto.">—</span>
                       )}
                     </div>
                   );

@@ -32,6 +32,19 @@ import { faviconUrl } from "@/lib/domains/favicon";
 const RANK_FAV_COLORS = ["#0f2f6e", "#1a4494", "#5b6b82", "#5b6b82", "#98a2b3"];
 const RANK_BAR_COLORS = ["#4f8bef", "#8fb6f6", "#c3d8fb", "#c3d8fb", "#e3ecfd"];
 
+/**
+ * Series identity for the position trend chart. Deliberately NOT
+ * RANK_BAR_COLORS: that is a sequential blue ramp, correct for rank bars where
+ * lightness encodes order, and wrong as categorical identity — reused on the
+ * trend chart it produced eight lines in eight shades of one hue, which is
+ * what made the chart unreadable (founder, 2026-08-03).
+ *
+ * Distinct hues, validated for colour-vision deficiency: worst adjacent pair
+ * separates by ΔE 11.4 under protanopia against the light surface. Direct
+ * end-of-line labels carry identity as well, so colour is never the only cue.
+ */
+const TREND_SERIES_COLORS = ["#2563eb", "#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
+
 export type CompetitorRowData = {
   id: string;
   name: string;
@@ -64,8 +77,9 @@ function parseExt(raw: unknown): ExtractedJson {
 type BrandPositionRankingEntry = {
   name: string;
   is_brand: boolean;
-  avg_position: number;
+  avg_position_when_mentioned: number | null;
   mention_count: number;
+  mention_rate?: number;
 };
 
 function parseBrandPositionRanking(raw: unknown): BrandPositionRankingEntry[] {
@@ -357,7 +371,11 @@ export default async function CompetitorsPage({
         })
       : [];
 
-  /* Position trend: brand + active competitors' avg_position across completed runs */
+  /* Position trend: brand + active competitors' rank WHEN MENTIONED across
+     completed runs (geo-score-v3, docs/adr/0026). A scan where an entity was
+     never mentioned contributes null, which the chart draws as a gap — the
+     pre-v3 field folded those into an N+1 penalty and drew a continuous line
+     through positions nobody ever occupied. */
   const rankingByRun = new Map<string, BrandPositionRankingEntry[]>();
   for (const rs of runScores ?? []) {
     rankingByRun.set(rs.run_id as string, parseBrandPositionRanking(rs.details_json));
@@ -368,18 +386,22 @@ export default async function CompetitorsPage({
   );
 
   const trendSeries: TrendSeries[] = [
-    { key: "brand", label: project.brand, color: "var(--accent)", isBrand: true },
-    ...competitorRows.map((c) => ({ key: c.id, label: c.name, color: c.barColor }))
+    { key: "brand", label: project.brand, color: TREND_SERIES_COLORS[0], isBrand: true },
+    ...competitorRows.map((c, i) => ({
+      key: c.id,
+      label: c.name,
+      color: TREND_SERIES_COLORS[(i + 1) % TREND_SERIES_COLORS.length]
+    }))
   ];
 
   const trendData: TrendPoint[] = runsAsc.map((run) => {
     const ranking = rankingByRun.get(run.id) ?? [];
     const values: Record<string, number | null> = {};
     const brandEntry = ranking.find((r) => r.is_brand);
-    values.brand = brandEntry ? brandEntry.avg_position : null;
+    values.brand = brandEntry ? brandEntry.avg_position_when_mentioned : null;
     for (const c of competitorRows) {
       const entry = ranking.find((r) => !r.is_brand && normKey(r.name) === normKey(c.name));
-      values[c.id] = entry ? entry.avg_position : null;
+      values[c.id] = entry ? entry.avg_position_when_mentioned : null;
     }
     return { date: run.finished_at ?? run.created_at, values };
   });
@@ -417,15 +439,33 @@ export default async function CompetitorsPage({
   //    ranks use standard competition ranking (1, 2, 2, 2, 5) instead of a
   //    running counter that would print 2/3/4 next to three identical values.
   const latestTrendPoint = trendData.length > 0 ? trendData[trendData.length - 1] : null;
+  // Appearance rate for the latest scan, keyed the same way as the trend
+  // series. Shown beside the rank because the two answer different questions
+  // and one without the other is what made the old single figure misleading
+  // (geo-score-v3, docs/adr/0026): a rank of 1.2 means little until you know
+  // whether it came from 90% of answers or from one.
+  const latestRunRanking = latestCompletedRun ? (rankingByRun.get(latestCompletedRun.id) ?? []) : [];
+  const mentionRateFor = (label: string): number | null => {
+    const entry = latestRunRanking.find((r) => normKey(r.name) === normKey(label));
+    return entry?.mention_rate ?? null;
+  };
+
   const latestPositions = (() => {
     if (!latestTrendPoint) return [];
     const sorted = [
-      { key: "brand", label: project.brand, isBrand: true, position: latestTrendPoint.values.brand ?? null },
+      {
+        key: "brand",
+        label: project.brand,
+        isBrand: true,
+        position: latestTrendPoint.values.brand ?? null,
+        mentionRate: mentionRateFor(project.brand)
+      },
       ...competitorRows.map((c) => ({
         key: c.id,
         label: c.name,
         isBrand: false,
-        position: latestTrendPoint.values[c.id] ?? null
+        position: latestTrendPoint.values[c.id] ?? null,
+        mentionRate: mentionRateFor(c.name)
       }))
     ]
       .filter((entry): entry is typeof entry & { position: number } => entry.position != null)
@@ -716,7 +756,7 @@ export default async function CompetitorsPage({
                   bottom of the desktop rail). The ranked list repeats the
                   chart's endpoint as a readable number, so "who is ahead right
                   now" doesn't require tracing a line. */}
-              <div className="cm2-sec-lbl">Evolución de la posición media</div>
+              <div className="cm2-sec-lbl">Evolución del puesto cuando apareces</div>
               <div className="card cm2-pos-card">
                 {hasTrendData ? (
                   <>
@@ -726,17 +766,22 @@ export default async function CompetitorsPage({
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
                         <div className="cm2-pos-list-hd">
-                          Posición media · último escaneo
+                          Puesto medio · último escaneo
                           {/* Kept short on purpose: InfoTip renders its text as the
                               element's aria-label, and a screen reader announces that
                               in one breath. */}
-                          <InfoTip text="Puesto medio en que la IA nombra cada marca. No aparecer cuenta como último puesto, así que salir poco sube la media. Más bajo es mejor." />
+                          <InfoTip text="Puesto medio en que la IA nombra cada marca, contando solo las respuestas donde aparece. 1,0 es salir siempre la primera. Al lado, en cuántas respuestas aparece." />
                         </div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
                             <span className="cm2-pos-n">{entry.rank}</span>
                             <span className="cm2-pos-nm">{entry.label}</span>
-                            <span className="cm2-pos-v">{entry.position.toFixed(2)}</span>
+                            {entry.mentionRate != null ? (
+                              <span style={{ fontSize: 11.5, color: "var(--ink-4)", fontVariantNumeric: "tabular-nums" }}>
+                                {Math.round(entry.mentionRate)}%
+                              </span>
+                            ) : null}
+                            <span className="cm2-pos-v">{entry.position.toFixed(2)}º</span>
                           </div>
                         ))}
                       </div>
