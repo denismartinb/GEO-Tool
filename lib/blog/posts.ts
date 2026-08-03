@@ -117,6 +117,26 @@ export const BLOG_POSTS: BlogPost[] = [
     coverImage: "/blog/genscore-vs-herramientas-geo/cover.png",
     primaryKeyword: "herramientas geo",
     cluster: "fundamentos"
+  },
+  {
+    slug: "llms-txt-guia-practica",
+    title: "llms.txt: guía práctica para crearlo (y qué esperar de verdad)",
+    description:
+      "Qué es llms.txt, cómo crear el tuyo paso a paso, y una respuesta honesta a la pregunta que importa: ¿mejora realmente cuánto te citan los motores de IA?",
+    datePublished: "2026-08-03",
+    coverIcon: "fileText",
+    primaryKeyword: "llms.txt guía práctica",
+    cluster: "playbooks"
+  },
+  {
+    slug: "como-conseguir-que-chatgpt-te-cite",
+    title: "Cómo conseguir que ChatGPT (y otros motores de IA) citen tu web",
+    description:
+      "Checklist práctico de lo que de verdad influye en si un motor generativo cita tu contenido como fuente: estructura, datos estructurados, autoridad y grounding.",
+    datePublished: "2026-08-03",
+    coverIcon: "cite",
+    primaryKeyword: "cómo conseguir que chatgpt te cite",
+    cluster: "playbooks"
   }
 ];
 
