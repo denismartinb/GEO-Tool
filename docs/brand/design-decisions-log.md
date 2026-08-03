@@ -1176,6 +1176,78 @@ merecería su propio diseño, no reutilizar esta caja.
 
 ---
 
+## 12. Artículos del blog — sistema de composición visual (GROWTH-3 Fase 3.1, 2026-08-03)
+
+**Estado: librería construida, 1 de 7 artículos convertido.**
+
+Diagnóstico de partida (verificado, no impresión): los 7 artículos del blog
+tenían **cero imágenes en el cuerpo** y solo 3 apariciones sueltas de un
+componente visual en total. Texto plano puede traer tráfico, pero la tasa de
+rebote es alta y no genera engagement.
+
+Decisiones finales:
+
+- **Ningún visual es decorativo; todos son evidencia.** Es el hallazgo al
+  analizar los PDFs de referencia de Semrush aportados por el fundador: cada
+  imagen suya es o una captura que prueba la afirmación, o un ejemplo
+  enmarcado del patrón que enseñan, o una cifra con su fuente. Convierte la
+  pregunta visual en una pregunta de honestidad, que es terreno donde este
+  proyecto ya tiene reglas duras.
+- **Librería de 15 bloques** en `components/blog/article/`, importados
+  siempre desde el barril. Detalle y criterio de uso de cada uno en
+  `docs/brand/article-design-system.md`.
+- **Tres reglas imposibles de saltarse por diseño de tipos**: `Stat` no
+  compila sin `source`, `PullQuote` no compila sin `cite`, y toda maqueta
+  declara en su pie que los datos son de ejemplo.
+- **Recetas obligatorias por cluster**, con mínimo de bloques por tipo de
+  artículo, validadas en `lib/blog/article-recipes.test.ts`. Una regla que no
+  es un test no existe — mismo criterio que los tests de enlazado interno del
+  glosario o de "al menos una fila donde gana el competidor" de las
+  comparativas.
+- **Imágenes: maquetas SVG/CSS, nunca ilustración generada por IA ni stock.**
+  Decisión completa y motivos en `docs/adr/0026-article-imagery-policy.md`.
+  Las capturas reales del producto quedan permitidas solo en `/docs`, nunca
+  en marketing, porque la cuenta piloto vive en el mismo proyecto de Supabase
+  que producción.
+- **La anotación sobre una maqueta se ancla a la fila que resalta**, no se
+  posiciona en absoluto con offsets. El artefacto de aprobación usaba
+  posicionamiento absoluto; se descartó al implementar porque se descuadra en
+  anchos intermedios. Se pierde la flecha curva de Semrush, se gana que no se
+  rompa nunca.
+- **Prefijo `art-` en todas las clases CSS.** No es cosmético: PR #292 costó
+  una colisión de clases entre ramas sin mergear, y este sistema introduce
+  ~15 clases de golpe.
+- **Tema claro únicamente**, como el resto del sitio. Se comprobó que
+  `globals.css` no declara `prefers-color-scheme` ni `data-theme` en ninguna
+  parte y que los tokens `-dark` definidos no los consume nadie.
+- **Enlaces: se prueban siempre, en dos niveles.** Estático en
+  `lib/blog/article-links.test.ts` (rompe el build si un href apunta a una
+  ruta inexistente) y en navegador dentro del journey del `ux-pilot` (cada
+  enlace interno debe responder 200 contra el despliegue real). Regla
+  explícita del fundador.
+- **Orden de entrega de un artículo**: redactar → componer → tests → pilot →
+  arreglar lo que el pilot encuentre → *entonces* Human Gate. Un artículo no
+  llega al fundador con un hallazgo de pilot abierto.
+
+Pendiente / roto conocido:
+
+- **6 de 7 artículos siguen en texto plano.** Están listados explícitamente
+  en `PENDING_CONVERSION` dentro de `article-recipes.test.ts`, con un test
+  que impide que esa lista crezca: un artículo nuevo nace cumpliendo la
+  receta. La conversión del resto es la Fase 3.2.
+- El pipeline semanal autónomo (Fase A1) **no** entra aquí: requiere
+  aprobación propia del fundador por el scheduler en background, que está en
+  la lista de prohibidos de `CLAUDE.md`.
+- `globals.css` usa `var(--mono)` en 11 sitios preexistentes, pero esa
+  variable no está definida en ninguna parte (la real es `--font-mono`).
+  Fuera del alcance de esta fase; los bloques `art-*` nuevos usan la
+  correcta.
+
+Referencias: `docs/brand/article-design-system.md`,
+`docs/adr/0026-article-imagery-policy.md`, `components/blog/article/`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

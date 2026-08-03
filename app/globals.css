@@ -5635,3 +5635,245 @@ select.set-field {
     font-size: 16px;
   }
 }
+
+/* ==========================================================================
+   GROWTH-3 Fase 3.1 — Sistema de diseño de artículos (.art-*)
+   --------------------------------------------------------------------------
+   Librería de composición para artículos del blog. Namespaced con `art-`
+   a propósito: PR #292 nos costó una colisión de clases entre ramas, y este
+   bloque introduce ~15 clases nuevas de golpe.
+
+   Principio rector (docs/brand/article-design-system.md): ningún bloque de
+   estos es decorativo. Cada uno codifica algo verdadero del contenido —
+   una respuesta, un veredicto, un paso de una secuencia, una cifra con su
+   fuente. Un bloque usado por estética y no por estructura es un bug.
+
+   Tokens: los de marca ya existentes (--brand-*). Cero colores nuevos.
+   Tema: claro únicamente, como el resto del sitio.
+   ========================================================================== */
+
+.art-tone-blue { color: var(--brand-blue); }
+.art-tone-cyan { color: var(--brand-cyan); }
+.art-tone-warm { color: var(--brand-warm); }
+.art-tone-pos { color: var(--brand-pos); }
+.art-tone-neg { color: var(--brand-neg); }
+.art-tone-bg-blue { background: var(--brand-blue); }
+.art-tone-bg-blue2 { background: var(--brand-blue-2); }
+.art-tone-bg-cyan { background: var(--brand-cyan); }
+.art-tone-bg-warm { background: var(--brand-warm); }
+
+/* --- Respuesta rápida ---------------------------------------------------- */
+.art-takeaway {
+  background: var(--brand-surface); border: 1px solid var(--line);
+  border-left: 3px solid var(--brand-blue); border-radius: 12px;
+  padding: 22px 24px; margin: 0 0 34px; box-shadow: var(--brand-shadow-card);
+}
+.art-takeaway-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--brand-blue); margin-bottom: 9px;
+}
+.art-takeaway p { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.65; }
+
+/* --- Veredicto ----------------------------------------------------------- */
+.art-verdict {
+  display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start;
+  background: rgba(255, 176, 32, .13); border: 1px solid rgba(255, 176, 32, .42);
+  border-radius: 12px; padding: 20px 22px; margin: 30px 0;
+}
+.art-verdict-badge {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink);
+  background: var(--brand-warm); padding: 5px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-verdict-body h4 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 750; margin: 0 0 5px; color: var(--ink);
+}
+.art-verdict-body p { margin: 0; font-size: 15px; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .art-verdict { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* --- Sección numerada + acción rápida ------------------------------------ */
+.art-numsec { margin: 44px 0; }
+.art-numsec-h { display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: baseline; margin-bottom: 13px; }
+.art-numsec-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft);
+  width: 31px; height: 31px; border-radius: 8px; display: grid; place-items: center; transform: translateY(3px);
+}
+.art-numsec-h h3 { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.01em; color: var(--ink); }
+.art-quick {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px;
+  padding: 14px 17px; margin: 17px 0 0;
+}
+.art-quick-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--brand-pos);
+  background: var(--brand-pos-soft); padding: 4px 8px; border-radius: 5px; white-space: nowrap;
+}
+.art-quick-body p { margin: 0; font-size: 14.8px; }
+@media (max-width: 560px) {
+  .art-quick { grid-template-columns: 1fr; gap: 9px; }
+  .art-quick-lbl { justify-self: start; }
+}
+
+/* --- Figura + marco ------------------------------------------------------ */
+.art-figure { margin: 34px 0; }
+.art-frame {
+  position: relative; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 26px; box-shadow: var(--brand-shadow-card); overflow: hidden;
+}
+.art-caption {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.55;
+  color: var(--ink-3); margin-top: 11px; display: flex; gap: 8px;
+}
+.art-caption b { color: var(--ink-2); font-weight: 700; white-space: nowrap; }
+
+/* --- Maqueta del panel de producto --------------------------------------- */
+.art-mock { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+@media (max-width: 640px) { .art-mock { grid-template-columns: 1fr; gap: 20px; } }
+.art-gauge { position: relative; width: 132px; height: 132px; justify-self: center; }
+.art-gauge-val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.art-gauge-num {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.art-gauge-cap {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 3px;
+}
+.art-rows { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+.art-row { position: relative; }
+.art-row-hl {
+  border: 2px solid var(--brand-blue); border-radius: 9px; padding: 10px 12px;
+  margin: 22px -12px 0; box-shadow: 0 0 0 4px var(--brand-blue-soft);
+}
+.art-anno-lbl {
+  position: absolute; top: -13px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  color: #fff; background: var(--brand-blue); padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
+.art-row-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.art-row-l em { display: block; font-style: normal; font-size: 11.5px; font-weight: 400; color: var(--ink-4); margin-top: 1px; }
+.art-row-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink);
+}
+.art-row-v small { color: var(--ink-4); font-weight: 400; margin-left: 6px; }
+.art-track { height: 7px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 99px; overflow: hidden; }
+.art-fill { height: 100%; border-radius: 99px; }
+
+/* --- Cifras destacadas --------------------------------------------------- */
+.art-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 13px; margin: 30px 0; }
+.art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
+.art-stat-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 31px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.art-stat-l { font-size: 13px; color: var(--ink-2); margin-top: 7px; line-height: 1.45; }
+.art-stat-src {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; color: var(--ink-4);
+  margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line-soft);
+}
+
+/* --- Cita ---------------------------------------------------------------- */
+.art-pull {
+  border-left: 3px solid var(--brand-cyan); background: rgba(9, 197, 214, .07);
+  border-radius: 0 11px 11px 0; padding: 19px 24px; margin: 30px 0;
+}
+.art-pull p {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 19px; font-weight: 600; line-height: 1.45; color: var(--ink);
+  margin: 0 0 10px; letter-spacing: -.01em;
+}
+.art-pull cite { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; font-style: normal; color: var(--ink-3); }
+
+/* --- Bloque de código ---------------------------------------------------- */
+.art-code { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; margin: 24px 0; box-shadow: var(--brand-shadow-card); }
+.art-code-h {
+  padding: 9px 15px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ink-3);
+}
+.art-code pre {
+  margin: 0; padding: 17px 19px; overflow-x: auto;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.8px; line-height: 1.75; color: var(--ink-2);
+}
+
+/* --- Tabla comparativa --------------------------------------------------- */
+.art-tablewrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 26px 0;
+  border: 1px solid var(--line); border-radius: 11px; background: var(--brand-surface); box-shadow: var(--brand-shadow-card);
+}
+.art-tablewrap table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px; margin: 0; }
+.art-tablewrap th, .art-tablewrap td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-2); }
+.art-tablewrap thead th {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); font-weight: 700;
+}
+.art-tablewrap tbody tr:last-child td { border-bottom: 0; }
+.art-tablewrap td strong { color: var(--ink); }
+/* Misma pista de scroll que .cmp-table-wrap: sin ella, en móvil las columnas
+   se leen como cortadas en vez de como deslizables (PILOT FAIL, PR #306). */
+@media (max-width: 640px) {
+  .art-tablewrap { position: relative; }
+  .art-tablewrap::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    padding: 9px 14px 0;
+  }
+}
+.art-pill { display: inline-block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.art-pill-no { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.art-pill-si { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.art-pill-neutral { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+
+/* --- Checklist ----------------------------------------------------------- */
+.art-check { list-style: none; padding: 0; margin: 22px 0; display: flex; flex-direction: column; gap: 8px; }
+.art-check li {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  padding: 12px 15px; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 9px; margin: 0; font-size: 14.8px; color: var(--ink-2);
+}
+.art-check li svg { margin-top: 3px; color: var(--brand-pos); }
+
+/* --- Bio de autor -------------------------------------------------------- */
+.art-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(140deg, var(--brand-blue), var(--brand-cyan));
+  display: grid; place-items: center; color: #fff;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-weight: 800; font-size: 18px;
+}
+.art-bio {
+  display: grid; grid-template-columns: auto 1fr; gap: 17px; background: var(--brand-surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 42px 0 0;
+  box-shadow: var(--brand-shadow-card);
+}
+.art-bio h4 { font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-size: 16px; font-weight: 750; margin: 0 0 5px; color: var(--ink); }
+.art-bio p { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+/* --- CTA de cierre ------------------------------------------------------- */
+.art-cta {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--brand-ink), #152a4d);
+  border-radius: 15px; padding: 34px; margin: 44px 0 0; text-align: center;
+}
+.art-cta-glow {
+  position: absolute; width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, .5), transparent 68%);
+  top: -150px; right: -90px; pointer-events: none;
+}
+.art-cta-body { position: relative; z-index: 2; }
+.art-cta h3 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  color: #fff; font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px;
+}
+.art-cta p { color: rgba(255, 255, 255, .72); margin: 0 0 20px; font-size: 15px; }
+.art-btn {
+  display: inline-block; background: #fff; color: var(--brand-ink); font-weight: 700;
+  font-size: 15px; padding: 12px 24px; border-radius: 9px; border: 0; text-decoration: none;
+}
+.art-btn:hover { background: #f0f3f9; }
