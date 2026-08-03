@@ -26,7 +26,9 @@ const BLOG_POSTS = [
   "que-es-geo-generative-engine-optimization",
   "como-elegir-prompts-monitorizar-marca-ia",
   "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo"
+  "genscore-vs-herramientas-geo",
+  "llms-txt-guia-practica",
+  "como-conseguir-que-chatgpt-te-cite"
 ] as const;
 
 /** Asserts the page's own <link rel="canonical"> matches its expected, absolute URL exactly (no trailing slash, no query string). */

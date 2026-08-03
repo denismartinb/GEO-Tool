@@ -1,0 +1,160 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-conseguir-que-chatgpt-te-cite");
+
+export const metadata = {
+  title: `${getSeoTitle(post)} — Genscore`,
+  description: getMetaDescription(post),
+  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">3 de agosto de 2026</p>
+
+<div className="blog-body">
+
+**Respuesta rápida:** un motor generativo cita tu web cuando, durante el
+proceso de *grounding*, encuentra tu contenido, lo considera fiable y lo usa
+como respaldo de una afirmación concreta. No hay ningún truco ni fichero
+mágico para forzarlo — lo que funciona es una combinación de contenido
+claro, datos estructurados reales y autoridad de dominio genuina. Este
+artículo es el checklist práctico de esas tres cosas.
+
+## ¿Qué diferencia una mención de una citación?
+
+Son dos señales distintas, y confundirlas lleva a optimizar lo que no toca.
+Una **mención** es que la IA nombre tu marca ("Tu marca es una opción
+popular para esto"). Una **citación** es que además enlace o señale
+explícitamente tu web como la fuente de una afirmación concreta. Puedes
+aparecer mencionado sin ser nunca citado — de hecho es lo más habitual.
+Tienes la definición completa en nuestro glosario, en
+<a href="/glosario/citacion-en-ia">qué es una citación en respuestas de
+IA</a>.
+
+## ¿Qué hace que un contenido sea citable?
+
+Tres cosas, por este orden de importancia:
+
+### 1. Que el motor pueda encontrarte durante el grounding
+
+Sin <a href="/glosario/grounding">grounding</a> — el motor buscando una
+fuente real en el momento de responder, en vez de usar solo lo que aprendió
+en el entrenamiento — no hay ninguna citación posible, por muy bueno que sea
+tu contenido. Esto depende de que tu contenido sea rastreable e indexable
+como cualquier página web normal: sin bloqueos accidentales en `robots.txt`,
+con URLs canónicas claras, sin contenido oculto detrás de interacciones que
+un rastreador no ejecuta.
+
+### 2. Que el contenido sea claro y verificable
+
+Un modelo generativo tiene que poder extraer una afirmación concreta de tu
+página sin ambigüedad. Eso significa: responder la pregunta real del
+usuario en los primeros párrafos (no enterrarla tras tres párrafos de
+contexto), usar encabezados formulados como preguntas reales, y apoyar las
+afirmaciones con datos concretos en vez de generalidades vagas. Los
+<a href="/glosario/datos-estructurados">datos estructurados</a>
+(`Article`, `FAQPage`, `DefinedTerm`) ayudan exactamente aquí: reducen la
+ambigüedad sobre qué es cada fragmento de tu página.
+
+### 3. Que tu dominio tenga autoridad real
+
+Esta es la parte que no se puede atajar con ningún fichero ni truco técnico.
+La evidencia disponible apunta a que los motores generativos también
+priorizan como fuentes contenido con autoridad de dominio real — lo que
+Google lleva años llamando <a href="/glosario/eeat">E-E-A-T</a> (experiencia,
+pericia, autoridad, confianza). Un dominio nuevo con contenido técnicamente
+perfecto compite en desventaja frente a uno con trayectoria demostrable.
+
+## Un ejemplo: antes y después
+
+**Antes** (difícil de citar): un artículo titulado "Nuestra solución de
+gestión" que empieza con tres párrafos de historia de la empresa antes de
+explicar qué hace el producto, sin ninguna cifra concreta ni comparación,
+y sin ningún marcado que indique de qué tipo de página se trata.
+
+**Después** (citable): el mismo contenido, con un H1 que nombra el problema
+real que resuelve ("Cómo automatizar la conciliación bancaria"), un primer
+párrafo que responde la pregunta directamente, una tabla comparativa con
+cifras concretas, y marcado `Article` que declara título, fecha y
+descripción de forma explícita. Un modelo generativo tiene ahora una
+afirmación concreta y verificable que extraer — en vez de un texto genérico
+del que no puede citar nada con precisión.
+
+La diferencia no es de longitud ni de esfuerzo de redacción — es de
+estructura y de qué tan rápido llega la sustancia.
+
+## Checklist práctico
+
+- Tu contenido responde la pregunta real del usuario en el primer párrafo,
+  no al final.
+- Usas encabezados H2/H3 formulados como preguntas reales, no como títulos
+  de sección genéricos.
+- Tienes datos estructurados (`Article`, `FAQPage`) en tus páginas de
+  contenido, no solo en la home.
+- Tu web es rastreable sin bloqueos accidentales — compruébalo con
+  cualquier herramienta de auditoría técnica.
+- Cada página declara su propia <a href="/glosario/url-canonica">URL
+  canónica</a>, sin variantes compitiendo entre sí.
+- Publicas con regularidad y **refrescas** contenido existente, no solo
+  contenido nuevo — la frescura pesa más en motores generativos que en
+  Google clásico.
+- No dependes de un llms.txt como estrategia principal — es un extra
+  opcional, no una palanca real (lo explicamos con más detalle en nuestra
+  <a href="/blog/llms-txt-guia-practica">guía práctica de llms.txt</a>).
+
+## ¿Cuánto se tarda en ver resultados?
+
+No hay una cifra universal honesta que dar aquí — depende de tu categoría,
+tu autoridad de partida y con qué frecuencia los motores generativos
+rastrean tu contenido. Lo que sí puedes hacer es medirlo en vez de
+adivinarlo: monitorizar de forma repetida si tu tasa de citación cambia
+después de cada cambio que hagas, en tu
+<a href="/docs/metodologia/geo-score">GEO Score</a>, es la única forma
+honesta de saber si algo de esta lista está funcionando para tu marca en
+concreto.
+
+## Preguntas frecuentes
+
+**¿Todos los motores de IA citan igual?** No necesariamente — cada uno
+tiene su propio proceso de grounding y sus propias fuentes preferidas, y
+esa diferencia entre motores es precisamente lo que mide tu cuota de voz
+por motor en Genscore. Lo que sí comparten los tres — ChatGPT, Gemini y
+Claude — es que ninguno puede citar lo que no encuentra o no entiende.
+
+**¿Basta con escribir mejor, o hace falta cambiar algo técnico?** Ambas
+cosas, y en ese orden de esfuerzo: primero la estructura y la claridad
+(gratis, solo requiere reescribir), después los datos estructurados
+(barato, una tarea técnica puntual), y por último la autoridad de dominio
+(la única que de verdad requiere tiempo).
+
+**¿Puedo forzar una citación con algún truco?** No de forma fiable, y
+cualquiera que te lo prometa como garantía está vendiendo humo. Lo que sí
+puedes hacer es eliminar sistemáticamente los motivos por los que un motor
+generativo *no* te citaría — que es exactamente lo que cubre el checklist
+de arriba.
+
+<div className="blog-cta">
+<p>¿Quieres saber si los motores de IA ya te citan como fuente?</p>
+<a href="/signup" className="btn btn-primary">Prueba gratis</a>
+</div>
+
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>
