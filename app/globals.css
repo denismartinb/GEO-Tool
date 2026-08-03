@@ -5758,6 +5758,12 @@ select.set-field {
 
 /* --- Cifras destacadas --------------------------------------------------- */
 .art-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 13px; margin: 30px 0; }
+/* Con solo dos tarjetas, `auto-fit` las estira a media columna cada una y el
+   bloque se lee suelto en pantallas anchas (hallazgo del ux-pilot, PR #310).
+   `auto-fill` sobre un ancho máximo las deja del tamaño que les toca. */
+@media (min-width: 900px) {
+  .art-stats:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(148px, 300px)); }
+}
 .art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
 .art-stat-n {
   font-family: var(--font-display), "Hanken Grotesk", sans-serif;
