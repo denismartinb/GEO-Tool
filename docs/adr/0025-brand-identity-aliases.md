@@ -110,8 +110,28 @@ must not alias "browser"; a company named Browser Inc. might). There is a test
 recording a case that slips through, so the gap is visible rather than
 discovered in production. The real safety properties are evidence-verification
 and the length bar; the denylist only catches common category nouns those two
-would let through. Mitigation is that `brand_aliases` is ordinary
-user-editable project data, not an invisible internal.
+would let through.
+
+**Correction (2026-08-03).** The first version of this section claimed the
+mitigation was that "`brand_aliases` is ordinary user-editable project data,
+not an invisible internal". **That was false when written and is still false.**
+There is no UI: aliases are derived, persisted, snapshotted and used to score,
+and the only way to inspect or change them is a direct SQL query. A bad alias —
+precisely the case the incomplete denylist lets through — moves the score with
+no way for the owner to see it or remove it. The risk above is therefore
+**unmitigated**, not mitigated, and this ADR should not have been written as if
+it were.
+
+What actually keeps it small today is narrower and worth naming honestly:
+derivation only accepts aliases that appear verbatim in the brand's own
+homepage evidence, so a wrong alias has to be a real string on the brand's own
+site. That bounds the damage; it does not make it visible.
+
+The missing surface (**Fase −1c**, not in this change): view a project's
+aliases and where each came from, add and remove them by hand, and explain in
+the mention-evidence panel *which* name matched — today that panel shows the
+quote but never says the mention counted because it matched "Firefox" rather
+than "Mozilla".
 
 **Lazy derivation for existing projects (1b, founder-approved 2026-08-02).**
 Creation-time derivation alone would leave every pre-existing project at
