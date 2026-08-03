@@ -109,6 +109,29 @@ export default defineConfig({
       // per-deploy workflow never passes that flag, so this project simply
       // does not exist as far as that workflow is concerned. A single
       // viewport is enough — this journey verifies behaviour, not layout.
+      name: "scan",
+      testMatch: "**/journeys/scan/*.spec.ts",
+      dependencies: ["auth"],
+      // UX-PILOT-3. The only journey in the harness that spends money, so it
+      // gets the same treatment as `write`: `scripts/pilot.mjs` includes this
+      // project only for an explicit `--journeys scan`, and the always-on
+      // per-deploy workflow never passes that. Being its own project — rather
+      // than a file the read set could pick up — is what makes "the deploy
+      // pilot cannot scan" a fact about the code instead of a promise.
+      // The authorization guard in tests/pilot/support/scan-authorization.ts
+      // refuses independently of any of this.
+      //
+      // A full-project scan runs every active prompt across every active
+      // engine, and the journey waits for two of them in sequence.
+      timeout: 900_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: VIEWPORTS[2].width, height: VIEWPORTS[2].height },
+        isMobile: false,
+        storageState: ".pilot/auth.json"
+      }
+    },
+    {
       name: "write",
       testMatch: "**/journeys/write/*.spec.ts",
       dependencies: ["auth"],

@@ -168,13 +168,17 @@ the same account, skips loudly when there is only one, and annotates the run
 when more projects existed than the cap allowed. This needs no exception:
 switching project is navigation, and every journey it runs is read-only.
 
-**Launching a scan is still forbidden** and is not covered by the above. The
-founder authorized the capability in principle on 2026-08-03 (*"que el pilot
-aprenda a lanzar escaneos cuando lo necesite… solo necesita preguntarme y yo
-lo autorizo"*) — the design is under Task Intake UX-PILOT-3 and nothing ships
-until that report is approved. Until then the read-only allow-list stands, and
-a pilot that cannot reach a state because no qualifying data exists reports
-`PILOT INCONCLUSIVE` and says so, rather than creating the data itself.
+**Second approved exception: UX-PILOT-3** (Task Intake approved 2026-08-03) —
+the pilot may launch real scans on a pinned project when a state is
+unreachable without one, because after a scoring change no run anywhere carries
+the new shape of data and no amount of looking harder fixes that. Three
+independent locks, none of them a convention: `workflow_dispatch` only (no
+deploy can trigger it), `--journeys scan` (the per-deploy read set cannot reach
+the files), and the founder's `PILOT_SCAN_AUTHORIZATION` secret (the code
+refuses without it, refuses without a named project, and refuses above the hard
+cap of 2 rather than clamping). It presses the project's own scan button and
+nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
+still has to judge them. Anything wider still needs its own Task Intake.
 
 ---
 

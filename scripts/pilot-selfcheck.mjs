@@ -155,11 +155,54 @@ function verifyCaptureDepth() {
   return true;
 }
 
+/**
+ * Fourth case: prove the always-on, per-deploy run cannot reach the one
+ * journey that spends money (UX-PILOT-3).
+ *
+ * The guard is structural — `journeys/scan/*.spec.ts` is matched only by the
+ * `scan` Playwright project, which `PROJECT_SETS` includes only for an explicit
+ * `--journeys scan` — but "structural" is a claim until something checks it.
+ * This is a behavioural check on the default invocation, which is exactly what
+ * every preview deploy runs. If a future refactor widens a testMatch or adds
+ * `scan` to the read set, this fails.
+ *
+ * Note the self-check never sets `PILOT_SCAN_AUTHORIZATION`, so even reaching
+ * the journey would refuse. Both locks are meant to hold independently; this
+ * checks the outer one.
+ */
+function verifyDeployRunCannotScan() {
+  if (!existsSync(".pilot/findings.jsonl")) {
+    console.log("✗ scan lockout: no findings.jsonl to inspect");
+    return false;
+  }
+
+  const findings = readFileSync(".pilot/findings.jsonl", "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+
+  const leaked = findings.filter(
+    (f) => f.label?.startsWith("scan-") || f.viewport === "scan" || f.path?.includes("/scan")
+  );
+
+  if (leaked.length > 0) {
+    console.log(
+      `✗ scan lockout: the default read run reached ${leaked.length} scan journey page(s) — ` +
+        `e.g. "${leaked[0].label}". The per-deploy pilot must never be able to spend money.`
+    );
+    return false;
+  }
+
+  console.log(`✓ scan lockout: default read run reached 0 scan journeys across ${findings.length} pages`);
+  return true;
+}
+
 const results = [];
 results.push(
   await runCase({ label: "healthy fixture → PILOT PASS", breakMode: "", expectedExit: 0 })
 );
 results.push(verifyCaptureDepth());
+results.push(verifyDeployRunCannotScan());
 results.push(
   await runCase({
     label: "overflowing fixture → PILOT FAIL",

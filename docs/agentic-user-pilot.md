@@ -333,21 +333,70 @@ inside this guard: every journey it runs is the same read-only pair of screens.
 It exists because one project only ever exercises one shape of data — see
 "Known limits". Nothing about it needed an exception.
 
-**Launching a scan does need one, and does not have it yet.** The founder
-authorized the capability in principle on 2026-08-03 — the pilot should be able
-to ask for a scan when a state is unreachable without one, and he grants it per
-run. The design is under Task Intake **UX-PILOT-3** and nothing ships until
-that report is approved. Until then, a pilot that cannot reach a state because
-no qualifying data exists reports `PILOT INCONCLUSIVE` and names what it could
-not verify. It never creates the data itself, and it never reports a state it
-did not see.
+**Launching a scan needs one, and now has it — see UX-PILOT-3 below.**
 
-The reason this needs a report rather than a patch: a scan costs real money
-against Gemini / OpenAI / Anthropic, writes to the production Supabase project,
-and the always-on per-deploy pilot must keep being unable to trigger one by
-accident. "Ask the founder" is a human gate, and this file's own rule is that
-the guard is *enforced in code by an allow-list, not by convention*. Both have
-to hold at once, and how is exactly what the report is for.
+## UX-PILOT-3 — the pilot asks for a scan (opt-in, never automatic)
+
+Task Intake approved 2026-08-03. Founder: *"que el pilot aprenda a lanzar
+escaneos cuando lo necesite… solo necesita preguntarme y yo lo autorizo."*
+
+**Why it exists.** Some states cannot be reached by looking harder. After a
+scoring change there is, by construction, no run anywhere carrying the new
+shape of data — `details_json` holds whatever the code that scored *that* run
+wrote, and there is no backfill (ADR 0026 §4). PR #308 hit this exactly: six
+acceptance criteria, including the whole trend chart, had no qualifying data on
+any project the pilot could reach, so the verdict was INCONCLUSIVE and no
+amount of harness work could change it. Without this journey that repeats on
+every methodology PR, forever.
+
+**Three independent locks.** "The agent asks first" is a human gate, and a
+human gate alone is a convention — one forgetful code path and the money is
+gone. This file's own rule is that the guard is *enforced in code by an
+allow-list, not by convention*, so both hold at once:
+
+1. **`workflow_dispatch` only.** `.github/workflows/ux-pilot-scan.yml` has no
+   `deployment_status` trigger, so no preview deploy can start it. Triggering
+   it is the founder's authorization — there is no path where it happens
+   without one.
+2. **`--journeys scan`.** `scripts/pilot.mjs` includes the `scan` Playwright
+   project only for that explicit flag. The per-deploy workflow runs the
+   default read set and cannot reach `tests/pilot/journeys/scan/**` at all.
+3. **`PILOT_SCAN_AUTHORIZATION`.** `tests/pilot/support/scan-authorization.ts`
+   refuses without the founder's secret, refuses without an explicitly named
+   `PILOT_SCAN_PROJECT_ID`, and refuses above the hard cap of
+   `MAX_SCANS_PER_RUN = 2` rather than clamping — a run that spends less than
+   it was told to reads as a run that did what it was asked. Ten unit tests
+   cover the refusal paths, because those are the ones that must never regress.
+
+**What it does.** Presses the project's own "Repetir escaneo" button on an
+existing project, up to twice, waiting for each to finish. Then captures the
+Overview and Competitors screens that the scans just unlocked, through the
+normal helper, so the evidence lands beside every other screenshot. Two is not
+a round number: the trend chart needs two runs with position data before it
+renders at all.
+
+**What it does not do.** Create projects, add prompts, touch competitors,
+delete anything, or pick its own target. The project is pinned by secret, never
+auto-discovered — "scan whatever project is first" is how a pilot ends up
+spending money on the founder's real tracked brand.
+
+**Evidence and reporting** go to `pilot-evidence/pr-<n>-scan` and a
+`<!-- agentic:ux-pilot-scan-result -->` comment, both distinct from the
+read-only and write pilots' — otherwise a scan run would update the read
+pilot's verdict in place and replace a screen-by-screen judgement with a
+two-line cost report. The comment always states how many scans were authorized
+and against which project: cost that is not stated is cost nobody reviews.
+
+**Its output is captures, not a verdict.** A green scan run means the money was
+spent and the screens were photographed. The `ux-pilot` agent still has to look
+at them.
+
+### Required secrets
+
+| Secret | Purpose |
+|---|---|
+| `PILOT_SCAN_AUTHORIZATION` | The founder's grant. Absent everywhere else; without it nothing launches. |
+| `PILOT_SCAN_PROJECT_ID` | The one project that may be scanned. Never auto-discovered. |
 
 ## UX-PILOT-2a — the one write journey (opt-in, not automatic)
 

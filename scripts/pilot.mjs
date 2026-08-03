@@ -97,7 +97,12 @@ const UNREACHABLE_SIGNATURES = [
  */
 const PROJECT_SETS = {
   read: ["auth", "mobile", "tablet", "desktop"],
-  write: ["auth", "write"]
+  write: ["auth", "write"],
+  // UX-PILOT-3. Reaching the scan journey takes this explicit flag, which the
+  // per-deploy workflow never passes — and even then the journey refuses
+  // without the founder's PILOT_SCAN_AUTHORIZATION secret. Two independent
+  // locks, on purpose: this is the one journey that spends money.
+  scan: ["auth", "scan"]
 };
 
 function parseArgs(argv) {
@@ -158,6 +163,10 @@ function cellFor(finding) {
  */
 function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys = "read" }) {
   const isWrite = journeys === "write";
+  // Its own comment marker, or a scan run would update the read pilot's
+  // verdict comment in place and silently replace a screen-by-screen judgement
+  // with a two-line cost report.
+  const isScan = journeys === "scan";
   const findings = readFindings();
   const labels = [...new Set(findings.map((finding) => finding.label))];
 
@@ -175,22 +184,40 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
       ["PILOT_PASSWORD", Boolean(process.env.PILOT_PASSWORD)],
       isWrite
         ? ["PILOT_WRITE_PROJECT_ID", Boolean(process.env.PILOT_WRITE_PROJECT_ID)]
-        : ["PILOT_PROJECT_ID", Boolean(process.env.PILOT_PROJECT_ID)],
+        : isScan
+          ? ["PILOT_SCAN_PROJECT_ID", Boolean(process.env.PILOT_SCAN_PROJECT_ID)]
+          : ["PILOT_PROJECT_ID", Boolean(process.env.PILOT_PROJECT_ID)],
+      // Stated on every scan run: the authorization that permitted real spend
+      // is the first thing a reviewer should be able to see.
+      ...(isScan ? [["PILOT_SCAN_AUTHORIZATION", Boolean(process.env.PILOT_SCAN_AUTHORIZATION)]] : []),
       ["PILOT_VERCEL_BYPASS", Boolean(process.env.PILOT_VERCEL_BYPASS)]
     ]
       .map(([name, present]) => `${name} ${present ? "✅" : "—"}`)
       .join(" · ") +
     "\n\n";
 
+  const marker = isWrite ? "write-" : isScan ? "scan-" : "";
+  const phase = isWrite ? " — Escritura (UX-PILOT-2a)" : isScan ? " — Escaneo autorizado (UX-PILOT-3)" : "";
   const header =
-    `<!-- agentic:ux-pilot-${isWrite ? "write-" : ""}result -->\n` +
-    `## Agentic User Pilot${isWrite ? " — Escritura (UX-PILOT-2a)" : ""} — ${verdict}\n\n` +
+    `<!-- agentic:ux-pilot-${marker}result -->\n` +
+    `## Agentic User Pilot${phase} — ${verdict}\n\n` +
     `**Deployment:** ${baseUrl}${sha ? ` (commit \`${sha.slice(0, 7)}\`)` : ""}\n` +
     `**Ejecutado por:** ${process.env.GITHUB_ACTIONS === "true" ? "GitHub Actions" : "sesión local"}\n\n` +
     configLine;
 
   let table = "";
-  if (isWrite) {
+  if (isScan) {
+    // Not a screen × viewport grid: this journey runs at one viewport and its
+    // subject is what it spent, not how a layout looks. A three-column table
+    // would imply coverage it does not have.
+    const count = process.env.PILOT_SCAN_COUNT?.trim() || "1";
+    const target = process.env.PILOT_SCAN_PROJECT_ID?.trim() || "(sin especificar)";
+    table =
+      failures.length === 0
+        ? `✅ Se lanzaron hasta **${count}** escaneo(s) reales sobre el proyecto \`${target}\` y se capturaron Overview y Competidores con los datos que desbloquearon.\n\n` +
+          "El coste es real, contra Gemini / OpenAI / Anthropic. Este informe **no** sustituye el juicio visual del pilot: las capturas están en la evidencia.\n\n"
+        : `_No se completó el escaneo autorizado sobre \`${target}\` — ver fallos abajo._\n\n`;
+  } else if (isWrite) {
     // One scoped scenario, not a screen × viewport grid — a 3-column table
     // would imply coverage this journey doesn't have.
     table =
