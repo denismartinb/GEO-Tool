@@ -84,6 +84,66 @@ function attachName(text: string, limit = 70): string {
   return clean.length > limit ? `${clean.slice(0, limit - 1)}…` : clean;
 }
 
+/**
+ * Makes `fullPage: true` actually mean full page.
+ *
+ * The dashboard shell is `height: 100vh; overflow: hidden` with an inner
+ * `overflow-y: auto` content column, so the DOCUMENT never grows past the
+ * viewport — and Playwright's fullPage capture measures the document. The
+ * result, silently, for every dashboard screen the pilot has ever shot: a
+ * screenshot of the top fold only, indistinguishable from a full one. Filters,
+ * lists and anything below the first screen were never in the evidence anybody
+ * judged (found by the ux-pilot agent reviewing PR #301's own screenshots).
+ *
+ * Temporarily neutralises the clipping on the real scroller and its ancestors,
+ * then restores it. Deliberately generic — it looks for whatever element is
+ * actually scrolling rather than hardcoding product class names, so it keeps
+ * working if the shell is restructured. Fails soft: if anything goes wrong the
+ * caller still gets its (fold-only) screenshot rather than a broken run.
+ */
+async function expandInnerScroller(page: Page): Promise<() => Promise<void>> {
+  const applied = await page
+    .evaluate(() => {
+      const scroller = Array.from(document.querySelectorAll<HTMLElement>("*")).find((el) => {
+        const style = getComputedStyle(el);
+        const scrolls = style.overflowY === "auto" || style.overflowY === "scroll";
+        return scrolls && el.scrollHeight > el.clientHeight + 40;
+      });
+      if (!scroller) return false;
+
+      const touched: Array<{ el: HTMLElement; height: string; maxHeight: string; overflow: string }> = [];
+      for (let el: HTMLElement | null = scroller; el; el = el.parentElement) {
+        touched.push({
+          el,
+          height: el.style.height,
+          maxHeight: el.style.maxHeight,
+          overflow: el.style.overflow,
+        });
+        el.style.height = "auto";
+        el.style.maxHeight = "none";
+        el.style.overflow = "visible";
+      }
+      (window as unknown as { __pilotRestore?: () => void }).__pilotRestore = () => {
+        for (const t of touched) {
+          t.el.style.height = t.height;
+          t.el.style.maxHeight = t.maxHeight;
+          t.el.style.overflow = t.overflow;
+        }
+      };
+      return true;
+    })
+    .catch(() => false);
+
+  if (!applied) return async () => {};
+  // Let the reflow settle so the capture measures the expanded document.
+  await page.waitForTimeout(150);
+  return async () => {
+    await page
+      .evaluate(() => (window as unknown as { __pilotRestore?: () => void }).__pilotRestore?.())
+      .catch(() => undefined);
+  };
+}
+
 function recordFindings(findings: PageFindings): void {
   mkdirSync(".pilot", { recursive: true });
   appendFileSync(FINDINGS_PATH, `${JSON.stringify(findings)}\n`);
@@ -154,7 +214,9 @@ export async function visitAsUser(
 
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
+    const restoreScroll = await expandInnerScroller(page);
     await page.screenshot({ path: screenshot, fullPage: true });
+    await restoreScroll();
 
     const findings: PageFindings = {
       label,

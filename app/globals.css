@@ -5442,6 +5442,26 @@ select.set-field {
 }
 .rec2-pillar-n .info-tip { flex-shrink: 0; }
 
+/* Tooltip bubbles are anchored left and 220px wide, which runs them off the
+   right edge for any pillar sitting at the end of its row: the 2nd and 4th in
+   the 2×2 phone grid, the 4th (and 3rd, in the narrow centred column) once the
+   row goes 4-across. Those flip to right-anchored, and the width is capped to
+   the viewport so a very narrow phone can never clip one either. Found by the
+   pilot on the real 375px screenshot — the local check had only hovered the
+   FIRST pillar, which is exactly the one that could never fail. */
+.rec2-pillars .info-tip-bubble {
+  width: max-content;
+  max-width: min(220px, calc(100vw - 32px));
+}
+.rec2-pillars .rec2-pillar:nth-child(even) .info-tip-bubble {
+  left: auto;
+  right: 0;
+}
+@media (min-width: 560px) {
+  .rec2-pillars .rec2-pillar:nth-child(even) .info-tip-bubble { left: 0; right: auto; }
+  .rec2-pillars .rec2-pillar:nth-child(n + 3) .info-tip-bubble { left: auto; right: 0; }
+}
+
 /* 5 · Section divider for the non-prioritised remainder */
 .rec2-sec {
   display: flex;
