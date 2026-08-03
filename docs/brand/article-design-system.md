@@ -30,6 +30,15 @@ De ahí se derivan las tres reglas duras:
    real de las filas que ese mismo artículo enseña. Se comprueba en
    `lib/blog/article-recipes.test.ts`, no a ojo: ya se coló dos veces.
 
+### Un peso no es un valor medido
+
+Un `StatGrid` de pesos va **bajo su propio H2 que lo enmarca como pesos**, y
+sus tarjetas se redactan "Peso de…". Si no, el lector se encuentra el peso de
+una señal (20%) a pocos párrafos del valor real de esa misma señal (21%) y no
+tiene forma de saber que una es la regla y el otro el resultado — pasó en la
+PR #310. `StatGrid` exige `label` por la misma razón que `Stat` exige
+`source`.
+
 ### No enseñes la misma cifra dos veces seguidas
 
 Si la `Figure` ya muestra los pesos, el `StatGrid` de debajo no los repite —

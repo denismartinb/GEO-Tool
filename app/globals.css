@@ -5762,7 +5762,9 @@ select.set-field {
    bloque se lee suelto en pantallas anchas (hallazgo del ux-pilot, PR #310).
    `auto-fill` sobre un ancho máximo las deja del tamaño que les toca. */
 @media (min-width: 900px) {
-  .art-stats:has(> :nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(148px, 300px)); }
+  .art-stats:has(> :nth-child(2):last-child) {
+    grid-template-columns: repeat(2, minmax(148px, 300px)); justify-content: center;
+  }
 }
 .art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
 .art-stat-n {
