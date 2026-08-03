@@ -879,12 +879,21 @@ const PLAN_SIZE = 3;
  * sensible plan instead of an empty one.
  */
 function planScore(rec: Recommendation): number {
-  const points = typeof rec.potentialPoints === "number" ? rec.potentialPoints : null;
-  const impactFallback = rec.impact === "high" ? 4 : rec.impact === "medium" ? 2 : 1;
-  const base = points !== null && points > 0 ? points * 10 : impactFallback;
-  const effortBonus = rec.effort === "low" ? 3 : rec.effort === "medium" ? 1 : 0;
-  const stalenessBonus = Math.min(3, Math.max(0, (rec.consecutive_runs_open ?? 1) - 1));
-  return base + effortBonus + stalenessBonus;
+  const points = typeof rec.potentialPoints === "number" && rec.potentialPoints > 0 ? rec.potentialPoints : null;
+  if (points !== null) {
+    // Quantified actions first, best-paying first, cheaper one wins a tie.
+    const effortBonus = rec.effort === "low" ? 0.3 : rec.effort === "medium" ? 0.1 : 0;
+    return 1000 + points + effortBonus;
+  }
+  // No honest figure — and on a low-confidence run that is EVERY card, which
+  // makes this branch the real ranking rather than a rare fallback. It used to
+  // be an ad-hoc impact + effort + "scans open" formula, and the staleness term
+  // dominated it: on the Movistar pilot the top action became "Repite lo que ya
+  // te funciona" — an amplification the engine itself scores as low severity —
+  // purely because it had been open six scans. Defer instead to the engine's
+  // own priority_rank, which already weighs severity, impact, confidence and
+  // how many prompts the gap touches.
+  return 1000 - rec.priority_rank;
 }
 
 /**
