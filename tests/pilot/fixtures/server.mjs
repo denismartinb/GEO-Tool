@@ -61,7 +61,8 @@ const PUBLIC_PAGES = new Map([
   ["/cookies", "Cookies — Genscore"],
   ["/terminos", "Términos — Genscore"],
   ["/glosario", "Glosario GEO — Genscore"],
-  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
+  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
+  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"]
 ]);
 
 // GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two

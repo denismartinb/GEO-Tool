@@ -25,12 +25,17 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 | A4 | `/docs/metodologia/geo-score` | geo score metodología | 🔲 Pendiente | — |
 | A5 | `/docs/planes-y-limites` | planes genscore límites | 🔲 Pendiente | — |
 
-## Capa C — Páginas de decisión (Fase 2.4)
+## Capa C — Páginas de decisión (Fase 2.4 / 2.6c)
+
+Priorizada frente a B1b/B2/B3 por recomendación de `seo-geo-research`: las
+páginas de comparación citan más que la media del portfolio en motores
+generativos (dato de terceros, no verificado de primera mano — ver
+Task Intake de Fase 2.6).
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | 🔲 Pendiente | — |
-| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | 🔲 Pendiente | — |
+| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | ✅ Hecho | #292 |
+| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | ✅ Hecho | #302 |
 | C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | 🔲 Pendiente | — |
 
 ## Capa D — Glosario (Fase 2.4 / 2.6b)
