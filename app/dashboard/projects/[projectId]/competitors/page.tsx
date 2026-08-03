@@ -789,7 +789,17 @@ export default async function CompetitorsPage({
                 ) : (
                   <div style={{ padding: "32px 20px", textAlign: "center" }}>
                     <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                      Disponible a partir de 2 escaneos completados con datos de posición.
+                      {/* Show progress, not just a gate. A flat "available from
+                          2 scans" is a dead end; the count turns it into a
+                          countdown the user can act on — and, right after a
+                          scoring change, it is also the honest explanation for
+                          why a project with plenty of scans still shows zero
+                          here (pilot proposal, 2026-08-03). */}
+                      Disponible a partir de 2 escaneos con datos de posición.{" "}
+                      <b className="tnum">
+                        {validTrendPoints} de 2
+                      </b>{" "}
+                      por ahora.
                     </div>
                   </div>
                 )}
