@@ -1989,9 +1989,22 @@ a {
 .s-oth { background: var(--cit-oth); }
 .s-comp { background: var(--cit-comp); }
 .s-neu { background: var(--cit-neu); }
-.cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
+.cit2-split-key { position: relative; display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
 .cit2-split-key span { display: inline-flex; align-items: center; gap: 5px; }
 .cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+/* Same bug the .cit2-kpis override above already documents, same fix — this
+   row just went unpatched. The default .info-tip-bubble is `position:
+   absolute; left: 0; width: 220px`, anchored to its own 14px trigger; a long
+   label ("Terceros que mencionan a un competidor tuyo") pushes its `i` icon
+   far enough right that the 220px bubble runs past a 375px viewport's edge.
+   `visibility: hidden` does NOT remove it from layout, so that overflow was
+   real and permanent — just invisible to any check measuring
+   document.documentElement instead of the actual clipping element, which is
+   exactly the harness bug fixed in journey.ts (2026-08-03). First real run
+   with that fix caught it: `scrollWidth 415px > viewport 375px` on
+   /citations, mobile, no hover needed. */
+.cit2-split-key .info-tip { position: static; }
+.cit2-split-key .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
 
 /* Source-type donut */
 .cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
