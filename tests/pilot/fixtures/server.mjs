@@ -256,6 +256,22 @@ function blogPostHtml(slug) {
 </head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
 }
 
+// GROWTH-2 Fase 2.9 (B1b): the 3 populated clusters get a pillar page at
+// /blog/<key> — mirrors lib/blog/posts.ts's BLOG_CLUSTERS keys, not its
+// full pillarIntro copy.
+const BLOG_PILLAR_KEYS = ["fundamentos", "medicion", "playbooks"];
+
+function blogPillarHtml(key) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/blog/${key}">
+<title>${key} — Blog — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${key}</h1><p>contenido del pilar</p>${overflow}</body></html>`;
+}
+
 function feedXml() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
@@ -314,6 +330,12 @@ const server = createServer((request, response) => {
   if (path === "/blog") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(blogIndexHtml());
+    return;
+  }
+
+  if (BLOG_PILLAR_KEYS.includes(path.replace(/^\/blog\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(blogPillarHtml(path.replace(/^\/blog\//, "")));
     return;
   }
 

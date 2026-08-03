@@ -59,6 +59,19 @@ test("blog index renders and has its own canonical", async ({ page }, testInfo) 
   }
 });
 
+// GROWTH-2 Fase 2.9 (B1b): pillar pages for the 3 populated clusters — not
+// "sectores", which has zero posts and is deliberately excluded from the
+// sitemap (see app/sitemap.ts), though the route itself still exists.
+const BLOG_PILLAR_CLUSTERS = ["fundamentos", "medicion", "playbooks"] as const;
+
+for (const cluster of BLOG_PILLAR_CLUSTERS) {
+  test(`blog cluster pillar page renders and has its own canonical: ${cluster}`, async ({ page }, testInfo) => {
+    const findings = await visitAsUser(page, testInfo, `/blog/${cluster}`, `blog-pillar-${cluster}`);
+    assertPageIsHealthy(findings);
+    await assertCanonical(page, `/blog/${cluster}`);
+  });
+}
+
 for (const slug of BLOG_POSTS) {
   test(`blog post renders and has its own canonical: ${slug}`, async ({ page }, testInfo) => {
     const findings = await visitAsUser(page, testInfo, `/blog/${slug}`, `blog-${slug}`);

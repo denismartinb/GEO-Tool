@@ -16,23 +16,37 @@ export type BlogCluster = {
   key: "fundamentos" | "medicion" | "playbooks" | "sectores";
   title: string;
   description: string;
+  /**
+   * GROWTH-2 Fase 2.9 (B1b): longer synthesis paragraph(s) for the cluster's
+   * own pillar page (/blog/<key>) — only set once a cluster has enough real
+   * posts to synthesize honestly. Undefined for "sectores" on purpose: it
+   * has zero posts today, so there is nothing real to synthesize yet.
+   * Paragraphs joined by \n\n, same convention as GlossaryTerm.longDefinition.
+   */
+  pillarIntro?: string;
 };
 
 export const BLOG_CLUSTERS: BlogCluster[] = [
   {
     key: "fundamentos",
     title: "Fundamentos GEO",
-    description: "Qué es GEO, en qué se diferencia del SEO, y por qué existe Genscore."
+    description: "Qué es GEO, en qué se diferencia del SEO, y por qué existe Genscore.",
+    pillarIntro:
+      "GEO (Generative Engine Optimization) parte de un cambio simple de constatar pero profundo en sus consecuencias: cada vez más gente pregunta directamente a ChatGPT, Gemini o Claude en vez de buscar en Google, y esos motores no devuelven una lista de enlaces — elaboran una respuesta y recomiendan marcas por su nombre. Puedes tener un SEO excelente y aun así ser invisible en esa respuesta, porque es una señal distinta: no se mide con un ranking, sino con si el modelo te menciona, en qué posición, y si respalda esa mención con una fuente real.\n\nEsta sección reúne los artículos que explican esos fundamentos desde cero: qué es el GEO exactamente y en qué se diferencia del SEO clásico, y cómo se compara Genscore con otras herramientas GEO que ya existen. Si es la primera vez que oyes hablar de esto, empieza aquí antes de pasar a la sección de Metodología y medición."
   },
   {
     key: "medicion",
     title: "Metodología y medición",
-    description: "Cómo se mide la visibilidad de una marca en IA: GEO Score, prompts, competidores."
+    description: "Cómo se mide la visibilidad de una marca en IA: GEO Score, prompts, competidores.",
+    pillarIntro:
+      "Medir GEO bien no es tan simple como lanzar una pregunta a ChatGPT y ver si sale tu marca. Una consulta aislada no representa la realidad: cada cliente pregunta con palabras distintas para el mismo problema, y las respuestas de un motor generativo cambian con el tiempo. Medirlo con rigor exige un conjunto de prompts que representen de verdad cómo pregunta tu cliente, un grupo de competidores elegido con criterio, y una métrica compuesta que combine varias señales en vez de una sola.\n\nEsta sección reúne los artículos sobre esa metodología: qué es el GEO Score de Genscore y cómo se calcula, cómo elegir los prompts correctos para monitorizar tu marca, y cómo seleccionar los competidores adecuados para que la comparación tenga sentido. Es la base técnica antes de pasar a los playbooks de ejecución."
   },
   {
     key: "playbooks",
     title: "Playbooks de ejecución",
-    description: "Cómo conseguir que un motor generativo te cite: llms.txt, datos estructurados, checklist técnico."
+    description: "Cómo conseguir que un motor generativo te cite: llms.txt, datos estructurados, checklist técnico.",
+    pillarIntro:
+      "Medir tu visibilidad en IA es el primer paso, no el último — el paso siguiente es actuar sobre lo que descubres. Esta sección reúne guías prácticas y honestas sobre qué de verdad influye en si un motor generativo cita tu contenido como fuente: desde el fichero llms.txt (con una respuesta clara a si de verdad ayuda, sin venderlo como una palanca mágica) hasta un checklist completo de lo que hace que un contenido sea citable — estructura, datos estructurados, autoridad de dominio.\n\nSon artículos pensados para ejecutar, no solo para entender la teoría — si ya sabes qué es el GEO y cómo se mide, esta es la sección donde se traduce en acciones concretas."
   },
   {
     key: "sectores",
@@ -147,6 +161,10 @@ export function getBlogPost(slug: string): BlogPost | undefined {
 /** Posts belonging to a given cluster, in the same order as BLOG_POSTS. */
 export function getPostsByCluster(cluster: BlogCluster["key"]): BlogPost[] {
   return BLOG_POSTS.filter((p) => p.cluster === cluster);
+}
+
+export function getBlogCluster(key: BlogCluster["key"]): BlogCluster | undefined {
+  return BLOG_CLUSTERS.find((c) => c.key === key);
 }
 
 /** <title> for search engines: `seoTitle` when set, otherwise `title`. */

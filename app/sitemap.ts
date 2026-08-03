@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { BLOG_POSTS } from "@/lib/blog/posts";
+import { BLOG_CLUSTERS, BLOG_POSTS } from "@/lib/blog/posts";
 import { DOCS_NAV } from "@/lib/docs/nav";
 import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 
@@ -7,6 +7,8 @@ const SITE_URL = "https://www.genscore.es";
 const DOCS_LAST_MODIFIED = "2026-08-02";
 /** GROWTH-2 Fase 2.6b: date each /glosario/<termino> page was added. */
 const GLOSSARY_LAST_MODIFIED = "2026-08-02";
+/** GROWTH-2 Fase 2.9: date each /blog/<cluster> pillar page was added. */
+const PILLAR_LAST_MODIFIED = "2026-08-03";
 
 /**
  * Real last-meaningful-change date per static route (GROWTH-2 Fase 2.1) —
@@ -54,5 +56,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(GLOSSARY_LAST_MODIFIED)
   }));
 
-  return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes];
+  // Only clusters with a real pillarIntro (i.e. real posts to synthesize) —
+  // "sectores" has zero posts today, so its stub page exists for direct
+  // navigation but isn't submitted to crawlers as if it were real content.
+  const pillarRoutes = BLOG_CLUSTERS.filter((c) => c.pillarIntro).map((c) => ({
+    url: `${SITE_URL}/blog/${c.key}`,
+    lastModified: new Date(PILLAR_LAST_MODIFIED)
+  }));
+
+  return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes, ...pillarRoutes];
 }
