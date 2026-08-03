@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
  * pipeline is blind to — `pnpm run validate` passes, tests pass, the PR looks
  * green, and the error surfaces only when a human pastes it into a SQL editor.
  *
- * That is exactly how 0023 shipped with a subquery inside a CHECK constraint
+ * That is exactly how 0025 shipped with a subquery inside a CHECK constraint
  * (`ERROR: 0A000: cannot use subquery in check constraint`) — a restriction
  * Postgres enforces unconditionally, so the statement could never have
  * succeeded on any database, in any state.
@@ -92,7 +92,14 @@ describe("supabase migrations", () => {
     // produced "Load failed (api.supabase.com)" with no way to tell whether
     // the statements ran). Any migration written after that incident must be
     // safe to re-run. Older migrations predate the rule and are exempt.
-    const IDEMPOTENCY_REQUIRED_FROM = "0023";
+    //
+    // 0025, not 0023: `0023_project_suggested_competitors.sql` landed on main
+    // independently and without knowledge of this rule. Editing an
+    // already-applied migration to satisfy a rule written after it is worse
+    // than exempting it — the file is a record of what was run, not a
+    // maintained artifact. The rule binds from the first migration written
+    // once it existed.
+    const IDEMPOTENCY_REQUIRED_FROM = "0025";
 
     const offenders = migrations
       .filter(({ file }) => file.slice(0, 4) >= IDEMPOTENCY_REQUIRED_FROM)

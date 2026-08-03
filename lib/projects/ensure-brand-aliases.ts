@@ -7,14 +7,14 @@ import { createServiceClient } from "@/lib/supabase/service";
  * Lazily derives a project's brand aliases the first time it is scanned
  * (GEO-SCORE-BRAND-IDENTITY-1b, founder-approved 2026-08-02).
  *
- * Why this exists: migration 0023 derives aliases at project CREATION only, so
+ * Why this exists: migration 0025 derives aliases at project CREATION only, so
  * every project that already existed keeps `'{}'` and stays mis-measured —
  * including the founder's own Mozilla project, the one that surfaced the bug
  * in the first place. Backfilling by hand does not scale and re-deriving on
  * every scan would burn a homepage fetch plus a Gemini call forever for the
  * majority of brands that legitimately have no aliases.
  *
- * `brand_aliases_derived_at` (migration 0024) is what makes "never derived"
+ * `brand_aliases_derived_at` (migration 0026) is what makes "never derived"
  * distinguishable from "derived, and the answer was none" — the second is the
  * common case and must be remembered, not rediscovered.
  *

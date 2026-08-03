@@ -5,7 +5,7 @@ prueba "Mozilla" (`mozilla.org`) sin cambiar nada y el GEO Score se movió
 **44 puntos** (30 → 74). *"No nos podemos permitir esta variabilidad."*
 
 **Estado:** Fase 0 implementada (ADR 0024). **Fase −1 implementada**
-(ADR 0025, migración `0023` aprobada por el fundador el 2026-08-02 junto con
+(ADR 0025, migración `0025` aprobada por el fundador el 2026-08-02 junto con
 la derivación automática de alias). Fases 1–3 pendientes.
 
 ---

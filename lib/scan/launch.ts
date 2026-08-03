@@ -36,7 +36,7 @@ export async function launchScan({
   deferExecution?: boolean;
 }): Promise<{ runId: string; executed: boolean }> {
   // GEO-SCORE-BRAND-IDENTITY-1b: derive this project's brand aliases if it
-  // has never had them (projects created before migration 0023). Awaited
+  // has never had them (projects created before migration 0025). Awaited
   // before the run is created so this scan's rows snapshot the aliases and
   // are scored with them — a scan that ran "just before" the derivation would
   // otherwise differ from the next one for no reason the user can see, which

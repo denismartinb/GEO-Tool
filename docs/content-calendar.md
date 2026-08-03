@@ -25,19 +25,25 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 | A4 | `/docs/metodologia/geo-score` | geo score metodología | 🔲 Pendiente | — |
 | A5 | `/docs/planes-y-limites` | planes genscore límites | 🔲 Pendiente | — |
 
-## Capa C — Páginas de decisión (Fase 2.4)
+## Capa C — Páginas de decisión (Fase 2.4 / 2.6c)
+
+Priorizada frente a B1b/B2/B3 por recomendación de `seo-geo-research`: las
+páginas de comparación citan más que la media del portfolio en motores
+generativos (dato de terceros, no verificado de primera mano — ver
+Task Intake de Fase 2.6).
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | 🔲 Pendiente | — |
-| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | 🔲 Pendiente | — |
+| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | ✅ Hecho | #292 |
+| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | ✅ Hecho | #302 |
 | C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | 🔲 Pendiente | — |
 
-## Capa D — Glosario (Fase 2.4)
+## Capa D — Glosario (Fase 2.4 / 2.6b)
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| D1 | `/glosario` (índice + primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | 🔲 Pendiente | — |
+| D1 | `/glosario` (índice, primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | ✅ Hecho | #292 |
+| D1b | `/glosario/<termino>` — URL propia por término (patrón confirmado por `seo-geo-research`: el único glosario del sector que funciona como motor de tráfico, Ahrefs, usa una página completa por término, no un índice único) | qué es &lt;término&gt; | ✅ Hecho | #299 |
 
 ## Capa B — Hubs del blog (Fase 2.5)
 
@@ -48,7 +54,8 @@ transaccional).
 
 | # | Qué | Estado | PR |
 |---|---|---|---|
-| B1 | Arquitectura de clusters + páginas pilar + enlazado interno + redirects si aplica | 🔲 Pendiente | — |
+| B1a | Taxonomía de clusters (`cluster` en `lib/blog/posts.ts`), índice reagrupado, enlazado interno "Sigue leyendo" entre posts del mismo cluster | ✅ Hecho | #294 |
+| B1b | Páginas pilar dedicadas por cluster + redirects si cambian rutas | 🔲 Pendiente | — |
 | B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | 🔲 Pendiente | — |
 | B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | 🔲 Pendiente | — |
 

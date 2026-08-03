@@ -1,8 +1,9 @@
 import "server-only";
 
-import { extractGeminiStructuredData } from "@/lib/llm/gemini";
+import { extractGeminiStructuredData, type BusinessProfile } from "@/lib/llm/gemini";
 import { extractClaudeStructuredData } from "@/lib/llm/claude";
 import { extractOpenAIStructuredData } from "@/lib/llm/openai";
+import { parsePersistedBusinessProfile } from "@/lib/projects/business-profile";
 import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -338,8 +339,9 @@ async function extractAndPersistRow(input: {
   projectId: string;
   runId: string;
   row: ScanPromptResultRow;
+  profile?: BusinessProfile;
 }): Promise<void> {
-  const { service, projectId, runId, row } = input;
+  const { service, projectId, runId, row, profile } = input;
   const rawResponseText = row.raw_response_text;
   if (!rawResponseText) return;
 
@@ -354,7 +356,8 @@ async function extractAndPersistRow(input: {
       brand: row.brand_snapshot,
       competitors,
       rawResponseText,
-      promptText: row.prompt_text_snapshot
+      promptText: row.prompt_text_snapshot,
+      profile
     };
     const extracted =
       row.provider === "claude"
@@ -452,6 +455,21 @@ export async function runStructuredExtractionForRun(input: {
     (row) => row.extraction_version !== EXTRACTION_VERSION && row.raw_response_text
   );
   const rowsToProcess = eligibleRows.slice(0, MAX_EXTRACTION_RESULTS);
+  if (rowsToProcess.length === 0) return;
+
+  // EMERGING-BRANDS-GROUNDING-1: read-only, best-effort lookup of the
+  // already-cached profile (never resolved/computed here — that would add a
+  // homepage fetch + Gemini call to the extraction path, which
+  // .claude/rules/gemini.md's "scans must complete or fail safely" rules
+  // out). A project with no cached profile yet (undefined here) or a query
+  // error both fall back silently to unfiltered other_brands_mentioned,
+  // identical to behavior before this phase.
+  const { data: projectRow } = await input.service
+    .from("projects")
+    .select("business_profile")
+    .eq("id", input.projectId)
+    .maybeSingle();
+  const profile = parsePersistedBusinessProfile(projectRow?.business_profile) ?? undefined;
 
   // Each row's extraction (Gemini structured-extraction call + grounding
   // redirect resolution + a single update() scoped to row.id) is independent
@@ -468,7 +486,8 @@ export async function runStructuredExtractionForRun(input: {
         service: input.service,
         projectId: input.projectId,
         runId: input.runId,
-        row
+        row,
+        profile
       })
     )
   );

@@ -1,10 +1,10 @@
--- 0024_brand_aliases_derived_at.sql
+-- 0026_brand_aliases_derived_at.sql
 --
 -- Phase: GEO-SCORE-BRAND-IDENTITY-1b (founder-approved 2026-08-02, "derivado
 -- perezosa sí")
 -- ADR: docs/adr/0025-brand-identity-aliases.md (Consequences → follow-up)
 --
--- Purpose: migration 0023 derives brand_aliases at project CREATION only, so
+-- Purpose: migration 0025 derives brand_aliases at project CREATION only, so
 -- every project that already existed keeps '{}' and stays mis-measured —
 -- including the founder's own Mozilla project, the one that surfaced the bug.
 -- Lazy derivation fixes that on the next scan, but needs to tell two states
@@ -26,7 +26,7 @@
 -- Nullable, no backfill: existing projects read as "never derived", which is
 -- exactly right — they never were.
 --
--- Apply manually in the Supabase SQL editor, after 0023.
+-- Apply manually in the Supabase SQL editor, after 0025.
 --
 -- Idempotent on purpose (see 0023's header): these are applied by hand, and a
 -- dropped connection mid-apply leaves an unknown state that must be safe to

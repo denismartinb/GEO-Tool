@@ -1,6 +1,7 @@
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { GeoScoreBreakdown } from "@/components/blog/geo-score-breakdown";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
@@ -81,6 +82,9 @@ frente a tus competidores y si hay una fuente real detrás, tu marca saca un
 <p>¿Quieres ver el GEO Score real de tu marca?</p>
 <a href="/signup" className="btn btn-primary">Prueba gratis</a>
 </div>
+
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
 
 </div>
 

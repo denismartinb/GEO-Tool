@@ -1508,7 +1508,12 @@ a {
     display: grid;
     grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
     gap: 18px;
-    align-items: stretch;
+    /* `start`, not `stretch`: the score card used to be padded out to the
+       KPI block's height by its sparkline. With the trend line withheld on
+       low-sample runs (GEO-SCORE-RELIABILITY-1) that stretch turned into a
+       tall card holding a gauge and a lot of air. Sizing to content keeps it
+       tidy in both states instead of only in the one that has a trend. */
+    align-items: start;
     margin-top: 16px;
   }
   .ov2-hero > .ov2-gauge-card {
@@ -1857,6 +1862,345 @@ a {
      as .ov2-rail on Overview. */
   .pr2-rail { position: sticky; top: 60px; }
   .pr2-rail .pr2-split { margin-top: 0; }
+}
+
+/* ============================================================
+   Competitors — v3 restyle (COMP-REDESIGN-1)
+
+   Same rollout mechanism as `.ov2-scope`/`.pr2-scope`
+   (docs/brand/design-decisions-log.md §2): a wrapper that re-points the
+   SAME custom-property names its descendants already consume, so shared
+   components (.card, .badge-pos/-neg) repaint in v3 colors only inside
+   this subtree. Same responsive column widths as Overview/Prompts
+   (460/640/1200/1280px) so the console reads as one system — see
+   PROMPTS-DESKTOP-2's note that unifying the *other* console pages to
+   this width was explicitly deferred; this phase does it for Competitors.
+   ============================================================ */
+.cm2-scope {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+  /* Sequential intensity scale for the engine × brand matrix (Paso C),
+     derived from --brand-blue as the top step — a deliberate 6-step scale
+     kept as named tokens instead of scattered hex literals. */
+  --cm2-h0: #f4f6fa;
+  --cm2-h0-ink: var(--brand-ink-4);
+  --cm2-h1: #e3ecfd;
+  --cm2-h1-ink: #1e4fb8;
+  --cm2-h2: #c3d8fb;
+  --cm2-h2-ink: #1a4494;
+  --cm2-h3: #8fb6f6;
+  --cm2-h3-ink: #0f2f6e;
+  --cm2-h4: #4f8bef;
+  --cm2-h5: var(--brand-blue);
+}
+.cm2-scope .card { box-shadow: var(--brand-shadow-card); }
+.cm2-scope .gauge-num {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+}
+.cm2-page { max-width: 460px; margin: 0 auto; }
+
+@media (min-width: 900px) {
+  .cm2-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .cm2-page { max-width: 1200px; }
+}
+@media (min-width: 1600px) {
+  .cm2-page { max-width: 1280px; }
+}
+
+/* 1 · Insight banner — same visual language as .ov2-insight/.pr2-insight */
+.cm2-insight {
+  display: flex; gap: 12px; align-items: flex-start; padding: 15px 16px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .07), rgba(37, 99, 235, .03));
+  border: 1px solid rgba(37, 99, 235, .16);
+  border-radius: 14px;
+}
+.cm2-insight-ico {
+  flex: 0 0 auto; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 9px; background: var(--brand-blue); color: #fff;
+}
+.cm2-insight-txt { font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.cm2-insight-txt b { color: var(--ink); font-weight: 750; }
+.cm2-insight-txt .neg { color: var(--brand-neg); font-weight: 750; }
+
+/* 2 · Section label — same convention as .pr2-sec-lbl */
+.cm2-sec-lbl {
+  font-family: var(--mono);
+  font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4);
+  margin: 20px 0 9px; display: flex; justify-content: space-between; align-items: center;
+}
+.cm2-sec-lbl .more {
+  color: var(--brand-blue); font-weight: 700; text-transform: none; letter-spacing: 0;
+  font-family: var(--font-body), "Figtree", sans-serif; font-size: 11.5px;
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+/* "Gestionar" lives on the section label, not the page header — the sticky
+   header is fixed as título + fecha + marca/dominio on every console screen
+   (docs/brand/design-decisions-log.md §3.2). */
+.cm2-manage-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  font-family: var(--font-body), "Figtree", sans-serif; font-size: 11.5px; font-weight: 700;
+  text-transform: none; letter-spacing: 0; line-height: 1.4;
+  padding: 4px 10px; border-radius: 8px; white-space: nowrap;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); cursor: pointer;
+}
+.cm2-manage-btn:hover { border-color: var(--brand-blue); color: var(--brand-blue); }
+.cm2-manage-btn svg { flex: 0 0 auto; display: block; }
+
+/* 3 · Podium — replaces the 5-column table (was the only page in the
+   console needing horizontal scroll on mobile). One row component,
+   progressive column reveal by breakpoint instead of a second layout. */
+/* Grid, not flex: the approved design puts the SoV bar UNDER the name on the
+   phone column but as its OWN column between "Cita" and the percentage on
+   desktop. One DOM order + two grid templates gives both exactly, where a
+   flex row could only ever produce one of them (the bar had to be nested
+   inside the name block, which pinned it under the name at every width). */
+.cm2-rank {
+  display: grid;
+  grid-template-columns: 16px 26px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 11px; row-gap: 7px;
+  padding: 11px 13px;
+  border-bottom: 1px solid var(--line-soft); cursor: pointer;
+}
+.cm2-rank > .cm2-rank-n { grid-column: 1; grid-row: 1 / span 2; }
+.cm2-rank > .cm2-rank-fav,
+.cm2-rank > .cm2-rank-fav-img { grid-column: 2; grid-row: 1 / span 2; }
+.cm2-rank > .cm2-rank-main { grid-column: 3; grid-row: 1; }
+.cm2-rank > .cm2-rank-bar-wrap { grid-column: 3; grid-row: 2; }
+.cm2-rank > .cm2-rank-r { grid-column: 4; grid-row: 1 / span 2; }
+.cm2-rank:last-child { border-bottom: none; }
+.cm2-rank:hover { background: var(--surface-2); }
+.cm2-rank.you { background: var(--brand-blue-soft); cursor: default; }
+.cm2-rank.you:hover { background: var(--brand-blue-soft); }
+.cm2-rank-n {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--ink-4);
+  width: 16px; text-align: center; flex: 0 0 auto; font-variant-numeric: tabular-nums;
+}
+.cm2-rank.you .cm2-rank-n { color: var(--brand-blue); }
+.cm2-rank-fav {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto; display: grid; place-items: center;
+  color: #fff; font-size: 11.5px; font-weight: 750;
+}
+/* Real favicon (lib/domains/favicon.ts) — same treatment as Overview's
+   .ov2-cmp-fav, falls back to .cm2-rank-fav (initial letter) when the
+   domain is missing. */
+.cm2-rank-fav-img {
+  width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
+  object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
+}
+.cm2-rank-main { min-width: 0; }
+.cm2-rank-nm { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 6px; min-width: 0; }
+.cm2-rank-nm-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.cm2-rank-dm { font-family: var(--mono); font-size: 10.5px; color: var(--ink-4); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm2-rank-you-tag {
+  font-size: 9.5px; font-weight: 750; color: var(--brand-blue); background: var(--brand-blue-soft-2);
+  padding: 1px 6px; border-radius: 999px; flex: 0 0 auto;
+}
+.cm2-rank-bar { height: 6px; border-radius: 99px; background: var(--surface-sunk); overflow: hidden; }
+.cm2-rank-bar i { display: block; height: 100%; border-radius: 99px; }
+.cm2-rank-r { flex: 0 0 auto; text-align: right; }
+.cm2-rank-sov {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.cm2-rank-sov small { font-size: 10px; font-weight: 700; color: var(--ink-4); margin-left: 1px; }
+.cm2-delta { font-size: 10.5px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cm2-delta.up { color: var(--pos); }
+.cm2-delta.dn { color: var(--brand-neg); }
+.cm2-delta.fl { color: var(--ink-4); }
+/* Extra columns (mención/cita) revealed at tablet+, hidden on the phone-width column. */
+.cm2-rank-extra { display: none; text-align: center; }
+.cm2-rank-extra .v { font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--ink); }
+.cm2-rank-extra .l { font-size: 9.5px; color: var(--ink-4); font-weight: 600; margin-top: 1px; }
+@media (min-width: 900px) {
+  /* Everything collapses onto a single row: name · mención · cita · bar · %,
+     the desktop composition of the approved design. */
+  .cm2-rank {
+    grid-template-columns: 16px 26px minmax(0, 200px) 58px 58px minmax(70px, 1fr) 62px;
+    row-gap: 0;
+  }
+  .cm2-rank > .cm2-rank-n,
+  .cm2-rank > .cm2-rank-fav,
+  .cm2-rank > .cm2-rank-fav-img,
+  .cm2-rank > .cm2-rank-main,
+  .cm2-rank > .cm2-rank-r { grid-row: 1; }
+  /* Explicit classes rather than :nth-of-type — every cell here is a div, so
+     type-based counting would drift the moment a cell is added or reordered. */
+  .cm2-rank-extra { display: block; grid-row: 1; }
+  .cm2-rank > .cm2-rank-extra.men { grid-column: 4; }
+  .cm2-rank > .cm2-rank-extra.cit { grid-column: 5; }
+  .cm2-rank > .cm2-rank-bar-wrap { grid-column: 6; grid-row: 1; }
+  .cm2-rank > .cm2-rank-r { grid-column: 7; }
+}
+
+/* 4 · Brecha de prompts — segmented control over the 5 gap categories */
+.cm2-segs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 13px 0; scrollbar-width: none; }
+.cm2-segs::-webkit-scrollbar { display: none; }
+.cm2-seg {
+  flex: 0 0 auto; padding: 6px 11px; border-radius: 9px; border: 1px solid var(--line);
+  background: var(--surface); cursor: pointer; text-align: left; font-family: inherit;
+}
+.cm2-seg.on { border-color: var(--brand-blue); background: var(--brand-blue-soft); }
+.cm2-seg .v {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--ink); line-height: 1; font-variant-numeric: tabular-nums;
+}
+.cm2-seg.on .v { color: var(--brand-blue); }
+.cm2-seg .k { font-size: 10px; color: var(--ink-3); font-weight: 650; margin-top: 3px; white-space: nowrap; }
+.cm2-gapbar { display: flex; height: 9px; border-radius: 99px; overflow: hidden; margin: 13px 13px 0; background: var(--surface-sunk); }
+.cm2-gapbar i { display: block; height: 100%; }
+.cm2-gaplegend { display: flex; flex-wrap: wrap; gap: 10px 14px; padding: 9px 13px 12px; }
+.cm2-gaplegend span { font-size: 10.5px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 5px; font-weight: 600; }
+.cm2-gaplegend .d { width: 7px; height: 7px; border-radius: 2.5px; flex: 0 0 auto; }
+
+.cm2-prow { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.cm2-prow:hover { background: var(--surface-2); }
+.cm2-prow-main { flex: 1; min-width: 0; }
+.cm2-prow-q { font-size: 12.5px; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.cm2-prow-m { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; align-items: center; }
+.cm2-chip {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface-sunk); color: var(--ink-3); border: 1px solid var(--line);
+}
+.cm2-chip-neg { background: var(--neg-soft); color: var(--brand-neg); border-color: transparent; }
+.cm2-chip-eng { color: #fff; border-color: transparent; }
+.cm2-prow-empty { padding: 24px 13px; text-align: center; color: var(--ink-4); font-size: 12.5px; }
+.cm2-prow-more {
+  padding: 11px 13px; border-top: 1px solid var(--line-soft); text-align: center;
+  color: var(--brand-blue); font-size: 12px; font-weight: 700; cursor: pointer; background: none; border-left: none;
+  border-right: none; border-bottom: none; width: 100%; font-family: inherit;
+}
+
+/* 5 · Presencia por motor — engine × brand matrix */
+.cm2-mx { width: 100%; border-collapse: collapse; font-size: 12px; }
+.cm2-mx th {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--ink-4); font-weight: 500; padding: 9px 6px; text-align: center;
+}
+.cm2-mx th:first-child { text-align: left; padding-left: 13px; }
+.cm2-mx td { padding: 5px 6px; text-align: center; border-top: 1px solid var(--line-soft); }
+.cm2-mx td:first-child { text-align: left; padding-left: 13px; font-size: 12px; font-weight: 650; color: var(--ink); white-space: nowrap; }
+.cm2-mx tr.you td:first-child { color: var(--brand-blue); }
+.cm2-mxc { display: block; border-radius: 7px; padding: 7px 0; font-weight: 750; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cm2-mxc.h0 { background: var(--cm2-h0); color: var(--cm2-h0-ink); }
+.cm2-mxc.h1 { background: var(--cm2-h1); color: var(--cm2-h1-ink); }
+.cm2-mxc.h2 { background: var(--cm2-h2); color: var(--cm2-h2-ink); }
+.cm2-mxc.h3 { background: var(--cm2-h3); color: var(--cm2-h3-ink); }
+.cm2-mxc.h4 { background: var(--cm2-h4); color: #fff; }
+.cm2-mxc.h5 { background: var(--cm2-h5); color: #fff; }
+
+/* 6 · Terreno por tema */
+.cm2-tp { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line-soft); }
+.cm2-tp:first-child { border-top: none; }
+.cm2-tp-nm { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 650; color: var(--ink); }
+.cm2-tp-nm i { display: block; font-style: normal; font-size: 10.5px; color: var(--ink-4); font-weight: 500; margin-top: 2px; }
+.cm2-tp-bars { flex: 0 0 90px; display: grid; gap: 3px; }
+.cm2-tp-b { height: 7px; border-radius: 99px; background: var(--surface-sunk); overflow: hidden; }
+.cm2-tp-b i { display: block; height: 100%; border-radius: 99px; }
+.cm2-tp-v { flex: 0 0 44px; text-align: right; font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cm2-tp-v.dn { color: var(--brand-neg); }
+.cm2-tp-v.up { color: var(--pos); }
+
+/* 7 · Competidores sugeridos (COMPETITOR-SUGGESTIONS-1).
+   Row layout is shared with the block this replaced ("Marcas que aparecen y
+   no sigues"), which is why the class prefix stays .cm2-emg. */
+.cm2-emg { display: flex; align-items: center; gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line-soft); }
+.cm2-emg:first-child { border-top: none; }
+.cm2-emg-intro { padding: 11px 13px 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.cm2-emg-main { flex: 1; min-width: 0; }
+.cm2-emg-meta { font-size: 11px; color: var(--ink-3); }
+.cm2-emg-err { font-size: 11px; color: var(--brand-neg); margin-top: 4px; line-height: 1.45; }
+/* inline-flex + nowrap keeps "+ Seguir" on ONE line with the glyph optically
+   centered against the label — as a plain inline button the icon wrapped to
+   its own line and sat off-centre (founder feedback). */
+.cm2-btn-mini {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 8px; line-height: 1.4;
+  border: 1px solid rgba(37, 99, 235, .3); background: var(--brand-blue-soft); color: var(--brand-blue);
+  cursor: pointer; font-family: inherit; white-space: nowrap;
+}
+.cm2-btn-mini svg { flex: 0 0 auto; display: block; }
+.cm2-btn-mini:disabled { opacity: .55; cursor: default; }
+
+/* Suggestion states: the grounded lookup is fetched after paint, so the block
+   is on screen from the first render and needs a real loading/empty/error
+   presence rather than collapsing to nothing. */
+.cm2-sug-skel { padding: 11px 13px 13px; }
+.cm2-sug-skel-txt { display: block; font-size: 11px; color: var(--ink-4); font-weight: 600; margin-bottom: 10px; }
+.cm2-sug-skel-row { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.cm2-sug-skel-fav { width: 26px; height: 26px; border-radius: 7px; flex: 0 0 auto; }
+.cm2-sug-skel-bar { height: 9px; border-radius: 99px; flex: 1; }
+.cm2-sug-skel-fav,
+.cm2-sug-skel-bar { background: var(--surface-sunk); animation: cm2SugPulse 1.3s ease-in-out infinite; }
+@keyframes cm2SugPulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+.cm2-sug-msg { padding: 12px 13px; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.cm2-sug-msg.cm2-emg-err { color: var(--brand-neg); margin-top: 0; }
+.cm2-sug-foot { padding: 11px 13px; border-top: 1px solid var(--line-soft); display: flex; }
+@media (prefers-reduced-motion: reduce) {
+  .cm2-sug-skel-fav,
+  .cm2-sug-skel-bar { animation: none; }
+}
+
+/* 7b · Evolución de la posición media + ranked list of current standings.
+   Stacked on phones, chart-beside-list once there's room. */
+.cm2-pos-card { padding: 16px 16px 10px; }
+.cm2-pos-chart { min-width: 0; }
+.cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+/* inline-flex keeps the InfoTip glyph on the label's own line — as plain
+   inline content after an uppercase, letter-spaced label it wrapped onto a
+   second line by itself. */
+.cm2-pos-list-hd {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); margin-bottom: 6px;
+}
+.cm2-pos-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
+.cm2-pos-n {
+  flex: 0 0 auto; width: 15px; text-align: center; font-size: 11px; font-weight: 750;
+  color: var(--ink-4); font-variant-numeric: tabular-nums;
+}
+.cm2-pos-row.you .cm2-pos-n { color: var(--brand-blue); }
+.cm2-pos-nm {
+  flex: 1; min-width: 0; font-size: 12.5px; font-weight: 650; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cm2-pos-row.you .cm2-pos-nm { color: var(--brand-blue); }
+.cm2-pos-v {
+  flex: 0 0 auto; font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 13px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+@media (min-width: 900px) {
+  .cm2-pos-card { display: flex; align-items: flex-start; gap: 18px; }
+  .cm2-pos-chart { flex: 1; min-width: 0; }
+  .cm2-pos-list { flex: 0 0 210px; margin-top: 0; padding-top: 0; border-top: none; }
+}
+
+/* 8 · Desktop layout — main column + sticky rail, same `display: contents`
+   default-off mechanism as .ov2-cols/.pr2-cols (zero effect below 1200px). */
+.cm2-cols, .cm2-main, .cm2-rail { display: contents; }
+@media (min-width: 1200px) {
+  .cm2-cols { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; margin-top: 16px; }
+  .cm2-main, .cm2-rail { display: block; min-width: 0; }
+  .cm2-main { grid-column: 1; grid-row: 1; }
+  .cm2-rail { grid-column: 2; grid-row: 1; position: sticky; top: 60px; }
 }
 
 /* ============================================================
@@ -4351,6 +4695,16 @@ a.notif-row:hover {
 .legal-body p { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin: 0 0 14px; }
 .legal-body ul { margin: 0 0 14px; padding-left: 20px; }
 .legal-body li { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 6px; }
+
+/* GROWTH-2 Fase 2.4: comparison table on /comparativas/*. Self-contained
+   (not reused from .docs-table-wrap/.tbl-wrap) — this branch predates the
+   /docs sidebar CSS from Fase 2.3, and .tbl-wrap pairs with a .tbl class
+   this table doesn't use. QA (PR #292) caught the table rendering with zero
+   styling and no horizontal-scroll safety net before this was added. */
+.cmp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 24px; }
+.cmp-table-wrap table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
+.cmp-table-wrap th, .cmp-table-wrap td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cmp-table-wrap th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .legal-body strong { color: var(--ink); font-weight: 650; }
 .legal-body a { color: var(--accent-ink); font-weight: 600; }
 
@@ -4372,16 +4726,66 @@ a.notif-row:hover {
 .blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
 .blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
 .blog-cta p { margin-bottom: 14px; }
+.blog-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.blog-related h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+.blog-related ul { margin: 0; padding-left: 20px; }
+.blog-related li { font-size: 14.5px; margin-bottom: 6px; }
+.glossary-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.glossary-related h2 { font-size: 16px; font-weight: 700; margin: 0 0 10px; }
+.glossary-related ul { margin: 0; padding-left: 20px; }
+.glossary-related li { font-size: 14.5px; margin-bottom: 6px; }
 .blog-index-card { display: block; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); margin-bottom: 20px; overflow: hidden; }
 .blog-index-card:hover { border-color: var(--accent); }
 .blog-index-card-body { padding: 20px; }
 .blog-index-card h2 { margin: 0 0 6px; font-size: 18px; }
 .blog-index-card p { margin: 0; color: var(--ink-2); font-size: 14px; }
 
+/* GROWTH-2 Fase 2.5: cluster grouping on /blog. */
+.blog-cluster { margin-bottom: 40px; }
+.blog-cluster-head { margin-bottom: 16px; }
+.blog-cluster-head h2 { font-size: 22px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 4px; }
+.blog-cluster-head p { margin: 0; color: var(--ink-3); font-size: 14px; }
+.blog-cluster-soon { font-size: 14px; color: var(--ink-4); font-style: italic; border: 1px dashed var(--line); border-radius: var(--r-md); padding: 16px 18px; margin: 0; }
+
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
+
+/* GROWTH-2 Fase 2.3: /docs sidebar layout. */
+.docs-layout { display: flex; flex-direction: column; gap: 32px; align-items: flex-start; }
+.docs-side { display: flex; flex-direction: column; gap: 4px; flex: none; width: 100%; }
+.docs-side-home { font-weight: 700; font-size: 14px; color: var(--ink); padding: 6px 10px; border-radius: var(--r-sm); }
+.docs-side-home.active { background: var(--surface-2); }
+.docs-side-section { margin-top: 14px; display: flex; flex-direction: column; gap: 2px; }
+.docs-side-title { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4); padding: 6px 10px 4px; }
+.docs-side a { display: block; font-size: 14px; color: var(--ink-2); padding: 6px 10px; border-radius: var(--r-sm); }
+.docs-side a:hover { background: var(--surface-2); color: var(--ink); }
+.docs-side a.active { background: var(--surface-2); color: var(--accent); font-weight: 600; }
+.docs-content { max-width: 720px; min-width: 0; }
+.docs-content h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0 0 8px; }
+.docs-content .docs-updated { font-size: 13px; color: var(--ink-4); margin: 0 0 28px; }
+.docs-content h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 32px 0 12px; }
+.docs-content h2:first-of-type { margin-top: 0; }
+.docs-content p { margin: 0 0 14px; line-height: 1.65; color: var(--ink-2); }
+.docs-content ul, .docs-content ol { margin: 0 0 14px; padding-left: 22px; color: var(--ink-2); }
+.docs-content li { margin-bottom: 6px; line-height: 1.6; }
+.docs-table-wrap { overflow-x: auto; margin: 0 0 24px; }
+.docs-content table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 14px; }
+.docs-content th, .docs-content td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.docs-content th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
+.docs-index-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
+.docs-index-card { display: block; border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px 18px; background: var(--surface); }
+.docs-index-card:hover { border-color: var(--accent); }
+.docs-index-card .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.docs-index-card h3 { font-size: 16px; margin: 4px 0 6px; }
+.docs-index-card p { font-size: 13.5px; color: var(--ink-3); margin: 0; }
+
+@media (min-width: 860px) {
+  .docs-layout { flex-direction: row; gap: 48px; }
+  .docs-side { width: 220px; position: sticky; top: 96px; }
+  .docs-index-grid { grid-template-columns: 1fr 1fr; }
+}
 
 .geo-breakdown { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 .geo-breakdown-row { display: grid; grid-template-columns: 1fr; gap: 6px; }

@@ -104,9 +104,18 @@ consequence, not a side effect. The ≥20 "high" bar from ADR 0015 is unchanged.
   called them "prompts" — a 1-prompt, 3-engine project read "3 de 3 prompts".
   The unit is now "respuestas de IA" wherever that count is displayed.
 - The mention-rate card states its margin (`±N pt`, Wilson 95%).
-- A withheld delta renders as **"— sin comparación"** with the reason, never
-  as "— sin cambio". Refusing to assert a change is not evidence of
-  stability, and rendering it as one is the same false claim inverted.
+- A withheld delta renders as **nothing at all** — never as "— sin cambio",
+  which would assert a measured stability we do not have.
+
+  *Amended 2026-08-03 (founder decision).* The first version of this labelled
+  each withheld element ("— sin comparación", "muestra insuficiente"). That
+  was right about the claim and wrong about the screen: four such notices at
+  once read as a broken product rather than a careful one. The absence is now
+  explained **once**, under the gauge, phrased as what unlocks it — *"Con N
+  respuestas de IA más verás franja y evolución. Añade prompts o motores."* —
+  because a user can act on that and cannot act on "insufficient sample". A
+  non-comparable pair of runs gets no line: it resolves itself on the next
+  scan.
 
 ## Consequences
 

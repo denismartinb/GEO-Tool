@@ -308,7 +308,7 @@ async function processPromptJob({
         prompt_text_snapshot: promptText,
         brand_snapshot: project.brand,
         // Frozen alongside brand/competitors so this row stays interpretable
-        // after the project's alias list changes (migration 0023).
+        // after the project's alias list changes (migration 0025).
         brand_aliases_snapshot: project.brand_aliases ?? [],
         competitors_snapshot: competitors.map((c) => ({ name: c.name, domain: c.domain })),
         country_snapshot: project.country,

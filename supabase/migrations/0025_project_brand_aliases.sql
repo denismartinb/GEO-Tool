@@ -1,4 +1,4 @@
--- 0023_project_brand_aliases.sql
+-- 0025_project_brand_aliases.sql
 --
 -- Phase: GEO-SCORE-BRAND-IDENTITY-1 (Fase −1 de docs/geo-score-variability-2026-08.md)
 -- Founder-approved 2026-08-02 (migración y derivación automática de alias).
@@ -23,7 +23,7 @@
 -- editable). No RLS change: projects and scan_prompt_results are owner-scoped
 -- at row level, and those policies already cover every column on the row.
 --
--- Apply manually in the Supabase SQL editor, after 0022.
+-- Apply manually in the Supabase SQL editor, after 0024.
 --
 -- Idempotent on purpose, unlike earlier migrations in this folder. Applying
 -- this by hand from a phone over a mobile connection produced a "Load failed

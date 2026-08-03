@@ -39,7 +39,7 @@ Mahou/San Miguel.
 
 ### 1. `projects.brand_aliases text[]`, snapshotted per scan
 
-Migration `0023`. Alongside it, `scan_prompt_results.brand_aliases_snapshot`,
+Migration `0025`. Alongside it, `scan_prompt_results.brand_aliases_snapshot`,
 frozen at scan time exactly like the existing `brand_snapshot` /
 `competitors_snapshot` (migration 0001).
 
@@ -158,7 +158,7 @@ Creation-time derivation alone would leave every pre-existing project at
 the bug. `ensureBrandAliasesDerived` (`lib/projects/ensure-brand-aliases.ts`)
 derives on first scan, with two deliberate choices:
 
-- **`brand_aliases_derived_at` (migration 0024)** distinguishes "never
+- **`brand_aliases_derived_at` (migration 0026)** distinguishes "never
   derived" from "derived, and the answer was none". The second is the common
   case; without the stamp, every scan of every alias-less brand would re-fetch
   its homepage and re-call Gemini forever to rediscover nothing.
