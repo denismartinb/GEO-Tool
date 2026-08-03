@@ -116,8 +116,13 @@ const CROSS_ICON = (
  */
 export function Checklist({ items, tone = "hacer" }: { items: ReactNode[]; tone?: "hacer" | "evitar" }) {
   const icon = tone === "evitar" ? CROSS_ICON : CHECK_ICON;
+  // El icono es `aria-hidden`, así que con lector de pantalla el matiz
+  // hacer/evitar se perdía entero: la lista sonaba igual en los dos casos. Se
+  // etiqueta la LISTA, no cada icono — un `aria-label` por punto repetiría
+  // "Evitar" cuatro veces sin añadir nada. (Mejora propuesta por el ux-pilot.)
+  const label = tone === "evitar" ? "Cosas que evitar" : "Cosas que comprobar";
   return (
-    <ul className={`art-check art-check-${tone}`}>
+    <ul className={`art-check art-check-${tone}`} aria-label={label}>
       {items.map((item, i) => (
         <li key={i}>
           {icon}
