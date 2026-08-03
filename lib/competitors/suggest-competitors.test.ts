@@ -28,6 +28,7 @@ const PROFILE = {
  */
 function createSupabaseMock(options: {
   project: Record<string, unknown> | null;
+  projectError?: { message: string };
   competitors?: Array<{ name: string | null; domain: string | null }>;
   updates?: Array<Record<string, unknown>>;
   updateError?: { message: string } | null;
@@ -50,7 +51,7 @@ function createSupabaseMock(options: {
   return {
     from: vi.fn((table: string) =>
       table === "projects"
-        ? builder({ data: options.project }, "projects")
+        ? builder({ data: options.project, error: options.projectError ?? null }, "projects")
         : builder({ data: options.competitors ?? [] }, "project_competitors")
     )
   };
@@ -58,6 +59,7 @@ function createSupabaseMock(options: {
 
 function run(overrides: {
   project?: Record<string, unknown> | null;
+  projectError?: { message: string };
   competitors?: Array<{ name: string | null; domain: string | null }>;
   updates?: Array<Record<string, unknown>>;
   refresh?: boolean;
@@ -75,6 +77,7 @@ function run(overrides: {
             suggested_competitors: null
           }
         : overrides.project,
+    projectError: overrides.projectError,
     competitors: overrides.competitors,
     updates: overrides.updates
   });
@@ -270,7 +273,29 @@ describe("getSuggestedCompetitorsCore", () => {
     if (!result.success) expect(result.error).not.toContain("503");
   });
 
-  it("16. refuses a project the user does not own", async () => {
+  it("16. distinguishes a failed lookup from a missing project — an unapplied migration must not read as \"project not found\"", async () => {
+    resolveAndCacheBusinessProfile.mockResolvedValue(PROFILE);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const suggest = vi.fn();
+
+    const result = await run({
+      project: null,
+      projectError: { message: 'column projects.suggested_competitors does not exist' },
+      suggest: suggest as never
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).not.toBe("No se ha encontrado el proyecto.");
+      // The real cause is logged server-side, never leaked to the UI.
+      expect(result.error).not.toContain("column");
+    }
+    expect(warn).toHaveBeenCalled();
+    expect(suggest).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it("17. refuses a project the user does not own", async () => {
     resolveAndCacheBusinessProfile.mockResolvedValue(PROFILE);
     const suggest = vi.fn();
     const result = await run({ project: null, suggest: suggest as never });

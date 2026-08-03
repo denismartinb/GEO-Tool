@@ -46,6 +46,8 @@ export type SuggestedCompetitorsResult =
 const SUGGESTION_LIMIT = 6;
 
 const PROJECT_NOT_FOUND = "No se ha encontrado el proyecto.";
+const LOOKUP_FAILED =
+  "No se han podido cargar los competidores sugeridos en este momento. Inténtalo de nuevo en unos minutos.";
 const PROFILE_UNRESOLVED =
   "Todavía no hemos podido identificar a qué se dedica esta marca, así que no podemos sugerir competidores fiables. Inténtalo de nuevo en unos minutos.";
 const SUGGESTION_FAILED =
@@ -132,13 +134,27 @@ export async function getSuggestedCompetitorsCore(input: {
 }): Promise<SuggestedCompetitorsResult> {
   const { projectId, refresh, supabase, user, suggest } = input;
 
-  const { data: project } = await supabase
+  const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("brand, domain, country, language, business_profile, suggested_competitors")
     .eq("id", projectId)
     .eq("owner_user_id", user.id)
     .eq("is_archived", false)
     .maybeSingle();
+
+  // A failed query and a genuinely missing project are different problems and
+  // must not share a message: reporting "no se ha encontrado el proyecto" for
+  // what is actually a DB-level failure (an unapplied migration, a transient
+  // error) sends whoever reads it chasing the wrong thing. Caught for real —
+  // the pilot surfaced exactly that on a preview where 0023 had not been
+  // applied yet.
+  if (projectError) {
+    console.warn("[suggest-competitors] project lookup failed", {
+      project_id: projectId,
+      message: projectError.message
+    });
+    return { success: false, error: LOOKUP_FAILED };
+  }
 
   if (!project) {
     return { success: false, error: PROJECT_NOT_FOUND };
