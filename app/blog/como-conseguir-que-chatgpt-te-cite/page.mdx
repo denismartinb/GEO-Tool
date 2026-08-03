@@ -1,6 +1,7 @@
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
@@ -13,9 +14,29 @@ export const metadata = {
   alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
 };
 
+export const faqItems = [
+  {
+    question: "¿Todos los motores de IA citan igual?",
+    answer:
+      "No necesariamente — cada uno tiene su propio proceso de grounding y sus propias fuentes preferidas, y esa diferencia entre motores es precisamente lo que mide tu cuota de voz por motor en Genscore. Lo que sí comparten ChatGPT, Gemini y Claude es que ninguno puede citar lo que no encuentra o no entiende."
+  },
+  {
+    question: "¿Basta con escribir mejor, o hace falta cambiar algo técnico?",
+    answer:
+      "Ambas cosas, y en ese orden de esfuerzo: primero la estructura y la claridad (gratis, solo requiere reescribir), después los datos estructurados (barato, una tarea técnica puntual), y por último la autoridad de dominio (la única que de verdad requiere tiempo)."
+  },
+  {
+    question: "¿Puedo forzar una citación con algún truco?",
+    answer:
+      "No de forma fiable, y cualquiera que lo prometa como garantía está vendiendo humo. Lo que sí puedes hacer es eliminar sistemáticamente los motivos por los que un motor generativo no te citaría."
+  }
+];
+
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
 
 <BlogPageShell>
 

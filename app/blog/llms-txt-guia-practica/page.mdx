@@ -1,6 +1,7 @@
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
@@ -13,9 +14,29 @@ export const metadata = {
   alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
 };
 
+export const faqItems = [
+  {
+    question: "¿llms.txt sustituye a robots.txt o al sitemap?",
+    answer:
+      "No. Cada uno cumple una función distinta: robots.txt controla qué puede rastrear un bot, sitemap.xml lista todas tus URLs indexables, y llms.txt es un resumen orientativo pensado para lectura rápida por un modelo. Puedes — y deberías — tener los tres a la vez, sin que se pisen entre sí."
+  },
+  {
+    question: "¿Es un estándar oficial de Google, OpenAI o Anthropic?",
+    answer:
+      "No. Es una propuesta impulsada por la comunidad de herramientas de IA, no un estándar publicado ni respaldado formalmente por ningún proveedor de motores generativos. Eso no lo invalida, pero explica por qué su adopción real sigue siendo incierta."
+  },
+  {
+    question: "¿Puede perjudicarme tener un llms.txt mal hecho?",
+    answer:
+      "No de forma directa — no es un fichero que un motor de búsqueda penalice por su contenido, a diferencia de un robots.txt mal configurado, que sí puede bloquear rastreo por error. El riesgo real de un llms.txt mal hecho es solo de tiempo mal invertido, no de penalización."
+  }
+];
+
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<FaqPageSchema items={faqItems} />
 
 <BlogPageShell>
 
