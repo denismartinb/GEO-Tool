@@ -19,6 +19,7 @@ import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
+import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 
 /* ---- Helpers ---- */
 
@@ -74,12 +75,10 @@ function parseExt(raw: unknown): ExtractedJson {
   return raw as ExtractedJson;
 }
 
-type BrandPositionRankingEntry = {
+type BrandPositionRankingEntry = PersistedRankingEntry & {
   name: string;
   is_brand: boolean;
-  avg_position_when_mentioned: number | null;
   mention_count: number;
-  mention_rate?: number;
 };
 
 function parseBrandPositionRanking(raw: unknown): BrandPositionRankingEntry[] {
@@ -398,10 +397,10 @@ export default async function CompetitorsPage({
     const ranking = rankingByRun.get(run.id) ?? [];
     const values: Record<string, number | null> = {};
     const brandEntry = ranking.find((r) => r.is_brand);
-    values.brand = brandEntry ? brandEntry.avg_position_when_mentioned : null;
+    values.brand = readPosition(brandEntry);
     for (const c of competitorRows) {
       const entry = ranking.find((r) => !r.is_brand && normKey(r.name) === normKey(c.name));
-      values[c.id] = entry ? entry.avg_position_when_mentioned : null;
+      values[c.id] = readPosition(entry);
     }
     return { date: run.finished_at ?? run.created_at, values };
   });

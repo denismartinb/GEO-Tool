@@ -103,6 +103,23 @@ at the transition; the comparability guard from ADR 0024 already refuses to
 publish a delta across differing `composite_version`, so the step cannot be
 rendered as a movement.
 
+**The cost of not backfilling is a read hazard, and it bit immediately.** A
+pre-v3 run's persisted `ranking` has no `avg_position_when_mentioned` key at
+all, so reading it yields `undefined` — a *third* runtime value for what is
+conceptually one state. `undefined ?? null` and `undefined !== null` disagree,
+and the Overview panorama used one of each: the position column read "—" while
+the rank badge on the same row read a number. Every existing project was in
+that state until its next scan, so this was the default, not an edge case. The
+agentic pilot caught it in the capture.
+
+The fix is not "use the loose comparison everywhere" — that only holds until
+the next reader forgets. `lib/scoring/brand-position-ranking.ts` collapses
+absent and null into a single `position` field once, where the persisted
+ranking is read, and every consumer reads that. **Anything reading a
+`details_json` field introduced after a run was scored must do the same:
+absent is not a value, and it must not be allowed to mean something different
+from the null it stands in for.**
+
 ### 5. The chart
 
 The trend chart was drawing eight series from `RANK_BAR_COLORS` — a

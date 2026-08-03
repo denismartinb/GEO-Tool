@@ -33,6 +33,7 @@ import { getLLMScanProviders } from "@/lib/scan/executor";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
+import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
 
 /* ---- constants & helpers ---- */
 
@@ -483,15 +484,11 @@ export default async function ProjectDetailPage({
   const brandPositionAvailable = Boolean(brandPosition) && brandPositionPromptsWithData > 0;
   // Ordered by rank WHEN MENTIONED, best first; entities the AI never named
   // have no rank at all and sort last rather than being given a fabricated
-  // one (geo-score-v3 — see docs/adr/0026).
-  const brandPositionRanking = [...(brandPosition?.ranking ?? [])].sort((a, b) => {
-    const pa = a.avg_position_when_mentioned;
-    const pb = b.avg_position_when_mentioned;
-    if (pa == null && pb == null) return 0;
-    if (pa == null) return 1;
-    if (pb == null) return -1;
-    return pa - pb;
-  });
+  // one (geo-score-v3 — see docs/adr/0026). Missing and null both mean "no
+  // rank" and are collapsed in one tested place, because readers disagreeing
+  // about which was which is what put a numeric rank badge beside a "—"
+  // position on the same row.
+  const brandPositionRanking = normalizeRanking(brandPosition?.ranking);
   const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
@@ -513,16 +510,11 @@ export default async function ProjectDetailPage({
     /** Real rank among ranked entities (1-based), or null when unavailable. */
     rank: number | null;
   };
-  /* Entities the AI actually named at least once. `computeBrandPosition`
-   * returns an entry for every tracked entity — including ones never
-   * mentioned, which carry `avg_position_when_mentioned: null` and sort last
-   * (geo-score-v3, docs/adr/0026). Their array index is NOT a rank: reading
-   * it as one is the same fabrication the N+1 penalty used to commit, just
-   * moved into the view layer. Because nulls sort last, every ranked entity
-   * has an index below this count, so `i + 1` is a true ordinal for them. */
-  const rankedEntityCount = brandPositionRanking.filter(
-    (e) => e.avg_position_when_mentioned !== null
-  ).length;
+  // Denominator for "your rank X of N": only entities the AI named. Counting
+  // the whole array counts brands that never appeared as if they were
+  // competing for the same places. Because unranked entities sort last,
+  // `i + 1` is a true ordinal for every entity with a position.
+  const rankedEntityCount = countRanked(brandPositionRanking);
   // Single source of truth for BOTH the position-bar chart and the ranked
   // list below it — both panels must show the same entities in the same
   // order, or the two numbers ("posición 2" on the bar vs. a different row
@@ -537,10 +529,10 @@ export default async function ProjectDetailPage({
             name: project.brand,
             domain: project.domain,
             isBrand: true,
-            avgPosition: entry.avg_position_when_mentioned ?? null,
+            avgPosition: entry.position,
             mentionRate: entry.mention_rate ?? null,
             sov: brandSov,
-            rank: entry.avg_position_when_mentioned !== null ? i + 1 : null
+            rank: entry.position !== null ? i + 1 : null
           };
         }
         const match = competitorRows.find(
@@ -551,10 +543,10 @@ export default async function ProjectDetailPage({
           name: entry.name ?? "—",
           domain: match?.domain ?? null,
           isBrand: false,
-          avgPosition: entry.avg_position_when_mentioned ?? null,
+          avgPosition: entry.position,
           mentionRate: entry.mention_rate ?? null,
           sov: match?.sov ?? 0,
-          rank: entry.avg_position_when_mentioned !== null ? i + 1 : null
+          rank: entry.position !== null ? i + 1 : null
         };
       })
     : [
@@ -577,7 +569,7 @@ export default async function ProjectDetailPage({
   const brandRankingEntry = brandPositionRanking.find((e) => e.is_brand);
   const brandRankIndex = brandPositionRanking.findIndex((e) => e.is_brand);
   const brandRank =
-    brandRankIndex >= 0 && brandRankingEntry?.avg_position_when_mentioned != null
+    brandRankIndex >= 0 && brandRankingEntry?.position != null
       ? brandRankIndex + 1
       : null;
   // Denominator is the entities the AI named, not every entity we track —
