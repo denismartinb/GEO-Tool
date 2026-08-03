@@ -20,8 +20,9 @@ const NAV_LINKS = [
 
 /**
  * Illustrative example values for the GEO Score panel mock. Weights are the
- * real ones (docs/adr/0008 + ADR 0015 — same as components/blog/
- * geo-score-breakdown.tsx and the Overview composition block); values are
+ * real ones (docs/adr/0008 + ADR 0015 — same as the article ProductMock in
+ * components/blog/article/figure.tsx and the Overview composition block);
+ * values are
  * sample data and the headline score below is their exact weighted sum, so
  * the mock teaches the real arithmetic instead of showing made-up numbers
  * that don't add up.
