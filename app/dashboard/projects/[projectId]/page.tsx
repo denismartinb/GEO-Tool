@@ -903,8 +903,13 @@ export default async function ProjectDetailPage({
                             bands on this screen and leaving the fourth would
                             just be arbitrary. */}
                         {!sampleSufficient ? (
-                          <span className="delta flat" title={`Calculado sobre ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA — muestra insuficiente para clasificar.`}>
-                            — muestra insuficiente
+                          // "— sin clasificar", not "— muestra insuficiente":
+                          // the longer string overflows this KPI card at 375px
+                          // (found by judging the pilot's own mobile capture).
+                          // The tooltip carries the why; the visible label only
+                          // has to say that the band is being withheld.
+                          <span className="delta flat" title={`Calculado sobre ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA — muestra insuficiente para clasificar. Añade prompts o motores.`}>
+                            — sin clasificar
                           </span>
                         ) : (
                         <span className={`badge ${
