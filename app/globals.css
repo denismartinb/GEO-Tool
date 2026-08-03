@@ -911,6 +911,66 @@ a {
   visibility: visible;
   transform: translateY(0);
 }
+
+/* Systemic fix (2026-08-03), not a fifth one-off patch.
+ *
+ * The default bubble above is `position: absolute; left: 0; width: 220px`,
+ * anchored to the trigger's own 14×14px box. `visibility: hidden` does NOT
+ * remove it from layout — a trigger placed anywhere past ~155px from its
+ * row's right edge overflows a 375px viewport for real, permanently, with
+ * no hover needed, whether or not anyone ever notices (the overflow was
+ * invisible to every check until 2026-08-03, when journey.ts started
+ * measuring the element that actually clips instead of the document — see
+ * its SHELL_CLIPPING_CLASSES comment). Found FOUR real, independent
+ * instances this way in one day: `.cit2-kpis` (patched 2026-08-01, before
+ * the class of bug had a name), `.cit2-split-key` and `.wa2-diag-title`
+ * (patched earlier today), `.cm2-pos-list-hd` (Competitors, COMP-REDESIGN-1,
+ * PR #285 — not this PR's own code, exposed by the same fix). Four bespoke
+ * classes reinventing the same three lines is how the fourth one shipped
+ * unpatched in the first place.
+ *
+ * `.info-tip-anchor` is the ONE reusable mechanism going forward: apply it
+ * to whatever element should own the tooltip's safe width — normally the
+ * immediate label/heading row wrapping the trigger, not a whole card, so the
+ * bubble reads as attached to that row rather than floating under
+ * unrelated content below it. The three prior one-off classes are folded
+ * into this same selector list rather than left as separate copies of an
+ * identical rule.
+ *
+ * This does not make overflow provably impossible in every future layout —
+ * a pure-CSS tooltip with no JS cannot know the viewport's remaining width
+ * at the trigger's exact position, so a wrapper wider than the viewport can
+ * still overflow. It removes the actual failure mode behind all four real
+ * cases (a fixed-width bubble anchored to a small trigger with no positioned
+ * ancestor to constrain it) and gives every future InfoTip call site one
+ * documented class to reach for instead of a fifth bespoke override.
+ */
+.info-tip-anchor,
+.cit2-kpis,
+.cit2-split-key,
+.wa2-diag-title,
+.cm2-pos-list-hd {
+  position: relative;
+}
+.info-tip-anchor .info-tip,
+.cit2-kpis .info-tip,
+.cit2-split-key .info-tip,
+.wa2-diag-title .info-tip,
+.cm2-pos-list-hd .info-tip {
+  position: static;
+}
+.info-tip-anchor .info-tip-bubble,
+.cit2-kpis .info-tip-bubble,
+.cit2-split-key .info-tip-bubble,
+.wa2-diag-title .info-tip-bubble,
+.cm2-pos-list-hd .info-tip-bubble {
+  top: 100%;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  margin-top: 6px;
+}
 .stat-value {
   font-size: 32px;
   font-weight: 800;
@@ -2161,7 +2221,10 @@ a {
 .cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 /* inline-flex keeps the InfoTip glyph on the label's own line — as plain
    inline content after an uppercase, letter-spaced label it wrapped onto a
-   second line by itself. */
+   second line by itself. Tooltip overflow fix (fourth of four real cases,
+   2026-08-03, pre-existing from COMP-REDESIGN-1) is in the shared
+   `.info-tip-anchor` rule near the base `.info-tip` definition —
+   `.cm2-pos-list-hd` is already in that rule's selector list. */
 .cm2-pos-list-hd {
   display: flex; align-items: center; gap: 5px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
@@ -2278,15 +2341,11 @@ a {
    corners. */
 .cit2-kpis { position: relative; display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); margin-top: 4px; }
 /* The KPI tooltips anchor to the STRIP, not to their own 14px trigger, and
-   open downward. Two reasons, both caught from the pilot's interaction
-   captures rather than from reading the CSS:
-   1. Upward + a clipped parent cut the bubble in half (see above).
-   2. The bubble is a fixed 220px; anchored to the trigger, the last KPI's
-      bubble ran past the right edge on a 375px viewport, which would have
-      introduced horizontal overflow the moment a user hovered it.
-   Spanning the strip (left:0/right:0) is immune to both at every width. */
-.cit2-kpis .info-tip { position: static; }
-.cit2-kpis .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
+   open downward — first caught from the pilot's interaction captures
+   (2026-08-02: a clipped parent cut the bubble in half; also the origin of
+   the overflow bug the shared `.info-tip-anchor` rule near the base
+   `.info-tip` definition now documents and fixes for `.cit2-kpis` and every
+   other known/future call site in one place, not just this one. */
 .cit2-kpis > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line-soft); }
 .cit2-kpis > div:last-child { border-right: 0; }
 .cit2-k { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }
@@ -2352,19 +2411,9 @@ a {
 .cit2-split-key { position: relative; display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
 .cit2-split-key span { display: inline-flex; align-items: center; gap: 5px; }
 .cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
-/* Same bug the .cit2-kpis override above already documents, same fix — this
-   row just went unpatched. The default .info-tip-bubble is `position:
-   absolute; left: 0; width: 220px`, anchored to its own 14px trigger; a long
-   label ("Terceros que mencionan a un competidor tuyo") pushes its `i` icon
-   far enough right that the 220px bubble runs past a 375px viewport's edge.
-   `visibility: hidden` does NOT remove it from layout, so that overflow was
-   real and permanent — just invisible to any check measuring
-   document.documentElement instead of the actual clipping element, which is
-   exactly the harness bug fixed in journey.ts (2026-08-03). First real run
-   with that fix caught it: `scrollWidth 415px > viewport 375px` on
-   /citations, mobile, no hover needed. */
-.cit2-split-key .info-tip { position: static; }
-.cit2-split-key .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
+/* Tooltip overflow fix for this row folded into the shared `.info-tip-anchor`
+   rule near the base `.info-tip` definition (2026-08-03) — see that comment
+   for the full incident history (this was the second of four real cases). */
 
 /* Source-type donut */
 .cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
@@ -5669,19 +5718,11 @@ select.set-field {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
 }
-/* Third instance of the exact bug .cit2-kpis (2026-08-01) and .cit2-split-key
-   (2026-08-03) already document and patch: the default .info-tip-bubble is
-   `position: absolute; left: 0; width: 220px`, and this specific trigger
-   ("Diagnóstico general" ⓘ) sits far enough right in the hero card that the
-   bubble ran 17px past a 375px viewport — invisible (visibility: hidden
-   still lays out), caught only once the pilot's overflow check measured the
-   real clipping element instead of the document (journey.ts, 2026-08-03).
-   Same fix, same reason a dedicated class is needed here instead of reusing
-   .cit2-kpis/.cit2-split-key: this title row is inline-styled JSX, not a
-   shared globals.css block. */
-.wa2-diag-title { position: relative; }
-.wa2-diag-title .info-tip { position: static; }
-.wa2-diag-title .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
+/* Tooltip overflow fix for this row (the "Diagnóstico general" ⓘ, third of
+   four real cases) folded into the shared `.info-tip-anchor` rule near the
+   base `.info-tip` definition (2026-08-03) — `.wa2-diag-title` is already
+   in that rule's selector list, so this class name alone is enough; no
+   separate override needed here. */
 /* Audit-date line in the sticky header. Deliberately NOT inside .wa2-scope:
    the header stays on the shared token system (see the .wa2-scope comment
    above), so these are plain global classes.
