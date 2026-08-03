@@ -2,27 +2,35 @@
  * UX-PILOT-3 — the gate on the pilot launching a real scan.
  *
  * Founder, 2026-08-03: *"que el pilot aprenda a lanzar escaneos cuando lo
- * necesite… solo necesita preguntarme y yo lo autorizo."*
+ * necesite"* and then, on the first design: *"tiene que dar al botón como si le
+ * diera yo, sin claves ni secretos."*
  *
- * A scan spends real money against Gemini, OpenAI and Anthropic and writes to
- * the production Supabase project. "The agent asks first" is a human gate, and
- * a human gate alone is a convention — one forgetful code path and the money is
- * gone. `CLAUDE.md` requires the guard be *enforced in code by an allow-list,
- * not by convention*, so both have to hold at once:
+ * The first version required a `PILOT_SCAN_AUTHORIZATION` secret on top of the
+ * manual dispatch. That was dropped, and dropping it was right: anyone able to
+ * set a repository secret is already able to trigger the workflow, so the
+ * secret bought no access control that `workflow_dispatch` did not already
+ * provide. It only added a setup step that made the capability harder to use
+ * than pressing the button by hand — which defeats the point.
  *
- *   - **The lock.** Nothing here authorizes anything unless
- *     `PILOT_SCAN_AUTHORIZATION` is present. It is a repository secret only the
- *     founder sets, and the per-deploy workflow never passes it. A pilot run
- *     that acquires the ability to scan by accident is therefore not a code
- *     path that exists.
- *   - **The gate.** The scan journeys live in their own Playwright project,
- *     which `scripts/pilot.mjs` only ever includes for an explicit
- *     `--journeys scan`. Reaching them at all takes a deliberate manual
- *     `workflow_dispatch`.
+ * WHAT STILL HOLDS, in code rather than by convention:
  *
- * Refusal is loud and specific. A pilot that quietly skipped scanning would
- * report "nothing to do" for a run the founder deliberately triggered, which is
- * the same class of lie as reporting a pass for a screen nobody saw.
+ *   - **The always-on pilot cannot reach this at all.** The scan journeys live
+ *     in their own Playwright project, which `scripts/pilot.mjs` includes only
+ *     for an explicit `--journeys scan`, in a workflow with no
+ *     `deployment_status` trigger. No preview deploy can spend money.
+ *   - **The target is never discovered.** `PILOT_SCAN_PROJECT_ID` is a required
+ *     input with no default. "Scan whatever project is first" is how a pilot
+ *     ends up spending money on the founder's real tracked brand.
+ *   - **The cap is refused, not clamped.** More than `MAX_SCANS_PER_RUN` is an
+ *     error; silently scanning fewer times than instructed would read as a run
+ *     that did what it was asked.
+ *
+ * WHAT NO LONGER HOLDS, stated plainly rather than glossed: nothing in code
+ * distinguishes a human pressing "Run workflow" from an agent dispatching it
+ * with a repository token. That distinction was what the secret bought, and the
+ * founder traded it away deliberately so the pilot can do this itself. The
+ * remaining protection is that dispatching requires repository write access and
+ * that the run announces, in the PR comment, exactly what it spent.
  */
 
 /**
@@ -41,11 +49,10 @@ export type ScanAuthorization =
 
 /**
  * Structurally compatible with `process.env` so the journey can pass it
- * straight through, while tests construct exactly the three variables that
+ * straight through, while tests construct exactly the two variables that
  * matter. The index signature is what makes `ProcessEnv` assignable.
  */
 export type ScanAuthorizationEnv = {
-  PILOT_SCAN_AUTHORIZATION?: string;
   PILOT_SCAN_PROJECT_ID?: string;
   PILOT_SCAN_COUNT?: string;
   [key: string]: string | undefined;
@@ -59,27 +66,18 @@ export type ScanAuthorizationEnv = {
  * ones where it says no.
  */
 export function resolveScanAuthorization(env: ScanAuthorizationEnv): ScanAuthorization {
-  const token = env.PILOT_SCAN_AUTHORIZATION?.trim();
-  if (!token) {
-    return {
-      authorized: false,
-      reason:
-        "PILOT_SCAN_AUTHORIZATION is not set. Launching a scan costs real money against " +
-        "three providers, so it requires the founder's per-run authorization (UX-PILOT-3). " +
-        "This is the expected state for every automatic per-deploy run."
-    };
-  }
-
-  // A dedicated, pinned project — never the auto-discovery the read-only
-  // journeys use. "Scan whatever project happens to be first" is how a pilot
-  // ends up spending money on the founder's real, tracked brand.
+  // The single most important refusal: absent means "no scan", never "pick
+  // one". Every other run of the harness — every preview deploy — passes an
+  // environment without this, and must come out the other side having spent
+  // nothing.
   const projectId = env.PILOT_SCAN_PROJECT_ID?.trim();
   if (!projectId) {
     return {
       authorized: false,
       reason:
         "PILOT_SCAN_PROJECT_ID is not set. The project to scan must be named explicitly; " +
-        "the pilot will not discover one to spend money on."
+        "the pilot will not discover one to spend money on. This is the expected state for " +
+        "every automatic per-deploy run."
     };
   }
 

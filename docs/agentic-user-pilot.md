@@ -349,24 +349,35 @@ any project the pilot could reach, so the verdict was INCONCLUSIVE and no
 amount of harness work could change it. Without this journey that repeats on
 every methodology PR, forever.
 
-**Three independent locks.** "The agent asks first" is a human gate, and a
-human gate alone is a convention — one forgetful code path and the money is
-gone. This file's own rule is that the guard is *enforced in code by an
-allow-list, not by convention*, so both hold at once:
+**No secret gates it.** Founder, on reviewing the first design: *"tiene que
+dar al botón como si le diera yo, sin claves ni secretos."* That design
+required a `PILOT_SCAN_AUTHORIZATION` secret on top of the manual dispatch, and
+dropping it was right — anyone able to set a repository secret can already
+dispatch the workflow, so it bought no access control, only a setup step that
+made the capability harder to use than pressing the button by hand.
+
+**What still holds, in code rather than by convention:**
 
 1. **`workflow_dispatch` only.** `.github/workflows/ux-pilot-scan.yml` has no
-   `deployment_status` trigger, so no preview deploy can start it. Triggering
-   it is the founder's authorization — there is no path where it happens
-   without one.
+   `deployment_status` trigger, so no preview deploy can ever start it.
 2. **`--journeys scan`.** `scripts/pilot.mjs` includes the `scan` Playwright
    project only for that explicit flag. The per-deploy workflow runs the
    default read set and cannot reach `tests/pilot/journeys/scan/**` at all.
-3. **`PILOT_SCAN_AUTHORIZATION`.** `tests/pilot/support/scan-authorization.ts`
-   refuses without the founder's secret, refuses without an explicitly named
-   `PILOT_SCAN_PROJECT_ID`, and refuses above the hard cap of
-   `MAX_SCANS_PER_RUN = 2` rather than clamping — a run that spends less than
-   it was told to reads as a run that did what it was asked. Ten unit tests
-   cover the refusal paths, because those are the ones that must never regress.
+   The self-check asserts this every run.
+3. **The target is never discovered.** `project_id` is a required workflow
+   input with no default, and `tests/pilot/support/scan-authorization.ts`
+   refuses without it — and refuses above the hard cap of
+   `MAX_SCANS_PER_RUN = 2` rather than clamping, because a run that spends less
+   than it was told to reads as a run that did what it was asked. Nine unit
+   tests cover the refusal paths, because those are the ones that must never
+   regress.
+
+**What no longer holds**, stated rather than glossed: nothing in code
+distinguishes a human pressing "Run workflow" from an agent dispatching it with
+a repository token. That distinction is exactly what the secret bought, and it
+was traded away deliberately so the pilot can do this itself. What remains is
+that dispatching takes repository write access, and that every run states in
+its PR comment what it spent.
 
 **What it does.** Presses the project's own "Repetir escaneo" button on an
 existing project, up to twice, waiting for each to finish. Then captures the
@@ -391,12 +402,22 @@ and against which project: cost that is not stated is cost nobody reviews.
 spent and the screens were photographed. The `ux-pilot` agent still has to look
 at them.
 
-### Required secrets
+### How to run it
 
-| Secret | Purpose |
+Actions → **Agentic User Pilot (scan)** → Run workflow, or dispatch it via the
+API. Three inputs, no secrets to configure:
+
+| Input | Notes |
 |---|---|
-| `PILOT_SCAN_AUTHORIZATION` | The founder's grant. Absent everywhere else; without it nothing launches. |
-| `PILOT_SCAN_PROJECT_ID` | The one project that may be scanned. Never auto-discovered. |
+| `pr_number` | Whose preview to scan against |
+| `project_id` | Required, no default. The pilot never picks one. |
+| `scan_count` | 1 unlocks the position list, 2 unlocks the trend chart. Capped at 2. |
+
+**A `workflow_dispatch` workflow must exist on the default branch before it can
+be dispatched at all** — GitHub returns 404 otherwise (hit for real on PR #308,
+where the workflow that would have verified the PR could not run until the PR
+merged). So the first run of any new dispatch workflow is always after its own
+merge.
 
 ## UX-PILOT-2a — the one write journey (opt-in, not automatic)
 

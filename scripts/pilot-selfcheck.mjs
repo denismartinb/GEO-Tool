@@ -166,9 +166,9 @@ function verifyCaptureDepth() {
  * every preview deploy runs. If a future refactor widens a testMatch or adds
  * `scan` to the read set, this fails.
  *
- * Note the self-check never sets `PILOT_SCAN_AUTHORIZATION`, so even reaching
- * the journey would refuse. Both locks are meant to hold independently; this
- * checks the outer one.
+ * The self-check never sets `PILOT_SCAN_PROJECT_ID` either, so even reaching
+ * the journey would refuse. The two locks are meant to hold independently;
+ * this checks the outer one.
  */
 function verifyDeployRunCannotScan() {
   if (!existsSync(".pilot/findings.jsonl")) {

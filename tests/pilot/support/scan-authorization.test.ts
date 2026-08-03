@@ -6,30 +6,21 @@ import {
 } from "./scan-authorization";
 
 const VALID = {
-  PILOT_SCAN_AUTHORIZATION: "granted-by-founder",
   PILOT_SCAN_PROJECT_ID: "proj-123",
   PILOT_SCAN_COUNT: "2"
 };
 
 describe("resolveScanAuthorization", () => {
-  it("refuses without the founder's token — the default state of every deploy run", () => {
-    const result = resolveScanAuthorization({ ...VALID, PILOT_SCAN_AUTHORIZATION: undefined });
-    expect(result.authorized).toBe(false);
-    expect(result.authorized === false && result.reason).toContain("PILOT_SCAN_AUTHORIZATION");
-  });
-
-  it("treats an empty or whitespace token as absent", () => {
-    for (const token of ["", "   ", "\n"]) {
-      expect(resolveScanAuthorization({ ...VALID, PILOT_SCAN_AUTHORIZATION: token }).authorized).toBe(
-        false
-      );
-    }
-  });
-
   it("refuses without an explicitly named project — it will not go find one to spend money on", () => {
     const result = resolveScanAuthorization({ ...VALID, PILOT_SCAN_PROJECT_ID: undefined });
     expect(result.authorized).toBe(false);
     expect(result.authorized === false && result.reason).toContain("PILOT_SCAN_PROJECT_ID");
+  });
+
+  it("treats an empty or whitespace project id as absent", () => {
+    for (const id of ["", "   ", "\n"]) {
+      expect(resolveScanAuthorization({ ...VALID, PILOT_SCAN_PROJECT_ID: id }).authorized).toBe(false);
+    }
   });
 
   it("authorizes exactly what it was told to", () => {
@@ -76,6 +67,6 @@ describe("describeAuthorization", () => {
   it("states why it refused", () => {
     const described = describeAuthorization(resolveScanAuthorization({}));
     expect(described).toContain("no autorizado");
-    expect(described).toContain("PILOT_SCAN_AUTHORIZATION");
+    expect(described).toContain("PILOT_SCAN_PROJECT_ID");
   });
 });

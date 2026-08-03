@@ -26,13 +26,14 @@ import {
  * production Supabase project. Two independent things must both hold before a
  * single click happens:
  *
- *   1. `resolveScanAuthorization` refuses unless the founder's
- *      `PILOT_SCAN_AUTHORIZATION` secret is present, the project is named
- *      explicitly, and the count is within the hard cap. The per-deploy
- *      workflow never passes that secret.
+ *   1. `resolveScanAuthorization` refuses unless the project is named
+ *      explicitly — `PILOT_SCAN_PROJECT_ID`, a required workflow input with no
+ *      default — and the count is within the hard cap. Every per-deploy run
+ *      passes an environment without it and must spend nothing.
  *   2. This file lives under `journeys/scan/`, which only the `scan` Playwright
  *      project matches, which `scripts/pilot.mjs` only includes for an explicit
- *      `--journeys scan`. The always-on run cannot reach it at all.
+ *      `--journeys scan`. The always-on run cannot reach it at all, and the
+ *      self-check asserts that every run.
  *
  * Within those bounds the journey is still deliberately narrow: it presses the
  * project's own "Repetir escaneo" button on a project that already exists. It

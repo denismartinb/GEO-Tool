@@ -172,11 +172,15 @@ switching project is navigation, and every journey it runs is read-only.
 the pilot may launch real scans on a pinned project when a state is
 unreachable without one, because after a scoring change no run anywhere carries
 the new shape of data and no amount of looking harder fixes that. Three
-independent locks, none of them a convention: `workflow_dispatch` only (no
-deploy can trigger it), `--journeys scan` (the per-deploy read set cannot reach
-the files), and the founder's `PILOT_SCAN_AUTHORIZATION` secret (the code
-refuses without it, refuses without a named project, and refuses above the hard
-cap of 2 rather than clamping). It presses the project's own scan button and
+locks, none of them a convention: `workflow_dispatch` only (no deploy can
+trigger it), `--journeys scan` (the per-deploy read set cannot reach the files,
+asserted by the self-check every run), and a required `project_id` input with
+no default (the code refuses without it, and refuses above the hard cap of 2
+rather than clamping). **No secret gates it** — founder, 2026-08-03: *"tiene
+que dar al botón como si le diera yo, sin claves ni secretos"*; anyone able to
+set a secret could already dispatch the workflow, so it bought no access
+control. What that trades away, stated rather than glossed: nothing in code
+distinguishes a human pressing the button from an agent dispatching it. It presses the project's own scan button and
 nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
 still has to judge them. Anything wider still needs its own Task Intake.
 

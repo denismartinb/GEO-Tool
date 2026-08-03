@@ -13,16 +13,28 @@ name: Agentic User Pilot (scan)
 # criteria, including the entire trend chart, had no qualifying data on any
 # project the pilot could reach.
 #
-# THREE INDEPENDENT LOCKS, none of which is a convention:
+# NO SECRET GATES THIS. Founder, 2026-08-03: "tiene que dar al botón como si le
+# diera yo, sin claves ni secretos." An earlier design required an extra
+# authorization secret; it was dropped because anyone able to set a repository
+# secret can already dispatch this workflow, so it bought no access control —
+# only a setup step that made the capability harder to use than pressing the
+# button by hand.
+#
+# WHAT STILL HOLDS, in code rather than by convention:
 #   1. workflow_dispatch only. There is no deployment_status trigger, so no
 #      preview deploy can ever start this.
 #   2. --journeys scan. scripts/pilot.mjs includes the `scan` Playwright
 #      project only for that explicit flag; the per-deploy workflow passes
 #      --journeys read (the default) and cannot reach these files.
-#   3. PILOT_SCAN_AUTHORIZATION. tests/pilot/support/scan-authorization.ts
-#      refuses to launch anything without the founder's secret, refuses without
-#      an explicitly named project, and refuses above the hard cap instead of
-#      clamping.
+#   3. The target is never discovered. project_id is a required input with no
+#      default, and tests/pilot/support/scan-authorization.ts refuses without
+#      it, and refuses above the hard cap of 2 instead of clamping.
+#
+# WHAT NO LONGER HOLDS, said plainly: nothing distinguishes a human pressing
+# "Run workflow" from an agent dispatching it with a repository token. That is
+# the point — the pilot is meant to be able to do this itself. What remains is
+# that it takes repository write access, and that every run states in the PR
+# comment exactly what it spent.
 #
 # Same fork-safety reasoning as the other two pilot workflows: no
 # pull_request_target — this job holds real credentials and spends real money.
@@ -34,6 +46,10 @@ on:
         description: "Pull request number whose preview to scan against"
         required: true
         type: number
+      project_id:
+        description: "Project id to scan. Required, no default — the pilot never picks one to spend money on."
+        required: true
+        type: string
       scan_count:
         description: "How many scans to launch (1 unlocks the position list, 2 unlocks the trend chart). Hard cap is 2."
         required: true
@@ -98,21 +114,17 @@ jobs:
           fi
           echo "url=${url}" >> "$GITHUB_OUTPUT"
 
-      # Fails before installing anything, so a run triggered without the
-      # authorization configured says why immediately instead of spending five
-      # minutes on setup and then skipping silently.
-      - name: Refuse without the founder's authorization
+      # Fails before installing anything, so a run triggered without a target
+      # says why immediately instead of spending five minutes on setup and then
+      # skipping silently. `required: true` already stops the UI, but the API
+      # accepts a dispatch with an empty string.
+      - name: Refuse without an explicit target project
         env:
-          AUTHORIZED: ${{ secrets.PILOT_SCAN_AUTHORIZATION != '' }}
-          TARGET: ${{ secrets.PILOT_SCAN_PROJECT_ID != '' }}
+          TARGET: ${{ inputs.project_id }}
         run: |
           set -euo pipefail
-          if [ "$AUTHORIZED" != "true" ]; then
-            echo "::error::PILOT_SCAN_AUTHORIZATION is not set. Launching a scan spends real money, so it needs the founder's explicit authorization secret (UX-PILOT-3)."
-            exit 1
-          fi
-          if [ "$TARGET" != "true" ]; then
-            echo "::error::PILOT_SCAN_PROJECT_ID is not set. The project to scan must be named explicitly — the pilot will not pick one to spend money on."
+          if [ -z "${TARGET// /}" ]; then
+            echo "::error::project_id is empty. The project to scan must be named explicitly — the pilot will not pick one to spend money on."
             exit 1
           fi
 
@@ -144,8 +156,7 @@ jobs:
         env:
           PILOT_EMAIL: ${{ secrets.PILOT_EMAIL }}
           PILOT_PASSWORD: ${{ secrets.PILOT_PASSWORD }}
-          PILOT_SCAN_AUTHORIZATION: ${{ secrets.PILOT_SCAN_AUTHORIZATION }}
-          PILOT_SCAN_PROJECT_ID: ${{ secrets.PILOT_SCAN_PROJECT_ID }}
+          PILOT_SCAN_PROJECT_ID: ${{ inputs.project_id }}
           PILOT_SCAN_COUNT: ${{ inputs.scan_count }}
           PILOT_COMMIT_SHA: ${{ steps.pr.outputs.sha }}
           PILOT_PR_NUMBER: ${{ inputs.pr_number }}

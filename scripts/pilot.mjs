@@ -100,8 +100,8 @@ const PROJECT_SETS = {
   write: ["auth", "write"],
   // UX-PILOT-3. Reaching the scan journey takes this explicit flag, which the
   // per-deploy workflow never passes — and even then the journey refuses
-  // without the founder's PILOT_SCAN_AUTHORIZATION secret. Two independent
-  // locks, on purpose: this is the one journey that spends money.
+  // without an explicitly named PILOT_SCAN_PROJECT_ID. Two independent locks,
+  // on purpose: this is the one journey that spends money.
   scan: ["auth", "scan"]
 };
 
@@ -187,9 +187,6 @@ function writeSummaryMarkdown(path, { verdict, baseUrl, sha, failures, journeys 
         : isScan
           ? ["PILOT_SCAN_PROJECT_ID", Boolean(process.env.PILOT_SCAN_PROJECT_ID)]
           : ["PILOT_PROJECT_ID", Boolean(process.env.PILOT_PROJECT_ID)],
-      // Stated on every scan run: the authorization that permitted real spend
-      // is the first thing a reviewer should be able to see.
-      ...(isScan ? [["PILOT_SCAN_AUTHORIZATION", Boolean(process.env.PILOT_SCAN_AUTHORIZATION)]] : []),
       ["PILOT_VERCEL_BYPASS", Boolean(process.env.PILOT_VERCEL_BYPASS)]
     ]
       .map(([name, present]) => `${name} ${present ? "✅" : "—"}`)
