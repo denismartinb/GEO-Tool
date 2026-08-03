@@ -7,8 +7,6 @@ import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { BLOG_CLUSTERS, getBlogCluster, getPostsByCluster } from "@/lib/blog/posts";
 
 const SITE_URL = "https://www.genscore.es";
-/** GROWTH-2 Fase 2.9 — same fixed-date convention as app/sitemap.ts. */
-const PILLAR_LAST_MODIFIED = "2026-08-03";
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
