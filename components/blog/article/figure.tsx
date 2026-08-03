@@ -30,6 +30,63 @@ export function Figure({
   );
 }
 
+/**
+ * Maqueta de cuota de voz: qué marcas se reparten las menciones de un
+ * conjunto de prompts, con la tuya marcada. Reproduce la pantalla de
+ * competidores del producto.
+ *
+ * `total` es obligatorio y se pinta en la cabecera: una cuota de voz sin
+ * decir sobre cuántos prompts se calcula no significa nada, y este proyecto
+ * no publica cifras sin su denominador.
+ */
+export function ShareOfVoice({
+  brands,
+  total
+}: {
+  brands: { name: string; value: number; you?: boolean }[];
+  total: string;
+}) {
+  const max = Math.max(...brands.map((b) => b.value));
+  return (
+    <div className="art-sov">
+      <div className="art-sov-h">
+        <span>Cuota de voz</span>
+        <span className="art-sov-total">{total}</span>
+      </div>
+      {brands.map((b) => (
+        <div key={b.name} className={b.you ? "art-sov-row art-sov-you" : "art-sov-row"}>
+          <span className="art-sov-n">
+            {b.name}
+            {b.you && <em>tu marca</em>}
+          </span>
+          <div className="art-sov-track">
+            <div className="art-sov-fill" style={{ width: `${(b.value / max) * 100}%` }} />
+          </div>
+          <span className="art-sov-v">{b.value}%</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Maqueta de un conjunto de prompts con su intención. Existe porque el
+ * consejo "cubre varias intenciones" es abstracto hasta que ves cuatro
+ * prompts reales uno debajo de otro y notas que preguntan cosas distintas.
+ */
+export function PromptSet({ prompts }: { prompts: { text: string; intent: string }[] }) {
+  return (
+    <div className="art-prompts">
+      {prompts.map((p) => (
+        <div key={p.text} className="art-prompt-row">
+          <span className="art-prompt-q">{p.text}</span>
+          <span className="art-prompt-i">{p.intent}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export type MockRow = {
   label: string;
   hint: string;

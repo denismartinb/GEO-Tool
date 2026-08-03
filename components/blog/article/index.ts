@@ -24,4 +24,4 @@ export {
   ArticleCta
 } from "./blocks";
 
-export { Figure, ProductMock, type MockRow } from "./figure";
+export { Figure, ProductMock, ShareOfVoice, PromptSet, type MockRow } from "./figure";
