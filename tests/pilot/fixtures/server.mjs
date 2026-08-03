@@ -63,8 +63,10 @@ const PUBLIC_PAGES = new Map([
   ["/cookies", "Cookies — Genscore"],
   ["/terminos", "Términos — Genscore"],
   ["/glosario", "Glosario GEO — Genscore"],
+  ["/comparativas", "Comparativas — Genscore"],
   ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
-  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"]
+  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"],
+  ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — Genscore"]
 ]);
 
 // GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
