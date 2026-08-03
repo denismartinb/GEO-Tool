@@ -1,6 +1,8 @@
 import "server-only";
+import { z } from "zod";
 import { fetchPageSafely } from "@/lib/web-audit/fetch-page";
 import { inferBusinessProfile, type BusinessProfile } from "@/lib/llm/gemini";
+import { type AuthenticatedContext } from "@/lib/scan/types";
 
 /**
  * COMPETITOR-GROUNDING-1: gives Gemini real evidence of what a business
@@ -82,6 +84,85 @@ export async function fetchHomepageEvidence(domain: string): Promise<HomepageEvi
   }
 
   return { status: "ok", title, description, headings, excerpt };
+}
+
+const persistedBusinessProfileSchema = z.object({
+  whatItSells: z.string(),
+  sector: z.string(),
+  subSector: z.string(),
+  businessModel: z.enum(["b2b", "b2c", "both", "unknown"]),
+  targetCustomer: z.string(),
+  geographicScope: z.string(),
+  sizeEstimate: z.string(),
+  confidence: z.enum(["low", "medium", "high"])
+});
+
+/**
+ * Defensively parses `projects.business_profile` (jsonb) — never throws,
+ * returns null on anything malformed/absent. Shared by every reader of the
+ * cached profile (prompt suggestion, and — EMERGING-BRANDS-GROUNDING-1 —
+ * scan extraction), so the persisted shape only has one source of truth.
+ */
+export function parsePersistedBusinessProfile(raw: unknown): BusinessProfile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const parsed = persistedBusinessProfileSchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
+}
+
+/**
+ * COMPETITOR-GROUNDING-2 (docs/adr/0022): resolves the business profile a
+ * project should be reasoned about with, computing and persisting it lazily
+ * on first use rather than requiring it at project-creation time.
+ *
+ * Shared by every feature that needs to know what the business actually does
+ * — prompt generation (lib/projects/add-prompts.ts) and competitor
+ * suggestion (lib/competitors/suggest-competitors.ts) — so the cache is
+ * written once and reused by both instead of each recomputing its own.
+ *
+ * Never blocks the caller: any failure to resolve or persist simply returns
+ * null, and each caller decides what "no profile" means for it (blind
+ * fallback for prompts, honest "can't suggest yet" for competitors).
+ */
+export async function resolveAndCacheBusinessProfile(input: {
+  projectId: string;
+  ownerUserId: string;
+  domain: string;
+  country: string;
+  language: string;
+  existingProfile: unknown;
+  supabase: AuthenticatedContext["supabase"];
+  /** Tag used in the cache-write warning log, so the source stays identifiable. */
+  logLabel?: string;
+}): Promise<BusinessProfile | null> {
+  const cached = parsePersistedBusinessProfile(input.existingProfile);
+  if (cached) return cached;
+
+  const context = await resolveBusinessContext({
+    domain: input.domain,
+    country: input.country,
+    language: input.language
+  }).catch(() => ({ status: "unidentified" }) as const);
+
+  if (context.status === "unidentified") return null;
+
+  // Best-effort cache write — a failure here must not block the caller; the
+  // next invocation simply recomputes it. Scoped by id + owner_user_id per
+  // .claude/rules/server-actions.md, even where the row was already
+  // ownership-verified by the caller.
+  const { error: cacheError } = await input.supabase
+    .from("projects")
+    .update({ business_profile: context.profile })
+    .eq("id", input.projectId)
+    .eq("owner_user_id", input.ownerUserId);
+
+  if (cacheError) {
+    console.warn(`[${input.logLabel ?? "business-profile"}] business_profile cache write failed`, {
+      project_id: input.projectId,
+      message: cacheError.message
+    });
+  }
+
+  return context.profile;
 }
 
 export type BusinessContextResult = { status: "identified"; profile: BusinessProfile } | { status: "unidentified" };

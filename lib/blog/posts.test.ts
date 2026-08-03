@@ -1,12 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { BLOG_POSTS, getBlogPost, getMetaDescription, getSeoTitle, type BlogPost } from "./posts";
+import {
+  BLOG_CLUSTERS,
+  BLOG_POSTS,
+  getBlogPost,
+  getMetaDescription,
+  getPostsByCluster,
+  getSeoTitle,
+  type BlogPost
+} from "./posts";
 
 const basePost: BlogPost = {
   slug: "ejemplo",
   title: "Título editorial largo y descriptivo",
   description: "Descripción editorial larga.",
   datePublished: "2026-01-01",
-  coverIcon: "compass"
+  coverIcon: "compass",
+  cluster: "fundamentos"
 };
 
 describe("getSeoTitle", () => {
@@ -41,5 +50,30 @@ describe("BLOG_POSTS", () => {
   it("getBlogPost finds an existing post and returns undefined for an unknown slug", () => {
     expect(getBlogPost(BLOG_POSTS[0].slug)?.slug).toBe(BLOG_POSTS[0].slug);
     expect(getBlogPost("no-existe")).toBeUndefined();
+  });
+
+  it("every post's cluster is a real key in BLOG_CLUSTERS", () => {
+    const validKeys = new Set(BLOG_CLUSTERS.map((c) => c.key));
+    for (const post of BLOG_POSTS) {
+      expect(validKeys.has(post.cluster), `${post.slug} has an unknown cluster "${post.cluster}"`).toBe(true);
+    }
+  });
+});
+
+describe("getPostsByCluster", () => {
+  it("returns only posts belonging to the requested cluster", () => {
+    for (const cluster of BLOG_CLUSTERS) {
+      const posts = getPostsByCluster(cluster.key);
+      expect(posts.every((p) => p.cluster === cluster.key)).toBe(true);
+    }
+  });
+
+  it("returns an empty array for a cluster with no posts yet", () => {
+    expect(getPostsByCluster("sectores")).toEqual([]);
+  });
+
+  it("every post is reachable from exactly one cluster (no post is orphaned)", () => {
+    const total = BLOG_CLUSTERS.reduce((sum, c) => sum + getPostsByCluster(c.key).length, 0);
+    expect(total).toBe(BLOG_POSTS.length);
   });
 });

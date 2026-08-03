@@ -37,11 +37,24 @@ async function assertCanonical(page: Page, expectedPath: string): Promise<void> 
 
 test.describe.configure({ mode: "serial" });
 
+const BLOG_CLUSTER_TITLES = [
+  "Fundamentos GEO",
+  "Metodología y medición",
+  "Playbooks de ejecución",
+  "GEO por sector"
+];
+
 test("blog index renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/blog", "blog-index");
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/blog");
   await expect(page).toHaveTitle(/— Genscore$/);
+  // GROWTH-2 Fase 2.5: the index groups posts into clusters instead of one
+  // flat list — every cluster heading must render, even the still-empty
+  // ones (which should show their "Próximamente" placeholder, not vanish).
+  for (const title of BLOG_CLUSTER_TITLES) {
+    await expect(page.getByRole("heading", { name: title })).toBeVisible();
+  }
 });
 
 for (const slug of BLOG_POSTS) {
@@ -50,6 +63,9 @@ for (const slug of BLOG_POSTS) {
     assertPageIsHealthy(findings);
     await assertCanonical(page, `/blog/${slug}`);
     await expect(page).toHaveTitle(/— Genscore$/);
+    // GROWTH-2 Fase 2.5: every post must link to at least one sibling in its
+    // cluster — the internal-linking rule in docs/content-strategy.md §4.3.
+    await expect(page.locator(".blog-related a").first()).toBeVisible();
   });
 }
 
@@ -75,6 +91,50 @@ test("/terminos renders and has its own canonical", async ({ page }, testInfo) =
   const findings = await visitAsUser(page, testInfo, "/terminos", "terminos");
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/terminos");
+});
+
+test("/glosario renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/glosario", "glosario");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/glosario");
+});
+
+// GROWTH-2 Fase 2.6b: each term now has its own page (/glosario/<slug>)
+// instead of only an anchor on the index. Two representative terms, not all
+// 15 — they all render through the same dynamic route/component.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"] as const;
+
+for (const slug of GLOSSARY_TERM_SLUGS) {
+  test(`glossary term page renders and has its own canonical: ${slug}`, async ({ page }, testInfo) => {
+    const findings = await visitAsUser(page, testInfo, `/glosario/${slug}`, `glosario-${slug}`);
+    assertPageIsHealthy(findings);
+    await assertCanonical(page, `/glosario/${slug}`);
+    // Internal-linking rule (content-strategy.md §4.3): every term page
+    // must link onward to at least one related term/doc/post.
+    await expect(page.locator(".glossary-related a").first()).toBeVisible();
+  });
+}
+
+test("/comparativas/genscore-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-otterly",
+    "comparativas-genscore-vs-otterly"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-otterly");
+});
+
+test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-peec-ai",
+    "comparativas-genscore-vs-peec-ai"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-peec-ai");
 });
 
 test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {

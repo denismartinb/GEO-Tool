@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
 import { redact } from "./env";
+import { attachmentName } from "./journey";
 
 /**
  * Generic interaction explorer (UX-PILOT-1c).
@@ -120,37 +121,21 @@ export interface InteractionFinding {
   screenshot?: string;
 }
 
-/**
- * Max characters kept for a control's human label. Playwright derives an
- * attachment's on-disk filename from the name passed to `testInfo.attach`, so
- * an unbounded label becomes an unbounded filename and the copy fails with
- * ENAMETOOLONG (255-byte limit on ext4) — which surfaces as a PILOT FAIL that
- * has nothing to do with the product.
- *
- * Real case (PR #295): the web-audit global-score tooltip carries a ~230-char
- * `aria-label` ("Media simple de tus señales disponibles: cobertura de
- * temas…"). The `textContent()` branch below was already capped at 60, but
- * the `aria-label` branch was not, so only elements labelled that way could
- * trigger it. Accented characters make it worse — "ñ"/"é"/"→" are 2–3 bytes
- * each in UTF-8, so the byte limit is hit well before the character count
- * suggests.
- */
-const MAX_CONTROL_LABEL = 60;
-
-/**
- * The label used for a control in findings and in attachment names, bounded
- * so it can always be turned into a filename. Exported for its unit test —
- * the failure it prevents only reproduces on a real deployment with a
- * long-labelled control, which is exactly the kind of thing that should not
- * need a full pilot run to verify.
- */
-export function controlLabel(ariaLabel: string | null, textContent: string | null, fallback: string): string {
-  const candidate = (ariaLabel ?? "").trim() || (textContent ?? "").trim() || fallback;
-  return candidate.slice(0, MAX_CONTROL_LABEL);
-}
-
 function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+/**
+ * Human-readable label for an interaction finding — feeds both the JSONL
+ * record and `testInfo.attach()`'s attachment name. Both branches (not just
+ * the textContent fallback) must be capped at 60 chars: an uncapped
+ * aria-label on a long descriptive control (e.g. a methodology tooltip) made
+ * it into the attachment name uncapped, and Playwright's own attachment-copy
+ * step has no length guard of its own — ENAMETOOLONG on the destination
+ * path, first seen on the web-audit screen (2026-08-02/03 pilot runs).
+ */
+export function deriveControlLabel(ariaLabel: string | null, textContent: string | null, fallback: string): string {
+  return (ariaLabel ?? "").trim().slice(0, 60) || (textContent ?? "").trim().slice(0, 60) || fallback;
 }
 
 function record(finding: InteractionFinding): void {
@@ -274,7 +259,7 @@ export async function exploreInteractions(
       const el = candidates.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
 
-      const control = controlLabel(
+      const control = deriveControlLabel(
         await el.getAttribute("aria-label"),
         await el.textContent(),
         `${screen} control #${i + 1}`
@@ -322,7 +307,7 @@ export async function exploreInteractions(
         // its timeout. The page-level captures (visitAsUser) stay fullPage —
         // those are for judging the whole screen.
         await page.screenshot({ path: screenshot });
-        await testInfo.attach(`${screen} → ${control} (${testInfo.project.name})`, {
+        await testInfo.attach(attachmentName(`${screen} → ${control} (${testInfo.project.name})`), {
           path: screenshot,
           contentType: "image/png"
         });

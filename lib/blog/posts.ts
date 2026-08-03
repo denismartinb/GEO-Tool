@@ -6,6 +6,41 @@
  * out in more than one place. Adding a post = one entry here + one new
  * app/blog/<slug>/page.mdx file.
  */
+/**
+ * GROWTH-2 Fase 2.5: cluster taxonomy for the blog (docs/content-strategy.md
+ * §2, capa B). "playbooks" and "sectores" have no posts yet — they exist
+ * here so the index can render an honest "próximamente" state instead of
+ * silently omitting a cluster the strategy already committed to.
+ */
+export type BlogCluster = {
+  key: "fundamentos" | "medicion" | "playbooks" | "sectores";
+  title: string;
+  description: string;
+};
+
+export const BLOG_CLUSTERS: BlogCluster[] = [
+  {
+    key: "fundamentos",
+    title: "Fundamentos GEO",
+    description: "Qué es GEO, en qué se diferencia del SEO, y por qué existe Genscore."
+  },
+  {
+    key: "medicion",
+    title: "Metodología y medición",
+    description: "Cómo se mide la visibilidad de una marca en IA: GEO Score, prompts, competidores."
+  },
+  {
+    key: "playbooks",
+    title: "Playbooks de ejecución",
+    description: "Cómo conseguir que un motor generativo te cite: llms.txt, datos estructurados, checklist técnico."
+  },
+  {
+    key: "sectores",
+    title: "GEO por sector",
+    description: "GEO aplicado a ecommerce, SaaS y agencias."
+  }
+];
+
 export type BlogPost = {
   slug: string;
   title: string;
@@ -21,6 +56,8 @@ export type BlogPost = {
   metaDescription?: string;
   /** The single primary keyword this URL targets — used by the content calendar and the SEO/GEO research agent to avoid two posts competing for the same query. Not rendered on the page. */
   primaryKeyword?: string;
+  /** Which BLOG_CLUSTERS entry this post belongs to — GROWTH-2 Fase 2.5. */
+  cluster: BlogCluster["key"];
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -31,7 +68,8 @@ export const BLOG_POSTS: BlogPost[] = [
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
     coverIcon: "trendUp",
-    primaryKeyword: "geo score"
+    primaryKeyword: "geo score",
+    cluster: "medicion"
   },
   {
     slug: "que-es-geo-generative-engine-optimization",
@@ -41,7 +79,11 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-07-13",
     coverIcon: "compass",
     coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.png",
-    primaryKeyword: "qué es geo"
+    // Not "qué es geo" — /geo (app/geo/page.tsx) already owns that keyword as
+    // the commercial landing page. This post's real differentiator, and the
+    // bulk of its body, is the SEO-vs-GEO comparison (GROWTH-2 Fase 2.6a).
+    primaryKeyword: "geo vs seo",
+    cluster: "fundamentos"
   },
   {
     slug: "como-elegir-prompts-monitorizar-marca-ia",
@@ -51,7 +93,8 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-07-13",
     coverIcon: "target",
     coverImage: "/blog/como-elegir-prompts-monitorizar-marca-ia/cover.png",
-    primaryKeyword: "prompts para monitorizar marca en ia"
+    primaryKeyword: "prompts para monitorizar marca en ia",
+    cluster: "medicion"
   },
   {
     slug: "como-elegir-competidores-analisis-geo",
@@ -61,7 +104,8 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-07-13",
     coverIcon: "layers",
     coverImage: "/blog/como-elegir-competidores-analisis-geo/cover.png",
-    primaryKeyword: "competidores análisis geo"
+    primaryKeyword: "competidores análisis geo",
+    cluster: "medicion"
   },
   {
     slug: "genscore-vs-herramientas-geo",
@@ -71,12 +115,18 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-07-13",
     coverIcon: "refresh",
     coverImage: "/blog/genscore-vs-herramientas-geo/cover.png",
-    primaryKeyword: "herramientas geo"
+    primaryKeyword: "herramientas geo",
+    cluster: "fundamentos"
   }
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
   return BLOG_POSTS.find((p) => p.slug === slug);
+}
+
+/** Posts belonging to a given cluster, in the same order as BLOG_POSTS. */
+export function getPostsByCluster(cluster: BlogCluster["key"]): BlogPost[] {
+  return BLOG_POSTS.filter((p) => p.cluster === cluster);
 }
 
 /** <title> for search engines: `seoTitle` when set, otherwise `title`. */
