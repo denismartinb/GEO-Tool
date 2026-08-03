@@ -107,6 +107,15 @@ verdict. They crowded out the ones that carry the information the whole phase
 exists for (Firefox, Thunderbird, MDN Plus) and cost a comparison each, per
 entity, per prompt.
 
+The rule extends to aliases already covered by an *accepted alias*, not just
+by the brand: once "Firefox" is in the set, "Firefox Relay" and "Firefox
+Focus" match through it and cannot change a verdict either. Run over the real
+mozilla.org list, the two rules together take 13 aliases down to 5 — Firefox,
+MDN Plus, Thunderbird, Solo 0DIN, Tabstack — with nothing lost, since every
+dropped name still matches through one that stayed. This check runs last, after
+evidence and duplicates, so a hallucinated or repeated alias is still reported
+as such instead of being masked as redundant.
+
 ## Consequences
 
 **Positive.** A brand is measured by what it is actually called. The Mozilla

@@ -137,7 +137,15 @@ function normalizeHaystack(value: string): string {
 
 export type AliasRejection = {
   alias: string;
-  reason: "too_short" | "too_long" | "generic" | "not_in_evidence" | "same_as_brand" | "duplicate" | "over_limit";
+  reason:
+    | "too_short"
+    | "too_long"
+    | "generic"
+    | "not_in_evidence"
+    | "same_as_brand"
+    | "redundant_with_alias"
+    | "duplicate"
+    | "over_limit";
 };
 
 export type AliasSelection = {
@@ -213,6 +221,34 @@ export function selectVerifiableAliases(
     }
     if (!haystack.includes(normalizeHaystack(alias))) {
       reject("not_in_evidence");
+      continue;
+    }
+    // The same redundancy as `same_as_brand`, one level deeper: an alias
+    // already covered by one accepted earlier. verifyMention tests the claimed
+    // name against EVERY name in the set, so once "Firefox" is in, "Firefox
+    // Relay" and "Firefox Focus" can never change a verdict either — they
+    // match through "Firefox".
+    //
+    // Checked last, after evidence and duplicates, so a hallucinated or
+    // repeated alias is still reported as such rather than being masked by
+    // this rule.
+    //
+    // Order-dependent by construction, and honestly so: candidates keep the
+    // model's own ordering, which puts the flagship product first (the real
+    // mozilla.org derivation returned "Firefox" at position 1, "Firefox
+    // Relay" at 4). If a narrower name arrived first it would win and the
+    // broader one would be dropped — a worse outcome, not a wrong one, since
+    // the broader name matches more real answers. Sorting by generality would
+    // remove that risk at the cost of no longer reflecting what the model
+    // considered most important; not worth it until a real case shows the
+    // ordering failing.
+    if (
+      accepted.some((existing) => {
+        const existingKey = normalizeName(existing);
+        return existingKey.includes(key) || key.includes(existingKey);
+      })
+    ) {
+      reject("redundant_with_alias");
       continue;
     }
     if (accepted.length >= MAX_ALIASES) {

@@ -11,8 +11,16 @@ const MOZILLA_EVIDENCE = [
 
 describe("selectVerifiableAliases", () => {
   it("accepts the product names that made the founder's scan wrong", () => {
-    const { accepted } = selectVerifiableAliases(["Firefox", "Firefox Focus", "Thunderbird"], "Mozilla", MOZILLA_EVIDENCE);
-    expect(accepted).toEqual(["Firefox", "Firefox Focus", "Thunderbird"]);
+    const { accepted, rejected } = selectVerifiableAliases(
+      ["Firefox", "Firefox Focus", "Thunderbird"],
+      "Mozilla",
+      MOZILLA_EVIDENCE
+    );
+
+    // "Firefox Focus" is dropped, not lost: verifyMention matches it through
+    // "Firefox", which is already in the set.
+    expect(accepted).toEqual(["Firefox", "Thunderbird"]);
+    expect(rejected).toEqual([{ alias: "Firefox Focus", reason: "redundant_with_alias" }]);
   });
 
   it("rejects an alias the model invented that is nowhere on the brand's own site", () => {
@@ -106,7 +114,10 @@ describe("selectVerifiableAliases", () => {
   });
 
   it("enforces the same cap as the database constraint", () => {
-    const many = Array.from({ length: MAX_ALIASES + 5 }, (_, i) => `Producto${i}`);
+    // Zero-padded to a fixed width so no name contains another — otherwise
+    // "Producto10" would be dropped as redundant with "Producto1" and the cap
+    // would never be reached.
+    const many = Array.from({ length: MAX_ALIASES + 5 }, (_, i) => `Producto${String(i).padStart(2, "0")}`);
     const evidence = many.join(" ");
     const { accepted, rejected } = selectVerifiableAliases(many, "Marca", evidence);
     expect(accepted).toHaveLength(MAX_ALIASES);
