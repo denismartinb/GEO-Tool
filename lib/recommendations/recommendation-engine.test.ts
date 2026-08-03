@@ -1057,4 +1057,30 @@ describe("generateRecommendationsForRun", () => {
 
     expect(recs.some((r) => r.recommendation_type === "track_emerging_competitor")).toBe(false);
   });
+
+  it("does not quote a citation title that is just the domain repeated", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "q1",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({
+          citations: [{ domain: "ocu.org", source: "grounding", title: "ocu.org", url: "https://ocu.org/x" }]
+        })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "q2",
+        brand_mentioned: false,
+        citation_found: true,
+        extracted_json: extractedWith({ citations: [{ domain: "ocu.org", source: "grounding" }] })
+      })
+    ]);
+
+    const rec = recs.find((r) => r.recommendation_type === "pursue_comparator_sources");
+    expect(rec).toBeDefined();
+    // Would otherwise read: «Escribe a ocu.org para que te incluyan en "ocu.org"».
+    expect(rec!.evidence_json.first_step).not.toContain('"ocu.org"');
+  });
 });

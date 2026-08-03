@@ -1133,7 +1133,17 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
       const citationPages = sources
         .filter((s): s is CitationSource & { examplePage: CitationExamplePage } => s.examplePage !== null)
         .map((s) => ({ domain: s.domain, title: s.examplePage.title, url: s.examplePage.url }));
-      const topPage = citationPages[0] ?? null;
+      // A citation's title is sometimes just the domain again ("ocu.org"),
+      // which turns the first step into «Escribe a ocu.org para que te incluyan
+      // en "ocu.org"» — nonsense, and it was on screen in the Movistar pilot.
+      // Only quote a title that actually names a page.
+      const usefulPage =
+        citationPages.find((page) => {
+          const title = page.title.trim().toLowerCase();
+          const domain = normalizeDomainValue(page.domain);
+          return title.length > 3 && title !== domain && title !== page.domain.trim().toLowerCase();
+        }) ?? null;
+      const topPage = usefulPage;
       const impact: "high" | "medium" = affected.length >= 4 ? "high" : "medium";
 
       candidates.push({
