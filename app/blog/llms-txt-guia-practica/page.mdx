@@ -4,6 +4,20 @@ import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  Pill,
+  CodeBlock,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  ProductMock
+} from "@/components/blog/article";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
 
 export const post = getBlogPost("llms-txt-guia-practica");
@@ -32,6 +46,13 @@ export const faqItems = [
   }
 ];
 
+export const mockRows = [
+  { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 80, weight: 40, tone: "blue" },
+  { label: "Prominencia", hint: "¿Apareces al principio o de pasada?", value: 64, weight: 25, tone: "blue2" },
+  { label: "Cuota de voz", hint: "¿Cuántas menciones son tuyas?", value: 55, weight: 20, tone: "cyan" },
+  { label: "Autoridad", hint: "¿La IA cita tu web como fuente?", value: 40, weight: 15, tone: "warm" }
+];
+
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
@@ -40,7 +61,7 @@ export const faqItems = [
 
 <BlogPageShell>
 
-<BlogCover icon={post.coverIcon} compact />
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
 
 # {post.title}
 
@@ -48,68 +69,80 @@ export const faqItems = [
 
 <div className="blog-body">
 
-**Respuesta rápida:** llms.txt es un fichero de texto en la raíz de tu dominio
-(`/llms.txt`) que resume tu sitio en lenguaje natural para que un modelo de
-IA lo consuma con facilidad. Crearlo es gratis y tarda diez minutos, pero no
-hay evidencia pública de que mejore cuánto te citan los motores generativos —
-así que trátalo como un extra de bajo coste, nunca como tu prioridad número
-uno de GEO. Esta guía te enseña a crear el tuyo, y a poner esa expectativa en
-su sitio correcto.
+<KeyTakeaway>
+
+Crear un `llms.txt` es gratis y tarda diez minutos, pero **no hay evidencia pública de que mejore cuánto te citan** los motores generativos. Trátalo como un extra de bajo coste, nunca como tu prioridad número uno de GEO.
+
+</KeyTakeaway>
 
 ## ¿Qué es llms.txt, en una frase?
 
-Es el equivalente a `robots.txt`, pero dirigido a agentes de IA en vez de a
-rastreadores de búsqueda: un fichero markdown simple que vive en
-`tudominio.com/llms.txt` y describe qué es tu sitio, qué secciones tiene y
-qué enlaces son más relevantes, para que un modelo pueda orientarse rápido si
-decide consultarlo durante el *grounding* de una respuesta. Puedes leer la
-definición completa en nuestro <a href="/glosario/llms-txt">glosario de
-GEO</a>.
+Es el equivalente a `robots.txt`, pero dirigido a agentes de IA en vez de a rastreadores de búsqueda: un fichero markdown simple que vive en `tudominio.com/llms.txt` y describe qué es tu sitio, qué secciones tiene y qué enlaces son más relevantes, para que un modelo pueda orientarse rápido si decide consultarlo durante el <a href="/glosario/grounding">grounding</a> de una respuesta.
 
 ## ¿De verdad mejora que te citen los motores de IA?
 
-Aquí es donde hay que ser honestos, no vendedores: **no hay evidencia pública
-verificable de que tener un llms.txt aumente tu tasa de citación** en
-respuestas de ChatGPT, Gemini o Claude. Google ha confirmado públicamente, a
-través de Gary Illyes, que no lo usa ni tiene previsto soportarlo. Es, hoy,
-un estándar propuesto por parte de la comunidad, sin adopción confirmada por
-ninguno de los motores generativos principales.
+<Verdict title="Sin evidencia pública verificable">
 
-Eso no significa que sea inútil — significa que no deberías esperar un
-cambio medible en tu <a href="/glosario/cuota-de-voz-en-ia">cuota de voz en
-IA</a> solo por publicarlo. Es un fichero opcional y de bajo coste: no hace
-daño tenerlo, pero tampoco sustituye al trabajo que sí tiene evidencia de
-importar.
+Ningún motor generativo principal ha confirmado que lo use. Es un estándar propuesto por la comunidad, no un factor demostrado.
+
+</Verdict>
+
+Aquí es donde hay que ser honestos, no vendedores. Google ha confirmado públicamente, a través de Gary Illyes, que no lo usa ni tiene previsto soportarlo. Es, hoy, un estándar propuesto por parte de la comunidad, sin adopción confirmada por ninguno de los motores generativos principales.
+
+Eso no significa que sea inútil — significa que no deberías esperar un cambio medible en tu <a href="/glosario/cuota-de-voz-en-ia">cuota de voz en IA</a> solo por publicarlo.
+
+<Figure
+  label="Figura 1."
+  caption="La señal que llms.txt pretende mover — la autoridad, es decir, si la IA cita tu dominio como fuente — pesa un 15% del GEO Score. Datos de ejemplo; los pesos son los reales de ADR-0015."
+>
+  <ProductMock
+    score={65}
+    rows={mockRows}
+    highlight={3}
+    annotation="Esto es lo que llms.txt pretende mover"
+  />
+</Figure>
 
 ## Cómo crear tu llms.txt paso a paso
 
-No necesitas ninguna herramienta especial — es un fichero de texto plano:
+No necesitas ninguna herramienta especial — es un fichero de texto plano.
 
-1. **Crea un fichero llamado `llms.txt`** en la raíz de tu dominio (mismo
-   nivel que `robots.txt` o `sitemap.xml`), accesible en
-   `https://tudominio.com/llms.txt`.
-2. **Empieza con un H1 con el nombre de tu marca**, seguido de una frase que
-   resuma a qué te dedicas — sin jerga de marketing, en lenguaje llano.
-3. **Añade una sección de enlaces clave**: tu documentación, tus páginas de
-   producto más importantes, tu blog. Un enlace por línea, en formato
-   markdown (`[Nombre de la página](https://tudominio.com/pagina): qué
-   contiene`).
-4. **Agrupa por secciones con H2** si tu sitio es grande — por ejemplo
-   "Producto", "Documentación", "Precios" — igual que harías con un índice.
-5. **Mantenlo corto.** No es un sitemap completo ni un volcado de todo tu
-   contenido: es un resumen orientativo. Si dudas, menos es más.
-6. **Publícalo y olvídate de revisarlo cada semana** — actualízalo solo
-   cuando cambie algo estructural de tu sitio (una sección nueva, un
-   rebranding), no como rutina.
+<NumberedSection n={1} title="Crea el fichero en la raíz de tu dominio">
 
-## Un ejemplo real, minimalista
+Al mismo nivel que `robots.txt` o `sitemap.xml`, accesible en `https://tudominio.com/llms.txt`.
 
-Así es, a grandes rasgos, la estructura que sigue el propio `llms.txt` de
-Genscore — puedes verlo completo en
-[genscore.es/llms.txt](https://www.genscore.es/llms.txt):
+<QuickAction>Comprueba si ya tienes uno: abre `tudominio.com/llms.txt` en el navegador.</QuickAction>
 
-```
-# Nombre de tu marca
+</NumberedSection>
+
+<NumberedSection n={2} title="Abre con un H1 y una frase que resuma tu negocio">
+
+El nombre de tu marca como encabezado, seguido de una frase que explique a qué te dedicas — sin jerga de marketing, en lenguaje llano. Es lo primero que leerá un modelo.
+
+<QuickAction>Escribe esa frase como se la dirías a alguien en un ascensor.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Añade tus enlaces clave agrupados por sección">
+
+Tu documentación, tus páginas de producto más importantes, tu blog. Un enlace por línea en formato markdown, con una frase de qué contiene. Agrupa con encabezados de segundo nivel si tu sitio es grande.
+
+<QuickAction>Si ocupa más de una pantalla, sobra la mitad. Menos es más.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Mantenlo corto y publícalo">
+
+No es un sitemap completo ni un volcado de todo tu contenido: es un resumen orientativo. Una vez publicado, actualízalo solo cuando cambie algo estructural de tu sitio — una sección nueva, un rebranding — no como rutina semanal.
+
+</NumberedSection>
+
+### Un ejemplo real, minimalista
+
+Así es, a grandes rasgos, la estructura que sigue el propio `llms.txt` de Genscore:
+
+<CodeBlock title="llms.txt">
+{`# Nombre de tu marca
 
 > Una frase clara que resuma a qué te dedicas, sin jerga de marketing.
 
@@ -120,71 +153,64 @@ Genscore — puedes verlo completo en
 
 ## Documentación
 
-- [Documentación](https://tudominio.com/docs): índice general.
-```
+- [Documentación](https://tudominio.com/docs): índice general.`}
+</CodeBlock>
 
-Nada más. Un H1, una descripción de una frase, y unas pocas secciones con
-enlaces a lo que de verdad importa de tu sitio. Si tu borrador ocupa más de
-una pantalla, probablemente estés incluyendo demasiado.
+Nada más. Un encabezado, una descripción de una frase, y unas pocas secciones con enlaces a lo que de verdad importa de tu sitio.
 
 ## Errores comunes al crear un llms.txt
 
-- **Copiar y pegar tu sitemap.xml tal cual.** Un sitemap está pensado para
-  rastreadores, con cientos de URLs; un llms.txt está pensado para que un
-  modelo entienda tu sitio en segundos. Si tiene más de una pantalla de
-  scroll, probablemente sea demasiado largo.
-- **Tratarlo como una lista de keywords.** No es contenido para posicionar
-  — es un mapa de navegación. Rellenarlo de términos que quieres rankear no
-  ayuda y puede leerse como spam.
-- **Esperar un resultado medible y frustrarte cuando no llega.** Ya lo hemos
-  dicho arriba, pero merece repetirse: ningún motor principal ha confirmado
-  que lo use. No lo pongas en tu lista de prioridades por delante de nada
-  que sí tenga evidencia.
+<Checklist
+  tone="evitar"
+  items={[
+    "No copies y pegues tu sitemap.xml tal cual: está pensado para rastreadores, con cientos de URLs, no para que un modelo entienda tu sitio en segundos.",
+    "No lo trates como una lista de keywords. No es contenido para posicionar, es un mapa de navegación.",
+    "No esperes un resultado medible. Ningún motor principal ha confirmado que lo use.",
+    "No lo pongas por delante de nada que sí tenga evidencia."
+  ]}
+/>
 
 ## Qué priorizar en su lugar (o además)
 
-Si tienes diez minutos, créate el llms.txt — es gratis y no hace daño. Pero
-si tienes que elegir dónde invertir tu tiempo esta semana, esto es lo que sí
-tiene evidencia de mover la aguja:
+Si tienes diez minutos, créate el llms.txt — es gratis y no hace daño. Pero si tienes que elegir dónde invertir tu tiempo esta semana, esto es lo que sí tiene evidencia de mover la aguja:
 
-- **Datos estructurados reales** (`Article`, `FAQPage`, `DefinedTerm`) que
-  describan tu contenido sin ambigüedad — puedes leer más en nuestra entrada
-  de <a href="/glosario/datos-estructurados">datos estructurados</a>.
-- **Contenido claro y verificable** que un modelo pueda citar con precisión,
-  no solo mencionar de pasada — la diferencia entre ambas cosas está
-  explicada en <a href="/glosario/citacion-en-ia">qué es una citación en
-  IA</a>.
-- **Autoridad de dominio real**, construida con tiempo, no con un fichero.
+<CompareTable>
 
-Si quieres saber dónde estás hoy en cualquiera de estas señales — mención,
-citación, autoridad — esa es exactamente la métrica compuesta que calcula tu
-<a href="/docs/metodologia/geo-score">GEO Score</a>.
+| Palanca | Evidencia de que funciona | Esfuerzo |
+|---|---|---|
+| **Datos estructurados** (Article, FAQPage) | <Pill tone="si">Confirmada</Pill> Reduce la ambigüedad al extraer | Bajo |
+| **Contenido citable** con cifras y fuente | <Pill tone="si">Confirmada</Pill> Los modelos citan datos concretos | Medio |
+| **Autoridad de dominio** real | <Pill tone="si">Confirmada</Pill> La correlación más fuerte observada | Alto |
+| **llms.txt** | <Pill tone="no">Sin evidencia</Pill> Ningún motor confirma usarlo | Bajo |
+
+</CompareTable>
+
+Puedes leer más en nuestras entradas de <a href="/glosario/datos-estructurados">datos estructurados</a> y de <a href="/glosario/citacion-en-ia">citación en IA</a>. Si quieres saber dónde estás hoy en cualquiera de estas señales, esa es exactamente la métrica compuesta que calcula tu <a href="/docs/metodologia/geo-score">GEO Score</a>.
 
 ## Preguntas frecuentes
 
-**¿llms.txt sustituye a robots.txt o al sitemap?** No. Cada uno cumple una
-función distinta: `robots.txt` controla qué puede rastrear un bot,
-`sitemap.xml` lista todas tus URLs indexables, y `llms.txt` es un resumen
-orientativo pensado para lectura rápida por un modelo. Puedes — y deberías —
-tener los tres a la vez, sin que se pisen entre sí.
+### ¿llms.txt sustituye a robots.txt o al sitemap?
 
-**¿Es un estándar oficial de Google, OpenAI o Anthropic?** No. Es una
-propuesta impulsada por la comunidad de herramientas de IA, no un estándar
-publicado ni respaldado formalmente por ningún proveedor de motores
-generativos. Eso no lo invalida, pero explica por qué su adopción real sigue
-siendo incierta.
+No. Cada uno cumple una función distinta: `robots.txt` controla qué puede rastrear un bot, `sitemap.xml` lista todas tus URLs indexables, y `llms.txt` es un resumen orientativo pensado para lectura rápida por un modelo. Puedes — y deberías — tener los tres a la vez, sin que se pisen entre sí.
 
-**¿Puede perjudicarme tener un llms.txt mal hecho?** No de forma directa —
-no es un fichero que un motor de búsqueda penalice por su contenido, a
-diferencia de un `robots.txt` mal configurado, que sí puede bloquear
-rastreo por error. El riesgo real de un llms.txt mal hecho es solo de
-tiempo mal invertido, no de penalización.
+### ¿Es un estándar oficial de Google, OpenAI o Anthropic?
 
-<div className="blog-cta">
-<p>¿Quieres ver si los motores de IA ya citan tu web como fuente?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
+No. Es una propuesta impulsada por la comunidad de herramientas de IA, no un estándar publicado ni respaldado formalmente por ningún proveedor de motores generativos. Eso no lo invalida, pero explica por qué su adopción real sigue siendo incierta.
 
+### ¿Puede perjudicarme tener un llms.txt mal hecho?
+
+No de forma directa — no es un fichero que un motor de búsqueda penalice por su contenido, a diferencia de un `robots.txt` mal configurado, que sí puede bloquear rastreo por error. El riesgo real de un llms.txt mal hecho es solo de tiempo mal invertido, no de penalización.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Los motores de IA ya citan tu web?"
+  text="Mide tu GEO Score real en minutos. Gratis, sin tarjeta."
+/>
 
 <RelatedPosts cluster="playbooks" currentSlug={post.slug} />
 

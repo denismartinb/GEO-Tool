@@ -183,6 +183,58 @@ test("/comparativas/mejores-herramientas-geo-en-espanol renders and has its own 
   await assertCanonical(page, "/comparativas/mejores-herramientas-geo-en-espanol");
 });
 
+/**
+ * GROWTH-3 Fase 3.1 — verificación de enlaces contra el despliegue real.
+ *
+ * Regla del fundador (2026-08-03): "probar siempre todos los links". El nivel
+ * estático vive en `lib/blog/article-links.test.ts` y coge enlaces a rutas
+ * inexistentes antes de desplegar. Este es el segundo nivel: coge las rutas
+ * que existen en el código pero fallan en el despliegue real (build roto,
+ * página que revienta al renderizar, redirección mal configurada).
+ *
+ * SCOPE GUARD: solo peticiones GET a rutas públicas. Se descarta cualquier
+ * enlace a /dashboard o /api — la cuenta piloto vive en el mismo proyecto de
+ * Supabase que producción y este journey no debe tocar nada autenticado.
+ */
+const LINK_SCAN_PAGES = [
+  "/blog",
+  "/blog/llms-txt-guia-practica",
+  "/glosario",
+  "/glosario/geo",
+  "/comparativas",
+  "/comparativas/mejores-herramientas-geo-en-espanol",
+  "/docs"
+];
+
+test("todos los enlaces internos del contenido publicado responden 200", async ({ page }) => {
+  const targets = new Set<string>();
+
+  for (const path of LINK_SCAN_PAGES) {
+    const response = await page.goto(path, { waitUntil: "domcontentloaded" });
+    expect(response?.status(), `${path} no cargó para escanear sus enlaces`).toBeLessThan(400);
+
+    const hrefs = await page
+      .locator('a[href^="/"]')
+      .evaluateAll((els) => els.map((el) => el.getAttribute("href") ?? ""));
+
+    for (const raw of hrefs) {
+      const clean = raw.split("#")[0].split("?")[0].replace(/\/$/, "") || "/";
+      if (clean.startsWith("/dashboard") || clean.startsWith("/api")) continue;
+      targets.add(clean);
+    }
+  }
+
+  expect(targets.size, "no se encontró ningún enlace interno que comprobar").toBeGreaterThan(5);
+
+  const broken: string[] = [];
+  for (const href of targets) {
+    const res = await page.request.get(href);
+    if (res.status() >= 400) broken.push(`${href} → ${res.status()}`);
+  }
+
+  expect(broken, `enlaces internos rotos: ${broken.join(", ")}`).toEqual([]);
+});
+
 test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {
   const response = await page.request.get("/feed.xml");
   expect(response.status(), "/feed.xml no respondió 200").toBe(200);
