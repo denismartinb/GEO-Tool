@@ -126,6 +126,17 @@ test("/comparativas/genscore-vs-otterly renders and has its own canonical", asyn
   await assertCanonical(page, "/comparativas/genscore-vs-otterly");
 });
 
+test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-peec-ai",
+    "comparativas-genscore-vs-peec-ai"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-peec-ai");
+});
+
 test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {
   const response = await page.request.get("/feed.xml");
   expect(response.status(), "/feed.xml no respondió 200").toBe(200);

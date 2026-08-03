@@ -23,6 +23,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/docs", lastModified: DOCS_LAST_MODIFIED },
   { path: "/glosario", lastModified: "2026-08-02" },
   { path: "/comparativas/genscore-vs-otterly", lastModified: "2026-08-02" },
+  { path: "/comparativas/genscore-vs-peec-ai", lastModified: "2026-08-03" },
   { path: "/privacidad", lastModified: "2026-07-19" },
   { path: "/cookies", lastModified: "2026-07-12" },
   { path: "/terminos", lastModified: "2026-07-19" }
