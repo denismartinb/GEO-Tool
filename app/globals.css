@@ -747,11 +747,11 @@ a {
 }
 /* Half-circle variant (Gauge variant="semi"): the box is cropped to the top
    half, so the reading sits on the arc's open baseline instead of the
-   vertical centre it would otherwise share with the stroke. */
+   vertical centre it would otherwise share with the stroke. The exact
+   bottom padding is set inline by the component (it depends on `stroke`). */
 .gauge-wrap.gauge-semi .gauge-center {
   align-items: flex-end;
   padding-top: 0;
-  padding-bottom: 2px;
 }
 .gauge-num {
   font-size: 32px;

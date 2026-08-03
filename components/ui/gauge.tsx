@@ -87,7 +87,12 @@ export function Gauge({
           />
         )}
       </svg>
-      <div className="gauge-center">
+      {/* The half-circle's flat side is the arc's baseline, which sits
+          `stroke / 2` above the bottom of the cropped box (the round linecaps
+          own that last half-stroke). Padding by exactly that much rests the
+          reading ON the baseline; a fixed value instead would sink it below
+          the arc by however much the stroke differs. */}
+      <div className="gauge-center" style={semi ? { paddingBottom: stroke / 2 } : undefined}>
         <div>
           <div className="gauge-num tnum">{value}</div>
           <div className="gauge-cap">{label}</div>
