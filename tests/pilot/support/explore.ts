@@ -124,6 +124,21 @@ function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 }
 
+/**
+ * Playwright derives an attachment's on-disk filename from its NAME, so an
+ * unbounded name crashes the run with ENAMETOOLONG once the accessible name of
+ * the control is a full paragraph — which is exactly what an InfoTip's
+ * explanatory text is (the web-audit global-score tip is ~230 chars, and its
+ * output path also carries the test title and a hash). The screenshot path
+ * itself was already bounded via slug(); this bounds the label that becomes
+ * the copy destination. Truncated with an ellipsis so the report still reads
+ * naturally instead of stopping mid-word.
+ */
+function attachName(text: string, limit = 70): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.length > limit ? `${clean.slice(0, limit - 1)}…` : clean;
+}
+
 function record(finding: InteractionFinding): void {
   mkdirSync(".pilot", { recursive: true });
   appendFileSync(INTERACTIONS_PATH, `${JSON.stringify({ kind: "interaction", ...finding })}\n`);
@@ -292,7 +307,7 @@ export async function exploreInteractions(
         // its timeout. The page-level captures (visitAsUser) stay fullPage —
         // those are for judging the whole screen.
         await page.screenshot({ path: screenshot });
-        await testInfo.attach(`${screen} → ${control} (${testInfo.project.name})`, {
+        await testInfo.attach(`${screen} → ${attachName(control)} (${testInfo.project.name})`, {
           path: screenshot,
           contentType: "image/png"
         });

@@ -69,7 +69,19 @@ async function findOverflowCulprits(page: Page, viewportWidth: number): Promise<
 }
 
 function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  // Bounded like explore.ts's: an unbounded slug builds an unbounded path, and
+  // captureInteraction is called with free-form labels.
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+/**
+ * Playwright turns an attachment's NAME into its on-disk filename, so a
+ * free-form label has to be bounded or the copy fails with ENAMETOOLONG. Same
+ * helper and limit as explore.ts.
+ */
+function attachName(text: string, limit = 70): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  return clean.length > limit ? `${clean.slice(0, limit - 1)}…` : clean;
 }
 
 function recordFindings(findings: PageFindings): void {
@@ -161,7 +173,7 @@ export async function visitAsUser(
     };
 
     recordFindings(findings);
-    await testInfo.attach(`${label} (${testInfo.project.name})`, {
+    await testInfo.attach(`${attachName(label)} (${testInfo.project.name})`, {
       path: screenshot,
       contentType: "image/png"
     });
@@ -218,7 +230,7 @@ export async function captureInteraction(page: Page, testInfo: TestInfo, label: 
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
   await page.screenshot({ path: screenshot, fullPage: true });
-  await testInfo.attach(`${label} (${testInfo.project.name})`, {
+  await testInfo.attach(`${attachName(label)} (${testInfo.project.name})`, {
     path: screenshot,
     contentType: "image/png"
   });
