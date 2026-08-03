@@ -139,6 +139,23 @@ test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", asyn
   await assertCanonical(page, "/comparativas/genscore-vs-peec-ai");
 });
 
+test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/comparativas", "comparativas-index");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas");
+});
+
+test("/comparativas/mejores-herramientas-geo-en-espanol renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/mejores-herramientas-geo-en-espanol",
+    "comparativas-mejores-herramientas-geo"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/mejores-herramientas-geo-en-espanol");
+});
+
 test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {
   const response = await page.request.get("/feed.xml");
   expect(response.status(), "/feed.xml no respondió 200").toBe(200);
