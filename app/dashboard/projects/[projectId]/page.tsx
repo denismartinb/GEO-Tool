@@ -513,6 +513,16 @@ export default async function ProjectDetailPage({
     /** Real rank among ranked entities (1-based), or null when unavailable. */
     rank: number | null;
   };
+  /* Entities the AI actually named at least once. `computeBrandPosition`
+   * returns an entry for every tracked entity — including ones never
+   * mentioned, which carry `avg_position_when_mentioned: null` and sort last
+   * (geo-score-v3, docs/adr/0026). Their array index is NOT a rank: reading
+   * it as one is the same fabrication the N+1 penalty used to commit, just
+   * moved into the view layer. Because nulls sort last, every ranked entity
+   * has an index below this count, so `i + 1` is a true ordinal for them. */
+  const rankedEntityCount = brandPositionRanking.filter(
+    (e) => e.avg_position_when_mentioned !== null
+  ).length;
   // Single source of truth for BOTH the position-bar chart and the ranked
   // list below it — both panels must show the same entities in the same
   // order, or the two numbers ("posición 2" on the bar vs. a different row
@@ -530,7 +540,7 @@ export default async function ProjectDetailPage({
             avgPosition: entry.avg_position_when_mentioned ?? null,
             mentionRate: entry.mention_rate ?? null,
             sov: brandSov,
-            rank: i + 1
+            rank: entry.avg_position_when_mentioned !== null ? i + 1 : null
           };
         }
         const match = competitorRows.find(
@@ -544,7 +554,7 @@ export default async function ProjectDetailPage({
           avgPosition: entry.avg_position_when_mentioned ?? null,
           mentionRate: entry.mention_rate ?? null,
           sov: match?.sov ?? 0,
-          rank: i + 1
+          rank: entry.avg_position_when_mentioned !== null ? i + 1 : null
         };
       })
     : [
@@ -564,9 +574,16 @@ export default async function ProjectDetailPage({
    * brand_position is available for this scan; otherwise the panorama
    * shows the SOV ranking list alone.
    */
+  const brandRankingEntry = brandPositionRanking.find((e) => e.is_brand);
   const brandRankIndex = brandPositionRanking.findIndex((e) => e.is_brand);
-  const brandRank = brandRankIndex >= 0 ? brandRankIndex + 1 : null;
-  const totalRanked = brandPositionRanking.length;
+  const brandRank =
+    brandRankIndex >= 0 && brandRankingEntry?.avg_position_when_mentioned != null
+      ? brandRankIndex + 1
+      : null;
+  // Denominator is the entities the AI named, not every entity we track —
+  // otherwise "3 / 8" counts five brands that never appeared as if they were
+  // competing for the same places.
+  const totalRanked = rankedEntityCount;
 
   // Top 5 by real position — the exact same rows feed both the bars and the
   // list. If the brand falls outside the top 5, its real row is appended so
@@ -1037,7 +1054,14 @@ export default async function ProjectDetailPage({
               {brandPositionAvailable && posbarsData.length > 0 && (
                 <div className="card" style={{ padding: "17px 16px 6px" }}>
                   <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
-                  <div className="ov2-pm-val">
+                  <div
+                    className="ov2-pm-val"
+                    title={
+                      brandRank === null
+                        ? "La IA no te nombró en este escaneo, así que no tienes puesto."
+                        : undefined
+                    }
+                  >
                     {brandRank ?? "—"}<small> / {totalRanked}</small>
                   </div>
                   <div className="ov2-posbars">

@@ -740,7 +740,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.formulas_used).toMatchObject({
-      brand_position: expect.stringContaining("avg_position(entity)")
+      brand_position: expect.stringContaining("avg_position_when_mentioned(entity)")
     });
     expect(
       (result.details_json.assumptions as string[]).some((a) => a.includes("brand_position"))

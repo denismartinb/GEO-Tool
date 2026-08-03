@@ -261,12 +261,17 @@ type BrandPositionDetails = {
  * per-prompt extracted_json of a run's completed results.
  *
  * Per prompt: N = 1 (brand) + competitors.length tracked entities. Each
- * mentioned entity's effective position is its 1-based first-mention rank
- * (dense, no gaps, brand and competitors share one ranking); each
- * not-mentioned entity is penalized with position N+1.
+ * mentioned entity's position is its 1-based first-mention rank (dense, no
+ * gaps, brand and competitors share one ranking).
  *
- * avg_position(entity) = mean(effective_position) across prompts with valid
- * extraction data. Returns null if no prompt has valid position data.
+ * avg_position_when_mentioned(entity) = mean(position) over ONLY the prompts
+ * where that entity was mentioned; null when it was never mentioned. The
+ * pre-v3 figure — which penalized every non-mention with N+1 and therefore
+ * ordered by frequency rather than by rank — is kept per entity as
+ * avg_position_penalized for comparison across the transition
+ * (GEO-SCORE-POSITION-V3, docs/adr/0026).
+ *
+ * Returns null if no prompt has valid position data.
  */
 function computeBrandPosition(results: ScoreInputRow[], totalResults: number): BrandPositionDetails | null {
   // entity name -> accumulators. `sumWhenMentioned`/`mentionCount` feed the v3
@@ -646,7 +651,9 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
         competitor_gap_score:
           "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)",
         brand_position:
-          "avg_position(entity) = mean(position if mentioned else N+1, over prompts with valid extraction); N = total tracked entities for that prompt",
+          "avg_position_when_mentioned(entity) = mean(position over ONLY the prompts where that entity was mentioned), null when never mentioned (geo-score-v3, docs/adr/0026); " +
+          "mention_rate(entity) = mention_count / prompt_count * 100, reported alongside so a rank is never read without knowing how often it was earned; " +
+          "avg_position_penalized(entity) = mean(position if mentioned else N+1) with N = total tracked entities for that prompt — the pre-v3 figure, retained for comparison across the transition and read by nothing",
         geo_score:
           "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
           "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
