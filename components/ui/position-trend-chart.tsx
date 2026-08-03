@@ -112,6 +112,14 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
         height={H}
+        /* Glyph advances are laid out at the authored size and snapped to the
+           device pixel grid BEFORE the fixed viewBox is scaled to the container
+           width, so at some scale factors the rounding accumulates into a
+           visible gap mid-word — the brand's own end label rendered "Maho u" at
+           1280px and correctly at 768 and 375 (pilot, 2026-08-03). Asking for
+           geometric precision positions glyphs exactly instead of hinting them,
+           which is what makes the artifact scale-independent. */
+        textRendering="geometricPrecision"
         style={{ display: "block", overflow: "visible" }}
         onMouseMove={handleMove}
         onMouseLeave={() => setHoverIdx(null)}
