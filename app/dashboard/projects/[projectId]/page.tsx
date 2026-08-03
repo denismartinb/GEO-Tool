@@ -389,13 +389,24 @@ export default async function ProjectDetailPage({
   const visDeltaVerdict = resolve(visDelta);
   const gapDeltaVerdict = resolve(gapDelta);
 
-  /** Human-readable reason a delta was withheld, for the caption under the gauge. */
-  const deltaWithheldNote = (verdict: DeltaVerdict | null): string | null => {
-    if (!verdict || verdict.kind === "publish") return null;
-    if (verdict.kind === "insufficient_sample") {
-      return `Sin comparación: ${verdict.responses} ${verdict.responses === 1 ? "respuesta" : "respuestas"} de IA en este escaneo (hacen falta ${MIN_RESPONSES_FOR_BAND}).`;
-    }
-    return `Sin comparación: ${verdict.reason}.`;
+  /**
+   * The ONE line that explains why the band, the delta and the trend are
+   * absent — everywhere else the withheld state renders as nothing at all
+   * (founder decision, 2026-08-03: four "sin comparación" notices on one
+   * screen read as a broken product, not a careful one).
+   *
+   * Deliberately phrased as what unlocks them, not as what is missing: the
+   * user can act on "add prompts or engines", and cannot act on "insufficient
+   * sample". Returns null when there is nothing to explain.
+   *
+   * A non-comparable pair of runs gets no line at all: it is not actionable —
+   * the next scan resolves it on its own — and naming it would reintroduce
+   * exactly the noise this change removes.
+   */
+  const sampleNudge = (verdict: DeltaVerdict | null): string | null => {
+    if (!verdict || verdict.kind !== "insufficient_sample") return null;
+    const missing = MIN_RESPONSES_FOR_BAND - verdict.responses;
+    return `Con ${missing} ${missing === 1 ? "respuesta" : "respuestas"} de IA más verás franja y evolución. Añade prompts o motores.`;
   };
 
   /* ---- sentiment KPI (audit phase B, finding 6) ----
@@ -748,17 +759,15 @@ export default async function ProjectDetailPage({
                     70/40 scale. Below MIN_RESPONSES_FOR_BAND responses a
                     single AI answer moves the score by more than 7 points, so
                     the band is not a claim the sample can support — the score
-                    itself is still shown, only its interpretation is withheld. */}
+                    itself is still shown, only its interpretation is withheld.
+                    Withheld means ABSENT, not labelled: a screen carrying four
+                    "sin comparación"/"muestra insuficiente" notices reads as
+                    broken rather than as careful (founder decision,
+                    2026-08-03). The single actionable line under the gauge
+                    below is what keeps the absence explainable. */}
                 {sampleSufficient ? (
                   <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                ) : (
-                  <span
-                    className="badge badge-warn"
-                    title={`Este escaneo analizó ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA. Por debajo de ${MIN_RESPONSES_FOR_BAND}, una sola respuesta mueve la puntuación más de 7 puntos, así que no clasificamos la franja ni comparamos con el escaneo anterior. Añade prompts o motores para estrechar el margen.`}
-                  >
-                    Muestra insuficiente
-                  </span>
-                )}
+                ) : null}
                 {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
                   <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
                 )}
@@ -776,11 +785,9 @@ export default async function ProjectDetailPage({
                   <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
                   <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
                 </>
-              ) : geoTrend.length >= 2 ? (
-                <div className="ov2-gauge-trend-cap">
-                  {deltaWithheldNote(gaugeDeltaVerdict) ?? `Últimos ${geoTrend.length} escaneos`}
-                </div>
-              ) : (
+              ) : sampleNudge(gaugeDeltaVerdict) ? (
+                <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
+              ) : geoTrend.length >= 2 ? null : (
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
               )}
             </div>
@@ -902,16 +909,8 @@ export default async function ProjectDetailPage({
                             rests on one or two cited pages. Gating three
                             bands on this screen and leaving the fourth would
                             just be arbitrary. */}
-                        {!sampleSufficient ? (
-                          // "— sin clasificar", not "— muestra insuficiente":
-                          // the longer string overflows this KPI card at 375px
-                          // (found by judging the pilot's own mobile capture).
-                          // The tooltip carries the why; the visible label only
-                          // has to say that the band is being withheld.
-                          <span className="delta flat" title={`Calculado sobre ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA — muestra insuficiente para clasificar. Añade prompts o motores.`}>
-                            — sin clasificar
-                          </span>
-                        ) : (
+                        {/* Hidden, not labelled — same rule as the gauge band. */}
+                        {!sampleSufficient ? null : (
                         <span className={`badge ${
                           m.value > 50 ? "badge-pos" :
                           m.value >= 30 ? "badge-accent" :
@@ -940,13 +939,14 @@ export default async function ProjectDetailPage({
                           {m.band.label}
                         </span>
                       ) : "hideDelta" in m && m.hideDelta ? null : !("deltaVerdict" in m) || m.deltaVerdict === null ? null : m.deltaVerdict.kind !== "publish" ? (
-                        // Never "— sin cambio" here: a delta we refuse to
-                        // assert is not evidence of stability, and rendering
-                        // it as one is the same false claim in the opposite
-                        // direction (GEO-SCORE-RELIABILITY-1).
-                        <span className="delta flat" title={deltaWithheldNote(m.deltaVerdict) ?? undefined}>
-                          — sin comparación
-                        </span>
+                        // Withheld -> render NOTHING. Never "— sin cambio",
+                        // which would assert measured stability we do not
+                        // have; and no "— sin comparación" label either, since
+                        // repeating that across every card reads as a broken
+                        // screen rather than a careful one (founder decision,
+                        // 2026-08-03). The absence is explained once, under
+                        // the gauge.
+                        null
                       ) : m.deltaVerdict.value !== 0 ? (
                         <Delta value={m.deltaVerdict.value} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
                       ) : (

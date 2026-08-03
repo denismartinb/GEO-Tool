@@ -815,11 +815,21 @@ Decisiones de presentación (no de cálculo — el score no cambia):
 - **La franja se sustituye por un badge `warn` "Muestra insuficiente"** con
   tooltip que dice cuántas respuestas hay, por qué no basta y qué hacer
   (añadir prompts o motores). Es un estado accionable, no un error.
-- **Un delta retirado se lee "— sin comparación", nunca "— sin cambio".**
-  Son afirmaciones opuestas: "sin cambio" declara estabilidad medida.
-  Supersede el comportamiento previo del pie de las cards KPI, que caía a
-  "— sin cambio" siempre que el delta valía 0, incluido cuando no había nada
-  comparable.
+- **Un delta retirado no se etiqueta: se oculta.** *(Decisión del fundador,
+  2026-08-03 — supersede la primera versión de esta misma fase, que lo
+  renderizaba como "— sin comparación".)* Rotular cada hueco funcionaba como
+  argumento de honestidad y fallaba como pantalla: cuatro avisos de
+  "sin comparación" / "muestra insuficiente" a la vez hacen que el producto
+  parezca roto, no cuidadoso. Sigue vigente lo que motivó aquella versión:
+  **nunca "— sin cambio"**, que declara una estabilidad medida que no
+  tenemos. La regla final es ausencia, no afirmación falsa ni cartel.
+- **La ausencia se explica UNA vez, bajo el gauge, y en positivo.** *"Con N
+  respuestas de IA más verás franja y evolución. Añade prompts o motores."* —
+  redactado como lo que se desbloquea, no como lo que falta, porque el usuario
+  puede actuar sobre "añade prompts" y no sobre "muestra insuficiente". Un par
+  de escaneos no comparables **no** lleva línea: no es accionable (el
+  siguiente escaneo lo resuelve solo) y nombrarlo reintroduciría el ruido que
+  esta decisión elimina.
 - **Unidad: "respuestas de IA", no "prompts".** El contador es
   `prompts × motores`; llamarlo "prompts" hacía que un proyecto de 1 prompt
   en 3 motores leyera "3 de 3 prompts". Supersede la copy del banner de
