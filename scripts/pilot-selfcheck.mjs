@@ -13,6 +13,7 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 
 const PORT = process.env.PILOT_FIXTURE_PORT ?? "4321";
@@ -85,10 +86,80 @@ async function runCase({ label, breakMode, expectedExit }) {
   }
 }
 
+/** Pixel height straight out of the PNG's IHDR chunk (bytes 20..24, big-endian). */
+function pngHeight(path) {
+  return readFileSync(path).readUInt32BE(20);
+}
+
+/**
+ * Third case, and the reason the fixture wraps authenticated pages in a
+ * viewport-pinned shell: prove the capture actually reaches below the fold.
+ *
+ * `fullPage: true` grows to `document.documentElement.scrollHeight`, which
+ * never exceeds one viewport when the shell pins itself and scrolls an inner
+ * element — so every dashboard screenshot was cropped at the fold while
+ * looking exactly like a complete one. A harness that captures half a screen
+ * reports a comfortable PASS over content nobody ever saw, which is the same
+ * failure mode this whole self-check exists to prevent.
+ *
+ * Run against the findings of the healthy case, before the next run clears
+ * `.pilot/`.
+ */
+function verifyCaptureDepth() {
+  if (!existsSync(".pilot/findings.jsonl")) {
+    console.log("✗ capture depth: no findings.jsonl — the healthy run wrote nothing");
+    return false;
+  }
+
+  const findings = readFileSync(".pilot/findings.jsonl", "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+
+  // Pages whose real content runs past the tallest viewport the pilot uses.
+  const shellPages = findings.filter((f) => f.contentHeight > 1_024);
+
+  if (shellPages.length === 0) {
+    console.log(
+      "✗ capture depth: no page reported content taller than a viewport — the fixture shell is not reproducing the real one"
+    );
+    return false;
+  }
+
+  for (const f of shellPages) {
+    if (f.capturedHeight < f.contentHeight && !f.captureTruncated) {
+      console.log(
+        `✗ capture depth: ${f.label} @ ${f.viewport} captured ${f.capturedHeight}px of ${f.contentHeight}px without flagging truncation`
+      );
+      return false;
+    }
+    if (!existsSync(f.screenshot)) {
+      console.log(`✗ capture depth: ${f.label} @ ${f.viewport} screenshot missing at ${f.screenshot}`);
+      return false;
+    }
+    // The PNG itself is the evidence — the findings could claim anything.
+    const height = pngHeight(f.screenshot);
+    if (height < f.capturedHeight - 4) {
+      console.log(
+        `✗ capture depth: ${f.label} @ ${f.viewport} PNG is only ${height}px tall, expected ~${f.capturedHeight}px (content ${f.contentHeight}px)`
+      );
+      return false;
+    }
+  }
+
+  console.log(
+    `✓ capture depth: ${shellPages.length} shell page(s) captured to full content height (tallest ${Math.max(
+      ...shellPages.map((f) => f.contentHeight)
+    )}px)`
+  );
+  return true;
+}
+
 const results = [];
 results.push(
   await runCase({ label: "healthy fixture → PILOT PASS", breakMode: "", expectedExit: 0 })
 );
+results.push(verifyCaptureDepth());
 results.push(
   await runCase({
     label: "overflowing fixture → PILOT FAIL",

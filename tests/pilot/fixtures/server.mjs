@@ -178,14 +178,42 @@ function citationsPage() {
     <script>${CITATIONS_SCRIPT}</script>`;
 }
 
+/**
+ * Authenticated pages are wrapped in the same shape as the real app shell:
+ * pinned to the viewport, with the actual scrolling done by an inner element.
+ *
+ * That is what made `fullPage: true` silently crop every dashboard capture at
+ * the fold — `document.documentElement.scrollHeight` never grows past one
+ * viewport, so Playwright believed it had the whole page. Reproducing the
+ * shape here is what lets the self-check prove the fix instead of asserting it
+ * (`BELOW_FOLD_MARKER` sits far enough down that only a working capture
+ * contains it).
+ */
+const BELOW_FOLD_MARKER = "marcador-bajo-el-pliegue";
+
+function shellWrap(body) {
+  const filler = Array.from(
+    { length: 40 },
+    (_, i) => `<p style="margin:0 0 24px">fila de relleno ${i + 1}</p>`
+  ).join("");
+  return `<div class="shell" style="height:100dvh;overflow:hidden;display:grid;grid-template-rows:auto 1fr">
+  <header style="padding:8px 16px">cabecera</header>
+  <main class="shell-scroll" style="overflow-y:auto;padding:16px">
+    ${body}
+    ${filler}
+    <p id="${BELOW_FOLD_MARKER}">${BELOW_FOLD_MARKER}</p>
+  </main>
+</div>`;
+}
+
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
-</head><body><h1>${title}</h1>${body}${overflow}</body></html>`;
+<style>body{margin:0;font-family:system-ui}</style>
+</head><body>${shellWrap(`<h1>${title}</h1>${body}${overflow}`)}</body></html>`;
 }
 
 function publicHtml(path, title) {

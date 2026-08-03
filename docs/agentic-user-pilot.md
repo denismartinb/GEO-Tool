@@ -201,9 +201,40 @@ Per screen, per viewport (375 / 768 / 1280):
   `location()` is appended or the noise filters cannot match;
 - silent session loss (any authenticated route bouncing to `/login`).
 
+### Captures reach past the fold (UX-PILOT-1d)
+
+`fullPage: true` grows a screenshot to `document.documentElement.scrollHeight`
+and no further. The app shell pins itself to the viewport
+(`.shell { height: 100dvh; overflow: hidden }`, `app/globals.css`) and scrolls
+an inner element instead, so that number never exceeds one viewport — and
+every "full-page" capture of an authenticated screen was **silently cropped at
+the fold**, looking exactly like a complete one.
+
+Found 2026-08-03 on PR #308, where the pilot could not see the Overview's
+position headline or any panorama row past the third, at any viewport. It had
+been blind below the fold on every dashboard screen since the harness was
+written, not just on that PR.
+
+`visitAsUser` now measures the real content height — including inside any
+inner scroll container — and, when it exceeds the viewport, grows the
+*viewport* to match before capturing, then restores it. The width never
+changes, so the responsive breakpoint under test is untouched, and the app
+lays itself out honestly at the taller size rather than having its
+`overflow: hidden` stripped to fake a layout the product never renders.
+
+Captures are capped at 6000px. When a page is taller, `captureTruncated: true`
+is recorded — a silently cropped screenshot reads exactly like a complete one,
+which is the whole defect this fixes.
+
+Post-interaction captures stay viewport-sized on purpose: growing the viewport
+reflows the page, which would move an element out from under the cursor and
+dismiss the very `:hover` state being captured.
+
 Evidence lands in `.pilot/` (gitignored — it contains a live Supabase session):
 
-- `.pilot/screens/<viewport>--<screen>.png` — page-load captures (full page)
+- `.pilot/screens/<viewport>--<screen>.png` — page-load captures (full content,
+  including below the fold; `contentHeight` / `capturedHeight` /
+  `captureTruncated` in the findings say exactly how much was captured)
 - `.pilot/screens/<viewport>--<screen>--xN-<control>.png` — post-interaction
   captures (viewport-sized)
 - `.pilot/findings.jsonl` — page-load signals
@@ -442,6 +473,14 @@ self-check would report a false `PILOT FAIL` on every run.
   login step. Protection stays on for human visitors.
 - **Single account only.** The pilot cannot prove tenant isolation; that stays
   with `data-guardian`.
+- **One project shows one shape of data.** The core-flow journey walks a single
+  project, so whole branches of these screens are unreachable from it — a brand
+  the AI never named, a project with fewer than two scans carrying position
+  data, a ranking where most entities have no rank. `second-project.spec.ts`
+  (UX-PILOT-1d) walks the Overview and Competitors screens on up to two further
+  projects on the same account for exactly this reason (founder, 2026-08-03).
+  It skips, loudly, when the account has only one project, and annotates the
+  run when more projects existed than the cap allowed.
 - **UX-PILOT-2a exercises one prompt, not real load.** It proves a scan can
   complete end-to-end, but with a single active prompt it does not reproduce
   the concurrency of a full `MAX_REAL_SCAN_PROMPTS`-sized scan across every
@@ -456,3 +495,11 @@ healthy fixture that must produce `PILOT PASS`, and a deliberately overflowing
 one that must produce `PILOT FAIL`. It proves the gate can both pass and fail.
 A gate that cannot fail is not a gate — and a harness that quietly stopped
 working would otherwise report a comfortable PASS forever.
+
+It also asserts **capture depth**: the fixture wraps its authenticated pages in
+the same viewport-pinned shell the real app uses, and the check reads the
+height straight out of each PNG's IHDR chunk to confirm the capture actually
+reached the bottom of the content. The findings could claim anything; the image
+cannot. Verified 2026-08-03 by reverting the capture fix — the check reports
+`PNG is only 812px tall, expected ~1938px` and the self-check fails, which is
+what makes it worth running.
