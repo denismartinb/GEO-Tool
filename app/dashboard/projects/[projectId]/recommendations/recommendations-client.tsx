@@ -331,7 +331,21 @@ function ResolvedHistoryCard({ item }: { item: ResolvedHistoryItem }) {
  * to this page. Self-contained: owns its own open/close state and calls the
  * same server actions regardless of which page renders it.
  */
-export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
+export function RecCard({
+  rec,
+  projectId,
+  compact = false,
+}: {
+  rec: Recommendation;
+  projectId: string;
+  /**
+   * Rendered inside a group of same-rule cards, where the description and
+   * first step are identical across every member and are already shown once
+   * at group level. Suppresses both so the expanded group reads as a list of
+   * affected queries rather than N copies of the same paragraph.
+   */
+  compact?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [isRewriting, startRewrite] = useTransition();
   const [rewriteError, setRewriteError] = useState<string | null>(null);
@@ -455,8 +469,8 @@ export function RecCard({ rec, projectId }: { rec: Recommendation; projectId: st
             </div>
           )}
           <div className="rec-title">{rec.title}</div>
-          <div className="rec-problem">{rec.description}</div>
-          {firstStep && (
+          {!compact && <div className="rec-problem">{rec.description}</div>}
+          {!compact && firstStep && (
             <div className="rec2-step">
               <Icon name="arrRight" size={13} />
               <span>
@@ -882,27 +896,68 @@ function GroupedRecs({
   type,
   items,
   projectId,
+  jointPointsByType,
 }: {
   type: string;
   items: Recommendation[];
   projectId: string;
+  jointPointsByType?: Record<string, number | null>;
 }) {
   const [open, setOpen] = useState(false);
-  const points = items.reduce((sum, r) => sum + (typeof r.potentialPoints === "number" ? r.potentialPoints : 0), 0);
-  const rounded = Math.round(points);
+  // Never the SUM of the members' deltas: two gaps of the same type can share
+  // affected prompts and summing double-counts them (ADR 0017 §3). The number
+  // shown here is a single joint counterfactual computed server-side over the
+  // whole group; absent it, the group shows no figure at all.
+  const joint = jointPointsByType?.[type] ?? null;
+
+  // Members of a group are, by construction, the same rule fired on different
+  // prompts — so their description and first step are word-for-word identical.
+  // Showing them once here and suppressing them on the cards is what keeps an
+  // expanded group readable instead of eight copies of the same two sentences.
+  const shared = items[0];
+  const sharedStep = shared.evidence_json?.first_step ?? null;
 
   return (
     <div className="rec2-group">
       <button type="button" className="rec2-group-h" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Icon name={open ? "chevDown" : "chevRight"} size={15} />
         <span className="rec2-group-t">{labelForType(type)}</span>
-        {rounded > 0 && <span className="rec2-pts" style={{ fontSize: 13 }}>+{rounded} pt</span>}
+        {joint !== null && joint > 0 && (
+          <span className="rec2-pts" style={{ fontSize: 13 }}>
+            +{joint} pt
+          </span>
+        )}
         <span className="rec2-group-c">{items.length}</span>
       </button>
       {open && (
         <div className="rec2-group-body">
+          <div style={{ padding: "12px 4px 2px" }}>
+            <div className="rec-problem" style={{ marginTop: 0 }}>
+              {shared.description}
+            </div>
+            {sharedStep && (
+              <div className="rec2-step">
+                <Icon name="arrRight" size={13} />
+                <span>
+                  <b>Empieza por aquí.</b> {sharedStep}
+                </span>
+              </div>
+            )}
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+                color: "var(--ink-4)",
+                margin: "14px 0 2px",
+              }}
+            >
+              Consultas afectadas
+            </div>
+          </div>
           {items.map((rec) => (
-            <RecCard key={rec.id} rec={rec} projectId={projectId} />
+            <RecCard key={rec.id} rec={rec} projectId={projectId} compact />
           ))}
         </div>
       )}
@@ -916,6 +971,7 @@ export function RecommendationsClient({
   recentWinsCount = 0,
   projectId,
   jointPoints = null,
+  jointPointsByType,
   domain = "",
 }: {
   recommendations: Recommendation[];
@@ -923,6 +979,8 @@ export function RecommendationsClient({
   recentWinsCount?: number;
   projectId: string;
   jointPoints?: number | null;
+  /** Joint counterfactual per recommendation type, computed server-side. */
+  jointPointsByType?: Record<string, number | null>;
   domain?: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -1069,7 +1127,13 @@ export function RecommendationsClient({
           </div>
           {groupByType(rest).map(({ type, items }) =>
             items.length > 1 ? (
-              <GroupedRecs key={type} type={type} items={items} projectId={projectId} />
+              <GroupedRecs
+                key={type}
+                type={type}
+                items={items}
+                projectId={projectId}
+                jointPointsByType={jointPointsByType}
+              />
             ) : (
               <RecCard key={items[0].id} rec={items[0]} projectId={projectId} />
             ),

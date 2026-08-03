@@ -373,6 +373,31 @@ export default async function RecommendationsPage({
   const jointPoints =
     jointPotential && Math.round(jointPotential.deltaPoints) > 0 ? Math.round(jointPotential.deltaPoints) : null;
 
+  // Per-type joint ceiling, for the collapsed group rows. Same rule as above:
+  // one counterfactual over the union of the group's prompts, never the sum of
+  // its members' individual deltas (ADR 0017 §3).
+  const jointPointsByType: Record<string, number | null> = {};
+  if (scoreInputRows.length > 0) {
+    const byType = new Map<string, Recommendation[]>();
+    for (const rec of recs) {
+      const bucket = byType.get(rec.recommendation_type) ?? [];
+      bucket.push(rec);
+      byType.set(rec.recommendation_type, bucket);
+    }
+    for (const [type, items] of byType) {
+      if (items.length < 2) continue;
+      const joint = computeJointPotentialPoints(
+        scoreInputRows,
+        project.domain,
+        items.map((r) => ({
+          recommendationType: r.recommendation_type,
+          affectedPromptIds: affectedPromptIds(r.evidence_json),
+        })),
+      );
+      jointPointsByType[type] = joint && Math.round(joint.deltaPoints) > 0 ? Math.round(joint.deltaPoints) : null;
+    }
+  }
+
   // Blocked AI crawlers = a hard ceiling on everything else on this page.
   const botsReport = (auditRow as { bots: BotAccessReport | null } | null)?.bots ?? null;
   const blockedBots = (botsReport?.bots ?? []).filter((b) => !b.allowed).map((b) => b.agent);
@@ -510,6 +535,7 @@ export default async function RecommendationsPage({
                 recentWinsCount={recentWins.length}
                 projectId={projectId}
                 jointPoints={jointPoints}
+                jointPointsByType={jointPointsByType}
                 domain={project.domain}
               />
             )}
