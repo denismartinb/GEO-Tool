@@ -48,7 +48,9 @@ const BLOG_SLUGS = [
   "que-es-geo-generative-engine-optimization",
   "como-elegir-prompts-monitorizar-marca-ia",
   "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo"
+  "genscore-vs-herramientas-geo",
+  "llms-txt-guia-practica",
+  "como-conseguir-que-chatgpt-te-cite"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
