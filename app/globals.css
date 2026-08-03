@@ -5348,11 +5348,19 @@ select.set-field {
 
 /* 3 · Pillar strip — context, not navigation. Horizontal scroll on phones so
    four pillars never squash into unreadable columns. */
+/* 2×2 on phones, 4-across from 560px. Four columns in a 375px viewport leave
+   ~60px of text per pillar, which is narrower than the word "PRESENCIA" — so
+   three of the four labels truncated to "PRESENC…" / "PROMINE…" / "AUTORID…",
+   naming nothing. Wrapping cannot save a single long word; the column has to
+   get wider. */
 .rec2-pillars {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 18px;
+}
+@media (min-width: 560px) {
+  .rec2-pillars { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 .rec2-pillar {
   background: var(--surface-sunk);
