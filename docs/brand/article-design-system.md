@@ -27,6 +27,23 @@ De ahí se derivan las tres reglas duras:
 3. Una maqueta de producto **siempre** declara en su pie que los datos son de
    ejemplo, y sus pesos/etiquetas coinciden con los reales del producto.
 
+### Aviso sobre `PullQuote` — el tipo no te salva de esto
+
+`cite` es obligatorio, pero el compilador **no puede comprobar que lo citado
+sea textual**. En la primera conversión de esta fase se coló una paráfrasis
+("Google ha confirmado públicamente que…", en tercera persona) atribuida a una
+persona concreta como si fueran sus palabras. Se retiró antes de publicar.
+
+La regla, que ninguna herramienta puede imponer por ti:
+
+- `PullQuote` es solo para **palabras literales de una fuente que puedes
+  enlazar**. Si no tienes la cita textual delante, no la uses.
+- Si lo que tienes es la posición de una organización, escríbelo en prosa con
+  su atribución ("Google ha confirmado, a través de X, que…"). Eso es honesto
+  y no necesita un bloque destacado.
+- Una cita en tercera persona sobre la propia organización del citado es la
+  señal más fácil de detectar: nadie habla así de sí mismo.
+
 ---
 
 ## 2. La librería
@@ -53,7 +70,7 @@ import { KeyTakeaway, NumberedSection, QuickAction } from "@/components/blog/art
 |---|---|---|
 | `Verdict` | Cuando la respuesta honesta a "¿esto funciona?" **no** es un sí limpio. | Para dar una opinión sin evidencia detrás. |
 | `Figure` | Contenedor de todo lo visual: marco, pie, fuente. | Nunca metas un visual sin `Figure`. |
-| `PullQuote` | Cita textual de una fuente identificable. | Para frases propias que quieres destacar — eso es negrita. |
+| `PullQuote` | Cita **textual y verificable** de una fuente identificable. | Para una paráfrasis. Ver el aviso de abajo. |
 | `Stat` / `StatGrid` | Cifra concreta con su fuente. | Si no puedes citar de dónde sale la cifra. |
 | `CodeBlock` | Fichero o fragmento reproducible por el lector. | Para pseudocódigo ilustrativo. |
 
