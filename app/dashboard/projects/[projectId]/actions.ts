@@ -36,15 +36,18 @@ import {
   createCompetitorInputSchema,
   deactivateCompetitorCore,
   deactivateCompetitorInputSchema,
-  followBrandCore,
-  followBrandInputSchema,
   updateCompetitorCore,
   updateCompetitorInputSchema,
   type CreateCompetitorResult,
   type DeactivateCompetitorResult,
   type UpdateCompetitorResult
 } from "@/lib/competitors/manage-competitors";
-import { resolveBrandDomain } from "@/lib/llm/gemini";
+import { suggestCompetitors } from "@/lib/llm/gemini";
+import {
+  getSuggestedCompetitorsCore,
+  suggestedCompetitorsInputSchema,
+  type SuggestedCompetitorsResult
+} from "@/lib/competitors/suggest-competitors";
 
 const promptCreateSchema = z.object({
   projectId: z.string().uuid(),
@@ -136,54 +139,32 @@ export async function createCompetitorAction(input: {
 }
 
 /**
- * "+ Seguir" sobre una marca emergente (COMP-REDESIGN-1, revisión del
- * fundador): el usuario solo aporta el nombre — que ya venía de
- * `other_brands_mentioned` — y el sistema resuelve el dominio por su cuenta
- * con Gemini grounded, igual que hace el onboarding al sugerir competidores.
+ * COMPETITOR-SUGGESTIONS-1: competidores sugeridos a partir del negocio real
+ * (perfil cacheado + búsqueda grounded), no de lo que salga en los prompts.
+ *
+ * Called from a client component on mount so the page itself never blocks on
+ * a multi-second grounded lookup; the block renders immediately with a
+ * skeleton and fills in when this resolves. Cached after the first call, so
+ * only a `refresh: true` ("Buscar más") pays that cost again.
  */
-export async function followBrandAction(input: {
+export async function getSuggestedCompetitorsAction(input: {
   projectId: string;
-  name: string;
-}): Promise<CreateCompetitorResult> {
-  const parsed = followBrandInputSchema.safeParse(input);
+  refresh?: boolean;
+}): Promise<SuggestedCompetitorsResult> {
+  const parsed = suggestedCompetitorsInputSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
   }
 
   const { supabase, user } = await requireUser();
 
-  // Country/language come from the project row, not the client — the caller
-  // only ever sends a brand name.
-  const { data: project } = await supabase
-    .from("projects")
-    .select("domain, country, language")
-    .eq("id", parsed.data.projectId)
-    .eq("owner_user_id", user.id)
-    .maybeSingle();
-
-  if (!project) {
-    return { success: false, error: "No se ha encontrado el proyecto." };
-  }
-
-  const result = await followBrandCore({
-    ...parsed.data,
+  return getSuggestedCompetitorsCore({
+    projectId: parsed.data.projectId,
+    refresh: parsed.data.refresh ?? false,
     supabase,
     user,
-    resolveDomain: (brandName) =>
-      resolveBrandDomain({
-        brandName,
-        country: project.country,
-        language: project.language,
-        projectDomain: project.domain
-      })
+    suggest: suggestCompetitors
   });
-
-  if (result.success) {
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
-  }
-
-  return result;
 }
 
 /** Edición de competidor (COMP-REDESIGN-1). Same call pattern as `createCompetitorAction`. */

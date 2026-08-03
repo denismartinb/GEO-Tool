@@ -3,7 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, type AddPromptsMode, type BusinessProfile, type GeneratedPromptCandidate } from "@/lib/llm/gemini";
-import { parsePersistedBusinessProfile, resolveBusinessContext } from "@/lib/projects/business-profile";
+import { resolveAndCacheBusinessProfile } from "@/lib/projects/business-profile";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { MAX_REAL_SCAN_PROMPTS } from "@/lib/scan/constants";
 import { getActionErrorCode } from "@/lib/scan/errors";
@@ -17,57 +17,6 @@ const ADD_PROMPTS_GENERATION_LIMIT = 5;
 const MIN_PROMPT_LENGTH = 10;
 const MAX_PROMPT_LENGTH = 300;
 const MAX_CATEGORY_LENGTH = 100;
-
-/**
- * COMPETITOR-GROUNDING-2 (docs/adr/0022): resolves the business profile this
- * project should use for prompt generation, computing and persisting it
- * lazily on first use rather than requiring it at project-creation time.
- * `mode: "manual"` never needs it (no new prompt text is generated, only
- * categorization of the user's own text) so callers should skip this
- * entirely for that mode. Never blocks the caller: any failure to resolve
- * or persist a profile simply returns null, and generateAddedPrompts falls
- * back to its pre-existing blind (brand/domain-only) behavior.
- */
-async function resolveAndCacheBusinessProfile(input: {
-  projectId: string;
-  ownerUserId: string;
-  domain: string;
-  country: string;
-  language: string;
-  existingProfile: unknown;
-  supabase: AuthenticatedContext["supabase"];
-}): Promise<BusinessProfile | null> {
-  const cached = parsePersistedBusinessProfile(input.existingProfile);
-  if (cached) return cached;
-
-  const context = await resolveBusinessContext({
-    domain: input.domain,
-    country: input.country,
-    language: input.language
-  }).catch(() => ({ status: "unidentified" }) as const);
-
-  if (context.status === "unidentified") return null;
-
-  // Best-effort cache write — a failure here must not block prompt
-  // generation for this call; the next "Añadir prompts" invocation simply
-  // recomputes it again. Scoped by id + owner_user_id per
-  // .claude/rules/server-actions.md, even though this row was already
-  // ownership-verified earlier in addPromptsCore.
-  const { error: cacheError } = await input.supabase
-    .from("projects")
-    .update({ business_profile: context.profile })
-    .eq("id", input.projectId)
-    .eq("owner_user_id", input.ownerUserId);
-
-  if (cacheError) {
-    console.warn("[add-prompts] business_profile cache write failed", {
-      project_id: input.projectId,
-      message: cacheError.message
-    });
-  }
-
-  return context.profile;
-}
 
 export const addPromptsInputSchema = z.object({
   projectId: z.string().uuid(),
@@ -210,7 +159,8 @@ export async function addPromptsCore({
           country: project.country,
           language: project.language,
           existingProfile: project.business_profile,
-          supabase
+          supabase,
+          logLabel: "add-prompts"
         })) ?? undefined);
 
   // Any Gemini failure (timeout, rate limit, malformed response, missing API

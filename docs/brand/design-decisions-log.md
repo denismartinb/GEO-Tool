@@ -1067,6 +1067,59 @@ más, con capturas reales de dispositivo:
    filas recibe) ni la cuota de voz / Terreno por tema / matriz, que siguen
    siendo acumulativas por diseño.
 
+
+## 11. Competidores sugeridos (COMPETITOR-SUGGESTIONS-1, 2026-08-03)
+
+**Qué se decidió.** La caja de sugerencias de la pantalla de Competidores deja
+de alimentarse de lo que la IA menciona en las respuestas y pasa a calcularse
+**a partir de lo que la marca realmente es**. Decisión del fundador
+(2026-08-03): *"yo sí quiero que aparezcan otros competidores sugeridos para
+seguir siempre. Lo que pasa es que se deben calcular en base a lo que es la
+marca real, no lo que sale en los prompts"*.
+
+**Por qué.** El bloque anterior ("Marcas que aparecen y no sigues") derivaba de
+`other_brands_mentioned`, es decir, de cualquier marca citada en una respuesta.
+Para un navegador como Mozilla eso producía AliExpress, Carrefour, eBay o El
+Corte Inglés: nombres reales presentes en el texto, pero que no compiten con
+nada. Dos intentos de arreglarlo por filtrado (EMERGING-BRANDS-GROUNDING-1, que
+añadió contexto de sector a la extracción, y EMERGING-BRANDS-WINDOW-1, que
+acotó el conteo al último escaneo) mejoraron el ruido pero no el problema de
+fondo: la fuente era la equivocada. Además el bloque aparecía y desaparecía
+según lo que hubiera extraído el último escaneo.
+
+**Cómo.** Se reutiliza el mecanismo del onboarding, sin inventar uno nuevo: el
+`business_profile` cacheado (ADR 0022) alimenta `suggestCompetitors`
+(`lib/llm/gemini.ts`), la búsqueda grounded con Google Search que ya se usa al
+crear un proyecto. Puntos de diseño:
+
+- **Caché en `projects.suggested_competitors`** (jsonb nullable, migración
+  0023, aprobada por el fundador). La llamada grounded tarda segundos y cuesta
+  una petición: no puede ejecutarse en cada render.
+- **Se cachea la lista en crudo y se filtra en lectura**, no al escribir. Así
+  seguir a un sugerido lo quita de la lista sin invalidar nada, y dejar de
+  seguirlo lo devuelve.
+- **Nunca se sugiere** el propio dominio ni un competidor ya dado de alta,
+  **activo o inactivo** — uno que desactivaste a propósito no vuelve como
+  "sugerencia".
+- **Carga desde cliente tras el primer pintado**, con esqueleto: la página
+  nunca se bloquea esperando la búsqueda, y el bloque está siempre presente.
+- **Sin perfil no se inventa nada**: si no se puede identificar el negocio se
+  dice honestamente, en vez de caer al modo ciego por dominio que ADR 0020
+  eliminó justamente por producir competidores absurdos.
+- `resolveAndCacheBusinessProfile` se extrae de `lib/projects/add-prompts.ts` a
+  `lib/projects/business-profile.ts` para que sugerencia de prompts y de
+  competidores compartan la misma caché en vez de recalcularla cada una.
+
+**Qué se retira (superseded).** El bloque "Marcas que aparecen y no sigues" y
+toda la fontanería que existía sólo para él: `lib/competitors/emerging-brands.ts`
+(+ tests), `emerging-brands-section.tsx`, `followBrandAction`/`followBrandCore`
+(alta por nombre) y `resolveBrandDomain` en `lib/llm/gemini.ts` — este último ya
+no hace falta porque la sugerencia trae el dominio consigo, así que "+ Seguir"
+ya no necesita una segunda llamada a Gemini. Queda en el historial de git por si
+se quiere recuperar como funcionalidad propia; la señal "a quién nombra la IA"
+sigue siendo interesante (caso Ikea de ADR 0018), pero es otra pregunta y
+merecería su propio diseño, no reutilizar esta caja.
+
 ---
 
 ## Cómo mantener este documento
