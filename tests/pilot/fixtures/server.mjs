@@ -378,12 +378,33 @@ function screenBody(path) {
   if (path === `/dashboard/projects/${PROJECT_ID}/web-audit`) {
     // The tablist is exactly what the web-audit journey anchors on, because
     // the real tabs only exist once the project has a coverage audit.
+    // Real click-to-switch behaviour (not just static markup), mirroring
+    // AuditTabBar/AuditTabPanel — added 2026-08-03 alongside
+    // core-flow.spec.ts's explicit Correcto/Páginas coverage, so a healthy
+    // fixture run proves that test's own aria-selected/tabpanel assertions
+    // work before trusting them against production.
     return `<div role="tablist" aria-label="Secciones de la auditoría">
-        <button role="tab" aria-selected="true">Problemas</button>
-        <button role="tab" aria-selected="false">Correcto</button>
-        <button role="tab" aria-selected="false">Páginas</button>
+        <button role="tab" aria-selected="true" data-tab="problemas">Problemas</button>
+        <button role="tab" aria-selected="false" data-tab="correcto">Correcto</button>
+        <button role="tab" aria-selected="false" data-tab="paginas">Páginas</button>
       </div>
-      <p>4 páginas sin datos estructurados</p>`;
+      <div role="tabpanel" data-panel="problemas">4 páginas sin datos estructurados</div>
+      <div role="tabpanel" data-panel="correcto" hidden>10 de 10 páginas indexables</div>
+      <div role="tabpanel" data-panel="paginas" hidden>Tabla de páginas de prueba</div>
+      <script>
+        document.querySelectorAll('[role="tab"]').forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var target = btn.getAttribute("data-tab");
+            document.querySelectorAll('[role="tab"]').forEach(function (t) {
+              t.setAttribute("aria-selected", t.getAttribute("data-tab") === target ? "true" : "false");
+            });
+            document.querySelectorAll('[role="tabpanel"]').forEach(function (p) {
+              if (p.getAttribute("data-panel") === target) p.removeAttribute("hidden");
+              else p.setAttribute("hidden", "");
+            });
+          });
+        });
+      </script>`;
   }
   return "<p>contenido</p>";
 }

@@ -167,6 +167,29 @@ test("web audit screen renders", async ({ page }, testInfo) => {
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "web-audit");
+
+  // Explicit tab coverage, not left to the generic sweep's luck: the
+  // interaction explorer's per-screen budget (4 candidates) is spent by
+  // nav/notifications/InfoTip/the already-active first tab before it ever
+  // reaches Correcto or Páginas — confirmed empirically on this PR's own
+  // pilot run (2026-08-03), whose only tab capture was "Problemas", the
+  // default. A full ux-pilot design-fidelity review flagged this exact
+  // gap: this PR's own new Correcto/Páginas tabs had never been seen with
+  // real data by anything. Real proof each tab actually switches content,
+  // not just that clicking it doesn't crash.
+  for (const label of ["Correcto", "Páginas"] as const) {
+    const tab = page.getByRole("tab", { name: label });
+    await tab.click();
+    await expect(tab, `clicking the "${label}" tab did not select it`).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    await expect(
+      page.locator('[role="tabpanel"]:not([hidden])'),
+      `"${label}" tab panel never became visible`
+    ).toBeVisible();
+    await captureInteraction(page, testInfo, `web-audit-tab-${label.toLowerCase()}`);
+  }
 });
 
 /**
