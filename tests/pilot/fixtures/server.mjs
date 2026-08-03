@@ -158,6 +158,20 @@ function citationsPage() {
       </div>
       <div class="cit2-v">50%</div>
     </div>
+    <!-- Mirrors the real .cit2-split-key legend so the selfcheck exercises
+         the same test path as core-flow.spec.ts's "citations KPI tooltip and
+         row expand actually work" journey — added 2026-08-03 alongside that
+         journey's new legend-tooltip check, so a healthy fixture run proves
+         the assertion itself works before trusting it against production. -->
+    <div class="cit2-split-key">
+      <span>
+        Terceros que te mencionan
+        <span class="info-tip" tabindex="0">
+          <span class="info-tip-icon">i</span>
+          <span class="info-tip-bubble">Tooltip de leyenda de prueba de la fixture</span>
+        </span>
+      </span>
+    </div>
     <div class="cit2-search"><input type="text" placeholder="Buscar página o dominio…" /></div>
     <div class="cit2-filtercount" style="display:none"></div>
     <div class="cit2-row">

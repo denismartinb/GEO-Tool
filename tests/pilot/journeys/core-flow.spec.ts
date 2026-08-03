@@ -207,6 +207,27 @@ test("citations KPI tooltip and row expand actually work, not just render their 
     if (i === 0) await captureInteraction(page, testInfo, "citations-tooltip-open");
   }
 
+  // 1b. Same check for the "Impacto de N citas" legend tooltips
+  //     (.cit2-split-key) — a DIFFERENT anchor container than the KPI strip
+  //     above, and the one real overflow instance (2026-08-03: 40px past a
+  //     375px viewport, .cit2-split-key's own .info-tip-anchor entry) that a
+  //     full ux-pilot design-fidelity review flagged as unverified: nothing
+  //     in the generic interaction sweep ever reached these triggers (the
+  //     KPI tooltips + nav/notifications controls already exhaust its
+  //     per-screen budget), so this is the only real hover-evidence path for
+  //     this specific tooltip.
+  const legendTips = page.locator(".cit2-split-key .info-tip");
+  const legendTipCount = await legendTips.count();
+  expect(legendTipCount, "no info-tip icons found in the citations impact legend").toBeGreaterThan(0);
+
+  for (let i = 0; i < legendTipCount; i++) {
+    await legendTips.nth(i).hover();
+    const bubble = page.locator(".cit2-split-key .info-tip-bubble").nth(i);
+    await expect(bubble, `hovering legend info-tip #${i + 1} did not reveal its tooltip`).toBeVisible();
+    await assertFullyVisible(page, `.cit2-split-key .info-tip-bubble >> nth=${i}`, `Legend tooltip #${i + 1}`);
+  }
+  await captureInteraction(page, testInfo, "citations-legend-tooltip-open");
+
   // 2. Full list row expands to show the prompt/evidence panel on click.
   const firstRow = page.locator(".cit2-rowmain").first();
   await expect(firstRow, "full citation list is empty — cannot verify row expand").toBeVisible();
