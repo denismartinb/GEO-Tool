@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { LegalPageShell } from "@/components/legal-page-shell";
 
 export const metadata: Metadata = {
-  title: "Política de Privacidad — GenScore"
+  title: "Política de Privacidad — GenScore",
+  alternates: { canonical: "https://www.genscore.es/privacidad" }
 };
 
 export default function PrivacidadPage() {

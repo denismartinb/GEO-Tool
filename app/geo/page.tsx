@@ -8,7 +8,8 @@ import { ProcessFlow } from "@/components/blog/process-flow";
 export const metadata: Metadata = {
   title: "¿Qué es el GEO? Guía visual de Generative Engine Optimization — GenScore",
   description:
-    "Qué es el GEO (Generative Engine Optimization), en qué se diferencia del SEO y cómo se mide la visibilidad de tu marca en respuestas de IA: GEO Score, tasa de mención, cuota de citas y más, explicados con ejemplos de GenScore."
+    "Qué es el GEO (Generative Engine Optimization), en qué se diferencia del SEO y cómo se mide la visibilidad de tu marca en respuestas de IA: GEO Score, tasa de mención, cuota de citas y más, explicados con ejemplos de GenScore.",
+  alternates: { canonical: "https://www.genscore.es/geo" }
 };
 
 const NAV_LINKS = [

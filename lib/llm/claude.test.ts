@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { generateClaudeVisibilityAnswer, extractClaudeStructuredData, ClaudeConfigError, ClaudeTimeoutError } from "./claude";
+import type { BusinessProfile } from "./gemini";
 
 const ORIGINAL_ENV = { ...process.env };
 
@@ -199,5 +200,45 @@ describe("extractClaudeStructuredData — MENTION-VERIFY-1 (docs/adr/0021)", () 
     expect(promptText).toMatch(/topical relevance is not a mention/i);
     expect(promptText).toMatch(/EXACT substring of the response text/i);
     expect(promptText).toContain('"display_name_found": string|null');
+  });
+
+  it("EMERGING-BRANDS-GROUNDING-1: includes a sector-relevance hint in other_brands_mentioned instructions when a profile is provided", async () => {
+    const profile: BusinessProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c",
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high"
+    };
+    const extractionJson = {
+      brand: { mentioned: true, display_name_found: "Mozilla", evidence: ["Mozilla is great"], position: 1 },
+      competitors: [],
+      citations: [],
+      sentiment: "positive",
+      other_brands_mentioned: [],
+      summary: "Mozilla looks great.",
+      confidence: "high",
+      notes: []
+    };
+    const fetchMock = mockFetchOnce(anthropicResponse(JSON.stringify(extractionJson)));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await extractClaudeStructuredData({
+      brand: "Mozilla",
+      competitors: [],
+      rawResponseText: "Mozilla is a great browser.",
+      promptText: "What is the best browser?",
+      profile
+    });
+
+    const [, init] = fetchMock.mock.calls[0];
+    const body = JSON.parse(init.body as string);
+    const promptText = body.messages[0].content as string;
+
+    expect(promptText).toMatch(/plausible competitors or alternatives/i);
+    expect(promptText).toContain("sector: software");
   });
 });

@@ -25,6 +25,7 @@ import { createServer } from "node:http";
 const SESSION_COOKIE = "pilot_fixture_session";
 const BREAK_MODE = process.env.PILOT_FIXTURE_BREAK ?? "";
 const PROJECT_ID = "fixture-project";
+const SITE_URL = "https://www.genscore.es";
 
 const AUTHED_PAGES = new Map([
   ["/dashboard", "Panel"],
@@ -36,6 +37,62 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
   [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
+
+// GROWTH-2 Fase 2.1 (tests/pilot/journeys/public-pages.spec.ts): unlike
+// AUTHED_PAGES above, these need no session — the real routes are public.
+// Each fixture page carries the same <link rel="canonical"> shape the real
+// pages ship, so that journey's mechanical assertions have something real to
+// check against instead of 404ing on this stand-in server.
+const BLOG_SLUGS = [
+  "que-es-el-geo-score",
+  "que-es-geo-generative-engine-optimization",
+  "como-elegir-prompts-monitorizar-marca-ia",
+  "como-elegir-competidores-analisis-geo",
+  "genscore-vs-herramientas-geo"
+];
+
+// GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
+// functions below (blogIndexHtml/blogPostHtml) instead of the generic
+// publicHtml — the journey now asserts on cluster headings and internal
+// "Sigue leyendo" links that a one-size-fits-all title+paragraph can't carry.
+const PUBLIC_PAGES = new Map([
+  ["/geo", "GEO — Genscore"],
+  ["/privacidad", "Privacidad — Genscore"],
+  ["/cookies", "Cookies — Genscore"],
+  ["/terminos", "Términos — Genscore"],
+  ["/glosario", "Glosario GEO — Genscore"],
+  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
+  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"]
+]);
+
+// GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
+// glossary terms the journey checks — each gets its own render function
+// because it needs a "Sigue explorando" related-links block, which the
+// generic publicHtml can't carry.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"];
+const GLOSSARY_RELATED_OF_SLUG = { geo: "geo-score", "geo-score": "geo" };
+
+function glosarioTerminoHtml(slug) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const related = GLOSSARY_RELATED_OF_SLUG[slug];
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/glosario/${slug}">
+<title>¿Qué es ${slug}? — Glosario GEO — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>¿Qué es ${slug}?</h1><p>contenido</p><div class="glossary-related"><h2>Sigue explorando</h2><ul><li><a href="/glosario/${related}">${related}</a></li></ul></div>${overflow}</body></html>`;
+}
+
+// GROWTH-2 Fase 2.3 (tests/pilot/journeys/docs-pages.spec.ts): same idea as
+// PUBLIC_PAGES above, kept as a separate map/function because these pages
+// also need a sidebar with an `active` link — the journey asserts on it.
+const DOCS_SLUGS = [
+  "empezar/primer-escaneo",
+  "informes/overview",
+  "metodologia/geo-score",
+  "planes-y-limites"
+];
 
 // Bare-bones equivalents of the real .info-tip (pure-CSS hover reveal) and
 // .cit2-row/.cit2-opp-item (click-to-toggle "open") classes from
@@ -167,6 +224,79 @@ function html(title, body) {
 </head><body>${content}</body></html>`;
 }
 
+function publicHtml(path, title) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}${path}">
+<title>${title}</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${title}</h1><p>contenido</p>${overflow}</body></html>`;
+}
+
+function docsPage(path, title) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const sidebar = DOCS_SLUGS.map(
+    (slug) => `<a href="/docs/${slug}" class="${path === `/docs/${slug}` ? "active" : ""}">${slug}</a>`
+  ).join("");
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}${path}">
+<title>${title}</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${title}</h1><nav>${sidebar}</nav><p>contenido</p>${overflow}</body></html>`;
+}
+
+// Mirrors lib/blog/posts.ts's cluster assignment (GROWTH-2 Fase 2.5) closely
+// enough for the fixture's own internal-linking assertions to hold — not a
+// copy of the real editorial mapping, just enough sibling structure per
+// cluster so blogPostHtml has at least one real link to render.
+const BLOG_CLUSTERS = ["Fundamentos GEO", "Metodología y medición", "Playbooks de ejecución", "GEO por sector"];
+const BLOG_CLUSTER_OF_SLUG = Object.fromEntries(BLOG_SLUGS.map((slug, i) => [slug, BLOG_CLUSTERS[i % 2]]));
+
+function blogIndexHtml() {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const sections = BLOG_CLUSTERS.map((cluster) => {
+    const posts = BLOG_SLUGS.filter((slug) => BLOG_CLUSTER_OF_SLUG[slug] === cluster);
+    const body = posts.length
+      ? `<ul>${posts.map((slug) => `<li><a href="/blog/${slug}">${slug}</a></li>`).join("")}</ul>`
+      : `<p class="blog-cluster-soon">Próximamente.</p>`;
+    return `<section class="blog-cluster"><h2>${cluster}</h2>${body}</section>`;
+  }).join("");
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/blog">
+<title>Blog — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>Blog — Genscore</h1>${sections}${overflow}</body></html>`;
+}
+
+function blogPostHtml(slug) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const cluster = BLOG_CLUSTER_OF_SLUG[slug];
+  const siblings = BLOG_SLUGS.filter((s) => s !== slug && BLOG_CLUSTER_OF_SLUG[s] === cluster);
+  const related = siblings.length
+    ? `<div class="blog-related"><h2>Sigue leyendo</h2><ul>${siblings
+        .map((s) => `<li><a href="/blog/${s}">${s}</a></li>`)
+        .join("")}</ul></div>`
+    : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/blog/${slug}">
+<title>${slug} — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
+}
+
+function feedXml() {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
+}
+
 function loginPage() {
   return html(
     "Bienvenido de nuevo",
@@ -265,6 +395,48 @@ const server = createServer((request, response) => {
   if (path === "/login") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(loginPage());
+    return;
+  }
+
+  if (path === "/feed.xml") {
+    response.writeHead(200, { "Content-Type": "application/rss+xml; charset=utf-8" });
+    response.end(feedXml());
+    return;
+  }
+
+  if (path === "/blog") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(blogIndexHtml());
+    return;
+  }
+
+  if (BLOG_SLUGS.includes(path.replace(/^\/blog\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(blogPostHtml(path.replace(/^\/blog\//, "")));
+    return;
+  }
+
+  if (GLOSSARY_TERM_SLUGS.includes(path.replace(/^\/glosario\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(glosarioTerminoHtml(path.replace(/^\/glosario\//, "")));
+    return;
+  }
+
+  if (PUBLIC_PAGES.has(path)) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(publicHtml(path, PUBLIC_PAGES.get(path)));
+    return;
+  }
+
+  if (path === "/docs") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(docsPage(path, "Documentación — Genscore"));
+    return;
+  }
+
+  if (DOCS_SLUGS.some((slug) => path === `/docs/${slug}`)) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(docsPage(path, `${path.slice(6)} — Genscore`));
     return;
   }
 

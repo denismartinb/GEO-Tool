@@ -60,6 +60,8 @@ export interface PageFindings {
   scrollWidth: number;
   viewportWidth: number;
   horizontalOverflow: boolean;
+  /** Populated only when horizontalOverflow is true — see findOverflowCulprits(). */
+  overflowCulprits: string[];
   consoleErrors: string[];
   failedRequests: string[];
   thirdPartyFailures: string[];
@@ -88,8 +90,60 @@ export interface PageFindings {
   headerInteractiveControls: string[];
 }
 
+/**
+ * Identifies which element(s) actually extend past the viewport's right
+ * edge when a page fails the horizontal-overflow check, instead of leaving
+ * the reviewer to guess from a screenshot alone. Deliberately walks every
+ * element in the document (not `document.body *`) — a third-party overlay
+ * a preview host injects can be appended as a sibling of <body> directly
+ * under <html>, outside where an app-level fix could ever reach it, and
+ * that distinction is exactly what a screenshot cannot show.
+ */
+async function findOverflowCulprits(page: Page, viewportWidth: number): Promise<string[]> {
+  return page.evaluate((width) => {
+    const results: string[] = [];
+    for (const el of document.querySelectorAll("*")) {
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) continue;
+      if (rect.right <= width + 2) continue;
+      const id = el.id ? `#${el.id}` : "";
+      const cls = el.className && typeof el.className === "string" ? `.${el.className.trim().split(/\s+/).join(".")}` : "";
+      const parent = el.parentElement;
+      const parentDesc = parent ? `${parent.tagName.toLowerCase()}${parent.id ? `#${parent.id}` : ""}` : "(none)";
+      results.push(
+        `${el.tagName.toLowerCase()}${id}${cls} — right:${Math.round(rect.right)}px left:${Math.round(rect.left)}px, parent:${parentDesc}`
+      );
+      if (results.length >= 5) break;
+    }
+    return results;
+  }, viewportWidth);
+}
+
 function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+/**
+ * Playwright derives an attachment's on-disk filename from the attachment
+ * NAME (sanitized, plus a hash suffix) — NOT from `path`. A long name
+ * therefore blows past the 255-byte filename limit and kills the journey
+ * with ENAMETOOLONG, even when the screenshot itself wrote fine because
+ * `slug()` had already truncated the path.
+ *
+ * Hit for real (2026-08-02): the interaction sweeper names attachments after
+ * the control's accessible name, and an InfoTip whose aria-label is a full
+ * explanatory sentence failed all three viewports at once. A control's
+ * accessible name is arbitrary product copy — the harness must never assume
+ * it is short, and a screenshot filename must never be able to fail a run
+ * that the product itself passed.
+ */
+const MAX_ATTACHMENT_NAME = 80;
+
+export function attachmentName(text: string): string {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  return collapsed.length <= MAX_ATTACHMENT_NAME
+    ? collapsed
+    : `${collapsed.slice(0, MAX_ATTACHMENT_NAME - 1)}…`;
 }
 
 function recordFindings(findings: PageFindings): void {
@@ -238,6 +292,8 @@ export async function visitAsUser(
     });
     const finalUrl = page.url();
     const bouncedToLogin = /\/login/.test(finalUrl) && !path.includes("/login");
+    // 2px of slack absorbs sub-pixel rounding without hiding a real overflow.
+    const horizontalOverflow = scrollWidth > viewport.width + 2;
 
     // Checked BEFORE the screenshot so a failure and its evidence describe the
     // same moment.
@@ -283,8 +339,8 @@ export async function visitAsUser(
       finalUrl: redact(finalUrl),
       scrollWidth,
       viewportWidth: viewport.width,
-      // 2px of slack absorbs sub-pixel rounding without hiding a real overflow.
-      horizontalOverflow: scrollWidth > viewport.width + 2,
+      horizontalOverflow,
+      overflowCulprits: horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [],
       consoleErrors,
       failedRequests,
       thirdPartyFailures,
@@ -296,7 +352,7 @@ export async function visitAsUser(
     };
 
     recordFindings(findings);
-    await testInfo.attach(`${label} (${testInfo.project.name})`, {
+    await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
       path: screenshot,
       contentType: "image/png"
     });
@@ -322,7 +378,10 @@ export function assertPageIsHealthy(findings: PageFindings): void {
   expect(
     findings.horizontalOverflow,
     `${findings.label} @ ${findings.viewport}: horizontal overflow — ` +
-      `scrollWidth ${findings.scrollWidth}px > viewport ${findings.viewportWidth}px`
+      `scrollWidth ${findings.scrollWidth}px > viewport ${findings.viewportWidth}px` +
+      (findings.overflowCulprits.length
+        ? `\nCulprit(s):\n  ${findings.overflowCulprits.join("\n  ")}`
+        : "")
   ).toBe(false);
 
   expect(
@@ -375,7 +434,7 @@ export async function captureInteraction(page: Page, testInfo: TestInfo, label: 
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
   await screenshotFullContent(page, screenshot);
-  await testInfo.attach(`${label} (${testInfo.project.name})`, {
+  await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"
   });
