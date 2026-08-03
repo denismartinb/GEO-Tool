@@ -4,8 +4,9 @@
 prueba "Mozilla" (`mozilla.org`) sin cambiar nada y el GEO Score se movió
 **44 puntos** (30 → 74). *"No nos podemos permitir esta variabilidad."*
 
-**Estado:** Fase 0 implementada (ADR 0024). Fase −1 especificada y
-**pendiente de aprobación explícita de migración**. Fases 1–3 pendientes.
+**Estado:** Fase 0 implementada (ADR 0024). **Fase −1 implementada**
+(ADR 0025, migración `0025` aprobada por el fundador el 2026-08-02 junto con
+la derivación automática de alias). Fases 1–3 pendientes.
 
 ---
 
@@ -141,7 +142,9 @@ Mahou/San Miguel).
 | Fase | Contenido | Riesgo | Estado |
 |---|---|---|---|
 | **0** | Honestidad: suelo de muestra, guarda de comparabilidad, margen de Wilson, unidades | Bajo | **Implementada** (ADR 0024) |
-| **−1** | Identidad de marca: alias por proyecto, dedupe en posición/SoV, revisión de competidores | Medio · **migración** | **Pendiente de aprobación** |
+| **−1** | Identidad de marca: alias por proyecto (derivados automáticamente y verificados contra evidencia), snapshot por escaneo | Medio · **migración** | **Implementada** (ADR 0025) |
+| −1b | Dedupe de entidades de la misma marca en posición/SoV + revisión de la lista de competidores (forks de Firefox) | Bajo | Pendiente |
+| **−1c** | **UI de alias**: verlos, añadirlos y quitarlos a mano, y decir en «Evidencias de mención» qué nombre casó. Hoy los alias mueven el score y solo se pueden inspeccionar por SQL — el riesgo asumido en ADR 0025 está **sin mitigar** hasta que exista | Bajo | **Pendiente (hueco conocido)** |
 | **1** | Metodología v3: `prominence` condicionada a mención, encogimiento bayesiano, recalibrar bandas | Medio · cambia el significado | Pendiente |
 | **2** | Muestreo: repeticiones por prompt en planes de pago | Coste por escaneo | Decisión de producto |
 | **3** | Candado: spec normativa, golden set congelado, tests de propiedad, gate de CI | Bajo | Pendiente |
