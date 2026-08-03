@@ -5236,6 +5236,24 @@ select.set-field {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
 }
+/* Audit-date line in the sticky header. Deliberately NOT inside .wa2-scope:
+   the header stays on the shared token system (see the .wa2-scope comment
+   above), so these are plain global classes.
+
+   Two lengths because `.ov-sticky-right` never shrinks (`flex-shrink: 0`).
+   The full sentence is ~340px wide, which at 375px starved the left block to
+   ~25px and made its kicker overlap this text — an invisible defect to every
+   mechanical check (nothing overflows when two elements share pixels), found
+   only by looking at the pilot's mobile capture. Below 900px is the same
+   breakpoint at which `.scan-status`/`.hdr-scan` already step out of this
+   header. */
+.wa2-hdr-audit-compact { display: none; }
+
+@media (max-width: 899px) {
+  .wa2-hdr-audit-full { display: none; }
+  .wa2-hdr-audit-compact { display: inline; }
+}
+
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
 @media (min-width: 900px) {

@@ -947,10 +947,24 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             real "Auditar ahora" button moved into the page body below,
             leaving this side purely informational. */}
         <div className="ov-sticky-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {/* Two lengths, not one. `.ov-sticky-right` is `flex-shrink: 0`, so
+              whatever sits here keeps its intrinsic width — fine for the short
+              pills Citations/Overview put here, but this is prose, and at
+              375px the full sentence claimed ~340px of a 375px header. The
+              left block (`flex: 1; min-width: 0`) collapsed to ~25px and its
+              "Auditoría web" kicker painted straight over this text. Caught by
+              reading the pilot's own mobile capture of PR #289 — no console
+              error, no failed request and no overflow signal fired, because
+              nothing overflowed: two elements simply shared the same pixels.
+              The compact form keeps the audit date on mobile (it is the only
+              place in the page that shows audit freshness) while fitting. */}
           {latestMap && (
             <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
-              Última auditoría: {formatDate(latestMap.generatedAt)}
-              {auditedScanDate ? ` · sobre el escaneo del ${formatDate(auditedScanDate)}` : ""}
+              <span className="wa2-hdr-audit-full">
+                Última auditoría: {formatDate(latestMap.generatedAt)}
+                {auditedScanDate ? ` · sobre el escaneo del ${formatDate(auditedScanDate)}` : ""}
+              </span>
+              <span className="wa2-hdr-audit-compact">Auditada {formatDate(latestMap.generatedAt)}</span>
             </span>
           )}
           {activeCampaignProgress && canAudit && (
