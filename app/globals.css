@@ -1508,7 +1508,12 @@ a {
     display: grid;
     grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
     gap: 18px;
-    align-items: stretch;
+    /* `start`, not `stretch`: the score card used to be padded out to the
+       KPI block's height by its sparkline. With the trend line withheld on
+       low-sample runs (GEO-SCORE-RELIABILITY-1) that stretch turned into a
+       tall card holding a gauge and a lot of air. Sizing to content keeps it
+       tidy in both states instead of only in the one that has a trend. */
+    align-items: start;
     margin-top: 16px;
   }
   .ov2-hero > .ov2-gauge-card {

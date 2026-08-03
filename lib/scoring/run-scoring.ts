@@ -1,5 +1,6 @@
 import { isBrandDomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
+import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 
 export const SCORING_VERSION = "phase9-geo-score-v2";
 
@@ -363,13 +364,23 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // sample per prompt/engine, 5 results give each answer a 20-point swing on
   // presence — calling that sample "high confidence" overstated its
   // statistical reliability (docs/geo-methodology-audit-2026-07.md, finding
-  // 5 / ADR 0015). 2..19 clean results are "medium".
+  // 5 / ADR 0015).
+  //
+  // "medium" now requires >=MIN_RESPONSES_FOR_BAND (10) rather than >=2
+  // (GEO-SCORE-RELIABILITY-1). Two clean results were never a "medium
+  // confidence" sample in any statistical sense: below 10 responses a single
+  // AI answer moves the mention rate by >=10 points, and ~0.71x of that
+  // reaches the composite. This also gates `computeRecommendationPotential
+  // Points` below, which already refuses to publish a point estimate over a
+  // "low" confidence run — so tiny runs stop showing "hasta +X pt" ceilings
+  // they cannot support, which is the intended consequence, not a side
+  // effect.
   let confidence: "low" | "medium" | "high" = "low";
   if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
     confidence = "low";
   } else if (totalResults >= 20 && extractionCoverage >= 0.8) {
     confidence = "high";
-  } else if (totalResults >= 2) {
+  } else if (totalResults >= MIN_RESPONSES_FOR_BAND) {
     confidence = "medium";
   }
 
@@ -507,7 +518,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       : "Extraction coverage is complete.",
     "brand_position: position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). Not-mentioned entities are penalized with position N+1 (N = total tracked entities for that prompt). avg_position = mean(effective_position) across prompts with valid extraction; lower is better.",
     "geo_score (geo-score-v2, ADR 0015): composite of presence (visibility_score), prominence (derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
-    "confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); 2-19 clean results are medium (ADR 0015)."
+    `confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); ${MIN_RESPONSES_FOR_BAND}-19 clean results are medium; below ${MIN_RESPONSES_FOR_BAND} responses a single AI answer moves the mention rate by >=${Math.round(100 / MIN_RESPONSES_FOR_BAND)} points, so the run is low confidence regardless of extraction quality (ADR 0015 + GEO-SCORE-RELIABILITY-1).`
   ];
 
   const perPromptSummary = results.slice(0, 10).map((row) => ({

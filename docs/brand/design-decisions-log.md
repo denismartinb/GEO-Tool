@@ -801,6 +801,60 @@ de producción (movistar.es), no una propuesta del piloto:
 
 ---
 
+## 8b. Overview — cómo se muestra la incertidumbre del score (GEO-SCORE-RELIABILITY-1, 2026-08-02)
+
+**Estado: implementado.** Detalle técnico en `docs/adr/0024-score-reliability-layer.md`
+y `docs/geo-score-variability-2026-08.md`.
+
+Decisiones de presentación (no de cálculo — el score no cambia):
+
+- **El score siempre se muestra; lo que se retira es la interpretación.**
+  Por debajo de 10 respuestas de IA desaparecen la franja cualitativa
+  («competitivo»/«emergente»/«inicial») y el delta, no el número. Ocultar el
+  número escondería evidencia real que el usuario ha pagado; mantener la
+  franja afirmaría una posición que la muestra no sostiene.
+- **La franja se sustituye por un badge `warn` "Muestra insuficiente"** con
+  tooltip que dice cuántas respuestas hay, por qué no basta y qué hacer
+  (añadir prompts o motores). Es un estado accionable, no un error.
+- **Un delta retirado no se etiqueta: se oculta.** *(Decisión del fundador,
+  2026-08-03 — supersede la primera versión de esta misma fase, que lo
+  renderizaba como "— sin comparación".)* Rotular cada hueco funcionaba como
+  argumento de honestidad y fallaba como pantalla: cuatro avisos de
+  "sin comparación" / "muestra insuficiente" a la vez hacen que el producto
+  parezca roto, no cuidadoso. Sigue vigente lo que motivó aquella versión:
+  **nunca "— sin cambio"**, que declara una estabilidad medida que no
+  tenemos. La regla final es ausencia, no afirmación falsa ni cartel.
+- **La ausencia se explica UNA vez, bajo el gauge, y en positivo.** *"Con N
+  respuestas de IA más verás franja y evolución. Añade prompts o motores."* —
+  redactado como lo que se desbloquea, no como lo que falta, porque el usuario
+  puede actuar sobre "añade prompts" y no sobre "muestra insuficiente". Un par
+  de escaneos no comparables **no** lleva línea: no es accionable (el
+  siguiente escaneo lo resuelve solo) y nombrarlo reintroduciría el ruido que
+  esta decisión elimina.
+- **Unidad: "respuestas de IA", no "prompts".** El contador es
+  `prompts × motores`; llamarlo "prompts" hacía que un proyecto de 1 prompt
+  en 3 motores leyera "3 de 3 prompts". Supersede la copy del banner de
+  insight de §4.
+- **El margen se muestra donde el dato es una proporción** (tasa de mención:
+  `±N pt`, Wilson 95%), no sobre el compuesto — no existe un intervalo
+  honesto del compuesto sin metodología nueva, y fabricarlo sería el mismo
+  error de precisión falsa que esta fase elimina.
+
+- **Una card KPI que no puede sostener su afirmación se oculta entera**, no se
+  queda con un valor vacío. Aplica a "Sentimiento de marca", cuyo veredicto
+  ("Positivo") se calcula solo sobre las respuestas que mencionan la marca —
+  2 en el escaneo que destapó esto. Dejarla habría sido la única card de la
+  pantalla afirmando algo con seguridad mientras sus tres hermanas se callan.
+- **La card del gauge deja de estirarse hasta la altura del bloque de KPIs**
+  (`align-items: start` en `.ov2-hero`, ≥1200px). Antes la rellenaba la
+  sparkline; al retirarla en escaneos de muestra baja quedaba un gauge con
+  mucho aire debajo. Ajustarla al contenido funciona en los dos estados, no
+  solo en el que tiene tendencia.
+
+Pendiente conocido: con muestra suficiente pero identidad de marca mal
+resuelta, la pantalla sigue publicando con confianza un número equivocado.
+Eso es la Fase −1 (alias de marca), en la PR #300.
+
 ## 9. Emails transaccionales — repintado a v3 (BRAND-5c, 2026-08-02)
 
 **Estado: implementado.**
