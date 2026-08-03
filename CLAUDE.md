@@ -158,6 +158,24 @@ completion, cleaning up after itself — opt-in only, via manual
 is approved; anything wider (creating a project, the unrestricted scan button,
 competitors, billing) needs its own Task Intake.
 
+**Reading more than one project is approved and shipped** (UX-PILOT-1d,
+2026-08-03, `tests/pilot/journeys/second-project.spec.ts`). One project only
+ever exercises one shape of data, so whole branches of a screen are
+unreachable from it — a brand the AI never named, a project with too few
+qualifying scans, a ranking where most entities have no rank. The pilot now
+walks the Overview and Competitors screens on up to two further projects on
+the same account, skips loudly when there is only one, and annotates the run
+when more projects existed than the cap allowed. This needs no exception:
+switching project is navigation, and every journey it runs is read-only.
+
+**Launching a scan is still forbidden** and is not covered by the above. The
+founder authorized the capability in principle on 2026-08-03 (*"que el pilot
+aprenda a lanzar escaneos cuando lo necesite… solo necesita preguntarme y yo
+lo autorizo"*) — the design is under Task Intake UX-PILOT-3 and nothing ships
+until that report is approved. Until then the read-only allow-list stands, and
+a pilot that cannot reach a state because no qualifying data exists reports
+`PILOT INCONCLUSIVE` and says so, rather than creating the data itself.
+
 ---
 
 ## Human Gate

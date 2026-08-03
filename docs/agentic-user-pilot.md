@@ -327,6 +327,28 @@ cost real money. This phase is therefore strictly read-only:
 Write journeys need their own approval, with an explicit cost cap and a
 cleanup strategy — see UX-PILOT-2a below for the one that has one.
 
+**Switching project is not a write.** Reading a second and third project on the
+same account (UX-PILOT-1d, `second-project.spec.ts`) is navigation and stays
+inside this guard: every journey it runs is the same read-only pair of screens.
+It exists because one project only ever exercises one shape of data — see
+"Known limits". Nothing about it needed an exception.
+
+**Launching a scan does need one, and does not have it yet.** The founder
+authorized the capability in principle on 2026-08-03 — the pilot should be able
+to ask for a scan when a state is unreachable without one, and he grants it per
+run. The design is under Task Intake **UX-PILOT-3** and nothing ships until
+that report is approved. Until then, a pilot that cannot reach a state because
+no qualifying data exists reports `PILOT INCONCLUSIVE` and names what it could
+not verify. It never creates the data itself, and it never reports a state it
+did not see.
+
+The reason this needs a report rather than a patch: a scan costs real money
+against Gemini / OpenAI / Anthropic, writes to the production Supabase project,
+and the always-on per-deploy pilot must keep being unable to trigger one by
+accident. "Ask the founder" is a human gate, and this file's own rule is that
+the guard is *enforced in code by an allow-list, not by convention*. Both have
+to hold at once, and how is exactly what the report is for.
+
 ## UX-PILOT-2a — the one write journey (opt-in, not automatic)
 
 `tests/pilot/journeys/write/add-prompt-and-scan.spec.ts` exercises the part of
