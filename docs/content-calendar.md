@@ -33,11 +33,12 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 | C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | 🔲 Pendiente | — |
 | C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | 🔲 Pendiente | — |
 
-## Capa D — Glosario (Fase 2.4)
+## Capa D — Glosario (Fase 2.4 / 2.6b)
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| D1 | `/glosario` (índice + primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | 🔲 Pendiente | — |
+| D1 | `/glosario` (índice, primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | ✅ Hecho | #292 |
+| D1b | `/glosario/<termino>` — URL propia por término (patrón confirmado por `seo-geo-research`: el único glosario del sector que funciona como motor de tráfico, Ahrefs, usa una página completa por término, no un índice único) | qué es &lt;término&gt; | ✅ Hecho | #299 |
 
 ## Capa B — Hubs del blog (Fase 2.5)
 

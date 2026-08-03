@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { DefinedTermSetSchema } from "@/components/seo/defined-term-set-schema";
@@ -29,17 +30,20 @@ export default function GlosarioPage() {
         terms={sortedTerms.map((t) => ({
           term: t.term,
           description: t.definition,
-          url: `${SITE_URL}/glosario#${t.slug}`
+          url: `${SITE_URL}/glosario/${t.slug}`
         }))}
       />
       <h1 className="lp-h2">Glosario GEO</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        Los términos clave de GEO (Generative Engine Optimization), explicados en una frase.
+        Los términos clave de GEO (Generative Engine Optimization), explicados en una frase. Cada
+        término tiene su propia página con la definición completa.
       </p>
       <div className="legal-body">
         {sortedTerms.map((t) => (
-          <div key={t.slug} id={t.slug}>
-            <h2>{t.term}</h2>
+          <div key={t.slug}>
+            <h2>
+              <Link href={`/glosario/${t.slug}`}>{t.term}</Link>
+            </h2>
             <p>{t.definition}</p>
           </div>
         ))}

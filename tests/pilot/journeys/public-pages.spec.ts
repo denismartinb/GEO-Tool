@@ -99,6 +99,22 @@ test("/glosario renders and has its own canonical", async ({ page }, testInfo) =
   await assertCanonical(page, "/glosario");
 });
 
+// GROWTH-2 Fase 2.6b: each term now has its own page (/glosario/<slug>)
+// instead of only an anchor on the index. Two representative terms, not all
+// 15 — they all render through the same dynamic route/component.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"] as const;
+
+for (const slug of GLOSSARY_TERM_SLUGS) {
+  test(`glossary term page renders and has its own canonical: ${slug}`, async ({ page }, testInfo) => {
+    const findings = await visitAsUser(page, testInfo, `/glosario/${slug}`, `glosario-${slug}`);
+    assertPageIsHealthy(findings);
+    await assertCanonical(page, `/glosario/${slug}`);
+    // Internal-linking rule (content-strategy.md §4.3): every term page
+    // must link onward to at least one related term/doc/post.
+    await expect(page.locator(".glossary-related a").first()).toBeVisible();
+  });
+}
+
 test("/comparativas/genscore-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(
     page,

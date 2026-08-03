@@ -64,6 +64,25 @@ const PUBLIC_PAGES = new Map([
   ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
 ]);
 
+// GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
+// glossary terms the journey checks — each gets its own render function
+// because it needs a "Sigue explorando" related-links block, which the
+// generic publicHtml can't carry.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"];
+const GLOSSARY_RELATED_OF_SLUG = { geo: "geo-score", "geo-score": "geo" };
+
+function glosarioTerminoHtml(slug) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const related = GLOSSARY_RELATED_OF_SLUG[slug];
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/glosario/${slug}">
+<title>¿Qué es ${slug}? — Glosario GEO — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>¿Qué es ${slug}?</h1><p>contenido</p><div class="glossary-related"><h2>Sigue explorando</h2><ul><li><a href="/glosario/${related}">${related}</a></li></ul></div>${overflow}</body></html>`;
+}
+
 // GROWTH-2 Fase 2.3 (tests/pilot/journeys/docs-pages.spec.ts): same idea as
 // PUBLIC_PAGES above, kept as a separate map/function because these pages
 // also need a sidebar with an `active` link — the journey asserts on it.
@@ -296,6 +315,12 @@ const server = createServer((request, response) => {
   if (BLOG_SLUGS.includes(path.replace(/^\/blog\//, ""))) {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(blogPostHtml(path.replace(/^\/blog\//, "")));
+    return;
+  }
+
+  if (GLOSSARY_TERM_SLUGS.includes(path.replace(/^\/glosario\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(glosarioTerminoHtml(path.replace(/^\/glosario\//, "")));
     return;
   }
 
