@@ -5867,6 +5867,48 @@ select.set-field {
   .art-sov-track { grid-column: 1 / -1; }
 }
 
+/* --- Maqueta de respuesta generativa (mención vs citación) ---------------- */
+.art-ans-pair { display: grid; gap: 13px; }
+@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; } }
+.art-ans {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 15px 16px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.art-ans-cited { background: var(--brand-surface); border-color: var(--brand-pos); }
+.art-ans-h {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.art-ans-cited .art-ans-h { color: var(--brand-pos); }
+.art-ans-body { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+.art-ans-src, .art-ans-nosrc {
+  display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 9px;
+  border-top: 1px dashed var(--line); font-size: 12.5px;
+}
+.art-ans-src { color: var(--brand-pos); font-weight: 600; }
+.art-ans-nosrc { color: var(--ink-3); font-style: italic; }
+
+/* --- Maqueta de recomendación -------------------------------------------- */
+.art-rec {
+  padding: 16px 17px; border-radius: 10px;
+  background: var(--brand-surface); border: 1px solid var(--line); box-shadow: var(--brand-shadow-card);
+}
+.art-rec-h { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 11px; }
+.art-rec-pri, .art-rec-conf {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+}
+/* No hay `--brand-warm-soft` en la paleta; se compone del token real con
+   `color-mix` en vez de inventar un hex nuevo (regla: cero colores nuevos). */
+.art-rec-pri { background: color-mix(in srgb, var(--brand-warm) 18%, transparent); color: var(--ink); }
+.art-rec-conf { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+.art-rec-t {
+  margin: 0 0 7px; font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 700; color: var(--ink);
+}
+.art-rec-why { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+
 /* --- Maqueta de conjunto de prompts -------------------------------------- */
 .art-prompts { display: flex; flex-direction: column; gap: 9px; }
 .art-prompt-row {

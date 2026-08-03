@@ -4,6 +4,13 @@ import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { ProcessFlow } from "@/components/blog/process-flow";
+import {
+  KeyTakeaway,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  RecommendationSample
+} from "@/components/blog/article";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
 
 export const post = getBlogPost("genscore-vs-herramientas-geo");
@@ -28,6 +35,12 @@ export const metadata = {
 
 <div className="blog-body">
 
+<KeyTakeaway>
+
+Casi todas las herramientas GEO responden bien a *"¿qué está pasando?"* y dejan solo al usuario en *"¿qué hago ahora?"*. Esa es la diferencia que persigue Genscore. No hay herramienta perfecta: la pregunta útil es **qué problema quieres resolver**, no cuál tiene más funciones.
+
+</KeyTakeaway>
+
 El mercado de herramientas GEO todavía está dando sus primeros pasos. Cada pocos meses aparece una nueva plataforma que promete ayudarte a entender cómo aparece tu marca en ChatGPT, Gemini o Claude. Eso es una buena noticia: significa que cada vez más empresas empiezan a considerar importante su visibilidad en inteligencia artificial.
 
 Sin embargo, cuando pruebas varias de estas herramientas, es fácil encontrar un patrón común. La mayoría responden bastante bien a una pregunta: *"¿Qué está pasando?"* Pero dejan al usuario solo cuando llega la siguiente: *"¿Qué hago ahora?"*
@@ -41,6 +54,20 @@ El primer paso de cualquier análisis GEO consiste en obtener datos. ¿Qué prom
 Sin esa información sería imposible tomar decisiones. Por eso herramientas como Otterly, Peec AI, Athena, Semrush AI Toolkit o Ahrefs Brand Radar han contribuido a dar forma a esta categoría. Cada una aborda el problema desde una perspectiva distinta y con diferentes capacidades, pero todas ayudan a entender cómo se comportan los modelos generativos respecto a una marca.
 
 Hasta aquí, el objetivo es parecido. La diferencia suele aparecer después.
+
+<Figure
+  label="Figura 1."
+  caption="La forma que toma una recomendación en Genscore: prioridad, confianza declarada y el porqué. Datos de ejemplo; la estructura y las etiquetas son las reales del producto."
+>
+  <RecommendationSample
+    priority="Prioridad media"
+    confidence="Confianza baja"
+    title="Añadir contenido comparativo"
+    why="Tu marca aparece en preguntas de descubrimiento pero desaparece en las de comparación, donde sí aparecen dos competidores."
+  />
+</Figure>
+
+Fíjate en que la maqueta declara **confianza baja**. Es deliberado: una recomendación que no dice con cuánta seguridad la hace es una opinión disfrazada de dato, y con pocos escaneos la seguridad es baja por definición.
 
 ## El verdadero trabajo empieza cuando termina el informe
 
@@ -95,11 +122,18 @@ Lo importante es entender qué problema quieres resolver. Si únicamente necesit
 
 Porque, al final, medir es solo el principio. La mejora llega cuando alguien convierte esos datos en decisiones.
 
-<div className="blog-cta">
-<p>¿Quieres pasar del análisis a la acción?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
+Si quieres el detalle herramienta por herramienta, lo tienes en nuestra comparativa de <a href="/comparativas/mejores-herramientas-geo-en-espanol">mejores herramientas GEO en español</a>, y en las fichas de <a href="/comparativas/genscore-vs-otterly">Genscore frente a Otterly</a> y <a href="/comparativas/genscore-vs-peec-ai">frente a Peec AI</a>.
 
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Quieres pasar del análisis a la acción?"
+  text="Genscore te dice qué hacer después de medir, con la confianza declarada."
+/>
 
 <RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
 
