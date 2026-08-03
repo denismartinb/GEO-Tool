@@ -24,12 +24,12 @@ const faqItems = [
   {
     question: "¿Cuál es la más barata para empezar?",
     answer:
-      "Genscore es la única con plan gratuito permanente, sin tarjeta. Entre las de pago, Otterly tiene el precio de entrada más bajo (29 $/mes), aunque sube con cada motor de IA adicional que añadas."
+      "Genscore es la única con plan gratuito permanente, sin tarjeta. Entre las de pago, Otterly tiene el precio de entrada más bajo (29 $/mes), aunque Gemini y Google AI Mode son add-ons con coste extra sobre ese precio base."
   },
   {
     question: "¿Alguna de estas herramientas tiene interfaz en español?",
     answer:
-      "Solo Genscore, de forma nativa. Para el resto no se ha podido confirmar soporte de español en su interfaz — la documentación pública que hemos consultado está en inglés."
+      "Solo Genscore, de forma nativa. Otterly confirma interfaz en inglés. Para Peec AI, Profound, Scrunch AI y AthenaHQ no se ha podido confirmar soporte de español — la documentación pública que hemos consultado está en inglés."
   }
 ];
 
@@ -124,6 +124,7 @@ export default function MejoresHerramientasGeoPage() {
             <h3>{t.name}</h3>
             <p>{t.oneLiner}</p>
             <p>{t.distinctiveFeature}</p>
+            {t.context && <p>{t.context}</p>}
             {t.comparisonHref && (
               <p>
                 <Link href={t.comparisonHref}>Ver la comparativa completa Genscore vs {t.name}</Link>

@@ -23,6 +23,12 @@ export type ToolProfile = {
   bestFor: string;
   /** Link to the dedicated head-to-head comparativa, when one exists. */
   comparisonHref?: string;
+  /**
+   * Extra paragraph of real, sourced context — used for the three tools
+   * without their own dedicated comparativa (Profound, Scrunch AI,
+   * AthenaHQ), whose profile would otherwise be a single sentence.
+   */
+  context?: string;
 };
 
 export const TOOLS: ToolProfile[] = [
@@ -45,7 +51,7 @@ export const TOOLS: ToolProfile[] = [
     url: "https://otterly.ai",
     oneLiner: "Monitorización y auditoría GEO con cobertura nominal de hasta 6 motores y seguimiento en más de 50 mercados.",
     distinctiveFeature:
-      "Cobertura multi-país más amplia de las tres opciones principales, con usuarios ilimitados ya en su plan de entrada.",
+      "Cobertura nominal de hasta 6 motores y seguimiento en más de 50 mercados, con usuarios ilimitados ya en su plan de entrada.",
     pricingNote: "Desde 29 $/mes — sin plan gratuito; Gemini y Google AI Mode son add-ons con coste extra.",
     spanishSupport: "No — interfaz en inglés.",
     bestFor:
@@ -58,7 +64,7 @@ export const TOOLS: ToolProfile[] = [
     url: "https://peec.ai",
     oneLiner: "Monitorización GEO con cobertura multi-idioma y multi-país al mismo precio, sin coste adicional por región.",
     distinctiveFeature:
-      "Su función \"Actions\" prioriza oportunidades por tipo de contenido, aunque no genera el contenido en sí — la creación queda en tus manos.",
+      "Su función \"Actions\" prioriza oportunidades y sugiere qué publicar u optimizar, aunque no genera el contenido en sí — la creación queda en tus manos.",
     pricingNote: "Desde ~95 $/mes — cifra pública, confírmala en peec.ai antes de decidir.",
     spanishSupport: "No confirmado — documentación e interfaz observadas en inglés.",
     bestFor:
@@ -76,7 +82,9 @@ export const TOOLS: ToolProfile[] = [
     pricingNote:
       "Cifras de agregadores de terceros, no confirmadas en su web oficial (bloqueada al intentar consultarla directamente) — orientativamente desde unos 99 $/mes en el plan self-serve, con niveles enterprise muy por encima. Confírmalo en tryprofound.com.",
     spanishSupport: "No encontrado con confianza — no verificado en fuente primaria.",
-    bestFor: "Equipos enterprise que ya operan a la escala que justifica un plan a medida y priorizan el benchmarking competitivo."
+    bestFor: "Equipos enterprise que ya operan a la escala que justifica un plan a medida y priorizan el benchmarking competitivo.",
+    context:
+      "Su producto central es \"Answer Engine Insights\": un desglose de qué fuentes citan los motores generativos al hablar de tu categoría, cruzado con benchmarking directo contra tus competidores en el mismo panel. Es de las opciones de esta lista más orientada a marcas que ya tienen un equipo dedicado a la categoría, no a quien empieza a medir su visibilidad en IA por primera vez."
   },
   {
     slug: "scrunch-ai",
@@ -89,7 +97,9 @@ export const TOOLS: ToolProfile[] = [
     pricingNote:
       "Cifras de agregadores de terceros, no confirmadas en su web oficial — orientativamente desde unos 250-300 $/mes. Confírmalo en scrunch.com.",
     spanishSupport: "No encontrado.",
-    bestFor: "Equipos SaaS/B2B con capacidad técnica que quieren optimizar activamente cómo los agentes de IA rastrean su web, no solo medir el resultado."
+    bestFor: "Equipos SaaS/B2B con capacidad técnica que quieren optimizar activamente cómo los agentes de IA rastrean su web, no solo medir el resultado.",
+    context:
+      "Es la única de las seis que no se limita a medir: su \"Agent Experience Platform\" sirve activamente una versión reducida de tu web a los rastreadores de IA, y añade un feed en tiempo real de qué agentes visitan el sitio y con qué intención. Encaja mejor con equipos que ya tienen a alguien capaz de actuar sobre esa señal técnica, no solo de leer un informe."
   },
   {
     slug: "athenahq",
@@ -101,6 +111,8 @@ export const TOOLS: ToolProfile[] = [
     pricingNote:
       "Cifras de agregadores de terceros, no confirmadas en su web oficial — orientativamente desde unos 270-295 $/mes por sistema de créditos. Confírmalo en athenahq.ai.",
     spanishSupport: "No encontrado.",
-    bestFor: "Equipos que ya tienen tráfico medible desde IA y quieren conectar esa visibilidad directamente con ingresos, no solo con menciones."
+    bestFor: "Equipos que ya tienen tráfico medible desde IA y quieren conectar esa visibilidad directamente con ingresos, no solo con menciones.",
+    context:
+      "Su \"Athena Citation Engine\" no se detiene en si te citan: predice la probabilidad de cita e integra GA4, Search Console y Shopify para intentar atribuir ingresos reales al tráfico que llega desde una mención en IA. Es la única de esta lista centrada en atribución económica en vez de solo en medición de visibilidad — encaja mejor cuando ya tienes tráfico e ingresos medibles que conectar, no como primera herramienta de un equipo que empieza de cero."
   }
 ];
