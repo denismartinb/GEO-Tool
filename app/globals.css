@@ -5493,11 +5493,39 @@ select.set-field {
 .rec2-group-body { padding: 0 12px 12px; border-top: 1px solid var(--line-soft); }
 .rec2-group-body .rec-card { margin-top: 10px; margin-bottom: 0; box-shadow: none; }
 
-/* Cards inside the new scope: tighter, one metric column, no rank chip. */
-.rec2-scope .rec-main { grid-template-columns: 1fr auto; gap: 12px; padding: 14px 16px; }
+/* Cards inside the new scope: tighter, one metric column, no rank chip.
+
+   On phones the card is a SINGLE column and the value/CTA sit in a row
+   underneath. The two-column grid only starts once there is room for it:
+   at 375px an `auto` right column doesn't shrink, so it took ~200px and
+   squeezed the title into a one-word-per-line ribbon (caught reading the
+   pilot's own 375px screenshot — the mechanical checks passed it, because
+   nothing overflowed horizontally and no console error fired). */
+.rec2-scope .rec-main { grid-template-columns: 1fr; gap: 10px; padding: 14px 16px; }
+.rec2-scope .rec-side {
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100%;
+}
 .rec2-scope .rec-title { font-size: 14px; }
 .rec2-scope .rec-problem { font-size: 12.5px; margin-top: 4px; }
 .rec2-scope .rec-tags { margin-top: 9px; gap: 6px; }
+/* Pillar labels wrap instead of truncating: "Prominencia" and "Cuota de voz"
+   cannot fit one line in a quarter of a 375px column, and "PROMINE…" tells
+   the user nothing. */
+.rec2-pillar-n { white-space: normal; line-height: 1.2; min-height: 2.4em; }
+
+@media (min-width: 560px) {
+  .rec2-scope .rec-main { grid-template-columns: 1fr auto; gap: 14px; }
+  .rec2-scope .rec-side {
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    justify-content: space-between !important;
+    width: auto;
+  }
+  .rec2-pillar-n { min-height: 0; }
+}
 
 @media (min-width: 900px) {
   .rec2-scope { max-width: 640px; }
