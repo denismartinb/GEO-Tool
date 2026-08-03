@@ -120,7 +120,7 @@ export default function MejoresHerramientasGeoPage() {
         </div>
 
         {TOOLS.map((t) => (
-          <div key={t.slug}>
+          <div className="tool-profile-card" key={t.slug}>
             <h3>{t.name}</h3>
             <p>{t.oneLiner}</p>
             <p>{t.distinctiveFeature}</p>
