@@ -15,6 +15,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
+import { checkCaptureDepth, checkScanLockout, pngHeightFrom } from "./pilot-selfcheck-checks.mjs";
 
 const PORT = process.env.PILOT_FIXTURE_PORT ?? "4321";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -33,7 +34,33 @@ async function waitForServer(timeoutMs = 10_000) {
   return false;
 }
 
+/**
+ * Refuses to start if something is already listening on the fixture port.
+ *
+ * Without this, a stale fixture — a killed run's orphan, or a second
+ * self-check running concurrently — keeps the port, the new server fails to
+ * bind, `waitForServer` succeeds against the WRONG server, and the case
+ * silently validates the wrong thing. Hit for real 2026-08-03: a concurrent
+ * run left a healthy fixture up, so the "overflowing fixture must FAIL" case
+ * tested a healthy one and reported `expected exit 1, got 0`. A self-check
+ * that can test the wrong server is the exact failure mode it exists to catch.
+ */
+async function assertPortIsFree() {
+  try {
+    await fetch(`${BASE_URL}/login`);
+  } catch {
+    return; // nothing listening, which is what we want
+  }
+  throw new Error(
+    `Something is already listening on ${BASE_URL}. Stop it first — otherwise this run ` +
+      "would silently test that server instead of the fixture it just started. " +
+      "(pkill -f 'fixtures/server.mjs', or set PILOT_FIXTURE_PORT.)"
+  );
+}
+
 async function runCase({ label, breakMode, expectedExit }) {
+  await assertPortIsFree();
+
   const server = spawn("node", ["tests/pilot/fixtures/server.mjs"], {
     env: {
       ...process.env,
@@ -86,115 +113,50 @@ async function runCase({ label, breakMode, expectedExit }) {
   }
 }
 
-/** Pixel height straight out of the PNG's IHDR chunk (bytes 20..24, big-endian). */
-function pngHeight(path) {
-  return readFileSync(path).readUInt32BE(20);
+/**
+ * The two assertions live in `pilot-selfcheck-checks.mjs` as pure functions so
+ * they can be unit-tested in both directions (see
+ * `tests/pilot/support/selfcheck-checks.test.ts`). An assertion nobody has
+ * watched fail is indistinguishable from one that cannot fail — and these two
+ * exist precisely to stop a broken harness reporting a comfortable PASS.
+ *
+ * These wrappers only supply real I/O and print the result.
+ */
+function readHealthyFindings() {
+  if (!existsSync(".pilot/findings.jsonl")) return null;
+  return readFileSync(".pilot/findings.jsonl", "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
 }
 
-/**
- * Third case, and the reason the fixture wraps authenticated pages in a
- * viewport-pinned shell: prove the capture actually reaches below the fold.
- *
- * `fullPage: true` grows to `document.documentElement.scrollHeight`, which
- * never exceeds one viewport when the shell pins itself and scrolls an inner
- * element — so every dashboard screenshot was cropped at the fold while
- * looking exactly like a complete one. A harness that captures half a screen
- * reports a comfortable PASS over content nobody ever saw, which is the same
- * failure mode this whole self-check exists to prevent.
- *
- * Run against the findings of the healthy case, before the next run clears
- * `.pilot/`.
- */
+function report(name, result) {
+  console.log(`${result.ok ? "\u2713" : "\u2717"} ${name}: ${result.message}`);
+  return result.ok;
+}
+
+/** Prove captures reach past the fold — run against the healthy case's
+ *  findings, before the next case clears `.pilot/`. */
 function verifyCaptureDepth() {
-  if (!existsSync(".pilot/findings.jsonl")) {
-    console.log("✗ capture depth: no findings.jsonl — the healthy run wrote nothing");
-    return false;
-  }
-
-  const findings = readFileSync(".pilot/findings.jsonl", "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line));
-
-  // Pages whose real content runs past the tallest viewport the pilot uses.
-  const shellPages = findings.filter((f) => f.contentHeight > 1_024);
-
-  if (shellPages.length === 0) {
-    console.log(
-      "✗ capture depth: no page reported content taller than a viewport — the fixture shell is not reproducing the real one"
-    );
-    return false;
-  }
-
-  for (const f of shellPages) {
-    if (f.capturedHeight < f.contentHeight && !f.captureTruncated) {
-      console.log(
-        `✗ capture depth: ${f.label} @ ${f.viewport} captured ${f.capturedHeight}px of ${f.contentHeight}px without flagging truncation`
-      );
-      return false;
-    }
-    if (!existsSync(f.screenshot)) {
-      console.log(`✗ capture depth: ${f.label} @ ${f.viewport} screenshot missing at ${f.screenshot}`);
-      return false;
-    }
-    // The PNG itself is the evidence — the findings could claim anything.
-    const height = pngHeight(f.screenshot);
-    if (height < f.capturedHeight - 4) {
-      console.log(
-        `✗ capture depth: ${f.label} @ ${f.viewport} PNG is only ${height}px tall, expected ~${f.capturedHeight}px (content ${f.contentHeight}px)`
-      );
-      return false;
-    }
-  }
-
-  console.log(
-    `✓ capture depth: ${shellPages.length} shell page(s) captured to full content height (tallest ${Math.max(
-      ...shellPages.map((f) => f.contentHeight)
-    )}px)`
+  const findings = readHealthyFindings();
+  if (!findings) return report("capture depth", { ok: false, message: "no findings.jsonl — the healthy run wrote nothing" });
+  return report(
+    "capture depth",
+    checkCaptureDepth(findings, {
+      fileExists: existsSync,
+      pngHeight: (path) => pngHeightFrom(readFileSync(path))
+    })
   );
-  return true;
 }
 
-/**
- * Fourth case: prove the always-on, per-deploy run cannot reach the one
- * journey that spends money (UX-PILOT-3).
- *
- * The guard is structural — `journeys/scan/*.spec.ts` is matched only by the
- * `scan` Playwright project, which `PROJECT_SETS` includes only for an explicit
- * `--journeys scan` — but "structural" is a claim until something checks it.
- * This is a behavioural check on the default invocation, which is exactly what
- * every preview deploy runs. If a future refactor widens a testMatch or adds
- * `scan` to the read set, this fails.
- *
- * The self-check never sets `PILOT_SCAN_PROJECT_ID` either, so even reaching
- * the journey would refuse. The two locks are meant to hold independently;
- * this checks the outer one.
- */
+/** Prove the per-deploy run cannot reach the journey that spends money.
+ *  The self-check never sets `PILOT_SCAN_PROJECT_ID` either, so even reaching
+ *  it would refuse; the two locks are meant to hold independently and this
+ *  checks the outer one. */
 function verifyDeployRunCannotScan() {
-  if (!existsSync(".pilot/findings.jsonl")) {
-    console.log("✗ scan lockout: no findings.jsonl to inspect");
-    return false;
-  }
-
-  const findings = readFileSync(".pilot/findings.jsonl", "utf8")
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line));
-
-  const leaked = findings.filter(
-    (f) => f.label?.startsWith("scan-") || f.viewport === "scan" || f.path?.includes("/scan")
-  );
-
-  if (leaked.length > 0) {
-    console.log(
-      `✗ scan lockout: the default read run reached ${leaked.length} scan journey page(s) — ` +
-        `e.g. "${leaked[0].label}". The per-deploy pilot must never be able to spend money.`
-    );
-    return false;
-  }
-
-  console.log(`✓ scan lockout: default read run reached 0 scan journeys across ${findings.length} pages`);
-  return true;
+  const findings = readHealthyFindings();
+  if (!findings) return report("scan lockout", { ok: false, message: "no findings.jsonl to inspect" });
+  return report("scan lockout", checkScanLockout(findings));
 }
 
 const results = [];
