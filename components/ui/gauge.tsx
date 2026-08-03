@@ -8,15 +8,42 @@ type GaugeProps = {
   size?: number;
   stroke?: number;
   label?: string;
+  /**
+   * "ring" (default) is the 270° dial Overview/Prompts/the landing hero have
+   * always used — unchanged, so adding this prop repaints nothing.
+   *
+   * "semi" is the half-circle from the approved Auditoría web mockup
+   * (`docs/design-reference/web-audit-issues-1/opcion-b-rev4-aprobada.html`,
+   * "Salud del sitio"). Founder review 2026-08-03, second time on this same
+   * point: swapping web-audit's bespoke SVG for this shared component fixed
+   * the consistency complaint but not the shape — "el gauge sigue sin ser el
+   * diseño atractivo que metimos como referencia". Kept as a variant of the
+   * ONE gauge component rather than a second bespoke SVG, so the two shapes
+   * can never drift in gradient, numeral face or band colours.
+   */
+  variant?: "ring" | "semi";
 };
 
-export function Gauge({ value, max = 100, size = 132, stroke = 13, label = "/ 100" }: GaugeProps) {
+export function Gauge({
+  value,
+  max = 100,
+  size = 132,
+  stroke = 13,
+  label = "/ 100",
+  variant = "ring"
+}: GaugeProps) {
   const uid = useId().replace(/:/g, "g");
+  const semi = variant === "semi";
   const r = (size - stroke) / 2;
   const cx = size / 2;
   const cy = size / 2;
-  const start = 135;
-  const sweep = 270;
+  // Degrees run clockwise from the top. "semi" sweeps left→top→right, leaving
+  // the flat side down; "ring" keeps its original gap at the bottom.
+  const start = semi ? 270 : 135;
+  const sweep = semi ? 180 : 270;
+  // The half-circle only ever paints the top half, so the box is cropped to
+  // it — otherwise every consumer would inherit ~half a gauge of dead space.
+  const boxHeight = semi ? size / 2 + stroke / 2 : size;
   const frac = Math.max(0, Math.min(1, value / max));
 
   function polar(deg: number): [number, number] {
@@ -35,8 +62,8 @@ export function Gauge({ value, max = 100, size = 132, stroke = 13, label = "/ 10
   const gid = `gg${uid}`;
 
   return (
-    <div className="gauge-wrap" style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
+    <div className={`gauge-wrap${semi ? " gauge-semi" : ""}`} style={{ width: size, height: boxHeight }}>
+      <svg width={size} height={boxHeight}>
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--brand-blue-2)" />

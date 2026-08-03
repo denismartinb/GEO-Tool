@@ -274,19 +274,33 @@ function scoreColor(score: number | null): string {
  * has). `.wa2-scope .gauge-num` in globals.css gives it the same
  * Bricolage/gradient treatment `.ov2-scope`/`.cit2-scope` already apply.
  */
+/**
+ * Half-circle variant, matching the approved mockup's "Salud del sitio" dial
+ * (founder review 2026-08-03 — second pass on this same point: adopting the
+ * shared component fixed consistency but not the shape).
+ */
 function ScoreGauge({ score }: { score: number | null }) {
+  const size = 168;
+  const stroke = 15;
   if (score === null) {
-    const size = 116;
+    const height = size / 2 + stroke / 2;
+    const r = (size - stroke) / 2;
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="Preparación GEO sin datos" style={{ flexShrink: 0 }}>
-        <circle cx={size / 2} cy={size / 2} r={(size - 10) / 2} fill="none" stroke="var(--line-soft)" strokeWidth={10} />
-        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" style={{ fontSize: 22, fontWeight: 700, fill: "var(--ink-4)" }}>
+      <svg width={size} height={height} role="img" aria-label="Diagnóstico general sin datos" style={{ flexShrink: 0 }}>
+        <path
+          d={`M ${stroke / 2} ${size / 2} A ${r} ${r} 0 0 1 ${size - stroke / 2} ${size / 2}`}
+          fill="none"
+          stroke="var(--surface-sunk)"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+        />
+        <text x="50%" y={size / 2 - 4} textAnchor="middle" style={{ fontSize: 26, fontWeight: 700, fill: "var(--ink-4)" }}>
           —
         </text>
       </svg>
     );
   }
-  return <Gauge value={score} size={116} stroke={10} />;
+  return <Gauge value={score} size={size} stroke={stroke} variant="semi" />;
 }
 
 /** Small Lighthouse-style score ring for per-page rows in Salud técnica (WEB-AUDIT-R4). `label` names WHICH page the ring belongs to — QA report: a screen reader tabbing the page list heard the same generic phrase on every ring. */
@@ -759,22 +773,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const technicalSnapshot = technicalHistory[0] ?? null;
 
   // Pure aggregation (lib/web-audit/issues.ts, WEB-AUDIT-ISSUES-1 fase 1) run
-  // over each loaded snapshot — cheap, no I/O, no new query per point. Series
-  // are chronological (oldest → newest) for the sparkline, matching how
-  // `trend`/Sparkline already read elsewhere on this page.
+  // over each loaded snapshot — cheap, no I/O, no new query per point.
+  // The chronological critical/warning series this used to build fed the two
+  // sparklines beside the Críticos/Avisos counts; both were removed in the
+  // founder review of 2026-08-03, so the series went with them rather than
+  // being left computed and unread on every render.
   const technicalReportsNewestFirst = technicalHistory.map((snap) => ({
     createdAt: snap.created_at,
     report: buildTechnicalIssuesReport(snap.pages, snap.bots)
   }));
   const currentTechnicalReport: TechnicalIssuesReport | null = technicalReportsNewestFirst[0]?.report ?? null;
   const previousTechnicalReport: TechnicalIssuesReport | null = technicalReportsNewestFirst[1]?.report ?? null;
-  const technicalReportsChronological = [...technicalReportsNewestFirst].reverse();
-  const criticalSeries: Array<number | null> = technicalReportsChronological.map(
-    (t) => t.report.issues.filter((i) => i.severity === "critical").length
-  );
-  const warningSeries: Array<number | null> = technicalReportsChronological.map(
-    (t) => t.report.issues.filter((i) => i.severity === "warning").length
-  );
   const technicalScoreDelta =
     currentTechnicalReport?.actualReadinessScore != null && previousTechnicalReport?.actualReadinessScore != null
       ? currentTechnicalReport.actualReadinessScore - previousTechnicalReport.actualReadinessScore
@@ -1086,12 +1095,19 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               scores, counts) with no hierarchy. */}
           <div className="card" style={{ marginTop: 14, padding: "16px 18px" }}>
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 20 }}>
-              <ScoreGauge score={globalScore.score} />
-              <div style={{ flex: 1, minWidth: 240 }}>
+              {/* Title ABOVE the dial, like the mockup's "Salud del sitio"
+                  (founder review 2026-08-03: "el gauge inicial necesita un
+                  título"). It used to sit over the tiles, which left the big
+                  number unlabelled and made it read as competing with the
+                  "Salud técnica" tile below rather than summarising it. */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
                 <div className="wa2-diag-title" style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
                   Diagnóstico general
                   <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas implementados (citados por la IA) y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
                 </div>
+                <ScoreGauge score={globalScore.score} />
+              </div>
+              <div style={{ flex: 1, minWidth: 240 }}>
                 {globalScore.includedCount < 3 && (
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
                     Media de {globalScore.includedCount} {globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.
@@ -1102,14 +1118,18 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                       Evolución chart, in the same series colors (accent =
                       cobertura, pos = implementación). The técnica tile has
                       no history loaded (only the latest snapshot) — no
-                      sparkline rather than a fake flat line. */}
+                      sparkline rather than a fake flat line.
+                      Hidden below 4 audits (founder review 2026-08-03: "que
+                      eso solo aparezca a partir del cuarto escaneo, porque si
+                      no quedan líneas muy raras") — two or three points draw a
+                      single kink that reads as a trend without being one. */}
                   <SubScoreTile
                     label="Contenido"
                     value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
                     hint="temas con contenido propio verificado"
                     delta={coverageDelta}
                     pct={summary.coveragePct}
-                    sparkValues={trend.map((p) => p.coveragePct)}
+                    sparkValues={trend.length >= 4 ? trend.map((p) => p.coveragePct) : undefined}
                     sparkColor="var(--accent)"
                   />
                   <SubScoreTile
@@ -1122,7 +1142,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     }
                     delta={surfacingDelta}
                     pct={summary.surfacingPct}
-                    sparkValues={trend.map((p) => p.surfacingPct)}
+                    sparkValues={trend.length >= 4 ? trend.map((p) => p.surfacingPct) : undefined}
                     sparkColor="var(--pos)"
                   />
                   <SubScoreTile
@@ -1146,6 +1166,39 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             </div>
           </div>
+
+          {/* Evolución: subida aquí desde el pie de "Problemas" (founder
+              review 2026-08-03: "subiría el gráfico de evolución de auditorías
+              y lo pondría precisamente debajo de la primera caja"). Al vivir
+              fuera del sistema de pestañas, la lectura pasa a ser: dónde
+              estás (hero) → hacia dónde vas (esto) → qué hacer (pestañas).
+              El bloque entero sigue desapareciendo con menos de dos
+              auditorías (founder-approved 2026-08-02) — nada de placeholder
+              "necesitas más datos". El Historial en tabla se queda en
+              Problemas: es detalle de consulta, no cabecera. */}
+          {trend.length >= 2 && (
+            <div className="card" style={{ marginTop: 12 }}>
+              <div style={{ padding: "13px 16px 0" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>
+                <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
+                  Cobertura e implementación a lo largo de los últimos escaneos.
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 14, fontSize: 11, color: "var(--ink-3)", fontWeight: 600, padding: "10px 16px 0" }}>
+                <span>
+                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--accent)" }} />
+                  Cobertura de temas
+                </span>
+                <span>
+                  <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--pos)" }} />
+                  Tasa de implementación
+                </span>
+              </div>
+              <div style={{ padding: "12px 16px 14px" }}>
+                <TrendChart points={trend} />
+              </div>
+            </div>
+          )}
 
           <AuditTabBar />
 
@@ -1186,10 +1239,19 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                         calculado
                       </span>
                     </div>
-                    <p style={{ fontSize: 11.5, color: "var(--ink-2)", margin: "6px 0 0" }}>
-                      Es una valoración técnica exacta. Que los motores de IA acaben citándote depende también de
-                      otros factores de GEO —contenido, autoridad, competencia— que se trabajan en el resto del
-                      producto, no solo aquí.
+                    {/* Names WHICH score these two numbers are. Founder review
+                        2026-08-03: the hero dial reads 58 and this card reads
+                        81 — "ya veo que es salud técnica, pero me ha costado
+                        identificarlo". They are different measures (global
+                        average vs technical only), so the fix is a label, not
+                        a shared number. Copy also cut down per the same
+                        review ("la frase tiene que ser más pequeña"). */}
+                    <div style={{ fontSize: 11, fontWeight: 650, color: "var(--pos-ink)", marginTop: 2 }}>
+                      Salud técnica
+                    </div>
+                    <p style={{ fontSize: 10.5, lineHeight: 1.45, color: "var(--ink-3)", margin: "6px 0 0" }}>
+                      Es una valoración técnica. Que la IA acabe citándote depende también de otros factores de
+                      GEO, que trabajas en Recomendaciones.
                     </p>
                   </div>
                 )}
@@ -1212,6 +1274,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                       </span>
                     )}
                   </div>
+                  {/* Counts only. The sparklines that used to sit beside each
+                      number were struck out by hand in the founder's review
+                      screenshot (2026-08-03): "eso hay que eliminarlo, las
+                      líneas me refiero. Dejamos solo el conteo de críticos y
+                      el conteo de avisos". The same per-audit history is still
+                      readable in Evolución/Historial, where it has axes. */}
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, padding: "12px 16px 0" }}>
                     <div>
                       <span
@@ -1219,11 +1287,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                       >
                         Críticos
                       </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                      <div style={{ marginTop: 2 }}>
                         <span style={{ fontSize: 22, fontWeight: 800, color: "var(--wa-crit)", fontVariantNumeric: "tabular-nums" }}>
                           {currentTechnicalReport.issues.filter((i) => i.severity === "critical").length}
                         </span>
-                        <Sparkline values={criticalSeries} color="var(--wa-crit)" />
                       </div>
                     </div>
                     <div>
@@ -1232,11 +1299,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                       >
                         Avisos
                       </span>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
+                      <div style={{ marginTop: 2 }}>
                         <span style={{ fontSize: 22, fontWeight: 800, color: "var(--warn)", fontVariantNumeric: "tabular-nums" }}>
                           {currentTechnicalReport.issues.filter((i) => i.severity === "warning").length}
                         </span>
-                        <Sparkline values={warningSeries} color="var(--warn)" />
                       </div>
                     </div>
                   </div>
@@ -1282,8 +1348,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 confirmation block. */}
             {grouped.performing.length > 0 && (
               <div className="card" style={{ marginTop: 12 }}>
-                <div style={{ padding: "13px 16px 0", display: "flex", alignItems: "center", gap: 8 }}>
-                  <span className="badge badge-pos" style={{ flexShrink: 0 }}>Rindiendo</span>
+                {/* No "Rindiendo" pill: the heading already says these are
+                    working, so the badge only repeated it (founder review
+                    2026-08-03: "creo que no aporta nada, yo lo quitaría"). */}
+                <div style={{ padding: "13px 16px 0" }}>
                   <div style={{ fontSize: 13.5, fontWeight: 750 }}>Lo que ya funciona ({grouped.performing.length})</div>
                 </div>
                 <div style={{ padding: "14px 16px 16px" }}>
@@ -1304,36 +1372,9 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </div>
             )}
 
-            {/* Evolución — trasladada aquí desde su antigua pestaña propia,
-                ahora retirada (WEB-AUDIT-ISSUES-1 fase 2): "¿voy mejorando?"
-                es la pregunta natural justo después de la lista de arriba,
-                no un destino aparte. Founder-approved 2026-08-02: el bloque
-                entero (no solo el gráfico) desaparece por completo con
-                menos de dos auditorías — nada de placeholder "necesitas
-                más datos", que no aporta nada con una sola auditoría. */}
-            {trend.length >= 2 && (
-              <div className="card" style={{ marginTop: 16 }}>
-                <div style={{ padding: "13px 16px 0" }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>
-                  <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-                    Cobertura e implementación a lo largo de los últimos escaneos.
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 14, fontSize: 11, color: "var(--ink-3)", fontWeight: 600, padding: "10px 16px 0" }}>
-                  <span>
-                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--accent)" }} />
-                    Cobertura de temas
-                  </span>
-                  <span>
-                    <span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 3, marginRight: 5, verticalAlign: -1, background: "var(--pos)" }} />
-                    Tasa de implementación
-                  </span>
-                </div>
-                <div style={{ padding: "12px 16px 14px" }}>
-                  <TrendChart points={trend} />
-                </div>
-              </div>
-            )}
+            {/* El GRÁFICO de Evolución ya no vive aquí — subido a nivel de
+                página, justo bajo el hero (founder review 2026-08-03). Lo que
+                queda debajo es sólo el Historial en tabla. */}
 
             {trend.length >= 2 && (
               <div className="card" style={{ marginTop: 12 }}>

@@ -1280,14 +1280,56 @@ solo que nadie podía medirlo:
 - "Diagnóstico general" en el hero de Auditoría web (17px de overflow) —
   introducido en esta misma fase.
 
-Mismo arreglo en los dos casos (mismo patrón ya usado en `.cit2-kpis` desde
-el 2026-08-01): `position:static` en el trigger, `left:0; right:0;
-width:auto` en la burbuja, ancladas a un contenedor con `position:relative`
-que ya abarca el ancho seguro. **Riesgo conocido, no resuelto:** hay más
-usos de `InfoTip` con el posicionamiento por defecto sin auditar
-(`app/page.tsx`, `runs/[runId]/page.tsx`), fuera del alcance de este PR
-porque el pilot no cubre esas pantallas hoy — candidato a un barrido
-dedicado o a que el default deje de ser `left:0; width:220px` sin más.
+Apareció un cuarto caso al mergear `main` (`.cm2-pos-list-hd`, Competidores,
+preexistente de COMP-REDESIGN-1/PR #285). Cuatro clases a medida repitiendo
+las mismas tres líneas es justamente cómo la cuarta llegó a producción sin
+parchear, así que se consolidaron en **una sola clase reutilizable
+`.info-tip-anchor`** (documentada en `app/globals.css` y en el propio
+`components/ui/info-tip.tsx`, para que el siguiente sitio de uso la
+encuentre antes de reinventarla). Auditados los **8** usos de `InfoTip` del
+producto, no solo los 4 conocidos: los dos que nunca se habían revisado
+(`app/page.tsx` y `runs/[runId]/page.tsx`) quedan cubiertos también.
+Descartado a propósito hacer `.card` global `position:relative` como
+arreglo "automático": cambiaría el bloque contenedor de las 26 reglas
+`position:absolute` que ya viven en `globals.css`, ninguna auditada aquí.
+
+**Tercera ronda — revisión del fundador sobre datos reales (2026-08-03,
+proyecto Movistar).** Con la pantalla ya funcionando, el juicio pasó de
+"¿está roto?" a "¿se entiende?":
+
+1. **El gauge no tenía título.** El número grande salía desnudo y competía
+   con el tile "Salud técnica" en vez de resumirlo. "Diagnóstico general"
+   sube de encima de los tiles a encima del propio gauge, como el
+   "Salud del sitio" de la maqueta.
+2. **58 arriba y 81 abajo confundían** ("ya veo que es salud técnica, pero
+   me ha costado identificarlo"). Son medidas distintas —media global vs
+   sólo técnica— así que el arreglo es etiquetar, no unificar: la caja de
+   potencial ahora dice **Salud técnica** bajo sus dos números.
+3. **La frase de esa caja, más corta y más pequeña** (11.5px → 10.5px,
+   `--ink-2` → `--ink-3`), y apuntando a Recomendaciones por su nombre.
+4. **Sparklines de los tiles sólo a partir de la 4ª auditoría** — con dos o
+   tres puntos se dibuja un codo que se lee como tendencia sin serlo.
+5. **Sparklines de Críticos/Avisos eliminadas** (tachadas a mano en la
+   captura de la revisión): sólo el conteo. La misma serie sigue disponible
+   en Evolución/Historial, donde sí tiene ejes.
+6. **Badge "Rindiendo" eliminado** de "Lo que ya funciona" — el titular ya
+   dice que funcionan.
+7. **El gráfico de Evolución sube** al nivel de página, justo bajo el hero y
+   por encima de las pestañas: dónde estás → hacia dónde vas → qué hacer. El
+   Historial en tabla se queda en Problemas (es detalle de consulta).
+8. **Gauge semicircular.** Segunda vez sobre el mismo punto: adoptar el
+   componente compartido (2026-08-02) arregló la consistencia pero no la
+   forma. Se añade `variant="semi"` al **único** componente `Gauge` en vez de
+   un segundo SVG a medida, así las dos formas no pueden divergir en
+   degradado, numeral ni colores de banda. **Pendiente de decisión del
+   fundador:** Overview, Prompts y la landing siguen con el anillo de 270°;
+   si la media luna les sienta mejor, es un `variant="semi"` por pantalla.
+
+**Pendiente, fuera de alcance de esta fase:** en la pestaña Páginas el
+fundador echa en falta "una solución para mejorar la puntuación de cada
+página". Hoy hay guía en prosa por página, pero no el **arreglo copiable**
+(bloque JSON-LD, meta description, etc.) — que es exactamente la fase 3b del
+Task Intake ya aprobado, no un retoque de esta ronda.
 
 ---
 
