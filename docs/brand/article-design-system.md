@@ -26,6 +26,26 @@ De ahí se derivan las tres reglas duras:
 2. Una cita **siempre** lleva atribución (`PullQuote` no compila sin `cite`).
 3. Una maqueta de producto **siempre** declara en su pie que los datos son de
    ejemplo, y sus pesos/etiquetas coinciden con los reales del producto.
+4. El número del gauge de un `ProductMock` **siempre** es la media ponderada
+   real de las filas que ese mismo artículo enseña. Se comprueba en
+   `lib/blog/article-recipes.test.ts`, no a ojo: ya se coló dos veces.
+
+### Un peso no es un valor medido
+
+Un `StatGrid` de pesos va **bajo su propio H2 que lo enmarca como pesos**, y
+sus tarjetas se redactan "Peso de…". Si no, el lector se encuentra el peso de
+una señal (20%) a pocos párrafos del valor real de esa misma señal (21%) y no
+tiene forma de saber que una es la regla y el otro el resultado — pasó en la
+PR #310. `StatGrid` exige `label` por la misma razón que `Stat` exige
+`source`.
+
+### No enseñes la misma cifra dos veces seguidas
+
+Si la `Figure` ya muestra los pesos, el `StatGrid` de debajo no los repite —
+es información duplicada disfrazada de dos bloques (hallazgo del `ux-pilot`,
+PR #309). El patrón que funciona: la figura enseña **valores de un escaneo**
+(`weight` es opcional en `MockRow`, así que se puede omitir) y el `StatGrid`
+enseña **los pesos**. Cada bloque aporta algo que el otro no.
 
 ### Aviso sobre `PullQuote` — el tipo no te salva de esto
 
@@ -79,6 +99,8 @@ import { KeyTakeaway, NumberedSection, QuickAction } from "@/components/blog/art
 | Componente | Para qué sirve | Cuándo NO usarlo |
 |---|---|---|
 | `ProductMock` | Maqueta del panel de GEO Score con datos de ejemplo. | Para mostrar una función que no existe. |
+| `ShareOfVoice` | Reparto de menciones entre marcas, con la tuya marcada. | Sin decir sobre cuántos prompts se calcula (`total` es obligatorio). |
+| `PromptSet` | Conjunto de prompts de ejemplo con su intención. | Para un solo prompt — eso va en prosa, en cursiva. |
 | `CompareTable` + `Pill` | Comparación multi-eje con veredicto codificado en color. | Para dos filas — eso es un párrafo. |
 | `Checklist` | Cosas que el lector debe comprobar una a una. | Para enumerar conceptos — eso es `<ul>`. |
 

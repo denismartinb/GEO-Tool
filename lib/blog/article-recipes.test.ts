@@ -32,10 +32,7 @@ const RECIPES: Record<BlogCluster["key"], Record<string, number>> = {
  * abajo que fija el tamaño máximo se lo impide.
  */
 const PENDING_CONVERSION = new Set([
-  "que-es-el-geo-score",
   "que-es-geo-generative-engine-optimization",
-  "como-elegir-prompts-monitorizar-marca-ia",
-  "como-elegir-competidores-analisis-geo",
   "genscore-vs-herramientas-geo",
   "como-conseguir-que-chatgpt-te-cite"
 ]);
@@ -122,6 +119,84 @@ describe("la deuda de conversión solo puede encoger", () => {
     for (const slug of PENDING_CONVERSION) {
       expect(real.has(slug), `${slug} está en PENDING_CONVERSION pero no existe en BLOG_POSTS`).toBe(true);
     }
+  });
+});
+
+/** Pesos canónicos del GEO Score, en el orden en que los pinta un `ProductMock` (ADR-0015). */
+const GEO_WEIGHTS = [0.4, 0.25, 0.2, 0.15];
+
+/** Lee `value:` y `weight:` (opcional) de un array `mockRows` declarado en un MDX. */
+export function readMockRows(source: string): { value: number; weight?: number }[] {
+  const block = source.match(/mockRows\s*=\s*\[([\s\S]*?)\n\]/);
+  if (!block) return [];
+  return [...block[1].matchAll(/\{[^}]*\}/g)].map((m) => {
+    const value = Number(m[0].match(/value:\s*(\d+(?:\.\d+)?)/)?.[1]);
+    const weight = m[0].match(/weight:\s*(\d+(?:\.\d+)?)/)?.[1];
+    return weight === undefined ? { value } : { value, weight: Number(weight) };
+  });
+}
+
+/** El número del gauge que el MDX pasa a `<ProductMock score={N} …>`. */
+export function readMockScore(source: string): number | null {
+  const m = source.match(/<ProductMock[\s\S]*?score=\{(\d+(?:\.\d+)?)\}/);
+  return m ? Number(m[1]) : null;
+}
+
+describe("el gauge de un ProductMock cuadra con las filas que enseña", () => {
+  /**
+   * Este error ya se ha colado DOS veces (QA lo encontró en la PR #309 con un
+   * 64 frente a un 65). Un artículo que enseña cuatro barras y un número que
+   * no sale de esas barras se contradice a sí mismo a la vista del lector,
+   * que es exactamente el tipo de mentira por descuido que este proyecto no
+   * publica. Comprobarlo a mano no escala: se comprueba aquí.
+   *
+   * Si las filas no declaran `weight`, se aplican los pesos canónicos de
+   * ADR-0015: las cuatro filas de un ProductMock son siempre los cuatro
+   * componentes del GEO Score, en ese orden.
+   */
+  for (const post of BLOG_POSTS) {
+    it(`el score declarado es la media ponderada real: ${post.slug}`, () => {
+      const source = readArticle(post.slug);
+      const score = readMockScore(source);
+      if (score === null) return;
+
+      const rows = readMockRows(source);
+      expect(rows.length, `${post.slug}: hay un ProductMock pero no se pudieron leer sus filas`).toBeGreaterThan(0);
+
+      const total = rows.reduce(
+        (acc, row, i) => acc + row.value * (row.weight !== undefined ? row.weight / 100 : (GEO_WEIGHTS[i] ?? 0)),
+        0
+      );
+      expect(
+        score,
+        `${post.slug}: el gauge dice ${score} pero sus propias filas dan ${total.toFixed(2)}`
+      ).toBe(Math.round(total));
+    });
+  }
+});
+
+describe("el lector de ProductMock funciona", () => {
+  it("lee filas con y sin peso, y el score", () => {
+    const conPeso = 'export const mockRows = [\n  { label: "a", value: 80, weight: 40 },\n  { label: "b", value: 60, weight: 60 }\n]';
+    expect(readMockRows(conPeso)).toEqual([
+      { value: 80, weight: 40 },
+      { value: 60, weight: 60 }
+    ]);
+    const sinPeso = 'export const mockRows = [\n  { label: "a", value: 50 }\n]';
+    expect(readMockRows(sinPeso)).toEqual([{ value: 50 }]);
+    expect(readMockScore("<ProductMock\n  score={65}\n  rows={mockRows}\n/>")).toBe(65);
+    expect(readMockScore("no hay maqueta aquí")).toBeNull();
+  });
+
+  it("detecta un gauge que no cuadra", () => {
+    // 80*.4 + 60*.6 = 68, no 70 — el test de arriba tiene que poder fallar.
+    const rows = [
+      { value: 80, weight: 40 },
+      { value: 60, weight: 60 }
+    ];
+    const total = rows.reduce((a, r) => a + r.value * (r.weight / 100), 0);
+    expect(Math.round(total)).toBe(68);
+    expect(Math.round(total)).not.toBe(70);
   });
 });
 

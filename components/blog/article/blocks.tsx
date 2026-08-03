@@ -154,8 +154,18 @@ export function Stat({
   );
 }
 
-export function StatGrid({ children }: { children: ReactNode }) {
-  return <div className="art-stats">{children}</div>;
+/**
+ * Rejilla de cifras. `label` es obligatorio por la misma razón que `source`
+ * lo es en `Stat`: sin él, un lector de pantalla anuncia tres bloques sueltos
+ * en vez de un grupo con sentido, y quien escribe el artículo no se ve
+ * obligado a decir de qué son esas cifras (propuesta del ux-pilot, PR #310).
+ */
+export function StatGrid({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <div className="art-stats" role="group" aria-label={label}>
+      {children}
+    </div>
+  );
 }
 
 /** Envoltorio de tabla comparativa: contenedor con scroll horizontal propio, para que el `body` nunca scrollee en móvil. */

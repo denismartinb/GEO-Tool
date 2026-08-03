@@ -1248,6 +1248,37 @@ Referencias: `docs/brand/article-design-system.md`,
 
 ---
 
+## 13. Artículos del blog — un peso no es un valor medido (GROWTH-3 Fase 3.2a, 2026-08-03)
+
+**Qué se decidió.** Todo `StatGrid` que muestre pesos del GEO Score va **bajo
+su propio H2 que los enmarca como pesos**, nunca colgando de un encabezado
+que promete otra cosa. Y sus tarjetas se redactan "**Peso de** la cuota de
+voz…", no "Cuota de voz…".
+
+**Por qué.** El `ux-pilot` encontró (PR #310) que en
+`como-elegir-competidores-analisis-geo` una tarjeta decía *"Cuota de voz —
+cuántas menciones son tuyas: 20%"* mientras la figura dos secciones antes
+mostraba *"Tu marca: 21%"*. Dos cifras casi idénticas etiquetadas igual: una
+es **la regla** (cuánto pesa esa señal en la fórmula) y la otra **el
+resultado** (la cuota real de una marca de ejemplo). Nada las distinguía.
+
+Ningún control automático puede detectar esto: no hay desbordamiento, ni
+error de consola, ni petición fallida. Solo aparece leyendo el artículo como
+lo leería alguien que llega por primera vez. Por eso se registra como regla
+en vez de confiar en que el pilot lo cace cada vez.
+
+`que-es-el-geo-score` ya lo hacía bien —su `StatGrid` vive bajo "Cuánto pesa
+cada señal"— y es el patrón de referencia.
+
+**Relacionado.** `StatGrid` exige ahora `label` (etiqueta accesible del
+grupo), por la misma lógica que `Stat` exige `source`: obliga a quien escribe
+a decir de qué son esas cifras. Ver `docs/brand/article-design-system.md`.
+
+**Pendiente.** Quedan 3 artículos por convertir al sistema (cluster
+`fundamentos` ×2 y `playbooks` ×1), en la Fase 3.2b.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
