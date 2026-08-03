@@ -5785,22 +5785,33 @@ select.set-field {
   border-left: 3px solid var(--brand-cyan); background: rgba(9, 197, 214, .07);
   border-radius: 0 11px 11px 0; padding: 19px 24px; margin: 30px 0;
 }
-.art-pull p {
+.art-pull-text {
   font-family: var(--font-display), "Hanken Grotesk", sans-serif;
   font-size: 19px; font-weight: 600; line-height: 1.45; color: var(--ink);
   margin: 0 0 10px; letter-spacing: -.01em;
 }
+/* MDX envuelve el contenido en bloque en su propio <p>: hereda, no duplica. */
+.art-pull-text p { margin: 0; font: inherit; color: inherit; letter-spacing: inherit; }
 .art-pull cite { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; font-style: normal; color: var(--ink-3); }
 
 /* --- Bloque de código ---------------------------------------------------- */
 .art-code { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; margin: 24px 0; box-shadow: var(--brand-shadow-card); }
 .art-code-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
   padding: 9px 15px; border-bottom: 1px solid var(--line); background: var(--surface-2);
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ink-3);
 }
 .art-code pre {
   margin: 0; padding: 17px 19px; overflow-x: auto;
   font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.8px; line-height: 1.75; color: var(--ink-2);
+}
+/* Mismo problema que .art-tablewrap resolvió en la PR #306: en móvil el código
+   se lee como cortado en vez de como deslizable. El pilot lo señaló también
+   aquí (PR #309), así que la pista va en los dos sitios, no solo en la tabla. */
+@media (max-width: 640px) {
+  .art-code-h::after {
+    content: "Desliza →"; flex: none; white-space: nowrap; color: var(--ink-3); opacity: .8;
+  }
 }
 
 /* --- Tabla comparativa --------------------------------------------------- */
@@ -5838,7 +5849,10 @@ select.set-field {
   padding: 12px 15px; background: var(--brand-surface); border: 1px solid var(--line);
   border-radius: 9px; margin: 0; font-size: 14.8px; color: var(--ink-2);
 }
-.art-check li svg { margin-top: 3px; color: var(--brand-pos); }
+.art-check li svg { margin-top: 3px; }
+/* El color del icono es semántico, no decorativo: verde = hazlo, rojo = evítalo. */
+.art-check-hacer li svg { color: var(--brand-pos); }
+.art-check-evitar li svg { color: var(--brand-neg); }
 
 /* --- Bio de autor -------------------------------------------------------- */
 .art-avatar {

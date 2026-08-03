@@ -82,6 +82,18 @@ import { KeyTakeaway, NumberedSection, QuickAction } from "@/components/blog/art
 | `CompareTable` + `Pill` | Comparación multi-eje con veredicto codificado en color. | Para dos filas — eso es un párrafo. |
 | `Checklist` | Cosas que el lector debe comprobar una a una. | Para enumerar conceptos — eso es `<ul>`. |
 
+#### `Checklist` — el icono tiene que decir lo mismo que el texto
+
+`tone="hacer"` (por defecto) marca cada punto con un check verde; `tone="evitar"`
+lo marca con un aspa roja. **No es una preferencia estética.** El icono es lo
+primero que lee quien escanea la página, antes que la frase: un apartado de
+"errores comunes" — es decir, cosas que NO hay que hacer — marcado con checks
+verdes le da al lector la señal contraria a la que dice el texto. El `ux-pilot`
+lo encontró así en la primera conversión de esta fase (PR #309).
+
+Regla: si los puntos están redactados en negativo ("No copies…", "Nunca…"),
+lleva `tone="evitar"`. Lo comprueba `lib/blog/article-recipes.test.ts`.
+
 ---
 
 ## 3. Recetas obligatorias por cluster
@@ -143,7 +155,21 @@ sitio: los tokens `--brand-*`.
 
 ---
 
-## 7. Nomenclatura CSS
+## 7. Contenido que se desborda en móvil
+
+Todo bloque con scroll horizontal propio (`CompareTable`, `CodeBlock`) lleva
+una pista visible por debajo de 640px. Sin ella el contenido se lee como
+**cortado**, no como deslizable — es un `PILOT FAIL` real de la PR #306, y el
+pilot volvió a señalarlo en la PR #309 para el bloque de código.
+
+Es también la razón por la que el barrido automático no basta como única
+verificación: el `scrollWidth` de la página está bien porque el desbordamiento
+ocurre *dentro* de un contenedor con scroll propio. Solo mirando la captura se
+ve. Cualquier bloque nuevo que desborde en horizontal necesita su pista.
+
+---
+
+## 8. Nomenclatura CSS
 
 Todas las clases van con prefijo `art-`. No es cosmético: la PR #292 costó una
 colisión de clases entre ramas sin mergear, y este sistema introduce ~15

@@ -81,9 +81,12 @@ export function QuickAction({ children, label = "Acción rápida" }: { children:
 
 /** Cita con atribución obligatoria — sin `cite` no se puede verificar quién lo dijo, y una cita sin fuente es exactamente lo que este proyecto no publica. */
 export function PullQuote({ children, cite }: { children: ReactNode; cite: string }) {
+  // `children` NO va envuelto en <p>: en MDX el contenido en bloque ya llega
+  // envuelto, y anidar <p> dentro de <p> produce HTML inválido (QA lo
+  // encontró en el HTML generado). El estilo lo lleva el div contenedor.
   return (
     <blockquote className="art-pull">
-      <p>{children}</p>
+      <div className="art-pull-text">{children}</div>
       <cite>{cite}</cite>
     </blockquote>
   );
@@ -95,13 +98,29 @@ const CHECK_ICON = (
   </svg>
 );
 
-/** Checklist renderizado — visualmente distinto de una lista de viñetas, porque "cosas que comprobar" no es lo mismo que "cosas que enumerar". */
-export function Checklist({ items }: { items: ReactNode[] }) {
+const CROSS_ICON = (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <path d="M4.2 4.2l7.6 7.6M11.8 4.2l-7.6 7.6" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" />
+  </svg>
+);
+
+/**
+ * Checklist renderizado — visualmente distinto de una lista de viñetas, porque
+ * "cosas que comprobar" no es lo mismo que "cosas que enumerar".
+ *
+ * `tone` NO es decorativo: el icono es lo primero que lee alguien que escanea
+ * la página, así que tiene que decir lo mismo que el texto. Un apartado de
+ * "errores comunes" enumera cosas que NO hay que hacer; marcarlas con un check
+ * verde le da al lector que escanea la señal contraria a la que dice la frase
+ * (hallazgo del ux-pilot en la PR #309). Ese apartado lleva `tone="evitar"`.
+ */
+export function Checklist({ items, tone = "hacer" }: { items: ReactNode[]; tone?: "hacer" | "evitar" }) {
+  const icon = tone === "evitar" ? CROSS_ICON : CHECK_ICON;
   return (
-    <ul className="art-check">
+    <ul className={`art-check art-check-${tone}`}>
       {items.map((item, i) => (
         <li key={i}>
-          {CHECK_ICON}
+          {icon}
           <span>{item}</span>
         </li>
       ))}

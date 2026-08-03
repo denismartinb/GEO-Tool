@@ -10,8 +10,6 @@ import {
   NumberedSection,
   QuickAction,
   Checklist,
-  Stat,
-  StatGrid,
   CompareTable,
   Pill,
   CodeBlock,
@@ -98,18 +96,12 @@ Eso no significa que sea inútil — significa que no deberías esperar un cambi
   caption="La señal que llms.txt pretende mover — la autoridad, es decir, si la IA cita tu dominio como fuente — pesa un 15% del GEO Score. Datos de ejemplo; los pesos son los reales de ADR-0015."
 >
   <ProductMock
-    score={64}
+    score={65}
     rows={mockRows}
     highlight={3}
     annotation="Esto es lo que llms.txt pretende mover"
   />
 </Figure>
-
-<StatGrid>
-  <Stat value="40%" label="Presencia — si la IA nombra tu marca" source="ADR-0015 · GEO Score v2" tone="blue" />
-  <Stat value="20%" label="Cuota de voz frente a competidores" source="ADR-0015 · GEO Score v2" tone="cyan" />
-  <Stat value="15%" label="Autoridad — citación real de tu dominio" source="ADR-0015 · GEO Score v2" tone="warm" />
-</StatGrid>
 
 ## Cómo crear tu llms.txt paso a paso
 
@@ -169,6 +161,7 @@ Nada más. Un encabezado, una descripción de una frase, y unas pocas secciones 
 ## Errores comunes al crear un llms.txt
 
 <Checklist
+  tone="evitar"
   items={[
     "No copies y pegues tu sitemap.xml tal cual: está pensado para rastreadores, con cientos de URLs, no para que un modelo entienda tu sitio en segundos.",
     "No lo trates como una lista de keywords. No es contenido para posicionar, es un mapa de navegación.",
