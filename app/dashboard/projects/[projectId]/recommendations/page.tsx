@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
@@ -21,7 +22,21 @@ function affectedPromptIds(evidenceJson: unknown): string[] {
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
 }
 
-type GeoPillar = { key: string; label: string; value: number };
+type GeoPillar = { key: string; label: string; value: number; help: string };
+
+/**
+ * Plain-language explanation of each GEO Score component, for the tooltip on
+ * its box. Deliberately says what the number MEANS for the user's brand, not
+ * how it is computed — the formula lives in docs/metodologia and in the
+ * Overview; here the question being answered is "¿esto qué me está diciendo?".
+ */
+const PILLAR_HELP: Record<string, string> = {
+  presence: "En cuántas de tus consultas te nombra la IA. Si no te nombra, no te pueden elegir.",
+  prominence:
+    "Cuando te nombra, si lo hace pronto o al final. Salir primero pesa mucho más que salir.",
+  standing: "Cuánto espacio ocupas tú frente a tus competidores en el total de menciones.",
+  authority: "Con qué frecuencia la IA usa tu web como fuente y te cita, en vez de citar a otros.",
+};
 
 /**
  * The four GEO Score components, read from the run's already-persisted
@@ -49,7 +64,7 @@ function readPillars(details: unknown): GeoPillar[] {
     const raw = (components as Record<string, unknown>)[key];
     const value = raw && typeof raw === "object" ? (raw as Record<string, unknown>).value : null;
     if (typeof value === "number" && Number.isFinite(value)) {
-      out.push({ key, label, value: Math.round(value) });
+      out.push({ key, label, value: Math.round(value), help: PILLAR_HELP[key] ?? "" });
     }
   }
   return out;
@@ -484,7 +499,10 @@ export default async function RecommendationsPage({
               <div className="rec2-pillars">
                 {pillars.map((p) => (
                   <div key={p.key} className="rec2-pillar">
-                    <div className="rec2-pillar-n">{p.label}</div>
+                    <div className="rec2-pillar-n">
+                      {p.label}
+                      {p.help && <InfoTip text={p.help} />}
+                    </div>
                     <div className="rec2-pillar-v">{p.value}</div>
                     <div className="rec2-pillar-trk">
                       <i style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }} />

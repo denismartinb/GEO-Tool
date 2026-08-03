@@ -5375,9 +5375,9 @@ select.set-field {
   letter-spacing: .05em;
   text-transform: uppercase;
   color: var(--ink-4);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* No overflow:hidden — the label carries an InfoTip whose bubble is absolutely
+     positioned and would be clipped away entirely, leaving an "i" that reveals
+     nothing. Labels wrap now, so there is no ellipsis to preserve either. */
 }
 .rec2-pillar-v {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
@@ -5407,6 +5407,40 @@ select.set-field {
   line-height: 1.25;
 }
 .rec2-plan-d { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.45; }
+
+/* 4b · The priority cards themselves. Tinted ground + accent border so the
+   three that matter read as a set at a glance, and a numbered chip so their
+   order is explicit rather than merely positional. */
+.rec2-scope .rec-card.rec2-priority {
+  border-color: var(--accent-ring);
+  background:
+    linear-gradient(180deg, rgba(37, 99, 235, .055), rgba(37, 99, 235, .015)),
+    var(--surface);
+}
+.rec2-scope .rec-card.rec2-priority:hover { border-color: var(--accent); }
+.rec2-rank {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-size: 11.5px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Pillar label + its tooltip share the line; the "i" must not push the text
+   into a wrap of its own. */
+.rec2-pillar-n {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+.rec2-pillar-n .info-tip { flex-shrink: 0; }
 
 /* 5 · Section divider for the non-prioritised remainder */
 .rec2-sec {

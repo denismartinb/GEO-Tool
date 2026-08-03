@@ -335,9 +335,16 @@ export function RecCard({
   rec,
   projectId,
   compact = false,
+  priorityRank,
 }: {
   rec: Recommendation;
   projectId: string;
+  /**
+   * 1-based position when this card is one of the scan's priority actions.
+   * Gives the card the accent treatment and a numbered chip, so the three
+   * that matter carry visible weight instead of looking like the rest.
+   */
+  priorityRank?: number;
   /**
    * Rendered inside a group of same-rule cards, where the description and
    * first step are identical across every member and are already shown once
@@ -422,7 +429,10 @@ export function RecCard({
         : "badge badge-neutral";
 
   return (
-    <div id={`rec-${rec.id}`} className={`rec-card${open ? " open" : ""}`}>
+    <div
+      id={priorityRank ? undefined : `rec-${rec.id}`}
+      className={`rec-card${open ? " open" : ""}${priorityRank ? " rec2-priority" : ""}`}
+    >
       <div
         className="rec-main"
         onClick={() => setOpen((o) => !o)}
@@ -446,7 +456,7 @@ export function RecCard({
             15+ cards they were most of the page's ink. Impact, effort and
             confidence still exist — they moved into the expanded detail. */}
         <div style={{ minWidth: 0, flex: 1 }}>
-          {(priorityLevel(rec) === "high" || quickWin || (rec.consecutive_runs_open ?? 1) > 1) && (
+          {(priorityRank || priorityLevel(rec) === "high" || quickWin || (rec.consecutive_runs_open ?? 1) > 1) && (
             <div
               style={{
                 display: "flex",
@@ -456,6 +466,7 @@ export function RecCard({
                 flexWrap: "wrap",
               }}
             >
+              {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
               {priorityLevel(rec) === "high" && <span className={priorityBadgeCls}>Prioridad alta</span>}
               {quickWin && (
                 <span className="badge badge-pos">
@@ -502,12 +513,14 @@ export function RecCard({
                 <div className="rec2-pts-l">potenciales</div>
               </>
             ) : (
-              <>
-                <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
-                  {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
-                </div>
-                {effectiveConfidence === "low" && <div className="rec2-pts-l">confianza baja</div>}
-              </>
+              /* Confidence deliberately NOT shown here (founder review): repeated
+                 down a list it read as the product hedging on every single card.
+                 It still qualifies the number — that is why a low-confidence run
+                 shows this qualitative label instead of a figure — and it stays
+                 visible inside the expanded detail. */
+              <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
+                {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
+              </div>
             )}
           </div>
           <button
@@ -916,6 +929,9 @@ function GroupedRecs({
   // expanded group readable instead of eight copies of the same two sentences.
   const shared = items[0];
   const sharedStep = shared.evidence_json?.first_step ?? null;
+  // A single-member group has nothing repeated to hoist, so its one card keeps
+  // its own description and step.
+  const single = items.length === 1;
 
   return (
     <div className="rec2-group">
@@ -931,33 +947,35 @@ function GroupedRecs({
       </button>
       {open && (
         <div className="rec2-group-body">
-          <div style={{ padding: "12px 4px 2px" }}>
-            <div className="rec-problem" style={{ marginTop: 0 }}>
-              {shared.description}
-            </div>
-            {sharedStep && (
-              <div className="rec2-step">
-                <Icon name="arrRight" size={13} />
-                <span>
-                  <b>Empieza por aquí.</b> {sharedStep}
-                </span>
+          {!single && (
+            <div style={{ padding: "12px 4px 2px" }}>
+              <div className="rec-problem" style={{ marginTop: 0 }}>
+                {shared.description}
               </div>
-            )}
-            <div
-              style={{
-                fontSize: 11,
-                fontWeight: 800,
-                letterSpacing: ".08em",
-                textTransform: "uppercase",
-                color: "var(--ink-4)",
-                margin: "14px 0 2px",
-              }}
-            >
-              Consultas afectadas
+              {sharedStep && (
+                <div className="rec2-step">
+                  <Icon name="arrRight" size={13} />
+                  <span>
+                    <b>Empieza por aquí.</b> {sharedStep}
+                  </span>
+                </div>
+              )}
+              <div
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: ".08em",
+                  textTransform: "uppercase",
+                  color: "var(--ink-4)",
+                  margin: "14px 0 2px",
+                }}
+              >
+                Consultas afectadas
+              </div>
             </div>
-          </div>
+          )}
           {items.map((rec) => (
-            <RecCard key={rec.id} rec={rec} projectId={projectId} compact />
+            <RecCard key={rec.id} rec={rec} projectId={projectId} compact={!single} />
           ))}
         </div>
       )}
@@ -985,10 +1003,7 @@ export function RecommendationsClient({
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
-  // Detect which type filters have data
-  const hasContent = recommendations.some((r) => categoryForType(r.recommendation_type) === "content");
   const hasTechnical = recommendations.some((r) => categoryForType(r.recommendation_type) === "technical");
-  const hasAuthority = recommendations.some((r) => categoryForType(r.recommendation_type) === "authority");
 
   // The plan: the highest-yield actions of this scan, in the order the engine
   // would tackle them. Computed before filtering — the plan is the scan's
@@ -1037,22 +1052,21 @@ export function RecommendationsClient({
     URL.revokeObjectURL(url);
   }
 
+  // "Todas" is exactly that: every active recommendation, including the ones
+  // already shown above as priority actions.
   const filtered = recommendations.filter((r) => {
     if (filter === "high") return priorityLevel(r) === "high";
-    if (filter === "quick") return isQuickWin(r);
-    if (filter === "content") return categoryForType(r.recommendation_type) === "content";
     if (filter === "technical") return categoryForType(r.recommendation_type) === "technical";
-    if (filter === "authority") return categoryForType(r.recommendation_type) === "authority";
     return true;
   });
 
+  // Four filters, no more (founder review). "Victorias rápidas", "Contenido" y
+  // "Autoridad" salieron: con las categorías ya visibles como acordeones en la
+  // lista, duplicaban la misma navegación en dos sitios distintos.
   const tabs: [FilterMode, string][] = [
     ["all", "Todas"],
     ["high", "Alta prioridad"],
-    ["quick", "Victorias rápidas"],
-    ...(hasContent ? [["content", "Contenido"] as [FilterMode, string]] : []),
     ...(hasTechnical ? [["technical", "Técnico"] as [FilterMode, string]] : []),
-    ...(hasAuthority ? [["authority", "Autoridad"] as [FilterMode, string]] : []),
     ...(resolvedHistory.length > 0 ? [["resolved", "Resueltas"] as [FilterMode, string]] : []),
   ];
 
@@ -1091,60 +1105,28 @@ export function RecommendationsClient({
         </button>
       )}
 
-      {/* 4 · The plan. Shown only on the unfiltered view: once the user picks
-          a filter they are browsing deliberately, and a fixed "start here"
-          block on top of a filtered list is noise. */}
-      {filter === "all" && plan.length > 0 && (
+      {/* 4 · The priority actions — always on top, whatever the filter, in the
+          accent treatment so the three that matter carry visible weight. They
+          are NOT removed from the list below: "Todas" means all of them, and a
+          repeat costs nothing next to the confusion of a list that silently
+          hides its three most important rows (founder review). */}
+      {plan.length > 0 && (
         <>
           <div className="rec2-plan">
             <div className="rec2-plan-t">
               {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}.
               {planPoints > 0 ? ` Hasta +${planPoints} puntos.` : ""}
             </div>
-            <div className="rec2-plan-d">
-              {recommendations.length > plan.length
-                ? `Las de mayor rendimiento de ${recommendations.length}.`
-                : "Ordenadas por lo que más mueve tu puntuación."}
-            </div>
           </div>
-          {plan.map((rec) => (
-            <RecCard key={rec.id} rec={rec} projectId={projectId} />
+          {plan.map((rec, i) => (
+            <RecCard key={`plan-${rec.id}`} rec={rec} projectId={projectId} priorityRank={i + 1} />
           ))}
         </>
       )}
 
-      {/* 5 · Everything else, grouped by action type so repeats collapse. */}
-      {filter === "all" && rest.length > 0 && (
-        <>
-          <div className="rec2-sec">
-            <span className="rec2-sec-t">Más recomendaciones</span>
-            <span className="rec2-sec-n">
-              {rest.length}
-              {jointPoints !== null && planPoints > 0 && jointPoints > planPoints
-                ? ` · +${jointPoints - planPoints} pt`
-                : ""}
-            </span>
-          </div>
-          {groupByType(rest).map(({ type, items }) =>
-            items.length > 1 ? (
-              <GroupedRecs
-                key={type}
-                type={type}
-                items={items}
-                projectId={projectId}
-                jointPointsByType={jointPointsByType}
-              />
-            ) : (
-              <RecCard key={items[0].id} rec={items[0]} projectId={projectId} />
-            ),
-          )}
-        </>
-      )}
-
-      {/* Filters + filtered list. Kept below the plan so the default view
-          answers "what now" before it offers ways to browse. */}
+      {/* 5 · Filters, directly under the priority actions. */}
       <div className="rec2-sec">
-        <span className="rec2-sec-t">{filter === "all" ? "Filtrar" : "Filtradas"}</span>
+        <span className="rec2-sec-t">Todas las recomendaciones</span>
         <button
           type="button"
           onClick={handleExport}
@@ -1165,6 +1147,27 @@ export function RecommendationsClient({
         </div>
       </div>
 
+      {/* 6 · The full list, grouped by action type into accordions that start
+          closed. With 20+ recommendations a flat list is unreadable, and the
+          categories are what the user actually chooses between. */}
+      {filter !== "resolved" &&
+        (filtered.length > 0 ? (
+          groupByType(filtered).map(({ type, items }) => (
+            <GroupedRecs
+              key={type}
+              type={type}
+              items={items}
+              projectId={projectId}
+              jointPointsByType={jointPointsByType}
+            />
+          ))
+        ) : (
+          <div className="section-empty">
+            <div className="section-empty-title">Nada con este filtro</div>
+            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+          </div>
+        ))}
+
       {filter === "resolved" &&
         (resolvedHistory.length > 0 ? (
           resolvedHistory.map((item) => <ResolvedHistoryCard key={item.id} item={item} />)
@@ -1174,17 +1177,6 @@ export function RecommendationsClient({
             <div className="section-empty-desc">
               Aquí aparecerá lo que un escaneo confirme como resuelto y lo que marques como hecho.
             </div>
-          </div>
-        ))}
-
-      {filter !== "all" &&
-        filter !== "resolved" &&
-        (filtered.length > 0 ? (
-          filtered.map((rec) => <RecCard key={rec.id} rec={rec} projectId={projectId} />)
-        ) : (
-          <div className="section-empty">
-            <div className="section-empty-title">Nada con este filtro</div>
-            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
           </div>
         ))}
     </>
