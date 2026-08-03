@@ -19,5 +19,6 @@ Documentacion/
 /screens/
 /findings.jsonl
 /interactions.jsonl
+/summary.md
 playwright-report/
 test-results/
