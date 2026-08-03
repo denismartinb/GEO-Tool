@@ -5503,6 +5503,15 @@ select.set-field {
    nothing overflowed horizontally and no console error fired). */
 .rec2-scope .rec-main { grid-template-columns: 1fr; gap: 10px; padding: 14px 16px; }
 .rec2-scope .rec-side {
+  /* MUST reset grid-column. The pre-existing mobile rule (max-width: 640px)
+     pins .rec-side to `grid-column: 2` because the old card had a 40px rank
+     pill in column 1. That pill is gone here, and pinning a child to column 2
+     of a single-column grid makes the browser create an IMPLICIT second
+     column — which squeezes the text back into a ~90px ribbon and silently
+     undoes the single-column layout. Caught on the second read of the pilot's
+     375px screenshot: the first fix looked right in the stylesheet and was
+     still broken on screen. */
+  grid-column: auto;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: space-between !important;
