@@ -5249,6 +5249,19 @@ select.set-field {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
 }
+/* Third instance of the exact bug .cit2-kpis (2026-08-01) and .cit2-split-key
+   (2026-08-03) already document and patch: the default .info-tip-bubble is
+   `position: absolute; left: 0; width: 220px`, and this specific trigger
+   ("Diagnóstico general" ⓘ) sits far enough right in the hero card that the
+   bubble ran 17px past a 375px viewport — invisible (visibility: hidden
+   still lays out), caught only once the pilot's overflow check measured the
+   real clipping element instead of the document (journey.ts, 2026-08-03).
+   Same fix, same reason a dedicated class is needed here instead of reusing
+   .cit2-kpis/.cit2-split-key: this title row is inline-styled JSX, not a
+   shared globals.css block. */
+.wa2-diag-title { position: relative; }
+.wa2-diag-title .info-tip { position: static; }
+.wa2-diag-title .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
 /* Audit-date line in the sticky header. Deliberately NOT inside .wa2-scope:
    the header stays on the shared token system (see the .wa2-scope comment
    above), so these are plain global classes.

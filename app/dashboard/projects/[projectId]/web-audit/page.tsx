@@ -1088,7 +1088,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 20 }}>
               <ScoreGauge score={globalScore.score} />
               <div style={{ flex: 1, minWidth: 240 }}>
-                <div style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
+                <div className="wa2-diag-title" style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
                   Diagnóstico general
                   <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas implementados (citados por la IA) y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
                 </div>
