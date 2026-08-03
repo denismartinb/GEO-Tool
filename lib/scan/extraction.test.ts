@@ -32,23 +32,30 @@ import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 function createServiceMock(options: {
   selectResult: { data: unknown[] | null; error: unknown };
   updateCalls: Array<Record<string, unknown>>;
+  /** EMERGING-BRANDS-GROUNDING-1: result for the `projects` table lookup runStructuredExtractionForRun does to read the cached business profile. Defaults to "no profile cached", matching every pre-existing test's expectations. */
+  projectResult?: { data: Record<string, unknown> | null; error?: unknown };
 }) {
-  const builder: Record<string, unknown> = {};
-  const methods = ["select", "eq", "not", "update", "in"];
+  const methods = ["select", "eq", "not", "update", "in", "maybeSingle"];
 
-  for (const method of methods) {
-    builder[method] = vi.fn((...args: unknown[]) => {
-      if (method === "update") {
-        options.updateCalls.push(args[0] as Record<string, unknown>);
-      }
-      return builder;
-    });
+  function makeBuilder(result: unknown) {
+    const builder: Record<string, unknown> = {};
+    for (const method of methods) {
+      builder[method] = vi.fn((...args: unknown[]) => {
+        if (method === "update") {
+          options.updateCalls.push(args[0] as Record<string, unknown>);
+        }
+        return builder;
+      });
+    }
+    builder.then = (resolve: (value: unknown) => unknown) => resolve(result);
+    return builder;
   }
 
-  builder.then = (resolve: (value: unknown) => unknown) => resolve(options.selectResult);
+  const scanResultsBuilder = makeBuilder(options.selectResult);
+  const projectsBuilder = makeBuilder(options.projectResult ?? { data: null, error: null });
 
   return {
-    from: vi.fn(() => builder)
+    from: vi.fn((table: string) => (table === "projects" ? projectsBuilder : scanResultsBuilder))
   };
 }
 
@@ -144,6 +151,60 @@ describe("runStructuredExtractionForRun", () => {
     expect(groundingCitations[1]).toMatchObject({ domain: null, confidence: "low" });
     expect(update.citations_count).toBe(2);
     expect(update.citation_found).toBe(true);
+  });
+
+  it("EMERGING-BRANDS-GROUNDING-1: threads the project's cached business profile into the extractor call", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const cachedProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c" as const,
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high" as const
+    };
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls,
+      projectResult: { data: { business_profile: cachedProfile }, error: null }
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledWith(expect.objectContaining({ profile: cachedProfile }));
+  });
+
+  it("passes profile: undefined (never a fabricated profile) when the project has no cached business profile yet", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls
+      // projectResult omitted — defaults to "no profile cached".
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledWith(expect.objectContaining({ profile: undefined }));
   });
 
   it("derives citations_count/citation_found from grounding chunks only, ignoring inline matches", async () => {

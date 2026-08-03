@@ -798,6 +798,7 @@ de producción (movistar.es), no una propuesta del piloto:
    pantalla a la que ir por el menú. Al perder su único consumidor, la prop
    `projectId` se retiró en cascada de `OpportunitiesBlock`, `CitationsClient`
    y de la llamada en `page.tsx` en vez de dejarla sin usar.
+
 ---
 
 ## 9. Emails transaccionales — repintado a v3 (BRAND-5c, 2026-08-02)
@@ -870,6 +871,254 @@ Referencias: `docs/brand/email-design-proposal.md` (propuesta completa,
 incluye §7-8 con el detalle de generación del PNG),
 `docs/email-templates/README.md` (por qué el `<img>` no puede llevar ancho
 fijo).
+
+---
+
+## 10. Página de Competidores (COMP-REDESIGN-1)
+
+**Estado: implementado (Fase A+B en un único PR, aprobado explícitamente por
+el fundador el 2026-08-02 — ver Task Intake en el hilo del PR).**
+
+**Origen:** el fundador pidió rediseñar Competidores a partir de dos
+documentos de referencia de Semrush (el blog "Why Are My Competitors Showing
+Up in AI Search and Not Us?" y la documentación del Competitor Research
+Report), pidiendo estudiar si la sección se podía "vitaminar" con información
+de valor nueva usando datos que ya tenemos.
+
+Decisiones finales:
+- **Repintado a v3** (`.cm2-scope`/`.cm2-page`), mismo mecanismo de remapeo
+  de variables que `.ov2-scope`/`.pr2-scope` (§2) y mismos anchos por
+  breakpoint que Overview/Prompts (460/640/1200/1280px) — Competidores
+  estaba en el sistema `.page`/1320px pre-BRAND-5b, la única pantalla de la
+  consola con scroll horizontal obligatorio en móvil (tabla de 5 columnas).
+  Se sustituye por un podio (fila-tarjeta) con revelación progresiva de
+  columnas por breakpoint, mismo componente en todos los tamaños.
+- **Taxonomía "Brecha de prompts"**: adapta el Missing/Weak/Strong/Shared/
+  Unique de Semrush a 5 categorías mutuamente excluyentes —
+  Ausente/Por detrás/Por delante/En exclusiva/Sin nadie —, derivadas
+  íntegramente de `extracted_json` ya persistido (sin llamada nueva a
+  Gemini, sin migración). Ámbito: **el último escaneo completado
+  únicamente** (no acumulado), porque "Ausente" está definido para coincidir
+  exactamente con la fórmula de `competitor_gap_score`
+  (`displacedPromptsCount`, ADR 0011/`lib/scoring/run-scoring.ts`) — mismo
+  criterio que ADR 0018 de no mostrar dos números con el mismo significado y
+  distinto valor en la misma pantalla. Test unitario (`lib/competitors/
+  prompt-gap.test.ts`, caso 11) verifica la paridad de fórmula.
+- **Delta escaneo-sobre-escaneo** junto a la cuota de voz acumulada de cada
+  fila: deliberadamente una métrica separada (compara solo el último escaneo
+  contra el anterior, `lib/competitors/sov-delta.ts`), nunca mezclada con el
+  número acumulado principal — incluso con precedente distinto, mismo
+  criterio de honestidad que ADR 0018.
+- **Matriz motor × marca** (tasa de mención por motor) sustituye el texto de
+  11px "Gemini 38% · ChatGPT 52%" bajo cada barra — reutiliza
+  `computeEntityEngineBreakdown` (ENGINES-VALUE-3) ya existente, solo cambia
+  la presentación.
+- **Terreno por tema**: compara tasa de mención propia vs. mejor competidor
+  activo por `project_prompts.category`, acumulado (mismo criterio que la
+  matriz), en el raíl de escritorio junto al gráfico de posición.
+- **Marcas emergentes**: primera vez que `other_brands_mentioned` (ya
+  extraído por los tres motores, usado hoy solo por recomendaciones/
+  auditoría web) se muestra en Competidores. Cierra el caso Ikea de ADR 0018
+  (Sklum/Brico Depôt/BANNI aparecían en el ranking sin que el usuario
+  pudiera hacer nada). Se muestra **fuera** del raíl de dos columnas (como
+  bloque independiente a ancho completo) cuando el proyecto todavía no tiene
+  ningún competidor activo — es precisamente el caso donde más ayuda a
+  arrancar, y quedaba oculto en la primera versión de esta fase por un gate
+  demasiado estricto (corregido antes de abrir el PR).
+- **Gestión de competidores** (alta/edición/baja): `createCompetitor`/
+  `updateCompetitor`/`deactivateCompetitor` llevaban meses en `actions.ts`
+  sin ninguna UI conectada (gap ya documentado en §4 de este log). Se
+  sustituyen por `createCompetitorAction`/`updateCompetitorAction`/
+  `deactivateCompetitorAction` (`lib/competitors/manage-competitors.ts`),
+  mismo patrón typed-input + `useTransition` que `addPrompts`/
+  `rewriteRecommendationAction` (sin FormData, sin redirect, error inline en
+  el modal). Añadir un dominio ya desactivado **reactiva** la fila existente
+  en vez de violar `competitors_project_domain_uniq`
+  (`0001_v0_schema.sql`) — flujo probado en `lib/competitors/
+  manage-competitors.test.ts`. Solo baja lógica (`is_active=false`), nunca
+  borrado duro.
+- **Decisión explícita de alcance (2026-08-02):** la gestión de
+  competidores entra en el **mismo PR** que el rediseño visual, por petición
+  directa del fundador — desviación del Task Intake original, que proponía
+  separarlas en Fase A (solo lectura) y Fase B (escritura).
+
+Pendiente / roto conocido:
+- **El piloto agéntico no puede verificar los flujos de escritura** de esta
+  fase (alta/edición/baja de competidores): sigue siendo de solo lectura
+  salvo la excepción UX-PILOT-2a (un único prompt manual). Esos flujos
+  vuelven `PILOT INCONCLUSIVE` y necesitan smoke manual del fundador.
+- **Página de Páginas citadas sin tocar.** El documento de Semrush describe
+  "Sources → Missing" (dominios que citan a un rival y nunca a ti) —
+  `aggregate-citations.ts` ya resuelve categoría `"competitor"` por dominio
+  pero descarta qué competidor hizo match. Analizado y documentado como
+  candidato (`CIT-GAP-1`) pero confirmado **fuera de alcance** por el
+  fundador (el pedido original de "vitaminar páginas citadas" era un
+  lapsus — el trabajo era solo Competidores).
+- **Emparejamiento de nombres sin normalizar acentos** (`COMP-MATCH-1`,
+  pendiente desde §4): esta fase no lo toca — sigue siendo `normKey()`
+  simple (trim + lowercase) en toda la página, sin `normalizeEntityName`
+  (PR #258). Mueve scoring real, necesita su propia validación.
+- Sin sentimiento por competidor: el esquema de extracción solo puntúa
+  `sentiment` de la marca propia, no de cada competidor — necesitaría
+  cambiar la extracción y re-escanear, fuera de alcance de un PR de
+  presentación.
+
+**Revisión del fundador sobre el preview (2026-08-02).** Cinco correcciones
+en el mismo PR, todas sobre datos reales:
+
+1. **"Gestionar" sale del sticky-header.** Se había colgado de
+   `.ov-sticky-right`, rompiendo el contrato de §3.2 de este mismo documento:
+   la cabecera de página es **idéntica en todas las pantallas de consola**
+   (título + pill de fecha + marca/dominio) y no admite acciones específicas
+   de una pantalla. Pasa a la etiqueta de sección "Cuota de voz en IA"
+   (`.cm2-manage-btn`). Anotado aquí porque fue una decisión ya tomada que
+   esta fase contradijo sin darse cuenta — exactamente lo que este log existe
+   para evitar.
+2. **Columnas de motor a cero se eliminan de la matriz.** Si ningún actor
+   (ni la marca ni ningún competidor) fue mencionado en un motor, esa columna
+   es espacio muerto, no una comparación. Filtro de presentación
+   (`matrixEngines`): las tasas por entidad no cambian y el 0% sigue siendo
+   real, simplemente no se pinta una columna que no informa. La matriz exige
+   ≥2 columnas supervivientes para seguir siendo comparativa.
+3. **"+ Seguir" en una línea.** El botón envolvía a dos líneas con el "+"
+   descentrado; ahora es `inline-flex` con `white-space: nowrap`.
+4. **El sistema resuelve el dominio, no el usuario.** "+ Seguir" pedía al
+   usuario teclear el dominio a mano, incoherente con el onboarding, que ya
+   los descubre solo. Nueva `resolveBrandDomain` (`lib/llm/gemini.ts`) —
+   búsqueda grounded del dominio oficial de una marca **ya nombrada** por la
+   IA, distinta de `suggestCompetitors` (que descubre *qué* marcas compiten;
+   ésta solo busca la dirección de una conocida). Mismo guardarraíl
+   BRAND-DOMAIN-1 (nunca resuelve al dominio propio) y misma convención
+   fail-soft. Si no se puede resolver, se dice claramente y se remite a
+   "Gestionar" — **nunca se inventa un dominio plausible**.
+   `followBrandCore` reutiliza `createCompetitorCore` tal cual, así que la
+   reactivación de una fila desactivada y el guardarraíl de duplicados se
+   comportan igual que en un alta manual.
+5. **Gráfico de posición media subido**, de la cola del raíl derecho a justo
+   debajo del podio de cuota de voz, y acompañado de una **lista ordenada con
+   la posición media del último escaneo** por marca — el fundador pidió
+   valorar "una tabla de la posición media de los competidores": leer quién
+   va delante ahora mismo no debería exigir seguir la línea de un gráfico.
+
+**Segunda revisión del fundador sobre el preview (2026-08-02).** Tres puntos
+más, con capturas reales de dispositivo:
+
+1. **"Tarjeta superpuesta con la card"** en la captura del proyecto Movistar:
+   el círculo oscuro que tapa la fila "Alternativas" de Terreno por tema
+   **no es de GenScore** — no existe ningún botón flotante en el código de
+   esta pantalla (ni en ningún `.cm2-*`), y se confirmó comparando la
+   evidencia real del pilot (`pilot-evidence/pr-285` en el commit de este
+   fix) contra las capturas del fundador: el círculo aparece en el mismo
+   sitio en el pilot headless, sin que el código lo pinte. Es el widget de
+   feedback/toolbar que Vercel inyecta sobre los preview deployments para
+   revisores autenticados — no está en producción y no es responsabilidad de
+   este repo. No se ha tocado CSS para "arreglarlo" porque no hay nada que
+   arreglar en el producto.
+2. **Leyenda en "Terreno por tema".** Las dos barras por fila (marca propia
+   vs. líder del tema) no se entendían sin leer el código de color de
+   memoria. Añadida una leyenda fija al pie de la card —"Tu marca" /
+   "Competidor"— reutilizando el patrón `.cm2-gaplegend` ya existente en
+   Brecha de prompts (punto + etiqueta), en vez de inventar un componente
+   nuevo.
+3. **Competidores sugeridos sin relación con el negocio real
+   (EMERGING-BRANDS-GROUNDING-1).** "Marcas que aparecen y no sigues"
+   recomendaba AliExpress/Carrefour/eBay/El Corte Inglés/Decathlon para
+   Mozilla (un navegador) porque `other_brands_mentioned` (extracción de
+   cada respuesta IA, `lib/llm/gemini.ts` + `claude.ts` + `openai.ts`) solo
+   comprobaba "¿este nombre aparece en el texto y no es la marca ni un
+   competidor?", sin ninguna noción de categoría de negocio. Corregido
+   reutilizando **el mismo mecanismo que ya usa la sugerencia de prompts**
+   (COMPETITOR-GROUNDING-2, ADR 0022): el `business_profile` (jsonb) que ya
+   se cachea en `projects` en el onboarding se lee — nunca se recalcula
+   durante un escaneo, para no añadir una llamada a Gemini a la ruta crítica
+   de escaneo — y, si existe, añade una frase de contexto de sector
+   (`otherBrandsRelevanceHint`, `lib/llm/gemini.ts`) a la instrucción de
+   extracción de las tres integraciones, pidiendo excluir marcas de una
+   categoría claramente distinta aunque aparezcan literalmente en el texto.
+   Parámetro puramente aditivo (`profile?: BusinessProfile`): un proyecto sin
+   perfil cacheado se comporta exactamente igual que antes. Solo afecta a
+   escaneos nuevos — los resultados ya guardados no se reprocesan
+   retroactivamente, igual que el resto del histórico de escaneos.
+
+**Tercera revisión del fundador sobre el preview (2026-08-02).**
+
+1. **Enlaces de pie de página eliminados.** La pantalla tenía un bloque
+   "Visión general / Historial de escaneos / Prompts" al final, heredado del
+   layout previo al rediseño — redundante con la navegación lateral y
+   ausente en el resto de pantallas v2 (Citas, Prompts). Eliminado.
+2. **"Sigue saliendo lo mismo tras volver a escanear" (EMERGING-BRANDS-WINDOW-1)
+   — corregido, opción (a).** Causa raíz: `computeEmergingBrands` contaba,
+   por marca, el número de **prompts distintos** en los que aparece — pero
+   sobre **todo el histórico de escaneos completados del proyecto**, igual
+   que la cuota de voz y "Terreno por tema" (`page.tsx`: "cumulative, same
+   population as the podium/matrix"). Ese conteo era acumulativo y no podía
+   bajar: si un prompt ya había llevado a AliExpress a "6 de 7" antes del
+   fix de EMERGING-BRANDS-GROUNDING-1, ese "6" quedaba fijado para siempre
+   — un escaneo nuevo solo podía añadir prompts a la cuenta, nunca
+   quitarlos. El fundador eligió la opción (a): acotar "marcas emergentes"
+   al **último escaneo completado**, no a todo el histórico — encaja mejor
+   con la semántica de "emergente" (algo que la IA dice ahora, no algo que
+   dijo hace meses) y ya es el patrón que usa "Brecha de prompts" en esta
+   misma pantalla. Implementado filtrando `results` por
+   `run_id === latestCompletedRun.id` antes de pasarlo tanto a
+   `computeEmergingBrands` como al denominador "en N de M prompts", para que
+   ambos números sigan viniendo de la misma población. No toca
+   `lib/competitors/emerging-brands.ts` (la función ya era agnóstica a qué
+   filas recibe) ni la cuota de voz / Terreno por tema / matriz, que siguen
+   siendo acumulativas por diseño.
+
+
+## 11. Competidores sugeridos (COMPETITOR-SUGGESTIONS-1, 2026-08-03)
+
+**Qué se decidió.** La caja de sugerencias de la pantalla de Competidores deja
+de alimentarse de lo que la IA menciona en las respuestas y pasa a calcularse
+**a partir de lo que la marca realmente es**. Decisión del fundador
+(2026-08-03): *"yo sí quiero que aparezcan otros competidores sugeridos para
+seguir siempre. Lo que pasa es que se deben calcular en base a lo que es la
+marca real, no lo que sale en los prompts"*.
+
+**Por qué.** El bloque anterior ("Marcas que aparecen y no sigues") derivaba de
+`other_brands_mentioned`, es decir, de cualquier marca citada en una respuesta.
+Para un navegador como Mozilla eso producía AliExpress, Carrefour, eBay o El
+Corte Inglés: nombres reales presentes en el texto, pero que no compiten con
+nada. Dos intentos de arreglarlo por filtrado (EMERGING-BRANDS-GROUNDING-1, que
+añadió contexto de sector a la extracción, y EMERGING-BRANDS-WINDOW-1, que
+acotó el conteo al último escaneo) mejoraron el ruido pero no el problema de
+fondo: la fuente era la equivocada. Además el bloque aparecía y desaparecía
+según lo que hubiera extraído el último escaneo.
+
+**Cómo.** Se reutiliza el mecanismo del onboarding, sin inventar uno nuevo: el
+`business_profile` cacheado (ADR 0022) alimenta `suggestCompetitors`
+(`lib/llm/gemini.ts`), la búsqueda grounded con Google Search que ya se usa al
+crear un proyecto. Puntos de diseño:
+
+- **Caché en `projects.suggested_competitors`** (jsonb nullable, migración
+  0023, aprobada por el fundador). La llamada grounded tarda segundos y cuesta
+  una petición: no puede ejecutarse en cada render.
+- **Se cachea la lista en crudo y se filtra en lectura**, no al escribir. Así
+  seguir a un sugerido lo quita de la lista sin invalidar nada, y dejar de
+  seguirlo lo devuelve.
+- **Nunca se sugiere** el propio dominio ni un competidor ya dado de alta,
+  **activo o inactivo** — uno que desactivaste a propósito no vuelve como
+  "sugerencia".
+- **Carga desde cliente tras el primer pintado**, con esqueleto: la página
+  nunca se bloquea esperando la búsqueda, y el bloque está siempre presente.
+- **Sin perfil no se inventa nada**: si no se puede identificar el negocio se
+  dice honestamente, en vez de caer al modo ciego por dominio que ADR 0020
+  eliminó justamente por producir competidores absurdos.
+- `resolveAndCacheBusinessProfile` se extrae de `lib/projects/add-prompts.ts` a
+  `lib/projects/business-profile.ts` para que sugerencia de prompts y de
+  competidores compartan la misma caché en vez de recalcularla cada una.
+
+**Qué se retira (superseded).** El bloque "Marcas que aparecen y no sigues" y
+toda la fontanería que existía sólo para él: `lib/competitors/emerging-brands.ts`
+(+ tests), `emerging-brands-section.tsx`, `followBrandAction`/`followBrandCore`
+(alta por nombre) y `resolveBrandDomain` en `lib/llm/gemini.ts` — este último ya
+no hace falta porque la sugerencia trae el dominio consigo, así que "+ Seguir"
+ya no necesita una segunda llamada a Gemini. Queda en el historial de git por si
+se quiere recuperar como funcionalidad propia; la señal "a quién nombra la IA"
+sigue siendo interesante (caso Ikea de ADR 0018), pero es otra pregunta y
+merecería su propio diseño, no reutilizar esta caja.
 
 ---
 

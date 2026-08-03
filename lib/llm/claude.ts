@@ -1,6 +1,6 @@
 import "server-only";
 import { extractionOutputSchema } from "@/lib/extraction/schema";
-import type { GeminiVisibilityResponse, GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
+import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_API_VERSION = "2023-06-01";
@@ -167,6 +167,7 @@ export async function extractClaudeStructuredData(input: {
   competitors: string[];
   rawResponseText: string;
   promptText: string;
+  profile?: BusinessProfile;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new ClaudeConfigError("Missing ANTHROPIC_API_KEY");
@@ -195,7 +196,7 @@ For "competitors": return EXACTLY one entry per name listed under Competitors be
 
 For "position": the 1-based rank of the entity's FIRST mention in the response text (1 = mentioned first). Use null if not mentioned. Rank only mentioned entities with no gaps (1, 2, 3...). Brand and competitors share a single ranking.
 
-For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories. Up to 5 entries, each a short canonical name. Empty array [] if none.`;
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. Only include names genuinely present in the text — never invent one. Exclude generic terms or product categories.${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name. Empty array [] if none.`;
 
   const userContent = [
     schemaInstruction,

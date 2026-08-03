@@ -69,7 +69,30 @@ async function findOverflowCulprits(page: Page, viewportWidth: number): Promise<
 }
 
 function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+/**
+ * Playwright derives an attachment's on-disk filename from the attachment
+ * NAME (sanitized, plus a hash suffix) — NOT from `path`. A long name
+ * therefore blows past the 255-byte filename limit and kills the journey
+ * with ENAMETOOLONG, even when the screenshot itself wrote fine because
+ * `slug()` had already truncated the path.
+ *
+ * Hit for real (2026-08-02): the interaction sweeper names attachments after
+ * the control's accessible name, and an InfoTip whose aria-label is a full
+ * explanatory sentence failed all three viewports at once. A control's
+ * accessible name is arbitrary product copy — the harness must never assume
+ * it is short, and a screenshot filename must never be able to fail a run
+ * that the product itself passed.
+ */
+const MAX_ATTACHMENT_NAME = 80;
+
+export function attachmentName(text: string): string {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  return collapsed.length <= MAX_ATTACHMENT_NAME
+    ? collapsed
+    : `${collapsed.slice(0, MAX_ATTACHMENT_NAME - 1)}…`;
 }
 
 function recordFindings(findings: PageFindings): void {
@@ -161,7 +184,7 @@ export async function visitAsUser(
     };
 
     recordFindings(findings);
-    await testInfo.attach(`${label} (${testInfo.project.name})`, {
+    await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
       path: screenshot,
       contentType: "image/png"
     });
@@ -218,7 +241,7 @@ export async function captureInteraction(page: Page, testInfo: TestInfo, label: 
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
   await page.screenshot({ path: screenshot, fullPage: true });
-  await testInfo.attach(`${label} (${testInfo.project.name})`, {
+  await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"
   });

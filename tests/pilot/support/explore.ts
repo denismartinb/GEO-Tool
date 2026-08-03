@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
 import { redact } from "./env";
+import { attachmentName } from "./journey";
 
 /**
  * Generic interaction explorer (UX-PILOT-1c).
@@ -306,7 +307,7 @@ export async function exploreInteractions(
         // its timeout. The page-level captures (visitAsUser) stay fullPage —
         // those are for judging the whole screen.
         await page.screenshot({ path: screenshot });
-        await testInfo.attach(`${screen} → ${control} (${testInfo.project.name})`, {
+        await testInfo.attach(attachmentName(`${screen} → ${control} (${testInfo.project.name})`), {
           path: screenshot,
           contentType: "image/png"
         });
