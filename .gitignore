@@ -11,5 +11,13 @@ Documentacion/
 # Agentic user pilot evidence: screenshots, auth session, findings, reports.
 # Contains a live Supabase session — must never be committed.
 .pilot/
+# The same evidence as it is laid out on the `pilot-evidence/pr-<n>` branches.
+# An agent fetching that branch to read the captures lands these at the repo
+# root, where `git add -A` will happily stage a few hundred PNGs of a live
+# session onto the feature branch (near-miss, 2026-08-03). Root-anchored so a
+# legitimately-named file deeper in the tree is unaffected.
+/screens/
+/findings.jsonl
+/interactions.jsonl
 playwright-report/
 test-results/
