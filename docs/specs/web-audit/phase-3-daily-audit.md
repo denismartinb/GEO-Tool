@@ -1,5 +1,14 @@
 # WEB-AUDIT-3 — Daily automatic audit + regression notices
 
+> **Estado (2026-08-04): la mitad de "auditoría automática" ya está
+> implementada, y NO con el diseño de este documento.** AUDIT-AFTER-SCAN-1
+> (ADR 0027, log §18) la resolvió como una cola de `jobs` encolada por el
+> escaneo al completarse, no como un barrido diario que busca proyectos
+> candidatos. Lo de abajo se conserva como registro de lo que se diseñó y por
+> qué; **no describe el código**. Lo que sigue vivo de esta spec es la sección
+> de **avisos de regresión**, que sigue sin implementar. Ver
+> `ROADMAP.md` → "Fila 6 — qué se implementó y qué no".
+
 **Gates:** extends the background-execution surface (CLAUDE.md forbidden list:
 "background scheduler") — even though it rides the ALREADY-SHIPPED daily cron,
 this phase requires its own Task Intake Report, a reliability-agent

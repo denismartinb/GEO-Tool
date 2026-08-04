@@ -69,7 +69,7 @@ fi
 while IFS= read -r file; do
   [ -n "$file" ] || continue
   case "$file" in
-    docs/* | .claude/* | .github/* | tests/*) ;;
+    docs/* | .claude/* | .github/* | tests/* | agents/*) ;;
     # Root-level prose only (CLAUDE.md, README.md, PRD.md…). A nested .md may
     # be routed content — pageExtensions in next.config.ts includes "md".
     */*) run "${file} affects the build" ;;

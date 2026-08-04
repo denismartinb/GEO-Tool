@@ -1655,6 +1655,212 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
   al lado decía lo mismo dos veces. Se retira también el estado `notice` del
   contexto, que dejaba de leerlo nadie.
 
+### Fase 3a — el generador de `llms.txt` (2026-08-04)
+
+Se amplía esta entrada en lugar de abrir una §18: es la misma zona y la misma
+familia de fases, y este documento ya acumula tres colisiones de numeración en
+un solo día.
+
+**El problema que había que decidir antes de escribir código.** Un `llms.txt`
+es una guía de lectura curada: secciones, enlaces y **una descripción por
+enlace**. Teníamos dos de las tres cosas de verdad — los temas son los prompts
+activos del propio usuario, y cada URL existe sólo porque su cita de grounding
+resolvió, fail-closed, contra el dominio propio. La tercera era la trampa.
+
+**Lo que se rechazó.** `DomainCoveragePage.title` parece un título de página y
+está saneado, pero **lo escribió Gemini**, no se leyó de la página —
+`domain-coverage.ts` es explícito en que lo único verificado es la URL.
+Meterlo en un fichero que el usuario publica en la raíz de su propio dominio,
+como descripción oficial de sus propias páginas, habría sido convertir la
+conjetura de un modelo en un hecho publicado. Es barato y es deshonesto; se
+descartó por principio, no por coste.
+
+**Lo que se decidió.** Estructura real, descripciones como marcador declarado
+(`DESCRIBE ESTA PÁGINA EN 1 FRASE`), mismo contrato que fase 3b usa para
+`<title>` y meta description. El texto visible de cada enlace es **la ruta**,
+no el título del modelo: una ruta es algo que el sitio tiene de verdad y que
+el usuario reconoce de un vistazo para escribir su frase al lado.
+
+**Generar las descripciones con Gemini queda fuera**, y no por olvido:
+introduce runtime de IA, coste y saneado en una fase que deliberadamente no
+tiene ninguno. Si al usarlo el relleno manual estorba, es una fase propia con
+su Task Intake.
+
+**Devuelve `null` antes que un fichero vacío.** Un proyecto sin auditoría de
+cobertura no tiene ninguna URL verificada, y un `llms.txt` hecho sólo de
+marcadores parece un artefacto que funciona y no le enseña nada al modelo —
+peor que no ofrecerlo. En ese caso la incidencia sigue mostrando su guía en
+prosa y nada más.
+
+**Instrucciones de publicación, por petición del fundador.** Generar el
+fichero era la mitad fácil. "Publica un fichero llms.txt en la raíz de tu
+dominio" es donde se para un responsable de marketing en una tienda Shopify:
+asume que sabe qué es la raíz de un sitio, en qué plataforma está y cómo
+comprobar que funcionó. Los cinco pasos terminan en **una URL que el usuario
+abre él mismo**, así que el éxito es algo que *ve*, no algo que supone. No se
+detalla más por plataforma a propósito: la auditoría conoce el dominio, no el
+CMS, e inventar un paso "tu plataforma es WordPress" sería una conjetura
+disfrazada de instrucción.
+
+**Descarga además de copiar.** Esto es un fichero, no un fragmento: copiarlo a
+un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
+`llms.txt.txt`) y la comprobación distingue mayúsculas.
+
+**Los epígrafes son los prompts, y eso tiene un coste que no es estético.**
+Al mirar la captura real del pilot sobre mozilla.org se vio que las secciones
+salen en forma de pregunta (`## ¿Qué navegador web ofrece la mejor protección
+de privacidad…?`), porque el único dato disponible para nombrar una sección es
+el prompt del usuario. Como calidad de lectura es aceptable — para un motor
+generativo, pregunta seguida de la página que la responde no es peor que un
+tema genérico. Lo que sí importa es otra cosa: **esos prompts son la
+estrategia de monitorización del cliente, y el fichero se publica en abierto
+en la raíz de su dominio**, así que tal cual sale le dice a su competencia qué
+consultas está vigilando en IA.
+
+El generador no puede reescribirlos sin la llamada a IA aplazada, así que se
+añade un paso de publicación que lo advierte explícitamente, colocado **antes**
+del paso que sube el fichero. El fundador aceptó la v1 con esta limitación
+(2026-08-04) sabiendo que reescribir los epígrafes queda de su parte.
+
+---
+
+## 18. La auditoría web deja de depender de un clic (AUDIT-AFTER-SCAN-1, 2026-08-04)
+
+**Estado: implementada, PR #322 (sustituye a #314, cerrada). Migración 0027
+aplicada a mano en Supabase el 2026-08-04 y verificada** (`jobs_type_chk` ya
+admite `web_audit`). Detalle técnico en `docs/adr/0027-post-scan-web-audit-queue.md`;
+invariantes de la zona en `.claude/rules/web-audit.md`.
+
+**Qué cambia para el usuario.** Al terminar un escaneo —automático o manual—
+se encola y se ejecuta sola la auditoría completa: primero la campaña de
+cobertura, después la salud técnica. El usuario no tiene que hacer nada, y
+sobre todo no tiene que *estar delante*. Ese era el fallo real: el producto se
+mueve a escaneos diarios automáticos, y la auditoría vivía en un bucle en
+primer plano conducido por la pestaña del navegador, así que la pantalla
+insignia nunca se habría refrescado justo en las cuentas que más importan.
+
+**Por qué una fila en `jobs` y no una llamada al vuelo.** Un despacho perdido
+no puede significar una auditoría perdida. La fila es el contrato; el
+`after()` que la arranca en caliente es sólo una optimización. Si se pierde,
+la fila sigue vencida y el cron diario de las 07:00 la recoge.
+
+**Lo que se decidió a nivel de producto, no de código:**
+
+- **Los límites de 5/día no se aplican a la ruta automática.** Existen para
+  acotar lo que una persona puede disparar a clics; la ruta automática ya está
+  acotada por algo más estricto —como mucho una auditoría por escaneo
+  completado—. Dejarlos puestos habría significado que el 6.º escaneo del día
+  se publica sin auditoría, que es exactamente el fallo que la fase elimina.
+- **El gate de plan Pro sí se mantiene.** Es una frontera comercial, no un
+  límite de uso.
+- **El email de fallo va al operador, nunca al cliente.** El cliente no pidió
+  esta auditoría y no puede actuar sobre un fallo de backend.
+
+**Roto conocido, a propósito, hasta el PR siguiente.** La pantalla sigue
+contando la versión manual del mundo: el botón «Auditar ahora» de §17 sigue
+ahí y dos textos siguen diciendo que la salud técnica "se audita al pulsar
+«Auditar ahora»" (el *hint* del tile "Salud técnica" y el vacío del bloque
+técnico). Con la auditoría automática eso ya no es cierto. El fundador fijó
+explícitamente la secuencia —"una vez que lo tengamos listo, quitaremos el
+botón manual"—, así que **la copia no se toca en este PR**: se retira junto
+con el botón, en su propio PR, para que la decisión de qué queda en su lugar
+(¿pastilla de "se audita sola tras cada escaneo"? ¿nada?) se tome de una vez
+y no a trozos. Mientras tanto el botón sigue funcionando como disparo manual,
+que es comportamiento razonable y no falso.
+
+---
+
+## 19. Publicación semanal del blog — de encargo escrito a cadena que arranca sola (GROWTH-3 Fase A2, 2026-08-04)
+
+**Contexto.** La Fase A1 (§ PR #318) dejó escrito *el encargo* de la
+publicación semanal y creó un disparador fuera del repo. Lo que no hizo fue
+ejecutarse nunca: una automatización que no se ha disparado ni una vez no está
+terminada, está redactada. A1 misma dejó anotado el riesgo — las sesiones
+disparadas podrían correr **sin herramientas MCP de GitHub**, y entonces el
+agente escribiría el artículo, empujaría la rama y ahí se quedaría, sin PR y
+sin que nadie se entere.
+
+**Qué se intentó primero y por qué se descartó.** El plan aprobado era
+dispararla a mano una vez y ver hasta dónde llegaba. No se pudo: las
+herramientas de rutinas exigen una aprobación interactiva que una sesión remota
+no puede conceder. Eso no confirmó el riesgo, pero lo reforzó — **lo que
+necesita una aprobación interactiva no está garantizado en una sesión
+headless**. Se dejó de intentar averiguar si haría falta la red de seguridad y
+se construyó.
+
+**Lo decidido.**
+
+- **`.github/workflows/weekly-post-pr.yml`** garantiza que exista un PR abierto
+  para toda rama `claude/weekly-post/**`. **Es idempotente a propósito**: si la
+  sesión semanal sí tenía herramientas y abrió el PR, el workflow lo encuentra y
+  no crea nada. Los dos caminos convergen en el mismo estado final, que es lo
+  que permite no tener que saber de antemano cuál se tomó.
+- **El mensaje del último commit es el PR** (asunto → título, cuerpo → cuerpo).
+  Se eligió frente a un fichero de plantilla en la rama porque un fichero
+  temporal en la rama del artículo acaba colándose en el diff que revisa el
+  fundador.
+- **El aviso son tres capas, no una** (`docs/agentic-weekly-post.md` §8). La
+  que sostiene el sistema es la más aburrida: el workflow pide revisión al
+  fundador y **GitHub manda su email nativo**. No depende de que el agente siga
+  vivo, ni de claves, ni de terceros — que es justo lo que se necesita cuando el
+  modo de fallo probable *es* que el agente se muera a mitad. Encima van el push
+  a la app de Claude (`PushNotification`, se pierde si no hay Control Remoto) y
+  las notificaciones de fin de rutina (pendientes de activar).
+- **Sin preview es `INCONCLUSIVE`, y se dice.** La cuenta de Vercel es gratuita
+  y tiene tope diario de deploys; la propia PR de A1 se quedó sin preview por
+  eso. Queda escrito que el aviso debe decir "escrito y validado, pero nadie lo
+  ha visto renderizado" en vez de presentarlo como listo — el mismo fallo del
+  2026-08-02 (§7) que el pilot existe para impedir.
+
+**Lo que se mantiene de A1, sin tocar.** No hay scheduler de producto: nada en
+`vercel.json`, ni `app/api/cron/**`, ni runtime. El agente **no mergea nunca**.
+Y el check de portada **sigue en rojo a propósito** (§14, ADR 0026): el agente
+no puede generar imágenes, y automatizar la publicación sin portada
+automatizaría una vez por semana el defecto que el fundador rechazó
+("parece un icono de algo que no carga bien").
+
+**Lo que se comprobó mirando, no suponiendo.** Se leyó la configuración real de
+la rutina y se la disparó a mano dos veces el 2026-08-04:
+
+- **La sesión semanal no tiene ninguna herramienta de GitHub.** Su lista de
+  permisos es `Task, Bash, Glob, Grep, Read, Edit, MultiEdit, Write,
+  NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, Skill,
+  Tmux, Monitor, SendUserFile, REPL`. El riesgo que A1 anotó como hipótesis
+  queda **confirmado**, y el workflow deja de ser una precaución para ser la
+  única vía de entrega.
+- **Sí tiene `Bash`**, así que el push está a su alcance.
+- **Las notificaciones de la rutina ya estaban en `{push: true, email: false}`**
+  — la capa 2 del aviso llevaba activa desde A1 sin que constara en ningún
+  sitio.
+
+**Y el hallazgo que obligó a añadir `.claude/settings.json`.** El primer
+disparo manual (15:48 UTC) **no produjo nada**: dos horas después no había ni
+rama ni PR. Ese mismo día, una sesión remota pidió cuatro veces leer la
+configuración de rutinas y las cuatro recibió "requiere aprobación" — una
+aprobación que nadie podía dar. Una sesión disparada a las 07:00 de un lunes
+está en esa situación con el fundador dormido. El fichero preaprueba lo que la
+sesión necesita para entregar (`git`, `pnpm test`, `pnpm run validate`), y de
+paso convierte en regla ejecutable dos prohibiciones que hasta ahora sólo eran
+texto en `CLAUDE.md`: `deny` sobre force-push y sobre push directo a `main`.
+**No es hermética** (`--force-with-lease` y otras variantes no están cubiertas):
+atrapa las formas comunes, no sustituye a la constitución.
+
+**Pendiente / roto conocido.**
+
+- **Una activación manual fuera del repo**, ya hecha por el fundador el
+  2026-08-04: *"Allow GitHub Actions to create and approve pull requests"*. Sin
+  ella el workflow devuelve 403 y no hay red de seguridad.
+- **La causa del disparo mudo de las 15:48 no está confirmada.** La hipótesis
+  del permiso encaja con todo lo observado, pero no se pudo leer el transcript
+  de aquella sesión. Si el 10 de agosto vuelve a no producir nada, esa
+  hipótesis queda descartada y hay que buscar en otro sitio.
+- **La cadena completa sigue sin haberse ejecutado de punta a punta.** Lo que
+  la Fase A2 cambia no es que no pueda fallar, sino que **si falla, se ve**:
+  sin PR abierto el lunes, el fallo es visible en vez de silencioso. Falta
+  todavía un detector para el caso "no se produjo absolutamente nada", que el
+  workflow no cubre porque se dispara con un push que en ese escenario nunca
+  ocurre.
+
 ---
 
 ## 18. Presupuesto de builds del flujo agéntico (BUILD-BUDGET-1 Fase 1, 2026-08-04)
@@ -1705,9 +1911,45 @@ impedir. `scripts/vercel-should-build.test.ts` fija las dos direcciones del
 contrato invertido de Vercel (0 = saltar, ≠0 = construir), que es justo lo que
 se voltea en silencio en un refactor.
 
-**Ahorro estimado:** de ~50-60 deploys/día a ~20-25 combinando las cuatro
-reglas. El `ignoreCommand` por sí solo es el 10-15%; el grueso está en la
-disciplina de push.
+**Ahorro estimado, corregido tras una medición ajena.** El análisis original
+atribuía al `ignoreCommand` un 10-15% de los *deploys*. Es falso, y lo demostró
+PR #323 probándolo en vivo: un commit sólo de `docs/` que la regla debía saltar
+fue rechazado con el mismo error de cuota que el resto, porque **el tope se
+aplica al crear el deployment, aguas arriba del paso de build donde corre el
+`ignoreCommand`**. Lo que ahorra son minutos de build y la pasada de `ux-pilot`
+que habría disparado ese preview — no deployments. La reducción del *número* de
+deploys viene entera de la disciplina de push (reglas 1-4), que era ya el grueso
+de la estimación: de ~50-60/día a ~20-25.
+
+**Colisión con otra sesión, y cómo se resolvió.** Mientras este PR estaba
+bloqueado por la cuota, otra sesión implementó lo mismo por su cuenta y lo
+mergeó: PR #323 metió un `ignoreCommand` en línea
+(`git diff --quiet HEAD^ HEAD -- ':(exclude)…'`). Su propio mensaje de commit
+declara la limitación: *"HEAD^ compara solo el último commit, no el push
+entero… Estrecharlo al rango del push completo es un cambio de una línea y
+merece su propio PR"*. Este PR es ese follow-up, así que se reconcilió en vez de
+competir:
+
+- Se conserva el mecanismo, se sustituye la implementación por el script, que
+  compara contra el último deploy con éxito, nunca salta producción y cubre
+  también `.github/` y `tests/`.
+- Se conserva `agents/` en la lista segura, que venía de su versión.
+- `vercel-ignore-command.test.ts` (raíz) se elimina: verificaba la *forma* de un
+  comando que ya no existe. Su garantía real —que nadie meta un patrón `*.md`
+  que se trague `app/blog/<slug>/page.mdx`— se traslada a
+  `scripts/vercel-should-build.test.ts` como aserción de **comportamiento**, que
+  sobrevive a una reescritura.
+- La consecuencia que documentó PR #326 ("un commit sólo de docs en la rama de
+  producción no redespliega producción") deja de aplicar: producción nunca se
+  salta. La otra causa de producción congelada que ese PR documenta —Production
+  Branch apuntando fuera de `main`— sigue vigente.
+
+**Vercel Pro contratado el 2026-08-04.** El tope de 100/día deja de existir, que
+era el detonante de esta fase. No la invalida: las cuatro reglas siguen
+ahorrando minutos de build, pasadas de piloto y los ~350-380 min/día de GitHub
+Actions, y el bucle "push para ver qué dice el piloto" seguía siendo un mal
+hábito con o sin tope. Lo que sí cambia es la urgencia de las dos fases que
+quedaron fuera.
 
 **Deliberadamente fuera de esta fase, y por qué:**
 
@@ -1720,12 +1962,12 @@ disciplina de push.
   *garantiza* no volver a tocar el techo (~1-2 builds por PR), y también la más
   invasiva: necesita Task Intake propio con plan de rollback.
 
-**Lo que sigue abierto, dicho sin maquillar.** El tope de 100/día es un síntoma.
-`docs/launch-plan.md` ya marca **Vercel Pro como bloqueante absoluto** (los
-términos de Vercel prohíben Hobby para cualquier negocio, se cobre o no).
-Optimizar el flujo había que hacerlo igual, pero si la decisión de Pro se sigue
-difiriendo, este techo vuelve en cuanto suba el ritmo — y el riesgo legal sigue
-abierto mientras tanto.
+**Lo que sigue abierto.** Con Pro contratado, el riesgo legal de operar un SaaS
+comercial en Hobby queda cerrado (era bloqueante de la Fase 5 de
+`docs/launch-plan.md`, ver su ledger). Queda vivo el segundo techo: los minutos
+de GitHub Actions que consume el piloto en cada deploy, que ninguna de las
+cuatro reglas de esta fase toca de raíz — eso es la fase del piloto por
+etiqueta.
 
 ---
 

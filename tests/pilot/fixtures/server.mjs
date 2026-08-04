@@ -429,7 +429,24 @@ function screenBody(path) {
         <button role="tab" aria-selected="false" data-tab="correcto">Correcto</button>
         <button role="tab" aria-selected="false" data-tab="paginas">Páginas</button>
       </div>
-      <div role="tabpanel" data-panel="problemas">4 páginas sin datos estructurados</div>
+      <div role="tabpanel" data-panel="problemas">
+        4 páginas sin datos estructurados
+        <!-- Fase 3a's generated llms.txt lives inside one of these collapsed
+             issue rows. PR #319 shipped with a green web-audit row and not
+             one capture containing the feature, because nothing ever opened
+             it — this is what makes that journey step provable against the
+             fixture before it is trusted against production. -->
+        <details class="wa-details">
+          <summary>Aviso · llms.txt · No encontrado</summary>
+          <div class="wa-details-body">
+            <pre># Marca de prueba
+
+## tema de prueba
+
+- [/pagina](https://fixture.example/pagina): DESCRIBE ESTA PÁGINA EN 1 FRASE</pre>
+          </div>
+        </details>
+      </div>
       <div role="tabpanel" data-panel="correcto" hidden>10 de 10 páginas indexables</div>
       <div role="tabpanel" data-panel="paginas" hidden>
         Tabla de páginas de prueba

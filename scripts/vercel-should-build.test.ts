@@ -1,5 +1,12 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -150,6 +157,49 @@ describe("vercel-should-build", () => {
     const { code, output } = decide(cwd, { VERCEL_GIT_COMMIT_SHA: sha });
     expect(code).toBe(BUILD);
     expect(output).toContain("no previous successful deployment");
+  });
+
+  // Inherited from vercel-ignore-command.test.ts (PR #323), which guarded the
+  // inline `git diff --quiet HEAD^ HEAD -- ':(exclude)…'` command this script
+  // replaces. Its near-miss is worth keeping in front of whoever edits the safe
+  // list next: the obvious first draft excluded `*.md`, and every article in
+  // this product is `app/blog/<slug>/page.mdx` — one character away from being
+  // silently unpublishable with every check still green. Stated as behaviour
+  // rather than as string-shape assertions, so it survives a rewrite.
+  it.each([
+    "app/dashboard/page.tsx",
+    "app/blog/some-post/page.mdx",
+    "components/ui/button.tsx",
+    "lib/scoring/geo-score.ts",
+    "public/logo.svg",
+    "supabase/migrations/0001_init.sql",
+    "middleware.ts",
+    "next.config.ts",
+    "package.json",
+    "tailwind.config.ts"
+  ])("always builds when %s changes", (file) => {
+    expect(decideFor([file]).code).toBe(BUILD);
+  });
+
+  it("is the command vercel.json actually runs, and it is executable", () => {
+    const config = JSON.parse(
+      readFileSync(path.resolve(__dirname, "..", "vercel.json"), "utf8")
+    ) as { ignoreCommand?: string };
+
+    expect(config.ignoreCommand).toBe("bash scripts/vercel-should-build.sh");
+    expect(existsSync(SCRIPT)).toBe(true);
+  });
+
+  it("only names directories that exist, so the rule is not a lie", () => {
+    // A stale entry is harmless to the build but hides that someone renamed a
+    // directory without revisiting the safe list.
+    for (const dir of ["docs", ".claude", ".github", "tests", "agents"]) {
+      expect(existsSync(path.resolve(__dirname, "..", dir))).toBe(true);
+    }
+  });
+
+  it("skips the agents/ prose directory", () => {
+    expect(decideFor(["agents/product-director.md"]).code).toBe(SKIP);
   });
 
   it("fails open when the previous SHA is not reachable in the shallow clone", () => {
