@@ -3,7 +3,7 @@ import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
 import { PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
-import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 
 // `after()` schedules work outside the request lifecycle Next.js provides in
 // a real deployment; under Vitest there is no such request context, so it
@@ -48,7 +48,11 @@ vi.mock("@/lib/llm/openai", async () => {
 });
 
 vi.mock("@/lib/scan/extraction", () => ({
-  runStructuredExtractionForRun: vi.fn().mockResolvedValue(undefined)
+  runStructuredExtractionForRun: vi.fn().mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0, remaining: 0 }),
+  // EXTRACTION-RELIABILITY-1: the executor asks this before completing a run.
+  // Default 0 = "every answer was extracted", which is the precondition every
+  // pre-existing test in this file implicitly assumed.
+  countUnprocessedExtractionRows: vi.fn().mockResolvedValue(0)
 }));
 
 vi.mock("@/lib/recommendations/recommendation-engine", () => ({
@@ -1529,10 +1533,14 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(stillPending).toHaveLength(12 - MAX_REAL_SCAN_PROMPTS);
     expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(MAX_REAL_SCAN_PROMPTS);
 
-    // Campaign is not finalized yet — extraction/scoring/recommendations and
-    // the scan_finalize job must wait for the batch that clears the queue.
+    // Campaign is not finalized yet — scoring/recommendations and the
+    // scan_finalize job must wait for the batch that clears the queue.
     expect(state.status).toBe("running");
-    expect(vi.mocked(runStructuredExtractionForRun)).not.toHaveBeenCalled();
+    // EXTRACTION-RELIABILITY-1: extraction, on the other hand, now runs on
+    // every batch, against the rows that batch just produced. Deferring all
+    // of it to the finalize pass is what forced the old 20-row cap and made
+    // a third of a 30-row run's answers unreachable (docs/adr/0027).
+    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
     expect(finalizeJob.status).toBe("pending");
 
@@ -1570,9 +1578,12 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
     expect(finalizeJob.status).toBe("completed");
 
-    // Extraction/scoring/recommendations run exactly once for the whole
-    // campaign, on the final batch — not once per batch.
-    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
+    // Scoring/recommendations run exactly once for the whole campaign, on the
+    // final batch — not once per batch. Extraction runs three times across
+    // this two-invocation campaign (EXTRACTION-RELIABILITY-1): once per batch
+    // for the rows that batch produced, plus the finalize sweep that catches
+    // anything an earlier batch's pass could not reach.
+    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(3);
     expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
 
     // The second invocation had nothing left to batch, so it must not have
@@ -1634,5 +1645,66 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(state.status).toBe("running");
     expect(afterMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * EXTRACTION-RELIABILITY-1 (docs/adr/0027) — the invariant that makes the
+ * silent data loss impossible rather than merely unlikely.
+ *
+ * Scoring reads `extracted_json`, so completing a run whose answers were
+ * never extracted publishes a score computed from a fraction of the run's own
+ * data and calls it done. That is exactly what shipped before this phase: on
+ * production data, 30-row runs completed with 20 rows extracted and 10 never
+ * touched, and nothing anywhere said so.
+ */
+describe("executePendingScan — a run cannot complete with unextracted answers", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    vi.mocked(countUnprocessedExtractionRows).mockReset();
+    vi.mocked(generateRecommendationsForRun).mockClear();
+    afterMock.mockClear();
+  });
+
+  afterEach(() => {
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+  });
+
+  it("defers finalize back to pending instead of completing when rows are still unextracted", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(3);
+
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    // The finalize job is released so a fresh invocation — with a fresh
+    // budget — can finish the extraction work, rather than the run being
+    // completed over a hole in its own data.
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    expect(finalizeJob.status).toBe("pending");
+
+    // Nothing downstream of extraction may run on incomplete data.
+    expect(vi.mocked(generateRecommendationsForRun)).not.toHaveBeenCalled();
+
+    // And the campaign hands off so it actually gets finished.
+    expect(afterMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("completes normally once every answer is extracted", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    expect(finalizeJob.status).toBe("completed");
+    expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
   });
 });

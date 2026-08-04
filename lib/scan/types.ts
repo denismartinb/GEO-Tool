@@ -59,4 +59,6 @@ export type ScanPromptResultRow = {
   provider: string;
   status: string;
   extraction_version: string;
+  /** Categorized `category: message` reason a prior extraction attempt failed (EXTRACTION-RELIABILITY-1); null when never attempted or successful. */
+  extraction_error?: string | null;
 };

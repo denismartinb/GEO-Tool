@@ -1,5 +1,13 @@
 import "server-only";
 import { extractionOutputSchema } from "@/lib/extraction/schema";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
+import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
+import {
+  EXTRACTION_CALL_TIMEOUT_MS,
+  EXTRACTION_MAX_ATTEMPTS,
+  EXTRACTION_RETRY_BASE_DELAY_MS,
+  EXTRACTION_RETRY_MAX_DELAY_MS
+} from "@/lib/scan/constants";
 import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
@@ -253,11 +261,21 @@ export async function extractOpenAIStructuredData(input: {
   rawResponseText: string;
   promptText: string;
   profile?: BusinessProfile;
+  /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
+  deadlineAt?: number;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new OpenAIConfigError("Missing OPENAI_API_KEY");
+  // Categorized rather than an OpenAIConfigError: at the extraction stage
+  // this is a per-row failure to be recorded, not the run-level abort that a
+  // missing key during *generation* triggers in the executor.
+  if (!apiKey) throw new ExtractionError("config", "Missing OPENAI_API_KEY");
 
-  const model = getOpenAIModel();
+  let model: string;
+  try {
+    model = getOpenAIModel();
+  } catch {
+    throw new ExtractionError("config", "Missing OPENAI_MODEL — no default is assumed.");
+  }
 
   const schemaInstruction = `Return ONLY valid JSON with this exact shape — no markdown fences, no prose:
 {
@@ -299,21 +317,25 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   const headers = buildHeaders(apiKey);
 
-  const response = await fetch(OPENAI_RESPONSES_URL, {
-    method: "POST",
-    headers,
-    body: requestBody
-  });
-
-  if (!response.ok) {
-    throw new Error(getOpenAIApiError(response.status));
-  }
+  const response = await fetchExtractionWithRetry(
+    OPENAI_RESPONSES_URL,
+    { method: "POST", headers, body: requestBody },
+    {
+      timeoutMs: EXTRACTION_CALL_TIMEOUT_MS,
+      maxAttempts: EXTRACTION_MAX_ATTEMPTS,
+      baseDelayMs: EXTRACTION_RETRY_BASE_DELAY_MS,
+      maxDelayMs: EXTRACTION_RETRY_MAX_DELAY_MS,
+      deadlineAt: input.deadlineAt,
+      describeStatus: getOpenAIApiError,
+      timeoutMessage: "OpenAI extraction request timed out."
+    }
+  );
 
   const data = (await response.json()) as ResponsesApiResult;
   const { text } = extractMessageText(data);
 
   if (!text) {
-    throw new Error("OpenAI extraction returned empty response.");
+    throw new ExtractionError("empty", "OpenAI extraction returned empty response.");
   }
 
   let parsedJson: unknown;
@@ -322,12 +344,12 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
     const cleaned = text.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
     parsedJson = JSON.parse(cleaned);
   } catch {
-    throw new Error("OpenAI extraction returned invalid JSON.");
+    throw new ExtractionError("invalid_json", "OpenAI extraction returned invalid JSON.");
   }
 
   const parsed = extractionOutputSchema.safeParse(parsedJson);
   if (!parsed.success) {
-    throw new Error("OpenAI extraction JSON failed schema validation.");
+    throw new ExtractionError("schema", "OpenAI extraction JSON failed schema validation.");
   }
 
   return {

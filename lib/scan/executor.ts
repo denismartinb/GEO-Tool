@@ -23,7 +23,7 @@ import {
 import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
-import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 import { emitNotification } from "@/lib/notifications/emit";
 import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "@/lib/notifications/dedupe-keys";
 
@@ -731,6 +731,15 @@ export async function executePendingScan({
       }
 
       await refreshRunProgressCounters({ service, projectId, runId });
+
+      // EXTRACTION-RELIABILITY-1: extract this batch's rows in the same
+      // invocation that generated them, instead of leaving every row in the
+      // campaign to a single pass at finalize. That pass was capped at 20
+      // rows and silently dropped the rest; spreading the work across the
+      // batches that produce it is what makes an uncapped extraction fit the
+      // ~60s budget at all (docs/adr/0027). Anything this pass cannot reach
+      // stays eligible for the next batch or for the finalize sweep below.
+      await runStructuredExtractionForRun({ service, projectId, runId });
     }
 
     // Not just `pending`: a job another concurrent invocation is actively
@@ -822,11 +831,58 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed_no_results");
     }
 
+    // Final sweep: picks up rows whose batch pass ran out of budget, plus
+    // any row belonging to a batch driven by an invocation that died before
+    // its own pass finished.
     await runStructuredExtractionForRun({
       service,
       projectId,
       runId
     });
+
+    // EXTRACTION-RELIABILITY-1 invariant: a run may not be marked `completed`
+    // while it still holds answers nothing has tried to extract. Scoring runs
+    // on `extracted_json`, so completing here would publish a score computed
+    // from a fraction of the run's own data and call it done — which is
+    // exactly the failure this phase exists to remove.
+    //
+    // Rather than fail (which would throw away good data) or complete
+    // anyway (which would hide the gap), the finalize job is released back to
+    // `pending` so a fresh invocation — with a fresh budget — can finish the
+    // work. Progress is strictly monotonic: every pass either extracts a row
+    // or records a categorized error on it, and both take that row out of the
+    // unprocessed set, so this can only repeat a bounded number of times. If
+    // it somehow stalls entirely, the run stops bumping `updated_at` and
+    // `reconcileStuckScanRuns` applies its usual timeout + auto-retry.
+    const unprocessedCount = await countUnprocessedExtractionRows({ service, projectId, runId });
+
+    if (unprocessedCount > 0) {
+      await logJob(service, {
+        jobId: finalizeJob.id,
+        projectId,
+        runId,
+        level: "warn",
+        message: "Extraction incomplete; deferring finalize to another invocation.",
+        context: { unprocessed: unprocessedCount, providers }
+      });
+
+      await service
+        .from("jobs")
+        .update({ status: "pending", locked_at: null, locked_by: null })
+        .eq("id", finalizeJob.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId);
+
+      // Bumps scan_runs.updated_at via the DB trigger, so the deferred run
+      // does not look stalled to the reconciliation pass while it is in fact
+      // still advancing.
+      await refreshRunProgressCounters({ service, projectId, runId });
+
+      if (scheduleContinuation) {
+        after(() => triggerScanContinuation({ projectId, runId }));
+      }
+      return;
+    }
 
     const { data: promptResults } = await service
       .from("scan_prompt_results")

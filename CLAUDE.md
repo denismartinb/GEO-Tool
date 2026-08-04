@@ -340,6 +340,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Auditoría web | `web-audit.md` | WEB-AUDIT-ISSUES-1 fases 2 y 3b (2026-08-04) | log §17 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | geo-score-v3 / ADR 0026 (2026-08-03) | ADR 0008/0015/0021/0024/0026 · log §8b |
 | Blog y contenido | `growth-content.md` | GROWTH-3 Fase 3.2a (2026-08-03) | log §12, §13 · `content-strategy.md` |
+| Escaneo (pipeline) | `scan.md` | EXTRACTION-RELIABILITY-1 Fase A (2026-08-04) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0027 |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
 | Prompts | — *(sin regla propia todavía)* | — | log §5 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
@@ -476,6 +477,7 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `competitors.md` | `app/dashboard/projects/*/competitors/**`, `lib/competitors/**` |
 | `recommendations.md` | `app/dashboard/projects/*/recommendations/**`, `lib/recommendations/**` |
 | `web-audit.md` | `app/dashboard/projects/*/web-audit/**`, `lib/web-audit/**` |
+| `scan.md` | `lib/scan/**` |
 | `scoring.md` | `lib/scoring/**` |
 | `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 

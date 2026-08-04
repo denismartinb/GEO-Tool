@@ -13,10 +13,50 @@ import "server-only";
 // back down (8 was the conservative fallback considered) rather than adding
 // execution-side mitigations speculatively.
 export const MAX_REAL_SCAN_PROMPTS = 10;
-// One row per prompt per active engine (multi-engine execution, migration
-// 0009) — currently up to 2 engines (Gemini, Claude), so size for
-// MAX_REAL_SCAN_PROMPTS * 2 rather than MAX_REAL_SCAN_PROMPTS alone.
-export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
+/**
+ * How many extraction calls may be in flight at once
+ * (EXTRACTION-RELIABILITY-1, docs/adr/0027).
+ *
+ * This replaces the former `MAX_EXTRACTION_RESULTS` cap (= 20), which was a
+ * *row* limit rather than a concurrency limit and silently discarded every
+ * eligible row past the 20th. It was sized when a run was a single batch;
+ * SCAN-CHAIN-1 made a campaign span many batches (up to the plan's prompt
+ * cap × active engines — 300 rows on Pro), and the cap was never revisited,
+ * so a 30-row run persisted 20 extractions and left 10 rows permanently
+ * unprocessed with no error and no log. Measured on production data
+ * (2026-08-04): `procesadas + con_error` summed to exactly 20 on every
+ * 30-row run, across every project.
+ *
+ * A concurrency limit is the right shape for the real constraint. Extraction
+ * requests are the heaviest in the pipeline (full schema instruction + the
+ * entire raw response), and the old code dispatched all of them at once via
+ * `Promise.allSettled`, which is a good way to manufacture the very 429s
+ * that then killed every row. 4 keeps the pass moving without bursting.
+ */
+export const EXTRACTION_CONCURRENCY = 4;
+
+/** Hard per-call timeout for a structured-extraction request. Matches the generation-side budget of all three providers. */
+export const EXTRACTION_CALL_TIMEOUT_MS = 20_000;
+
+/** Total attempts per extraction call, including the first (3 = two retries). */
+export const EXTRACTION_MAX_ATTEMPTS = 3;
+
+/** First backoff delay between extraction attempts; doubles per attempt, with full jitter. */
+export const EXTRACTION_RETRY_BASE_DELAY_MS = 750;
+
+/** Ceiling for any single extraction backoff, including a provider-sent `Retry-After`. */
+export const EXTRACTION_RETRY_MAX_DELAY_MS = 8_000;
+
+/**
+ * Wall-clock budget for one extraction pass, well inside the ~60s Vercel
+ * `maxDuration` (docs/adr/0003) that the pass shares with this invocation's
+ * generation batch and, on the final batch, with scoring and
+ * recommendations. When the budget runs out, the remaining rows are simply
+ * left for the next pass — they are never dropped, because a run can no
+ * longer be marked `completed` while any row is still unprocessed (see
+ * `countUnprocessedExtractionRows` in lib/scan/extraction.ts).
+ */
+export const EXTRACTION_PASS_BUDGET_MS = 25_000;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call
