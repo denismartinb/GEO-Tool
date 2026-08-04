@@ -765,19 +765,32 @@ export default async function CompetitorsPage({
                   chart's endpoint as a readable number, so "who is ahead right
                   now" doesn't require tracing a line.
 
-                  Nothing is rendered until there is a real chart to show: no
-                  section label, no empty card, no explanation of why it is
-                  missing. An earlier version explained the wait honestly and
-                  the founder still cut it (2026-08-04) — a block that only ever
-                  says "not yet" is noise on the screen every single visit, and
-                  the honest wording did not change that. */}
-              {hasTrendData ? (
+                  The CHART waits for enough scans; the LIST does not. A trend
+                  needs history, but "who is ahead right now" is answerable from
+                  the very first scan, and hiding it until the fourth threw away
+                  real data the user already had (founder, 2026-08-04: "la tabla
+                  sí debe salir desde el primer escaneo, solo se oculta el
+                  gráfico").
+
+                  What is never rendered is an empty shell: no section label and
+                  no card unless at least one of the two has something real to
+                  say. An earlier version explained the wait honestly and the
+                  founder still cut it — a block that only ever says "not yet"
+                  is noise on every visit, and better wording did not fix that.
+
+                  The label tracks what is actually below it, so it never
+                  promises an evolution the card is not showing. */}
+              {hasTrendData || latestPositions.length > 0 ? (
                 <>
-                  <div className="cm2-sec-lbl">Evolución del puesto cuando apareces</div>
-                  <div className="card cm2-pos-card">
-                    <div className="cm2-pos-chart">
-                      <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
-                    </div>
+                  <div className="cm2-sec-lbl">
+                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Puesto medio cuando apareces"}
+                  </div>
+                  <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
+                    {hasTrendData ? (
+                      <div className="cm2-pos-chart">
+                        <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
+                      </div>
+                    ) : null}
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
                         {/* No InfoTip here. Right-aligning the heading put the

@@ -2194,6 +2194,10 @@ a {
   .cm2-pos-card { display: flex; align-items: flex-start; gap: 18px; }
   .cm2-pos-chart { flex: 1; min-width: 0; }
   .cm2-pos-list { flex: 0 0 210px; margin-top: 0; padding-top: 0; border-top: none; }
+  /* Before the chart exists the list is the whole card, so the fixed 210px
+     column would leave two thirds of the width empty next to it. */
+  .cm2-pos-card.list-only { display: block; }
+  .cm2-pos-card.list-only .cm2-pos-list { flex: none; }
 }
 
 /* 8 · Desktop layout — main column + sticky rail, same `display: contents`

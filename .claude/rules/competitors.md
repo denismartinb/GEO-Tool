@@ -72,8 +72,13 @@ limpio (log §11).
 - La lista "puesto medio · último escaneo" se ancla al **último escaneo real**,
   nunca al último punto que sobreviva a la ventana — si no, el encabezado
   mentiría.
-- **Sin gráfico no se pinta nada: ni etiqueta de sección, ni tarjeta, ni
-  explicación de por qué falta.** Se probó explicar la espera con un mensaje
+- **El gráfico espera; la tabla no.** Una tendencia necesita historia, pero
+  "quién va por delante ahora mismo" se responde desde el **primer** escaneo:
+  la lista de puesto medio se muestra siempre que haya datos, y sólo el gráfico
+  se oculta hasta `MIN_TREND_POINTS`. La etiqueta de sección cambia según lo
+  que haya debajo, para no prometer una evolución que la tarjeta no enseña.
+- **Lo que nunca se pinta es un cascarón vacío: ni etiqueta ni tarjeta si no
+  hay ni gráfico ni tabla.** Se probó explicar la espera con un mensaje
   honesto y el fundador lo cortó igual (2026-08-04): un bloque que sólo sabe
   decir "todavía no" es ruido en todas las visitas, y redactarlo mejor no lo
   arregla. Ojo: esto convive con que un escaneo anterior a geo-score-v3 no

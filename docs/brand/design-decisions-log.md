@@ -1367,8 +1367,8 @@ la página es un componente de servidor y la lógica inline ahí no se puede pro
 fundador lanzó un escaneo, Mozilla llegó a 4 puntos y por fin se pudo ver la
 línea recta funcionando. Cuatro ajustes sobre eso:
 
-1. **Sin gráfico no se pinta nada.** Se quitan tanto el estado vacío como la
-   nota bajo el gráfico. Es una **rectificación de lo que se había hecho dos
+1. **Sin gráfico no se pinta nada** *(matizado horas después, ver abajo)*. Se
+   quitan tanto el estado vacío como la nota bajo el gráfico. Es una **rectificación de lo que se había hecho dos
    rondas antes**: se había invertido esfuerzo en explicar honestamente por qué
    faltaba el dato, y el fundador lo tachó literalmente sobre la captura. La
    lección que queda escrita: un bloque que sólo sabe decir "todavía no" es
