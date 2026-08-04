@@ -329,6 +329,47 @@ for the payment-failed email to fire.
   value to match.
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
+  **Reverting is not optional.** While it points elsewhere, merging to `main`
+  produces no production deploy at all — silently. Preview deploys keep working
+  the whole time, so everything looks healthy.
+
+### Merging to `main` does not guarantee a production deploy — check it
+
+Verified on 2026-08-04, and it cost a founder test session: AUDIT-AFTER-SCAN-1
+was merged, the founder ran a scan against `genscore.es`, nothing was audited,
+and the queue table was empty. Nothing had failed — **production was still
+serving `148f6bc`, eight commits behind `main`**, so the deployed bundle did
+not contain the enqueue call. There is no error anywhere in that story: the
+code simply was not running.
+
+Confirm the deploy landed before concluding anything about behaviour in
+production:
+
+```bash
+# What production is actually serving, newest first
+curl -s "https://api.github.com/repos/denismartinb/GEO-Tool/deployments?environment=Production&per_page=3" \
+  | python3 -c "import sys,json;[print(d['created_at'], d['sha'][:8]) for d in json.load(sys.stdin)]"
+
+# How far ahead main is of that sha
+git log --oneline <sha-from-above>..origin/main
+```
+
+A visual tell is often faster: pick something the last merge changed on screen
+and look for it. In this incident the Auditoría web tabs still read «Plan de
+acción · Salud técnica · Evolución», the layout PR #289 had already replaced
+with «Problemas · Correcto · Páginas» — one glance would have said "old code"
+before any SQL was run.
+
+Two causes seen so far, in the order worth checking:
+
+1. **Production Branch points somewhere other than `main`** (Vercel → Settings
+   → Environments → Production → Branch Tracking), typically left over from the
+   non-main smoke procedure above. This is the one that produces *zero*
+   production deployments while previews continue normally.
+2. **The daily deployment cap on the free plan**
+   (`api-deployments-free-per-day`, >100/day, resets after 24 h). Vercel does
+   not retry a build it refused, so a merge that lands inside that window never
+   deploys even after the cap lifts — it needs a new push or a manual Redeploy.
 
 ---
 
