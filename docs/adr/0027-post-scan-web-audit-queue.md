@@ -75,6 +75,20 @@ reloj a cero.
 - Un `after()` perdido no es una auditoría perdida: la fila sigue `pending` y
   vencida, y el cron diario la recoge. El despacho es una optimización; la
   fila es el contrato.
+- **Corregido 2026-08-05:** esa frase era cierta a medias y el hueco se vio en
+  producción. «La fila es el contrato» sólo vale **a partir del momento en que
+  la fila existe**; antes no había contrato ninguno. El encolado vive en la
+  *misma invocación* que acaba de marcar la ejecución `completed`, tres líneas
+  antes, y si esa invocación muere en medio —timeout, o instancia reciclada
+  por un despliegue que aterriza justo ahí, ambas observadas la noche del
+  2026-08-04— no hay fila, ni log, ni `catch`. Y sin fila **nada volvía a
+  mirar esa ejecución jamás**, porque el barrido sólo recorre `jobs`: la
+  auditoría se perdía para siempre. Ocurrió en 1 de 3 escaneos reales.
+  `backfillMissingWebAuditJobs` cierra el hueco reconciliando contra
+  `scan_runs`: lo que dispara la auditoría pasa a ser el registro durable de
+  «un escaneo terminó», no la supervivencia de una función serverless. Corre
+  al inicio de cada cadena, así que la recuperación es de minutos, no del cron
+  del día siguiente.
 - Los límites de 5/día **no** se aplican a la ruta automática: existen para
   acotar lo que un humano puede disparar a clics, y la ruta automática ya
   está acotada por algo más estricto (como mucho una por ejecución

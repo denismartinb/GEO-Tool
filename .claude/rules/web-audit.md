@@ -95,6 +95,29 @@ ciclo, sin alcanzar jamás `max_attempts` y por tanto **sin enviar nunca el
 email de alerta**. `runWebAuditJob` rechaza y falla un trabajo que ya esté en
 su techo, antes de cualquier llamada a Gemini.
 
+### Lo que dispara la auditoría es `scan_runs`, no la fila de `jobs`
+
+`backfillMissingWebAuditJobs` reconcilia ejecuciones `completed` de las últimas
+24 h que no tengan fila `web_audit`, y las encola. Corre al inicio de cada
+cadena del worker.
+
+No es redundancia con el encolado en línea: **es lo que hace cierto** que una
+auditoría no se pierda. El encolado vive en la misma invocación que marca la
+ejecución `completed`, y si esa invocación muere entre ambas cosas no hay fila,
+ni log, ni `catch` — y sin fila nada volvía a mirar esa ejecución, porque el
+barrido sólo recorre `jobs`. Ocurrió en producción el 2026-08-04, en 1 de 3
+escaneos reales, coincidiendo con un despliegue (ADR 0027, sección
+"Consecuencias").
+
+Regla derivada, y la lección se ha repetido tres veces en esta zona: **lo que
+no está reconciliado contra un registro durable de la base de datos, se
+pierde.** Cualquier fase que añada un paso nuevo a esta tubería tiene que
+poder responder «¿qué lo vuelve a intentar si la invocación muere aquí?».
+
+El desfase de `BACKFILL_GRACE_MS` (5 min) no es cosmético: sin él la
+reconciliación compite con el encolado en línea, y como el deduplicado es un
+SELECT-luego-INSERT y no una restricción, se insertarían dos filas.
+
 ### `jobs.last_error` lo lee el dueño del proyecto
 
 `jobs` lleva RLS `jobs_select_owner`, así que el propietario puede leer
