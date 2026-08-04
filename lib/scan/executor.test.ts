@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
-import { FINALIZE_LOCK_LEASE_MS, PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
+import { FINALIZE_LOCK_LEASE_MS, PROMPT_RETRY_DELAY_MS, SCAN_INVOCATION_WORK_BUDGET_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 
@@ -1788,5 +1788,51 @@ describe("executePendingScan — an abandoned finalize claim is recoverable", ()
     // would run scoring and recommendations twice for the same campaign.
     expect(finalizeJob.status).toBe("running");
     expect(vi.mocked(generateRecommendationsForRun)).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Regression, other half of the 2026-08-04 IKEA failure (docs/adr/0027,
+ * Addendum): the extraction budget must belong to the invocation, not to each
+ * pass.
+ *
+ * The invocation that processes the last batch runs generation, then that
+ * batch's extraction pass, then the finalize sweep. With a per-pass budget
+ * those two passes each started a fresh 25s clock, so the invocation could
+ * queue ~70s of work inside a 60s maxDuration and get killed mid-sweep.
+ */
+describe("executePendingScan — extraction shares one invocation-wide deadline", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+    vi.mocked(runStructuredExtractionForRun).mockClear();
+  });
+
+  it("passes the same absolute deadline to the batch pass and the finalize sweep", async () => {
+    const { service, supabase } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const before = Date.now();
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+    const after = Date.now();
+
+    const calls = vi.mocked(runStructuredExtractionForRun).mock.calls;
+    // Batch pass + finalize sweep, both in this one invocation.
+    expect(calls).toHaveLength(2);
+
+    const deadlines = calls.map(([args]) => args.deadlineAt);
+    expect(deadlines.every((d) => typeof d === "number")).toBe(true);
+
+    // The crux: the second pass does NOT get a fresh clock. Both draw from the
+    // same absolute deadline, so whatever generation and the first pass spent
+    // is already gone when the sweep starts.
+    expect(deadlines[0]).toBe(deadlines[1]);
+
+    // And that deadline is anchored to when the invocation began, not to when
+    // each pass began.
+    expect(deadlines[0]).toBeGreaterThanOrEqual(before + SCAN_INVOCATION_WORK_BUDGET_MS);
+    expect(deadlines[0]).toBeLessThanOrEqual(after + SCAN_INVOCATION_WORK_BUDGET_MS);
   });
 });
