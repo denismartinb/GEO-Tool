@@ -1,6 +1,6 @@
 /**
  * Typed, categorized failures for the structured-extraction path
- * (EXTRACTION-RELIABILITY-1, docs/adr/0027).
+ * (EXTRACTION-RELIABILITY-1, docs/adr/0029).
  *
  * Before this phase every extraction failure was persisted as whatever
  * `error.message` happened to be, which made two very different situations

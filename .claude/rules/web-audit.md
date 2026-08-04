@@ -40,3 +40,65 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   almacena ni se renderiza jamás.
 - **RLS**: lecturas con el cliente de usuario; cualquier escritura con
   service-role prueba propiedad antes con el cliente de usuario.
+
+## Excepción registrada: la auditoría automática tras escaneo
+
+`lib/web-audit/audit-job-runner.ts` (AUDIT-AFTER-SCAN-1, ADR 0027) llama a los
+dos núcleos de auditoría con el **cliente de servicio**, porque en esa ruta no
+existe sesión de usuario por construcción: la dispara el final de un escaneo,
+que en producción es automático y diario.
+
+Dicho con precisión, porque la formulación cómoda sería falsa: en esa ruta el
+filtro `.eq("owner_user_id", user.id)` **es tautológico** — el `owner_user_id`
+se lee de la propia fila del proyecto y se devuelve como valor del filtro. No
+es ahí donde está la protección.
+
+Lo que sí protege el aislamiento es que **el `projectId` es derivado en
+servidor y jamás aceptado desde una petición**: sale de una fila de `jobs` que
+el ejecutor creó para una ejecución que acababa de terminar, y `jobs.run_id`
+tiene FK a `scan_runs(id, project_id)`. El endpoint `/api/cron/run-audit` no
+acepta ningún identificador de proyecto en su cuerpo — sólo `chainIndex`.
+
+Si alguna vez esa ruta pasa a aceptar un `projectId` de fuera, esta excepción
+deja de valer y hace falta una prueba de propiedad real.
+
+### El presupuesto del barrido es compartido, no por trabajo
+
+En `processDueWebAuditJobs` (AUDIT-AFTER-SCAN-1, ADR 0027) **un trabajo sólo
+se reclama cuando ya es seguro que se puede ejecutar ahora**: de uno en uno,
+contra un reloj único (`SWEEP_BUDGET_MS`) que cubre toda la invocación, y
+pasando a cada trabajo el presupuesto que *queda*, nunca uno nuevo.
+
+No es preferencia de estilo. Reclamar es bloquear: un trabajo reclamado y no
+ejecutado queda en `running` y fuera de la cola durante `STALE_LOCK_MS` (10
+min), y si la plataforma mata la invocación tampoco llega a despacharse la
+cadena. Con presupuestos por trabajo, un barrido de 3 se iba a ~126 s bajo un
+`maxDuration` de 60 (ADR 0003) y degradaba justo en el caso para el que existe
+la red de seguridad: el que encuentra cola. Misma razón para el reserve de la
+auditoría técnica — si no cabe entera, el trabajo se aparca como
+**continuación** (sin gastar intento), porque la cobertura ya está persistida
+y reentrar cuesta una llamada cacheada.
+
+Cualquier fase que añada trabajo por trabajo (más lotes, otro núcleo de
+auditoría) tiene que reajustar `MIN_JOB_BUDGET_MS` y el reserve, no sólo
+subir el límite del lote.
+
+### Reclamar un trabajo abandonado consume intento
+
+En `claimDueWebAuditJobs`, la rama que rescata trabajos varados en `running`
+**incrementa `attempt_count`** (data-guardian R1, 2026-08-04). Los cierres
+ordenados no son los únicos que mueven ese contador precisamente porque una
+invocación matada por la plataforma nunca llega a ellos: sin cobrar el intento
+aquí, un trabajo que la plataforma mate de forma sistemática se re-reclamaría
+cada `STALE_LOCK_MS` para siempre, gastando llamadas reales de Gemini en cada
+ciclo, sin alcanzar jamás `max_attempts` y por tanto **sin enviar nunca el
+email de alerta**. `runWebAuditJob` rechaza y falla un trabajo que ya esté en
+su techo, antes de cualquier llamada a Gemini.
+
+### `jobs.last_error` lo lee el dueño del proyecto
+
+`jobs` lleva RLS `jobs_select_owner`, así que el propietario puede leer
+`last_error` directamente por PostgREST. Ahí va **siempre un código estable**,
+nunca texto de error crudo — misma convención que el ejecutor de escaneos con
+`getSanitizedScanError`. El detalle crudo va al `console.error` y al email del
+operador, que no son superficies de usuario (data-guardian R2).

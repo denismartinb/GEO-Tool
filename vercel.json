@@ -1,5 +1,6 @@
 {
   "regions": ["dub1"],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/' ':(exclude).claude/' ':(exclude)agents/' ':(exclude)CLAUDE.md' ':(exclude)README.md' ':(exclude)PRD.md' ':(exclude)TECHNICAL_BRIEF.md' ':(exclude)UX_BRIEF.md' 2>/dev/null; test $? -eq 0",
   "crons": [
     {
       "path": "/api/cron/weekly-scans",
@@ -8,6 +9,10 @@
     {
       "path": "/api/cron/weekly-digest",
       "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/run-audit",
+      "schedule": "0 7 * * *"
     }
   ]
 }

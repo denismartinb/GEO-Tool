@@ -993,7 +993,7 @@ describe("reconcileExtractedCompetitors", () => {
 });
 
 /**
- * EXTRACTION-RELIABILITY-1 (docs/adr/0027) — the defect these pin.
+ * EXTRACTION-RELIABILITY-1 (docs/adr/0029) — the defect these pin.
  *
  * `runStructuredExtractionForRun` used to `.slice(0, MAX_EXTRACTION_RESULTS)`
  * (= 20) the eligible rows and silently discard the rest: no error, no log,

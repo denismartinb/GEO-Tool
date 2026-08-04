@@ -1563,7 +1563,7 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     // EXTRACTION-RELIABILITY-1: extraction, on the other hand, now runs on
     // every batch, against the rows that batch just produced. Deferring all
     // of it to the finalize pass is what forced the old 20-row cap and made
-    // a third of a 30-row run's answers unreachable (docs/adr/0027).
+    // a third of a 30-row run's answers unreachable (docs/adr/0029).
     expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
     expect(finalizeJob.status).toBe("pending");
@@ -1673,7 +1673,7 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
 });
 
 /**
- * EXTRACTION-RELIABILITY-1 (docs/adr/0027) — the invariant that makes the
+ * EXTRACTION-RELIABILITY-1 (docs/adr/0029) — the invariant that makes the
  * silent data loss impossible rather than merely unlikely.
  *
  * Scoring reads `extracted_json`, so completing a run whose answers were
@@ -1792,7 +1792,7 @@ describe("executePendingScan — an abandoned finalize claim is recoverable", ()
 });
 
 /**
- * Regression, other half of the 2026-08-04 IKEA failure (docs/adr/0027,
+ * Regression, other half of the 2026-08-04 IKEA failure (docs/adr/0029,
  * Addendum): the extraction budget must belong to the invocation, not to each
  * pass.
  *

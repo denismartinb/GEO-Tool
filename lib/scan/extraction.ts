@@ -522,7 +522,7 @@ export type ExtractionPassSummary = {
 
 /**
  * Extracts every eligible row of a run, in bounded-concurrency waves, within
- * a wall-clock budget (EXTRACTION-RELIABILITY-1, docs/adr/0027).
+ * a wall-clock budget (EXTRACTION-RELIABILITY-1, docs/adr/0029).
  *
  * Called once per batch by the executor and again on the finalize batch, so
  * a campaign's extraction work is spread across the same invocations that

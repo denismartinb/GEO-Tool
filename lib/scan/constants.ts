@@ -15,7 +15,7 @@ import "server-only";
 export const MAX_REAL_SCAN_PROMPTS = 10;
 /**
  * How many extraction calls may be in flight at once
- * (EXTRACTION-RELIABILITY-1, docs/adr/0027).
+ * (EXTRACTION-RELIABILITY-1, docs/adr/0029).
  *
  * This replaces the former `MAX_EXTRACTION_RESULTS` cap (= 20), which was a
  * *row* limit rather than a concurrency limit and silently discarded every

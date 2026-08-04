@@ -202,6 +202,29 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     await expect(firstPageRow, "clicking a page row did not expand it").toHaveAttribute("open", "");
     await captureInteraction(page, testInfo, "web-audit-page-row-open");
   }
+
+  // Fase 3a's generated llms.txt has the SAME problem one tab over, and it
+  // bit for real: PR #319 came back PILOT PASS with web-audit ✅ on all three
+  // viewports while not one capture contained the feature the PR existed for
+  // — the issue rows in Problemas are collapsed <details> too, and nothing
+  // ever opened the llms.txt one. A green row for a screen whose new content
+  // was never on screen is exactly the 2026-08-02 empty-state incident in a
+  // different costume.
+  await page.getByRole("tab", { name: "Problemas" }).click();
+  const llmsIssue = page
+    .locator('[role="tabpanel"]:not([hidden]) details.wa-details')
+    .filter({ hasText: "llms.txt" })
+    .first();
+
+  if ((await llmsIssue.count()) > 0) {
+    await llmsIssue.locator("summary").click();
+    await expect(llmsIssue, "clicking the llms.txt issue did not expand it").toHaveAttribute("open", "");
+    // fullContent: the file block alone is taller than the fold, so a
+    // viewport capture verifies the generated llms.txt and silently omits the
+    // five publishing steps underneath — which are half of what this phase
+    // ships. Confirmed on the first run: 800px tall, steps nowhere in it.
+    await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
+  }
 });
 
 /**

@@ -9,7 +9,7 @@ import {
 
 /**
  * The one HTTP path every provider's structured-extraction call goes through
- * (EXTRACTION-RELIABILITY-1, docs/adr/0027).
+ * (EXTRACTION-RELIABILITY-1, docs/adr/0029).
  *
  * Before this phase, the *generation* call of all three providers had a
  * timeout and a single 429 retry, while the *extraction* call of all three

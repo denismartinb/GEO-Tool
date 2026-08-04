@@ -6,6 +6,7 @@ import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { checkGenerationRateLimit, type GenerationRateLimitConfig } from "@/lib/recommendations/generation-rate-limit";
 import { isProOrAbove } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
+import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 import {
@@ -113,7 +114,18 @@ export type DomainCoverageResult =
        * (coverage.topics.length / totalPrompts). */
       totalPrompts: number;
     }
-  | { success: false; error: string };
+  | {
+      success: false;
+      error: string;
+      /**
+       * Machine-readable classification of `error`, so a caller that must
+       * decide whether retrying could ever help (AUDIT-AFTER-SCAN-1's backend
+       * runner) never has to match on Spanish prose. Required, not optional:
+       * a new failure path that forgets to classify itself should fail the
+       * typecheck, not default to "retry forever". See audit-failure.ts.
+       */
+      reason: AuditFailureReason;
+    };
 
 const GENERIC_FAILURE = "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos.";
 const PLAN_REQUIRED_FAILURE = "Auditar la cobertura de tu dominio está disponible a partir del plan Pro.";
@@ -359,12 +371,30 @@ export async function auditDomainCoverageCore({
   projectId,
   supabase,
   service,
-  user
+  user,
+  trigger = "manual"
 }: {
   projectId: string;
   supabase: AuthenticatedContext["supabase"];
   service: ReturnType<typeof createServiceClient>;
-  user: AuthenticatedContext["user"];
+  /**
+   * Only `.id` is read, and only to prove ownership. Narrowed from the full
+   * Supabase `User` so the backend post-scan runner (AUDIT-AFTER-SCAN-1) can
+   * pass the project's owner id without fabricating a session object — a real
+   * `AuthenticatedContext["user"]` still satisfies this.
+   */
+  user: Pick<AuthenticatedContext["user"], "id">;
+  /**
+   * `"automatic"` = the post-scan backend runner (AUDIT-AFTER-SCAN-1), which
+   * skips the 5/day campaign rate limit. That limit exists to bound what a
+   * human can trigger by clicking; the automatic path is bounded by something
+   * stricter — it runs at most once per completed scan run, and each run is
+   * already capped by the plan's own scan allowance. Leaving the limit on
+   * would mean the 6th scan of a day silently ships without an audit, which
+   * is exactly the failure this phase exists to remove. The PLAN gate below
+   * is NOT bypassed: it is a commercial boundary, not a rate limit.
+   */
+  trigger?: "manual" | "automatic";
 }): Promise<DomainCoverageResult> {
   try {
     // Ownership — proven with the user-context (RLS-scoped) client before any
@@ -381,10 +411,10 @@ export async function auditDomainCoverageCore({
 
     const project = projectRaw as unknown as ProjectRow | null;
     if (projectError || !project) {
-      return { success: false, error: feedbackErrorMessages.project_not_found };
+      return { success: false, error: feedbackErrorMessages.project_not_found, reason: "project_not_found" };
     }
     if (project.is_archived) {
-      return { success: false, error: feedbackErrorMessages.project_archived };
+      return { success: false, error: feedbackErrorMessages.project_archived, reason: "project_archived" };
     }
 
     // Plan gate — invariant 2. Raw column value, never via resolvePlan.
@@ -393,7 +423,7 @@ export async function auditDomainCoverageCore({
       "load_plan"
     );
     if (!isProOrAbove((profileRaw as { current_plan?: string } | null)?.current_plan)) {
-      return { success: false, error: PLAN_REQUIRED_FAILURE };
+      return { success: false, error: PLAN_REQUIRED_FAILURE, reason: "plan_required" };
     }
 
     // Scan/prompt context is derived server-side (data-guardian C5): the latest
@@ -411,7 +441,7 @@ export async function auditDomainCoverageCore({
     );
     const scanId = (latestRunRaw as { id: string } | null)?.id ?? null;
     if (!scanId) {
-      return { success: false, error: NO_SCAN_FAILURE };
+      return { success: false, error: NO_SCAN_FAILURE, reason: "no_scan" };
     }
 
     const { data: promptRows } = await withTimeout(
@@ -425,7 +455,7 @@ export async function auditDomainCoverageCore({
     );
     const prompts = ((promptRows ?? []) as PromptRow[]).filter((p) => p.prompt_text?.trim());
     if (prompts.length === 0) {
-      return { success: false, error: NO_PROMPTS_FAILURE };
+      return { success: false, error: NO_PROMPTS_FAILURE, reason: "no_prompts" };
     }
 
     // Existing campaign row for THIS project (any status). Used to (a) serve a
@@ -476,7 +506,7 @@ export async function auditDomainCoverageCore({
     // of today's counted units from continuing past the limit boundary.
     const resuming = existingRow?.status === "running" && existingMatchesScan;
 
-    if (!resuming) {
+    if (!resuming && trigger === "manual") {
       const rateLimit = await checkGenerationRateLimit(service, projectId, {
         config: DOMAIN_COVERAGE_RATE_LIMIT,
         generationType: GENERATION_TYPE
@@ -485,7 +515,8 @@ export async function auditDomainCoverageCore({
         console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
         return {
           success: false,
-          error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE
+          error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE,
+          reason: rateLimit.reason === "rate_limit_exceeded" ? "rate_limited" : "generic"
         };
       }
     }
@@ -675,7 +706,7 @@ export async function auditDomainCoverageCore({
 
     if (persistError) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId });
-      return { success: false, error: GENERIC_FAILURE };
+      return { success: false, error: GENERIC_FAILURE, reason: "generic" };
     }
 
     console.info(`${LOG_PREFIX} ${campaignStatus === "completed" ? "completed" : "batch_persisted"}`, {
@@ -696,6 +727,6 @@ export async function auditDomainCoverageCore({
         error_name: error instanceof Error ? error.name : "unknown"
       });
     }
-    return { success: false, error: GENERIC_FAILURE };
+    return { success: false, error: GENERIC_FAILURE, reason: "generic" };
   }
 }

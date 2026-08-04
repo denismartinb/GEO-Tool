@@ -180,7 +180,7 @@ EXTRACTION-RELIABILITY-1 it ran exactly once, at finalize, capped at 20 rows
 (`MAX_EXTRACTION_RESULTS`) — a cap sized when a run was a single batch and
 never revisited after SCAN-CHAIN-1 made campaigns span many. Everything past
 the 20th row was silently discarded: on a 30-row run that was a third of the
-answers, on a 300-row Pro run 93%. See `docs/adr/0027`.
+answers, on a 300-row Pro run 93%. See `docs/adr/0029`.
 
 **A pass is bounded by rate and time, never by row count.**
 `EXTRACTION_CONCURRENCY` (4) bounds in-flight calls. The time bound is
@@ -190,7 +190,7 @@ deadline at entry and threads it into every extraction pass it runs, so
 generation, the batch pass and the finalize sweep all draw from the same
 budget. Rows a pass cannot reach stay eligible for the next invocation. A
 per-pass budget instead of a shared one is what killed a real scan in preview
-— see `docs/adr/0027`, Addendum.
+— see `docs/adr/0029`, Addendum.
 
 **A finalize claim is leased, not permanent.** Because extraction now runs
 inside the finalize step, that step is long enough to be killed mid-flight, and
@@ -314,7 +314,7 @@ the underlying configuration and launches a new scan manually.
    categorized `extraction_error` explaining why not. Completing over such a
    gap publishes a score computed from a fraction of the run's own data and
    calls it done — which is exactly what happened before
-   EXTRACTION-RELIABILITY-1 (`docs/adr/0027`). Enforced in `executePendingScan`
+   EXTRACTION-RELIABILITY-1 (`docs/adr/0029`). Enforced in `executePendingScan`
    via `countUnprocessedExtractionRows`.
 5. **No user-facing cancel today.** There is no cancel-scan action or button.
    A user blocked by a stuck `pending`/`running` run relies on the timeout +

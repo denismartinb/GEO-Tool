@@ -1,4 +1,4 @@
-# ADR 0027 — Extraction must finish or say why (EXTRACTION-RELIABILITY-1)
+# ADR 0029 — Extraction must finish or say why (EXTRACTION-RELIABILITY-1)
 
 Date: 2026-08-04
 Status: Accepted

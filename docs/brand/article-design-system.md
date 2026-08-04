@@ -4,7 +4,7 @@
 > agente que redacta lee de aquí, y las reglas que se pueden comprobar por
 > máquina están implementadas como tests, no como recomendaciones.
 >
-> Política de imágenes: `docs/adr/0026-article-imagery-policy.md`.
+> Política de imágenes: `docs/adr/0028-article-imagery-policy.md`.
 > Identidad (paleta, tipografía, logo): `docs/brand/brand-guidelines.md`.
 > Reglas de redacción SEO/GEO: `docs/content-strategy.md` §4.
 
