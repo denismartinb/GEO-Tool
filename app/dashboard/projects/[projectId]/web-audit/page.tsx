@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
+import { buildLlmsTxt, publishSteps, type LlmsTxtResult, type PublishStep } from "@/lib/web-audit/llms-txt";
 import {
   buildWebAuditSummary,
   buildCitationWindowCandidates,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/web-audit/issues";
 import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
 import { PageFixBlock } from "./page-fix-block";
+import { LlmsTxtBlock } from "./llms-txt-block";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -178,7 +180,18 @@ const SEVERITY_META: Record<IssueSeverity, { label: string; stripe: string; badg
 const SINGLE_FACT_CHECKS = new Set<IssueCheckKey>(["llms_txt_missing", "sitemap_missing"]);
 
 /** One technical problem, collapsed by default (same `.wa-details` pattern PageAuditRow already uses) — severity + scope always visible, the fix and affected pages one tap away. */
-function IssueRow({ issue }: { issue: TechnicalIssue }) {
+function IssueRow({
+  issue,
+  llmsTxt
+}: {
+  issue: TechnicalIssue;
+  /**
+   * Fase 3a. Only ever passed for `llms_txt_missing`, and only when there was
+   * real coverage data to build a file from — so a project that has never run
+   * a coverage audit still gets the prose guidance and no half-empty artifact.
+   */
+  llmsTxt?: { file: LlmsTxtResult; steps: PublishStep[] } | null;
+}) {
   const meta = CHECK_META[issue.check];
   const sev = SEVERITY_META[issue.severity];
   const scopeLabel = SINGLE_FACT_CHECKS.has(issue.check)
@@ -209,6 +222,7 @@ function IssueRow({ issue }: { issue: TechnicalIssue }) {
       </summary>
       <div className="wa-details-body">
         <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 8px", lineHeight: 1.5 }}>{meta.guidance}</p>
+        {llmsTxt && <LlmsTxtBlock file={llmsTxt.file} steps={llmsTxt.steps} />}
         {issue.affectedLabels.length > 0 && (
           <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
             {issue.affectedLabels.slice(0, 12).map((label) => (
@@ -850,6 +864,16 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // already the normalized host used everywhere else on this page.
   const fixContext: PageFixContext = { projectName: project.name, domainNormalized: project.domain };
 
+  // Fase 3a: the llms.txt the user can publish, built from the latest coverage
+  // campaign. Null when no campaign has ever produced a verified page — the
+  // builder refuses to emit a file that would be nothing but placeholders.
+  const llmsTxtFile = buildLlmsTxt({
+    brand: project.name,
+    domainNormalized: project.domain,
+    coverage: latestMap
+  });
+  const llmsPublishSteps = publishSteps(project.domain);
+
   const auditedScan = latestMap ? maps.find((m) => m.scanId === latestMap.scanId) : null;
   const auditedScanDate = auditedScan?.scanId === latestRunRow?.id ? latestRunRow?.finished_at ?? latestRunRow?.created_at : null;
 
@@ -1299,7 +1323,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   </div>
                   <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
                     {currentTechnicalReport.issues.length > 0 ? (
-                      currentTechnicalReport.issues.map((issue) => <IssueRow key={issue.check} issue={issue} />)
+                      currentTechnicalReport.issues.map((issue) => (
+                        <IssueRow
+                          key={issue.check}
+                          issue={issue}
+                          llmsTxt={
+                            issue.check === "llms_txt_missing" && llmsTxtFile
+                              ? { file: llmsTxtFile, steps: llmsPublishSteps }
+                              : null
+                          }
+                        />
+                      ))
                     ) : (
                       <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
                         Ningún problema técnico detectado en la última auditoría.
