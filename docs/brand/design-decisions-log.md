@@ -1703,6 +1703,99 @@ que es comportamiento razonable y no falso.
 
 ---
 
+## 19. Publicación semanal del blog — de encargo escrito a cadena que arranca sola (GROWTH-3 Fase A2, 2026-08-04)
+
+**Contexto.** La Fase A1 (§ PR #318) dejó escrito *el encargo* de la
+publicación semanal y creó un disparador fuera del repo. Lo que no hizo fue
+ejecutarse nunca: una automatización que no se ha disparado ni una vez no está
+terminada, está redactada. A1 misma dejó anotado el riesgo — las sesiones
+disparadas podrían correr **sin herramientas MCP de GitHub**, y entonces el
+agente escribiría el artículo, empujaría la rama y ahí se quedaría, sin PR y
+sin que nadie se entere.
+
+**Qué se intentó primero y por qué se descartó.** El plan aprobado era
+dispararla a mano una vez y ver hasta dónde llegaba. No se pudo: las
+herramientas de rutinas exigen una aprobación interactiva que una sesión remota
+no puede conceder. Eso no confirmó el riesgo, pero lo reforzó — **lo que
+necesita una aprobación interactiva no está garantizado en una sesión
+headless**. Se dejó de intentar averiguar si haría falta la red de seguridad y
+se construyó.
+
+**Lo decidido.**
+
+- **`.github/workflows/weekly-post-pr.yml`** garantiza que exista un PR abierto
+  para toda rama `claude/weekly-post/**`. **Es idempotente a propósito**: si la
+  sesión semanal sí tenía herramientas y abrió el PR, el workflow lo encuentra y
+  no crea nada. Los dos caminos convergen en el mismo estado final, que es lo
+  que permite no tener que saber de antemano cuál se tomó.
+- **El mensaje del último commit es el PR** (asunto → título, cuerpo → cuerpo).
+  Se eligió frente a un fichero de plantilla en la rama porque un fichero
+  temporal en la rama del artículo acaba colándose en el diff que revisa el
+  fundador.
+- **El aviso son tres capas, no una** (`docs/agentic-weekly-post.md` §8). La
+  que sostiene el sistema es la más aburrida: el workflow pide revisión al
+  fundador y **GitHub manda su email nativo**. No depende de que el agente siga
+  vivo, ni de claves, ni de terceros — que es justo lo que se necesita cuando el
+  modo de fallo probable *es* que el agente se muera a mitad. Encima van el push
+  a la app de Claude (`PushNotification`, se pierde si no hay Control Remoto) y
+  las notificaciones de fin de rutina (pendientes de activar).
+- **Sin preview es `INCONCLUSIVE`, y se dice.** La cuenta de Vercel es gratuita
+  y tiene tope diario de deploys; la propia PR de A1 se quedó sin preview por
+  eso. Queda escrito que el aviso debe decir "escrito y validado, pero nadie lo
+  ha visto renderizado" en vez de presentarlo como listo — el mismo fallo del
+  2026-08-02 (§7) que el pilot existe para impedir.
+
+**Lo que se mantiene de A1, sin tocar.** No hay scheduler de producto: nada en
+`vercel.json`, ni `app/api/cron/**`, ni runtime. El agente **no mergea nunca**.
+Y el check de portada **sigue en rojo a propósito** (§14, ADR 0026): el agente
+no puede generar imágenes, y automatizar la publicación sin portada
+automatizaría una vez por semana el defecto que el fundador rechazó
+("parece un icono de algo que no carga bien").
+
+**Lo que se comprobó mirando, no suponiendo.** Se leyó la configuración real de
+la rutina y se la disparó a mano dos veces el 2026-08-04:
+
+- **La sesión semanal no tiene ninguna herramienta de GitHub.** Su lista de
+  permisos es `Task, Bash, Glob, Grep, Read, Edit, MultiEdit, Write,
+  NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, Skill,
+  Tmux, Monitor, SendUserFile, REPL`. El riesgo que A1 anotó como hipótesis
+  queda **confirmado**, y el workflow deja de ser una precaución para ser la
+  única vía de entrega.
+- **Sí tiene `Bash`**, así que el push está a su alcance.
+- **Las notificaciones de la rutina ya estaban en `{push: true, email: false}`**
+  — la capa 2 del aviso llevaba activa desde A1 sin que constara en ningún
+  sitio.
+
+**Y el hallazgo que obligó a añadir `.claude/settings.json`.** El primer
+disparo manual (15:48 UTC) **no produjo nada**: dos horas después no había ni
+rama ni PR. Ese mismo día, una sesión remota pidió cuatro veces leer la
+configuración de rutinas y las cuatro recibió "requiere aprobación" — una
+aprobación que nadie podía dar. Una sesión disparada a las 07:00 de un lunes
+está en esa situación con el fundador dormido. El fichero preaprueba lo que la
+sesión necesita para entregar (`git`, `pnpm test`, `pnpm run validate`), y de
+paso convierte en regla ejecutable dos prohibiciones que hasta ahora sólo eran
+texto en `CLAUDE.md`: `deny` sobre force-push y sobre push directo a `main`.
+**No es hermética** (`--force-with-lease` y otras variantes no están cubiertas):
+atrapa las formas comunes, no sustituye a la constitución.
+
+**Pendiente / roto conocido.**
+
+- **Una activación manual fuera del repo**, ya hecha por el fundador el
+  2026-08-04: *"Allow GitHub Actions to create and approve pull requests"*. Sin
+  ella el workflow devuelve 403 y no hay red de seguridad.
+- **La causa del disparo mudo de las 15:48 no está confirmada.** La hipótesis
+  del permiso encaja con todo lo observado, pero no se pudo leer el transcript
+  de aquella sesión. Si el 10 de agosto vuelve a no producir nada, esa
+  hipótesis queda descartada y hay que buscar en otro sitio.
+- **La cadena completa sigue sin haberse ejecutado de punta a punta.** Lo que
+  la Fase A2 cambia no es que no pueda fallar, sino que **si falla, se ve**:
+  sin PR abierto el lunes, el fallo es visible en vez de silencioso. Falta
+  todavía un detector para el caso "no se produjo absolutamente nada", que el
+  workflow no cubre porque se dispara con un push que en ese escenario nunca
+  ocurre.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
