@@ -145,6 +145,12 @@ De ahí dos obligaciones para el agente, que no son cosméticas:
   controla qué dirá el PR si lo abre el workflow. Un commit con asunto y sin
   cuerpo produce un PR mudo — y ahí es donde tiene que ir, arriba del todo,
   que **falta la portada** (§4).
+- **Nada de `<...>` sin comillas invertidas en el mensaje del commit.** El
+  cuerpo se renderiza como markdown al llegar al PR, así que GitHub se come
+  cualquier cosa entre ángulos tomándola por una etiqueta HTML. El smoke del
+  2026-08-04 lo demostró: `public/blog/<slug>/cover.png` llegó al PR como
+  `public/blog//cover.png`, justo en la línea que avisa de dónde va la
+  portada. Escríbelo entre backticks y sobrevive.
 
 ---
 
