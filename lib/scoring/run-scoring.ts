@@ -2,7 +2,7 @@ import { isBrandDomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
 import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 
-export const SCORING_VERSION = "phase9-geo-score-v3";
+export const SCORING_VERSION = "phase9-geo-score-v4";
 
 export type ScoreInputRow = {
   id: string;
@@ -102,6 +102,23 @@ const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 
 function isGroundedRow(row: ScoreInputRow): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
+}
+
+/**
+ * True when a row produced usable evidence — a successful extraction with no
+ * recorded error.
+ *
+ * This is the gate that keeps a technical failure from reading as a finding
+ * about the brand. A row whose extraction failed has `brand_mentioned = false`
+ * and `citation_found = false` because nothing was ever read from it, not
+ * because the AI declined to name the brand. Counting it scores an outage as
+ * an absence (geo-score-v4, docs/adr/0027).
+ *
+ * Both signals are required, not either: a row can carry an `extraction_error`
+ * alongside a partial `extracted_json`, and half-read evidence is not evidence.
+ */
+function isScorableRow(row: ScoreInputRow): boolean {
+  return Boolean(row.extracted_json && typeof row.extracted_json === "object") && !row.extraction_error;
 }
 
 type ExtractedCitation = {
@@ -366,11 +383,45 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   const extractionErrorCount = results.filter((row) => row.extraction_error).length;
   const extractionCoverage = extractedResultsCount / safeTotal;
 
-  const brandMentionedCount = results.filter((row) => row.brand_mentioned).length;
-  const totalCitationsCount = results.reduce((acc, row) => acc + Math.max(0, row.citations_count ?? 0), 0);
-  const totalCompetitorMentions = results.reduce((acc, row) => acc + Math.max(0, row.mentioned_competitors_count ?? 0), 0);
+  /* ---- scorable rows (geo-score-v4, docs/adr/0027) ----------------------
+   * A row whose extraction failed carries NO evidence about the brand — not
+   * that it was absent, not that it was present. Leaving it in a denominator
+   * silently converts a technical failure into a negative finding: the row
+   * has `brand_mentioned = false` and `citation_found = false` because
+   * nothing was ever read, and both then count against the score.
+   *
+   * Founder, 2026-08-03: *"no tiene sentido que un fallo técnico penalice la
+   * nota de posicionamiento"*, and asked for every calculation feeding the
+   * GEO Score to be swept for the same defect.
+   *
+   * `prominence` already worked this way — `computeBrandPosition` skips rows
+   * without valid extraction — so this makes the other components consistent
+   * with the one that was already right, rather than inventing a rule.
+   *
+   * The failures stay visible: `total_results` still counts them and
+   * `unscorable_results_count` names them, so a run that lost half its
+   * sample reads as a smaller sample, never as a worse brand.
+   */
+  const scoredResults = results.filter(isScorableRow);
+  const scoredTotal = scoredResults.length;
+  const safeScoredTotal = Math.max(scoredTotal, 1);
+  const unscorableResultsCount = totalResults - scoredTotal;
 
-  const visibilityScore = round2((brandMentionedCount / safeTotal) * 100);
+  const brandMentionedCount = scoredResults.filter((row) => row.brand_mentioned).length;
+  const totalCitationsCount = scoredResults.reduce((acc, row) => acc + Math.max(0, row.citations_count ?? 0), 0);
+  const totalCompetitorMentions = scoredResults.reduce(
+    (acc, row) => acc + Math.max(0, row.mentioned_competitors_count ?? 0),
+    0
+  );
+
+  // Null, not 0, when nothing could be read: a run that produced no usable
+  // evidence has no mention rate, and publishing 0% would be the same
+  // fabrication ADR 0024 removed from the delta.
+  const visibilityScoreValue: number | null =
+    scoredTotal > 0 ? round2((brandMentionedCount / scoredTotal) * 100) : null;
+  // The persisted column is non-null; the composite uses the nullable value
+  // above so an unreadable run drops presence instead of scoring it zero.
+  const visibilityScore = visibilityScoreValue ?? 0;
 
   // --- Own-domain citation_score (docs/adr/0013) ---
   // citation_score (and the authority component of geo_score) requires a
@@ -381,7 +432,9 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // surfaced this). Domain-matching mirrors own_citation_share (docs/adr/0010).
   // Only rows from grounded providers (docs/adr/0012) are eligible, since an
   // ungrounded provider can never have a real grounding citation.
-  const groundedResults = results.filter(isGroundedRow);
+  // Scorable AND grounded: an unreadable row from a grounded provider still
+  // proves nothing about whether the AI cited the brand's own domain.
+  const groundedResults = scoredResults.filter(isGroundedRow);
   const groundedTotal = groundedResults.length;
   const citationScoreDataAvailable = groundedTotal > 0 && projectDomainNormalized.length > 0;
   const ownDomainCitationCount = groundedResults.filter((row) =>
@@ -398,8 +451,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   const citationFoundCount = groundedResults.filter((row) => row.citation_found).length;
   const citationScoreAnyDomain = groundedTotal > 0 ? round2((citationFoundCount / groundedTotal) * 100) : 0;
 
-  const citationFoundCountBlended = results.filter((row) => row.citation_found).length;
-  const citationScoreBlended = round2((citationFoundCountBlended / safeTotal) * 100);
+  const citationFoundCountBlended = scoredResults.filter((row) => row.citation_found).length;
+  const citationScoreBlended = round2((citationFoundCountBlended / safeScoredTotal) * 100);
 
   const citationByProvider: Record<string, { total: number; citation_found_count: number }> = {};
   for (const row of results) {
@@ -418,10 +471,13 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // past total_results with just 2-3 competitors per prompt) without ever
   // checking co-occurrence with the brand. Field name (competitor_gap_score)
   // is kept unchanged to avoid a migration — only the computation changes.
-  const displacedPromptsCount = results.filter(
+  // Same denominator rule, in the other direction: an unreadable row is not a
+  // prompt where the brand held its ground either. Left in, it would quietly
+  // UNDERSTATE competitive pressure.
+  const displacedPromptsCount = scoredResults.filter(
     (row) => !row.brand_mentioned && Math.max(0, row.mentioned_competitors_count ?? 0) > 0
   ).length;
-  const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeTotal) * 100));
+  const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeScoredTotal) * 100));
 
   // "high" requires >=20 fully-extracted results (was >=5): with one LLM
   // sample per prompt/engine, 5 results give each answer a 20-point swing on
@@ -458,9 +514,11 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   const brandPosition = untrustedCompetitorSet ? null : computeBrandPosition(results, totalResults);
 
   // --- GEO Score composite (ADR 0008, revised by ADR 0015) ---
-  const COMPOSITE_VERSION = "geo-score-v3";
+  const COMPOSITE_VERSION = "geo-score-v4";
 
-  const presenceScore = visibilityScore; // 0..100, higher better
+  // Dropped (not zeroed) when no row could be read — the remaining weights
+  // renormalize through the same mechanism prominence/standing/authority use.
+  const presenceScore: number | null = visibilityScoreValue; // 0..100, higher better
   const authorityScore: number | null = citationScoreDataAvailable ? citationScore : null; // 0..100, higher better
 
   // --- standing = Share of Voice (geo-score-v2, ADR 0015) ---
@@ -600,14 +658,14 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   }
 
   const assumptions = [
-    "visibility_score = % prompts with brand_mentioned",
+    "visibility_score = % of SCORABLE prompts with brand_mentioned. A prompt whose extraction failed carries no evidence either way, so it is excluded from every denominator rather than counted as a non-mention — a technical failure must not read as an absence of the brand (geo-score-v4, docs/adr/0027). prominence already worked this way; v4 makes presence, authority and competitive pressure consistent with it.",
     "citation_score = % of GROUNDED-provider prompts citing the brand's OWN domain (docs/adr/0013), not just any source. Ungrounded providers (e.g. Claude, no web search grounding) are excluded, same as docs/adr/0012, but still count toward visibility_score/standing. citation_score_any_domain (any grounding citation, regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are kept in details_json for comparison only.",
     "competitor_gap_score (Competitive Pressure, docs/adr/0011) higher = worse: % of prompts where a competitor was mentioned but the brand was not (brand displacement), not raw competitor mention volume",
     extractionCoverage < 1
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
       : "Extraction coverage is complete.",
     "brand_position (geo-score-v3): position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). avg_position_when_mentioned = mean rank over ONLY the prompts where that entity was mentioned; lower is better and 1.0 means always listed first. Never-mentioned entities have null and sort last. mention_rate carries the other half of the story — how often the entity appeared at all. The pre-v3 figure, which averaged an N+1 penalty for every non-mention into the same number and therefore re-encoded the mention rate as if it were a rank, is retained per entity as avg_position_penalized for comparison only.",
-    "geo_score (geo-score-v3, ADR 0026): composite of presence (visibility_score), prominence (rank WHEN MENTIONED, derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
+    "geo_score (geo-score-v4, ADR 0027): composite of presence (visibility_score), prominence (rank WHEN MENTIONED, derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (presence when no row could be read, prominence without position data, standing with a zero share-of-voice denominator, authority without grounded scorable rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
     `confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); ${MIN_RESPONSES_FOR_BAND}-19 clean results are medium; below ${MIN_RESPONSES_FOR_BAND} responses a single AI answer moves the mention rate by >=${Math.round(100 / MIN_RESPONSES_FOR_BAND)} points, so the run is low confidence regardless of extraction quality (ADR 0015 + GEO-SCORE-RELIABILITY-1).`
   ];
 
@@ -630,6 +688,11 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     details_json: {
       scoring_version: SCORING_VERSION,
       total_results: totalResults,
+      // The sample every score below is actually computed over. When it is
+      // smaller than total_results the run lost rows to extraction failures;
+      // that is a smaller sample, never a worse brand (geo-score-v4).
+      scored_results_count: scoredTotal,
+      unscorable_results_count: unscorableResultsCount,
       extracted_results_count: extractedResultsCount,
       extraction_error_count: extractionErrorCount,
       brand_mentioned_count: brandMentionedCount,
@@ -645,11 +708,12 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       displaced_prompts_count: displacedPromptsCount,
       sentiment_distribution: sentimentDistribution,
       formulas_used: {
-        visibility_score: "brand_mentioned_count / total_results * 100",
+        visibility_score:
+          "brand_mentioned_count / scored_results_count * 100 (geo-score-v4, docs/adr/0027) — rows whose extraction failed are excluded from the denominator rather than counted as non-mentions; null (presence dropped from the composite) when no row could be read at all",
         citation_score:
-          "own_domain_citation_count / grounded_results_count * 100, computed only over rows from grounded providers (docs/adr/0012) with a grounding citation whose domain matches the project's own domain (docs/adr/0013); 0 with citation_score_data_available=false when no grounded rows exist in this run or no project domain was provided. citation_score_any_domain (grounded rows, any citation regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are retained in details_json for comparison only.",
+          "own_domain_citation_count / grounded_results_count * 100, computed only over SCORABLE rows from grounded providers (an unreadable row proves nothing about citation either, geo-score-v4) (docs/adr/0012) with a grounding citation whose domain matches the project's own domain (docs/adr/0013); 0 with citation_score_data_available=false when no grounded rows exist in this run or no project domain was provided. citation_score_any_domain (grounded rows, any citation regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are retained in details_json for comparison only.",
         competitor_gap_score:
-          "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)",
+          "clamp(0,100, (displaced_prompts_count / scored_results_count) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011). Unreadable rows are excluded here too — left in they would UNDERSTATE pressure, the same defect in the other direction (geo-score-v4)",
         brand_position:
           "avg_position_when_mentioned(entity) = mean(position over ONLY the prompts where that entity was mentioned), null when never mentioned (geo-score-v3, docs/adr/0026); " +
           "mention_rate(entity) = mention_count / prompt_count * 100, reported alongside so a rank is never read without knowing how often it was earned; " +

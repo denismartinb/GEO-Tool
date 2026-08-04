@@ -621,7 +621,12 @@ export default async function CompetitorsPage({
         {/* Empty: competitors configured but no completed runs */}
         {activeCompetitors.length > 0 && completedRuns.length === 0 ? (
           <div style={{ marginTop: 14 }}>
-            <div className="cm2-sec-lbl">Panorámica competitiva · cuota de voz en IA</div>
+            {/* Scope in the label, not in a tooltip. The same brand shows a
+                different mention rate here and on the Overview because this
+                pools every completed scan and that one reads the latest —
+                both correct, and unreadable side by side without saying so
+                (pilot finding, 2026-08-03). */}
+            <div className="cm2-sec-lbl">Panorámica competitiva · cuota de voz en IA · histórico</div>
             <div className="card" style={{ padding: "48px 40px", textAlign: "center" }}>
               <div
                 style={{

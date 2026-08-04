@@ -317,8 +317,14 @@ export default async function ProjectDetailPage({
   // existed (no backfill, per ADR 0008).
   const gaugeScore = Math.round(geoScore?.score ?? visibilityScore);
 
-  const computedMentionRate = allPromptResults?.length
-    ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
+  /* Same rule the scoring uses (geo-score-v4, docs/adr/0027): a row whose
+   * extraction failed carries no evidence either way, so it is excluded from
+   * the denominator rather than counted as "the AI didn't mention you". */
+  const scorableResults = (allPromptResults ?? []).filter(
+    (r) => Boolean(r.extracted_json && typeof r.extracted_json === "object") && !r.extraction_error
+  );
+  const computedMentionRate = scorableResults.length
+    ? Math.round((scorableResults.filter((r) => r.brand_mentioned).length / scorableResults.length) * 100)
     : Math.round((totalResults > 0 ? (brandMentions / totalResults) * 100 : visibilityScore));
 
   /* ---- distribución por motor de IA: vista comparativa real por motor ----
@@ -441,7 +447,10 @@ export default async function ProjectDetailPage({
   /* ---- competitor breakdown from extracted_json ---- */
   const competitorMentionCounts: Record<string, number> = {};
 
-  for (const result of allPromptResults ?? []) {
+  // Scorable rows only, matching computedMentionRate and the scoring side —
+  // otherwise the competitor rates below would use a different denominator
+  // from the brand's own on the same screen (geo-score-v4, docs/adr/0027).
+  for (const result of scorableResults) {
     const ext = parseExt(result.extracted_json);
 
     for (const comp of ext.competitors ?? []) {
@@ -459,8 +468,8 @@ export default async function ProjectDetailPage({
   const competitorRows = (competitors ?? []).map((comp, i) => {
     const key = comp.name.toLowerCase().trim();
     const mentionCount = competitorMentionCounts[key] ?? 0;
-    const mentionRate = allPromptResults?.length
-      ? Math.round((mentionCount / allPromptResults.length) * 100)
+    const mentionRate = scorableResults.length
+      ? Math.round((mentionCount / scorableResults.length) * 100)
       : 0;
     const sov = totalForSov > 0 ? Math.round((mentionCount / totalForSov) * 100) : 0;
     return {
@@ -1036,7 +1045,7 @@ export default async function ProjectDetailPage({
 
           {/* 5 · Panorámica competitiva */}
           <div className="ov2-sec-lbl">
-            Panorámica competitiva
+            Panorámica competitiva · último escaneo
             {competitors?.length ? (
               <Link href={`/dashboard/projects/${projectId}/competitors`}>Ver todo</Link>
             ) : null}

@@ -499,10 +499,10 @@ describe("computeRunScoresFromResults — details_json contents", () => {
     expect(result.details_json.total_results).toBe(3);
     expect(result.details_json.sentiment_distribution).toEqual({ positive: 2, negative: 1 });
     expect(result.details_json.formulas_used).toMatchObject({
-      visibility_score: "brand_mentioned_count / total_results * 100",
+      visibility_score: expect.stringContaining("brand_mentioned_count / scored_results_count"),
       citation_score: expect.stringContaining("grounded providers"),
       competitor_gap_score:
-        "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)"
+        expect.stringContaining("displaced_prompts_count / scored_results_count")
     });
     expect(Array.isArray(result.details_json.assumptions)).toBe(true);
     expect(Array.isArray(result.details_json.per_prompt_summary)).toBe(true);
@@ -836,7 +836,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     };
 
     expect(geoScore).toBeDefined();
-    expect(geoScore.composite_version).toBe("geo-score-v3");
+    expect(geoScore.composite_version).toBe("geo-score-v4");
     expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
     expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
     expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
@@ -927,7 +927,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     ).toBe(true);
 
     const geoScore = result.details_json.geo_score as { composite_version: string; formula: string };
-    expect(geoScore.composite_version).toBe("geo-score-v3");
+    expect(geoScore.composite_version).toBe("geo-score-v4");
     expect(geoScore.formula).toContain("standing = share of voice");
     expect(geoScore.formula).toContain("standing_v1");
     expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100");
@@ -1472,5 +1472,82 @@ describe("computeJointPotentialPoints", () => {
       { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] }
     ]);
     expect(result).toBeNull();
+  });
+});
+
+describe("computeRunScoresFromResults — a technical failure is not a finding (geo-score-v4, ADR 0027)", () => {
+  const mentioned = () =>
+    row({ brand_mentioned: true, citation_found: true, citations_count: 1, extracted_json: { citations: [ownDomainCitation()] } });
+
+  /** A row the pipeline could not read: no extracted_json, and an error recorded. */
+  const failed = () => row({ id: "failed", extracted_json: null, extraction_error: "timeout talking to the model" });
+
+  it("excludes an unreadable row from presence instead of counting it as a non-mention", () => {
+    const clean = computeRunScoresFromResults([mentioned(), mentioned()], PROJECT_DOMAIN);
+    const withFailure = computeRunScoresFromResults([mentioned(), mentioned(), failed()], PROJECT_DOMAIN);
+
+    // Two of two readable prompts mentioned the brand, in both runs.
+    expect(clean.visibility_score).toBe(100);
+    expect(withFailure.visibility_score).toBe(100);
+
+    // Under v3 the third row dragged this to 66.67 — an outage scored as an
+    // absence, which is the whole point of this phase.
+    expect(withFailure.details_json.scored_results_count).toBe(2);
+    expect(withFailure.details_json.total_results).toBe(3);
+    expect(withFailure.details_json.unscorable_results_count).toBe(1);
+  });
+
+  it("excludes it from authority too — an unread row proves nothing about citations", () => {
+    const clean = computeRunScoresFromResults([mentioned(), mentioned()], PROJECT_DOMAIN);
+    const withFailure = computeRunScoresFromResults([mentioned(), mentioned(), failed()], PROJECT_DOMAIN);
+
+    expect(clean.citation_score).toBe(100);
+    expect(withFailure.citation_score).toBe(100);
+    expect(withFailure.details_json.grounded_results_count).toBe(2);
+  });
+
+  it("excludes it from competitive pressure — left in, it would UNDERSTATE the pressure", () => {
+    const displaced = () => row({ brand_mentioned: false, mentioned_competitors_count: 2 });
+
+    const clean = computeRunScoresFromResults([displaced(), displaced()], PROJECT_DOMAIN);
+    const withFailure = computeRunScoresFromResults([displaced(), displaced(), failed()], PROJECT_DOMAIN);
+
+    // Both prompts that could be read showed the brand displaced: 100%, not 67%.
+    expect(clean.competitor_gap_score).toBe(100);
+    expect(withFailure.competitor_gap_score).toBe(100);
+  });
+
+  it("treats a row carrying an error alongside partial JSON as unreadable — half-read evidence is not evidence", () => {
+    const halfRead = row({
+      id: "half",
+      brand_mentioned: false,
+      extracted_json: { phase: "partial" },
+      extraction_error: "schema validation failed"
+    });
+
+    const result = computeRunScoresFromResults([mentioned(), halfRead], PROJECT_DOMAIN);
+    expect(result.details_json.scored_results_count).toBe(1);
+    expect(result.visibility_score).toBe(100);
+  });
+
+  it("drops presence entirely rather than scoring 0 when nothing could be read", () => {
+    const result = computeRunScoresFromResults([failed(), failed()], PROJECT_DOMAIN);
+    const geo = result.details_json.geo_score as { inputs_used?: string[] } | undefined;
+
+    expect(result.details_json.scored_results_count).toBe(0);
+    // A run that read nothing has no mention rate. Publishing 0% would be the
+    // same fabrication ADR 0024 removed from the delta.
+    expect(geo?.inputs_used ?? []).not.toContain("presence");
+  });
+
+  it("leaves a run with no failures scoring exactly as before", () => {
+    // The guard must be inert on healthy data — this phase changes what
+    // happens to broken rows, nothing else.
+    const rows = [mentioned(), mentioned(), row({ brand_mentioned: false })];
+    const result = computeRunScoresFromResults(rows, PROJECT_DOMAIN);
+
+    expect(result.details_json.scored_results_count).toBe(3);
+    expect(result.details_json.unscorable_results_count).toBe(0);
+    expect(result.visibility_score).toBe(66.67);
   });
 });
