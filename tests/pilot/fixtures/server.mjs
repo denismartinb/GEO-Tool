@@ -390,7 +390,18 @@ function screenBody(path) {
       </div>
       <div role="tabpanel" data-panel="problemas">4 páginas sin datos estructurados</div>
       <div role="tabpanel" data-panel="correcto" hidden>10 de 10 páginas indexables</div>
-      <div role="tabpanel" data-panel="paginas" hidden>Tabla de páginas de prueba</div>
+      <div role="tabpanel" data-panel="paginas" hidden>
+        Tabla de páginas de prueba
+        <!-- A real collapsed page row: fase 3b's copyable fixes live inside
+             one of these, so the journey has to open it to have any evidence
+             at all. Native <details>, same as PageAuditRow. -->
+        <details class="wa-details">
+          <summary>/ · 3 mejoras pendientes</summary>
+          <div class="wa-details-body">
+            <pre>&lt;link rel="canonical" href="https://fixture.example/" /&gt;</pre>
+          </div>
+        </details>
+      </div>
       <script>
         document.querySelectorAll('[role="tab"]').forEach(function (btn) {
           btn.addEventListener("click", function () {

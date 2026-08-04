@@ -190,6 +190,18 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     ).toBeVisible();
     await captureInteraction(page, testInfo, `web-audit-tab-${label.toLowerCase()}`);
   }
+
+  // Fase 3b's copyable fixes live INSIDE a page row, and those rows are
+  // native <details>, collapsed by default. Neither the sweep (its budget is
+  // spent long before) nor the tab captures above ever open one, so without
+  // this the whole feature has zero visual evidence — the Páginas capture
+  // just shows ten closed rows. The loop above leaves "Páginas" selected.
+  const firstPageRow = page.locator('[role="tabpanel"]:not([hidden]) details.wa-details').first();
+  if ((await firstPageRow.count()) > 0) {
+    await firstPageRow.locator("summary").click();
+    await expect(firstPageRow, "clicking a page row did not expand it").toHaveAttribute("open", "");
+    await captureInteraction(page, testInfo, "web-audit-page-row-open");
+  }
 });
 
 /**
