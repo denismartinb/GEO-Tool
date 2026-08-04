@@ -304,6 +304,36 @@ for the payment-failed email to fire.
   trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
   If the Supabase project is ever migrated to a different region, update this
   value to match.
+- **ignoreCommand**: `vercel.json` skips the build when a commit touched
+  nothing outside internal documentation (`docs/`, `.claude/`, `agents/` and
+  the root `.md` files). Exit `0` means skip, exit `1` means build — so the
+  command ends in `test $? -eq 0`, which collapses every git error (exit `128`
+  when `HEAD^` does not exist on a root commit or a too-shallow clone) to
+  "build". **When in doubt, deploy**: Vercel reading a git failure as `0`
+  would turn it into a silently missing deployment.
+  - **The exclusions are literal paths, never patterns, and that is
+    load-bearing.** Every blog article in this product is
+    `app/blog/<slug>/page.mdx`, so the obvious first draft — excluding `*.md`,
+    or its one-character neighbour `*.mdx` — would have stopped publishing new
+    articles with every check still green. `vercel-ignore-command.test.ts`
+    forbids wildcards and forbids excluding anything under `app/`, `lib/`,
+    `components/`, `public/` or `supabase/`.
+  - **What it does not do:** it is not a fix for the Hobby plan's
+    `api-deployments-free-per-day` limit (100 deployments/24h, counted per
+    Vercel *account*, not per project), which blocked every deploy on
+    2026-08-03 and 2026-08-04. It saves build time; whether a skipped build
+    still consumes a deployment record is stated in the PR as unverified.
+  - **Consequence to know about:** a documentation-only commit on the
+    production branch does not redeploy production. That is correct — nothing
+    the app serves changed — but the previous deployment stays live.
+- **Deployment rate limit (Hobby).** `api-deployments-free-per-day` rejects
+  every new deployment for 24 hours once the account passes 100. Pushing again
+  does not clear it: it consumes another attempt against the same counter.
+  Observed 2026-08-04 — a retrigger commit failed identically, minutes after
+  an unrelated PR's already-queued build completed successfully, so a
+  succeeding build is **not** evidence the window has reopened. The real fix
+  is Vercel Pro, which `docs/launch-plan.md` already lists as a blocker for a
+  separate reason (Hobby forbids commercial use).
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
 
