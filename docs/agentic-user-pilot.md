@@ -201,9 +201,40 @@ Per screen, per viewport (375 / 768 / 1280):
   `location()` is appended or the noise filters cannot match;
 - silent session loss (any authenticated route bouncing to `/login`).
 
+### Captures reach past the fold (UX-PILOT-1d)
+
+`fullPage: true` grows a screenshot to `document.documentElement.scrollHeight`
+and no further. The app shell pins itself to the viewport
+(`.shell { height: 100dvh; overflow: hidden }`, `app/globals.css`) and scrolls
+an inner element instead, so that number never exceeds one viewport — and
+every "full-page" capture of an authenticated screen was **silently cropped at
+the fold**, looking exactly like a complete one.
+
+Found 2026-08-03 on PR #308, where the pilot could not see the Overview's
+position headline or any panorama row past the third, at any viewport. It had
+been blind below the fold on every dashboard screen since the harness was
+written, not just on that PR.
+
+`visitAsUser` now measures the real content height — including inside any
+inner scroll container — and, when it exceeds the viewport, grows the
+*viewport* to match before capturing, then restores it. The width never
+changes, so the responsive breakpoint under test is untouched, and the app
+lays itself out honestly at the taller size rather than having its
+`overflow: hidden` stripped to fake a layout the product never renders.
+
+Captures are capped at 6000px. When a page is taller, `captureTruncated: true`
+is recorded — a silently cropped screenshot reads exactly like a complete one,
+which is the whole defect this fixes.
+
+Post-interaction captures stay viewport-sized on purpose: growing the viewport
+reflows the page, which would move an element out from under the cursor and
+dismiss the very `:hover` state being captured.
+
 Evidence lands in `.pilot/` (gitignored — it contains a live Supabase session):
 
-- `.pilot/screens/<viewport>--<screen>.png` — page-load captures (full page)
+- `.pilot/screens/<viewport>--<screen>.png` — page-load captures (full content,
+  including below the fold; `contentHeight` / `capturedHeight` /
+  `captureTruncated` in the findings say exactly how much was captured)
 - `.pilot/screens/<viewport>--<screen>--xN-<control>.png` — post-interaction
   captures (viewport-sized)
 - `.pilot/findings.jsonl` — page-load signals
@@ -295,6 +326,98 @@ cost real money. This phase is therefore strictly read-only:
 
 Write journeys need their own approval, with an explicit cost cap and a
 cleanup strategy — see UX-PILOT-2a below for the one that has one.
+
+**Switching project is not a write.** Reading a second and third project on the
+same account (UX-PILOT-1d, `second-project.spec.ts`) is navigation and stays
+inside this guard: every journey it runs is the same read-only pair of screens.
+It exists because one project only ever exercises one shape of data — see
+"Known limits". Nothing about it needed an exception.
+
+**Launching a scan needs one, and now has it — see UX-PILOT-3 below.**
+
+## UX-PILOT-3 — the pilot asks for a scan (opt-in, never automatic)
+
+Task Intake approved 2026-08-03. Founder: *"que el pilot aprenda a lanzar
+escaneos cuando lo necesite… solo necesita preguntarme y yo lo autorizo."*
+
+**Why it exists.** Some states cannot be reached by looking harder. After a
+scoring change there is, by construction, no run anywhere carrying the new
+shape of data — `details_json` holds whatever the code that scored *that* run
+wrote, and there is no backfill (ADR 0026 §4). PR #308 hit this exactly: six
+acceptance criteria, including the whole trend chart, had no qualifying data on
+any project the pilot could reach, so the verdict was INCONCLUSIVE and no
+amount of harness work could change it. Without this journey that repeats on
+every methodology PR, forever.
+
+**No secret gates it.** Founder, on reviewing the first design: *"tiene que
+dar al botón como si le diera yo, sin claves ni secretos."* That design
+required a `PILOT_SCAN_AUTHORIZATION` secret on top of the manual dispatch, and
+dropping it was right — anyone able to set a repository secret can already
+dispatch the workflow, so it bought no access control, only a setup step that
+made the capability harder to use than pressing the button by hand.
+
+**What still holds, in code rather than by convention:**
+
+1. **`workflow_dispatch` only.** `.github/workflows/ux-pilot-scan.yml` has no
+   `deployment_status` trigger, so no preview deploy can ever start it.
+2. **`--journeys scan`.** `scripts/pilot.mjs` includes the `scan` Playwright
+   project only for that explicit flag. The per-deploy workflow runs the
+   default read set and cannot reach `tests/pilot/journeys/scan/**` at all.
+   The self-check asserts this every run.
+3. **The target is never discovered.** `project_id` is a required workflow
+   input with no default, and `tests/pilot/support/scan-authorization.ts`
+   refuses without it — and refuses above the hard cap of
+   `MAX_SCANS_PER_RUN = 2` rather than clamping, because a run that spends less
+   than it was told to reads as a run that did what it was asked. Nine unit
+   tests cover the refusal paths, because those are the ones that must never
+   regress.
+
+**What no longer holds**, stated rather than glossed: nothing in code
+distinguishes a human pressing "Run workflow" from an agent dispatching it with
+a repository token. That distinction is exactly what the secret bought, and it
+was traded away deliberately so the pilot can do this itself. What remains is
+that dispatching takes repository write access, and that every run states in
+its PR comment what it spent.
+
+**What it does.** Presses the project's own "Repetir escaneo" button on an
+existing project, up to twice, waiting for each to finish. Then captures the
+Overview and Competitors screens that the scans just unlocked, through the
+normal helper, so the evidence lands beside every other screenshot. Two is not
+a round number: the trend chart needs two runs with position data before it
+renders at all.
+
+**What it does not do.** Create projects, add prompts, touch competitors,
+delete anything, or pick its own target. The project is pinned by secret, never
+auto-discovered — "scan whatever project is first" is how a pilot ends up
+spending money on the founder's real tracked brand.
+
+**Evidence and reporting** go to `pilot-evidence/pr-<n>-scan` and a
+`<!-- agentic:ux-pilot-scan-result -->` comment, both distinct from the
+read-only and write pilots' — otherwise a scan run would update the read
+pilot's verdict in place and replace a screen-by-screen judgement with a
+two-line cost report. The comment always states how many scans were authorized
+and against which project: cost that is not stated is cost nobody reviews.
+
+**Its output is captures, not a verdict.** A green scan run means the money was
+spent and the screens were photographed. The `ux-pilot` agent still has to look
+at them.
+
+### How to run it
+
+Actions → **Agentic User Pilot (scan)** → Run workflow, or dispatch it via the
+API. Three inputs, no secrets to configure:
+
+| Input | Notes |
+|---|---|
+| `pr_number` | Whose preview to scan against |
+| `project_id` | Required, no default. The pilot never picks one. |
+| `scan_count` | 1 unlocks the position list, 2 unlocks the trend chart. Capped at 2. |
+
+**A `workflow_dispatch` workflow must exist on the default branch before it can
+be dispatched at all** — GitHub returns 404 otherwise (hit for real on PR #308,
+where the workflow that would have verified the PR could not run until the PR
+merged). So the first run of any new dispatch workflow is always after its own
+merge.
 
 ## UX-PILOT-2a — the one write journey (opt-in, not automatic)
 
@@ -442,6 +565,14 @@ self-check would report a false `PILOT FAIL` on every run.
   login step. Protection stays on for human visitors.
 - **Single account only.** The pilot cannot prove tenant isolation; that stays
   with `data-guardian`.
+- **One project shows one shape of data.** The core-flow journey walks a single
+  project, so whole branches of these screens are unreachable from it — a brand
+  the AI never named, a project with fewer than two scans carrying position
+  data, a ranking where most entities have no rank. `second-project.spec.ts`
+  (UX-PILOT-1d) walks the Overview and Competitors screens on up to two further
+  projects on the same account for exactly this reason (founder, 2026-08-03).
+  It skips, loudly, when the account has only one project, and annotates the
+  run when more projects existed than the cap allowed.
 - **UX-PILOT-2a exercises one prompt, not real load.** It proves a scan can
   complete end-to-end, but with a single active prompt it does not reproduce
   the concurrency of a full `MAX_REAL_SCAN_PROMPTS`-sized scan across every
@@ -456,3 +587,11 @@ healthy fixture that must produce `PILOT PASS`, and a deliberately overflowing
 one that must produce `PILOT FAIL`. It proves the gate can both pass and fail.
 A gate that cannot fail is not a gate — and a harness that quietly stopped
 working would otherwise report a comfortable PASS forever.
+
+It also asserts **capture depth**: the fixture wraps its authenticated pages in
+the same viewport-pinned shell the real app uses, and the check reads the
+height straight out of each PNG's IHDR chunk to confirm the capture actually
+reached the bottom of the content. The findings could claim anything; the image
+cannot. Verified 2026-08-03 by reverting the capture fix — the check reports
+`PNG is only 812px tall, expected ~1938px` and the self-check fails, which is
+what makes it worth running.

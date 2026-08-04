@@ -65,6 +65,12 @@ const SCREENS_DIR = ".pilot/screens";
  */
 const EXPLORABLE = [
   "[aria-expanded]",
+  // A toggle button, by definition — the attribute exists to say "this control
+  // has an on/off state I am reporting". The chart's legend chips are these,
+  // and they went unswept through two rounds of pilot evidence because the
+  // list only matched `aria-expanded` (found 2026-08-03). The form/submit and
+  // destructive-name guards below still apply to everything matched here.
+  "[aria-pressed]",
   ".info-tip",
   ".cit2-tab",
   ".cit2-rowmain",

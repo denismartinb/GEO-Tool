@@ -145,7 +145,8 @@ Mahou/San Miguel).
 | **−1** | Identidad de marca: alias por proyecto (derivados automáticamente y verificados contra evidencia), snapshot por escaneo | Medio · **migración** | **Implementada** (ADR 0025) |
 | −1b | Dedupe de entidades de la misma marca en posición/SoV + revisión de la lista de competidores (forks de Firefox) | Bajo | Pendiente |
 | **−1c** | **UI de alias**: verlos, añadirlos y quitarlos a mano, y decir en «Evidencias de mención» qué nombre casó. Hoy los alias mueven el score y solo se pueden inspeccionar por SQL — el riesgo asumido en ADR 0025 está **sin mitigar** hasta que exista | Bajo | **Pendiente (hueco conocido)** |
-| **1** | Metodología v3: `prominence` condicionada a mención, encogimiento bayesiano, recalibrar bandas | Medio · cambia el significado | Pendiente |
+| **1** | Metodología v3: la posición mide **puesto**, no frecuencia — `avg_position_when_mentioned` + tasa de aparición por entidad, `prominence` condicionada a mención y con suelo de muestra, gráfico de evolución rediseñado | Medio · cambia el significado | **Implementada** (ADR 0026) |
+| 1b | Recalibrar pesos (.40/.25/.20/.15) y bandas 70/40 con la distribución observada de proyectos reales; revisar si `prominence` merece 0.25 ahora que deja de duplicar `presence` | Medio | Pendiente · necesita datos que aún no existen |
 | **2** | Muestreo: repeticiones por prompt en planes de pago | Coste por escaneo | Decisión de producto |
 | **3** | Candado: spec normativa, golden set congelado, tests de propiedad, gate de CI | Bajo | Pendiente |
 
@@ -206,3 +207,49 @@ Conviene dejarlo escrito para que nadie lea el ADR 0024 como "arreglado":
   Fase −1.
 - La inestabilidad de fondo solo baja de verdad con más muestra (Fase 2);
   ninguna fórmula estabiliza un score de 3 respuestas.
+
+---
+
+## 5 · Fase 1 — la posición no medía el puesto
+
+El fundador leyó la pantalla de competidores y rechazó la métrica de plano:
+
+> *"Cómo es posible que la posición mejor sea 6,5. Y peor aún, es imposible
+> que mozilla esté por encima de chrome, edge o safari."*
+
+Las dos objeciones eran correctas y comparten una sola causa. `avg_position`
+asignaba `N+1` a cada **no mención** y lo promediaba junto a los puestos
+reales, así que la cifra ordenaba por **frecuencia de aparición**, no por
+puesto. Sonda sintética donde las ocho entidades salen **siempre segundas** y
+solo cambia cuánto aparecen:
+
+```
+Entidad             posición media    aparece en    puesto real
+Mozilla                 5.50          10/20              2
+Google Chrome           7.25           5/20              2
+Apple Safari            7.60           4/20              2
+Microsoft Edge          7.60           4/20              2
+Brave                   8.30           2/20              2
+Proton VPN              8.65           1/20              2
+Amazon                  8.65           1/20              2
+ESET                    9.00           0/20              —
+```
+
+Reproduce la captura real del fundador casi exactamente, y ninguna de esas
+entidades está mejor colocada que otra. Se sigue que el mejor valor
+alcanzable no era 1 (aparecer siempre primero en la mitad de las respuestas
+promedia 5,0) y que la marca seguida sale estructuralmente favorecida: el set
+de prompts se elige alrededor de ella, así que aparece más y come menos
+penalizaciones.
+
+Ese mismo defecto vivía dentro del score. `prominence` (peso .25) derivaba de
+esa cifra, así que era una **segunda codificación de la tasa de mención** que
+`presence` (peso .40) ya lleva — el hallazgo 4 de la auditoría de julio, y la
+causa medida del ratio de transferencia 0,71× de la sección 1.
+
+La v3 (ADR 0026) separa las dos preguntas: `avg_position_when_mentioned`
+promedia **solo** los prompts donde la entidad aparece, y la tasa de aparición
+viaja a su lado en columna propia. `prominence` pasa a usar el puesto
+condicionado con su propio suelo de muestra. Los pesos y las bandas no se
+tocan a propósito: cambiar la medición y los pesos a la vez haría que ningún
+efecto fuera atribuible (Fase 1b).
