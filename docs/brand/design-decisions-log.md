@@ -1659,8 +1659,9 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
 
 ## 18. La auditoría web deja de depender de un clic (AUDIT-AFTER-SCAN-1, 2026-08-04)
 
-**Estado: implementada, PR #314 + continuación. Migración 0027 pendiente de
-aplicar a mano en Supabase.** Detalle técnico en `docs/adr/0027-post-scan-web-audit-queue.md`;
+**Estado: implementada, PR #322 (sustituye a #314, cerrada). Migración 0027
+aplicada a mano en Supabase el 2026-08-04 y verificada** (`jobs_type_chk` ya
+admite `web_audit`). Detalle técnico en `docs/adr/0027-post-scan-web-audit-queue.md`;
 invariantes de la zona en `.claude/rules/web-audit.md`.
 
 **Qué cambia para el usuario.** Al terminar un escaneo —automático o manual—

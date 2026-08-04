@@ -14,7 +14,7 @@ orden — el orden lo fija la columna `#`.
 | 4 | Auditoría técnica (páginas + bots IA) | WEB-AUDIT-2 | `phase-2-technical-audit.md` | ✅ Implementada (PR #197) — migración 0018 aplicada manualmente | Fetch acotado (adyacente a "crawler") + migración 0018 | Human Gate |
 | 5 | Generador de briefs de contenido con IA | WEB-AUDIT-BRIEF | `phase-brief-generator.md` | Propuesta | Gemini runtime + migración (generation_type) | **Aprobación explícita + Task Intake + data-guardian** |
 | 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
-| 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #314) — migración 0027 pendiente de aplicar | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
+| 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
 
 ### Fila 6 — qué se implementó y qué no (2026-08-04)
 

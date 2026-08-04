@@ -1,6 +1,7 @@
 # ADR 0027 — La auditoría web se ejecuta en backend tras cada escaneo, por cola
 
-- **Estado:** aceptada (AUDIT-AFTER-SCAN-1, aprobada por el fundador 2026-08-04)
+- **Estado:** aceptada (AUDIT-AFTER-SCAN-1, aprobada por el fundador 2026-08-04).
+  Migración 0027 aplicada a mano en Supabase el 2026-08-04 y verificada.
 - **Contexto relacionado:** ADR 0003 (`maxDuration=60`), ADR 0014 (encadenado
   de lotes de escaneo), ADR 0016 (barrido diario auto-encadenado)
 
