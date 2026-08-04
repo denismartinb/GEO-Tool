@@ -434,29 +434,46 @@ export default async function RecommendationsPage({
       : null;
   const planPoints = planJoint ? planJoint.deltaPoints : null;
 
-  /* Por qué NO hay cifra de puntos.
+  /* Diagnóstico de por qué NO hay cifra de puntos — SOLO en logs de servidor.
    *
-   * Una ausencia silenciosa es indistinguible de un fallo: durante el
-   * desarrollo de esta pantalla hicieron falta tres rondas de suposiciones
-   * para entender por qué las tarjetas no mostraban "+X pt", porque el
-   * producto no decía nada. Ahora lo dice, en el mismo lenguaje llano que el
-   * resto: qué falta y qué hacer al respecto.
+   * Una ausencia silenciosa es indistinguible de un fallo, y sin esta traza
+   * hicieron falta tres rondas de suposiciones para entender por qué las
+   * tarjetas no mostraban "+X pt". Pero eso es un problema NUESTRO, no del
+   * cliente: la pantalla nunca le cuenta al usuario que a la herramienta le
+   * falta un dato o que una corrida salió pobre (decisión del fundador,
+   * 2026-08-04). El usuario ve el impacto cualitativo, que es información
+   * honesta y suficiente; el porqué se queda aquí.
+   *
+   * Sin identificadores de usuario ni contenido de las respuestas: solo el
+   * proyecto, la corrida y los contadores que explican la decisión.
    */
   const anyQuantified = recs.some((r) => typeof r.potentialPoints === "number" && r.potentialPoints >= 0.1);
-  let pointsNote: string | null = null;
-  if (!anyQuantified && recs.length > 0) {
+  if (!anyQuantified && recs.length > 0 && latestCompletedRun) {
     if (scoreInputRows.length === 0) {
-      pointsNote = "No hemos podido leer las respuestas de este escaneo, así que no podemos estimar cuántos puntos vale cada acción.";
+      console.warn("[geo:recs] sin puntos potenciales: no se leyeron filas del escaneo", {
+        projectId,
+        runId: latestCompletedRun.id,
+        recommendations: recs.length,
+      });
     } else {
       const live = computeRunScoresFromResults(scoreInputRows, project.domain);
-      const details = live.details_json as { clean_results_count?: number; total_results?: number };
-      const clean = details.clean_results_count ?? 0;
-      const totalRows = details.total_results ?? scoreInputRows.length;
-      if (live.confidence === "low") {
-        pointsNote = `Sin estimación de puntos: solo ${clean} de ${totalRows} respuestas de este escaneo se procesaron bien. Con menos del 80% correcto, poner una cifra sería inventarla.`;
-      } else {
-        pointsNote = "Sin estimación de puntos: las acciones de este escaneo no son de las que se pueden cuantificar sobre la puntuación.";
-      }
+      const details = live.details_json as {
+        clean_results_count?: number;
+        total_results?: number;
+        extraction_error_count?: number;
+        geo_score?: { score?: number };
+      };
+      console.warn("[geo:recs] sin puntos potenciales en ninguna recomendación", {
+        projectId,
+        runId: latestCompletedRun.id,
+        confidence: live.confidence,
+        cleanResults: details.clean_results_count,
+        totalResults: details.total_results,
+        extractionErrors: details.extraction_error_count,
+        geoScore: details.geo_score?.score ?? null,
+        quantifiableTypes: recs.filter((r) => r.potentialPoints !== null).length,
+        recommendations: recs.length,
+      });
     }
   }
 
@@ -619,7 +636,6 @@ export default async function RecommendationsPage({
                 jointPointsByType={jointPointsByType}
                 planIds={planIds}
                 planPoints={planPoints}
-                pointsNote={pointsNote}
                 domain={project.domain}
               />
             )}
