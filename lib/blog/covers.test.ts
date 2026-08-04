@@ -16,7 +16,7 @@ import { BLOG_POSTS } from "./posts";
  * portada es así a propósito" de "a este artículo se le olvidó la portada".
  * Este fichero elimina esa ambigüedad.
  *
- * Ver la enmienda de 2026-08-04 en `docs/adr/0026-article-imagery-policy.md`.
+ * Ver la enmienda de 2026-08-04 en `docs/adr/0028-article-imagery-policy.md`.
  */
 
 /**

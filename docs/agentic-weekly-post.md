@@ -66,7 +66,7 @@ código nuevo que mantener en producción.
 
 **El agente no puede generar imágenes.** No hay herramienta de generación en
 su entorno y el stock exige licencia (ver la enmienda de
-`docs/adr/0026-article-imagery-policy.md`).
+`docs/adr/0028-article-imagery-policy.md`).
 
 Y `lib/blog/covers.test.ts` **exige portada a todo artículo nuevo**: la lista
 de exentos está congelada y no admite altas. Así que un artículo semanal sin

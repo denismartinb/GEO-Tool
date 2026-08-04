@@ -1,10 +1,18 @@
-# ADR 0026 — Política de imágenes e ilustración en artículos
+# ADR 0028 — Política de imágenes e ilustración en artículos
 
 - **Estado:** aceptado
 - **Fecha:** 2026-08-03
 - **Fase:** GROWTH-3 Fase 3.1
 - **Decide:** de dónde salen los activos visuales de un artículo del blog, y
   de dónde no.
+- **Renumerado 2026-08-04:** este ADR se publicó como `0026` y colisionaba con
+  `0026-position-when-mentioned.md`, que ya se había mergeado con el mismo
+  número. Se mueve este porque todas sus referencias citaban el nombre
+  completo del fichero, mientras que una docena de referencias en
+  `lib/scoring/` y `app/dashboard/` dicen solo «docs/adr/0026» y se refieren
+  al otro. Un enlace antiguo a `0026-article-imagery-policy.md` ya no
+  resuelve; es el precio de que «ADR 0026» a secas vuelva a significar una
+  sola cosa. Ver ADR 0001 §Numeración.
 
 ## Contexto
 
