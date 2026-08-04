@@ -212,11 +212,32 @@ recibió "requiere aprobación", una aprobación que nadie podía conceder.
 `git` de lectura y de entrega, `pnpm install/test/run validate` — para que el
 trabajo no dependa de que el fundador esté despierto.
 
-Y de paso convierte en **regla ejecutable** dos prohibiciones que hasta ahora
-sólo vivían en `CLAUDE.md` como texto: la lista `deny` bloquea el force-push y
-el push directo a `main`. **No es hermética** —`--force-with-lease` u otras
-variantes no están cubiertas— así que sigue siendo la constitución la que
-manda; esto sólo atrapa las formas comunes.
+La lista `deny` añade un recordatorio contra el force-push y el push directo a
+`main`. **No la trates como una barrera**, y esta redacción es deliberadamente
+más dura que la original porque QA (PR #318) demostró que la anterior
+prometía de más.
+
+Los patrones casan por **prefijo literal del texto del comando**, no por
+sentido de los argumentos. Se escapan, entre otras:
+
+| Comando | ¿Bloqueado? |
+|---|---|
+| `git push` a secas, estando en `main` | **No** — y es el accidente más probable de todos |
+| `git push origin` sin refspec | **No** |
+| `git push -u origin main` | **No** — el flag va antes de lo que casa el patrón |
+| `git push origin rama --force` | **No** — el flag va al final |
+| `git push --force-with-lease` | **No** |
+
+**La barrera real es otra, y está fuera de este fichero:** la rama `main`
+está protegida en GitHub (`protected: true`, verificado). Eso es lo que
+impide de verdad un push directo; el `deny` sólo evita que la sesión pida
+aprobación en los casos más obvios. Quien confíe en esta lista como
+protección se llevará una sorpresa.
+
+Y un efecto que conviene saber: `.claude/settings.json` está en la raíz del
+repo, así que aplica a **cualquier** sesión contra este repositorio, no sólo
+a la de los lunes. Es coherente con el modelo de trabajo (empujar ramas
+propias ya es un paso normal), pero no es "sólo para los lunes".
 
 ### Lo único que queda fuera del repo
 

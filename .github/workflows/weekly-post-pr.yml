@@ -127,4 +127,20 @@ jobs:
             -X POST -f "reviewers[]=$REVIEWER" > /dev/null 2>&1 \
             || echo "No se pidió revisión (lo normal si el fundador es el autor del PR). El PR queda asignado igualmente."
 
+          # Los `|| true` de arriba ignoran el código de salida, pero NO
+          # comprueban el efecto. Y el efecto es justamente el aviso: si no se
+          # asigna ni se pide revisión, el fundador no recibe el email de
+          # GitHub y no se entera de que hay un artículo esperándole. Un job en
+          # verde significaría "entregado" cuando en realidad no lo avisó nadie
+          # (hallazgo de QA en la PR #318).
+          #
+          # No se falla el job: el PR existe y eso ya es progreso real. Pero se
+          # deja un ::warning:: visible, para que "verde" deje de poder
+          # significar "puede que nadie se haya enterado".
+          notified="$(gh pr view "$existing" --json assignees,reviewRequests \
+            --jq '[(.assignees | length), (.reviewRequests | length)] | add')"
+          if [ "${notified:-0}" -eq 0 ]; then
+            echo "::warning::El PR #${existing} quedó SIN asignado y SIN revisor: no se ha enviado ningún aviso por GitHub. Revísalo a mano — el artículo está, pero nadie ha sido notificado."
+          fi
+
           echo "PR listo: $(gh pr view "$existing" --json url --jq .url)"
