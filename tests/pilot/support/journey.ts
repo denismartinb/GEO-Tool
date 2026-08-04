@@ -291,7 +291,12 @@ export function assertPageIsHealthy(findings: PageFindings): void {
 export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
+  // Same fold problem as visitAsUser: without this the "proof" of an
+  // interaction is a picture of the top of the page, which may not even
+  // contain the control that was clicked.
+  const restoreScroll = await expandInnerScroller(page);
   await page.screenshot({ path: screenshot, fullPage: true });
+  await restoreScroll();
   await testInfo.attach(`${attachName(label)} (${testInfo.project.name})`, {
     path: screenshot,
     contentType: "image/png"
