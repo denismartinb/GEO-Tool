@@ -1451,6 +1451,18 @@ la lista de criterios del PR no es una revisión**. El ranking 1..N era correcto
 en las tres capturas y aun así la tabla no comunicaba el dato principal. Mirar
 sirve para lo que no estaba en la lista.
 
+**Y aun etiquetado, el puesto seguía sin verse: estaba en el sitio equivocado.**
+Con "1º" a la izquierda y su etiqueta encima, el fundador volvió a decir que no
+salía la posición —incluso sobre una captura donde sí salía—. La explicación,
+en sus palabras: *"me gusta más que la columna de puesto [vaya] a la derecha, no
+la había visto"*. Un ordinal pequeño y gris al principio de la fila se lee como
+viñeta de lista y el ojo lo salta; el peso visual estaba en el porcentaje, que
+no es el dato del bloque. La lista pasa a **tres columnas —marca · mención ·
+puesto—**, con el puesto el último y la cifra más pesada de la fila
+(`--ink-2`, 750). Lección transferible: **el dato principal va donde termina la
+lectura de la fila, no donde empieza**; si la posición estuviera primero tendría
+que competir con el nombre por la atención, y pierde.
+
 **Cierre de fase completo.** El invariante vive en `.claude/rules/competitors.md`
 (secciones "Métricas" y "Gráfico de evolución del puesto") y la celda de
 Competidores del mapa de zonas de `CLAUDE.md` apunta a esta fase — primera fase

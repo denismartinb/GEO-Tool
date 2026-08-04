@@ -93,14 +93,14 @@ limpio (log §11).
   tiene `avg_position_when_mentioned` para nadie (ADR 0026 decisión 4, sin
   backfill), así que un proyecto con mucha historia puede pasar días sin
   bloque. Es lo esperado.
-- **Cada columna de la lista lleva su propia etiqueta encima ("Puesto · último
-  escaneo" a la izquierda, "Mención" a la derecha), y el puesto se escribe como
-  ordinal (`3º`).** Con un solo encabezado alineado a la derecha, "ranking"
-  acababa nombrando los porcentajes y la columna del puesto se quedaba sin
-  etiqueta: los dígitos se leían como viñetas y el fundador vio una tabla sin
-  posición (log §15). La regla es *la etiqueta va sobre el dato que nombra*, no
-  "a la derecha" — eso era el remedio de cuando el dato de la derecha sí era el
-  puesto.
+- **La lista tiene tres columnas —marca · mención · puesto— y cada una lleva su
+  etiqueta encima.** El **puesto va el último, a la derecha, y es la cifra más
+  pesada** de la fila: es el dato del bloque. Puesto a la izquierda como dígito
+  pequeño y gris, el fundador pasó por encima de él dos veces sin verlo (*"no la
+  había visto"*, log §15). Se escribe como ordinal (`3º`): "3" es una viñeta.
+- La regla es **la etiqueta va sobre el dato que nombra**, no "a la derecha":
+  con un solo encabezado a la derecha, "ranking" acabó nombrando los
+  porcentajes y la columna de puesto se quedó sin etiqueta.
 - **Sin InfoTip en ese encabezado.** Pegado al borde del viewport, la burbuja se
   abre fuera de pantalla y sale cortada (log §15). Un tooltip que no se puede
   leer estorba más de lo que explica.

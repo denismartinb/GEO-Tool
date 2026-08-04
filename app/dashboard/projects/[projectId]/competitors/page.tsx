@@ -802,29 +802,30 @@ export default async function CompetitorsPage({
                     ) : null}
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
-                        {/* Two labels, each sitting over the column it names.
-                            A single right-aligned heading read as if "ranking"
-                            named the percentages, leaving the position itself
-                            unlabelled — the rank digits then read as list
-                            bullets and the founder saw a table with no position
-                            in it (2026-08-04). No InfoTip: right-aligned, its
-                            glyph lands flush against the viewport edge and the
-                            bubble opens off-screen, so it was cut. */}
+                        {/* The position is the point of this block, so it is the
+                            last column and the heaviest — the founder looked
+                            for it on the right and did not see it on the left
+                            ("me gusta más que la columna de puesto [vaya] a la
+                            derecha, no la había visto", 2026-08-04). Each label
+                            sits over its own column; a single heading used to
+                            name the wrong one. No InfoTip: right-aligned its
+                            bubble opens off-screen and renders clipped. */}
                         <div className="cm2-pos-list-hd">
-                          <span>Puesto · último escaneo</span>
-                          <span>Mención</span>
+                          <span className="cm2-pos-hd-nm">Último escaneo</span>
+                          <span className="cm2-pos-rate">Mención</span>
+                          <span className="cm2-pos-n">Puesto</span>
                         </div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
+                            <span className="cm2-pos-nm">{entry.label}</span>
+                            {/* Also the tiebreaker for the order, so a shared
+                                mean rank never resolves invisibly. */}
+                            <span className="cm2-pos-rate">
+                              {entry.mentionRate != null ? `${Math.round(entry.mentionRate)}%` : ""}
+                            </span>
                             {/* Ordinal, not a row number: "3º" is a standing,
                                 "3" is a bullet. */}
                             <span className="cm2-pos-n">{entry.rank}º</span>
-                            <span className="cm2-pos-nm">{entry.label}</span>
-                            {/* Also the tiebreaker for the order above it, so a
-                                shared mean rank never resolves invisibly. */}
-                            {entry.mentionRate != null ? (
-                              <span className="cm2-pos-rate">{Math.round(entry.mentionRate)}%</span>
-                            ) : null}
                           </div>
                         ))}
                       </div>

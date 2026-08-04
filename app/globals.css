@@ -2171,19 +2171,23 @@ a {
    "que se relacione con el dato"). A single right-aligned heading named the
    percentages by position, so the ranking column ended up with no label at
    all and its digits read as bullets. */
-/* flex-end, not center: beside the chart the column is narrow enough that the
-   left label wraps to two lines, and centring left "Mención" floating between
-   them. Aligned to the bottom it sits on the label's last line either way. */
+/* Header and rows share the same three columns, so every label sits over the
+   data it names. flex-end because the labels are shorter than the row text and
+   should sit on its baseline side. */
+.cm2-pos-list-hd,
+.cm2-pos-row { display: flex; align-items: center; gap: 9px; }
 .cm2-pos-list-hd {
-  display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+  align-items: flex-end;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: 6px;
 }
-.cm2-pos-list-hd > :last-child { flex: 0 0 auto; }
-.cm2-pos-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
+.cm2-pos-hd-nm { flex: 1; min-width: 0; }
+.cm2-pos-row { padding: 5px 0; }
+/* Last column and the heaviest: the position is what this block is for, and on
+   the left as a small grey digit the founder read straight past it. */
 .cm2-pos-n {
-  flex: 0 0 auto; width: 22px; text-align: right; font-size: 11px; font-weight: 750;
-  color: var(--ink-3); font-variant-numeric: tabular-nums;
+  flex: 0 0 40px; text-align: right; font-size: 12px; font-weight: 750;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
 .cm2-pos-row.you .cm2-pos-n { color: var(--brand-blue); }
 .cm2-pos-nm {
@@ -2196,14 +2200,21 @@ a {
    read as "nobody is in first place". The mention rate takes its place at the
    end of the row, which is also what breaks ties in the order. */
 .cm2-pos-rate {
-  flex: 0 0 auto; font-size: 11.5px; color: var(--ink-4); font-variant-numeric: tabular-nums;
+  flex: 0 0 46px; text-align: right; font-size: 11.5px; color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+/* The header reuses the value classes to stay column-aligned, so it must not
+   inherit their tabular-figure sizing for its own uppercase label. */
+.cm2-pos-list-hd .cm2-pos-rate,
+.cm2-pos-list-hd .cm2-pos-n {
+  font: inherit; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4);
 }
 @media (min-width: 900px) {
   .cm2-pos-card { display: flex; align-items: flex-start; gap: 18px; }
   .cm2-pos-chart { flex: 1; min-width: 0; }
-  /* 232px, not 210: the two column labels ("Puesto · último escaneo" +
-     "Mención") need the extra width to sit on one line. */
-  .cm2-pos-list { flex: 0 0 232px; margin-top: 0; padding-top: 0; border-top: none; }
+  /* 250px, not 210: three columns now (marca · mención · puesto), and the brand
+     names need what is left after the two fixed numeric ones. */
+  .cm2-pos-list { flex: 0 0 250px; margin-top: 0; padding-top: 0; border-top: none; }
   /* Before the chart exists the list is the whole card, so the fixed 210px
      column would leave two thirds of the width empty next to it. */
   .cm2-pos-card.list-only { display: block; }
