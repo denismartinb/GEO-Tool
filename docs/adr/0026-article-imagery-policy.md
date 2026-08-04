@@ -47,6 +47,11 @@ capturas reales solo en documentación de producto (`/docs`).**
 **Se rechazan (1) la ilustración generada por IA y (2) el stock, para todo el
 contenido del sitio.**
 
+> **Enmienda de 2026-08-04 — esta frase ya no es absoluta.** Las **portadas**
+> de artículo quedan excluidas de este rechazo por decisión del fundador. La
+> prohibición sigue vigente dentro del cuerpo. Ver §Enmienda al final del
+> documento antes de aplicar esta sección.
+
 ### Por qué se rechaza la ilustración generada por IA
 
 - **Puede mentir.** Una ilustración generada puede representar una interfaz

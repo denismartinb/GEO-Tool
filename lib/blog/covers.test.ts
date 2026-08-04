@@ -44,7 +44,13 @@ describe("todo artículo publicado tiene portada propia", () => {
     });
 
     it(`el fichero de portada existe de verdad en disco: ${post.slug}`, () => {
-      const rel = post.coverImage!.replace(/^\//, "");
+      // Sin esta guarda, un post sin `coverImage` revienta aquí con un
+      // TypeError en vez de con el fallo legible del test de arriba (QA lo
+      // señaló). Un test que falla mal es peor que uno que falla claro.
+      expect(typeof post.coverImage, `${post.slug} no declara coverImage`).toBe("string");
+      if (typeof post.coverImage !== "string") return;
+
+      const rel = post.coverImage.replace(/^\//, "");
       expect(
         existsSync(join(process.cwd(), "public", rel)),
         `${post.slug} apunta a ${post.coverImage} pero ese fichero no existe en public/`
