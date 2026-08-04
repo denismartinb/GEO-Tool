@@ -2171,11 +2171,15 @@ a {
    "que se relacione con el dato"). A single right-aligned heading named the
    percentages by position, so the ranking column ended up with no label at
    all and its digits read as bullets. */
+/* flex-end, not center: beside the chart the column is narrow enough that the
+   left label wraps to two lines, and centring left "Mención" floating between
+   them. Aligned to the bottom it sits on the label's last line either way. */
 .cm2-pos-list-hd {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: 6px;
 }
+.cm2-pos-list-hd > :last-child { flex: 0 0 auto; }
 .cm2-pos-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
 .cm2-pos-n {
   flex: 0 0 auto; width: 22px; text-align: right; font-size: 11px; font-weight: 750;
@@ -2197,7 +2201,9 @@ a {
 @media (min-width: 900px) {
   .cm2-pos-card { display: flex; align-items: flex-start; gap: 18px; }
   .cm2-pos-chart { flex: 1; min-width: 0; }
-  .cm2-pos-list { flex: 0 0 210px; margin-top: 0; padding-top: 0; border-top: none; }
+  /* 232px, not 210: the two column labels ("Puesto · último escaneo" +
+     "Mención") need the extra width to sit on one line. */
+  .cm2-pos-list { flex: 0 0 232px; margin-top: 0; padding-top: 0; border-top: none; }
   /* Before the chart exists the list is the whole card, so the fixed 210px
      column would leave two thirds of the width empty next to it. */
   .cm2-pos-card.list-only { display: block; }
