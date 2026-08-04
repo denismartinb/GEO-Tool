@@ -259,13 +259,25 @@ export default async function RunsPage({
     completedRunIds.length > 0
       ? await supabase
           .from("run_scores")
-          .select("run_id, visibility_score")
+          .select("run_id, visibility_score, details_json")
           .eq("project_id", projectId)
           .in("run_id", completedRunIds)
       : { data: [] };
 
+  // Runs whose extractions all failed are left OUT of the map entirely rather
+  // than entered as 0 — the column is non-null, so 0 is what an unmeasured run
+  // stores, and both the score column and the delta column read from here
+  // (geo-score-v4, docs/adr/0027).
   const scoreByRunId = new Map<string, number>(
-    (scores ?? []).map((s) => [s.run_id, Math.round(Number(s.visibility_score ?? 0))])
+    (scores ?? [])
+      .filter((s) => {
+        const details =
+          s.details_json && typeof s.details_json === "object"
+            ? (s.details_json as { scored_results_count?: unknown })
+            : {};
+        return !(typeof details.scored_results_count === "number" && details.scored_results_count === 0);
+      })
+      .map((s) => [s.run_id, Math.round(Number(s.visibility_score ?? 0))])
   );
 
   /* Summary stats */

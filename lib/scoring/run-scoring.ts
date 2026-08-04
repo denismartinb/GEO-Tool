@@ -449,7 +449,12 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // - citation_score_blended: all rows (including ungrounded providers) with
   //   ANY citation present (the original pre-0012 formula).
   const citationFoundCount = groundedResults.filter((row) => row.citation_found).length;
-  const citationScoreAnyDomain = groundedTotal > 0 ? round2((citationFoundCount / groundedTotal) * 100) : 0;
+  // null, not 0, for the same reason citation_score is dropped: with no
+  // grounded scorable rows there is nothing to compute a rate over, and the
+  // citations page renders this figure directly. Nulled here rather than
+  // patched per-reader (geo-score-v4, docs/adr/0027).
+  const citationScoreAnyDomain: number | null =
+    groundedTotal > 0 ? round2((citationFoundCount / groundedTotal) * 100) : null;
 
   const citationFoundCountBlended = scoredResults.filter((row) => row.citation_found).length;
   const citationScoreBlended = round2((citationFoundCountBlended / safeScoredTotal) * 100);

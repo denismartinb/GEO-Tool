@@ -778,6 +778,26 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   const { runScore, promptResults } = input;
   if (!promptResults.length) return [];
 
+  /* No readable evidence, no recommendations (geo-score-v4, docs/adr/0027).
+   *
+   * Every rule below reads runScore.visibility_score / citation_score /
+   * competitor_gap_score, which are non-null persisted columns and therefore
+   * carry 0 when a run's extractions all failed — the score was never
+   * measured, but 0 is what the column can hold. Two rules trigger on exactly
+   * that: `visibility_score < 60 && citation_score < 50` and
+   * `visibility_score < 50 && totalCompetitorMentions === 0` both become
+   * trivially true, and the engine PERSISTS "los prompts informativos rinden
+   * por debajo de lo esperado" and "las menciones de marca son bajas" as real
+   * findings about the brand.
+   *
+   * That is strictly worse than mis-rendering a number: the row survives
+   * reloads and surfaces on two screens. A run that read nothing has nothing
+   * to advise about, so the engine declines rather than inventing advice from
+   * a zero nobody measured. (Caught by QA on PR #313, round 4.)
+   */
+  const scoredResultsCount = (runScore.details_json ?? {}).scored_results_count;
+  if (typeof scoredResultsCount === "number" && scoredResultsCount === 0) return [];
+
   const brandMissing = promptResults.filter((p) => !p.brand_mentioned);
   const competitorNoBrand = promptResults.filter((p) => p.mentioned_competitors_count > 0 && !p.brand_mentioned);
   const comparativePrompts = competitorNoBrand.filter(isComparativePrompt);

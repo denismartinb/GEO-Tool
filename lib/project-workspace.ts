@@ -228,7 +228,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       .eq("status", "active"),
     supabase
       .from("run_scores")
-      .select("project_id, run_id, visibility_score, created_at")
+      .select("project_id, run_id, visibility_score, created_at, details_json")
       .order("created_at", { ascending: false })
       .limit(WORKSPACE_RECENCY_QUERY_LIMIT),
     // No .eq("owner_user_id", ...) — the notifications_select_owner RLS
@@ -279,6 +279,16 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
   const seenScoresByProject = new Map<string, number[]>();
 
   for (const s of scores ?? []) {
+    // A run whose extractions all failed persists 0 because the column is
+    // non-null, not because anything measured zero. Skipping it here keeps a
+    // failed scan from becoming a "0" card and a cliff-edge delta on the
+    // project switcher (geo-score-v4, docs/adr/0027).
+    const details =
+      s.details_json && typeof s.details_json === "object"
+        ? (s.details_json as { scored_results_count?: unknown })
+        : {};
+    if (typeof details.scored_results_count === "number" && details.scored_results_count === 0) continue;
+
     const value = Number(s.visibility_score ?? NaN);
     const rounded = Number.isFinite(value) ? Math.round(value) : null;
     const seen = seenScoresByProject.get(s.project_id) ?? [];

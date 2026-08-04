@@ -54,7 +54,7 @@ export default async function RunDetailPage({
       .order("created_at", { ascending: true }),
     supabase
       .from("run_scores")
-      .select("visibility_score, citation_score, competitor_gap_score, confidence, scoring_version")
+      .select("visibility_score, citation_score, competitor_gap_score, confidence, scoring_version, details_json")
       .eq("run_id", runId)
       .eq("project_id", projectId)
       .maybeSingle(),
@@ -66,6 +66,16 @@ export default async function RunDetailPage({
       .eq("status", "active")
       .order("priority_rank", { ascending: true })
   ]);
+
+  // A run whose extractions all failed produces scored_results_count === 0
+  // (geo-score-v4, docs/adr/0027). Its persisted score columns are 0 because
+  // they cannot be null, not because anything measured zero.
+  const scoreDetails =
+    score?.details_json && typeof score.details_json === "object"
+      ? (score.details_json as { scored_results_count?: unknown })
+      : {};
+  const scoreUnavailable =
+    typeof scoreDetails.scored_results_count === "number" && scoreDetails.scored_results_count === 0;
 
   return (
     <div className="page space-y-4">
@@ -131,6 +141,16 @@ export default async function RunDetailPage({
         <CardContent>
           {!score ? (
             <EmptyState title="Todavía no hay puntuaciones" description="Las puntuaciones aparecerán tras completar la extracción estructurada." />
+          ) : scoreUnavailable ? (
+            /* The persisted columns are non-null, so a run whose extractions
+               all failed carries 0 in all three — never measured, but 0 is
+               what the column can hold. Printing them under "Visibilidad" /
+               "Presión competitiva" states them as findings (geo-score-v4,
+               docs/adr/0027). */
+            <EmptyState
+              title="Sin puntuaciones para este escaneo"
+              description="Ninguna de sus respuestas pudo procesarse, así que no hay nada que puntuar. Vuelve a lanzar el escaneo."
+            />
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded border p-3 text-sm text-[var(--ink-2)]">
