@@ -216,6 +216,32 @@ distinguishes a human pressing the button from an agent dispatching it. It press
 nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
 still has to judge them. Anything wider still needs its own Task Intake.
 
+**Reading more than one project is approved and shipped** (UX-PILOT-1d,
+2026-08-03, `tests/pilot/journeys/second-project.spec.ts`). One project only
+ever exercises one shape of data, so whole branches of a screen are
+unreachable from it — a brand the AI never named, a project with too few
+qualifying scans, a ranking where most entities have no rank. The pilot now
+walks the Overview and Competitors screens on up to two further projects on
+the same account, skips loudly when there is only one, and annotates the run
+when more projects existed than the cap allowed. This needs no exception:
+switching project is navigation, and every journey it runs is read-only.
+
+**Second approved exception: UX-PILOT-3** (Task Intake approved 2026-08-03) —
+the pilot may launch real scans on a pinned project when a state is
+unreachable without one, because after a scoring change no run anywhere carries
+the new shape of data and no amount of looking harder fixes that. Three
+locks, none of them a convention: `workflow_dispatch` only (no deploy can
+trigger it), `--journeys scan` (the per-deploy read set cannot reach the files,
+asserted by the self-check every run), and a required `project_id` input with
+no default (the code refuses without it, and refuses above the hard cap of 2
+rather than clamping). **No secret gates it** — founder, 2026-08-03: *"tiene
+que dar al botón como si le diera yo, sin claves ni secretos"*; anyone able to
+set a secret could already dispatch the workflow, so it bought no access
+control. What that trades away, stated rather than glossed: nothing in code
+distinguishes a human pressing the button from an agent dispatching it. It presses the project's own scan button and
+nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
+still has to judge them. Anything wider still needs its own Task Intake.
+
 ---
 
 ## Human Gate
@@ -229,7 +255,10 @@ Human Gate is always manual. It asks:
 5. **Did the agentic user pilot pass, and what did it leave unverified?**
 6. **What did the pilot propose improving, and what was folded in already?**
 7. Are there product risks?
-8. Should this merge now?
+8. **¿Se cerró la fase documentalmente en este mismo PR?** — histórico, regla
+   de ruta si cambió un invariante, y celda del mapa de zonas (ver "Cierre de
+   fase"). Si falta, el PR no está terminado.
+9. Should this merge now?
 
 Only after Human Gate may a PR be merged.
 
@@ -293,6 +322,34 @@ Do not implement without explicit founder approval:
 
 ---
 
+## Mapa de zonas del producto
+
+Índice de estado por zona. **Es un índice, no un registro**: una fila por zona,
+y crece sólo cuando nace una zona nueva. El detalle largo vive en el histórico;
+los invariantes duros viven en la regla de ruta, que se inyecta **sola** al
+tocar esos ficheros.
+
+Antes de trabajar en una zona: leer su regla de ruta y las secciones de
+histórico que aparecen aquí. Al cerrar una fase: actualizar la celda "Última
+fase" (ver "Cierre de fase" más abajo).
+
+| Zona | Regla de ruta (automática) | Última fase cerrada | Histórico |
+|---|---|---|---|
+| Competidores | `competitors.md` | COMPETITOR-SUGGESTIONS-1 (2026-08-03) | log §10, §11 · ADR 0011/0018/0020/0022 |
+| Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
+| Auditoría web | `web-audit.md` | WEB-AUDIT-ISSUES-1 fases 2 y 3b (2026-08-04) | log §17 · `docs/specs/web-audit/ROADMAP.md` |
+| Metodología GEO (scoring) | `scoring.md` | geo-score-v3 / ADR 0026 (2026-08-03) | ADR 0008/0015/0021/0024/0026 · log §8b |
+| Blog y contenido | `growth-content.md` | GROWTH-3 Fase 3.2a (2026-08-03) | log §12, §13 · `content-strategy.md` |
+| Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
+| Prompts | — *(sin regla propia todavía)* | — | log §5 |
+| Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
+
+`log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
+irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
+obligatoria antes de tocarlas.
+
+---
+
 ## Implementation Rules
 
 Before editing: check current branch, git status, recent commits, handoff check.
@@ -305,6 +362,25 @@ QA; report exact changed files and results.
 
 Never delete source files casually. Never touch `Documentacion/` unless
 explicitly instructed.
+
+### Cierre de fase (obligatorio, en el mismo PR)
+
+Una fase no está terminada hasta que la siguiente sesión pueda retomarla sin
+preguntar nada. En el **mismo PR** que implementa el cambio, y nunca en uno
+posterior:
+
+1. **Histórico** — entrada en `docs/brand/design-decisions-log.md` (o ADR nuevo
+   si es una decisión técnica): qué se decidió, por qué, y qué queda pendiente
+   o roto conocido. Lo superado se marca `superseded por §X`, no se borra.
+2. **Regla de ruta** — si la fase estableció o cambió un invariante de la zona,
+   actualizar su `.claude/rules/*.md`. Cada invariante debe ser **trazable** a
+   una sección del histórico o a un ADR: una regla que nadie puede justificar
+   es peor que ninguna, porque una sesión futura la obedecerá igual.
+3. **Mapa de zonas** — actualizar la celda "Última fase cerrada" de la zona en
+   la tabla de arriba. Si la zona no existía, añadir su fila.
+
+Lo hace **el agente**, no el fundador. Documentación que depende de que un
+humano se acuerde es documentación que se pudre.
 
 ---
 
@@ -397,6 +473,11 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `supabase.md` | `supabase/**`, `lib/supabase/**` |
 | `gemini.md` | `lib/llm/**` |
 | `server-actions.md` | `app/**/actions.ts` |
+| `competitors.md` | `app/dashboard/projects/*/competitors/**`, `lib/competitors/**` |
+| `recommendations.md` | `app/dashboard/projects/*/recommendations/**`, `lib/recommendations/**` |
+| `web-audit.md` | `app/dashboard/projects/*/web-audit/**`, `lib/web-audit/**` |
+| `scoring.md` | `lib/scoring/**` |
+| `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 
 ### Documentation (`docs/`)
 

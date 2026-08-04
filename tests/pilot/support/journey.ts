@@ -158,7 +158,6 @@ function recordFindings(findings: PageFindings): void {
 }
 
 /**
-/**
  * Horizontal-overflow measurement (2026-08-03, PR #289): `horizontalOverflow`
  * used to compare `document.documentElement.scrollWidth` against the
  * viewport, which can never trip on a console screen. Setting `overflow-y:
@@ -177,7 +176,8 @@ function recordFindings(findings: PageFindings): void {
  * result instead of letting a runaway list produce an unreadable PNG.
  */
 
-/** * Ceiling on how tall a capture may grow. A runaway list would otherwise
+/**
+ * Ceiling on how tall a capture may grow. A runaway list would otherwise
  * produce a PNG too large to read (and too large to attach). When a page is
  * taller than this the capture is truncated — and `captureTruncated` says so,
  * because a silently cropped screenshot reads exactly like a complete one.
