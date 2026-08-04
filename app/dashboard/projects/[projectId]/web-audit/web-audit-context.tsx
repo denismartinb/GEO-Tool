@@ -54,7 +54,6 @@ type Progress = { covered: number; total: number } | null;
 interface WebAuditRunnerState {
   isPending: boolean;
   error: string | null;
-  notice: string | null;
   progress: Progress;
   drive: () => void;
 }
@@ -92,7 +91,6 @@ export function WebAuditProvider({
   // the same server-computed `autoStart` snapshot instead.
   const [isPending, setIsPending] = useState(canAudit && Boolean(autoStart));
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [progress, setProgress] = useState<Progress>(autoStart ?? null);
   const abortedRef = useRef(false);
   const firedRef = useRef(false);
@@ -105,7 +103,6 @@ export function WebAuditProvider({
 
   async function drive() {
     setError(null);
-    setNotice(null);
     setIsPending(true);
     let consecutiveFailures = 0;
 
@@ -142,12 +139,13 @@ export function WebAuditProvider({
         setProgress({ covered: result.coverage.topics.length, total: result.totalPrompts });
 
         if (result.status === "completed") {
-          // Few words, not two sentences: this sits in a toolbar row next to
-          // the button, and the long version wrapped to three lines with its
-          // icon orphaned (founder review 2026-08-04). The "why nothing
-          // changed" explanation it used to carry is now permanent state —
-          // the "Al día" pill, visible BEFORE clicking (run-audit-button.tsx).
-          setNotice(result.cached ? "Ya estaba al día" : "Auditoría actualizada");
+          // No "done" notice: the `router.refresh()` below re-renders the
+          // button with `upToDate` true, and its "Auditoría actualizada" pill
+          // IS the confirmation (founder review 2026-08-04 — a toast saying
+          // the same thing next to the pill was just noise). `result.cached`
+          // stops being interesting for the same reason: "nothing changed
+          // because you were already current" is now visible BEFORE the
+          // click, as a disabled button.
           // WEB-AUDIT-R2 (founder-approved 2026-07-12): "Auditar ahora" now
           // also refreshes technical health, in the same click — coverage and
           // technical share the same "auditoría web" mental model going
@@ -189,7 +187,7 @@ export function WebAuditProvider({
   }, []);
 
   return (
-    <WebAuditRunnerContext.Provider value={{ isPending, error, notice, progress, drive }}>
+    <WebAuditRunnerContext.Provider value={{ isPending, error, progress, drive }}>
       {children}
     </WebAuditRunnerContext.Provider>
   );

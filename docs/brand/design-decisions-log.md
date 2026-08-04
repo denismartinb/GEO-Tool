@@ -1359,15 +1359,33 @@ sparklines. Cambios nuevos:
    haciendo clic.
 
    Modelo nuevo: **la frescura es un estado que se ve antes de actuar, no un
-   recibo que se imprime después.** Barra de dos huecos (estado a la
-   izquierda, acción a la derecha) con cuatro estados: *sin auditar* (botón
-   primario, sin pastilla), *escaneo sin auditar* (pastilla ámbar + botón
-   primario: hay datos nuevos que traer), *al día* (pastilla verde + botón
-   `outline` "Volver a auditar" — se puede pulsar, pero el botón lo
-   desaconseja retrocediendo en vez de rechazarte después) y *auditando*
-   (spinner + conteo de temas). Las confirmaciones bajan a dos o tres
-   palabras y se renderizan en flex, así el icono no puede volver a
-   separarse de su frase.
+   recibo que se imprime después.** Barra de dos huecos: estado a la
+   izquierda, acción a la derecha.
+
+**Quinta ronda — simplificación del mismo botón (2026-08-04).** La primera
+versión de esa barra introdujo variaciones que el fundador cortó de raíz:
+
+- **El botón ya no cambia de color.** Alternaba `outline`/`default` según la
+  frescura, y eso se lee como que el botón cambia de color porque sí
+  ("primero blanco, luego azul, no tiene sentido"). Ahora es siempre el botón
+  primario; lo único que se mueve es habilitado/deshabilitado. Por lo mismo
+  desaparece la etiqueta alternativa "Volver a auditar": **un control, un
+  nombre**.
+- **Dos estados, no cuatro.** *Auditoría actualizada* → pastilla verde que lo
+  dice + **botón deshabilitado** (pulsar sería un no-op servidor, así que el
+  control dice que no de antemano en vez de aceptar el clic y explicarlo
+  después). *Escaneo sin auditar* → sin pastilla, botón activo. Nada más.
+  "Al día" se descartó por informal; la etiqueta es "Auditoría actualizada".
+- **Sin banner mientras audita.** El bloque "Auditoría en curso" (título +
+  tres líneas + pastilla "Auditando") repetía lo que el propio botón ya dice
+  con su spinner y su conteo en vivo. Se retira **sólo** la variante con
+  `canAudit`: la de plan pausado a mitad de campaña se queda, porque ahí el
+  botón desaparece bajo el gate y ese banner es lo único que explica por qué
+  la página parece atascada.
+- **Sin toast de confirmación.** `router.refresh()` ya re-renderiza el botón
+  con la pastilla puesta, así que la pastilla *es* la confirmación; un aviso
+  al lado decía lo mismo dos veces. Se retira también el estado `notice` del
+  contexto, que dejaba de leerlo nadie.
 
 ---
 

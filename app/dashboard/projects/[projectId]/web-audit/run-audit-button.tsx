@@ -6,42 +6,32 @@ import { useWebAuditRunner } from "./web-audit-context";
 
 /**
  * Triggers a coverage audit and lets the server-rendered "Auditoría web" page
- * pick up the (persisted) result on refresh — unlike the old ephemeral
- * domain-coverage-section.tsx, this component holds no coverage state of its
- * own beyond in-flight progress, so a page reload never loses the result.
- *
- * Both instances on the page read/drive the SAME campaign via
- * `useWebAuditRunner` — a single `WebAuditProvider` higher up the tree owns
- * the actual state, so clicking either shows the other as loading too.
+ * pick up the (persisted) result on refresh — this component holds no
+ * coverage state of its own beyond in-flight progress, so a page reload never
+ * loses the result.
  *
  * ---------------------------------------------------------------------------
- * UX rebuilt 2026-08-04 (founder review, with the redesign asked for
- * explicitly: "dale una vuelta a la UX de ese botón — dónde tiene que estar,
- * cuáles son sus estados").
+ * Two states, one label, one colour (founder review 2026-08-04, second pass
+ * on this control):
  *
- * What was wrong: the button floated alone above the hero with no anchor, and
- * everything it had to say was said only AFTER a click, as a right-aligned
- * paragraph underneath. The "already fresh" case ran two sentences over three
- * lines, and its leading check icon — inline in a right-aligned block — broke
- * onto its own line at the far left. So the layout looked wrong, and the one
- * piece of information that would have saved the click ("this is already up
- * to date") was only reachable BY clicking.
+ *   - Auditoría actualizada → green pill saying so, button DISABLED. Clicking
+ *     would be a no-op server-side (the audit already covers the newest
+ *     scan), so the control says no up front instead of accepting the click
+ *     and explaining afterwards.
+ *   - Escaneo sin auditar → no pill at all, button enabled. There is new data
+ *     to pull in; nothing else needs saying.
+ *   - Auditando → no pill, no banner: the button itself carries the spinner
+ *     and the live topic count.
  *
- * The model now: freshness is a STATE shown before you act, not a receipt
- * printed after. `upToDate` comes from the server (does the stored audit
- * cover the newest scan?), and drives both the pill and the button's weight:
+ * The first attempt at this had the button switch between `outline` and
+ * `default` depending on freshness, which read as the button changing colour
+ * for no reason ("primero blanco, luego azul, no tiene sentido"). It is now
+ * always the primary button; only its enabled/disabled state moves. Same
+ * reason the "Volver a auditar" label is gone — one control, one name.
  *
- *   - Sin auditar (`upToDate === null`) → primary "Auditar ahora", no pill.
- *     The empty-state card already explains what auditing does.
- *   - Escaneo sin auditar (`false`) → amber pill + primary button: there IS
- *     new data to pull in, so the action is worth the visual weight.
- *   - Al día (`true`) → green pill + outline button "Volver a auditar":
- *     clicking is allowed but pointless, and the button says so by receding
- *     instead of by rejecting the user afterwards.
- *   - Auditando → spinner + live topic count, same as before.
- *
- * Confirmations shrank to a few words and render as a flex row, so the icon
- * can never orphan itself again regardless of wrapping.
+ * There is deliberately no transient "done" toast: `router.refresh()` on
+ * completion re-renders this with `upToDate` true, so the pill IS the
+ * confirmation. A toast on top of it said the same thing twice.
  */
 export function RunAuditButton({
   canAudit,
@@ -51,7 +41,7 @@ export function RunAuditButton({
   canAudit: boolean;
   upToDate?: boolean | null;
 }) {
-  const { isPending, error, notice, progress, drive } = useWebAuditRunner();
+  const { isPending, error, progress, drive } = useWebAuditRunner();
 
   if (!canAudit) {
     return (
@@ -67,39 +57,23 @@ export function RunAuditButton({
       ? `Auditando… ${progress.covered}/${progress.total} temas`
       : "Auditando…";
 
-  // While a campaign is in flight the pill would contradict the spinner
-  // ("Al día" next to "Auditando…"), so state yields to progress.
-  const showPill = !isPending && !error && upToDate !== null;
+  const isUpToDate = upToDate === true;
 
   return (
     <div className="wa2-auditbar">
       <div className="wa2-auditbar-state">
-        {showPill &&
-          (upToDate ? (
-            <span className="badge badge-pos">
-              <Icon name="check" size={11} />
-              Al día
-            </span>
-          ) : (
-            <span className="badge badge-warn">Escaneo sin auditar</span>
-          ))}
-        {notice && !error && (
-          <span className="wa2-auditbar-notice">
+        {isUpToDate && !isPending && !error && (
+          <span className="badge badge-pos">
             <Icon name="check" size={11} />
-            {notice}
+            Auditoría actualizada
           </span>
         )}
         {error && <span className="wa2-auditbar-error">{error}</span>}
       </div>
 
-      <Button
-        type="button"
-        onClick={drive}
-        disabled={isPending}
-        variant={upToDate === true && !isPending ? "outline" : "default"}
-      >
+      <Button type="button" onClick={drive} disabled={isPending || isUpToDate}>
         {isPending ? <span className="btn-spinner" /> : <Icon name="search" size={14} />}
-        {isPending ? progressLabel : upToDate === true ? "Volver a auditar" : "Auditar ahora"}
+        {isPending ? progressLabel : "Auditar ahora"}
       </Button>
     </div>
   );

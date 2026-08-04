@@ -1017,26 +1017,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           hidden entirely under the plan gate. Founder report: the old
           unconditional version left the page looking permanently stuck with
           no error, no explanation. */}
-      {activeCampaignProgress &&
-        (canAudit ? (
-          <div className="firstscan-banner">
-            <div className="fb-ico">
-              <Icon name="search" size={18} />
-              <span className="fb-spin"></span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="fb-t">Auditoría en curso</div>
-              <div className="fb-d">
-                Llevamos {activeCampaignProgress.covered} de {activeCampaignProgress.total} temas. Puedes navegar a
-                otras páginas — al volver aquí, seguirá por donde se quedó.
-              </div>
-            </div>
-            <span className="st-chip st-scanning">
-              <span className="d" />
-              Auditando
-            </span>
-          </div>
-        ) : (
+      {/* Sólo la variante de plan pausado. La de "Auditoría en curso" se
+          retiró (founder review 2026-08-04): mientras se audita, el propio
+          botón ya lleva el spinner y el conteo de temas en vivo, así que el
+          banner repetía la misma información en tres líneas más una pastilla
+          — "todo el resto es liar la experiencia". Esta variante NO es
+          redundante: cuando el plan decae a mitad de auditoría el botón
+          desaparece entero bajo el gate, y entonces este banner es lo único
+          que explica por qué la página parece atascada. */}
+      {activeCampaignProgress && !canAudit && (
           <div className="firstscan-banner">
             <div className="fb-ico">
               <Icon name="search" size={18} />
@@ -1053,7 +1042,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               Ver planes
             </Link>
           </div>
-        ))}
+        )}
 
       {/* Gated / empty states */}
       {!canAudit ? (
