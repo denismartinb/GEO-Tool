@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
@@ -781,13 +780,12 @@ export default async function CompetitorsPage({
                     </div>
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
-                        <div className="cm2-pos-list-hd">
-                          Puesto medio · último escaneo
-                          {/* Kept short on purpose: InfoTip renders its text as the
-                              element's aria-label, and a screen reader announces that
-                              in one breath. */}
-                          <InfoTip text="Puesto medio en que la IA nombra cada marca, contando solo las respuestas donde aparece. 1,0 es salir siempre la primera. Al lado, en cuántas respuestas aparece." />
-                        </div>
+                        {/* No InfoTip here. Right-aligning the heading put the
+                            glyph flush against the viewport edge, so its bubble
+                            opened off-screen and rendered clipped — founder cut
+                            it (2026-08-04). A tooltip that cannot be read is
+                            worse than the explanation it was carrying. */}
+                        <div className="cm2-pos-list-hd">Puesto medio · último escaneo</div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
                             <span className="cm2-pos-n">{entry.rank}</span>

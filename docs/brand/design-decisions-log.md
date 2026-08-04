@@ -1379,7 +1379,11 @@ línea recta funcionando. Cuatro ajustes sobre eso:
    los números que etiqueta. Había dos lecturas posibles de la petición y se
    preguntó en vez de adivinar, para no gastar un despliegue en la equivocada
    (el cupo de Vercel estaba al límite ese día).
-3. **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las 4
+3. **Fuera el InfoTip del encabezado.** Consecuencia directa de alinear el
+   título a la derecha: el icono queda pegado al borde y la burbuja se abre
+   fuera de pantalla, cortada. El fundador lo vio en el mismo despliegue y pidió
+   quitarlo. Un tooltip ilegible estorba más de lo que explica.
+4. **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las 4
    primeras series arrancan encendidas (`DEFAULT_VISIBLE`); el resto se activan
    pulsando. El fundador preguntó "¿por qué brave, protón, etc salen
    deshabilitados?" — señal de que el atenuado al 0.5 comunicaba "no

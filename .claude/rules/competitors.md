@@ -80,6 +80,11 @@ limpio (log §11).
   tiene `avg_position_when_mentioned` para nadie (ADR 0026 decisión 4, sin
   backfill), así que un proyecto con mucha historia puede pasar días sin
   bloque. Es lo esperado.
+- **El encabezado "puesto medio · último escaneo" va alineado a la derecha y sin
+  InfoTip.** Alinearlo a la derecha lo pega al borde del viewport, y ahí la
+  burbuja del tooltip se abre fuera de pantalla y sale cortada (log §15). Un
+  tooltip que no se puede leer estorba más de lo que explica; si hace falta
+  explicar el dato, que sea en otro sitio.
 - **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las primeras
   `DEFAULT_VISIBLE` series arrancan encendidas; el resto se activan pulsando.
   El fundador las leyó como deshabilitadas, así que el atenuado se mantiene
