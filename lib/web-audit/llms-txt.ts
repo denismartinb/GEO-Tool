@@ -188,6 +188,22 @@ export function publishSteps(domainNormalized: string): PublishStep[] {
         "un modelo de IA, no para posicionar: directas y concretas, sin adjetivos de marketing."
     },
     {
+      // Los epígrafes son los prompts monitorizados del proyecto, tal cual. Es
+      // el único dato real disponible para nombrar una sección (ver la
+      // cabecera de este fichero), pero publicarlos literalmente expone en
+      // abierto qué consultas vigila la marca en IA — su propia estrategia de
+      // GEO, servida a la competencia en la raíz de su dominio. El generador
+      // no puede reescribirlos sin una llamada a IA (fase aplazada), así que
+      // como mínimo el usuario tiene que saberlo antes de publicar. Avisar es
+      // barato; que se entere su competencia, no.
+      title: "Reescribe los títulos de sección antes de publicar",
+      body:
+        "Cada «##» es uno de los prompts que monitorizas, copiado tal cual. Publicado en abierto, " +
+        "le dice a tu competencia qué consultas estás vigilando. Cámbialos por el tema que " +
+        "agrupan («Privacidad y seguridad» en vez de la pregunta entera): se lee mejor y no " +
+        "regalas tu estrategia."
+    },
+    {
       title: "Guarda el fichero con ese nombre exacto",
       body: "En minúsculas y con extensión .txt. Ni llms.TXT ni LLMs.txt — el nombre se comprueba tal cual.",
       code: "llms.txt"

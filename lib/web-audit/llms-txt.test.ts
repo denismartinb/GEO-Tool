@@ -185,4 +185,19 @@ describe("publishSteps", () => {
   it("names the exact filename, since the check is case-sensitive", () => {
     expect(publishSteps("acme.com").some((s) => s.code === "llms.txt")).toBe(true);
   });
+
+  it("warns that the section headings are the monitored prompts, BEFORE the upload step", () => {
+    // Not a copy nicety. Every "##" is one of the project's monitored prompts
+    // verbatim, so publishing the file as generated tells the brand's
+    // competitors which AI queries it is tracking. The generator cannot
+    // rewrite them without the deferred AI phase, so the least it must do is
+    // say so — and say it before the step that puts the file online, not
+    // after.
+    const steps = publishSteps("acme.com");
+    const warning = steps.findIndex((s) => /competencia/i.test(s.body));
+    const upload = steps.findIndex((s) => s.code === "public/llms.txt");
+
+    expect(warning, "no hay aviso sobre exponer los prompts monitorizados").toBeGreaterThanOrEqual(0);
+    expect(warning).toBeLessThan(upload);
+  });
 });

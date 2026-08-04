@@ -1706,6 +1706,22 @@ disfrazada de instrucción.
 un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
 `llms.txt.txt`) y la comprobación distingue mayúsculas.
 
+**Los epígrafes son los prompts, y eso tiene un coste que no es estético.**
+Al mirar la captura real del pilot sobre mozilla.org se vio que las secciones
+salen en forma de pregunta (`## ¿Qué navegador web ofrece la mejor protección
+de privacidad…?`), porque el único dato disponible para nombrar una sección es
+el prompt del usuario. Como calidad de lectura es aceptable — para un motor
+generativo, pregunta seguida de la página que la responde no es peor que un
+tema genérico. Lo que sí importa es otra cosa: **esos prompts son la
+estrategia de monitorización del cliente, y el fichero se publica en abierto
+en la raíz de su dominio**, así que tal cual sale le dice a su competencia qué
+consultas está vigilando en IA.
+
+El generador no puede reescribirlos sin la llamada a IA aplazada, así que se
+añade un paso de publicación que lo advierte explícitamente, colocado **antes**
+del paso que sube el fichero. El fundador aceptó la v1 con esta limitación
+(2026-08-04) sabiendo que reescribir los epígrafes queda de su parte.
+
 ---
 
 ## Cómo mantener este documento
