@@ -223,6 +223,16 @@ you write a verdict.
    a rescan** — neither "not implemented" nor "verified". Judging engine copy
    from a stale project is how a correct change gets reported as missing.
 
+   Worse, the pilot account shares its database with production, so a scan
+   launched from **any** deployment regenerates those rows with **that
+   branch's** engine — and can do so mid-run. Real case: the same run saw the
+   new copy at 375px (data from the previous day's scan) and the old copy at
+   768/1280px, because a production scan landed in between. So when a screen's
+   content disagrees with the branch under test, check the scan date on screen
+   before concluding anything, and never assert that persisted content matches
+   the branch's code: that belongs in the engine's unit tests, where data
+   provenance is known.
+
 ## UX quality bar (judgement, not assertions)
 
 Fidelity asks "is it what we agreed?". This asks "is what we agreed any good?".
