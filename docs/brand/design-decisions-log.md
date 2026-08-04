@@ -1657,6 +1657,67 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
 
 ---
 
+## 18. Publicación semanal del blog — de encargo escrito a cadena que arranca sola (GROWTH-3 Fase A2, 2026-08-04)
+
+**Contexto.** La Fase A1 (§ PR #318) dejó escrito *el encargo* de la
+publicación semanal y creó un disparador fuera del repo. Lo que no hizo fue
+ejecutarse nunca: una automatización que no se ha disparado ni una vez no está
+terminada, está redactada. A1 misma dejó anotado el riesgo — las sesiones
+disparadas podrían correr **sin herramientas MCP de GitHub**, y entonces el
+agente escribiría el artículo, empujaría la rama y ahí se quedaría, sin PR y
+sin que nadie se entere.
+
+**Qué se intentó primero y por qué se descartó.** El plan aprobado era
+dispararla a mano una vez y ver hasta dónde llegaba. No se pudo: las
+herramientas de rutinas exigen una aprobación interactiva que una sesión remota
+no puede conceder. Eso no confirmó el riesgo, pero lo reforzó — **lo que
+necesita una aprobación interactiva no está garantizado en una sesión
+headless**. Se dejó de intentar averiguar si haría falta la red de seguridad y
+se construyó.
+
+**Lo decidido.**
+
+- **`.github/workflows/weekly-post-pr.yml`** garantiza que exista un PR abierto
+  para toda rama `claude/weekly-post/**`. **Es idempotente a propósito**: si la
+  sesión semanal sí tenía herramientas y abrió el PR, el workflow lo encuentra y
+  no crea nada. Los dos caminos convergen en el mismo estado final, que es lo
+  que permite no tener que saber de antemano cuál se tomó.
+- **El mensaje del último commit es el PR** (asunto → título, cuerpo → cuerpo).
+  Se eligió frente a un fichero de plantilla en la rama porque un fichero
+  temporal en la rama del artículo acaba colándose en el diff que revisa el
+  fundador.
+- **El aviso son tres capas, no una** (`docs/agentic-weekly-post.md` §8). La
+  que sostiene el sistema es la más aburrida: el workflow pide revisión al
+  fundador y **GitHub manda su email nativo**. No depende de que el agente siga
+  vivo, ni de claves, ni de terceros — que es justo lo que se necesita cuando el
+  modo de fallo probable *es* que el agente se muera a mitad. Encima van el push
+  a la app de Claude (`PushNotification`, se pierde si no hay Control Remoto) y
+  las notificaciones de fin de rutina (pendientes de activar).
+- **Sin preview es `INCONCLUSIVE`, y se dice.** La cuenta de Vercel es gratuita
+  y tiene tope diario de deploys; la propia PR de A1 se quedó sin preview por
+  eso. Queda escrito que el aviso debe decir "escrito y validado, pero nadie lo
+  ha visto renderizado" en vez de presentarlo como listo — el mismo fallo del
+  2026-08-02 (§7) que el pilot existe para impedir.
+
+**Lo que se mantiene de A1, sin tocar.** No hay scheduler de producto: nada en
+`vercel.json`, ni `app/api/cron/**`, ni runtime. El agente **no mergea nunca**.
+Y el check de portada **sigue en rojo a propósito** (§14, ADR 0026): el agente
+no puede generar imágenes, y automatizar la publicación sin portada
+automatizaría una vez por semana el defecto que el fundador rechazó
+("parece un icono de algo que no carga bien").
+
+**Pendiente / roto conocido.**
+
+- **Dos activaciones manuales, y sin ellas el lunes no pasa nada visible**
+  (`docs/agentic-weekly-post.md` §9): activar *"Allow GitHub Actions to create
+  and approve pull requests"* en el repo, y las notificaciones de la rutina.
+- **La cadena completa sigue sin haberse ejecutado de punta a punta.** El
+  primer disparo real (2026-08-10) es la primera prueba de verdad. Lo que la
+  Fase A2 cambia no es que no pueda fallar, sino que **si falla, se ve**: sin
+  PR abierto el lunes, el fallo es visible en vez de silencioso.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -35,12 +35,15 @@ código nuevo que mantener en producción.
 3. **Redacta y compone** con el sistema de diseño. No es prosa plana: la
    receta mínima de su cluster es un test, y no pasa el build sin cumplirla.
 4. **Valida**: `pnpm test && pnpm run validate`.
-5. **Abre PR** desde una rama propia, con el ledger del calendario actualizado
-   en el mismo PR.
-6. **Pasa QA** (subagente `qa`) y **el `ux-pilot`**, y **arregla lo que
+5. **Empuja la rama** `claude/weekly-post/<slug>`, con el ledger del
+   calendario actualizado en el mismo commit. **El nombre de la rama importa**
+   — ver §7.
+6. **Abre el PR.** Si tiene herramientas de GitHub, lo abre él. Si no las
+   tiene, no pasa nada: el workflow de §7 lo abre solo. En los dos casos
+   **comprueba que el PR existe** antes de dar nada por hecho.
+7. **Pasa QA** (subagente `qa`) y **el `ux-pilot`**, y **arregla lo que
    encuentren** antes de avisar a nadie.
-7. **Para en el Human Gate.** Avisa al fundador en castellano con la URL del
-   preview y qué mirar. **No mergea nunca.**
+8. **Para en el Human Gate y avisa** (§8). **No mergea nunca.**
 
 ---
 
@@ -107,3 +110,87 @@ llamadas al pipeline de escaneos, sin tocar Gemini.
 
 En los cuatro casos: abrir el PR igualmente si hay trabajo aprovechable, pero
 decirlo con claridad y **no presentarlo como listo**.
+
+**Caso aparte, y más frecuente de lo que parece: el preview no despliega.** La
+cuenta de Vercel es gratuita y tiene un tope de 100 deploys al día; el 2026-08-04
+la propia PR de la Fase A1 se quedó sin preview por eso. Sin preview no hay
+pilot, y sin pilot no hay verificación visual. Eso es un `INCONCLUSIVE`, no un
+contratiempo menor: el aviso al fundador debe decir **"el artículo está escrito
+y validado, pero nadie lo ha visto renderizado"**, y decir por qué. Presentarlo
+como listo sería exactamente el fallo del 2026-08-02 que el pilot existe para
+impedir.
+
+---
+
+## 7. Cómo se abre el PR — y por qué la rama se llama así
+
+La Fase A1 dejó un riesgo sin cerrar: al crear la rutina, el sistema avisó de
+que las sesiones disparadas podrían correr **sin las herramientas MCP de
+GitHub**. Se intentó comprobar el 2026-08-04 y no se pudo — las herramientas de
+rutinas exigen una aprobación interactiva que una sesión remota no puede dar.
+Eso no resolvió la duda, pero sí la reforzó: **lo que necesita una aprobación
+interactiva no está garantizado en una sesión headless.**
+
+La Fase A2 deja de apostar. `.github/workflows/weekly-post-pr.yml` se dispara
+al empujar cualquier rama `claude/weekly-post/**` y **garantiza que exista un
+PR abierto**, lo haya abierto el agente o no. Es idempotente: si el agente sí
+tenía herramientas y ya lo abrió, el workflow lo encuentra y no crea nada.
+
+De ahí dos obligaciones para el agente, que no son cosméticas:
+
+- **La rama se llama `claude/weekly-post/<slug>`.** Fuera de ese prefijo el
+  workflow no dispara y no hay red de seguridad.
+- **El mensaje del último commit es el PR.** El asunto es el título; el cuerpo
+  del mensaje es el cuerpo del PR. Es el único canal por el que el agente
+  controla qué dirá el PR si lo abre el workflow. Un commit con asunto y sin
+  cuerpo produce un PR mudo — y ahí es donde tiene que ir, arriba del todo,
+  que **falta la portada** (§4).
+
+---
+
+## 8. El aviso al fundador — tres capas, porque una sola falla en silencio
+
+El fundador pidió enterarse en cuanto haya artículo. El problema de un único
+canal es que, cuando el que falla es el propio agente, el aviso muere con él.
+Por eso hay tres capas, de más a menos frágil:
+
+1. **Email nativo de GitHub (la que siempre funciona).** El workflow de §7
+   asigna el PR al fundador y le pide revisión. Ese email lo manda GitHub, no
+   nosotros: no depende de que el agente siga vivo, ni de claves, ni de
+   servicios de terceros. Si la sesión semanal se muere justo después de
+   empujar la rama, **este aviso llega igual**.
+2. **Push a la app de Claude (la del móvil).** Último paso del agente:
+   `PushNotification` con una línea —qué artículo, y si hay algo en rojo—.
+   Requiere que el Control Remoto esté conectado; si no lo está, no llega y no
+   pasa nada, porque la capa 1 ya llegó.
+3. **Aviso de fin de rutina (push + email).** Se configura en la propia rutina
+   (`notifications: {push: true, email: true}`) y sólo funciona si la rutina
+   crea sesión nueva en cada disparo. **Está pendiente de activar** — ver §9.
+
+**Qué tiene que decir el mensaje final del agente**, porque es literalmente lo
+que se lee en el móvil y en el email, y un "he terminado" no sirve de nada:
+
+- la **URL del PR** y la **URL del preview de Vercel** (o que no hay preview y
+  por qué);
+- **qué mirar**, en castellano y en términos de comportamiento, no del diff;
+- **qué queda en rojo** — la portada casi siempre (§4);
+- **qué no se pudo verificar**, si el pilot no vio algo.
+
+Esto es la misma exigencia que `CLAUDE.md` pone a cualquier Human Gate. Aquí se
+repite porque la sesión semanal no recuerda haberla leído.
+
+---
+
+## 9. Puesta en marcha — lo que hay que activar una sola vez
+
+Dos cosas que **no puede hacer el agente** y que, si faltan, hacen que el lunes
+no pase nada visible:
+
+1. **En el repo:** Settings → Actions → General → Workflow permissions →
+   activar **"Allow GitHub Actions to create and approve pull requests"**. Sin
+   eso, el workflow de §7 falla con 403 y no hay red de seguridad. El propio
+   workflow falla con ese mensaje escrito, para que no haya que adivinarlo.
+2. **En la rutina semanal:** activar las notificaciones de fin de ejecución
+   (capa 3 de §8). Sólo aplica si la rutina crea una sesión nueva por disparo;
+   si la actual reutiliza una sesión, hay que recrearla con el mismo horario
+   (`0 7 * * 1`). Es opcional: con la capa 1 el aviso ya llega.
