@@ -1337,6 +1337,50 @@ zonas sin regla de ruta siguen dependiendo de que se lea su histórico.
 
 ---
 
+## 14. Blog — la cabecera de artículo y las portadas (2026-08-04)
+
+**Cómo salió.** El fundador abrió el blog en su móvil y señaló dos cosas:
+*"la parte inicial del artículo con la fecha, el bloque inicial, la imagen,
+queda todo muy pegado… no tiene la estructura típica y limpia de un blog"*, y
+sobre las portadas de respaldo: *"parece un icono de algo que no carga bien"*.
+
+**Qué se decidió — ritmo de cabecera.** La secuencia de una cabecera de
+artículo es: hueco superior → portada → título → fecha → primer bloque, con
+el metadato **agrupado con el título** y **separado del cuerpo**. El error
+anterior era tener el ritmo al revés: 84px muertos arriba (el `padding` de
+`.lp-section`) y cero separación abajo.
+
+Medido por el `ux-pilot` sobre el render real: 48px de nav a portada en los
+tres anchos, ~21px de título a fecha, ~44px de fecha a cuerpo.
+
+**Precaución que hay que mantener.** `.blog-post-meta` **se comparte** con las
+tarjetas del índice de `/blog` y de los hubs. Toda regla de cabecera va
+acotada con `h1 +`, porque esas tarjetas titulan con `h2`. Sin eso, arreglar
+el artículo rompe el índice.
+
+**Qué se decidió — portadas.** Se permite imagen generada o de stock **en
+portada**, manteniendo la prohibición dentro del cuerpo (enmienda a
+`docs/adr/0026-article-imagery-policy.md`, decisión del fundador). Con una
+regla: una portada no puede representar una interfaz, un panel, un gráfico ni
+una métrica. Si enseña algo que parece un dato de Genscore, ese dato tiene que
+existir — y entonces ya no es portada, es figura.
+
+**Contraste.** La fecha pasa de `--ink-4` (2.63:1 sobre blanco, por debajo de
+AA) a `--ink-3` (4.76:1). Aplica también a las tarjetas del índice.
+
+**Pendiente / roto conocido.** Faltan 3 portadas
+(`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`). Hasta que existan, esos artículos caen
+en el degradado con icono, que es exactamente lo que se ha rechazado.
+`lib/blog/covers.test.ts` impide que esa deuda crezca.
+
+**Consecuencia de planificación.** La producción de portadas es hoy un paso
+humano: no hay herramienta de generación en el entorno del agente y el stock
+exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
+tiene aquí una dependencia manual.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

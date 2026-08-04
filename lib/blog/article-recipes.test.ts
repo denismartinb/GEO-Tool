@@ -31,11 +31,7 @@ const RECIPES: Record<BlogCluster["key"], Record<string, number>> = {
  * si alguien añade un slug aquí en vez de componer el artículo, el test de
  * abajo que fija el tamaño máximo se lo impide.
  */
-const PENDING_CONVERSION = new Set([
-  "que-es-geo-generative-engine-optimization",
-  "genscore-vs-herramientas-geo",
-  "como-conseguir-que-chatgpt-te-cite"
-]);
+const PENDING_CONVERSION = new Set<string>([]);
 
 function readArticle(slug: string): string {
   const path = join(process.cwd(), "app", "blog", slug, "page.mdx");
@@ -95,6 +91,29 @@ const CONVERSION_DEBT_BASELINE = new Set([
 ]);
 
 describe("la deuda de conversión solo puede encoger", () => {
+  /**
+   * La línea base se ha roto por accidente DOS veces, las dos con un `sed`
+   * que casaba el mismo slug en los dos conjuntos y lo borraba de ambos. Si
+   * la línea base encoge a la vez que la deuda, la garantía de pertenencia
+   * se evapora en silencio: todo pendiente sigue "estando en la base"
+   * simplemente porque la base se encogió con él.
+   *
+   * Por eso se fija aquí literalmente. No es redundante con la constante:
+   * es lo que convierte "hay que tener cuidado" en "el test te para".
+   */
+  it("la línea base es exactamente la deuda original de la Fase 3.1", () => {
+    expect([...CONVERSION_DEBT_BASELINE].sort()).toEqual(
+      [
+        "como-conseguir-que-chatgpt-te-cite",
+        "como-elegir-competidores-analisis-geo",
+        "como-elegir-prompts-monitorizar-marca-ia",
+        "genscore-vs-herramientas-geo",
+        "que-es-el-geo-score",
+        "que-es-geo-generative-engine-optimization"
+      ].sort()
+    );
+  });
+
   /**
    * Comprobar solo el tamaño NO basta, y QA lo demostró: se podía sacar un
    * slug de la lista y meter otro nuevo, mantener el tamaño en 6, y con eso
