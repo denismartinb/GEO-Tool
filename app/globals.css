@@ -2163,6 +2163,13 @@ a {
    Stacked on phones, chart-beside-list once there's room. */
 .cm2-pos-card { padding: 16px 16px 10px; }
 .cm2-pos-chart { min-width: 0; }
+/* Why the line is short. Sits between chart and list, so it reads as an
+   explanation of what is above it rather than a footnote to the page. */
+.cm2-pos-note {
+  margin-top: 10px; padding: 9px 11px; border-radius: 9px;
+  background: var(--surface-sunk); color: var(--ink-3);
+  font-size: 11.5px; line-height: 1.5;
+}
 .cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 /* inline-flex keeps the InfoTip glyph on the label's own line — as plain
    inline content after an uppercase, letter-spaced label it wrapped onto a

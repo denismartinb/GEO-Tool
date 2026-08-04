@@ -63,6 +63,12 @@ limpio (log §11).
 - La lista "puesto medio · último escaneo" se ancla al **último escaneo real**,
   nunca al último punto que sobreviva a la ventana — si no, el encabezado
   mentiría.
+- **"Pocos escaneos" y "escaneos sin el dato nuevo" son estados distintos y no
+  pueden compartir mensaje.** Un escaneo anterior a geo-score-v3 no tiene
+  `avg_position_when_mentioned` para nadie (ADR 0026 decisión 4, sin backfill),
+  y eso es lo normal en cualquier proyecto con historia. Decirle "0 de 2
+  escaneos" a un proyecto con 21 se lee como "escanea más" y es falso: hay que
+  decir cuántos traen el dato y por qué (log §15).
 
 ## Layout
 

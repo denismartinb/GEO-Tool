@@ -418,6 +418,18 @@ export default async function CompetitorsPage({
   const validTrendPoints = chartTrendData.filter((d) => d.values.brand != null).length;
   const hasTrendData = validTrendPoints >= 2;
 
+  /* How many completed scans carry no position data at all. Pre-v3 runs have
+     no `avg_position_when_mentioned` for ANY entity and were deliberately not
+     backfilled (ADR 0026 decision 4: "el histórico da igual"), so on an
+     established project this is most of the history — the ADR itself calls it
+     "the default, not an edge case".
+
+     Without this number the screen tells a project with 21 scans that it has
+     "0 de 2 escaneos", which reads as "scan more" when the truth is "your old
+     scans predate this metric". Founder caught exactly that. */
+  const runsMissingPositionData = completedRuns.length - chartTrendData.length;
+  const positionDataIsBackfillGap = runsMissingPositionData > 0 && completedRuns.length >= 2;
+
   const trendPositionValues = chartTrendData
     .flatMap((d) => Object.values(d.values))
     .filter((v): v is number => v != null);
@@ -772,6 +784,18 @@ export default async function CompetitorsPage({
                     <div className="cm2-pos-chart">
                       <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
                     </div>
+                    {/* A chart drawn from 2 of a project's 21 scans looks broken
+                        rather than sparse — flat lines stretched edge to edge,
+                        with no clue why the other 19 are missing. Say it instead
+                        of letting the user conclude the feature is bugged. */}
+                    {positionDataIsBackfillGap ? (
+                      <div className="cm2-pos-note">
+                        Solo <b className="tnum">{chartTrendData.length}</b> de tus{" "}
+                        <b className="tnum">{completedRuns.length}</b> escaneos traen el puesto medio: cambió
+                        la forma de calcularlo y los anteriores no se recalcularon. La línea se irá
+                        alargando con cada escaneo nuevo.
+                      </div>
+                    ) : null}
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
                         <div className="cm2-pos-list-hd">
@@ -799,17 +823,32 @@ export default async function CompetitorsPage({
                 ) : (
                   <div style={{ padding: "32px 20px", textAlign: "center" }}>
                     <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                      {/* Show progress, not just a gate. A flat "available from
-                          2 scans" is a dead end; the count turns it into a
-                          countdown the user can act on — and, right after a
-                          scoring change, it is also the honest explanation for
-                          why a project with plenty of scans still shows zero
-                          here (pilot proposal, 2026-08-03). */}
-                      Disponible a partir de 2 escaneos con datos de posición.{" "}
-                      <b className="tnum">
-                        {validTrendPoints} de 2
-                      </b>{" "}
-                      por ahora.
+                      {/* Two different states wore the same message until the
+                          founder hit the second one on a project with 21 scans:
+                          "0 de 2 escaneos" reads as "scan more", which is only
+                          true for a young project. On an established one the
+                          real reason is that its scans predate this metric
+                          (ADR 0026 decision 4, no backfill) — telling it to
+                          scan more is technically the fix but the sentence is
+                          a lie about why. */}
+                      {positionDataIsBackfillGap ? (
+                        <>
+                          El puesto medio cambió de forma de calcularse, y los escaneos anteriores no
+                          lo traen.{" "}
+                          <b className="tnum">
+                            {chartTrendData.length} de {completedRuns.length}
+                          </b>{" "}
+                          escaneos ya lo tienen; hacen falta 2. Cada escaneo nuevo suma.
+                        </>
+                      ) : (
+                        <>
+                          Disponible a partir de 2 escaneos con datos de posición.{" "}
+                          <b className="tnum">
+                            {validTrendPoints} de 2
+                          </b>{" "}
+                          por ahora.
+                        </>
+                      )}
                     </div>
                   </div>
                 )}

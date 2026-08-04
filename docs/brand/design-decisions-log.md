@@ -1363,6 +1363,28 @@ Lógica extraída a `lib/competitors/trend-window.ts` con 9 tests, siguiendo el
 patrón del resto de la zona (`filterComparableEngines`, `computeTopicComparison`):
 la página es un componente de servidor y la lógica inline ahí no se puede probar.
 
+**Segundo hallazgo, al verlo desplegado: el estado vacío mentía sobre el motivo.**
+El fundador probó el preview y vio dos cosas raras: Movistar decía *"0 de 2
+escaneos"* teniendo **21**, y Mozilla dibujaba dos puntos planos de lado a lado.
+Investigado: **no lo causa la ventana de 15**. Lo causa la decisión 4 de ADR 0026
+(geo-score-v3, sin backfill): un escaneo anterior a v3 no tiene
+`avg_position_when_mentioned` **para ninguna entidad**, así que toda la historia
+previa es una columna vacía. El propio ADR lo advierte: *"Every existing project
+was in that state until its next scan, so this was the default, not an edge
+case."*
+
+O sea: el filtro de columnas vacías funcionaba: lo que hizo fue **destapar** que
+casi todo el histórico no tiene el dato nuevo. Antes esas columnas se dibujaban
+como huecos y disimulaban el problema.
+
+Lo que sí era un fallo nuestro es **el mensaje**. "0 de 2 escaneos" se lee como
+"escanea más", y eso sólo es cierto en un proyecto nuevo; en uno con 21 escaneos
+la verdad es "tus escaneos son anteriores a esta métrica". Dos estados
+distintos llevaban la misma frase. Ahora se distinguen: cuando hay escaneos
+completados sin dato de posición, tanto el estado vacío como una nota bajo el
+gráfico dicen cuántos de cuántos lo traen y por qué, en vez de dejar que el
+usuario concluya que la pantalla está rota.
+
 **Cierre de fase completo.** El invariante vive en `.claude/rules/competitors.md`
 (sección "Gráfico de evolución del puesto") y la celda de Competidores del mapa
 de zonas de `CLAUDE.md` apunta a esta fase — primera fase cerrada bajo el
