@@ -1279,6 +1279,7 @@ export async function executePendingScan({
       projectId,
       runId,
       projectDomain: project.domain as string,
+      expectedEngines: providers,
       finalizeJobId: finalizeJob.id
     });
 

@@ -90,8 +90,9 @@ const REASON_COPY: Record<ScanHealthReason, { headline: string; detail: string }
  *   `engine_down` when they take out a whole engine, which is the point at
  *   which they stop being noise.
  */
-export function analyzeRunHealth(rows: readonly HealthRow[]): ScanHealthFinding[] {
+export function analyzeRunHealth(rows: readonly HealthRow[], expectedEngines: readonly string[] = []): ScanHealthFinding[] {
   const byEngine = new Map<string, HealthRow[]>();
+  for (const engine of expectedEngines) byEngine.set(engine, []);
   for (const row of rows) {
     const engine = row.provider ?? "gemini";
     const bucket = byEngine.get(engine);
@@ -103,7 +104,20 @@ export function analyzeRunHealth(rows: readonly HealthRow[]): ScanHealthFinding[
 
   for (const [engine, engineRows] of byEngine) {
     const answered = engineRows.filter((row) => row.status === "completed" && row.raw_response_text);
-    if (answered.length === 0) continue;
+
+    // An engine that produced no rows AT ALL failed at generation, not at
+    // extraction — a dead API, a rejected model id, an outage. Seeding the
+    // map with the run's expected engines is what makes that visible: keyed
+    // only on the rows that exist, such an engine simply is not in the data,
+    // and the check that is supposed to catch "ChatGPT contributed nothing"
+    // would silently skip the very case it exists for. The run still
+    // completes, because a prompt job succeeds if any engine answers.
+    if (answered.length === 0) {
+      if (expectedEngines.includes(engine)) {
+        findings.push({ engine, reason: "engine_down", affectedRows: 0, totalRows: 0 });
+      }
+      continue;
+    }
 
     const countByCategory = (category: string) =>
       answered.filter((row) => row.extraction_error?.startsWith(`${category}:`)).length;
@@ -174,6 +188,8 @@ export async function checkAndSendScanHealthAlert(input: {
   runId: string;
   /** Omit when the caller doesn't already hold it — it is looked up only if an alert actually fires. */
   projectDomain?: string;
+  /** The engines this run was supposed to use. Without it, an engine that produced no rows at all cannot be detected. */
+  expectedEngines?: readonly string[];
   /** Set when the run itself ended `failed` with no auto-retry left. */
   runFailedWithoutRetry?: boolean;
   finalizeJobId?: string | null;
@@ -194,7 +210,7 @@ export async function checkAndSendScanHealthAlert(input: {
       return;
     }
 
-    const findings = analyzeRunHealth((rows ?? []) as HealthRow[]);
+    const findings = analyzeRunHealth((rows ?? []) as HealthRow[], input.expectedEngines ?? []);
 
     if (input.runFailedWithoutRetry) {
       const totalRows = rows?.length ?? 0;

@@ -105,3 +105,37 @@ describe("analyzeRunHealth", () => {
     expect(openaiReasons).toEqual(expect.arrayContaining(["quota", "engine_down"]));
   });
 });
+
+/**
+ * The hole found while writing the manual test recipe for this very phase: an
+ * engine that fails at *generation* inserts no rows at all, so keyed only on
+ * the rows that exist it simply is not in the data — and the check meant to
+ * catch "ChatGPT contributed nothing" silently skipped exactly that case.
+ * The run still completes, because a prompt job succeeds if any engine
+ * answers.
+ */
+describe("analyzeRunHealth — an engine that produced no rows at all", () => {
+  it("reports an expected engine that is entirely absent from the rows", () => {
+    const findings = analyzeRunHealth([row({ provider: "gemini" }), row({ provider: "claude" })], [
+      "gemini",
+      "claude",
+      "openai"
+    ]);
+
+    expect(findings).toContainEqual(expect.objectContaining({ engine: "openai", reason: "engine_down" }));
+  });
+
+  it("stays silent about an engine that was never expected to run", () => {
+    // A Free-plan project is capped to one engine (PRICING-TRUTH-1), so the
+    // other two are absent by design, not by failure.
+    const findings = analyzeRunHealth([row({ provider: "gemini" })], ["gemini"]);
+
+    expect(findings).toEqual([]);
+  });
+
+  it("still says nothing when no expected set is supplied", () => {
+    // reconcileStuckScanRuns has no provider list to hand; it must not start
+    // inventing engine-down findings out of missing data.
+    expect(analyzeRunHealth([row({ provider: "gemini" })])).toEqual([]);
+  });
+});

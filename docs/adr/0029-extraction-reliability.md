@@ -209,6 +209,7 @@ is testable, not buried in plumbing:
 | `quota:` on any row | Yes, no threshold | Never heals on its own; only the operator can clear it |
 | `config:` on any row | Yes, no threshold | Wrong key or model id — the ADR 0002 class of failure |
 | An engine answered but extracted **nothing** | Yes | A prompt job succeeds if *any* engine answers, so a dead engine still leaves the run "Completado" |
+| An expected engine produced **no rows at all** | Yes | It failed at *generation* — a dead API or a rejected model id. Needs the run's expected engine set, because such an engine is simply absent from the data |
 | Run `failed` with auto-retry spent | Yes | It will not try again by itself |
 | Isolated `schema` / `invalid_json` / `empty` / `timeout` | **No** | Model noise: self-corrects next scan, nothing to go fix. Still counts toward `engine_down` when it takes out a whole engine — the point at which it stops being noise |
 
