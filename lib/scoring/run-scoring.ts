@@ -942,6 +942,25 @@ export function computeJointPotentialPoints(
  * the legacy visibility_score for runs scored before geo-score-v1 existed
  * (no backfill, per ADR 0008) — mirrors app/dashboard/projects/[projectId]/page.tsx.
  */
+/**
+ * True when a run produced no usable evidence at all (geo-score-v4,
+ * docs/adr/0027) — every extraction failed, so its persisted score columns
+ * carry 0 only because they cannot be null.
+ *
+ * Exported because it is the signal consumers must branch on. Several already
+ * re-derived it inline; having one place named makes "must I guard this read?"
+ * answerable, which is the part seven rounds of review kept getting wrong.
+ * `scored_results_count` only exists from v4, so a missing field means a
+ * pre-v4 run and is deliberately NOT treated as unreadable.
+ */
+export function isUnreadableRun(detailsJson: unknown): boolean {
+  const details =
+    detailsJson && typeof detailsJson === "object"
+      ? (detailsJson as { scored_results_count?: unknown })
+      : {};
+  return typeof details.scored_results_count === "number" && details.scored_results_count === 0;
+}
+
 export function getEffectiveGeoScore(row: {
   visibility_score: number | null;
   details_json: unknown;

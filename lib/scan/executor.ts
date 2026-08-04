@@ -10,7 +10,7 @@ import {
   computeRecommendationTransition,
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
-import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "@/lib/scoring/run-scoring";
+import { computeRunScoresFromResults, isUnreadableRun, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
@@ -888,14 +888,24 @@ export async function executePendingScan({
     let newRecommendationsCount = 0;
     let resolvedGapsCount = 0;
     let previousVisibilityScore: number | null = null;
-    /* This run's honest score: null when nothing could be read, rather than
-     * the persisted 0 the non-null column has to hold (geo-score-v4,
-     * docs/adr/0027). Same helper score-alert.ts and weekly-digest.ts already
-     * use two call sites away. */
-    const effectiveVisibilityScore = getEffectiveGeoScore({
-      visibility_score: scores.visibility_score,
-      details_json: scores.details_json
-    });
+    /* This run's honest presence score: null when nothing could be read,
+     * rather than the persisted 0 the non-null column has to hold
+     * (geo-score-v4, docs/adr/0027).
+     *
+     * Deliberately NOT getEffectiveGeoScore, though score-alert.ts and
+     * weekly-digest.ts use it two call sites away: that helper prefers the
+     * COMPOSITE, and this payload is labelled "Visibilidad" by
+     * lib/notifications/render.ts. In this product "Visibilidad" always means
+     * the presence percentage (runs/[runId], prompts-client) and the composite
+     * is always "GEO Score" (Overview, emails, score-alert) — so routing this
+     * through the helper would have made the bell say "Visibilidad 68" while
+     * the run detail page said something else under the same word, on every
+     * healthy scan. Caught by QA on PR #313 round 7 after I introduced it
+     * sideways while fixing the null. Same gate, same field, no metric change.
+     */
+    const effectiveVisibilityScore = isUnreadableRun(scores.details_json)
+      ? null
+      : scores.visibility_score;
 
     // Fail-soft: derived recommendations must never sink an otherwise-successful
     // scan. The real scan work (answers + scores) is already persisted above; if
@@ -978,10 +988,12 @@ export async function executePendingScan({
           .select("visibility_score, details_json")
           .eq("run_id", previousRunRow.id as string)
           .maybeSingle();
-        // getEffectiveGeoScore returns null when that run read nothing, so a
-        // healthy scan cannot get a fabricated delta against an unreadable
-        // predecessor (geo-score-v4, docs/adr/0027).
-        previousVisibilityScore = previousScoreRow ? getEffectiveGeoScore(previousScoreRow) : null;
+        // Same gate on the predecessor, so a healthy scan cannot get a
+        // fabricated delta against a run that read nothing.
+        previousVisibilityScore =
+          previousScoreRow && !isUnreadableRun(previousScoreRow.details_json)
+            ? Number(previousScoreRow.visibility_score)
+            : null;
 
         const { data: previousRowsRaw } = await service
           .from("recommendations")

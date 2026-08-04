@@ -7,6 +7,7 @@ import {
   computeRunScoresFromResults,
   getEffectiveGeoScore,
   isQuantifiableRecommendationType,
+  isUnreadableRun,
   SCORING_VERSION
 } from "./run-scoring";
 
@@ -1585,5 +1586,29 @@ describe("computeRunScoresFromResults — a technical failure is not a finding (
     expect(result.details_json.scored_results_count).toBe(3);
     expect(result.details_json.unscorable_results_count).toBe(0);
     expect(result.visibility_score).toBe(66.67);
+  });
+});
+
+describe("isUnreadableRun", () => {
+  it("is true only when the run scored zero readable rows", () => {
+    expect(isUnreadableRun({ total_results: 12, scored_results_count: 0 })).toBe(true);
+  });
+
+  it("is false for a healthy run", () => {
+    expect(isUnreadableRun({ total_results: 12, scored_results_count: 12 })).toBe(false);
+    expect(isUnreadableRun({ total_results: 12, scored_results_count: 3 })).toBe(false);
+  });
+
+  it("is false for a pre-v4 run, which never wrote the field", () => {
+    // Absent means "scored before this existed", not "read nothing" — reading
+    // it as unreadable would blank out every historical run.
+    expect(isUnreadableRun({ total_results: 12 })).toBe(false);
+    expect(isUnreadableRun({})).toBe(false);
+    expect(isUnreadableRun(null)).toBe(false);
+    expect(isUnreadableRun(undefined)).toBe(false);
+  });
+
+  it("ignores a non-numeric value rather than guessing", () => {
+    expect(isUnreadableRun({ scored_results_count: "0" })).toBe(false);
   });
 });
