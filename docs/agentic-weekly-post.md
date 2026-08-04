@@ -181,16 +181,47 @@ repite porque la sesión semanal no recuerda haberla leído.
 
 ---
 
-## 9. Puesta en marcha — lo que hay que activar una sola vez
+## 9. Lo que sabemos de la sesión disparada, por haberlo mirado
 
-Dos cosas que **no puede hacer el agente** y que, si faltan, hacen que el lunes
-no pase nada visible:
+El 2026-08-04 se disparó la rutina a mano y se leyó su configuración real. Esto
+no son suposiciones:
 
-1. **En el repo:** Settings → Actions → General → Workflow permissions →
-   activar **"Allow GitHub Actions to create and approve pull requests"**. Sin
-   eso, el workflow de §7 falla con 403 y no hay red de seguridad. El propio
-   workflow falla con ese mensaje escrito, para que no haya que adivinarlo.
-2. **En la rutina semanal:** activar las notificaciones de fin de ejecución
-   (capa 3 de §8). Sólo aplica si la rutina crea una sesión nueva por disparo;
-   si la actual reutiliza una sesión, hay que recrearla con el mismo horario
-   (`0 7 * * 1`). Es opcional: con la capa 1 el aviso ya llega.
+**La sesión semanal NO tiene herramientas de GitHub.** Su lista de permisos es
+exactamente: `Task, Bash, Glob, Grep, Read, Edit, MultiEdit, Write,
+NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, Skill,
+Tmux, Monitor, SendUserFile, REPL`. Ni un solo `mcp__github__*`. Por eso el
+workflow de §7 no es una precaución: **es la única vía por la que el artículo
+del lunes puede llegar a ser un PR.**
+
+**Tiene `Bash`**, así que empujar la rama sí está a su alcance. La entrega
+depende de eso y del workflow, de nada más.
+
+**Las notificaciones de la rutina están en `{push: true, email: false}`.** La
+capa 2 de §8 ya está activa. El email de la rutina está apagado y es
+redundante: la capa 1 ya manda uno.
+
+### Por qué existe `.claude/settings.json`
+
+Una sesión disparada un lunes a las 07:00 **no tiene a nadie delante**. Si se
+para a pedir permiso para `git push`, se queda ahí hasta que alguien lo vea —
+y ese alguien está durmiendo. No es hipotético: el 2026-08-04, una sesión
+remota intentó cuatro veces leer la configuración de las rutinas y las cuatro
+recibió "requiere aprobación", una aprobación que nadie podía conceder.
+
+`.claude/settings.json` preaprueba lo que la sesión semanal necesita —
+`git` de lectura y de entrega, `pnpm install/test/run validate` — para que el
+trabajo no dependa de que el fundador esté despierto.
+
+Y de paso convierte en **regla ejecutable** dos prohibiciones que hasta ahora
+sólo vivían en `CLAUDE.md` como texto: la lista `deny` bloquea el force-push y
+el push directo a `main`. **No es hermética** —`--force-with-lease` u otras
+variantes no están cubiertas— así que sigue siendo la constitución la que
+manda; esto sólo atrapa las formas comunes.
+
+### Lo único que queda fuera del repo
+
+**Settings → Actions → General → Workflow permissions → "Allow GitHub Actions
+to create and approve pull requests".** Sin eso, el workflow de §7 falla con
+403 y no hay red de seguridad. El propio workflow falla con ese mensaje
+escrito, para que no haya que adivinarlo. Activado por el fundador el
+2026-08-04.

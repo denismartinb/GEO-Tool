@@ -1706,15 +1706,47 @@ no puede generar imágenes, y automatizar la publicación sin portada
 automatizaría una vez por semana el defecto que el fundador rechazó
 ("parece un icono de algo que no carga bien").
 
+**Lo que se comprobó mirando, no suponiendo.** Se leyó la configuración real de
+la rutina y se la disparó a mano dos veces el 2026-08-04:
+
+- **La sesión semanal no tiene ninguna herramienta de GitHub.** Su lista de
+  permisos es `Task, Bash, Glob, Grep, Read, Edit, MultiEdit, Write,
+  NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, Skill,
+  Tmux, Monitor, SendUserFile, REPL`. El riesgo que A1 anotó como hipótesis
+  queda **confirmado**, y el workflow deja de ser una precaución para ser la
+  única vía de entrega.
+- **Sí tiene `Bash`**, así que el push está a su alcance.
+- **Las notificaciones de la rutina ya estaban en `{push: true, email: false}`**
+  — la capa 2 del aviso llevaba activa desde A1 sin que constara en ningún
+  sitio.
+
+**Y el hallazgo que obligó a añadir `.claude/settings.json`.** El primer
+disparo manual (15:48 UTC) **no produjo nada**: dos horas después no había ni
+rama ni PR. Ese mismo día, una sesión remota pidió cuatro veces leer la
+configuración de rutinas y las cuatro recibió "requiere aprobación" — una
+aprobación que nadie podía dar. Una sesión disparada a las 07:00 de un lunes
+está en esa situación con el fundador dormido. El fichero preaprueba lo que la
+sesión necesita para entregar (`git`, `pnpm test`, `pnpm run validate`), y de
+paso convierte en regla ejecutable dos prohibiciones que hasta ahora sólo eran
+texto en `CLAUDE.md`: `deny` sobre force-push y sobre push directo a `main`.
+**No es hermética** (`--force-with-lease` y otras variantes no están cubiertas):
+atrapa las formas comunes, no sustituye a la constitución.
+
 **Pendiente / roto conocido.**
 
-- **Dos activaciones manuales, y sin ellas el lunes no pasa nada visible**
-  (`docs/agentic-weekly-post.md` §9): activar *"Allow GitHub Actions to create
-  and approve pull requests"* en el repo, y las notificaciones de la rutina.
-- **La cadena completa sigue sin haberse ejecutado de punta a punta.** El
-  primer disparo real (2026-08-10) es la primera prueba de verdad. Lo que la
-  Fase A2 cambia no es que no pueda fallar, sino que **si falla, se ve**: sin
-  PR abierto el lunes, el fallo es visible en vez de silencioso.
+- **Una activación manual fuera del repo**, ya hecha por el fundador el
+  2026-08-04: *"Allow GitHub Actions to create and approve pull requests"*. Sin
+  ella el workflow devuelve 403 y no hay red de seguridad.
+- **La causa del disparo mudo de las 15:48 no está confirmada.** La hipótesis
+  del permiso encaja con todo lo observado, pero no se pudo leer el transcript
+  de aquella sesión. Si el 10 de agosto vuelve a no producir nada, esa
+  hipótesis queda descartada y hay que buscar en otro sitio.
+- **La cadena completa sigue sin haberse ejecutado de punta a punta.** Lo que
+  la Fase A2 cambia no es que no pueda fallar, sino que **si falla, se ve**:
+  sin PR abierto el lunes, el fallo es visible en vez de silencioso. Falta
+  todavía un detector para el caso "no se produjo absolutamente nada", que el
+  workflow no cubre porque se dispara con un push que en ese escenario nunca
+  ocurre.
 
 ---
 
