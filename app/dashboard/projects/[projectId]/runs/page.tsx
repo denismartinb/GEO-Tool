@@ -335,6 +335,16 @@ export default async function RunsPage({
     scoreDeltas.set(run.id, resolveDelta(curr - prev, currComparable, prevComparable));
   }
 
+  /**
+   * Whether any run in view has a delta this layer refuses to publish — the
+   * condition for the one-line explanation under the table. Deliberately not
+   * "does any row show a dash": the very first run of a project shows one too,
+   * and "no previous scan to compare against" needs no explaining.
+   */
+  const hasWithheldDelta = Array.from(scoreDeltas.values()).some(
+    (verdict) => verdict !== null && verdict.kind !== "publish"
+  );
+
   /* Assign run number (1 = oldest) */
   const runNumberByRunId = new Map<string, number>();
   const runsOldestFirst = [...allRuns].reverse();
@@ -861,6 +871,21 @@ export default async function RunsPage({
               </tbody>
             </table>
           </div>
+          {/* One line, once, and only when there is something to explain
+              (DELTA-GUARD-1). Judged from the pilot's own capture: a column
+              with fifteen consecutive em dashes and the reason hidden in a
+              `title` reads as "something is broken" — and a `title` is
+              invisible on touch, which is where the founder actually reads
+              this. Same pattern the Overview already uses: ONE line that says
+              what unlocks the comparison, never a notice per row. */}
+          {hasWithheldDelta ? (
+            <div style={{ padding: "2px 12px 10px", fontSize: 11.5, color: "var(--ink-4)" }}>
+              Los guiones de «Δ Score» son comparaciones que no podemos afirmar: el escaneo
+              tenía muy pocas respuestas de IA, o midió algo distinto del anterior (otros
+              motores, otra metodología). Pasa el ratón por encima para ver el motivo de cada
+              uno.
+            </div>
+          ) : null}
         </div>
       )}
 
