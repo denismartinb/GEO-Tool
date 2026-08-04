@@ -4742,7 +4742,11 @@ a.notif-row:hover {
 .blog-body th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .blog-body td { color: var(--ink-2); line-height: 1.6; }
 .blog-body table strong { white-space: nowrap; }
-.blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+/* `--ink-4` (#98a0b0) da 2.63:1 sobre blanco — por debajo del 4.5:1 que pide
+   AA para texto normal. `--ink-3` da 4.76:1. La fecha, además, ahora tiene
+   más protagonismo visual que antes (34px de aire debajo), así que merece
+   leerse bien. Hallazgo del ux-pilot, PR #312. */
+.blog-post-meta { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
 .blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
 .blog-cta p { margin-bottom: 14px; }
 .blog-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
