@@ -1890,11 +1890,30 @@ cuenta *jobs*, y en cuanto hay repeticiones un job deja de ser un prompt.
   el chip significa «este motor nombró la marca en al menos una de sus
   respuestas», que es la misma regla que la fila ya usaba entre motores.
 
+- **Historial de escaneos: la columna «Prompts» pasa a «Lanzamientos».** Con 6
+  prompts y 3 repeticiones la celda decía `18/18` bajo un encabezado que ponía
+  «Prompts», que en un proyecto de 6 prompts es literalmente falso. Se renombra
+  la columna y, sólo cuando hubo repeticiones, se añade el desglose debajo
+  (*«6 prompts × 3 repeticiones»*) en vez de esconder de dónde sale el número.
+- **Las filas del historial se vuelven clicables.** Hallazgo colateral al
+  verificar lo anterior: `/runs/[runId]` estaba enlazada desde exactamente dos
+  sitios, **ambos dentro de estados vacíos** («no hay citas», «no se generaron
+  recomendaciones»). Un proyecto con datos reales no podía abrir el detalle de
+  ningún escaneo — la página llevaba huérfana quién sabe cuánto. La fecha de
+  cada fila es ahora el enlace; un `<tr>` entero no se puede envolver en un
+  ancla sin producir marcado inválido.
+
 **Roto conocido, aceptado y pendiente de la fase de superficie:** el cajón de
 evidencias muestra R filas por motor sin etiquetar a qué muestra pertenece cada
 una, y el total de citas por prompt suma las R respuestas (por tanto no es
 comparable entre escaneos con distinto R). No se toca aquí para no adelantar a
 medias un diseño que tiene su propia fase.
+
+**Sigue abierto, y no es de esta fase:** la columna **Δ Score** de ese mismo
+historial resta los dos scores en crudo (`curr - prev`), sin pasar por la
+guarda de comparabilidad de ADR 0024 que la Visión general sí aplica. Publica
+`+34 pt` sobre escaneos de 3 respuestas — exactamente el problema de
+credibilidad que motivó SAMPLING-1, en la pantalla de al lado.
 
 ---
 

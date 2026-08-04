@@ -184,7 +184,7 @@ export default async function RunsPage({
   const { supabase } = await requireUser();
 
   const RUNS_SELECT =
-    "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
+    "id, status, error_summary, total_prompts, sample_count, successful_prompts, failed_prompts, created_at, started_at, finished_at";
 
   // Reconciliation itself is decided below from the already-fetched runs
   // instead of running unconditionally on every render
@@ -630,7 +630,13 @@ export default async function RunsPage({
                   <th style={{ width: 40 }}>#</th>
                   <th>Fecha</th>
                   <th>Estado</th>
-                  <th>Prompts</th>
+                  {/* SAMPLING-1 (ADR 0030): la columna cuenta LANZAMIENTOS
+                      (`total_prompts`), y un lanzamiento sólo equivale a un
+                      prompt cuando el escaneo no repitió su set. Con 6 prompts
+                      y 3 repeticiones esta celda dice 18/18, así que el
+                      encabezado "Prompts" era literalmente falso. El desglose
+                      real va bajo cada celda que lo necesita. */}
+                  <th>Lanzamientos</th>
                   <th className="num">GEO Score</th>
                   {hasMultipleCompleted ? <th className="num">Δ Score</th> : null}
                 </tr>
@@ -640,6 +646,10 @@ export default async function RunsPage({
                   const runNum = runNumberByRunId.get(run.id) ?? 1;
                   const total = Number(run.total_prompts ?? 0);
                   const ok = Number(run.successful_prompts ?? 0);
+                  // Runs created before migration 0028 have no sample_count;
+                  // they were all one pass over their prompt set, i.e. 1.
+                  const sampleCount = Math.max(1, Number(run.sample_count ?? 1));
+                  const distinctPrompts = sampleCount > 1 ? Math.round(total / sampleCount) : total;
                   const okPct = total > 0 ? (ok / total) * 100 : 0;
                   const hasFailed = run.status === "failed" || Number(run.failed_prompts ?? 0) > 0;
                   const barColor =
@@ -667,13 +677,24 @@ export default async function RunsPage({
                           {runNum}
                         </td>
 
-                        {/* Date */}
+                        {/* Date — also the only way into the run detail page.
+                            Before this, `/runs/[runId]` was reachable from
+                            exactly two links, both of which live inside EMPTY
+                            states ("no citations", "no recommendations"), so a
+                            project with real data could not open a scan at all.
+                            A whole <tr> cannot be wrapped in an anchor without
+                            invalid markup, so the date — the row's natural
+                            identifier — carries the link. */}
                         <td>
-                          <div
-                            style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)" }}
+                          <Link
+                            href={`/dashboard/projects/${projectId}/runs/${run.id}`}
+                            // `display: block` preserves the layout the plain
+                            // <div> had: an inline anchor would shrink-wrap and
+                            // pull the timestamp line up beside it.
+                            style={{ display: "block", fontSize: 12.5, fontWeight: 650, color: "var(--ink)" }}
                           >
                             {formatDateShort(run.created_at)}
-                          </div>
+                          </Link>
                           <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 1 }}>
                             {run.finished_at
                               ? `Fin: ${formatDate(run.finished_at)}`
@@ -723,6 +744,12 @@ export default async function RunsPage({
                                   {ok}/{total}
                                 </span>
                               </div>
+                              {sampleCount > 1 && (
+                                <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}>
+                                  {distinctPrompts} {distinctPrompts === 1 ? "prompt" : "prompts"} ×{" "}
+                                  {sampleCount} repeticiones
+                                </div>
+                              )}
                               {hasFailed && Number(run.failed_prompts ?? 0) > 0 && (
                                 <div
                                   style={{ fontSize: 11, color: "var(--neg-ink)", marginTop: 2, fontWeight: 650 }}
