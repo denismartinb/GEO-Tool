@@ -573,10 +573,12 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     expect(result.details_json.brand_position).toBeUndefined();
   });
 
-  it("computes avg_position with dense ranking and penalizes not-mentioned entities with N+1", () => {
-    // N = 1 brand + 1 competitor = 2 tracked entities -> penalized position = 3
-    // Prompt 1: brand mentioned at 1, competitor not mentioned -> competitor gets 3
-    // Prompt 2: competitor mentioned at 1, brand not mentioned -> brand gets 3
+  it("averages rank over ONLY the prompts where the entity was mentioned (geo-score-v3)", () => {
+    // Prompt 1: brand at rank 1, competitor absent.
+    // Prompt 2: competitor at rank 1, brand absent.
+    // Each was mentioned exactly once, at rank 1 -> both 1.0 when mentioned.
+    // The pre-v3 figure folded the N+1 penalty in and reported 2 for both,
+    // which said nothing about rank and everything about frequency.
     const results = [
       positionRow({
         id: "1",
@@ -594,43 +596,113 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     const brandPosition = result.details_json.brand_position as {
       prompts_with_position_data: number;
       total_entities: number;
-      ranking: Array<{ name: string; is_brand: boolean; avg_position: number; mention_count: number }>;
-      brand_avg_position: number | null;
+      ranking: Array<{
+        name: string;
+        is_brand: boolean;
+        avg_position_when_mentioned: number | null;
+        mention_count: number;
+        prompt_count: number;
+        mention_rate: number;
+        avg_position_penalized: number;
+      }>;
+      brand_avg_position_when_mentioned: number | null;
+      brand_mention_count: number;
       confidence: "low" | "high";
     };
 
     expect(brandPosition.prompts_with_position_data).toBe(2);
     expect(brandPosition.total_entities).toBe(2);
-    // brand: (1 + 3) / 2 = 2; competitor: (3 + 1) / 2 = 2 -> tied, both 2
-    expect(brandPosition.brand_avg_position).toBe(2);
-    const brandEntry = brandPosition.ranking.find((e) => e.is_brand);
-    const competitorEntry = brandPosition.ranking.find((e) => !e.is_brand);
-    expect(brandEntry).toMatchObject({ name: "MiMarca", avg_position: 2, mention_count: 1 });
-    expect(competitorEntry).toMatchObject({ name: "Competitor", avg_position: 2, mention_count: 1 });
-    // confidence is high: prompts_with_position_data (2) >= total_results (2)
+    expect(brandPosition.brand_avg_position_when_mentioned).toBe(1);
+    expect(brandPosition.brand_mention_count).toBe(1);
+
+    const brandEntry = brandPosition.ranking.find((e) => e.is_brand)!;
+    const competitorEntry = brandPosition.ranking.find((e) => !e.is_brand)!;
+    expect(brandEntry).toMatchObject({
+      name: "MiMarca",
+      avg_position_when_mentioned: 1,
+      mention_count: 1,
+      prompt_count: 2,
+      mention_rate: 50
+    });
+    expect(competitorEntry).toMatchObject({ name: "Competitor", avg_position_when_mentioned: 1, mention_rate: 50 });
+
+    // The retained pre-v3 figure still shows the blend: (1 + 3) / 2 = 2 each.
+    expect(brandEntry.avg_position_penalized).toBe(2);
+    expect(competitorEntry.avg_position_penalized).toBe(2);
     expect(brandPosition.confidence).toBe("high");
   });
 
-  it("treats a non-null position with mentioned: false as not-mentioned (defensive normalization)", () => {
-    // Gemini contradiction: mentioned: false but position: 1. Must be ignored
-    // and treated as not-mentioned (penalized position N+1 = 2).
+  it("separates rank from frequency — the defect that motivated v3", () => {
+    // Every entity ranks 2nd whenever it appears. Only how OFTEN they appear
+    // differs. v3 must report an identical rank for all of them and carry the
+    // difference in mention_rate; the pre-v3 figure spread them apart and
+    // presented that spread as if it were a ranking.
+    const appearances: Record<string, number> = { MiMarca: 8, Rival1: 4, Rival2: 2, Rival3: 1 };
+    const results = Array.from({ length: 8 }, (_, i) =>
+      positionRow({
+        id: `p${i}`,
+        brand: { mentioned: i < appearances.MiMarca, position: i < appearances.MiMarca ? 2 : null },
+        competitors: ["Rival1", "Rival2", "Rival3"].map((name) => ({
+          name,
+          mentioned: i < appearances[name],
+          position: i < appearances[name] ? 2 : null
+        }))
+      })
+    );
+
+    const ranking = (
+      computeRunScoresFromResults(results, PROJECT_DOMAIN).details_json.brand_position as {
+        ranking: Array<{ avg_position_when_mentioned: number | null; mention_rate: number; avg_position_penalized: number }>;
+      }
+    ).ranking;
+
+    for (const entry of ranking) expect(entry.avg_position_when_mentioned).toBe(2);
+    expect(ranking.map((e) => e.mention_rate).sort((a, b) => b - a)).toEqual([100, 50, 25, 12.5]);
+
+    const penalized = ranking.map((e) => e.avg_position_penalized);
+    expect(Math.max(...penalized)).toBeGreaterThan(Math.min(...penalized));
+  });
+
+  it("gives a never-mentioned entity no rank at all, and sorts it last", () => {
     const results = [
       positionRow({
         id: "1",
-        brand: { mentioned: false, position: 1 },
-        competitors: []
+        brand: { mentioned: true, position: 3 },
+        competitors: [
+          { name: "Visible", mentioned: true, position: 1 },
+          { name: "Ausente", mentioned: false, position: null }
+        ]
       })
     ];
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
-    const brandPosition = result.details_json.brand_position as {
-      ranking: Array<{ name: string; avg_position: number; mention_count: number }>;
-      brand_avg_position: number | null;
+    const ranking = (
+      computeRunScoresFromResults(results, PROJECT_DOMAIN).details_json.brand_position as {
+        ranking: Array<{ name: string; avg_position_when_mentioned: number | null }>;
+      }
+    ).ranking;
+
+    expect(ranking.map((e) => e.name)).toEqual(["Visible", "MiMarca", "Ausente"]);
+    expect(ranking[2].avg_position_when_mentioned).toBeNull();
+  });
+
+  it("treats a non-null position with mentioned: false as not-mentioned (defensive normalization)", () => {
+    // Gemini contradiction: mentioned: false but position: 1. Must be ignored.
+    // Under v3 that means NO rank at all, not a penalized one.
+    const results = [positionRow({ id: "1", brand: { mentioned: false, position: 1 }, competitors: [] })];
+
+    const brandPosition = computeRunScoresFromResults(results, PROJECT_DOMAIN).details_json.brand_position as {
+      ranking: Array<{ avg_position_when_mentioned: number | null; mention_count: number; avg_position_penalized: number }>;
+      brand_avg_position_when_mentioned: number | null;
+      brand_mention_count: number;
     };
 
-    // total_entities = 1 (brand only) -> penalized position = 2
-    expect(brandPosition.brand_avg_position).toBe(2);
-    expect(brandPosition.ranking[0]).toMatchObject({ avg_position: 2, mention_count: 0 });
+    expect(brandPosition.brand_avg_position_when_mentioned).toBeNull();
+    expect(brandPosition.brand_mention_count).toBe(0);
+    expect(brandPosition.ranking[0]).toMatchObject({
+      avg_position_when_mentioned: null,
+      mention_count: 0,
+      avg_position_penalized: 2
+    });
   });
 
   it("returns confidence: low when prompts_with_position_data < total_results", () => {
@@ -668,7 +740,7 @@ describe("computeRunScoresFromResults — brand_position (docs/adr/0005)", () =>
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.details_json.formulas_used).toMatchObject({
-      brand_position: expect.stringContaining("avg_position(entity)")
+      brand_position: expect.stringContaining("avg_position_when_mentioned(entity)")
     });
     expect(
       (result.details_json.assumptions as string[]).some((a) => a.includes("brand_position"))
@@ -764,7 +836,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     };
 
     expect(geoScore).toBeDefined();
-    expect(geoScore.composite_version).toBe("geo-score-v2");
+    expect(geoScore.composite_version).toBe("geo-score-v3");
     expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
     expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
     expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
@@ -855,10 +927,10 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     ).toBe(true);
 
     const geoScore = result.details_json.geo_score as { composite_version: string; formula: string };
-    expect(geoScore.composite_version).toBe("geo-score-v2");
+    expect(geoScore.composite_version).toBe("geo-score-v3");
     expect(geoScore.formula).toContain("standing = share of voice");
     expect(geoScore.formula).toContain("standing_v1");
-    expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position-1)/total_entities)*100");
+    expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100");
   });
 
   it("standing is real share of voice, with the v1 value retained as standing_v1 (ADR 0015)", () => {
@@ -998,15 +1070,20 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
   });
 
   it("still computes prominence/standing from the well-extracted rows when one row's extraction simply never completed (extraction_version stuck at the DB default 'v1', extracted_json null) — a single transient extraction failure must not blank out an otherwise-good run", () => {
+    // MIN_RESPONSES_FOR_BAND well-extracted rows so prominence clears its own
+    // sample gate (geo-score-v3) and this test keeps measuring what it is
+    // about: the extraction_version guard, not the mention count.
     const results = [
-      trackedRow({
-        id: "1",
-        brand_mentioned: true,
-        mentioned_competitors_count: 1,
-        brand: { mentioned: true, position: 1 },
-        competitors: [{ name: "Competitor", mentioned: true, position: 2 }],
-        extraction_version: EXTRACTION_VERSION
-      }),
+      ...Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
+        trackedRow({
+          id: `ok-${i}`,
+          brand_mentioned: true,
+          mentioned_competitors_count: 1,
+          brand: { mentioned: true, position: 1 },
+          competitors: [{ name: "Competitor", mentioned: true, position: 2 }],
+          extraction_version: EXTRACTION_VERSION
+        })
+      ),
       // Simulates lib/scan/extraction.ts's failure path: extraction_version
       // stays at the schema default ('v1', migration 0001) because the
       // success branch that advances it to EXTRACTION_VERSION never ran.
@@ -1031,16 +1108,16 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
   });
 
   it("computes normally when every row's extraction_version matches the current EXTRACTION_VERSION", () => {
-    const results = [
+    const results = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
       trackedRow({
-        id: "1",
+        id: `r-${i}`,
         brand_mentioned: true,
         mentioned_competitors_count: 0,
         brand: { mentioned: true, position: 1 },
         competitors: [{ name: "Competitor", mentioned: false, position: null }],
         extraction_version: EXTRACTION_VERSION
       })
-    ];
+    );
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
@@ -1053,15 +1130,15 @@ describe("computeRunScoresFromResults — SCAN-TRACKED-SET-1 guards (docs/adr/00
     // Backward compatibility: callers that don't pass extraction_version
     // (e.g. not-yet-updated tests or call sites) get the pre-SCAN-TRACKED-SET-1
     // behavior, not a spurious drop.
-    const results = [
+    const results = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
       trackedRow({
-        id: "1",
+        id: `r-${i}`,
         brand_mentioned: true,
         brand: { mentioned: true, position: 1 },
         competitors: [{ name: "Competitor", mentioned: false, position: null }]
         // extraction_version omitted entirely
       })
-    ];
+    );
 
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
     const geoScore = result.details_json.geo_score as { components: Record<string, { value: number | null }> };
@@ -1125,12 +1202,17 @@ describe("isQuantifiableRecommendationType", () => {
 });
 
 describe("computeRecommendationPotentialPoints", () => {
-  // 10 fully-extracted, error-free rows -> confidence "medium"
+  // Fully-extracted, error-free rows -> confidence "medium"
   // (MIN_RESPONSES_FOR_BAND..19 clean results), so every scenario below
   // clears the confidence gate on its own merits and isolates the
   // counterfactual math being tested.
+  //
+  // MIN_RESPONSES_FOR_BAND of them mention the brand, which is also what
+  // prominence needs before it is scored at all (geo-score-v3) — otherwise
+  // an increase_brand_prominence counterfactual moves a component that isn't
+  // in the composite and correctly yields zero points.
   function baseline(): ReturnType<typeof row>[] {
-    const mentioned = Array.from({ length: 5 }, (_, i) =>
+    const mentioned = Array.from({ length: MIN_RESPONSES_FOR_BAND }, (_, i) =>
       row({
         brand_snapshot: "MiMarca",
         id: `mentioned-${i}`,

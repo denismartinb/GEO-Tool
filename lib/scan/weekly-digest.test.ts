@@ -193,9 +193,9 @@ describe("runWeeklyDigest", () => {
             details_json: {
               brand_position: {
                 ranking: [
-                  { name: "Acme", is_brand: true, avg_position: 1.5, mention_count: 5 },
-                  { name: "Rival", is_brand: false, avg_position: 2.0, mention_count: 8 },
-                  { name: "Other", is_brand: false, avg_position: 3.0, mention_count: 2 }
+                  { name: "Acme", is_brand: true, avg_position_when_mentioned: 1.5, mention_count: 5 },
+                  { name: "Rival", is_brand: false, avg_position_when_mentioned: 2.0, mention_count: 8 },
+                  { name: "Other", is_brand: false, avg_position_when_mentioned: 3.0, mention_count: 2 }
                 ]
               }
             }
@@ -207,9 +207,9 @@ describe("runWeeklyDigest", () => {
             details_json: {
               brand_position: {
                 ranking: [
-                  { name: "Acme", is_brand: true, avg_position: 1.2, mention_count: 6 },
-                  { name: "Rival", is_brand: false, avg_position: 2.5, mention_count: 3 },
-                  { name: "Other", is_brand: false, avg_position: 3.0, mention_count: 2 }
+                  { name: "Acme", is_brand: true, avg_position_when_mentioned: 1.2, mention_count: 6 },
+                  { name: "Rival", is_brand: false, avg_position_when_mentioned: 2.5, mention_count: 3 },
+                  { name: "Other", is_brand: false, avg_position_when_mentioned: 3.0, mention_count: 2 }
                 ]
               }
             }

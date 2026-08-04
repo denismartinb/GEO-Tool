@@ -2,7 +2,7 @@ import { isBrandDomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
 import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 
-export const SCORING_VERSION = "phase9-geo-score-v2";
+export const SCORING_VERSION = "phase9-geo-score-v3";
 
 export type ScoreInputRow = {
   id: string;
@@ -213,15 +213,46 @@ function clamp(min: number, max: number, x: number) {
 type BrandPositionRankingEntry = {
   name: string;
   is_brand: boolean;
-  avg_position: number;
+  /**
+   * Mean rank over ONLY the prompts where this entity was actually mentioned
+   * — the metric a reader can interpret without further context: 1.0 means
+   * "always listed first". Null when the entity was never mentioned.
+   *
+   * This replaces `avg_position` as the ranking signal (GEO-SCORE-POSITION-V3,
+   * founder-approved 2026-08-03). The old figure averaged the N+1 penalty for
+   * every non-mention into the same number, which made it a re-encoding of the
+   * mention rate rather than a measure of rank: given eight entities that all
+   * rank 2nd whenever they appear, it still spread them from 5.50 to 9.00,
+   * purely by how often they appeared. It also flattered the tracked brand by
+   * construction, since the prompt set is chosen around that brand — the
+   * founder's own project showed Mozilla ranked above Chrome, Safari and Edge.
+   */
+  avg_position_when_mentioned: number | null;
   mention_count: number;
+  /** Prompts this entity was evaluated over — the denominator of mention_rate. */
+  prompt_count: number;
+  /** 0..100, how often this entity appeared at all. The other half of the story. */
+  mention_rate: number;
+  /**
+   * The pre-v3 figure: mean rank with every non-mention counted as N+1.
+   * Retained for comparison across the transition only, exactly as ADR 0013
+   * kept `citation_score_any_domain` and ADR 0015 kept `standing_v1`. Nothing
+   * reads it for scoring or display.
+   */
+  avg_position_penalized: number;
 };
 
 type BrandPositionDetails = {
   prompts_with_position_data: number;
   total_entities: number;
+  /** Ordered by rank when mentioned, best first; never-mentioned entities last. */
   ranking: BrandPositionRankingEntry[];
-  brand_avg_position: number | null;
+  /** The brand's own `avg_position_when_mentioned`; null if never mentioned. */
+  brand_avg_position_when_mentioned: number | null;
+  /** How many prompts the brand was actually mentioned in — prominence's sample. */
+  brand_mention_count: number;
+  /** Pre-v3 penalized figure for the brand, comparison only. */
+  brand_avg_position_penalized: number | null;
   confidence: "low" | "high";
 };
 
@@ -230,16 +261,26 @@ type BrandPositionDetails = {
  * per-prompt extracted_json of a run's completed results.
  *
  * Per prompt: N = 1 (brand) + competitors.length tracked entities. Each
- * mentioned entity's effective position is its 1-based first-mention rank
- * (dense, no gaps, brand and competitors share one ranking); each
- * not-mentioned entity is penalized with position N+1.
+ * mentioned entity's position is its 1-based first-mention rank (dense, no
+ * gaps, brand and competitors share one ranking).
  *
- * avg_position(entity) = mean(effective_position) across prompts with valid
- * extraction data. Returns null if no prompt has valid position data.
+ * avg_position_when_mentioned(entity) = mean(position) over ONLY the prompts
+ * where that entity was mentioned; null when it was never mentioned. The
+ * pre-v3 figure — which penalized every non-mention with N+1 and therefore
+ * ordered by frequency rather than by rank — is kept per entity as
+ * avg_position_penalized for comparison across the transition
+ * (GEO-SCORE-POSITION-V3, docs/adr/0026).
+ *
+ * Returns null if no prompt has valid position data.
  */
 function computeBrandPosition(results: ScoreInputRow[], totalResults: number): BrandPositionDetails | null {
-  // entity name -> { sumPositions, mentionCount, promptCount, isBrand }
-  const accumulators = new Map<string, { sum: number; mentionCount: number; promptCount: number; isBrand: boolean }>();
+  // entity name -> accumulators. `sumWhenMentioned`/`mentionCount` feed the v3
+  // conditional rank; `sumPenalized`/`promptCount` keep the pre-v3 figure for
+  // comparison across the transition.
+  const accumulators = new Map<
+    string,
+    { sumWhenMentioned: number; sumPenalized: number; mentionCount: number; promptCount: number; isBrand: boolean }
+  >();
   let promptsWithPositionData = 0;
   let maxTotalEntities = 0;
 
@@ -261,12 +302,20 @@ function computeBrandPosition(results: ScoreInputRow[], totalResults: number): B
     ];
 
     for (const { name, isBrand, entity } of entities) {
-      const effectivePosition = entity.mentioned && entity.position !== null ? entity.position : penalizedPosition;
+      const existing =
+        accumulators.get(name) ??
+        { sumWhenMentioned: 0, sumPenalized: 0, mentionCount: 0, promptCount: 0, isBrand };
 
-      const existing = accumulators.get(name) ?? { sum: 0, mentionCount: 0, promptCount: 0, isBrand };
-      existing.sum += effectivePosition;
       existing.promptCount += 1;
-      if (entity.mentioned) existing.mentionCount += 1;
+
+      if (entity.mentioned && entity.position !== null) {
+        existing.sumWhenMentioned += entity.position;
+        existing.sumPenalized += entity.position;
+        existing.mentionCount += 1;
+      } else {
+        existing.sumPenalized += penalizedPosition;
+      }
+
       accumulators.set(name, existing);
     }
   }
@@ -274,13 +323,25 @@ function computeBrandPosition(results: ScoreInputRow[], totalResults: number): B
   if (promptsWithPositionData === 0) return null;
 
   const ranking: BrandPositionRankingEntry[] = Array.from(accumulators.entries())
-    .map(([name, { sum, mentionCount, promptCount, isBrand }]) => ({
+    .map(([name, { sumWhenMentioned, sumPenalized, mentionCount, promptCount, isBrand }]) => ({
       name,
       is_brand: isBrand,
-      avg_position: round2(sum / promptCount),
-      mention_count: mentionCount
+      avg_position_when_mentioned: mentionCount > 0 ? round2(sumWhenMentioned / mentionCount) : null,
+      mention_count: mentionCount,
+      prompt_count: promptCount,
+      mention_rate: promptCount > 0 ? round2((mentionCount / promptCount) * 100) : 0,
+      avg_position_penalized: round2(sumPenalized / promptCount)
     }))
-    .sort((a, b) => a.avg_position - b.avg_position);
+    // Best rank first (founder decision, 2026-08-03: order by position, with
+    // the appearance rate shown alongside). An entity that was never mentioned
+    // has no rank at all and sorts last rather than being given a fabricated
+    // one.
+    .sort((a, b) => {
+      if (a.avg_position_when_mentioned === null && b.avg_position_when_mentioned === null) return 0;
+      if (a.avg_position_when_mentioned === null) return 1;
+      if (b.avg_position_when_mentioned === null) return -1;
+      return a.avg_position_when_mentioned - b.avg_position_when_mentioned;
+    });
 
   const brandEntry = ranking.find((entry) => entry.is_brand);
 
@@ -288,7 +349,9 @@ function computeBrandPosition(results: ScoreInputRow[], totalResults: number): B
     prompts_with_position_data: promptsWithPositionData,
     total_entities: maxTotalEntities,
     ranking,
-    brand_avg_position: brandEntry?.avg_position ?? null,
+    brand_avg_position_when_mentioned: brandEntry?.avg_position_when_mentioned ?? null,
+    brand_mention_count: brandEntry?.mention_count ?? 0,
+    brand_avg_position_penalized: brandEntry?.avg_position_penalized ?? null,
     confidence: promptsWithPositionData < totalResults ? "low" : "high"
   };
 }
@@ -395,7 +458,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   const brandPosition = untrustedCompetitorSet ? null : computeBrandPosition(results, totalResults);
 
   // --- GEO Score composite (ADR 0008, revised by ADR 0015) ---
-  const COMPOSITE_VERSION = "geo-score-v2";
+  const COMPOSITE_VERSION = "geo-score-v3";
 
   const presenceScore = visibilityScore; // 0..100, higher better
   const authorityScore: number | null = citationScoreDataAvailable ? citationScore : null; // 0..100, higher better
@@ -428,9 +491,34 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
         ? round2((brandMentionedCount / sovDenominator) * 100)
         : null;
 
+  // --- prominence = rank WHEN MENTIONED (geo-score-v3) ---
+  // v2 fed this the penalized average, which counted every non-mention as
+  // N+1. That made prominence a second encoding of the mention rate rather
+  // than a measure of rank: presence (.40) and prominence (.25) were largely
+  // the same signal, which is why a mention-rate swing reached the composite
+  // at a measured 0.71x instead of the 0.40 presence's weight implies
+  // (docs/geo-methodology-audit-2026-07.md finding 4 — ADR 0015 fixed
+  // `standing` and left this one). Conditioning on mention makes prominence
+  // answer a question presence does not: when the AI does name you, does it
+  // put you first or fourth?
+  //
+  // Gated on the brand's own MENTION count, not the run's response count.
+  // Removing the N+1 penalty removes what used to keep a single lucky
+  // first-place mention honest: without a gate, one mention at rank 1 would
+  // read as a perfect 100. Below the floor the component is dropped and the
+  // remaining weights renormalize — the same mechanism authority and standing
+  // already use, and the same threshold Fase 0 established for every other
+  // claim on this data.
   let prominenceScore: number | null = null;
-  if (brandPosition && brandPosition.brand_avg_position !== null && brandPosition.total_entities > 0) {
-    const p = brandPosition.brand_avg_position; // 1..N+1, lower better
+  const prominenceSampleSufficient =
+    brandPosition !== null && brandPosition.brand_mention_count >= MIN_RESPONSES_FOR_BAND;
+  if (
+    brandPosition &&
+    prominenceSampleSufficient &&
+    brandPosition.brand_avg_position_when_mentioned !== null &&
+    brandPosition.total_entities > 0
+  ) {
+    const p = brandPosition.brand_avg_position_when_mentioned; // 1..N, lower better
     const n = brandPosition.total_entities;
     prominenceScore = clamp(0, 100, (1 - (p - 1) / n) * 100);
   }
@@ -475,7 +563,9 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
                 weight: 0,
                 reason: untrustedCompetitorSet
                   ? "extraction predates the current pipeline version — competitor-set reconciliation and/or mention verification may be incomplete for this run (docs/adr/0018, docs/adr/0021)"
-                  : "brand_position absent (pre-grounded-position-v1 run)"
+                  : brandPosition && !prominenceSampleSufficient
+                    ? `the brand was mentioned in ${brandPosition.brand_mention_count} prompts; rank-when-mentioned needs at least ${MIN_RESPONSES_FOR_BAND} to mean anything (geo-score-v3)`
+                    : "brand_position absent, or the brand was never mentioned in this run"
               }
             : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
         standing:
@@ -504,7 +594,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
         "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
         "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
         "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
-        "prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
+        "prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100, dropped unless the brand was mentioned in at least MIN_RESPONSES_FOR_BAND prompts (geo-score-v3); " +
         "absent components dropped and remaining weights renormalized."
     };
   }
@@ -516,8 +606,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     extractionCoverage < 1
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
       : "Extraction coverage is complete.",
-    "brand_position: position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). Not-mentioned entities are penalized with position N+1 (N = total tracked entities for that prompt). avg_position = mean(effective_position) across prompts with valid extraction; lower is better.",
-    "geo_score (geo-score-v2, ADR 0015): composite of presence (visibility_score), prominence (derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
+    "brand_position (geo-score-v3): position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). avg_position_when_mentioned = mean rank over ONLY the prompts where that entity was mentioned; lower is better and 1.0 means always listed first. Never-mentioned entities have null and sort last. mention_rate carries the other half of the story — how often the entity appeared at all. The pre-v3 figure, which averaged an N+1 penalty for every non-mention into the same number and therefore re-encoded the mention rate as if it were a rank, is retained per entity as avg_position_penalized for comparison only.",
+    "geo_score (geo-score-v3, ADR 0026): composite of presence (visibility_score), prominence (rank WHEN MENTIONED, derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
     `confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); ${MIN_RESPONSES_FOR_BAND}-19 clean results are medium; below ${MIN_RESPONSES_FOR_BAND} responses a single AI answer moves the mention rate by >=${Math.round(100 / MIN_RESPONSES_FOR_BAND)} points, so the run is low confidence regardless of extraction quality (ADR 0015 + GEO-SCORE-RELIABILITY-1).`
   ];
 
@@ -561,12 +651,14 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
         competitor_gap_score:
           "clamp(0,100, (displaced_prompts_count / total_results) * 100 ); displaced_prompts_count = prompts where mentioned_competitors_count > 0 AND brand_mentioned is false (docs/adr/0011)",
         brand_position:
-          "avg_position(entity) = mean(position if mentioned else N+1, over prompts with valid extraction); N = total tracked entities for that prompt",
+          "avg_position_when_mentioned(entity) = mean(position over ONLY the prompts where that entity was mentioned), null when never mentioned (geo-score-v3, docs/adr/0026); " +
+          "mention_rate(entity) = mention_count / prompt_count * 100, reported alongside so a rank is never read without knowing how often it was earned; " +
+          "avg_position_penalized(entity) = mean(position if mentioned else N+1) with N = total tracked entities for that prompt — the pre-v3 figure, retained for comparison across the transition and read by nothing",
         geo_score:
           "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
           "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
           "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
-          "prominence = (1 - (brand_avg_position-1)/total_entities)*100; " +
+          "prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100, dropped unless the brand was mentioned in at least MIN_RESPONSES_FOR_BAND prompts (geo-score-v3); " +
           "absent components dropped and remaining weights renormalized."
       },
       assumptions,
