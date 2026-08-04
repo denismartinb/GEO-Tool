@@ -5781,6 +5781,27 @@ select.set-field {
 .wa2-auditbar-notice { color: var(--ink-3); }
 .wa2-auditbar-error { color: var(--neg-ink); }
 
+/* Fase 3b — copyable fixes inside a page's row in the Páginas tab. */
+.wa2-fixes { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.wa2-fix { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.wa2-fix-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-bottom: 1px solid var(--line-soft);
+}
+.wa2-fix-where { font-size: 11px; color: var(--ink-3); line-height: 1.4; min-width: 0; }
+.wa2-fix-copy { flex: 0 0 auto; font-size: 12px; padding: 4px 10px; }
+/* overflow-x on the block itself: a JSON-LD line is easily wider than a
+   375px viewport, and the console shell clips horizontally rather than
+   scrolling (see journey.ts's SHELL_CLIPPING_CLASSES) — without this the
+   snippet would simply be unreachable on mobile. */
+.wa2-fix-code {
+  margin: 0; padding: 10px; overflow-x: auto;
+  font-family: var(--mono); font-size: 11px; line-height: 1.55;
+  color: var(--ink-2); background: var(--surface-2);
+  white-space: pre; tab-size: 2;
+}
+.wa2-fix-note { margin: 0; padding: 8px 10px; font-size: 10.5px; color: var(--ink-4); border-top: 1px solid var(--line-soft); }
+
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
 @media (min-width: 900px) {

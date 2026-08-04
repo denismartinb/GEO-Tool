@@ -25,12 +25,15 @@ import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
 import { buildPageCheckGuidance } from "@/lib/web-audit/page-checks";
 import {
   buildTechnicalIssuesReport,
+  failingPageChecks,
   type TechnicalIssue,
   type TechnicalIssuesReport,
   type TechnicalPassingCheck,
   type IssueCheckKey,
   type IssueSeverity
 } from "@/lib/web-audit/issues";
+import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
+import { PageFixBlock } from "./page-fix-block";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -426,7 +429,7 @@ function SubScoreTile({
   );
 }
 
-function PageAuditRow({ page }: { page: PageAuditEntry }) {
+function PageAuditRow({ page, fixContext }: { page: PageAuditEntry; fixContext: PageFixContext }) {
   let path: string;
   try {
     path = new URL(page.url).pathname || "/";
@@ -449,6 +452,11 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
 
   const { check } = page;
   const guidance = buildPageCheckGuidance(check);
+  // `failingPageChecks` (issues.ts) rather than re-deriving the predicates
+  // here: PAGE_CHECKS stays the one definition of what "failing" means, and
+  // checks never measured on this page are excluded instead of being shown
+  // as broken (legacy pre-R3 snapshots).
+  const fixes = buildPageFixes(failingPageChecks(check), page, fixContext);
   // Collapsed by default (WEB-AUDIT-R1): 10 pages × up to 7 guidance bullets
   // was the page's biggest wall of text. The summary row keeps the verdict
   // (score + failing-check count); the how-to-fix detail is one tap away.
@@ -546,6 +554,20 @@ function PageAuditRow({ page }: { page: PageAuditEntry }) {
               <li key={i} style={{ display: "list-item" }}>{line}</li>
             ))}
           </ul>
+        )}
+        {/* Fase 3b: the copyable fix for each failing check that HAS one.
+            Founder review 2026-08-03: "en páginas está muy bien, pero no
+            damos una solución para mejorar la puntuación de cada página" —
+            the prose above says what to change, these say it in code you can
+            paste. Deliberately after the guidance, not instead of it: several
+            checks (h1, intro, listas, extensión) are edits to the page's own
+            content and correctly produce no snippet at all. */}
+        {fixes.length > 0 && (
+          <div className="wa2-fixes">
+            {fixes.map((fix) => (
+              <PageFixBlock key={fix.check} fix={fix} />
+            ))}
+          </div>
         )}
       </div>
     </details>
@@ -856,6 +878,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     ? buildWebAuditSummary({ coverage: latestMap, citationWindowCandidates, projectDomain: project.domain })
     : null;
   const trend = buildCoverageTrend({ maps, resultsByScanId, projectDomain: project.domain });
+
+  // Brand + domain for the copyable fixes (fase 3b). `project.domain` is
+  // already the normalized host used everywhere else on this page.
+  const fixContext: PageFixContext = { projectName: project.name, domainNormalized: project.domain };
 
   const auditedScan = latestMap ? maps.find((m) => m.scanId === latestMap.scanId) : null;
   const auditedScanDate = auditedScan?.scanId === latestRunRow?.id ? latestRunRow?.finished_at ?? latestRunRow?.created_at : null;
@@ -1524,7 +1550,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   </div>
                   <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
                     {technicalSnapshot.pages.map((page, i) => (
-                      <PageAuditRow key={`${page.url}-${i}`} page={page} />
+                      <PageAuditRow key={`${page.url}-${i}`} page={page} fixContext={fixContext} />
                     ))}
                   </div>
                 </div>
