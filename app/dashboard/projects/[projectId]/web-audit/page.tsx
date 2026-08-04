@@ -347,33 +347,6 @@ function ScoreRing({ score, label }: { score: number; label: string }) {
   );
 }
 
-/**
- * Tiny trend sparkline for a hero sub-score tile (WEB-AUDIT-R4). Values are
- * the same real per-audit percentages the Evolución chart plots — null points
- * (an audit where that rate couldn't be computed) are skipped, exactly like
- * TrendChart's pathFor. Rendered only with ≥2 real points; anything less has
- * no trend to show.
- */
-function Sparkline({ values, color }: { values: Array<number | null>; color: string }) {
-  const W = 64;
-  const H = 22;
-  const pad = 2;
-  const points = values
-    .map((v, i) => ({ v, i }))
-    .filter((p): p is { v: number; i: number } => p.v !== null);
-  if (points.length < 2) return null;
-  const stepX = values.length > 1 ? (W - pad * 2) / (values.length - 1) : 0;
-  const yFor = (pct: number) => H - pad - (pct / 100) * (H - pad * 2);
-  const d = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${pad + p.i * stepX} ${yFor(p.v)}`).join(" ");
-  const last = points[points.length - 1];
-  return (
-    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} aria-hidden="true" style={{ flexShrink: 0 }}>
-      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={pad + last.i * stepX} cy={yFor(last.v)} r={2.5} fill={color} />
-    </svg>
-  );
-}
-
 /** 4px progress bar under a hero tile / history row (WEB-AUDIT-R4). */
 function MiniBar({ pct, color }: { pct: number; color: string }) {
   return (
@@ -389,8 +362,6 @@ function SubScoreTile({
   hint,
   delta,
   pct,
-  sparkValues,
-  sparkColor
 }: {
   label: string;
   value: string;
@@ -399,9 +370,6 @@ function SubScoreTile({
   delta: number | null;
   /** 0-100 fill for the tile's progress bar; null → no bar (signal never computed). */
   pct: number | null;
-  /** Per-audit history for the sparkline — same series the Evolución chart plots. */
-  sparkValues?: Array<number | null>;
-  sparkColor?: string;
 }) {
   return (
     <div style={{ padding: "9px 11px", background: "var(--surface-2)", borderRadius: 10, minWidth: 0 }}>
@@ -409,7 +377,6 @@ function SubScoreTile({
         <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)", flex: 1, minWidth: 0 }}>
           {label}
         </div>
-        {sparkValues && <Sparkline values={sparkValues} color={sparkColor ?? "var(--accent)"} />}
       </div>
       <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-.01em", marginTop: 2, fontVariantNumeric: "tabular-nums" }}>
         {value}
@@ -1140,23 +1107,18 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   </div>
                 )}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
-                  {/* Sparklines plot the same real per-audit series as the
-                      Evolución chart, in the same series colors (accent =
-                      cobertura, pos = implementación). The técnica tile has
-                      no history loaded (only the latest snapshot) — no
-                      sparkline rather than a fake flat line.
-                      Hidden below 4 audits (founder review 2026-08-03: "que
-                      eso solo aparezca a partir del cuarto escaneo, porque si
-                      no quedan líneas muy raras") — two or three points draw a
-                      single kink that reads as a trend without being one. */}
+                  {/* Sin sparklines. Se probaron con 4 auditorías reales
+                      (founder review 2026-08-04) y a 64×22px no se leen: "no
+                      aportan mucho porque se ven muy pequeñas". Es además
+                      información duplicada — el gráfico de Evolución, justo
+                      debajo, dibuja exactamente la misma serie con ejes y
+                      fechas. */}
                   <SubScoreTile
                     label="Contenido"
                     value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
                     hint="Temas con contenido propio verificado"
                     delta={coverageDelta}
                     pct={summary.coveragePct}
-                    sparkValues={trend.length >= 4 ? trend.map((p) => p.coveragePct) : undefined}
-                    sparkColor="var(--accent)"
                   />
                   <SubScoreTile
                     label="Implementado"
@@ -1168,8 +1130,6 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     }
                     delta={surfacingDelta}
                     pct={summary.surfacingPct}
-                    sparkValues={trend.length >= 4 ? trend.map((p) => p.surfacingPct) : undefined}
-                    sparkColor="var(--pos)"
                   />
                   <SubScoreTile
                     label="Salud técnica"
