@@ -1,6 +1,6 @@
 {
   "regions": ["dub1"],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- . ':(exclude)docs/' ':(exclude).claude/' ':(exclude)agents/' ':(exclude)CLAUDE.md' ':(exclude)README.md' ':(exclude)PRD.md' ':(exclude)TECHNICAL_BRIEF.md' ':(exclude)UX_BRIEF.md' 2>/dev/null; test $? -eq 0",
+  "ignoreCommand": "bash scripts/vercel-should-build.sh",
   "crons": [
     {
       "path": "/api/cron/weekly-scans",

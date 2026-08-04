@@ -327,20 +327,32 @@ for the payment-failed email to fire.
   trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
   If the Supabase project is ever migrated to a different region, update this
   value to match.
-- **ignoreCommand**: `vercel.json` skips the build when a commit touched
-  nothing outside internal documentation (`docs/`, `.claude/`, `agents/` and
-  the root `.md` files). Exit `0` means skip, exit `1` means build — so the
-  command ends in `test $? -eq 0`, which collapses every git error (exit `128`
-  when `HEAD^` does not exist on a root commit or a too-shallow clone) to
-  "build". **When in doubt, deploy**: Vercel reading a git failure as `0`
-  would turn it into a silently missing deployment.
-  - **The exclusions are literal paths, never patterns, and that is
+- **ignoreCommand**: `vercel.json` runs `scripts/vercel-should-build.sh`, which
+  skips the build when a push touched nothing outside internal documentation
+  (`docs/`, `.claude/`, `.github/`, `tests/`, `agents/` and the root `.md`
+  files). Exit `0` means skip, any other code means build, and every uncertain
+  path in the script ends in "build". **When in doubt, deploy**: Vercel reading
+  a failure as `0` would turn it into a silently missing deployment.
+  - **It compares against the last *successful deployment* of the branch**
+    (`VERCEL_GIT_PREVIOUS_SHA`), not `HEAD^`. A push of three commits is one
+    deployment, so `HEAD^` would only see the last of them and a branch whose
+    final commit is documentation could skip a build its earlier commits
+    needed — leaving the preview on stale code, and the pilot judging a screen
+    that is not the commit's. That limitation was called out as follow-up work
+    when the inline command shipped (PR #323) and is what BUILD-BUDGET-1
+    Fase 1 closed (PR #325). Vercel clones shallow, so the script deepens the
+    clone to reach that SHA and builds if it cannot.
+  - **Production is never skipped**, whatever changed. A production deploy that
+    silently does not happen is a much worse trade than one wasted build — see
+    the stale-production incident below.
+  - **The safe list is literal directories, never patterns, and that is
     load-bearing.** Every blog article in this product is
     `app/blog/<slug>/page.mdx`, so the obvious first draft — excluding `*.md`,
     or its one-character neighbour `*.mdx` — would have stopped publishing new
-    articles with every check still green. `vercel-ignore-command.test.ts`
-    forbids wildcards and forbids excluding anything under `app/`, `lib/`,
-    `components/`, `public/` or `supabase/`.
+    articles with every check still green. `scripts/vercel-should-build.test.ts`
+    pins both directions of the exit contract and asserts that a change under
+    `app/`, `lib/`, `components/`, `public/` or `supabase/` — including a
+    nested `.mdx` — always builds.
   - **What it does not do, measured rather than assumed:** it does nothing for
     the Hobby plan's `api-deployments-free-per-day` limit. Tested directly on
     2026-08-04 — commit `da8736a` touches only `docs/`, so the rule should
@@ -349,10 +361,17 @@ for the payment-failed email to fire.
     upstream of the build step where `ignoreCommand` runs**, so a build this
     rule would have skipped never gets far enough to skip. This saves build
     minutes and nothing else.
-  - **Consequence to know about:** a documentation-only commit on the
-    production branch does not redeploy production. That is correct — nothing
-    the app serves changed — but the previous deployment stays live.
-- **Deployment rate limit (Hobby).** `api-deployments-free-per-day` rejects
+  - **What it does not buy, and this was measured:** it does not free a slot
+    against a daily deployment cap. Tested 2026-08-04 — a `docs/`-only commit
+    the rule should have skipped was rejected with the same rate-limit error as
+    every other push, because **the cap is applied when the deployment is
+    created, upstream of the build step where `ignoreCommand` runs**. What it
+    saves is build minutes and the `ux-pilot` run that a successful preview
+    deployment would have triggered, not deployments.
+- **Deployment rate limit (Hobby — historical since 2026-08-04).** The account
+  moved to **Vercel Pro on 2026-08-04**, so this no longer binds; it is kept
+  because the failure mode is unmistakable if it ever returns.
+  `api-deployments-free-per-day` rejects
   every new deployment for 24 hours once the account passes 100. Pushing again
   does not clear it: it consumes another attempt against the same counter.
   Observed 2026-08-04 — a retrigger commit failed identically, minutes after
