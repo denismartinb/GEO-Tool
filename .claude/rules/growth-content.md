@@ -45,7 +45,7 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 ## Si esto lo escribe la sesión semanal automática
 
 Su encargo completo está en `docs/agentic-weekly-post.md` — leerlo antes de
-seguir. Dos invariantes que no son cosméticos (log §18):
+seguir. Dos invariantes que no son cosméticos (log §19):
 
 - **La rama se llama `claude/weekly-post/<slug>`.** Fuera de ese prefijo, el
   workflow que garantiza que el PR se abra (`weekly-post-pr.yml`) no dispara, y

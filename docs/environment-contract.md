@@ -122,6 +122,29 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+### Auditoría web automática tras cada escaneo (AUDIT-AFTER-SCAN-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `AUTO_WEB_AUDIT_ENABLED` | No (defaults to **enabled**) | Vercel | `false` to disable; anything else (including unset) leaves it on |
+| `OPS_ALERT_EMAIL` | No (alerts are silently skipped when unset) | Vercel | operator inbox, e.g. `alerts@genscore.es` |
+
+Unlike every other kill switch in this document, this one defaults to **on**:
+the whole point of the phase is that the audit happens without anyone asking,
+and a feature that needs a variable set in three environments before it does
+anything is a feature that gets found broken later. `false` is the escape
+hatch for cost — each automatic audit spends real Gemini grounding calls.
+
+Reuses `CRON_SECRET` for both entry points: Vercel's daily cron (`GET
+/api/cron/run-audit`, `0 7 * * *` — an hour after the scan sweep, so the
+day's automatic scans have already queued their audits) and the worker's own
+`POST` self-chain. No new secret.
+
+`OPS_ALERT_EMAIL` receives the failure alert when a queued audit exhausts its
+six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
+customer: the audit is automatic, so the user never asked for it and cannot
+act on the backend failure. Requires `RESEND_API_KEY` like every other email.
+
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
 | Variable | Required | Where | Expected shape |
