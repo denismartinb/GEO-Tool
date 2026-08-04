@@ -1170,10 +1170,24 @@ describe("getEffectiveGeoScore", () => {
     expect(score).toBe(42);
   });
 
-  it("defaults to 0 when both geo_score and visibility_score are absent", () => {
-    const score = getEffectiveGeoScore({ visibility_score: null, details_json: null });
+  it("returns null, not 0, when there is no score at all — 0 is a score, absent is not", () => {
+    expect(getEffectiveGeoScore({ visibility_score: null, details_json: null })).toBeNull();
+  });
 
-    expect(score).toBe(0);
+  it("returns null for a run that read nothing, instead of its non-null 0 column (docs/adr/0027)", () => {
+    // The persisted visibility_score is 0 here only because the column cannot
+    // be null — not because the brand scored zero. Falling back to it renders
+    // a fabricated 0 GEO Score for a scan whose extraction failed wholesale.
+    const score = getEffectiveGeoScore({
+      visibility_score: 0,
+      details_json: { total_results: 12, scored_results_count: 0 }
+    });
+    expect(score).toBeNull();
+  });
+
+  it("still falls back to visibility_score for pre-composite runs, which is what that fallback is for", () => {
+    // No scored_results_count at all => scored before v4 => legacy behaviour.
+    expect(getEffectiveGeoScore({ visibility_score: 42, details_json: { total_results: 10 } })).toBe(42);
   });
 });
 
@@ -1530,14 +1544,21 @@ describe("computeRunScoresFromResults — a technical failure is not a finding (
     expect(result.visibility_score).toBe(100);
   });
 
-  it("drops presence entirely rather than scoring 0 when nothing could be read", () => {
+  it("publishes no composite at all when nothing could be read, and no consumer invents one", () => {
     const result = computeRunScoresFromResults([failed(), failed()], PROJECT_DOMAIN);
-    const geo = result.details_json.geo_score as { inputs_used?: string[] } | undefined;
 
     expect(result.details_json.scored_results_count).toBe(0);
-    // A run that read nothing has no mention rate. Publishing 0% would be the
-    // same fabrication ADR 0024 removed from the delta.
-    expect(geo?.inputs_used ?? []).not.toContain("presence");
+    // Every component is unavailable, so there is no composite. Asserting on
+    // `geo_score?.inputs_used` alone would pass vacuously here — the whole
+    // object is absent — which is exactly how the fabricated-zero path below
+    // survived review the first time (QA, PR #313).
+    expect(result.details_json.geo_score).toBeUndefined();
+
+    // And the fallback consumers use must refuse too, rather than reading the
+    // non-null visibility_score column as a real 0.
+    expect(
+      getEffectiveGeoScore({ visibility_score: result.visibility_score, details_json: result.details_json })
+    ).toBeNull();
   });
 
   it("leaves a run with no failures scoring exactly as before", () => {

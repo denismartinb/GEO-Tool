@@ -930,8 +930,31 @@ export function computeJointPotentialPoints(
 export function getEffectiveGeoScore(row: {
   visibility_score: number | null;
   details_json: unknown;
-}): number {
+}): number | null {
   const details =
-    row.details_json && typeof row.details_json === "object" ? (row.details_json as { geo_score?: { score?: number } }) : {};
-  return details.geo_score?.score ?? row.visibility_score ?? 0;
+    row.details_json && typeof row.details_json === "object"
+      ? (row.details_json as { geo_score?: { score?: number }; scored_results_count?: unknown })
+      : {};
+
+  if (typeof details.geo_score?.score === "number") return details.geo_score.score;
+
+  /* No composite. Two very different reasons, and they must not share a
+   * fallback:
+   *
+   *  - Scored before geo-score-v1 existed (ADR 0008, no backfill). The legacy
+   *    visibility_score IS that run's real number — the case this fallback was
+   *    written for.
+   *  - Every row was unscorable, so no component could be computed at all
+   *    (geo-score-v4, docs/adr/0027). The persisted visibility_score is 0 there
+   *    only because the column is non-null, NOT because the brand scored zero.
+   *    Returning it renders a fabricated 0 for a run that read nothing — the
+   *    exact fabrication this ADR exists to remove, arriving through the back
+   *    door. Caught by QA on PR #313 before it shipped.
+   *
+   * `scored_results_count` only exists from v4 onward, so its presence is also
+   * what distinguishes the two.
+   */
+  if (typeof details.scored_results_count === "number" && details.scored_results_count === 0) return null;
+
+  return row.visibility_score ?? null;
 }

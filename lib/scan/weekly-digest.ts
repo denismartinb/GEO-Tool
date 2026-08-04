@@ -151,6 +151,13 @@ export async function runWeeklyDigest({
     const [currentRow, previousRow] = recentScores as RunScoreRow[];
     const currentScore = getEffectiveGeoScore(currentRow);
     const previousScore = getEffectiveGeoScore(previousRow);
+    // No score means the run read nothing, not that the brand scored zero
+    // (geo-score-v4, docs/adr/0027). A digest is a weekly summary, not a place
+    // to invent a number for a scan that failed.
+    if (currentScore === null || previousScore === null) {
+      skipped += 1;
+      continue;
+    }
     const subScores = getSubScores(currentRow);
     const topMover = getTopCompetitorMover(currentRow, previousRow);
 

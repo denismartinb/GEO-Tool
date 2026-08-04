@@ -162,7 +162,7 @@ export default async function CompetitorsPage({
       ? await Promise.all([
           supabase
             .from("scan_prompt_results")
-            .select("extracted_json, run_id, provider, prompt_id, prompt_text_snapshot")
+            .select("extracted_json, extraction_error, run_id, provider, prompt_id, prompt_text_snapshot")
             .eq("project_id", projectId)
             .eq("status", "completed")
             .in("run_id", completedRunIds),
@@ -174,7 +174,15 @@ export default async function CompetitorsPage({
         ])
       : [{ data: [] }, { data: [] }];
 
-  const results = allResults ?? [];
+  /* Same rule as the scoring and the Overview (geo-score-v4, docs/adr/0027):
+   * a row whose extraction failed carries no evidence either way. Left in the
+   * denominator it converts a provider timeout into "the AI didn't mention
+   * you" — and this screen is the one whose disagreement with the Overview
+   * started the whole phase, so it must not be the one still doing it.
+   * (QA caught this file left un-swept on PR #313.) */
+  const results = (allResults ?? []).filter(
+    (r) => Boolean(r.extracted_json && typeof r.extracted_json === "object") && !r.extraction_error
+  );
 
   /* 3. Compute SoV correctly:
        SoV(X) = mentions(X) / (brandMentions + Σ competitorMentions) * 100

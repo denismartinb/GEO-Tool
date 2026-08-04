@@ -297,6 +297,8 @@ export default async function ProjectDetailPage({
     latestScore?.details_json && typeof latestScore.details_json === "object"
       ? (latestScore.details_json as {
           total_results?: number;
+          /** v4 onward: rows that actually produced usable evidence. */
+          scored_results_count?: number;
           brand_mentioned_count?: number;
           brand_position?: BrandPositionDetails;
           geo_score?: GeoScoreDetails;
@@ -314,8 +316,17 @@ export default async function ProjectDetailPage({
   /* ---- composite GEO score (ADR 0008) ---- */
   const geoScore = scoreDetails.geo_score;
   // Fallback to legacy visibility_score for runs scored before geo-score-v1
-  // existed (no backfill, per ADR 0008).
-  const gaugeScore = Math.round(geoScore?.score ?? visibilityScore);
+  // existed (no backfill, per ADR 0008) — but NOT when the composite is absent
+  // because every row was unscorable (geo-score-v4, docs/adr/0027). The
+  // persisted visibility_score is 0 there only because the column is non-null,
+  // and rendering it would show a 0 GEO Score for a run that simply read
+  // nothing: the very fabrication the phase removes, arriving through the back
+  // door. Caught by QA before it shipped.
+  const readNothing =
+    typeof scoreDetails.scored_results_count === "number" && scoreDetails.scored_results_count === 0;
+  const gaugeScoreValue: number | null =
+    typeof geoScore?.score === "number" ? geoScore.score : readNothing ? null : visibilityScore;
+  const gaugeScore = Math.round(gaugeScoreValue ?? 0);
 
   /* Same rule the scoring uses (geo-score-v4, docs/adr/0027): a row whose
    * extraction failed carries no evidence either way, so it is excluded from
@@ -368,7 +379,13 @@ export default async function ProjectDetailPage({
   // GEO Score history for the gauge (audit phase B, finding 10). Pre-composite
   // runs fall back to visibility_score inside getEffectiveGeoScore — the same
   // fallback the gauge itself applies (ADR 0008, no backfill).
-  const geoTrend = trendHistory.map((r) => Math.round(getEffectiveGeoScore(r)));
+  // Runs that read nothing have no score and are left OUT of the trend rather
+  // than plotted at zero (geo-score-v4, docs/adr/0027) — a dip to 0 caused by
+  // an extraction failure would read as a collapse in visibility.
+  const geoTrend = trendHistory
+    .map((r) => getEffectiveGeoScore(r))
+    .filter((v): v is number => v !== null)
+    .map((v) => Math.round(v));
 
   const prevScore = trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;

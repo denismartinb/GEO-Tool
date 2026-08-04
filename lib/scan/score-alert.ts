@@ -83,6 +83,12 @@ export async function checkAndSendScoreDropAlert({
     const previousScore = getEffectiveGeoScore(previous);
     const currentScore = getEffectiveGeoScore(currentRow);
 
+    // A run that could not be read has no score (geo-score-v4, docs/adr/0027).
+    // Treating that as a drop would email the founder "your visibility fell 40
+    // points" because an extraction timed out — the loudest possible version of
+    // charging a technical failure to the brand.
+    if (baselineScore === null || previousScore === null || currentScore === null) return;
+
     const sustainedDrop =
       baselineScore - previousScore >= SCORE_DROP_ALERT_THRESHOLD &&
       baselineScore - currentScore >= SCORE_DROP_ALERT_THRESHOLD;
