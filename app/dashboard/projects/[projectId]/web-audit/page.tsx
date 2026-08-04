@@ -1000,9 +1000,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           piggybacked technical audit (WEB-AUDIT-R2), so this is genuinely
           the single button that "audita todo". */}
       {canAudit && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
-          <RunAuditButton canAudit={canAudit} />
-        </div>
+        <RunAuditButton
+          canAudit={canAudit}
+          // `auditedScanDate` is only non-null when the stored audit was built
+          // from the newest scan, which is exactly "al día". Without a summary
+          // there is nothing audited yet — null, not false.
+          upToDate={summary ? auditedScanDate !== null : null}
+        />
       )}
 
       {/* A campaign can be left "running" server-side while the account's
@@ -1103,7 +1107,14 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0 }}>
                 <div className="wa2-diag-title" style={{ display: "flex", alignItems: "center", fontSize: 13.5, fontWeight: 750 }}>
                   Diagnóstico general
-                  <InfoTip text="Media simple de tus señales disponibles: cobertura de temas, temas implementados (citados por la IA) y salud técnica. Cada componente se muestra al lado — un componente sin auditar no cuenta como 0, simplemente no entra en la media." />
+                  {/* Qué te aporta, no cómo se calcula (founder review
+                      2026-08-04). La versión anterior describía la aritmética
+                      —"media simple de tus señales disponibles… no cuenta
+                      como 0"— que es exactamente lo que un usuario no
+                      necesita saber para decidir qué hacer, y además ocupaba
+                      once líneas que tapaban el propio gauge. El desglose
+                      sigue visible al lado, en los tres tiles. */}
+                  <InfoTip text="Lo preparada que está tu web para que la IA te cite como fuente. Sube al cubrir los temas que te importan, al conseguir que la IA te mencione en ellos y al dejar tus páginas legibles para los motores." />
                 </div>
                 <ScoreGauge score={globalScore.score} />
               </div>
@@ -1126,7 +1137,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                   <SubScoreTile
                     label="Contenido"
                     value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
-                    hint="temas con contenido propio verificado"
+                    hint="Temas con contenido propio verificado"
                     delta={coverageDelta}
                     pct={summary.coveragePct}
                     sparkValues={trend.length >= 4 ? trend.map((p) => p.coveragePct) : undefined}
@@ -1137,8 +1148,8 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     value={summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
                     hint={
                       summary.surfacingPct !== null && grouped.invisible.length > 0
-                        ? `palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
-                        : "de tus temas con contenido, cuántos cita la IA"
+                        ? `Palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
+                        : "De tus temas con contenido, cuántos cita la IA"
                     }
                     delta={surfacingDelta}
                     pct={summary.surfacingPct}
@@ -1156,8 +1167,8 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     }
                     hint={
                       technicalSnapshot
-                        ? `media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
-                        : "lánzala desde la pestaña Salud técnica"
+                        ? `Media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
+                        : "Se audita al pulsar «Auditar ahora»"
                     }
                     delta={null}
                     pct={technicalSnapshot?.readiness_score ?? null}
@@ -1172,11 +1183,16 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               y lo pondría precisamente debajo de la primera caja"). Al vivir
               fuera del sistema de pestañas, la lectura pasa a ser: dónde
               estás (hero) → hacia dónde vas (esto) → qué hacer (pestañas).
-              El bloque entero sigue desapareciendo con menos de dos
-              auditorías (founder-approved 2026-08-02) — nada de placeholder
-              "necesitas más datos". El Historial en tabla se queda en
-              Problemas: es detalle de consulta, no cabecera. */}
-          {trend.length >= 2 && (
+              Umbral subido de 2 a 4 auditorías (founder-approved 2026-08-04,
+              tras verlo en el preview): con dos puntos el gráfico dibuja una
+              recta que se lee como tendencia sin serlo — el mismo criterio
+              que ya aplican las sparklines de los tiles, y que pesa más aquí
+              porque este bloque pasó a la posición más visible de la página.
+              Sigue sin haber placeholder "necesitas más datos": desaparece
+              entero. El Historial en tabla se queda en Problemas con umbral
+              2 — es una tabla, no una línea: dos filas se leen perfectamente
+              y son justo lo que da contexto mientras el gráfico no aparece. */}
+          {trend.length >= 4 && (
             <div className="card" style={{ marginTop: 12 }}>
               <div style={{ padding: "13px 16px 0" }}>
                 <div style={{ fontSize: 13.5, fontWeight: 750 }}>Evolución entre auditorías</div>

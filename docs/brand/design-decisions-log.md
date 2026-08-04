@@ -1331,6 +1331,44 @@ página". Hoy hay guía en prosa por página, pero no el **arreglo copiable**
 (bloque JSON-LD, meta description, etc.) — que es exactamente la fase 3b del
 Task Intake ya aprobado, no un retoque de esta ronda.
 
+**Cuarta ronda (2026-08-04).** Validados en preview el título del gauge, la
+media luna, la desambiguación 43-vs-45, la frase corta y la regla de las
+sparklines. Cambios nuevos:
+
+1. **Evolución sube su umbral de 2 a 4 auditorías.** Propuesto tras mirar el
+   preview y aceptado por el fundador: con dos puntos el gráfico dibuja una
+   recta que se lee como tendencia sin serlo — mismo criterio que las
+   sparklines, y pesa más aquí porque el bloque acababa de pasar a la
+   posición más visible. El **Historial** en tabla se queda en 2: es una
+   tabla, no una línea, y es justo lo que da contexto mientras el gráfico no
+   aparece.
+2. **Tooltip del gauge reescrito**: explicaba la aritmética ("media simple de
+   tus señales disponibles… no cuenta como 0"), que es lo que el usuario no
+   necesita para decidir qué hacer, y ocupaba once líneas que tapaban el
+   propio gauge. Ahora dice qué aporta y por qué importa para GEO. El
+   desglose sigue visible al lado, en los tres tiles.
+3. **Las pistas de los tiles empiezan por mayúscula.** De paso se corrigió
+   una que había quedado obsoleta ("lánzala desde la pestaña Salud técnica"
+   — esa pestaña ya no existe; ahora dice que se audita con «Auditar ahora»).
+4. **UX del botón «Auditar ahora» rehecha** (rediseño pedido explícitamente).
+   El problema no era sólo estético: el botón flotaba solo, sin anclaje, y
+   todo lo que tenía que decir lo decía DESPUÉS del clic, como párrafo
+   alineado a la derecha; el caso "ya estaba fresca" ocupaba dos frases en
+   tres líneas y su icono de check se rompía a su propia línea. Es decir, la
+   única información que te habría ahorrado el clic sólo se alcanzaba
+   haciendo clic.
+
+   Modelo nuevo: **la frescura es un estado que se ve antes de actuar, no un
+   recibo que se imprime después.** Barra de dos huecos (estado a la
+   izquierda, acción a la derecha) con cuatro estados: *sin auditar* (botón
+   primario, sin pastilla), *escaneo sin auditar* (pastilla ámbar + botón
+   primario: hay datos nuevos que traer), *al día* (pastilla verde + botón
+   `outline` "Volver a auditar" — se puede pulsar, pero el botón lo
+   desaconseja retrocediendo en vez de rechazarte después) y *auditando*
+   (spinner + conteo de temas). Las confirmaciones bajan a dos o tres
+   palabras y se renderizan en flex, así el icono no puede volver a
+   separarse de su frase.
+
 ---
 
 ## Cómo mantener este documento

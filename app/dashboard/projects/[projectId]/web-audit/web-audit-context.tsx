@@ -142,11 +142,12 @@ export function WebAuditProvider({
         setProgress({ covered: result.coverage.topics.length, total: result.totalPrompts });
 
         if (result.status === "completed") {
-          setNotice(
-            result.cached
-              ? "Ya tenías la auditoría más reciente de este escaneo. Vuelve a lanzar un escaneo para auditar datos nuevos."
-              : "Auditoría actualizada."
-          );
+          // Few words, not two sentences: this sits in a toolbar row next to
+          // the button, and the long version wrapped to three lines with its
+          // icon orphaned (founder review 2026-08-04). The "why nothing
+          // changed" explanation it used to carry is now permanent state —
+          // the "Al día" pill, visible BEFORE clicking (run-audit-button.tsx).
+          setNotice(result.cached ? "Ya estaba al día" : "Auditoría actualizada");
           // WEB-AUDIT-R2 (founder-approved 2026-07-12): "Auditar ahora" now
           // also refreshes technical health, in the same click — coverage and
           // technical share the same "auditoría web" mental model going

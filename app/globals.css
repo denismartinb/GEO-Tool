@@ -5749,6 +5749,38 @@ select.set-field {
   .wa2-hdr-audit-compact { display: inline; }
 }
 
+/* Audit toolbar: freshness state on the left, the single action on the right.
+   Before this the button floated alone, right-aligned, and its confirmation
+   rendered as a right-aligned paragraph whose leading icon broke onto its own
+   line (founder review 2026-08-04). A real two-slot row gives the button an
+   anchor and the state a permanent home that does not jump. */
+.wa2-auditbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.wa2-auditbar-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+/* Flex, not inline text: this is what stops the check icon orphaning itself
+   from its own sentence when the row wraps. */
+.wa2-auditbar-notice,
+.wa2-auditbar-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.wa2-auditbar-notice { color: var(--ink-3); }
+.wa2-auditbar-error { color: var(--neg-ink); }
+
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
 @media (min-width: 900px) {
