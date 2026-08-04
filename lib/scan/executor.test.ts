@@ -48,7 +48,7 @@ vi.mock("@/lib/llm/openai", async () => {
 });
 
 vi.mock("@/lib/scan/extraction", () => ({
-  runStructuredExtractionForRun: vi.fn().mockResolvedValue(undefined)
+  runStructuredExtractionForRun: vi.fn().mockResolvedValue({ processed: 0, remaining: 0 })
 }));
 
 vi.mock("@/lib/recommendations/recommendation-engine", () => ({
@@ -89,6 +89,15 @@ type JobsRow = {
   payload_json: Record<string, unknown>;
   last_error: string | null;
   created_at: string;
+  /**
+   * Optional (undefined until the first claim patches them in) — real jobs
+   * rows always have these columns, but most fixtures/tests here don't care
+   * about their value, only the SCAN-CHAIN-2 continuation tests do (the
+   * finalize re-queue's `locked_by: null` is part of what "not currently
+   * claimed" means).
+   */
+  locked_by?: string | null;
+  locked_at?: string | null;
 };
 
 /**
@@ -1634,5 +1643,178 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(state.status).toBe("running");
     expect(afterMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  describe("extraction continuation (SCAN-CHAIN-2, docs/adr/0027)", () => {
+    // Single prompt so the scan_prompt batch always finishes in one call,
+    // landing on finalize in the SAME invocation (the real production
+    // timeline) — every test below is purely about what happens once
+    // extraction itself needs more than one batch.
+    function buildSinglePromptCampaign() {
+      return buildCampaignClients({ promptCount: 1 });
+    }
+
+    beforeEach(() => {
+      generateGeminiVisibilityAnswer.mockReset();
+      generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+      vi.mocked(runStructuredExtractionForRun).mockReset();
+      vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+      process.env.SCAN_CONTINUE_SECRET = "test-continue-secret";
+    });
+
+    afterEach(() => {
+      if (ORIGINAL_SCAN_CONTINUE_SECRET === undefined) {
+        delete process.env.SCAN_CONTINUE_SECRET;
+      } else {
+        process.env.SCAN_CONTINUE_SECRET = ORIGINAL_SCAN_CONTINUE_SECRET;
+      }
+      vi.unstubAllGlobals();
+      // Restore the file-level default other describe blocks rely on.
+      vi.mocked(runStructuredExtractionForRun).mockResolvedValue({ processed: 0, remaining: 0 });
+    });
+
+    it("does not score and re-queues finalize to `pending` without consuming an attempt when rows still remain", async () => {
+      vi.mocked(runStructuredExtractionForRun).mockResolvedValueOnce({ processed: 30, remaining: 5 });
+
+      const { service, supabase, state, jobsTable } = buildSinglePromptCampaign();
+      serviceClientHolder.current = service;
+
+      const { executePendingScan } = await import("./executor");
+      await executePendingScan({
+        projectId: PROJECT_ID,
+        runId: CAMPAIGN_RUN_ID,
+        supabase,
+        scheduleContinuation: false
+      });
+
+      expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
+      // Not scored, not completed — exactly the invariant this phase exists
+      // to enforce.
+      expect(vi.mocked(generateRecommendationsForRun)).not.toHaveBeenCalled();
+      expect(state.status).toBe("running");
+
+      const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
+      expect(finalizeJob.status).toBe("pending");
+      // The claim incremented attempt_count 0 -> 1; the re-queue must revert
+      // it back to 0 — this continuation is not a new attempt.
+      expect(finalizeJob.attempt_count).toBe(0);
+      expect(finalizeJob.locked_by).toBeNull();
+
+      // Foreground driver: no self-fetch continuation scheduled, the caller
+      // (autoExecutePendingScan's own loop) drives the next batch directly.
+      expect(afterMock).not.toHaveBeenCalled();
+    });
+
+    it("schedules a background self-fetch continuation via after() when rows remain and scheduleContinuation defaults to true", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
+      vi.stubGlobal("fetch", fetchMock);
+      vi.mocked(runStructuredExtractionForRun).mockResolvedValueOnce({ processed: 30, remaining: 5 });
+
+      const { service, supabase } = buildSinglePromptCampaign();
+      serviceClientHolder.current = service;
+
+      const { executePendingScan } = await import("./executor");
+      await executePendingScan({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID, supabase });
+
+      expect(afterMock).toHaveBeenCalledTimes(1);
+      await afterMock.mock.calls[0][0]();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(String(url)).toContain("/api/scan/continue");
+      expect(JSON.parse(init.body as string)).toEqual({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID });
+    });
+
+    it("processes every batch across many continuation rounds and scores exactly once, never letting attempt_count exceed a single net increment — even across more rounds than max_attempts", async () => {
+      // 4 continuation rounds (remaining > 0) then a 5th that finally settles
+      // — deliberately MORE rounds than the finalize job's max_attempts=3
+      // fixture value, to prove a naive "increment attempt_count on every
+      // reclaim" implementation (which this one is NOT) would have exhausted
+      // attempts and died mid-campaign here.
+      vi.mocked(runStructuredExtractionForRun)
+        .mockResolvedValueOnce({ processed: 30, remaining: 90 })
+        .mockResolvedValueOnce({ processed: 30, remaining: 60 })
+        .mockResolvedValueOnce({ processed: 30, remaining: 30 })
+        .mockResolvedValueOnce({ processed: 30, remaining: 15 })
+        .mockResolvedValueOnce({ processed: 15, remaining: 0 });
+
+      const { service, supabase, state, jobsTable } = buildSinglePromptCampaign();
+      serviceClientHolder.current = service;
+
+      const { executePendingScan } = await import("./executor");
+      const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
+
+      for (let round = 0; round < 4; round += 1) {
+        await executePendingScan({
+          projectId: PROJECT_ID,
+          runId: CAMPAIGN_RUN_ID,
+          supabase,
+          scheduleContinuation: false
+        });
+        expect(finalizeJob.status).toBe("pending");
+        // Never grows past the single in-flight increment, and that
+        // increment itself is reverted every round — it must stay at 0
+        // between rounds, however many rounds it takes.
+        expect(finalizeJob.attempt_count).toBe(0);
+        expect(state.status).toBe("running");
+      }
+
+      // Final round: extraction reports remaining: 0, so this invocation
+      // proceeds to score and complete instead of re-queuing again.
+      await executePendingScan({
+        projectId: PROJECT_ID,
+        runId: CAMPAIGN_RUN_ID,
+        supabase,
+        scheduleContinuation: false
+      });
+
+      expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(5);
+      expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
+      expect(finalizeJob.status).toBe("completed");
+      // Net effect across the whole multi-round attempt: exactly one durable
+      // increment, recorded once finalize actually concludes — nowhere near
+      // the max_attempts=3 fixture value despite needing 5 rounds.
+      expect(finalizeJob.attempt_count).toBe(1);
+      expect(state.status).toBe("completed");
+    });
+
+    it("a finalize job already claimed by another invocation (status: running) is left untouched — the race guard, not a new claim", async () => {
+      const { service, supabase, state, jobsTable } = buildSinglePromptCampaign();
+      serviceClientHolder.current = service;
+
+      const { executePendingScan } = await import("./executor");
+
+      // First call: processes the single prompt and claims finalize; extraction
+      // reports rows remaining, so finalize is re-queued to pending.
+      vi.mocked(runStructuredExtractionForRun).mockResolvedValueOnce({ processed: 30, remaining: 5 });
+      await executePendingScan({
+        projectId: PROJECT_ID,
+        runId: CAMPAIGN_RUN_ID,
+        supabase,
+        scheduleContinuation: false
+      });
+
+      const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
+      expect(finalizeJob.status).toBe("pending");
+
+      // Simulate a second, concurrent continuation invocation grabbing
+      // finalize an instant before this one does.
+      finalizeJob.status = "running";
+      finalizeJob.locked_by = "another-invocation";
+
+      vi.mocked(runStructuredExtractionForRun).mockClear();
+      await executePendingScan({
+        projectId: PROJECT_ID,
+        runId: CAMPAIGN_RUN_ID,
+        supabase,
+        scheduleContinuation: false
+      });
+
+      // This invocation could not claim an already-`running` finalize job
+      // (the atomic `.eq("status", "pending")` claim), so it must not have
+      // run extraction again or touched the run's terminal state.
+      expect(vi.mocked(runStructuredExtractionForRun)).not.toHaveBeenCalled();
+      expect(finalizeJob.locked_by).toBe("another-invocation");
+      expect(state.status).toBe("running");
+    });
   });
 });

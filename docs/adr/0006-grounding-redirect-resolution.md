@@ -117,11 +117,14 @@ budget.
 - All chunks for a single prompt result are resolved in parallel via
   `Promise.allSettled` — total wall-clock time for a prompt's resolution
   step is bounded by the **slowest single chunk**, not the sum.
-- `MAX_EXTRACTION_RESULTS = 10` (`lib/scan/constants.ts`) caps how many
-  prompt results are extracted per run. Grounding chunk counts per prompt
-  are typically small in practice (Gemini Search grounding for a single
-  conversational answer commonly returns somewhere in the range of 1–10
-  chunks).
+- `EXTRACTION_BATCH_SIZE` (`lib/scan/constants.ts`; named `MAX_EXTRACTION_RESULTS`
+  and valued at 10 when this ADR was written) caps how many prompt results are
+  extracted per BATCH, not per run — see docs/adr/0027-chained-structured-
+  extraction.md (SCAN-CHAIN-2): a run with more eligible rows than this now
+  runs additional batches instead of silently leaving the rest unextracted.
+  Grounding chunk counts per prompt are typically small in practice (Gemini
+  Search grounding for a single conversational answer commonly returns
+  somewhere in the range of 1–10 chunks).
 
 **Worst-case added latency per prompt result:** ~5s (one chunk hits the
 absolute worst case: HEAD timeout + GET timeout, both 2.5s) regardless of how

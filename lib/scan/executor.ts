@@ -778,13 +778,21 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed");
     }
 
+    // SCAN-CHAIN-2 (docs/adr/0027): captured BEFORE the claim below increments
+    // it, so a continuation re-queue (see the `remaining > 0` branch further
+    // down) can restore this exact value — reclaiming finalize to process the
+    // next extraction batch is a continuation of the same logical attempt,
+    // not a new attempt following a failure, and must not durably consume one
+    // of the job's max_attempts.
+    const finalizeAttemptCountBeforeClaim = finalizeJob.attempt_count;
+
     const { data: claimedFinalize, error: claimFinalizeError } = await service
       .from("jobs")
       .update({
         status: "running",
         locked_at: nowIso,
         locked_by: "gemini-executor",
-        attempt_count: finalizeJob.attempt_count + 1,
+        attempt_count: finalizeAttemptCountBeforeClaim + 1,
         last_error: null
       })
       .eq("id", finalizeJob.id)
@@ -822,11 +830,75 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed_no_results");
     }
 
-    await runStructuredExtractionForRun({
+    const extractionResult = await runStructuredExtractionForRun({
       service,
       projectId,
       runId
     });
+
+    // SCAN-CHAIN-2 (docs/adr/0027): structured extraction is itself batched
+    // (EXTRACTION_BATCH_SIZE, lib/scan/constants.ts). Scoring while eligible
+    // rows still remain unextracted is exactly the bug this phase fixes —
+    // prominence/citation/authority computed from a partial extraction, with
+    // never-attempted rows' `citation_found` sitting at its DB-default
+    // `false` and still counting toward the denominator. Re-queue
+    // scan_finalize back to `pending` (never scored, never marked completed)
+    // and hand off to the next batch via the SAME self-chaining primitive
+    // SCAN-CHAIN-1 already uses between scan_prompt batches — either a
+    // background self-fetch (scheduleContinuation) or, for the foreground
+    // driver, simply returning so its own batch loop calls this again.
+    if (extractionResult.remaining > 0) {
+      // Keeps `scan_runs.updated_at` fresh via the DB's own `set_updated_at`
+      // trigger, exactly like every scan_prompt batch already does (see the
+      // call inside the batch loop above) — `reconcileStuckScanRuns` keys its
+      // 120s running-timeout off `updated_at`, precisely so a campaign still
+      // making genuine progress is never mistaken for stuck (docs/
+      // scan-lifecycle.md, "Timeout detection"). Without a write here, a
+      // large campaign's extraction phase (several chained batches, each
+      // taking real wall-clock time) would leave `updated_at` frozen at
+      // whatever the LAST scan_prompt batch set it to and could trip that
+      // same timeout mid-extraction — the counters this recomputes are
+      // already final at this point (every scan_prompt job is terminal), so
+      // this call exists for the write/trigger, not for new counter values.
+      await refreshRunProgressCounters({ service, projectId, runId });
+
+      // Guarded by `.eq("status", "running")`: this invocation is the sole
+      // owner of finalize right now (it just claimed it above), so this can
+      // never race a different invocation the way the initial claim's
+      // `.eq("status", "pending")` guards against a duplicate claim — it's
+      // defensive symmetry with that claim, not a load-bearing check.
+      await service
+        .from("jobs")
+        .update({
+          status: "pending",
+          locked_at: null,
+          locked_by: null,
+          // Reverts the claim above: the net attempt_count change across any
+          // number of continuation rounds is zero. It only durably advances
+          // when finalize actually concludes — completes below, or is
+          // bulk-failed by this function's own catch block on a genuine
+          // error — never merely for continuing an in-progress extraction.
+          attempt_count: finalizeAttemptCountBeforeClaim
+        })
+        .eq("id", finalizeJob.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running");
+
+      await logJob(service, {
+        jobId: finalizeJob.id,
+        projectId,
+        runId,
+        level: "info",
+        message: "Structured extraction batch processed; more rows remain — re-queuing finalize for the next batch.",
+        context: { processed: extractionResult.processed, remaining: extractionResult.remaining }
+      });
+
+      if (scheduleContinuation) {
+        after(() => triggerScanContinuation({ projectId, runId }));
+      }
+      return;
+    }
 
     const { data: promptResults } = await service
       .from("scan_prompt_results")

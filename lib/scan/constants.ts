@@ -13,10 +13,37 @@ import "server-only";
 // back down (8 was the conservative fallback considered) rather than adding
 // execution-side mitigations speculatively.
 export const MAX_REAL_SCAN_PROMPTS = 10;
-// One row per prompt per active engine (multi-engine execution, migration
-// 0009) — currently up to 2 engines (Gemini, Claude), so size for
-// MAX_REAL_SCAN_PROMPTS * 2 rather than MAX_REAL_SCAN_PROMPTS alone.
-export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
+/**
+ * Per-invocation batch size for structured extraction (SCAN-CHAIN-2,
+ * docs/adr/0027-chained-structured-extraction.md).
+ *
+ * One `scan_prompt_results` row exists per prompt per active engine
+ * (multi-engine execution, migration 0009) — up to 3 engines today (gemini,
+ * claude, openai; see `getLLMScanProviders`/`VALID_LLM_SCAN_PROVIDERS` in
+ * `lib/scan/executor.ts`), so this is sized for `MAX_REAL_SCAN_PROMPTS * 3`
+ * rather than `MAX_REAL_SCAN_PROMPTS` alone.
+ *
+ * This constant used to be named `MAX_EXTRACTION_RESULTS` and, worse, was
+ * treated as a hard per-CAMPAIGN cap: `runStructuredExtractionForRun` sliced
+ * the whole run's eligible rows down to this many and never came back for
+ * the rest. Dimensioned for 2 engines (20), a real Pro/Agency run (100-300
+ * prompts x 3 engines = 300-900 rows) only ever got its oldest 20 rows
+ * extracted — silently starving prominence/citation/authority scoring of the
+ * remaining rows' real data, while presence (computed inline in
+ * `executor.ts`, not from extraction) stayed correct. Worse still, an
+ * un-extracted row's `citation_found` sat at its DB-default `false`
+ * (migration 0001) and still counted in the authority denominator, so the
+ * product told the customer they were never cited when the row was simply
+ * never looked at.
+ *
+ * Fixed by SCAN-CHAIN-2: this is now a genuine per-BATCH size. Every
+ * eligible row still gets extracted, just across as many batches as it
+ * takes — `runStructuredExtractionForRun` reports `remaining` after each
+ * batch, and `executePendingScan` re-queues the `scan_finalize` job (the
+ * same self-chaining primitive SCAN-CHAIN-1 already uses for `scan_prompt`
+ * batches) instead of scoring early over a partial extraction.
+ */
+export const EXTRACTION_BATCH_SIZE = MAX_REAL_SCAN_PROMPTS * 3;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call

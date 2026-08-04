@@ -4,7 +4,7 @@ import { extractGeminiStructuredData, type BusinessProfile } from "@/lib/llm/gem
 import { extractClaudeStructuredData } from "@/lib/llm/claude";
 import { extractOpenAIStructuredData } from "@/lib/llm/openai";
 import { parsePersistedBusinessProfile } from "@/lib/projects/business-profile";
-import { EXTRACTION_VERSION, MAX_EXTRACTION_RESULTS } from "@/lib/scan/constants";
+import { EXTRACTION_VERSION, EXTRACTION_BATCH_SIZE } from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
@@ -433,15 +433,54 @@ async function extractAndPersistRow(input: {
   }
 }
 
+export type ExtractionBatchResult = {
+  /** How many rows this call actually attempted extraction for (success or extraction_error alike). */
+  processed: number;
+  /**
+   * How many eligible rows are STILL unprocessed after this batch —
+   * SCAN-CHAIN-2 (docs/adr/0027). The caller (`executePendingScan`'s finalize
+   * tail) must not score the run while this is > 0: re-queue `scan_finalize`
+   * and call this again instead. `0` means every row this run can extract
+   * has either succeeded (current `EXTRACTION_VERSION`) or permanently failed
+   * (`extraction_error` set) — the only two terminal outcomes for a row, so
+   * `0` is a genuine "nothing left to do," not just "nothing eligible existed
+   * to begin with" (that case also reports `0`, which is the correct signal
+   * either way: the caller may proceed to score).
+   */
+  remaining: number;
+};
+
+/**
+ * Runs one BATCH of structured extraction for a run (SCAN-CHAIN-2, docs/adr/
+ * 0027-chained-structured-extraction.md) — up to `EXTRACTION_BATCH_SIZE`
+ * still-eligible rows, oldest-query-order first (no explicit `order()`: rows
+ * come back in whatever order Supabase returns them, which is stable enough
+ * across calls within the same run since eligibility itself is the changing
+ * variable, not row order). A row is "eligible" when it has a completed
+ * generation (`status: "completed"`, non-null `raw_response_text`), a real
+ * provider, has NOT yet succeeded at the current `EXTRACTION_VERSION`, and
+ * has NOT already failed extraction in this run (`extraction_error` is
+ * null) — a previously-failed row is a terminal, not a retry candidate (see
+ * `ScanPromptResultRow.extraction_error`'s docstring for why: without this
+ * exclusion, a single permanently-failing row would make every subsequent
+ * batch re-select it forever, since its `extraction_version` never advances
+ * past the failure).
+ *
+ * Callers (`executePendingScan`) MUST check `remaining` on the result and
+ * re-invoke this (via the same self-chaining `scan_finalize` re-queue
+ * SCAN-CHAIN-1 already uses for `scan_prompt` batches) until it reports `0`
+ * before computing scores — scoring over a partial extraction is exactly the
+ * bug this phase fixes.
+ */
 export async function runStructuredExtractionForRun(input: {
   service: ReturnType<typeof createServiceClient>;
   projectId: string;
   runId: string;
-}) {
+}): Promise<ExtractionBatchResult> {
   const { data: rows, error } = await input.service
     .from("scan_prompt_results")
     .select(
-      "id, raw_response_text, raw_response_json, prompt_text_snapshot, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, provider, status, extraction_version"
+      "id, raw_response_text, raw_response_json, prompt_text_snapshot, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, provider, status, extraction_version, extraction_error"
     )
     .eq("project_id", input.projectId)
     .eq("run_id", input.runId)
@@ -449,13 +488,13 @@ export async function runStructuredExtractionForRun(input: {
     .in("provider", ["gemini", "claude", "openai"])
     .not("raw_response_text", "is", null);
 
-  if (error || !rows?.length) return;
+  if (error || !rows?.length) return { processed: 0, remaining: 0 };
 
   const eligibleRows = (rows as unknown as ScanPromptResultRow[]).filter(
-    (row) => row.extraction_version !== EXTRACTION_VERSION && row.raw_response_text
+    (row) => row.extraction_version !== EXTRACTION_VERSION && row.raw_response_text && !row.extraction_error
   );
-  const rowsToProcess = eligibleRows.slice(0, MAX_EXTRACTION_RESULTS);
-  if (rowsToProcess.length === 0) return;
+  const rowsToProcess = eligibleRows.slice(0, EXTRACTION_BATCH_SIZE);
+  if (rowsToProcess.length === 0) return { processed: 0, remaining: 0 };
 
   // EMERGING-BRANDS-GROUNDING-1: read-only, best-effort lookup of the
   // already-cached profile (never resolved/computed here — that would add a
@@ -491,4 +530,14 @@ export async function runStructuredExtractionForRun(input: {
       })
     )
   );
+
+  return {
+    processed: rowsToProcess.length,
+    // Rows beyond this batch that were eligible when this call started.
+    // Whether every processed row above actually succeeded or set
+    // extraction_error doesn't change this count — it's purely "how many
+    // still-unprocessed rows didn't fit in this batch," which is exactly
+    // what determines whether the caller must come back for another one.
+    remaining: eligibleRows.length - rowsToProcess.length
+  };
 }

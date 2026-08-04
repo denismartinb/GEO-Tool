@@ -44,7 +44,9 @@ becomes terminal (`failed` or `completed`).
 ### running → completed
 - After **every** `scan_prompt` job for the campaign has reached a terminal
   state (`completed` or `failed`) — not just the jobs in the most recent
-  batch — results persisted, and scores computed via
+  batch — AND every eligible `scan_prompt_results` row has been through
+  structured extraction (see "Chained structured extraction (SCAN-CHAIN-2)"
+  below) — results persisted, and scores computed via
   `computeRunScoresFromResults`.
 - Sets `finished_at`.
 
@@ -96,6 +98,55 @@ background continuation can never double-process a batch even if both fire.
 whole campaign's progress, not just the most recent batch — this is what the
 real-progress bar (`components/scan-in-progress.tsx`) reads, and what a
 duplicate invocation racing against another cannot corrupt.
+
+---
+
+## Chained structured extraction (SCAN-CHAIN-2)
+
+Once every `scan_prompt` job for a campaign is terminal, the invocation that
+observes this atomically claims the run's `scan_finalize` job (single-owner
+gate, same claim pattern as above) and runs structured extraction
+(`runStructuredExtractionForRun`, `lib/scan/extraction.ts`) — one LLM call
+per `scan_prompt_results` row, turning its raw answer into `extracted_json`
+(mention, position, sentiment, citations). This step feeds prominence,
+citation/authority, and share-of-voice scoring; presence is computed inline
+at generation time and does not depend on it.
+
+Like `scan_prompt` execution itself, extraction is **batched and
+self-chaining**, not a single unbounded call: `runStructuredExtractionForRun`
+processes at most `EXTRACTION_BATCH_SIZE` (`MAX_REAL_SCAN_PROMPTS * 3` —
+sized for up to 3 active engines) still-eligible rows per call and reports
+`{ processed, remaining }`. A row is eligible when its generation completed,
+it hasn't already succeeded at the current `EXTRACTION_VERSION`, and it
+doesn't already carry a non-null `extraction_error` from a prior attempt in
+this same run (a failed row is terminal, never retried — see
+docs/adr/0027-chained-structured-extraction.md for why retrying it would
+re-chain forever).
+
+If `remaining > 0` after a batch, the run is **not** scored:
+`executePendingScan` re-queues `scan_finalize` back to `pending` (reverting
+the claim's `attempt_count` increment — a continuation is not a failure
+retry and must not consume one of the job's `max_attempts`) and hands off to
+the next batch via the same mechanism SCAN-CHAIN-1 uses for `scan_prompt`
+batches: a background self-fetch (`scheduleContinuation: true`) or simply
+returning for the foreground driver's own loop. Only once `remaining === 0`
+does the run proceed to scoring and `completed`. `scan_runs.updated_at` is
+touched on every extraction-continuation round too (via
+`refreshRunProgressCounters`), so the stuck-run timeout below never misfires
+on a campaign whose `scan_prompt` batches all finished but whose extraction
+is still chaining through several rounds.
+
+A campaign with more `scan_prompt_results` rows than `EXTRACTION_BATCH_SIZE`
+(any Starter/Pro/Agency run with 3 active engines) therefore completes
+extraction over multiple chained invocations before scoring — see
+docs/adr/0027 for the full design, the three failure traps it closes
+(infinite re-chain on a failed row, attempt-count exhaustion, and a
+double-claim race), and why this was a P0 (an un-extracted row's
+`citation_found` defaults to `false` in the DB and still counted toward the
+authority score's denominator, artificially deflating it for any run larger
+than the old hard cap).
+
+---
 
 ### running|pending → failed
 - On any **unrecoverable** error: a Gemini configuration error (missing API
@@ -253,3 +304,12 @@ The sync execution + `maxDuration=60` approach was chosen over async/background
 workers to avoid infra complexity at private-beta scale. See
 `docs/adr/0003-sync-scan-execution-and-maxduration.md`. If that tradeoff is
 revisited, this document must be updated alongside the ADR.
+
+Structured extraction was originally a single unbounded call, hard-capped at
+20 rows and never revisited for the rest of a large run — silently starving
+prominence/citation/authority scoring on any campaign larger than that cap
+while `citation_found` defaulted to `false` for the un-extracted rows and
+still counted toward the authority denominator. Fixed by chaining extraction
+the same way `scan_prompt` execution is chained — see "Chained structured
+extraction (SCAN-CHAIN-2)" above and
+`docs/adr/0027-chained-structured-extraction.md`.

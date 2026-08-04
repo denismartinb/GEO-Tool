@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { reconcileExtractedCompetitors, runStructuredExtractionForRun, verifyExtractedMentions } from "./extraction";
-import { EXTRACTION_VERSION } from "./constants";
+import { EXTRACTION_BATCH_SIZE, EXTRACTION_VERSION } from "./constants";
 import type { ExtractionOutput } from "@/lib/extraction/schema";
 
 vi.mock("@/lib/llm/gemini", () => ({
@@ -608,6 +608,133 @@ describe("runStructuredExtractionForRun", () => {
     });
 
     expect(updateCalls[0].brand_mentioned).toBe(true);
+  });
+});
+
+describe("runStructuredExtractionForRun — SCAN-CHAIN-2 batching (docs/adr/0027)", () => {
+  afterEach(() => {
+    vi.mocked(extractGeminiStructuredData).mockReset();
+  });
+
+  it("returns {processed, remaining: 0} when every eligible row fits in a single batch", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    const result = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(result).toEqual({ processed: 1, remaining: 0 });
+  });
+
+  it("returns {processed: 0, remaining: 0} when nothing is eligible (already at the current EXTRACTION_VERSION)", async () => {
+    const service = createServiceMock({
+      selectResult: { data: [baseRow({ extraction_version: EXTRACTION_VERSION })], error: null },
+      updateCalls: []
+    });
+
+    const result = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(result).toEqual({ processed: 0, remaining: 0 });
+    expect(extractGeminiStructuredData).not.toHaveBeenCalled();
+  });
+
+  it("caps a single call at EXTRACTION_BATCH_SIZE rows and reports the rest as remaining — the P0 fix: a 300-row run (100 prompts x 3 engines) no longer silently loses everything past the old hard cap", async () => {
+    const totalRows = EXTRACTION_BATCH_SIZE + 5;
+    const rows = Array.from({ length: totalRows }, (_, i) => baseRow({ id: `row-${i}` }));
+
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: { data: rows, error: null },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    const result = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledTimes(EXTRACTION_BATCH_SIZE);
+    expect(updateCalls).toHaveLength(EXTRACTION_BATCH_SIZE);
+    expect(result).toEqual({ processed: EXTRACTION_BATCH_SIZE, remaining: 5 });
+  });
+
+  it("excludes a row with a prior extraction_error from every future batch — never retried, and never blocks the batch from making progress on the rest (the infinite-rechain trap)", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          // Already tried and permanently failed in this run — must be
+          // skipped, not re-selected as "eligible" forever.
+          baseRow({ id: "failed-row", extraction_error: "Gemini extraction JSON failed schema validation." }),
+          // Genuinely unprocessed — must still go through normally.
+          baseRow({ id: "fresh-row" })
+        ],
+        error: null
+      },
+      updateCalls
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    const result = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    // Only the fresh row was ever sent to the extractor.
+    expect(extractGeminiStructuredData).toHaveBeenCalledTimes(1);
+    expect(updateCalls).toHaveLength(1);
+    // The failed row is permanently excluded, not "remaining" — there is
+    // nothing further this run can ever do with it, so it must not keep the
+    // campaign from ever reaching remaining: 0 and scoring.
+    expect(result).toEqual({ processed: 1, remaining: 0 });
+  });
+
+  it("a batch containing ONLY already-failed rows reports remaining: 0 (not stuck) — proves a run cannot be permanently blocked from scoring by rows that will never succeed", async () => {
+    const service = createServiceMock({
+      selectResult: {
+        data: [
+          baseRow({ id: "failed-1", extraction_error: "boom" }),
+          baseRow({ id: "failed-2", extraction_error: "boom again" })
+        ],
+        error: null
+      },
+      updateCalls: []
+    });
+
+    const result = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).not.toHaveBeenCalled();
+    expect(result).toEqual({ processed: 0, remaining: 0 });
   });
 });
 

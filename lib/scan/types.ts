@@ -59,4 +59,16 @@ export type ScanPromptResultRow = {
   provider: string;
   status: string;
   extraction_version: string;
+  /**
+   * SCAN-CHAIN-2 (docs/adr/0027): a non-null value here means a PRIOR
+   * extraction attempt for this row already failed and persisted this
+   * sanitized error. Such a row must never be treated as "eligible" for
+   * another extraction attempt within the same run — its
+   * `extraction_version` never advances past the failure (see
+   * `extractAndPersistRow`), so without this field a batched, re-queuing
+   * extraction pass would pick the same failed row again on every single
+   * batch, forever, instead of moving on to the next batch of genuinely
+   * unprocessed rows.
+   */
+  extraction_error: string | null;
 };
