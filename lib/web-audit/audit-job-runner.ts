@@ -115,6 +115,24 @@ const MAX_BATCHES_PER_INVOCATION = 4;
 const SWEEP_BATCH_SIZE = 3;
 
 /**
+ * After this long, a job still marked 'running' is considered abandoned and
+ * reclaimable.
+ *
+ * Without this the queue has a permanent leak: an invocation killed by the
+ * platform mid-batch never gets to write the row back, so the job stays
+ * 'running' with a stale `locked_by` — and a claim that only looks at
+ * 'pending'/'retrying' would never touch it again. The audit would silently
+ * never happen, which is the exact failure this phase exists to remove, just
+ * moved one layer down.
+ *
+ * 10 minutes is comfortably above the route's own maxDuration=60 (ADR-0003),
+ * so a healthy in-flight job is never stolen from itself. Migration 0001
+ * already ships `jobs_locked_idx on (locked_at) where status in
+ * ('running','retrying')` — the schema anticipated exactly this sweep.
+ */
+const STALE_LOCK_MS = 10 * 60_000;
+
+/**
  * Hard backstop on how many times the worker route may self-dispatch in one
  * chain. Sits ABOVE the realistic need (a single 300-prompt campaign needs
  * ~75 continuations) and below anything that could look like a runaway. When
@@ -207,10 +225,15 @@ export async function enqueueWebAuditJob({
 
 /**
  * Atomically claim due jobs. Same optimistic-claim shape the scan executor
- * uses: flip 'pending'/'retrying' → 'running' filtered on the status we
- * expected to see, and trust only the rows the UPDATE actually returned. Two
- * concurrent sweeps therefore cannot both run the same audit — the loser's
- * UPDATE matches zero rows.
+ * uses: flip the status to 'running' filtered on the status we expected to
+ * see, and trust only the rows the UPDATE actually returned. Two concurrent
+ * sweeps therefore cannot both run the same audit — the loser's UPDATE
+ * matches zero rows.
+ *
+ * Claims two disjoint sets: jobs that are due ('pending'/'retrying' with
+ * `next_attempt_at` in the past) and jobs abandoned mid-flight ('running'
+ * with a `locked_at` older than STALE_LOCK_MS). Without the second, a single
+ * platform kill leaks a job out of the queue permanently.
  */
 export async function claimDueWebAuditJobs({
   service,
@@ -221,31 +244,58 @@ export async function claimDueWebAuditJobs({
   now: Date;
   limit?: number;
 }): Promise<WebAuditJobRow[]> {
-  const { data: candidates, error } = await service
-    .from("jobs")
-    .select("id, project_id, run_id, attempt_count, max_attempts, payload_json")
-    .eq("job_type", WEB_AUDIT_JOB_TYPE)
-    .in("status", ["pending", "retrying"])
-    .lte("next_attempt_at", now.toISOString())
-    .order("next_attempt_at", { ascending: true })
-    .limit(limit);
+  const COLUMNS = "id, project_id, run_id, attempt_count, max_attempts, payload_json";
+  const staleBefore = new Date(now.getTime() - STALE_LOCK_MS).toISOString();
 
-  if (error || !candidates) {
-    if (error) console.error(`${LOG_PREFIX} claim query failed`, { message: error.message });
-    return [];
-  }
+  const [due, stale] = await Promise.all([
+    service
+      .from("jobs")
+      .select(COLUMNS)
+      .eq("job_type", WEB_AUDIT_JOB_TYPE)
+      .in("status", ["pending", "retrying"])
+      .lte("next_attempt_at", now.toISOString())
+      .order("next_attempt_at", { ascending: true })
+      .limit(limit),
+    service
+      .from("jobs")
+      .select(COLUMNS)
+      .eq("job_type", WEB_AUDIT_JOB_TYPE)
+      .eq("status", "running")
+      .lt("locked_at", staleBefore)
+      .order("locked_at", { ascending: true })
+      .limit(limit)
+  ]);
+
+  if (due.error) console.error(`${LOG_PREFIX} due-claim query failed`, { message: due.error.message });
+  if (stale.error) console.error(`${LOG_PREFIX} stale-claim query failed`, { message: stale.error.message });
+
+  const candidates: Array<WebAuditJobRow & { claimFrom: string[] }> = [
+    ...((due.data ?? []) as WebAuditJobRow[]).map((j) => ({ ...j, claimFrom: ["pending", "retrying"] })),
+    ...((stale.data ?? []) as WebAuditJobRow[]).map((j) => ({ ...j, claimFrom: ["running"] }))
+  ].slice(0, limit);
 
   const claimed: WebAuditJobRow[] = [];
-  for (const candidate of candidates as WebAuditJobRow[]) {
-    const { data: won } = await service
+  for (const { claimFrom, ...candidate } of candidates) {
+    // For a stale reclaim, `locked_at` must ALSO still be old at UPDATE time:
+    // between the SELECT and here, the original owner could have come back to
+    // life and re-locked it. Filtering on the status alone would then steal a
+    // job that is legitimately running.
+    let update = service
       .from("jobs")
       .update({ status: "running", locked_at: now.toISOString(), locked_by: "web-audit-runner" })
       .eq("id", candidate.id)
       .eq("project_id", candidate.project_id)
-      .in("status", ["pending", "retrying"])
-      .select("id")
-      .maybeSingle();
+      .in("status", claimFrom);
 
+    if (claimFrom[0] === "running") {
+      update = update.lt("locked_at", staleBefore);
+      console.warn(`${LOG_PREFIX} reclaiming abandoned job`, {
+        projectId: candidate.project_id,
+        runId: candidate.run_id
+      });
+    }
+
+    const { data: won } = await update.select("id").maybeSingle();
     if (won) claimed.push(candidate);
   }
 

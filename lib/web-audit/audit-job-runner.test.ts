@@ -37,30 +37,58 @@ function makeService(options: {
   project?: { owner_user_id: string; domain: string } | null;
   existingJob?: { id: string } | null;
   dueJobs?: WebAuditJobRow[];
+  /** Jobs left in 'running' by a killed invocation — reclaimed via locked_at. */
+  staleJobs?: WebAuditJobRow[];
   claimWins?: boolean;
 }) {
   const recorded: Recorded[] = [];
-  const { project = { owner_user_id: "user-1", domain: "acme.com" }, existingJob = null, dueJobs = [], claimWins = true } = options;
+  const {
+    project = { owner_user_id: "user-1", domain: "acme.com" },
+    existingJob = null,
+    dueJobs = [],
+    staleJobs = [],
+    claimWins = true
+  } = options;
 
   function builder(table: string, op: "select" | "update" | "insert", payload?: Record<string, unknown>) {
     if (op !== "select" && payload) recorded.push({ table, op, payload });
 
-    const result =
-      table === "projects"
-        ? { data: project, error: null }
-        : op === "update"
-          ? { data: claimWins ? { id: "job-1" } : null, error: null }
-          : { data: existingJob ?? (dueJobs.length ? dueJobs : null), error: null };
+    // The claim issues two selects against `jobs` that differ only by their
+    // filters, so the fake has to remember which one it is answering.
+    const filters: Array<{ method: string; args: unknown[] }> = [];
+    const isStaleQuery = () => filters.some((f) => f.method === "lt");
+    const wantsRunning = () =>
+      filters.some((f) => f.method === "eq" && f.args[0] === "status" && f.args[1] === "running") ||
+      filters.some((f) => f.method === "in" && Array.isArray(f.args[1]) && (f.args[1] as string[]).includes("running"));
+
+    const resolve = () => {
+      if (table === "projects") return { data: project, error: null };
+      if (op === "update") {
+        // A stale reclaim must also still satisfy the locked_at filter.
+        const won = claimWins && !(wantsRunning() && !isStaleQuery());
+        return { data: won ? { id: "job-1" } : null, error: null };
+      }
+      if (table !== "jobs") return { data: null, error: null };
+      if (existingJob) return { data: existingJob, error: null };
+      return { data: isStaleQuery() ? staleJobs : dueJobs, error: null };
+    };
+
+    const track = (method: string) => (...args: unknown[]) => {
+      filters.push({ method, args });
+      return self;
+    };
 
     const self: Record<string, unknown> = {
-      eq: () => self,
-      in: () => self,
-      lte: () => self,
-      order: () => self,
-      limit: () => self,
-      select: () => self,
-      maybeSingle: () => Promise.resolve(table === "jobs" && op === "select" ? { data: existingJob, error: null } : result),
-      then: (resolve: (v: unknown) => unknown) => Promise.resolve(result).then(resolve)
+      eq: track("eq"),
+      in: track("in"),
+      lte: track("lte"),
+      lt: track("lt"),
+      order: track("order"),
+      limit: track("limit"),
+      select: track("select"),
+      maybeSingle: () =>
+        Promise.resolve(table === "jobs" && op === "select" ? { data: existingJob, error: null } : resolve()),
+      then: (onFulfilled: (v: unknown) => unknown) => Promise.resolve(resolve()).then(onFulfilled)
     };
     return self;
   }
@@ -330,6 +358,27 @@ describe("enqueueWebAuditJob", () => {
 });
 
 describe("claimDueWebAuditJobs", () => {
+  it("reclaims a job abandoned in 'running' by a killed invocation", async () => {
+    // Without this the queue leaks: an invocation the platform kills mid-batch
+    // never writes its row back, so the job sits in 'running' forever and a
+    // claim that only looked at pending/retrying would never touch it again.
+    // The audit would silently never happen — the exact failure this phase
+    // exists to remove, moved one layer down.
+    const { service } = makeService({ dueJobs: [], staleJobs: [job({ id: "abandoned" })] });
+
+    const claimed = await claimDueWebAuditJobs({ service, now: NOW });
+
+    expect(claimed.map((j) => j.id)).toEqual(["abandoned"]);
+  });
+
+  it("does not steal a job whose lock is still fresh", async () => {
+    // A 'running' row that the stale query did not return must never be
+    // claimed — the original invocation is alive and mid-batch.
+    const { service } = makeService({ dueJobs: [], staleJobs: [] });
+
+    expect(await claimDueWebAuditJobs({ service, now: NOW })).toEqual([]);
+  });
+
   it("returns only the jobs whose claim UPDATE actually matched", async () => {
     // Losing the race must yield nothing, so two concurrent sweeps can never
     // both run the same audit.

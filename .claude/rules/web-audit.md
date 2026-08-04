@@ -40,3 +40,24 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   almacena ni se renderiza jamás.
 - **RLS**: lecturas con el cliente de usuario; cualquier escritura con
   service-role prueba propiedad antes con el cliente de usuario.
+
+## Excepción registrada: la auditoría automática tras escaneo
+
+`lib/web-audit/audit-job-runner.ts` (AUDIT-AFTER-SCAN-1, ADR 0027) llama a los
+dos núcleos de auditoría con el **cliente de servicio**, porque en esa ruta no
+existe sesión de usuario por construcción: la dispara el final de un escaneo,
+que en producción es automático y diario.
+
+Dicho con precisión, porque la formulación cómoda sería falsa: en esa ruta el
+filtro `.eq("owner_user_id", user.id)` **es tautológico** — el `owner_user_id`
+se lee de la propia fila del proyecto y se devuelve como valor del filtro. No
+es ahí donde está la protección.
+
+Lo que sí protege el aislamiento es que **el `projectId` es derivado en
+servidor y jamás aceptado desde una petición**: sale de una fila de `jobs` que
+el ejecutor creó para una ejecución que acababa de terminar, y `jobs.run_id`
+tiene FK a `scan_runs(id, project_id)`. El endpoint `/api/cron/run-audit` no
+acepta ningún identificador de proyecto en su cuerpo — sólo `chainIndex`.
+
+Si alguna vez esa ruta pasa a aceptar un `projectId` de fuera, esta excepción
+deja de valer y hace falta una prueba de propiedad real.
