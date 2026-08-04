@@ -418,18 +418,6 @@ export default async function CompetitorsPage({
   const validTrendPoints = chartTrendData.filter((d) => d.values.brand != null).length;
   const hasTrendData = validTrendPoints >= MIN_TREND_POINTS;
 
-  /* How many completed scans carry no position data at all. Pre-v3 runs have
-     no `avg_position_when_mentioned` for ANY entity and were deliberately not
-     backfilled (ADR 0026 decision 4: "el histórico da igual"), so on an
-     established project this is most of the history — the ADR itself calls it
-     "the default, not an edge case".
-
-     Without this number the screen tells a project with 21 scans that it has
-     "0 de 2 escaneos", which reads as "scan more" when the truth is "your old
-     scans predate this metric". Founder caught exactly that. */
-  const runsMissingPositionData = completedRuns.length - chartTrendData.length;
-  const positionDataIsBackfillGap = runsMissingPositionData > 0 && completedRuns.length >= 2;
-
   const trendPositionValues = chartTrendData
     .flatMap((d) => Object.values(d.values))
     .filter((v): v is number => v != null);
@@ -776,26 +764,21 @@ export default async function CompetitorsPage({
                   share-of-voice podium (founder feedback: it was buried at the
                   bottom of the desktop rail). The ranked list repeats the
                   chart's endpoint as a readable number, so "who is ahead right
-                  now" doesn't require tracing a line. */}
-              <div className="cm2-sec-lbl">Evolución del puesto cuando apareces</div>
-              <div className="card cm2-pos-card">
-                {hasTrendData ? (
-                  <>
+                  now" doesn't require tracing a line.
+
+                  Nothing is rendered until there is a real chart to show: no
+                  section label, no empty card, no explanation of why it is
+                  missing. An earlier version explained the wait honestly and
+                  the founder still cut it (2026-08-04) — a block that only ever
+                  says "not yet" is noise on the screen every single visit, and
+                  the honest wording did not change that. */}
+              {hasTrendData ? (
+                <>
+                  <div className="cm2-sec-lbl">Evolución del puesto cuando apareces</div>
+                  <div className="card cm2-pos-card">
                     <div className="cm2-pos-chart">
                       <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
                     </div>
-                    {/* A chart drawn from 2 of a project's 21 scans looks broken
-                        rather than sparse — flat lines stretched edge to edge,
-                        with no clue why the other 19 are missing. Say it instead
-                        of letting the user conclude the feature is bugged. */}
-                    {positionDataIsBackfillGap ? (
-                      <div className="cm2-pos-note">
-                        Solo <b className="tnum">{chartTrendData.length}</b> de tus{" "}
-                        <b className="tnum">{completedRuns.length}</b> escaneos traen el puesto medio: cambió
-                        la forma de calcularlo y los anteriores no se recalcularon. La línea se irá
-                        alargando con cada escaneo nuevo.
-                      </div>
-                    ) : null}
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
                         <div className="cm2-pos-list-hd">
@@ -819,40 +802,9 @@ export default async function CompetitorsPage({
                         ))}
                       </div>
                     ) : null}
-                  </>
-                ) : (
-                  <div style={{ padding: "32px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                      {/* Two different states wore the same message until the
-                          founder hit the second one on a project with 21 scans:
-                          "0 de 2 escaneos" reads as "scan more", which is only
-                          true for a young project. On an established one the
-                          real reason is that its scans predate this metric
-                          (ADR 0026 decision 4, no backfill) — telling it to
-                          scan more is technically the fix but the sentence is
-                          a lie about why. */}
-                      {positionDataIsBackfillGap ? (
-                        <>
-                          El puesto medio cambió de forma de calcularse, y los escaneos anteriores no
-                          lo traen.{" "}
-                          <b className="tnum">
-                            {chartTrendData.length} de {completedRuns.length}
-                          </b>{" "}
-                          escaneos ya lo tienen; hacen falta {MIN_TREND_POINTS}. Cada escaneo nuevo suma.
-                        </>
-                      ) : (
-                        <>
-                          Disponible a partir de {MIN_TREND_POINTS} escaneos con datos de posición.{" "}
-                          <b className="tnum">
-                            {validTrendPoints} de {MIN_TREND_POINTS}
-                          </b>{" "}
-                          por ahora.
-                        </>
-                      )}
-                    </div>
                   </div>
-                )}
-              </div>
+                </>
+              ) : null}
 
               {/* Brecha de prompts */}
               {promptGapSummary && (

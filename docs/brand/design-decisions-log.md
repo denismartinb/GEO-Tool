@@ -1359,9 +1359,31 @@ escaneo anterior bajo un encabezado que dice "último escaneo" — una mentira
 sutil. El contador "X de 2" sí pasa a contarse **dentro de la ventana visible**,
 para que el mensaje y el gráfico no puedan contradecirse.
 
-Lógica extraída a `lib/competitors/trend-window.ts` con 9 tests, siguiendo el
+Lógica extraída a `lib/competitors/trend-window.ts` con tests, siguiendo el
 patrón del resto de la zona (`filterComparableEngines`, `computeTopicComparison`):
 la página es un componente de servidor y la lógica inline ahí no se puede probar.
+
+**Cuarta ronda, ya con el gráfico dibujándose de verdad (2026-08-04).** El
+fundador lanzó un escaneo, Mozilla llegó a 4 puntos y por fin se pudo ver la
+línea recta funcionando. Cuatro ajustes sobre eso:
+
+1. **Sin gráfico no se pinta nada.** Se quitan tanto el estado vacío como la
+   nota bajo el gráfico. Es una **rectificación de lo que se había hecho dos
+   rondas antes**: se había invertido esfuerzo en explicar honestamente por qué
+   faltaba el dato, y el fundador lo tachó literalmente sobre la captura. La
+   lección que queda escrita: un bloque que sólo sabe decir "todavía no" es
+   ruido en cada visita, y redactarlo mejor no cambia eso. El mensaje honesto
+   resolvió un problema real ("0 de 2" mentía), pero la solución correcta no
+   era mejor copy, era no ocupar sitio.
+2. **El título "puesto medio · último escaneo" se alinea a la derecha**, sobre
+   los números que etiqueta. Había dos lecturas posibles de la petición y se
+   preguntó en vez de adivinar, para no gastar un despliegue en la equivocada
+   (el cupo de Vercel estaba al límite ese día).
+3. **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las 4
+   primeras series arrancan encendidas (`DEFAULT_VISIBLE`); el resto se activan
+   pulsando. El fundador preguntó "¿por qué brave, protón, etc salen
+   deshabilitados?" — señal de que el atenuado al 0.5 comunicaba "no
+   disponible". Subido a 0.8 y añadida una pista explícita.
 
 **Tercer hallazgo: el gráfico era una escalera.** Con los proyectos reducidos a
 2 puntos se hizo visible lo que antes se perdía entre 20: la línea no unía

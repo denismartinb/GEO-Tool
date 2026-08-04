@@ -72,12 +72,19 @@ limpio (log §11).
 - La lista "puesto medio · último escaneo" se ancla al **último escaneo real**,
   nunca al último punto que sobreviva a la ventana — si no, el encabezado
   mentiría.
-- **"Pocos escaneos" y "escaneos sin el dato nuevo" son estados distintos y no
-  pueden compartir mensaje.** Un escaneo anterior a geo-score-v3 no tiene
-  `avg_position_when_mentioned` para nadie (ADR 0026 decisión 4, sin backfill),
-  y eso es lo normal en cualquier proyecto con historia. Decirle "0 de 2
-  escaneos" a un proyecto con 21 se lee como "escanea más" y es falso: hay que
-  decir cuántos traen el dato y por qué (log §15).
+- **Sin gráfico no se pinta nada: ni etiqueta de sección, ni tarjeta, ni
+  explicación de por qué falta.** Se probó explicar la espera con un mensaje
+  honesto y el fundador lo cortó igual (2026-08-04): un bloque que sólo sabe
+  decir "todavía no" es ruido en todas las visitas, y redactarlo mejor no lo
+  arregla. Ojo: esto convive con que un escaneo anterior a geo-score-v3 no
+  tiene `avg_position_when_mentioned` para nadie (ADR 0026 decisión 4, sin
+  backfill), así que un proyecto con mucha historia puede pasar días sin
+  bloque. Es lo esperado.
+- **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las primeras
+  `DEFAULT_VISIBLE` series arrancan encendidas; el resto se activan pulsando.
+  El fundador las leyó como deshabilitadas, así que el atenuado se mantiene
+  suave y va acompañado de una pista explícita. Un interruptor que parece
+  muerto no lo pulsa nadie.
 
 ## Layout
 
