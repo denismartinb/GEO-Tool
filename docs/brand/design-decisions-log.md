@@ -1657,6 +1657,52 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
 
 ---
 
+## 18. La auditoría web deja de depender de un clic (AUDIT-AFTER-SCAN-1, 2026-08-04)
+
+**Estado: implementada, PR #322 (sustituye a #314, cerrada). Migración 0027
+aplicada a mano en Supabase el 2026-08-04 y verificada** (`jobs_type_chk` ya
+admite `web_audit`). Detalle técnico en `docs/adr/0027-post-scan-web-audit-queue.md`;
+invariantes de la zona en `.claude/rules/web-audit.md`.
+
+**Qué cambia para el usuario.** Al terminar un escaneo —automático o manual—
+se encola y se ejecuta sola la auditoría completa: primero la campaña de
+cobertura, después la salud técnica. El usuario no tiene que hacer nada, y
+sobre todo no tiene que *estar delante*. Ese era el fallo real: el producto se
+mueve a escaneos diarios automáticos, y la auditoría vivía en un bucle en
+primer plano conducido por la pestaña del navegador, así que la pantalla
+insignia nunca se habría refrescado justo en las cuentas que más importan.
+
+**Por qué una fila en `jobs` y no una llamada al vuelo.** Un despacho perdido
+no puede significar una auditoría perdida. La fila es el contrato; el
+`after()` que la arranca en caliente es sólo una optimización. Si se pierde,
+la fila sigue vencida y el cron diario de las 07:00 la recoge.
+
+**Lo que se decidió a nivel de producto, no de código:**
+
+- **Los límites de 5/día no se aplican a la ruta automática.** Existen para
+  acotar lo que una persona puede disparar a clics; la ruta automática ya está
+  acotada por algo más estricto —como mucho una auditoría por escaneo
+  completado—. Dejarlos puestos habría significado que el 6.º escaneo del día
+  se publica sin auditoría, que es exactamente el fallo que la fase elimina.
+- **El gate de plan Pro sí se mantiene.** Es una frontera comercial, no un
+  límite de uso.
+- **El email de fallo va al operador, nunca al cliente.** El cliente no pidió
+  esta auditoría y no puede actuar sobre un fallo de backend.
+
+**Roto conocido, a propósito, hasta el PR siguiente.** La pantalla sigue
+contando la versión manual del mundo: el botón «Auditar ahora» de §17 sigue
+ahí y dos textos siguen diciendo que la salud técnica "se audita al pulsar
+«Auditar ahora»" (el *hint* del tile "Salud técnica" y el vacío del bloque
+técnico). Con la auditoría automática eso ya no es cierto. El fundador fijó
+explícitamente la secuencia —"una vez que lo tengamos listo, quitaremos el
+botón manual"—, así que **la copia no se toca en este PR**: se retira junto
+con el botón, en su propio PR, para que la decisión de qué queda en su lugar
+(¿pastilla de "se audita sola tras cada escaneo"? ¿nada?) se tome de una vez
+y no a trozos. Mientras tanto el botón sigue funcionando como disparo manual,
+que es comportamiento razonable y no falso.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
