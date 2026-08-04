@@ -145,6 +145,17 @@ six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
 customer: the audit is automatic, so the user never asked for it and cannot
 act on the backend failure. Requires `RESEND_API_KEY` like every other email.
 
+The same address also receives the **scan-health alert**
+(EXTRACTION-RELIABILITY-1 Fase B, `docs/adr/0029`): a provider out of quota, a
+provider rejecting the key or model id, an engine that answered prompts but
+extracted nothing, or a run that failed with its auto-retry already spent.
+Deduped on (engine, reason) across every project for 24 h, so one exhausted
+API account is one email rather than one per project per daily sweep. Also
+operator-only, and for the same reason. With `OPS_ALERT_EMAIL` unset the alert
+is silently skipped — the failure is still recorded in
+`scan_prompt_results.extraction_error`, but nobody is told, which is the state
+that let OpenAI's 429s run unnoticed for four days.
+
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
 | Variable | Required | Where | Expected shape |

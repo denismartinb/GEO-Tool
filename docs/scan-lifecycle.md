@@ -223,6 +223,19 @@ already spent its bounded retries and carries a truthful error. Re-queueing it
 every pass would let one systematic failure consume the whole budget and
 starve rows nothing has looked at yet.
 
+**A run that loses data alerts the operator (Fase B).** After a run reaches a
+terminal state, `checkAndSendScanHealthAlert` (`lib/scan/scan-health-alert.ts`)
+evaluates its rows and emails `OPS_ALERT_EMAIL` when something actionable
+happened: a `quota:` or `config:` extraction error (no threshold — neither
+heals on its own), an engine that answered prompts but extracted nothing at
+all, or a run that ended `failed` with its auto-retry already spent. Isolated
+model noise (`schema`, `invalid_json`, `empty`, `timeout`) deliberately does
+NOT alert — it self-corrects on the next scan and there is nothing to fix —
+but it still counts toward the engine-down check. Deduped on (engine, reason)
+across **every** project for `SCAN_HEALTH_ALERT_DEDUPE_HOURS` (24h), because
+the daily cron would otherwise turn one incident into one email per project.
+Fail-soft: an alert can never sink a scan. See `docs/adr/0029`, Fase B.
+
 **Finalize defers rather than completing over a hole.** If
 `countUnprocessedExtractionRows` is non-zero at finalize, the `scan_finalize`
 job is released back to `pending`, progress counters are refreshed (bumping
