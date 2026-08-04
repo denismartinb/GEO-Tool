@@ -197,7 +197,10 @@ Human Gate is always manual. It asks:
 5. **Did the agentic user pilot pass, and what did it leave unverified?**
 6. **What did the pilot propose improving, and what was folded in already?**
 7. Are there product risks?
-8. Should this merge now?
+8. **¿Se cerró la fase documentalmente en este mismo PR?** — histórico, regla
+   de ruta si cambió un invariante, y celda del mapa de zonas (ver "Cierre de
+   fase"). Si falta, el PR no está terminado.
+9. Should this merge now?
 
 Only after Human Gate may a PR be merged.
 
@@ -261,6 +264,34 @@ Do not implement without explicit founder approval:
 
 ---
 
+## Mapa de zonas del producto
+
+Índice de estado por zona. **Es un índice, no un registro**: una fila por zona,
+y crece sólo cuando nace una zona nueva. El detalle largo vive en el histórico;
+los invariantes duros viven en la regla de ruta, que se inyecta **sola** al
+tocar esos ficheros.
+
+Antes de trabajar en una zona: leer su regla de ruta y las secciones de
+histórico que aparecen aquí. Al cerrar una fase: actualizar la celda "Última
+fase" (ver "Cierre de fase" más abajo).
+
+| Zona | Regla de ruta (automática) | Última fase cerrada | Histórico |
+|---|---|---|---|
+| Competidores | `competitors.md` | TREND-WINDOW-1 (2026-08-04) | log §10, §11, §15 · ADR 0011/0018/0020/0022 |
+| Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
+| Auditoría web | `web-audit.md` | WEB-AUDIT-ACTION | `docs/specs/web-audit/ROADMAP.md` |
+| Metodología GEO (scoring) | `scoring.md` | geo-score-v3 / ADR 0026 (2026-08-03) | ADR 0008/0015/0021/0024/0026 · log §8b |
+| Blog y contenido | `growth-content.md` | GROWTH-3 Fase 3.2a (2026-08-03) | log §12, §13 · `content-strategy.md` |
+| Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
+| Prompts | — *(sin regla propia todavía)* | — | log §5 |
+| Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
+
+`log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
+irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
+obligatoria antes de tocarlas.
+
+---
+
 ## Implementation Rules
 
 Before editing: check current branch, git status, recent commits, handoff check.
@@ -273,6 +304,25 @@ QA; report exact changed files and results.
 
 Never delete source files casually. Never touch `Documentacion/` unless
 explicitly instructed.
+
+### Cierre de fase (obligatorio, en el mismo PR)
+
+Una fase no está terminada hasta que la siguiente sesión pueda retomarla sin
+preguntar nada. En el **mismo PR** que implementa el cambio, y nunca en uno
+posterior:
+
+1. **Histórico** — entrada en `docs/brand/design-decisions-log.md` (o ADR nuevo
+   si es una decisión técnica): qué se decidió, por qué, y qué queda pendiente
+   o roto conocido. Lo superado se marca `superseded por §X`, no se borra.
+2. **Regla de ruta** — si la fase estableció o cambió un invariante de la zona,
+   actualizar su `.claude/rules/*.md`. Cada invariante debe ser **trazable** a
+   una sección del histórico o a un ADR: una regla que nadie puede justificar
+   es peor que ninguna, porque una sesión futura la obedecerá igual.
+3. **Mapa de zonas** — actualizar la celda "Última fase cerrada" de la zona en
+   la tabla de arriba. Si la zona no existía, añadir su fila.
+
+Lo hace **el agente**, no el fundador. Documentación que depende de que un
+humano se acuerde es documentación que se pudre.
 
 ---
 
@@ -365,6 +415,11 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `supabase.md` | `supabase/**`, `lib/supabase/**` |
 | `gemini.md` | `lib/llm/**` |
 | `server-actions.md` | `app/**/actions.ts` |
+| `competitors.md` | `app/dashboard/projects/*/competitors/**`, `lib/competitors/**` |
+| `recommendations.md` | `app/dashboard/projects/*/recommendations/**`, `lib/recommendations/**` |
+| `web-audit.md` | `app/dashboard/projects/*/web-audit/**`, `lib/web-audit/**` |
+| `scoring.md` | `lib/scoring/**` |
+| `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 
 ### Documentation (`docs/`)
 
