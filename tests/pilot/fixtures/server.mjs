@@ -162,6 +162,20 @@ function citationsPage() {
       </div>
       <div class="cit2-v">50%</div>
     </div>
+    <!-- Mirrors the real .cit2-split-key legend so the selfcheck exercises
+         the same test path as core-flow.spec.ts's "citations KPI tooltip and
+         row expand actually work" journey — added 2026-08-03 alongside that
+         journey's new legend-tooltip check, so a healthy fixture run proves
+         the assertion itself works before trusting it against production. -->
+    <div class="cit2-split-key">
+      <span>
+        Terceros que te mencionan
+        <span class="info-tip" tabindex="0">
+          <span class="info-tip-icon">i</span>
+          <span class="info-tip-bubble">Tooltip de leyenda de prueba de la fixture</span>
+        </span>
+      </span>
+    </div>
     <div class="cit2-search"><input type="text" placeholder="Buscar página o dominio…" /></div>
     <div class="cit2-filtercount" style="display:none"></div>
     <div class="cit2-row">
@@ -199,6 +213,12 @@ function citationsPage() {
  * shape here is what lets the self-check prove the fix instead of asserting it
  * (`BELOW_FOLD_MARKER` sits far enough down that only a working capture
  * contains it).
+ *
+ * The class names and the `.dash-main { min-height: 0 }` flex-shrink trick are
+ * the real ones from app/globals.css + app/dashboard/layout.tsx, not
+ * stand-ins: journey.ts measures horizontal overflow against `.dash-content`
+ * specifically, so a fixture that invented its own class name would leave that
+ * measurement untested (see the shell-clip case in pilot-selfcheck.mjs).
  */
 const BELOW_FOLD_MARKER = "marcador-bajo-el-pliegue";
 
@@ -207,13 +227,23 @@ function shellWrap(body) {
     { length: 40 },
     (_, i) => `<p style="margin:0 0 24px">fila de relleno ${i + 1}</p>`
   ).join("");
-  return `<div class="shell" style="height:100dvh;overflow:hidden;display:grid;grid-template-rows:auto 1fr">
+  // Trapped INSIDE `.dash-content`, whose own `overflow-y: auto` computes
+  // `overflow-x: auto` too — so the document never sees it. Only a check that
+  // measures `.dash-content` directly can catch this.
+  const trappedWide =
+    BREAK_MODE === "shell-clip"
+      ? '<div style="width:2200px" id="shell-clip-wide-marker">ancho atrapado dentro de .dash-content</div>'
+      : "";
+  return `<div class="shell" style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
   <header style="padding:8px 16px">cabecera</header>
-  <main class="shell-scroll" style="overflow-y:auto;padding:16px">
-    ${body}
-    ${filler}
-    <p id="${BELOW_FOLD_MARKER}">${BELOW_FOLD_MARKER}</p>
-  </main>
+  <div class="dash-main" style="flex:1;min-height:0;display:flex;flex-direction:column">
+    <main class="dash-content" style="flex:1;overflow-y:auto;padding:16px">
+      ${body}
+      ${trappedWide}
+      ${filler}
+      <p id="${BELOW_FOLD_MARKER}">${BELOW_FOLD_MARKER}</p>
+    </main>
+  </div>
 </div>`;
 }
 
@@ -342,6 +372,95 @@ function projectsPage() {
   );
 }
 
+/**
+ * Minimal stand-ins for the "this screen has real data" anchors each read-only
+ * journey declares via `ContentExpectation` (tests/pilot/support/journey.ts).
+ *
+ * The fixture used to serve a generic `<p>contenido</p>` for every authed
+ * page, which was fine while the harness only checked for breakage. It is not
+ * fine now: `assertPageIsHealthy` fails a screen that renders no real content,
+ * so a fixture serving placeholders would make the "healthy fixture must
+ * PASS" half of `pnpm pilot:selfcheck` fail for the right reason on the wrong
+ * subject. Modelling a project WITH data is also simply more honest — an
+ * empty account is the state the pilot must refuse, not the state it
+ * self-checks against.
+ *
+ * Deliberately the smallest markup that satisfies each anchor; this is not an
+ * attempt to mirror the real screens.
+ */
+function screenBody(path) {
+  // `empty` reproduces the exact production state that made the pilot lie on
+  // 2026-08-02: every screen loads cleanly, with no console error, no failed
+  // request and no overflow — and shows a placeholder instead of the product.
+  // The self-check asserts the pilot FAILS here; a harness that passes this
+  // fixture has lost the only defence against certifying an empty account.
+  if (BREAK_MODE === "empty") {
+    return "<p>Todavía no has auditado tu web</p>";
+  }
+
+  if (path === `/dashboard/projects/${PROJECT_ID}`) {
+    return "<h2>Puntuación GEO</h2><p>62 / 100</p><p>Tasa de mención 40%</p>";
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/prompts`) {
+    return '<p>GenScore monitoriza 3 prompts activos</p><div class="pr2-page">Prompt de prueba</div>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/competitors`) {
+    return '<table class="tbl"><tr><td>fixture-rival.example</td><td>Cuota de voz 22%</td></tr></table>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/recommendations`) {
+    return '<h2>Backlog de acciones</h2><div class="rec-card">Recomendación de prueba</div>';
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/runs`) {
+    // A table, not prose: the journey anchors on `.run-tbl` because the real
+    // page's status text sits inside `.scan-status`, which globals.css hides
+    // below 900px. Keep this in sync with that anchor.
+    return `<table class="run-tbl"><tbody><tr><td>1</td><td>1 ago 2026</td><td>Completado</td></tr></tbody></table>`;
+  }
+  if (path === `/dashboard/projects/${PROJECT_ID}/web-audit`) {
+    // The tablist is exactly what the web-audit journey anchors on, because
+    // the real tabs only exist once the project has a coverage audit.
+    // Real click-to-switch behaviour (not just static markup), mirroring
+    // AuditTabBar/AuditTabPanel — added 2026-08-03 alongside
+    // core-flow.spec.ts's explicit Correcto/Páginas coverage, so a healthy
+    // fixture run proves that test's own aria-selected/tabpanel assertions
+    // work before trusting them against production.
+    return `<div role="tablist" aria-label="Secciones de la auditoría">
+        <button role="tab" aria-selected="true" data-tab="problemas">Problemas</button>
+        <button role="tab" aria-selected="false" data-tab="correcto">Correcto</button>
+        <button role="tab" aria-selected="false" data-tab="paginas">Páginas</button>
+      </div>
+      <div role="tabpanel" data-panel="problemas">4 páginas sin datos estructurados</div>
+      <div role="tabpanel" data-panel="correcto" hidden>10 de 10 páginas indexables</div>
+      <div role="tabpanel" data-panel="paginas" hidden>
+        Tabla de páginas de prueba
+        <!-- A real collapsed page row: fase 3b's copyable fixes live inside
+             one of these, so the journey has to open it to have any evidence
+             at all. Native <details>, same as PageAuditRow. -->
+        <details class="wa-details">
+          <summary>/ · 3 mejoras pendientes</summary>
+          <div class="wa-details-body">
+            <pre>&lt;link rel="canonical" href="https://fixture.example/" /&gt;</pre>
+          </div>
+        </details>
+      </div>
+      <script>
+        document.querySelectorAll('[role="tab"]').forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var target = btn.getAttribute("data-tab");
+            document.querySelectorAll('[role="tab"]').forEach(function (t) {
+              t.setAttribute("aria-selected", t.getAttribute("data-tab") === target ? "true" : "false");
+            });
+            document.querySelectorAll('[role="tabpanel"]').forEach(function (p) {
+              if (p.getAttribute("data-panel") === target) p.removeAttribute("hidden");
+              else p.setAttribute("hidden", "");
+            });
+          });
+        });
+      </script>`;
+  }
+  return "<p>contenido</p>";
+}
+
 function isAuthenticated(request) {
   return (request.headers.cookie ?? "").includes(`${SESSION_COOKIE}=1`);
 }
@@ -436,7 +555,7 @@ const server = createServer((request, response) => {
     response.end(
       path === "/dashboard/projects"
         ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", "<p>contenido</p>")
+        : html(AUTHED_PAGES.get(path) ?? "", screenBody(path))
     );
     return;
   }
