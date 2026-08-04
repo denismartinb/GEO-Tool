@@ -394,19 +394,29 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
     input.rawResponseText
   ].join("\n\n");
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: 0 }
-      }
-    })
+  const extractionBody = JSON.stringify({
+    contents: [{ parts: [{ text: promptBlock }] }],
+    // temperature: 0 — see ADR 0009 addendum (2026-06-19).
+    generationConfig: {
+      temperature: 0,
+      responseMimeType: "application/json",
+      thinkingConfig: { thinkingBudget: 0 }
+    }
   });
+
+  // Con timeout, como las llamadas de generación de este mismo fichero. Antes
+  // usaba `fetch` pelado: una llamada colgada no volvía nunca y se llevaba por
+  // delante la invocación entera al agotarse maxDuration. SCAN-CHAIN-2 lo hizo
+  // urgente al pasar la extracción de ~20 llamadas por escaneo a ~900.
+  const response = await fetchWithTimeout(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: extractionBody
+    },
+    GEMINI_CALL_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     throw new Error(getGeminiApiError(response.status));

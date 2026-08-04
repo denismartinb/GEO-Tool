@@ -99,6 +99,33 @@ describe("runStructuredExtractionForRun", () => {
     vi.mocked(resolveGroundingRedirects).mockResolvedValue(new Map());
   });
 
+  /**
+   * QA (PR #317) señaló que este comportamiento era correcto pero no tenía
+   * test con nombre. Importa porque una fila con `raw_response_text` vacío
+   * pasa el filtro `NOT NULL` del SELECT: si además contara en `remaining`,
+   * bloquearía la puntuación del run PARA SIEMPRE — el fallo sería peor que
+   * el bug original, que al menos terminaba.
+   */
+  it("una respuesta vacía no cuenta como pendiente y no bloquea el cierre del run", async () => {
+    const service = createServiceMock({
+      selectResult: {
+        data: [baseRow({ raw_response_text: "" })],
+        error: null
+      },
+      updateCalls: []
+    });
+
+    const result = await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(result.processed).toBe(0);
+    expect(result.remaining, "una fila con texto vacío nunca es extraíble: contarla dejaría el run sin puntuar para siempre").toBe(0);
+    expect(extractGeminiStructuredData).not.toHaveBeenCalled();
+  });
+
   it("uses the OpenAI extractor and treats its grounding URLs as final (no redirect resolution)", async () => {
     const updateCalls: Array<Record<string, unknown>> = [];
     const service = createServiceMock({

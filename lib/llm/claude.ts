@@ -215,11 +215,15 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   const headers = buildHeaders(apiKey);
 
-  const response = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers,
-    body: requestBody
-  });
+  // Con timeout, como las llamadas de generación de este mismo fichero. Antes
+  // usaba `fetch` pelado: una llamada colgada no volvía nunca y se llevaba por
+  // delante la invocación entera al agotarse maxDuration. SCAN-CHAIN-2 lo hizo
+  // urgente al pasar la extracción de ~20 llamadas por escaneo a ~900.
+  const response = await fetchWithTimeout(
+    ANTHROPIC_API_URL,
+    { method: "POST", headers, body: requestBody },
+    CLAUDE_CALL_TIMEOUT_MS
+  );
 
   if (!response.ok) {
     throw new Error(getClaudeApiError(response.status));
