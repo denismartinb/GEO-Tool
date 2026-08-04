@@ -485,7 +485,7 @@ export async function auditDomainCoverageAction(input: {
 }): Promise<DomainCoverageResult> {
   const parsed = domainCoverageInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Datos de solicitud no válidos." };
+    return { success: false, error: "Datos de solicitud no válidos.", reason: "generic" };
   }
 
   const { supabase, user } = await requireUser();
@@ -514,7 +514,7 @@ export async function runTechnicalAuditAction(input: {
 }): Promise<TechnicalAuditResult> {
   const parsed = technicalAuditInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Datos de solicitud no válidos." };
+    return { success: false, error: "Datos de solicitud no válidos.", reason: "generic" };
   }
 
   const { supabase, user } = await requireUser();

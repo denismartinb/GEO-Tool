@@ -122,6 +122,29 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 (opt-in, default `false`, no UI yet — see migration `0008_recurring_scans.sql`).
 `vercel.json` schedules the route daily (`0 6 * * *`).
 
+### Auditoría web automática tras cada escaneo (AUDIT-AFTER-SCAN-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `AUTO_WEB_AUDIT_ENABLED` | No (defaults to **enabled**) | Vercel | `false` to disable; anything else (including unset) leaves it on |
+| `OPS_ALERT_EMAIL` | No (alerts are silently skipped when unset) | Vercel | operator inbox, e.g. `alerts@genscore.es` |
+
+Unlike every other kill switch in this document, this one defaults to **on**:
+the whole point of the phase is that the audit happens without anyone asking,
+and a feature that needs a variable set in three environments before it does
+anything is a feature that gets found broken later. `false` is the escape
+hatch for cost — each automatic audit spends real Gemini grounding calls.
+
+Reuses `CRON_SECRET` for both entry points: Vercel's daily cron (`GET
+/api/cron/run-audit`, `0 7 * * *` — an hour after the scan sweep, so the
+day's automatic scans have already queued their audits) and the worker's own
+`POST` self-chain. No new secret.
+
+`OPS_ALERT_EMAIL` receives the failure alert when a queued audit exhausts its
+six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
+customer: the audit is automatic, so the user never asked for it and cannot
+act on the backend failure. Requires `RESEND_API_KEY` like every other email.
+
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
 | Variable | Required | Where | Expected shape |
@@ -304,8 +327,83 @@ for the payment-failed email to fire.
   trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
   If the Supabase project is ever migrated to a different region, update this
   value to match.
+- **ignoreCommand**: `vercel.json` skips the build when a commit touched
+  nothing outside internal documentation (`docs/`, `.claude/`, `agents/` and
+  the root `.md` files). Exit `0` means skip, exit `1` means build — so the
+  command ends in `test $? -eq 0`, which collapses every git error (exit `128`
+  when `HEAD^` does not exist on a root commit or a too-shallow clone) to
+  "build". **When in doubt, deploy**: Vercel reading a git failure as `0`
+  would turn it into a silently missing deployment.
+  - **The exclusions are literal paths, never patterns, and that is
+    load-bearing.** Every blog article in this product is
+    `app/blog/<slug>/page.mdx`, so the obvious first draft — excluding `*.md`,
+    or its one-character neighbour `*.mdx` — would have stopped publishing new
+    articles with every check still green. `vercel-ignore-command.test.ts`
+    forbids wildcards and forbids excluding anything under `app/`, `lib/`,
+    `components/`, `public/` or `supabase/`.
+  - **What it does not do, measured rather than assumed:** it does nothing for
+    the Hobby plan's `api-deployments-free-per-day` limit. Tested directly on
+    2026-08-04 — commit `da8736a` touches only `docs/`, so the rule should
+    have skipped it, and it was rejected with the same rate-limit error as
+    every other push. **The limit is applied when the deployment is created,
+    upstream of the build step where `ignoreCommand` runs**, so a build this
+    rule would have skipped never gets far enough to skip. This saves build
+    minutes and nothing else.
+  - **Consequence to know about:** a documentation-only commit on the
+    production branch does not redeploy production. That is correct — nothing
+    the app serves changed — but the previous deployment stays live.
+- **Deployment rate limit (Hobby).** `api-deployments-free-per-day` rejects
+  every new deployment for 24 hours once the account passes 100. Pushing again
+  does not clear it: it consumes another attempt against the same counter.
+  Observed 2026-08-04 — a retrigger commit failed identically, minutes after
+  an unrelated PR's already-queued build completed successfully, so a
+  succeeding build is **not** evidence the window has reopened. Nor does the
+  `ignoreCommand` above help: the limit gates deployment creation, not the
+  build. The only real fix is Vercel Pro, which `docs/launch-plan.md` already
+  lists as a blocker for a separate reason (Hobby forbids commercial use).
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
+  **Reverting is not optional.** While it points elsewhere, merging to `main`
+  produces no production deploy at all — silently. Preview deploys keep working
+  the whole time, so everything looks healthy.
+
+### Merging to `main` does not guarantee a production deploy — check it
+
+Verified on 2026-08-04, and it cost a founder test session: AUDIT-AFTER-SCAN-1
+was merged, the founder ran a scan against `genscore.es`, nothing was audited,
+and the queue table was empty. Nothing had failed — **production was still
+serving `148f6bc`, eight commits behind `main`**, so the deployed bundle did
+not contain the enqueue call. There is no error anywhere in that story: the
+code simply was not running.
+
+Confirm the deploy landed before concluding anything about behaviour in
+production:
+
+```bash
+# What production is actually serving, newest first
+curl -s "https://api.github.com/repos/denismartinb/GEO-Tool/deployments?environment=Production&per_page=3" \
+  | python3 -c "import sys,json;[print(d['created_at'], d['sha'][:8]) for d in json.load(sys.stdin)]"
+
+# How far ahead main is of that sha
+git log --oneline <sha-from-above>..origin/main
+```
+
+A visual tell is often faster: pick something the last merge changed on screen
+and look for it. In this incident the Auditoría web tabs still read «Plan de
+acción · Salud técnica · Evolución», the layout PR #289 had already replaced
+with «Problemas · Correcto · Páginas» — one glance would have said "old code"
+before any SQL was run.
+
+Two causes seen so far, in the order worth checking:
+
+1. **Production Branch points somewhere other than `main`** (Vercel → Settings
+   → Environments → Production → Branch Tracking), typically left over from the
+   non-main smoke procedure above. This is the one that produces *zero*
+   production deployments while previews continue normally.
+2. **The daily deployment cap on the free plan**
+   (`api-deployments-free-per-day`, >100/day, resets after 24 h). Vercel does
+   not retry a build it refused, so a merge that lands inside that window never
+   deploys even after the cap lifts — it needs a new push or a manual Redeploy.
 
 ---
 
