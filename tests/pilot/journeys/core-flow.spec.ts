@@ -219,7 +219,11 @@ test("web audit screen renders", async ({ page }, testInfo) => {
   if ((await llmsIssue.count()) > 0) {
     await llmsIssue.locator("summary").click();
     await expect(llmsIssue, "clicking the llms.txt issue did not expand it").toHaveAttribute("open", "");
-    await captureInteraction(page, testInfo, "web-audit-llms-txt-open");
+    // fullContent: the file block alone is taller than the fold, so a
+    // viewport capture verifies the generated llms.txt and silently omits the
+    // five publishing steps underneath — which are half of what this phase
+    // ships. Confirmed on the first run: 800px tall, steps nowhere in it.
+    await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
   }
 });
 

@@ -6191,8 +6191,20 @@ select.set-field {
 .wa2-llms-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
 /* El fichero entero cabe de sobra en pantalla, pero una campaña con muchos
    temas lo hace largo — se acota y scrollea en vez de empujar los pasos de
-   publicación fuera de la vista, que es lo que el usuario necesita leer. */
-.wa2-llms .wa2-fix-code { max-height: 260px; overflow-y: auto; }
+   publicación fuera de la vista, que es lo que el usuario necesita leer.
+
+   `pre-wrap` (no `pre`, como en .wa2-fix-code) por una razón medida, no por
+   gusto: en el pilot del 2026-08-04 sobre mozilla.org, las URLs reales
+   (https://support.mozilla.org/es/kb/navegacion-privada-Firefox-no-guardar…)
+   dejaban visible menos de la mitad de cada línea a 375px. Ahí sí importa
+   scrollear en horizontal — en un fragmento de JSON-LD la línea exacta es el
+   producto —, pero esto es un fichero de texto plano que el usuario copia o
+   descarga entero: partir la línea en pantalla no cambia lo que se lleva, y
+   sin ello la vista previa en móvil no sirve para nada. */
+.wa2-llms .wa2-fix-code {
+  max-height: 260px; overflow-y: auto; overflow-x: hidden;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
 
 .wa2-llms-steps {
   margin: 0; padding: 0; list-style: none;
