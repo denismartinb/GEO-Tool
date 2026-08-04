@@ -54,7 +54,24 @@ becomes terminal (`failed` or `completed`).
 
 A project's active prompts (up to its plan's cap — Free 10, Starter 25, Pro
 100, Agency 300, see `app/pricing/plans-data.ts`) all get a real `scan_prompt`
-job when a run is created (`lib/scan/run-creation.ts`). `executePendingScan`
+job when a run is created (`lib/scan/run-creation.ts`).
+
+**One job per (prompt, sample)** since SAMPLING-1 (ADR 0027): when
+`prompts × engines` falls short of the response floor
+(`MIN_RESPONSES_PER_RUN`, `lib/scan/sampling.ts`), the run repeats its prompt
+set and each repetition gets its own jobs, carrying `sample_index` in
+`payload_json`. Two consequences worth stating here, because both are easy to
+get wrong from elsewhere in the lifecycle:
+
+- `scan_runs.total_prompts` counts **jobs**, not distinct prompts — every
+  progress figure divides `successful_prompts + failed_prompts` (job counts)
+  by it. The distinct prompt count is `total_prompts / sample_count`.
+- The unit of work is `(run, prompt, engine, sample)`. `processPromptJob`'s
+  "does a result already exist" check is scoped to `sample_index`; without
+  that scope every repetition after the first would find sample 0's rows and
+  complete without making a call.
+
+`executePendingScan`
 does **not** try to process all of them in one invocation: it atomically
 claims up to `MAX_REAL_SCAN_PROMPTS` (10) still-`pending` jobs per call —
 enough to fit comfortably inside the ~60s Vercel `maxDuration` budget

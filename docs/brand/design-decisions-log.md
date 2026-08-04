@@ -1657,6 +1657,41 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
 
 ---
 
+## 18. Un escaneo dice cuántos lanzamientos hizo, no cuántos prompts tiene (SAMPLING-1, 2026-08-04)
+
+Decisión técnica completa en **ADR 0027**; aquí sólo lo que cambia en pantalla
+y por qué, que es lo que le toca a este documento.
+
+Desde SAMPLING-1 un escaneo puede **repetir su set de prompts** para alcanzar
+el suelo de 50 respuestas que el score necesita para ser publicable. Eso rompe
+una equivalencia que el producto daba por hecha en su copy: `total_prompts`
+cuenta *jobs*, y en cuanto hay repeticiones un job deja de ser un prompt.
+
+- **Barra de progreso (`components/scan-in-progress.tsx`): se retira el
+  sustantivo.** Pasa de «X de Y prompts» a «X de Y». Nombrar la unidad ahí
+  sería falso en los escaneos que repiten, y llevar `sample_count` hasta ese
+  componente exige tocar 4 páginas más `/api/.../scan-status` — trabajo de la
+  fase de superficie, no de ésta. Precedente que ya existía: la tabla de
+  escaneos (`live-run-status-cells.tsx`) ya mostraba `ok/total` sin sustantivo.
+- **Detalle del escaneo: se nombra la unidad real sólo cuando hace falta.** Con
+  `sample_count = 1` sigue diciendo «Prompts analizados: X de Y». Con
+  repeticiones dice «Lanzamientos analizados: X de Y · N prompts × R
+  repeticiones», que además enseña de dónde sale el número en vez de
+  esconderlo.
+- **Chips de motor en Prompts: agregados, no la última fila.** Construían un
+  `Map` por proveedor, así que con varias muestras el chip «Gemini: marca
+  mencionada» lo decidía la fila que llegara última — una moneda al aire. Ahora
+  el chip significa «este motor nombró la marca en al menos una de sus
+  respuestas», que es la misma regla que la fila ya usaba entre motores.
+
+**Roto conocido, aceptado y pendiente de la fase de superficie:** el cajón de
+evidencias muestra R filas por motor sin etiquetar a qué muestra pertenece cada
+una, y el total de citas por prompt suma las R respuestas (por tanto no es
+comparable entre escaneos con distinto R). No se toca aquí para no adelantar a
+medias un diseño que tiene su propia fase.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

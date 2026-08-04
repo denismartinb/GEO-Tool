@@ -123,8 +123,17 @@ function EngineChipsWithGaps({
   engines: ResultRow[];
   allProviders: string[];
 }) {
-  const byProvider = new Map(engines.map((r) => [normalizeProvider(r.provider), r]));
-  const mentioning = allProviders.filter((p) => byProvider.get(p)?.brand_mentioned === true);
+  // Aggregated per engine, not last-row-wins. Since SAMPLING-1 (ADR 0027) a
+  // run can hold several samples of the same (prompt, engine), so building a
+  // Map keyed by provider would keep whichever sample happened to come last
+  // and show a mention chip decided by row order — with 2 samples where
+  // Gemini named the brand once, the chip was a coin flip. "This engine
+  // named the brand in at least one of its answers" is both stable and the
+  // same rule the row's own `brandMentioned` already uses across engines.
+  const mentioningProviders = new Set(
+    engines.filter((r) => r.brand_mentioned).map((r) => normalizeProvider(r.provider))
+  );
+  const mentioning = allProviders.filter((p) => mentioningProviders.has(p));
   // Fragment, not a wrapper div: `.pr2-prow-engs` is itself the flex
   // container, and an inner flex box would trap the pills in a non-wrapping
   // line. Rendering nothing when no engine mentioned the brand also lets

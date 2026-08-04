@@ -147,7 +147,7 @@ Mahou/San Miguel).
 | **−1c** | **UI de alias**: verlos, añadirlos y quitarlos a mano, y decir en «Evidencias de mención» qué nombre casó. Hoy los alias mueven el score y solo se pueden inspeccionar por SQL — el riesgo asumido en ADR 0025 está **sin mitigar** hasta que exista | Bajo | **Pendiente (hueco conocido)** |
 | **1** | Metodología v3: la posición mide **puesto**, no frecuencia — `avg_position_when_mentioned` + tasa de aparición por entidad, `prominence` condicionada a mención y con suelo de muestra, gráfico de evolución rediseñado | Medio · cambia el significado | **Implementada** (ADR 0026) |
 | 1b | Recalibrar pesos (.40/.25/.20/.15) y bandas 70/40 con la distribución observada de proyectos reales; revisar si `prominence` merece 0.25 ahora que deja de duplicar `presence` | Medio | Pendiente · necesita datos que aún no existen |
-| **2** | Muestreo: repeticiones por prompt en planes de pago | Coste por escaneo | Decisión de producto |
+| **2** | Muestreo: repeticiones por prompt en planes de pago | Coste por escaneo | **Implementada** (SAMPLING-1, ADR 0027) |
 | **3** | Candado: spec normativa, golden set congelado, tests de propiedad, gate de CI | Bajo | Pendiente |
 
 La Fase 0 va primero por ser la única sin migración ni cambio de significado.
@@ -207,6 +207,24 @@ Conviene dejarlo escrito para que nadie lea el ADR 0024 como "arreglado":
   Fase −1.
 - La inestabilidad de fondo solo baja de verdad con más muestra (Fase 2);
   ninguna fórmula estabiliza un score de 3 respuestas.
+
+### Lo que la Fase 2 tampoco resuelve (agosto 2026)
+
+Mismo aviso, para que nadie lea el ADR 0027 como "la variabilidad está
+arreglada":
+
+- El suelo de 50 estrecha el margen de ~±18 pp a ~±13 pp en el caso típico
+  (30 → 60 respuestas). Es una mejora del 29 %, no un número firme. El score
+  **sigue** publicándose con su margen, y debe seguir haciéndolo.
+- La Fase 2 depende de que se levante el tope de extracción
+  (`MAX_EXTRACTION_RESULTS`). Mientras ese tope siga por debajo del número de
+  filas de un escaneo, las filas sobrantes conservan su `brand_mentioned`
+  ingenuo — sin alias (Fase −1) y sin verificar (ADR 0021) — y **más muestra
+  significa más denominador sin verificar**. Es la única dependencia dura de
+  esta fase.
+- Sigue sin tocarse el hueco conocido de la Fase −1c (UI de alias): con muestra
+  grande y un alias mal resuelto, el producto publica con confianza un número
+  equivocado. Más muestra no arregla un número equivocado, sólo lo estabiliza.
 
 ---
 
