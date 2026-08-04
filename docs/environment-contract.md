@@ -318,11 +318,14 @@ for the payment-failed email to fire.
     articles with every check still green. `vercel-ignore-command.test.ts`
     forbids wildcards and forbids excluding anything under `app/`, `lib/`,
     `components/`, `public/` or `supabase/`.
-  - **What it does not do:** it is not a fix for the Hobby plan's
-    `api-deployments-free-per-day` limit (100 deployments/24h, counted per
-    Vercel *account*, not per project), which blocked every deploy on
-    2026-08-03 and 2026-08-04. It saves build time; whether a skipped build
-    still consumes a deployment record is stated in the PR as unverified.
+  - **What it does not do, measured rather than assumed:** it does nothing for
+    the Hobby plan's `api-deployments-free-per-day` limit. Tested directly on
+    2026-08-04 — commit `da8736a` touches only `docs/`, so the rule should
+    have skipped it, and it was rejected with the same rate-limit error as
+    every other push. **The limit is applied when the deployment is created,
+    upstream of the build step where `ignoreCommand` runs**, so a build this
+    rule would have skipped never gets far enough to skip. This saves build
+    minutes and nothing else.
   - **Consequence to know about:** a documentation-only commit on the
     production branch does not redeploy production. That is correct — nothing
     the app serves changed — but the previous deployment stays live.
@@ -331,9 +334,10 @@ for the payment-failed email to fire.
   does not clear it: it consumes another attempt against the same counter.
   Observed 2026-08-04 — a retrigger commit failed identically, minutes after
   an unrelated PR's already-queued build completed successfully, so a
-  succeeding build is **not** evidence the window has reopened. The real fix
-  is Vercel Pro, which `docs/launch-plan.md` already lists as a blocker for a
-  separate reason (Hobby forbids commercial use).
+  succeeding build is **not** evidence the window has reopened. Nor does the
+  `ignoreCommand` above help: the limit gates deployment creation, not the
+  build. The only real fix is Vercel Pro, which `docs/launch-plan.md` already
+  lists as a blocker for a separate reason (Hobby forbids commercial use).
 - For smoke testing a non-main branch: change Production Branch in Vercel
   settings, push a commit to trigger a deploy, then revert after the smoke.
 
