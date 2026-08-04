@@ -13,6 +13,7 @@ import {
   type ScoreInputRow,
 } from "@/lib/scoring/run-scoring";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
+import { selectPlan } from "@/lib/recommendations/plan";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
@@ -413,6 +414,25 @@ export default async function RecommendationsPage({
     }
   }
 
+  // El plan se selecciona AQUI, no en el cliente, porque su techo de puntos
+  // tiene que ser un contrafactual conjunto sobre esas mismas acciones —
+  // sumar los deltas de las tres tarjetas contaria dos veces los prompts que
+  // compartan (ADR 0017 §3). Calcularlo en cliente obligaria a sumar.
+  const plan = selectPlan(recs);
+  const planIds = plan.map((r) => r.id);
+  const planJoint =
+    scoreInputRows.length > 0 && plan.length > 0
+      ? computeJointPotentialPoints(
+          scoreInputRows,
+          project.domain,
+          plan.map((r) => ({
+            recommendationType: r.recommendation_type,
+            affectedPromptIds: affectedPromptIds(r.evidence_json),
+          })),
+        )
+      : null;
+  const planPoints = planJoint ? planJoint.deltaPoints : null;
+
   // Blocked AI crawlers = a hard ceiling on everything else on this page.
   const botsReport = (auditRow as { bots: BotAccessReport | null } | null)?.bots ?? null;
   const blockedBots = (botsReport?.bots ?? []).filter((b) => !b.allowed).map((b) => b.agent);
@@ -433,23 +453,39 @@ export default async function RecommendationsPage({
 
   return (
     <div className="page fade-in">
-      <div className="rec2-scope">
-        {/* 1 · Head — title and the scan date, nothing else. The metadata row
-            (prompts / competitors / scans / score) that used to live here was
-            removed in the founder design review: it repeated the Overview and
-            pushed the first real action below the fold. */}
-        <div className="rec2-head">
-          <div style={{ minWidth: 0 }}>
-            <div className="rec2-kicker">Actuar</div>
-            <h1 className="rec2-h1">Recomendaciones</h1>
+      {/* 1 · Cabecera estándar de sección, igual que Competidores, Prompts y
+          Páginas citadas: kicker con el nombre de la sección, nombre del
+          proyecto, contador y fecha de escaneo a la derecha. El rediseño la
+          había sustituido por un titular propio, rompiendo la consistencia de
+          la consola (revisión del fundador).
+
+          Va FUERA de `.rec2-scope`, como en el resto de secciones: la cabecera
+          sangra a los bordes de la página con márgenes negativos, y dentro de
+          una columna centrada de 460px quedaría recortada. */}
+      <div className="ov-sticky-header">
+        <div className="ov-sticky-left">
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>
+              Recomendaciones
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                {project.name}
+              </span>
+              {total > 0 && <span className="badge badge-neutral">{total} acciones</span>}
+            </div>
           </div>
+        </div>
+        <div className="ov-sticky-right">
           {lastScanDate && (
-            <span className="badge badge-pos" style={{ fontSize: 11, flexShrink: 0 }}>
+            <span className="badge badge-pos" style={{ fontSize: 11 }}>
               Escaneado {lastScanDate}
             </span>
           )}
         </div>
+      </div>
 
+      <div className="rec2-scope">
         {activeRun ? (
           <ScanInProgress activeRun={activeRun} />
         ) : (
@@ -554,6 +590,8 @@ export default async function RecommendationsPage({
                 projectId={projectId}
                 jointPoints={jointPoints}
                 jointPointsByType={jointPointsByType}
+                planIds={planIds}
+                planPoints={planPoints}
                 domain={project.domain}
               />
             )}

@@ -7,6 +7,7 @@ import { DotMeter } from "@/components/ui/dot-meter";
 import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/recommendations/recommendation-engine";
 import { rewriteRecommendationAction, dismissRecommendationAction } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
+import { MIN_VISIBLE_POINTS, formatPoints, selectPlan } from "@/lib/recommendations/plan";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -507,9 +508,9 @@ export function RecCard({
           }}
         >
           <div style={{ textAlign: "right" }}>
-            {typeof rec.potentialPoints === "number" && Math.round(rec.potentialPoints) > 0 ? (
+            {typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS ? (
               <>
-                <div className="rec2-pts">+{Math.round(rec.potentialPoints)} pt</div>
+                <div className="rec2-pts">+{formatPoints(rec.potentialPoints)} pt</div>
                 <div className="rec2-pts-l">potenciales</div>
               </>
             ) : (
@@ -864,39 +865,6 @@ export function RecCard({
 }
 
 /**
- * How many actions the plan proposes per scan. Three is a deliberate product
- * choice, not a layout constant: the research behind this redesign found the
- * competition's failure mode is a 100-row list nobody starts, and every guide
- * reviewed prescribes a small, bounded set of next moves. Everything else
- * stays one scroll below in "Más recomendaciones" — nothing is hidden.
- */
-const PLAN_SIZE = 3;
-
-/**
- * Actions the plan should surface first: highest real potential, and among
- * equals the cheapest to do. Recommendations without a quantified delta fall
- * back to their qualitative impact so a low-confidence run still gets a
- * sensible plan instead of an empty one.
- */
-function planScore(rec: Recommendation): number {
-  const points = typeof rec.potentialPoints === "number" && rec.potentialPoints > 0 ? rec.potentialPoints : null;
-  if (points !== null) {
-    // Quantified actions first, best-paying first, cheaper one wins a tie.
-    const effortBonus = rec.effort === "low" ? 0.3 : rec.effort === "medium" ? 0.1 : 0;
-    return 1000 + points + effortBonus;
-  }
-  // No honest figure — and on a low-confidence run that is EVERY card, which
-  // makes this branch the real ranking rather than a rare fallback. It used to
-  // be an ad-hoc impact + effort + "scans open" formula, and the staleness term
-  // dominated it: on the Movistar pilot the top action became "Repite lo que ya
-  // te funciona" — an amplification the engine itself scores as low severity —
-  // purely because it had been open six scans. Defer instead to the engine's
-  // own priority_rank, which already weighs severity, impact, confidence and
-  // how many prompts the gap touches.
-  return 1000 - rec.priority_rank;
-}
-
-/**
  * Groups the leftovers by recommendation type so fifteen "Aparece en …" cards
  * collapse into one expandable row with a count. This is the density fix the
  * redesign exists for, and it is deliberately done HERE rather than in the
@@ -947,9 +915,9 @@ function GroupedRecs({
       <button type="button" className="rec2-group-h" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Icon name={open ? "chevDown" : "chevRight"} size={15} />
         <span className="rec2-group-t">{labelForType(type)}</span>
-        {joint !== null && joint > 0 && (
+        {joint !== null && joint >= MIN_VISIBLE_POINTS && (
           <span className="rec2-pts" style={{ fontSize: 13 }}>
-            +{joint} pt
+            +{formatPoints(joint)} pt
           </span>
         )}
         <span className="rec2-group-c">{items.length}</span>
@@ -999,6 +967,8 @@ export function RecommendationsClient({
   projectId,
   jointPoints = null,
   jointPointsByType,
+  planIds = [],
+  planPoints = null,
   domain = "",
 }: {
   recommendations: Recommendation[];
@@ -1008,43 +978,25 @@ export function RecommendationsClient({
   jointPoints?: number | null;
   /** Joint counterfactual per recommendation type, computed server-side. */
   jointPointsByType?: Record<string, number | null>;
+  /** Ids de las acciones del plan, en orden, seleccionadas en el servidor. */
+  planIds?: string[];
+  /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
+  planPoints?: number | null;
   domain?: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
 
   const hasTechnical = recommendations.some((r) => categoryForType(r.recommendation_type) === "technical");
 
-  // The plan: the highest-yield actions of this scan, in the order the engine
-  // would tackle them. Computed before filtering — the plan is the scan's
-  // answer to "what now", not a view of the current tab.
-  //
-  // At most ONE per recommendation type. Without this the plan degenerates into
-  // the same rule three times on three different queries — seen on the real
-  // preview, where all three "priority actions" were "Te mencionan pero no
-  // citan tu dominio en …" with identical descriptions. That is the exact
-  // failure this redesign exists to remove, and it is worse in the highlighted
-  // block than anywhere else: three near-identical cards read as padding, not
-  // as a plan. Diversifying costs a little raw potential and buys three
-  // genuinely different pieces of work. If fewer than PLAN_SIZE distinct types
-  // exist, the remaining slots fall back to the next best regardless of type.
-  const ranked = [...recommendations].sort((a, b) => planScore(b) - planScore(a));
-  const seenTypes = new Set<string>();
-  const plan = ranked.filter((r) => {
-    if (seenTypes.has(r.recommendation_type)) return false;
-    seenTypes.add(r.recommendation_type);
-    return true;
-  }).slice(0, PLAN_SIZE);
-  if (plan.length < PLAN_SIZE) {
-    for (const rec of ranked) {
-      if (plan.length >= PLAN_SIZE) break;
-      if (!plan.includes(rec)) plan.push(rec);
-    }
-  }
-  const planIds = new Set(plan.map((r) => r.id));
-  const rest = recommendations.filter((r) => !planIds.has(r.id));
-  const planPoints = Math.round(
-    plan.reduce((sum, r) => sum + (typeof r.potentialPoints === "number" ? r.potentialPoints : 0), 0),
-  );
+  // El plan y su techo de puntos se calculan en el servidor (selectPlan +
+  // un contrafactual conjunto sobre esas mismas acciones). Sumar aqui los
+  // deltas de cada tarjeta contaria dos veces los prompts que comparten
+  // (ADR 0017 §3), que es justo el error que se corrigio en los grupos.
+  const plan = planIds.length > 0
+    ? (planIds.map((id) => recommendations.find((r) => r.id === id)).filter(Boolean) as Recommendation[])
+    : selectPlan(recommendations);
+  const planIdSet = new Set(plan.map((r) => r.id));
+  const rest = recommendations.filter((r) => !planIdSet.has(r.id));
 
   function handleExport() {
     const lines: string[] = [
@@ -1057,8 +1009,8 @@ export function RecommendationsClient({
     ];
     const write = (rec: Recommendation, i: number) => {
       const pts =
-        typeof rec.potentialPoints === "number" && Math.round(rec.potentialPoints) > 0
-          ? ` (+${Math.round(rec.potentialPoints)} pt potenciales)`
+        typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS
+          ? ` (+${formatPoints(rec.potentialPoints)} pt potenciales)`
           : "";
       lines.push(`${i + 1}. **${rec.title}**${pts}`);
       lines.push(`   ${rec.description}`);
@@ -1156,7 +1108,7 @@ export function RecommendationsClient({
                 "3 acciones prioritarias." y ese punto huérfano cantaba. */}
             <div className="rec2-plan-t">
               {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}
-              {planPoints > 0 ? `. Hasta +${planPoints} puntos` : ""}
+              {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? `. Hasta +${formatPoints(planPoints)} puntos` : ""}
             </div>
           </div>
           {plan.map((rec, i) => (
