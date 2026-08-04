@@ -17,6 +17,7 @@ import {
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
+import { selectTrendWindow } from "@/lib/competitors/trend-window";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
@@ -405,10 +406,19 @@ export default async function CompetitorsPage({
     return { date: run.finished_at ?? run.created_at, values };
   });
 
-  const validTrendPoints = trendData.filter((d) => d.values.brand != null).length;
+  /* What the chart actually draws: informative scans only, most recent window.
+     See lib/competitors/trend-window.ts for both defects this fixes. Kept
+     separate from `trendData` on purpose — the "último escaneo" list below
+     must stay anchored to the real latest run, not to the last point that
+     happened to survive this window, or its heading would be a lie. */
+  const chartTrendData = selectTrendWindow({ points: trendData });
+
+  // Counted over the visible window, so the countdown copy and the chart can
+  // never disagree about how much position data there is.
+  const validTrendPoints = chartTrendData.filter((d) => d.values.brand != null).length;
   const hasTrendData = validTrendPoints >= 2;
 
-  const trendPositionValues = trendData
+  const trendPositionValues = chartTrendData
     .flatMap((d) => Object.values(d.values))
     .filter((v): v is number => v != null);
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
@@ -760,7 +770,7 @@ export default async function CompetitorsPage({
                 {hasTrendData ? (
                   <>
                     <div className="cm2-pos-chart">
-                      <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
+                      <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
                     </div>
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">

@@ -1321,6 +1321,54 @@ humano: no hay herramienta de generación en el entorno del agente y el stock
 exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
 tiene aquí una dependencia manual.
 
+
+## 15. Gráfico de evolución del puesto — ventana y huecos (TREND-WINDOW-1, 2026-08-04)
+
+> **Nota de coordinación.** Mientras se escribía esto, otra sesión ya había
+> mergeado una §14 (cabecera de artículos) y el PR #315 tenía escrita *otra*
+> §14 — colisión real, del mismo tipo que la de los dos ADR 0026, y en el
+> propio documento que existe para evitarla. Resuelto renumerando: §14 es la
+> del blog (ya en `main`), §15 es esta, §16 la de #315.
+
+**Dos defectos, reportados por el fundador sobre el proyecto Movistar (21
+escaneos completados).**
+
+**1. Banda vertical en blanco en mitad del gráfico.** *"Eso no puede suceder en
+ningún caso."* Tenía razón. Todos los escaneos completados recibían un hueco en
+el eje X, incluidos aquellos sin ranking persistido (sin fila en `run_scores`, o
+con un `details_json` sin `brand_position.ranking`). Para esos, el valor de
+**todas** las series es null, así que **todas** las líneas se cortan en la misma
+x y aparece un agujero.
+
+La distinción que gobierna el arreglo: **una serie suelta en null es
+información** —"esa marca no salió en ese escaneo"— y debe seguir cortando su
+propia línea; **una columna donde nadie tiene valor no informa de nada** y
+renderizarla como hueco sólo comunica "esto está roto".
+
+**2. Demasiados puntos.** Con escaneos acumulándose a diario la línea se
+convierte en ruido. Ventana de los **últimos 15** (`MAX_TREND_POINTS`).
+
+**Orden de las dos operaciones, que no es indiferente:** se filtran primero las
+columnas vacías y se recorta después. Al revés, la ventana gastaría huecos en
+columnas que no pintan nada — justo el defecto que se venía a arreglar. Hay un
+test que fija ese orden.
+
+**Lo que deliberadamente NO cambia.** La lista "puesto medio · último escaneo"
+sigue anclada al último escaneo **real**, no al último punto que sobreviva a la
+ventana. Si se hubiera reusado el punto filtrado, la lista mostraría datos de un
+escaneo anterior bajo un encabezado que dice "último escaneo" — una mentira
+sutil. El contador "X de 2" sí pasa a contarse **dentro de la ventana visible**,
+para que el mensaje y el gráfico no puedan contradecirse.
+
+Lógica extraída a `lib/competitors/trend-window.ts` con 9 tests, siguiendo el
+patrón del resto de la zona (`filterComparableEngines`, `computeTopicComparison`):
+la página es un componente de servidor y la lógica inline ahí no se puede probar.
+
+**Cierre de fase pendiente de #315.** El invariante correspondiente va en
+`.claude/rules/competitors.md` y la celda del mapa de zonas en `CLAUDE.md` —
+ambos ficheros nacen en PR #315, que aún no está mergeado, así que esa parte del
+cierre se aplica allí en vez de aquí.
+
 ---
 
 ## Cómo mantener este documento
