@@ -116,6 +116,49 @@ auto-merge. Human Gate is always manual.**
 
 ---
 
+## Presupuesto de builds (BUILD-BUDGET-1, 2026-08-04)
+
+Cada push a cualquier rama es un deploy de Vercel. El 2026-08-03 se gastaron 50
+y el 04-08 iban 40 a las 17:52, con el 48% concentrado en tres ramas de PRs
+largos (15, 14 y 14 builds cada una) — el tope de 100/día del plan Hobby
+congeló producción seis horas esa tarde. **La cuenta pasó a Vercel Pro el
+2026-08-04 y ese tope ya no existe**, pero las reglas siguen: cada deploy de
+preview arrastra una pasada de `ux-pilot` (~350-380 min/día de GitHub Actions
+el 03 y 04-08), y el cuello nunca fue el número de PRs sino que **el build se
+estaba usando como bucle de feedback**. Reglas, en orden de importancia:
+
+1. **Un push por iteración pilotable, no por commit.** `pnpm run validate` ya
+   ejecuta `next build` en local: el preview no sirve para saber si compila,
+   sólo para que el piloto lo mire. Commitea lo que haga falta; empuja una vez,
+   cuando el slice esté listo para que alguien lo juzgue.
+2. **Prohibidos los commits de "retrigger".** Un commit vacío para forzar un
+   deploy gasta build y no cambia nada (`chore: retrigger Vercel deploy`,
+   2026-08-03, dos veces). Si de verdad hace falta reconstruir, se hace
+   *Redeploy* desde Vercel.
+3. **No mergees `main` en tu rama** salvo conflicto real o justo antes del
+   Human Gate. Cada sincronización es un build más y una pasada más del piloto.
+4. **Máximo 3 PRs abiertos a la vez.** El 04-08 había 10. Un PR abierto envejece,
+   se resincroniza y vuelve a construir; el paralelismo alto es cola, no
+   velocidad. Antes de abrir el cuarto, cierra o mergea uno.
+
+Lo que **no** cambia: el piloto sigue corriendo en cada deploy de preview y
+sigue siendo obligatorio antes del Human Gate. Esta fase reduce el número de
+deploys, no las garantías.
+
+`scripts/vercel-should-build.sh` (enganchado como `ignoreCommand` en
+`vercel.json`) salta el build cuando el push sólo toca `docs/`, `.claude/`,
+`.github/`, `tests/`, `agents/` o prosa de raíz (`*.md`). Compara contra el
+último deploy con éxito de la rama, no contra `HEAD^`, y **nunca salta
+producción**. Ahorra minutos de build y pasadas de piloto, no deployments: el
+tope diario se aplica al crear el deployment, aguas arriba del build (medido en
+PR #323). Es **fail-open a propósito**: en
+cualquier duda construye. Un build saltado de más dejaría el preview apuntando a
+código viejo y el piloto juzgaría una pantalla que no es la del commit — justo
+el fallo que el piloto existe para impedir. Si tocas ese script, mantén sus
+tests (`scripts/vercel-should-build.test.ts`) verdes en ambas direcciones.
+
+---
+
 ## Agentic User Pilot (mandatory before Human Gate)
 
 Before the founder is asked to look at anything, the `ux-pilot` agent must open
@@ -344,6 +387,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
 | Prompts | — *(sin regla propia todavía)* | — | log §5 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21 · "Presupuesto de builds" arriba |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
