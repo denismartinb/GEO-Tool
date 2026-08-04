@@ -364,6 +364,19 @@ function isAnalyzed(page: PageAuditEntry): page is AnalyzedPage {
  * (the headline figure rounds the combined projected mean ONCE; per-issue
  * figures each round independently for their own row).
  */
+/**
+ * The page-level checks a single page currently fails, in this table's
+ * canonical order.
+ *
+ * Exists so the per-page UI (fase 3b's copyable fixes) can ask "what is wrong
+ * with THIS page" without re-implementing the predicates — `PAGE_CHECKS` stays
+ * the single definition of what counts as failing, and a check that was never
+ * measured on this page is excluded rather than reported as failing.
+ */
+export function failingPageChecks(check: PageCheckResult): PageLevelCheckKey[] {
+  return PAGE_CHECKS.filter((def) => def.isMeasured(check) && def.fails(check)).map((def) => def.key);
+}
+
 export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAccessReport): TechnicalIssuesReport {
   const analyzed = pages.filter(isAnalyzed);
   const analyzedPageCount = analyzed.length;

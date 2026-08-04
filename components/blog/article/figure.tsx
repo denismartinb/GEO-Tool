@@ -70,6 +70,82 @@ export function ShareOfVoice({
 }
 
 /**
+ * Maqueta de una respuesta generativa, con o sin fuente citada.
+ *
+ * Existe para enseñar la distinción entre **mención** y **citación**, que en
+ * prosa cuesta un párrafo y en dos tarjetas se ve de un golpe. El texto es
+ * siempre ilustrativo — nunca la respuesta real de un motor, porque eso sería
+ * atribuirle a ChatGPT o Gemini palabras que no hemos verificado que dijeran
+ * (misma regla que `PullQuote`, ver `docs/brand/article-design-system.md`).
+ */
+export function AnswerSample({
+  verdict,
+  text,
+  source
+}: {
+  verdict: string;
+  text: string;
+  /** Ausente = la respuesta nombra la marca pero no respalda nada con una fuente. */
+  source?: string;
+}) {
+  return (
+    <div className={source ? "art-ans art-ans-cited" : "art-ans"}>
+      <div className="art-ans-h">{verdict}</div>
+      <p className="art-ans-body">{text}</p>
+      {source ? (
+        <div className="art-ans-src">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M6.5 9.5a3 3 0 004.2 0l2-2a3 3 0 10-4.2-4.2l-.6.6M9.5 6.5a3 3 0 00-4.2 0l-2 2a3 3 0 104.2 4.2l.6-.6"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+          {source}
+        </div>
+      ) : (
+        <div className="art-ans-nosrc">Sin fuente: nada apunta a tu web</div>
+      )}
+    </div>
+  );
+}
+
+export function AnswerPair({ children }: { children: ReactNode }) {
+  return <div className="art-ans-pair">{children}</div>;
+}
+
+/**
+ * Maqueta de una recomendación del producto.
+ *
+ * `confidence` es obligatorio y se pinta siempre: el producto real nunca
+ * muestra una recomendación sin decir con cuánta confianza la hace, y una
+ * maqueta que lo ocultara estaría enseñando un producto que no existe.
+ */
+export function RecommendationSample({
+  title,
+  priority,
+  confidence,
+  why
+}: {
+  title: string;
+  priority: string;
+  confidence: string;
+  why: string;
+}) {
+  return (
+    <div className="art-rec">
+      <div className="art-rec-h">
+        <span className="art-rec-pri">{priority}</span>
+        <span className="art-rec-conf">{confidence}</span>
+      </div>
+      <h4 className="art-rec-t">{title}</h4>
+      <p className="art-rec-why">{why}</p>
+    </div>
+  );
+}
+
+/**
  * Maqueta de un conjunto de prompts con su intención. Existe porque el
  * consejo "cubre varias intenciones" es abstracto hasta que ves cuatro
  * prompts reales uno debajo de otro y notas que preguntan cosas distintas.

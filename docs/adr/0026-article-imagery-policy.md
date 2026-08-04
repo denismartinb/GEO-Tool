@@ -47,6 +47,11 @@ capturas reales solo en documentación de producto (`/docs`).**
 **Se rechazan (1) la ilustración generada por IA y (2) el stock, para todo el
 contenido del sitio.**
 
+> **Enmienda de 2026-08-04 — esta frase ya no es absoluta.** Las **portadas**
+> de artículo quedan excluidas de este rechazo por decisión del fundador. La
+> prohibición sigue vigente dentro del cuerpo. Ver §Enmienda al final del
+> documento antes de aplicar esta sección.
+
 ### Por qué se rechaza la ilustración generada por IA
 
 - **Puede mentir.** Una ilustración generada puede representar una interfaz
@@ -90,8 +95,10 @@ de un cliente**.
 
 ### Prohibido
 
-- Ilustración generada por IA en cualquier página pública.
-- Imágenes de stock.
+- Ilustración generada por IA **dentro del cuerpo** de una página pública.
+  (Enmienda de 2026-08-04: las **portadas** quedan excluidas de esta
+  prohibición — ver §Enmienda al final.)
+- Imágenes de stock **dentro del cuerpo** de una página pública.
 - Capturas de la cuenta piloto o de cualquier proyecto de cliente en
   contenido de marketing.
 - Maquetas que muestren una función que el producto no tiene.
@@ -110,3 +117,51 @@ componentes (`components/blog/article/`), construida en esta fase.
   respetar.
 - `docs/agentic-user-pilot.md` — el harness cuyas capturas se descartan para
   marketing y se permiten en `/docs`.
+
+---
+
+## Enmienda (2026-08-04) — las portadas quedan fuera de la prohibición
+
+**Decisión del fundador**, tras revisar el blog en móvil: las portadas
+generadas por el sistema de respaldo (degradado + icono) **no valen**. Sus
+palabras: *"parece un icono de algo que no carga bien"*, y *"hay que currarse
+bien las imágenes principales de todos los artículos, porque es lo que le da
+al blog una sensación de que es coherente y de que aporta valor"*.
+
+### Qué cambia
+
+Se permite **imagen generada o de stock en la portada** de un artículo.
+
+### Qué NO cambia, y por qué
+
+La prohibición sigue en pie **dentro del cuerpo del artículo**. La razón
+original no era estética, era de honestidad: una imagen generada puede
+representar una interfaz que no existe o una métrica que no calculamos, y eso
+es mentir con un dibujo. Dentro del artículo, donde el visual va junto a una
+afirmación concreta, ese riesgo es real.
+
+En una portada el riesgo desaparece **si la portada no afirma nada**. De ahí
+la regla que acompaña a la enmienda:
+
+> Una portada puede ser generada o de stock, pero **no puede representar una
+> interfaz de producto, un gráfico, un panel ni una métrica**. Si la portada
+> enseña algo que parece un dato de Genscore, ese dato tiene que existir — y
+> entonces ya no es una portada, es una figura, y le aplica la regla del
+> cuerpo.
+
+Es decir: portadas conceptuales o abstractas, sí. Portadas que simulen
+nuestro producto, no.
+
+### Lo que esto implica en la práctica
+
+- Las 4 portadas actuales (aportadas por el fundador) **se mantienen**.
+- Faltan 3: `que-es-el-geo-score`, `llms-txt-guia-practica` y
+  `como-conseguir-que-chatgpt-te-cite`. Hasta que existan, esos artículos
+  caen en el degradado con icono, que es justo lo que se ha rechazado.
+- El agente que redacta **no puede generar imágenes**: no hay herramienta de
+  generación en el entorno de trabajo, y el stock exige una licencia. La
+  producción de la portada es, hoy, un paso humano. Mientras siga siéndolo,
+  la publicación semanal autónoma tiene aquí una dependencia manual — hay que
+  tenerlo en cuenta al planificar esa fase.
+- `lib/blog/covers.test.ts` impide que la deuda de portadas crezca: un
+  artículo nuevo nace con portada.

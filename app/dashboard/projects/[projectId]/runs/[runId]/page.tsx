@@ -110,7 +110,7 @@ export default async function RunDetailPage({
                 <div key={result.id} className="rounded border p-3 text-sm text-[var(--ink-2)]">
                   <p className="font-medium">Prompt {idx + 1} · {formatStatus(result.status)}</p>
                   <p>{result.prompt_text_snapshot}</p>
-                  <p className="flex items-center gap-1">
+                  <p className="flex items-center gap-1 info-tip-anchor">
                     Marca mencionada: {result.brand_mentioned ? "sí" : "no"} · Cita encontrada:{" "}
                     {result.citation_found ? "sí" : "no"}
                     <InfoTip text="Mencionada: la IA nombra tu marca por lo que ya sabe de ella, sin depender de tu web. Cita encontrada: la respuesta incluye una fuente verificada (grounding) apuntando a tu propio dominio — una señal distinta, y la única que depende de contenido que publiques." />

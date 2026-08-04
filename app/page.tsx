@@ -171,7 +171,7 @@ function ProductShot() {
           <div className="hv-block-label">Cómo se compone tu puntuación</div>
           {SHOT_COMPONENTS.map((row) => (
             <div className="compose-row" key={row.l}>
-              <div className="compose-top">
+              <div className="compose-top info-tip-anchor">
                 <span className="compose-l">
                   {row.l}
                   {row.info && <InfoTip text={row.info} />}

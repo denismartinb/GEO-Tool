@@ -101,6 +101,8 @@ import { KeyTakeaway, NumberedSection, QuickAction } from "@/components/blog/art
 | `ProductMock` | Maqueta del panel de GEO Score con datos de ejemplo. | Para mostrar una función que no existe. |
 | `ShareOfVoice` | Reparto de menciones entre marcas, con la tuya marcada. | Sin decir sobre cuántos prompts se calcula (`total` es obligatorio). |
 | `PromptSet` | Conjunto de prompts de ejemplo con su intención. | Para un solo prompt — eso va en prosa, en cursiva. |
+| `AnswerSample` / `AnswerPair` | La forma de una respuesta generativa, con o sin fuente. Enseña la diferencia mención/citación de un golpe. | **Nunca** para reproducir la respuesta real de un motor: sería atribuirle palabras sin verificar. Igual que `PullQuote`. |
+| `RecommendationSample` | Maqueta de una recomendación del producto. | Sin `confidence` — no compila. Una recomendación que no declara su confianza es una opinión disfrazada de dato. |
 | `CompareTable` + `Pill` | Comparación multi-eje con veredicto codificado en color. | Para dos filas — eso es un párrafo. |
 | `Checklist` | Cosas que el lector debe comprobar una a una. | Para enumerar conceptos — eso es `<ul>`. |
 

@@ -745,6 +745,14 @@ a {
   text-align: center;
   padding-top: 10px;
 }
+/* Half-circle variant (Gauge variant="semi"): the box is cropped to the top
+   half, so the reading sits on the arc's open baseline instead of the
+   vertical centre it would otherwise share with the stroke. The exact
+   bottom padding is set inline by the component (it depends on `stroke`). */
+.gauge-wrap.gauge-semi .gauge-center {
+  align-items: flex-end;
+  padding-top: 0;
+}
 .gauge-num {
   font-size: 32px;
   font-weight: 800;
@@ -910,6 +918,66 @@ a {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
+}
+
+/* Systemic fix (2026-08-03), not a fifth one-off patch.
+ *
+ * The default bubble above is `position: absolute; left: 0; width: 220px`,
+ * anchored to the trigger's own 14×14px box. `visibility: hidden` does NOT
+ * remove it from layout — a trigger placed anywhere past ~155px from its
+ * row's right edge overflows a 375px viewport for real, permanently, with
+ * no hover needed, whether or not anyone ever notices (the overflow was
+ * invisible to every check until 2026-08-03, when journey.ts started
+ * measuring the element that actually clips instead of the document — see
+ * its SHELL_CLIPPING_CLASSES comment). Found FOUR real, independent
+ * instances this way in one day: `.cit2-kpis` (patched 2026-08-01, before
+ * the class of bug had a name), `.cit2-split-key` and `.wa2-diag-title`
+ * (patched earlier today), `.cm2-pos-list-hd` (Competitors, COMP-REDESIGN-1,
+ * PR #285 — not this PR's own code, exposed by the same fix). Four bespoke
+ * classes reinventing the same three lines is how the fourth one shipped
+ * unpatched in the first place.
+ *
+ * `.info-tip-anchor` is the ONE reusable mechanism going forward: apply it
+ * to whatever element should own the tooltip's safe width — normally the
+ * immediate label/heading row wrapping the trigger, not a whole card, so the
+ * bubble reads as attached to that row rather than floating under
+ * unrelated content below it. The three prior one-off classes are folded
+ * into this same selector list rather than left as separate copies of an
+ * identical rule.
+ *
+ * This does not make overflow provably impossible in every future layout —
+ * a pure-CSS tooltip with no JS cannot know the viewport's remaining width
+ * at the trigger's exact position, so a wrapper wider than the viewport can
+ * still overflow. It removes the actual failure mode behind all four real
+ * cases (a fixed-width bubble anchored to a small trigger with no positioned
+ * ancestor to constrain it) and gives every future InfoTip call site one
+ * documented class to reach for instead of a fifth bespoke override.
+ */
+.info-tip-anchor,
+.cit2-kpis,
+.cit2-split-key,
+.wa2-diag-title,
+.cm2-pos-list-hd {
+  position: relative;
+}
+.info-tip-anchor .info-tip,
+.cit2-kpis .info-tip,
+.cit2-split-key .info-tip,
+.wa2-diag-title .info-tip,
+.cm2-pos-list-hd .info-tip {
+  position: static;
+}
+.info-tip-anchor .info-tip-bubble,
+.cit2-kpis .info-tip-bubble,
+.cit2-split-key .info-tip-bubble,
+.wa2-diag-title .info-tip-bubble,
+.cm2-pos-list-hd .info-tip-bubble {
+  top: 100%;
+  bottom: auto;
+  left: 0;
+  right: 0;
+  width: auto;
+  margin-top: 6px;
 }
 .stat-value {
   font-size: 32px;
@@ -2166,7 +2234,10 @@ a {
 .cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 /* inline-flex keeps the InfoTip glyph on the label's own line — as plain
    inline content after an uppercase, letter-spaced label it wrapped onto a
-   second line by itself. */
+   second line by itself. Tooltip overflow fix (fourth of four real cases,
+   2026-08-03, pre-existing from COMP-REDESIGN-1) is in the shared
+   `.info-tip-anchor` rule near the base `.info-tip` definition —
+   `.cm2-pos-list-hd` is already in that rule's selector list. */
 .cm2-pos-list-hd {
   display: flex; align-items: center; gap: 5px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
@@ -2283,15 +2354,11 @@ a {
    corners. */
 .cit2-kpis { position: relative; display: flex; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); margin-top: 4px; }
 /* The KPI tooltips anchor to the STRIP, not to their own 14px trigger, and
-   open downward. Two reasons, both caught from the pilot's interaction
-   captures rather than from reading the CSS:
-   1. Upward + a clipped parent cut the bubble in half (see above).
-   2. The bubble is a fixed 220px; anchored to the trigger, the last KPI's
-      bubble ran past the right edge on a 375px viewport, which would have
-      introduced horizontal overflow the moment a user hovered it.
-   Spanning the strip (left:0/right:0) is immune to both at every width. */
-.cit2-kpis .info-tip { position: static; }
-.cit2-kpis .info-tip-bubble { top: 100%; bottom: auto; left: 0; right: 0; width: auto; margin-top: 6px; }
+   open downward — first caught from the pilot's interaction captures
+   (2026-08-02: a clipped parent cut the bubble in half; also the origin of
+   the overflow bug the shared `.info-tip-anchor` rule near the base
+   `.info-tip` definition now documents and fixes for `.cit2-kpis` and every
+   other known/future call site in one place, not just this one. */
 .cit2-kpis > div { flex: 1 1 0; min-width: 0; padding: 10px 12px; border-right: 1px solid var(--line-soft); }
 .cit2-kpis > div:last-child { border-right: 0; }
 .cit2-k { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--ink-4); line-height: 1.35; }
@@ -2354,9 +2421,12 @@ a {
 .s-oth { background: var(--cit-oth); }
 .s-comp { background: var(--cit-comp); }
 .s-neu { background: var(--cit-neu); }
-.cit2-split-key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
+.cit2-split-key { position: relative; display: flex; gap: 14px; flex-wrap: wrap; margin-top: 9px; font-size: 11px; color: var(--ink-3); }
 .cit2-split-key span { display: inline-flex; align-items: center; gap: 5px; }
 .cit2-split-key i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+/* Tooltip overflow fix for this row folded into the shared `.info-tip-anchor`
+   rule near the base `.info-tip` definition (2026-08-03) — see that comment
+   for the full incident history (this was the second of four real cases). */
 
 /* Source-type donut */
 .cit2-donut-wrap { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
@@ -4742,7 +4812,11 @@ a.notif-row:hover {
 .blog-body th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .blog-body td { color: var(--ink-2); line-height: 1.6; }
 .blog-body table strong { white-space: nowrap; }
-.blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+/* `--ink-4` (#98a0b0) da 2.63:1 sobre blanco — por debajo del 4.5:1 que pide
+   AA para texto normal. `--ink-3` da 4.76:1. La fecha, además, ahora tiene
+   más protagonismo visual que antes (34px de aire debajo), así que merece
+   leerse bien. Hallazgo del ux-pilot, PR #312. */
+.blog-post-meta { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
 .blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
 .blog-cta p { margin-bottom: 14px; }
 .blog-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
@@ -4768,6 +4842,22 @@ a.notif-row:hover {
 
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
+
+/* --- Ritmo de la cabecera de artículo ------------------------------------
+   El ritmo vertical iba justo al revés de como se necesita: 84px de hueco
+   muerto encima de la portada (el padding de .lp-section) y CERO separación
+   entre portada, título, fecha y el primer bloque, que quedaban pegados unos
+   a otros. Se recorta arriba y se reparte abajo, que es donde el lector lo
+   necesita al empezar a leer.
+
+   Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
+   solo se usa aquí (el índice y los hubs usan la portada normal dentro de
+   una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+.lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.blog-cover-compact { margin-bottom: 24px; }
+.blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
+h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
 
@@ -5867,6 +5957,50 @@ select.set-field {
   .art-sov-track { grid-column: 1 / -1; }
 }
 
+/* --- Maqueta de respuesta generativa (mención vs citación) ---------------- */
+.art-ans-pair { display: grid; gap: 13px; }
+/* En dos columnas el hueco tiene que separar dos textos largos, no dos
+   tarjetas apiladas: 13px se queda corto ahí (mejora del ux-pilot, PR #311). */
+@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.art-ans {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 15px 16px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.art-ans-cited { background: var(--brand-surface); border-color: var(--brand-pos); }
+.art-ans-h {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.art-ans-cited .art-ans-h { color: var(--brand-pos); }
+.art-ans-body { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+.art-ans-src, .art-ans-nosrc {
+  display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 9px;
+  border-top: 1px dashed var(--line); font-size: 12.5px;
+}
+.art-ans-src { color: var(--brand-pos); font-weight: 600; }
+.art-ans-nosrc { color: var(--ink-3); font-style: italic; }
+
+/* --- Maqueta de recomendación -------------------------------------------- */
+.art-rec {
+  padding: 16px 17px; border-radius: 10px;
+  background: var(--brand-surface); border: 1px solid var(--line); box-shadow: var(--brand-shadow-card);
+}
+.art-rec-h { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 11px; }
+.art-rec-pri, .art-rec-conf {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+}
+/* No hay `--brand-warm-soft` en la paleta; se compone del token real con
+   `color-mix` en vez de inventar un hex nuevo (regla: cero colores nuevos). */
+.art-rec-pri { background: color-mix(in srgb, var(--brand-warm) 18%, transparent); color: var(--ink); }
+.art-rec-conf { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+.art-rec-t {
+  margin: 0 0 7px; font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 700; color: var(--ink);
+}
+.art-rec-why { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+
 /* --- Maqueta de conjunto de prompts -------------------------------------- */
 .art-prompts { display: flex; flex-direction: column; gap: 9px; }
 .art-prompt-row {
@@ -5929,3 +6063,165 @@ select.set-field {
   font-size: 15px; padding: 12px 24px; border-radius: 9px; border: 0; text-decoration: none;
 }
 .art-btn:hover { background: #f0f3f9; }
+
+/* ============================================================
+   Web audit page (Auditoría web) — WEB-AUDIT-ISSUES-1 fase 2.
+   Adopts the SAME rollout mechanism as .ov2-scope/.pr2-scope/.cit2-scope (a
+   wrapper that re-points shared token names) AND their exact width
+   convention (460px base, 640px ≥900px, 1200px ≥1200px, 1280px ≥1600px) —
+   the founder-approved standard width for every console screen since
+   CITATIONS-REDESIGN-1 (docs/brand/design-decisions-log.md §5). Wraps only
+   the content BELOW the sticky header, same nesting as citations-client.tsx
+   — the header stays on the shared `.ov-sticky-header` chrome untouched.
+   ============================================================ */
+.wa2-scope {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+
+  /* Issue severity — a distinct semantic scale from --pos/--neg (which mean
+     "good outcome / bad outcome" for a metric), because a technical issue's
+     severity is a triage priority, not a verdict. "warning" reuses the
+     shared --warn/--warn-ink tokens (same amber every other warning badge in
+     the app already uses); critical/improvement get their own tokens here
+     since nothing else in :root models a 3-tier severity scale. */
+  --wa-crit: var(--brand-neg);
+  --wa-crit-soft: var(--brand-neg-soft);
+  --wa-improve: var(--ink-4);
+  --wa-improve-soft: var(--brand-line-soft);
+}
+.wa2-scope .card { box-shadow: var(--brand-shadow-card); }
+/* Same rule .ov2-scope/.cit2-scope give the shared Gauge component's number — the hero score is a display-face numeral, not body text. */
+.wa2-scope .gauge-num {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+}
+/* Tooltip overflow fix for this row (the "Diagnóstico general" ⓘ, third of
+   four real cases) folded into the shared `.info-tip-anchor` rule near the
+   base `.info-tip` definition (2026-08-03) — `.wa2-diag-title` is already
+   in that rule's selector list, so this class name alone is enough; no
+   separate override needed here. */
+/* Audit-date line in the sticky header. Deliberately NOT inside .wa2-scope:
+   the header stays on the shared token system (see the .wa2-scope comment
+   above), so these are plain global classes.
+
+   Two lengths because `.ov-sticky-right` never shrinks (`flex-shrink: 0`).
+   The full sentence is ~340px wide, which at 375px starved the left block to
+   ~25px and made its kicker overlap this text — an invisible defect to every
+   mechanical check (nothing overflows when two elements share pixels), found
+   only by looking at the pilot's mobile capture. Below 900px is the same
+   breakpoint at which `.scan-status`/`.hdr-scan` already step out of this
+   header. */
+.wa2-hdr-audit-compact { display: none; }
+
+@media (max-width: 899px) {
+  .wa2-hdr-audit-full { display: none; }
+  .wa2-hdr-audit-compact { display: inline; }
+}
+
+/* Audit toolbar: freshness state on the left, the single action on the right.
+   Before this the button floated alone, right-aligned, and its confirmation
+   rendered as a right-aligned paragraph whose leading icon broke onto its own
+   line (founder review 2026-08-04). A real two-slot row gives the button an
+   anchor and the state a permanent home that does not jump. */
+.wa2-auditbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.wa2-auditbar-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+/* Flex, not inline text: this is what stops the check icon orphaning itself
+   from its own sentence when the row wraps. */
+.wa2-auditbar-notice,
+.wa2-auditbar-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.wa2-auditbar-notice { color: var(--ink-3); }
+.wa2-auditbar-error { color: var(--neg-ink); }
+
+/* Fase 3b — copyable fixes inside a page's row in the Páginas tab. */
+.wa2-fixes { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.wa2-fix { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.wa2-fix-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-bottom: 1px solid var(--line-soft);
+}
+.wa2-fix-where { font-size: 11px; color: var(--ink-3); line-height: 1.4; min-width: 0; }
+.wa2-fix-copy { flex: 0 0 auto; font-size: 12px; padding: 4px 10px; }
+/* overflow-x on the block itself: a JSON-LD line is easily wider than a
+   375px viewport, and the console shell clips horizontally rather than
+   scrolling (see journey.ts's SHELL_CLIPPING_CLASSES) — without this the
+   snippet would simply be unreachable on mobile. */
+.wa2-fix-code {
+  margin: 0; padding: 10px; overflow-x: auto;
+  font-family: var(--mono); font-size: 11px; line-height: 1.55;
+  color: var(--ink-2); background: var(--surface-2);
+  white-space: pre; tab-size: 2;
+}
+.wa2-fix-note { margin: 0; padding: 8px 10px; font-size: 10.5px; color: var(--ink-4); border-top: 1px solid var(--line-soft); }
+
+.wa2-page { max-width: 460px; margin: 0 auto; }
+
+@media (min-width: 900px) {
+  .wa2-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .wa2-page { max-width: 1200px; }
+}
+@media (min-width: 1600px) {
+  .wa2-page { max-width: 1280px; }
+}
+
+/* Technical issue / passing-check rows reuse .wa-details for the collapsible
+   shell (same component PageAuditRow already uses) — only the severity
+   stripe and the point-delta badge are new here. */
+.wa2-issue-stripe {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 3px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+.wa2-passing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.wa2-check-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pos-soft);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+}

@@ -4,6 +4,17 @@ import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  AnswerSample,
+  AnswerPair
+} from "@/components/blog/article";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-conseguir-que-chatgpt-te-cite");
@@ -48,12 +59,11 @@ export const faqItems = [
 
 <div className="blog-body">
 
-**Respuesta rápida:** un motor generativo cita tu web cuando, durante el
-proceso de *grounding*, encuentra tu contenido, lo considera fiable y lo usa
-como respaldo de una afirmación concreta. No hay ningún truco ni fichero
-mágico para forzarlo — lo que funciona es una combinación de contenido
-claro, datos estructurados reales y autoridad de dominio genuina. Este
-artículo es el checklist práctico de esas tres cosas.
+<KeyTakeaway>
+
+Un motor generativo cita tu web cuando, durante el *grounding*, **encuentra** tu contenido, lo **considera fiable** y lo usa como respaldo de una afirmación concreta. No hay truco ni fichero mágico: funcionan el contenido claro, los datos estructurados reales y la autoridad de dominio genuina — en ese orden de esfuerzo.
+
+</KeyTakeaway>
 
 ## ¿Qué diferencia una mención de una citación?
 
@@ -66,11 +76,30 @@ Tienes la definición completa en nuestro glosario, en
 <a href="/glosario/citacion-en-ia">qué es una citación en respuestas de
 IA</a>.
 
+<Figure
+  label="Figura 1."
+  caption="La misma marca en dos respuestas: nombrada sin respaldo, y nombrada con tu web como fuente. Texto ilustrativo — no es la respuesta real de ningún motor."
+>
+  <AnswerPair>
+    <AnswerSample
+      verdict="Solo mención"
+      text="Para automatizar la conciliación bancaria hay varias opciones en el mercado, como Tu Marca u otras herramientas similares."
+    />
+    <AnswerSample
+      verdict="Citación"
+      text="La conciliación bancaria automática puede reducir el cierre mensual de días a horas, según la guía de Tu Marca sobre el proceso."
+      source="tumarca.com/guia-conciliacion"
+    />
+  </AnswerPair>
+</Figure>
+
+Fíjate en la diferencia real: la segunda respuesta **atribuye una afirmación concreta** a tu web. La primera te nombra en una lista y no lleva a nadie a tu sitio.
+
 ## ¿Qué hace que un contenido sea citable?
 
 Tres cosas, por este orden de importancia:
 
-### 1. Que el motor pueda encontrarte durante el grounding
+<NumberedSection n={1} title="Que el motor pueda encontrarte durante el grounding">
 
 Sin <a href="/glosario/grounding">grounding</a> — el motor buscando una
 fuente real en el momento de responder, en vez de usar solo lo que aprendió
@@ -80,7 +109,11 @@ como cualquier página web normal: sin bloqueos accidentales en `robots.txt`,
 con URLs canónicas claras, sin contenido oculto detrás de interacciones que
 un rastreador no ejecuta.
 
-### 2. Que el contenido sea claro y verificable
+<QuickAction>Abre `tudominio.com/robots.txt` y comprueba que no bloqueas nada que quieras que se cite.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Que el contenido sea claro y verificable">
 
 Un modelo generativo tiene que poder extraer una afirmación concreta de tu
 página sin ambigüedad. Eso significa: responder la pregunta real del
@@ -91,7 +124,11 @@ afirmaciones con datos concretos en vez de generalidades vagas. Los
 (`Article`, `FAQPage`, `DefinedTerm`) ayudan exactamente aquí: reducen la
 ambigüedad sobre qué es cada fragmento de tu página.
 
-### 3. Que tu dominio tenga autoridad real
+<QuickAction>Coge tu página más importante y comprueba si responde la pregunta del titular en el primer párrafo. Si no, súbela.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Que tu dominio tenga autoridad real">
 
 Esta es la parte que no se puede atajar con ningún fichero ni truco técnico.
 La evidencia disponible apunta a que los motores generativos también
@@ -99,6 +136,10 @@ priorizan como fuentes contenido con autoridad de dominio real — lo que
 Google lleva años llamando <a href="/glosario/eeat">E-E-A-T</a> (experiencia,
 pericia, autoridad, confianza). Un dominio nuevo con contenido técnicamente
 perfecto compite en desventaja frente a uno con trayectoria demostrable.
+
+<QuickAction>Es la única de las tres que no se arregla esta semana. Empieza por las otras dos.</QuickAction>
+
+</NumberedSection>
 
 ## Un ejemplo: antes y después
 
@@ -120,22 +161,19 @@ estructura y de qué tan rápido llega la sustancia.
 
 ## Checklist práctico
 
-- Tu contenido responde la pregunta real del usuario en el primer párrafo,
-  no al final.
-- Usas encabezados H2/H3 formulados como preguntas reales, no como títulos
-  de sección genéricos.
-- Tienes datos estructurados (`Article`, `FAQPage`) en tus páginas de
-  contenido, no solo en la home.
-- Tu web es rastreable sin bloqueos accidentales — compruébalo con
-  cualquier herramienta de auditoría técnica.
-- Cada página declara su propia <a href="/glosario/url-canonica">URL
-  canónica</a>, sin variantes compitiendo entre sí.
-- Publicas con regularidad y **refrescas** contenido existente, no solo
-  contenido nuevo — la frescura pesa más en motores generativos que en
-  Google clásico.
-- No dependes de un llms.txt como estrategia principal — es un extra
-  opcional, no una palanca real (lo explicamos con más detalle en nuestra
-  <a href="/blog/llms-txt-guia-practica">guía práctica de llms.txt</a>).
+<Checklist
+  items={[
+    "Tu contenido responde la pregunta real del usuario en el primer párrafo, no al final.",
+    "Usas encabezados H2/H3 formulados como preguntas reales, no como títulos de sección genéricos.",
+    "Tienes datos estructurados (Article, FAQPage) en tus páginas de contenido, no solo en la home.",
+    "Tu web es rastreable sin bloqueos accidentales.",
+    "Cada página declara su propia URL canónica, sin variantes compitiendo entre sí.",
+    "Publicas con regularidad y refrescas contenido existente, no solo contenido nuevo.",
+    "No dependes de un llms.txt como estrategia principal — es un extra, no una palanca."
+  ]}
+/>
+
+Los términos técnicos están explicados en el glosario: <a href="/glosario/url-canonica">URL canónica</a>, <a href="/glosario/datos-estructurados">datos estructurados</a>. Y sobre el último punto, el detalle está en nuestra <a href="/blog/llms-txt-guia-practica">guía práctica de llms.txt</a>.
 
 ## ¿Cuánto se tarda en ver resultados?
 
@@ -168,11 +206,16 @@ puedes hacer es eliminar sistemáticamente los motivos por los que un motor
 generativo *no* te citaría — que es exactamente lo que cubre el checklist
 de arriba.
 
-<div className="blog-cta">
-<p>¿Quieres saber si los motores de IA ya te citan como fuente?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
+<AuthorBio>
 
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Los motores de IA ya te citan como fuente?"
+  text="Mide tu tasa de citación real, no solo si te mencionan. Gratis, sin tarjeta."
+/>
 
 <RelatedPosts cluster="playbooks" currentSlug={post.slug} />
 
