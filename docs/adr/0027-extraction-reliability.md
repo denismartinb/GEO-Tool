@@ -132,6 +132,60 @@ than a review question.
   every pass would let one systematic failure (an exhausted account) consume the
   whole budget and starve rows nothing has looked at yet.
 
+## Addendum (2026-08-04) — the first cut broke scans in preview
+
+The version of this ADR's decision that first shipped to preview **failed a
+real scan**, and the way it failed is worth keeping: it was a budget error
+that turned a slow campaign into a dead one.
+
+IKEA run `9608d861` (26 prompts × 3 engines = 78 rows) generated all 26
+prompts cleanly (`successful_prompts = 26, failed_prompts = 0`) and then died
+with `error_summary = scan_timeout` after 190.9s. The same project, the same
+26 prompts, took **33.5s and completed** on the previous run under the old
+code.
+
+**Cause 1 — a per-pass budget in a shared invocation.** Decision 1 gave each
+extraction pass its own fixed 25s. But the invocation that processes the
+*last* batch runs three things back to back: generation (~20s), that batch's
+extraction pass (25s), then the finalize sweep (another 25s). That is ~70s of
+work inside a 60s `maxDuration`. Vercel killed it mid-sweep.
+
+**Cause 2 — and a killed finalize was unrecoverable.** The killed invocation
+had already claimed the `scan_finalize` job as `running` and never reached the
+code that releases it. Nothing else recovers a `jobs` row:
+`reconcileStuckScanRuns` only ever touches `scan_runs`. So every subsequent
+invocation failed the `status = 'pending'` claim, returned immediately without
+doing any work, and `updated_at` stopped moving — until the reconciliation
+pass declared the run stuck. Before extraction moved inside finalize this was
+unreachable, because finalize was near-instant and effectively could not be
+killed.
+
+The two compounded: cause 1 made the kill likely, cause 2 made it permanent.
+Recovery cost a full re-scan of 78 rows.
+
+**Amended decisions:**
+
+- `SCAN_INVOCATION_WORK_BUDGET_MS` (45s) replaces the per-pass budget. The
+  executor computes **one absolute deadline at entry** and threads it into
+  every extraction pass in that invocation. Generation spends from it first;
+  extraction gets what is left and not a millisecond more. A pass with no
+  budget left defers its rows instead of overrunning.
+- `FINALIZE_LOCK_LEASE_MS` (90s): a `scan_finalize` job stuck in `running`
+  with a `locked_at` older than the lease can be taken over. The takeover is
+  the same atomic `UPDATE ... WHERE ... RETURNING` claim the prompt batches
+  use, so it stays exclusive. 90s is far longer than any live invocation can
+  now run (45s of work), so a lease only expires on an invocation that is
+  genuinely gone.
+- Progress counters are refreshed **after** the batch extraction pass as well
+  as before it, so every invocation bumps `scan_runs.updated_at` on its way
+  out. A campaign doing real work must never look stalled to the
+  reconciliation pass.
+
+The general lesson, now a rule in `.claude/rules/scan.md`: **work added inside
+an invocation must be budgeted against what that invocation already spends,
+not given its own allowance** — and any step long enough to be killed needs a
+recoverable claim.
+
 ## What this phase deliberately does NOT do
 
 - **No alerting.** Nothing yet emails the founder when a provider runs out of

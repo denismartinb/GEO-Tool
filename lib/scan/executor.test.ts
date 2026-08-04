@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
-import { PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
+import { FINALIZE_LOCK_LEASE_MS, PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
 import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 
@@ -93,6 +93,9 @@ type JobsRow = {
   payload_json: Record<string, unknown>;
   last_error: string | null;
   created_at: string;
+  /** Lock bookkeeping — read by the finalize lock lease (EXTRACTION-RELIABILITY-1). */
+  locked_at?: string | null;
+  locked_by?: string | null;
 };
 
 /**
@@ -109,19 +112,36 @@ function makeJobsTable(initialJobs: JobsRow[]) {
   const jobs: JobsRow[] = initialJobs.map((j) => ({ ...j }));
   const updates: Array<Partial<JobsRow> & { __id: string }> = [];
 
-  function rowMatches(job: JobsRow, filters: Array<[string, unknown]>, inFilter: { col: string; vals: unknown[] } | null) {
+  function rowMatches(
+    job: JobsRow,
+    filters: Array<[string, unknown]>,
+    inFilter: { col: string; vals: unknown[] } | null,
+    ltFilters: Array<[string, unknown]> = []
+  ) {
     const record = job as unknown as Record<string, unknown>;
     if (!filters.every(([col, val]) => record[col] === val)) return false;
     if (inFilter && !inFilter.vals.includes(record[inFilter.col])) return false;
+    // `.lt()` backs the finalize lock lease (EXTRACTION-RELIABILITY-1): a
+    // null lock never matches, so a job with no `locked_at` is never taken
+    // over by the lease path.
+    if (
+      !ltFilters.every(([col, val]) => {
+        const actual = record[col];
+        return actual !== null && actual !== undefined && String(actual) < String(val);
+      })
+    ) {
+      return false;
+    }
     return true;
   }
 
   function updateBuilder(patch: Partial<JobsRow>) {
     const filters: Array<[string, unknown]> = [];
+    const ltFilters: Array<[string, unknown]> = [];
     let inFilter: { col: string; vals: unknown[] } | null = null;
 
     function applyAndCollectMatches(): JobsRow[] {
-      const matched = jobs.filter((job) => rowMatches(job, filters, inFilter));
+      const matched = jobs.filter((job) => rowMatches(job, filters, inFilter, ltFilters));
       for (const job of matched) {
         Object.assign(job, patch);
         updates.push({ __id: job.id, ...patch });
@@ -136,6 +156,10 @@ function makeJobsTable(initialJobs: JobsRow[]) {
       },
       in(column: string, values: unknown[]) {
         inFilter = { col: column, vals: values };
+        return builder;
+      },
+      lt(column: string, value: unknown) {
+        ltFilters.push([column, value]);
         return builder;
       },
       select(_cols?: string) {
@@ -1706,5 +1730,63 @@ describe("executePendingScan — a run cannot complete with unextracted answers"
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
     expect(finalizeJob.status).toBe("completed");
     expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Regression: the 2026-08-04 IKEA failure (run 9608d861, `scan_timeout` after
+ * 190.9s with all 26 prompts generated cleanly).
+ *
+ * Since extraction moved inside the finalize step, that step is long enough to
+ * be killed by Vercel's maxDuration mid-flight — and a killed invocation
+ * cannot release the finalize job it claimed. `reconcileStuckScanRuns` only
+ * touches `scan_runs`, never `jobs`, so the abandoned `running` job was
+ * unrecoverable: every later invocation failed the `status = 'pending'` claim,
+ * returned immediately, and nothing wrote progress again until the run was
+ * failed as stuck. Recovering cost a full re-scan.
+ */
+describe("executePendingScan — an abandoned finalize claim is recoverable", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+    vi.mocked(generateRecommendationsForRun).mockClear();
+  });
+
+  async function runWithFinalizeHeldSince(lockedAt: string | null) {
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    // Simulate the corpse: finalize claimed as `running`, never released.
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    finalizeJob.status = "running";
+    finalizeJob.locked_at = lockedAt;
+    finalizeJob.locked_by = "gemini-executor";
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    return jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+  }
+
+  it("takes over a finalize job whose lock lease has expired", async () => {
+    const staleLock = new Date(Date.now() - FINALIZE_LOCK_LEASE_MS - 60_000).toISOString();
+
+    const finalizeJob = await runWithFinalizeHeldSince(staleLock);
+
+    // The campaign finishes instead of stalling forever.
+    expect(finalizeJob.status).toBe("completed");
+    expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a finalize job alone while a live invocation still holds it", async () => {
+    const freshLock = new Date(Date.now() - 5_000).toISOString();
+
+    const finalizeJob = await runWithFinalizeHeldSince(freshLock);
+
+    // Still held by whoever is genuinely working on it — taking it over here
+    // would run scoring and recommendations twice for the same campaign.
+    expect(finalizeJob.status).toBe("running");
+    expect(vi.mocked(generateRecommendationsForRun)).not.toHaveBeenCalled();
   });
 });

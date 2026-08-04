@@ -5,7 +5,7 @@ import { extractClaudeStructuredData } from "@/lib/llm/claude";
 import { extractOpenAIStructuredData } from "@/lib/llm/openai";
 import { parsePersistedBusinessProfile } from "@/lib/projects/business-profile";
 import { formatExtractionError } from "@/lib/llm/extraction-errors";
-import { EXTRACTION_CONCURRENCY, EXTRACTION_PASS_BUDGET_MS, EXTRACTION_VERSION } from "@/lib/scan/constants";
+import { EXTRACTION_CONCURRENCY, EXTRACTION_VERSION, SCAN_INVOCATION_WORK_BUDGET_MS } from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
@@ -540,10 +540,15 @@ export async function runStructuredExtractionForRun(input: {
   service: ReturnType<typeof createServiceClient>;
   projectId: string;
   runId: string;
-  /** Overrides the default pass budget. Absolute epoch ms. */
+  /**
+   * Absolute epoch-ms deadline for the *whole invocation*, shared with every
+   * other pass in it — not a fresh per-pass allowance. The executor computes
+   * it once at entry; see SCAN_INVOCATION_WORK_BUDGET_MS for why a per-pass
+   * budget put a run over Vercel's ceiling in production.
+   */
   deadlineAt?: number;
 }): Promise<ExtractionPassSummary> {
-  const deadlineAt = input.deadlineAt ?? Date.now() + EXTRACTION_PASS_BUDGET_MS;
+  const deadlineAt = input.deadlineAt ?? Date.now() + SCAN_INVOCATION_WORK_BUDGET_MS;
   const empty: ExtractionPassSummary = { attempted: 0, succeeded: 0, failed: 0, remaining: 0 };
   const { data: rows, error } = await input.service
     .from("scan_prompt_results")

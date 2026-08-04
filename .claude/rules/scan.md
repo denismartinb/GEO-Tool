@@ -24,6 +24,17 @@ worse than no rule, because a future session will obey it anyway.
   where the message is a constant this codebase wrote. Never persist a raw
   provider or transport message (`.claude/rules/gemini.md`, "Sanitize all
   errors"; `lib/llm/extraction-errors.ts`).
+- **Budget new work against the invocation, not against itself.** A step added
+  inside `executePendingScan` shares the ~60s `maxDuration` with everything
+  else already there. Compute one absolute deadline at entry and thread it
+  down; never give a new step its own fixed allowance. Giving extraction a
+  per-pass 25s put the final batch's invocation at ~70s of work in a 60s
+  function and killed a real scan (`docs/adr/0027`, Addendum).
+- **Any claim held across a step long enough to be killed needs a lease.**
+  `reconcileStuckScanRuns` only ever touches `scan_runs`, never `jobs`, so a
+  job left `running` by a dead invocation is stranded forever unless something
+  can take it over. Use the atomic `UPDATE ... WHERE locked_at < now - lease
+  RETURNING` pattern (`docs/adr/0027`, Addendum).
 - **Terminal states stay terminal, and progress must bump `updated_at`.** Any
   path that defers work instead of finishing it must write to `scan_runs` so
   `reconcileStuckScanRuns` can tell a deferring run from a stalled one

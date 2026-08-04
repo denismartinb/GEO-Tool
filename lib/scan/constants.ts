@@ -48,15 +48,49 @@ export const EXTRACTION_RETRY_BASE_DELAY_MS = 750;
 export const EXTRACTION_RETRY_MAX_DELAY_MS = 8_000;
 
 /**
- * Wall-clock budget for one extraction pass, well inside the ~60s Vercel
- * `maxDuration` (docs/adr/0003) that the pass shares with this invocation's
- * generation batch and, on the final batch, with scoring and
- * recommendations. When the budget runs out, the remaining rows are simply
- * left for the next pass — they are never dropped, because a run can no
- * longer be marked `completed` while any row is still unprocessed (see
- * `countUnprocessedExtractionRows` in lib/scan/extraction.ts).
+ * Wall-clock budget for **all** the work one `executePendingScan` invocation
+ * may do, measured from the moment it starts — not a per-pass allowance.
+ *
+ * This is a shared deadline on purpose, and the distinction is what a first
+ * cut of EXTRACTION-RELIABILITY-1 got wrong in production (IKEA run
+ * 9608d861, 2026-08-04, `scan_timeout` after 190.9s with all 26 prompts
+ * generated fine). That version gave each extraction pass its own fixed 25s.
+ * The invocation that processes the *last* batch runs three things in a row —
+ * generation (~20s), that batch's extraction pass (25s), then the finalize
+ * sweep (another 25s) — which is ~70s of work inside a 60s `maxDuration`.
+ * Vercel killed it mid-sweep, so it never reached the code that releases the
+ * finalize job or writes progress, and the campaign stalled until the
+ * reconciliation pass failed it.
+ *
+ * One absolute deadline for the whole invocation makes that arithmetic
+ * impossible: whatever generation spends, extraction gets what is left and
+ * not a millisecond more, and a pass that finds no budget simply defers its
+ * rows to the next invocation instead of overrunning. 45s leaves headroom
+ * under the 60s ceiling for the finalize bookkeeping, scoring and
+ * recommendations that follow.
  */
-export const EXTRACTION_PASS_BUDGET_MS = 25_000;
+export const SCAN_INVOCATION_WORK_BUDGET_MS = 45_000;
+
+/**
+ * How long a claimed `scan_finalize` job may stay `running` before another
+ * invocation is allowed to take it over.
+ *
+ * Finalize used to be near-instant, so a claim that was never released could
+ * not realistically happen. Since extraction runs inside the finalize step it
+ * is long enough to be killed mid-flight, and `reconcileStuckScanRuns` only
+ * ever touches `scan_runs` — it never releases a `jobs` row. Without a lease,
+ * one killed invocation strands the campaign permanently: every later
+ * invocation fails the `status = 'pending'` claim, returns immediately, and
+ * nothing writes progress again (exactly the 2026-08-04 IKEA failure).
+ *
+ * The takeover is still exclusive: the claim is an `UPDATE ... WHERE
+ * locked_at < now - lease RETURNING`, so whichever invocation commits first
+ * moves `locked_at` and every racing one stops matching — the same atomic
+ * claim pattern the prompt batches already use. 90s is comfortably longer
+ * than any live invocation (capped at 45s of work above), so a lease can only
+ * expire on an invocation that is genuinely gone.
+ */
+export const FINALIZE_LOCK_LEASE_MS = 90_000;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call

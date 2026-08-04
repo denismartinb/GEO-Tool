@@ -183,10 +183,23 @@ the 20th row was silently discarded: on a 30-row run that was a third of the
 answers, on a 300-row Pro run 93%. See `docs/adr/0027`.
 
 **A pass is bounded by rate and time, never by row count.**
-`EXTRACTION_CONCURRENCY` (4) bounds in-flight calls;
-`EXTRACTION_PASS_BUDGET_MS` (25s) bounds its wall clock inside the ~60s
-`maxDuration` it shares with generation and, on the last batch, with scoring
-and recommendations. Rows a pass cannot reach stay eligible for the next one.
+`EXTRACTION_CONCURRENCY` (4) bounds in-flight calls. The time bound is
+`SCAN_INVOCATION_WORK_BUDGET_MS` (45s) and it belongs to the **whole
+invocation**, not to each pass: `executePendingScan` computes one absolute
+deadline at entry and threads it into every extraction pass it runs, so
+generation, the batch pass and the finalize sweep all draw from the same
+budget. Rows a pass cannot reach stay eligible for the next invocation. A
+per-pass budget instead of a shared one is what killed a real scan in preview
+— see `docs/adr/0027`, Addendum.
+
+**A finalize claim is leased, not permanent.** Because extraction now runs
+inside the finalize step, that step is long enough to be killed mid-flight, and
+a killed invocation cannot release the `scan_finalize` job it claimed. Nothing
+else recovers a `jobs` row — `reconcileStuckScanRuns` only touches
+`scan_runs` — so a job whose `locked_at` is older than
+`FINALIZE_LOCK_LEASE_MS` (90s) may be taken over by another invocation, via the
+same atomic claim the prompt batches use. Without this, one killed invocation
+stranded the campaign permanently.
 
 **Per-call retries.** Every extraction call goes through
 `fetchExtractionWithRetry` (`lib/llm/extraction-fetch.ts`):
