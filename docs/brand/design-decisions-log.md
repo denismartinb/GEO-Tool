@@ -2025,6 +2025,51 @@ etiqueta.
 
 ---
 
+## 22. El historial de escaneos deja de publicar deltas que la Visión general oculta (DELTA-GUARD-1, 2026-08-05)
+
+**El hallazgo, encontrado mirando capturas del piloto, no auditando código.** La
+Visión general lleva desde GEO-SCORE-RELIABILITY-1 (ADR 0024) negándose a
+publicar un «vs. escaneo anterior» que la muestra no sostiene. La tabla de
+Escaneos, en la pantalla de al lado, seguía restando los dos scores en crudo
+(`curr - prev`) y publicando **`+34 pt`, `-50 pt`, `+67 pt` sobre escaneos de 3
+respuestas**. Es exactamente la falsa precisión que motivó el ADR, viva en la
+pantalla donde el fundador mira su histórico.
+
+Que sobreviviera un año de trabajo sobre el score tiene una explicación
+incómoda: ADR 0024 se implementó *en una pantalla*, no *en el producto*. La
+capa de fiabilidad existía y era correcta; simplemente había un consumidor que
+no la llamaba.
+
+**La decisión.** Un delta sólo se publica si `resolveDelta` lo autoriza —
+mismo punto de decisión, mismos criterios, cero lógica duplicada. Los tres
+casos se renderizan así:
+
+| Veredicto | Render |
+|---|---|
+| `publish` | El valor, como siempre |
+| `insufficient_sample` | Guion, con el tamaño de muestra y el mínimo en el tooltip |
+| `not_comparable` | Guion, con la causa concreta en el tooltip |
+
+**Se retiene deliberadamente el guion, no un aviso.** El 2026-08-03 el fundador
+decidió para la Visión general que una comparación retenida se renderiza como
+nada, porque varios «sin comparación» en una pantalla se leen como un producto
+roto y no como uno cuidadoso. Aquí pesa más: son *filas*, así que un aviso por
+fila sería una columna entera de disculpas. La razón vive en el `title`, para
+quien la busque.
+
+**Consecuencia visible y buscada:** proyectos como Mozilla (1 prompt × 3
+motores) pasan a tener la columna Δ Score casi vacía. No es una regresión —
+es el producto dejando de afirmar lo que nunca pudo medir. Con SAMPLING-1
+(§20) esos mismos proyectos vuelven a llenarla en cuanto alcanzan el suelo de
+respuestas.
+
+**Invariante nuevo, en `.claude/rules/scoring.md`:** ninguna superficie
+publica una comparación entre escaneos sin pasar por `resolveDelta`. La
+lección no es "arreglada la tabla" sino que una capa de honestidad que hay que
+acordarse de llamar acaba sin llamarse.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

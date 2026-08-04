@@ -14,6 +14,13 @@ import {
   reconcileStuckScanRuns,
   scanRunsNeedReconciliation
 } from "@/lib/scan/scan-runner";
+import {
+  deltaWithheldReason,
+  readComparableRun,
+  resolveDelta,
+  type ComparableRun,
+  type DeltaVerdict
+} from "@/lib/scoring/score-reliability";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
@@ -259,13 +266,23 @@ export default async function RunsPage({
     completedRunIds.length > 0
       ? await supabase
           .from("run_scores")
-          .select("run_id, visibility_score")
+          // details_json (DELTA-GUARD-1): carries the comparability
+          // fingerprint resolveDelta needs — response count, composite
+          // version, surviving components and engine set. Reading it here is
+          // what lets this table apply the same ADR 0024 guard the Overview
+          // already applies, instead of subtracting two numbers that may not
+          // measure the same thing.
+          .select("run_id, visibility_score, details_json")
           .eq("project_id", projectId)
           .in("run_id", completedRunIds)
       : { data: [] };
 
   const scoreByRunId = new Map<string, number>(
     (scores ?? []).map((s) => [s.run_id, Math.round(Number(s.visibility_score ?? 0))])
+  );
+
+  const comparableByRunId = new Map<string, ComparableRun>(
+    (scores ?? []).map((s) => [s.run_id as string, readComparableRun(s.details_json)])
   );
 
   /* Summary stats */
@@ -280,22 +297,42 @@ export default async function RunsPage({
   /* Build ordered list for delta computation (oldest first for completed runs) */
   const completedRunsOldestFirst = [...completedRuns].reverse();
 
-  /* Compute delta for each completed run vs its predecessor */
-  const scoreDeltas = new Map<string, number | null>();
+  /**
+   * Delta for each completed run vs its predecessor (DELTA-GUARD-1).
+   *
+   * This used to be a raw `curr - prev`. The Overview stopped doing that in
+   * GEO-SCORE-RELIABILITY-1 (ADR 0024) because a subtraction of two persisted
+   * scores says nothing on its own: it is only a real change in visibility if
+   * both runs carry enough AI responses to support the claim AND measured the
+   * same thing (same composite version, same surviving components, same
+   * engines, same sample size). This table kept subtracting anyway, so the
+   * screen the founder actually reads was publishing "+34 pt" on runs of
+   * three responses — the exact false precision ADR 0024 exists to remove,
+   * one screen over.
+   *
+   * `resolveDelta` is that ADR's single decision point, so using it here means
+   * the two screens cannot drift apart in what they are willing to assert.
+   */
+  const scoreDeltas = new Map<string, DeltaVerdict | null>();
   for (let i = 0; i < completedRunsOldestFirst.length; i++) {
     const run = completedRunsOldestFirst[i];
     if (i === 0) {
       scoreDeltas.set(run.id, null); // first ever run — no previous
-    } else {
-      const prevRun = completedRunsOldestFirst[i - 1];
-      const curr = scoreByRunId.get(run.id) ?? null;
-      const prev = scoreByRunId.get(prevRun.id) ?? null;
-      if (curr !== null && prev !== null) {
-        scoreDeltas.set(run.id, curr - prev);
-      } else {
-        scoreDeltas.set(run.id, null);
-      }
+      continue;
     }
+
+    const prevRun = completedRunsOldestFirst[i - 1];
+    const curr = scoreByRunId.get(run.id) ?? null;
+    const prev = scoreByRunId.get(prevRun.id) ?? null;
+    const currComparable = comparableByRunId.get(run.id);
+    const prevComparable = comparableByRunId.get(prevRun.id);
+
+    if (curr === null || prev === null || !currComparable || !prevComparable) {
+      scoreDeltas.set(run.id, null);
+      continue;
+    }
+
+    scoreDeltas.set(run.id, resolveDelta(curr - prev, currComparable, prevComparable));
   }
 
   /* Assign run number (1 = oldest) */
@@ -772,15 +809,25 @@ export default async function RunsPage({
                           )}
                         </td>
 
-                        {/* Delta (only if >=2 completed runs) */}
+                        {/* Delta (only if >=2 completed runs).
+                            DELTA-GUARD-1: only a "publish" verdict is a real,
+                            assertable change. Everything else renders as the
+                            same em dash the "no previous run" case already
+                            used, with the reason in the tooltip — the founder
+                            decided on 2026-08-03 (Overview) that a withheld
+                            comparison renders as nothing rather than as a
+                            notice, because several "sin comparación" labels on
+                            one screen read as a broken product instead of a
+                            careful one. A whole COLUMN of them would be
+                            worse. */}
                         {hasMultipleCompleted ? (
                           <td className="num">
-                            {delta !== null ? (
-                              <Delta value={delta} suffix=" pt" />
+                            {delta?.kind === "publish" ? (
+                              <Delta value={delta.value} suffix=" pt" />
                             ) : (
                               <span
                                 style={{ fontSize: 11.5, color: "var(--ink-4)" }}
-                                title="Sin histórico previo"
+                                title={deltaWithheldReason(delta)}
                               >
                                 —
                               </span>
