@@ -96,3 +96,5 @@ razón de ponerlas primero: cierran un hueco visible del sitio.
 
 Requiere Task Intake y aprobación propia (coste de escaneos + metodología
 publicada). No planificado en este calendario hasta esa aprobación.
+
+<!-- smoke A2: 2026-08-04T18:15Z -->
