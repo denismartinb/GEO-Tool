@@ -1657,6 +1657,78 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
 
 ---
 
+## 18. Presupuesto de builds del flujo agéntico (BUILD-BUDGET-1 Fase 1, 2026-08-04)
+
+**El problema, medido.** El fundador reportó que se estaba tocando a diario el
+tope de 100 deploys/día del plan Hobby. Censo real vía los eventos
+`deployment_status` del repo (cada uno es un deploy de Vercel):
+
+| Día | Deploys | Ramas activas |
+|---|---|---|
+| 2026-08-03 | 50 | 15 |
+| 2026-08-04 (hasta 17:52) | 40 | 11 |
+
+De los 90 deploys de esos dos días, **43 (48%) salieron de sólo tres ramas** —
+`recommendations-page-redesign` (15), `web-audits-redesign` (14),
+`geo-score-variability` (14) — y 12 fueron de producción (uno por merge). Había
+10 PRs abiertos a la vez. 5 de los 41 commits mergeados desde el 01-08 no tocan
+nada que Next construya (docs, `.claude/`, tests) y aun así costaron un build
+cada uno más su pasada de piloto.
+
+**Segundo techo, no pedido pero encontrado.** El `ux-pilot` consumió 344 min de
+GitHub Actions el 03-08 y 381 min el 04-08. A ese ritmo el plan gratuito de
+Actions para repos privados (2.000 min/mes) se agota en unos 6 días. Misma
+causa raíz, factura distinta.
+
+**El diagnóstico.** No eran "demasiados PRs". El build se había convertido en el
+bucle de feedback: push → build → piloto → falla → arreglo → push. Un PR grande
+pagaba 14-15 builds por lo que debería costar 2 o 3.
+
+**Lo que se decidió (Fase 1 — sólo lo que no cambia ninguna garantía):**
+
+1. `ignoreCommand` en `vercel.json` → `scripts/vercel-should-build.sh`. Salta el
+   build cuando el diff contra el **último deploy con éxito de esa rama**
+   (`VERCEL_GIT_PREVIOUS_SHA`, no `HEAD^`: un push de tres commits es un solo
+   deploy) sólo toca `docs/`, `.claude/`, `.github/`, `tests/` o `*.md` de raíz.
+   Producción nunca se salta. `scripts/` tampoco entra en la lista segura, por
+   contener este mismo script.
+2. Reglas de push en `CLAUDE.md` §"Presupuesto de builds": un push por iteración
+   pilotable; prohibidos los commits vacíos de *retrigger*; no mergear `main` en
+   la rama sin conflicto real; máximo 3 PRs abiertos.
+
+**Fail-open, y por qué importa más que la cuota.** El script construye ante
+cualquier duda (sin SHA previo, SHA inalcanzable en el clon shallow, `git diff`
+que falla). Un build saltado de más dejaría el preview apuntando a código viejo
+y el piloto juzgaría una pantalla que no es la del commit — exactamente el fallo
+del 2026-08-02 (§7 y la nota de Auditoría web) que el piloto existe para
+impedir. `scripts/vercel-should-build.test.ts` fija las dos direcciones del
+contrato invertido de Vercel (0 = saltar, ≠0 = construir), que es justo lo que
+se voltea en silencio en un refactor.
+
+**Ahorro estimado:** de ~50-60 deploys/día a ~20-25 combinando las cuatro
+reglas. El `ignoreCommand` por sí solo es el 10-15%; el grueso está en la
+disciplina de push.
+
+**Deliberadamente fuera de esta fase, y por qué:**
+
+- **Que el piloto deje de correr en cada deploy** y pase a etiqueta
+  (`status:ready-for-pilot`). Ahorraría otro 10-15% y aliviaría los minutos de
+  Actions, pero **cambia un invariante ya documentado** de `CLAUDE.md` y de
+  `docs/agentic-user-pilot.md`. Necesita su propia aprobación.
+- **Desactivar los deploys automáticos por rama** (`git.deploymentEnabled`) y
+  crear el preview bajo demanda con la CLI de Vercel. Es la única opción que
+  *garantiza* no volver a tocar el techo (~1-2 builds por PR), y también la más
+  invasiva: necesita Task Intake propio con plan de rollback.
+
+**Lo que sigue abierto, dicho sin maquillar.** El tope de 100/día es un síntoma.
+`docs/launch-plan.md` ya marca **Vercel Pro como bloqueante absoluto** (los
+términos de Vercel prohíben Hobby para cualquier negocio, se cobre o no).
+Optimizar el flujo había que hacerlo igual, pero si la decisión de Pro se sigue
+difiriendo, este techo vuelve en cuanto suba el ritmo — y el riesgo legal sigue
+abierto mientras tanto.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

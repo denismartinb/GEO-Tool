@@ -1,5 +1,6 @@
 {
   "regions": ["dub1"],
+  "ignoreCommand": "bash scripts/vercel-should-build.sh",
   "crons": [
     {
       "path": "/api/cron/weekly-scans",
