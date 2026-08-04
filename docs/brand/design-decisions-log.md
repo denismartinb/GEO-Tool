@@ -1655,6 +1655,57 @@ versión de esa barra introdujo variaciones que el fundador cortó de raíz:
   al lado decía lo mismo dos veces. Se retira también el estado `notice` del
   contexto, que dejaba de leerlo nadie.
 
+### Fase 3a — el generador de `llms.txt` (2026-08-04)
+
+Se amplía esta entrada en lugar de abrir una §18: es la misma zona y la misma
+familia de fases, y este documento ya acumula tres colisiones de numeración en
+un solo día.
+
+**El problema que había que decidir antes de escribir código.** Un `llms.txt`
+es una guía de lectura curada: secciones, enlaces y **una descripción por
+enlace**. Teníamos dos de las tres cosas de verdad — los temas son los prompts
+activos del propio usuario, y cada URL existe sólo porque su cita de grounding
+resolvió, fail-closed, contra el dominio propio. La tercera era la trampa.
+
+**Lo que se rechazó.** `DomainCoveragePage.title` parece un título de página y
+está saneado, pero **lo escribió Gemini**, no se leyó de la página —
+`domain-coverage.ts` es explícito en que lo único verificado es la URL.
+Meterlo en un fichero que el usuario publica en la raíz de su propio dominio,
+como descripción oficial de sus propias páginas, habría sido convertir la
+conjetura de un modelo en un hecho publicado. Es barato y es deshonesto; se
+descartó por principio, no por coste.
+
+**Lo que se decidió.** Estructura real, descripciones como marcador declarado
+(`DESCRIBE ESTA PÁGINA EN 1 FRASE`), mismo contrato que fase 3b usa para
+`<title>` y meta description. El texto visible de cada enlace es **la ruta**,
+no el título del modelo: una ruta es algo que el sitio tiene de verdad y que
+el usuario reconoce de un vistazo para escribir su frase al lado.
+
+**Generar las descripciones con Gemini queda fuera**, y no por olvido:
+introduce runtime de IA, coste y saneado en una fase que deliberadamente no
+tiene ninguno. Si al usarlo el relleno manual estorba, es una fase propia con
+su Task Intake.
+
+**Devuelve `null` antes que un fichero vacío.** Un proyecto sin auditoría de
+cobertura no tiene ninguna URL verificada, y un `llms.txt` hecho sólo de
+marcadores parece un artefacto que funciona y no le enseña nada al modelo —
+peor que no ofrecerlo. En ese caso la incidencia sigue mostrando su guía en
+prosa y nada más.
+
+**Instrucciones de publicación, por petición del fundador.** Generar el
+fichero era la mitad fácil. "Publica un fichero llms.txt en la raíz de tu
+dominio" es donde se para un responsable de marketing en una tienda Shopify:
+asume que sabe qué es la raíz de un sitio, en qué plataforma está y cómo
+comprobar que funcionó. Los cinco pasos terminan en **una URL que el usuario
+abre él mismo**, así que el éxito es algo que *ve*, no algo que supone. No se
+detalla más por plataforma a propósito: la auditoría conoce el dominio, no el
+CMS, e inventar un paso "tu plataforma es WordPress" sería una conjetura
+disfrazada de instrucción.
+
+**Descarga además de copiar.** Esto es un fichero, no un fragmento: copiarlo a
+un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
+`llms.txt.txt`) y la comprobación distingue mayúsculas.
+
 ---
 
 ## Cómo mantener este documento
