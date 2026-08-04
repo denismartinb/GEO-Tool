@@ -458,3 +458,80 @@ export async function sendAccountDeletedEmail(to: string): Promise<void> {
     )
   );
 }
+
+/**
+ * Operator alert address for backend failures nobody else can act on
+ * (AUDIT-AFTER-SCAN-1). Inert when unset, same as RESEND_API_KEY: an
+ * unconfigured alert channel must never turn into a crash on a code path
+ * whose whole job is handling a failure gracefully.
+ */
+function getOpsAlertAddress(): string | null {
+  const raw = process.env.OPS_ALERT_EMAIL?.trim();
+  return raw ? raw : null;
+}
+
+/**
+ * The raw provider error is interpolated into HTML below. It originates
+ * upstream (Gemini, Supabase, fetch) and is not ours, so it is escaped — an
+ * alert about a failure must not become an injection vector into the
+ * operator's own inbox.
+ */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/**
+ * AUDIT-AFTER-SCAN-1: the post-scan web audit exhausted its retry budget.
+ *
+ * Goes to the OPERATOR, never to the customer. The customer never asked for
+ * this audit (it is automatic), and the failure is backend trouble they
+ * cannot act on — mailing them would be noise about someone else's problem.
+ *
+ * Deliberately plain and dense rather than brand-wrapped: the reader is
+ * debugging, and wants the project, the run, the attempt count and the real
+ * error above the fold.
+ */
+export async function sendWebAuditFailedAlertEmail(input: {
+  domain: string;
+  projectId: string;
+  runId: string;
+  attempts: number;
+  windowMinutes: number;
+  lastError: string;
+  failedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const hours = (input.windowMinutes / 60).toFixed(1);
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#5B6B82;font-size:13px;white-space:nowrap;">${label}</td>` +
+    `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
+
+  await sendEmail(
+    to,
+    `[GenScore] Auditoría web automática fallida — ${input.domain}`,
+    `<!doctype html><html><head><meta charset="utf-8"></head>
+     <body style="margin:0;padding:24px;background:#FFFFFF;font-family:${FONT_STACK};color:#0B1426;">
+       <h1 style="margin:0 0 6px;font-size:17px;">Auditoría web automática fallida</h1>
+       <p style="margin:0 0 18px;font-size:13.5px;color:#5B6B82;">
+         Se agotaron los ${input.attempts} intentos a lo largo de ~${hours} h. El escaneo sí se completó;
+         lo que no se ha actualizado es la auditoría web de este proyecto.
+       </p>
+       <table role="presentation" cellpadding="0" cellspacing="0">
+         ${row("Dominio", input.domain)}
+         ${row("Proyecto", input.projectId)}
+         ${row("Escaneo", input.runId)}
+         ${row("Fallo definitivo", input.failedAt.toISOString())}
+       </table>
+       <p style="margin:18px 0 6px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#5B6B82;">Último error</p>
+       <pre style="margin:0;padding:12px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:10px;font-size:12.5px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(
+         input.lastError
+       )}</pre>
+     </body></html>`
+  );
+}

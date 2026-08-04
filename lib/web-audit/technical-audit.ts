@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { isProOrAbove } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
+import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
@@ -69,7 +70,18 @@ export type TechnicalAuditSnapshot = {
 
 export type TechnicalAuditResult =
   | { success: true; snapshot: TechnicalAuditSnapshot; cached: boolean }
-  | { success: false; error: string };
+  | {
+      success: false;
+      error: string;
+      /**
+       * Machine-readable classification of `error`, so a caller that must
+       * decide whether retrying could ever help (AUDIT-AFTER-SCAN-1's backend
+       * runner) never has to match on Spanish prose. Required, not optional:
+       * a new failure path that forgets to classify itself should fail the
+       * typecheck, not default to "retry forever". See audit-failure.ts.
+       */
+      reason: AuditFailureReason;
+    };
 
 const GENERIC_FAILURE = "No se ha podido auditar la salud técnica de tu web en este momento. Inténtalo de nuevo en unos minutos.";
 const PLAN_REQUIRED_FAILURE = "Auditar la salud técnica de tu web está disponible a partir del plan Pro.";
@@ -268,12 +280,22 @@ export async function runTechnicalAuditCore({
   projectId,
   supabase,
   service,
-  user
+  user,
+  trigger = "manual"
 }: {
   projectId: string;
   supabase: AuthenticatedContext["supabase"];
   service: ReturnType<typeof createServiceClient>;
-  user: AuthenticatedContext["user"];
+  /** See the same parameter on `auditDomainCoverageCore` — only `.id` is read. */
+  user: Pick<AuthenticatedContext["user"], "id">;
+  /**
+   * `"automatic"` = the post-scan backend runner (AUDIT-AFTER-SCAN-1), which
+   * skips the 5/day snapshot rate limit for the reasons documented on
+   * `auditDomainCoverageCore`. The 24h cache check above still runs first and
+   * still short-circuits, so an automatic run right after a scan that already
+   * has a fresh snapshot for the SAME run costs nothing.
+   */
+  trigger?: "manual" | "automatic";
 }): Promise<TechnicalAuditResult> {
   try {
     const { data: projectRaw, error: projectError } = await withTimeout(
@@ -282,10 +304,10 @@ export async function runTechnicalAuditCore({
     );
     const project = projectRaw as unknown as ProjectRow | null;
     if (projectError || !project) {
-      return { success: false, error: feedbackErrorMessages.project_not_found };
+      return { success: false, error: feedbackErrorMessages.project_not_found, reason: "project_not_found" };
     }
     if (project.is_archived) {
-      return { success: false, error: feedbackErrorMessages.project_archived };
+      return { success: false, error: feedbackErrorMessages.project_archived, reason: "project_archived" };
     }
 
     const { data: profileRaw } = await withTimeout(
@@ -293,7 +315,7 @@ export async function runTechnicalAuditCore({
       "load_plan"
     );
     if (!isProOrAbove((profileRaw as { current_plan?: string } | null)?.current_plan)) {
-      return { success: false, error: PLAN_REQUIRED_FAILURE };
+      return { success: false, error: PLAN_REQUIRED_FAILURE, reason: "plan_required" };
     }
 
     const { data: latestRunRaw } = await withTimeout(
@@ -309,7 +331,7 @@ export async function runTechnicalAuditCore({
     );
     const scanId = (latestRunRaw as { id: string } | null)?.id ?? null;
     if (!scanId) {
-      return { success: false, error: NO_SCAN_FAILURE };
+      return { success: false, error: NO_SCAN_FAILURE, reason: "no_scan" };
     }
 
     // Cache check BEFORE the rate-limit check (data-guardian R4): a fresh
@@ -349,13 +371,16 @@ export async function runTechnicalAuditCore({
       }
     }
 
-    const rateLimit = await checkSnapshotRateLimit(service, projectId, { config: DEFAULT_SNAPSHOT_RATE_LIMIT });
-    if (!rateLimit.allowed) {
-      console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
-      return {
-        success: false,
-        error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE
-      };
+    if (trigger === "manual") {
+      const rateLimit = await checkSnapshotRateLimit(service, projectId, { config: DEFAULT_SNAPSHOT_RATE_LIMIT });
+      if (!rateLimit.allowed) {
+        console.warn(`${LOG_PREFIX} rate_limited`, { project_id: projectId });
+        return {
+          success: false,
+          error: rateLimit.reason === "rate_limit_exceeded" ? RATE_LIMIT_FAILURE : GENERIC_FAILURE,
+          reason: rateLimit.reason === "rate_limit_exceeded" ? "rate_limited" : "generic"
+        };
+      }
     }
 
     const { data: projectDomainRaw } = await withTimeout(
@@ -458,7 +483,7 @@ export async function runTechnicalAuditCore({
     );
     if (persistError) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId });
-      return { success: false, error: GENERIC_FAILURE };
+      return { success: false, error: GENERIC_FAILURE, reason: "generic" };
     }
 
     console.info(`${LOG_PREFIX} completed`, {
@@ -483,6 +508,6 @@ export async function runTechnicalAuditCore({
         error_name: error instanceof Error ? error.name : "unknown"
       });
     }
-    return { success: false, error: GENERIC_FAILURE };
+    return { success: false, error: GENERIC_FAILURE, reason: "generic" };
   }
 }

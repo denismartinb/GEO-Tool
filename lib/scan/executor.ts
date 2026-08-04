@@ -25,6 +25,8 @@ import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
 import { emitNotification } from "@/lib/notifications/emit";
+import { enqueueWebAuditJob } from "@/lib/web-audit/audit-job-runner";
+import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "@/lib/notifications/dedupe-keys";
 
 // gap_resolved's sampleTitles (NOTIF-SERVER-1a) needs each previous-run
@@ -1166,6 +1168,32 @@ export async function executePendingScan({
         resolvedGaps: resolvedGapsCount
       }
     });
+
+    // AUDIT-AFTER-SCAN-1: the web audit is no longer something a human has to
+    // remember to click. Queued here, after the run is durably 'completed',
+    // because the audit reads the run's persisted results — queueing earlier
+    // would race the very data it audits.
+    //
+    // Wrapped in its own try/catch for the same reason as the recommendation
+    // block above: the scan itself succeeded. A queueing failure must never
+    // surface to the user as a failed scan.
+    if (isAutoWebAuditEnabled()) {
+      try {
+        const enqueued = await enqueueWebAuditJob({ service, projectId, runId });
+        // Only dispatch when this call actually created the job. On
+        // "already_queued" something else already owns the work, and firing
+        // again would just race it.
+        if (enqueued === "enqueued") {
+          after(() => triggerWebAuditRun());
+        }
+      } catch (auditError) {
+        console.error("[scan-runner] failed to queue the post-scan web audit; the run itself completed", {
+          projectId,
+          runId,
+          message: auditError instanceof Error ? auditError.message : "unknown"
+        });
+      }
+    }
   } catch (error) {
     const errorSummary = getSanitizedScanError(error);
 
