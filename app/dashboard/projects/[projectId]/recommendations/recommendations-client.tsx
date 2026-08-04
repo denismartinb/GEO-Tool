@@ -1085,11 +1085,18 @@ export function RecommendationsClient({
 
   // "Todas" is exactly that: every active recommendation, including the ones
   // already shown above as priority actions.
-  const filtered = recommendations.filter((r) => {
-    if (filter === "high") return priorityLevel(r) === "high";
-    if (filter === "technical") return categoryForType(r.recommendation_type) === "technical";
-    return true;
-  });
+  //
+  // "Alta prioridad" returns THE PLAN — the same three cards shown above, not a
+  // separate impact×confidence selection. Two different answers to "what is
+  // high priority here?" on one screen is the contradiction this redesign set
+  // out to remove, and it had crept back in through the filter (founder
+  // review). Repetition is fine; disagreement is not.
+  const filtered =
+    filter === "high"
+      ? plan
+      : recommendations.filter((r) =>
+          filter === "technical" ? categoryForType(r.recommendation_type) === "technical" : true,
+        );
 
   // Four filters, no more (founder review). "Victorias rápidas", "Contenido" y
   // "Autoridad" salieron: con las categorías ya visibles como acordeones en la
@@ -1144,9 +1151,12 @@ export function RecommendationsClient({
       {plan.length > 0 && (
         <>
           <div className="rec2-plan">
+            {/* Sin punto final: cuando no hay cifra de puntos (una corrida de
+                confianza baja, que hoy es lo normal) el titular se quedaba en
+                "3 acciones prioritarias." y ese punto huérfano cantaba. */}
             <div className="rec2-plan-t">
-              {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}.
-              {planPoints > 0 ? ` Hasta +${planPoints} puntos.` : ""}
+              {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}
+              {planPoints > 0 ? `. Hasta +${planPoints} puntos` : ""}
             </div>
           </div>
           {plan.map((rec, i) => (
@@ -1178,11 +1188,19 @@ export function RecommendationsClient({
         </div>
       </div>
 
-      {/* 6 · The full list, grouped by action type into accordions that start
-          closed. With 20+ recommendations a flat list is unreadable, and the
-          categories are what the user actually chooses between. */}
+      {/* 6 · The list.
+          Accordions ONLY under "Todas": grouping exists to tame 20+ mixed
+          recommendations, and a filtered view is already narrow and already
+          named. Filtering to "Técnico" and then having to open an accordion
+          labelled by category to reach the actions is the same choice asked
+          twice (founder review). Filtered views list their actions directly. */}
       {filter !== "resolved" &&
-        (filtered.length > 0 ? (
+        (filtered.length === 0 ? (
+          <div className="section-empty">
+            <div className="section-empty-title">Nada con este filtro</div>
+            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+          </div>
+        ) : filter === "all" ? (
           groupByType(filtered).map(({ type, items }) => (
             <GroupedRecs
               key={type}
@@ -1193,10 +1211,7 @@ export function RecommendationsClient({
             />
           ))
         ) : (
-          <div className="section-empty">
-            <div className="section-empty-title">Nada con este filtro</div>
-            <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
-          </div>
+          filtered.map((rec) => <RecCard key={`f-${rec.id}`} rec={rec} projectId={projectId} />)
         ))}
 
       {filter === "resolved" &&

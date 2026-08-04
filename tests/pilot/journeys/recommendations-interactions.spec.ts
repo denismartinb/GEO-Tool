@@ -114,16 +114,21 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
   expect(tabLabels[0], "el primer filtro debería ser 'Todas'").toContain("Todas");
 
   const groupsUnderTodas = await page.locator(".rec2-group").count();
+
+  // "Alta prioridad" debe devolver EXACTAMENTE las mismas acciones del bloque
+  // de arriba — repetidas, no una selección distinta — y sin acordeones: una
+  // vista filtrada ya viene acotada y nombrada.
   const highTab = tabs.filter({ hasText: "Alta prioridad" });
   if (await highTab.count()) {
     await highTab.first().click();
-    // La vista filtrada debe seguir renderizando algo (grupo o vacío honesto).
-    const filteredGroups = await page.locator(".rec2-group").count();
-    const emptyState = await page.locator(".section-empty").count();
     expect(
-      filteredGroups + emptyState,
-      "el filtro 'Alta prioridad' deja la pantalla en blanco"
-    ).toBeGreaterThan(0);
+      await page.locator(".rec2-group").count(),
+      "'Alta prioridad' no debería agrupar en acordeones"
+    ).toBe(0);
+    expect(
+      await page.locator(".rec-card").count(),
+      "'Alta prioridad' debería repetir las mismas acciones prioritarias de arriba"
+    ).toBe(priorityCount * 2);
     await captureInteraction(page, testInfo, "recs-filtro-alta-prioridad");
 
     await tabs.first().click();
@@ -131,6 +136,22 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
       await page.locator(".rec2-group").count(),
       "volver a 'Todas' no restaura la lista completa"
     ).toBe(groupsUnderTodas);
+  }
+
+  // "Técnico" lista sus acciones directamente: la categoría ya está en la
+  // pestaña, no hace falta volver a elegirla en un acordeón.
+  const techTab = tabs.filter({ hasText: "Técnico" });
+  if (await techTab.count()) {
+    await techTab.first().click();
+    expect(
+      await page.locator(".rec2-group").count(),
+      "'Técnico' no debería agrupar en acordeones"
+    ).toBe(0);
+    const cards = await page.locator(".rec-card").count();
+    const empty = await page.locator(".section-empty").count();
+    expect(cards + empty, "'Técnico' deja la pantalla en blanco").toBeGreaterThan(0);
+    await captureInteraction(page, testInfo, "recs-filtro-tecnico");
+    await tabs.first().click();
   }
 
   // --- 5 · "Ver más": el detalle de una prioritaria se abre ----------------
