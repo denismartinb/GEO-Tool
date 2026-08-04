@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { createServiceClient } from "@/lib/supabase/service";
-import { sendScanHealthAlertEmail } from "@/lib/email/transactional";
+import { isOpsAlertConfigured, sendScanHealthAlertEmail } from "@/lib/email/transactional";
 import {
   EXTRACTION_VERSION,
   SCAN_HEALTH_ALERT_DEDUPE_HOURS,
@@ -202,6 +202,23 @@ export async function checkAndSendScanHealthAlert(input: {
     }
 
     if (findings.length === 0) return;
+
+    // An unconfigured alert channel silently swallowing an alert is the exact
+    // failure class this phase exists to remove — `sendScanHealthAlertEmail`
+    // returns without doing anything when OPS_ALERT_EMAIL is unset, which
+    // would make a real incident vanish just as thoroughly as the
+    // uncategorized errors of Fase A did. Found the hard way: the var was not
+    // configured at all when this shipped, so the pre-existing web-audit alert
+    // (AUDIT-AFTER-SCAN-1) had been inert since the day it was written.
+    // The alert still cannot be delivered, but it is no longer invisible.
+    if (!isOpsAlertConfigured()) {
+      console.error("[geo:scan:health] scan health findings with no OPS_ALERT_EMAIL configured — alert not delivered", {
+        projectId: input.projectId,
+        runId: input.runId,
+        findings: findings.map((f) => `${f.engine}:${f.reason}`)
+      });
+      return;
+    }
 
     // Resolved lazily: the common case is a healthy run with nothing to send,
     // and `reconcileStuckScanRuns` (one of the two callers) does not carry the

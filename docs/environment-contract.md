@@ -151,10 +151,17 @@ provider rejecting the key or model id, an engine that answered prompts but
 extracted nothing, or a run that failed with its auto-retry already spent.
 Deduped on (engine, reason) across every project for 24 h, so one exhausted
 API account is one email rather than one per project per daily sweep. Also
-operator-only, and for the same reason. With `OPS_ALERT_EMAIL` unset the alert
-is silently skipped — the failure is still recorded in
-`scan_prompt_results.extraction_error`, but nobody is told, which is the state
-that let OpenAI's 429s run unnoticed for four days.
+operator-only, and for the same reason.
+
+**This variable was not configured at all when Fase B shipped** (founder,
+2026-08-04), which means the web-audit alert above had been inert since the day
+it was written. An unset alert channel swallowing an alert is the same class of
+silent failure this whole ADR exists to remove, so
+`checkAndSendScanHealthAlert` now emits a loud `console.error` when it has
+findings and no address to send them to. The alert still cannot be delivered —
+only setting the variable fixes that — but it stops being invisible. **Set it
+in both Production and Preview**, and note that it needs `RESEND_API_KEY` too:
+without that, `sendEmail` is a no-op for every email in the product.
 
 ### Weekly digest email (ALERTS-1 Fase 6b)
 

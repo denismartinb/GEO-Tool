@@ -465,6 +465,10 @@ export async function sendAccountDeletedEmail(to: string): Promise<void> {
  * unconfigured alert channel must never turn into a crash on a code path
  * whose whole job is handling a failure gracefully.
  */
+export function isOpsAlertConfigured(): boolean {
+  return getOpsAlertAddress() !== null;
+}
+
 function getOpsAlertAddress(): string | null {
   const raw = process.env.OPS_ALERT_EMAIL?.trim();
   return raw ? raw : null;
