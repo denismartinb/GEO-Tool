@@ -2167,18 +2167,19 @@ a {
 /* inline-flex keeps the InfoTip glyph on the label's own line — as plain
    inline content after an uppercase, letter-spaced label it wrapped onto a
    second line by itself. */
-/* Right-aligned so the label sits over the numbers it names instead of
-   floating off at the far left of a wide row (founder, 2026-08-04: "que se
-   relacione con el dato"). */
+/* One label per column, each over the data it names (founder, 2026-08-04:
+   "que se relacione con el dato"). A single right-aligned heading named the
+   percentages by position, so the ranking column ended up with no label at
+   all and its digits read as bullets. */
 .cm2-pos-list-hd {
-  display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: 6px;
 }
 .cm2-pos-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
 .cm2-pos-n {
-  flex: 0 0 auto; width: 15px; text-align: center; font-size: 11px; font-weight: 750;
-  color: var(--ink-4); font-variant-numeric: tabular-nums;
+  flex: 0 0 auto; width: 22px; text-align: right; font-size: 11px; font-weight: 750;
+  color: var(--ink-3); font-variant-numeric: tabular-nums;
 }
 .cm2-pos-row.you .cm2-pos-n { color: var(--brand-blue); }
 .cm2-pos-nm {

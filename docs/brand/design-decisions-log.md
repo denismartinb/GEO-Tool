@@ -1429,10 +1429,32 @@ completados sin dato de posición, tanto el estado vacío como una nota bajo el
 gráfico dicen cuántos de cuántos lo traen y por qué, en vez de dejar que el
 usuario concluya que la pantalla está rota.
 
+**Última ronda: la tabla se quedó sin columna de puesto.** Al sustituir la media
+en crudo por el ranking 1..N se eliminó la columna de valor y quedó una sola
+cifra visible por fila —el porcentaje de mención— bajo un encabezado alineado a
+la derecha que decía "ranking · último escaneo". Resultado: **el encabezado
+nombraba los porcentajes**, y el puesto —un dígito gris pequeño a la izquierda—
+se leía como viñeta de lista. El fundador lo cazó en el preview: *"¿no ves que
+no sale la posición en la tabla?"*.
+
+El error de fondo no fue la maqueta, fue la regla que me apunté: había anotado
+"el encabezado va a la derecha" cuando lo que el fundador pidió fue *"que se
+relacione con el dato"*. En el momento en que el dato de la derecha dejó de ser
+el puesto, la regla siguió obedeciéndose y pasó a mentir. La regla correcta es
+**una etiqueta por columna, encima del dato que nombra**: "Puesto · último
+escaneo" a la izquierda, "Mención" a la derecha. Y el puesto se escribe como
+ordinal (`3º`), porque "3" es una viñeta y "3º" es una posición. Corregido
+también el gris del dígito (`--ink-4` → `--ink-3`).
+
+Segundo aviso, para quien lea esto: **una revisión de capturas que sólo verifica
+la lista de criterios del PR no es una revisión**. El ranking 1..N era correcto
+en las tres capturas y aun así la tabla no comunicaba el dato principal. Mirar
+sirve para lo que no estaba en la lista.
+
 **Cierre de fase completo.** El invariante vive en `.claude/rules/competitors.md`
-(sección "Gráfico de evolución del puesto") y la celda de Competidores del mapa
-de zonas de `CLAUDE.md` apunta a esta fase — primera fase cerrada bajo el
-protocolo que estrenó §16.
+(secciones "Métricas" y "Gráfico de evolución del puesto") y la celda de
+Competidores del mapa de zonas de `CLAUDE.md` apunta a esta fase — primera fase
+cerrada bajo el protocolo que estrenó §16.
 
 ## 16. Gobernanza del contexto entre sesiones (CONTEXT-GOVERNANCE-1, 2026-08-03)
 

@@ -792,7 +792,7 @@ export default async function CompetitorsPage({
               {hasTrendData || latestPositions.length > 0 ? (
                 <>
                   <div className="cm2-sec-lbl">
-                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Ranking del último escaneo"}
+                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Puesto en el último escaneo"}
                   </div>
                   <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
                     {hasTrendData ? (
@@ -802,15 +802,23 @@ export default async function CompetitorsPage({
                     ) : null}
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
-                        {/* No InfoTip here. Right-aligning the heading put the
-                            glyph flush against the viewport edge, so its bubble
-                            opened off-screen and rendered clipped — founder cut
-                            it (2026-08-04). A tooltip that cannot be read is
-                            worse than the explanation it was carrying. */}
-                        <div className="cm2-pos-list-hd">Ranking · último escaneo</div>
+                        {/* Two labels, each sitting over the column it names.
+                            A single right-aligned heading read as if "ranking"
+                            named the percentages, leaving the position itself
+                            unlabelled — the rank digits then read as list
+                            bullets and the founder saw a table with no position
+                            in it (2026-08-04). No InfoTip: right-aligned, its
+                            glyph lands flush against the viewport edge and the
+                            bubble opens off-screen, so it was cut. */}
+                        <div className="cm2-pos-list-hd">
+                          <span>Puesto · último escaneo</span>
+                          <span>Mención</span>
+                        </div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
-                            <span className="cm2-pos-n">{entry.rank}</span>
+                            {/* Ordinal, not a row number: "3º" is a standing,
+                                "3" is a bullet. */}
+                            <span className="cm2-pos-n">{entry.rank}º</span>
                             <span className="cm2-pos-nm">{entry.label}</span>
                             {/* Also the tiebreaker for the order above it, so a
                                 shared mean rank never resolves invisibly. */}

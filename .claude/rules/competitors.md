@@ -93,11 +93,17 @@ limpio (log §11).
   tiene `avg_position_when_mentioned` para nadie (ADR 0026 decisión 4, sin
   backfill), así que un proyecto con mucha historia puede pasar días sin
   bloque. Es lo esperado.
-- **El encabezado "puesto medio · último escaneo" va alineado a la derecha y sin
-  InfoTip.** Alinearlo a la derecha lo pega al borde del viewport, y ahí la
-  burbuja del tooltip se abre fuera de pantalla y sale cortada (log §15). Un
-  tooltip que no se puede leer estorba más de lo que explica; si hace falta
-  explicar el dato, que sea en otro sitio.
+- **Cada columna de la lista lleva su propia etiqueta encima ("Puesto · último
+  escaneo" a la izquierda, "Mención" a la derecha), y el puesto se escribe como
+  ordinal (`3º`).** Con un solo encabezado alineado a la derecha, "ranking"
+  acababa nombrando los porcentajes y la columna del puesto se quedaba sin
+  etiqueta: los dígitos se leían como viñetas y el fundador vio una tabla sin
+  posición (log §15). La regla es *la etiqueta va sobre el dato que nombra*, no
+  "a la derecha" — eso era el remedio de cuando el dato de la derecha sí era el
+  puesto.
+- **Sin InfoTip en ese encabezado.** Pegado al borde del viewport, la burbuja se
+  abre fuera de pantalla y sale cortada (log §15). Un tooltip que no se puede
+  leer estorba más de lo que explica.
 - **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las primeras
   `DEFAULT_VISIBLE` series arrancan encendidas; el resto se activan pulsando.
   El fundador las leyó como deshabilitadas, así que el atenuado se mantiene
