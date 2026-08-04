@@ -4768,6 +4768,22 @@ a.notif-row:hover {
 
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
+
+/* --- Ritmo de la cabecera de artículo ------------------------------------
+   El ritmo vertical iba justo al revés de como se necesita: 84px de hueco
+   muerto encima de la portada (el padding de .lp-section) y CERO separación
+   entre portada, título, fecha y el primer bloque, que quedaban pegados unos
+   a otros. Se recorta arriba y se reparte abajo, que es donde el lector lo
+   necesita al empezar a leer.
+
+   Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
+   solo se usa aquí (el índice y los hubs usan la portada normal dentro de
+   una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+.lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.blog-cover-compact { margin-bottom: 24px; }
+.blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
+h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
 
