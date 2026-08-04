@@ -1,5 +1,13 @@
 import "server-only";
 import { extractionOutputSchema } from "@/lib/extraction/schema";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
+import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
+import {
+  EXTRACTION_CALL_TIMEOUT_MS,
+  EXTRACTION_MAX_ATTEMPTS,
+  EXTRACTION_RETRY_BASE_DELAY_MS,
+  EXTRACTION_RETRY_MAX_DELAY_MS
+} from "@/lib/scan/constants";
 import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
@@ -168,9 +176,14 @@ export async function extractClaudeStructuredData(input: {
   rawResponseText: string;
   promptText: string;
   profile?: BusinessProfile;
+  /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
+  deadlineAt?: number;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new ClaudeConfigError("Missing ANTHROPIC_API_KEY");
+  // Categorized rather than a ClaudeConfigError: at the extraction stage this
+  // is a per-row failure to be recorded, not the run-level abort that a
+  // missing key during *generation* triggers in the executor.
+  if (!apiKey) throw new ExtractionError("config", "Missing ANTHROPIC_API_KEY");
 
   const model = getClaudeModel();
 
@@ -215,21 +228,25 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   const headers = buildHeaders(apiKey);
 
-  const response = await fetch(ANTHROPIC_API_URL, {
-    method: "POST",
-    headers,
-    body: requestBody
-  });
-
-  if (!response.ok) {
-    throw new Error(getClaudeApiError(response.status));
-  }
+  const response = await fetchExtractionWithRetry(
+    ANTHROPIC_API_URL,
+    { method: "POST", headers, body: requestBody },
+    {
+      timeoutMs: EXTRACTION_CALL_TIMEOUT_MS,
+      maxAttempts: EXTRACTION_MAX_ATTEMPTS,
+      baseDelayMs: EXTRACTION_RETRY_BASE_DELAY_MS,
+      maxDelayMs: EXTRACTION_RETRY_MAX_DELAY_MS,
+      deadlineAt: input.deadlineAt,
+      describeStatus: getClaudeApiError,
+      timeoutMessage: "Claude extraction request timed out."
+    }
+  );
 
   const data = (await response.json()) as AnthropicResponse;
   const text = extractText(data);
 
   if (!text) {
-    throw new Error("Claude extraction returned empty response.");
+    throw new ExtractionError("empty", "Claude extraction returned empty response.");
   }
 
   let parsedJson: unknown;
@@ -238,12 +255,12 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
     const cleaned = text.replace(/^```(?:json)?\n?/i, "").replace(/\n?```$/i, "").trim();
     parsedJson = JSON.parse(cleaned);
   } catch {
-    throw new Error("Claude extraction returned invalid JSON.");
+    throw new ExtractionError("invalid_json", "Claude extraction returned invalid JSON.");
   }
 
   const parsed = extractionOutputSchema.safeParse(parsedJson);
   if (!parsed.success) {
-    throw new Error("Claude extraction JSON failed schema validation.");
+    throw new ExtractionError("schema", "Claude extraction JSON failed schema validation.");
   }
 
   return {

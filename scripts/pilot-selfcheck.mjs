@@ -172,6 +172,36 @@ results.push(
     expectedExit: 1
   })
 );
+// The regression this exists for is not hypothetical: on 2026-08-02 the pilot
+// reported PILOT PASS, with ✅ on all three viewports, for a PR that redesigned
+// the whole web-audit screen — because the pilot account had no data and every
+// capture showed an empty state. Nothing was broken, so nothing failed. This
+// case pins that hole shut: screens that load perfectly and show placeholders
+// must FAIL, not pass.
+results.push(
+  await runCase({
+    label: "empty-state fixture (loads clean, shows placeholders) → PILOT FAIL",
+    breakMode: "empty",
+    expectedExit: 1
+  })
+);
+// Pins the 2026-08-03 finding shut: on every real dashboard screen, the
+// element that actually scrolls and clips is `.dash-content`
+// (`.shell { height: 100vh; overflow: hidden }` above it), never
+// `document.documentElement` — so a wide element placed INSIDE `.dash-content`
+// (this fixture mode reproduces that exact CSS chain, see server.mjs) must
+// still flip the run to FAIL. Before the SHELL_CLIPPING_CLASSES fix in
+// journey.ts, this case passed clean: document.documentElement.scrollWidth
+// never saw it, because `.dash-content`'s own overflow-y:auto clips and
+// scrolls it independently. Revert that fix and this case is the one that
+// goes red.
+results.push(
+  await runCase({
+    label: "shell-clip fixture (overflow trapped inside .dash-content) → PILOT FAIL",
+    breakMode: "shell-clip",
+    expectedExit: 1
+  })
+);
 
 const allPassed = results.every(Boolean);
 console.log(allPassed ? "\nPilot harness self-check PASSED" : "\nPilot harness self-check FAILED");

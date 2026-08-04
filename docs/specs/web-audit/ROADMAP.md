@@ -13,7 +13,30 @@ orden — el orden lo fija la columna `#`.
 | 3 | Plan de acción + huecos con competidor | WEB-AUDIT-ACTION | `phase-action-plan.md` | ✅ Implementada | Ninguno (solo datos ya persistidos) | Human Gate |
 | 4 | Auditoría técnica (páginas + bots IA) | WEB-AUDIT-2 | `phase-2-technical-audit.md` | ✅ Implementada (PR #197) — migración 0018 aplicada manualmente | Fetch acotado (adyacente a "crawler") + migración 0018 | Human Gate |
 | 5 | Generador de briefs de contenido con IA | WEB-AUDIT-BRIEF | `phase-brief-generator.md` | Propuesta | Gemini runtime + migración (generation_type) | **Aprobación explícita + Task Intake + data-guardian** |
-| 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | Diseñada | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
+| 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
+| 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
+
+### Fila 6 — qué se implementó y qué no (2026-08-04)
+
+`phase-3-daily-audit.md` juntaba dos cosas que resultaron ser separables:
+refrescar la auditoría sin intervención humana, y **avisar de regresiones**
+cuando el refresco muestra una caída. AUDIT-AFTER-SCAN-1 (fila 6a) implementó
+la primera y **no** la segunda.
+
+También cambió el mecanismo respecto a lo diseñado, y conviene no leer la
+spec antigua como si describiera el código: en vez de un barrido diario que
+busca proyectos candidatos (`recurring_scans_enabled`, orden por antigüedad,
+`MAX_PROJECTS_PER_RUN`), la auditoría es **una fila en `jobs` encolada por el
+propio escaneo al completarse**, con reintentos con backoff heredados de esa
+tabla. El cron diario sigue existiendo, pero como red de seguridad de la cola,
+no como el disparador. Motivo: el disparo por evento audita el escaneo que
+acaba de terminar, y una cola durable convierte un despacho perdido en un
+retraso en vez de en una auditoría que nunca ocurre.
+
+**Sigue pendiente de fila 6:** los avisos derivados de regresión en la
+campana de notificaciones (cobertura o *surfacing* que bajan, un bot de IA que
+pasa a bloqueado, `llms.txt` que desaparece). Nada de eso existe hoy — ahora
+que los datos se refrescan solos, es cuando esa mitad empieza a tener sentido.
 
 ## Cabos sueltos post-ACTION (no numerados, siguen el mismo Human Gate)
 

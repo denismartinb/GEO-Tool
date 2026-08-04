@@ -55,7 +55,10 @@ test("projects list renders at least one project", async ({ page }, testInfo) =>
 
 test("project overview renders real scan data", async ({ page }, testInfo) => {
   const id = await projectId(page);
-  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, "overview");
+  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}`, "overview", {
+    describedAs: "la puntuación GEO del último escaneo",
+    anyOf: [{ text: /puntuación geo/i }, { text: /tasa de mención/i }]
+  });
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "overview");
 });
@@ -66,7 +69,11 @@ test("prompts screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/prompts`,
-    "prompts"
+    "prompts",
+    {
+      describedAs: "la lista de prompts monitorizados",
+      anyOf: [{ text: /GenScore monitoriza/i }, { selector: ".pr2-page" }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "prompts");
@@ -78,7 +85,11 @@ test("competitors screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/competitors`,
-    "competitors"
+    "competitors",
+    {
+      describedAs: "la tabla de competidores con datos del escaneo",
+      anyOf: [{ selector: ".tbl" }, { text: /cuota de voz|share of voice/i }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "competitors");
@@ -90,7 +101,11 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/recommendations`,
-    "recommendations"
+    "recommendations",
+    {
+      describedAs: "el backlog de acciones generado por el último escaneo",
+      anyOf: [{ text: /backlog de acciones/i }, { selector: ".rec-card" }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "recommendations");
@@ -98,7 +113,22 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
 
 test("scan history screen renders", async ({ page }, testInfo) => {
   const id = await projectId(page);
-  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs");
+  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs", {
+    // `.run-tbl` (the history table) and NOT the status text: the first
+    // version of this anchor matched /completado|en curso|.../, which on this
+    // page lives inside `.scan-status` — and globals.css hides that element
+    // entirely below 900px. The result was a mobile-only failure on a screen
+    // that renders perfectly at every width (caught by the pilot on its first
+    // real run, 2026-08-02).
+    //
+    // Rule for every anchor here: it must be (a) absent in the empty state,
+    // so it actually discriminates, and (b) visible at all three viewports,
+    // so it never reports a CSS breakpoint as missing data. Prefer a
+    // structural element that only exists with data over prose that a media
+    // query might hide.
+    describedAs: "la tabla del historial de escaneos",
+    anyOf: [{ selector: ".run-tbl" }]
+  });
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "runs");
 });
@@ -109,7 +139,11 @@ test("citations screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/citations`,
-    "citations"
+    "citations",
+    {
+      describedAs: "la lista de páginas citadas",
+      anyOf: [{ selector: ".cit2-page" }, { selector: ".cit2-row" }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "citations");
@@ -121,10 +155,76 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     page,
     testInfo,
     `/dashboard/projects/${id}/web-audit`,
-    "web-audit"
+    "web-audit",
+    {
+      // The tabs only exist once `summary` does — i.e. once the project has a
+      // real coverage audit. Anchoring here is exactly what would have turned
+      // the 2026-08-02 false PASS into a loud failure: every capture that day
+      // showed the "Todavía no has auditado tu web" card instead of these.
+      describedAs: "las pestañas de la auditoría (Problemas · Correcto · Páginas)",
+      anyOf: [{ selector: '[role="tablist"]' }, { text: /problemas técnicos/i }]
+    }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "web-audit");
+
+  // Explicit tab coverage, not left to the generic sweep's luck: the
+  // interaction explorer's per-screen budget (4 candidates) is spent by
+  // nav/notifications/InfoTip/the already-active first tab before it ever
+  // reaches Correcto or Páginas — confirmed empirically on this PR's own
+  // pilot run (2026-08-03), whose only tab capture was "Problemas", the
+  // default. A full ux-pilot design-fidelity review flagged this exact
+  // gap: this PR's own new Correcto/Páginas tabs had never been seen with
+  // real data by anything. Real proof each tab actually switches content,
+  // not just that clicking it doesn't crash.
+  for (const label of ["Correcto", "Páginas"] as const) {
+    const tab = page.getByRole("tab", { name: label });
+    await tab.click();
+    await expect(tab, `clicking the "${label}" tab did not select it`).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    await expect(
+      page.locator('[role="tabpanel"]:not([hidden])'),
+      `"${label}" tab panel never became visible`
+    ).toBeVisible();
+    await captureInteraction(page, testInfo, `web-audit-tab-${label.toLowerCase()}`);
+  }
+
+  // Fase 3b's copyable fixes live INSIDE a page row, and those rows are
+  // native <details>, collapsed by default. Neither the sweep (its budget is
+  // spent long before) nor the tab captures above ever open one, so without
+  // this the whole feature has zero visual evidence — the Páginas capture
+  // just shows ten closed rows. The loop above leaves "Páginas" selected.
+  const firstPageRow = page.locator('[role="tabpanel"]:not([hidden]) details.wa-details').first();
+  if ((await firstPageRow.count()) > 0) {
+    await firstPageRow.locator("summary").click();
+    await expect(firstPageRow, "clicking a page row did not expand it").toHaveAttribute("open", "");
+    await captureInteraction(page, testInfo, "web-audit-page-row-open");
+  }
+
+  // Fase 3a's generated llms.txt has the SAME problem one tab over, and it
+  // bit for real: PR #319 came back PILOT PASS with web-audit ✅ on all three
+  // viewports while not one capture contained the feature the PR existed for
+  // — the issue rows in Problemas are collapsed <details> too, and nothing
+  // ever opened the llms.txt one. A green row for a screen whose new content
+  // was never on screen is exactly the 2026-08-02 empty-state incident in a
+  // different costume.
+  await page.getByRole("tab", { name: "Problemas" }).click();
+  const llmsIssue = page
+    .locator('[role="tabpanel"]:not([hidden]) details.wa-details')
+    .filter({ hasText: "llms.txt" })
+    .first();
+
+  if ((await llmsIssue.count()) > 0) {
+    await llmsIssue.locator("summary").click();
+    await expect(llmsIssue, "clicking the llms.txt issue did not expand it").toHaveAttribute("open", "");
+    // fullContent: the file block alone is taller than the fold, so a
+    // viewport capture verifies the generated llms.txt and silently omits the
+    // five publishing steps underneath — which are half of what this phase
+    // ships. Confirmed on the first run: 800px tall, steps nowhere in it.
+    await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
+  }
 });
 
 /**
@@ -164,6 +264,27 @@ test("citations KPI tooltip and row expand actually work, not just render their 
     await assertFullyVisible(page, `.cit2-kpis .info-tip-bubble >> nth=${i}`, `KPI tooltip #${i + 1}`);
     if (i === 0) await captureInteraction(page, testInfo, "citations-tooltip-open");
   }
+
+  // 1b. Same check for the "Impacto de N citas" legend tooltips
+  //     (.cit2-split-key) — a DIFFERENT anchor container than the KPI strip
+  //     above, and the one real overflow instance (2026-08-03: 40px past a
+  //     375px viewport, .cit2-split-key's own .info-tip-anchor entry) that a
+  //     full ux-pilot design-fidelity review flagged as unverified: nothing
+  //     in the generic interaction sweep ever reached these triggers (the
+  //     KPI tooltips + nav/notifications controls already exhaust its
+  //     per-screen budget), so this is the only real hover-evidence path for
+  //     this specific tooltip.
+  const legendTips = page.locator(".cit2-split-key .info-tip");
+  const legendTipCount = await legendTips.count();
+  expect(legendTipCount, "no info-tip icons found in the citations impact legend").toBeGreaterThan(0);
+
+  for (let i = 0; i < legendTipCount; i++) {
+    await legendTips.nth(i).hover();
+    const bubble = page.locator(".cit2-split-key .info-tip-bubble").nth(i);
+    await expect(bubble, `hovering legend info-tip #${i + 1} did not reveal its tooltip`).toBeVisible();
+    await assertFullyVisible(page, `.cit2-split-key .info-tip-bubble >> nth=${i}`, `Legend tooltip #${i + 1}`);
+  }
+  await captureInteraction(page, testInfo, "citations-legend-tooltip-open");
 
   // 2. Full list row expands to show the prompt/evidence panel on click.
   const firstRow = page.locator(".cit2-rowmain").first();

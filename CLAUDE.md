@@ -116,6 +116,49 @@ auto-merge. Human Gate is always manual.**
 
 ---
 
+## Presupuesto de builds (BUILD-BUDGET-1, 2026-08-04)
+
+Cada push a cualquier rama es un deploy de Vercel. El 2026-08-03 se gastaron 50
+y el 04-08 iban 40 a las 17:52, con el 48% concentrado en tres ramas de PRs
+largos (15, 14 y 14 builds cada una) — el tope de 100/día del plan Hobby
+congeló producción seis horas esa tarde. **La cuenta pasó a Vercel Pro el
+2026-08-04 y ese tope ya no existe**, pero las reglas siguen: cada deploy de
+preview arrastra una pasada de `ux-pilot` (~350-380 min/día de GitHub Actions
+el 03 y 04-08), y el cuello nunca fue el número de PRs sino que **el build se
+estaba usando como bucle de feedback**. Reglas, en orden de importancia:
+
+1. **Un push por iteración pilotable, no por commit.** `pnpm run validate` ya
+   ejecuta `next build` en local: el preview no sirve para saber si compila,
+   sólo para que el piloto lo mire. Commitea lo que haga falta; empuja una vez,
+   cuando el slice esté listo para que alguien lo juzgue.
+2. **Prohibidos los commits de "retrigger".** Un commit vacío para forzar un
+   deploy gasta build y no cambia nada (`chore: retrigger Vercel deploy`,
+   2026-08-03, dos veces). Si de verdad hace falta reconstruir, se hace
+   *Redeploy* desde Vercel.
+3. **No mergees `main` en tu rama** salvo conflicto real o justo antes del
+   Human Gate. Cada sincronización es un build más y una pasada más del piloto.
+4. **Máximo 3 PRs abiertos a la vez.** El 04-08 había 10. Un PR abierto envejece,
+   se resincroniza y vuelve a construir; el paralelismo alto es cola, no
+   velocidad. Antes de abrir el cuarto, cierra o mergea uno.
+
+Lo que **no** cambia: el piloto sigue corriendo en cada deploy de preview y
+sigue siendo obligatorio antes del Human Gate. Esta fase reduce el número de
+deploys, no las garantías.
+
+`scripts/vercel-should-build.sh` (enganchado como `ignoreCommand` en
+`vercel.json`) salta el build cuando el push sólo toca `docs/`, `.claude/`,
+`.github/`, `tests/`, `agents/` o prosa de raíz (`*.md`). Compara contra el
+último deploy con éxito de la rama, no contra `HEAD^`, y **nunca salta
+producción**. Ahorra minutos de build y pasadas de piloto, no deployments: el
+tope diario se aplica al crear el deployment, aguas arriba del build (medido en
+PR #323). Es **fail-open a propósito**: en
+cualquier duda construye. Un build saltado de más dejaría el preview apuntando a
+código viejo y el piloto juzgaría una pantalla que no es la del commit — justo
+el fallo que el piloto existe para impedir. Si tocas ese script, mantén sus
+tests (`scripts/vercel-should-build.test.ts`) verdes en ambas direcciones.
+
+---
+
 ## Agentic User Pilot (mandatory before Human Gate)
 
 Before the founder is asked to look at anything, the `ux-pilot` agent must open
@@ -146,17 +189,75 @@ section means the pilot ran checklists without judgement — it goes back.
 **Never report a pass for something the pilot did not see.** An unreachable
 preview, a failed login, or a blocked egress policy is INCONCLUSIVE, never PASS.
 Interaction-gated behaviour no assertion covered is "unverified", not "verified".
+**A screen that loads cleanly but renders an empty state has not been seen
+either** — journeys declare what real content proves the screen rendered
+(`ContentExpectation`), and a placeholder fails the run. This is not a
+hypothetical: on 2026-08-02 a full redesign of Auditoría web shipped with a
+green pilot and ✅ on three viewports because the pilot account had no audit
+data, so every capture showed "Todavía no has auditado tu web".
 
-The always-on pilot (every preview deploy) is strictly read-only: no scan
-launches, no project creation or deletion, no writing forms, no billing flows —
-enforced in code by an allow-list, not by convention. **One approved
-exception:** UX-PILOT-2a (`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts`)
-adds a single manual prompt to a dedicated `PILOT_WRITE_PROJECT_ID` and lets
-the resulting scoped scan (never the project's full active set) run to
-completion, cleaning up after itself — opt-in only, via manual
-`workflow_dispatch`, never on a deploy. Nothing beyond that one scoped journey
-is approved; anything wider (creating a project, the unrestricted scan button,
-competitors, billing) needs its own Task Intake.
+**Two mandatory inputs before a pilot run can mean anything** (both were
+missing in that incident, which is why it produced a meaningless pass):
+
+1. **The approved design must live in the repo**, at
+   `docs/design-reference/<FASE>/`. A chat-artifact URL is not an input: CI
+   runners and future agent sessions cannot open it, so the design-fidelity
+   half of the pilot silently never runs. **When the founder approves a design
+   by artifact, that HTML is committed in the same PR that implements it.**
+2. **The pilot account must hold real data.** See the seeding rules below.
+
+### Pilot write scope (expanded 2026-08-02, founder-approved)
+
+The always-on pilot (every preview deploy) stays strictly **read-only**: no
+scan launches, no project creation, no writing forms, no billing — enforced in
+code by an allow-list, not by convention.
+
+Write journeys live in `tests/pilot/journeys/write/`, run **only** under
+`--journeys write` (never on a deploy), and are approved to do whatever the
+pilot genuinely needs to have real data to test against — create the dedicated
+write-project, scan it, audit it. Their guard is not a shorter list of allowed
+actions but **three structural rules**, and any new write journey must keep all
+three:
+
+- **Dedicated target.** Only the reserved `PILOT_WRITE_DOMAIN` project
+  (`mozilla.org`), matched by exact domain. Never auto-discovery, never a real
+  customer domain.
+- **Bounded cost.** The write-project is created trimmed to one prompt, so a
+  scan or an audit there is ~1 LLM call, not ~30. Anything that would scale
+  with a real project's prompt count needs its cost cap stated in the journey.
+- **Idempotent and self-healing.** Seeding skips itself when the data already
+  exists (the product's real 5/day rate limits are the binding constraint, not
+  money), and anything created that consumes a plan cap is cleaned up.
+
+Still out of scope without their own Task Intake: billing/Stripe flows,
+deleting projects, and anything touching a project other than the reserved
+write-project.
+
+**Reading more than one project is approved and shipped** (UX-PILOT-1d,
+2026-08-03, `tests/pilot/journeys/second-project.spec.ts`). One project only
+ever exercises one shape of data, so whole branches of a screen are
+unreachable from it — a brand the AI never named, a project with too few
+qualifying scans, a ranking where most entities have no rank. The pilot now
+walks the Overview and Competitors screens on up to two further projects on
+the same account, skips loudly when there is only one, and annotates the run
+when more projects existed than the cap allowed. This needs no exception:
+switching project is navigation, and every journey it runs is read-only.
+
+**Second approved exception: UX-PILOT-3** (Task Intake approved 2026-08-03) —
+the pilot may launch real scans on a pinned project when a state is
+unreachable without one, because after a scoring change no run anywhere carries
+the new shape of data and no amount of looking harder fixes that. Three
+locks, none of them a convention: `workflow_dispatch` only (no deploy can
+trigger it), `--journeys scan` (the per-deploy read set cannot reach the files,
+asserted by the self-check every run), and a required `project_id` input with
+no default (the code refuses without it, and refuses above the hard cap of 2
+rather than clamping). **No secret gates it** — founder, 2026-08-03: *"tiene
+que dar al botón como si le diera yo, sin claves ni secretos"*; anyone able to
+set a secret could already dispatch the workflow, so it bought no access
+control. What that trades away, stated rather than glossed: nothing in code
+distinguishes a human pressing the button from an agent dispatching it. It presses the project's own scan button and
+nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
+still has to judge them. Anything wider still needs its own Task Intake.
 
 **Reading more than one project is approved and shipped** (UX-PILOT-1d,
 2026-08-03, `tests/pilot/journeys/second-project.spec.ts`). One project only
@@ -279,12 +380,14 @@ fase" (ver "Cierre de fase" más abajo).
 |---|---|---|---|
 | Competidores | `competitors.md` | TREND-WINDOW-1 (2026-08-04) | log §10, §11, §15 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
-| Auditoría web | `web-audit.md` | WEB-AUDIT-ACTION | `docs/specs/web-audit/ROADMAP.md` |
+| Auditoría web | `web-audit.md` | AUDIT-AFTER-SCAN-1 · WEB-AUDIT-ISSUES-1 fase 3a (2026-08-04) | log §17, §18 · ADR 0027 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | geo-score-v3 / ADR 0026 (2026-08-03) | ADR 0008/0015/0021/0024/0026 · log §8b |
-| Blog y contenido | `growth-content.md` | GROWTH-3 Fase 3.2a (2026-08-03) | log §12, §13 · `content-strategy.md` |
+| Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
+| Escaneo (pipeline) | `scan.md` | EXTRACTION-RELIABILITY-1 Fase A (2026-08-04) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029 |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
 | Prompts | — *(sin regla propia todavía)* | — | log §5 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §18 · "Presupuesto de builds" arriba |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
@@ -418,6 +521,7 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `competitors.md` | `app/dashboard/projects/*/competitors/**`, `lib/competitors/**` |
 | `recommendations.md` | `app/dashboard/projects/*/recommendations/**`, `lib/recommendations/**` |
 | `web-audit.md` | `app/dashboard/projects/*/web-audit/**`, `lib/web-audit/**` |
+| `scan.md` | `lib/scan/**` |
 | `scoring.md` | `lib/scoring/**` |
 | `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
 

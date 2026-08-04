@@ -303,28 +303,20 @@ export default async function RecommendationsPage({
           )}
         </div>
         <div className="ov-sticky-right">
+          {/* "Exportar plan" retirado (2026-08-02): era un botón permanentemente
+              deshabilitado (sin onClick, sin función real) que además violaba
+              la regla de cabecera compartida (docs/brand/design-decisions-log.md
+              §3 — solo badges/pills informativos, nunca controles) — la
+              detectó el check mecánico nuevo de tests/pilot/support/journey.ts
+              al correr contra esta pantalla desde el PR de Auditoría web.
+              Ningún otro sitio del código lo referenciaba: no había función
+              que reconectar. Si se implementa exportar de verdad, el control
+              va en el cuerpo, como el resto de acciones de página. */}
           {lastScanDate && (
             <span className="badge badge-pos" style={{ fontSize: 11 }}>
               Escaneado {lastScanDate}
             </span>
           )}
-          <button
-            type="button"
-            style={{
-              padding: "7px 14px",
-              fontSize: 13,
-              fontWeight: 600,
-              border: "1.5px solid var(--line)",
-              borderRadius: 8,
-              background: "var(--surface)",
-              color: "var(--ink-2)",
-              cursor: "default",
-            }}
-            disabled
-            aria-disabled="true"
-          >
-            Exportar plan
-          </button>
         </div>
       </div>
 

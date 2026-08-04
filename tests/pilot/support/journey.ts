@@ -22,6 +22,36 @@ const IGNORED_CONSOLE_PATTERNS: RegExp[] = [
 /** Third-party hosts whose failures are recorded but never fail the journey. */
 const THIRD_PARTY_HOSTS = /posthog|sentry|stripe|google|gstatic|vercel-insights|vitals/i;
 
+/**
+ * What must be on screen for a page to count as actually verified.
+ *
+ * Exists because of a real, expensive miss (2026-08-02): the pilot reported
+ * `PILOT PASS` with a full row of ✅ for `web-audit` across all three
+ * viewports on a PR that redesigned that entire screen — while every
+ * screenshot showed the same empty state ("Todavía no has auditado tu web"),
+ * because the pilot account's project had no audit data. Nothing in the
+ * harness distinguished "the redesigned screen rendered correctly" from "a
+ * placeholder rendered correctly", so a green check certified nothing and the
+ * founder found the real defects by hand.
+ *
+ * A screen whose real content never rendered is UNVERIFIED, and the pilot's
+ * own first principle ("never report PASS for something you did not see")
+ * means unverified must be loud, not silent.
+ */
+export interface ContentAnchor {
+  /** CSS selector that must resolve to a visible element. */
+  selector?: string;
+  /** Visible text that must appear somewhere on the page. */
+  text?: RegExp;
+}
+
+export interface ContentExpectation {
+  /** Human-readable: what the anchors below prove is on screen. Quoted in the failure. */
+  describedAs: string;
+  /** Any ONE of these being visible is enough — screens legitimately vary. */
+  anyOf: ContentAnchor[];
+}
+
 export interface PageFindings {
   label: string;
   path: string;
@@ -37,6 +67,27 @@ export interface PageFindings {
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
   screenshot: string;
+  /**
+   * null when the journey declared no expectation for this screen; true/false
+   * when it did. `false` means the page loaded fine and showed nothing worth
+   * judging — an empty state, a plan gate, a skeleton that never resolved.
+   */
+  renderedRealContent: boolean | null;
+  /** Echoes `ContentExpectation.describedAs`, so the JSONL says what was expected. */
+  expectedContent: string | null;
+  /**
+   * Interactive controls (button/link/input/select) found inside the shared
+   * sticky header (`.ov-sticky-header`). Mechanical, not judgement: the
+   * header is documented shared chrome across every console page
+   * (docs/brand/design-decisions-log.md §3 — "el contexto vive entero en el
+   * sticky-header... título de sección + pill de fecha", never an action).
+   * Real case (2026-08-02, WEB-AUDIT-ISSUES-1 fase 2): a page shipped an
+   * "Auditar ahora" button in its header and neither the automated pilot nor
+   * a design-fidelity read caught it, because nothing mechanically checked
+   * for it — this exists so that class of regression fails on its own from
+   * now on, on every page, without needing anyone to notice a screenshot.
+   */
+  headerInteractiveControls: string[];
   /** Real content height, including inside the shell's inner scroll container. */
   contentHeight: number;
   /** Viewport height the screenshot was taken at. */
@@ -105,6 +156,25 @@ function recordFindings(findings: PageFindings): void {
   mkdirSync(".pilot", { recursive: true });
   appendFileSync(FINDINGS_PATH, `${JSON.stringify(findings)}\n`);
 }
+
+/**
+ * Horizontal-overflow measurement (2026-08-03, PR #289): `horizontalOverflow`
+ * used to compare `document.documentElement.scrollWidth` against the
+ * viewport, which can never trip on a console screen. Setting `overflow-y:
+ * auto` on `.dash-content` without an explicit `overflow-x` computes
+ * `overflow-x: auto` too (CSS overflow shorthand rules), so `.dash-content`
+ * clips and independently scrolls any horizontal overflow itself — it never
+ * reaches the document. Proven dead across 27/27 real findings, all of which
+ * had `scrollWidth === viewportWidth`. It is measured against `.dash-content`
+ * directly below, since that element is the actual clipping box on every
+ * dashboard screen.
+ *
+ * The vertical half of that same blindness is fixed by the capture code
+ * below, which arrived independently on `main`. Its approach — growing the
+ * viewport rather than stripping the shell's `overflow: hidden` — is the one
+ * kept: it captures a layout the product actually renders, and it bounds the
+ * result instead of letting a runaway list produce an unreadable PNG.
+ */
 
 /**
  * Ceiling on how tall a capture may grow. A runaway list would otherwise
@@ -196,7 +266,8 @@ export async function visitAsUser(
   page: Page,
   testInfo: TestInfo,
   path: string,
-  label: string
+  label: string,
+  expectation?: ContentExpectation
 ): Promise<PageFindings> {
   const consoleErrors: string[] = [];
   const failedRequests: string[] = [];
@@ -239,11 +310,52 @@ export async function visitAsUser(
     await page.waitForTimeout(1_000);
 
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };
-    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    // `.dash-content` (see the horizontal-overflow note above), not
+    // document.documentElement — on a dashboard screen the document never
+    // overflows, `.dash-content` does, on its own independent axis. Still
+    // check the document too: non-console pages (/login) have no
+    // `.dash-content` and scroll normally.
+    const scrollWidth = await page.evaluate(() => {
+      const content = document.querySelector<HTMLElement>(".dash-content");
+      return Math.max(document.documentElement.scrollWidth, content?.scrollWidth ?? 0);
+    });
     const finalUrl = page.url();
     const bouncedToLogin = /\/login/.test(finalUrl) && !path.includes("/login");
     // 2px of slack absorbs sub-pixel rounding without hiding a real overflow.
     const horizontalOverflow = scrollWidth > viewport.width + 2;
+
+    // Checked BEFORE the screenshot so a failure and its evidence describe the
+    // same moment.
+    let renderedRealContent: boolean | null = null;
+    if (expectation) {
+      renderedRealContent = false;
+      for (const anchor of expectation.anyOf) {
+        if (anchor.selector) {
+          const hit = await page.locator(anchor.selector).first().isVisible().catch(() => false);
+          if (hit) {
+            renderedRealContent = true;
+            break;
+          }
+        }
+        if (anchor.text) {
+          const hit = await page.getByText(anchor.text).first().isVisible().catch(() => false);
+          if (hit) {
+            renderedRealContent = true;
+            break;
+          }
+        }
+      }
+    }
+
+    const headerInteractiveControls = await page.evaluate(() => {
+      const header = document.querySelector(".ov-sticky-header");
+      if (!header) return [];
+      const controls = header.querySelectorAll("button, a[href], input, select, textarea");
+      return Array.from(controls).map((el) => {
+        const text = (el.textContent ?? "").trim().replace(/\s+/g, " ").slice(0, 40);
+        return `${el.tagName.toLowerCase()}${text ? `:"${text}"` : ""}`;
+      });
+    });
 
     // Culprits are measured BEFORE the capture, while the viewport is still
     // the one under test — captureFullContent resizes it and puts it back.
@@ -267,6 +379,9 @@ export async function visitAsUser(
       thirdPartyFailures,
       bouncedToLogin,
       screenshot,
+      renderedRealContent,
+      expectedContent: expectation?.describedAs ?? null,
+      headerInteractiveControls,
       ...capture
     };
 
@@ -312,6 +427,31 @@ export function assertPageIsHealthy(findings: PageFindings): void {
     findings.consoleErrors,
     `${findings.label}: console errors`
   ).toEqual([]);
+
+  expect(
+    findings.headerInteractiveControls,
+    `${findings.label}: the shared sticky header must stay purely informational ` +
+      `(badges/pills only) — docs/brand/design-decisions-log.md §3. Found interactive ` +
+      `control(s) inside .ov-sticky-header, which belong in the page body instead.`
+  ).toEqual([]);
+
+  // Deliberately the LAST assertion: the ones above describe a broken screen,
+  // this one describes a screen the pilot never got to judge. Both fail the
+  // run, but only this one is fixed by seeding data rather than by changing
+  // product code, so it should not mask a real defect above it.
+  if (findings.renderedRealContent !== null) {
+    expect(
+      findings.renderedRealContent,
+      `${findings.label} @ ${findings.viewport}: the page loaded without errors but never ` +
+        `rendered ${findings.expectedContent} — this is an empty state, a plan gate, or an ` +
+        `unresolved skeleton, NOT the screen this journey exists to verify. Reporting it as ` +
+        `passing would certify a placeholder (real incident, 2026-08-02: a full-screen redesign ` +
+        `shipped with a green pilot because every capture showed "Todavía no has auditado tu web"). ` +
+        `Fix by seeding the pilot account with real data — run the "Agentic User Pilot (write)" ` +
+        `workflow, whose seed journey creates a project, scans it and audits it. ` +
+        `See docs/agentic-user-pilot.md § "Datos reales".`
+    ).toBe(true);
+  }
 }
 
 /**
@@ -330,10 +470,29 @@ export function assertPageIsHealthy(findings: PageFindings): void {
  * The revealed element has already been scrolled into view, so the viewport is
  * where it is.
  */
-export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
+export async function captureInteraction(
+  page: Page,
+  testInfo: TestInfo,
+  label: string,
+  opts: {
+    /**
+     * Capture the whole content instead of the viewport. Off by default,
+     * because for a REVEAL the viewport is the point: a tooltip that renders
+     * clipped or off-screen is the finding, and growing the viewport would
+     * hide exactly that.
+     *
+     * Turn it on when the interaction reveals something TALLER than the fold,
+     * where the viewport frame cuts off the very thing being verified — e.g.
+     * the generated llms.txt, whose five publishing steps sit below the file
+     * block and were invisible in every capture of the first run.
+     */
+    fullContent?: boolean;
+  } = {}
+): Promise<string> {
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
-  await page.screenshot({ path: screenshot });
+  if (opts.fullContent) await captureFullContent(page, screenshot);
+  else await page.screenshot({ path: screenshot });
   await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"

@@ -36,7 +36,7 @@ founder stops checking.
 | PR number | The Director |
 | Preview URL | The Vercel bot comment on the PR (resolve it yourself) |
 | Acceptance criteria | The PR body / the approved Task Intake Report |
-| **The approved design** | The mockup/artifact the founder signed off on, plus `docs/brand/design-decisions-log.md`. Ask the Director for it if it wasn't handed to you — piloting without it means you can only check for breakage, not for fidelity |
+| **The approved design** | `docs/design-reference/<FASE>/` — a chat-artifact URL is NOT a valid input; if the Director hands you one, ask for the repo-committed copy instead (or commit it yourself before piloting). Real case (2026-08-02, WEB-AUDIT-ISSUES-1 fase 2): the approved mockup only ever existed as an ephemeral claude.ai link, so neither this agent nor the CI-automated harness could ever open it — the design-fidelity checklist silently never ran, and a PASS shipped with a header button, a retired matrix widget, and gauges that never matched the mockup. Plus `docs/brand/design-decisions-log.md` for standing rules (header contents, console widths, etc.) that apply with no artifact needed at all |
 | `PILOT_EMAIL`, `PILOT_PASSWORD` | Environment only — never from the repo, never from chat |
 | `PILOT_PROJECT_ID` | Optional; read-only journeys auto-discover the first project when unset |
 | `PILOT_WRITE_PROJECT_ID` | Required only for the UX-PILOT-2a write journey; no auto-discovery — never guess |
@@ -238,22 +238,33 @@ always-on pilot (`.github/workflows/ux-pilot.yml`, every preview deploy) is
 - Never touch billing or Stripe checkout.
 - Never echo `PILOT_EMAIL` or `PILOT_PASSWORD` into a log, a comment, or a file.
 
-**One exception exists, and only one: UX-PILOT-2a**
-(`tests/pilot/journeys/write/add-prompt-and-scan.spec.ts`). It adds exactly one
-manual prompt via the real UI, which by construction
-(`lib/projects/add-prompts.ts`'s `onlyPromptIds`) launches a scan scoped to that
-one prompt only — never the project's full active set — against a dedicated
-`PILOT_WRITE_PROJECT_ID` the founder created for this purpose, and cleans up the
-prompt it created afterward. It is opt-in only, via
-`.github/workflows/ux-pilot-write.yml` (`workflow_dispatch`, never on a
-deploy) — you (or the Director) trigger it deliberately when a PR's acceptance
-criteria genuinely require exercising the write path, not by default.
+**Write journeys are approved** (founder, 2026-08-02) and live in
+`tests/pilot/journeys/write/`. They run only under `--journeys write`
+(`.github/workflows/ux-pilot-write.yml`, `workflow_dispatch`) — never on a
+deploy. Today:
 
-Anything beyond that one scoped journey — creating a project, editing an
-existing prompt, the unrestricted "Lanzar escaneo" button, competitors, billing
-— has **no approved phase yet**. If a PR's acceptance criteria need one of
-those to verify, say so and return `PILOT INCONCLUSIVE` for that criterion
-rather than improvising a write path nobody reviewed.
+- **UX-PILOT-2a** (`add-prompt-and-scan.spec.ts`) — adds one manual prompt and
+  lets its scoped scan complete, then cleans up.
+- **UX-PILOT-2b** (`seed-web-audit.spec.ts`) — leaves a real web audit on the
+  pilot project so the read-only journeys stop seeing empty states. Skips
+  itself when the audit already exists.
+
+Their guard is three structural rules, not a shorter action list. Any new write
+journey keeps all three: **dedicated target** (only the reserved
+`PILOT_WRITE_DOMAIN` project, exact-match, never auto-discovery), **bounded
+cost** (the write-project is trimmed to one prompt, so a scan/audit is ~1 LLM
+call), and **idempotent + self-healing** (skip when the state exists — the
+product's real 5/day rate limits bind before money does — and clean up anything
+consuming a plan cap).
+
+Still unapproved: billing/Stripe, deleting projects, and touching any project
+other than the reserved write-project. If a criterion needs one of those, say
+so and return `PILOT INCONCLUSIVE` for it rather than improvising a write path
+nobody reviewed.
+
+**When a read-only run fails because a screen showed an empty state**, that is
+not a product defect — trigger the write workflow to seed the account, then
+re-run. Never "solve" it by relaxing the expectation.
 
 ## Verdicts
 

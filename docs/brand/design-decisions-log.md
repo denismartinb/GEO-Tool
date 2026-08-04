@@ -1205,7 +1205,7 @@ Decisiones finales:
   glosario o de "al menos una fila donde gana el competidor" de las
   comparativas.
 - **Imágenes: maquetas SVG/CSS, nunca ilustración generada por IA ni stock.**
-  Decisión completa y motivos en `docs/adr/0026-article-imagery-policy.md`.
+  Decisión completa y motivos en `docs/adr/0028-article-imagery-policy.md`.
   Las capturas reales del producto quedan permitidas solo en `/docs`, nunca
   en marketing, porque la cuenta piloto vive en el mismo proyecto de Supabase
   que producción.
@@ -1244,7 +1244,7 @@ Pendiente / roto conocido:
   correcta.
 
 Referencias: `docs/brand/article-design-system.md`,
-`docs/adr/0026-article-imagery-policy.md`, `components/blog/article/`.
+`docs/adr/0028-article-imagery-policy.md`, `components/blog/article/`.
 
 ---
 
@@ -1277,6 +1277,7 @@ a decir de qué son esas cifras. Ver `docs/brand/article-design-system.md`.
 **Pendiente.** Quedan 3 artículos por convertir al sistema (cluster
 `fundamentos` ×2 y `playbooks` ×1), en la Fase 3.2b.
 
+---
 
 ## 14. Blog — la cabecera de artículo y las portadas (2026-08-04)
 
@@ -1301,7 +1302,7 @@ el artículo rompe el índice.
 
 **Qué se decidió — portadas.** Se permite imagen generada o de stock **en
 portada**, manteniendo la prohibición dentro del cuerpo (enmienda a
-`docs/adr/0026-article-imagery-policy.md`, decisión del fundador). Con una
+`docs/adr/0028-article-imagery-policy.md`, decisión del fundador). Con una
 regla: una portada no puede representar una interfaz, un panel, un gráfico ni
 una métrica. Si enseña algo que parece un dato de Genscore, ese dato tiene que
 existir — y entonces ya no es portada, es figura.
@@ -1532,6 +1533,589 @@ uno de los dos toca enlaces cruzados y merece su propia decisión). Las tres
 zonas sin regla de ruta siguen dependiendo de que se lea su histórico.
 
 ---
+
+---
+
+---
+
+## 17. Página de Auditoría web (WEB-AUDIT-ISSUES-1, 2026-08-02/03)
+
+**Estado: fase 1 (derivador) implementada y mergeada (PR #288). Fase 2 (esta
+entrada) implementada, PR #289, en Human Gate.**
+
+**Origen:** tres rondas de artefactos de diseño con el fundador. La primera
+propuso tres direcciones (A/B/C); el fundador eligió **B — la auditoría como
+registro de problemas** porque "una auditoría web es para encontrar
+problemas técnicos". La segunda ronda, a petición explícita del fundador,
+resolvió el solapamiento real con Recomendaciones que ya existía en
+producción (la misma tarjeta de recomendación se embebía en las dos
+pantallas — WEB-AUDIT-R5 — sin que el usuario pudiera saber si era la misma
+acción o dos). La tercera, tras el comentario del fundador "creo que resumen
+y problemas pueden ser la misma", fusionó las pestañas.
+
+**El reparto (decisión central de toda la fase):**
+> La Auditoría **arregla tu web** (problemas técnicos, se resuelven en la
+> propia página). Recomendaciones **consigue que te citen** (trabajo de
+> contenido, con su propio ciclo de vida).
+
+Decisiones finales:
+
+1. **Tres pestañas, no tres+**: `problemas` (portada por defecto, fusiona lo
+   que antes eran "Resumen" y "Salud técnica"), `correcto` (nueva, petición
+   directa del fundador), `paginas` (renombrada desde "tecnica", contenido
+   sin cambios). "Evolución" deja de ser pestaña propia y pasa a bloque al
+   pie de Problemas — mismo contenido, sin cambios de UI.
+2. **`RecCard` retirado de esta página.** La fila de Plan de acción que antes
+   embebía la tarjeta interactiva completa de Recomendaciones (WEB-AUDIT-R5)
+   ahora muestra un badge plano "✓ En tu plan" + enlace — misma información
+   (rationale, competidores citados), una sola tarjeta real en todo el
+   producto. Esto simplificó bastante la carga de datos: desaparece el join
+   con `generated_solutions` que solo servía para el estado "Propuesta
+   generada" de `RecCard`.
+3. **Nueva pestaña Correcto**: espejo de la lista de problemas, pero de
+   comprobaciones que YA pasan (`lib/web-audit/issues.ts`'s `passing`).
+   Cero backend nuevo — son datos que el derivador ya calculaba y la UI
+   tiraba. Tachado + check verde, con el alcance real ("10 de 10 páginas
+   indexables"), nunca un "bien" genérico.
+4. **Puntos potenciales sólo sobre lo técnico.** "Si arreglas los N
+   problemas técnicos: X → Y (calculado)" usa el `pointDelta`/
+   `projectedReadinessScore` exactos de `issues.ts` — nunca una cifra sobre
+   el score global, que mezcla contenido (no controlable) con técnica.
+5. **Sistema de anchura de consola** (`.wa2-scope`/`.wa2-page`): mismo
+   mecanismo y mismos valores que `.ov2-scope`/`.cit2-scope`
+   (460px→640px≥900px→1200px≥1200px→1280px≥1600px) — el estándar oficial
+   desde CITATIONS-REDESIGN-1 (§8), no una elección nueva por pantalla.
+   Envuelve todo el contenido bajo la cabecera sticky, que se queda en el
+   sistema de tokens compartido sin repintar (misma anidación que
+   `citations-client.tsx`).
+6. **Históricos de auditoría técnica ampliados de 1 a 8 filas** — antes esta
+   página sólo cargaba el último snapshot técnico; la mini-tendencia de
+   críticos/avisos y el delta de score en "Problemas" necesitaban más.
+
+Pendiente / roto conocido:
+
+- **"Lo que ya funciona" (temas de contenido citados) sigue en Problemas**,
+  no se fusionó con la pestaña Correcto en esta fase — decisión de alcance
+  explícita para no mezclar el derivador técnico con el de contenido en el
+  mismo PR. Candidato a fase futura si se quiere una sola pantalla de "todo
+  lo que va bien".
+- **No hay journey de pilot dedicado** para las pestañas nuevas — el
+  journey genérico de `core-flow.spec.ts` ("web audit screen renders") ya
+  visita `/web-audit` y ejercita sus controles vía `exploreInteractions`,
+  pero no verifica interacciones específicas (como sí hace el de Citations
+  para tooltips/expansión de fila). Se añadirá si el pilot señala algo
+  concreto que verificar.
+- Fases 3 (arreglos copiables, generador de `llms.txt`) y 4 (verificación
+  automática, detección de regresión) del plan original de 4 fases siguen
+  sin empezar — cada una necesita su propio Human Gate antes de continuar.
+
+**Revisión del fundador tras el Human Gate (2026-08-02):** el preview real
+(proyecto Movistar) no se parecía al artefacto aprobado en varios puntos
+concretos — gauge del héroe distinto, botón "Auditar ahora" en la cabecera
+compartida, dos botones de auditoría distintos, matriz de oportunidad que
+nunca estuvo en el mockup, Plan de acción que no debía vivir aquí, Evolución
+asomando con una sola auditoría. Todo corregido en el mismo PR. Detalle:
+
+- **Gauge del héroe**: sustituido el SVG a medida por el componente
+  `Gauge` compartido (`components/ui/gauge.tsx`, degradado + numeral
+  Bricolage) — el mismo que usa Overview. Añadida `.wa2-scope .gauge-num`
+  en `globals.css`, mismo patrón que `.ov2-scope`/`.cit2-scope`.
+- **Cabecera**: el botón se retira de `.ov-sticky-header` — confirmado
+  contra el código real de Citations/Prompts que ninguna cabecera v3 lleva
+  controles interactivos, sólo badges/pills pasivos (§3). El botón único
+  se mueve al cuerpo.
+- **Un solo botón de auditoría**: retirado "Auditar salud técnica" de
+  Páginas — "Auditar ahora" ya dispara la auditoría técnica en el mismo
+  clic desde WEB-AUDIT-R2 (piggyback en `web-audit-context.tsx`), así que
+  el segundo botón nunca fue una función distinta.
+- **Matriz de oportunidad y Plan de acción retirados por completo** de
+  Auditoría web. Efecto secundario real, documentado en el código: los
+  temas `content_gap`/`open_opportunity`/`capture` no tienen hoy ninguna
+  recomendación real que los cubra en el motor de reglas — su guía
+  sintetizada se queda sin sitio en el producto hasta que se decida si
+  migra a Recomendaciones. Gap conocido, no resuelto especulativamente.
+- **Evolución** (gráfico + historial) oculta por completo con menos de dos
+  auditorías — antes sólo el gráfico se ocultaba.
+
+**Por qué el pilot automático no lo detectó — diagnóstico y arreglo
+(mismo día):** dos causas raíz confirmadas leyendo `.claude/agents/
+ux-pilot.md`, `.github/workflows/ux-pilot.yml` y `tests/pilot/support/*`,
+no supuestas:
+
+1. **El artefacto de diseño aprobado sólo existía como enlace efímero de
+   claude.ai** — ni el harness automático de CI ni una sesión de agente
+   futura podían abrirlo, así que el checklist de fidelidad de diseño de
+   `ux-pilot.md` (6 puntos: añadidos, desaparecidos, claridad, duplicados,
+   valores que parecen rotos, jerarquía) nunca llegó a ejecutarse contra
+   nada — no es que fallara, es que no tenía con qué comparar. **Arreglo**:
+   el artefacto rev. 4 aprobado se copió a
+   `docs/design-reference/web-audit-issues-1/` en este mismo PR, y
+   `ux-pilot.md` ahora exige explícitamente una ruta del repo, nunca un
+   enlace de chat, como input de "diseño aprobado".
+2. **El proyecto que usa la cuenta piloto (Mozilla, sin
+   `PILOT_PROJECT_ID` fijado) no tenía ninguna auditoría completada** —
+   toda la sección nueva vivía detrás de ese gate (`!summary`), así que ni
+   el sweep de interacciones ni ninguna captura llegaban a ver Problemas/
+   Correcto/Páginas, sólo el estado vacío. **Arreglado (2026-08-03):** el
+   fundador lanzó el workflow "Agentic User Pilot (write)" (UX-PILOT-2a/2b),
+   que sembró una auditoría real en el proyecto piloto.
+
+Además, se añadió un check mecánico nuevo en `tests/pilot/support/
+journey.ts` (`headerInteractiveControls`, parte de `assertPageIsHealthy`):
+falla automáticamente si CUALQUIER página futura mete un control
+interactivo dentro de `.ov-sticky-header`, sin depender de que un agente
+o un humano lo note en una captura. `pnpm pilot:selfcheck` verificado en
+verde tras el cambio.
+
+**Segunda ronda — el pilot seguía ciego a la mitad de cada pantalla
+(2026-08-03), diagnóstico y arreglo:** con datos ya sembrados, el pilot
+seguía sin poder certificar nada con confianza porque `journey.ts` medía
+`document.documentElement` para overflow horizontal y para el recorte de la
+captura `fullPage`, cuando el elemento que de verdad recorta y scrollea en
+toda pantalla de consola es `.dash-content` (`.shell { height:100vh;
+overflow:hidden }` > `.dash-main` > `.dash-content { flex:1;
+overflow-y:auto }`, `app/globals.css` + `app/dashboard/layout.tsx`). Efecto
+real: 0 de 27 capturas históricas habían mostrado nunca nada bajo el primer
+pliegue, y el check de overflow horizontal era estructuralmente incapaz de
+saltar. Arreglado en `journey.ts` (expande temporalmente esa cadena de
+clases antes de capturar, mide `.dash-content.scrollWidth` en vez del
+documento), verificado con un caso de fixture dedicado que reproduce la
+cadena CSS exacta y con inspección visual directa de la captura resultante
+(no solo con el test).
+
+Con el detector arreglado, salieron a la luz **tres casos reales,
+preexistentes, del mismo bug de tooltip** — invisibles hasta ahora porque
+`visibility:hidden` no saca un elemento del layout, así que una burbuja de
+`.info-tip-bubble` (220px, `position:absolute; left:0`) anclada cerca del
+borde derecho de un viewport de 375px desbordaba de forma real y permanente,
+solo que nadie podía medirlo:
+
+- Leyenda de "Impacto de citas" en Páginas citadas (`.cit2-split-key`,
+  40px de overflow) — defecto de PR #284 (CITATIONS-REDESIGN-1), no de esta
+  fase.
+- "Diagnóstico general" en el hero de Auditoría web (17px de overflow) —
+  introducido en esta misma fase.
+
+Apareció un cuarto caso al mergear `main` (`.cm2-pos-list-hd`, Competidores,
+preexistente de COMP-REDESIGN-1/PR #285). Cuatro clases a medida repitiendo
+las mismas tres líneas es justamente cómo la cuarta llegó a producción sin
+parchear, así que se consolidaron en **una sola clase reutilizable
+`.info-tip-anchor`** (documentada en `app/globals.css` y en el propio
+`components/ui/info-tip.tsx`, para que el siguiente sitio de uso la
+encuentre antes de reinventarla). Auditados los **8** usos de `InfoTip` del
+producto, no solo los 4 conocidos: los dos que nunca se habían revisado
+(`app/page.tsx` y `runs/[runId]/page.tsx`) quedan cubiertos también.
+Descartado a propósito hacer `.card` global `position:relative` como
+arreglo "automático": cambiaría el bloque contenedor de las 26 reglas
+`position:absolute` que ya viven en `globals.css`, ninguna auditada aquí.
+
+**Tercera ronda — revisión del fundador sobre datos reales (2026-08-03,
+proyecto Movistar).** Con la pantalla ya funcionando, el juicio pasó de
+"¿está roto?" a "¿se entiende?":
+
+1. **El gauge no tenía título.** El número grande salía desnudo y competía
+   con el tile "Salud técnica" en vez de resumirlo. "Diagnóstico general"
+   sube de encima de los tiles a encima del propio gauge, como el
+   "Salud del sitio" de la maqueta.
+2. **58 arriba y 81 abajo confundían** ("ya veo que es salud técnica, pero
+   me ha costado identificarlo"). Son medidas distintas —media global vs
+   sólo técnica— así que el arreglo es etiquetar, no unificar: la caja de
+   potencial ahora dice **Salud técnica** bajo sus dos números.
+3. **La frase de esa caja, más corta y más pequeña** (11.5px → 10.5px,
+   `--ink-2` → `--ink-3`), y apuntando a Recomendaciones por su nombre.
+4. **Sparklines de los tiles sólo a partir de la 4ª auditoría** — con dos o
+   tres puntos se dibuja un codo que se lee como tendencia sin serlo.
+5. **Sparklines de Críticos/Avisos eliminadas** (tachadas a mano en la
+   captura de la revisión): sólo el conteo. La misma serie sigue disponible
+   en Evolución/Historial, donde sí tiene ejes.
+6. **Badge "Rindiendo" eliminado** de "Lo que ya funciona" — el titular ya
+   dice que funcionan.
+7. **El gráfico de Evolución sube** al nivel de página, justo bajo el hero y
+   por encima de las pestañas: dónde estás → hacia dónde vas → qué hacer. El
+   Historial en tabla se queda en Problemas (es detalle de consulta).
+8. **Gauge semicircular.** Segunda vez sobre el mismo punto: adoptar el
+   componente compartido (2026-08-02) arregló la consistencia pero no la
+   forma. Se añade `variant="semi"` al **único** componente `Gauge` en vez de
+   un segundo SVG a medida, así las dos formas no pueden divergir en
+   degradado, numeral ni colores de banda. **Pendiente de decisión del
+   fundador:** Overview, Prompts y la landing siguen con el anillo de 270°;
+   si la media luna les sienta mejor, es un `variant="semi"` por pantalla.
+
+**Pendiente, fuera de alcance de esta fase:** en la pestaña Páginas el
+fundador echa en falta "una solución para mejorar la puntuación de cada
+página". Hoy hay guía en prosa por página, pero no el **arreglo copiable**
+(bloque JSON-LD, meta description, etc.) — que es exactamente la fase 3b del
+Task Intake ya aprobado, no un retoque de esta ronda.
+
+**Cuarta ronda (2026-08-04).** Validados en preview el título del gauge, la
+media luna, la desambiguación 43-vs-45, la frase corta y la regla de las
+sparklines. Cambios nuevos:
+
+1. **Evolución sube su umbral de 2 a 4 auditorías.** Propuesto tras mirar el
+   preview y aceptado por el fundador: con dos puntos el gráfico dibuja una
+   recta que se lee como tendencia sin serlo — mismo criterio que las
+   sparklines, y pesa más aquí porque el bloque acababa de pasar a la
+   posición más visible. El **Historial** en tabla se queda en 2: es una
+   tabla, no una línea, y es justo lo que da contexto mientras el gráfico no
+   aparece.
+2. **Tooltip del gauge reescrito**: explicaba la aritmética ("media simple de
+   tus señales disponibles… no cuenta como 0"), que es lo que el usuario no
+   necesita para decidir qué hacer, y ocupaba once líneas que tapaban el
+   propio gauge. Ahora dice qué aporta y por qué importa para GEO. El
+   desglose sigue visible al lado, en los tres tiles.
+3. **Las pistas de los tiles empiezan por mayúscula.** De paso se corrigió
+   una que había quedado obsoleta ("lánzala desde la pestaña Salud técnica"
+   — esa pestaña ya no existe; ahora dice que se audita con «Auditar ahora»).
+4. **UX del botón «Auditar ahora» rehecha** (rediseño pedido explícitamente).
+   El problema no era sólo estético: el botón flotaba solo, sin anclaje, y
+   todo lo que tenía que decir lo decía DESPUÉS del clic, como párrafo
+   alineado a la derecha; el caso "ya estaba fresca" ocupaba dos frases en
+   tres líneas y su icono de check se rompía a su propia línea. Es decir, la
+   única información que te habría ahorrado el clic sólo se alcanzaba
+   haciendo clic.
+
+   Modelo nuevo: **la frescura es un estado que se ve antes de actuar, no un
+   recibo que se imprime después.** Barra de dos huecos: estado a la
+   izquierda, acción a la derecha.
+
+**Quinta ronda — simplificación del mismo botón (2026-08-04).** La primera
+versión de esa barra introdujo variaciones que el fundador cortó de raíz:
+
+- **El botón ya no cambia de color.** Alternaba `outline`/`default` según la
+  frescura, y eso se lee como que el botón cambia de color porque sí
+  ("primero blanco, luego azul, no tiene sentido"). Ahora es siempre el botón
+  primario; lo único que se mueve es habilitado/deshabilitado. Por lo mismo
+  desaparece la etiqueta alternativa "Volver a auditar": **un control, un
+  nombre**.
+- **Dos estados, no cuatro.** *Auditoría actualizada* → pastilla verde que lo
+  dice + **botón deshabilitado** (pulsar sería un no-op servidor, así que el
+  control dice que no de antemano en vez de aceptar el clic y explicarlo
+  después). *Escaneo sin auditar* → sin pastilla, botón activo. Nada más.
+  "Al día" se descartó por informal; la etiqueta es "Auditoría actualizada".
+- **Sin banner mientras audita.** El bloque "Auditoría en curso" (título +
+  tres líneas + pastilla "Auditando") repetía lo que el propio botón ya dice
+  con su spinner y su conteo en vivo. Se retira **sólo** la variante con
+  `canAudit`: la de plan pausado a mitad de campaña se queda, porque ahí el
+  botón desaparece bajo el gate y ese banner es lo único que explica por qué
+  la página parece atascada.
+- **Sin toast de confirmación.** `router.refresh()` ya re-renderiza el botón
+  con la pastilla puesta, así que la pastilla *es* la confirmación; un aviso
+  al lado decía lo mismo dos veces. Se retira también el estado `notice` del
+  contexto, que dejaba de leerlo nadie.
+
+### Fase 3a — el generador de `llms.txt` (2026-08-04)
+
+Se amplía esta entrada en lugar de abrir una §18: es la misma zona y la misma
+familia de fases, y este documento ya acumula tres colisiones de numeración en
+un solo día.
+
+**El problema que había que decidir antes de escribir código.** Un `llms.txt`
+es una guía de lectura curada: secciones, enlaces y **una descripción por
+enlace**. Teníamos dos de las tres cosas de verdad — los temas son los prompts
+activos del propio usuario, y cada URL existe sólo porque su cita de grounding
+resolvió, fail-closed, contra el dominio propio. La tercera era la trampa.
+
+**Lo que se rechazó.** `DomainCoveragePage.title` parece un título de página y
+está saneado, pero **lo escribió Gemini**, no se leyó de la página —
+`domain-coverage.ts` es explícito en que lo único verificado es la URL.
+Meterlo en un fichero que el usuario publica en la raíz de su propio dominio,
+como descripción oficial de sus propias páginas, habría sido convertir la
+conjetura de un modelo en un hecho publicado. Es barato y es deshonesto; se
+descartó por principio, no por coste.
+
+**Lo que se decidió.** Estructura real, descripciones como marcador declarado
+(`DESCRIBE ESTA PÁGINA EN 1 FRASE`), mismo contrato que fase 3b usa para
+`<title>` y meta description. El texto visible de cada enlace es **la ruta**,
+no el título del modelo: una ruta es algo que el sitio tiene de verdad y que
+el usuario reconoce de un vistazo para escribir su frase al lado.
+
+**Generar las descripciones con Gemini queda fuera**, y no por olvido:
+introduce runtime de IA, coste y saneado en una fase que deliberadamente no
+tiene ninguno. Si al usarlo el relleno manual estorba, es una fase propia con
+su Task Intake.
+
+**Devuelve `null` antes que un fichero vacío.** Un proyecto sin auditoría de
+cobertura no tiene ninguna URL verificada, y un `llms.txt` hecho sólo de
+marcadores parece un artefacto que funciona y no le enseña nada al modelo —
+peor que no ofrecerlo. En ese caso la incidencia sigue mostrando su guía en
+prosa y nada más.
+
+**Instrucciones de publicación, por petición del fundador.** Generar el
+fichero era la mitad fácil. "Publica un fichero llms.txt en la raíz de tu
+dominio" es donde se para un responsable de marketing en una tienda Shopify:
+asume que sabe qué es la raíz de un sitio, en qué plataforma está y cómo
+comprobar que funcionó. Los cinco pasos terminan en **una URL que el usuario
+abre él mismo**, así que el éxito es algo que *ve*, no algo que supone. No se
+detalla más por plataforma a propósito: la auditoría conoce el dominio, no el
+CMS, e inventar un paso "tu plataforma es WordPress" sería una conjetura
+disfrazada de instrucción.
+
+**Descarga además de copiar.** Esto es un fichero, no un fragmento: copiarlo a
+un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
+`llms.txt.txt`) y la comprobación distingue mayúsculas.
+
+**Los epígrafes son los prompts, y eso tiene un coste que no es estético.**
+Al mirar la captura real del pilot sobre mozilla.org se vio que las secciones
+salen en forma de pregunta (`## ¿Qué navegador web ofrece la mejor protección
+de privacidad…?`), porque el único dato disponible para nombrar una sección es
+el prompt del usuario. Como calidad de lectura es aceptable — para un motor
+generativo, pregunta seguida de la página que la responde no es peor que un
+tema genérico. Lo que sí importa es otra cosa: **esos prompts son la
+estrategia de monitorización del cliente, y el fichero se publica en abierto
+en la raíz de su dominio**, así que tal cual sale le dice a su competencia qué
+consultas está vigilando en IA.
+
+El generador no puede reescribirlos sin la llamada a IA aplazada, así que se
+añade un paso de publicación que lo advierte explícitamente, colocado **antes**
+del paso que sube el fichero. El fundador aceptó la v1 con esta limitación
+(2026-08-04) sabiendo que reescribir los epígrafes queda de su parte.
+
+---
+
+## 18. La auditoría web deja de depender de un clic (AUDIT-AFTER-SCAN-1, 2026-08-04)
+
+**Estado: implementada, PR #322 (sustituye a #314, cerrada). Migración 0027
+aplicada a mano en Supabase el 2026-08-04 y verificada** (`jobs_type_chk` ya
+admite `web_audit`). Detalle técnico en `docs/adr/0027-post-scan-web-audit-queue.md`;
+invariantes de la zona en `.claude/rules/web-audit.md`.
+
+**Qué cambia para el usuario.** Al terminar un escaneo —automático o manual—
+se encola y se ejecuta sola la auditoría completa: primero la campaña de
+cobertura, después la salud técnica. El usuario no tiene que hacer nada, y
+sobre todo no tiene que *estar delante*. Ese era el fallo real: el producto se
+mueve a escaneos diarios automáticos, y la auditoría vivía en un bucle en
+primer plano conducido por la pestaña del navegador, así que la pantalla
+insignia nunca se habría refrescado justo en las cuentas que más importan.
+
+**Por qué una fila en `jobs` y no una llamada al vuelo.** Un despacho perdido
+no puede significar una auditoría perdida. La fila es el contrato; el
+`after()` que la arranca en caliente es sólo una optimización. Si se pierde,
+la fila sigue vencida y el cron diario de las 07:00 la recoge.
+
+**Lo que se decidió a nivel de producto, no de código:**
+
+- **Los límites de 5/día no se aplican a la ruta automática.** Existen para
+  acotar lo que una persona puede disparar a clics; la ruta automática ya está
+  acotada por algo más estricto —como mucho una auditoría por escaneo
+  completado—. Dejarlos puestos habría significado que el 6.º escaneo del día
+  se publica sin auditoría, que es exactamente el fallo que la fase elimina.
+- **El gate de plan Pro sí se mantiene.** Es una frontera comercial, no un
+  límite de uso.
+- **El email de fallo va al operador, nunca al cliente.** El cliente no pidió
+  esta auditoría y no puede actuar sobre un fallo de backend.
+
+**Roto conocido, a propósito, hasta el PR siguiente.** La pantalla sigue
+contando la versión manual del mundo: el botón «Auditar ahora» de §17 sigue
+ahí y dos textos siguen diciendo que la salud técnica "se audita al pulsar
+«Auditar ahora»" (el *hint* del tile "Salud técnica" y el vacío del bloque
+técnico). Con la auditoría automática eso ya no es cierto. El fundador fijó
+explícitamente la secuencia —"una vez que lo tengamos listo, quitaremos el
+botón manual"—, así que **la copia no se toca en este PR**: se retira junto
+con el botón, en su propio PR, para que la decisión de qué queda en su lugar
+(¿pastilla de "se audita sola tras cada escaneo"? ¿nada?) se tome de una vez
+y no a trozos. Mientras tanto el botón sigue funcionando como disparo manual,
+que es comportamiento razonable y no falso.
+
+---
+
+## 19. Publicación semanal del blog — de encargo escrito a cadena que arranca sola (GROWTH-3 Fase A2, 2026-08-04)
+
+**Contexto.** La Fase A1 (§ PR #318) dejó escrito *el encargo* de la
+publicación semanal y creó un disparador fuera del repo. Lo que no hizo fue
+ejecutarse nunca: una automatización que no se ha disparado ni una vez no está
+terminada, está redactada. A1 misma dejó anotado el riesgo — las sesiones
+disparadas podrían correr **sin herramientas MCP de GitHub**, y entonces el
+agente escribiría el artículo, empujaría la rama y ahí se quedaría, sin PR y
+sin que nadie se entere.
+
+**Qué se intentó primero y por qué se descartó.** El plan aprobado era
+dispararla a mano una vez y ver hasta dónde llegaba. No se pudo: las
+herramientas de rutinas exigen una aprobación interactiva que una sesión remota
+no puede conceder. Eso no confirmó el riesgo, pero lo reforzó — **lo que
+necesita una aprobación interactiva no está garantizado en una sesión
+headless**. Se dejó de intentar averiguar si haría falta la red de seguridad y
+se construyó.
+
+**Lo decidido.**
+
+- **`.github/workflows/weekly-post-pr.yml`** garantiza que exista un PR abierto
+  para toda rama `claude/weekly-post/**`. **Es idempotente a propósito**: si la
+  sesión semanal sí tenía herramientas y abrió el PR, el workflow lo encuentra y
+  no crea nada. Los dos caminos convergen en el mismo estado final, que es lo
+  que permite no tener que saber de antemano cuál se tomó.
+- **El mensaje del último commit es el PR** (asunto → título, cuerpo → cuerpo).
+  Se eligió frente a un fichero de plantilla en la rama porque un fichero
+  temporal en la rama del artículo acaba colándose en el diff que revisa el
+  fundador.
+- **El aviso son tres capas, no una** (`docs/agentic-weekly-post.md` §8). La
+  que sostiene el sistema es la más aburrida: el workflow pide revisión al
+  fundador y **GitHub manda su email nativo**. No depende de que el agente siga
+  vivo, ni de claves, ni de terceros — que es justo lo que se necesita cuando el
+  modo de fallo probable *es* que el agente se muera a mitad. Encima van el push
+  a la app de Claude (`PushNotification`, se pierde si no hay Control Remoto) y
+  las notificaciones de fin de rutina (pendientes de activar).
+- **Sin preview es `INCONCLUSIVE`, y se dice.** La cuenta de Vercel es gratuita
+  y tiene tope diario de deploys; la propia PR de A1 se quedó sin preview por
+  eso. Queda escrito que el aviso debe decir "escrito y validado, pero nadie lo
+  ha visto renderizado" en vez de presentarlo como listo — el mismo fallo del
+  2026-08-02 (§7) que el pilot existe para impedir.
+
+**Lo que se mantiene de A1, sin tocar.** No hay scheduler de producto: nada en
+`vercel.json`, ni `app/api/cron/**`, ni runtime. El agente **no mergea nunca**.
+Y el check de portada **sigue en rojo a propósito** (§14, ADR 0026): el agente
+no puede generar imágenes, y automatizar la publicación sin portada
+automatizaría una vez por semana el defecto que el fundador rechazó
+("parece un icono de algo que no carga bien").
+
+**Lo que se comprobó mirando, no suponiendo.** Se leyó la configuración real de
+la rutina y se la disparó a mano dos veces el 2026-08-04:
+
+- **La sesión semanal no tiene ninguna herramienta de GitHub.** Su lista de
+  permisos es `Task, Bash, Glob, Grep, Read, Edit, MultiEdit, Write,
+  NotebookEdit, WebFetch, TodoWrite, WebSearch, BashOutput, KillBash, Skill,
+  Tmux, Monitor, SendUserFile, REPL`. El riesgo que A1 anotó como hipótesis
+  queda **confirmado**, y el workflow deja de ser una precaución para ser la
+  única vía de entrega.
+- **Sí tiene `Bash`**, así que el push está a su alcance.
+- **Las notificaciones de la rutina ya estaban en `{push: true, email: false}`**
+  — la capa 2 del aviso llevaba activa desde A1 sin que constara en ningún
+  sitio.
+
+**Y el hallazgo que obligó a añadir `.claude/settings.json`.** El primer
+disparo manual (15:48 UTC) **no produjo nada**: dos horas después no había ni
+rama ni PR. Ese mismo día, una sesión remota pidió cuatro veces leer la
+configuración de rutinas y las cuatro recibió "requiere aprobación" — una
+aprobación que nadie podía dar. Una sesión disparada a las 07:00 de un lunes
+está en esa situación con el fundador dormido. El fichero preaprueba lo que la
+sesión necesita para entregar (`git`, `pnpm test`, `pnpm run validate`), y de
+paso convierte en regla ejecutable dos prohibiciones que hasta ahora sólo eran
+texto en `CLAUDE.md`: `deny` sobre force-push y sobre push directo a `main`.
+**No es hermética** (`--force-with-lease` y otras variantes no están cubiertas):
+atrapa las formas comunes, no sustituye a la constitución.
+
+**Pendiente / roto conocido.**
+
+- **Una activación manual fuera del repo**, ya hecha por el fundador el
+  2026-08-04: *"Allow GitHub Actions to create and approve pull requests"*. Sin
+  ella el workflow devuelve 403 y no hay red de seguridad.
+- **La causa del disparo mudo de las 15:48 no está confirmada.** La hipótesis
+  del permiso encaja con todo lo observado, pero no se pudo leer el transcript
+  de aquella sesión. Si el 10 de agosto vuelve a no producir nada, esa
+  hipótesis queda descartada y hay que buscar en otro sitio.
+- **La cadena completa sigue sin haberse ejecutado de punta a punta.** Lo que
+  la Fase A2 cambia no es que no pueda fallar, sino que **si falla, se ve**:
+  sin PR abierto el lunes, el fallo es visible en vez de silencioso. Falta
+  todavía un detector para el caso "no se produjo absolutamente nada", que el
+  workflow no cubre porque se dispara con un push que en ese escenario nunca
+  ocurre.
+
+---
+
+## 18. Presupuesto de builds del flujo agéntico (BUILD-BUDGET-1 Fase 1, 2026-08-04)
+
+**El problema, medido.** El fundador reportó que se estaba tocando a diario el
+tope de 100 deploys/día del plan Hobby. Censo real vía los eventos
+`deployment_status` del repo (cada uno es un deploy de Vercel):
+
+| Día | Deploys | Ramas activas |
+|---|---|---|
+| 2026-08-03 | 50 | 15 |
+| 2026-08-04 (hasta 17:52) | 40 | 11 |
+
+De los 90 deploys de esos dos días, **43 (48%) salieron de sólo tres ramas** —
+`recommendations-page-redesign` (15), `web-audits-redesign` (14),
+`geo-score-variability` (14) — y 12 fueron de producción (uno por merge). Había
+10 PRs abiertos a la vez. 5 de los 41 commits mergeados desde el 01-08 no tocan
+nada que Next construya (docs, `.claude/`, tests) y aun así costaron un build
+cada uno más su pasada de piloto.
+
+**Segundo techo, no pedido pero encontrado.** El `ux-pilot` consumió 344 min de
+GitHub Actions el 03-08 y 381 min el 04-08. A ese ritmo el plan gratuito de
+Actions para repos privados (2.000 min/mes) se agota en unos 6 días. Misma
+causa raíz, factura distinta.
+
+**El diagnóstico.** No eran "demasiados PRs". El build se había convertido en el
+bucle de feedback: push → build → piloto → falla → arreglo → push. Un PR grande
+pagaba 14-15 builds por lo que debería costar 2 o 3.
+
+**Lo que se decidió (Fase 1 — sólo lo que no cambia ninguna garantía):**
+
+1. `ignoreCommand` en `vercel.json` → `scripts/vercel-should-build.sh`. Salta el
+   build cuando el diff contra el **último deploy con éxito de esa rama**
+   (`VERCEL_GIT_PREVIOUS_SHA`, no `HEAD^`: un push de tres commits es un solo
+   deploy) sólo toca `docs/`, `.claude/`, `.github/`, `tests/` o `*.md` de raíz.
+   Producción nunca se salta. `scripts/` tampoco entra en la lista segura, por
+   contener este mismo script.
+2. Reglas de push en `CLAUDE.md` §"Presupuesto de builds": un push por iteración
+   pilotable; prohibidos los commits vacíos de *retrigger*; no mergear `main` en
+   la rama sin conflicto real; máximo 3 PRs abiertos.
+
+**Fail-open, y por qué importa más que la cuota.** El script construye ante
+cualquier duda (sin SHA previo, SHA inalcanzable en el clon shallow, `git diff`
+que falla). Un build saltado de más dejaría el preview apuntando a código viejo
+y el piloto juzgaría una pantalla que no es la del commit — exactamente el fallo
+del 2026-08-02 (§7 y la nota de Auditoría web) que el piloto existe para
+impedir. `scripts/vercel-should-build.test.ts` fija las dos direcciones del
+contrato invertido de Vercel (0 = saltar, ≠0 = construir), que es justo lo que
+se voltea en silencio en un refactor.
+
+**Ahorro estimado, corregido tras una medición ajena.** El análisis original
+atribuía al `ignoreCommand` un 10-15% de los *deploys*. Es falso, y lo demostró
+PR #323 probándolo en vivo: un commit sólo de `docs/` que la regla debía saltar
+fue rechazado con el mismo error de cuota que el resto, porque **el tope se
+aplica al crear el deployment, aguas arriba del paso de build donde corre el
+`ignoreCommand`**. Lo que ahorra son minutos de build y la pasada de `ux-pilot`
+que habría disparado ese preview — no deployments. La reducción del *número* de
+deploys viene entera de la disciplina de push (reglas 1-4), que era ya el grueso
+de la estimación: de ~50-60/día a ~20-25.
+
+**Colisión con otra sesión, y cómo se resolvió.** Mientras este PR estaba
+bloqueado por la cuota, otra sesión implementó lo mismo por su cuenta y lo
+mergeó: PR #323 metió un `ignoreCommand` en línea
+(`git diff --quiet HEAD^ HEAD -- ':(exclude)…'`). Su propio mensaje de commit
+declara la limitación: *"HEAD^ compara solo el último commit, no el push
+entero… Estrecharlo al rango del push completo es un cambio de una línea y
+merece su propio PR"*. Este PR es ese follow-up, así que se reconcilió en vez de
+competir:
+
+- Se conserva el mecanismo, se sustituye la implementación por el script, que
+  compara contra el último deploy con éxito, nunca salta producción y cubre
+  también `.github/` y `tests/`.
+- Se conserva `agents/` en la lista segura, que venía de su versión.
+- `vercel-ignore-command.test.ts` (raíz) se elimina: verificaba la *forma* de un
+  comando que ya no existe. Su garantía real —que nadie meta un patrón `*.md`
+  que se trague `app/blog/<slug>/page.mdx`— se traslada a
+  `scripts/vercel-should-build.test.ts` como aserción de **comportamiento**, que
+  sobrevive a una reescritura.
+- La consecuencia que documentó PR #326 ("un commit sólo de docs en la rama de
+  producción no redespliega producción") deja de aplicar: producción nunca se
+  salta. La otra causa de producción congelada que ese PR documenta —Production
+  Branch apuntando fuera de `main`— sigue vigente.
+
+**Vercel Pro contratado el 2026-08-04.** El tope de 100/día deja de existir, que
+era el detonante de esta fase. No la invalida: las cuatro reglas siguen
+ahorrando minutos de build, pasadas de piloto y los ~350-380 min/día de GitHub
+Actions, y el bucle "push para ver qué dice el piloto" seguía siendo un mal
+hábito con o sin tope. Lo que sí cambia es la urgencia de las dos fases que
+quedaron fuera.
+
+**Deliberadamente fuera de esta fase, y por qué:**
+
+- **Que el piloto deje de correr en cada deploy** y pase a etiqueta
+  (`status:ready-for-pilot`). Ahorraría otro 10-15% y aliviaría los minutos de
+  Actions, pero **cambia un invariante ya documentado** de `CLAUDE.md` y de
+  `docs/agentic-user-pilot.md`. Necesita su propia aprobación.
+- **Desactivar los deploys automáticos por rama** (`git.deploymentEnabled`) y
+  crear el preview bajo demanda con la CLI de Vercel. Es la única opción que
+  *garantiza* no volver a tocar el techo (~1-2 builds por PR), y también la más
+  invasiva: necesita Task Intake propio con plan de rollback.
+
+**Lo que sigue abierto.** Con Pro contratado, el riesgo legal de operar un SaaS
+comercial en Hobby queda cerrado (era bloqueante de la Fase 5 de
+`docs/launch-plan.md`, ver su ledger). Queda vivo el segundo techo: los minutos
+de GitHub Actions que consume el piloto en cada deploy, que ninguna de las
+cuatro reglas de esta fase toca de raíz — eso es la fase del piloto por
+etiqueta.
 
 ---
 

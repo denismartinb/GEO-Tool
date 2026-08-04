@@ -42,6 +42,18 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 - El nombre público es **Genscore**. "GEO Studio" es el nombre interno del repo
   y "Lumira" está retirado — no reintroducir ninguno en copy de usuario.
 
+## Si esto lo escribe la sesión semanal automática
+
+Su encargo completo está en `docs/agentic-weekly-post.md` — leerlo antes de
+seguir. Dos invariantes que no son cosméticos (log §19):
+
+- **La rama se llama `claude/weekly-post/<slug>`.** Fuera de ese prefijo, el
+  workflow que garantiza que el PR se abra (`weekly-post-pr.yml`) no dispara, y
+  el artículo se queda en una rama que nadie mira.
+- **El mensaje del último commit es el PR**: asunto → título, cuerpo → cuerpo.
+  Si el PR lo abre el workflow, ese mensaje es lo único que el agente controla,
+  y ahí va —arriba del todo— que falta la portada.
+
 ## Al cerrar una pieza
 
 - Actualizar `docs/content-calendar.md` **en el mismo PR** que publica la pieza
