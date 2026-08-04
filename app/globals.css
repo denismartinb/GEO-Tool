@@ -5392,11 +5392,14 @@ select.set-field {
 .rec2-pillar-trk > i { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
 
 /* 4 · Plan header — the one number that matters, stated plainly */
+/* Encabezado del plan: un titular, no un banner.
+   Llevaba el mismo degradado azul que `.ov2-insight` usa para los avisos
+   informativos del producto, así que el bloque se leía como una notificación
+   en vez de como el encabezado de una lista de acciones (revisión del
+   fundador). Se queda sin caja: el peso lo dan el tamaño y la tipografía
+   display, y el tinte pasa a las tarjetas. */
 .rec2-plan {
-  border: 1px solid var(--accent-ring);
-  background: linear-gradient(180deg, rgba(37, 99, 235, .07), rgba(37, 99, 235, .02));
-  border-radius: var(--r-lg);
-  padding: 14px 16px;
+  padding: 2px 2px 0;
   margin-bottom: 12px;
 }
 .rec2-plan-t {
@@ -5411,11 +5414,11 @@ select.set-field {
 /* 4b · The priority cards themselves. Tinted ground + accent border so the
    three that matter read as a set at a glance, and a numbered chip so their
    order is explicit rather than merely positional. */
+/* Tinte PLANO, un solo color de la paleta. El degradado anterior era el
+   lenguaje de los banners informativos y no el de una tarjeta accionable. */
 .rec2-scope .rec-card.rec2-priority {
-  border-color: var(--accent-ring);
-  background:
-    linear-gradient(180deg, rgba(37, 99, 235, .055), rgba(37, 99, 235, .015)),
-    var(--surface);
+  border-color: var(--brand-blue-soft-2);
+  background: #f4f7fe;
 }
 .rec2-scope .rec-card.rec2-priority:hover { border-color: var(--accent); }
 .rec2-rank {
