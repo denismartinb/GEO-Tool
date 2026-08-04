@@ -1,6 +1,7 @@
 import "server-only";
 
 import { AUDIT_USER_AGENT, readBodyCapped } from "@/lib/web-audit/fetch-page";
+import { parseSitemap, type SitemapReport } from "@/lib/web-audit/sitemap";
 
 /**
  * robots.txt / llms.txt access report for the AI bots that matter (WEB-AUDIT-2).
@@ -30,8 +31,23 @@ export type BotAccessReport = {
   bots: BotAccessEntry[];
   llmsTxtFound: boolean;
   llmsTxtBytes: number | null;
-  /** WEB-AUDIT-R3: whether /sitemap.xml is reachable — same reachability check as llms.txt, no XML parsing (presence only). */
+  /**
+   * WEB-AUDIT-R3: whether /sitemap.xml is REACHABLE. Kept exactly as it was —
+   * `sitemap_missing` still keys off this, and every snapshot taken before
+   * WEB-AUDIT-SITEMAP-1 has only this field.
+   *
+   * Note it stays `true` for a soft 404 (an HTML error page served with 200),
+   * because reachability is all it ever meant. `sitemap` below is what
+   * distinguishes a real sitemap from one.
+   */
   sitemapFound: boolean;
+  /**
+   * WEB-AUDIT-SITEMAP-1: what the already-downloaded bytes actually contained.
+   * Optional on purpose — a snapshot persisted before this phase has no such
+   * field, and the UI must degrade to the old presence-only reading instead of
+   * inventing a state for it.
+   */
+  sitemap?: SitemapReport | null;
 };
 
 type RawGroup = { agents: string[]; disallows: string[] };
@@ -129,6 +145,9 @@ export async function buildBotAccessReport(domain: string): Promise<BotAccessRep
     bots,
     llmsTxtFound: llmsContent !== null,
     llmsTxtBytes: llmsContent !== null ? Buffer.byteLength(llmsContent, "utf-8") : null,
-    sitemapFound: sitemapContent !== null
+    sitemapFound: sitemapContent !== null,
+    // Zero extra network cost: these are the very bytes fetched on the line
+    // above, which used to be discarded after the null check.
+    sitemap: parseSitemap(sitemapContent)
   };
 }

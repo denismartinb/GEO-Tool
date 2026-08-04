@@ -8,6 +8,7 @@ import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildLlmsTxt, publishSteps, type LlmsTxtResult, type PublishStep } from "@/lib/web-audit/llms-txt";
+import { sitemapSteps, type SitemapStep } from "@/lib/web-audit/sitemap";
 import {
   buildWebAuditSummary,
   buildCitationWindowCandidates,
@@ -36,6 +37,7 @@ import {
 import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
 import { PageFixBlock } from "./page-fix-block";
 import { LlmsTxtBlock } from "./llms-txt-block";
+import { SitemapStepsBlock } from "./sitemap-steps-block";
 
 // Server Actions invoked from this page (auditDomainCoverageAction) run
 // several sequential Gemini grounding calls up to COVERAGE_TOTAL_BUDGET_MS
@@ -163,7 +165,12 @@ const CHECK_META: Record<IssueCheckKey, { label: string; guidance: string; unit:
     guidance: "Publica un fichero llms.txt en la raíz de tu dominio con una guía de lectura para los modelos de IA.",
     unit: "página"
   },
-  sitemap_missing: { label: "sitemap.xml", guidance: "Publica un sitemap.xml en la raíz de tu dominio.", unit: "página" }
+  sitemap_missing: {
+    label: "sitemap.xml",
+    guidance:
+      "Un sitemap le dice a los buscadores y a los motores de IA qué páginas tienes. Casi seguro que tu plataforma ya sabe generarlo — es cuestión de activarlo, no de escribirlo.",
+    unit: "página"
+  }
 };
 
 function pluralizeUnit(unit: "página" | "bot", count: number): string {
@@ -182,7 +189,8 @@ const SINGLE_FACT_CHECKS = new Set<IssueCheckKey>(["llms_txt_missing", "sitemap_
 /** One technical problem, collapsed by default (same `.wa-details` pattern PageAuditRow already uses) — severity + scope always visible, the fix and affected pages one tap away. */
 function IssueRow({
   issue,
-  llmsTxt
+  llmsTxt,
+  sitemap
 }: {
   issue: TechnicalIssue;
   /**
@@ -191,8 +199,16 @@ function IssueRow({
    * a coverage audit still gets the prose guidance and no half-empty artifact.
    */
   llmsTxt?: { file: LlmsTxtResult; steps: PublishStep[] } | null;
+  /** Fase sitemap: qué hacer para tener uno. Sólo para `sitemap_missing`. */
+  sitemap?: { steps: SitemapStep[] } | null;
 }) {
   const meta = CHECK_META[issue.check];
+  // Founder question (2026-08-04): una incidencia que ya trae solución dentro
+  // se leía igual que una que sólo trae prosa, así que nadie tenía motivo para
+  // abrirla. El distintivo lo dice en la fila cerrada — sin tocar severidad ni
+  // orden, que dependen del impacto real en el score y no de lo satisfactoria
+  // que sea la solución.
+  const hasFix = Boolean(llmsTxt || sitemap);
   const sev = SEVERITY_META[issue.severity];
   const scopeLabel = SINGLE_FACT_CHECKS.has(issue.check)
     ? "No encontrado"
@@ -208,6 +224,12 @@ function IssueRow({
               {sev.label}
             </span>
             <span style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)" }}>{meta.label}</span>
+            {hasFix && (
+              <span className="badge wa2-fix-ready">
+                <Icon name="check" size={10} />
+                Solución disponible
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 2 }}>{scopeLabel}</div>
         </div>
@@ -223,6 +245,7 @@ function IssueRow({
       <div className="wa-details-body">
         <p style={{ fontSize: 12, color: "var(--ink-3)", margin: "0 0 8px", lineHeight: 1.5 }}>{meta.guidance}</p>
         {llmsTxt && <LlmsTxtBlock file={llmsTxt.file} steps={llmsTxt.steps} />}
+        {sitemap && <SitemapStepsBlock steps={sitemap.steps} />}
         {issue.affectedLabels.length > 0 && (
           <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 4 }}>
             {issue.affectedLabels.slice(0, 12).map((label) => (
@@ -555,7 +578,64 @@ function PageAuditRow({ page, fixContext }: { page: PageAuditEntry; fixContext: 
   );
 }
 
+/**
+ * Cómo se lee un sitemap, ahora que lo parseamos.
+ *
+ * `bots.sitemap` es opcional: los snapshots anteriores a WEB-AUDIT-SITEMAP-1
+ * sólo tienen `sitemapFound`, así que ahí se conserva exactamente el texto de
+ * antes. Nada se recalcula sobre un snapshot viejo — sería inventar un dato
+ * que aquella auditoría nunca midió.
+ *
+ * El recuento sólo se muestra como cifra cuando el fichero cabía entero. Si
+ * vino truncado por el tope de 128 KB, es un suelo y se dice "más de N": dar
+ * el prefijo como total sería una métrica fabricada.
+ */
+function describeSitemap(bots: BotAccessReport): {
+  sitemapIsReal: boolean;
+  sitemapBadge: string;
+  sitemapDetail: string | null;
+} {
+  const report = bots.sitemap;
+
+  if (report === undefined) {
+    return {
+      sitemapIsReal: bots.sitemapFound,
+      sitemapBadge: bots.sitemapFound ? "Encontrado" : "No encontrado",
+      sitemapDetail: null
+    };
+  }
+
+  if (!report) {
+    return { sitemapIsReal: false, sitemapBadge: "No encontrado", sitemapDetail: null };
+  }
+
+  if (report.kind === "invalid") {
+    return {
+      sitemapIsReal: false,
+      sitemapBadge: "No es un sitemap",
+      sitemapDetail: "La dirección responde, pero lo que devuelve no es XML de sitemap — normalmente una página de error."
+    };
+  }
+
+  if (report.kind === "index") {
+    return {
+      sitemapIsReal: true,
+      sitemapBadge: "Índice de sitemaps",
+      sitemapDetail: `Apunta a ${report.locCount} ${report.locCount === 1 ? "sitemap" : "sitemaps"}. No se abren: seguirlos sería rastrear tu web, y esta auditoría no lo hace.`
+    };
+  }
+
+  return {
+    sitemapIsReal: true,
+    sitemapBadge: "Encontrado",
+    sitemapDetail: report.truncated
+      ? `Más de ${report.locCount} URLs (el fichero es más largo de lo que leemos).`
+      : `${report.locCount} ${report.locCount === 1 ? "URL" : "URLs"}.`
+  };
+}
+
 function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: string }) {
+  const { sitemapIsReal, sitemapBadge, sitemapDetail } = describeSitemap(bots);
   return (
     <div className="card">
       <div style={{ padding: "13px 16px 0" }}>
@@ -588,11 +668,21 @@ function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: 
             {bots.llmsTxtFound ? `Encontrado (${bots.llmsTxtBytes} bytes)` : "No encontrado"}
           </span>
         </div>
-        {/* WEB-AUDIT-R3: sitemap.xml reachability — same presence-only check as llms.txt, no XML parsing. */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
-          <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>sitemap.xml</div>
-          <span className={`badge ${bots.sitemapFound ? "badge-pos" : "badge-outline"}`}>
-            {bots.sitemapFound ? "Encontrado" : "No encontrado"}
+        {/* WEB-AUDIT-SITEMAP-1: ya no es sólo alcanzabilidad. `bots.sitemap`
+            es opcional — un snapshot anterior a esta fase no lo trae, y
+            entonces se degrada al texto de antes en vez de inventar un
+            estado. Un "Encontrado" a secas era engañoso en el caso más común
+            de fallo: un 404 blando (página HTML de error servida con 200),
+            que respondía y por tanto contaba como encontrado. */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>sitemap.xml</div>
+            {sitemapDetail && (
+              <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 2 }}>{sitemapDetail}</div>
+            )}
+          </div>
+          <span className={`badge ${sitemapIsReal ? "badge-pos" : "badge-outline"}`} style={{ flexShrink: 0 }}>
+            {sitemapBadge}
           </span>
         </div>
       </div>
@@ -873,6 +963,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     coverage: latestMap
   });
   const llmsPublishSteps = publishSteps(project.domain);
+  const sitemapFixSteps = sitemapSteps(project.domain);
 
   const auditedScan = latestMap ? maps.find((m) => m.scanId === latestMap.scanId) : null;
   const auditedScanDate = auditedScan?.scanId === latestRunRow?.id ? latestRunRow?.finished_at ?? latestRunRow?.created_at : null;
@@ -1332,6 +1423,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                               ? { file: llmsTxtFile, steps: llmsPublishSteps }
                               : null
                           }
+                          sitemap={issue.check === "sitemap_missing" ? { steps: sitemapFixSteps } : null}
                         />
                       ))
                     ) : (

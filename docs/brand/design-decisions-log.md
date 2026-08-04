@@ -1706,6 +1706,49 @@ disfrazada de instrucción.
 un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
 `llms.txt.txt`) y la comprobación distingue mayúsculas.
 
+### Sitemap parseado y distintivo «Solución disponible» (2026-08-04)
+
+Dos preguntas del fundador tras usar la fase 3a, y las dos respuestas útiles
+fueron distintas de las que pedía literalmente.
+
+**«Si el llms.txt es tan importante, ¿le damos más presencia?»** No. Está al
+fondo de la lista porque `pointDelta` es `null`: nuestro propio scoring dice
+que vale cero, y ese cero está bien puesto — `llms.txt` es un estándar
+**propuesto**, sin adopción confirmada por ningún motor. Subirlo a crítico
+sería afirmar un impacto que no podemos sostener; comportamiento de producto
+falso en forma de priorización en vez de en forma de dato. Lo que sí era real
+es que la fila cerrada no delataba que ahora trae solución dentro, así que
+nadie tenía motivo para abrirla: de ahí el distintivo **«Solución disponible»**,
+que informa sin tocar severidad ni orden.
+
+**«¿No deberíamos generar también el sitemap.xml?»** Tampoco, y aquí la
+diferencia no es de esfuerzo sino de qué es cada artefacto. Un `llms.txt` es
+una **guía curada**: que la mantenga una persona es lo normal. Un sitemap es un
+**índice generado por máquina** que debe seguir al sitio: uno estático nuestro
+estaría obsoleto en cuanto publiquen algo, y lo habríamos construido con las
+~15 URLs que conocemos de sus varios cientos. Además, en 2026 un sitio sin
+sitemap casi nunca necesita escribirlo — necesita activarlo. Los pasos apuntan
+al interruptor por plataforma.
+
+**Lo que sí faltaba era parsearlo.** La comprobación vieja era sólo de
+alcanzabilidad, y el fallo más común del mundo real la burla: un **404 blando**
+—página HTML de error servida con 200— contaba como «Encontrado». Ahora se
+distingue `urlset` / `index` / `invalid`. Coste: **cero peticiones nuevas**,
+porque `robots.ts` ya descargaba esos bytes y los tiraba. Ese detalle es la
+frontera de alcance, no una nota de rendimiento: parsear lo que ya tenemos no
+amplía la superficie de fetch, pero **seguir un índice hasta sus sitemaps hijo
+sí** —es seguir enlaces, o sea rastrear— y por eso no se hace; «índice» se
+reporta como estado propio.
+
+Dos honestidades que el código sostiene con tests: el recuento se muestra como
+«más de N» cuando el fichero vino truncado por el tope de 128 KB, porque un
+prefijo no es un total; y el campo nuevo es **opcional**, de forma que un
+snapshot anterior conserva su lectura de antes en vez de reinterpretarse — dar
+por medido lo que aquella auditoría nunca midió sería inventar una medición
+retroactiva.
+
+---
+
 **Los epígrafes son los prompts, y eso tiene un coste que no es estético.**
 Al mirar la captura real del pilot sobre mozilla.org se vio que las secciones
 salen en forma de pregunta (`## ¿Qué navegador web ofrece la mejor protección

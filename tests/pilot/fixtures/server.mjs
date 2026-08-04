@@ -437,7 +437,13 @@ function screenBody(path) {
              it — this is what makes that journey step provable against the
              fixture before it is trusted against production. -->
         <details class="wa-details">
-          <summary>Aviso · llms.txt · No encontrado</summary>
+          <summary>Aviso · sitemap.xml · No encontrado <span class="wa2-fix-ready">Solución disponible</span></summary>
+          <div class="wa-details-body">
+            <ol class="wa2-llms-steps"><li class="wa2-llms-step">Casi seguro que tu plataforma ya lo genera</li></ol>
+          </div>
+        </details>
+        <details class="wa-details">
+          <summary>Aviso · llms.txt · No encontrado <span class="wa2-fix-ready">Solución disponible</span></summary>
           <div class="wa-details-body">
             <pre># Marca de prueba
 

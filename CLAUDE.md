@@ -337,7 +337,7 @@ fase" (ver "Cierre de fase" más abajo).
 |---|---|---|---|
 | Competidores | `competitors.md` | COMPETITOR-SUGGESTIONS-1 (2026-08-03) | log §10, §11 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
-| Auditoría web | `web-audit.md` | AUDIT-AFTER-SCAN-1 · WEB-AUDIT-ISSUES-1 fase 3a (2026-08-04) | log §17, §18 · ADR 0027 · `docs/specs/web-audit/ROADMAP.md` |
+| Auditoría web | `web-audit.md` | WEB-AUDIT-SITEMAP-1 (2026-08-04) | log §17, §18 · ADR 0027 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | geo-score-v3 / ADR 0026 (2026-08-03) | ADR 0008/0015/0021/0024/0026 · log §8b |
 | Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
