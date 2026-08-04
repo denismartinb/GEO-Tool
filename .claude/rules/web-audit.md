@@ -82,3 +82,23 @@ y reentrar cuesta una llamada cacheada.
 Cualquier fase que añada trabajo por trabajo (más lotes, otro núcleo de
 auditoría) tiene que reajustar `MIN_JOB_BUDGET_MS` y el reserve, no sólo
 subir el límite del lote.
+
+### Reclamar un trabajo abandonado consume intento
+
+En `claimDueWebAuditJobs`, la rama que rescata trabajos varados en `running`
+**incrementa `attempt_count`** (data-guardian R1, 2026-08-04). Los cierres
+ordenados no son los únicos que mueven ese contador precisamente porque una
+invocación matada por la plataforma nunca llega a ellos: sin cobrar el intento
+aquí, un trabajo que la plataforma mate de forma sistemática se re-reclamaría
+cada `STALE_LOCK_MS` para siempre, gastando llamadas reales de Gemini en cada
+ciclo, sin alcanzar jamás `max_attempts` y por tanto **sin enviar nunca el
+email de alerta**. `runWebAuditJob` rechaza y falla un trabajo que ya esté en
+su techo, antes de cualquier llamada a Gemini.
+
+### `jobs.last_error` lo lee el dueño del proyecto
+
+`jobs` lleva RLS `jobs_select_owner`, así que el propietario puede leer
+`last_error` directamente por PostgREST. Ahí va **siempre un código estable**,
+nunca texto de error crudo — misma convención que el ejecutor de escaneos con
+`getSanitizedScanError`. El detalle crudo va al `console.error` y al email del
+operador, que no son superficies de usuario (data-guardian R2).

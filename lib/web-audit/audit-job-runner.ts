@@ -311,27 +311,53 @@ export async function claimDueWebAuditJobs({
 
   const claimed: WebAuditJobRow[] = [];
   for (const { claimFrom, ...candidate } of candidates) {
+    const isStaleReclaim = claimFrom[0] === "running";
+
+    // A reclaim CONSUMES an attempt, and that is not a detail.
+    //
+    // The ordered finishers (finishAttempt/finishContinuation) are the only
+    // other places attempt_count moves, and an invocation killed mid-batch
+    // never reaches them. So without this, a job the platform kills
+    // systematically is re-claimed every STALE_LOCK_MS forever: real Gemini
+    // calls burned on every cycle, attempt_count frozen below max_attempts,
+    // finishFailed never reached and therefore the alert email NEVER sent.
+    // That is precisely the failure this phase exists to remove — silent,
+    // unbounded, unreported — just moved one layer down (data-guardian R1).
+    //
+    // Charging the attempt here means a job that cannot survive an invocation
+    // exhausts its budget like any other failure and alerts the operator:
+    // runWebAuditJob refuses a job already at its ceiling and fails it.
+    const patch: Record<string, unknown> = {
+      status: "running",
+      locked_at: now.toISOString(),
+      locked_by: "web-audit-runner"
+    };
+    if (isStaleReclaim) patch.attempt_count = candidate.attempt_count + 1;
+
     // For a stale reclaim, `locked_at` must ALSO still be old at UPDATE time:
     // between the SELECT and here, the original owner could have come back to
     // life and re-locked it. Filtering on the status alone would then steal a
     // job that is legitimately running.
     let update = service
       .from("jobs")
-      .update({ status: "running", locked_at: now.toISOString(), locked_by: "web-audit-runner" })
+      .update(patch)
       .eq("id", candidate.id)
       .eq("project_id", candidate.project_id)
       .in("status", claimFrom);
 
-    if (claimFrom[0] === "running") {
+    if (isStaleReclaim) {
       update = update.lt("locked_at", staleBefore);
       console.warn(`${LOG_PREFIX} reclaiming abandoned job`, {
         projectId: candidate.project_id,
-        runId: candidate.run_id
+        runId: candidate.run_id,
+        attemptCount: candidate.attempt_count + 1
       });
     }
 
     const { data: won } = await update.select("id").maybeSingle();
-    if (won) claimed.push(candidate);
+    // Hand back the attempt_count that actually landed in the row, so the
+    // runner's exhaustion check sees the truth rather than the pre-claim value.
+    if (won) claimed.push(isStaleReclaim ? { ...candidate, attempt_count: candidate.attempt_count + 1 } : candidate);
   }
 
   return claimed;
@@ -379,6 +405,26 @@ export async function runWebAuditJob({
   const batchStartCutoffMs = Math.max(0, budgetMs - BATCH_START_MARGIN_MS);
   const continuations = readContinuations(job.payload_json);
 
+  // Budget already spent — only reachable via a stale reclaim, which charges
+  // an attempt (see claimDueWebAuditJobs). Failing here is what turns "the
+  // platform keeps killing this job" into an alert instead of an invisible
+  // loop. Runs BEFORE any Gemini call, so an exhausted job costs nothing.
+  if (job.attempt_count >= job.max_attempts) {
+    console.error(`${LOG_PREFIX} retry budget exhausted by repeated abandonment`, {
+      projectId: job.project_id,
+      runId: job.run_id,
+      attemptCount: job.attempt_count
+    });
+    return finishFailed(
+      service,
+      job,
+      "abandoned_repeatedly",
+      now,
+      job.attempt_count,
+      `the invocation running this job was killed before it could write back, ${job.attempt_count} times`
+    );
+  }
+
   if (continuations >= MAX_AUDIT_CONTINUATIONS) {
     // A campaign that never reports "completed" is a bug in the campaign, not
     // a capacity problem — treat it as a hard failure so it is alerted, not
@@ -388,7 +434,7 @@ export async function runWebAuditJob({
       runId: job.run_id,
       continuations
     });
-    return finishFailed(service, job, `continuation cap (${MAX_AUDIT_CONTINUATIONS}) reached`, now);
+    return finishFailed(service, job, "continuation_cap_reached", now, undefined, `cap is ${MAX_AUDIT_CONTINUATIONS}`);
   }
 
   const project = await loadProjectContext(service, job.project_id);
@@ -481,7 +527,9 @@ export async function runWebAuditJob({
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`${LOG_PREFIX} threw`, { projectId: job.project_id, runId: job.run_id, message });
-    return finishAttempt(service, job, message.slice(0, 500), now);
+    // Stable code in the row, raw text only to the log and the operator: the
+    // owner can read `last_error` through RLS (data-guardian R2).
+    return finishAttempt(service, job, "unexpected_error", now, message.slice(0, 500));
   }
 }
 
@@ -507,13 +555,24 @@ async function finishContinuation(
   return { result: "continue", continuations };
 }
 
-/** A real error: consume an attempt and apply the documented backoff. */
+/**
+ * A real error: consume an attempt and apply the documented backoff.
+ *
+ * `code` is a stable identifier, never raw error text. `jobs` carries RLS
+ * `jobs_select_owner`, so the project owner can read `last_error` straight
+ * out of PostgREST — the same reason the scan executor only ever writes
+ * `getSanitizedScanError` output there. `detail` carries the raw text to the
+ * places that are not user-readable: the server log and the operator email
+ * (data-guardian R2).
+ */
 async function finishAttempt(
   service: ServiceClient,
   job: WebAuditJobRow,
-  error: string,
-  now: Date
+  code: string,
+  now: Date,
+  detail?: string
 ): Promise<WebAuditJobOutcome> {
+  const error = code;
   const state = nextAuditJobState({
     previousAttemptCount: job.attempt_count,
     maxAttempts: job.max_attempts,
@@ -539,27 +598,33 @@ async function finishAttempt(
   }
 
   if (state.status === "failed") {
-    return finishFailed(service, job, error, now, state.attemptCount);
+    return finishFailed(service, job, error, now, state.attemptCount, detail);
   }
 
   // Unreachable: nextAuditJobState only returns "completed" for a null error.
   return { result: "completed" };
 }
 
-/** Retry budget exhausted: mark failed and alert the operator. */
+/**
+ * Retry budget exhausted: mark failed and alert the operator.
+ *
+ * Same split as finishAttempt — `code` is what lands in the owner-readable
+ * `last_error`; `detail` is raw and only reaches the log and the operator.
+ */
 async function finishFailed(
   service: ServiceClient,
   job: WebAuditJobRow,
-  error: string,
+  code: string,
   now: Date,
-  attemptCount: number = job.attempt_count + 1
+  attemptCount: number = job.attempt_count + 1,
+  detail?: string
 ): Promise<WebAuditJobOutcome> {
   await service
     .from("jobs")
     .update({
       status: "failed",
       attempt_count: attemptCount,
-      last_error: error,
+      last_error: code,
       locked_at: null,
       locked_by: null
     })
@@ -570,7 +635,8 @@ async function finishFailed(
     projectId: job.project_id,
     runId: job.run_id,
     attemptCount,
-    error
+    code,
+    detail
   });
 
   // The alert is the founder's explicit requirement ("en caso de que falle,
@@ -584,11 +650,12 @@ async function finishFailed(
     runId: job.run_id,
     attempts: attemptCount,
     windowMinutes: retryWindowMinutes(job.max_attempts),
-    lastError: error,
+    // The operator gets the full picture; the owner-readable row gets the code.
+    lastError: detail ? `${code}: ${detail}` : code,
     failedAt: now
   });
 
-  return { result: "failed", attemptCount, lastError: error };
+  return { result: "failed", attemptCount, lastError: code };
 }
 
 /** Terminal but expected. No alert — nothing is broken. */

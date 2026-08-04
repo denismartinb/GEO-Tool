@@ -83,6 +83,26 @@ reloj a cero.
 - Coste: cada escaneo pasa a gastar también las llamadas de grounding de la
   auditoría. Asumido explícitamente por el fundador. `AUTO_WEB_AUDIT_ENABLED=false`
   es la salida de emergencia.
+- **La ruta automática se salta la comprobación del límite, pero sí gasta el
+  contador** (data-guardian R3a, 2026-08-04). `checkGenerationRateLimit` cuenta
+  filas de `generated_solutions` y `checkSnapshotRateLimit` cuenta filas de
+  `web_audit_snapshots`; la ruta automática no las consulta, pero **inserta
+  igual las filas que se cuentan**. Con un escaneo diario es 1 de 5 y da igual.
+  Con varios escaneos en un mismo día, «Auditar ahora» puede empezar a decir
+  "has alcanzado el límite" por un presupuesto que el usuario no gastó.
+  Separarlos de verdad exige un discriminador en esas tablas, es decir
+  esquema: queda como coste conocido, no como algo que se nos pasó.
+- **El gasto automático es 1:1 con los escaneos, y los escaneos de Pro+ no
+  tienen tope diario** (data-guardian R3b). El plan Free está acotado por
+  construcción (una única ejecución completada, `lib/scan/run-creation.ts`),
+  pero en Pro+ la única puerta es `active_run_exists`. Antes el gasto de
+  auditoría estaba topado en 5/día/proyecto pasara lo que pasara; ahora hereda
+  un eje que ya era ilimitado. No es un eje **nuevo** de abuso —el escaneo en
+  sí es lo caro y ya lo era—, pero el peor caso de un Pro lanzando escaneos en
+  serie sube de 5 campañas/día a decenas. Recomendación de data-guardian, sin
+  implementar por no ser mecánica aprobada: un techo automático generoso
+  (~20/día/proyecto reutilizando `checkGenerationRateLimit` con otro `config`,
+  sin tocar esquema) que convierta "ilimitado" en "acotado y aburrido".
 - Ambos núcleos de auditoría se llaman con el cliente de servicio porque en
   esta ruta no hay sesión por construcción. Dicho con precisión, porque la
   formulación cómoda sería falsa: aquí el filtro

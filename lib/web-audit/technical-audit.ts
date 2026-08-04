@@ -383,12 +383,12 @@ export async function runTechnicalAuditCore({
       }
     }
 
-    const { data: projectDomainRaw } = await withTimeout(
-      supabase.from("projects").select("domain").eq("id", projectId).maybeSingle(),
-      "load_domain"
-    );
-    const domain = (projectDomainRaw as { domain: string } | null)?.domain ?? project.domain;
-    const projectDomainNormalized = normalizeDomain(domain);
+    // `project.domain` comes from the ownership-scoped query at the top of
+    // this function. A second read of the same column — filtered only by id —
+    // used to sit here; harmless on the user path but an unscoped read under
+    // the service role on the automatic one, and redundant either way
+    // (data-guardian R4, AUDIT-AFTER-SCAN-1).
+    const projectDomainNormalized = normalizeDomain(project.domain);
     const homepageUrl = `https://${projectDomainNormalized}/`;
 
     // Coverage-map candidate source: verified pages from the latest

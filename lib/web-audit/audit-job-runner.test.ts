@@ -340,6 +340,37 @@ describe("runWebAuditJob", () => {
     });
   });
 
+  it("gives up and alerts when a job has been abandoned until its budget is spent", async () => {
+    // The exhaustion check runs before any Gemini call, so the job that
+    // cannot survive an invocation stops costing money AND becomes visible.
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service, recorded } = makeService({});
+
+    const outcome = await runWebAuditJob({
+      service,
+      job: job({ attempt_count: 6, max_attempts: 6 }),
+      now: NOW
+    });
+
+    expect(mockedCoverage).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({ result: "failed", lastError: "abandoned_repeatedly" });
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "failed" });
+    expect(mockedAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it("never writes a raw error into last_error — the owner can read that column", async () => {
+    // `jobs` carries RLS jobs_select_owner, so last_error is reachable from
+    // PostgREST by the project owner. Stable code in the row; raw text only
+    // to the operator's email.
+    mockedCoverage.mockRejectedValue(new Error("connect ECONNREFUSED 10.0.0.1:5432"));
+    const { service, recorded } = makeService({});
+
+    await runWebAuditJob({ service, job: job({ attempt_count: 5, max_attempts: 6 }), now: NOW });
+
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ last_error: "unexpected_error" });
+    expect(mockedAlert.mock.calls[0][0].lastError).toContain("ECONNREFUSED");
+  });
+
   it("treats a thrown error as a retryable attempt, not a crash", async () => {
     mockedCoverage.mockRejectedValue(new Error("supabase exploded"));
     const { service, recorded } = makeService({});
@@ -347,7 +378,9 @@ describe("runWebAuditJob", () => {
     const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
 
     expect(outcome.result).toBe("retrying");
-    expect(jobUpdates(recorded).at(-1)).toMatchObject({ last_error: "supabase exploded" });
+    // Was asserting the raw message here. That is the behaviour data-guardian
+    // R2 rules out: last_error is owner-readable through RLS.
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ last_error: "unexpected_error" });
   });
 
   it("cancels when the project no longer exists", async () => {
@@ -398,6 +431,29 @@ describe("claimDueWebAuditJobs", () => {
     const claimed = await claimDueWebAuditJobs({ service, now: NOW });
 
     expect(claimed.map((j) => j.id)).toEqual(["abandoned"]);
+  });
+
+  it("charges an attempt when reclaiming, so repeated abandonment cannot loop forever", async () => {
+    // Without this the ordered finishers are the ONLY writers of
+    // attempt_count, and an invocation killed mid-batch never reaches them:
+    // the job would be re-claimed every 10 minutes indefinitely, burning real
+    // Gemini calls, never reaching max_attempts and therefore never alerting.
+    const { service, recorded } = makeService({ staleJobs: [job({ attempt_count: 2 })] });
+
+    const claimed = await claimDueWebAuditJobs({ service, now: NOW });
+
+    expect(jobUpdates(recorded)[0]).toMatchObject({ status: "running", attempt_count: 3 });
+    // The caller must see the count that actually landed, not the stale one.
+    expect(claimed[0].attempt_count).toBe(3);
+  });
+
+  it("does not charge an attempt on an ordinary due claim", async () => {
+    const { service, recorded } = makeService({ dueJobs: [job({ attempt_count: 2 })] });
+
+    const claimed = await claimDueWebAuditJobs({ service, now: NOW });
+
+    expect(jobUpdates(recorded)[0]).not.toHaveProperty("attempt_count");
+    expect(claimed[0].attempt_count).toBe(2);
   });
 
   it("does not steal a job whose lock is still fresh", async () => {
