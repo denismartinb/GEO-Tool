@@ -477,7 +477,15 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   const displacedPromptsCount = scoredResults.filter(
     (row) => !row.brand_mentioned && Math.max(0, row.mentioned_competitors_count ?? 0) > 0
   ).length;
-  const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeScoredTotal) * 100));
+  // Nullable for the same reason visibility_score is: with nothing readable,
+  // `safeScoredTotal` clamps to 1 and this persists a 0 — which the Overview
+  // then renders as "Presión competitiva: 0% · Baja", a green, reassuring claim
+  // about a scan that read nothing. QA caught this one round after the same
+  // defect was fixed for presence; it is not part of geoScoreComponents, so
+  // none of the composite's dropping machinery covered it.
+  const competitorGapScoreValue: number | null =
+    scoredTotal > 0 ? round2(clamp(0, 100, (displacedPromptsCount / scoredTotal) * 100)) : null;
+  const competitorGapScore = competitorGapScoreValue ?? 0;
 
   // "high" requires >=20 fully-extracted results (was >=5): with one LLM
   // sample per prompt/engine, 5 results give each answer a 20-point swing on
@@ -533,6 +541,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // prominence/authority), instead of fabricating a 100. The v1 value is kept
   // below as standing_v1 for comparison only, mirroring how ADR 0013 retained
   // citation_score_any_domain.
+  // Comparison-only figure (ADR 0015), read by nothing; the ?? 0 above is
+  // harmless here because standing itself is dropped on an unreadable run.
   const standingV1 = clamp(0, 100, 100 - competitorGapScore);
   const sovDenominator = brandMentionedCount + totalCompetitorMentions;
   // A run with zero TRACKED competitors (brandPosition.total_entities <= 1,

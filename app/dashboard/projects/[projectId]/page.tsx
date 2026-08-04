@@ -356,12 +356,16 @@ export default async function ProjectDetailPage({
    * If total_resolved_citations === 0 → null ("Sin datos").
    */
   const citationShareResult: { share: number | null; ownCitations: number; totalCitations: number } = (() => {
-    if (!allPromptResults?.length) return { share: null, ownCitations: 0, totalCitations: 0 };
+    // Scorable rows only, by contract rather than by coincidence: a row with
+    // an extraction_error has no citations to read today, but relying on that
+    // is the "coincides by construction" pattern QA has now flagged three
+    // times in this file (geo-score-v4, docs/adr/0027).
+    if (!scorableResults.length) return { share: null, ownCitations: 0, totalCitations: 0 };
 
     let totalResolved = 0;
     let ownCitations = 0;
 
-    for (const result of allPromptResults) {
+    for (const result of scorableResults) {
       const ext = parseExt(result.extracted_json);
       for (const cit of ext.citations ?? []) {
         if (cit.source !== "grounding") continue;
@@ -898,6 +902,19 @@ export default async function ProjectDetailPage({
           {/* 3 · Indicadores clave — KPI carousel */}
           <div className="ov2-hero-kpis">
           <div className="ov2-sec-lbl">Indicadores clave</div>
+          {/* Every card below is a measurement over this scan's responses. With
+              none of them readable there is nothing to measure, and each card
+              would render a bare "0%" that reads as measured — "Presión
+              competitiva: 0% · Baja" is a green, reassuring claim about a scan
+              that read nothing. Gating them one by one is how this defect kept
+              reappearing a field further out through three QA rounds, so the
+              strip goes as a whole. */}
+          {scoreUnavailable ? (
+            <div className="card" style={{ padding: 18, color: "var(--ink-3)", fontSize: 13.5 }}>
+              Sin indicadores para este escaneo: ninguna de sus respuestas pudo procesarse.
+            </div>
+          ) : (
+          <>
           <div className="ov2-kpi-car">
             {[
               {
@@ -1069,6 +1086,8 @@ export default async function ProjectDetailPage({
               </div>
             ))}
           </div>
+          </>
+          )}
           </div>
           </div>
 
@@ -1081,7 +1100,14 @@ export default async function ProjectDetailPage({
           {/* 4 · Posicionamiento por motores de IA */}
           <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
           <div className="card" style={{ padding: 18 }}>
-            {engineBreakdown.length > 0 ? (
+            {/* computeEngineBreakdown reads brand_mentioned off every row,
+                readable or not, so on an unreadable scan every engine would
+                draw a 0%-wide bar presented as a measured comparison. */}
+            {scoreUnavailable ? (
+              <div style={{ color: "var(--ink-3)", fontSize: 13.5 }}>
+                Ninguna respuesta de este escaneo pudo procesarse, así que no hay comparación por motor.
+              </div>
+            ) : engineBreakdown.length > 0 ? (
               engineBreakdown.map((e) => {
                 const meta = getEngineMeta(e.provider);
                 return (
@@ -1232,7 +1258,7 @@ export default async function ProjectDetailPage({
                     <div className="ov2-opps-s">
                       {roundedJointPoints !== null
                         ? "Techo optimista si resuelves estas acciones — tu próximo escaneo lo confirma."
-                        : topCompetitor && topCompetitor.mentionRate > computedMentionRate
+                        : !scoreUnavailable && topCompetitor && topCompetitor.mentionRate > computedMentionRate
                           ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
                           : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
                     </div>

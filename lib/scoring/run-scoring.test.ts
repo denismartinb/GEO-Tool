@@ -1561,6 +1561,21 @@ describe("computeRunScoresFromResults — a technical failure is not a finding (
     ).toBeNull();
   });
 
+  it("publishes competitive pressure as an unmeasured 0 that the UI must gate, not as a real 'Baja'", () => {
+    // competitor_gap_score is NOT part of the composite, so none of the
+    // component-dropping machinery covers it. Its persisted column is non-null,
+    // so 0 is the only value it can carry — which is exactly why the Overview
+    // has to gate the card on scored_results_count rather than trusting the
+    // number. QA caught this a full round after presence was fixed, which is
+    // what this test exists to stop happening again.
+    const result = computeRunScoresFromResults([failed(), failed()], PROJECT_DOMAIN);
+
+    expect(result.details_json.scored_results_count).toBe(0);
+    expect(result.competitor_gap_score).toBe(0);
+    // The signal a consumer must branch on — never the 0 itself.
+    expect(result.details_json.unscorable_results_count).toBe(2);
+  });
+
   it("leaves a run with no failures scoring exactly as before", () => {
     // The guard must be inert on healthy data — this phase changes what
     // happens to broken rows, nothing else.
