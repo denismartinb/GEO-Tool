@@ -165,6 +165,75 @@ convergence/termination guarantees and capacity math.
 
 ---
 
+## Structured extraction (EXTRACTION-RELIABILITY-1)
+
+Extraction is not a postscript to a run — it is what produces
+`extracted_json`, and therefore everything the product scores and displays. A
+row holding a real engine answer that nothing extracted is invisible to the
+entire product, so the lifecycle treats it as unfinished work, not as a
+detail.
+
+**Extraction runs per batch, plus a final sweep.** Each batch extracts the
+rows it just generated, in the same invocation; the finalize batch runs one
+more pass to catch anything an earlier pass could not reach. Before
+EXTRACTION-RELIABILITY-1 it ran exactly once, at finalize, capped at 20 rows
+(`MAX_EXTRACTION_RESULTS`) — a cap sized when a run was a single batch and
+never revisited after SCAN-CHAIN-1 made campaigns span many. Everything past
+the 20th row was silently discarded: on a 30-row run that was a third of the
+answers, on a 300-row Pro run 93%. See `docs/adr/0029`.
+
+**A pass is bounded by rate and time, never by row count.**
+`EXTRACTION_CONCURRENCY` (4) bounds in-flight calls. The time bound is
+`SCAN_INVOCATION_WORK_BUDGET_MS` (45s) and it belongs to the **whole
+invocation**, not to each pass: `executePendingScan` computes one absolute
+deadline at entry and threads it into every extraction pass it runs, so
+generation, the batch pass and the finalize sweep all draw from the same
+budget. Rows a pass cannot reach stay eligible for the next invocation. A
+per-pass budget instead of a shared one is what killed a real scan in preview
+— see `docs/adr/0029`, Addendum.
+
+**A finalize claim is leased, not permanent.** Because extraction now runs
+inside the finalize step, that step is long enough to be killed mid-flight, and
+a killed invocation cannot release the `scan_finalize` job it claimed. Nothing
+else recovers a `jobs` row — `reconcileStuckScanRuns` only touches
+`scan_runs` — so a job whose `locked_at` is older than
+`FINALIZE_LOCK_LEASE_MS` (90s) may be taken over by another invocation, via the
+same atomic claim the prompt batches use. Without this, one killed invocation
+stranded the campaign permanently.
+
+**Per-call retries.** Every extraction call goes through
+`fetchExtractionWithRetry` (`lib/llm/extraction-fetch.ts`):
+`EXTRACTION_CALL_TIMEOUT_MS` (20s) per attempt, `EXTRACTION_MAX_ATTEMPTS` (3)
+with exponential backoff plus full jitter, honoring a clamped `Retry-After`.
+429 and 5xx are retryable; 400/401/403 are not (the key or model id is wrong,
+and retrying only burns budget the remaining rows need). Before this phase,
+extraction on all three providers had neither a timeout nor a retry while
+generation had both — which is why every observed provider outage killed
+extraction and left generation working.
+
+**Failures are categorized and sanitized.** `extraction_error` stores
+`category: message`, where category is one of `quota | timeout | http | empty
+| invalid_json | schema | config | unknown`. Only messages this codebase
+authored are ever persisted; anything else is flattened to
+`unknown: Extraction failed.`. Query a provider outage with
+`extraction_error LIKE 'quota:%'`.
+
+**A row that failed extraction is not re-attempted within the run.** It has
+already spent its bounded retries and carries a truthful error. Re-queueing it
+every pass would let one systematic failure consume the whole budget and
+starve rows nothing has looked at yet.
+
+**Finalize defers rather than completing over a hole.** If
+`countUnprocessedExtractionRows` is non-zero at finalize, the `scan_finalize`
+job is released back to `pending`, progress counters are refreshed (bumping
+`updated_at`, so the reconciliation pass does not mistake a deferring run for
+a stalled one) and a continuation is scheduled. Termination is guaranteed:
+every pass either extracts a row or records an error on it, and both take that
+row out of the unprocessed set. A genuine stall is still caught by the
+timeout + auto-retry below.
+
+---
+
 ## Timeout detection and auto-retry (`reconcileStuckScanRuns`)
 
 A run in `running` state whose `updated_at` is older than
@@ -239,7 +308,15 @@ the underlying configuration and launches a new scan manually.
 3. **No silent hangs.** If the execution process dies (Vercel timeout, OOM,
    crash), `reconcileStuckScanRuns` eventually corrects the DB row to
    `failed` (with auto-retry, see above).
-4. **No user-facing cancel today.** There is no cancel-scan action or button.
+4. **No mute rows.** A run may not be marked `completed` while it holds an
+   engine answer that nothing has tried to extract. Either the row carries
+   `extracted_json` at the current `EXTRACTION_VERSION`, or it carries a
+   categorized `extraction_error` explaining why not. Completing over such a
+   gap publishes a score computed from a fraction of the run's own data and
+   calls it done — which is exactly what happened before
+   EXTRACTION-RELIABILITY-1 (`docs/adr/0029`). Enforced in `executePendingScan`
+   via `countUnprocessedExtractionRows`.
+5. **No user-facing cancel today.** There is no cancel-scan action or button.
    A user blocked by a stuck `pending`/`running` run relies on the timeout +
    auto-retry mechanism above, not on cancelling it themselves. Adding a
    cancel action is tracked as a future phase (see

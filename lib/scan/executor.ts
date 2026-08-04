@@ -15,15 +15,17 @@ import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
   EXTRACTION_VERSION,
+  FINALIZE_LOCK_LEASE_MS,
   MAX_REAL_SCAN_PROMPTS,
   PROMPT_RETRY_DELAY_MS,
   PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
-  PROMPT_VERSION
+  PROMPT_VERSION,
+  SCAN_INVOCATION_WORK_BUDGET_MS
 } from "@/lib/scan/constants";
 import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
-import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 import { emitNotification } from "@/lib/notifications/emit";
 import { getSiteUrl } from "@/lib/site-url";
 import { enqueueWebAuditJob } from "@/lib/web-audit/audit-job-runner";
@@ -519,6 +521,13 @@ export async function executePendingScan({
    */
   scheduleContinuation?: boolean;
 }) {
+  // One absolute deadline for everything this invocation does. Generation
+  // spends from it first; whatever remains is what extraction gets, across
+  // both the batch pass and the finalize sweep. See
+  // SCAN_INVOCATION_WORK_BUDGET_MS — a per-pass budget is what pushed the
+  // final batch's invocation past Vercel's 60s ceiling in production.
+  const workDeadlineAt = Date.now() + SCAN_INVOCATION_WORK_BUDGET_MS;
+
   const { data: run, error: runError } = await supabase
     .from("scan_runs")
     .select("id, project_id, status, total_prompts")
@@ -735,6 +744,22 @@ export async function executePendingScan({
       }
 
       await refreshRunProgressCounters({ service, projectId, runId });
+
+      // EXTRACTION-RELIABILITY-1: extract this batch's rows in the same
+      // invocation that generated them, instead of leaving every row in the
+      // campaign to a single pass at finalize. That pass was capped at 20
+      // rows and silently dropped the rest; spreading the work across the
+      // batches that produce it is what makes an uncapped extraction fit the
+      // ~60s budget at all (docs/adr/0029). Anything this pass cannot reach
+      // stays eligible for the next batch or for the finalize sweep below.
+      await runStructuredExtractionForRun({ service, projectId, runId, deadlineAt: workDeadlineAt });
+
+      // Second progress write, after the pass rather than only before it, so
+      // every invocation bumps `scan_runs.updated_at` on its way out. Without
+      // it, a long extraction pass is indistinguishable from a stalled
+      // campaign to `reconcileStuckScanRuns`, which keys staleness on
+      // `updated_at` — a run doing real work must never look stuck.
+      await refreshRunProgressCounters({ service, projectId, runId });
     }
 
     // Not just `pending`: a job another concurrent invocation is actively
@@ -782,15 +807,17 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed");
     }
 
+    const finalizeClaim = {
+      status: "running",
+      locked_at: nowIso,
+      locked_by: "gemini-executor",
+      attempt_count: finalizeJob.attempt_count + 1,
+      last_error: null
+    };
+
     const { data: claimedFinalize, error: claimFinalizeError } = await service
       .from("jobs")
-      .update({
-        status: "running",
-        locked_at: nowIso,
-        locked_by: "gemini-executor",
-        attempt_count: finalizeJob.attempt_count + 1,
-        last_error: null
-      })
+      .update(finalizeClaim)
       .eq("id", finalizeJob.id)
       .eq("project_id", projectId)
       .eq("run_id", runId)
@@ -802,10 +829,52 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed");
     }
 
-    if (!claimedFinalize) {
-      // Another invocation already claimed (or already completed) finalize
-      // for this campaign.
-      return;
+    let ownsFinalize = Boolean(claimedFinalize);
+
+    if (!ownsFinalize) {
+      // Not pending. Either another invocation is genuinely working on it, or
+      // it is a corpse: an invocation that claimed finalize and was killed
+      // (Vercel `maxDuration`) before it could complete or release the job.
+      // Nothing else recovers that — `reconcileStuckScanRuns` only ever
+      // touches `scan_runs`, never `jobs` — so before this lease, one killed
+      // invocation stranded the campaign for good: every later invocation
+      // failed the pending-claim, returned here doing nothing, and
+      // `updated_at` stopped moving until the run was failed as stuck. That
+      // is the 2026-08-04 IKEA failure (run 9608d861), and it cost a full
+      // re-scan of 26 prompts × 3 engines to recover from.
+      //
+      // Taking over a lock older than the lease is still exclusive: whichever
+      // invocation's UPDATE commits first moves `locked_at`, so every racing
+      // one stops matching the predicate — same atomic claim the prompt
+      // batches use.
+      const leaseExpiredBefore = new Date(Date.now() - FINALIZE_LOCK_LEASE_MS).toISOString();
+
+      const { data: reclaimedFinalize } = await service
+        .from("jobs")
+        .update(finalizeClaim)
+        .eq("id", finalizeJob.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running")
+        .lt("locked_at", leaseExpiredBefore)
+        .select("id")
+        .maybeSingle();
+
+      if (!reclaimedFinalize) {
+        // Genuinely held by a live invocation (or already completed).
+        return;
+      }
+
+      await logJob(service, {
+        jobId: finalizeJob.id,
+        projectId,
+        runId,
+        level: "warn",
+        message: "Reclaimed a finalize job whose lock lease expired.",
+        context: { providers }
+      });
+
+      ownsFinalize = true;
     }
 
     const { count: totalSuccessCount } = await service
@@ -826,11 +895,59 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed_no_results");
     }
 
+    // Final sweep: picks up rows whose batch pass ran out of budget, plus
+    // any row belonging to a batch driven by an invocation that died before
+    // its own pass finished.
     await runStructuredExtractionForRun({
       service,
       projectId,
-      runId
+      runId,
+      deadlineAt: workDeadlineAt
     });
+
+    // EXTRACTION-RELIABILITY-1 invariant: a run may not be marked `completed`
+    // while it still holds answers nothing has tried to extract. Scoring runs
+    // on `extracted_json`, so completing here would publish a score computed
+    // from a fraction of the run's own data and call it done — which is
+    // exactly the failure this phase exists to remove.
+    //
+    // Rather than fail (which would throw away good data) or complete
+    // anyway (which would hide the gap), the finalize job is released back to
+    // `pending` so a fresh invocation — with a fresh budget — can finish the
+    // work. Progress is strictly monotonic: every pass either extracts a row
+    // or records a categorized error on it, and both take that row out of the
+    // unprocessed set, so this can only repeat a bounded number of times. If
+    // it somehow stalls entirely, the run stops bumping `updated_at` and
+    // `reconcileStuckScanRuns` applies its usual timeout + auto-retry.
+    const unprocessedCount = await countUnprocessedExtractionRows({ service, projectId, runId });
+
+    if (unprocessedCount > 0) {
+      await logJob(service, {
+        jobId: finalizeJob.id,
+        projectId,
+        runId,
+        level: "warn",
+        message: "Extraction incomplete; deferring finalize to another invocation.",
+        context: { unprocessed: unprocessedCount, providers }
+      });
+
+      await service
+        .from("jobs")
+        .update({ status: "pending", locked_at: null, locked_by: null })
+        .eq("id", finalizeJob.id)
+        .eq("project_id", projectId)
+        .eq("run_id", runId);
+
+      // Bumps scan_runs.updated_at via the DB trigger, so the deferred run
+      // does not look stalled to the reconciliation pass while it is in fact
+      // still advancing.
+      await refreshRunProgressCounters({ service, projectId, runId });
+
+      if (scheduleContinuation) {
+        after(() => triggerScanContinuation({ projectId, runId }));
+      }
+      return;
+    }
 
     const { data: promptResults } = await service
       .from("scan_prompt_results")
