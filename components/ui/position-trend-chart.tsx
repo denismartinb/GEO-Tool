@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
+import { buildSeriesPaths, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
 
 export type TrendSeries = {
   key: string;
@@ -45,7 +46,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
     () => new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key))
   );
 
-  if (data.length < 2) return null;
+  if (data.length < MIN_TREND_POINTS) return null;
 
   const visible = series.filter((s) => !hidden.has(s.key));
   const plotW = W - PAD_LEFT - PAD_RIGHT;
@@ -144,28 +145,14 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
         ))}
 
         {visible.map((s) => {
-          // Step, not interpolation: a rank changes from one scan to the next,
-          // it does not slide through the values in between. A smooth line
-          // would draw positions that were never measured.
-          const segments: string[] = [];
-          let current = "";
-          let prev: { x: number; y: number } | null = null;
-
-          data.forEach((d, i) => {
-            const v = d.values[s.key];
-            if (v == null) {
-              if (current) segments.push(current);
-              current = "";
-              prev = null;
-              return;
-            }
-            const px = xFor(i);
-            const py = yFor(v);
-            if (!prev) current = `M${px.toFixed(1)} ${py.toFixed(1)}`;
-            else current += ` H${px.toFixed(1)} V${py.toFixed(1)}`;
-            prev = { x: px, y: py };
-          });
-          if (current) segments.push(current);
+          // Straight segments between measurements — see buildSeriesPaths for
+          // why this is not a step chart.
+          const segments = buildSeriesPaths(
+            data.map((d, i) => {
+              const v = d.values[s.key];
+              return v == null ? null : { x: xFor(i), y: yFor(v) };
+            })
+          );
 
           return (
             <g key={s.key}>

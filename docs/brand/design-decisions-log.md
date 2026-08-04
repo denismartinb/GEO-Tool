@@ -1363,6 +1363,24 @@ Lógica extraída a `lib/competitors/trend-window.ts` con 9 tests, siguiendo el
 patrón del resto de la zona (`filterComparableEngines`, `computeTopicComparison`):
 la página es un componente de servidor y la lógica inline ahí no se puede probar.
 
+**Tercer hallazgo: el gráfico era una escalera.** Con los proyectos reducidos a
+2 puntos se hizo visible lo que antes se perdía entre 20: la línea no unía
+punto con punto, sino que trazaba un tramo horizontal y luego caía en vertical.
+Estaba hecho a propósito, con este razonamiento en el código: *"a rank changes
+from one scan to the next, it does not slide through the values in between"*.
+El fundador lo rechazó —*"la línea tiene que unir un punto con otro; es un
+gráfico en escalera que no tiene sentido"*— y tenía razón: **un escalón afirma
+que el valor se mantuvo plano hasta el instante del escaneo siguiente**, que es
+una afirmación sin medir *más* fuerte que la de una diagonal, además de leerse
+como un fallo. Los puntos ya marcan dónde hay medición real; la línea sólo
+conecta. Cambiado a segmentos rectos (`buildSeriesPaths`, con test que prohíbe
+explícitamente `H`/`V` en el trazo).
+
+**Y el umbral sube de 2 a 4 escaneos** (`MIN_TREND_POINTS`). Dos es el mínimo
+matemático de una recta y el número equivocado de producto: son dos rayas planas
+de lado a lado. Decisión del fundador tras ver tres proyectos distintos en ese
+estado.
+
 **Segundo hallazgo, al verlo desplegado: el estado vacío mentía sobre el motivo.**
 El fundador probó el preview y vio dos cosas raras: Movistar decía *"0 de 2
 escaneos"* teniendo **21**, y Mozilla dibujaba dos puntos planos de lado a lado.

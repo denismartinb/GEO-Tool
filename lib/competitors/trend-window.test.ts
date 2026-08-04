@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { MAX_TREND_POINTS, selectTrendWindow, type TrendWindowPoint } from "./trend-window";
+import {
+  buildSeriesPaths,
+  MAX_TREND_POINTS,
+  MIN_TREND_POINTS,
+  selectTrendWindow,
+  type TrendWindowPoint
+} from "./trend-window";
 
 function point(date: string, values: Record<string, number | null | undefined>): TrendWindowPoint {
   return { date, values };
@@ -82,5 +88,46 @@ describe("selectTrendWindow", () => {
       { date: "b", runId: "run-b", values: { brand: 2 } }
     ];
     expect(selectTrendWindow({ points }).map((p) => p.runId)).toEqual(["run-a", "run-b"]);
+  });
+});
+
+describe("buildSeriesPaths", () => {
+  it("10. connects points with straight segments — never a staircase", () => {
+    const [path] = buildSeriesPaths([
+      { x: 0, y: 10 },
+      { x: 50, y: 30 }
+    ]);
+
+    expect(path).toBe("M0.0 10.0 L50.0 30.0");
+    // The exact defect the founder reported: H/V pairs draw a step, which
+    // claims the value held flat until the instant of the next scan.
+    expect(path).not.toContain("H");
+    expect(path).not.toContain("V");
+  });
+
+  it("11. breaks into separate segments around a gap, so a missing scan is not drawn through", () => {
+    const paths = buildSeriesPaths([
+      { x: 0, y: 10 },
+      { x: 10, y: 12 },
+      null,
+      { x: 30, y: 20 },
+      { x: 40, y: 22 }
+    ]);
+
+    expect(paths).toHaveLength(2);
+    expect(paths[0]).toBe("M0.0 10.0 L10.0 12.0");
+    expect(paths[1]).toBe("M30.0 20.0 L40.0 22.0");
+  });
+
+  it("12. a lone point still emits a move, so its dot is not orphaned by an empty path", () => {
+    expect(buildSeriesPaths([{ x: 5, y: 5 }])).toEqual(["M5.0 5.0"]);
+  });
+
+  it("13. an all-null series produces no path at all", () => {
+    expect(buildSeriesPaths([null, null])).toEqual([]);
+  });
+
+  it("14. a trend needs 4 points, not the mathematical minimum of 2", () => {
+    expect(MIN_TREND_POINTS).toBe(4);
   });
 });

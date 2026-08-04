@@ -17,7 +17,7 @@ import {
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
-import { selectTrendWindow } from "@/lib/competitors/trend-window";
+import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
@@ -416,7 +416,7 @@ export default async function CompetitorsPage({
   // Counted over the visible window, so the countdown copy and the chart can
   // never disagree about how much position data there is.
   const validTrendPoints = chartTrendData.filter((d) => d.values.brand != null).length;
-  const hasTrendData = validTrendPoints >= 2;
+  const hasTrendData = validTrendPoints >= MIN_TREND_POINTS;
 
   /* How many completed scans carry no position data at all. Pre-v3 runs have
      no `avg_position_when_mentioned` for ANY entity and were deliberately not
@@ -838,13 +838,13 @@ export default async function CompetitorsPage({
                           <b className="tnum">
                             {chartTrendData.length} de {completedRuns.length}
                           </b>{" "}
-                          escaneos ya lo tienen; hacen falta 2. Cada escaneo nuevo suma.
+                          escaneos ya lo tienen; hacen falta {MIN_TREND_POINTS}. Cada escaneo nuevo suma.
                         </>
                       ) : (
                         <>
-                          Disponible a partir de 2 escaneos con datos de posición.{" "}
+                          Disponible a partir de {MIN_TREND_POINTS} escaneos con datos de posición.{" "}
                           <b className="tnum">
-                            {validTrendPoints} de 2
+                            {validTrendPoints} de {MIN_TREND_POINTS}
                           </b>{" "}
                           por ahora.
                         </>

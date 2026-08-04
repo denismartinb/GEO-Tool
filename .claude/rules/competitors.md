@@ -57,6 +57,15 @@ limpio (log §11).
   como un gráfico roto (TREND-WINDOW-1, log §15).
 - **Que una serie suelta valga null sí es información** ("esa marca no salió en
   ese escaneo") y debe seguir cortando **su** línea. No confundir los dos casos.
+- **La línea une puntos con rectas, nunca en escalera.** El gráfico usaba pares
+  `H`/`V` argumentando que "un puesto no se desliza por los valores
+  intermedios" — pero un escalón afirma que el valor se mantuvo plano hasta el
+  instante del escaneo siguiente, que es una afirmación *más* fuerte sin medir
+  que una diagonal, y se lee como un fallo de dibujado. Los puntos marcan la
+  medición; la línea sólo conecta (`buildSeriesPaths`, log §15).
+- **Mínimo 4 escaneos para dibujar tendencia** (`MIN_TREND_POINTS`). Dos puntos
+  es el mínimo matemático de una recta y el número equivocado de producto: sale
+  como dos rayas planas de lado a lado y parece roto.
 - **Ventana de los últimos 15 escaneos** (`MAX_TREND_POINTS`,
   `lib/competitors/trend-window.ts`). Se **filtra primero y se recorta después**:
   al revés se gastarían huecos de la ventana en columnas que no pintan nada.
