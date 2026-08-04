@@ -326,6 +326,11 @@ export default async function ProjectDetailPage({
     typeof scoreDetails.scored_results_count === "number" && scoreDetails.scored_results_count === 0;
   const gaugeScoreValue: number | null =
     typeof geoScore?.score === "number" ? geoScore.score : readNothing ? null : visibilityScore;
+  /* When this is true the scan produced no readable evidence at all, so there
+   * is no score, no mention rate and no band — not a zero of any of them. It
+   * has to reach the render: computing the null and then `?? 0`-ing it one
+   * line later is how the fabricated zero survived a whole QA round. */
+  const scoreUnavailable = gaugeScoreValue === null;
   const gaugeScore = Math.round(gaugeScoreValue ?? 0);
 
   /* Same rule the scoring uses (geo-score-v4, docs/adr/0027): a row whose
@@ -410,7 +415,10 @@ export default async function ProjectDetailPage({
   const sampleSufficient = hasSufficientSample(totalResults);
   const resolve = (value: number): DeltaVerdict | null =>
     previousRun ? resolveDelta(value, currentRun, previousRun) : null;
-  const gaugeDeltaVerdict = geoTrend.length >= 2 ? resolve(gaugeDelta) : null;
+  // No delta at all on a run that read nothing — every consumer below would
+  // otherwise compare against a zero that was never measured (the sparkline
+  // caption included).
+  const gaugeDeltaVerdict = !scoreUnavailable && geoTrend.length >= 2 ? resolve(gaugeDelta) : null;
   const visDeltaVerdict = resolve(visDelta);
   const gapDeltaVerdict = resolve(gapDelta);
 
@@ -761,11 +769,28 @@ export default async function ProjectDetailPage({
               {/* "prompts" here counted prompt × engine rows, not prompts: a
                   project with 1 prompt scanned on 3 engines read "3 de 3
                   prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1). */}
-              GenScore detectó que <b>{project.brand}</b> aparece en{" "}
-              <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
-              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
-              <b>puntuación GEO de {gaugeScore}/100</b>.
-              {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
+              {scoreUnavailable ? (
+                <>
+                  {/* "0 de 20 respuestas" would describe a brand nobody
+                      mentioned. What actually happened is that no response
+                      could be read, which is a scan problem, not a visibility
+                      finding. */}
+                  Ninguna de las <b>{totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
+                  de este escaneo pudo procesarse, así que no hay puntuación ni tasa de mención que mostrar.
+                  Vuelve a lanzar el escaneo.
+                </>
+              ) : (
+                <>
+                  GenScore detectó que <b>{project.brand}</b> aparece en{" "}
+                  <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
+                  ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
+                  <b>puntuación GEO de {gaugeScore}/100</b>.
+                </>
+              )}
+              {/* The rival comparison reads off computedMentionRate, which is
+                  meaningless on an unreadable run — "te saca ventaja: 40% frente
+                  a tu 0%" would be the same false finding in another sentence. */}
+              {!scoreUnavailable && topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
                   {" "}Tu rival más visible,{" "}
                   <b>{topCompetitor.name}</b>, te saca ventaja:{" "}
@@ -806,7 +831,26 @@ export default async function ProjectDetailPage({
           {/* 2 · Compact gauge card (score + trend) */}
           <div className="ov2-gauge-card">
             <div className="ov2-gauge-ring">
-              <Gauge value={gaugeScore} size={96} stroke={10} />
+              {scoreUnavailable ? (
+                <div
+                  style={{
+                    width: 96,
+                    height: 96,
+                    display: "grid",
+                    placeItems: "center",
+                    borderRadius: "50%",
+                    border: "10px solid var(--line-soft)",
+                    color: "var(--ink-4)",
+                    fontSize: 26,
+                    fontWeight: 700
+                  }}
+                  title="Ninguna respuesta de este escaneo pudo leerse, así que no hay puntuación que mostrar."
+                >
+                  —
+                </div>
+              ) : (
+                <Gauge value={gaugeScore} size={96} stroke={10} />
+              )}
             </div>
             <div className="ov2-gauge-info">
               <div className="ov2-gauge-lbl">Puntuación GEO</div>
@@ -821,10 +865,12 @@ export default async function ProjectDetailPage({
                     broken rather than as careful (founder decision,
                     2026-08-03). The single actionable line under the gauge
                     below is what keeps the absence explainable. */}
-                {sampleSufficient ? (
+                {/* No band and no delta on a run that read nothing: both would
+                    be interpretations of a zero that was never measured. */}
+                {sampleSufficient && !scoreUnavailable ? (
                   <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
                 ) : null}
-                {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
+                {!scoreUnavailable && gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
                   <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
                 )}
               </div>
