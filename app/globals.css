@@ -5869,7 +5869,9 @@ select.set-field {
 
 /* --- Maqueta de respuesta generativa (mención vs citación) ---------------- */
 .art-ans-pair { display: grid; gap: 13px; }
-@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; } }
+/* En dos columnas el hueco tiene que separar dos textos largos, no dos
+   tarjetas apiladas: 13px se queda corto ahí (mejora del ux-pilot, PR #311). */
+@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; gap: 20px; } }
 .art-ans {
   display: flex; flex-direction: column; gap: 9px;
   padding: 15px 16px; border-radius: 10px;
