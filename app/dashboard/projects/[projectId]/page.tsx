@@ -310,6 +310,14 @@ export default async function ProjectDetailPage({
     scoreDetails.brand_mentioned_count ??
       allPromptResults?.filter((r) => r.brand_mentioned).length
   );
+  /* Responses the run could actually read. From geo-score-v4 on,
+   * brand_mentioned_count counts ONLY these, so pairing it with total_results
+   * produces a sentence that contradicts itself — "9 de 18 (75%)" was on
+   * screen, and 9/18 is 50%. The rate is right; the denominator was the wrong
+   * one (founder, 2026-08-04). Falls back to total_results for pre-v4 runs,
+   * where the two scopes were the same thing. */
+  const scoredResultsTotal = n(scoreDetails.scored_results_count ?? totalResults);
+  const unreadableResults = Math.max(0, totalResults - scoredResultsTotal);
   const visibilityScore = n(latestScore?.visibility_score);
   const citationScore = n(latestScore?.citation_score);
   const competitorPressureScore = n(latestScore?.competitor_gap_score);
@@ -331,6 +339,39 @@ export default async function ProjectDetailPage({
    * has to reach the render: computing the null and then `?? 0`-ing it one
    * line later is how the fabricated zero survived a whole QA round. */
   const scoreUnavailable = gaugeScoreValue === null;
+
+  /* ---- how precise is this number, really? ------------------------------
+   * Founder, 2026-08-04, after watching the score move 30 -> 51 across a
+   * methodology change: *"me da sensación de poca precisión una nota que
+   * varía así… ¿quién me dice a mí que ahora sí refleja la realidad y antes
+   * no?"* — and he was right. The two mention rates behind those two scores
+   * (7/18 and 9/12) have 95% Wilson intervals of 20–61% and 47–91%. They
+   * OVERLAP. Statistically the two runs are not distinguishable, so neither
+   * number was ever precise enough to be "the right one".
+   *
+   * Presence is the one component whose sampling error we can compute
+   * honestly, and it carries the largest weight (.40). Propagating its Wilson
+   * half-width through presence's normalized share of the composite gives a
+   * floor on the composite's own uncertainty — a LOWER BOUND, never the whole
+   * story: prominence, standing and authority carry their own sampling noise
+   * that this does not attempt to quantify. The copy says "al menos" for that
+   * reason, and it is why this is shown as a range rather than replacing the
+   * headline number, which would over-claim in the opposite direction.
+   *
+   * The existing sample floor (MIN_RESPONSES_FOR_BAND = 10 responses) does not
+   * cover this: 18 responses clears it and still carries ±20 points on
+   * presence alone.
+   */
+  const presenceWeightShare = (() => {
+    const components = geoScore?.components;
+    if (!components) return null;
+    const present = Object.values(components).filter((c) => c && c.value !== null && c.value !== undefined);
+    const weightSum = present.reduce((sum, c) => sum + (c?.weight ?? 0), 0);
+    const presenceWeight = components.presence?.weight ?? 0;
+    if (weightSum <= 0 || presenceWeight <= 0) return null;
+    return presenceWeight / weightSum;
+  })();
+
   const gaugeScore = Math.round(gaugeScoreValue ?? 0);
 
   /* Same rule the scoring uses (geo-score-v4, docs/adr/0027): a row whose
@@ -415,8 +456,15 @@ export default async function ProjectDetailPage({
    */
   const currentRun = readComparableRun(latestScore?.details_json);
   const previousRun = prevScore ? readComparableRun(prevScore.details_json) : null;
-  const mentionInterval = computeMentionInterval(brandMentions, totalResults);
-  const sampleSufficient = hasSufficientSample(totalResults);
+  // Both arguments on the same scale — see scoredResultsTotal above.
+  const mentionInterval = computeMentionInterval(brandMentions, scoredResultsTotal);
+  const sampleSufficient = hasSufficientSample(scoredResultsTotal);
+
+  const scoreMarginPoints =
+    mentionInterval && presenceWeightShare !== null && !scoreUnavailable
+      ? Math.round(mentionInterval.marginPoints * presenceWeightShare)
+      : null;
+
   const resolve = (value: number): DeltaVerdict | null =>
     previousRun ? resolveDelta(value, currentRun, previousRun) : null;
   // No delta at all on a run that read nothing — every consumer below would
@@ -786,7 +834,10 @@ export default async function ProjectDetailPage({
               ) : (
                 <>
                   GenScore detectó que <b>{project.brand}</b> aparece en{" "}
-                  <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
+                  <b>
+                    {brandMentions} de {scoredResultsTotal}{" "}
+                    {scoredResultsTotal === 1 ? "respuesta" : "respuestas"} de IA
+                  </b>{" "}
                   ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
                   <b>puntuación GEO de {gaugeScore}/100</b>.
                 </>
@@ -858,6 +909,22 @@ export default async function ProjectDetailPage({
             </div>
             <div className="ov2-gauge-info">
               <div className="ov2-gauge-lbl">Puntuación GEO</div>
+              {/* The range, not just the point. A "51/100" with a qualitative
+                  band promises a precision this sample size does not support. */}
+              {scoreMarginPoints !== null && scoreMarginPoints >= 1 && (
+                <div
+                  className="ov2-gauge-trend-cap"
+                  style={{ marginTop: 2 }}
+                  title={
+                    `Con ${scoredResultsTotal} ${scoredResultsTotal === 1 ? "respuesta" : "respuestas"} de IA, ` +
+                    "la tasa de mención tiene este margen al 95%. Es un mínimo: los otros componentes " +
+                    "añaden su propia variación. Se estrecha con más prompts, más motores o más escaneos."
+                  }
+                >
+                  Entre {Math.max(0, gaugeScore - scoreMarginPoints)} y{" "}
+                  {Math.min(100, gaugeScore + scoreMarginPoints)} · al menos ±{scoreMarginPoints} pt por muestra
+                </div>
+              )}
               <div className="ov2-gauge-badges">
                 {/* The qualitative band asserts where the brand sits on a
                     70/40 scale. Below MIN_RESPONSES_FOR_BAND responses a
