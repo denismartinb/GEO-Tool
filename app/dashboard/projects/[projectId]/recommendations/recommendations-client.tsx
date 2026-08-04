@@ -969,6 +969,7 @@ export function RecommendationsClient({
   jointPointsByType,
   planIds = [],
   planPoints = null,
+  pointsNote = null,
   domain = "",
 }: {
   recommendations: Recommendation[];
@@ -982,6 +983,8 @@ export function RecommendationsClient({
   planIds?: string[];
   /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
   planPoints?: number | null;
+  /** Explicación en llano de por qué no hay cifras de puntos, si no las hay. */
+  pointsNote?: string | null;
   domain?: string;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -1115,6 +1118,27 @@ export function RecommendationsClient({
             <RecCard key={`plan-${rec.id}`} rec={rec} projectId={projectId} priorityRank={i + 1} />
           ))}
         </>
+      )}
+
+      {pointsNote && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "flex-start",
+            marginTop: 14,
+            padding: "10px 13px",
+            background: "var(--surface-sunk)",
+            border: "1px solid var(--line)",
+            borderRadius: "var(--r-md)",
+            fontSize: 12.5,
+            lineHeight: 1.5,
+            color: "var(--ink-2)",
+          }}
+        >
+          <Icon name="info" size={14} />
+          <span>{pointsNote}</span>
+        </div>
       )}
 
       {/* 5 · Filters, directly under the priority actions. */}

@@ -10,6 +10,7 @@ import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
+  computeRunScoresFromResults,
   type ScoreInputRow,
 } from "@/lib/scoring/run-scoring";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
@@ -433,6 +434,32 @@ export default async function RecommendationsPage({
       : null;
   const planPoints = planJoint ? planJoint.deltaPoints : null;
 
+  /* Por qué NO hay cifra de puntos.
+   *
+   * Una ausencia silenciosa es indistinguible de un fallo: durante el
+   * desarrollo de esta pantalla hicieron falta tres rondas de suposiciones
+   * para entender por qué las tarjetas no mostraban "+X pt", porque el
+   * producto no decía nada. Ahora lo dice, en el mismo lenguaje llano que el
+   * resto: qué falta y qué hacer al respecto.
+   */
+  const anyQuantified = recs.some((r) => typeof r.potentialPoints === "number" && r.potentialPoints >= 0.1);
+  let pointsNote: string | null = null;
+  if (!anyQuantified && recs.length > 0) {
+    if (scoreInputRows.length === 0) {
+      pointsNote = "No hemos podido leer las respuestas de este escaneo, así que no podemos estimar cuántos puntos vale cada acción.";
+    } else {
+      const live = computeRunScoresFromResults(scoreInputRows, project.domain);
+      const details = live.details_json as { clean_results_count?: number; total_results?: number };
+      const clean = details.clean_results_count ?? 0;
+      const totalRows = details.total_results ?? scoreInputRows.length;
+      if (live.confidence === "low") {
+        pointsNote = `Sin estimación de puntos: solo ${clean} de ${totalRows} respuestas de este escaneo se procesaron bien. Con menos del 80% correcto, poner una cifra sería inventarla.`;
+      } else {
+        pointsNote = "Sin estimación de puntos: las acciones de este escaneo no son de las que se pueden cuantificar sobre la puntuación.";
+      }
+    }
+  }
+
   // Blocked AI crawlers = a hard ceiling on everything else on this page.
   const botsReport = (auditRow as { bots: BotAccessReport | null } | null)?.bots ?? null;
   const blockedBots = (botsReport?.bots ?? []).filter((b) => !b.allowed).map((b) => b.agent);
@@ -592,6 +619,7 @@ export default async function RecommendationsPage({
                 jointPointsByType={jointPointsByType}
                 planIds={planIds}
                 planPoints={planPoints}
+                pointsNote={pointsNote}
                 domain={project.domain}
               />
             )}
