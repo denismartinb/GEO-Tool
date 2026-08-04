@@ -638,7 +638,7 @@ describe("runStructuredExtractionForRun", () => {
   });
 });
 
-describe("runStructuredExtractionForRun — SCAN-CHAIN-2 batching (docs/adr/0027)", () => {
+describe("runStructuredExtractionForRun — SCAN-CHAIN-2 batching (docs/adr/0029)", () => {
   afterEach(() => {
     vi.mocked(extractGeminiStructuredData).mockReset();
   });

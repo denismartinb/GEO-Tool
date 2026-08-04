@@ -15,7 +15,7 @@ import "server-only";
 export const MAX_REAL_SCAN_PROMPTS = 10;
 /**
  * Per-invocation batch size for structured extraction (SCAN-CHAIN-2,
- * docs/adr/0027-chained-structured-extraction.md).
+ * docs/adr/0029-chained-structured-extraction.md).
  *
  * One `scan_prompt_results` row exists per prompt per active engine
  * (multi-engine execution, migration 0009) — up to 3 engines today (gemini,

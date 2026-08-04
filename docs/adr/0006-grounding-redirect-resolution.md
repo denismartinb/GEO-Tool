@@ -119,7 +119,7 @@ budget.
   step is bounded by the **slowest single chunk**, not the sum.
 - `EXTRACTION_BATCH_SIZE` (`lib/scan/constants.ts`; named `MAX_EXTRACTION_RESULTS`
   and valued at 10 when this ADR was written) caps how many prompt results are
-  extracted per BATCH, not per run — see docs/adr/0027-chained-structured-
+  extracted per BATCH, not per run — see docs/adr/0029-chained-structured-
   extraction.md (SCAN-CHAIN-2): a run with more eligible rows than this now
   runs additional batches instead of silently leaving the rest unextracted.
   Grounding chunk counts per prompt are typically small in practice (Gemini

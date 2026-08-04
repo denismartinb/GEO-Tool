@@ -1,4 +1,4 @@
-# ADR 0027 — Chained Structured Extraction (SCAN-CHAIN-2)
+# ADR 0029 — Chained Structured Extraction (SCAN-CHAIN-2)
 
 **Date:** 2026-08-04
 **Status:** Accepted

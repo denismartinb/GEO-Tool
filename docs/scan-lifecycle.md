@@ -120,7 +120,7 @@ sized for up to 3 active engines) still-eligible rows per call and reports
 it hasn't already succeeded at the current `EXTRACTION_VERSION`, and it
 doesn't already carry a non-null `extraction_error` from a prior attempt in
 this same run (a failed row is terminal, never retried — see
-docs/adr/0027-chained-structured-extraction.md for why retrying it would
+docs/adr/0029-chained-structured-extraction.md for why retrying it would
 re-chain forever).
 
 If `remaining > 0` after a batch, the run is **not** scored:
@@ -139,7 +139,7 @@ is still chaining through several rounds.
 A campaign with more `scan_prompt_results` rows than `EXTRACTION_BATCH_SIZE`
 (any Starter/Pro/Agency run with 3 active engines) therefore completes
 extraction over multiple chained invocations before scoring — see
-docs/adr/0027 for the full design, the three failure traps it closes
+docs/adr/0029 for the full design, the three failure traps it closes
 (infinite re-chain on a failed row, attempt-count exhaustion, and a
 double-claim race), and why this was a P0 (an un-extracted row's
 `citation_found` defaults to `false` in the DB and still counted toward the
@@ -312,4 +312,4 @@ while `citation_found` defaulted to `false` for the un-extracted rows and
 still counted toward the authority denominator. Fixed by chaining extraction
 the same way `scan_prompt` execution is chained — see "Chained structured
 extraction (SCAN-CHAIN-2)" above and
-`docs/adr/0027-chained-structured-extraction.md`.
+`docs/adr/0029-chained-structured-extraction.md`.

@@ -778,7 +778,7 @@ export async function executePendingScan({
       throw new ProjectActionError("scan_failed");
     }
 
-    // SCAN-CHAIN-2 (docs/adr/0027): captured BEFORE the claim below increments
+    // SCAN-CHAIN-2 (docs/adr/0029): captured BEFORE the claim below increments
     // it, so a continuation re-queue (see the `remaining > 0` branch further
     // down) can restore this exact value — reclaiming finalize to process the
     // next extraction batch is a continuation of the same logical attempt,
@@ -836,7 +836,7 @@ export async function executePendingScan({
       runId
     });
 
-    // SCAN-CHAIN-2 (docs/adr/0027): structured extraction is itself batched
+    // SCAN-CHAIN-2 (docs/adr/0029): structured extraction is itself batched
     // (EXTRACTION_BATCH_SIZE, lib/scan/constants.ts). Scoring while eligible
     // rows still remain unextracted is exactly the bug this phase fixes —
     // prominence/citation/authority computed from a partial extraction, with

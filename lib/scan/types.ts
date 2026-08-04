@@ -60,7 +60,7 @@ export type ScanPromptResultRow = {
   status: string;
   extraction_version: string;
   /**
-   * SCAN-CHAIN-2 (docs/adr/0027): a non-null value here means a PRIOR
+   * SCAN-CHAIN-2 (docs/adr/0029): a non-null value here means a PRIOR
    * extraction attempt for this row already failed and persisted this
    * sanitized error. Such a row must never be treated as "eligible" for
    * another extraction attempt within the same run — its

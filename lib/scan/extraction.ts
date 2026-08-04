@@ -438,7 +438,7 @@ export type ExtractionBatchResult = {
   processed: number;
   /**
    * How many eligible rows are STILL unprocessed after this batch —
-   * SCAN-CHAIN-2 (docs/adr/0027). The caller (`executePendingScan`'s finalize
+   * SCAN-CHAIN-2 (docs/adr/0029). The caller (`executePendingScan`'s finalize
    * tail) must not score the run while this is > 0: re-queue `scan_finalize`
    * and call this again instead. `0` means every row this run can extract
    * has either succeeded (current `EXTRACTION_VERSION`) or permanently failed
@@ -451,8 +451,8 @@ export type ExtractionBatchResult = {
 };
 
 /**
- * Runs one BATCH of structured extraction for a run (SCAN-CHAIN-2, docs/adr/
- * 0027-chained-structured-extraction.md) — up to `EXTRACTION_BATCH_SIZE`
+ * Runs one BATCH of structured extraction for a run (SCAN-CHAIN-2,
+ * docs/adr/0029-chained-structured-extraction.md) — up to `EXTRACTION_BATCH_SIZE`
  * still-eligible rows, oldest-query-order first (no explicit `order()`: rows
  * come back in whatever order Supabase returns them, which is stable enough
  * across calls within the same run since eligibility itself is the changing

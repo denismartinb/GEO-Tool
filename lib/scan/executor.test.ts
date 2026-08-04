@@ -1645,7 +1645,7 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  describe("extraction continuation (SCAN-CHAIN-2, docs/adr/0027)", () => {
+  describe("extraction continuation (SCAN-CHAIN-2, docs/adr/0029)", () => {
     // Single prompt so the scan_prompt batch always finishes in one call,
     // landing on finalize in the SAME invocation (the real production
     // timeline) — every test below is purely about what happens once
