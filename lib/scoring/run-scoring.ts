@@ -99,6 +99,16 @@ function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
  */
 const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
 
+/**
+ * Minimum share of a run's results that must have extracted cleanly (parsed,
+ * no extraction error) before the run's numbers are worth qualifying above
+ * "low". Below this, too much of the sample is missing to put a figure on it.
+ *
+ * 0.8 is the tolerance ADR 0015 always intended; until 2026-08-04 the guard
+ * above it made the branch unreachable, so the effective tolerance was zero.
+ */
+const CLEAN_COVERAGE_FLOOR = 0.8;
+
 function isGroundedRow(row: ScoreInputRow): boolean {
   return !row.provider || GROUNDED_PROVIDERS.has(row.provider);
 }
@@ -300,7 +310,15 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
 
   const extractedResultsCount = results.filter((row) => row.extracted_json && typeof row.extracted_json === "object").length;
   const extractionErrorCount = results.filter((row) => row.extraction_error).length;
-  const extractionCoverage = extractedResultsCount / safeTotal;
+  /**
+   * Rows that are actually usable as evidence: extracted AND without an
+   * extraction error. This — not the raw extracted count — is what confidence
+   * is measured against (ADR 0015 rev. 2026-08-04).
+   */
+  const cleanResultsCount = results.filter(
+    (row) => row.extracted_json && typeof row.extracted_json === "object" && !row.extraction_error
+  ).length;
+  const extractionCoverage = cleanResultsCount / safeTotal;
 
   const brandMentionedCount = results.filter((row) => row.brand_mentioned).length;
   const totalCitationsCount = results.reduce((acc, row) => acc + Math.max(0, row.citations_count ?? 0), 0);
@@ -359,17 +377,30 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   ).length;
   const competitorGapScore = round2(clamp(0, 100, (displacedPromptsCount / safeTotal) * 100));
 
-  // "high" requires >=20 fully-extracted results (was >=5): with one LLM
-  // sample per prompt/engine, 5 results give each answer a 20-point swing on
-  // presence — calling that sample "high confidence" overstated its
-  // statistical reliability (docs/geo-methodology-audit-2026-07.md, finding
-  // 5 / ADR 0015). 2..19 clean results are "medium".
+  // "high" requires >=20 clean results (was >=5): with one LLM sample per
+  // prompt/engine, 5 results give each answer a 20-point swing on presence —
+  // calling that sample "high confidence" overstated its statistical
+  // reliability (docs/geo-methodology-audit-2026-07.md, finding 5 / ADR 0015).
+  // 2..19 clean results are "medium".
+  //
+  // Revised 2026-08-04 (founder decision): confidence is now PROPORTIONAL to
+  // how much of the run extracted cleanly, instead of collapsing to "low" the
+  // moment a single row failed. The old rule read as if it tolerated 20% of
+  // rows failing — but its `extractionCoverage >= 0.8` branch was unreachable,
+  // because the guard above it already demanded that NOTHING had failed. So a
+  // 19-of-20 run was rated exactly like a 0-of-20 one, and since
+  // computeRecommendationPotentialPoints refuses to quantify a low-confidence
+  // run, one bad row erased the "+X pt" figure from every recommendation on
+  // the page. Both real pilot projects sat in that state permanently.
+  //
+  // The floor stays: below CLEAN_COVERAGE_FLOOR of the run usable, the sample
+  // is not worth putting a number on, and confidence really is low.
   let confidence: "low" | "medium" | "high" = "low";
-  if (extractedResultsCount < totalResults || extractionErrorCount > 0) {
+  if (extractionCoverage < CLEAN_COVERAGE_FLOOR) {
     confidence = "low";
-  } else if (totalResults >= 20 && extractionCoverage >= 0.8) {
+  } else if (cleanResultsCount >= 20) {
     confidence = "high";
-  } else if (totalResults >= 2) {
+  } else if (cleanResultsCount >= 2) {
     confidence = "medium";
   }
 
@@ -503,11 +534,11 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     "citation_score = % of GROUNDED-provider prompts citing the brand's OWN domain (docs/adr/0013), not just any source. Ungrounded providers (e.g. Claude, no web search grounding) are excluded, same as docs/adr/0012, but still count toward visibility_score/standing. citation_score_any_domain (any grounding citation, regardless of domain — the pre-0013 formula) and citation_score_blended (all providers pooled, any domain) are kept in details_json for comparison only.",
     "competitor_gap_score (Competitive Pressure, docs/adr/0011) higher = worse: % of prompts where a competitor was mentioned but the brand was not (brand displacement), not raw competitor mention volume",
     extractionCoverage < 1
-      ? "Some prompts have partial extraction coverage. Confidence forced to low."
+      ? `Extraction coverage ${Math.round(extractionCoverage * 100)}% (clean rows / total). Confidence is low only below ${Math.round(CLEAN_COVERAGE_FLOOR * 100)}%.`
       : "Extraction coverage is complete.",
     "brand_position: position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). Not-mentioned entities are penalized with position N+1 (N = total tracked entities for that prompt). avg_position = mean(effective_position) across prompts with valid extraction; lower is better.",
     "geo_score (geo-score-v2, ADR 0015): composite of presence (visibility_score), prominence (derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
-    "confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); 2-19 clean results are medium (ADR 0015)."
+    "confidence (ADR 0015, rev. 2026-08-04): measured on CLEAN results (extracted, no extraction error). Low when clean coverage < 80% of the run; otherwise high with >=20 clean results (one LLM sample per prompt/engine is noisy at small sizes), medium with 2-19. Previously any single failed row forced low, which made the 80% tolerance unreachable and erased potential-points figures from every recommendation."
   ];
 
   const perPromptSummary = results.slice(0, 10).map((row) => ({
@@ -531,6 +562,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       total_results: totalResults,
       extracted_results_count: extractedResultsCount,
       extraction_error_count: extractionErrorCount,
+      clean_results_count: cleanResultsCount,
       brand_mentioned_count: brandMentionedCount,
       own_domain_citation_count: ownDomainCitationCount,
       citation_found_count: citationFoundCount,

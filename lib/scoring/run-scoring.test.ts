@@ -405,11 +405,12 @@ describe("computeRunScoresFromResults — competitor_gap_score (Competitive Pres
 });
 
 describe("computeRunScoresFromResults — confidence buckets", () => {
-  it("is low when extraction coverage is incomplete (some rows missing extracted_json)", () => {
+  it("is low when clean coverage falls below the 80% floor", () => {
+    // 3 of 5 usable = 60% — too much of the run missing to put a number on it.
     const results = [
       row({ id: "1", extracted_json: { phase: "phase4-basic" } }),
       row({ id: "2", extracted_json: null }),
-      row({ id: "3", extracted_json: { phase: "phase4-basic" } }),
+      row({ id: "3", extracted_json: null }),
       row({ id: "4", extracted_json: { phase: "phase4-basic" } }),
       row({ id: "5", extracted_json: { phase: "phase4-basic" } })
     ];
@@ -417,26 +418,41 @@ describe("computeRunScoresFromResults — confidence buckets", () => {
     const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
 
     expect(result.confidence).toBe("low");
-    expect(result.details_json.extracted_results_count).toBe(4);
+    expect(result.details_json.clean_results_count).toBe(3);
     expect(result.details_json.total_results).toBe(5);
   });
 
-  it("is low when any row has an extraction_error, even with full extraction coverage", () => {
-    const results = [
-      row({ id: "1", extraction_error: "boom" }),
-      row({ id: "2" }),
-      row({ id: "3" }),
-      row({ id: "4" }),
-      row({ id: "5" })
-    ];
+  it("survives an isolated extraction failure instead of collapsing to low (ADR 0015 rev. 2026-08-04)", () => {
+    // 4 of 5 usable = 80%, exactly the floor. Before this revision a single bad
+    // row rated the run identically to a run where NOTHING extracted, and that
+    // erased the potential-points figure from every recommendation on screen.
+    const missing = computeRunScoresFromResults(
+      [
+        row({ id: "1", extracted_json: null }),
+        row({ id: "2" }),
+        row({ id: "3" }),
+        row({ id: "4" }),
+        row({ id: "5" })
+      ],
+      PROJECT_DOMAIN
+    );
+    expect(missing.confidence).toBe("medium");
 
-    const result = computeRunScoresFromResults(results, PROJECT_DOMAIN);
-
-    expect(result.confidence).toBe("low");
-    expect(result.details_json.extraction_error_count).toBe(1);
-    // Coverage is complete (extracted_json present on all 5) yet confidence is
-    // still forced to low because of the extraction error.
-    expect(result.details_json.extracted_results_count).toBe(5);
+    const errored = computeRunScoresFromResults(
+      [
+        row({ id: "1", extraction_error: "boom" }),
+        row({ id: "2" }),
+        row({ id: "3" }),
+        row({ id: "4" }),
+        row({ id: "5" })
+      ],
+      PROJECT_DOMAIN
+    );
+    expect(errored.confidence).toBe("medium");
+    // An errored row is NOT clean, even though its extracted_json parsed.
+    expect(errored.details_json.extraction_error_count).toBe(1);
+    expect(errored.details_json.clean_results_count).toBe(4);
+    expect(errored.details_json.extracted_results_count).toBe(5);
   });
 
   it("is high with >=20 results and full extraction coverage (>=0.8) — ADR 0015", () => {
@@ -503,7 +519,7 @@ describe("computeRunScoresFromResults — details_json contents", () => {
       PROJECT_DOMAIN
     );
     expect(
-      (incomplete.details_json.assumptions as string[]).some((a) => a.includes("partial extraction coverage"))
+      (incomplete.details_json.assumptions as string[]).some((a) => a.includes("Extraction coverage 50%"))
     ).toBe(true);
 
     const complete = computeRunScoresFromResults([row({ id: "1" }), row({ id: "2" })], PROJECT_DOMAIN);
@@ -1160,11 +1176,17 @@ describe("computeRecommendationPotentialPoints", () => {
     expect(result).toBeNull();
   });
 
-  it("returns null when confidence is low (extraction errors present)", () => {
+  it("returns null when confidence is low (clean coverage below the floor)", () => {
+    const rows = baseline().map((r, i) => (i < Math.ceil(baseline().length * 0.5) ? { ...r, extraction_error: "timeout" } : r));
+    const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "increase_brand_visibility", ["absent-0"]);
+    expect(result).toBeNull();
+  });
+
+  it("still quantifies a run with one isolated extraction failure (ADR 0015 rev. 2026-08-04)", () => {
     const rows = baseline();
     rows[0] = { ...rows[0], extraction_error: "timeout" };
     const result = computeRecommendationPotentialPoints(rows, PROJECT_DOMAIN, "increase_brand_visibility", ["absent-0"]);
-    expect(result).toBeNull();
+    expect(result, "un fallo aislado no debe borrar la cifra de puntos").not.toBeNull();
   });
 
   it("increase_brand_visibility: resolving an absent-brand prompt yields a positive delta", () => {
@@ -1367,9 +1389,9 @@ describe("computeJointPotentialPoints", () => {
     expect(joint!.deltaPoints).toBeLessThanOrEqual(onlyA!.deltaPoints + aAndB!.deltaPoints);
   });
 
-  it("returns null when confidence is low", () => {
-    const rows = baseline();
-    rows[0] = { ...rows[0], extraction_error: "timeout" };
+  it("returns null when confidence is low (clean coverage below the floor)", () => {
+    const base = baseline();
+    const rows = base.map((r, i) => (i < Math.ceil(base.length * 0.5) ? { ...r, extraction_error: "timeout" } : r));
     const result = computeJointPotentialPoints(rows, PROJECT_DOMAIN, [
       { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] }
     ]);
