@@ -14,7 +14,13 @@ import {
 } from "./audit-job-runner";
 
 vi.mock("@/lib/recommendations/domain-coverage", () => ({ auditDomainCoverageCore: vi.fn() }));
-vi.mock("@/lib/web-audit/technical-audit", () => ({ runTechnicalAuditCore: vi.fn() }));
+// TECH_AUDIT_TOTAL_BUDGET_MS has to be in the mock as well: the runner sizes
+// its "does the technical audit still fit?" reserve off it, and a mocked
+// module replaces the constant for the module under test too.
+vi.mock("@/lib/web-audit/technical-audit", () => ({
+  runTechnicalAuditCore: vi.fn(),
+  TECH_AUDIT_TOTAL_BUDGET_MS: 25_000
+}));
 vi.mock("@/lib/email/transactional", () => ({ sendWebAuditFailedAlertEmail: vi.fn(async () => undefined) }));
 
 const mockedCoverage = vi.mocked(coverageModule.auditDomainCoverageCore);
@@ -70,7 +76,13 @@ function makeService(options: {
       }
       if (table !== "jobs") return { data: null, error: null };
       if (existingJob) return { data: existingJob, error: null };
-      return { data: isStaleQuery() ? staleJobs : dueJobs, error: null };
+      // Draining, not peeking: a real claim flips the row to 'running', so a
+      // second claim in the same sweep never sees it again. The fake used to
+      // hand the same row back on every call, which would let a one-job-at-a-
+      // time sweep loop on a single job forever.
+      const pool = isStaleQuery() ? staleJobs : dueJobs;
+      const asked = filters.find((f) => f.method === "limit")?.args[0];
+      return { data: pool.splice(0, typeof asked === "number" ? asked : pool.length), error: null };
     };
 
     const track = (method: string) => (...args: unknown[]) => {
@@ -185,6 +197,23 @@ describe("runWebAuditJob", () => {
 
     expect(mockedCoverage).toHaveBeenCalled();
     expect(mockedTechnical).not.toHaveBeenCalled();
+  });
+
+  it("parks instead of starting a technical audit that cannot finish in time", async () => {
+    // Coverage is already durable here, so parking costs one cached coverage
+    // call on re-entry. Starting a 25s fetch pass with 5s of budget left
+    // would instead gamble on a platform kill, which loses the row update and
+    // strands the job in 'running' until the stale-lock sweep.
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service, recorded } = makeService({});
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW, budgetMs: 5_000 });
+
+    expect(mockedTechnical).not.toHaveBeenCalled();
+    expect(outcome).toEqual({ result: "continue", continuations: 1 });
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "pending" });
+    // A continuation is not a failure: the retry budget must be untouched.
+    expect(jobUpdates(recorded).at(-1)).not.toHaveProperty("attempt_count");
   });
 
   it("bypasses the manual 5/day rate limits on both cores", async () => {
@@ -416,6 +445,37 @@ describe("processDueWebAuditJobs", () => {
     const { processed, hasMoreWork } = await processDueWebAuditJobs({ service, now: NOW, limit: 3 });
 
     expect(processed).toBe(0);
+    expect(hasMoreWork).toBe(false);
+  });
+
+  it("never claims a job it has no budget left to run", async () => {
+    // The whole point of claiming one at a time: a claim it cannot honour
+    // locks the job out of the queue for STALE_LOCK_MS (10 min), so a sweep
+    // that ran out of clock must leave the row untouched and chain instead.
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service, recorded } = makeService({ dueJobs: [job({ id: "a" }), job({ id: "b" })] });
+
+    const { processed, hasMoreWork } = await processDueWebAuditJobs({
+      service,
+      now: NOW,
+      limit: 3,
+      budgetMs: 1_000
+    });
+
+    expect(processed).toBe(0);
+    expect(jobUpdates(recorded)).toEqual([]);
+    expect(hasMoreWork).toBe(true);
+  });
+
+  it("runs the jobs it does claim, one at a time, up to the batch limit", async () => {
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service } = makeService({ dueJobs: [job({ id: "a" }), job({ id: "b" })] });
+
+    const { processed, outcomes, hasMoreWork } = await processDueWebAuditJobs({ service, now: NOW, limit: 3 });
+
+    expect(processed).toBe(2);
+    expect(outcomes.every((o) => o.result === "completed")).toBe(true);
+    // Two jobs under a limit of three, queue drained: nothing to chain for.
     expect(hasMoreWork).toBe(false);
   });
 });

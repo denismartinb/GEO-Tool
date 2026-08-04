@@ -48,6 +48,27 @@ Confundirlos sería un bug real: una campaña de 8 lotes agotaría un
 presupuesto de 6 intentos antes de terminar y avisaría de un fallo que nunca
 ocurrió.
 
+### Reclamar es bloquear: el presupuesto del barrido es uno solo
+
+Una invocación reclama **un trabajo cada vez**, y sólo si lo que queda del
+reloj compartido (`SWEEP_BUDGET_MS`) basta para ejecutarlo entero. La primera
+versión reclamaba el lote completo y daba a cada trabajo un presupuesto propio
+medido desde su propio arranque, lo que sumaba 3 × 42 s bajo un `maxDuration`
+de 60 (ADR 0003).
+
+Eso no degradaba suavemente. Un trabajo reclamado y no ejecutado se queda en
+`running` y desaparece de la cola durante `STALE_LOCK_MS` (10 min), y la
+muerte de la invocación se lleva por delante el `after()` que encadenaba la
+siguiente. El resultado era que **una cola se drenaba a ~un trabajo al día**,
+en silencio, justo en el barrido diario que existe precisamente para
+encontrar cola.
+
+Por lo mismo, la auditoría técnica sólo arranca si cabe entera
+(`TECH_AUDIT_TOTAL_BUDGET_MS` + margen). Si no cabe, el trabajo se aparca como
+**continuación** —no como reintento—: la cobertura ya está persistida, así que
+reentrar cuesta una llamada de cobertura cacheada y la técnica arranca con el
+reloj a cero.
+
 ## Consecuencias
 
 - Un `after()` perdido no es una auditoría perdida: la fila sigue `pending` y
@@ -62,10 +83,17 @@ ocurrió.
   auditoría. Asumido explícitamente por el fundador. `AUTO_WEB_AUDIT_ENABLED=false`
   es la salida de emergencia.
 - Ambos núcleos de auditoría se llaman con el cliente de servicio porque en
-  esta ruta no hay sesión por construcción. La propiedad **no** se debilita:
-  siguen filtrando por `.eq("owner_user_id", user.id)` contra el propietario
-  real leído de la fila del proyecto, y el resto de consultas se acotan al
-  mismo `projectId` ya demostrado.
+  esta ruta no hay sesión por construcción. Dicho con precisión, porque la
+  formulación cómoda sería falsa: aquí el filtro
+  `.eq("owner_user_id", user.id)` **es tautológico** — el `owner_user_id` se
+  lee de la propia fila del proyecto y se devuelve como valor del filtro. Lo
+  que protege el aislamiento es que **el `projectId` es derivado en servidor y
+  jamás aceptado desde una petición**: sale de una fila de `jobs` creada por
+  el ejecutor para una ejecución recién terminada, y `jobs.run_id` tiene FK a
+  `scan_runs(id, project_id)`. `/api/cron/run-audit` no acepta ningún
+  identificador de proyecto en su cuerpo, sólo `chainIndex`. Si algún día lo
+  aceptara, hace falta una prueba de propiedad real (ver
+  `.claude/rules/web-audit.md`).
 
 ## Alternativas descartadas
 

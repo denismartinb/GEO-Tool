@@ -61,3 +61,24 @@ acepta ningún identificador de proyecto en su cuerpo — sólo `chainIndex`.
 
 Si alguna vez esa ruta pasa a aceptar un `projectId` de fuera, esta excepción
 deja de valer y hace falta una prueba de propiedad real.
+
+### El presupuesto del barrido es compartido, no por trabajo
+
+En `processDueWebAuditJobs` (AUDIT-AFTER-SCAN-1, ADR 0027) **un trabajo sólo
+se reclama cuando ya es seguro que se puede ejecutar ahora**: de uno en uno,
+contra un reloj único (`SWEEP_BUDGET_MS`) que cubre toda la invocación, y
+pasando a cada trabajo el presupuesto que *queda*, nunca uno nuevo.
+
+No es preferencia de estilo. Reclamar es bloquear: un trabajo reclamado y no
+ejecutado queda en `running` y fuera de la cola durante `STALE_LOCK_MS` (10
+min), y si la plataforma mata la invocación tampoco llega a despacharse la
+cadena. Con presupuestos por trabajo, un barrido de 3 se iba a ~126 s bajo un
+`maxDuration` de 60 (ADR 0003) y degradaba justo en el caso para el que existe
+la red de seguridad: el que encuentra cola. Misma razón para el reserve de la
+auditoría técnica — si no cabe entera, el trabajo se aparca como
+**continuación** (sin gastar intento), porque la cobertura ya está persistida
+y reentrar cuesta una llamada cacheada.
+
+Cualquier fase que añada trabajo por trabajo (más lotes, otro núcleo de
+auditoría) tiene que reajustar `MIN_JOB_BUDGET_MS` y el reserve, no sólo
+subir el límite del lote.

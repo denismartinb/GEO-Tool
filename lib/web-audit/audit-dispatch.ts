@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSiteUrl } from "@/lib/scan/executor";
+import { getSiteUrl } from "@/lib/site-url";
 
 /**
  * AUDIT-AFTER-SCAN-1 — dispatch side of the post-scan audit worker.

@@ -25,6 +25,7 @@ import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
 import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
 import { emitNotification } from "@/lib/notifications/emit";
+import { getSiteUrl } from "@/lib/site-url";
 import { enqueueWebAuditJob } from "@/lib/web-audit/audit-job-runner";
 import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { gapPendingKey, gapResolvedKey, scanCompletedKey, scanFailedKey } from "@/lib/notifications/dedupe-keys";
@@ -450,11 +451,12 @@ async function refreshRunProgressCounters({
   return { successCount: successCount ?? 0, failedCount: failedCount ?? 0 };
 }
 
-export function getSiteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")
-  );
-}
+/**
+ * Re-exported from its own leaf module (see `lib/site-url.ts` for why): the
+ * post-scan audit dispatcher needs it and this file imports the dispatcher,
+ * so defining it here would close an import cycle.
+ */
+export { getSiteUrl };
 
 /**
  * Fires the next batch of a multi-batch campaign (SCAN-CHAIN-1) without

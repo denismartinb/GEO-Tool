@@ -1,7 +1,7 @@
 import "server-only";
 
 import { auditDomainCoverageCore } from "@/lib/recommendations/domain-coverage";
-import { runTechnicalAuditCore } from "@/lib/web-audit/technical-audit";
+import { runTechnicalAuditCore, TECH_AUDIT_TOTAL_BUDGET_MS } from "@/lib/web-audit/technical-audit";
 import { isTerminalAuditFailure, type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import {
   nextAuditJobState,
@@ -113,6 +113,41 @@ const MAX_BATCHES_PER_INVOCATION = 4;
 
 /** How many due jobs one sweep invocation will process. */
 const SWEEP_BATCH_SIZE = 3;
+
+/**
+ * Wall-clock the whole sweep may spend, shared across every job it runs.
+ *
+ * This is NOT the same as INVOCATION_BUDGET_MS, and conflating them was a real
+ * bug: each job measured its budget from its own start, so a sweep that
+ * claimed SWEEP_BATCH_SIZE jobs could spend 3 × 42s inside a route whose
+ * maxDuration is 60 (ADR-0003). The platform kill then landed on the exact
+ * path the queue exists to protect — the daily safety net, which is by
+ * definition the invocation that finds a backlog — leaving the unrun jobs
+ * claimed in 'running' for the full STALE_LOCK_MS and killing the self-chain
+ * before it could be dispatched. A backlog would have drained at roughly one
+ * audit per DAY, silently.
+ */
+export const SWEEP_BUDGET_MS = 45_000;
+
+/**
+ * Least remaining wall-clock worth claiming another job with: enough for one
+ * full coverage batch (BATCH_TIME_BUDGET_MS = 30s) plus its write-back. Below
+ * this the sweep stops instead of claiming a job it cannot run — a claim it
+ * cannot honour is strictly worse than not claiming, because the job is then
+ * locked out of the queue for STALE_LOCK_MS.
+ */
+const MIN_JOB_BUDGET_MS = 34_000;
+
+/**
+ * Wall-clock kept in reserve for the technical audit once coverage is done.
+ * Sized off TECH_AUDIT_TOTAL_BUDGET_MS plus room for the persist. If what is
+ * left is under this, the job parks as a continuation instead: coverage is
+ * already persisted, so re-entering costs one cached (near-instant) coverage
+ * call and the technical audit runs on a fresh clock. Starting it anyway
+ * would gamble on a platform kill mid-fetch — which loses the row update, not
+ * just the audit.
+ */
+const TECHNICAL_RESERVE_MS = TECH_AUDIT_TOTAL_BUDGET_MS + 2_000;
 
 /**
  * After this long, a job still marked 'running' is considered abandoned and
@@ -414,6 +449,14 @@ export async function runWebAuditJob({
     }
 
     // --- Technical health (single call, own 25s budget) -------------------
+    //
+    // Only if it genuinely fits. Coverage is already durable at this point,
+    // so parking here loses nothing: the next invocation's coverage call is a
+    // cache hit and the technical audit gets a full clock.
+    if (Date.now() - startedAt > budgetMs - TECHNICAL_RESERVE_MS) {
+      return finishContinuation(service, job, continuations + 1, now);
+    }
+
     const technical = await runTechnicalAuditCore(coreArgs);
 
     if (!technical.success) {
@@ -579,26 +622,47 @@ async function finishCancelled(
 export async function processDueWebAuditJobs({
   service,
   now = new Date(),
-  limit = SWEEP_BATCH_SIZE
+  limit = SWEEP_BATCH_SIZE,
+  budgetMs = SWEEP_BUDGET_MS
 }: {
   service: ServiceClient;
   now?: Date;
   limit?: number;
+  budgetMs?: number;
 }): Promise<{ processed: number; outcomes: WebAuditJobOutcome[]; hasMoreWork: boolean }> {
-  const jobs = await claimDueWebAuditJobs({ service, now, limit });
+  const startedAt = Date.now();
   const outcomes: WebAuditJobOutcome[] = [];
+  let outOfBudget = false;
 
-  for (const job of jobs) {
-    outcomes.push(await runWebAuditJob({ service, job, now }));
+  // One job claimed at a time, deliberately. Claiming the whole batch up
+  // front and then discovering there is no time left to run it would leave
+  // the surplus locked in 'running' until the stale-lock sweep — see
+  // SWEEP_BUDGET_MS. A job is only ever claimed once it is certain it can be
+  // run now.
+  while (outcomes.length < limit) {
+    const remainingMs = budgetMs - (Date.now() - startedAt);
+    if (remainingMs < MIN_JOB_BUDGET_MS) {
+      outOfBudget = true;
+      break;
+    }
+
+    const [job] = await claimDueWebAuditJobs({ service, now, limit: 1 });
+    if (!job) break;
+
+    outcomes.push(
+      await runWebAuditJob({ service, job, now, budgetMs: Math.min(INVOCATION_BUDGET_MS, remainingMs) })
+    );
   }
 
   return {
-    processed: jobs.length,
+    processed: outcomes.length,
     outcomes,
-    // Two independent reasons to chain another invocation: a campaign parked
-    // mid-flight, or a claim that filled the batch limit (there may be more
-    // due jobs behind it). Without the second, the daily-sweep safety net
-    // would drain a backlog at `limit` jobs PER DAY.
-    hasMoreWork: outcomes.some((o) => o.result === "continue") || jobs.length >= limit
+    // Three independent reasons to chain another invocation: a campaign
+    // parked mid-flight, a run that filled the batch limit, or a budget that
+    // ran out before the queue did. Without the last two, the daily-sweep
+    // safety net would drain a backlog at `limit` jobs PER DAY. When the
+    // queue is in fact empty the chained invocation simply finds nothing and
+    // stops — one wasted call is the right price for never stranding work.
+    hasMoreWork: outcomes.some((o) => o.result === "continue") || outcomes.length >= limit || outOfBudget
   };
 }
