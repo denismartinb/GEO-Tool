@@ -278,16 +278,33 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
   const scoreDeltaByProject: Record<string, number | null> = {};
   const seenScoresByProject = new Map<string, number[]>();
 
+  /* Projects whose MOST RECENT run read nothing show no score at all.
+   *
+   * `scores` is ordered newest-first. Simply skipping unreadable runs would
+   * pair the card's "hace 2 horas" timestamp — built from scan_runs, which
+   * knows nothing about readability — with a real score from an OLDER run, and
+   * a user reasonably reads that as "today's scan scored 72". Every other
+   * surface in this phase renders an unscored latest run as an explicit
+   * absence; this one would have quietly substituted stale data into the
+   * "latest" slot instead (QA, PR #313 round 5).
+   */
+  const staleLatestProjects = new Set<string>();
+  const seenAnyRunForProject = new Set<string>();
+
   for (const s of scores ?? []) {
-    // A run whose extractions all failed persists 0 because the column is
-    // non-null, not because anything measured zero. Skipping it here keeps a
-    // failed scan from becoming a "0" card and a cliff-edge delta on the
-    // project switcher (geo-score-v4, docs/adr/0027).
     const details =
       s.details_json && typeof s.details_json === "object"
         ? (s.details_json as { scored_results_count?: unknown })
         : {};
-    if (typeof details.scored_results_count === "number" && details.scored_results_count === 0) continue;
+    const unreadable =
+      typeof details.scored_results_count === "number" && details.scored_results_count === 0;
+
+    const isNewestForProject = !seenAnyRunForProject.has(s.project_id);
+    seenAnyRunForProject.add(s.project_id);
+    if (unreadable) {
+      if (isNewestForProject) staleLatestProjects.add(s.project_id);
+      continue;
+    }
 
     const value = Number(s.visibility_score ?? NaN);
     const rounded = Number.isFinite(value) ? Math.round(value) : null;
@@ -299,8 +316,20 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
   }
 
   for (const [projectId, seen] of seenScoresByProject.entries()) {
+    if (staleLatestProjects.has(projectId)) {
+      // The newest run read nothing: no current score, and no delta either —
+      // a delta between two older runs is not "this scan's change".
+      latestScoreByProject[projectId] = null;
+      scoreDeltaByProject[projectId] = null;
+      continue;
+    }
     latestScoreByProject[projectId] = seen[0] ?? null;
     scoreDeltaByProject[projectId] = seen.length >= 2 ? seen[0] - seen[1] : null;
+  }
+  // A project whose only run is unreadable never reaches the loop above.
+  for (const projectId of staleLatestProjects) {
+    latestScoreByProject[projectId] ??= null;
+    scoreDeltaByProject[projectId] ??= null;
   }
 
   const notifications: WorkspaceNotification[] = (notificationRows ?? []).map(mapNotificationRow);

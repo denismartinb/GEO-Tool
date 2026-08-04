@@ -15,7 +15,8 @@ import {
 /** Subset of run_scores.details_json this page reads — same access pattern
  * as the Overview page (app/dashboard/projects/[projectId]/page.tsx). */
 type CitationScoreDetails = {
-  citation_score_any_domain?: number;
+  /** null from geo-score-v4 on when there are no grounded scorable rows. */
+  citation_score_any_domain?: number | null;
   citation_by_provider?: Record<string, { total: number; citation_found_count: number }>;
 };
 

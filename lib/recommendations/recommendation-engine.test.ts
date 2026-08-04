@@ -54,6 +54,39 @@ describe("generateRecommendationsForRun", () => {
     expect(run([])).toEqual([]);
   });
 
+  it("declines entirely when the run read nothing, instead of persisting findings from an unmeasured 0", () => {
+    // The persisted score columns are non-null, so a run whose extractions all
+    // failed carries 0 in visibility_score and citation_score — never
+    // measured. Two rules below trigger on exactly that (`< 60 && < 50`, and
+    // `< 50 && no competitor mentions`) and would INSERT "los prompts
+    // informativos rinden por debajo" as a real finding about the brand. A row
+    // in the database is worse than a mis-rendered number: it survives reloads
+    // and reaches two screens (geo-score-v4, docs/adr/0027).
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "qué es el mejor software de gestión", brand_mentioned: false }),
+        prompt({ id: "p2", prompt_text_snapshot: "cómo elegir proveedor", brand_mentioned: false })
+      ],
+      { visibility_score: 0, citation_score: 0, details_json: { scored_results_count: 0 } }
+    );
+
+    expect(recs).toEqual([]);
+  });
+
+  it("still recommends normally when the run has readable rows", () => {
+    // The gate must be inert on healthy data: same inputs, a non-zero scored
+    // count, and the engine behaves exactly as before.
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "qué es el mejor software de gestión", brand_mentioned: false }),
+        prompt({ id: "p2", prompt_text_snapshot: "cómo elegir proveedor", brand_mentioned: false })
+      ],
+      { visibility_score: 0, citation_score: 0, details_json: { scored_results_count: 2 } }
+    );
+
+    expect(recs.length).toBeGreaterThan(0);
+  });
+
   it("flags low visibility with evidence scoped to the missing prompts", () => {
     const recs = run(
       [
