@@ -123,7 +123,7 @@ function EngineChipsWithGaps({
   engines: ResultRow[];
   allProviders: string[];
 }) {
-  // Aggregated per engine, not last-row-wins. Since SAMPLING-1 (ADR 0027) a
+  // Aggregated per engine, not last-row-wins. Since SAMPLING-1 (ADR 0030) a
   // run can hold several samples of the same (prompt, engine), so building a
   // Map keyed by provider would keep whichever sample happened to come last
   // and show a mention chip decided by row order — with 2 samples where

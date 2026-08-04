@@ -185,7 +185,7 @@ describe("createPendingScanRunCore", () => {
     expect(runId).toBeTruthy();
 
     const STARTER_PROMPT_CAP = 25;
-    // SAMPLING-1 (ADR 0027): no LLM_SCAN_PROVIDERS is set in tests, so the
+    // SAMPLING-1 (ADR 0030): no LLM_SCAN_PROVIDERS is set in tests, so the
     // engine set is Gemini alone. 25 prompts x 1 engine = 25 responses, under
     // the floor of 50, so the run repeats its prompt set twice (50 >= 50).
     // total_prompts counts JOBS, which is why it is 50 and not 25.

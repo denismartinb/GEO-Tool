@@ -3,6 +3,14 @@ import { z } from "zod";
 import { extractionOutputSchema, type ExtractionOutput } from "@/lib/extraction/schema";
 import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
+import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
+import {
+  EXTRACTION_CALL_TIMEOUT_MS,
+  EXTRACTION_MAX_ATTEMPTS,
+  EXTRACTION_RETRY_BASE_DELAY_MS,
+  EXTRACTION_RETRY_MAX_DELAY_MS
+} from "@/lib/scan/constants";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 // Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
@@ -351,9 +359,14 @@ export async function extractGeminiStructuredData(input: {
   rawResponseText: string;
   promptText: string;
   profile?: BusinessProfile;
+  /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
+  deadlineAt?: number;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+  // Categorized rather than a bare Error: at the extraction stage this is a
+  // per-row failure to be recorded, not the run-level abort that a missing
+  // key during *generation* triggers in the executor.
+  if (!apiKey) throw new ExtractionError("config", "Missing GEMINI_API_KEY");
 
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
@@ -394,23 +407,31 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
     input.rawResponseText
   ].join("\n\n");
 
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: {
-        temperature: 0,
-        responseMimeType: "application/json",
-        thinkingConfig: { thinkingBudget: 0 }
-      }
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(getGeminiApiError(response.status));
-  }
+  const response = await fetchExtractionWithRetry(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptBlock }] }],
+        // temperature: 0 — see ADR 0009 addendum (2026-06-19).
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 }
+        }
+      })
+    },
+    {
+      timeoutMs: EXTRACTION_CALL_TIMEOUT_MS,
+      maxAttempts: EXTRACTION_MAX_ATTEMPTS,
+      baseDelayMs: EXTRACTION_RETRY_BASE_DELAY_MS,
+      maxDelayMs: EXTRACTION_RETRY_MAX_DELAY_MS,
+      deadlineAt: input.deadlineAt,
+      describeStatus: getGeminiApiError,
+      timeoutMessage: "Gemini extraction request timed out."
+    }
+  );
 
   const data = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -419,19 +440,19 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
   if (!text) {
-    throw new Error("Gemini extraction returned empty JSON.");
+    throw new ExtractionError("empty", "Gemini extraction returned empty JSON.");
   }
 
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(text);
   } catch {
-    throw new Error("Gemini extraction returned invalid JSON.");
+    throw new ExtractionError("invalid_json", "Gemini extraction returned invalid JSON.");
   }
 
   const parsed = extractionOutputSchema.safeParse(parsedJson);
   if (!parsed.success) {
-    throw new Error("Gemini extraction JSON failed schema validation.");
+    throw new ExtractionError("schema", "Gemini extraction JSON failed schema validation.");
   }
 
   return {

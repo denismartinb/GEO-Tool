@@ -1,6 +1,6 @@
 /**
  * SAMPLING-1 — the response floor (Fase 2 de
- * docs/geo-score-variability-2026-08.md, ADR 0027).
+ * docs/geo-score-variability-2026-08.md, ADR 0030).
  *
  * Pure and dependency-free on purpose: this module decides how many times a
  * run repeats its prompt set, and that decision has to be reproducible in a

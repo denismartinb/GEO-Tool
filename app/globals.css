@@ -6184,6 +6184,49 @@ select.set-field {
 }
 .wa2-fix-note { margin: 0; padding: 8px 10px; font-size: 10.5px; color: var(--ink-4); border-top: 1px solid var(--line-soft); }
 
+/* Fase 3a — el llms.txt generado y sus pasos de publicación. Reutiliza el
+   chrome de .wa2-fix a propósito: un artefacto copiable debe verse igual en
+   toda la pantalla, no reinventarse por fase. */
+.wa2-llms { display: flex; flex-direction: column; gap: 12px; margin: 4px 0 10px; }
+.wa2-llms-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+/* El fichero entero cabe de sobra en pantalla, pero una campaña con muchos
+   temas lo hace largo — se acota y scrollea en vez de empujar los pasos de
+   publicación fuera de la vista, que es lo que el usuario necesita leer.
+
+   `pre-wrap` (no `pre`, como en .wa2-fix-code) por una razón medida, no por
+   gusto: en el pilot del 2026-08-04 sobre mozilla.org, las URLs reales
+   (https://support.mozilla.org/es/kb/navegacion-privada-Firefox-no-guardar…)
+   dejaban visible menos de la mitad de cada línea a 375px. Ahí sí importa
+   scrollear en horizontal — en un fragmento de JSON-LD la línea exacta es el
+   producto —, pero esto es un fichero de texto plano que el usuario copia o
+   descarga entero: partir la línea en pantalla no cambia lo que se lleva, y
+   sin ello la vista previa en móvil no sirve para nada. */
+.wa2-llms .wa2-fix-code {
+  max-height: 260px; overflow-y: auto; overflow-x: hidden;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+.wa2-llms-steps {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.wa2-llms-step { display: flex; gap: 9px; align-items: flex-start; }
+.wa2-llms-num {
+  flex: 0 0 auto; width: 18px; height: 18px; border-radius: 999px; margin-top: 1px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent-ink);
+  font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.wa2-llms-step-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wa2-llms-step-title { font-size: 12px; font-weight: 650; color: var(--ink); line-height: 1.35; }
+.wa2-llms-step-text { margin: 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.wa2-llms-code {
+  align-self: flex-start; max-width: 100%; overflow-x: auto;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 6px; padding: 3px 7px; overflow-wrap: anywhere;
+}
+
 .wa2-page { max-width: 460px; margin: 0 auto; }
 
 @media (min-width: 900px) {

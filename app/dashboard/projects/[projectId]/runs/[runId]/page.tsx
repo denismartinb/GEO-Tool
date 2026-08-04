@@ -45,7 +45,7 @@ export default async function RunDetailPage({
 
   if (!run) notFound();
 
-  // Runs created before migration 0027 have no sample_count; they were all
+  // Runs created before migration 0028 have no sample_count; they were all
   // one pass over their prompt set, which is exactly 1.
   const sampleCount = Math.max(1, Number(run.sample_count ?? 1));
   const distinctPrompts = Math.round(Number(run.total_prompts ?? 0) / sampleCount);
@@ -92,7 +92,7 @@ export default async function RunDetailPage({
         <CardHeader><h2 className="font-medium">Resumen del escaneo</h2></CardHeader>
         <CardContent className="space-y-1 text-sm text-[var(--ink-2)]">
           <p>Estado: {formatStatus(run.status)}</p>
-          {/* SAMPLING-1 (ADR 0027): total_prompts cuenta lanzamientos, y un
+          {/* SAMPLING-1 (ADR 0030): total_prompts cuenta lanzamientos, y un
               lanzamiento sólo equivale a un prompt cuando el escaneo no
               repitió su set. Con repeticiones se nombra la unidad real y se
               muestra de dónde sale, en vez de llamar "prompts" a 60 cuando

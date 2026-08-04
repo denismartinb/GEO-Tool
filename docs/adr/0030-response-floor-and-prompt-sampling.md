@@ -1,9 +1,9 @@
-# ADR 0027 — Suelo de respuestas por escaneo (muestreo por repetición de prompts)
+# ADR 0030 — Suelo de respuestas por escaneo (muestreo por repetición de prompts)
 
 - **Estado:** aceptado
 - **Fecha:** 2026-08-04
 - **Fase:** SAMPLING-1 (Fase 2 de `docs/geo-score-variability-2026-08.md`)
-- **Migración:** `supabase/migrations/0027_scan_prompt_result_samples.sql`
+- **Migración:** `supabase/migrations/0028_scan_prompt_result_samples.sql`
   (aprobada explícitamente por el fundador, decisión D5)
 - **Decide:** cuántas respuestas de IA tiene que reunir un escaneo antes de
   publicar un GEO Score, y cómo las consigue cuando el proyecto tiene pocos
@@ -122,13 +122,18 @@ multiplicaría por R contra el mismo presupuesto de ~60 s de `maxDuration`
 - **No toca ninguna fórmula de scoring.** Ni un peso, ni un umbral, ni una
   banda (`.claude/rules/scoring.md`). Cambia el **tamaño de la muestra** sobre
   la que corren esas fórmulas, y nada más.
-- **No arregla la cobertura de extracción.** Hoy `runStructuredExtractionForRun`
-  extrae como mucho `MAX_EXTRACTION_RESULTS` filas por escaneo, así que un run
-  con más filas que ese tope deja el resto con su `brand_mentioned` ingenuo
-  (sin alias, sin verificar) y sin datos de posición. **Esta fase depende de que
-  esa corrección aterrice antes**: con el tope puesto, más muestra significa más
-  denominador sin verificar, es decir, un score peor. Es trabajo de su propia
-  fase, en curso en paralelo.
+- **No arregla la cobertura de extracción, y dependía de que otro la
+  arreglara.** Mientras `runStructuredExtractionForRun` truncaba cada escaneo a
+  las primeras 20 filas (el antiguo `MAX_EXTRACTION_RESULTS`), subir el suelo
+  de respuestas **empeoraba** el score: las filas sobrantes entraban al cálculo
+  con su `brand_mentioned` ingenuo, sin alias (ADR 0025) y sin verificar
+  (ADR 0021), y sin datos de posición. Dicho de otro modo, esta fase habría
+  cobrado el triple por un número peor.
+  **Resuelto por EXTRACTION-RELIABILITY-1 (ADR 0029), mergeado el 2026-08-04**,
+  que sustituye el tope por concurrencia acotada con presupuesto y difiere el
+  finalize antes que completar un run sobre filas sin procesar. Esta fase se
+  mergea **después** de aquella, y ese orden no es una preferencia: invertirlo
+  degrada el producto de forma medible.
 - **No rediseña la superficie.** El cajón de evidencias de Prompts muestra R
   filas por motor sin etiquetar la muestra, y `citationsTotal` por prompt suma
   las R respuestas. Fase de superficie, ya acordada como separada.

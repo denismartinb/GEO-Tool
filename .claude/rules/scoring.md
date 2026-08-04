@@ -41,7 +41,7 @@ que produjo ADR 0015, 0024 y 0026.
 - La confianza declarada tiene que ser estadísticamente defendible, no una
   etiqueta cosmética (ADR 0015 punto 3).
 
-## Tamaño de la muestra (SAMPLING-1, ADR 0027)
+## Tamaño de la muestra (SAMPLING-1, ADR 0030)
 
 - **Un escaneo apunta a un suelo de 50 respuestas** (`MIN_RESPONSES_PER_RUN`,
   `lib/scan/sampling.ts`). Cuando `prompts × motores` no llega, el run repite
@@ -55,12 +55,15 @@ que produjo ADR 0015, 0024 y 0026.
 - **La unidad de trabajo es `(run, prompt, motor, muestra)`.** Cualquier
   comprobación de "esto ya está hecho" tiene que filtrar por `sample_index`.
   Sin ese filtro las repeticiones se saltan sus llamadas en silencio y el
-  escaneo reporta éxito con un tercio de las respuestas (ADR 0027).
+  escaneo reporta éxito con un tercio de las respuestas (ADR 0030).
 - **El suelo no puede subir sin mirar la cobertura de extracción.** Si un run
-  tiene más filas de las que `runStructuredExtractionForRun` extrae, las
-  sobrantes entran al score con su mención ingenua, sin alias y sin verificar
-  (ADR 0021/0025): más muestra empeora el número en vez de mejorarlo.
-- Free queda fuera del suelo por decisión de producto (D1, ADR 0027), no por
+  tiene más filas de las que `runStructuredExtractionForRun` llega a procesar,
+  las sobrantes entran al score con su mención ingenua, sin alias y sin
+  verificar (ADR 0021/0025): más muestra empeora el número en vez de mejorarlo.
+  Hoy no ocurre —ADR 0029 retiró el tope de filas—, pero la regla se queda
+  escrita porque el acoplamiento sigue ahí: cualquier futuro límite en la
+  extracción vuelve a invertir el signo de esta fase.
+- Free queda fuera del suelo por decisión de producto (D1, ADR 0030), no por
   limitación técnica.
 
 ## Referencias

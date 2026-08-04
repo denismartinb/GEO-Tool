@@ -470,10 +470,29 @@ export function assertPageIsHealthy(findings: PageFindings): void {
  * The revealed element has already been scrolled into view, so the viewport is
  * where it is.
  */
-export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
+export async function captureInteraction(
+  page: Page,
+  testInfo: TestInfo,
+  label: string,
+  opts: {
+    /**
+     * Capture the whole content instead of the viewport. Off by default,
+     * because for a REVEAL the viewport is the point: a tooltip that renders
+     * clipped or off-screen is the finding, and growing the viewport would
+     * hide exactly that.
+     *
+     * Turn it on when the interaction reveals something TALLER than the fold,
+     * where the viewport frame cuts off the very thing being verified — e.g.
+     * the generated llms.txt, whose five publishing steps sit below the file
+     * block and were invisible in every capture of the first run.
+     */
+    fullContent?: boolean;
+  } = {}
+): Promise<string> {
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
-  await page.screenshot({ path: screenshot });
+  if (opts.fullContent) await captureFullContent(page, screenshot);
+  else await page.screenshot({ path: screenshot });
   await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"

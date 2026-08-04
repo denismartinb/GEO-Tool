@@ -11,7 +11,7 @@
  * de 6 pasos simulados se omite — se mantiene spinner + título + cuerpo +
  * barra de progreso real + contador real ("X de Y").
  *
- * El contador perdió el sustantivo "prompts" en SAMPLING-1 (ADR 0027): desde
+ * El contador perdió el sustantivo "prompts" en SAMPLING-1 (ADR 0030): desde
  * que un escaneo puede repetir su set de prompts, `total_prompts` cuenta
  * lanzamientos (prompt x repetición), no prompts, así que nombrar la unidad
  * aquí sería falso en los escaneos que repiten. Recuperar una etiqueta más

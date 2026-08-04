@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
  * `Figure` es el contenedor de TODO lo visual de un artículo: marco, pie y
  * fuente. `ProductMock` es la maqueta del panel de Genscore, construida en
  * SVG/CSS con datos de ejemplo — nunca una captura de la cuenta piloto (ver
- * `docs/adr/0026-article-imagery-policy.md`).
+ * `docs/adr/0028-article-imagery-policy.md`).
  */
 
 /** Marco + pie de figura. `label` numera la figura; `caption` explica qué se está viendo y de dónde salen los datos. */

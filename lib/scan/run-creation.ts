@@ -98,7 +98,7 @@ async function copyForwardLatestResults({
       // Carried, not reset. A partial rescan copies forward every sample of
       // every prompt it is not rescanning; collapsing them to the default 0
       // would violate the (run_id, prompt_id, provider, sample_index)
-      // uniqueness of migration 0027 the moment a prompt had more than one
+      // uniqueness of migration 0028 the moment a prompt had more than one
       // sample, failing the whole insert.
       sample_index: row.sample_index,
       brand_snapshot: row.brand_snapshot,
@@ -283,7 +283,7 @@ export async function createPendingScanRunCore({
   const scannedPrompts = eligibleForJobs.slice(0, campaignCap);
   const promptCount = scannedPrompts.length;
 
-  // SAMPLING-1 (ADR 0027): how many times this run asks each prompt of each
+  // SAMPLING-1 (ADR 0030): how many times this run asks each prompt of each
   // engine, so a project with few prompts still reaches the response floor
   // the score needs. Resolved HERE, at job-creation time, because the unit of
   // work is one (prompt, sample) job: putting the repetition inside
@@ -307,7 +307,7 @@ export async function createPendingScanRunCore({
   // divides `successful_prompts + failed_prompts` (job counts, see
   // refreshRunProgressCounters) by this, so any other definition makes the
   // bar exceed 100%. The distinct-prompt count is recoverable as
-  // total_prompts / sample_count (migration 0027).
+  // total_prompts / sample_count (migration 0028).
   const totalJobs = promptCount * sampling.samples;
 
   const { data: run, error: runError } = await service

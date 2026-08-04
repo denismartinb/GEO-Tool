@@ -1,8 +1,8 @@
--- 0027_scan_prompt_result_samples.sql
+-- 0028_scan_prompt_result_samples.sql
 --
 -- Phase: SAMPLING-1 (Fase 2 de docs/geo-score-variability-2026-08.md)
--- Founder-approved 2026-08-04 (decisión D5 del Task Intake; ver ADR 0027).
--- ADR: docs/adr/0027-response-floor-and-prompt-sampling.md
+-- Founder-approved 2026-08-04 (decisión D5 del Task Intake; ver ADR 0030).
+-- ADR: docs/adr/0030-response-floor-and-prompt-sampling.md
 --
 -- Purpose: a run may now ask the SAME prompt to the SAME engine more than
 -- once, so that a project with few prompts still reaches the response floor
@@ -39,7 +39,7 @@ alter table public.scan_prompt_results
   add column if not exists sample_index smallint not null default 0;
 
 comment on column public.scan_prompt_results.sample_index is
-  'Zero-based repetition index of this (prompt, provider) pair within its run. 0 for every run created before SAMPLING-1 and for every run whose prompt count already clears the response floor. See lib/scan/sampling.ts and ADR 0027.';
+  'Zero-based repetition index of this (prompt, provider) pair within its run. 0 for every run created before SAMPLING-1 and for every run whose prompt count already clears the response floor. See lib/scan/sampling.ts and ADR 0030.';
 
 -- Lower bound only, deliberately. The real cap (MAX_PROMPT_SAMPLES) lives in
 -- lib/scan/sampling.ts, and duplicating it here would mean raising the cap
@@ -88,7 +88,7 @@ alter table public.scan_runs
   add column if not exists sample_count smallint not null default 1;
 
 comment on column public.scan_runs.sample_count is
-  'Times this run asked each prompt of each engine (SAMPLING-1, ADR 0027). 1 for every run created before sampling and for every run whose prompt count already clears the response floor. total_prompts / sample_count = distinct prompts scanned.';
+  'Times this run asked each prompt of each engine (SAMPLING-1, ADR 0030). 1 for every run created before sampling and for every run whose prompt count already clears the response floor. total_prompts / sample_count = distinct prompts scanned.';
 
 alter table public.scan_runs
   drop constraint if exists scan_runs_sample_count_chk;

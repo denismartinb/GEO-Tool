@@ -6,7 +6,7 @@
  *   import { KeyTakeaway, NumberedSection, Figure } from "@/components/blog/article";
  *
  * Diseño y reglas: `docs/brand/article-design-system.md`.
- * Política de imágenes: `docs/adr/0026-article-imagery-policy.md`.
+ * Política de imágenes: `docs/adr/0028-article-imagery-policy.md`.
  */
 export {
   KeyTakeaway,
