@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type MouseEvent } from "react";
+import { buildSeriesPaths, MIN_TREND_POINTS } from "@/lib/competitors/trend-window";
 
 export type TrendSeries = {
   key: string;
@@ -45,7 +46,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
     () => new Set(series.slice(DEFAULT_VISIBLE).map((s) => s.key))
   );
 
-  if (data.length < 2) return null;
+  if (data.length < MIN_TREND_POINTS) return null;
 
   const visible = series.filter((s) => !hidden.has(s.key));
   const plotW = W - PAD_LEFT - PAD_RIGHT;
@@ -144,28 +145,14 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
         ))}
 
         {visible.map((s) => {
-          // Step, not interpolation: a rank changes from one scan to the next,
-          // it does not slide through the values in between. A smooth line
-          // would draw positions that were never measured.
-          const segments: string[] = [];
-          let current = "";
-          let prev: { x: number; y: number } | null = null;
-
-          data.forEach((d, i) => {
-            const v = d.values[s.key];
-            if (v == null) {
-              if (current) segments.push(current);
-              current = "";
-              prev = null;
-              return;
-            }
-            const px = xFor(i);
-            const py = yFor(v);
-            if (!prev) current = `M${px.toFixed(1)} ${py.toFixed(1)}`;
-            else current += ` H${px.toFixed(1)} V${py.toFixed(1)}`;
-            prev = { x: px, y: py };
-          });
-          if (current) segments.push(current);
+          // Straight segments between measurements — see buildSeriesPaths for
+          // why this is not a step chart.
+          const segments = buildSeriesPaths(
+            data.map((d, i) => {
+              const v = d.values[s.key];
+              return v == null ? null : { x: xFor(i), y: yFor(v) };
+            })
+          );
 
           return (
             <g key={s.key}>
@@ -228,7 +215,15 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
         )}
       </svg>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+      {/* The greyed-out chips are OFF, not broken. Only the first
+          DEFAULT_VISIBLE series start on, and the founder read the rest as
+          disabled ("¿por qué brave, protón, etc salen deshabilitados?") — a
+          toggle that looks dead is a toggle nobody presses. Hence the hint and
+          a lighter dimming than the old 0.5, which read as "unavailable". */}
+      <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 12 }}>
+        Toca una marca para mostrarla u ocultarla en el gráfico.
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 7 }}>
         {series.map((s) => {
           const isHidden = hidden.has(s.key);
           return (
@@ -249,7 +244,7 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
                 cursor: "pointer",
                 font: "inherit",
                 fontSize: 12,
-                opacity: isHidden ? 0.5 : 1
+                opacity: isHidden ? 0.8 : 1
               }}
             >
               <span
@@ -262,7 +257,9 @@ export function PositionTrendChart({ series, data, maxPosition }: PositionTrendC
                   display: "inline-block"
                 }}
               />
-              <span style={{ color: "var(--ink-2)", fontWeight: s.isBrand ? 700 : 500 }}>{s.label}</span>
+              <span style={{ color: isHidden ? "var(--ink-3)" : "var(--ink-2)", fontWeight: s.isBrand ? 700 : 500 }}>
+                {s.label}
+              </span>
             </button>
           );
         })}

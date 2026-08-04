@@ -2232,21 +2232,30 @@ a {
 .cm2-pos-card { padding: 16px 16px 10px; }
 .cm2-pos-chart { min-width: 0; }
 .cm2-pos-list { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
-/* inline-flex keeps the InfoTip glyph on the label's own line — as plain
-   inline content after an uppercase, letter-spaced label it wrapped onto a
-   second line by itself. Tooltip overflow fix (fourth of four real cases,
-   2026-08-03, pre-existing from COMP-REDESIGN-1) is in the shared
-   `.info-tip-anchor` rule near the base `.info-tip` definition —
-   `.cm2-pos-list-hd` is already in that rule's selector list. */
+/* This header no longer carries an InfoTip: right-aligned, its bubble opened
+   off-screen and rendered clipped, so the founder cut it (log §15). The shared
+   `.info-tip-anchor` rule still lists `.cm2-pos-list-hd` — harmless, and left
+   alone rather than editing a selector other zones depend on.
+
+   One label per column, each over the data it names (founder, 2026-08-04: "que
+   se relacione con el dato"). A single right-aligned heading named the
+   percentages by position, leaving the position column unlabelled and its
+   digits reading as bullets. Header and rows share the same three columns;
+   flex-end because the labels are shorter than the row text. */
+.cm2-pos-list-hd,
+.cm2-pos-row { display: flex; align-items: center; gap: 9px; }
 .cm2-pos-list-hd {
-  display: flex; align-items: center; gap: 5px;
+  align-items: flex-end;
   font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
   color: var(--ink-4); margin-bottom: 6px;
 }
-.cm2-pos-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; }
+.cm2-pos-hd-nm { flex: 1; min-width: 0; }
+.cm2-pos-row { padding: 5px 0; }
+/* Last column and the heaviest: the position is what this block is for, and on
+   the left as a small grey digit the founder read straight past it. */
 .cm2-pos-n {
-  flex: 0 0 auto; width: 15px; text-align: center; font-size: 11px; font-weight: 750;
-  color: var(--ink-4); font-variant-numeric: tabular-nums;
+  flex: 0 0 40px; text-align: right; font-size: 12px; font-weight: 750;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
 }
 .cm2-pos-row.you .cm2-pos-n { color: var(--brand-blue); }
 .cm2-pos-nm {
@@ -2254,14 +2263,30 @@ a {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .cm2-pos-row.you .cm2-pos-nm { color: var(--brand-blue); }
-.cm2-pos-v {
-  flex: 0 0 auto; font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
-  font-size: 13px; font-weight: 800; color: var(--ink); font-variant-numeric: tabular-nums;
+/* The mean-rank value ("2,18º") used to live here. Removed with the switch to
+   a plain 1..N ranking (log §15): a mean is almost never 1,00, so the column
+   read as "nobody is in first place". The mention rate takes its place at the
+   end of the row, which is also what breaks ties in the order. */
+.cm2-pos-rate {
+  flex: 0 0 46px; text-align: right; font-size: 11.5px; color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+/* The header reuses the value classes to stay column-aligned, so it must not
+   inherit their tabular-figure sizing for its own uppercase label. */
+.cm2-pos-list-hd .cm2-pos-rate,
+.cm2-pos-list-hd .cm2-pos-n {
+  font: inherit; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4);
 }
 @media (min-width: 900px) {
   .cm2-pos-card { display: flex; align-items: flex-start; gap: 18px; }
   .cm2-pos-chart { flex: 1; min-width: 0; }
-  .cm2-pos-list { flex: 0 0 210px; margin-top: 0; padding-top: 0; border-top: none; }
+  /* 250px, not 210: three columns now (marca · mención · puesto), and the brand
+     names need what is left after the two fixed numeric ones. */
+  .cm2-pos-list { flex: 0 0 250px; margin-top: 0; padding-top: 0; border-top: none; }
+  /* Before the chart exists the list is the whole card, so the fixed 210px
+     column would leave two thirds of the width empty next to it. */
+  .cm2-pos-card.list-only { display: block; }
+  .cm2-pos-card.list-only .cm2-pos-list { flex: none; }
 }
 
 /* 8 · Desktop layout — main column + sticky rail, same `display: contents`
