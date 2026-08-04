@@ -169,6 +169,60 @@ For each interaction capture, ask:
    skipped control, say plainly that it is unverified rather than letting the
    green sweep imply coverage.
 
+## Coverage traps — where "no finding" silently means "never looked"
+
+Added 2026-08-04 after RECS-REDESIGN-1, where a **PILOT PASS with the screen
+green at 375px sat on top of a layout so broken the title fell vertically, one
+word per line.** Nothing in the harness fires on that. Every trap below has
+already produced a false sense of coverage on a real PR; check each one before
+you write a verdict.
+
+1. **A green table is not a verification.** The per-screen ✅ means the page
+   loaded without console errors, horizontal overflow or a bounce to login. A
+   squashed column, an unreadable title, an element overlapping another —
+   none of those move it. Never let the table stand in for looking.
+
+2. **Confirm the screenshot is actually the whole page.** Compare the image's
+   height to the viewport height. If they match, the capture is fold-cropped
+   and *everything below the first screen is unverified* — say so and mark the
+   criteria that live down there as not verified. The dashboard shell scrolls
+   in an inner container, so `fullPage` silently captured only the top fold
+   until this was fixed (`expandInnerScroller`, `tests/pilot/support/journey.ts`).
+   If it ever regresses, this check is what catches it.
+
+3. **The interaction sweep does NOT cover the screen.** It stops at
+   `PILOT_MAX_INTERACTIONS` (default **4**) controls per screen, and on a long
+   screen the nav menu, the notification bell and a couple of tooltips consume
+   that budget before it reaches the content. It also only considers elements
+   matching `EXPLORABLE` — filter tabs, plain buttons and most custom controls
+   are simply not in it. And the destructive-text deny-list over-matches on
+   purpose, so an innocent control named "Añadir bloque de cita" is refused for
+   the "añad" stem. **Read `interactions.jsonl` and enumerate what was never
+   touched.** If the PR's whole change sits behind untouched controls, that is
+   INCONCLUSIVE for those criteria, never PASS.
+
+4. **When the generic sweep cannot reach the controls under test, demand a
+   dedicated journey.** Do not accept "the DOM changed" as proof of a feature.
+   `tests/pilot/journeys/recommendations-interactions.spec.ts` is the pattern:
+   it clicks the real controls and asserts the consequence (the accordion opens
+   *with cards inside*, the tooltip's box fits *within the viewport*, the export
+   *downloads a .md*). Recommend one whenever a PR's core interactions are
+   outside the sweep's reach.
+
+5. **Check every instance of a repeated component, not the first.** The
+   first one is usually the one that cannot fail. A tooltip bug shipped because
+   the check hovered pillar 1, in the left column, while the breakage lived in
+   the right-hand pillars whose bubble ran off-screen. For anything repeated in
+   a row or grid, inspect the **edge** instances: last in the row, right-most
+   column, longest text.
+
+6. **Content persisted at scan time will not reflect a code change.** Titles,
+   descriptions and `first_step` live in `recommendations.evidence_json`,
+   written when the scan ran. A copy or wording fix in the engine is invisible
+   on existing rows until that project is re-scanned. Report those as **pending
+   a rescan** — neither "not implemented" nor "verified". Judging engine copy
+   from a stale project is how a correct change gets reported as missing.
+
 ## UX quality bar (judgement, not assertions)
 
 Fidelity asks "is it what we agreed?". This asks "is what we agreed any good?".
@@ -272,6 +326,17 @@ rather than improvising a write path nobody reviewed.
   reachable rather than guessing.
 - **The pilot sees one account's data.** It cannot prove multi-tenant isolation;
   that remains `data-guardian` territory.
+- **One project is not one product.** The journeys used to inspect only
+  whichever project sits first in the list, so a single domain and data shape
+  stood in for all of them — and the states that only appear with many
+  recommendations (grouped accordions, a full priority block, per-category
+  counts) were never seen. A second-project journey now exists
+  (`PILOT_SECOND_PROJECT`, default "Movistar"). When a PR's behaviour depends
+  on data volume, check that the evidence includes the larger project, and say
+  so if it does not.
+- **Interaction coverage is bounded and partial by design** — see the coverage
+  traps above. Absence of an interaction finding is never evidence that a
+  control works.
 
 ## Report format
 
