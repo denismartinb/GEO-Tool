@@ -477,17 +477,26 @@ export default async function CompetitorsPage({
       }))
     ]
       .filter((entry): entry is typeof entry & { position: number } => entry.position != null)
-      .sort((a, b) => a.position - b.position);
+      /* Ranked 1..N with no repeats, so the column reads as an order rather
+         than a measurement (founder, 2026-08-04). The underlying number is a
+         mean rank — "2,18º" — which is exactly what made it confusing: a mean
+         is almost never 1,00, so the list looked like nobody was in first
+         place. The order it produces is still the honest signal; the decimal
+         behind it is not what the user is asking this list.
 
-    let lastPosition: number | null = null;
-    let lastRank = 0;
-    return sorted.map((entry, index) => {
-      if (lastPosition === null || entry.position !== lastPosition) {
-        lastRank = index + 1;
-        lastPosition = entry.position;
-      }
-      return { ...entry, rank: lastRank };
-    });
+         Ties broken by mention rate: at the same mean rank, the brand the AI
+         names in more answers is genuinely ahead, and that number is already
+         on screen beside the name, so the tiebreak is visible rather than
+         arbitrary. Name last, purely so the order is stable between renders
+         instead of depending on array order. */
+      .sort(
+        (a, b) =>
+          a.position - b.position ||
+          (b.mentionRate ?? -1) - (a.mentionRate ?? -1) ||
+          a.label.localeCompare(b.label, "es")
+      );
+
+    return sorted.map((entry, index) => ({ ...entry, rank: index + 1 }));
   })();
 
   // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
@@ -783,7 +792,7 @@ export default async function CompetitorsPage({
               {hasTrendData || latestPositions.length > 0 ? (
                 <>
                   <div className="cm2-sec-lbl">
-                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Puesto medio cuando apareces"}
+                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Ranking del último escaneo"}
                   </div>
                   <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
                     {hasTrendData ? (
@@ -798,17 +807,16 @@ export default async function CompetitorsPage({
                             opened off-screen and rendered clipped — founder cut
                             it (2026-08-04). A tooltip that cannot be read is
                             worse than the explanation it was carrying. */}
-                        <div className="cm2-pos-list-hd">Puesto medio · último escaneo</div>
+                        <div className="cm2-pos-list-hd">Ranking · último escaneo</div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
                             <span className="cm2-pos-n">{entry.rank}</span>
                             <span className="cm2-pos-nm">{entry.label}</span>
+                            {/* Also the tiebreaker for the order above it, so a
+                                shared mean rank never resolves invisibly. */}
                             {entry.mentionRate != null ? (
-                              <span style={{ fontSize: 11.5, color: "var(--ink-4)", fontVariantNumeric: "tabular-nums" }}>
-                                {Math.round(entry.mentionRate)}%
-                              </span>
+                              <span className="cm2-pos-rate">{Math.round(entry.mentionRate)}%</span>
                             ) : null}
-                            <span className="cm2-pos-v">{entry.position.toFixed(2)}º</span>
                           </div>
                         ))}
                       </div>

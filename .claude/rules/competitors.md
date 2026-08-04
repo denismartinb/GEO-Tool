@@ -42,6 +42,14 @@ limpio (log §11).
 
 ## Métricas
 
+- **La lista muestra un ranking 1..N sin repetidos, no la media en crudo.** El
+  dato de fondo sigue siendo `avg_position_when_mentioned`, pero una media casi
+  nunca vale 1,00, así que enseñarla hacía que la lista pareciera no tener a
+  nadie en primera posición (log §15). **Empates: desempata la tasa de mención**
+  (a igual puesto medio, quien sale en más respuestas va antes), y el nombre
+  como último criterio sólo para que el orden sea estable entre renders. El
+  porcentaje que desempata se muestra en la fila, para que el criterio sea
+  visible y no arbitrario.
 - **La posición mide rango, no frecuencia** (ADR 0026 `position-when-mentioned`).
   No reintroducir el promedio con penalización `N+1` de ADR 0005: producía que
   una marca poco mencionada quedase por encima de Chrome o Safari.
