@@ -692,8 +692,16 @@ export default async function CompetitorsPage({
                   título + fecha + marca/dominio only, identical across every
                   console screen; hanging a page-specific action off it broke
                   that contract (founder feedback). */}
+              {/* Scope in the label, not in a tooltip. The same brand shows a
+                  different mention rate here and on the Overview because this
+                  pools EVERY completed scan and that one reads the latest —
+                  both correct, and unreadable side by side without saying so.
+                  This is the header that actually renders once a project has
+                  data; the empty-state copy above carries the same suffix.
+                  (I first labelled only that one, which no account with a
+                  completed scan ever sees — pilot, PR #313.) */}
               <div className="cm2-sec-lbl">
-                Cuota de voz en IA
+                Cuota de voz en IA · histórico
                 <ManageCompetitorsPanel
                   projectId={projectId}
                   activeCompetitors={activeCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))}
