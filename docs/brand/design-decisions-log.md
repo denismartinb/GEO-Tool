@@ -801,6 +801,60 @@ de producción (movistar.es), no una propuesta del piloto:
 
 ---
 
+## 8b. Overview — cómo se muestra la incertidumbre del score (GEO-SCORE-RELIABILITY-1, 2026-08-02)
+
+**Estado: implementado.** Detalle técnico en `docs/adr/0024-score-reliability-layer.md`
+y `docs/geo-score-variability-2026-08.md`.
+
+Decisiones de presentación (no de cálculo — el score no cambia):
+
+- **El score siempre se muestra; lo que se retira es la interpretación.**
+  Por debajo de 10 respuestas de IA desaparecen la franja cualitativa
+  («competitivo»/«emergente»/«inicial») y el delta, no el número. Ocultar el
+  número escondería evidencia real que el usuario ha pagado; mantener la
+  franja afirmaría una posición que la muestra no sostiene.
+- **La franja se sustituye por un badge `warn` "Muestra insuficiente"** con
+  tooltip que dice cuántas respuestas hay, por qué no basta y qué hacer
+  (añadir prompts o motores). Es un estado accionable, no un error.
+- **Un delta retirado no se etiqueta: se oculta.** *(Decisión del fundador,
+  2026-08-03 — supersede la primera versión de esta misma fase, que lo
+  renderizaba como "— sin comparación".)* Rotular cada hueco funcionaba como
+  argumento de honestidad y fallaba como pantalla: cuatro avisos de
+  "sin comparación" / "muestra insuficiente" a la vez hacen que el producto
+  parezca roto, no cuidadoso. Sigue vigente lo que motivó aquella versión:
+  **nunca "— sin cambio"**, que declara una estabilidad medida que no
+  tenemos. La regla final es ausencia, no afirmación falsa ni cartel.
+- **La ausencia se explica UNA vez, bajo el gauge, y en positivo.** *"Con N
+  respuestas de IA más verás franja y evolución. Añade prompts o motores."* —
+  redactado como lo que se desbloquea, no como lo que falta, porque el usuario
+  puede actuar sobre "añade prompts" y no sobre "muestra insuficiente". Un par
+  de escaneos no comparables **no** lleva línea: no es accionable (el
+  siguiente escaneo lo resuelve solo) y nombrarlo reintroduciría el ruido que
+  esta decisión elimina.
+- **Unidad: "respuestas de IA", no "prompts".** El contador es
+  `prompts × motores`; llamarlo "prompts" hacía que un proyecto de 1 prompt
+  en 3 motores leyera "3 de 3 prompts". Supersede la copy del banner de
+  insight de §4.
+- **El margen se muestra donde el dato es una proporción** (tasa de mención:
+  `±N pt`, Wilson 95%), no sobre el compuesto — no existe un intervalo
+  honesto del compuesto sin metodología nueva, y fabricarlo sería el mismo
+  error de precisión falsa que esta fase elimina.
+
+- **Una card KPI que no puede sostener su afirmación se oculta entera**, no se
+  queda con un valor vacío. Aplica a "Sentimiento de marca", cuyo veredicto
+  ("Positivo") se calcula solo sobre las respuestas que mencionan la marca —
+  2 en el escaneo que destapó esto. Dejarla habría sido la única card de la
+  pantalla afirmando algo con seguridad mientras sus tres hermanas se callan.
+- **La card del gauge deja de estirarse hasta la altura del bloque de KPIs**
+  (`align-items: start` en `.ov2-hero`, ≥1200px). Antes la rellenaba la
+  sparkline; al retirarla en escaneos de muestra baja quedaba un gauge con
+  mucho aire debajo. Ajustarla al contenido funciona en los dos estados, no
+  solo en el que tiene tendencia.
+
+Pendiente conocido: con muestra suficiente pero identidad de marca mal
+resuelta, la pantalla sigue publicando con confianza un número equivocado.
+Eso es la Fase −1 (alias de marca), en la PR #300.
+
 ## 9. Emails transaccionales — repintado a v3 (BRAND-5c, 2026-08-02)
 
 **Estado: implementado.**
@@ -1122,7 +1176,154 @@ merecería su propio diseño, no reutilizar esta caja.
 
 ---
 
-## 12. Página de Auditoría web (WEB-AUDIT-ISSUES-1, 2026-08-02/03)
+## 12. Artículos del blog — sistema de composición visual (GROWTH-3 Fase 3.1, 2026-08-03)
+
+**Estado: librería construida, 1 de 7 artículos convertido.**
+
+Diagnóstico de partida (verificado, no impresión): los 7 artículos del blog
+tenían **cero imágenes en el cuerpo** y solo 3 apariciones sueltas de un
+componente visual en total. Texto plano puede traer tráfico, pero la tasa de
+rebote es alta y no genera engagement.
+
+Decisiones finales:
+
+- **Ningún visual es decorativo; todos son evidencia.** Es el hallazgo al
+  analizar los PDFs de referencia de Semrush aportados por el fundador: cada
+  imagen suya es o una captura que prueba la afirmación, o un ejemplo
+  enmarcado del patrón que enseñan, o una cifra con su fuente. Convierte la
+  pregunta visual en una pregunta de honestidad, que es terreno donde este
+  proyecto ya tiene reglas duras.
+- **Librería de 15 bloques** en `components/blog/article/`, importados
+  siempre desde el barril. Detalle y criterio de uso de cada uno en
+  `docs/brand/article-design-system.md`.
+- **Tres reglas imposibles de saltarse por diseño de tipos**: `Stat` no
+  compila sin `source`, `PullQuote` no compila sin `cite`, y toda maqueta
+  declara en su pie que los datos son de ejemplo.
+- **Recetas obligatorias por cluster**, con mínimo de bloques por tipo de
+  artículo, validadas en `lib/blog/article-recipes.test.ts`. Una regla que no
+  es un test no existe — mismo criterio que los tests de enlazado interno del
+  glosario o de "al menos una fila donde gana el competidor" de las
+  comparativas.
+- **Imágenes: maquetas SVG/CSS, nunca ilustración generada por IA ni stock.**
+  Decisión completa y motivos en `docs/adr/0026-article-imagery-policy.md`.
+  Las capturas reales del producto quedan permitidas solo en `/docs`, nunca
+  en marketing, porque la cuenta piloto vive en el mismo proyecto de Supabase
+  que producción.
+- **La anotación sobre una maqueta se ancla a la fila que resalta**, no se
+  posiciona en absoluto con offsets. El artefacto de aprobación usaba
+  posicionamiento absoluto; se descartó al implementar porque se descuadra en
+  anchos intermedios. Se pierde la flecha curva de Semrush, se gana que no se
+  rompa nunca.
+- **Prefijo `art-` en todas las clases CSS.** No es cosmético: PR #292 costó
+  una colisión de clases entre ramas sin mergear, y este sistema introduce
+  ~15 clases de golpe.
+- **Tema claro únicamente**, como el resto del sitio. Se comprobó que
+  `globals.css` no declara `prefers-color-scheme` ni `data-theme` en ninguna
+  parte y que los tokens `-dark` definidos no los consume nadie.
+- **Enlaces: se prueban siempre, en dos niveles.** Estático en
+  `lib/blog/article-links.test.ts` (rompe el build si un href apunta a una
+  ruta inexistente) y en navegador dentro del journey del `ux-pilot` (cada
+  enlace interno debe responder 200 contra el despliegue real). Regla
+  explícita del fundador.
+- **Orden de entrega de un artículo**: redactar → componer → tests → pilot →
+  arreglar lo que el pilot encuentre → *entonces* Human Gate. Un artículo no
+  llega al fundador con un hallazgo de pilot abierto.
+
+Pendiente / roto conocido:
+
+- **6 de 7 artículos siguen en texto plano.** Están listados explícitamente
+  en `PENDING_CONVERSION` dentro de `article-recipes.test.ts`, con un test
+  que impide que esa lista crezca: un artículo nuevo nace cumpliendo la
+  receta. La conversión del resto es la Fase 3.2.
+- El pipeline semanal autónomo (Fase A1) **no** entra aquí: requiere
+  aprobación propia del fundador por el scheduler en background, que está en
+  la lista de prohibidos de `CLAUDE.md`.
+- `globals.css` usa `var(--mono)` en 11 sitios preexistentes, pero esa
+  variable no está definida en ninguna parte (la real es `--font-mono`).
+  Fuera del alcance de esta fase; los bloques `art-*` nuevos usan la
+  correcta.
+
+Referencias: `docs/brand/article-design-system.md`,
+`docs/adr/0026-article-imagery-policy.md`, `components/blog/article/`.
+
+---
+
+## 13. Artículos del blog — un peso no es un valor medido (GROWTH-3 Fase 3.2a, 2026-08-03)
+
+**Qué se decidió.** Todo `StatGrid` que muestre pesos del GEO Score va **bajo
+su propio H2 que los enmarca como pesos**, nunca colgando de un encabezado
+que promete otra cosa. Y sus tarjetas se redactan "**Peso de** la cuota de
+voz…", no "Cuota de voz…".
+
+**Por qué.** El `ux-pilot` encontró (PR #310) que en
+`como-elegir-competidores-analisis-geo` una tarjeta decía *"Cuota de voz —
+cuántas menciones son tuyas: 20%"* mientras la figura dos secciones antes
+mostraba *"Tu marca: 21%"*. Dos cifras casi idénticas etiquetadas igual: una
+es **la regla** (cuánto pesa esa señal en la fórmula) y la otra **el
+resultado** (la cuota real de una marca de ejemplo). Nada las distinguía.
+
+Ningún control automático puede detectar esto: no hay desbordamiento, ni
+error de consola, ni petición fallida. Solo aparece leyendo el artículo como
+lo leería alguien que llega por primera vez. Por eso se registra como regla
+en vez de confiar en que el pilot lo cace cada vez.
+
+`que-es-el-geo-score` ya lo hacía bien —su `StatGrid` vive bajo "Cuánto pesa
+cada señal"— y es el patrón de referencia.
+
+**Relacionado.** `StatGrid` exige ahora `label` (etiqueta accesible del
+grupo), por la misma lógica que `Stat` exige `source`: obliga a quien escribe
+a decir de qué son esas cifras. Ver `docs/brand/article-design-system.md`.
+
+**Pendiente.** Quedan 3 artículos por convertir al sistema (cluster
+`fundamentos` ×2 y `playbooks` ×1), en la Fase 3.2b.
+
+---
+
+## 14. Blog — la cabecera de artículo y las portadas (2026-08-04)
+
+**Cómo salió.** El fundador abrió el blog en su móvil y señaló dos cosas:
+*"la parte inicial del artículo con la fecha, el bloque inicial, la imagen,
+queda todo muy pegado… no tiene la estructura típica y limpia de un blog"*, y
+sobre las portadas de respaldo: *"parece un icono de algo que no carga bien"*.
+
+**Qué se decidió — ritmo de cabecera.** La secuencia de una cabecera de
+artículo es: hueco superior → portada → título → fecha → primer bloque, con
+el metadato **agrupado con el título** y **separado del cuerpo**. El error
+anterior era tener el ritmo al revés: 84px muertos arriba (el `padding` de
+`.lp-section`) y cero separación abajo.
+
+Medido por el `ux-pilot` sobre el render real: 48px de nav a portada en los
+tres anchos, ~21px de título a fecha, ~44px de fecha a cuerpo.
+
+**Precaución que hay que mantener.** `.blog-post-meta` **se comparte** con las
+tarjetas del índice de `/blog` y de los hubs. Toda regla de cabecera va
+acotada con `h1 +`, porque esas tarjetas titulan con `h2`. Sin eso, arreglar
+el artículo rompe el índice.
+
+**Qué se decidió — portadas.** Se permite imagen generada o de stock **en
+portada**, manteniendo la prohibición dentro del cuerpo (enmienda a
+`docs/adr/0026-article-imagery-policy.md`, decisión del fundador). Con una
+regla: una portada no puede representar una interfaz, un panel, un gráfico ni
+una métrica. Si enseña algo que parece un dato de Genscore, ese dato tiene que
+existir — y entonces ya no es portada, es figura.
+
+**Contraste.** La fecha pasa de `--ink-4` (2.63:1 sobre blanco, por debajo de
+AA) a `--ink-3` (4.76:1). Aplica también a las tarjetas del índice.
+
+**Pendiente / roto conocido.** Faltan 3 portadas
+(`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`). Hasta que existan, esos artículos caen
+en el degradado con icono, que es exactamente lo que se ha rechazado.
+`lib/blog/covers.test.ts` impide que esa deuda crezca.
+
+**Consecuencia de planificación.** La producción de portadas es hoy un paso
+humano: no hay herramienta de generación en el entorno del agente y el stock
+exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
+tiene aquí una dependencia manual.
+
+---
+
+## 15. Página de Auditoría web (WEB-AUDIT-ISSUES-1, 2026-08-02/03)
 
 **Estado: fase 1 (derivador) implementada y mergeada (PR #288). Fase 2 (esta
 entrada) implementada, PR #289, en Human Gate.**

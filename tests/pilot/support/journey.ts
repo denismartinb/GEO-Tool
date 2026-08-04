@@ -88,6 +88,12 @@ export interface PageFindings {
    * now on, on every page, without needing anyone to notice a screenshot.
    */
   headerInteractiveControls: string[];
+  /** Real content height, including inside the shell's inner scroll container. */
+  contentHeight: number;
+  /** Viewport height the screenshot was taken at. */
+  capturedHeight: number;
+  /** True when the page was taller than the capture ceiling and got cut. */
+  captureTruncated: boolean;
 }
 
 /**
@@ -152,75 +158,98 @@ function recordFindings(findings: PageFindings): void {
 }
 
 /**
- * The console shell (`app/dashboard/layout.tsx` + `app/globals.css`) is
- * `.shell { height: 100vh; overflow: hidden }` > `.dash-main` (a flex column
- * with `min-height: 0`, the trick that lets its child actually shrink) >
- * `.dash-content { flex: 1; overflow-y: auto }`. The PAGE never scrolls —
- * `.dash-content` does, internally — so `document.documentElement` stays
- * pinned at the viewport's own height no matter how long a screen's content
- * is.
+/**
+ * Horizontal-overflow measurement (2026-08-03, PR #289): `horizontalOverflow`
+ * used to compare `document.documentElement.scrollWidth` against the
+ * viewport, which can never trip on a console screen. Setting `overflow-y:
+ * auto` on `.dash-content` without an explicit `overflow-x` computes
+ * `overflow-x: auto` too (CSS overflow shorthand rules), so `.dash-content`
+ * clips and independently scrolls any horizontal overflow itself — it never
+ * reaches the document. Proven dead across 27/27 real findings, all of which
+ * had `scrollWidth === viewportWidth`. It is measured against `.dash-content`
+ * directly below, since that element is the actual clipping box on every
+ * dashboard screen.
  *
- * That silently broke two things this harness claimed to do, discovered
- * 2026-08-03 by reading PR #289's own captures by hand rather than trusting
- * the checklist: `page.screenshot({ fullPage: true })` measures
- * `document.documentElement`'s scroll box to decide how much to capture, so
- * every "full page" screenshot this harness had ever taken of a dashboard
- * screen was actually just the first viewport-height slice — 0/27 real
- * findings had ever shown more than what fits above the fold. And
- * `horizontalOverflow` compared `document.documentElement.scrollWidth` to
- * the viewport, which can never trip: setting `overflow-y: auto` on
- * `.dash-content` without an explicit `overflow-x` computes `overflow-x` to
- * `auto` too (CSS overflow shorthand rules), so `.dash-content` clips and
- * independently scrolls any horizontal overflow itself — it never reaches
- * the document.
- *
- * Fix: before a fullPage capture, temporarily neutralize the three classes
- * in this exact clipping chain (inline style, restored right after) so the
- * document naturally grows to the content's real height; measure horizontal
- * overflow against `.dash-content` directly instead of the document, since
- * that element — not `document.documentElement` — is the actual clipping
- * box on every dashboard screen.
+ * The vertical half of that same blindness is fixed by the capture code
+ * below, which arrived independently on `main`. Its approach — growing the
+ * viewport rather than stripping the shell's `overflow: hidden` — is the one
+ * kept: it captures a layout the product actually renders, and it bounds the
+ * result instead of letting a runaway list produce an unreadable PNG.
  */
-const SHELL_CLIPPING_CLASSES = [".shell", ".dash-main", ".dash-content"];
 
-async function expandShellForCapture(page: Page): Promise<void> {
-  await page.evaluate((selectors) => {
-    const w = window as unknown as { __pilotExpanded?: Array<{ el: HTMLElement; style: string }> };
-    w.__pilotExpanded = [];
-    for (const selector of selectors) {
-      const el = document.querySelector<HTMLElement>(selector);
-      if (!el) continue;
-      w.__pilotExpanded.push({ el, style: el.getAttribute("style") ?? "" });
-      el.style.setProperty("overflow", "visible", "important");
-      el.style.setProperty("height", "auto", "important");
-      el.style.setProperty("max-height", "none", "important");
-    }
-  }, SHELL_CLIPPING_CLASSES);
-}
+/** * Ceiling on how tall a capture may grow. A runaway list would otherwise
+ * produce a PNG too large to read (and too large to attach). When a page is
+ * taller than this the capture is truncated — and `captureTruncated` says so,
+ * because a silently cropped screenshot reads exactly like a complete one.
+ */
+const MAX_CAPTURE_HEIGHT = 6_000;
 
-async function restoreShellAfterCapture(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const w = window as unknown as { __pilotExpanded?: Array<{ el: HTMLElement; style: string }> };
-    for (const { el, style } of w.__pilotExpanded ?? []) {
-      if (style) el.setAttribute("style", style);
-      else el.removeAttribute("style");
+/**
+ * How tall the page's real content is, INCLUDING content inside an inner
+ * scroll container.
+ *
+ * `fullPage: true` grows the capture to `document.documentElement.scrollHeight`
+ * and no further. The app shell pins itself to the viewport
+ * (`.shell { height: 100dvh; overflow: hidden }`, app/globals.css) and scrolls
+ * an inner element instead, so that number never exceeds one viewport — and
+ * every "full-page" capture of an authenticated screen was silently cropped at
+ * the fold. Found 2026-08-03, when the pilot could not see the Overview's
+ * position headline or any panorama row past the third at any viewport; it had
+ * been blind on every dashboard screen, not just that one.
+ */
+async function measureContentHeight(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    let tallest = document.documentElement.scrollHeight;
+    for (const el of document.querySelectorAll("*")) {
+      if (el.scrollHeight <= el.clientHeight + 1) continue;
+      const overflowY = window.getComputedStyle(el).overflowY;
+      if (overflowY !== "auto" && overflowY !== "scroll") continue;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      tallest = Math.max(tallest, top + el.scrollHeight);
     }
-    w.__pilotExpanded = [];
+    return Math.ceil(tallest);
   });
 }
 
+export type CaptureResult = {
+  /** Real content height measured before capturing. */
+  contentHeight: number;
+  /** Viewport height the capture was actually taken at. */
+  capturedHeight: number;
+  /** True when content exceeded MAX_CAPTURE_HEIGHT and was cut. */
+  captureTruncated: boolean;
+};
+
 /**
- * A fullPage screenshot of whatever the console shell clips to its own
- * scroll box. Shared by `visitAsUser` and `captureInteraction` so both kinds
- * of capture see the same true content height, not just the first viewport.
+ * Screenshots the whole screen, not just the part above the fold.
+ *
+ * Rather than stripping the shell's `overflow: hidden` — which would capture a
+ * layout the product never renders — this grows the *viewport* to the content
+ * height and lets the app lay itself out honestly at that size, then restores
+ * it. Width is untouched, so the responsive breakpoint under test never
+ * changes.
  */
-async function screenshotFullContent(page: Page, path: string): Promise<void> {
-  await expandShellForCapture(page);
+async function captureFullContent(page: Page, path: string): Promise<CaptureResult> {
+  const viewport = page.viewportSize();
+  const contentHeight = await measureContentHeight(page);
+
+  if (!viewport || contentHeight <= viewport.height + 2) {
+    await page.screenshot({ path, fullPage: true });
+    return { contentHeight, capturedHeight: viewport?.height ?? contentHeight, captureTruncated: false };
+  }
+
+  const capturedHeight = Math.min(contentHeight, MAX_CAPTURE_HEIGHT);
+  await page.setViewportSize({ width: viewport.width, height: capturedHeight });
+  // Let the app reflow and any viewport-dependent client component settle.
+  await page.waitForTimeout(400);
   try {
     await page.screenshot({ path, fullPage: true });
   } finally {
-    await restoreShellAfterCapture(page);
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(200);
   }
+
+  return { contentHeight, capturedHeight, captureTruncated: contentHeight > MAX_CAPTURE_HEIGHT };
 }
 
 /**
@@ -281,7 +310,7 @@ export async function visitAsUser(
     await page.waitForTimeout(1_000);
 
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };
-    // `.dash-content` (see the SHELL_CLIPPING_CLASSES comment above), not
+    // `.dash-content` (see the horizontal-overflow note above), not
     // document.documentElement — on a dashboard screen the document never
     // overflows, `.dash-content` does, on its own independent axis. Still
     // check the document too: non-console pages (/login) have no
@@ -328,9 +357,13 @@ export async function visitAsUser(
       });
     });
 
+    // Culprits are measured BEFORE the capture, while the viewport is still
+    // the one under test — captureFullContent resizes it and puts it back.
+    const overflowCulprits = horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [];
+
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
-    await screenshotFullContent(page, screenshot);
+    const capture = await captureFullContent(page, screenshot);
 
     const findings: PageFindings = {
       label,
@@ -340,7 +373,7 @@ export async function visitAsUser(
       scrollWidth,
       viewportWidth: viewport.width,
       horizontalOverflow,
-      overflowCulprits: horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [],
+      overflowCulprits,
       consoleErrors,
       failedRequests,
       thirdPartyFailures,
@@ -348,7 +381,8 @@ export async function visitAsUser(
       screenshot,
       renderedRealContent,
       expectedContent: expectation?.describedAs ?? null,
-      headerInteractiveControls
+      headerInteractiveControls,
+      ...capture
     };
 
     recordFindings(findings);
@@ -429,11 +463,17 @@ export function assertPageIsHealthy(findings: PageFindings): void {
  * if the interaction doesn't work, instead of silently screenshotting a
  * closed state and letting it pass for "verified" (founder request,
  * 2026-08-02: "quiero la evidencia de que verificaste el click").
+ *
+ * Deliberately viewport-sized, unlike `visitAsUser`: growing the viewport to
+ * capture a whole screen reflows the page, which would move an element out
+ * from under the cursor and dismiss the very `:hover` state being captured.
+ * The revealed element has already been scrolled into view, so the viewport is
+ * where it is.
  */
 export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
-  await screenshotFullContent(page, screenshot);
+  await page.screenshot({ path: screenshot });
   await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"
@@ -513,23 +553,42 @@ export async function resolveProjectId(page: Page): Promise<string> {
   const pinned = process.env.PILOT_PROJECT_ID?.trim();
   if (pinned) return pinned;
 
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
-
-  const href = await page
-    .locator('a[href^="/dashboard/projects/"]')
-    .filter({ hasNotText: /nuevo|new/i })
-    .first()
-    .getAttribute("href");
-
-  const match = href?.match(/\/dashboard\/projects\/([^/?#]+)/);
-  const projectId = match?.[1];
-
-  if (!projectId || projectId === "new") {
+  const [first] = await discoverProjectIds(page);
+  if (!first) {
     throw new Error(
       "Pilot account has no project to inspect. Seed the pilot account with a " +
         "project that already has completed scans, or set PILOT_PROJECT_ID."
     );
   }
+  return first;
+}
 
-  return projectId;
+/**
+ * Every project on the pilot account, in list order.
+ *
+ * One project only ever exercises one shape of data. The account's projects
+ * differ in the ways that matter for judging a screen — how many scans they
+ * have, whether the brand is mentioned at all, how many competitors the AI
+ * names — so walking a second one is the cheapest way to reach states the
+ * primary project simply cannot produce (founder, 2026-08-03: *"si cambias de
+ * proyecto escaneado, por ejemplo Movistar, ahí puedes probar otras
+ * casuísticas"*).
+ */
+export async function discoverProjectIds(page: Page): Promise<string[]> {
+  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+
+  const hrefs = await page
+    .locator('a[href^="/dashboard/projects/"]')
+    .filter({ hasNotText: /nuevo|new/i })
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
+
+  const ids: string[] = [];
+  for (const href of hrefs) {
+    const id = href.match(/\/dashboard\/projects\/([^/?#]+)/)?.[1];
+    // "new" is the create route, not a project; the list also links each
+    // project from several places, so the same id shows up more than once.
+    if (!id || id === "new" || ids.includes(id)) continue;
+    ids.push(id);
+  }
+  return ids;
 }

@@ -20,11 +20,20 @@ import {
   isQuantifiableRecommendationType,
   type ScoreInputRow
 } from "@/lib/scoring/run-scoring";
+import {
+  computeMentionInterval,
+  hasSufficientSample,
+  MIN_RESPONSES_FOR_BAND,
+  readComparableRun,
+  resolveDelta,
+  type DeltaVerdict
+} from "@/lib/scoring/score-reliability";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
+import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
 
 /* ---- constants & helpers ---- */
 
@@ -91,7 +100,8 @@ type ExtractedJsonPartial = {
 type BrandPositionEntry = {
   name?: string;
   is_brand?: boolean;
-  avg_position?: number;
+  avg_position_when_mentioned?: number | null;
+  mention_rate?: number;
   mention_count?: number;
 };
 
@@ -99,7 +109,7 @@ type BrandPositionDetails = {
   prompts_with_position_data?: number;
   total_entities?: number;
   ranking?: BrandPositionEntry[];
-  brand_avg_position?: number;
+  brand_avg_position_when_mentioned?: number | null;
   confidence?: string;
 };
 
@@ -359,6 +369,48 @@ export default async function ProjectDetailPage({
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
   const gaugeDelta = geoTrend.length >= 2 ? gaugeScore - geoTrend[geoTrend.length - 2] : 0;
 
+  /* ---- GEO-SCORE-RELIABILITY-1 — precision and comparability ----
+   * Every "vs. escaneo anterior" number above is a raw subtraction of two
+   * persisted rows. Whether it means anything depends on two things the page
+   * previously never checked: whether this run carries enough AI responses to
+   * support the claim, and whether the two runs measured the same thing at
+   * all (same methodology version, same surviving components, same engines,
+   * same sample size). `resolveDelta` is the single decision point for both,
+   * so the gauge and the KPI cards cannot disagree about what is assertable.
+   *
+   * When there is no previous run the verdict is null and nothing is
+   * rendered — that is the pre-existing "≥2 escaneos" behavior, unchanged.
+   */
+  const currentRun = readComparableRun(latestScore?.details_json);
+  const previousRun = prevScore ? readComparableRun(prevScore.details_json) : null;
+  const mentionInterval = computeMentionInterval(brandMentions, totalResults);
+  const sampleSufficient = hasSufficientSample(totalResults);
+  const resolve = (value: number): DeltaVerdict | null =>
+    previousRun ? resolveDelta(value, currentRun, previousRun) : null;
+  const gaugeDeltaVerdict = geoTrend.length >= 2 ? resolve(gaugeDelta) : null;
+  const visDeltaVerdict = resolve(visDelta);
+  const gapDeltaVerdict = resolve(gapDelta);
+
+  /**
+   * The ONE line that explains why the band, the delta and the trend are
+   * absent — everywhere else the withheld state renders as nothing at all
+   * (founder decision, 2026-08-03: four "sin comparación" notices on one
+   * screen read as a broken product, not a careful one).
+   *
+   * Deliberately phrased as what unlocks them, not as what is missing: the
+   * user can act on "add prompts or engines", and cannot act on "insufficient
+   * sample". Returns null when there is nothing to explain.
+   *
+   * A non-comparable pair of runs gets no line at all: it is not actionable —
+   * the next scan resolves it on its own — and naming it would reintroduce
+   * exactly the noise this change removes.
+   */
+  const sampleNudge = (verdict: DeltaVerdict | null): string | null => {
+    if (!verdict || verdict.kind !== "insufficient_sample") return null;
+    const missing = MIN_RESPONSES_FOR_BAND - verdict.responses;
+    return `Con ${missing} ${missing === 1 ? "respuesta" : "respuestas"} de IA más verás franja y evolución. Añade prompts o motores.`;
+  };
+
   /* ---- sentiment KPI (audit phase B, finding 6) ----
    * Distribution of the sentiment the AI expresses ABOUT THE BRAND in the
    * latest scan, computed only over answers where the brand is actually
@@ -430,9 +482,13 @@ export default async function ProjectDetailPage({
   const brandPosition = scoreDetails.brand_position;
   const brandPositionPromptsWithData = n(brandPosition?.prompts_with_position_data);
   const brandPositionAvailable = Boolean(brandPosition) && brandPositionPromptsWithData > 0;
-  const brandPositionRanking = [...(brandPosition?.ranking ?? [])].sort(
-    (a, b) => n(a.avg_position) - n(b.avg_position)
-  );
+  // Ordered by rank WHEN MENTIONED, best first; entities the AI never named
+  // have no rank at all and sort last rather than being given a fabricated
+  // one (geo-score-v3 — see docs/adr/0026). Missing and null both mean "no
+  // rank" and are collapsed in one tested place, because readers disagreeing
+  // about which was which is what put a numeric rank badge beside a "—"
+  // position on the same row.
+  const brandPositionRanking = normalizeRanking(brandPosition?.ranking);
   const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
@@ -449,10 +505,16 @@ export default async function ProjectDetailPage({
     domain: string | null;
     isBrand: boolean;
     avgPosition: number | null;
+    mentionRate: number | null;
     sov: number;
     /** Real rank among ranked entities (1-based), or null when unavailable. */
     rank: number | null;
   };
+  // Denominator for "your rank X of N": only entities the AI named. Counting
+  // the whole array counts brands that never appeared as if they were
+  // competing for the same places. Because unranked entities sort last,
+  // `i + 1` is a true ordinal for every entity with a position.
+  const rankedEntityCount = countRanked(brandPositionRanking);
   // Single source of truth for BOTH the position-bar chart and the ranked
   // list below it — both panels must show the same entities in the same
   // order, or the two numbers ("posición 2" on the bar vs. a different row
@@ -467,9 +529,10 @@ export default async function ProjectDetailPage({
             name: project.brand,
             domain: project.domain,
             isBrand: true,
-            avgPosition: n(entry.avg_position),
+            avgPosition: entry.position,
+            mentionRate: entry.mention_rate ?? null,
             sov: brandSov,
-            rank: i + 1
+            rank: entry.position !== null ? i + 1 : null
           };
         }
         const match = competitorRows.find(
@@ -480,29 +543,39 @@ export default async function ProjectDetailPage({
           name: entry.name ?? "—",
           domain: match?.domain ?? null,
           isBrand: false,
-          avgPosition: n(entry.avg_position),
+          avgPosition: entry.position,
+          mentionRate: entry.mention_rate ?? null,
           sov: match?.sov ?? 0,
-          rank: i + 1
+          rank: entry.position !== null ? i + 1 : null
         };
       })
     : [
-        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, sov: brandSov, rank: null },
+        { key: "brand", name: project.brand, domain: project.domain, isBrand: true, avgPosition: null, mentionRate: null, sov: brandSov, rank: null },
         ...competitorRows
           .slice()
           .sort((a, b) => b.mentionRate - a.mentionRate)
-          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, sov: c.sov, rank: null }))
+          .map((c) => ({ key: c.name, name: c.name, domain: c.domain, isBrand: false, avgPosition: null, mentionRate: null, sov: c.sov, rank: null }))
       ];
   const maxPanoramaSov = Math.max(1, ...panoramaRows.map((r) => r.sov));
 
   /* ---- position-media summary + bars (real brand_position data) ----
-   * "Tu posición media X / N" = brand's rank among the ranked entities.
-   * Bars encode avg_position (lower = better = taller). Only when
+   * "Tu puesto cuando apareces X / N" = brand's rank among the entities the
+   * AI actually named. Bars encode avg_position_when_mentioned (lower =
+   * better = taller); an entity the AI never named has no rank and is not
+   * ranked at all (geo-score-v3, docs/adr/0026). Only when
    * brand_position is available for this scan; otherwise the panorama
    * shows the SOV ranking list alone.
    */
+  const brandRankingEntry = brandPositionRanking.find((e) => e.is_brand);
   const brandRankIndex = brandPositionRanking.findIndex((e) => e.is_brand);
-  const brandRank = brandRankIndex >= 0 ? brandRankIndex + 1 : null;
-  const totalRanked = brandPositionRanking.length;
+  const brandRank =
+    brandRankIndex >= 0 && brandRankingEntry?.position != null
+      ? brandRankIndex + 1
+      : null;
+  // Denominator is the entities the AI named, not every entity we track —
+  // otherwise "3 / 8" counts five brands that never appeared as if they were
+  // competing for the same places.
+  const totalRanked = rankedEntityCount;
 
   // Top 5 by real position — the exact same rows feed both the bars and the
   // list. If the brand falls outside the top 5, its real row is appended so
@@ -515,15 +588,22 @@ export default async function ProjectDetailPage({
       : topPanoramaRows;
 
   const posbarsData = (() => {
-    if (!brandPositionAvailable || topPanoramaRows.length === 0) return [];
-    const positions = topPanoramaRows.map((r) => n(r.avgPosition));
+    if (!brandPositionAvailable) return [];
+    // Only entities that actually have a rank. Under geo-score-v3 an entity
+    // the AI never named has `avgPosition: null` — coercing that to 0 would
+    // draw it as the best-placed brand on the chart, which is the exact
+    // inversion of the truth.
+    const ranked = topPanoramaRows.filter(
+      (r): r is typeof r & { avgPosition: number } => r.avgPosition !== null
+    );
+    if (ranked.length === 0) return [];
+    const positions = ranked.map((r) => r.avgPosition);
     const maxPos = Math.max(...positions);
     const minPos = Math.min(...positions);
     const range = maxPos - minPos;
-    return topPanoramaRows.map((r) => {
-      const pos = n(r.avgPosition);
-      // Lower avg_position (better) → taller bar. Flat range → uniform height.
-      const height = range > 0 ? 20 + ((maxPos - pos) / range) * 40 : 40;
+    return ranked.map((r) => {
+      // Lower rank-when-mentioned (better) → taller bar. Flat range → uniform.
+      const height = range > 0 ? 20 + ((maxPos - r.avgPosition) / range) * 40 : 40;
       return { name: r.name, isBrand: r.isBrand, height };
     });
   })();
@@ -652,8 +732,12 @@ export default async function ProjectDetailPage({
               <Icon name="sparkles" size={18} />
             </div>
             <p className="ov2-insight-txt">
+              {/* "prompts" here counted prompt × engine rows, not prompts: a
+                  project with 1 prompt scanned on 3 engines read "3 de 3
+                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1). */}
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
-              <b>{brandMentions} de {totalResults} prompts</b> ({computedMentionRate}%), con una{" "}
+              <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
+              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
               <b>puntuación GEO de {gaugeScore}/100</b>.
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
@@ -701,15 +785,39 @@ export default async function ProjectDetailPage({
             <div className="ov2-gauge-info">
               <div className="ov2-gauge-lbl">Puntuación GEO</div>
               <div className="ov2-gauge-badges">
-                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                {geoTrend.length >= 2 && gaugeDelta !== 0 && <Delta value={gaugeDelta} suffix=" pt" />}
+                {/* The qualitative band asserts where the brand sits on a
+                    70/40 scale. Below MIN_RESPONSES_FOR_BAND responses a
+                    single AI answer moves the score by more than 7 points, so
+                    the band is not a claim the sample can support — the score
+                    itself is still shown, only its interpretation is withheld.
+                    Withheld means ABSENT, not labelled: a screen carrying four
+                    "sin comparación"/"muestra insuficiente" notices reads as
+                    broken rather than as careful (founder decision,
+                    2026-08-03). The single actionable line under the gauge
+                    below is what keeps the absence explainable. */}
+                {sampleSufficient ? (
+                  <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
+                ) : null}
+                {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
+                  <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
+                )}
               </div>
-              {geoTrend.length >= 2 ? (
+              {/* The sparkline is the delta in graphical form: a line joining
+                  the last N scores asserts a trend between them just as
+                  literally as "+44 pt" does. Drawing a rising line directly
+                  under the words "sin comparación" would contradict them in
+                  the more persuasive medium — the founder's original report
+                  was a screenshot of exactly that rise. So the line is
+                  withheld under the same condition as the number, and the
+                  caption says why instead. */}
+              {geoTrend.length >= 2 && gaugeDeltaVerdict?.kind === "publish" ? (
                 <>
                   <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
                   <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
                 </>
-              ) : (
+              ) : sampleNudge(gaugeDeltaVerdict) ? (
+                <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
+              ) : geoTrend.length >= 2 ? null : (
                 <div className="ov2-gauge-trend-cap">La tendencia estará disponible con ≥2 escaneos.</div>
               )}
             </div>
@@ -725,9 +833,11 @@ export default async function ProjectDetailPage({
                 label: "Tasa de mención",
                 value: computedMentionRate,
                 unit: "%",
-                delta: visDelta,
-                hint: "Prompts donde aparece tu marca.",
-                tip: "Porcentaje de prompts en los que tu marca aparece mencionada en la respuesta de la IA, sobre el total de prompts del escaneo.",
+                deltaVerdict: visDeltaVerdict,
+                hint: mentionInterval
+                  ? `${brandMentions} de ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA · margen ±${Math.round(mentionInterval.marginPoints)} pt (95%).`
+                  : "Respuestas de IA donde aparece tu marca.",
+                tip: "Porcentaje de respuestas de IA en las que tu marca aparece mencionada, sobre el total de respuestas del escaneo (prompts × motores). El margen es el intervalo de confianza de Wilson al 95%: con pocas respuestas, el valor real puede estar en cualquier punto de ese rango. Se estrecha añadiendo prompts o motores.",
                 isShare: false as const
               },
               {
@@ -735,7 +845,6 @@ export default async function ProjectDetailPage({
                 label: "Cuota de Citas",
                 value: citationShareResult.share,
                 unit: "%",
-                delta: 0,
                 hint: citationShareResult.share !== null
                   ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
                   : "Sin citas grounding resueltas en este escaneo.",
@@ -747,12 +856,18 @@ export default async function ProjectDetailPage({
                 label: "Presión competitiva",
                 value: competitorPressureScore,
                 unit: "%",
-                delta: gapDelta,
-                hint: "Prompts donde aparece un competidor pero tu marca no.",
+                deltaVerdict: gapDeltaVerdict,
+                hint: "Respuestas de IA donde aparece un competidor pero tu marca no.",
                 invert: true,
-                tip: "Mide en qué porcentaje de tus prompts aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
+                tip: "Mide en qué porcentaje de las respuestas de IA aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
                 isShare: false as const,
-                band: getCompetitivePressureBand(competitorPressureScore)
+                // Same sample gate as the GEO gauge's band: "Presión
+                // competitiva: Baja" is a qualitative claim about the market,
+                // and over <10 AI responses it rests on one or two answers.
+                // Gating one band and not the other would just move the false
+                // precision to the card next door. Falls through to the
+                // delta verdict below, which renders the honest absence.
+                band: sampleSufficient ? getCompetitivePressureBand(competitorPressureScore) : undefined
               },
               {
                 // Sentiment replaces the old "Confianza" card (audit phase B,
@@ -767,7 +882,6 @@ export default async function ProjectDetailPage({
                   ? sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1)
                   : "Sin datos",
                 unit: "",
-                delta: 0,
                 hint:
                   sentimentTotal > 0
                     ? `${sentimentBreakdown} · sobre ${sentimentTotal} ${sentimentTotal === 1 ? "respuesta" : "respuestas"} con tu marca.`
@@ -776,7 +890,16 @@ export default async function ProjectDetailPage({
                 isShare: false as const,
                 hideDelta: true as const
               }
-            ].map((m) => (
+            ]
+              // A KPI that cannot support its own claim is hidden, not
+              // labelled (founder decision, 2026-08-03). "Sentimiento de
+              // marca: Positivo" is a qualitative verdict, and it is computed
+              // only over answers that actually mention the brand — 2 of them
+              // on the run that surfaced this. Left in, it would have been the
+              // only card on the screen still asserting something confident
+              // while its three siblings withheld.
+              .filter((m) => m.key !== "sentiment" || hasSufficientSample(sentimentTotal))
+              .map((m) => (
               <div key={m.key} className="ov2-kpi">
                 <div className="ov2-kpi-k">{m.label}</div>
 
@@ -819,6 +942,14 @@ export default async function ProjectDetailPage({
                     <>
                       <div className="ov2-kpi-v">{m.value}<small>%</small></div>
                       <div className="ov2-kpi-foot">
+                        {/* Same sample gate as the GEO band and the
+                            competitive-pressure band: "Muy bajo" is a
+                            qualitative verdict, and over <10 responses it
+                            rests on one or two cited pages. Gating three
+                            bands on this screen and leaving the fourth would
+                            just be arbitrary. */}
+                        {/* Hidden, not labelled — same rule as the gauge band. */}
+                        {!sampleSufficient ? null : (
                         <span className={`badge ${
                           m.value > 50 ? "badge-pos" :
                           m.value >= 30 ? "badge-accent" :
@@ -832,6 +963,7 @@ export default async function ProjectDetailPage({
                            m.value >= 5  ? "Bajo" :
                            "Muy bajo"}
                         </span>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -845,8 +977,17 @@ export default async function ProjectDetailPage({
                         <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10 }}>
                           {m.band.label}
                         </span>
-                      ) : "hideDelta" in m && m.hideDelta ? null : m.delta !== 0 ? (
-                        <Delta value={m.delta} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
+                      ) : "hideDelta" in m && m.hideDelta ? null : !("deltaVerdict" in m) || m.deltaVerdict === null ? null : m.deltaVerdict.kind !== "publish" ? (
+                        // Withheld -> render NOTHING. Never "— sin cambio",
+                        // which would assert measured stability we do not
+                        // have; and no "— sin comparación" label either, since
+                        // repeating that across every card reads as a broken
+                        // screen rather than a careful one (founder decision,
+                        // 2026-08-03). The absence is explained once, under
+                        // the gauge.
+                        null
+                      ) : m.deltaVerdict.value !== 0 ? (
+                        <Delta value={m.deltaVerdict.value} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
                       ) : (
                         <span className="delta flat">— sin cambio</span>
                       )}
@@ -904,8 +1045,15 @@ export default async function ProjectDetailPage({
             <>
               {brandPositionAvailable && posbarsData.length > 0 && (
                 <div className="card" style={{ padding: "17px 16px 6px" }}>
-                  <div className="ov2-pm-lbl">Tu posición media</div>
-                  <div className="ov2-pm-val">
+                  <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
+                  <div
+                    className="ov2-pm-val"
+                    title={
+                      brandRank === null
+                        ? "La IA no te nombró en este escaneo, así que no tienes puesto."
+                        : undefined
+                    }
+                  >
                     {brandRank ?? "—"}<small> / {totalRanked}</small>
                   </div>
                   <div className="ov2-posbars">
@@ -945,9 +1093,9 @@ export default async function ProjectDetailPage({
                         <div className="pct">{row.sov}%</div>
                       </div>
                       {row.avgPosition !== null ? (
-                        <span className="ov2-cmp-sc">{row.avgPosition.toFixed(2)}<small> pos</small></span>
+                        <span className="ov2-cmp-sc">{row.avgPosition.toFixed(2)}<small>º</small></span>
                       ) : (
-                        <span className="ov2-cmp-sc" style={{ color: "var(--ink-4)" }}>—</span>
+                        <span className="ov2-cmp-sc" style={{ color: "var(--ink-4)" }} title="La IA no la nombró en este escaneo, así que no tiene puesto.">—</span>
                       )}
                     </div>
                   );

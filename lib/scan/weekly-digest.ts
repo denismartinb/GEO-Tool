@@ -14,7 +14,13 @@ type RunScoreRow = {
   details_json: unknown;
 };
 
-type RankingEntry = { name: string; is_brand: boolean; avg_position: number; mention_count: number };
+type RankingEntry = {
+  name: string;
+  is_brand: boolean;
+  /** null when the AI never named this entity (geo-score-v3, docs/adr/0026). */
+  avg_position_when_mentioned: number | null;
+  mention_count: number;
+};
 
 type SubScores = {
   /** presence — % of prompts where the brand was mentioned */

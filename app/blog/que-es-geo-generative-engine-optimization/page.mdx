@@ -3,6 +3,14 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  CompareTable,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  AnswerSample
+} from "@/components/blog/article";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-geo-generative-engine-optimization");
@@ -27,6 +35,12 @@ export const metadata = {
 
 <div className="blog-body">
 
+<KeyTakeaway>
+
+GEO (*Generative Engine Optimization*) es **conseguir que tu marca forme parte de la respuesta que genera una IA**, no que ocupe un puesto en una lista de enlaces. No sustituye al SEO —los modelos necesitan fuentes fiables—, pero cambia la pregunta: ya no es "¿en qué posición salgo?", sino "¿qué dice ChatGPT de mí?".
+
+</KeyTakeaway>
+
 Durante más de veinte años, el objetivo del marketing digital ha sido bastante claro: aparecer lo más arriba posible en Google. Si alguien buscaba "mejor CRM para pymes" o "software de facturación", querías que tu web estuviera entre los primeros resultados.
 
 Pero algo ha cambiado.
@@ -49,11 +63,24 @@ Imagina una consulta como esta: *"¿Qué herramientas existen para monitorizar l
 
 Google devolverá enlaces. ChatGPT probablemente responderá con una lista de herramientas, una pequeña explicación de cada una y quizá una recomendación final.
 
-El objetivo del GEO es conseguir que tu marca forme parte de esa respuesta.
+<Figure
+  label="Figura 1."
+  caption="La forma de una respuesta generativa: nombra marcas y, cuando las respalda, apunta a una fuente. Texto ilustrativo — no es la respuesta real de ningún motor."
+>
+  <AnswerSample
+    verdict="Respuesta generada por IA"
+    text="Para monitorizar la visibilidad de una marca en ChatGPT existen herramientas específicas de GEO, que ejecutan conjuntos de prompts y miden con qué frecuencia aparece cada marca en las respuestas."
+    source="tumarca.com/metodologia"
+  />
+</Figure>
+
+El objetivo del GEO es conseguir que tu marca forme parte de esa respuesta — y, si es posible, que sea tu web la fuente que la respalda.
 
 ## SEO y GEO persiguen objetivos diferentes
 
 Es tentador pensar que el GEO es simplemente "el nuevo SEO". En realidad, comparten algunas bases, pero resuelven problemas distintos.
+
+<CompareTable>
 
 | | SEO | GEO |
 |---|---|---|
@@ -61,6 +88,8 @@ Es tentador pensar que el GEO es simplemente "el nuevo SEO". En realidad, compar
 | **Canal** | El usuario hace clic en enlaces | El usuario puede obtener la respuesta sin visitar ninguna web |
 | **Métrica** | La métrica principal suele ser el tráfico | La métrica principal es la visibilidad y presencia de marca |
 | **Resultado** | El éxito depende del ranking | El éxito depende de si la IA te menciona y cómo lo hace |
+
+</CompareTable>
 
 Una consecuencia interesante es que el clic deja de ser la única medida importante. Si una IA recomienda tu marca como una de las mejores opciones para resolver un problema, ya has ganado una parte importante de la decisión del usuario, incluso aunque no visite tu página en ese momento.
 
@@ -119,11 +148,16 @@ Y eso obliga a ampliar la estrategia. El SEO sigue siendo importante. El GEO añ
 
 Las empresas que empiecen a medir esa visibilidad antes tendrán una ventaja para adaptarse a una forma de descubrir productos que ya está cambiando los hábitos de búsqueda.
 
-<div className="blog-cta">
-<p>¿Quieres saber cómo aparece tu marca en ChatGPT, Gemini o Claude?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
+<AuthorBio>
 
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Cómo aparece tu marca en ChatGPT, Gemini o Claude?"
+  text="Mídelo con escaneos reales en minutos. Gratis, sin tarjeta."
+/>
 
 <RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
 

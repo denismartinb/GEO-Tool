@@ -1576,7 +1576,12 @@ a {
     display: grid;
     grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
     gap: 18px;
-    align-items: stretch;
+    /* `start`, not `stretch`: the score card used to be padded out to the
+       KPI block's height by its sparkline. With the trend line withheld on
+       low-sample runs (GEO-SCORE-RELIABILITY-1) that stretch turned into a
+       tall card holding a gauge and a lot of air. Sizing to content keeps it
+       tidy in both states instead of only in the one that has a trend. */
+    align-items: start;
     margin-top: 16px;
   }
   .ov2-hero > .ov2-gauge-card {
@@ -4770,6 +4775,21 @@ a.notif-row:hover {
 .cmp-table-wrap table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
 .cmp-table-wrap th, .cmp-table-wrap td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .cmp-table-wrap th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
+/* GROWTH-2 Fase 2.8: without card boundaries, 6 consecutive tool profiles
+   (h3 + 2-3 paragraphs each) read as one continuous wall of prose instead of
+   6 distinct entities (pilot finding on the tools pillar). */
+.tool-profile-card { padding: 18px 20px; margin: 0 0 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.tool-profile-card h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
+.tool-profile-card p:last-child { margin-bottom: 0; }
+/* Below ~640px the table's 560px min-width forces horizontal scroll — without
+   a hint, the pilot found columns just read as cut off mid-word rather than
+   "scroll for more" (Fase 2.8, PILOT FAIL on the 4-column tools pillar).
+   CSS-only so it applies to every .cmp-table-wrap, not just the page that
+   surfaced it. */
+@media (max-width: 640px) {
+  .cmp-table-wrap { position: relative; }
+  .cmp-table-wrap::before { content: "Desliza para ver todas las columnas →"; display: block; font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
+}
 .legal-body strong { color: var(--ink); font-weight: 650; }
 .legal-body a { color: var(--accent-ink); font-weight: 600; }
 
@@ -4778,17 +4798,25 @@ a.notif-row:hover {
 .blog-body h2:first-child { margin-top: 0; }
 .blog-body h3 { font-size: 17px; font-weight: 700; letter-spacing: -.01em; margin: 28px 0 10px; }
 .blog-body p { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin: 0 0 16px; }
-.blog-body ul, .blog-body ol { margin: 0 0 16px; padding-left: 20px; }
+.blog-body ul { list-style: disc outside; margin: 0 0 16px; padding-left: 20px; }
+.blog-body ol { list-style: decimal outside; margin: 0 0 16px; padding-left: 20px; }
 .blog-body li { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 8px; }
 .blog-body strong { color: var(--ink); font-weight: 650; }
 .blog-body a { color: var(--accent-ink); font-weight: 600; }
 .blog-body blockquote { border-left: 3px solid var(--line); padding-left: 16px; margin: 0 0 16px; color: var(--ink-3); font-style: italic; }
+.blog-body pre { overflow-x: auto; margin: 0 0 16px; padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); font-size: 13px; line-height: 1.6; }
+.blog-body pre code { background: none; padding: 0; }
+.blog-body :not(pre) > code { background: var(--surface-2); padding: 2px 5px; border-radius: 4px; font-size: 0.9em; }
 .blog-body table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; }
 .blog-body th, .blog-body td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
 .blog-body th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 .blog-body td { color: var(--ink-2); line-height: 1.6; }
 .blog-body table strong { white-space: nowrap; }
-.blog-post-meta { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+/* `--ink-4` (#98a0b0) da 2.63:1 sobre blanco — por debajo del 4.5:1 que pide
+   AA para texto normal. `--ink-3` da 4.76:1. La fecha, además, ahora tiene
+   más protagonismo visual que antes (34px de aire debajo), así que merece
+   leerse bien. Hallazgo del ux-pilot, PR #312. */
+.blog-post-meta { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
 .blog-cta { margin-top: 40px; padding: 24px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); text-align: center; }
 .blog-cta p { margin-bottom: 14px; }
 .blog-related { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
@@ -4814,6 +4842,22 @@ a.notif-row:hover {
 
 .blog-cover { position: relative; height: 170px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--surface-2); }
 .blog-cover-compact { height: 96px; }
+
+/* --- Ritmo de la cabecera de artículo ------------------------------------
+   El ritmo vertical iba justo al revés de como se necesita: 84px de hueco
+   muerto encima de la portada (el padding de .lp-section) y CERO separación
+   entre portada, título, fecha y el primer bloque, que quedaban pegados unos
+   a otros. Se recorta arriba y se reparte abajo, que es donde el lector lo
+   necesita al empezar a leer.
+
+   Las reglas van acotadas al artículo a propósito: `.blog-cover-compact`
+   solo se usa aquí (el índice y los hubs usan la portada normal dentro de
+   una tarjeta), y `.blog-post-meta` sí se comparte con las tarjetas del
+   índice — de ahí `h1 +`, porque esas tarjetas titulan con `h2`. */
+.lp-inner > .blog-cover-compact:first-child { margin-top: -36px; border-radius: var(--r-md); }
+.blog-cover-compact { margin-bottom: 24px; }
+.blog-cover-compact + h1 { margin: 0 0 14px; line-height: 1.22; }
+h1 + .blog-post-meta { margin: 0 0 34px; }
 .blog-cover-icon { position: relative; z-index: 1; width: 72px; height: 72px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; color: var(--accent); box-shadow: 0 4px 16px rgba(0,0,0,.08); }
 .blog-cover-compact .blog-cover-icon { width: 48px; height: 48px; }
 
@@ -4852,17 +4896,6 @@ a.notif-row:hover {
   .docs-index-grid { grid-template-columns: 1fr 1fr; }
 }
 
-.geo-breakdown { display: flex; flex-direction: column; gap: 14px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
-.geo-breakdown-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
-.geo-breakdown-label { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.geo-breakdown-bar-wrap { height: 8px; border-radius: 4px; background: var(--surface-sunk); overflow: hidden; }
-.geo-breakdown-bar { height: 100%; border-radius: 4px; }
-.geo-breakdown-weight { font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
-
-@media (min-width: 560px) {
-  .geo-breakdown-row { grid-template-columns: 180px 1fr 44px; align-items: center; gap: 12px; }
-  .geo-breakdown-weight { text-align: right; }
-}
 
 .process-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 20px 0 28px; padding: 20px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 .process-flow-step-wrap { display: flex; align-items: center; gap: 8px; }
@@ -5582,7 +5615,7 @@ select.set-field {
 /* ============================================================
    GEO explainer page (/geo) — reuses the .lp-* marketing system.
    Classes use a .gx- prefix to avoid colliding with the dashboard
-   Overview (.gauge-*, .compose-*) and blog (.geo-breakdown) classes.
+   Overview (.gauge-*, .compose-*) and blog (.art-*) classes.
    ============================================================ */
 .gx-hero { padding: 84px 0 72px; }
 .gx-hero-actions { display: flex; justify-content: center; gap: 12px; margin-top: 30px; flex-wrap: wrap; }
@@ -5681,6 +5714,355 @@ select.set-field {
     font-size: 16px;
   }
 }
+
+/* ==========================================================================
+   GROWTH-3 Fase 3.1 — Sistema de diseño de artículos (.art-*)
+   --------------------------------------------------------------------------
+   Librería de composición para artículos del blog. Namespaced con `art-`
+   a propósito: PR #292 nos costó una colisión de clases entre ramas, y este
+   bloque introduce ~15 clases nuevas de golpe.
+
+   Principio rector (docs/brand/article-design-system.md): ningún bloque de
+   estos es decorativo. Cada uno codifica algo verdadero del contenido —
+   una respuesta, un veredicto, un paso de una secuencia, una cifra con su
+   fuente. Un bloque usado por estética y no por estructura es un bug.
+
+   Tokens: los de marca ya existentes (--brand-*). Cero colores nuevos.
+   Tema: claro únicamente, como el resto del sitio.
+   ========================================================================== */
+
+.art-tone-blue { color: var(--brand-blue); }
+.art-tone-cyan { color: var(--brand-cyan); }
+.art-tone-warm { color: var(--brand-warm); }
+.art-tone-pos { color: var(--brand-pos); }
+.art-tone-neg { color: var(--brand-neg); }
+.art-tone-bg-blue { background: var(--brand-blue); }
+.art-tone-bg-blue2 { background: var(--brand-blue-2); }
+.art-tone-bg-cyan { background: var(--brand-cyan); }
+.art-tone-bg-warm { background: var(--brand-warm); }
+
+/* --- Respuesta rápida ---------------------------------------------------- */
+.art-takeaway {
+  background: var(--brand-surface); border: 1px solid var(--line);
+  border-left: 3px solid var(--brand-blue); border-radius: 12px;
+  padding: 22px 24px; margin: 0 0 34px; box-shadow: var(--brand-shadow-card);
+}
+.art-takeaway-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--brand-blue); margin-bottom: 9px;
+}
+.art-takeaway p { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.65; }
+
+/* --- Veredicto ----------------------------------------------------------- */
+.art-verdict {
+  display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start;
+  background: rgba(255, 176, 32, .13); border: 1px solid rgba(255, 176, 32, .42);
+  border-radius: 12px; padding: 20px 22px; margin: 30px 0;
+}
+.art-verdict-badge {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink);
+  background: var(--brand-warm); padding: 5px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-verdict-body h4 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 750; margin: 0 0 5px; color: var(--ink);
+}
+.art-verdict-body p { margin: 0; font-size: 15px; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .art-verdict { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* --- Sección numerada + acción rápida ------------------------------------ */
+.art-numsec { margin: 44px 0; }
+.art-numsec-h { display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: baseline; margin-bottom: 13px; }
+.art-numsec-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft);
+  width: 31px; height: 31px; border-radius: 8px; display: grid; place-items: center; transform: translateY(3px);
+}
+.art-numsec-h h3 { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.01em; color: var(--ink); }
+.art-quick {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px;
+  padding: 14px 17px; margin: 17px 0 0;
+}
+.art-quick-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--brand-pos);
+  background: var(--brand-pos-soft); padding: 4px 8px; border-radius: 5px; white-space: nowrap;
+}
+.art-quick-body p { margin: 0; font-size: 14.8px; }
+@media (max-width: 560px) {
+  .art-quick { grid-template-columns: 1fr; gap: 9px; }
+  .art-quick-lbl { justify-self: start; }
+}
+
+/* --- Figura + marco ------------------------------------------------------ */
+.art-figure { margin: 34px 0; }
+.art-frame {
+  position: relative; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 26px; box-shadow: var(--brand-shadow-card); overflow: hidden;
+}
+.art-caption {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.55;
+  color: var(--ink-3); margin-top: 11px; display: flex; gap: 8px;
+}
+.art-caption b { color: var(--ink-2); font-weight: 700; white-space: nowrap; }
+
+/* --- Maqueta del panel de producto --------------------------------------- */
+.art-mock { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+@media (max-width: 640px) { .art-mock { grid-template-columns: 1fr; gap: 20px; } }
+.art-gauge { position: relative; width: 132px; height: 132px; justify-self: center; }
+.art-gauge-val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.art-gauge-num {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.art-gauge-cap {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 3px;
+}
+.art-rows { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+.art-row { position: relative; }
+.art-row-hl {
+  border: 2px solid var(--brand-blue); border-radius: 9px; padding: 10px 12px;
+  margin: 22px -12px 0; box-shadow: 0 0 0 4px var(--brand-blue-soft);
+}
+.art-anno-lbl {
+  position: absolute; top: -13px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  color: #fff; background: var(--brand-blue); padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
+.art-row-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.art-row-l em { display: block; font-style: normal; font-size: 11.5px; font-weight: 400; color: var(--ink-4); margin-top: 1px; }
+.art-row-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink);
+}
+.art-row-v small { color: var(--ink-4); font-weight: 400; margin-left: 6px; }
+.art-track { height: 7px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 99px; overflow: hidden; }
+.art-fill { height: 100%; border-radius: 99px; }
+
+/* --- Cifras destacadas --------------------------------------------------- */
+.art-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 13px; margin: 30px 0; }
+/* Con solo dos tarjetas, `auto-fit` las estira a media columna cada una y el
+   bloque se lee suelto en pantallas anchas (hallazgo del ux-pilot, PR #310).
+   `auto-fill` sobre un ancho máximo las deja del tamaño que les toca. */
+@media (min-width: 900px) {
+  .art-stats:has(> :nth-child(2):last-child) {
+    grid-template-columns: repeat(2, minmax(148px, 300px)); justify-content: center;
+  }
+}
+.art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
+.art-stat-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 31px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.art-stat-l { font-size: 13px; color: var(--ink-2); margin-top: 7px; line-height: 1.45; }
+.art-stat-src {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; color: var(--ink-4);
+  margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line-soft);
+}
+
+/* --- Cita ---------------------------------------------------------------- */
+.art-pull {
+  border-left: 3px solid var(--brand-cyan); background: rgba(9, 197, 214, .07);
+  border-radius: 0 11px 11px 0; padding: 19px 24px; margin: 30px 0;
+}
+.art-pull-text {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 19px; font-weight: 600; line-height: 1.45; color: var(--ink);
+  margin: 0 0 10px; letter-spacing: -.01em;
+}
+/* MDX envuelve el contenido en bloque en su propio <p>: hereda, no duplica. */
+.art-pull-text p { margin: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+.art-pull cite { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; font-style: normal; color: var(--ink-3); }
+
+/* --- Bloque de código ---------------------------------------------------- */
+.art-code { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; margin: 24px 0; box-shadow: var(--brand-shadow-card); }
+.art-code-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 9px 15px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ink-3);
+}
+.art-code pre {
+  margin: 0; padding: 17px 19px; overflow-x: auto;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.8px; line-height: 1.75; color: var(--ink-2);
+}
+/* Mismo problema que .art-tablewrap resolvió en la PR #306: en móvil el código
+   se lee como cortado en vez de como deslizable. El pilot lo señaló también
+   aquí (PR #309), así que la pista va en los dos sitios, no solo en la tabla. */
+@media (max-width: 640px) {
+  .art-code-h::after {
+    content: "Desliza →"; flex: none; white-space: nowrap; color: var(--ink-3); opacity: .8;
+  }
+}
+
+/* --- Tabla comparativa --------------------------------------------------- */
+.art-tablewrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 26px 0;
+  border: 1px solid var(--line); border-radius: 11px; background: var(--brand-surface); box-shadow: var(--brand-shadow-card);
+}
+.art-tablewrap table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px; margin: 0; }
+.art-tablewrap th, .art-tablewrap td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-2); }
+.art-tablewrap thead th {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); font-weight: 700;
+}
+.art-tablewrap tbody tr:last-child td { border-bottom: 0; }
+.art-tablewrap td strong { color: var(--ink); }
+/* Misma pista de scroll que .cmp-table-wrap: sin ella, en móvil las columnas
+   se leen como cortadas en vez de como deslizables (PILOT FAIL, PR #306). */
+@media (max-width: 640px) {
+  .art-tablewrap { position: relative; }
+  .art-tablewrap::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    padding: 9px 14px 0;
+  }
+}
+.art-pill { display: inline-block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.art-pill-no { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.art-pill-si { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.art-pill-neutral { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+
+/* --- Maqueta de cuota de voz --------------------------------------------- */
+.art-sov { display: flex; flex-direction: column; gap: 11px; }
+.art-sov-h {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); padding-bottom: 4px; border-bottom: 1px solid var(--line);
+}
+.art-sov-total { text-transform: none; letter-spacing: 0; }
+.art-sov-row { display: grid; grid-template-columns: minmax(88px, 132px) 1fr auto; gap: 12px; align-items: center; }
+.art-sov-n { font-size: 13.5px; color: var(--ink-2); display: flex; flex-direction: column; }
+.art-sov-n em {
+  font-style: normal; font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-blue);
+}
+.art-sov-track { height: 9px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.art-sov-fill { height: 100%; border-radius: 5px; background: var(--line-strong, var(--ink-3)); opacity: .45; }
+.art-sov-you .art-sov-n { color: var(--ink); font-weight: 700; }
+.art-sov-you .art-sov-fill { background: var(--brand-blue); opacity: 1; }
+.art-sov-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.5px;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.art-sov-you .art-sov-v { color: var(--brand-blue); font-weight: 700; }
+@media (max-width: 480px) {
+  .art-sov-row { grid-template-columns: 1fr auto; }
+  .art-sov-track { grid-column: 1 / -1; }
+}
+
+/* --- Maqueta de respuesta generativa (mención vs citación) ---------------- */
+.art-ans-pair { display: grid; gap: 13px; }
+/* En dos columnas el hueco tiene que separar dos textos largos, no dos
+   tarjetas apiladas: 13px se queda corto ahí (mejora del ux-pilot, PR #311). */
+@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.art-ans {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 15px 16px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.art-ans-cited { background: var(--brand-surface); border-color: var(--brand-pos); }
+.art-ans-h {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.art-ans-cited .art-ans-h { color: var(--brand-pos); }
+.art-ans-body { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+.art-ans-src, .art-ans-nosrc {
+  display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 9px;
+  border-top: 1px dashed var(--line); font-size: 12.5px;
+}
+.art-ans-src { color: var(--brand-pos); font-weight: 600; }
+.art-ans-nosrc { color: var(--ink-3); font-style: italic; }
+
+/* --- Maqueta de recomendación -------------------------------------------- */
+.art-rec {
+  padding: 16px 17px; border-radius: 10px;
+  background: var(--brand-surface); border: 1px solid var(--line); box-shadow: var(--brand-shadow-card);
+}
+.art-rec-h { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 11px; }
+.art-rec-pri, .art-rec-conf {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+}
+/* No hay `--brand-warm-soft` en la paleta; se compone del token real con
+   `color-mix` en vez de inventar un hex nuevo (regla: cero colores nuevos). */
+.art-rec-pri { background: color-mix(in srgb, var(--brand-warm) 18%, transparent); color: var(--ink); }
+.art-rec-conf { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+.art-rec-t {
+  margin: 0 0 7px; font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 700; color: var(--ink);
+}
+.art-rec-why { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+
+/* --- Maqueta de conjunto de prompts -------------------------------------- */
+.art-prompts { display: flex; flex-direction: column; gap: 9px; }
+.art-prompt-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+}
+.art-prompt-q { font-size: 14px; color: var(--ink-2); font-style: italic; }
+.art-prompt-i {
+  flex: none; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--brand-blue);
+  background: var(--brand-blue-soft, var(--brand-surface)); border-radius: 5px; padding: 3px 8px;
+}
+
+/* --- Checklist ----------------------------------------------------------- */
+.art-check { list-style: none; padding: 0; margin: 22px 0; display: flex; flex-direction: column; gap: 8px; }
+.art-check li {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  padding: 12px 15px; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 9px; margin: 0; font-size: 14.8px; color: var(--ink-2);
+}
+.art-check li svg { margin-top: 3px; }
+/* El color del icono es semántico, no decorativo: verde = hazlo, rojo = evítalo. */
+.art-check-hacer li svg { color: var(--brand-pos); }
+.art-check-evitar li svg { color: var(--brand-neg); }
+
+/* --- Bio de autor -------------------------------------------------------- */
+.art-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(140deg, var(--brand-blue), var(--brand-cyan));
+  display: grid; place-items: center; color: #fff;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-weight: 800; font-size: 18px;
+}
+.art-bio {
+  display: grid; grid-template-columns: auto 1fr; gap: 17px; background: var(--brand-surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 42px 0 0;
+  box-shadow: var(--brand-shadow-card);
+}
+.art-bio h4 { font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-size: 16px; font-weight: 750; margin: 0 0 5px; color: var(--ink); }
+.art-bio p { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+/* --- CTA de cierre ------------------------------------------------------- */
+.art-cta {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--brand-ink), #152a4d);
+  border-radius: 15px; padding: 34px; margin: 44px 0 0; text-align: center;
+}
+.art-cta-glow {
+  position: absolute; width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, .5), transparent 68%);
+  top: -150px; right: -90px; pointer-events: none;
+}
+.art-cta-body { position: relative; z-index: 2; }
+.art-cta h3 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  color: #fff; font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px;
+}
+.art-cta p { color: rgba(255, 255, 255, .72); margin: 0 0 20px; font-size: 15px; }
+.art-btn {
+  display: inline-block; background: #fff; color: var(--brand-ink); font-weight: 700;
+  font-size: 15px; padding: 12px 24px; border-radius: 9px; border: 0; text-decoration: none;
+}
+.art-btn:hover { background: #f0f3f9; }
 
 /* ============================================================
    Web audit page (Auditoría web) — WEB-AUDIT-ISSUES-1 fase 2.

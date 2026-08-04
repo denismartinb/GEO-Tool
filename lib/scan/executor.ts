@@ -114,7 +114,7 @@ async function processPromptJob({
   projectId: string;
   runId: string;
   job: JobRow;
-  project: { brand: string; country: string; language: string };
+  project: { brand: string; brand_aliases?: string[] | null; country: string; language: string };
   competitors: { name: string; domain: string }[];
   providers: LLMScanProvider[];
 }): Promise<PromptJobOutcome> {
@@ -307,6 +307,9 @@ async function processPromptJob({
         prompt_id: promptId,
         prompt_text_snapshot: promptText,
         brand_snapshot: project.brand,
+        // Frozen alongside brand/competitors so this row stays interpretable
+        // after the project's alias list changes (migration 0025).
+        brand_aliases_snapshot: project.brand_aliases ?? [],
         competitors_snapshot: competitors.map((c) => ({ name: c.name, domain: c.domain })),
         country_snapshot: project.country,
         language_snapshot: project.language,
@@ -539,7 +542,7 @@ export async function executePendingScan({
 
   const { data: project } = await supabase
     .from("projects")
-    .select("id, domain, brand, country, language, owner_user_id")
+    .select("id, domain, brand, brand_aliases, country, language, owner_user_id")
     .eq("id", projectId)
     .single();
 

@@ -4,6 +4,7 @@ import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/constants";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 import { createPendingScanRun } from "@/lib/scan/run-creation";
 import { executePendingScan } from "@/lib/scan/executor";
+import { ensureBrandAliasesDerived } from "@/lib/projects/ensure-brand-aliases";
 
 /**
  * Create a pending run and, when sync execution is enabled, run it to completion
@@ -34,6 +35,15 @@ export async function launchScan({
    */
   deferExecution?: boolean;
 }): Promise<{ runId: string; executed: boolean }> {
+  // GEO-SCORE-BRAND-IDENTITY-1b: derive this project's brand aliases if it
+  // has never had them (projects created before migration 0025). Awaited
+  // before the run is created so this scan's rows snapshot the aliases and
+  // are scored with them — a scan that ran "just before" the derivation would
+  // otherwise differ from the next one for no reason the user can see, which
+  // is the very artefact this whole phase exists to remove. Never throws and
+  // never blocks: see ensureBrandAliasesDerived.
+  await ensureBrandAliasesDerived(projectId);
+
   const runId = await createPendingScanRun({ projectId, supabase, user, onlyPromptIds });
 
   if (ENABLE_SYNC_SCAN_EXECUTION && !deferExecution) {

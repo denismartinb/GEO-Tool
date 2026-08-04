@@ -48,7 +48,9 @@ const BLOG_SLUGS = [
   "que-es-geo-generative-engine-optimization",
   "como-elegir-prompts-monitorizar-marca-ia",
   "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo"
+  "genscore-vs-herramientas-geo",
+  "llms-txt-guia-practica",
+  "como-conseguir-que-chatgpt-te-cite"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
@@ -61,8 +63,10 @@ const PUBLIC_PAGES = new Map([
   ["/cookies", "Cookies — Genscore"],
   ["/terminos", "Términos — Genscore"],
   ["/glosario", "Glosario GEO — Genscore"],
+  ["/comparativas", "Comparativas — Genscore"],
   ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
-  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"]
+  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"],
+  ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — Genscore"]
 ]);
 
 // GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
@@ -199,43 +203,58 @@ function citationsPage() {
     <script>${CITATIONS_SCRIPT}</script>`;
 }
 
-// Reproduces the EXACT clipping chain of the real console shell
-// (`.shell { height: 100vh; overflow: hidden }` > `.dash-main` (`min-height:
-// 0`, the flex-shrink trick) > `.dash-content { flex: 1; overflow-y: auto }`,
-// app/globals.css + app/dashboard/layout.tsx) so the "shell-clip" self-check
-// case below exercises the SAME structural bug journey.ts's
-// SHELL_CLIPPING_CLASSES fix targets — not a synthetic stand-in for it. A
-// wide marker and a marker 2000px below the fold both live inside
-// `.dash-content`; neither the document nor the plain-overflow fixture mode
-// above them ever sees either, only `.dash-content` does.
-const SHELL_CLIP_STYLE = `
-  .shell { height: 100vh; overflow: hidden; display: flex; }
-  .dash-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .dash-content { flex: 1; overflow-y: auto; padding: 16px; }
-`;
+/**
+ * Authenticated pages are wrapped in the same shape as the real app shell:
+ * pinned to the viewport, with the actual scrolling done by an inner element.
+ *
+ * That is what made `fullPage: true` silently crop every dashboard capture at
+ * the fold — `document.documentElement.scrollHeight` never grows past one
+ * viewport, so Playwright believed it had the whole page. Reproducing the
+ * shape here is what lets the self-check prove the fix instead of asserting it
+ * (`BELOW_FOLD_MARKER` sits far enough down that only a working capture
+ * contains it).
+ *
+ * The class names and the `.dash-main { min-height: 0 }` flex-shrink trick are
+ * the real ones from app/globals.css + app/dashboard/layout.tsx, not
+ * stand-ins: journey.ts measures horizontal overflow against `.dash-content`
+ * specifically, so a fixture that invented its own class name would leave that
+ * measurement untested (see the shell-clip case in pilot-selfcheck.mjs).
+ */
+const BELOW_FOLD_MARKER = "marcador-bajo-el-pliegue";
 
-function shellClipBody(title, body) {
-  return `<div class="shell"><div class="dash-main"><main class="dash-content">
-    <h1>${title}</h1>
-    ${body}
-    <div style="width:2200px" id="shell-clip-wide-marker">ancho fuera del shell</div>
-    <div style="height:2000px"></div>
-    <div id="shell-clip-fold-marker">marcador bajo el pliegue, solo visible si la captura ve el contenido real de .dash-content</div>
-  </main></div></div>`;
+function shellWrap(body) {
+  const filler = Array.from(
+    { length: 40 },
+    (_, i) => `<p style="margin:0 0 24px">fila de relleno ${i + 1}</p>`
+  ).join("");
+  // Trapped INSIDE `.dash-content`, whose own `overflow-y: auto` computes
+  // `overflow-x: auto` too — so the document never sees it. Only a check that
+  // measures `.dash-content` directly can catch this.
+  const trappedWide =
+    BREAK_MODE === "shell-clip"
+      ? '<div style="width:2200px" id="shell-clip-wide-marker">ancho atrapado dentro de .dash-content</div>'
+      : "";
+  return `<div class="shell" style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
+  <header style="padding:8px 16px">cabecera</header>
+  <div class="dash-main" style="flex:1;min-height:0;display:flex;flex-direction:column">
+    <main class="dash-content" style="flex:1;overflow-y:auto;padding:16px">
+      ${body}
+      ${trappedWide}
+      ${filler}
+      <p id="${BELOW_FOLD_MARKER}">${BELOW_FOLD_MARKER}</p>
+    </main>
+  </div>
+</div>`;
 }
 
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
-  // Only authed dashboard pages go through the real shell in production —
-  // login and 404 render outside it, so this must not wrap them either.
-  const isShellPage = BREAK_MODE === "shell-clip" && title !== "Bienvenido de nuevo" && title !== "No encontrado";
-  const content = isShellPage ? shellClipBody(title, body) : `<h1>${title}</h1>${body}${overflow}`;
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}${isShellPage ? SHELL_CLIP_STYLE : ""}</style>
-</head><body>${content}</body></html>`;
+<style>body{margin:0;font-family:system-ui}</style>
+</head><body>${shellWrap(`<h1>${title}</h1>${body}${overflow}`)}</body></html>`;
 }
 
 function publicHtml(path, title) {
@@ -304,6 +323,28 @@ function blogPostHtml(slug) {
 <title>${slug} — Genscore</title>
 <style>body{margin:0;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
+}
+
+// GROWTH-2 Fase 2.9 (B1b): the 4 clusters each get a pillar page at
+// /blog/<key> — mirrors lib/blog/posts.ts's BLOG_CLUSTERS keys. "sectores"
+// has zero real posts, so it renders the same honest empty-state copy the
+// real page does instead of "contenido del pilar" — the pilot journey
+// asserts on that exact text.
+const BLOG_PILLAR_KEYS = ["fundamentos", "medicion", "playbooks", "sectores"];
+
+function blogPillarHtml(key) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const body =
+    key === "sectores"
+      ? `<p>Todavía no hay artículos publicados en esta sección — está planificada en nuestro <a href="/blog">calendario de contenido</a> y llegará más adelante.</p>`
+      : `<p>contenido del pilar</p>`;
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/blog/${key}">
+<title>${key} — Blog — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${key}</h1>${body}${overflow}</body></html>`;
 }
 
 function feedXml() {
@@ -453,6 +494,12 @@ const server = createServer((request, response) => {
   if (path === "/blog") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(blogIndexHtml());
+    return;
+  }
+
+  if (BLOG_PILLAR_KEYS.includes(path.replace(/^\/blog\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(blogPillarHtml(path.replace(/^\/blog\//, "")));
     return;
   }
 

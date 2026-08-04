@@ -4,6 +4,16 @@ import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { ProcessFlow } from "@/components/blog/process-flow";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PromptSet
+} from "@/components/blog/article";
 import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-elegir-prompts-monitorizar-marca-ia");
@@ -13,6 +23,13 @@ export const metadata = {
   description: getMetaDescription(post),
   alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
 };
+
+export const promptExamples = [
+  { text: "¿Cómo puedo organizar la documentación de una empresa?", intent: "Descubrimiento" },
+  { text: "¿Qué programas existen para gestionar documentos?", intent: "Investigación" },
+  { text: "¿Qué alternativa a X recomendarías?", intent: "Comparación" },
+  { text: "¿Cuál es el mejor software de gestión documental para una pyme?", intent: "Decisión" }
+];
 
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
 
@@ -27,6 +44,12 @@ export const metadata = {
 <p className="blog-post-meta">13 de julio de 2026</p>
 
 <div className="blog-body">
+
+<KeyTakeaway>
+
+Monitoriza los prompts que **describen el problema de tu cliente**, no los que nombran tu producto. Un conjunto pequeño y bien repartido entre las cuatro intenciones de compra dice mucho más que cientos de consultas parecidas — y no gana quien monitoriza más, sino quien monitoriza las adecuadas.
+
+</KeyTakeaway>
 
 Una de las preguntas más habituales cuando una empresa empieza a trabajar el GEO es sorprendentemente sencilla: *"¿Qué prompts tengo que monitorizar?"*
 
@@ -55,14 +78,23 @@ La diferencia parece pequeña, pero cambia completamente el contexto de la respu
 
 Una buena colección de prompts suele cubrir distintas fases del proceso de decisión. Algunas personas todavía están explorando. Otras comparan alternativas. Y otras ya buscan una solución concreta.
 
-| Tipo de intención | Ejemplo |
-|---|---|
-| **Descubrimiento** | "¿Cómo puedo organizar la documentación de una empresa?" |
-| **Investigación** | "¿Qué programas existen para gestionar documentos?" |
-| **Comparación** | "¿Qué alternativa a X recomendarías?" |
-| **Decisión** | "¿Cuál es el mejor software de gestión documental para una pyme?" |
+<Figure
+  label="Figura 1."
+  caption="Un conjunto mínimo que cubre las cuatro intenciones de compra. Datos de ejemplo de un caso de gestión documental; las etiquetas de intención son las que usa el producto."
+>
+  <PromptSet prompts={promptExamples} />
+</Figure>
+
+Léelas seguidas y verás que **ninguna nombra un producto**: describen un problema, que es como habla de verdad alguien con ChatGPT o Gemini.
 
 Si solo monitorizas preguntas de decisión, perderás una parte importante del recorrido del usuario. Y si solo monitorizas preguntas muy generales, quizá nunca veas cómo compites realmente frente a otras marcas. Lo interesante es combinar ambos mundos.
+
+<StatGrid label="Pesos del GEO Score que dependen de tus prompts">
+  <Stat value="40%" label="Peso de la presencia — la señal que más depende de qué prompts elijas" source="ADR-0015 · GEO Score v2" tone="blue" />
+  <Stat value="25%" label="Peso de la prominencia — tu puesto medio en esas respuestas" source="ADR-0015 · GEO Score v2" tone="cyan" />
+</StatGrid>
+
+Estas dos señales suman **el 65% de tu <a href="/docs/metodologia/geo-score">GEO Score</a>** y ambas se calculan sobre el conjunto de prompts que tú defines. Cambiar la lista cambia el número, sin que haya cambiado nada en el mercado: por eso conviene elegirla con criterio y luego dejarla estable.
 
 ## Construye una muestra representativa
 
@@ -78,11 +110,14 @@ Ese último paso suele olvidarse. Los hábitos cambian, aparecen nuevas herramie
 
 ## Evita tres errores muy comunes
 
-El primero es utilizar únicamente el nombre de tu marca. Eso sirve para analizar reputación, pero no para descubrir oportunidades.
-
-El segundo consiste en crear prompts excesivamente específicos. Cuanto más artificial sea una consulta, menos probabilidades habrá de que represente una búsqueda real.
-
-Y el tercero es obsesionarse con el volumen. No gana quien monitoriza más prompts. Gana quien monitoriza los adecuados. Un conjunto pequeño pero bien diseñado suele aportar mucha más información que una lista enorme llena de consultas parecidas.
+<Checklist
+  tone="evitar"
+  items={[
+    "No monitorices solo tu nombre de marca: sirve para analizar reputación, pero no descubre ninguna oportunidad nueva.",
+    "No escribas prompts excesivamente específicos. Cuanto más artificial es la consulta, menos probable es que alguien la formule de verdad.",
+    "No te obsesiones con el volumen. Un conjunto pequeño y bien diseñado aporta más que una lista enorme de consultas parecidas."
+  ]}
+/>
 
 ## Los prompts también cuentan una historia
 
@@ -98,11 +133,16 @@ En GEO, la calidad de los prompts determina la calidad del análisis. Si las pre
 
 Por eso merece la pena dedicar tiempo a diseñar esa base. Es el equivalente a elegir correctamente las palabras clave en una estrategia SEO. Solo que aquí trabajamos con conversaciones completas, contexto e intención. Y cuanto más se parezcan esas conversaciones a las que mantiene un usuario con ChatGPT, Gemini o Claude, más útil será el resultado.
 
-<div className="blog-cta">
-<p>¿Quieres saber si estás monitorizando los prompts adecuados?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
+<AuthorBio>
 
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Estás monitorizando los prompts adecuados?"
+  text="Genscore te propone un conjunto inicial a partir de tu dominio y tu categoría."
+/>
 
 <RelatedPosts cluster="medicion" currentSlug={post.slug} />
 

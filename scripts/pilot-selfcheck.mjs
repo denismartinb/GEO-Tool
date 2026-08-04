@@ -13,7 +13,9 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
+import { checkCaptureDepth, checkScanLockout, pngHeightFrom } from "./pilot-selfcheck-checks.mjs";
 
 const PORT = process.env.PILOT_FIXTURE_PORT ?? "4321";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -32,7 +34,33 @@ async function waitForServer(timeoutMs = 10_000) {
   return false;
 }
 
+/**
+ * Refuses to start if something is already listening on the fixture port.
+ *
+ * Without this, a stale fixture — a killed run's orphan, or a second
+ * self-check running concurrently — keeps the port, the new server fails to
+ * bind, `waitForServer` succeeds against the WRONG server, and the case
+ * silently validates the wrong thing. Hit for real 2026-08-03: a concurrent
+ * run left a healthy fixture up, so the "overflowing fixture must FAIL" case
+ * tested a healthy one and reported `expected exit 1, got 0`. A self-check
+ * that can test the wrong server is the exact failure mode it exists to catch.
+ */
+async function assertPortIsFree() {
+  try {
+    await fetch(`${BASE_URL}/login`);
+  } catch {
+    return; // nothing listening, which is what we want
+  }
+  throw new Error(
+    `Something is already listening on ${BASE_URL}. Stop it first — otherwise this run ` +
+      "would silently test that server instead of the fixture it just started. " +
+      "(pkill -f 'fixtures/server.mjs', or set PILOT_FIXTURE_PORT.)"
+  );
+}
+
 async function runCase({ label, breakMode, expectedExit }) {
+  await assertPortIsFree();
+
   const server = spawn("node", ["tests/pilot/fixtures/server.mjs"], {
     env: {
       ...process.env,
@@ -85,10 +113,58 @@ async function runCase({ label, breakMode, expectedExit }) {
   }
 }
 
+/**
+ * The two assertions live in `pilot-selfcheck-checks.mjs` as pure functions so
+ * they can be unit-tested in both directions (see
+ * `tests/pilot/support/selfcheck-checks.test.ts`). An assertion nobody has
+ * watched fail is indistinguishable from one that cannot fail — and these two
+ * exist precisely to stop a broken harness reporting a comfortable PASS.
+ *
+ * These wrappers only supply real I/O and print the result.
+ */
+function readHealthyFindings() {
+  if (!existsSync(".pilot/findings.jsonl")) return null;
+  return readFileSync(".pilot/findings.jsonl", "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function report(name, result) {
+  console.log(`${result.ok ? "\u2713" : "\u2717"} ${name}: ${result.message}`);
+  return result.ok;
+}
+
+/** Prove captures reach past the fold — run against the healthy case's
+ *  findings, before the next case clears `.pilot/`. */
+function verifyCaptureDepth() {
+  const findings = readHealthyFindings();
+  if (!findings) return report("capture depth", { ok: false, message: "no findings.jsonl — the healthy run wrote nothing" });
+  return report(
+    "capture depth",
+    checkCaptureDepth(findings, {
+      fileExists: existsSync,
+      pngHeight: (path) => pngHeightFrom(readFileSync(path))
+    })
+  );
+}
+
+/** Prove the per-deploy run cannot reach the journey that spends money.
+ *  The self-check never sets `PILOT_SCAN_PROJECT_ID` either, so even reaching
+ *  it would refuse; the two locks are meant to hold independently and this
+ *  checks the outer one. */
+function verifyDeployRunCannotScan() {
+  const findings = readHealthyFindings();
+  if (!findings) return report("scan lockout", { ok: false, message: "no findings.jsonl to inspect" });
+  return report("scan lockout", checkScanLockout(findings));
+}
+
 const results = [];
 results.push(
   await runCase({ label: "healthy fixture → PILOT PASS", breakMode: "", expectedExit: 0 })
 );
+results.push(verifyCaptureDepth());
+results.push(verifyDeployRunCannotScan());
 results.push(
   await runCase({
     label: "overflowing fixture → PILOT FAIL",

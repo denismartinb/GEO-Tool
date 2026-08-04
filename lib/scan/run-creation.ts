@@ -9,6 +9,7 @@ type CopyForwardResultRow = {
   prompt_id: string;
   prompt_text_snapshot: string;
   brand_snapshot: string;
+  brand_aliases_snapshot: string[] | null;
   competitors_snapshot: unknown;
   country_snapshot: string;
   language_snapshot: string;
@@ -76,7 +77,7 @@ async function copyForwardLatestResults({
   const { data: sourceRows } = await service
     .from("scan_prompt_results")
     .select(
-      "prompt_id, prompt_text_snapshot, brand_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
+      "prompt_id, prompt_text_snapshot, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
     )
     .eq("project_id", projectId)
     .eq("run_id", latestCompletedRun.id)
@@ -92,6 +93,7 @@ async function copyForwardLatestResults({
       prompt_id: row.prompt_id,
       prompt_text_snapshot: row.prompt_text_snapshot,
       brand_snapshot: row.brand_snapshot,
+      brand_aliases_snapshot: row.brand_aliases_snapshot ?? [],
       competitors_snapshot: row.competitors_snapshot,
       country_snapshot: row.country_snapshot,
       language_snapshot: row.language_snapshot,

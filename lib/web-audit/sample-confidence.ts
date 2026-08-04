@@ -13,6 +13,11 @@
  * progress or regression, and presenting it as a bare "+17 pt" reads as
  * fake precision the product doesn't have.
  *
+ * The interval itself now comes from `lib/stats/wilson.ts`, shared with the
+ * GEO score's own reliability layer (GEO-SCORE-RELIABILITY-1) — same formula,
+ * one implementation. This module keeps what is genuinely web-audit-specific:
+ * the small-sample threshold, whole-point rounding, and the delta rule.
+ *
  * geo-strategy's recommendation (rejected persistent-verification and the
  * "cited in ANY of the last N scans" window as biasing metrics upward —
  * see the phase's Task Intake): fix the PRESENTATION first, honestly, with
@@ -22,7 +27,7 @@
  * precision than the sample supports.
  */
 
-const Z_95 = 1.959963984540054; // z-score for a 95% confidence interval
+import { wilsonInterval } from "@/lib/stats/wilson";
 
 /** Below this many trials, a single flip can swing the percentage enough that showing it as a bare point value (or a delta against it) reads as more precise than the sample supports. geo-strategy review 2026-07-17. */
 export const SMALL_SAMPLE_THRESHOLD = 5;
@@ -40,16 +45,12 @@ export type SampleConfidence = {
  * over an empty sample, and callers must not render one.
  */
 export function computeSampleConfidence(successes: number, trials: number): SampleConfidence | null {
-  if (trials <= 0) return null;
-  const p = successes / trials;
-  const z2 = Z_95 * Z_95;
-  const denom = 1 + z2 / trials;
-  const center = (p + z2 / (2 * trials)) / denom;
-  const margin = (Z_95 * Math.sqrt((p * (1 - p)) / trials + z2 / (4 * trials * trials))) / denom;
+  const interval = wilsonInterval(successes, trials);
+  if (!interval) return null;
 
   return {
-    lowerPct: Math.round(Math.max(0, center - margin) * 100),
-    upperPct: Math.round(Math.min(1, center + margin) * 100),
+    lowerPct: Math.round(interval.low * 100),
+    upperPct: Math.round(interval.high * 100),
     isSmallSample: trials < SMALL_SAMPLE_THRESHOLD
   };
 }
