@@ -16,6 +16,7 @@ import {
 } from "@/lib/scan/scan-runner";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
+import { isUnreadableRun } from "@/lib/scoring/run-scoring";
 import { setRecurringScans } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
@@ -271,11 +272,7 @@ export default async function RunsPage({
   const scoreByRunId = new Map<string, number>(
     (scores ?? [])
       .filter((s) => {
-        const details =
-          s.details_json && typeof s.details_json === "object"
-            ? (s.details_json as { scored_results_count?: unknown })
-            : {};
-        return !(typeof details.scored_results_count === "number" && details.scored_results_count === 0);
+        return !isUnreadableRun(s.details_json);
       })
       .map((s) => [s.run_id, Math.round(Number(s.visibility_score ?? 0))])
   );

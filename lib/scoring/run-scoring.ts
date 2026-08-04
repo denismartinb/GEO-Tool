@@ -967,7 +967,7 @@ export function getEffectiveGeoScore(row: {
 }): number | null {
   const details =
     row.details_json && typeof row.details_json === "object"
-      ? (row.details_json as { geo_score?: { score?: number }; scored_results_count?: unknown })
+      ? (row.details_json as { geo_score?: { score?: number } })
       : {};
 
   if (typeof details.geo_score?.score === "number") return details.geo_score.score;
@@ -988,7 +988,7 @@ export function getEffectiveGeoScore(row: {
    * `scored_results_count` only exists from v4 onward, so its presence is also
    * what distinguishes the two.
    */
-  if (typeof details.scored_results_count === "number" && details.scored_results_count === 0) return null;
+  if (isUnreadableRun(row.details_json)) return null;
 
   return row.visibility_score ?? null;
 }

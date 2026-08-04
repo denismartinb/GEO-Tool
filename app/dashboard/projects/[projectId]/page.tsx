@@ -18,6 +18,7 @@ import {
   computeRecommendationPotentialPoints,
   getEffectiveGeoScore,
   isQuantifiableRecommendationType,
+  isUnreadableRun,
   type ScoreInputRow
 } from "@/lib/scoring/run-scoring";
 import {
@@ -322,8 +323,7 @@ export default async function ProjectDetailPage({
   // and rendering it would show a 0 GEO Score for a run that simply read
   // nothing: the very fabrication the phase removes, arriving through the back
   // door. Caught by QA before it shipped.
-  const readNothing =
-    typeof scoreDetails.scored_results_count === "number" && scoreDetails.scored_results_count === 0;
+  const readNothing = isUnreadableRun(latestScore?.details_json);
   const gaugeScoreValue: number | null =
     typeof geoScore?.score === "number" ? geoScore.score : readNothing ? null : visibilityScore;
   /* When this is true the scan produced no readable evidence at all, so there

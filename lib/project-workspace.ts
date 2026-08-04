@@ -1,4 +1,5 @@
 import "server-only";
+import { isUnreadableRun } from "@/lib/scoring/run-scoring";
 
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
@@ -292,12 +293,7 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
   const seenAnyRunForProject = new Set<string>();
 
   for (const s of scores ?? []) {
-    const details =
-      s.details_json && typeof s.details_json === "object"
-        ? (s.details_json as { scored_results_count?: unknown })
-        : {};
-    const unreadable =
-      typeof details.scored_results_count === "number" && details.scored_results_count === 0;
+    const unreadable = isUnreadableRun(s.details_json);
 
     const isNewestForProject = !seenAnyRunForProject.has(s.project_id);
     seenAnyRunForProject.add(s.project_id);

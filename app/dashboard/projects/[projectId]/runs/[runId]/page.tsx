@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isUnreadableRun } from "@/lib/scoring/run-scoring";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
@@ -70,12 +71,7 @@ export default async function RunDetailPage({
   // A run whose extractions all failed produces scored_results_count === 0
   // (geo-score-v4, docs/adr/0027). Its persisted score columns are 0 because
   // they cannot be null, not because anything measured zero.
-  const scoreDetails =
-    score?.details_json && typeof score.details_json === "object"
-      ? (score.details_json as { scored_results_count?: unknown })
-      : {};
-  const scoreUnavailable =
-    typeof scoreDetails.scored_results_count === "number" && scoreDetails.scored_results_count === 0;
+  const scoreUnavailable = isUnreadableRun(score?.details_json);
 
   return (
     <div className="page space-y-4">
