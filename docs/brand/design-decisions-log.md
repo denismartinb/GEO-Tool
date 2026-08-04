@@ -1277,6 +1277,64 @@ a decir de qué son esas cifras. Ver `docs/brand/article-design-system.md`.
 **Pendiente.** Quedan 3 artículos por convertir al sistema (cluster
 `fundamentos` ×2 y `playbooks` ×1), en la Fase 3.2b.
 
+
+## 14. Gobernanza del contexto entre sesiones (CONTEXT-GOVERNANCE-1, 2026-08-03)
+
+**El problema.** El fundador lo planteó así: *"quiero que la plataforma agéntica
+no pierda el contexto y tenga todo en cuenta cada vez que hago una mejora"*. El
+síntoma concreto: cada zona (competidores, recomendaciones, auditoría web, blog,
+metodología GEO) acumula decisiones que sólo viven en este documento, y este
+documento sólo se lee si al agente se le ocurre leerlo. Además hay deriva entre
+sesiones paralelas — el mismo día en que se escribió esta entrada había **dos
+ADRs numerados 0026** (`article-imagery-policy` y `position-when-mentioned`),
+escritos por ramas distintas que no se veían.
+
+**La pregunta que había que responder bien.** El fundador propuso guardarlo todo
+en `CLAUDE.md`. Se descartó y se explicó por qué: `CLAUDE.md` se carga **en cada
+turno**, así que un registro de decisiones (que crece con cada PR) lo convertiría
+en cientos de líneas mayormente irrelevantes para la tarea del momento. El
+agente leería peor, no mejor.
+
+**La decisión: tres capas, separando índice de contenido.**
+
+| Capa | Dónde | Cuándo se lee | Crece |
+|---|---|---|---|
+| Constitución | `CLAUDE.md` | Siempre | Casi nunca |
+| **Mapa de zonas** | `CLAUDE.md` | Siempre | **Acotado** — una fila por zona |
+| Invariantes por zona | `.claude/rules/*.md` | **Automático** al tocar la ruta | Acotado por zona |
+| Histórico | este log, `docs/adr/` | Cuando se consulta | Ilimitado |
+
+La clave es que `CLAUDE.md` guarda el **índice**, no el **contenido**. Un índice
+tiene una fila por zona y seguirá teniendo ~8 dentro de un año; un registro de
+decisiones no tiene techo. Al cerrar una fase se edita **una celda** (la de
+"última fase"), que es el reflejo permanente que el fundador pedía.
+
+El mecanismo que de verdad garantiza que no se pierda contexto no es un
+documento que se espera que alguien lea, sino el frontmatter `paths:` de
+`.claude/rules/*.md`, que **se inyecta solo** cuando se toca un fichero de esa
+ruta. Ese es el único punto del sistema que no depende de que el agente se
+acuerde de nada.
+
+**Qué se creó.** Cinco reglas nuevas para las zonas que el fundador nombró:
+`competitors.md`, `recommendations.md`, `web-audit.md`, `scoring.md` y
+`growth-content.md`. Cada invariante es **trazable** a una sección de este log o
+a un ADR concreto — regla explícita del diseño: *un invariante que nadie puede
+justificar es peor que ninguno, porque una sesión futura lo obedecerá igual*.
+Por eso Visión general, Prompts y Páginas citadas se quedaron **sin regla
+propia** en esta fase en vez de rellenarlas a medias; aparecen en el mapa
+marcadas como pendientes.
+
+**Cómo se hace obligatorio.** "Cierre de fase" en `CLAUDE.md` (histórico + regla
+de ruta + celda del mapa, **en el mismo PR**), pregunta 8 del Human Gate, y la
+barra de calidad del `director.md`. Lo hace el agente, no el fundador — decisión
+explícita del fundador: *"el mapa que se actualice de forma automática por el
+agente del mismo PR"*. Documentación que depende de que un humano se acuerde es
+documentación que se pudre.
+
+**Pendiente conocido.** La colisión de ADR 0026 sigue sin resolver (renumerar
+uno de los dos toca enlaces cruzados y merece su propia decisión). Las tres
+zonas sin regla de ruta siguen dependiendo de que se lea su histórico.
+
 ---
 
 ## Cómo mantener este documento
