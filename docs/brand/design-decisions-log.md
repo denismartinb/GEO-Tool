@@ -1205,7 +1205,7 @@ Decisiones finales:
   glosario o de "al menos una fila donde gana el competidor" de las
   comparativas.
 - **Imágenes: maquetas SVG/CSS, nunca ilustración generada por IA ni stock.**
-  Decisión completa y motivos en `docs/adr/0026-article-imagery-policy.md`.
+  Decisión completa y motivos en `docs/adr/0028-article-imagery-policy.md`.
   Las capturas reales del producto quedan permitidas solo en `/docs`, nunca
   en marketing, porque la cuenta piloto vive en el mismo proyecto de Supabase
   que producción.
@@ -1244,7 +1244,7 @@ Pendiente / roto conocido:
   correcta.
 
 Referencias: `docs/brand/article-design-system.md`,
-`docs/adr/0026-article-imagery-policy.md`, `components/blog/article/`.
+`docs/adr/0028-article-imagery-policy.md`, `components/blog/article/`.
 
 ---
 
@@ -1302,7 +1302,7 @@ el artículo rompe el índice.
 
 **Qué se decidió — portadas.** Se permite imagen generada o de stock **en
 portada**, manteniendo la prohibición dentro del cuerpo (enmienda a
-`docs/adr/0026-article-imagery-policy.md`, decisión del fundador). Con una
+`docs/adr/0028-article-imagery-policy.md`, decisión del fundador). Con una
 regla: una portada no puede representar una interfaz, un panel, un gráfico ni
 una métrica. Si enseña algo que parece un dato de Genscore, ese dato tiene que
 existir — y entonces ya no es portada, es figura.
