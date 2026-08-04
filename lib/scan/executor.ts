@@ -10,7 +10,7 @@ import {
   computeRecommendationTransition,
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
-import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
+import { computeRunScoresFromResults, getEffectiveGeoScore, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
@@ -888,6 +888,14 @@ export async function executePendingScan({
     let newRecommendationsCount = 0;
     let resolvedGapsCount = 0;
     let previousVisibilityScore: number | null = null;
+    /* This run's honest score: null when nothing could be read, rather than
+     * the persisted 0 the non-null column has to hold (geo-score-v4,
+     * docs/adr/0027). Same helper score-alert.ts and weekly-digest.ts already
+     * use two call sites away. */
+    const effectiveVisibilityScore = getEffectiveGeoScore({
+      visibility_score: scores.visibility_score,
+      details_json: scores.details_json
+    });
 
     // Fail-soft: derived recommendations must never sink an otherwise-successful
     // scan. The real scan work (answers + scores) is already persisted above; if
@@ -967,10 +975,13 @@ export async function executePendingScan({
         // score.
         const { data: previousScoreRow } = await service
           .from("run_scores")
-          .select("visibility_score")
+          .select("visibility_score, details_json")
           .eq("run_id", previousRunRow.id as string)
           .maybeSingle();
-        previousVisibilityScore = previousScoreRow ? Number(previousScoreRow.visibility_score) : null;
+        // getEffectiveGeoScore returns null when that run read nothing, so a
+        // healthy scan cannot get a fabricated delta against an unreadable
+        // predecessor (geo-score-v4, docs/adr/0027).
+        previousVisibilityScore = previousScoreRow ? getEffectiveGeoScore(previousScoreRow) : null;
 
         const { data: previousRowsRaw } = await service
           .from("recommendations")
@@ -1159,9 +1170,20 @@ export async function executePendingScan({
         runId,
         promptsProcessed: totalSuccessCount ?? 0,
         providers,
-        visibilityScore: scores.visibility_score,
+        /* The bell notification is the loudest surface of all: it renders
+         * "Visibilidad 0 (-72)" with a red downward arrow. On a run whose
+         * extractions all failed, scores.visibility_score is the persisted 0 —
+         * never measured — so that alert would proactively tell the founder
+         * their visibility crashed because an extraction timed out.
+         *
+         * The payload type already allows null and the renderer already has
+         * the branch for it (lib/notifications/render.ts); only this producer
+         * was never wired up. Found by QA on PR #313, round 6. */
+        visibilityScore: effectiveVisibilityScore,
         visibilityDelta:
-          previousVisibilityScore !== null ? scores.visibility_score - previousVisibilityScore : null,
+          effectiveVisibilityScore !== null && previousVisibilityScore !== null
+            ? effectiveVisibilityScore - previousVisibilityScore
+            : null,
         newRecommendations: newRecommendationsCount,
         resolvedGaps: resolvedGapsCount
       }
