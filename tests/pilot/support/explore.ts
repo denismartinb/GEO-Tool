@@ -72,6 +72,17 @@ const EXPLORABLE = [
   // destructive-name guards below still apply to everything matched here.
   "[aria-pressed]",
   ".info-tip",
+  // Generic ARIA tab role, not a bespoke .cit2-tab-style class: this is what
+  // actually caught PR #289's real coverage gap (2026-08-03) — the
+  // Problemas/Correcto/Páginas AuditTabBar on Auditoría web uses `role="tab"`
+  // (app/dashboard/projects/[projectId]/web-audit/audit-tabs.tsx), and
+  // nothing in this list matched it, so a full ux-pilot design-fidelity
+  // review had to report "Correcto y Páginas nunca vistas con datos reales"
+  // as an open gap rather than a verified pass — on the very PR that
+  // introduced those two tabs. A pure client-side setState toggle (verified:
+  // no form, no network call, no destructive label) is exactly the "local
+  // in-page state" category this list exists for.
+  "[role='tab']",
   ".cit2-tab",
   ".cit2-rowmain",
   ".cit2-opp-row",
