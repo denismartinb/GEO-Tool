@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BLOG_CLUSTERS,
   BLOG_POSTS,
+  getBlogCluster,
   getBlogPost,
   getMetaDescription,
   getPostsByCluster,
@@ -75,5 +76,28 @@ describe("getPostsByCluster", () => {
   it("every post is reachable from exactly one cluster (no post is orphaned)", () => {
     const total = BLOG_CLUSTERS.reduce((sum, c) => sum + getPostsByCluster(c.key).length, 0);
     expect(total).toBe(BLOG_POSTS.length);
+  });
+});
+
+describe("getBlogCluster", () => {
+  it("finds an existing cluster and returns undefined for an unknown key", () => {
+    expect(getBlogCluster("fundamentos")?.key).toBe("fundamentos");
+    // @ts-expect-error deliberately invalid key to prove the lookup is safe
+    expect(getBlogCluster("no-existe")).toBeUndefined();
+  });
+});
+
+describe("BLOG_CLUSTERS pillarIntro (GROWTH-2 Fase 2.9, B1b)", () => {
+  it("every cluster with at least one real post has a pillarIntro", () => {
+    for (const cluster of BLOG_CLUSTERS) {
+      const hasPosts = getPostsByCluster(cluster.key).length > 0;
+      if (hasPosts) {
+        expect(cluster.pillarIntro, `${cluster.key} has posts but no pillarIntro`).toBeTruthy();
+      }
+    }
+  });
+
+  it("'sectores' has no pillarIntro — it has zero real posts, nothing to synthesize honestly yet", () => {
+    expect(getBlogCluster("sectores")?.pillarIntro).toBeUndefined();
   });
 });

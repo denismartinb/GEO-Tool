@@ -37,6 +37,12 @@ export interface PageFindings {
   thirdPartyFailures: string[];
   bouncedToLogin: boolean;
   screenshot: string;
+  /** Real content height, including inside the shell's inner scroll container. */
+  contentHeight: number;
+  /** Viewport height the screenshot was taken at. */
+  capturedHeight: number;
+  /** True when the page was taller than the capture ceiling and got cut. */
+  captureTruncated: boolean;
 }
 
 /**
@@ -69,12 +75,111 @@ async function findOverflowCulprits(page: Page, viewportWidth: number): Promise<
 }
 
 function slug(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+/**
+ * Playwright derives an attachment's on-disk filename from the attachment
+ * NAME (sanitized, plus a hash suffix) — NOT from `path`. A long name
+ * therefore blows past the 255-byte filename limit and kills the journey
+ * with ENAMETOOLONG, even when the screenshot itself wrote fine because
+ * `slug()` had already truncated the path.
+ *
+ * Hit for real (2026-08-02): the interaction sweeper names attachments after
+ * the control's accessible name, and an InfoTip whose aria-label is a full
+ * explanatory sentence failed all three viewports at once. A control's
+ * accessible name is arbitrary product copy — the harness must never assume
+ * it is short, and a screenshot filename must never be able to fail a run
+ * that the product itself passed.
+ */
+const MAX_ATTACHMENT_NAME = 80;
+
+export function attachmentName(text: string): string {
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  return collapsed.length <= MAX_ATTACHMENT_NAME
+    ? collapsed
+    : `${collapsed.slice(0, MAX_ATTACHMENT_NAME - 1)}…`;
 }
 
 function recordFindings(findings: PageFindings): void {
   mkdirSync(".pilot", { recursive: true });
   appendFileSync(FINDINGS_PATH, `${JSON.stringify(findings)}\n`);
+}
+
+/**
+ * Ceiling on how tall a capture may grow. A runaway list would otherwise
+ * produce a PNG too large to read (and too large to attach). When a page is
+ * taller than this the capture is truncated — and `captureTruncated` says so,
+ * because a silently cropped screenshot reads exactly like a complete one.
+ */
+const MAX_CAPTURE_HEIGHT = 6_000;
+
+/**
+ * How tall the page's real content is, INCLUDING content inside an inner
+ * scroll container.
+ *
+ * `fullPage: true` grows the capture to `document.documentElement.scrollHeight`
+ * and no further. The app shell pins itself to the viewport
+ * (`.shell { height: 100dvh; overflow: hidden }`, app/globals.css) and scrolls
+ * an inner element instead, so that number never exceeds one viewport — and
+ * every "full-page" capture of an authenticated screen was silently cropped at
+ * the fold. Found 2026-08-03, when the pilot could not see the Overview's
+ * position headline or any panorama row past the third at any viewport; it had
+ * been blind on every dashboard screen, not just that one.
+ */
+async function measureContentHeight(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    let tallest = document.documentElement.scrollHeight;
+    for (const el of document.querySelectorAll("*")) {
+      if (el.scrollHeight <= el.clientHeight + 1) continue;
+      const overflowY = window.getComputedStyle(el).overflowY;
+      if (overflowY !== "auto" && overflowY !== "scroll") continue;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      tallest = Math.max(tallest, top + el.scrollHeight);
+    }
+    return Math.ceil(tallest);
+  });
+}
+
+export type CaptureResult = {
+  /** Real content height measured before capturing. */
+  contentHeight: number;
+  /** Viewport height the capture was actually taken at. */
+  capturedHeight: number;
+  /** True when content exceeded MAX_CAPTURE_HEIGHT and was cut. */
+  captureTruncated: boolean;
+};
+
+/**
+ * Screenshots the whole screen, not just the part above the fold.
+ *
+ * Rather than stripping the shell's `overflow: hidden` — which would capture a
+ * layout the product never renders — this grows the *viewport* to the content
+ * height and lets the app lay itself out honestly at that size, then restores
+ * it. Width is untouched, so the responsive breakpoint under test never
+ * changes.
+ */
+async function captureFullContent(page: Page, path: string): Promise<CaptureResult> {
+  const viewport = page.viewportSize();
+  const contentHeight = await measureContentHeight(page);
+
+  if (!viewport || contentHeight <= viewport.height + 2) {
+    await page.screenshot({ path, fullPage: true });
+    return { contentHeight, capturedHeight: viewport?.height ?? contentHeight, captureTruncated: false };
+  }
+
+  const capturedHeight = Math.min(contentHeight, MAX_CAPTURE_HEIGHT);
+  await page.setViewportSize({ width: viewport.width, height: capturedHeight });
+  // Let the app reflow and any viewport-dependent client component settle.
+  await page.waitForTimeout(400);
+  try {
+    await page.screenshot({ path, fullPage: true });
+  } finally {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(200);
+  }
+
+  return { contentHeight, capturedHeight, captureTruncated: contentHeight > MAX_CAPTURE_HEIGHT };
 }
 
 /**
@@ -140,9 +245,13 @@ export async function visitAsUser(
     // 2px of slack absorbs sub-pixel rounding without hiding a real overflow.
     const horizontalOverflow = scrollWidth > viewport.width + 2;
 
+    // Culprits are measured BEFORE the capture, while the viewport is still
+    // the one under test — captureFullContent resizes it and puts it back.
+    const overflowCulprits = horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [];
+
     const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
     mkdirSync(SCREENS_DIR, { recursive: true });
-    await page.screenshot({ path: screenshot, fullPage: true });
+    const capture = await captureFullContent(page, screenshot);
 
     const findings: PageFindings = {
       label,
@@ -152,16 +261,17 @@ export async function visitAsUser(
       scrollWidth,
       viewportWidth: viewport.width,
       horizontalOverflow,
-      overflowCulprits: horizontalOverflow ? await findOverflowCulprits(page, viewport.width) : [],
+      overflowCulprits,
       consoleErrors,
       failedRequests,
       thirdPartyFailures,
       bouncedToLogin,
-      screenshot
+      screenshot,
+      ...capture
     };
 
     recordFindings(findings);
-    await testInfo.attach(`${label} (${testInfo.project.name})`, {
+    await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
       path: screenshot,
       contentType: "image/png"
     });
@@ -213,12 +323,18 @@ export function assertPageIsHealthy(findings: PageFindings): void {
  * if the interaction doesn't work, instead of silently screenshotting a
  * closed state and letting it pass for "verified" (founder request,
  * 2026-08-02: "quiero la evidencia de que verificaste el click").
+ *
+ * Deliberately viewport-sized, unlike `visitAsUser`: growing the viewport to
+ * capture a whole screen reflows the page, which would move an element out
+ * from under the cursor and dismiss the very `:hover` state being captured.
+ * The revealed element has already been scrolled into view, so the viewport is
+ * where it is.
  */
 export async function captureInteraction(page: Page, testInfo: TestInfo, label: string): Promise<string> {
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
-  await page.screenshot({ path: screenshot, fullPage: true });
-  await testInfo.attach(`${label} (${testInfo.project.name})`, {
+  await page.screenshot({ path: screenshot });
+  await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"
   });
@@ -297,23 +413,42 @@ export async function resolveProjectId(page: Page): Promise<string> {
   const pinned = process.env.PILOT_PROJECT_ID?.trim();
   if (pinned) return pinned;
 
-  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
-
-  const href = await page
-    .locator('a[href^="/dashboard/projects/"]')
-    .filter({ hasNotText: /nuevo|new/i })
-    .first()
-    .getAttribute("href");
-
-  const match = href?.match(/\/dashboard\/projects\/([^/?#]+)/);
-  const projectId = match?.[1];
-
-  if (!projectId || projectId === "new") {
+  const [first] = await discoverProjectIds(page);
+  if (!first) {
     throw new Error(
       "Pilot account has no project to inspect. Seed the pilot account with a " +
         "project that already has completed scans, or set PILOT_PROJECT_ID."
     );
   }
+  return first;
+}
 
-  return projectId;
+/**
+ * Every project on the pilot account, in list order.
+ *
+ * One project only ever exercises one shape of data. The account's projects
+ * differ in the ways that matter for judging a screen — how many scans they
+ * have, whether the brand is mentioned at all, how many competitors the AI
+ * names — so walking a second one is the cheapest way to reach states the
+ * primary project simply cannot produce (founder, 2026-08-03: *"si cambias de
+ * proyecto escaneado, por ejemplo Movistar, ahí puedes probar otras
+ * casuísticas"*).
+ */
+export async function discoverProjectIds(page: Page): Promise<string[]> {
+  await page.goto("/dashboard/projects", { waitUntil: "domcontentloaded" });
+
+  const hrefs = await page
+    .locator('a[href^="/dashboard/projects/"]')
+    .filter({ hasNotText: /nuevo|new/i })
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href") ?? ""));
+
+  const ids: string[] = [];
+  for (const href of hrefs) {
+    const id = href.match(/\/dashboard\/projects\/([^/?#]+)/)?.[1];
+    // "new" is the create route, not a project; the list also links each
+    // project from several places, so the same id shows up more than once.
+    if (!id || id === "new" || ids.includes(id)) continue;
+    ids.push(id);
+  }
+  return ids;
 }

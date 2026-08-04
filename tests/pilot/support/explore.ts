@@ -1,6 +1,7 @@
 import { appendFileSync, mkdirSync } from "node:fs";
 import type { Page, TestInfo } from "@playwright/test";
 import { redact } from "./env";
+import { attachmentName } from "./journey";
 
 /**
  * Generic interaction explorer (UX-PILOT-1c).
@@ -64,6 +65,12 @@ const SCREENS_DIR = ".pilot/screens";
  */
 const EXPLORABLE = [
   "[aria-expanded]",
+  // A toggle button, by definition — the attribute exists to say "this control
+  // has an on/off state I am reporting". The chart's legend chips are these,
+  // and they went unswept through two rounds of pilot evidence because the
+  // list only matched `aria-expanded` (found 2026-08-03). The form/submit and
+  // destructive-name guards below still apply to everything matched here.
+  "[aria-pressed]",
   ".info-tip",
   ".cit2-tab",
   ".cit2-rowmain",
@@ -122,6 +129,19 @@ export interface InteractionFinding {
 
 function slug(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
+}
+
+/**
+ * Human-readable label for an interaction finding — feeds both the JSONL
+ * record and `testInfo.attach()`'s attachment name. Both branches (not just
+ * the textContent fallback) must be capped at 60 chars: an uncapped
+ * aria-label on a long descriptive control (e.g. a methodology tooltip) made
+ * it into the attachment name uncapped, and Playwright's own attachment-copy
+ * step has no length guard of its own — ENAMETOOLONG on the destination
+ * path, first seen on the web-audit screen (2026-08-02/03 pilot runs).
+ */
+export function deriveControlLabel(ariaLabel: string | null, textContent: string | null, fallback: string): string {
+  return (ariaLabel ?? "").trim().slice(0, 60) || (textContent ?? "").trim().slice(0, 60) || fallback;
 }
 
 function record(finding: InteractionFinding): void {
@@ -245,24 +265,11 @@ export async function exploreInteractions(
       const el = candidates.nth(i);
       if (!(await el.isVisible().catch(() => false))) continue;
 
-      // Both sources feed the same cap. A first version only sliced the
-      // textContent branch, so an aria-label — unbounded, and often the
-      // longer, more descriptive string on an accessible .info-tip — sailed
-      // through untouched into `testInfo.attach(...)`'s name. Playwright
-      // uses that name to build a real file path when it copies attachments
-      // into its output/report directories, and a >200-char label blew past
-      // the filesystem's name-length limit (ENAMETOOLONG, first real run
-      // with `.info-tip` aria-labels in production, 2026-08-02) — a harness
-      // bug, not a product one: a long, descriptive aria-label is correct
-      // accessibility practice.
-      const control =
-        (
-          (await el.getAttribute("aria-label")) ||
-          (await el.textContent()) ||
-          ""
-        )
-          .trim()
-          .slice(0, 60) || `${screen} control #${i + 1}`;
+      const control = deriveControlLabel(
+        await el.getAttribute("aria-label"),
+        await el.textContent(),
+        `${screen} control #${i + 1}`
+      );
 
       const refusal = await refuseReason(el).catch(() => "could not inspect element");
       if (refusal) {
@@ -306,7 +313,7 @@ export async function exploreInteractions(
         // its timeout. The page-level captures (visitAsUser) stay fullPage —
         // those are for judging the whole screen.
         await page.screenshot({ path: screenshot });
-        await testInfo.attach(`${screen} → ${control} (${testInfo.project.name})`, {
+        await testInfo.attach(attachmentName(`${screen} → ${control} (${testInfo.project.name})`), {
           path: screenshot,
           contentType: "image/png"
         });

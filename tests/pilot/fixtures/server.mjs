@@ -48,7 +48,9 @@ const BLOG_SLUGS = [
   "que-es-geo-generative-engine-optimization",
   "como-elegir-prompts-monitorizar-marca-ia",
   "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo"
+  "genscore-vs-herramientas-geo",
+  "llms-txt-guia-practica",
+  "como-conseguir-que-chatgpt-te-cite"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
@@ -61,8 +63,30 @@ const PUBLIC_PAGES = new Map([
   ["/cookies", "Cookies — Genscore"],
   ["/terminos", "Términos — Genscore"],
   ["/glosario", "Glosario GEO — Genscore"],
-  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"]
+  ["/comparativas", "Comparativas — Genscore"],
+  ["/comparativas/genscore-vs-otterly", "Genscore vs Otterly — Genscore"],
+  ["/comparativas/genscore-vs-peec-ai", "Genscore vs Peec AI — Genscore"],
+  ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — Genscore"]
 ]);
+
+// GROWTH-2 Fase 2.6b (tests/pilot/journeys/public-pages.spec.ts): the two
+// glossary terms the journey checks — each gets its own render function
+// because it needs a "Sigue explorando" related-links block, which the
+// generic publicHtml can't carry.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"];
+const GLOSSARY_RELATED_OF_SLUG = { geo: "geo-score", "geo-score": "geo" };
+
+function glosarioTerminoHtml(slug) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const related = GLOSSARY_RELATED_OF_SLUG[slug];
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/glosario/${slug}">
+<title>¿Qué es ${slug}? — Glosario GEO — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>¿Qué es ${slug}?</h1><p>contenido</p><div class="glossary-related"><h2>Sigue explorando</h2><ul><li><a href="/glosario/${related}">${related}</a></li></ul></div>${overflow}</body></html>`;
+}
 
 // GROWTH-2 Fase 2.3 (tests/pilot/journeys/docs-pages.spec.ts): same idea as
 // PUBLIC_PAGES above, kept as a separate map/function because these pages
@@ -165,14 +189,42 @@ function citationsPage() {
     <script>${CITATIONS_SCRIPT}</script>`;
 }
 
+/**
+ * Authenticated pages are wrapped in the same shape as the real app shell:
+ * pinned to the viewport, with the actual scrolling done by an inner element.
+ *
+ * That is what made `fullPage: true` silently crop every dashboard capture at
+ * the fold — `document.documentElement.scrollHeight` never grows past one
+ * viewport, so Playwright believed it had the whole page. Reproducing the
+ * shape here is what lets the self-check prove the fix instead of asserting it
+ * (`BELOW_FOLD_MARKER` sits far enough down that only a working capture
+ * contains it).
+ */
+const BELOW_FOLD_MARKER = "marcador-bajo-el-pliegue";
+
+function shellWrap(body) {
+  const filler = Array.from(
+    { length: 40 },
+    (_, i) => `<p style="margin:0 0 24px">fila de relleno ${i + 1}</p>`
+  ).join("");
+  return `<div class="shell" style="height:100dvh;overflow:hidden;display:grid;grid-template-rows:auto 1fr">
+  <header style="padding:8px 16px">cabecera</header>
+  <main class="shell-scroll" style="overflow-y:auto;padding:16px">
+    ${body}
+    ${filler}
+    <p id="${BELOW_FOLD_MARKER}">${BELOW_FOLD_MARKER}</p>
+  </main>
+</div>`;
+}
+
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
-</head><body><h1>${title}</h1>${body}${overflow}</body></html>`;
+<style>body{margin:0;font-family:system-ui}</style>
+</head><body>${shellWrap(`<h1>${title}</h1>${body}${overflow}`)}</body></html>`;
 }
 
 function publicHtml(path, title) {
@@ -243,6 +295,28 @@ function blogPostHtml(slug) {
 </head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
 }
 
+// GROWTH-2 Fase 2.9 (B1b): the 4 clusters each get a pillar page at
+// /blog/<key> — mirrors lib/blog/posts.ts's BLOG_CLUSTERS keys. "sectores"
+// has zero real posts, so it renders the same honest empty-state copy the
+// real page does instead of "contenido del pilar" — the pilot journey
+// asserts on that exact text.
+const BLOG_PILLAR_KEYS = ["fundamentos", "medicion", "playbooks", "sectores"];
+
+function blogPillarHtml(key) {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const body =
+    key === "sectores"
+      ? `<p>Todavía no hay artículos publicados en esta sección — está planificada en nuestro <a href="/blog">calendario de contenido</a> y llegará más adelante.</p>`
+      : `<p>contenido del pilar</p>`;
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/blog/${key}">
+<title>${key} — Blog — Genscore</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+</head><body><h1>${key}</h1>${body}${overflow}</body></html>`;
+}
+
 function feedXml() {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel><title>Genscore — Blog</title><link>${SITE_URL}/blog</link><item><link>${SITE_URL}/blog/${BLOG_SLUGS[0]}</link></item></channel></rss>`;
@@ -304,9 +378,21 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (BLOG_PILLAR_KEYS.includes(path.replace(/^\/blog\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(blogPillarHtml(path.replace(/^\/blog\//, "")));
+    return;
+  }
+
   if (BLOG_SLUGS.includes(path.replace(/^\/blog\//, ""))) {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(blogPostHtml(path.replace(/^\/blog\//, "")));
+    return;
+  }
+
+  if (GLOSSARY_TERM_SLUGS.includes(path.replace(/^\/glosario\//, ""))) {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(glosarioTerminoHtml(path.replace(/^\/glosario\//, "")));
     return;
   }
 

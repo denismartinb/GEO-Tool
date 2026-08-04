@@ -51,6 +51,35 @@ function parseExt(raw: unknown): ExtractedJsonLike {
  * the engine dimension on top of the same aggregation, by re-running the
  * caller-supplied mention predicate per row and bucketing by provider.
  */
+/**
+ * Drops engine columns nobody was mentioned in, for the Competitors page's
+ * engine × brand matrix (founder feedback, COMP-REDESIGN-1 review: "cuando
+ * ChatGPT sale todo a cero... es mejor que esa columna se elimine").
+ *
+ * Presentation-only: the 0% is real and each entity's rate is untouched —
+ * a column where neither the brand nor any competitor ever appears simply
+ * isn't a comparison, so it's dead width. An engine kept here always has at
+ * least one non-zero cell.
+ *
+ * Lives here (not inline in the page) so the rule is unit-testable: the
+ * matrix sits below the fold, and the agentic pilot only ever captures
+ * viewport-sized screenshots, so this behaviour cannot be verified from
+ * screenshot evidence.
+ */
+export function filterComparableEngines(input: {
+  brandBreakdown: EntityEngineBreakdown[];
+  competitorBreakdowns: EntityEngineBreakdown[][];
+}): EntityEngineBreakdown[] {
+  const { brandBreakdown, competitorBreakdowns } = input;
+  return brandBreakdown.filter((brandEngine) => {
+    if (brandEngine.mentionRate > 0) return true;
+    return competitorBreakdowns.some(
+      (breakdown) =>
+        (breakdown.find((e) => e.provider === brandEngine.provider)?.mentionRate ?? 0) > 0
+    );
+  });
+}
+
 export function computeEntityEngineBreakdown(input: {
   rows: EntityEngineInputRow[];
   isEntityMentioned: (ext: ExtractedJsonLike) => boolean; // brand or a specific competitor

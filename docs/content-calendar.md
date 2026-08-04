@@ -25,21 +25,27 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 | A4 | `/docs/metodologia/geo-score` | geo score metodología | 🔲 Pendiente | — |
 | A5 | `/docs/planes-y-limites` | planes genscore límites | 🔲 Pendiente | — |
 
-## Capa C — Páginas de decisión (Fase 2.4)
+## Capa C — Páginas de decisión (Fase 2.4 / 2.6c / 2.8)
+
+Priorizada frente a B1b/B2/B3 por recomendación de `seo-geo-research`: las
+páginas de comparación citan más que la media del portfolio en motores
+generativos (dato de terceros, no verificado de primera mano — ver
+Task Intake de Fase 2.6).
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | 🔲 Pendiente | — |
-| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | 🔲 Pendiente | — |
-| C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | 🔲 Pendiente | — |
+| C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | ✅ Hecho | #292 |
+| C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | ✅ Hecho | #302 |
+| C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | ✅ Hecho | #306 |
 
-## Capa D — Glosario (Fase 2.4)
+## Capa D — Glosario (Fase 2.4 / 2.6b)
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| D1 | `/glosario` (índice + primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | 🔲 Pendiente | — |
+| D1 | `/glosario` (índice, primeras ~15 entradas: GEO, AEO, GEO Score, share of voice en IA, llms.txt, grounding, AI Overviews, prompt tracking...) | glosario geo | ✅ Hecho | #292 |
+| D1b | `/glosario/<termino>` — URL propia por término (patrón confirmado por `seo-geo-research`: el único glosario del sector que funciona como motor de tráfico, Ahrefs, usa una página completa por término, no un índice único) | qué es &lt;término&gt; | ✅ Hecho | #299 |
 
-## Capa B — Hubs del blog (Fase 2.5)
+## Capa B — Hubs del blog (Fase 2.5 / 2.9)
 
 Reestructuración de `/blog` en 4 clusters (fundamentos, medición, playbooks,
 sectores) — no piezas nuevas en sí, sino arquitectura + 2-3 artículos nuevos
@@ -49,9 +55,20 @@ transaccional).
 | # | Qué | Estado | PR |
 |---|---|---|---|
 | B1a | Taxonomía de clusters (`cluster` en `lib/blog/posts.ts`), índice reagrupado, enlazado interno "Sigue leyendo" entre posts del mismo cluster | ✅ Hecho | #294 |
-| B1b | Páginas pilar dedicadas por cluster + redirects si cambian rutas | 🔲 Pendiente | — |
-| B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | 🔲 Pendiente | — |
-| B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | 🔲 Pendiente | — |
+| B1b | Páginas pilar dedicadas por cluster (`/blog/<cluster>`) | ✅ Hecho — 3 de 4 (ver nota) | — |
+| B2 | `/blog/como-conseguir-que-chatgpt-te-cite` (cluster playbooks) | ✅ Hecho | — |
+| B3 | `/blog/llms-txt-guia-practica` (cluster playbooks) | ✅ Hecho | — |
+
+**Nota B1b:** páginas pilar reales para fundamentos, medición y playbooks —
+cada una con una síntesis propia (no relleno) del porqué de esa sección y
+enlace a todos sus artículos; cada artículo enlaza de vuelta a su pilar
+("todo satélite enlaza a su página pilar", `content-strategy.md` §4.3). El
+cluster "sectores" **no** tiene página pilar con contenido — sigue con cero
+artículos, así que no hay nada real que sintetizar todavía; la ruta
+`/blog/sectores` existe (no da 404) pero muestra un estado honesto de
+"aún no hay artículos" y está excluida del sitemap para no indexar una
+página sin contenido real. Sin redirects: no se ha movido ninguna URL de
+post existente.
 
 ## Capa E — Observatorio
 

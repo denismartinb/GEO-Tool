@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, suggestCompetitors, suggestPrompts, type BusinessProfile } from "@/lib/llm/gemini";
-import { resolveBusinessContext } from "@/lib/projects/business-profile";
+import { deriveBrandAliases, resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
 import {
@@ -258,6 +258,14 @@ export async function createProject(formData: FormData) {
     }
   }
 
+  // GEO-SCORE-BRAND-IDENTITY-1: derived at creation so the very first scan
+  // already measures the brand correctly. A brand whose product carries the
+  // recognizable name (Mozilla/Firefox) is otherwise scored as absent from
+  // answers that recommend it — see docs/geo-score-variability-2026-08.md.
+  // Never blocks creation: deriveBrandAliases swallows its own failures and
+  // returns [], which is also the correct value for most brands.
+  const derivedBrandAliases = await deriveBrandAliases({ brand, domain }).catch(() => [] as string[]);
+
   const { data, error } = await supabase
     .from("projects")
     .insert({
@@ -267,7 +275,8 @@ export async function createProject(formData: FormData) {
       brand,
       country,
       language,
-      business_profile: resolvedBusinessProfile
+      business_profile: resolvedBusinessProfile,
+      brand_aliases: derivedBrandAliases
     })
     .select("id")
     .single();

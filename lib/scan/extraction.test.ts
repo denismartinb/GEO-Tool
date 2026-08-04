@@ -32,23 +32,30 @@ import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 function createServiceMock(options: {
   selectResult: { data: unknown[] | null; error: unknown };
   updateCalls: Array<Record<string, unknown>>;
+  /** EMERGING-BRANDS-GROUNDING-1: result for the `projects` table lookup runStructuredExtractionForRun does to read the cached business profile. Defaults to "no profile cached", matching every pre-existing test's expectations. */
+  projectResult?: { data: Record<string, unknown> | null; error?: unknown };
 }) {
-  const builder: Record<string, unknown> = {};
-  const methods = ["select", "eq", "not", "update", "in"];
+  const methods = ["select", "eq", "not", "update", "in", "maybeSingle"];
 
-  for (const method of methods) {
-    builder[method] = vi.fn((...args: unknown[]) => {
-      if (method === "update") {
-        options.updateCalls.push(args[0] as Record<string, unknown>);
-      }
-      return builder;
-    });
+  function makeBuilder(result: unknown) {
+    const builder: Record<string, unknown> = {};
+    for (const method of methods) {
+      builder[method] = vi.fn((...args: unknown[]) => {
+        if (method === "update") {
+          options.updateCalls.push(args[0] as Record<string, unknown>);
+        }
+        return builder;
+      });
+    }
+    builder.then = (resolve: (value: unknown) => unknown) => resolve(result);
+    return builder;
   }
 
-  builder.then = (resolve: (value: unknown) => unknown) => resolve(options.selectResult);
+  const scanResultsBuilder = makeBuilder(options.selectResult);
+  const projectsBuilder = makeBuilder(options.projectResult ?? { data: null, error: null });
 
   return {
-    from: vi.fn(() => builder)
+    from: vi.fn((table: string) => (table === "projects" ? projectsBuilder : scanResultsBuilder))
   };
 }
 
@@ -144,6 +151,60 @@ describe("runStructuredExtractionForRun", () => {
     expect(groundingCitations[1]).toMatchObject({ domain: null, confidence: "low" });
     expect(update.citations_count).toBe(2);
     expect(update.citation_found).toBe(true);
+  });
+
+  it("EMERGING-BRANDS-GROUNDING-1: threads the project's cached business profile into the extractor call", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const cachedProfile = {
+      whatItSells: "a web browser",
+      sector: "software",
+      subSector: "web browsers",
+      businessModel: "b2c" as const,
+      targetCustomer: "general internet users",
+      geographicScope: "global",
+      sizeEstimate: "large",
+      confidence: "high" as const
+    };
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls,
+      projectResult: { data: { business_profile: cachedProfile }, error: null }
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledWith(expect.objectContaining({ profile: cachedProfile }));
+  });
+
+  it("passes profile: undefined (never a fabricated profile) when the project has no cached business profile yet", async () => {
+    const updateCalls: Array<Record<string, unknown>> = [];
+    const service = createServiceMock({
+      selectResult: { data: [baseRow()], error: null },
+      updateCalls
+      // projectResult omitted — defaults to "no profile cached".
+    });
+
+    vi.mocked(extractGeminiStructuredData).mockResolvedValue({
+      data: baseExtractionOutput(),
+      model: "gemini-2.0-flash-001"
+    });
+
+    await runStructuredExtractionForRun({
+      service: service as unknown as Parameters<typeof runStructuredExtractionForRun>[0]["service"],
+      projectId: "project-1",
+      runId: "run-1"
+    });
+
+    expect(extractGeminiStructuredData).toHaveBeenCalledWith(expect.objectContaining({ profile: undefined }));
   });
 
   it("derives citations_count/citation_found from grounding chunks only, ignoring inline matches", async () => {
@@ -565,6 +626,78 @@ describe("verifyExtractedMentions (MENTION-VERIFY-1, docs/adr/0021)", () => {
       ...overrides
     };
   }
+
+  /* ---- GEO-SCORE-BRAND-IDENTITY-1: a brand is not one name ---- */
+
+  // Verbatim from the founder's real 2026-08-02 scan of mozilla.org. All
+  // three engines recommended Firefox; the brand only counted at all because
+  // each answer happened to also write the parent company's name in passing.
+  const CLAUDE_RESPONSE_WITHOUT_PARENT_NAME =
+    "Firefox\nOfrece proteccion de rastreo mejorada de forma predeterminada y tiene configuracion granular de privacidad. " +
+    "Firefox es probablemente la mejor opcion equilibrada: excelente privacidad y codigo abierto.";
+
+  it("counts the brand when the AI recommends its product by name (the Mozilla case)", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Firefox", evidence: [], position: 1 }
+    });
+
+    const withoutAliases = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla");
+    const withAliases = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", ["Firefox"]);
+
+    // This is the defect: an answer that recommends Firefox twice scored the
+    // brand as absent, because "Firefox" does not plausibly name "Mozilla".
+    expect(withoutAliases.brand.mentioned).toBe(false);
+    expect(withAliases.brand.mentioned).toBe(true);
+    expect(withAliases.brand.position).toBe(1);
+  });
+
+  it("still requires the claimed name to be in the raw text — an alias cannot manufacture a mention", () => {
+    // The safety property. Aliases loosen check (a) of ADR 0021; check (b) is
+    // untouched, so an alias for a product the answer never mentions is still
+    // a non-mention.
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Thunderbird", evidence: [], position: 1 }
+    });
+
+    const result = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", [
+      "Firefox",
+      "Thunderbird"
+    ]);
+
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("keeps matching the brand's own name when aliases are present", () => {
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "Mozilla", evidence: [], position: 2 }
+    });
+
+    const result = verifyExtractedMentions(data, "El navegador esta desarrollado por Mozilla.", "Mozilla", ["Firefox"]);
+
+    expect(result.brand.mentioned).toBe(true);
+  });
+
+  it("ignores blank aliases instead of matching everything", () => {
+    // An empty alias would make namesPlausiblyMatch trivially true and switch
+    // verification off entirely for that project.
+    const data = baseData({
+      brand: { mentioned: true, display_name_found: "algo sin relacion", evidence: [], position: 1 }
+    });
+
+    const result = verifyExtractedMentions(data, "algo sin relacion aparece aqui.", "Mozilla", ["", "   "]);
+
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("does not apply brand aliases to competitors", () => {
+    const data = baseData({
+      competitors: [{ name: "Brave", mentioned: true, display_name_found: "Firefox", evidence: [], position: 1 }]
+    });
+
+    const result = verifyExtractedMentions(data, CLAUDE_RESPONSE_WITHOUT_PARENT_NAME, "Mozilla", ["Firefox"]);
+
+    expect(result.competitors[0].mentioned).toBe(false);
+  });
 
   it("downgrades a brand mention whose display_name_found is not present in the raw text", () => {
     const data = baseData({

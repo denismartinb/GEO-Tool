@@ -158,6 +158,32 @@ completion, cleaning up after itself — opt-in only, via manual
 is approved; anything wider (creating a project, the unrestricted scan button,
 competitors, billing) needs its own Task Intake.
 
+**Reading more than one project is approved and shipped** (UX-PILOT-1d,
+2026-08-03, `tests/pilot/journeys/second-project.spec.ts`). One project only
+ever exercises one shape of data, so whole branches of a screen are
+unreachable from it — a brand the AI never named, a project with too few
+qualifying scans, a ranking where most entities have no rank. The pilot now
+walks the Overview and Competitors screens on up to two further projects on
+the same account, skips loudly when there is only one, and annotates the run
+when more projects existed than the cap allowed. This needs no exception:
+switching project is navigation, and every journey it runs is read-only.
+
+**Second approved exception: UX-PILOT-3** (Task Intake approved 2026-08-03) —
+the pilot may launch real scans on a pinned project when a state is
+unreachable without one, because after a scoring change no run anywhere carries
+the new shape of data and no amount of looking harder fixes that. Three
+locks, none of them a convention: `workflow_dispatch` only (no deploy can
+trigger it), `--journeys scan` (the per-deploy read set cannot reach the files,
+asserted by the self-check every run), and a required `project_id` input with
+no default (the code refuses without it, and refuses above the hard cap of 2
+rather than clamping). **No secret gates it** — founder, 2026-08-03: *"tiene
+que dar al botón como si le diera yo, sin claves ni secretos"*; anyone able to
+set a secret could already dispatch the workflow, so it bought no access
+control. What that trades away, stated rather than glossed: nothing in code
+distinguishes a human pressing the button from an agent dispatching it. It presses the project's own scan button and
+nothing else. Its output is captures, not a verdict — the `ux-pilot` agent
+still has to judge them. Anything wider still needs its own Task Intake.
+
 ---
 
 ## Human Gate

@@ -394,6 +394,26 @@ versionada ("Cuota de voz" solo para runs v2). **E2 pendiente** (PR
 siguiente): la alerta de caída no comparará runs de versiones distintas y
 exigirá caída sostenida en 2 comparaciones consecutivas.
 
+**Estado (2026-08-02) — el hallazgo 5 se cobró en producción.** El fundador
+reportó un salto de **44 puntos entre dos escaneos consecutivos sin tocar
+nada**, en un proyecto de 1 prompt × 3 motores (3 respuestas de IA). Es
+exactamente el escenario que este hallazgo predijo y cuyas propuestas 2 y 3
+nunca se implementaron. Diagnóstico completo, reproducciones y plan de fases
+en `docs/geo-score-variability-2026-08.md`; la capa de fiabilidad (suelo de
+muestra, guarda de comparabilidad, margen de Wilson, unidades) está
+implementada en `docs/adr/0024-score-reliability-layer.md`.
+
+Dos matices que esta auditoría no vio y conviene incorporar aquí:
+
+1. La propuesta 1 ("ligar las etiquetas de confianza al nº de prompts") se
+   implementó a medias en ADR 0015: subió el listón de "alta" a ≥20 pero dejó
+   "media" en ≥2, así que un run de 2 respuestas y uno de 19 se presentaban
+   igual. Corregido en ADR 0024 (media exige ≥10).
+2. La causa del salto reportado **no fue varianza estadística** sino un error
+   de medición: la marca trackeada era "Mozilla" y las respuestas recomendaban
+   "Firefox". Ver el documento de agosto — la varianza es un problema real y
+   distinto, pero atacarla sola no habría evitado este incidente.
+
 **Estado (2026-07-12, cont.):** #217 (E1) mergeado. **E2 implementada** en
 el PR siguiente: `checkAndSendScoreDropAlert` exige ahora caída
 **sostenida** — el run actual y el anterior deben estar ambos ≥10 puntos

@@ -26,7 +26,9 @@ const BLOG_POSTS = [
   "que-es-geo-generative-engine-optimization",
   "como-elegir-prompts-monitorizar-marca-ia",
   "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo"
+  "genscore-vs-herramientas-geo",
+  "llms-txt-guia-practica",
+  "como-conseguir-que-chatgpt-te-cite"
 ] as const;
 
 /** Asserts the page's own <link rel="canonical"> matches its expected, absolute URL exactly (no trailing slash, no query string). */
@@ -55,6 +57,33 @@ test("blog index renders and has its own canonical", async ({ page }, testInfo) 
   for (const title of BLOG_CLUSTER_TITLES) {
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
   }
+});
+
+// GROWTH-2 Fase 2.9 (B1b): pillar pages for the 3 populated clusters — not
+// "sectores", which has zero posts and is deliberately excluded from the
+// sitemap (see app/sitemap.ts), though the route itself still exists.
+const BLOG_PILLAR_CLUSTERS = ["fundamentos", "medicion", "playbooks"] as const;
+
+for (const cluster of BLOG_PILLAR_CLUSTERS) {
+  test(`blog cluster pillar page renders and has its own canonical: ${cluster}`, async ({ page }, testInfo) => {
+    const findings = await visitAsUser(page, testInfo, `/blog/${cluster}`, `blog-pillar-${cluster}`);
+    assertPageIsHealthy(findings);
+    await assertCanonical(page, `/blog/${cluster}`);
+  });
+}
+
+// GROWTH-2 Fase 2.9: "sectores" carries the honesty burden of this slice
+// (zero posts — it must show a real "no hay artículos" state, never a
+// fabricated one) and QA flagged it as the page most worth a pilot eyeball,
+// so it gets its own dedicated check rather than riding along with the
+// populated clusters above.
+test("blog cluster pillar page for an empty cluster shows an honest placeholder, not fake content: sectores", async ({
+  page
+}, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/blog/sectores", "blog-pillar-sectores");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/blog/sectores");
+  await expect(page.getByText(/todavía no hay artículos/i)).toBeVisible();
 });
 
 for (const slug of BLOG_POSTS) {
@@ -99,6 +128,22 @@ test("/glosario renders and has its own canonical", async ({ page }, testInfo) =
   await assertCanonical(page, "/glosario");
 });
 
+// GROWTH-2 Fase 2.6b: each term now has its own page (/glosario/<slug>)
+// instead of only an anchor on the index. Two representative terms, not all
+// 15 — they all render through the same dynamic route/component.
+const GLOSSARY_TERM_SLUGS = ["geo", "geo-score"] as const;
+
+for (const slug of GLOSSARY_TERM_SLUGS) {
+  test(`glossary term page renders and has its own canonical: ${slug}`, async ({ page }, testInfo) => {
+    const findings = await visitAsUser(page, testInfo, `/glosario/${slug}`, `glosario-${slug}`);
+    assertPageIsHealthy(findings);
+    await assertCanonical(page, `/glosario/${slug}`);
+    // Internal-linking rule (content-strategy.md §4.3): every term page
+    // must link onward to at least one related term/doc/post.
+    await expect(page.locator(".glossary-related a").first()).toBeVisible();
+  });
+}
+
 test("/comparativas/genscore-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(
     page,
@@ -108,6 +153,86 @@ test("/comparativas/genscore-vs-otterly renders and has its own canonical", asyn
   );
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/comparativas/genscore-vs-otterly");
+});
+
+test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-peec-ai",
+    "comparativas-genscore-vs-peec-ai"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-peec-ai");
+});
+
+test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/comparativas", "comparativas-index");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas");
+});
+
+test("/comparativas/mejores-herramientas-geo-en-espanol renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/mejores-herramientas-geo-en-espanol",
+    "comparativas-mejores-herramientas-geo"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/mejores-herramientas-geo-en-espanol");
+});
+
+/**
+ * GROWTH-3 Fase 3.1 — verificación de enlaces contra el despliegue real.
+ *
+ * Regla del fundador (2026-08-03): "probar siempre todos los links". El nivel
+ * estático vive en `lib/blog/article-links.test.ts` y coge enlaces a rutas
+ * inexistentes antes de desplegar. Este es el segundo nivel: coge las rutas
+ * que existen en el código pero fallan en el despliegue real (build roto,
+ * página que revienta al renderizar, redirección mal configurada).
+ *
+ * SCOPE GUARD: solo peticiones GET a rutas públicas. Se descarta cualquier
+ * enlace a /dashboard o /api — la cuenta piloto vive en el mismo proyecto de
+ * Supabase que producción y este journey no debe tocar nada autenticado.
+ */
+const LINK_SCAN_PAGES = [
+  "/blog",
+  "/blog/llms-txt-guia-practica",
+  "/glosario",
+  "/glosario/geo",
+  "/comparativas",
+  "/comparativas/mejores-herramientas-geo-en-espanol",
+  "/docs"
+];
+
+test("todos los enlaces internos del contenido publicado responden 200", async ({ page }) => {
+  const targets = new Set<string>();
+
+  for (const path of LINK_SCAN_PAGES) {
+    const response = await page.goto(path, { waitUntil: "domcontentloaded" });
+    expect(response?.status(), `${path} no cargó para escanear sus enlaces`).toBeLessThan(400);
+
+    const hrefs = await page
+      .locator('a[href^="/"]')
+      .evaluateAll((els) => els.map((el) => el.getAttribute("href") ?? ""));
+
+    for (const raw of hrefs) {
+      const clean = raw.split("#")[0].split("?")[0].replace(/\/$/, "") || "/";
+      if (clean.startsWith("/dashboard") || clean.startsWith("/api")) continue;
+      targets.add(clean);
+    }
+  }
+
+  expect(targets.size, "no se encontró ningún enlace interno que comprobar").toBeGreaterThan(5);
+
+  const broken: string[] = [];
+  for (const href of targets) {
+    const res = await page.request.get(href);
+    if (res.status() >= 400) broken.push(`${href} → ${res.status()}`);
+  }
+
+  expect(broken, `enlaces internos rotos: ${broken.join(", ")}`).toEqual([]);
 });
 
 test("/feed.xml responds with a valid RSS 2.0 document", async ({ page }) => {

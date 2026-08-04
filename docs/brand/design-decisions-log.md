@@ -798,7 +798,62 @@ de producción (movistar.es), no una propuesta del piloto:
    pantalla a la que ir por el menú. Al perder su único consumidor, la prop
    `projectId` se retiró en cascada de `OpportunitiesBlock`, `CitationsClient`
    y de la llamada en `page.tsx` en vez de dejarla sin usar.
+
 ---
+
+## 8b. Overview — cómo se muestra la incertidumbre del score (GEO-SCORE-RELIABILITY-1, 2026-08-02)
+
+**Estado: implementado.** Detalle técnico en `docs/adr/0024-score-reliability-layer.md`
+y `docs/geo-score-variability-2026-08.md`.
+
+Decisiones de presentación (no de cálculo — el score no cambia):
+
+- **El score siempre se muestra; lo que se retira es la interpretación.**
+  Por debajo de 10 respuestas de IA desaparecen la franja cualitativa
+  («competitivo»/«emergente»/«inicial») y el delta, no el número. Ocultar el
+  número escondería evidencia real que el usuario ha pagado; mantener la
+  franja afirmaría una posición que la muestra no sostiene.
+- **La franja se sustituye por un badge `warn` "Muestra insuficiente"** con
+  tooltip que dice cuántas respuestas hay, por qué no basta y qué hacer
+  (añadir prompts o motores). Es un estado accionable, no un error.
+- **Un delta retirado no se etiqueta: se oculta.** *(Decisión del fundador,
+  2026-08-03 — supersede la primera versión de esta misma fase, que lo
+  renderizaba como "— sin comparación".)* Rotular cada hueco funcionaba como
+  argumento de honestidad y fallaba como pantalla: cuatro avisos de
+  "sin comparación" / "muestra insuficiente" a la vez hacen que el producto
+  parezca roto, no cuidadoso. Sigue vigente lo que motivó aquella versión:
+  **nunca "— sin cambio"**, que declara una estabilidad medida que no
+  tenemos. La regla final es ausencia, no afirmación falsa ni cartel.
+- **La ausencia se explica UNA vez, bajo el gauge, y en positivo.** *"Con N
+  respuestas de IA más verás franja y evolución. Añade prompts o motores."* —
+  redactado como lo que se desbloquea, no como lo que falta, porque el usuario
+  puede actuar sobre "añade prompts" y no sobre "muestra insuficiente". Un par
+  de escaneos no comparables **no** lleva línea: no es accionable (el
+  siguiente escaneo lo resuelve solo) y nombrarlo reintroduciría el ruido que
+  esta decisión elimina.
+- **Unidad: "respuestas de IA", no "prompts".** El contador es
+  `prompts × motores`; llamarlo "prompts" hacía que un proyecto de 1 prompt
+  en 3 motores leyera "3 de 3 prompts". Supersede la copy del banner de
+  insight de §4.
+- **El margen se muestra donde el dato es una proporción** (tasa de mención:
+  `±N pt`, Wilson 95%), no sobre el compuesto — no existe un intervalo
+  honesto del compuesto sin metodología nueva, y fabricarlo sería el mismo
+  error de precisión falsa que esta fase elimina.
+
+- **Una card KPI que no puede sostener su afirmación se oculta entera**, no se
+  queda con un valor vacío. Aplica a "Sentimiento de marca", cuyo veredicto
+  ("Positivo") se calcula solo sobre las respuestas que mencionan la marca —
+  2 en el escaneo que destapó esto. Dejarla habría sido la única card de la
+  pantalla afirmando algo con seguridad mientras sus tres hermanas se callan.
+- **La card del gauge deja de estirarse hasta la altura del bloque de KPIs**
+  (`align-items: start` en `.ov2-hero`, ≥1200px). Antes la rellenaba la
+  sparkline; al retirarla en escaneos de muestra baja quedaba un gauge con
+  mucho aire debajo. Ajustarla al contenido funciona en los dos estados, no
+  solo en el que tiene tendencia.
+
+Pendiente conocido: con muestra suficiente pero identidad de marca mal
+resuelta, la pantalla sigue publicando con confianza un número equivocado.
+Eso es la Fase −1 (alias de marca), en la PR #300.
 
 ## 9. Emails transaccionales — repintado a v3 (BRAND-5c, 2026-08-02)
 
@@ -870,6 +925,401 @@ Referencias: `docs/brand/email-design-proposal.md` (propuesta completa,
 incluye §7-8 con el detalle de generación del PNG),
 `docs/email-templates/README.md` (por qué el `<img>` no puede llevar ancho
 fijo).
+
+---
+
+## 10. Página de Competidores (COMP-REDESIGN-1)
+
+**Estado: implementado (Fase A+B en un único PR, aprobado explícitamente por
+el fundador el 2026-08-02 — ver Task Intake en el hilo del PR).**
+
+**Origen:** el fundador pidió rediseñar Competidores a partir de dos
+documentos de referencia de Semrush (el blog "Why Are My Competitors Showing
+Up in AI Search and Not Us?" y la documentación del Competitor Research
+Report), pidiendo estudiar si la sección se podía "vitaminar" con información
+de valor nueva usando datos que ya tenemos.
+
+Decisiones finales:
+- **Repintado a v3** (`.cm2-scope`/`.cm2-page`), mismo mecanismo de remapeo
+  de variables que `.ov2-scope`/`.pr2-scope` (§2) y mismos anchos por
+  breakpoint que Overview/Prompts (460/640/1200/1280px) — Competidores
+  estaba en el sistema `.page`/1320px pre-BRAND-5b, la única pantalla de la
+  consola con scroll horizontal obligatorio en móvil (tabla de 5 columnas).
+  Se sustituye por un podio (fila-tarjeta) con revelación progresiva de
+  columnas por breakpoint, mismo componente en todos los tamaños.
+- **Taxonomía "Brecha de prompts"**: adapta el Missing/Weak/Strong/Shared/
+  Unique de Semrush a 5 categorías mutuamente excluyentes —
+  Ausente/Por detrás/Por delante/En exclusiva/Sin nadie —, derivadas
+  íntegramente de `extracted_json` ya persistido (sin llamada nueva a
+  Gemini, sin migración). Ámbito: **el último escaneo completado
+  únicamente** (no acumulado), porque "Ausente" está definido para coincidir
+  exactamente con la fórmula de `competitor_gap_score`
+  (`displacedPromptsCount`, ADR 0011/`lib/scoring/run-scoring.ts`) — mismo
+  criterio que ADR 0018 de no mostrar dos números con el mismo significado y
+  distinto valor en la misma pantalla. Test unitario (`lib/competitors/
+  prompt-gap.test.ts`, caso 11) verifica la paridad de fórmula.
+- **Delta escaneo-sobre-escaneo** junto a la cuota de voz acumulada de cada
+  fila: deliberadamente una métrica separada (compara solo el último escaneo
+  contra el anterior, `lib/competitors/sov-delta.ts`), nunca mezclada con el
+  número acumulado principal — incluso con precedente distinto, mismo
+  criterio de honestidad que ADR 0018.
+- **Matriz motor × marca** (tasa de mención por motor) sustituye el texto de
+  11px "Gemini 38% · ChatGPT 52%" bajo cada barra — reutiliza
+  `computeEntityEngineBreakdown` (ENGINES-VALUE-3) ya existente, solo cambia
+  la presentación.
+- **Terreno por tema**: compara tasa de mención propia vs. mejor competidor
+  activo por `project_prompts.category`, acumulado (mismo criterio que la
+  matriz), en el raíl de escritorio junto al gráfico de posición.
+- **Marcas emergentes**: primera vez que `other_brands_mentioned` (ya
+  extraído por los tres motores, usado hoy solo por recomendaciones/
+  auditoría web) se muestra en Competidores. Cierra el caso Ikea de ADR 0018
+  (Sklum/Brico Depôt/BANNI aparecían en el ranking sin que el usuario
+  pudiera hacer nada). Se muestra **fuera** del raíl de dos columnas (como
+  bloque independiente a ancho completo) cuando el proyecto todavía no tiene
+  ningún competidor activo — es precisamente el caso donde más ayuda a
+  arrancar, y quedaba oculto en la primera versión de esta fase por un gate
+  demasiado estricto (corregido antes de abrir el PR).
+- **Gestión de competidores** (alta/edición/baja): `createCompetitor`/
+  `updateCompetitor`/`deactivateCompetitor` llevaban meses en `actions.ts`
+  sin ninguna UI conectada (gap ya documentado en §4 de este log). Se
+  sustituyen por `createCompetitorAction`/`updateCompetitorAction`/
+  `deactivateCompetitorAction` (`lib/competitors/manage-competitors.ts`),
+  mismo patrón typed-input + `useTransition` que `addPrompts`/
+  `rewriteRecommendationAction` (sin FormData, sin redirect, error inline en
+  el modal). Añadir un dominio ya desactivado **reactiva** la fila existente
+  en vez de violar `competitors_project_domain_uniq`
+  (`0001_v0_schema.sql`) — flujo probado en `lib/competitors/
+  manage-competitors.test.ts`. Solo baja lógica (`is_active=false`), nunca
+  borrado duro.
+- **Decisión explícita de alcance (2026-08-02):** la gestión de
+  competidores entra en el **mismo PR** que el rediseño visual, por petición
+  directa del fundador — desviación del Task Intake original, que proponía
+  separarlas en Fase A (solo lectura) y Fase B (escritura).
+
+Pendiente / roto conocido:
+- **El piloto agéntico no puede verificar los flujos de escritura** de esta
+  fase (alta/edición/baja de competidores): sigue siendo de solo lectura
+  salvo la excepción UX-PILOT-2a (un único prompt manual). Esos flujos
+  vuelven `PILOT INCONCLUSIVE` y necesitan smoke manual del fundador.
+- **Página de Páginas citadas sin tocar.** El documento de Semrush describe
+  "Sources → Missing" (dominios que citan a un rival y nunca a ti) —
+  `aggregate-citations.ts` ya resuelve categoría `"competitor"` por dominio
+  pero descarta qué competidor hizo match. Analizado y documentado como
+  candidato (`CIT-GAP-1`) pero confirmado **fuera de alcance** por el
+  fundador (el pedido original de "vitaminar páginas citadas" era un
+  lapsus — el trabajo era solo Competidores).
+- **Emparejamiento de nombres sin normalizar acentos** (`COMP-MATCH-1`,
+  pendiente desde §4): esta fase no lo toca — sigue siendo `normKey()`
+  simple (trim + lowercase) en toda la página, sin `normalizeEntityName`
+  (PR #258). Mueve scoring real, necesita su propia validación.
+- Sin sentimiento por competidor: el esquema de extracción solo puntúa
+  `sentiment` de la marca propia, no de cada competidor — necesitaría
+  cambiar la extracción y re-escanear, fuera de alcance de un PR de
+  presentación.
+
+**Revisión del fundador sobre el preview (2026-08-02).** Cinco correcciones
+en el mismo PR, todas sobre datos reales:
+
+1. **"Gestionar" sale del sticky-header.** Se había colgado de
+   `.ov-sticky-right`, rompiendo el contrato de §3.2 de este mismo documento:
+   la cabecera de página es **idéntica en todas las pantallas de consola**
+   (título + pill de fecha + marca/dominio) y no admite acciones específicas
+   de una pantalla. Pasa a la etiqueta de sección "Cuota de voz en IA"
+   (`.cm2-manage-btn`). Anotado aquí porque fue una decisión ya tomada que
+   esta fase contradijo sin darse cuenta — exactamente lo que este log existe
+   para evitar.
+2. **Columnas de motor a cero se eliminan de la matriz.** Si ningún actor
+   (ni la marca ni ningún competidor) fue mencionado en un motor, esa columna
+   es espacio muerto, no una comparación. Filtro de presentación
+   (`matrixEngines`): las tasas por entidad no cambian y el 0% sigue siendo
+   real, simplemente no se pinta una columna que no informa. La matriz exige
+   ≥2 columnas supervivientes para seguir siendo comparativa.
+3. **"+ Seguir" en una línea.** El botón envolvía a dos líneas con el "+"
+   descentrado; ahora es `inline-flex` con `white-space: nowrap`.
+4. **El sistema resuelve el dominio, no el usuario.** "+ Seguir" pedía al
+   usuario teclear el dominio a mano, incoherente con el onboarding, que ya
+   los descubre solo. Nueva `resolveBrandDomain` (`lib/llm/gemini.ts`) —
+   búsqueda grounded del dominio oficial de una marca **ya nombrada** por la
+   IA, distinta de `suggestCompetitors` (que descubre *qué* marcas compiten;
+   ésta solo busca la dirección de una conocida). Mismo guardarraíl
+   BRAND-DOMAIN-1 (nunca resuelve al dominio propio) y misma convención
+   fail-soft. Si no se puede resolver, se dice claramente y se remite a
+   "Gestionar" — **nunca se inventa un dominio plausible**.
+   `followBrandCore` reutiliza `createCompetitorCore` tal cual, así que la
+   reactivación de una fila desactivada y el guardarraíl de duplicados se
+   comportan igual que en un alta manual.
+5. **Gráfico de posición media subido**, de la cola del raíl derecho a justo
+   debajo del podio de cuota de voz, y acompañado de una **lista ordenada con
+   la posición media del último escaneo** por marca — el fundador pidió
+   valorar "una tabla de la posición media de los competidores": leer quién
+   va delante ahora mismo no debería exigir seguir la línea de un gráfico.
+
+**Segunda revisión del fundador sobre el preview (2026-08-02).** Tres puntos
+más, con capturas reales de dispositivo:
+
+1. **"Tarjeta superpuesta con la card"** en la captura del proyecto Movistar:
+   el círculo oscuro que tapa la fila "Alternativas" de Terreno por tema
+   **no es de GenScore** — no existe ningún botón flotante en el código de
+   esta pantalla (ni en ningún `.cm2-*`), y se confirmó comparando la
+   evidencia real del pilot (`pilot-evidence/pr-285` en el commit de este
+   fix) contra las capturas del fundador: el círculo aparece en el mismo
+   sitio en el pilot headless, sin que el código lo pinte. Es el widget de
+   feedback/toolbar que Vercel inyecta sobre los preview deployments para
+   revisores autenticados — no está en producción y no es responsabilidad de
+   este repo. No se ha tocado CSS para "arreglarlo" porque no hay nada que
+   arreglar en el producto.
+2. **Leyenda en "Terreno por tema".** Las dos barras por fila (marca propia
+   vs. líder del tema) no se entendían sin leer el código de color de
+   memoria. Añadida una leyenda fija al pie de la card —"Tu marca" /
+   "Competidor"— reutilizando el patrón `.cm2-gaplegend` ya existente en
+   Brecha de prompts (punto + etiqueta), en vez de inventar un componente
+   nuevo.
+3. **Competidores sugeridos sin relación con el negocio real
+   (EMERGING-BRANDS-GROUNDING-1).** "Marcas que aparecen y no sigues"
+   recomendaba AliExpress/Carrefour/eBay/El Corte Inglés/Decathlon para
+   Mozilla (un navegador) porque `other_brands_mentioned` (extracción de
+   cada respuesta IA, `lib/llm/gemini.ts` + `claude.ts` + `openai.ts`) solo
+   comprobaba "¿este nombre aparece en el texto y no es la marca ni un
+   competidor?", sin ninguna noción de categoría de negocio. Corregido
+   reutilizando **el mismo mecanismo que ya usa la sugerencia de prompts**
+   (COMPETITOR-GROUNDING-2, ADR 0022): el `business_profile` (jsonb) que ya
+   se cachea en `projects` en el onboarding se lee — nunca se recalcula
+   durante un escaneo, para no añadir una llamada a Gemini a la ruta crítica
+   de escaneo — y, si existe, añade una frase de contexto de sector
+   (`otherBrandsRelevanceHint`, `lib/llm/gemini.ts`) a la instrucción de
+   extracción de las tres integraciones, pidiendo excluir marcas de una
+   categoría claramente distinta aunque aparezcan literalmente en el texto.
+   Parámetro puramente aditivo (`profile?: BusinessProfile`): un proyecto sin
+   perfil cacheado se comporta exactamente igual que antes. Solo afecta a
+   escaneos nuevos — los resultados ya guardados no se reprocesan
+   retroactivamente, igual que el resto del histórico de escaneos.
+
+**Tercera revisión del fundador sobre el preview (2026-08-02).**
+
+1. **Enlaces de pie de página eliminados.** La pantalla tenía un bloque
+   "Visión general / Historial de escaneos / Prompts" al final, heredado del
+   layout previo al rediseño — redundante con la navegación lateral y
+   ausente en el resto de pantallas v2 (Citas, Prompts). Eliminado.
+2. **"Sigue saliendo lo mismo tras volver a escanear" (EMERGING-BRANDS-WINDOW-1)
+   — corregido, opción (a).** Causa raíz: `computeEmergingBrands` contaba,
+   por marca, el número de **prompts distintos** en los que aparece — pero
+   sobre **todo el histórico de escaneos completados del proyecto**, igual
+   que la cuota de voz y "Terreno por tema" (`page.tsx`: "cumulative, same
+   population as the podium/matrix"). Ese conteo era acumulativo y no podía
+   bajar: si un prompt ya había llevado a AliExpress a "6 de 7" antes del
+   fix de EMERGING-BRANDS-GROUNDING-1, ese "6" quedaba fijado para siempre
+   — un escaneo nuevo solo podía añadir prompts a la cuenta, nunca
+   quitarlos. El fundador eligió la opción (a): acotar "marcas emergentes"
+   al **último escaneo completado**, no a todo el histórico — encaja mejor
+   con la semántica de "emergente" (algo que la IA dice ahora, no algo que
+   dijo hace meses) y ya es el patrón que usa "Brecha de prompts" en esta
+   misma pantalla. Implementado filtrando `results` por
+   `run_id === latestCompletedRun.id` antes de pasarlo tanto a
+   `computeEmergingBrands` como al denominador "en N de M prompts", para que
+   ambos números sigan viniendo de la misma población. No toca
+   `lib/competitors/emerging-brands.ts` (la función ya era agnóstica a qué
+   filas recibe) ni la cuota de voz / Terreno por tema / matriz, que siguen
+   siendo acumulativas por diseño.
+
+
+## 11. Competidores sugeridos (COMPETITOR-SUGGESTIONS-1, 2026-08-03)
+
+**Qué se decidió.** La caja de sugerencias de la pantalla de Competidores deja
+de alimentarse de lo que la IA menciona en las respuestas y pasa a calcularse
+**a partir de lo que la marca realmente es**. Decisión del fundador
+(2026-08-03): *"yo sí quiero que aparezcan otros competidores sugeridos para
+seguir siempre. Lo que pasa es que se deben calcular en base a lo que es la
+marca real, no lo que sale en los prompts"*.
+
+**Por qué.** El bloque anterior ("Marcas que aparecen y no sigues") derivaba de
+`other_brands_mentioned`, es decir, de cualquier marca citada en una respuesta.
+Para un navegador como Mozilla eso producía AliExpress, Carrefour, eBay o El
+Corte Inglés: nombres reales presentes en el texto, pero que no compiten con
+nada. Dos intentos de arreglarlo por filtrado (EMERGING-BRANDS-GROUNDING-1, que
+añadió contexto de sector a la extracción, y EMERGING-BRANDS-WINDOW-1, que
+acotó el conteo al último escaneo) mejoraron el ruido pero no el problema de
+fondo: la fuente era la equivocada. Además el bloque aparecía y desaparecía
+según lo que hubiera extraído el último escaneo.
+
+**Cómo.** Se reutiliza el mecanismo del onboarding, sin inventar uno nuevo: el
+`business_profile` cacheado (ADR 0022) alimenta `suggestCompetitors`
+(`lib/llm/gemini.ts`), la búsqueda grounded con Google Search que ya se usa al
+crear un proyecto. Puntos de diseño:
+
+- **Caché en `projects.suggested_competitors`** (jsonb nullable, migración
+  0023, aprobada por el fundador). La llamada grounded tarda segundos y cuesta
+  una petición: no puede ejecutarse en cada render.
+- **Se cachea la lista en crudo y se filtra en lectura**, no al escribir. Así
+  seguir a un sugerido lo quita de la lista sin invalidar nada, y dejar de
+  seguirlo lo devuelve.
+- **Nunca se sugiere** el propio dominio ni un competidor ya dado de alta,
+  **activo o inactivo** — uno que desactivaste a propósito no vuelve como
+  "sugerencia".
+- **Carga desde cliente tras el primer pintado**, con esqueleto: la página
+  nunca se bloquea esperando la búsqueda, y el bloque está siempre presente.
+- **Sin perfil no se inventa nada**: si no se puede identificar el negocio se
+  dice honestamente, en vez de caer al modo ciego por dominio que ADR 0020
+  eliminó justamente por producir competidores absurdos.
+- `resolveAndCacheBusinessProfile` se extrae de `lib/projects/add-prompts.ts` a
+  `lib/projects/business-profile.ts` para que sugerencia de prompts y de
+  competidores compartan la misma caché en vez de recalcularla cada una.
+
+**Qué se retira (superseded).** El bloque "Marcas que aparecen y no sigues" y
+toda la fontanería que existía sólo para él: `lib/competitors/emerging-brands.ts`
+(+ tests), `emerging-brands-section.tsx`, `followBrandAction`/`followBrandCore`
+(alta por nombre) y `resolveBrandDomain` en `lib/llm/gemini.ts` — este último ya
+no hace falta porque la sugerencia trae el dominio consigo, así que "+ Seguir"
+ya no necesita una segunda llamada a Gemini. Queda en el historial de git por si
+se quiere recuperar como funcionalidad propia; la señal "a quién nombra la IA"
+sigue siendo interesante (caso Ikea de ADR 0018), pero es otra pregunta y
+merecería su propio diseño, no reutilizar esta caja.
+
+---
+
+## 12. Artículos del blog — sistema de composición visual (GROWTH-3 Fase 3.1, 2026-08-03)
+
+**Estado: librería construida, 1 de 7 artículos convertido.**
+
+Diagnóstico de partida (verificado, no impresión): los 7 artículos del blog
+tenían **cero imágenes en el cuerpo** y solo 3 apariciones sueltas de un
+componente visual en total. Texto plano puede traer tráfico, pero la tasa de
+rebote es alta y no genera engagement.
+
+Decisiones finales:
+
+- **Ningún visual es decorativo; todos son evidencia.** Es el hallazgo al
+  analizar los PDFs de referencia de Semrush aportados por el fundador: cada
+  imagen suya es o una captura que prueba la afirmación, o un ejemplo
+  enmarcado del patrón que enseñan, o una cifra con su fuente. Convierte la
+  pregunta visual en una pregunta de honestidad, que es terreno donde este
+  proyecto ya tiene reglas duras.
+- **Librería de 15 bloques** en `components/blog/article/`, importados
+  siempre desde el barril. Detalle y criterio de uso de cada uno en
+  `docs/brand/article-design-system.md`.
+- **Tres reglas imposibles de saltarse por diseño de tipos**: `Stat` no
+  compila sin `source`, `PullQuote` no compila sin `cite`, y toda maqueta
+  declara en su pie que los datos son de ejemplo.
+- **Recetas obligatorias por cluster**, con mínimo de bloques por tipo de
+  artículo, validadas en `lib/blog/article-recipes.test.ts`. Una regla que no
+  es un test no existe — mismo criterio que los tests de enlazado interno del
+  glosario o de "al menos una fila donde gana el competidor" de las
+  comparativas.
+- **Imágenes: maquetas SVG/CSS, nunca ilustración generada por IA ni stock.**
+  Decisión completa y motivos en `docs/adr/0026-article-imagery-policy.md`.
+  Las capturas reales del producto quedan permitidas solo en `/docs`, nunca
+  en marketing, porque la cuenta piloto vive en el mismo proyecto de Supabase
+  que producción.
+- **La anotación sobre una maqueta se ancla a la fila que resalta**, no se
+  posiciona en absoluto con offsets. El artefacto de aprobación usaba
+  posicionamiento absoluto; se descartó al implementar porque se descuadra en
+  anchos intermedios. Se pierde la flecha curva de Semrush, se gana que no se
+  rompa nunca.
+- **Prefijo `art-` en todas las clases CSS.** No es cosmético: PR #292 costó
+  una colisión de clases entre ramas sin mergear, y este sistema introduce
+  ~15 clases de golpe.
+- **Tema claro únicamente**, como el resto del sitio. Se comprobó que
+  `globals.css` no declara `prefers-color-scheme` ni `data-theme` en ninguna
+  parte y que los tokens `-dark` definidos no los consume nadie.
+- **Enlaces: se prueban siempre, en dos niveles.** Estático en
+  `lib/blog/article-links.test.ts` (rompe el build si un href apunta a una
+  ruta inexistente) y en navegador dentro del journey del `ux-pilot` (cada
+  enlace interno debe responder 200 contra el despliegue real). Regla
+  explícita del fundador.
+- **Orden de entrega de un artículo**: redactar → componer → tests → pilot →
+  arreglar lo que el pilot encuentre → *entonces* Human Gate. Un artículo no
+  llega al fundador con un hallazgo de pilot abierto.
+
+Pendiente / roto conocido:
+
+- **6 de 7 artículos siguen en texto plano.** Están listados explícitamente
+  en `PENDING_CONVERSION` dentro de `article-recipes.test.ts`, con un test
+  que impide que esa lista crezca: un artículo nuevo nace cumpliendo la
+  receta. La conversión del resto es la Fase 3.2.
+- El pipeline semanal autónomo (Fase A1) **no** entra aquí: requiere
+  aprobación propia del fundador por el scheduler en background, que está en
+  la lista de prohibidos de `CLAUDE.md`.
+- `globals.css` usa `var(--mono)` en 11 sitios preexistentes, pero esa
+  variable no está definida en ninguna parte (la real es `--font-mono`).
+  Fuera del alcance de esta fase; los bloques `art-*` nuevos usan la
+  correcta.
+
+Referencias: `docs/brand/article-design-system.md`,
+`docs/adr/0026-article-imagery-policy.md`, `components/blog/article/`.
+
+---
+
+## 13. Artículos del blog — un peso no es un valor medido (GROWTH-3 Fase 3.2a, 2026-08-03)
+
+**Qué se decidió.** Todo `StatGrid` que muestre pesos del GEO Score va **bajo
+su propio H2 que los enmarca como pesos**, nunca colgando de un encabezado
+que promete otra cosa. Y sus tarjetas se redactan "**Peso de** la cuota de
+voz…", no "Cuota de voz…".
+
+**Por qué.** El `ux-pilot` encontró (PR #310) que en
+`como-elegir-competidores-analisis-geo` una tarjeta decía *"Cuota de voz —
+cuántas menciones son tuyas: 20%"* mientras la figura dos secciones antes
+mostraba *"Tu marca: 21%"*. Dos cifras casi idénticas etiquetadas igual: una
+es **la regla** (cuánto pesa esa señal en la fórmula) y la otra **el
+resultado** (la cuota real de una marca de ejemplo). Nada las distinguía.
+
+Ningún control automático puede detectar esto: no hay desbordamiento, ni
+error de consola, ni petición fallida. Solo aparece leyendo el artículo como
+lo leería alguien que llega por primera vez. Por eso se registra como regla
+en vez de confiar en que el pilot lo cace cada vez.
+
+`que-es-el-geo-score` ya lo hacía bien —su `StatGrid` vive bajo "Cuánto pesa
+cada señal"— y es el patrón de referencia.
+
+**Relacionado.** `StatGrid` exige ahora `label` (etiqueta accesible del
+grupo), por la misma lógica que `Stat` exige `source`: obliga a quien escribe
+a decir de qué son esas cifras. Ver `docs/brand/article-design-system.md`.
+
+**Pendiente.** Quedan 3 artículos por convertir al sistema (cluster
+`fundamentos` ×2 y `playbooks` ×1), en la Fase 3.2b.
+
+---
+
+## 14. Blog — la cabecera de artículo y las portadas (2026-08-04)
+
+**Cómo salió.** El fundador abrió el blog en su móvil y señaló dos cosas:
+*"la parte inicial del artículo con la fecha, el bloque inicial, la imagen,
+queda todo muy pegado… no tiene la estructura típica y limpia de un blog"*, y
+sobre las portadas de respaldo: *"parece un icono de algo que no carga bien"*.
+
+**Qué se decidió — ritmo de cabecera.** La secuencia de una cabecera de
+artículo es: hueco superior → portada → título → fecha → primer bloque, con
+el metadato **agrupado con el título** y **separado del cuerpo**. El error
+anterior era tener el ritmo al revés: 84px muertos arriba (el `padding` de
+`.lp-section`) y cero separación abajo.
+
+Medido por el `ux-pilot` sobre el render real: 48px de nav a portada en los
+tres anchos, ~21px de título a fecha, ~44px de fecha a cuerpo.
+
+**Precaución que hay que mantener.** `.blog-post-meta` **se comparte** con las
+tarjetas del índice de `/blog` y de los hubs. Toda regla de cabecera va
+acotada con `h1 +`, porque esas tarjetas titulan con `h2`. Sin eso, arreglar
+el artículo rompe el índice.
+
+**Qué se decidió — portadas.** Se permite imagen generada o de stock **en
+portada**, manteniendo la prohibición dentro del cuerpo (enmienda a
+`docs/adr/0026-article-imagery-policy.md`, decisión del fundador). Con una
+regla: una portada no puede representar una interfaz, un panel, un gráfico ni
+una métrica. Si enseña algo que parece un dato de Genscore, ese dato tiene que
+existir — y entonces ya no es portada, es figura.
+
+**Contraste.** La fecha pasa de `--ink-4` (2.63:1 sobre blanco, por debajo de
+AA) a `--ink-3` (4.76:1). Aplica también a las tarjetas del índice.
+
+**Pendiente / roto conocido.** Faltan 3 portadas
+(`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`). Hasta que existan, esos artículos caen
+en el degradado con icono, que es exactamente lo que se ha rechazado.
+`lib/blog/covers.test.ts` impide que esa deuda crezca.
+
+**Consecuencia de planificación.** La producción de portadas es hoy un paso
+humano: no hay herramienta de generación en el entorno del agente y el stock
+exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
+tiene aquí una dependencia manual.
 
 ---
 

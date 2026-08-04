@@ -330,11 +330,27 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
   };
 }
 
+/**
+ * EMERGING-BRANDS-GROUNDING-1: same additive-`profile` pattern already used
+ * by generateAddedPrompts (COMPETITOR-GROUNDING-2, docs/adr/0022) — grounds
+ * "other_brands_mentioned" in the project's real business profile so a
+ * browser project (Mozilla) doesn't surface retail noise (AliExpress,
+ * Carrefour...) just because a grounded search answer happened to cite an
+ * unrelated shopping page. Returns "" when no profile is cached yet, which
+ * keeps the instruction — and therefore extraction behavior — identical to
+ * before this change.
+ */
+export function otherBrandsRelevanceHint(profile?: BusinessProfile): string {
+  if (!profile) return "";
+  return ` Only include names that are plausible competitors or alternatives for a business in this category (sector: ${profile.sector}; what it sells: ${profile.whatItSells}) — exclude any brand from a clearly different industry or category even if it is genuinely present in the text (e.g. a general marketplace or retailer cited as unrelated context is not a competitor of a ${profile.subSector || profile.sector} business).`;
+}
+
 export async function extractGeminiStructuredData(input: {
   brand: string;
   competitors: string[];
   rawResponseText: string;
   promptText: string;
+  profile?: BusinessProfile;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
@@ -367,7 +383,7 @@ For "position": the 1-based rank of the entity's FIRST mention in the response t
 
 For "sentiment_drivers": ONLY when "sentiment" is "negative" or "mixed", list up to 3 short noun-phrase themes (2-4 words each) that are visible in or evidenced by the response as reasons for the negative perception OF THE BRAND (e.g. "atención al cliente", "plazos de entrega", "precios altos", "equipaje de mano"). Include themes that are clearly implied by the response text, not just ones listed explicitly — for example, if the response says "passengers often report problems with checked baggage fees", extract "checked baggage fees" even though it wasn't presented as a bullet point. Do NOT invent a criticism that has no basis in the response text. Empty array [] for positive/neutral sentiment or when the response gives no indication of any specific negative theme about the brand.
 
-For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. This surfaces brands the AI mentions that are not currently being tracked. Only include names that are genuinely present in the response text — never invent one. Exclude generic terms, product categories, or descriptive phrases (e.g. "aerolíneas low-cost" is not a brand name). Up to 5 entries, each a short canonical name (e.g. "IKEA", not "la marca IKEA" or "la empresa sueca IKEA"). Empty array [] if none.`;
+For "other_brands_mentioned": list the real, actual company or brand names that appear in the response text and are NEITHER "${input.brand}" NOR any of the names listed under Competitors below. This surfaces brands the AI mentions that are not currently being tracked. Only include names that are genuinely present in the response text — never invent one. Exclude generic terms, product categories, or descriptive phrases (e.g. "aerolíneas low-cost" is not a brand name).${otherBrandsRelevanceHint(input.profile)} Up to 5 entries, each a short canonical name (e.g. "IKEA", not "la marca IKEA" or "la empresa sueca IKEA"). Empty array [] if none.`;
 
   const promptBlock = [
     schemaInstruction,
@@ -624,6 +640,65 @@ export async function inferBusinessProfile(input: {
     sizeEstimate: parsed.data.size_estimate,
     confidence: parsed.data.confidence
   };
+}
+
+const brandAliasesResponseSchema = z.object({
+  aliases: z.array(z.string()).default([])
+});
+
+/**
+ * Proposes the product/trade names that count as a mention of this brand
+ * (GEO-SCORE-BRAND-IDENTITY-1). Ungrounded on purpose — this asks the model
+ * to READ the supplied homepage evidence, not to recall what it knows about
+ * the company. Recall is exactly what produces plausible-but-wrong aliases,
+ * and `selectVerifiableAliases` (lib/projects/brand-aliases.ts) drops
+ * anything absent from that evidence anyway, so a grounded search call would
+ * spend money to generate candidates that are then thrown away.
+ *
+ * Returns [] (never a fabricated list) on any failure. An empty result is the
+ * correct answer for most brands: they are only ever called by their own name.
+ */
+export async function inferBrandAliases(input: {
+  brand: string;
+  domain: string;
+  evidence: HomepageEvidenceInput;
+}): Promise<string[]> {
+  if (input.evidence.status !== "ok") return [];
+
+  const evidenceBlock = [
+    `Homepage title: ${input.evidence.title || "(none)"}`,
+    `Homepage meta description: ${input.evidence.description || "(none)"}`,
+    input.evidence.headings.length ? `Homepage headings: ${input.evidence.headings.join(" | ")}` : "Homepage headings: (none)",
+    `Homepage visible text excerpt: ${input.evidence.excerpt || "(none)"}`
+  ].join("\n");
+
+  const promptBlock = [
+    `The brand tracked in this project is "${input.brand}" (${input.domain}).`,
+    "List the OTHER names under which an AI assistant would refer to this same brand: its products, sub-brands and trade names.",
+    'Example of the problem this solves: for the brand "Mozilla", an answer recommending "Firefox" is talking about Mozilla, but never writes the word "Mozilla".',
+    "",
+    "Hard rules:",
+    "- Use ONLY names that appear in the evidence below. Do not add names you happen to know about this company from elsewhere.",
+    "- Never return generic category words (browser, app, platform, store, software, service...). Only names that identify THIS brand specifically.",
+    "- Never return the brand's own name, or a legal-form variant of it (S.A., Inc., GmbH).",
+    "- Do not return competitors, partners, or products of other companies.",
+    "- If the evidence shows no distinct product or sub-brand name, return an empty list. An empty list is a correct and expected answer.",
+    "",
+    'Return ONLY valid JSON with this exact shape: { "aliases": string[] }.',
+    "",
+    evidenceBlock
+  ].join("\n");
+
+  let raw: unknown;
+  try {
+    raw = await generateGeminiJson(promptBlock);
+  } catch {
+    return [];
+  }
+
+  const parsed = brandAliasesResponseSchema.safeParse(raw);
+  if (!parsed.success) return [];
+  return parsed.data.aliases;
 }
 
 export type SuggestedCompetitor = { name: string; domain: string };
