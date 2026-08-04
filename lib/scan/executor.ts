@@ -10,6 +10,7 @@ import {
   computeRecommendationTransition,
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
+import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -42,38 +43,11 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export type LLMScanProvider = "gemini" | "claude" | "openai";
-const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude", "openai"];
-
-function parseProviderList(raw: string): LLMScanProvider[] {
-  const parsed = raw
-    .split(",")
-    .map((p) => p.trim().toLowerCase())
-    .filter((p): p is LLMScanProvider => VALID_LLM_SCAN_PROVIDERS.includes(p as LLMScanProvider));
-  return Array.from(new Set(parsed));
-}
-
-/**
- * Engines run concurrently for every prompt in a scan: each prompt gets one
- * scan_prompt_results row per active engine (migration 0009), and KPIs/cards
- * are computed from the combined sample of all engines' rows (no per-engine
- * weighting). LLM_SCAN_PROVIDERS is a comma-separated list (e.g.
- * "gemini,claude"); falls back to the legacy single-value LLM_SCAN_PROVIDER,
- * and defaults to Gemini-only if neither is set, so deployments that never
- * configured either var keep their existing single-engine behavior.
- */
-export function getLLMScanProviders(): LLMScanProvider[] {
-  const multi = process.env.LLM_SCAN_PROVIDERS?.trim();
-  if (multi) {
-    const parsed = parseProviderList(multi);
-    if (parsed.length) return parsed;
-  }
-
-  const legacy = process.env.LLM_SCAN_PROVIDER?.trim().toLowerCase();
-  if (legacy === "claude") return ["claude"];
-  if (legacy === "openai") return ["openai"];
-  return ["gemini"];
-}
+// Provider resolution moved to lib/scan/providers.ts (SAMPLING-1) so
+// run-creation.ts can size the sampling from the same engine count this
+// module executes with, without importing the executor's whole dependency
+// graph. Re-exported here so existing call sites keep working unchanged.
+export { getLLMScanProviders, type LLMScanProvider } from "@/lib/scan/providers";
 
 type PromptJobOutcome =
   | { kind: "success" }
@@ -140,6 +114,13 @@ async function processPromptJob({
 
   const promptId = String(job.payload_json.prompt_id ?? "");
   const promptText = String(job.payload_json.prompt_text ?? "").trim();
+  // SAMPLING-1: which repetition of this prompt this job is. Absent on jobs
+  // created before ADR 0030 (and on any single-sample run), which is exactly
+  // sample 0 — the same value migration 0028 backfills by default. Coerced
+  // defensively: a non-numeric payload must not silently become NaN and blow
+  // up the insert's NOT NULL constraint mid-scan.
+  const rawSampleIndex = Number(job.payload_json.sample_index ?? 0);
+  const sampleIndex = Number.isFinite(rawSampleIndex) && rawSampleIndex >= 0 ? Math.floor(rawSampleIndex) : 0;
 
   if (!promptId || !promptText) {
     await logJob(service, {
@@ -165,12 +146,19 @@ async function processPromptJob({
     return { kind: "failed" };
   }
 
+  // Scoped to THIS sample: the idempotency guard is "has this unit of work
+  // already produced a row", and after ADR 0030 the unit of work is
+  // (run, prompt, engine, sample). Without the sample_index filter every
+  // repetition after the first would see sample 0's rows, conclude there was
+  // nothing left to do, and complete without making a single call — the run
+  // would report 60 successful jobs and hold 20 responses.
   const { data: existingResults } = await service
     .from("scan_prompt_results")
     .select("provider")
     .eq("run_id", runId)
     .eq("project_id", projectId)
-    .eq("prompt_id", promptId);
+    .eq("prompt_id", promptId)
+    .eq("sample_index", sampleIndex);
 
   const existingProviders = new Set((existingResults ?? []).map((row) => row.provider as string));
   const pendingProviders = providers.filter((provider) => !existingProviders.has(provider));
@@ -182,7 +170,7 @@ async function processPromptJob({
       runId,
       level: "warn",
       message: "Skipping prompt job because a result already exists for every active engine.",
-      context: { prompt_id: promptId, providers }
+      context: { prompt_id: promptId, sample_index: sampleIndex, providers }
     });
     await service
       .from("jobs")
@@ -311,6 +299,7 @@ async function processPromptJob({
         project_id: projectId,
         prompt_id: promptId,
         prompt_text_snapshot: promptText,
+        sample_index: sampleIndex,
         brand_snapshot: project.brand,
         // Frozen alongside brand/competitors so this row stays interpretable
         // after the project's alias list changes (migration 0025).
@@ -530,7 +519,7 @@ export async function executePendingScan({
 
   const { data: run, error: runError } = await supabase
     .from("scan_runs")
-    .select("id, project_id, status, total_prompts")
+    .select("id, project_id, status, total_prompts, sample_count")
     .eq("id", runId)
     .eq("project_id", projectId)
     .single();
@@ -631,21 +620,16 @@ export async function executePendingScan({
     }
   }
 
-  // PRICING-TRUTH-1 (PR b): the active engine set is otherwise a single
-  // deployment-wide env var (LLM_SCAN_PROVIDERS) — cap it per the project
-  // owner's plan (`caps.engines`) so a Free project never fans out to more
-  // engines than its plan promises. A no-op today (every plan already caps
-  // at <= the number of real engines configured), but becomes load-bearing
-  // the moment a third engine is added (ENGINES-2) without needing to touch
-  // this gate again. `.slice` preserves LLM_SCAN_PROVIDERS' configured order,
-  // so whichever engine is listed first is the one every plan gets.
+  // Plan-capped engine set (PRICING-TRUTH-1 PR b) — see
+  // resolveScanProvidersForPlan. Shared with createPendingScanRunCore so the
+  // engine count the sampling was sized from is the same one executed here.
   const { data: ownerProfile } = await service
     .from("profiles")
     .select("current_plan")
     .eq("id", project.owner_user_id as string)
     .maybeSingle();
   const plan = resolvePlan(ownerProfile?.current_plan as string | undefined);
-  const providers = getLLMScanProviders().slice(0, plan.caps.engines);
+  const providers = resolveScanProvidersForPlan(plan);
 
   try {
     if (isFirstBatch && startJob) {
@@ -668,7 +652,10 @@ export async function executePendingScan({
         runId,
         level: "info",
         message: "LLM scan started.",
-        context: { providers }
+        // sample_count logged alongside the engine set (SAMPLING-1) so
+        // "why did this run make 3x the calls" is answerable from job_logs
+        // alone, without recomputing the sampling decision after the fact.
+        context: { providers, sample_count: run.sample_count ?? 1 }
       });
 
       await service

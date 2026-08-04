@@ -1,13 +1,16 @@
 import "server-only";
 
 import { resolvePlan } from "@/lib/billing";
+import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
+import { computeSampleCount } from "@/lib/scan/sampling";
 import { ProjectActionError, type AuthenticatedContext } from "@/lib/scan/types";
 import { createServiceClient } from "@/lib/supabase/service";
 
 type CopyForwardResultRow = {
   prompt_id: string;
   prompt_text_snapshot: string;
+  sample_index: number;
   brand_snapshot: string;
   brand_aliases_snapshot: string[] | null;
   competitors_snapshot: unknown;
@@ -77,7 +80,7 @@ async function copyForwardLatestResults({
   const { data: sourceRows } = await service
     .from("scan_prompt_results")
     .select(
-      "prompt_id, prompt_text_snapshot, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
+      "prompt_id, prompt_text_snapshot, sample_index, brand_snapshot, brand_aliases_snapshot, competitors_snapshot, country_snapshot, language_snapshot, provider, model, status, raw_response_text, raw_response_json, tokens_in, tokens_out, cost_usd, llm_latency_ms, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extraction_version, extracted_json, extraction_error"
     )
     .eq("project_id", projectId)
     .eq("run_id", latestCompletedRun.id)
@@ -92,6 +95,12 @@ async function copyForwardLatestResults({
       project_id: projectId,
       prompt_id: row.prompt_id,
       prompt_text_snapshot: row.prompt_text_snapshot,
+      // Carried, not reset. A partial rescan copies forward every sample of
+      // every prompt it is not rescanning; collapsing them to the default 0
+      // would violate the (run_id, prompt_id, provider, sample_index)
+      // uniqueness of migration 0028 the moment a prompt had more than one
+      // sample, failing the whole insert.
+      sample_index: row.sample_index,
       brand_snapshot: row.brand_snapshot,
       brand_aliases_snapshot: row.brand_aliases_snapshot ?? [],
       competitors_snapshot: row.competitors_snapshot,
@@ -153,7 +162,10 @@ export async function createPendingScanRunCore({
 }): Promise<string> {
   const { data: project, error: projectError } = await readClient
     .from("projects")
-    .select("id, is_archived, owner_user_id")
+    // `domain` is read only for the sampling exemption (SAMPLING-1): the
+    // agentic pilot's reserved write-project must keep costing ~1 LLM call
+    // per scan (see lib/scan/sampling.ts).
+    .select("id, domain, is_archived, owner_user_id")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -271,6 +283,33 @@ export async function createPendingScanRunCore({
   const scannedPrompts = eligibleForJobs.slice(0, campaignCap);
   const promptCount = scannedPrompts.length;
 
+  // SAMPLING-1 (ADR 0030): how many times this run asks each prompt of each
+  // engine, so a project with few prompts still reaches the response floor
+  // the score needs. Resolved HERE, at job-creation time, because the unit of
+  // work is one (prompt, sample) job: putting the repetition inside
+  // processPromptJob instead would multiply the per-batch concurrency
+  // (10 jobs x 3 engines x R calls at once) straight through the ~60s
+  // maxDuration budget, whereas one job per sample keeps every batch at the
+  // same 30 concurrent calls it makes today and simply uses more batches
+  // (docs/adr/0014-batched-self-chaining-scan-execution.md).
+  //
+  // The engine count comes from the same resolver `executePendingScan` uses,
+  // so the number the sampling was sized from cannot drift from the number
+  // actually executed.
+  const sampling = computeSampleCount({
+    promptCount,
+    engineCount: resolveScanProvidersForPlan(plan).length,
+    planId: plan.id,
+    domain: project.domain as string | null | undefined
+  });
+
+  // Counts scan_prompt JOBS, not distinct prompts — every progress bar
+  // divides `successful_prompts + failed_prompts` (job counts, see
+  // refreshRunProgressCounters) by this, so any other definition makes the
+  // bar exceed 100%. The distinct-prompt count is recoverable as
+  // total_prompts / sample_count (migration 0028).
+  const totalJobs = promptCount * sampling.samples;
+
   const { data: run, error: runError } = await service
     .from("scan_runs")
     .insert({
@@ -278,7 +317,8 @@ export async function createPendingScanRunCore({
       triggered_by_user_id: triggeredByUserId,
       trigger_source: triggerSource,
       status: "pending",
-      total_prompts: promptCount,
+      total_prompts: totalJobs,
+      sample_count: sampling.samples,
       successful_prompts: 0,
       failed_prompts: 0,
       extraction_version: "v1",
@@ -299,18 +339,29 @@ export async function createPendingScanRunCore({
       status: "pending",
       payload_json: { run_id: run.id, project_id: projectId }
     },
-    ...scannedPrompts.map((prompt) => ({
-      project_id: projectId,
-      run_id: run.id,
-      job_type: "scan_prompt",
-      status: "pending",
-      payload_json: {
-        run_id: run.id,
+    // Sample-major order (every prompt at sample 0, then every prompt at
+    // sample 1, ...) rather than prompt-major. All of these rows are inserted
+    // by one statement and therefore share a created_at, so the batch order
+    // in `executePendingScan` is not guaranteed to follow this — but where it
+    // does, a run cut short by repeated failures degrades into "every prompt
+    // measured once" instead of "a third of the prompts measured three
+    // times", which is the more useful partial result. Nothing depends on it
+    // for correctness.
+    ...Array.from({ length: sampling.samples }, (_, sampleIndex) =>
+      scannedPrompts.map((prompt) => ({
         project_id: projectId,
-        prompt_id: prompt.id,
-        prompt_text: prompt.prompt_text
-      }
-    })),
+        run_id: run.id,
+        job_type: "scan_prompt",
+        status: "pending",
+        payload_json: {
+          run_id: run.id,
+          project_id: projectId,
+          prompt_id: prompt.id,
+          prompt_text: prompt.prompt_text,
+          sample_index: sampleIndex
+        }
+      }))
+    ).flat(),
     {
       project_id: projectId,
       run_id: run.id,

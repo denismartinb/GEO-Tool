@@ -364,16 +364,27 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
  * only by `run_id`/`project_id`) always sees `[]`, matching every other test
  * in this file.
  */
-function makeScanPromptResultsTable(existingProviders: string[] = []) {
+function makeScanPromptResultsTable(existingProviders: string[] | Record<number, string[]> = []) {
+  // Sample-aware since SAMPLING-1 (ADR 0030): a plain array means "these
+  // providers already have a row for sample 0", the historical meaning; a
+  // record keyed by sample index lets a test seed different samples
+  // differently, which is what proves repetitions are not skipped by an
+  // earlier sample's rows.
+  const bySample: Record<number, string[]> = Array.isArray(existingProviders)
+    ? { 0: existingProviders }
+    : existingProviders;
+
   const inserted: Array<Record<string, unknown>> = [];
   let hasPromptIdFilter = false;
+  let sampleFilter = 0;
   const builder: Record<string, unknown> = {
     insert: (row: Record<string, unknown>) => {
       inserted.push(row);
       return Promise.resolve({ error: null });
     },
-    eq: (column: string) => {
+    eq: (column: string, value?: unknown) => {
       if (column === "prompt_id") hasPromptIdFilter = true;
+      if (column === "sample_index") sampleFilter = Number(value ?? 0);
       return builder;
     },
     select: () => builder,
@@ -381,8 +392,11 @@ function makeScanPromptResultsTable(existingProviders: string[] = []) {
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
     single: () => Promise.resolve({ data: null, error: null }),
     then: (resolve: (value: { data: unknown[]; error: null }) => unknown) => {
-      const data = hasPromptIdFilter ? existingProviders.map((provider) => ({ provider })) : [];
+      const data = hasPromptIdFilter
+        ? (bySample[sampleFilter] ?? []).map((provider) => ({ provider }))
+        : [];
       hasPromptIdFilter = false;
+      sampleFilter = 0;
       return Promise.resolve({ data, error: null }).then(resolve);
     }
   };
@@ -425,9 +439,14 @@ function buildClients(
     previousRunId = null,
     previousRecommendationRows = [],
     ownerPlan,
-    notificationsBehavior = "ok"
+    notificationsBehavior = "ok",
+    promptJobSampleIndex
   }: {
     promptJobMaxAttempts: number;
+    /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
+     *  sample_index in the payload at all, which is exactly what a job created
+     *  before ADR 0030 looks like. */
+    promptJobSampleIndex?: number;
     previousRunId?: string | null;
     previousRecommendationRows?: RecRow[];
     /** PRICING-TRUTH-1 (PR b): owner's `profiles.current_plan`, read by executePendingScan
@@ -437,7 +456,7 @@ function buildClients(
     ownerPlan?: string;
     notificationsBehavior?: "ok" | "error" | "throws";
   },
-  existingProviders: string[] = []
+  existingProviders: string[] | Record<number, string[]> = []
 ) {
   const jobsTable = makeJobsTable([
     {
@@ -460,7 +479,11 @@ function buildClients(
       status: "pending",
       attempt_count: 0,
       max_attempts: promptJobMaxAttempts,
-      payload_json: { prompt_id: PROMPT_ID, prompt_text: "What is the best CRM?" },
+      payload_json: {
+        prompt_id: PROMPT_ID,
+        prompt_text: "What is the best CRM?",
+        ...(promptJobSampleIndex === undefined ? {} : { sample_index: promptJobSampleIndex })
+      },
       last_error: null,
       created_at: "2026-06-13T10:00:01.000Z"
     },
@@ -825,6 +848,86 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted).toHaveLength(1);
     expect(scanPromptResultsTable.inserted[0].provider).toBe("claude");
+  });
+
+  it("SAMPLING-1: persists the sample_index its job carries", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      promptJobSampleIndex: 2
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(scanPromptResultsTable.inserted).toHaveLength(2);
+    expect(scanPromptResultsTable.inserted.map((row) => row.sample_index)).toEqual([2, 2]);
+  });
+
+  it("SAMPLING-1: a job with no sample_index in its payload writes sample 0", async () => {
+    // Jobs created before ADR 0030 have no sample_index. They are sample 0 —
+    // the same value migration 0028 defaults their rows to — and must not
+    // become NaN and break the insert.
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(scanPromptResultsTable.inserted.map((row) => row.sample_index)).toEqual([0, 0]);
+  });
+
+  it("SAMPLING-1: an earlier sample's rows never make a later sample skip its calls", async () => {
+    // The failure this pins down is silent and total: if the per-engine
+    // idempotency check is not scoped to the sample, every repetition after
+    // the first sees sample 0's rows, concludes there is nothing to do, and
+    // completes without one LLM call. The run would report full success and
+    // hold a third of the responses it claims — sampling would cost nothing
+    // and do nothing, which is the worst possible way for this to break.
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients(
+      { promptJobMaxAttempts: 3, promptJobSampleIndex: 1 },
+      // Both engines already answered sample 0. Sample 1 has nothing.
+      { 0: ["gemini", "claude"] }
+    );
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(2);
+    expect(scanPromptResultsTable.inserted.map((row) => row.sample_index)).toEqual([1, 1]);
+  });
+
+  it("SAMPLING-1: the idempotent-retry skip still applies within the same sample", async () => {
+    // The other half of the invariant: scoping to the sample must not lose
+    // the original guarantee that re-running a job never double-writes a row.
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients(
+      { promptJobMaxAttempts: 3, promptJobSampleIndex: 1 },
+      { 1: ["gemini"] }
+    );
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(1);
+    expect(scanPromptResultsTable.inserted[0]).toMatchObject({ provider: "claude", sample_index: 1 });
   });
 
   it("PRICING-TRUTH-1 (PR b): caps a Free-plan project to 1 engine even with 2 configured", async () => {
