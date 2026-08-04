@@ -399,11 +399,33 @@ Two causes seen so far, in the order worth checking:
 1. **Production Branch points somewhere other than `main`** (Vercel → Settings
    → Environments → Production → Branch Tracking), typically left over from the
    non-main smoke procedure above. This is the one that produces *zero*
-   production deployments while previews continue normally.
+   production deployments while previews continue normally. **This was the
+   actual cause on 2026-08-04.**
 2. **The daily deployment cap on the free plan**
    (`api-deployments-free-per-day`, >100/day, resets after 24 h). Vercel does
    not retry a build it refused, so a merge that lands inside that window never
    deploys even after the cap lifts — it needs a new push or a manual Redeploy.
+
+**How to tell the two apart in one look:** a cap rejection leaves a trace — a
+failed deployment and a `vercel[bot]` comment carrying the error. A misrouted
+Production Branch leaves **nothing at all**: query the deployments API for the
+merge commit and you get zero records, because Vercel never attempted a build.
+On 2026-08-04 that distinction cost several hours, because the cap was
+genuinely exhausted earlier the same day and made a convincing false lead —
+including one wrong conclusion in each direction before the "zero records"
+signal settled it.
+
+Two corollaries worth stating, both learned the same day:
+
+- **Upgrading the plan does not retroactively deploy anything.** Fixing the
+  cause only means the *next* push deploys. Two merges to `main` landed between
+  the cap lifting and the branch setting being corrected, and neither ever
+  built. Something has to trigger a fresh build afterwards.
+- **The `ignoreCommand` does not save deployment quota.** Measured directly
+  (PR #323): a commit touching only `docs/` was rejected with the same
+  `api-deployments-free-per-day` error as any other push, so Vercel evaluates
+  the cap *before* running the ignore command. It saves build minutes and
+  noise, not quota.
 
 ---
 
