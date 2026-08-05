@@ -6304,19 +6304,22 @@ select.set-field {
 }
 
 /* ============================================================
-   DOMAINS-REDESIGN-1 — «Dominios» (.dm2-*) y /debug (.dbg-*)
+   DOMAINS-REDESIGN-1 — «Dominios» (.dm2-*)
 
-   Referencia de implementación:
-   docs/design-reference/domains-redesign-1/pantalla-dominios.html
-   y pantalla-debug.html. Su README lista los invariantes; si esto y aquello
-   divergen, el fichero manda.
+   Rev. 2 (2026-08-05): rediseño pixel-perfect contra el mockup que aprobó el
+   fundador, `docs/design-reference/domains-redesign-1/dominios-rev2-aprobado.png`.
+   La rev. 1 (`pantalla-dominios.html`) queda superada — el fichero se
+   actualiza en el mismo PR para que la referencia no mienta.
 
-   Mismo mecanismo de despliegue que .ov2-scope/.cm2-scope/.cit2-scope
-   (design-decisions-log §2): un envoltorio que reapunta los MISMOS nombres de
-   variables que sus descendientes ya consumen, de modo que `.card`, `.badge-*`,
-   `Gauge` y `Delta` — ninguno editado aquí — se repintan en v3 sólo dentro de
-   este subárbol. Y los mismos anchos por breakpoint que el resto de la consola
-   (460/640/1200/1280), que es el estándar desde CITATIONS-REDESIGN-1.
+   Los colores NO son los del mockup: son los tokens de marca v3
+   (`--brand-*`, docs/brand/brand-guidelines.md §2), por petición explícita del
+   fundador. El mockup fija estructura, proporción y jerarquía; la paleta la
+   fija la marca.
+
+   Mismo mecanismo de despliegue que .ov2-scope/.cm2-scope (log §2): un
+   envoltorio que reapunta los MISMOS nombres de variables que sus
+   descendientes ya consumen, de modo que `.card`, `.badge-*`, `Gauge` y
+   `Delta` se repintan en v3 sólo dentro de este subárbol.
    ============================================================ */
 .dm2-page {
   font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -6341,220 +6344,324 @@ select.set-field {
 @media (min-width: 1200px) { .dm2-page { max-width: 1200px; } }
 @media (min-width: 1600px) { .dm2-page { max-width: 1280px; } }
 
-.dm2-page .card { box-shadow: var(--brand-shadow-card); }
-.dm2-page .gauge-num {
+/* ---- Cabecera de la pantalla ----
+   Bloque de título propio, no el `.ov-sticky-header` de 15px de las pantallas
+   de proyecto (log §3). Aquel describe UN proyecto — kicker + nombre + dominio
+   —; ésta es de cuenta y su contexto es el espacio de trabajo entero. El
+   mockup lo resuelve con un titular grande, y es lo que se implementa. */
+.dm2-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.dm2-kicker {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-ink-4);
+  margin-bottom: 2px;
+}
+.dm2-title-row { display: flex; align-items: center; gap: 10px; }
+.dm2-title {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
-}
-
-/* Cabecera: mismo bloque que el resto de pantallas (.ov-sticky-header), sólo
-   cambia el nombre porque aquí el contexto es la cuenta, no un proyecto. */
-.dm2-hdr-name {
-  font-family: var(--font-body), "Figtree", -apple-system, sans-serif;
-  font-size: 15px;
-  font-weight: 750;
-  letter-spacing: -.01em;
+  font-size: 27px;
+  letter-spacing: -.035em;
+  line-height: 1.1;
   color: var(--brand-ink);
 }
-.dm2-auto { font-size: 11px; color: var(--brand-ink-4); }
-.dm2-auto-compact { display: none; }
-
-/* ---- Portada del dominio activo ---- */
-.dm2-hero {
-  display: flex;
+.dm2-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-ink-3);
+  background: var(--surface-sunk);
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+/* Pastilla de estado agregado. Sólo aparece con algo en curso: en reposo no
+   hay una fecha única de cuenta que poner ahí (ver computeAccountScanState). */
+.dm2-state {
+  display: inline-flex;
   align-items: center;
-  gap: 26px;
-  flex-wrap: wrap;
-  padding: 26px 28px;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--brand-blue);
+  background: var(--brand-blue-soft);
+  border-radius: 999px;
+  padding: 9px 16px;
+  margin-top: 6px;
+}
+.dm2-state .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-blue);
+  flex: 0 0 auto;
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+@keyframes dm2Pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---- Portada del dominio seleccionado ---- */
+.dm2-hero {
+  display: block;
+  border: 2px solid var(--brand-blue);
   border-radius: 20px;
-  position: relative;
-  overflow: hidden;
-  transition: box-shadow .18s ease, border-color .18s ease;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .05), rgba(37, 99, 235, .015));
+  padding: 20px;
+  margin-bottom: 22px;
+  transition: box-shadow .18s ease;
 }
-.dm2-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: linear-gradient(180deg, var(--brand-blue), var(--brand-blue-2));
-}
-.dm2-hero:hover {
-  border-color: var(--brand-blue-soft-2);
-  box-shadow: 0 2px 4px rgba(11, 20, 38, .05), 0 18px 40px rgba(11, 20, 38, .09);
-}
-/* En escritorio el grupo icono+identidad no es una caja: sus hijos son items
-   directos del flex de la portada. En móvil sí lo es, para poder apilar. */
-.dm2-hero-top { display: contents; }
+.dm2-hero:hover { box-shadow: 0 8px 28px rgba(37, 99, 235, .14); }
+.dm2-hero-top { display: flex; align-items: flex-start; gap: 16px; }
 .dm2-fav {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
   color: #fff;
   object-fit: cover;
-  background: var(--surface-sunk);
-  box-shadow: inset 0 0 0 1px rgba(11, 20, 38, .10), 0 1px 2px rgba(11, 20, 38, .10);
+  background: var(--brand-surface);
+  box-shadow: inset 0 0 0 1px rgba(11, 20, 38, .08), 0 2px 8px rgba(11, 20, 38, .10);
 }
 .dm2-fav-letter {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
   letter-spacing: -.02em;
 }
-.dm2-id { flex: 1; min-width: 180px; }
+.dm2-id { flex: 1; min-width: 0; }
 .dm2-name {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
-  font-size: 26px;
+  font-size: 25px;
   letter-spacing: -.03em;
-  line-height: 1.1;
+  line-height: 1.15;
   color: var(--brand-ink);
 }
-.dm2-dom { font-family: var(--mono); font-size: 12.5px; color: var(--brand-ink-3); margin-top: 3px; }
-.dm2-fresh {
-  margin-top: 12px;
+.dm2-dom {
+  font-size: 14px;
+  color: var(--brand-ink-3);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dm2-dom .sep { color: var(--brand-ink-4); margin: 0 5px; }
+.dm2-last {
   display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  font-size: 11.5px;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  font-size: 13.5px;
   color: var(--brand-ink-3);
 }
-.dm2-fresh b { color: var(--brand-ink-2); font-weight: 700; }
+.dm2-last svg { color: var(--brand-ink-4); flex: 0 0 auto; }
 
-.dm2-gauge { text-align: center; flex: 0 0 auto; }
-.dm2-gauge-lbl {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--brand-ink-4);
-  margin-top: 5px;
+/* Las dos píldoras de la esquina. «Seleccionado» es un estado, no una acción:
+   fondo claro y borde, nunca relleno sólido, para que no compita con el botón. */
+.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex: 0 0 auto; }
+.dm2-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 8px 14px;
+  white-space: nowrap;
 }
-.dm2-gauge-empty {
+.dm2-flag-sel {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-blue-soft-2);
+  color: var(--brand-blue);
+}
+.dm2-flag-run { background: var(--brand-blue-soft); color: var(--brand-blue); }
+.dm2-flag-run .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-blue);
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+
+/* Gauge + explicación, en fila. El texto no es relleno: es lo único de la
+   pantalla que dice QUÉ mide el número, y sin él la puntuación es un dato
+   suelto para quien entra por primera vez. */
+.dm2-score { display: flex; align-items: center; gap: 20px; margin: 18px 0 20px; flex-wrap: wrap; }
+.dm2-score .gauge-wrap { flex: 0 0 auto; }
+.dm2-hero .gauge-num {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
-  font-size: 33px;
+  font-size: 38px;
   letter-spacing: -.04em;
-  color: var(--brand-ink-4);
-  line-height: 1;
+  color: var(--brand-ink);
 }
-.dm2-cta { display: flex; flex-direction: column; gap: 9px; min-width: 150px; }
-.dm2-runs { font-size: 11px; color: var(--brand-ink-4); text-align: center; }
-
-/* ---- Los demás dominios ---- */
-.dm2-rail-lbl {
-  margin: 26px 0 11px;
+.dm2-hero .gauge-cap {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .11em;
   text-transform: uppercase;
   color: var(--brand-ink-4);
+  margin-top: 2px;
+  max-width: 88px;
+  line-height: 1.3;
 }
-.dm2-rail { display: flex; gap: 11px; overflow-x: auto; padding-bottom: 5px; }
-.dm2-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
-@media (max-width: 1199px) { .dm2-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 899px)  { .dm2-grid { grid-template-columns: 1fr; } }
+.dm2-score-copy {
+  flex: 1;
+  min-width: 190px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--brand-ink-3);
+}
+.dm2-score-empty {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  letter-spacing: -.04em;
+  color: var(--brand-ink-4);
+}
+
+.dm2-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  background: var(--brand-blue);
+  color: #fff;
+  border-radius: 14px;
+  padding: 16px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.dm2-hero:hover .dm2-open { background: #1d51c7; }
+.dm2-open svg { position: absolute; right: 18px; }
+
+/* ---- Rejilla de los demás dominios ---- */
+.dm2-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (min-width: 1200px) { .dm2-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 .dm2-card {
-  flex: 0 0 auto;
-  width: 176px;
-  padding: 13px 14px;
-  border-radius: var(--r-lg);
-  transition: border-color .16s ease, transform .16s ease;
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: 16px;
+  box-shadow: var(--brand-shadow-card);
+  padding: 15px 16px;
+  transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
 }
-.dm2-grid .dm2-card { width: auto; }
-.dm2-card:hover { border-color: var(--brand-blue-soft-2); transform: translateY(-2px); }
-.dm2-card-top { display: flex; align-items: center; gap: 9px; }
-.dm2-card-name { font-size: 12.5px; font-weight: 700; letter-spacing: -.01em; color: var(--brand-ink); }
-.dm2-card-dom {
-  font-family: var(--mono);
-  font-size: 9.5px;
-  color: var(--brand-ink-4);
+.dm2-card:hover {
+  border-color: var(--brand-blue-soft-2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(11, 20, 38, .09);
+}
+.dm2-card-top { display: flex; align-items: center; gap: 11px; }
+.dm2-card-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  color: var(--brand-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.dm2-card-foot { display: flex; align-items: center; gap: 7px; margin-top: 12px; }
+.dm2-card-dom {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--brand-ink-4);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dm2-card-foot { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
 .dm2-card-score {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
-  font-size: 19px;
-  letter-spacing: -.03em;
+  font-size: 25px;
+  letter-spacing: -.035em;
+  line-height: 1;
   color: var(--brand-ink);
 }
-.dm2-card-chip { margin-left: auto; font-size: 10px; }
+.dm2-card-chip {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+.dm2-chip-fresh { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.dm2-chip-stale { background: var(--surface-sunk); color: var(--brand-ink-3); }
+.dm2-chip-run {
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dm2-chip-run .dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--brand-blue);
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
 
-/* Fuera del raíl a propósito: no es un dominio más, y dentro del raíl cae fuera
-   del viewport en móvil. */
+/* Una celda más de la rejilla, del mismo tamaño que un dominio: fuera de ella
+   se convertía en una banda punteada a todo lo ancho bajo una fila coja
+   (corregido tras leer la captura del piloto, 2026-08-05). */
 .dm2-add {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 6px;
-  margin-top: 12px;
-  padding: 18px;
+  gap: 7px;
+  padding: 20px 16px;
   text-align: center;
-  border: 1.5px dashed var(--brand-line);
-  border-radius: var(--r-lg);
-  color: var(--brand-ink-3);
-  font-size: 12px;
-  font-weight: 700;
-  transition: border-color .16s ease, color .16s ease, background .16s ease;
+  border: 1.5px dashed var(--brand-blue-soft-2);
+  border-radius: 16px;
+  background: rgba(37, 99, 235, .035);
+  transition: border-color .16s ease, background .16s ease;
 }
-.dm2-add:hover { border-color: var(--brand-blue); color: var(--brand-blue); background: var(--brand-blue-soft); }
+.dm2-add:hover { border-color: var(--brand-blue); background: var(--brand-blue-soft); }
 .dm2-add-pl {
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: var(--surface-sunk);
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
   display: grid;
   place-items: center;
 }
-.dm2-add-sub { font-size: 10px; font-weight: 600; color: var(--brand-ink-4); }
+.dm2-add-t { font-size: 14.5px; font-weight: 700; color: var(--brand-blue); }
+.dm2-add-sub { font-size: 12px; color: var(--brand-ink-4); line-height: 1.4; }
+
+.dm2-archived { margin-top: 20px; font-size: 12.5px; color: var(--brand-ink-4); }
 
 .dm2-empty { padding: 48px 40px; text-align: center; display: grid; justify-items: center; gap: 10px; }
 .dm2-empty-ico {
-  width: 48px;
-  height: 48px;
-  border-radius: 999px;
+  width: 48px; height: 48px; border-radius: 999px;
   background: var(--surface-sunk);
-  display: grid;
-  place-items: center;
+  display: grid; place-items: center;
   color: var(--brand-ink-3);
 }
 .dm2-empty-t {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
-  font-weight: 800;
-  font-size: 17px;
-  letter-spacing: -.02em;
-  color: var(--brand-ink);
+  font-weight: 800; font-size: 17px; letter-spacing: -.02em; color: var(--brand-ink);
 }
 .dm2-empty-d { font-size: 13.5px; color: var(--brand-ink-3); max-width: 380px; line-height: 1.6; margin-bottom: 8px; }
 
-@media (max-width: 899px) {
-  /* La línea de automatización cede el sitio a la pastilla: a 375px las dos
-     juntas se pisan — el mismo choque que Auditoría web ya sufrió y resolvió
-     con dos longitudes (log §17). */
-  .dm2-auto-full { display: none; }
-  .dm2-auto-compact { display: inline; }
-  .dm2-auto-yield { display: none; }
-
-  .dm2-hero { flex-direction: column; align-items: stretch; gap: 14px; padding: 18px 17px; border-radius: 16px; }
-  .dm2-hero-top { display: flex; align-items: center; gap: 12px; }
-  .dm2-hero .dm2-fav { width: 44px !important; height: 44px !important; border-radius: 12px !important; }
-  .dm2-name { font-size: 19px; }
-  .dm2-dom { font-size: 11px; }
-  .dm2-id { min-width: 0; }
-  .dm2-fresh { margin-top: 6px; flex-direction: column; gap: 2px; font-size: 10.5px; }
-  /* Agrupado, no repartido: con `space-between` la etiqueta salía disparada al
-     borde derecho y el número quedaba huérfano a la izquierda — se leían como
-     dos elementos distintos (visto en las capturas de móvil y tablet del
-     piloto). */
-  .dm2-gauge { display: flex; align-items: center; justify-content: flex-start; gap: 12px; }
-  .dm2-gauge-lbl { margin-top: 0; text-align: left; }
-  .dm2-gauge .delta { margin-left: auto; }
-  .dm2-cta { min-width: 0; }
-  .dm2-cta .btn { width: 100%; justify-content: center; }
-  .dm2-runs { display: none; }
-  .dm2-card { width: 142px; }
+@media (max-width: 560px) {
+  .dm2-title { font-size: 24px; }
+  .dm2-hero { padding: 17px; border-radius: 18px; }
+  .dm2-hero-top { gap: 13px; }
+  .dm2-name { font-size: 21px; }
+  .dm2-dom { font-size: 13px; }
+  .dm2-flags { flex-direction: column; }
+  .dm2-flag { font-size: 12px; padding: 7px 11px; }
+  .dm2-score { gap: 14px; margin: 16px 0 18px; }
+  .dm2-score-copy { font-size: 13.5px; min-width: 150px; }
+  .dm2-grid { gap: 11px; }
+  .dm2-card { padding: 13px 14px; }
+  .dm2-card-name { font-size: 14px; }
+  .dm2-card-dom { font-size: 11px; }
+  .dm2-card-score { font-size: 22px; }
+  .dm2-card-chip { font-size: 10.5px; padding: 4px 8px; }
 }
 
 /* ============================================================

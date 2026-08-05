@@ -2728,6 +2728,39 @@ del primer smoke real del fundador, el mismo día:
   (`0030_project_auto_web_audit.sql`) y no ofrece interruptor. El server action
   distingue además `42703`/`PGRST204` por si alguien fuerza el envío.
 
+**Rev. 2 de Dominios (2026-08-05, mismo día).** Tras ver la pantalla en el
+preview el fundador la rechazó entera —*"no me gusta nada"*— y aportó un mockup
+propio, que queda como diseño aprobado en
+`docs/design-reference/domains-redesign-1/dominios-rev2-aprobado.png`. Qué
+cambia respecto a la rev. 1:
+
+- **Bloque de título propio** en vez de la cabecera de 15 px: *kicker* +
+  «Dominios» a 27 px + contador, con la pastilla de estado agregado a la
+  derecha. No contradice §3: aquello describe la cabecera de las pantallas de
+  **proyecto**, y ésta es de cuenta.
+- **Portada con borde azul y fondo teñido**, icono a 72 px, píldoras
+  «Seleccionado» y «En progreso», gauge semicircular junto a una frase que dice
+  **qué mide** el número — lo único de la pantalla que lo explicaba, y no
+  estaba—, y botón «Ver visión general» a ancho completo con chevron.
+- **Se acabó el raíl**: siempre rejilla, dos columnas en móvil y cuatro en
+  escritorio, con «Añadir dominio» como una celda más. La distinción
+  raíl/rejilla por número de dominios desaparece con ella.
+- **Los colores son los de marca, no los del mockup**, por petición explícita
+  del fundador. El mockup fija estructura y jerarquía; la paleta la fija
+  `brand-guidelines.md` §2.
+- **Fuera la entrada «Dominios» del menú.** Se vuelve al gesto anterior:
+  pinchar el bloque de dominio de la barra lateral. Es exactamente lo que la
+  decisión de 2026-07-18 había establecido para Escaneos y que esta fase había
+  roto al añadir una entrada propia — *"que no se enlace con un enlace nuevo
+  desde el menú, sino pinchando en el propio dominio como ocurría antes"*.
+
+**Descartado de ese mockup, y por qué:** lleva una **barra de pestañas inferior**
+en móvil (Dominios / Informes / Alertas / Ajustes). No se implementa: contradice
+§3, que decidió el drawer lateral como mecanismo de navegación móvil tras
+evaluar y descartar alternativas, y además introduce dos secciones que no
+existen. Cambiar la navegación de toda la consola es su propia fase, no un
+efecto colateral del rediseño de una pantalla.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el

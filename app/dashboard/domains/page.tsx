@@ -32,8 +32,6 @@ import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/f
  * Esta pantalla observa; no conduce. `AutoExecuteScan` vive en Visión general.
  */
 
-const RAIL_TO_GRID_THRESHOLD = 4;
-
 /** Colores de la ficha de dominio cuando el favicon real no carga. Mismo criterio determinista que Páginas citadas. */
 const FALLBACK_COLORS = ["#0B9BD8", "#E8404A", "#FF8A1E", "#3B4759", "#8B5CF6", "#0EA5A0"];
 
@@ -100,18 +98,6 @@ function DomainFavicon({
   );
 }
 
-function AddDomainCard() {
-  return (
-    <Link href="/dashboard/projects/new" className="dm2-add">
-      <span className="dm2-add-pl">
-        <Icon name="plus" size={16} />
-      </span>
-      <b>Añadir dominio</b>
-      <span className="dm2-add-sub">Se escanea desde el primer día</span>
-    </Link>
-  );
-}
-
 export default async function DomainsPage({
   searchParams
 }: {
@@ -122,15 +108,11 @@ export default async function DomainsPage({
 
   const {
     projects,
-    promptCountByProject,
-    completedRunCountByProject,
     latestScanStatusByProject,
     latestScanDateByProject,
-    latestAuditDateByProject,
     auditingByProject,
     latestScoreByProject,
-    scoreDeltaByProject,
-    dataMaturityByProject
+    scoreDeltaByProject
   } = await getWorkspaceCounters();
 
   const feedbackErrorMessage = feedback.error
@@ -147,15 +129,15 @@ export default async function DomainsPage({
   if (!active) {
     return (
       <div className="page">
-        <div className="ov-sticky-header">
-          <div className="ov-sticky-left">
+        <div className="dm2-page">
+          <div className="dm2-head">
             <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>Espacio de trabajo</p>
-              <span className="dm2-hdr-name">Dominios</span>
+              <p className="dm2-kicker">Espacio de trabajo</p>
+              <div className="dm2-title-row">
+                <h1 className="dm2-title">Dominios</h1>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="dm2-page">
           <div className="card dm2-empty">
             <div className="dm2-empty-ico"><Icon name="globe" size={22} /></div>
             <div className="dm2-empty-t">Todavía no tienes ningún dominio</div>
@@ -210,183 +192,147 @@ export default async function DomainsPage({
   );
 
   const activeScore = latestScoreByProject[active.id] ?? null;
-  const activeDelta = scoreDeltaByProject[active.id] ?? null;
   const activeScanned = formatFreshness(latestScanDateByProject[active.id]);
-  const activeAudited = formatFreshness(latestAuditDateByProject[active.id]);
-  const activeMaturity = dataMaturityByProject[active.id];
-  const activePromptCount = promptCountByProject[active.id] ?? 0;
-  const activeRunCount = completedRunCountByProject[active.id] ?? 0;
   const activeAuditing = Boolean(auditingByProject[active.id]);
 
-  const railIsGrid = rest.length >= RAIL_TO_GRID_THRESHOLD;
 
   return (
     <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
+      <div className="dm2-page">
+        {/* ---- Cabecera ---- */}
+        <div className="dm2-head">
           <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Espacio de trabajo</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span className="dm2-hdr-name">Dominios</span>
-              <span className="badge badge-neutral" style={{ fontSize: 11 }}>
+            <p className="dm2-kicker">Espacio de trabajo</p>
+            <div className="dm2-title-row">
+              <h1 className="dm2-title">Dominios</h1>
+              <span className="dm2-count">
                 {projects.length} {projects.length === 1 ? "activo" : "activos"}
               </span>
             </div>
           </div>
-        </div>
-        <div className="ov-sticky-right">
-          {/* La línea informativa cede el sitio a la pastilla en móvil: a 375px
-              las dos juntas se pisan, que es literalmente el fallo que Auditoría
-              web sufrió y arregló con dos longitudes (log §17). */}
-          <span className={`dm2-auto${accountState.kind === "idle" ? "" : " dm2-auto-yield"}`}>
-            <span className="dm2-auto-full">Escaneo y auditoría automáticos, cada día</span>
-            <span className="dm2-auto-compact">Automático cada día</span>
-          </span>
           {accountState.kind !== "idle" ? (
-            <span className="badge badge-accent" style={{ fontSize: 11 }} aria-live="polite">
-              <span className="dot run" style={{ marginRight: 6 }} />
+            <span className="dm2-state" aria-live="polite">
+              <span className="dot" />
               {accountState.label}
             </span>
           ) : null}
         </div>
-      </div>
 
-      {feedbackErrorMessage && <p className="feedback error" style={{ marginBottom: 16 }}>{feedbackErrorMessage}</p>}
-      {feedbackSuccessMessage && <p className="feedback success" style={{ marginBottom: 16 }}>{feedbackSuccessMessage}</p>}
+        {feedbackErrorMessage && <p className="feedback error" style={{ marginBottom: 16 }}>{feedbackErrorMessage}</p>}
+        {feedbackSuccessMessage && (
+          <p className="feedback success" style={{ marginBottom: 16 }}>{feedbackSuccessMessage}</p>
+        )}
 
-      <div className="dm2-page">
-        {/* ---- Portada del dominio activo ---- */}
-        <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero card">
+        {/* ---- Portada del dominio seleccionado ---- */}
+        <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero">
           <div className="dm2-hero-top">
-            <DomainFavicon name={active.name} domain={active.domain} size={60} radius={16} />
+            <DomainFavicon name={active.name} domain={active.domain} size={72} radius={20} />
             <div className="dm2-id">
               <div className="dm2-name">{active.name}</div>
               <div className="dm2-dom">
-                {active.domain} · {active.country} · {active.language}
+                {active.domain}
+                <span className="sep">·</span>
+                {active.country}
+                <span className="sep">·</span>
+                {active.language}
               </div>
-              <div className="dm2-fresh">
+              <div className="dm2-last">
+                <Icon name="clock" size={14} />
                 {activeRun ? (
-                  <span>Tu escaneo está en curso</span>
+                  <span>Escaneo en curso</span>
+                ) : activeScanned ? (
+                  <span>Último escaneo: {activeScanned.label}</span>
                 ) : (
-                  <>
-                    {activeScanned ? (
-                      <span>
-                        Escaneado <b>{activeScanned.label}</b>
-                      </span>
-                    ) : (
-                      <span>Sin escaneos todavía</span>
-                    )}
-                    {activeAudited ? (
-                      <span>
-                        Auditado <b>{activeAudited.label}</b>
-                      </span>
-                    ) : null}
-                    {activeMaturity?.kind === "accumulating" ? (
-                      <span>
-                        {activeMaturity.completed} de {activeMaturity.target} escaneos
-                      </span>
-                    ) : null}
-                  </>
+                  <span>Sin escaneos todavía</span>
                 )}
               </div>
             </div>
+            <div className="dm2-flags">
+              <span className="dm2-flag dm2-flag-sel">
+                <Icon name="check" size={14} />
+                Seleccionado
+              </span>
+              {activeRun ? (
+                <span className="dm2-flag dm2-flag-run">
+                  <span className="dot" />
+                  En progreso
+                </span>
+              ) : activeAuditing ? (
+                <span className="dm2-flag dm2-flag-run">
+                  <span className="dot" />
+                  Auditando
+                </span>
+              ) : null}
+            </div>
           </div>
 
-          <div className="dm2-gauge">
+          <div className="dm2-score">
             {activeScore === null ? (
-              <>
-                <div className="dm2-gauge-empty">—</div>
-                <div className="dm2-gauge-lbl">Puntuación GEO</div>
-              </>
+              <div className="dm2-score-empty">—</div>
             ) : (
-              <>
-                <Gauge value={activeScore} size={104} stroke={9} variant="semi" label="" />
-                <div className="dm2-gauge-lbl">Puntuación GEO</div>
-                {/* DELTA-GUARD-1: `scoreDeltaByProject` ya viene filtrado por
-                    `resolveDelta`; null aquí significa "no afirmable", y una
-                    comparación que no podemos afirmar no se pinta. */}
-                {activeDelta !== null ? <Delta value={activeDelta} suffix=" pt" /> : null}
-              </>
+              <Gauge value={activeScore} size={132} stroke={14} variant="semi" label="Puntuación GEO" />
             )}
+            <p className="dm2-score-copy">
+              {activeScore === null
+                ? "Todavía no hay puntuación: en cuanto termine el primer escaneo, aquí verás cómo te nombran las IA."
+                : "El análisis GEO evalúa tu dominio en visibilidad generativa y presencia de marca."}
+            </p>
           </div>
 
-          <div className="dm2-cta">
-            <span className="btn btn-primary">Visión general</span>
-            <span className="dm2-runs">
-              {activeRunCount} {activeRunCount === 1 ? "escaneo" : "escaneos"} · {activePromptCount}{" "}
-              {activePromptCount === 1 ? "prompt" : "prompts"}
-            </span>
-          </div>
+          <span className="dm2-open">
+            Ver visión general
+            <Icon name="arrRight" size={18} />
+          </span>
         </Link>
 
         {/* ---- Los demás dominios ---- */}
-        {rest.length > 0 ? (
-          <>
-            <div className="dm2-rail-lbl">Cambiar de dominio</div>
-            {/* A partir de RAIL_TO_GRID_THRESHOLD el raíl deja de ser raíl: un
-                scroll horizontal esconde lo que no cabe, y el dominio que no se
-                ve deja de existir para quien tiene que elegirlo. */}
-            <div className={railIsGrid ? "dm2-grid" : "dm2-rail"}>
-              {rest.map((p) => {
-                const score = latestScoreByProject[p.id] ?? null;
-                const delta = scoreDeltaByProject[p.id] ?? null;
-                const scanning = isActiveScanning(p.id);
-                const auditing = Boolean(auditingByProject[p.id]);
-                const scanned = formatFreshness(latestScanDateByProject[p.id]);
+        <div className="dm2-grid">
+          {rest.map((p) => {
+            const score = latestScoreByProject[p.id] ?? null;
+            const delta = scoreDeltaByProject[p.id] ?? null;
+            const scanning = isActiveScanning(p.id);
+            const auditing = Boolean(auditingByProject[p.id]);
+            const scanned = formatFreshness(latestScanDateByProject[p.id]);
 
-                return (
-                  <Link key={p.id} href={`/dashboard/projects/${p.id}`} className="dm2-card card">
-                    <div className="dm2-card-top">
-                      <DomainFavicon name={p.name} domain={p.domain} size={28} radius={8} />
-                      <div style={{ minWidth: 0 }}>
-                        <div className="dm2-card-name">{p.name}</div>
-                        <div className="dm2-card-dom">{p.domain}</div>
-                      </div>
-                    </div>
-                    <div className="dm2-card-foot">
-                      <span className="dm2-card-score tnum">{score === null ? "—" : score}</span>
-                      {/* Un delta de 0 se pintaba como un «0» pelado junto a la
-                          puntuación y se leía como un segundo número (visto en
-                          la captura del piloto: «43  0»). Cero no es una
-                          noticia: no se pinta. */}
-                      {delta !== null && delta !== 0 ? <Delta value={delta} /> : null}
-                      {scanning ? (
-                        <span className="badge badge-accent dm2-card-chip">
-                          <span className="dot run" style={{ marginRight: 5 }} />
-                          Escaneando…
-                        </span>
-                      ) : auditing ? (
-                        <span className="badge badge-accent dm2-card-chip">
-                          <span className="dot run" style={{ marginRight: 5 }} />
-                          Auditando…
-                        </span>
-                      ) : scanned ? (
-                        // El verde afirma "al día". En la captura del piloto un
-                        // dominio escaneado el 25 de julio llevaba pastilla
-                        // verde: el color decía que estaba fresco y la fecha
-                        // decía que no. Verde sólo hoy/ayer; el resto, neutro.
-                        <span className={`badge dm2-card-chip ${scanned.recent ? "badge-pos" : "badge-neutral"}`}>
-                          {scanned.label}
-                        </span>
-                      ) : null}
-                    </div>
-                  </Link>
-                );
-              })}
-              {/* En rejilla, «Añadir dominio» es la última celda y no una banda
-                  aparte: fuera de ella se convertía en un rectángulo punteado a
-                  todo lo ancho bajo una última fila coja (visto en la captura de
-                  escritorio del piloto). Dentro, cierra la serie y tapa el
-                  hueco. En móvil la rejilla es de una columna, así que sigue
-                  siendo la caja a ancho completo del final. */}
-              {railIsGrid ? <AddDomainCard /> : null}
-            </div>
-          </>
-        ) : null}
+            return (
+              <Link key={p.id} href={`/dashboard/projects/${p.id}`} className="dm2-card">
+                <div className="dm2-card-top">
+                  <DomainFavicon name={p.name} domain={p.domain} size={44} radius={12} />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="dm2-card-name">{p.name}</div>
+                    <div className="dm2-card-dom">{p.domain}</div>
+                  </div>
+                </div>
+                <div className="dm2-card-foot">
+                  <span className="dm2-card-score tnum">{score === null ? "—" : score}</span>
+                  {/* Un delta de 0 no es una noticia: se lee como un segundo
+                      número pegado a la puntuación («43  0»). */}
+                  {delta !== null && delta !== 0 ? <Delta value={delta} /> : null}
+                  {scanning || auditing ? (
+                    <span className="dm2-card-chip dm2-chip-run">
+                      <span className="dot" />
+                      {scanning ? "Escaneando" : "Auditando"}
+                    </span>
+                  ) : scanned ? (
+                    // El verde afirma "al día": un dominio escaneado hace once
+                    // días con pastilla verde decía lo contrario que su fecha.
+                    <span className={`dm2-card-chip ${scanned.recent ? "dm2-chip-fresh" : "dm2-chip-stale"}`}>
+                      {scanned.label}
+                    </span>
+                  ) : null}
+                </div>
+              </Link>
+            );
+          })}
 
-        {/* En raíl (1–3 dominios) va fuera: dentro quedaría fuera del viewport
-            en móvil, que es justo donde más falta hace verla. */}
-        {railIsGrid ? null : <AddDomainCard />}
+          <Link href="/dashboard/projects/new" className="dm2-add">
+            <span className="dm2-add-pl">
+              <Icon name="plus" size={18} />
+            </span>
+            <span className="dm2-add-t">Añadir dominio</span>
+            <span className="dm2-add-sub">Se escanea desde el primer día</span>
+          </Link>
+        </div>
       </div>
     </div>
   );

@@ -12,7 +12,8 @@ El Task Intake de la fase está en `task-intake.md`, en esta misma carpeta.
 
 | Fichero | Qué es | Para qué |
 |---|---|---|
-| `pantalla-dominios.html` | La pantalla `/dashboard/domains` a pantalla completa, con shell, barra lateral y cabecera reales | **Referencia de implementación pixel-perfect** y entrada del `ux-pilot` para su checklist de fidelidad |
+| `dominios-rev2-aprobado.png` | **El mockup que aprobó el fundador** (2026-08-05, rev. 2). Es la aprobación misma | La verdad sobre estructura, proporción y jerarquía. Los colores NO: van en tokens de marca por petición explícita |
+| `pantalla-dominios.html` | Reconstrucción navegable de ese mockup, con las clases reales de producción | **Referencia de implementación pixel-perfect** y entrada del `ux-pilot`; un agente puede abrirla, medirla y diffearla, cosa que un PNG no permite |
 | `pantalla-debug.html` | La pantalla `/dashboard/projects/[projectId]/debug` completa, con los 7 bloques | Igual, para la pantalla interna |
 | `exploracion-iteracion-3.html` | El artefacto de exploración: anatomía anotada, estados, reglas de estado en cabecera y el razonamiento de cada decisión | Contexto de *por qué* es así. No es la referencia visual — lleva anotaciones y prosa que no van en el producto |
 
@@ -48,9 +49,11 @@ cabecera `.ov-sticky-header` con sus márgenes negativos, el ancho de columna
 Cada uno es trazable; si una implementación se separa de ellos, es un bug de
 fidelidad, no una interpretación:
 
-- **La cabecera es `.ov-sticky-header`** — *kicker* + línea de identidad de
-  15 px + pastilla a la derecha. Sin título grande propio.
-  `design-decisions-log.md` §3.
+- **Dominios tiene bloque de título propio**, no el `.ov-sticky-header` de
+  15 px: *kicker* + titular grande + contador, y la pastilla de estado a la
+  derecha. §3 describe la cabecera de las pantallas de PROYECTO (kicker +
+  nombre + dominio); ésta es de cuenta y su contexto es el espacio de trabajo
+  entero. Rev. 2, 2026-08-05.
 - **El estado vive en la pastilla de esa cabecera, nunca en la barra de app.**
   Vocabulario: `Escaneando…` / `Analizando…` / `Escaneado <fecha>`, calculado
   por `computeScanStage`. §26.
@@ -68,8 +71,16 @@ fidelidad, no una interpretación:
   automatización se cuenta con una línea informativa y con la frescura
   («Escaneado hoy, 06:14»), no con interruptores. Mismo criterio que
   AUDIT-NO-BUTTON-1 (§25).
-- **La caja «Añadir dominio» va fuera del raíl, a ancho completo**, también en
-  móvil: dentro del raíl cae fuera del viewport a 375 px.
+- **No hay raíl: siempre rejilla**, dos columnas en móvil y cuatro en
+  escritorio. La caja «Añadir dominio» es una celda más, del mismo tamaño que
+  un dominio.
+- **La portada lleva borde azul y fondo teñido**, con las píldoras
+  «Seleccionado» y, si procede, «En progreso» / «Auditando». El botón «Ver
+  visión general» va a ancho completo con chevron.
+- **A Dominios se llega pinchando el bloque de dominio** de la barra lateral,
+  no por una entrada de menú propia. Es el gesto que ya existía para Escaneos
+  (founder 2026-07-18, reafirmado 2026-08-05 tras probar la entrada de menú y
+  descartarla).
 - **`/debug` no aparece en el menú, pero es alcanzable.** `/dashboard/debug`
   redirige al `/debug` del dominio más reciente. Una pantalla de operación a la
   que el operador no puede llegar no es discreta, es inservible — y sin ese
