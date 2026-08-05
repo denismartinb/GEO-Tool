@@ -378,8 +378,11 @@ It exists because one project only ever exercises one shape of data — see
 NOTIF-AUTOREAD-1 (2026-08-05, log §26) abrir el panel de notificaciones escribe
 `read_at` en las notificaciones sin leer de la cuenta del piloto. No es una
 excepción que nadie pidiera: el allow-list del barrido ya casaba con la campana
-(`[aria-expanded]`), así que **cada pasada del piloto lo dispara desde que la
-fase existe**, haya journey de notificaciones o no. Se acepta sin pedir una
+(`[aria-expanded]`). **El barrido ya no la toca** (`refuseReason` la rechaza por
+nombre desde 2026-08-05): abría la campana en ~14 pantallas × 3 viewports y
+destruía el estado "sin leer" antes de que el journey dedicado pudiera
+observarlo, así que la escritura queda en una sola por pasada, la del propio
+`notifications.spec.ts`. Se acepta sin pedir una
 aprobación aparte porque es acotado en las cuatro dimensiones que importan —
 idempotente, sólo sobre filas de la propia cuenta del piloto, sin coste de LLM
 y sin consumir ningún cupo de plan — y porque prohibirlo exigiría sacar la

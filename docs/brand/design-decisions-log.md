@@ -2531,6 +2531,30 @@ filas de la propia cuenta del piloto, sin coste de LLM, sin consumir cupo de
 plan— y porque impedirlo obligaría a sacar la campana del barrido, que es
 justo el control que hay que mirar.
 
+**El piloto se comía el estado que venía a medir.** Segundo intento, segundo
+hueco, y éste era estructural: el barrido genérico de interacciones abre la
+campana en ~14 pantallas × 3 viewports *antes* de que el journey dedicado
+llegue a su primera aserción (`core-flow.spec.ts` va antes por orden de
+fichero, con `workers: 1`). Y abrir la campana **es** la escritura que se
+quería observar, así que el journey encontraba siempre cero sin leer y se
+anotaba a sí mismo como no verificable — cada pasada, no sólo aquella. No se
+arregla sembrando datos una vez. Se arregla en la raíz: **el barrido ya no
+toca la campana** (`explore.ts`, `refuseReason`). No cuesta cobertura —el
+journey dedicado la ejercita mucho mejor que un clic a ciegas— y de paso
+devuelve la escritura de ~42 por pasada a una sola.
+
+**La captura mentía, y el juicio sobre ella también.** El agente leyó el panel
+a 375px como "descentrado y solapando el título". Mirando la PNG, ni una cosa
+ni la otra: el panel está anclado a la derecha bajo la campana y ocupa casi
+todo el ancho porque 320px en 375 es casi todo el ancho. Lo que sí se veía era
+**medio transparente, con la página traspasándolo**, y eso tampoco era un
+defecto del producto: `menuIn` anima la opacidad 0→1 en 140 ms y la captura se
+tomaba a mitad del fundido. `captureInteraction` no pasaba
+`animations: "disabled"`, así que **toda** la suite llevaba fotografiando
+popovers, menús y cajones a medio aparecer. Arreglado ahí, no en el CSS del
+panel: el defecto estaba en el instrumento, y "arreglar" el componente habría
+sido cambiar código bueno por una foto mala.
+
 **El primer PASS del piloto no probaba nada de esta fase.** El run mecánico
 del commit inicial dio ✅ en 41 pantallas a tres viewports y ni una era
 notificaciones: el barrido genérico agota su presupuesto (4 candidatos por

@@ -116,5 +116,18 @@ test("the notifications page shows real notifications and no mark-read link", as
     "la página volvió a tener un control de marcar como leídas"
   ).toHaveCount(0);
 
+  // The "No leídas" tab, explicitly rather than left to the sweep's luck.
+  // Auto-read makes its EMPTY state the common case from now on — the tab a
+  // user is most likely to land on is the one nothing had ever looked at
+  // (ux-pilot, 2026-08-05). Whether that reads as a resolved message or as a
+  // hole in the page is a judgement call, and it needs a capture to make it.
+  const unreadTab = page.getByRole("button", { name: /^no leídas/i });
+  await unreadTab.click();
+  await expect(
+    page.locator(".notif-row, .notif-page-empty").first(),
+    "la pestaña No leídas no resolvió ni a filas ni a un vacío legible"
+  ).toBeVisible();
+  await captureInteraction(page, testInfo, "notifications-page-unread-tab");
+
   await exploreInteractions(page, testInfo, "notifications-page");
 });
