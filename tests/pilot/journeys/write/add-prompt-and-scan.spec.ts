@@ -158,7 +158,9 @@ test("adding one manual prompt launches a scan restricted to it, and the founder
     // `goto` photographs the route's loading skeleton — which is what the first
     // passing run did, producing an "overview-after-scan" image showing nothing
     // but grey placeholders. Evidence that cannot be read is not evidence.
-    await page.goto(`/dashboard/projects/${projectId}/runs`, { waitUntil: "domcontentloaded" });
+    // DOMAINS-REDESIGN-1: el progreso del escaneo se mira (y se conduce) en
+    // Visión general; /runs ya sólo redirige a la pantalla interna.
+    await page.goto(`/dashboard/projects/${projectId}`, { waitUntil: "domcontentloaded" });
     await waitForContent(page, [
       () => page.getByText(/completado|en curso|pendiente|fallido/i).first().isVisible()
     ]);

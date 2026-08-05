@@ -331,11 +331,11 @@ export async function setRecurringScans(formData: FormData) {
       .maybeSingle();
 
     if (completedRunError) {
-      redirect(`/dashboard/projects/${projectId}/runs?error=unexpected_error`);
+      redirect(`/dashboard/projects/${projectId}/debug?error=unexpected_error`);
     }
 
     if (!completedRun) {
-      redirect(`/dashboard/projects/${projectId}/runs?error=recurring_requires_completed_scan`);
+      redirect(`/dashboard/projects/${projectId}/debug?error=recurring_requires_completed_scan`);
     }
   }
 
@@ -349,12 +349,71 @@ export async function setRecurringScans(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    redirect(`/dashboard/projects/${projectId}/runs?error=recurring_update_failed`);
+    redirect(`/dashboard/projects/${projectId}/debug?error=recurring_update_failed`);
   }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  revalidatePath(`/dashboard/projects/${projectId}/runs`);
-  redirect(`/dashboard/projects/${projectId}/runs?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=${enabled ? "recurring_enabled" : "recurring_disabled"}`);
+}
+
+/**
+ * DOMAINS-REDESIGN-1 — the per-project automatic-audit switch, mirror image of
+ * `setRecurringScans` above and deliberately so: the two live side by side on
+ * /debug, and a user reading them should not have to learn two behaviours.
+ *
+ * One asymmetry, and it is not an oversight: this has no "requires a completed
+ * scan" precondition. Recurring scans need one because a recurring scan repeats
+ * a known-good baseline; the audit has no such dependency — it simply does not
+ * run until there is a completed scan to audit, and enabling it early is
+ * harmless.
+ *
+ * Writing `false` here does not cancel work already queued. A `web_audit` job
+ * that is already `pending` will still run: the flag is checked at enqueue
+ * time (`enqueueWebAuditJob`), not at execution time. That is the honest
+ * boundary — switching this off stops the NEXT audit, not the one already in
+ * flight — and cancelling live jobs would be its own phase.
+ */
+export async function setAutoWebAudit(formData: FormData) {
+  const parsed = recurringScansSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ auto_web_audit_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    // `42703` = undefined_column, `PGRST204` = la columna no está en el caché de
+    // esquema de PostgREST. Las dos significan lo mismo para quien está delante:
+    // falta aplicar la migración. Decir "vuelve a intentarlo" ahí es mandar al
+    // operador a repetir algo que no puede funcionar (reportado por el fundador
+    // el 2026-08-05, desde su móvil).
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "auto_audit_migration_pending" : "auto_audit_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  revalidatePath(`/dashboard/projects/${projectId}/web-audit`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=${enabled ? "auto_audit_enabled" : "auto_audit_disabled"}`);
 }
 
 export type AutoExecuteScanStatus = "idle" | "running" | "done";
@@ -438,7 +497,7 @@ export async function autoExecutePendingScan(input: {
   } while (Date.now() - startedAt < AUTO_EXECUTE_TIME_BUDGET_MS);
 
   revalidatePath(`/dashboard/projects/${projectId}`);
-  revalidatePath(`/dashboard/projects/${projectId}/runs`);
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
   revalidatePath(`/dashboard/projects/${projectId}/runs/${runId}`);
 
   return { status };
@@ -470,7 +529,7 @@ export async function addPrompts(input: {
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
-    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/runs`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/debug`);
   }
 
   return result;

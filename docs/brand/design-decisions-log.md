@@ -2855,7 +2855,265 @@ regla de `resolveDelta` sigue viva y vinculante en todas las demás.
 esa misma pantalla) y el resumen semanal siguen mostrando el score del último
 escaneo, no la mediana. Ahí sí puede haber discrepancia con Visión general.
 Está pendiente de decidir si pasan a la ventana o se quedan como están.
+---
 
+## 32. Escaneos se parte en dos: «Dominios» y `/debug` (DOMAINS-REDESIGN-1 Fase A, 2026-08-05)
+
+**Estado: implementada la Fase A.** Diseño explorado en tres iteraciones con el
+fundador el mismo día y aprobado ("Apruebo el plan"). La referencia visual vive
+en `docs/design-reference/domains-redesign-1/` — dos HTML a pantalla completa
+más el artefacto de exploración y el Task Intake.
+
+**El problema.** `/runs` mezclaba tres cosas de tres dueños: una rejilla de
+dominios (del cliente), un historial con lanzamientos, duraciones, auditoría,
+deltas y errores (nuestro), y un interruptor de escaneo diario (nuestro
+mientras contenemos coste antes de producción). Petición del fundador: *"la
+información que tiene a día de hoy no se debe presentar al usuario"*.
+
+**Qué se decidió.**
+
+1. **`/dashboard/domains` — «Dominios»**, opción B («Escenario») de las tres
+   exploradas: portada del dominio activo (icono, identidad, puntuación GEO,
+   frescura de escaneo y auditoría, botón «Visión general») y raíl inferior para
+   cambiar. **A partir de cuatro dominios el raíl pasa a rejilla**, que es la
+   opción A absorbida como estado de desbordamiento: un scroll horizontal
+   esconde lo que no cabe, y el dominio que no se ve deja de existir para quien
+   tiene que elegirlo.
+2. **Cero controles en la pantalla de cliente.** Que escanee y audite cada día
+   se cuenta con una línea informativa y con la frescura, nunca con un botón.
+   Mismo criterio que AUDIT-NO-BUTTON-1 (§25).
+3. **Sólo la puntuación GEO y su delta.** Ninguna segunda métrica, por regla y
+   no por gusto: el día que esta pantalla y Visión general calculen lo mismo por
+   caminos distintos, se contradicen.
+4. **`/debug`** se queda el historial íntegro, los interruptores y el borrado de
+   dominio, con una banda «Interno» arriba. Sin entrada en el menú.
+5. **Estado en cabecera, agregado.** Dominios es la primera cabecera de cuenta
+   del producto, así que `computeAccountScanState` (`lib/domains/`) decide:
+   un dominio activo → «Escaneando movistar.es»; varios → «N dominios en
+   curso» (no se mezclan etapas: cada tarjeta lleva la suya); el escaneo gana a
+   la auditoría, porque la auditoría corre *después* (§18); en reposo, sin
+   pastilla.
+6. **«Auditando» entra en `ScanStatePill`** y deja de ser el chip
+   `.scan-status`. Cierra el pendiente literal que dejó §26 — ese chip está
+   oculto bajo el breakpoint móvil, o sea el mismo fallo que §26 arregló para el
+   escaneo, sin arreglar para la auditoría.
+
+**Lo que se encontró leyendo el código, y era lo más importante del PR.**
+
+- **`AutoExecuteScan` estaba montado en un único sitio del producto**
+  (`runs/page.tsx`), y `createProject` redirigía justo ahí. Vaciar esa pantalla
+  sin mover el driver habría dejado el primer escaneo de cada cliente nuevo
+  colgado hasta que lo rescatase el cron. Ahora vive en Visión general, que es
+  donde aterriza el onboarding.
+- **Visión general no exportaba `maxDuration`.** `autoExecutePendingScan` es una
+  Server Action y hereda el de su página (ADR 0003), así que mover el driver sin
+  añadir `export const maxDuration = 60` habría matado cada ventana de lotes al
+  límite por defecto de Vercel — en producción, en silencio, y presentándose
+  después como un timeout de escaneo.
+- **El driver va también en `/debug`**, porque el botón «Repetir escaneo» vive
+  ahí (el de Visión general sólo existe en su estado vacío). Sin driver, ese
+  botón crearía un run que nada empuja. Dos montajes son seguros por
+  construcción: cada lote se reclama con un UPDATE atómico (SCAN-CHAIN-1).
+- **`getWorkspaceCounters` publicaba una resta cruda como delta.** Es
+  exactamente lo que DELTA-GUARD-1 (§23) corrigió en el historial, un mes antes,
+  en la función de al lado. Ahora pasa por `resolveDelta`.
+
+**El interruptor de auditoría, y por qué hubo migración.** El intake proponía
+dejarlo global y de sólo lectura para no gastar una migración en un control que
+el cliente nunca verá. El fundador pidió lo contrario —*"necesito el interruptor
+para ahorrar costes en esa fase de pruebas"*—, así que la 0030 añade
+`projects.auto_web_audit_enabled`, por defecto **true** (por defecto false
+habría apagado las auditorías de todos los proyectos existentes al aplicarla,
+que es un cambio de comportamiento que nadie pidió y que se vería igual que la
+tubería rota).
+
+El gate vive en `enqueueWebAuditJob` y no en el ejecutor, y esa colocación es la
+decisión, no un detalle: hay **dos** rutas de encolado —el ejecutor en línea y
+`backfillMissingWebAuditJobs` en el cron diario—, así que un gate en el ejecutor
+lo habría deshecho el backfill horas después, reencolando justo la auditoría que
+el fundador acababa de apagar. Falla **abierto** a propósito: si la lectura del
+flag falla, se audita. De los dos errores posibles, "auditamos algo apagado"
+cuesta una campaña y "dejamos de auditar todo" es invisible.
+
+**Riesgo asumido, dicho claro:** apagar el interruptor no cancela un trabajo ya
+encolado — el flag se mira al encolar, no al ejecutar. La copia lo dice ("no se
+auditarán los **próximos** escaneos") en vez de prometer lo que no hace.
+
+**Lo que se movió de sitio y el cliente pierde:** el borrado duro de dominio
+(DATA-MGMT-1) vivía en cada tarjeta de la rejilla de Escaneos. La rejilla es
+ahora Dominios, que por diseño no lleva controles, así que el borrado se queda
+en `/debug`. Deja de estar al alcance del cliente en la consola. Es reversible y
+está aquí escrito para que se note si algún día molesta.
+
+**El fallo que encontró el piloto, y por qué la suite no podía verlo.** La
+primera versión añadió `auto_web_audit_enabled` al `select` de
+`requireActiveProject`, que es el cargador de **seis** pantallas y hace
+`notFound()` si la consulta no devuelve fila. Como las migraciones se aplican a
+mano, en el preview la columna todavía no existía: PostgREST devolvió error y
+Prompts, Competidores, Páginas citadas, Recomendaciones, Auditoría web y
+`/debug` daban **404 a la vez**. `pnpm test` (1525) y `pnpm run validate`
+estaban en verde, porque nada en este proyecto comprueba el esquema real — el
+fallo era estructuralmente invisible hasta abrir un navegador contra una base
+sin migrar.
+
+Corregido leyendo el flag donde se usa (`/debug`, con su propia consulta que
+degrada a "activado" si la columna falta) y con una guarda estática sobre ese
+`select` (`lib/project-workspace.test.ts`): añadir una columna ahí obliga a
+editar el test, y editarlo obliga a leer por qué.
+
+Regla que queda: **un cargador compartido no puede depender de una columna que
+una migración manual todavía no ha creado.** El repo ya escribía las migraciones
+con `add column if not exists`; el lado de lectura no tenía la tolerancia
+equivalente.
+
+**Cuatro correcciones salidas de mirar las capturas del piloto, no de su
+tabla.** El run dio `PILOT PASS` con las tres pantallas en verde; el juicio
+visual encontró lo que ninguna aserción mide:
+
+1. **«Añadir dominio» a ancho completo en escritorio** era un rectángulo
+   punteado gigante bajo una última fila coja. En rejilla pasa a ser la última
+   celda: cierra la serie y tapa el hueco. En raíl (1–3 dominios) sigue fuera y
+   a ancho completo, que es lo que la hace visible en móvil.
+2. **La pastilla de frescura era verde siempre**, incluso en un dominio
+   escaneado once días antes: el color afirmaba «al día» mientras la fecha decía
+   lo contrario. Verde sólo hoy/ayer; el resto, neutro.
+3. **Un delta de 0 se pintaba como «0»** pegado a la puntuación («43  0») y se
+   leía como un segundo número. Cero no es una noticia: no se pinta.
+4. **El número del gauge y su etiqueta se separaban** en móvil y tablet
+   (`space-between` los mandaba a bordes opuestos). Agrupados.
+
+Ninguna de las cuatro habría fallado un test: son juicio, y por eso el pilot
+termina con capturas y no con un veredicto.
+
+**Un atajo que faltaba, encontrado por el fundador en el primer smoke.**
+`/debug` no está enlazada desde ningún sitio a propósito, y el efecto
+secundario era que la única forma de llegar consistía en teclear a mano una URL
+con un UUID dentro. `/dashboard/debug` redirige al `/debug` del dominio más
+reciente (mismo criterio de reserva que la barra lateral y la portada de
+Dominios). Sigue sin aparecer en ningún menú: es una URL que se recuerda, no un
+enlace que se ve. La lección, que es del mismo tipo que la del cargador
+compartido: **ocultar una pantalla no puede significar dejarla inalcanzable
+también para quien la necesita.**
+
+**El atajo, y el interruptor que mentía sobre por qué fallaba.** Dos hallazgos
+del primer smoke real del fundador, el mismo día:
+
+- `/debug` no estaba enlazada desde ningún sitio y la única vía era teclear una
+  URL con un UUID dentro. La URL que él tecleó de memoria fue `/debug`, así que
+  ahí vive ahora el atajo: resuelve el dominio más reciente y redirige.
+  Protegida por `requireUser` como cualquier pantalla de consola. **Ocultar una
+  pantalla no puede significar dejarla inalcanzable para quien la necesita.**
+- Con la migración 0030 sin aplicar, el interruptor de auditoría se pintaba
+  encendido y al pulsarlo devolvía «No se ha podido actualizar… vuelve a
+  intentarlo». Reintentar no crea una columna: era un consejo imposible de
+  seguir, y un control que parece operable y no puede funcionar gasta un intento
+  del operador y además le miente sobre la causa. Ahora la lectura distingue
+  tres estados y, si la columna no está, la fila dice qué falta
+  (`0030_project_auto_web_audit.sql`) y no ofrece interruptor. El server action
+  distingue además `42703`/`PGRST204` por si alguien fuerza el envío.
+
+**Rev. 2 de Dominios (2026-08-05, mismo día).** Tras ver la pantalla en el
+preview el fundador la rechazó entera —*"no me gusta nada"*— y aportó un mockup
+propio, que queda como diseño aprobado en
+`docs/design-reference/domains-redesign-1/dominios-rev2-aprobado.png`. Qué
+cambia respecto a la rev. 1:
+
+- **Bloque de título propio** en vez de la cabecera de 15 px: *kicker* +
+  «Dominios» a 27 px + contador, con la pastilla de estado agregado a la
+  derecha. No contradice §3: aquello describe la cabecera de las pantallas de
+  **proyecto**, y ésta es de cuenta.
+- **Portada con borde azul y fondo teñido**, icono a 72 px, píldoras
+  «Seleccionado» y «En progreso», gauge semicircular junto a una frase que dice
+  **qué mide** el número — lo único de la pantalla que lo explicaba, y no
+  estaba—, y botón «Ver visión general» a ancho completo con chevron.
+- **Se acabó el raíl**: siempre rejilla, dos columnas en móvil y cuatro en
+  escritorio, con «Añadir dominio» como una celda más. La distinción
+  raíl/rejilla por número de dominios desaparece con ella.
+- **Los colores son los de marca, no los del mockup**, por petición explícita
+  del fundador. El mockup fija estructura y jerarquía; la paleta la fija
+  `brand-guidelines.md` §2.
+- **Fuera la entrada «Dominios» del menú.** Se vuelve al gesto anterior:
+  pinchar el bloque de dominio de la barra lateral. Es exactamente lo que la
+  decisión de 2026-07-18 había establecido para Escaneos y que esta fase había
+  roto al añadir una entrada propia — *"que no se enlace con un enlace nuevo
+  desde el menú, sino pinchando en el propio dominio como ocurría antes"*.
+
+**Descartado de ese mockup, y por qué:** lleva una **barra de pestañas inferior**
+en móvil (Dominios / Informes / Alertas / Ajustes). No se implementa: contradice
+§3, que decidió el drawer lateral como mecanismo de navegación móvil tras
+evaluar y descartar alternativas, y además introduce dos secciones que no
+existen. Cambiar la navegación de toda la consola es su propia fase, no un
+efecto colateral del rediseño de una pantalla.
+
+**El día que borré 955 líneas de CSS sin enterarme (2026-08-05).** Al aplicar
+la bajada de escala de Dominios usé sustitución de texto sobre
+`app/globals.css` entero. El bloque móvil lo localicé buscando
+`@media (max-width: 560px)` — y esa cadena aparece **antes** en el fichero, en
+el sistema de artículos del blog. El corte se llevó por delante ~930 líneas
+intermedias: el arreglo del auto-zoom de iOS, el sistema `.art-*` completo y
+todo lo que había entre medias.
+
+**Nada del pipeline local lo detectó.** `pnpm test` (1526) y
+`pnpm run validate` —build, typecheck y lint— pasaron en verde con el fichero
+mutilado, porque borrar CSS no rompe ninguna de las tres cosas. Lo cazó el
+piloto, y no en la pantalla que yo estaba tocando: `web-audit @ mobile:
+horizontal overflow — scrollWidth 438px > viewport 375px`. Una pantalla que
+este PR no toca, rota por CSS que este PR borró.
+
+Dos reglas que quedan:
+
+1. **Ninguna sustitución ciega sobre un fichero de 6.700 líneas.** Se acota
+   primero el bloque (por sus marcadores de inicio y fin), se opera dentro y se
+   comprueba después que el diff no sale de ahí. Es lo que se hizo al rehacerlo.
+2. **Verde en local no es verde.** Es la segunda vez el mismo día que el
+   pipeline aprueba algo roto — la primera fueron las seis pantallas en 404 por
+   una columna que no existía. Las dos las encontró el piloto sobre un
+   despliegue real. Cuando el coste de equivocarse es "una pantalla que no
+   estoy mirando", la única prueba que vale es la que mira todas.
+
+**Las tarjetas de la rejilla pasan de navegar a seleccionar (2026-08-05,
+mismo día).** Hasta aquí, tocar un dominio de la rejilla llevaba directo a su
+Visión general — el mismo gesto que la portada. El fundador probó eso en el
+preview y pidió lo contrario: *"pinchar en un dominio de abajo debe
+seleccionarlo y por tanto retornar a la misma página con ese dominio en la
+card principal"*. La portada deja de ser sólo un escaparate del dominio más
+reciente y pasa a ser el resultado de una elección.
+
+Implementado con un parámetro en la propia URL —
+`/dashboard/domains?active=<id>`— en vez de estado de cliente o una cookie de
+sesión: la pantalla sigue siendo un Server Component puro, la selección
+sobrevive a recargar y compartir el enlace, y no hace falta inventar
+persistencia nueva para algo que dura lo que dura la navegación. `active` se
+valida contra `projects`, que ya viene acotado por RLS — un id ajeno o
+inexistente simplemente no casa con nada y cae al criterio de reserva de
+siempre (el más reciente), igual que cuando no hay parámetro.
+
+**Deliberadamente no tocado:** el bloque de proyecto de la barra lateral
+(`proj-switch`) sigue sin enterarse de esta selección — deriva el proyecto
+activo de la URL de las rutas `/dashboard/projects/[id]/*`, y `/dashboard/
+domains?active=…` no es una de ellas. Elegir un dominio en Dominios no cambia
+qué dominio ve la barra lateral en el resto de la consola; sólo cambia qué
+portada ves en Dominios. Unificar los dos sería una noción de "dominio
+seleccionado" a nivel de cuenta, persistida más allá de una URL — alcance
+mayor, pedido explícito propio si algún día hace falta.
+
+**Por qué `/debug` sí conserva la columna GEO Score y su delta.** El mismo día, SCORE-WINDOW-1 (§31) retiró esa columna de la pantalla de cliente con una condición explícita del fundador: *"Yo veré la puntuación de los Escaneos en la página de debug"*. No es una omisión de esta fase — es la mitad complementaria de esa decisión. La regla de `resolveDelta` (DELTA-GUARD-1, §23) sigue vigente aquí tal cual: §31 sólo la da por superada en la pantalla que dejó de existir.
+
+**Pendiente / roto conocido.**
+
+- **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el
+  fundador lo descartó por ahora (*"no he publicado aún la web"*). Matiz que yo
+  mismo había exagerado y conviene dejar recto: la página pasa por
+  `requireActiveProject`, que ya filtra por dueño, así que nunca hubo riesgo
+  entre cuentas — lo peor era que un cliente viese sus propios internos y
+  pudiera encender su escaneo diario. **Hay que cerrarla antes de abrir la web
+  al público.**
+- **Fase B pendiente:** los bloques de `/debug` que necesitan consultas nuevas
+  (motores, salud de extracción por categoría, alertas al operador, cola de
+  trabajos, respuestas con coste/latencia). Están diseñados en
+  `pantalla-debug.html`, sin implementar.
+- `/runs` queda como redirección a `/debug`; `/runs/[runId]` (detalle de
+  escaneo) sigue donde estaba.
 ---
 
 ## Cómo mantener este documento

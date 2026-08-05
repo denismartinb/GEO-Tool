@@ -5,10 +5,18 @@ import { computeScanStage, type ActiveScanRun } from "@/components/scan-in-progr
  * no tiene arnés de DOM en los tests, así que sacarla a una función pura es
  * lo que permite fijarla.
  */
-export function scanStatePillLabel(activeRun?: ActiveScanRun | null, lastScanLabel?: string | null): string | null {
+export function scanStatePillLabel(
+  activeRun?: ActiveScanRun | null,
+  lastScanLabel?: string | null,
+  auditing?: boolean
+): string | null {
   if (activeRun) {
     return computeScanStage(activeRun).kind === "analyzing" ? "Analizando…" : "Escaneando…";
   }
+  // DOMAINS-REDESIGN-1: la auditoría sólo se anuncia cuando no hay escaneo
+  // vivo. Corre DESPUÉS de cada escaneo (AUDIT-AFTER-SCAN-1), así que decir
+  // "Auditando" mientras el escaneo sigue invertiría el orden de los hechos.
+  if (auditing) return "Auditando…";
   return lastScanLabel ? `Escaneado ${lastScanLabel}` : null;
 }
 
@@ -41,17 +49,29 @@ export function scanStatePillLabel(activeRun?: ActiveScanRun | null, lastScanLab
  */
 export function ScanStatePill({
   activeRun,
-  lastScanLabel
+  lastScanLabel,
+  auditing = false
 }: {
   /** El run pendiente/en curso, si lo hay. */
   activeRun?: ActiveScanRun | null;
   /** Fecha ya formateada del último escaneo completado. */
   lastScanLabel?: string | null;
+  /**
+   * Si hay una campaña de auditoría viva (DOMAINS-REDESIGN-1).
+   *
+   * Cierra el pendiente que §26 dejó escrito: "la Auditoría web mantiene su
+   * propio chip «Auditando», que es otro concepto y no se ha tocado". Ese chip
+   * era `.scan-status`, que `app/globals.css` oculta bajo el breakpoint móvil —
+   * exactamente el fallo que esta pastilla existe para arreglar, sin arreglar
+   * para la auditoría. Trayéndolo aquí hereda gratis la visibilidad en móvil,
+   * el `aria-live` y el formato.
+   */
+  auditing?: boolean;
 }) {
-  const label = scanStatePillLabel(activeRun, lastScanLabel);
+  const label = scanStatePillLabel(activeRun, lastScanLabel, auditing);
   if (!label) return null;
 
-  if (activeRun) {
+  if (activeRun || auditing) {
     return (
       <span className="badge badge-accent" style={{ fontSize: 11 }} aria-live="polite">
         <span className="dot run" style={{ marginRight: 6 }} />

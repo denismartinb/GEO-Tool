@@ -34,7 +34,7 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/prompts`, "Prompts"],
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
-  [`/dashboard/projects/${PROJECT_ID}/runs`, "Escaneos"],
+  ["/dashboard/domains", "Dominios"],
   [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
 
@@ -410,11 +410,12 @@ function screenBody(path) {
   if (path === `/dashboard/projects/${PROJECT_ID}/recommendations`) {
     return '<h2>Backlog de acciones</h2><div class="rec-card">Recomendación de prueba</div>';
   }
-  if (path === `/dashboard/projects/${PROJECT_ID}/runs`) {
-    // A table, not prose: the journey anchors on `.run-tbl` because the real
-    // page's status text sits inside `.scan-status`, which globals.css hides
-    // below 900px. Keep this in sync with that anchor.
-    return `<table class="run-tbl"><tbody><tr><td>1</td><td>1 ago 2026</td><td>Completado</td></tr></tbody></table>`;
+  if (path === "/dashboard/domains") {
+    // DOMAINS-REDESIGN-1: la portada del dominio activo, que es el ancla de
+    // core-flow.spec.ts. Estructura, no prosa: la pastilla de estado desaparece
+    // en reposo y la línea de automatización se oculta en móvil, así que
+    // ninguna de las dos discrimina "hay datos" en los tres viewports.
+    return `<a class="dm2-hero" href="/dashboard/projects/${PROJECT_ID}"><span class="dm2-name">Fixture</span><span class="dm2-dom">fixture.example</span><span class="dm2-gauge">64</span></a>`;
   }
   if (path === `/dashboard/projects/${PROJECT_ID}/web-audit`) {
     // The tablist is exactly what the web-audit journey anchors on, because

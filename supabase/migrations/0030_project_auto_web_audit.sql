@@ -1,0 +1,37 @@
+-- 0030_project_auto_web_audit.sql
+--
+-- Phase: DOMAINS-REDESIGN-1 Fase A (founder-approved 2026-08-05)
+--
+-- Purpose: a per-project opt-out for the automatic post-scan web audit, so the
+-- founder can stop spending Gemini grounding calls on individual domains while
+-- the product is still in pre-launch testing.
+--
+-- Why a column and not the existing env var: AUTO_WEB_AUDIT_ENABLED
+-- (lib/web-audit/audit-dispatch.ts) is account-wide and can only be changed by
+-- editing Vercel config and redeploying. The founder asked for a control he can
+-- click, per domain, from the internal /debug screen — the same shape as
+-- `recurring_scans_enabled` (0008), which this deliberately mirrors so the two
+-- switches on that screen read and behave identically.
+--
+-- Default TRUE, unlike 0008's opt-in flag, and that asymmetry is the point:
+-- the automatic audit is ON for every project today (AUDIT-AFTER-SCAN-1 made it
+-- unconditional, and AUDIT-NO-BUTTON-1 removed the manual trigger that used to
+-- be the alternative). Defaulting to false would silently disable audits for
+-- every existing project on apply — a behaviour change nobody asked for, and one
+-- that would look exactly like the pipeline breaking.
+--
+-- The env var stays as the outer kill switch: env off wins over any column
+-- value. Both gates are enforced in `enqueueWebAuditJob`, the single point every
+-- enqueue path goes through (the scan executor's inline call and the daily
+-- cron's `backfillMissingWebAuditJobs`) — a per-project flag checked only at the
+-- executor would be undone by the backfill re-queueing the same audit hours
+-- later.
+--
+-- No RLS policy changes: `projects` RLS is already keyed off ownership, and this
+-- column is read through the service client by the job pipeline and written
+-- through the owner-scoped server action, exactly like recurring_scans_enabled.
+--
+-- Apply manually in the Supabase SQL editor, in order, after 0029.
+
+alter table public.projects
+  add column if not exists auto_web_audit_enabled boolean not null default true;

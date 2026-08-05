@@ -111,26 +111,22 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
   await exploreInteractions(page, testInfo, "recommendations");
 });
 
-test("scan history screen renders", async ({ page }, testInfo) => {
-  const id = await projectId(page);
-  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs", {
-    // `.run-tbl` (the history table) and NOT the status text: the first
-    // version of this anchor matched /completado|en curso|.../, which on this
-    // page lives inside `.scan-status` — and globals.css hides that element
-    // entirely below 900px. The result was a mobile-only failure on a screen
-    // that renders perfectly at every width (caught by the pilot on its first
-    // real run, 2026-08-02).
-    //
-    // Rule for every anchor here: it must be (a) absent in the empty state,
-    // so it actually discriminates, and (b) visible at all three viewports,
-    // so it never reports a CSS breakpoint as missing data. Prefer a
-    // structural element that only exists with data over prose that a media
-    // query might hide.
-    describedAs: "la tabla del historial de escaneos",
-    anyOf: [{ selector: ".run-tbl" }]
+test("domains screen renders", async ({ page }, testInfo) => {
+  // DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. Su mitad
+  // de cliente es Dominios; el historial se fue a /debug, que es interna y
+  // deliberadamente NO forma parte del recorrido del piloto.
+  const findings = await visitAsUser(page, testInfo, "/dashboard/domains", "domains", {
+    // La portada del dominio activo, no la pastilla de estado ni la línea de
+    // automatización: la primera desaparece en reposo y la segunda se oculta
+    // bajo el breakpoint móvil. Misma regla que ya regía aquí — el ancla debe
+    // (a) faltar en el estado vacío, para discriminar de verdad, y (b) verse
+    // en los tres viewports, para no reportar un breakpoint como falta de
+    // datos.
+    describedAs: "la portada del dominio activo",
+    anyOf: [{ selector: ".dm2-hero" }]
   });
   assertPageIsHealthy(findings);
-  await exploreInteractions(page, testInfo, "runs");
+  await exploreInteractions(page, testInfo, "domains");
 });
 
 test("citations screen renders", async ({ page }, testInfo) => {

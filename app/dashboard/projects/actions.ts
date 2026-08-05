@@ -332,8 +332,16 @@ export async function createProject(formData: FormData) {
   }
 
   // Create the pending scan run (fast, no Gemini calls) and land the user on
-  // Escaneos immediately. Execution itself is triggered from that page so the
-  // user sees the real "scan in progress" UI instead of waiting on this request.
+  // Visión general immediately. Execution itself is driven from that page's
+  // `AutoExecuteScan` so the user sees the real "scan in progress" UI instead
+  // of waiting on this request.
+  //
+  // DOMAINS-REDESIGN-1 moved this target from Escaneos. The two have to change
+  // together: the driver is mounted on exactly one page, and this redirect
+  // decides which page a brand-new project's first scan gets driven from. If
+  // they ever disagree, the first scan of every new customer stalls in
+  // `pending` until the daily cron rescues it — silently, since nothing here
+  // fails.
   try {
     await createPendingScanRun({ projectId: data.id, supabase, user });
   } catch (scanError) {
@@ -342,13 +350,13 @@ export async function createProject(formData: FormData) {
   }
 
   revalidatePath(`/dashboard/projects/${data.id}`);
-  revalidatePath(`/dashboard/projects/${data.id}/runs`);
+  revalidatePath("/dashboard/domains");
 
   if (setupError) {
-    redirect(`/dashboard/projects/${data.id}/runs?success=project_created&error=project_setup_partial`);
+    redirect(`/dashboard/projects/${data.id}?success=project_created&error=project_setup_partial`);
   }
 
-  redirect(`/dashboard/projects/${data.id}/runs?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_started" : "scan_pending"}`);
+  redirect(`/dashboard/projects/${data.id}?success=${ENABLE_SYNC_SCAN_EXECUTION ? "scan_started" : "scan_pending"}`);
 }
 
 export async function archiveProject(formData: FormData) {

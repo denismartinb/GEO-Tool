@@ -126,8 +126,17 @@ The cron only ever processes projects with `projects.recurring_scans_enabled = t
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `AUTO_WEB_AUDIT_ENABLED` | No (defaults to **enabled**) | Vercel | `false` to disable; anything else (including unset) leaves it on |
+| `AUTO_WEB_AUDIT_ENABLED` | No (defaults to **enabled**) | Vercel | `false` to disable account-wide; anything else (including unset) leaves it on |
 | `OPS_ALERT_EMAIL` | No (alerts are silently skipped when unset) | Vercel | operator inbox, e.g. `alerts@genscore.es` |
+
+**Since DOMAINS-REDESIGN-1 (migration 0030) this is the OUTER switch, not the
+only one.** Each project also carries `projects.auto_web_audit_enabled`
+(default `true`), toggled from the internal `/debug` screen so the founder can
+stop spending Gemini grounding calls on one domain without redeploying. Env off
+wins over any column value. Both are enforced in the same place —
+`enqueueWebAuditJob` — because two paths enqueue audits (the scan executor
+inline, and `backfillMissingWebAuditJobs` on the daily cron) and a gate on only
+one of them gets undone by the other.
 
 Unlike every other kill switch in this document, this one defaults to **on**:
 the whole point of the phase is that the audit happens without anyone asking,

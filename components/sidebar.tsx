@@ -16,10 +16,13 @@ type WorkspaceProject = {
   language: string;
 };
 
-// "Escaneos" (/runs) deliberately has no entry here (founder-approved
-// 2026-07-18): the domain block at the top of the sidebar (`proj-switch`)
-// already links straight to it — a second link would just duplicate that
-// entry point.
+// "Dominios" (/dashboard/domains) deliberately has no entry here, and neither
+// had "Escaneos" before it (founder-approved 2026-07-18, reaffirmed 2026-08-05):
+// the domain block at the top of the sidebar (`proj-switch`) already links
+// straight to it — a second link would just duplicate that entry point. A brief
+// version of this phase DID add one and the founder had it removed: pinchar el
+// propio dominio es el gesto que ya existía y el que la gente conoce.
+// The operational half (/debug) has no entry at all, by design.
 const analyzeLinks = [
   { segment: "", label: "Visión general", icon: "overview", countKey: null as null | string },
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
@@ -110,8 +113,8 @@ export function Sidebar({
       {project ? (
         <Link
           className="proj-switch"
-          href={`/dashboard/projects/${project.id}/runs`}
-          title="Ver escaneos de este dominio"
+          href="/dashboard/domains"
+          title="Cambiar de dominio"
           onClick={handleNavSelect}
         >
           {faviconUrl(project.domain) ? (
