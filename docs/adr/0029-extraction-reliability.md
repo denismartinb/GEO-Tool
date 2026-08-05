@@ -291,6 +291,15 @@ column's unit halfway would trade one confusion for another. The stage moved
 to the status badge instead, which reads "Analizando" rather than "En curso"
 once every launch is terminal and the run is still working.
 
+**And on mobile there was no signal at all.** In a project with history the
+full-screen progress never mounts (it lives in the empty state), the
+`.scan-status` chip is hidden under the mobile breakpoint, and the
+sticky-header pill still read "Escaneado 5 ago" — asserting the data on screen
+was the latest there is while a scan was running. The pill now carries the
+state (`Escaneando…` / `Analizando…` / the date), which is where
+BRAND-5b-mobile-header already decided scan context belongs. See
+`docs/brand/design-decisions-log.md` §20 for the design half.
+
 The analysis denominator is **counted from the rows that exist**, not derived
 from `prompts × engines × samples`. That arithmetic has already changed once
 under this code — SAMPLING-1 (ADR 0030) made `total_prompts` count jobs rather

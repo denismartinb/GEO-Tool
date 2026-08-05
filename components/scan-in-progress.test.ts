@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computeScanStage, type ActiveScanRun } from "./scan-in-progress";
 import { isAnalyzing } from "./live-run-status-cells";
+import { scanStatePillLabel } from "./scan-state-pill";
 
 /**
  * EXTRACTION-RELIABILITY-1 Fase C (docs/adr/0029).
@@ -125,5 +126,39 @@ describe("isAnalyzing (Escaneos row)", () => {
   it("is false before the launch count is known", () => {
     expect(isAnalyzing({ ...base, total_prompts: 0 })).toBe(false);
     expect(isAnalyzing({ ...base, total_prompts: null })).toBe(false);
+  });
+});
+
+/**
+ * La pastilla del sticky-header (Fase C). Es la única señal de escaneo que se
+ * ve en móvil en una pantalla con datos: el chip `.scan-status` está oculto
+ * bajo el breakpoint (`app/globals.css`) y el overlay a pantalla completa
+ * sólo se monta cuando no hay nada que enseñar. Founder, 2026-08-05: "no veo
+ * ningún chip en ninguna cabecera móvil".
+ */
+describe("scanStatePillLabel", () => {
+  const running = { status: "running", total_prompts: 6, successful_prompts: 0, failed_prompts: 0, started_at: null };
+
+  it("shows the date when nothing is running", () => {
+    expect(scanStatePillLabel(null, "5 ago 2026")).toBe("Escaneado 5 ago 2026");
+  });
+
+  it("renders nothing when there is neither a run nor a date", () => {
+    expect(scanStatePillLabel(null, null)).toBeNull();
+  });
+
+  // "Escaneado 5 ago" during a scan is the actual lie: it asserts the data on
+  // screen is the latest there is, while fresher data is minutes away.
+  it("replaces the date with the live state while a scan runs", () => {
+    expect(scanStatePillLabel({ ...running, successful_prompts: 2 }, "5 ago 2026")).toBe("Escaneando…");
+  });
+
+  it("names the analysis stage, matching the full-screen progress", () => {
+    expect(
+      scanStatePillLabel(
+        { ...running, successful_prompts: 6, responses_total: 18, responses_processed: 4 },
+        "5 ago 2026"
+      )
+    ).toBe("Analizando…");
   });
 });

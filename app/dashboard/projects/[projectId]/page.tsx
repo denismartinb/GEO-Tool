@@ -12,6 +12,7 @@ import { Delta } from "@/components/ui/delta";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -690,18 +691,15 @@ export default async function ProjectDetailPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {latestCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
-          {activeRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              latestCompletedRun
+                ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                    .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                : null
+            }
+          />
         </div>
       </div>
 

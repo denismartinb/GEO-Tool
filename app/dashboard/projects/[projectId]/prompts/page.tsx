@@ -6,6 +6,7 @@ import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { PromptsClient } from "./prompts-client";
 import { AddPromptsButton } from "./add-prompts-button";
 
@@ -249,25 +250,19 @@ export default async function PromptsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {latestRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado{" "}
-              {new Date(
-                latestRun.finished_at ?? latestRun.created_at
-              ).toLocaleDateString("es-ES", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                timeZone: "Europe/Madrid",
-              })}
-            </span>
-          )}
-          {activeRun && latestRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              latestRun
+                ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "Europe/Madrid"
+                  })
+                : null
+            }
+          />
         </div>
       </header>
 

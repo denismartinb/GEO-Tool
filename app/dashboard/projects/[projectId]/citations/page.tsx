@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { CitationsClient } from "./citations-client";
 import {
   aggregateCitations,
@@ -165,17 +166,7 @@ export default async function CitationsPage({
           </span>
         </div>
         <div className="ov-sticky-right">
-          {lastScanDate && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {lastScanDate}
-            </span>
-          )}
-          {activeRun && latestRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
         </div>
       </div>
 
