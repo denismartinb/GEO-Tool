@@ -226,7 +226,7 @@ export default async function DomainsPage({
         {/* ---- Portada del dominio seleccionado ---- */}
         <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero">
           <div className="dm2-hero-top">
-            <DomainFavicon name={active.name} domain={active.domain} size={72} radius={20} />
+            <DomainFavicon name={active.name} domain={active.domain} size={56} radius={16} />
             <div className="dm2-id">
               <div className="dm2-name">{active.name}</div>
               <div className="dm2-dom">
@@ -270,7 +270,7 @@ export default async function DomainsPage({
             {activeScore === null ? (
               <div className="dm2-score-empty">—</div>
             ) : (
-              <Gauge value={activeScore} size={150} stroke={15} variant="semi" label="Puntuación GEO" />
+              <Gauge value={activeScore} size={124} stroke={12} variant="semi" label="Puntuación GEO" />
             )}
             <p className="dm2-score-copy">
               {activeScore === null
@@ -297,7 +297,7 @@ export default async function DomainsPage({
             return (
               <Link key={p.id} href={`/dashboard/projects/${p.id}`} className="dm2-card">
                 <div className="dm2-card-top">
-                  <DomainFavicon name={p.name} domain={p.domain} size={44} radius={12} />
+                  <DomainFavicon name={p.name} domain={p.domain} size={38} radius={11} />
                   <div style={{ minWidth: 0 }}>
                     <div className="dm2-card-name">{p.name}</div>
                     <div className="dm2-card-dom">{p.domain}</div>
