@@ -6212,6 +6212,15 @@ select.set-field {
 /* Fase 3a — el llms.txt generado y sus pasos de publicación. Reutiliza el
    chrome de .wa2-fix a propósito: un artefacto copiable debe verse igual en
    toda la pantalla, no reinventarse por fase. */
+/* Distintivo de fila cerrada: la incidencia trae solución dentro. Verde
+   deliberadamente apagado y sin peso tipográfico: informa de que hay algo
+   accionable, no compite con la pastilla de severidad ni con los puntos, que
+   son los que ordenan la lista. */
+.wa2-fix-ready {
+  background: var(--pos-soft); color: var(--pos); border-color: transparent;
+  font-size: 10px; font-weight: 600; gap: 3px; flex-shrink: 0;
+}
+
 .wa2-llms { display: flex; flex-direction: column; gap: 12px; margin: 4px 0 10px; }
 .wa2-llms-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
 /* El fichero entero cabe de sobra en pantalla, pero una campaña con muchos

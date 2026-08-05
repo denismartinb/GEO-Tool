@@ -442,14 +442,30 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
 
   // llms.txt / sitemap.xml — single project-level facts, always "warning": a
   // real, documented best-practice gap, never blocking, never scored.
-  if (bots.llmsTxtFound) {
+  //
+  // A probe we could NOT resolve (403 from a WAF, timeout, server error) is
+  // neither an issue nor a pass: it is unmeasured, and lands in neither list.
+  // That is the same rule `PageCheckDefinition.isMeasured` already applies
+  // page-side — "a never-measured check is silently excluded, never asserted
+  // as passing or failing" — applied here for the first time.
+  //
+  // It matters more than it looks. Before this, an unreachable probe produced
+  // a warning indistinguishable from a real gap, and since fase 3a/sitemap
+  // those warnings carry step-by-step instructions: we would be telling a
+  // customer behind an ordinary WAF to create a file they already have.
+  // Reachability is reported on its own, in the bot-access card.
+  const llmsState = bots.probes?.llmsTxt ?? (bots.llmsTxtFound ? "found" : "absent");
+  const sitemapState = bots.probes?.sitemap ?? (bots.sitemapFound ? "found" : "absent");
+
+  if (llmsState === "found") {
     passing.push({ check: "llms_txt_missing", passedCount: 1, applicableCount: 1 });
-  } else {
+  } else if (llmsState === "absent") {
     issues.push({ check: "llms_txt_missing", severity: "warning", affectedCount: 1, applicableCount: 1, pointDelta: null, affectedLabels: [] });
   }
-  if (bots.sitemapFound) {
+
+  if (sitemapState === "found") {
     passing.push({ check: "sitemap_missing", passedCount: 1, applicableCount: 1 });
-  } else {
+  } else if (sitemapState === "absent") {
     issues.push({ check: "sitemap_missing", severity: "warning", affectedCount: 1, applicableCount: 1, pointDelta: null, affectedLabels: [] });
   }
 
