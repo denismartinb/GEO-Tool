@@ -21,6 +21,8 @@ import {
   type ComparableRun,
   type DeltaVerdict
 } from "@/lib/scoring/score-reliability";
+import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
+import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { setRecurringScans } from "../actions";
@@ -50,6 +52,59 @@ function getStatusBadgeClass(status: string): string {
   if (status === "cancelled") return "badge badge-neutral";
   if (status === "running" || status === "retrying") return "badge badge-accent";
   return "badge badge-neutral";
+}
+
+/**
+ * AUDIT-IN-RUNS-1 — the Auditoría cell.
+ *
+ * Deliberately not a link. This table has one row per scan, but the Auditoría
+ * web screen shows the LATEST audit, not a given scan's: linking Tuesday's row
+ * would land the user on Thursday's audit and quietly pass it off as Tuesday's.
+ * A per-scan audit view is its own phase; until then the cell informs and does
+ * not pretend to navigate.
+ */
+function RunAuditCell({ status }: { status: RunAuditStatus }) {
+  if (status.kind === "none") {
+    // Three different pasts (never audited, below the Pro gate, gave up) that
+    // the user cannot act on differently — so one honest blank, not three
+    // labels that invite three questions.
+    return <span style={{ color: "var(--ink-4)" }}>—</span>;
+  }
+
+  if (status.kind === "in_progress") {
+    return <span className="badge badge-accent">En curso</span>;
+  }
+
+  if (status.kind === "retrying") {
+    // Not "En curso": the backoff reaches ten hours, so that label would
+    // promise motion that is not coming today and read as a frozen table.
+    return (
+      <span className="badge badge-neutral" title="La auditoría falló y volverá a intentarse">
+        Reintentando
+      </span>
+    );
+  }
+
+  const isComplete = status.kind === "audited";
+
+  return (
+    <>
+      <span className={isComplete ? "badge badge-pos" : "badge badge-neutral"}>
+        {isComplete ? "Auditada" : "Parcial"}
+      </span>
+      {status.readinessScore !== null && (
+        // Labelled by `title` rather than inline text: unlabelled, "40/100"
+        // sitting one column from "GEO Score" reads as a second score.
+        <div
+          className="tnum"
+          style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}
+          title="Salud técnica"
+        >
+          {status.readinessScore}/100
+        </div>
+      )}
+    </>
+  );
 }
 
 function formatDate(value: string | null | undefined): string {
@@ -283,6 +338,70 @@ export default async function RunsPage({
 
   const comparableByRunId = new Map<string, ComparableRun>(
     (scores ?? []).map((s) => [s.run_id as string, readComparableRun(s.details_json)])
+  );
+
+  /* AUDIT-IN-RUNS-1 — the "Auditoría" column.
+   *
+   * Three bounded queries and three Maps, deliberately not one lookup per row:
+   * this table lists every run a project has, so a per-row query would grow
+   * with history. Same shape as scoreByRunId directly above.
+   *
+   * Both halves of the audit are read from what is actually PERSISTED rather
+   * than from the job's status, because the job says what was attempted and
+   * the user is being told what exists. The job row is consulted only to tell
+   * "still working" apart from "never happened". */
+  const [{ data: snapshotRows }, { data: coverageRows }, { data: auditJobRows }] =
+    completedRunIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("web_audit_snapshots")
+            .select("scan_id, readiness_score")
+            .eq("project_id", projectId)
+            .in("scan_id", completedRunIds),
+          // The coverage map does not carry scan_id as a column — the audited
+          // scan lives inside the persisted JSON — so these are parsed rather
+          // than filtered in SQL. Bounded to the same history depth the web
+          // audit page uses for its own trend.
+          supabase
+            .from("generated_solutions")
+            .select("sanitized_content")
+            .eq("project_id", projectId)
+            .eq("generation_type", "domain_coverage")
+            .eq("status", "completed")
+            .eq("is_sanitized", true)
+            .order("created_at", { ascending: false })
+            .limit(12),
+          supabase
+            .from("jobs")
+            .select("run_id, status")
+            .eq("project_id", projectId)
+            .eq("job_type", "web_audit")
+            .in("run_id", completedRunIds)
+        ])
+      : [{ data: [] }, { data: [] }, { data: [] }];
+
+  const readinessByScanId = new Map<string, number | null>(
+    ((snapshotRows ?? []) as Array<{ scan_id: string; readiness_score: number | null }>).map((row) => [
+      row.scan_id,
+      row.readiness_score === null ? null : Number(row.readiness_score)
+    ])
+  );
+
+  const coverageScanIds = new Set<string>(
+    ((coverageRows ?? []) as Array<{ sanitized_content: string | null }>)
+      .map((row) => parseCoverageMap(row.sanitized_content)?.scanId)
+      .filter((scanId): scanId is string => Boolean(scanId))
+  );
+
+  const auditJobStatusByRunId = new Map<string, string>(
+    ((auditJobRows ?? []) as Array<{ run_id: string; status: string }>).map((row) => [row.run_id, row.status])
+  );
+
+  const auditStatusByRunId = new Map<string, RunAuditStatus>(
+    completedRunIds.map((runId) => [
+      runId,
+      deriveRunAuditStatus({ runId, coverageScanIds, readinessByScanId, jobStatusByRunId: auditJobStatusByRunId })
+    ])
   );
 
   /* Summary stats */
@@ -684,6 +803,10 @@ export default async function RunsPage({
                       encabezado "Prompts" era literalmente falso. El desglose
                       real va bajo cada celda que lo necesita. */}
                   <th>Lanzamientos</th>
+                  {/* AUDIT-IN-RUNS-1: sólo desde que la auditoría se ejecuta
+                      sola tras cada escaneo existe una relación 1:1 fiable
+                      entre una fila de esta tabla y una auditoría. */}
+                  <th>Auditoría</th>
                   <th className="num">GEO Score</th>
                   {hasMultipleCompleted ? <th className="num">Δ Score</th> : null}
                 </tr>
@@ -807,6 +930,11 @@ export default async function RunsPage({
                             </td>
                           </>
                         )}
+
+                        {/* Auditoría (AUDIT-IN-RUNS-1) */}
+                        <td>
+                          <RunAuditCell status={auditStatusByRunId.get(run.id) ?? { kind: "none" }} />
+                        </td>
 
                         {/* GEO Score */}
                         <td className="num">

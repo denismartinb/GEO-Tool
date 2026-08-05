@@ -5,8 +5,11 @@ import type { DomainCoverageResult } from "@/lib/recommendations/domain-coverage
 import * as technicalModule from "@/lib/web-audit/technical-audit";
 import * as emailModule from "@/lib/email/transactional";
 import {
+  backfillMissingWebAuditJobs,
   claimDueWebAuditJobs,
   enqueueWebAuditJob,
+  BACKFILL_GRACE_MS,
+  BACKFILL_LOOKBACK_MS,
   MAX_AUDIT_CONTINUATIONS,
   processDueWebAuditJobs,
   runWebAuditJob,
@@ -46,14 +49,22 @@ function makeService(options: {
   /** Jobs left in 'running' by a killed invocation — reclaimed via locked_at. */
   staleJobs?: WebAuditJobRow[];
   claimWins?: boolean;
+  /** Completed `scan_runs` the backfill can see. */
+  completedRuns?: Array<{ id: string; project_id: string }>;
+  /** `run_id`s that already carry a web_audit job. */
+  runsWithJob?: string[];
 }) {
   const recorded: Recorded[] = [];
+  /** Read-query filters, so tests can assert on the window a query asked for. */
+  const queries: Array<{ table: string; filters: Array<{ method: string; args: unknown[] }> }> = [];
   const {
     project = { owner_user_id: "user-1", domain: "acme.com" },
     existingJob = null,
     dueJobs = [],
     staleJobs = [],
-    claimWins = true
+    claimWins = true,
+    completedRuns = [],
+    runsWithJob = []
   } = options;
 
   function builder(table: string, op: "select" | "update" | "insert", payload?: Record<string, unknown>) {
@@ -67,8 +78,19 @@ function makeService(options: {
       filters.some((f) => f.method === "eq" && f.args[0] === "status" && f.args[1] === "running") ||
       filters.some((f) => f.method === "in" && Array.isArray(f.args[1]) && (f.args[1] as string[]).includes("running"));
 
+    /** The backfill's "which of these runs already has a job?" probe. */
+    const isBackfillProbe = () =>
+      table === "jobs" && op === "select" && filters.some((f) => f.method === "in" && f.args[0] === "run_id");
+
     const resolve = () => {
       if (table === "projects") return { data: project, error: null };
+      if (table === "scan_runs") {
+        queries.push({ table, filters: [...filters] });
+        return { data: completedRuns, error: null };
+      }
+      if (isBackfillProbe()) {
+        return { data: runsWithJob.map((run_id) => ({ run_id })), error: null };
+      }
       if (op === "update") {
         // A stale reclaim must also still satisfy the locked_at filter.
         const won = claimWins && !(wantsRunning() && !isStaleQuery());
@@ -95,6 +117,7 @@ function makeService(options: {
       in: track("in"),
       lte: track("lte"),
       lt: track("lt"),
+      gte: track("gte"),
       order: track("order"),
       limit: track("limit"),
       select: track("select"),
@@ -118,7 +141,7 @@ function makeService(options: {
     }
   };
 
-  return { service: client as unknown as ServiceClient, recorded };
+  return { service: client as unknown as ServiceClient, recorded, queries };
 }
 
 function jobUpdates(recorded: Recorded[]) {
@@ -416,6 +439,103 @@ describe("enqueueWebAuditJob", () => {
 
     expect(result).toBe("already_queued");
     expect(recorded.some((r) => r.op === "insert")).toBe(false);
+  });
+});
+
+describe("backfillMissingWebAuditJobs", () => {
+  /**
+   * The production incident this exists for (2026-08-04): the inline enqueue
+   * shares an invocation with the update that marks the run completed. When
+   * that invocation died in between — a deploy recycled it — there was no row,
+   * no log and no catch, and because the sweep only walks `jobs`, nothing
+   * would ever have looked at that run again.
+   */
+  it("enqueues a completed run that never got an audit job", async () => {
+    const { service, recorded } = makeService({
+      completedRuns: [{ id: "run-lost", project_id: "project-1" }],
+      runsWithJob: []
+    });
+
+    const enqueued = await backfillMissingWebAuditJobs({ service, now: NOW });
+
+    expect(enqueued).toBe(1);
+    const inserts = recorded.filter((r) => r.table === "jobs" && r.op === "insert");
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].payload).toMatchObject({ run_id: "run-lost", project_id: "project-1" });
+  });
+
+  it("leaves runs that already have a job alone", async () => {
+    // One project per run on purpose: after the newest-per-project rule, two
+    // runs of the SAME project would test the dedupe against a row the
+    // backfill no longer even considers.
+    const { service, recorded } = makeService({
+      completedRuns: [
+        { id: "run-ok", project_id: "project-1" },
+        { id: "run-lost", project_id: "project-2" }
+      ],
+      runsWithJob: ["run-ok"]
+    });
+
+    const enqueued = await backfillMissingWebAuditJobs({ service, now: NOW });
+
+    expect(enqueued).toBe(1);
+    const inserted = recorded
+      .filter((r) => r.table === "jobs" && r.op === "insert")
+      .map((r) => r.payload.run_id);
+    expect(inserted).toEqual(["run-lost"]);
+  });
+
+  it("only ever queues the newest run of a project, never its history", async () => {
+    // Both cores audit "the latest completed run of THIS project" and ignore
+    // the job's run_id, so a job naming an older run audits the newest one
+    // anyway. The first version queued nine jobs for one project on its first
+    // production sweep, and painted nine historical rows as "En curso" for
+    // work that could never produce an audit of their own.
+    const { service, recorded } = makeService({
+      completedRuns: [
+        { id: "run-newest", project_id: "project-1" },
+        { id: "run-older", project_id: "project-1" },
+        { id: "run-oldest", project_id: "project-1" },
+        { id: "run-other-project", project_id: "project-2" }
+      ],
+      runsWithJob: []
+    });
+
+    const enqueued = await backfillMissingWebAuditJobs({ service, now: NOW });
+
+    // One per project, and for project-1 it must be the first row the
+    // newest-first query returned.
+    expect(enqueued).toBe(2);
+    const inserted = recorded
+      .filter((r) => r.table === "jobs" && r.op === "insert")
+      .map((r) => r.payload.run_id);
+    expect(inserted).toEqual(["run-newest", "run-other-project"]);
+  });
+
+  it("does nothing when every completed run is already covered", async () => {
+    const { service, recorded } = makeService({
+      completedRuns: [{ id: "run-ok", project_id: "project-1" }],
+      runsWithJob: ["run-ok"]
+    });
+
+    expect(await backfillMissingWebAuditJobs({ service, now: NOW })).toBe(0);
+    expect(recorded.filter((r) => r.op === "insert")).toEqual([]);
+  });
+
+  it("asks only for runs old enough that the inline enqueue cannot still be in flight", async () => {
+    // Without the grace window the backfill races the normal path: the
+    // executor marks the run completed and inserts the job milliseconds
+    // later, and a sweep landing in between would insert a second one — the
+    // dedupe is a SELECT-then-INSERT, not a constraint.
+    const { service, queries } = makeService({ completedRuns: [] });
+
+    await backfillMissingWebAuditJobs({ service, now: NOW });
+
+    const runsQuery = queries.find((q) => q.table === "scan_runs");
+    const lte = runsQuery?.filters.find((f) => f.method === "lte" && f.args[0] === "finished_at");
+    const gte = runsQuery?.filters.find((f) => f.method === "gte" && f.args[0] === "finished_at");
+    expect(new Date(lte?.args[1] as string).getTime()).toBe(NOW.getTime() - BACKFILL_GRACE_MS);
+    expect(new Date(gte?.args[1] as string).getTime()).toBe(NOW.getTime() - BACKFILL_LOOKBACK_MS);
   });
 });
 

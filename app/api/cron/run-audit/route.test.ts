@@ -12,11 +12,13 @@ type SweepResult = { processed: number; outcomes: Array<{ result: string }>; has
 const processDueWebAuditJobs = vi.fn(
   (_args?: unknown): Promise<SweepResult> => Promise.resolve({ processed: 0, outcomes: [], hasMoreWork: false })
 );
+const backfillMissingWebAuditJobs = vi.fn((_args?: unknown): Promise<number> => Promise.resolve(0));
 vi.mock("@/lib/web-audit/audit-job-runner", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/web-audit/audit-job-runner")>();
   return {
     ...actual,
-    processDueWebAuditJobs: (args: unknown) => processDueWebAuditJobs(args)
+    processDueWebAuditJobs: (args: unknown) => processDueWebAuditJobs(args),
+    backfillMissingWebAuditJobs: (args: unknown) => backfillMissingWebAuditJobs(args)
   };
 });
 
@@ -192,6 +194,42 @@ describe("self-chaining", () => {
 
     await flushAfterCallbacks();
     expect(triggerWebAuditRun).toHaveBeenCalledWith({ chainIndex: 1 });
+  });
+});
+
+describe("backfill", () => {
+  /**
+   * The 2026-08-04 incident: a run finished, the invocation died before the
+   * inline enqueue, and because the sweep only walks `jobs` nothing would ever
+   * have audited that run. Reconciling against `scan_runs` is what makes a
+   * lost enqueue a delay instead of a permanent hole.
+   */
+  it("reconciles completed runs against the queue at the head of a chain", async () => {
+    const { POST } = await route();
+    await POST(post({}));
+
+    expect(backfillMissingWebAuditJobs).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not repeat the reconciliation on every link of the chain", async () => {
+    // The chained invocations are draining a queue this pass already
+    // reconciled; re-scanning `scan_runs` on each link is pure cost.
+    const { POST } = await route();
+    await POST(post({ chainIndex: 3 }));
+
+    expect(backfillMissingWebAuditJobs).not.toHaveBeenCalled();
+  });
+
+  it("chains another invocation when the backfill found work but the sweep claimed none", async () => {
+    // Without this, a run recovered by the backfill would sit until the next
+    // cron tick — the row exists, but nobody was told to come back for it.
+    backfillMissingWebAuditJobs.mockResolvedValueOnce(1);
+    processDueWebAuditJobs.mockResolvedValueOnce({ processed: 0, outcomes: [], hasMoreWork: false });
+
+    const { POST } = await route();
+    const response = await POST(post({}));
+
+    expect(await response.json()).toMatchObject({ backfilled: 1, continuationScheduled: true });
   });
 });
 
