@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { FormattedResponse } from "@/components/ui/formatted-response";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
+import { sampleCountOf, sampleLabel } from "@/lib/scan/sample-display";
 // Same brand-domain matching the Citations page and run-scoring use, so
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
@@ -195,6 +196,22 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
 
   const category = results[0].category;
 
+  /**
+   * SAMPLING-SURFACE-1 (ADR 0030): with repetitions, `results` arrives in
+   * whatever order the query returned, so the same engine's answers can be
+   * scattered through the "Por motor" list. Sorting by engine and then by
+   * sample puts an engine's own repetitions next to each other, which is what
+   * makes "this engine said different things on different tries" legible at a
+   * glance. `sampleCount` is derived once and shared with the label so the two
+   * cannot disagree about how many times the prompt was asked.
+   */
+  const sampleCount = sampleCountOf(results);
+  const enginesBySample = [...results].sort((a, b) => {
+    const byProvider = normalizeProvider(a.provider).localeCompare(normalizeProvider(b.provider));
+    if (byProvider !== 0) return byProvider;
+    return Number(a.sample_index ?? 0) - Number(b.sample_index ?? 0);
+  });
+
   return (
     <>
       {/* Overlay */}
@@ -301,14 +318,27 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
               <div>
                 <p className="ac-title">Por motor</p>
                 <div className="aside-card">
-                  {results.map((r) => {
+                  {enginesBySample.map((r) => {
                     const meta = getEngineMeta(r.provider);
+                    const label = sampleLabel(r.sample_index, sampleCount);
                     return (
                       <div key={r.id} className="pr2-erow">
                         <span className="pr2-eav" style={{ color: meta.color }}>
                           <EngineGlyph provider={normalizeProvider(r.provider)} />
                         </span>
-                        <span className="pr2-erow-name">{meta.label}</span>
+                        {/* SAMPLING-SURFACE-1 (ADR 0030): with repetitions this
+                            list showed "Gemini / Gemini / Gemini / Claude /
+                            ..." with nothing saying why — three rows that look
+                            like a rendering bug but are in fact three separate
+                            answers to the same question, and whose disagreement
+                            is the entire point of sampling. The label only
+                            appears when there is more than one sample. */}
+                        <span className="pr2-erow-name">
+                          {meta.label}
+                          {label ? (
+                            <span style={{ color: "var(--ink-4)", fontWeight: 500 }}> · {label}</span>
+                          ) : null}
+                        </span>
                         <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
                           {r.brand_mentioned ? "Mencionada" : "Ausente"}
                         </span>
