@@ -12,8 +12,16 @@
 ## 1 · Qué se decide
 
 El número grande de Visión general pasa a ser la **mediana de los 3 últimos
-escaneos comparables** (`DEFAULT_SCORE_WINDOW_SIZE = 3`). El score del escaneo
-concreto no desaparece: se muestra junto al titular, etiquetado.
+escaneos comparables** (`DEFAULT_SCORE_WINDOW_SIZE = 3`).
+
+**Dónde se explica.** La primera versión llevaba una línea bajo el gauge
+("Mediana de tus N últimos escaneos comparables · este escaneo: X"). El
+fundador la retiró el 2026-08-05 tras verla funcionando: sobraba en la pantalla
+principal. La explicación **no se pierde** — vive en la página pública de
+metodología (`app/docs/metodologia/geo-score`), que dice qué es la mediana, por
+qué existe y cuál es su coste. Que el usuario pueda saber qué cantidad está
+mirando sigue siendo obligatorio; en qué superficie se lo contamos es una
+decisión de producto.
 
 Cuando no hay ventana publicable —menos de 2 escaneos elegibles, o ninguno
 comparable con el más reciente— **el titular vuelve a ser el score del último
@@ -74,7 +82,8 @@ cosas incomparables.
 - **La frase narrativa** ("aparece en X de Y respuestas… con una puntuación
   GEO de Z") sigue usando el **score del escaneo**: describe los datos de ese
   escaneo, y emparejarlos con la mediana atribuiría una cifra a datos que no
-  la produjeron.
+  la produjeron. Es, además, el único sitio de la pantalla donde el usuario ve
+  el número de su escaneo concreto desde que se retiró la línea bajo el gauge.
 - **Las alertas de caída NO cambian.** `checkAndSendScoreDropAlert` sigue
   mirando runs. Una alerta debe disparar cuando algo cae de verdad, y meterla
   detrás de una mediana la retrasaría dos escaneos justo en el caso en que

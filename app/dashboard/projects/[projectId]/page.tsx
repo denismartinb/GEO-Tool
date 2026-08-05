@@ -866,18 +866,6 @@ export default async function ProjectDetailPage({
                   <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
                 )}
               </div>
-              {/* SCORE-WINDOW-1: when the headline is a median, say so and
-                  show this scan's own number beside it. A stabilised figure
-                  presented as if it were "your last scan" would be a quieter
-                  lie than the volatility it replaces — the user must be able
-                  to tell which quantity they are looking at, and to see the
-                  raw one they might otherwise think we are hiding. */}
-              {windowPublished ? (
-                <div style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 4 }}>
-                  Mediana de tus {scoreWindow.runsUsed.length} últimos escaneos comparables · este escaneo:{" "}
-                  <b style={{ color: "var(--ink-3)" }}>{perRunScore}</b>
-                </div>
-              ) : null}
               {/* The sparkline is the delta in graphical form: a line joining
                   the last N scores asserts a trend between them just as
                   literally as "+44 pt" does. Drawing a rising line directly

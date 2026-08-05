@@ -2812,11 +2812,18 @@ hacen recuperación viva y ninguna fórmula la quita. Se decidió el mismo día 
 que se midió que tampoco se puede pinear el modelo de Gemini —no existe id
 versionado—, así que esta fuente de ruido no tenía otra salida.
 
-**Decisión 2 — el escaneo concreto no se esconde.** Bajo el gauge: *"Mediana de
-tus N últimos escaneos comparables · este escaneo: X"*. Una cifra estabilizada
-presentada como si fuera "tu último escaneo" sería una mentira más silenciosa
-que la volatilidad que sustituye. El usuario tiene que poder saber qué cantidad
-está mirando, y ver la cruda por si cree que se la ocultamos.
+**Decisión 2 — dónde se explica que es una mediana.** La primera versión lo
+decía bajo el gauge: *"Mediana de tus N últimos escaneos comparables · este
+escaneo: X"*. **El fundador la retiró el mismo día, tras verla funcionando**:
+sobraba en la pantalla principal.
+
+La obligación de fondo no se retira con la línea —el usuario tiene que poder
+saber qué cantidad está mirando—, así que la explicación se movió a la página
+pública de metodología, que además estaba desactualizada (seguía describiendo
+cuatro componentes cuando v4 tiene cinco). El riesgo que se asume, dicho:
+alguien que escanee y vea el número apenas moverse no tiene en pantalla nada
+que se lo explique. El número de su escaneo concreto sigue visible en la frase
+de arriba ("aparece en X de Y respuestas… con una puntuación GEO de Z").
 
 **Decisión 3 — todo lo que cuelga del titular mide lo mismo que él.** La banda
 se calcula sobre la ventana; el delta es ventana contra ventana (restarle a la
