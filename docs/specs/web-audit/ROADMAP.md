@@ -15,8 +15,8 @@ orden — el orden lo fija la columna `#`.
 | 5 | Generador de briefs de contenido con IA | WEB-AUDIT-BRIEF | `phase-brief-generator.md` | Propuesta | Gemini runtime + migración (generation_type) | **Aprobación explícita + Task Intake + data-guardian** |
 | 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
 | 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
-
-| 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §19 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
+| 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §22 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
+| 6c | Fuera el botón «Auditar ahora» | AUDIT-NO-BUTTON-1 | log §25 | ✅ Implementada (2026-08-05) | Ninguno | Petición directa del fundador |
 
 ### Fila 6 — qué se implementó y qué no (2026-08-04)
 
@@ -36,7 +36,7 @@ acaba de terminar, y una cola durable convierte un despacho perdido en un
 retraso en vez de en una auditoría que nunca ocurre.
 
 **Fila 6 cerrada (2026-08-05).** La segunda mitad la implementó
-WEB-AUDIT-ALERTS-1 (log §25): los avisos de regresión existen y salen por la
+WEB-AUDIT-ALERTS-1 (log §27): los avisos de regresión existen y salen por la
 campana. Con dos desviaciones respecto a lo diseñado, ambas justificadas allí:
 van seis tipos y no cuatro (`sitemap_lost` y `page_unreachable` se añaden
 porque son la misma clase de fallo silencioso y no cuestan una consulta más),

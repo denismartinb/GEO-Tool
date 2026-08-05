@@ -50,6 +50,12 @@ worse than no rule, because a future session will obey it anyway.
   cannot act on is noise about someone else's problem — use `OPS_ALERT_EMAIL`,
   never their address (`lib/email/transactional.ts`, precedent
   AUDIT-AFTER-SCAN-1).
+- **Progress shown to a user must cover every stage that keeps them waiting.**
+  A bar that measures one stage of two reads as "stuck" the moment the other
+  one starts, and adding work behind an existing progress figure silently
+  makes that figure a lie (`docs/adr/0029`, Fase C). Counters must be measured
+  from real rows; a split between stages may be a presentation convention, but
+  no number under it may be invented.
 - **Terminal states stay terminal, and progress must bump `updated_at`.** Any
   path that defers work instead of finishing it must write to `scan_runs` so
   `reconcileStuckScanRuns` can tell a deferring run from a stalled one

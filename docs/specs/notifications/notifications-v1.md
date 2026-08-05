@@ -354,7 +354,7 @@ Tres avisos-empujón el mismo día son ruido.
   `insert` en `web_audit_snapshots` (~línea 449). Requiere `.select("id")` en
   ese insert para tener `snapshotId`. Severidad `info`.
 - **`ai_bot_blocked`** — ✅ **implementado 2026-08-05** por WEB-AUDIT-ALERTS-1
-  (log §25), en `lib/web-audit/regression-alerts.ts`, llamado desde
+  (log §27), en `lib/web-audit/regression-alerts.ts`, llamado desde
   `technical-audit.ts` justo tras el insert. Con un matiz sobre lo escrito
   abajo: se emite sólo cuando el lado anterior tenía `allowed: true`
   explícito, **no** cuando el agente era "inexistente" — un bot recién añadido

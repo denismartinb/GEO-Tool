@@ -67,18 +67,22 @@ export function renderNotification(
     case "scan_completed": {
       const score = num(payload.visibilityScore);
       const delta = num(payload.visibilityDelta);
+      // Rounded like the score beside it: the payload carries a raw float
+      // difference of two scores, which surfaced in real notifications as
+      // "Visibilidad 72 (+5.549999999999997)" (founder report, 2026-08-05)
+      // and "Visibilidad 75 (+2.780000000000001)" (pilot capture, PR #336).
+      //
+      // Found and fixed twice independently, on main and on this branch; the
+      // merge kept both declarations and broke the build. This is the single
+      // survivor, and it keeps the stricter half of the two: the parenthetical
+      // disappears when the rounded value is 0, because "(+0)" is noise rather
+      // than information. `Math.round(-0.4)` is `-0`, falsy, so a sub-point
+      // dip is suppressed the same way.
+      const roundedDelta = delta === null ? null : Math.round(delta);
       const newRecs = num(payload.newRecommendations) ?? 0;
       const resolvedGaps = num(payload.resolvedGaps) ?? 0;
       const promptsProcessed = num(payload.promptsProcessed);
 
-      // `visibilityDelta` is the raw difference between two computed scores,
-      // so it reaches here as a float — the bell was showing "Visibilidad 75
-      // (+2.780000000000001)" in production (pilot capture, PR #336). Round
-      // it the same way the score printed beside it is rounded, and drop the
-      // parenthetical when the rounded value is 0: "(+0)" is noise, not
-      // information. `Math.round(-0.4)` is `-0`, which is falsy, so a
-      // sub-point dip is suppressed as well.
-      const roundedDelta = delta !== null ? Math.round(delta) : null;
       const scoreText =
         score !== null
           ? `Visibilidad ${Math.round(score)}${roundedDelta ? ` (${roundedDelta > 0 ? "+" : ""}${roundedDelta})` : ""}.`

@@ -505,11 +505,13 @@ export async function runTechnicalAuditCore({
     // throws, so an audit that ran and persisted is still a success even if
     // the bell stays empty.
     //
-    // Emitted on the manual path too, not only the automatic one. The daily
-    // audit is what makes the comparison meaningful, but a user who clicks
-    // "Auditar ahora" and lands on the Cobertura tab would otherwise never
-    // learn that a bot got blocked — and the transition rule means this is
-    // still at most one notice per real change, not one per audit.
+    // Placed in the core rather than in the job runner, so it covers every
+    // way this audit can be reached. As of AUDIT-NO-BUTTON-1 (log §25) that
+    // is only the automatic post-scan path — "Auditar ahora" is gone — but
+    // the emission deliberately does not assume it: the `trigger` distinction
+    // still exists below for the rate limit, and a notice about a regression
+    // is worth sending whoever asked for the audit. The transition rule
+    // (regressions.ts) is what bounds the volume, not the caller.
     await emitAuditRegressionNotifications({
       service,
       projectId,

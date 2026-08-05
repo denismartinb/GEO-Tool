@@ -131,7 +131,7 @@ ninguna aserción).
 
 ### Un aviso de regresión es una transición, nunca un estado
 
-`lib/web-audit/regressions.ts` (WEB-AUDIT-ALERTS-1, log §25) compara la
+`lib/web-audit/regressions.ts` (WEB-AUDIT-ALERTS-1, log §27) compara la
 auditoría anterior con la actual. Ningún aviso salta porque algo *esté* mal,
 sólo porque *ha pasado* a estarlo. Es lo único que impide que un trabajo
 diario se convierta en una regañina diaria: una condición que persiste produce

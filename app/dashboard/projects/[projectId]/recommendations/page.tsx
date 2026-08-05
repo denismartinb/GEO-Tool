@@ -3,9 +3,11 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /**
@@ -75,7 +77,11 @@ export default async function RecommendationsPage({
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   const [{ data: recommendations }, { data: resolvedRecommendations }, { data: history }] = latestCompletedRun
     ? await Promise.all([
@@ -312,15 +318,19 @@ export default async function RecommendationsPage({
               Ningún otro sitio del código lo referenciaba: no había función
               que reconectar. Si se implementa exportar de verdad, el control
               va en el cuerpo, como el resto de acciones de página. */}
-          {lastScanDate && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {lastScanDate}
-            </span>
-          )}
+          <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
         </div>
       </div>
 
-      {activeRun ? (
+      {/* Alineada con Prompts, Competidores y Páginas citadas: el overlay a
+          pantalla completa sólo sustituye a la pantalla cuando NO hay nada que
+          enseñar. Esconder las recomendaciones que ya tienes detrás de un
+          overlay porque hay un refresco en marcha era la única pantalla de
+          datos que lo hacía, y la causa del PILOT FAIL repetido de
+          "recommendations: estado vacío" (2026-08-04/05) — que no era una
+          carrera con los datos, sino esta condición. Con datos, el estado del
+          escaneo lo lleva la pastilla del sticky-header. */}
+      {activeRun && !latestCompletedRun ? (
         <ScanInProgress activeRun={activeRun} />
       ) : (
       <>

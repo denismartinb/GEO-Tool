@@ -2366,7 +2366,109 @@ desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal
 
 ---
 
-## 25. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
+## 25. Fuera el botón «Auditar ahora» (AUDIT-NO-BUTTON-1, 2026-08-05)
+
+**Estado: implementada.** Petición directa del fundador: *"quita el botón
+auditar ahora y pon la fecha en auditoría actualizada"*. Cierra la secuencia
+que él mismo fijó el 2026-08-04 al aprobar §18 — primero que la auditoría
+funcione sola, después retirar el disparo manual.
+
+**Qué desaparece.** El botón, y con él la última pieza de la pantalla que
+sostenía que la auditoría espera a que alguien la pida. Desde §18 corre sola
+tras cada escaneo, así que el botón ofrecía trabajo que el producto ya no
+necesita — y, peor, insinuaba que sin pulsarlo no pasaría nada.
+
+**Qué queda en su sitio: nada.** La primera versión puso ahí una pastilla de
+estado con la fecha dentro (`Auditoría actualizada · 5 ago 2026`). Al verla en
+el preview el fundador cortó también eso: *"quitamos lo de auditoría
+actualizada, dejamos solo la info de la cabecera"*. Y tenía razón — la
+cabecera pegajosa ya dice **la fecha de la auditoría**, **si cubre el último
+escaneo** (`· sobre el escaneo del …`, que sólo aparece cuando está al día) y
+**«Auditando»** mientras una campaña corre. La pastilla repetía las tres cosas
+un centímetro más abajo.
+
+Lección, porque se repitió dentro del mismo PR: al quitar un control, la
+tentación es sustituirlo por algo. A veces el hueco es la respuesta.
+
+**La copia que mentía, corregida.** Tres textos seguían describiendo el mundo
+manual: el *hint* de Salud técnica y el vacío del bloque técnico decían "al
+pulsar «Auditar ahora»" (ahora "sola tras cada escaneo"), y el aviso de
+conexión interrumpida pedía pulsar un botón que ya no existe (ahora "la
+auditoría continuará sola"). También "Todavía **no has auditado**" pasa a "no
+**se ha** auditado": ya no lo hace el usuario.
+
+**Lo que NO se quita, y es deliberado.** `WebAuditProvider` sigue reanudando
+sola una campaña a medias al abrir la página. No es un resto del botón: es lo
+que hizo que la pantalla se curara sola el 2026-08-04 mientras la cola drenaba
+despacio. No cuesta Gemini extra —es el mismo trabajo que haría el backend— y
+el usuario ni lo pide ni lo ve. Sin control visible, deja de ser una ruta
+manual y pasa a ser lo que siempre debió ser: un atajo invisible.
+
+**Riesgo asumido, dicho claro:** ya no hay escotilla manual. Si la auditoría
+automática falla, el usuario no puede forzarla. Es aceptable porque el fallo
+definitivo avisa al operador por email y el cron diario reintenta, pero es un
+grado menos de control del que había ayer.
+
+**Lo que se pierde al quitar también la pastilla, y se acepta:** el mensaje de
+error del reanudado en cliente ya no tiene dónde renderizarse. No es
+silenciar un fallo accionable — el reanudado es invisible para el usuario, el
+siguiente render lo reintenta y la cola del backend también—, pero conviene
+que conste: hoy un fallo de esa ruta no se ve en pantalla. El banner de "plan
+pausado a mitad de auditoría" sigue cubriendo el único caso que de verdad deja
+al usuario atascado sin explicación.
+
+---
+
+## 26. El estado del escaneo, visible en móvil (EXTRACTION-RELIABILITY-1 Fase C, 2026-08-05)
+
+**El problema.** En un móvil, en un proyecto con historial, durante un
+escaneo no había **ninguna** señal en pantalla. Tres cosas se sumaban: el chip
+`.scan-status` está oculto bajo el breakpoint móvil (`app/globals.css`), el
+overlay a pantalla completa sólo se monta cuando todavía no hay datos que
+enseñar, y la pastilla del sticky-header seguía diciendo "Escaneado 5 ago".
+Reportado por el fundador desde su propio móvil: *"no veo ningún chip en
+ninguna cabecera móvil que indique el estado de escaneando o actualizando"*.
+
+Y la pastilla no es que faltara: es que **mentía justo cuando importaba**.
+"Escaneado 5 ago" afirma que lo que ves es lo último que hay, mientras se
+están cociendo datos nuevos.
+
+**Qué se decidió.**
+
+1. **El estado vive en la pastilla del sticky-header**, no en la barra de app.
+   Esto es continuación de §3 (BRAND-5b-mobile-header), no una excepción a
+   ella: aquella decisión estableció que la barra móvil no lleva contexto y
+   que *"el contexto vive entero en el sticky-header de cada página"*, y ya
+   descartó explícitamente una versión con esa info incrustada en la barra
+   ("el header y la cabecera del body es redundante"). Esta fase usa el hueco
+   que aquella designó.
+2. **Tres estados en la misma pastilla**: `Escaneando…` mientras se consulta a
+   los motores, `Analizando…` durante la extracción, y `Escaneado <fecha>` en
+   reposo. La etiqueta de escaneo activo sale de `computeScanStage`, el mismo
+   cálculo que la pantalla completa, para que las dos superficies no puedan
+   discrepar.
+3. **`ScanStatePill` es un componente compartido.** Antes la pastilla estaba
+   duplicada en seis pantallas con cinco formateos de fecha distintos y tres
+   condiciones distintas para el chip de al lado.
+4. **Recomendaciones se alinea con las demás pantallas de datos.** Era la
+   única que escondía su contenido entero detrás del overlay durante un
+   escaneo; ahora el overlay sólo sustituye a la pantalla cuando no hay nada
+   que enseñar, igual que en Prompts, Competidores y Páginas citadas.
+
+**Por qué el punto 4 importa más de lo que parece.** Ese comportamiento era la
+causa del `PILOT FAIL` repetido de "recommendations: estado vacío" (2026-08-04
+y 05). Se explicó dos veces como una carrera con los datos del escaneo; no lo
+era. El piloto estaba señalando una inconsistencia real de diseño y la
+explicación cómoda la tapó dos veces.
+
+**Pendiente / roto conocido.** El reparto 50/50 entre las dos etapas de la
+barra a pantalla completa es una convención de presentación, no una medida —
+ajustable con datos reales de duración. Y la Auditoría web mantiene su propio
+chip "Auditando", que es otro concepto y no se ha tocado.
+
+---
+
+## 27. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
 
 **Estado: implementada. Migración `0029_notification_audit_regression_types.sql`
 aplicada a mano en Supabase por el fundador el 2026-08-05**, en el mismo PR.

@@ -6,6 +6,7 @@ import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
 import {
@@ -527,22 +528,20 @@ export default async function RunsPage({
               >
                 {project.domain}
               </span>
-              {activeRun ? (
-                <span className="scan-status">
-                  <span className="dot run" />
-                  Escaneo en curso
-                </span>
-              ) : null}
+
             </div>
           </div>
         </div>
         <div className="ov-sticky-right">
-          {lastCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              lastCompletedRun
+                ? new Date(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)
+                    .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                : null
+            }
+          />
         </div>
       </div>
 

@@ -61,13 +61,24 @@ interface WebAuditRunnerState {
 const WebAuditRunnerContext = createContext<WebAuditRunnerState | null>(null);
 
 /**
- * Shared driver for the coverage-audit campaign, scoped to one web-audit
- * page render. The trigger button appears in two places (sticky header, and
- * the empty-state card) — before this Provider, each was its own component
- * instance with independent useState, so clicking one left the other frozen
- * on "Auditar ahora" while a campaign was visibly running (founder report:
- * top button didn't show loading when the card button was clicked). Lifting
- * the drive loop here means every consumer reads/drives the same state.
+ * Drives an unfinished coverage campaign to completion when the page mounts.
+ *
+ * **It has no consumers, and that is not an oversight.** This began as shared
+ * state for the two "Auditar ahora" buttons (each had its own useState, so
+ * clicking one left the other frozen mid-campaign). Both buttons are gone —
+ * AUDIT-NO-BUTTON-1 — and so is the status pill that briefly replaced them,
+ * so nothing reads `isPending` / `progress` / `error` today.
+ *
+ * What survives is the effect at the bottom: a campaign parked mid-flight
+ * finishes when someone opens the page, instead of waiting for the queue's
+ * next turn. It costs no extra Gemini (it is the same work the backend would
+ * do) and it is what let the screen self-heal on 2026-08-04 while the queue
+ * was draining slowly.
+ *
+ * So: **do not delete this because it looks unused.** The in-flight state is
+ * genuinely dead weight and could be trimmed; the mount effect is load-bearing
+ * and invisible on purpose — the sticky header renders its own "Auditando"
+ * pill from server data while it runs.
  */
 export function WebAuditProvider({
   projectId,
@@ -84,9 +95,9 @@ export function WebAuditProvider({
   // Founder-reported stuck screen: a campaign started while the account was
   // Pro, then the plan lapsed (e.g. downgraded via the new Stripe billing
   // flow) before it finished. Auto-resuming would call a server action that
-  // immediately fails the Pro gate — a single silent failure nothing here
-  // renders, since the only consumer that reads this context (RunAuditButton)
-  // bails out before mounting when !canAudit. Never start a doomed call;
+  // immediately fails the Pro gate — a single silent failure nothing renders
+  // (nothing consumes this context any more; see the header). Never start a
+  // doomed call;
   // page.tsx now shows an explicit "plan changed mid-campaign" message using
   // the same server-computed `autoStart` snapshot instead.
   const [isPending, setIsPending] = useState(canAudit && Boolean(autoStart));
@@ -119,7 +130,7 @@ export function WebAuditProvider({
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             setError(
               progress
-                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). Pulsa «Auditar ahora» para continuar.`
+                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). La auditoría continuará sola.`
                 : "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos."
             );
             return;

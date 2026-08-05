@@ -259,6 +259,56 @@ The through-line: **a check you cannot consult from where you already work is
 not a check**, and a probe that verifies one segment of a path must not claim
 to have verified the path.
 
+## Fase C (2026-08-05) — the bar tells the truth
+
+Fase A moved extraction inside the finalize step, which had an unflagged cost
+on screen: `components/scan-in-progress.tsx` measured only generation
+(`successful_prompts + failed_prompts` over `total_prompts`), so once the last
+answer came back the bar pinned at "100% · 6 de 6" for the rest of the scan —
+with the whole project section behind the overlay, and a spinner next to a
+full bar. That reads as "stuck". It surfaced from a pilot capture on
+2026-08-05, not from a test: nothing was broken, so nothing failed.
+
+The bar now spans both stages — generation is its first half, analysis the
+second — and `computeScanStage` is exported separately from the render so the
+judgement is testable without a DOM. Two properties are load-bearing:
+
+- **It never reaches 100% while the run is in flight** (`MAX_IN_FLIGHT_PCT`).
+  The last point of the bar is reserved for a run that actually finished.
+- **Both counters are measured, not modelled.** The 50/50 split between stages
+  is a presentation convention — analysis can take more or less time than
+  generation — but no number under it is invented, which is what CLAUDE.md's
+  "no fake progress" rule is actually about. The prototype this screen came
+  from animated six fictional steps on a timer; that is the line being held.
+
+**Escaneos was missed on the first pass** (founder report, 2026-08-05: "no he
+visto que cambie ningún título"). That page does not render this component at
+all — it renders `LiveRunStatusCells` for the one in-flight row, which is why
+watching a scan from the most natural place showed exactly the old behaviour.
+Its fix is deliberately different: the "Lanzamientos" counter is **not** wrong
+during extraction — 6 of 6 launches really have finished — so switching that
+column's unit halfway would trade one confusion for another. The stage moved
+to the status badge instead, which reads "Analizando" rather than "En curso"
+once every launch is terminal and the run is still working.
+
+**And on mobile there was no signal at all.** In a project with history the
+full-screen progress never mounts (it lives in the empty state), the
+`.scan-status` chip is hidden under the mobile breakpoint, and the
+sticky-header pill still read "Escaneado 5 ago" — asserting the data on screen
+was the latest there is while a scan was running. The pill now carries the
+state (`Escaneando…` / `Analizando…` / the date), which is where
+BRAND-5b-mobile-header already decided scan context belongs. See
+`docs/brand/design-decisions-log.md` §20 for the design half.
+
+The analysis denominator is **counted from the rows that exist**, not derived
+from `prompts × engines × samples`. That arithmetic has already changed once
+under this code — SAMPLING-1 (ADR 0030) made `total_prompts` count jobs rather
+than distinct prompts — and a count of real rows cannot drift when it changes
+again. `withAnalysisProgress` (`lib/scan/active-run-progress.ts`) is the single
+place that computes it, so the five screens that render this component cannot
+diverge; a caller that skips it degrades to the generation-only bar instead of
+breaking.
+
 ## What this phase deliberately does NOT do
 
 - **No customer-facing signal.** The operator is told; the customer is not.
