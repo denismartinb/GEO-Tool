@@ -9,6 +9,7 @@ import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { faviconUrl } from "@/lib/domains/favicon";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
+import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
@@ -36,6 +37,24 @@ import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
 import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+
+/**
+ * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
+ * replaced.
+ *
+ * `AutoExecuteScan` (mounted below) drives the scan by calling
+ * `autoExecutePendingScan`, a Server Action — and Server Actions inherit the
+ * `maxDuration` of the page they are invoked from (docs/adr/0003). Overview
+ * previously exported none, so it ran on Vercel's default budget. Mounting the
+ * driver here without this line would kill every batch window mid-flight, in
+ * production only, with no error the user or the logs would attribute to it:
+ * the run would simply stop advancing and be failed later by
+ * `reconcileStuckScanRuns` as a timeout.
+ *
+ * 60s matches the window `AUTO_EXECUTE_TIME_BUDGET_MS` (~40s) is sized against.
+ */
+export const maxDuration = 60;
 
 /* ---- constants & helpers ---- */
 
@@ -676,6 +695,21 @@ export default async function ProjectDetailPage({
   /* ---- render ---- */
   return (
     <div className="page">
+      {/* DOMAINS-REDESIGN-1 — the invisible driver that actually executes a
+          pending scan's batches, moved here from the Escaneos page it used to
+          be the ONLY mount of. Onboarding now lands on this page, so this is
+          where a freshly created project's first run gets driven; leaving it
+          behind would have stranded every new customer's first scan in
+          `pending` until the cron rescued it.
+
+          Mounted while the run is `pending` OR `running`, not just `pending`:
+          a multi-batch campaign (SCAN-CHAIN-1) flips to `running` after its
+          first batch, and unmounting then would strand the campaign after
+          batch 1. AutoExecuteScan guards against double-driving across
+          re-renders. */}
+      {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
+        <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
+      ) : null}
       {activeRun ? <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} /> : null}
 
       {/* Sticky page header */}

@@ -161,4 +161,25 @@ describe("scanStatePillLabel", () => {
       )
     ).toBe("Analizando…");
   });
+
+  /**
+   * DOMAINS-REDESIGN-1 — «Auditando» entra en esta pastilla y deja de ser el
+   * chip `.scan-status` de Auditoría web, que el CSS oculta bajo el breakpoint
+   * móvil. §26 lo dejó escrito como pendiente: era el mismo fallo que esta
+   * pastilla existe para arreglar, sin arreglar para la auditoría.
+   */
+  it("replaces the date with the audit state while an audit campaign runs", () => {
+    expect(scanStatePillLabel(null, "5 ago 2026", true)).toBe("Auditando…");
+  });
+
+  it("announces the audit even with no previous scan date to fall back on", () => {
+    expect(scanStatePillLabel(null, null, true)).toBe("Auditando…");
+  });
+
+  // La auditoría corre DESPUÉS de cada escaneo (AUDIT-AFTER-SCAN-1). Decir
+  // "Auditando" mientras el escaneo sigue vivo invertiría el orden de los
+  // hechos y sugeriría que ya hay resultados que auditar.
+  it("lets the scan win when both are somehow live at once", () => {
+    expect(scanStatePillLabel({ ...running, successful_prompts: 2 }, "5 ago 2026", true)).toBe("Escaneando…");
+  });
 });

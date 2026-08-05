@@ -180,14 +180,20 @@ export async function resolveOrCreateWriteProject(page: Page): Promise<string> {
   await captureStep(page, "wizard-trimmed-to-one-prompt");
   await page.getByRole("button", { name: /crear dominio y escanear/i }).click();
 
-  await page.waitForURL(/\/dashboard\/projects\/[^/]+\/runs/, { timeout: 90_000 }).catch(() => undefined);
+  // DOMAINS-REDESIGN-1: el alta aterriza en Visión general, no en Escaneos.
+  // Es ahí donde vive ahora `AutoExecuteScan`, el driver que de verdad ejecuta
+  // los lotes del primer escaneo, así que esta espera vigila exactamente la
+  // pantalla de la que depende que el escaneo avance.
+  await page
+    .waitForURL(/\/dashboard\/projects\/[0-9a-f-]{36}(?:[?#]|$)/, { timeout: 90_000 })
+    .catch(() => undefined);
 
-  await captureStep(page, "project-created-runs-page");
+  await captureStep(page, "project-created-overview");
 
-  const created = page.url().match(/\/dashboard\/projects\/([^/?#]+)\/runs/)?.[1];
+  const created = page.url().match(/\/dashboard\/projects\/([0-9a-f-]{36})/)?.[1];
   if (!created) {
     throw new Error(
-      `El alta de dominio no terminó en la pantalla de escaneos. URL final: ${page.url()}`
+      `El alta de dominio no terminó en la visión general del proyecto. URL final: ${page.url()}`
     );
   }
 

@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Gauge } from "@/components/ui/gauge";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
@@ -1102,12 +1103,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <span className="wa2-hdr-audit-compact">Auditada {formatDate(latestMap.generatedAt)}</span>
             </span>
           )}
-          {activeCampaignProgress && canAudit && (
-            <span className="scan-status">
-              <span className="dot run" />
-              Auditando
-            </span>
-          )}
+          {/* DOMAINS-REDESIGN-1: era un `.scan-status`, que el CSS oculta bajo
+              el breakpoint móvil — el mismo fallo que §26 arregló para el
+              escaneo y dejó anotado como pendiente para la auditoría. La
+              pastilla compartida lo hace visible también en móvil y unifica el
+              vocabulario de estado de toda la consola. */}
+          {activeCampaignProgress && canAudit && <ScanStatePill auditing />}
         </div>
       </div>
 
@@ -1678,12 +1679,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           flexWrap: "wrap"
         }}
       >
+        {/* DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. El
+            pie enlaza a Dominios, que es lo que ese enlace le resolvía al
+            usuario — cambiar de dominio — y no al historial interno. */}
         <Link
-          href={`/dashboard/projects/${projectId}/runs`}
+          href="/dashboard/domains"
           style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
         >
-          <Icon name="runs" size={13} />
-          Escaneos
+          <Icon name="globe" size={13} />
+          Dominios
         </Link>
         <Link
           href={`/dashboard/projects/${projectId}/recommendations`}

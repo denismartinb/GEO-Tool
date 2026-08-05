@@ -64,7 +64,7 @@ async function waitForScanToSettle(page: Page, projectId: string, timeoutMs: num
   const deadline = Date.now() + timeoutMs;
 
   while (Date.now() < deadline) {
-    await page.goto(`/dashboard/projects/${projectId}/runs?pilot=scan-${Date.now()}`, {
+    await page.goto(`/dashboard/projects/${projectId}/debug?pilot=scan-${Date.now()}`, {
       waitUntil: "domcontentloaded"
     });
 
@@ -128,7 +128,7 @@ test("launches the scans the founder authorized, then captures what they unlocke
   // qualifying data now do. Captured through the normal helper so they land in
   // the evidence branch alongside every other screenshot, and so the same
   // mechanical checks apply.
-  const runs = await visitAsUser(page, testInfo, `/dashboard/projects/${projectId}/runs`, "scan-runs");
+  const runs = await visitAsUser(page, testInfo, `/dashboard/projects/${projectId}/debug`, "scan-debug");
   assertPageIsHealthy(runs);
 
   const overview = await visitAsUser(page, testInfo, `/dashboard/projects/${projectId}`, "scan-overview");

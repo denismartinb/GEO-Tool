@@ -2573,6 +2573,112 @@ silencia el email, la campana, o ambos?).
 
 ---
 
+## 28. Escaneos se parte en dos: «Dominios» y `/debug` (DOMAINS-REDESIGN-1 Fase A, 2026-08-05)
+
+**Estado: implementada la Fase A.** Diseño explorado en tres iteraciones con el
+fundador el mismo día y aprobado ("Apruebo el plan"). La referencia visual vive
+en `docs/design-reference/domains-redesign-1/` — dos HTML a pantalla completa
+más el artefacto de exploración y el Task Intake.
+
+**El problema.** `/runs` mezclaba tres cosas de tres dueños: una rejilla de
+dominios (del cliente), un historial con lanzamientos, duraciones, auditoría,
+deltas y errores (nuestro), y un interruptor de escaneo diario (nuestro
+mientras contenemos coste antes de producción). Petición del fundador: *"la
+información que tiene a día de hoy no se debe presentar al usuario"*.
+
+**Qué se decidió.**
+
+1. **`/dashboard/domains` — «Dominios»**, opción B («Escenario») de las tres
+   exploradas: portada del dominio activo (icono, identidad, puntuación GEO,
+   frescura de escaneo y auditoría, botón «Visión general») y raíl inferior para
+   cambiar. **A partir de cuatro dominios el raíl pasa a rejilla**, que es la
+   opción A absorbida como estado de desbordamiento: un scroll horizontal
+   esconde lo que no cabe, y el dominio que no se ve deja de existir para quien
+   tiene que elegirlo.
+2. **Cero controles en la pantalla de cliente.** Que escanee y audite cada día
+   se cuenta con una línea informativa y con la frescura, nunca con un botón.
+   Mismo criterio que AUDIT-NO-BUTTON-1 (§25).
+3. **Sólo la puntuación GEO y su delta.** Ninguna segunda métrica, por regla y
+   no por gusto: el día que esta pantalla y Visión general calculen lo mismo por
+   caminos distintos, se contradicen.
+4. **`/debug`** se queda el historial íntegro, los interruptores y el borrado de
+   dominio, con una banda «Interno» arriba. Sin entrada en el menú.
+5. **Estado en cabecera, agregado.** Dominios es la primera cabecera de cuenta
+   del producto, así que `computeAccountScanState` (`lib/domains/`) decide:
+   un dominio activo → «Escaneando movistar.es»; varios → «N dominios en
+   curso» (no se mezclan etapas: cada tarjeta lleva la suya); el escaneo gana a
+   la auditoría, porque la auditoría corre *después* (§18); en reposo, sin
+   pastilla.
+6. **«Auditando» entra en `ScanStatePill`** y deja de ser el chip
+   `.scan-status`. Cierra el pendiente literal que dejó §26 — ese chip está
+   oculto bajo el breakpoint móvil, o sea el mismo fallo que §26 arregló para el
+   escaneo, sin arreglar para la auditoría.
+
+**Lo que se encontró leyendo el código, y era lo más importante del PR.**
+
+- **`AutoExecuteScan` estaba montado en un único sitio del producto**
+  (`runs/page.tsx`), y `createProject` redirigía justo ahí. Vaciar esa pantalla
+  sin mover el driver habría dejado el primer escaneo de cada cliente nuevo
+  colgado hasta que lo rescatase el cron. Ahora vive en Visión general, que es
+  donde aterriza el onboarding.
+- **Visión general no exportaba `maxDuration`.** `autoExecutePendingScan` es una
+  Server Action y hereda el de su página (ADR 0003), así que mover el driver sin
+  añadir `export const maxDuration = 60` habría matado cada ventana de lotes al
+  límite por defecto de Vercel — en producción, en silencio, y presentándose
+  después como un timeout de escaneo.
+- **El driver va también en `/debug`**, porque el botón «Repetir escaneo» vive
+  ahí (el de Visión general sólo existe en su estado vacío). Sin driver, ese
+  botón crearía un run que nada empuja. Dos montajes son seguros por
+  construcción: cada lote se reclama con un UPDATE atómico (SCAN-CHAIN-1).
+- **`getWorkspaceCounters` publicaba una resta cruda como delta.** Es
+  exactamente lo que DELTA-GUARD-1 (§23) corrigió en el historial, un mes antes,
+  en la función de al lado. Ahora pasa por `resolveDelta`.
+
+**El interruptor de auditoría, y por qué hubo migración.** El intake proponía
+dejarlo global y de sólo lectura para no gastar una migración en un control que
+el cliente nunca verá. El fundador pidió lo contrario —*"necesito el interruptor
+para ahorrar costes en esa fase de pruebas"*—, así que la 0030 añade
+`projects.auto_web_audit_enabled`, por defecto **true** (por defecto false
+habría apagado las auditorías de todos los proyectos existentes al aplicarla,
+que es un cambio de comportamiento que nadie pidió y que se vería igual que la
+tubería rota).
+
+El gate vive en `enqueueWebAuditJob` y no en el ejecutor, y esa colocación es la
+decisión, no un detalle: hay **dos** rutas de encolado —el ejecutor en línea y
+`backfillMissingWebAuditJobs` en el cron diario—, así que un gate en el ejecutor
+lo habría deshecho el backfill horas después, reencolando justo la auditoría que
+el fundador acababa de apagar. Falla **abierto** a propósito: si la lectura del
+flag falla, se audita. De los dos errores posibles, "auditamos algo apagado"
+cuesta una campaña y "dejamos de auditar todo" es invisible.
+
+**Riesgo asumido, dicho claro:** apagar el interruptor no cancela un trabajo ya
+encolado — el flag se mira al encolar, no al ejecutar. La copia lo dice ("no se
+auditarán los **próximos** escaneos") en vez de prometer lo que no hace.
+
+**Lo que se movió de sitio y el cliente pierde:** el borrado duro de dominio
+(DATA-MGMT-1) vivía en cada tarjeta de la rejilla de Escaneos. La rejilla es
+ahora Dominios, que por diseño no lleva controles, así que el borrado se queda
+en `/debug`. Deja de estar al alcance del cliente en la consola. Es reversible y
+está aquí escrito para que se note si algún día molesta.
+
+**Pendiente / roto conocido.**
+
+- **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el
+  fundador lo descartó por ahora (*"no he publicado aún la web"*). Matiz que yo
+  mismo había exagerado y conviene dejar recto: la página pasa por
+  `requireActiveProject`, que ya filtra por dueño, así que nunca hubo riesgo
+  entre cuentas — lo peor era que un cliente viese sus propios internos y
+  pudiera encender su escaneo diario. **Hay que cerrarla antes de abrir la web
+  al público.**
+- **Fase B pendiente:** los bloques de `/debug` que necesitan consultas nuevas
+  (motores, salud de extracción por categoría, alertas al operador, cola de
+  trabajos, respuestas con coste/latencia). Están diseñados en
+  `pantalla-debug.html`, sin implementar.
+- `/runs` queda como redirección a `/debug`; `/runs/[runId]` (detalle de
+  escaneo) sigue donde estaba.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

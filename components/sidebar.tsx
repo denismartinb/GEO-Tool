@@ -16,10 +16,12 @@ type WorkspaceProject = {
   language: string;
 };
 
-// "Escaneos" (/runs) deliberately has no entry here (founder-approved
-// 2026-07-18): the domain block at the top of the sidebar (`proj-switch`)
-// already links straight to it — a second link would just duplicate that
-// entry point.
+// DOMAINS-REDESIGN-1: "Escaneos" (/runs) is gone. Its customer half is now
+// "Dominios" (/dashboard/domains), which DOES get its own entry — the 2026-07-18
+// decision not to give Escaneos one rested on the domain block below already
+// linking there, and that block no longer does: it links to the active
+// project's Visión general, because switching domain is what Dominios is for.
+// The operational half (/debug) deliberately has no entry at all.
 const analyzeLinks = [
   { segment: "", label: "Visión general", icon: "overview", countKey: null as null | string },
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
@@ -107,11 +109,22 @@ export function Sidebar({
           </button>
         </div>
 
+      <Link
+        href="/dashboard/domains"
+        className={`nav-item sb-domains${pathname === "/dashboard/domains" ? " active" : ""}`}
+        onClick={handleNavSelect}
+        aria-current={pathname === "/dashboard/domains" ? "page" : undefined}
+      >
+        <Icon name="globe" size={17} />
+        <span className="hide-collapsed">Dominios</span>
+        {projects.length > 0 && <span className="nav-count hide-collapsed">{projects.length}</span>}
+      </Link>
+
       {project ? (
         <Link
           className="proj-switch"
-          href={`/dashboard/projects/${project.id}/runs`}
-          title="Ver escaneos de este dominio"
+          href={`/dashboard/projects/${project.id}`}
+          title="Ver este dominio"
           onClick={handleNavSelect}
         >
           {faviconUrl(project.domain) ? (

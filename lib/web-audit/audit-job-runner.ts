@@ -223,6 +223,20 @@ function readContinuations(payload: Record<string, unknown>): number {
  * `jobs.run_id` is NOT NULL with an FK to `scan_runs`, so the job is
  * inherently tied to the run it audits — which is also exactly the dedupe
  * key we want.
+ *
+ * DOMAINS-REDESIGN-1: this is also where the per-project opt-out
+ * (`projects.auto_web_audit_enabled`, migration 0030) is enforced, and that
+ * placement is deliberate rather than convenient. Two paths enqueue audits —
+ * the executor's inline call after a run completes, and
+ * `backfillMissingWebAuditJobs` on the daily cron — so a check at the executor
+ * alone would be undone hours later by the backfill queueing the very audit the
+ * founder had switched off. Gating the single function both go through makes
+ * that impossible, and makes a future third caller safe by construction.
+ *
+ * The check costs one indexed read per call. The backfill calls this in a loop
+ * bounded to `BACKFILL_LIMIT`, so the worst case is ten tiny reads on a daily
+ * cron — cheaper than the alternative of duplicating the gate in two places and
+ * keeping them in sync.
  */
 export async function enqueueWebAuditJob({
   service,
@@ -232,8 +246,26 @@ export async function enqueueWebAuditJob({
   service: ServiceClient;
   projectId: string;
   runId: string;
-}): Promise<"enqueued" | "already_queued" | "error"> {
+}): Promise<"enqueued" | "already_queued" | "disabled" | "error"> {
   try {
+    // Read the flag before the dedupe query: when a project has audits off,
+    // this returns without touching `jobs` at all.
+    const { data: projectRow, error: projectError } = await service
+      .from("projects")
+      .select("auto_web_audit_enabled")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    // Fail OPEN, on purpose. A read failure here must not silently stop audits
+    // for every project — the same reasoning as `isAutoWebAuditEnabled`
+    // defaulting to on. A missing column (migration 0030 not yet applied) and a
+    // transient error are indistinguishable at this layer, and of the two
+    // possible mistakes, "audited something the founder had switched off" costs
+    // one Gemini campaign while "stopped auditing everything" is invisible.
+    if (!projectError && projectRow && projectRow.auto_web_audit_enabled === false) {
+      return "disabled";
+    }
+
     const { data: existing } = await service
       .from("jobs")
       .select("id")

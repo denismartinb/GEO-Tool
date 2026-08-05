@@ -70,9 +70,26 @@ fidelidad, no una interpretación:
   AUDIT-NO-BUTTON-1 (§25).
 - **La caja «Añadir dominio» va fuera del raíl, a ancho completo**, también en
   móvil: dentro del raíl cae fuera del viewport a 375 px.
-- **`/debug` no aparece en el menú y se protege en servidor.** Ocultar no es
-  proteger: enciende el escaneo diario, que cuesta dinero.
+- **`/debug` no aparece en el menú.** La propuesta de protegerla además con
+  `OPS_USER_EMAILS` + 404 la descartó el fundador el 2026-08-05 ("no he
+  publicado aún la web"). La página pasa por `requireActiveProject`, así que un
+  cliente sólo podría ver los internos de SUS proyectos, nunca los de otra
+  cuenta — pero **hay que cerrarla antes de abrir la web al público**.
 
 ## Estado
 
-Diseño aprobado. **Sin implementar** en el momento de escribir esto.
+**Fase A implementada** (2026-08-05, mismo PR). Lo que la implementación se
+desvió del intake, y por qué:
+
+- **El interruptor de auditoría por dominio SÍ entró**, con migración 0030
+  (`projects.auto_web_audit_enabled`). El intake proponía dejarlo global; el
+  fundador pidió el control real para contener coste en pruebas.
+- **`OPS_USER_EMAILS` no entró** (ver arriba).
+- **El driver de escaneo se monta en dos sitios**, no en uno: Visión general
+  (donde aterriza el onboarding) y `/debug` (donde vive el botón «Repetir
+  escaneo»). Es seguro porque los lotes se reclaman con un UPDATE atómico.
+
+**Fase B pendiente**: los bloques de `pantalla-debug.html` que necesitan
+consultas nuevas — motores, salud de extracción, alertas al operador, cola de
+trabajos y respuestas con coste. `/debug` hoy tiene los bloques 5 y 6
+(controles e historial) más el borrado de dominio.
