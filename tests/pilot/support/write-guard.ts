@@ -269,13 +269,23 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
     // Verified against main: this journey has flapped since 2026-08-01 and
     // failed outright on 2026-08-02, passing only when the project happened to
     // have no topics.
-    const search = page.getByPlaceholder(/buscar prompt/i).filter({ visible: true }).first();
-    if (await search.isVisible().catch(() => false)) {
-      await search.fill(PILOT_TEST_PROMPT_MARKER);
-      // The filter is client-side and synchronous, but give the re-render a
-      // beat so the first count below never races an empty intermediate list.
-      await page.waitForTimeout(250);
+    // Two inputs carry this placeholder — a toolbar one below the desktop rail
+    // breakpoint and a list-header one above it — and exactly one is visible at
+    // any viewport. Iterate and fill the visible one rather than guessing with
+    // .first(): picking the hidden one fails silently, which is precisely how
+    // the previous attempt at this fix left the box empty and the sweep still
+    // finding nothing.
+    const searchBoxes = page.getByPlaceholder(/buscar prompt/i);
+    const boxCount = await searchBoxes.count();
+    for (let i = 0; i < boxCount; i += 1) {
+      const box = searchBoxes.nth(i);
+      if (!(await box.isVisible().catch(() => false))) continue;
+      await box.fill(PILOT_TEST_PROMPT_MARKER);
+      break;
     }
+    // The filter is client-side and synchronous, but give the re-render a beat
+    // so the count below never races an empty intermediate list.
+    await page.waitForTimeout(300);
   };
 
   await openList(`sweep-${Date.now()}`);
