@@ -2759,11 +2759,12 @@ distinto y por eso el artículo tiene una sección de "lo que NO puedes vender"
 que los otros dos no necesitan.
 
 **El ángulo salió del dato, no al revés.** Conductor mide que el tráfico de
-referencia desde chats de IA es el **1,08%** de las visitas de una web, frente
-al 25% de la búsqueda orgánica. Ese número hace inviable la propuesta comercial
-obvia ("vas a recibir visitas desde ChatGPT") y obliga a vender otra cosa:
-presencia medida en la respuesta. El artículo se construyó sobre esa tensión en
-vez de esquivarla.
+referencia desde chats de IA es el **1,08%** de las visitas de una web, y a la
+vez que el **25,11%** de las búsquedas de Google ya devuelven un AI Overview.
+Pocos clics y presencia en todas partes, simultáneamente. Eso hace inviable la
+propuesta comercial obvia ("vas a recibir visitas desde ChatGPT") y obliga a
+vender otra cosa: presencia medida en la respuesta. El artículo se construyó
+sobre esa tensión en vez de esquivarla.
 
 **Dos estudios que parecen contradecirse y no se contradicen.** Conductor dice
 que ChatGPT es el 87,4% del tráfico de referencia de IA; Similarweb dice que
@@ -2772,15 +2773,32 @@ de 2025 y mayo de 2026. Miden cosas distintas —clics que salen frente a gente
 que entra— y el artículo lo explica en lugar de elegir la mitad que conviene.
 Es el mismo criterio que W2 aplicó a G2 y 6sense.
 
-**Verificación de fuentes: una atribución se corrigió a tiempo.** La primera
-búsqueda devolvió el 1,08% atribuido a "Similarweb y Semrush". Una búsqueda
-dirigida lo desmintió: es de **Conductor**, informe de noviembre de 2025. Es
-exactamente el fallo de W1 (Capital One / Alchemer) a punto de repetirse, y lo
-que lo evitó no fue el tipo `Stat` —que sólo exige que haya `source`— sino
-buscar dos veces. También se descartó una segunda cifra por inconsistente: el
-peso de ChatGPT en el tráfico de referencia aparece como 87,4% y como 92,4%
-según la fuente secundaria; se publica la que casa con la metodología descrita
-por Conductor, y sólo esa.
+**Verificación de fuentes: dos atribuciones corregidas, y una la cazó QA.** La
+primera búsqueda devolvió el 1,08% atribuido a "Similarweb y Semrush"; una
+búsqueda dirigida lo desmintió (es de **Conductor**, noviembre de 2025). Se
+descartó además el peso de ChatGPT en el tráfico de referencia por
+inconsistente entre fuentes secundarias (87,4% frente a 92,4%): se publica sólo
+el que casa con la metodología descrita por Conductor.
+
+**Y aun así se coló una tercera, que bloqueó QA.** El artículo publicó un
+`Stat` de "25% — cuota que sigue llegando desde búsqueda orgánica clásica"
+atribuido a Conductor. La cifra existe en ese informe, pero **mide otra cosa**:
+es el **25,11% de las búsquedas de Google que devuelven un AI Overview** (21,9
+millones de búsquedas en EE. UU., 15-sep a 12-oct de 2025). QA lo bloqueó tras
+cinco búsquedas cruzadas, ninguna de las cuales sostenía la lectura publicada.
+
+Es **exactamente** el fallo de W1 (Capital One / Alchemer): una cifra real, del
+informe correcto, pegada a la métrica equivocada. La lección que deja, y que
+conviene no olvidar porque ya van dos: **el resumen de un buscador funde con
+frecuencia dos hechos en una sola frase**, y leerlo entero no basta — hay que
+buscar cada cifra *por separado y por lo que mide*, no por el titular que la
+acompaña. Ningún tipo puede comprobar esto: `Stat` exige que haya `source`, no
+que la etiqueta describa lo que la fuente midió.
+
+Al corregirlo, el hueco no se rellenó con otra cifra cómoda: el artículo
+**declara en prosa que no pudo sostener** la comparación "1,08% frente a 25% de
+orgánico" que circula por ahí, y que los desgloses de orgánico por sector van
+del ~18% al ~42% sin media limpia que enseñar.
 
 **Qué se declara no saber:** que no hay encuesta pública fiable de tarifas GEO
 en el mercado español (las cifras que circulan son de agencias anunciándose, no
