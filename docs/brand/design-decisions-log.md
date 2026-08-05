@@ -2711,6 +2711,23 @@ enlace que se ve. La lección, que es del mismo tipo que la del cargador
 compartido: **ocultar una pantalla no puede significar dejarla inalcanzable
 también para quien la necesita.**
 
+**El atajo, y el interruptor que mentía sobre por qué fallaba.** Dos hallazgos
+del primer smoke real del fundador, el mismo día:
+
+- `/debug` no estaba enlazada desde ningún sitio y la única vía era teclear una
+  URL con un UUID dentro. La URL que él tecleó de memoria fue `/debug`, así que
+  ahí vive ahora el atajo: resuelve el dominio más reciente y redirige.
+  Protegida por `requireUser` como cualquier pantalla de consola. **Ocultar una
+  pantalla no puede significar dejarla inalcanzable para quien la necesita.**
+- Con la migración 0030 sin aplicar, el interruptor de auditoría se pintaba
+  encendido y al pulsarlo devolvía «No se ha podido actualizar… vuelve a
+  intentarlo». Reintentar no crea una columna: era un consejo imposible de
+  seguir, y un control que parece operable y no puede funcionar gasta un intento
+  del operador y además le miente sobre la causa. Ahora la lectura distingue
+  tres estados y, si la columna no está, la fila dice qué falta
+  (`0030_project_auto_web_audit.sql`) y no ofrece interruptor. El server action
+  distingue además `42703`/`PGRST204` por si alguien fuerza el envío.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el

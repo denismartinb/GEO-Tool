@@ -339,7 +339,17 @@ export async function setAutoWebAudit(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    redirect(`/dashboard/projects/${projectId}/debug?error=auto_audit_update_failed`);
+    // `42703` = undefined_column, `PGRST204` = la columna no está en el caché de
+    // esquema de PostgREST. Las dos significan lo mismo para quien está delante:
+    // falta aplicar la migración. Decir "vuelve a intentarlo" ahí es mandar al
+    // operador a repetir algo que no puede funcionar (reportado por el fundador
+    // el 2026-08-05, desde su móvil).
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "auto_audit_migration_pending" : "auto_audit_update_failed"
+      }`
+    );
   }
 
   revalidatePath(`/dashboard/projects/${projectId}/debug`);

@@ -18,6 +18,15 @@ import { requireUser } from "@/lib/auth";
  * sin aparecer en ningún menú: es una URL que se recuerda, no un enlace que se
  * ve. Si la cuenta no tiene proyectos, manda a Dominios, que es donde se crea
  * el primero.
+ *
+ * En la raíz (`/debug`) y no bajo `/dashboard`, por petición del fundador: es
+ * la URL que tecleó de memoria cuando fue a buscarla, y el 404 que se llevó fue
+ * precisamente por eso.
+ *
+ * `requireUser` la protege igual que a cualquier pantalla de la consola — sin
+ * sesión redirige a /login —, así que estar fuera de `/dashboard` no la deja
+ * abierta. Lo que NO hace es distinguir operador de cliente: eso sigue
+ * pendiente para antes de publicar la web (ver histórico §28).
  */
 export default async function DebugShortcutPage() {
   const { supabase } = await requireUser();

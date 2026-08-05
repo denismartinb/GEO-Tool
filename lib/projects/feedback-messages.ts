@@ -18,6 +18,10 @@ export const feedbackErrorMessages: Record<string, string> = {
     "Completa al menos un escaneo manual antes de activar el escaneo automático diario.",
   recurring_update_failed: "No se ha podido actualizar el escaneo automático. Vuelve a intentarlo.",
   auto_audit_update_failed: "No se ha podido actualizar la auditoría automática. Vuelve a intentarlo.",
+  // Sin "vuelve a intentarlo" a propósito: reintentar no crea una columna. Dice
+  // qué hay que hacer y quién puede hacerlo.
+  auto_audit_migration_pending:
+    "La auditoría automática todavía no se puede configurar por dominio: falta aplicar la migración 0030 en Supabase.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
   unauthorized: "No tienes permisos para realizar esta acción.",

@@ -171,13 +171,26 @@ export default async function RunsPage({
      columna" y el interruptor se pinta encendido — que es el comportamiento
      real del producto sin migración aplicada (el gate de `enqueueWebAuditJob`
      también falla abierto). Ninguna otra pantalla se entera. */
-  const { data: auditFlagRow } = await supabase
+  const { data: auditFlagRow, error: auditFlagError } = await supabase
     .from("projects")
     .select("auto_web_audit_enabled")
     .eq("id", projectId)
     .maybeSingle();
 
-  const autoWebAuditEnabled = auditFlagRow?.auto_web_audit_enabled !== false;
+  /* Tres estados, no dos. La primera versión pintaba el interruptor encendido
+     cuando la consulta fallaba, y al pulsarlo el UPDATE moría con «vuelve a
+     intentarlo» — un consejo imposible de seguir, porque reintentar no crea una
+     columna. Lo reportó el fundador desde su móvil (2026-08-05).
+
+     Un control que parece operable y no puede funcionar es peor que un control
+     ausente: gasta un intento del operador y le miente sobre por qué falló. Si
+     la lectura falla, la fila dice qué hacer — aplicar la migración — y no
+     ofrece interruptor. */
+  const autoWebAuditState: "on" | "off" | "unavailable" = auditFlagError
+    ? "unavailable"
+    : auditFlagRow?.auto_web_audit_enabled === false
+    ? "off"
+    : "on";
 
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, sample_count, successful_prompts, failed_prompts, created_at, started_at, finished_at";
@@ -496,27 +509,41 @@ export default async function RunsPage({
       </div>
 
       <div className="card dbg-switch">
-        <div className="dbg-switch-ico" data-on={autoWebAuditEnabled ? "true" : "false"}>
+        <div className="dbg-switch-ico" data-on={autoWebAuditState === "on" ? "true" : "false"}>
           <Icon name="search" size={17} />
         </div>
         <div className="dbg-switch-txt">
           <b>Auditoría automática tras cada escaneo</b>
           <small>
-            Apagarlo detiene las próximas auditorías de este dominio. Una que ya
-            esté encolada termina igual.
+            {autoWebAuditState === "unavailable" ? (
+              <>
+                Falta aplicar la migración <code>0030_project_auto_web_audit.sql</code> en Supabase.
+                Hasta entonces la auditoría corre para todos los dominios, que es el comportamiento
+                de siempre.
+              </>
+            ) : (
+              <>
+                Apagarlo detiene las próximas auditorías de este dominio. Una que ya esté encolada
+                termina igual.
+              </>
+            )}
           </small>
         </div>
-        <form action={setAutoWebAudit}>
-          <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="enabled" value={autoWebAuditEnabled ? "false" : "true"} />
-          <button
-            type="submit"
-            className={`switch-toggle ${autoWebAuditEnabled ? "on" : ""}`}
-            role="switch"
-            aria-checked={autoWebAuditEnabled}
-            aria-label="Auditoría automática tras cada escaneo"
-          />
-        </form>
+        {autoWebAuditState === "unavailable" ? (
+          <span className="badge badge-neutral">Sin migrar</span>
+        ) : (
+          <form action={setAutoWebAudit}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="enabled" value={autoWebAuditState === "on" ? "false" : "true"} />
+            <button
+              type="submit"
+              className={`switch-toggle ${autoWebAuditState === "on" ? "on" : ""}`}
+              role="switch"
+              aria-checked={autoWebAuditState === "on"}
+              aria-label="Auditoría automática tras cada escaneo"
+            />
+          </form>
+        )}
       </div>
 
       {/* DOMAINS-REDESIGN-1: el borrado duro del dominio (DATA-MGMT-1) vivía en
