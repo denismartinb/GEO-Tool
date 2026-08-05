@@ -30,8 +30,10 @@ export type ScanHealthReason =
   | "quota"
   /** A provider rejected the key or the model id. Same class as the pinned-model 404 of ADR 0002. */
   | "config"
-  /** An engine answered prompts but not one of its rows produced extracted data. */
+  /** An engine answered prompts but not one of its rows produced extracted data — the failure is in extraction. */
   | "engine_down"
+  /** An engine produced no rows at all: it never got past generation. A different thing to go fix. */
+  | "engine_no_response"
   /** The run itself ended `failed` with its bounded auto-retries already spent. */
   | "run_failed";
 
@@ -62,9 +64,14 @@ const REASON_COPY: Record<ScanHealthReason, { headline: string; detail: string }
       "El proveedor rechaza la petición por clave o modelo inválidos. No se reintenta a propósito, porque reintentarlo daría el mismo resultado. Revisa las variables de entorno de ese motor."
   },
   engine_down: {
-    headline: "Un motor no ha aportado ningún dato",
+    headline: "Un motor respondió pero no se pudo extraer nada",
     detail:
-      "Ese motor respondió a los prompts, pero ninguna de sus filas llegó a convertirse en datos extraídos. El escaneo se da por completado con el resto de motores, así que sin este aviso no habría constancia de la pérdida."
+      "Ese motor sí contestó a los prompts, pero ninguna de sus respuestas llegó a convertirse en datos extraídos. El fallo está en la extracción, no en la generación. El escaneo se da por completado con el resto de motores, así que sin este aviso no habría constancia de la pérdida."
+  },
+  engine_no_response: {
+    headline: "Un motor no ha contestado a nada",
+    detail:
+      "Ese motor no produjo ni una sola respuesta en todo el escaneo: falló antes de la extracción, en la propia llamada de generación. Revisa su clave, su modelo y el estado de esa API. El escaneo se da por completado con el resto de motores, así que sin este aviso no habría constancia de la pérdida."
   },
   run_failed: {
     headline: "Un escaneo ha fallado sin reintentos disponibles",
@@ -82,9 +89,12 @@ const REASON_COPY: Record<ScanHealthReason, { headline: string; detail: string }
  *
  * - `quota` and `config` alert on a single row, with no threshold. They never
  *   heal on their own and only the operator can clear them.
- * - `engine_down` needs the engine to have produced *nothing*. A partially
- *   extracted engine is degraded, not down, and the missing rows are already
- *   on record.
+ * - `engine_down` needs every one of the engine's answers to have failed
+ *   extraction. A partially extracted engine is degraded, not down, and the
+ *   missing rows are already on record.
+ * - `engine_no_response` is the sibling case: the engine produced no rows at
+ *   all, so it failed at generation. Kept separate because it sends the
+ *   operator to a different place to look.
  * - `schema`, `invalid_json`, `empty` and `timeout` deliberately do NOT
  *   alert on their own. They are model noise: they self-correct on the next
  *   scan and there is no action to take. They still count toward
@@ -114,8 +124,13 @@ export function analyzeRunHealth(rows: readonly HealthRow[], expectedEngines: re
     // would silently skip the very case it exists for. The run still
     // completes, because a prompt job succeeds if any engine answers.
     if (answered.length === 0) {
+      // Distinguished from `engine_down` on purpose: this engine never got
+      // past generation, so the operator has to look at its key, its model id
+      // and that API's status — not at the extraction path. Reporting both
+      // under one label sent the first real alert (2026-08-05, mozilla.org)
+      // with a body that described the wrong half of the pipeline.
       if (expectedEngines.includes(engine)) {
-        findings.push({ engine, reason: "engine_down", affectedRows: 0, totalRows: 0 });
+        findings.push({ engine, reason: "engine_no_response", affectedRows: engineRows.length, totalRows: engineRows.length });
       }
       continue;
     }

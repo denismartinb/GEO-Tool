@@ -600,7 +600,7 @@ export async function sendScanHealthAlertEmail(input: {
        <table role="presentation" cellpadding="0" cellspacing="0">
          ${row("Motor", input.engine)}
          ${row("Causa", input.reason)}
-         ${row("Filas afectadas", `${input.affectedRows} de ${input.totalRows}`)}
+         ${input.totalRows > 0 ? row("Filas afectadas", `${input.affectedRows} de ${input.totalRows}`) : row("Filas", "ninguna: el motor no llegó a responder")}
          ${row("Dominio", input.domain)}
          ${row("Proyecto", input.projectId)}
          ${row("Escaneo", input.runId)}

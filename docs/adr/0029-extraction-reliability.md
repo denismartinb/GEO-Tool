@@ -209,7 +209,7 @@ is testable, not buried in plumbing:
 | `quota:` on any row | Yes, no threshold | Never heals on its own; only the operator can clear it |
 | `config:` on any row | Yes, no threshold | Wrong key or model id — the ADR 0002 class of failure |
 | An engine answered but extracted **nothing** | Yes | A prompt job succeeds if *any* engine answers, so a dead engine still leaves the run "Completado" |
-| An expected engine produced **no rows at all** | Yes | It failed at *generation* — a dead API or a rejected model id. Needs the run's expected engine set, because such an engine is simply absent from the data |
+| An expected engine produced **no rows at all** (`engine_no_response`) | Yes | It failed at *generation* — a dead API or a rejected model id. Needs the run's expected engine set, because such an engine is simply absent from the data |
 | Run `failed` with auto-retry spent | Yes | It will not try again by itself |
 | Isolated `schema` / `invalid_json` / `empty` / `timeout` | **No** | Model noise: self-corrects next scan, nothing to go fix. Still counts toward `engine_down` when it takes out a whole engine — the point at which it stops being noise |
 
@@ -229,6 +229,35 @@ hidden: the lookup is an unindexed scan over a time-bounded slice of
 Two deliberate asymmetries, both favouring a duplicate email over a swallowed
 incident: the dedupe lookup **fails open** if it errors, and the dedupe marker
 is written only *after* a successful send.
+
+### What the first real delivery cost to learn (2026-08-05)
+
+The first end-to-end verification of this phase took four attempts, and every
+failure was the same mistake at a different depth — worth recording, because
+the mistake is the one this ADR is about:
+
+1. `isOpsAlertConfigured` checked the destination (`OPS_ALERT_EMAIL`) but not
+   the transport (`RESEND_API_KEY`), so `sendEmail` no-opped afterwards on
+   `if (!resend) return`. Two silent gates in series.
+2. When an alert could not be delivered, the reason existed only as a
+   `console.error` in Vercel's runtime logs — short-lived and, in practice,
+   unreachable for the operator. "Nothing to report" and "something to report
+   that could not be sent" were indistinguishable. The reason is now persisted
+   to `job_logs` (`scan_health_alert_undeliverable`), diagnosable with the same
+   SQL as everything else here.
+3. `analyzeRunHealth` keyed on the rows that existed, so an engine that failed
+   at *generation* — producing no rows at all — was absent from the data and
+   silently skipped by the check written to catch exactly that. Fixed by
+   passing the run's expected engine set.
+4. The first alert that did arrive carried the wrong body: `engine_down` said
+   "that engine answered the prompts" about an engine that had answered
+   nothing. Split into `engine_down` (answered, extraction failed) and
+   `engine_no_response` (never answered), because they send the operator to
+   different places to look.
+
+The through-line: **a check you cannot consult from where you already work is
+not a check**, and a probe that verifies one segment of a path must not claim
+to have verified the path.
 
 ## What this phase deliberately does NOT do
 

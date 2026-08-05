@@ -122,7 +122,12 @@ describe("analyzeRunHealth — an engine that produced no rows at all", () => {
       "openai"
     ]);
 
-    expect(findings).toContainEqual(expect.objectContaining({ engine: "openai", reason: "engine_down" }));
+    // engine_no_response, NOT engine_down: it never got past generation, so
+    // the operator has to look at the key/model/API, not at extraction.
+    // The first real alert (2026-08-05) went out under the wrong label and
+    // its body described the wrong half of the pipeline.
+    expect(findings).toContainEqual(expect.objectContaining({ engine: "openai", reason: "engine_no_response" }));
+    expect(findings.map((f) => f.reason)).not.toContain("engine_down");
   });
 
   it("stays silent about an engine that was never expected to run", () => {
