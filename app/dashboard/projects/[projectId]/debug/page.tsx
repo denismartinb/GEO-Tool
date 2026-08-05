@@ -160,6 +160,25 @@ export default async function RunsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
+  /* DOMAINS-REDESIGN-1 — el flag de auditoría automática se lee AQUÍ y no en
+     `requireActiveProject`, que es el cargador de seis pantallas.
+     `projects.auto_web_audit_enabled` llega en la migración 0030, y las
+     migraciones de este repo se aplican a mano: mientras no esté aplicada,
+     pedirla en el select compartido hace que PostgREST devuelva error y que las
+     seis den 404. Pasó, y lo cazó el piloto en el preview de este mismo PR.
+
+     Aquí, con su propia consulta, un error sólo significa "todavía no está la
+     columna" y el interruptor se pinta encendido — que es el comportamiento
+     real del producto sin migración aplicada (el gate de `enqueueWebAuditJob`
+     también falla abierto). Ninguna otra pantalla se entera. */
+  const { data: auditFlagRow } = await supabase
+    .from("projects")
+    .select("auto_web_audit_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  const autoWebAuditEnabled = auditFlagRow?.auto_web_audit_enabled !== false;
+
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, sample_count, successful_prompts, failed_prompts, created_at, started_at, finished_at";
 
@@ -477,7 +496,7 @@ export default async function RunsPage({
       </div>
 
       <div className="card dbg-switch">
-        <div className="dbg-switch-ico" data-on={project.auto_web_audit_enabled ? "true" : "false"}>
+        <div className="dbg-switch-ico" data-on={autoWebAuditEnabled ? "true" : "false"}>
           <Icon name="search" size={17} />
         </div>
         <div className="dbg-switch-txt">
@@ -489,12 +508,12 @@ export default async function RunsPage({
         </div>
         <form action={setAutoWebAudit}>
           <input type="hidden" name="projectId" value={projectId} />
-          <input type="hidden" name="enabled" value={project.auto_web_audit_enabled ? "false" : "true"} />
+          <input type="hidden" name="enabled" value={autoWebAuditEnabled ? "false" : "true"} />
           <button
             type="submit"
-            className={`switch-toggle ${project.auto_web_audit_enabled ? "on" : ""}`}
+            className={`switch-toggle ${autoWebAuditEnabled ? "on" : ""}`}
             role="switch"
-            aria-checked={project.auto_web_audit_enabled}
+            aria-checked={autoWebAuditEnabled}
             aria-label="Auditoría automática tras cada escaneo"
           />
         </form>

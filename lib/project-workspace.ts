@@ -9,11 +9,25 @@ import { readComparableRun, resolveDelta, type ComparableRun } from "@/lib/scori
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
+/**
+ * Cargador compartido de las pantallas de proyecto (Prompts, Competidores,
+ * Páginas citadas, Recomendaciones, Auditoría web y /debug).
+ *
+ * **No añadas aquí una columna de una migración recién escrita.** Las
+ * migraciones de este repo se aplican a mano en el editor SQL de Supabase, así
+ * que entre que se mergea el código y alguien pega el SQL hay una ventana en la
+ * que la columna no existe — y en esa ventana PostgREST devuelve error, `data`
+ * queda `null` y este `notFound()` convierte las SEIS pantallas en un 404.
+ *
+ * No es hipotético: DOMAINS-REDESIGN-1 añadió aquí `auto_web_audit_enabled` y
+ * el piloto encontró exactamente eso en el preview (PR #345, 2026-08-05). Una
+ * columna nueva se lee donde se usa, con tolerancia a que todavía no exista.
+ */
 export async function requireActiveProject(projectId: string) {
   const { supabase } = await requireUser();
   const { data: project } = await supabase
     .from("projects")
-    .select("id, name, brand, domain, country, language, recurring_scans_enabled, auto_web_audit_enabled")
+    .select("id, name, brand, domain, country, language, recurring_scans_enabled")
     .eq("id", projectId)
     .eq("is_archived", false)
     .single();

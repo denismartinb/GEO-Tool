@@ -2661,6 +2661,27 @@ ahora Dominios, que por diseño no lleva controles, así que el borrado se queda
 en `/debug`. Deja de estar al alcance del cliente en la consola. Es reversible y
 está aquí escrito para que se note si algún día molesta.
 
+**El fallo que encontró el piloto, y por qué la suite no podía verlo.** La
+primera versión añadió `auto_web_audit_enabled` al `select` de
+`requireActiveProject`, que es el cargador de **seis** pantallas y hace
+`notFound()` si la consulta no devuelve fila. Como las migraciones se aplican a
+mano, en el preview la columna todavía no existía: PostgREST devolvió error y
+Prompts, Competidores, Páginas citadas, Recomendaciones, Auditoría web y
+`/debug` daban **404 a la vez**. `pnpm test` (1525) y `pnpm run validate`
+estaban en verde, porque nada en este proyecto comprueba el esquema real — el
+fallo era estructuralmente invisible hasta abrir un navegador contra una base
+sin migrar.
+
+Corregido leyendo el flag donde se usa (`/debug`, con su propia consulta que
+degrada a "activado" si la columna falta) y con una guarda estática sobre ese
+`select` (`lib/project-workspace.test.ts`): añadir una columna ahí obliga a
+editar el test, y editarlo obliga a leer por qué.
+
+Regla que queda: **un cargador compartido no puede depender de una columna que
+una migración manual todavía no ha creado.** El repo ya escribía las migraciones
+con `add column if not exists`; el lado de lectura no tenía la tolerancia
+equivalente.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el
