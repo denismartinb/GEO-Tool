@@ -186,12 +186,85 @@ an invocation must be budgeted against what that invocation already spends,
 not given its own allowance** — and any step long enough to be killed needs a
 recoverable claim.
 
+## Fase B (2026-08-04) — the operator finds out
+
+Fase A made a failed extraction leave a categorized trace. Fase B is what
+makes anyone read it. Without it the trace lives only in the database and the
+sole detector is a manual SQL query, which is precisely why OpenAI's 429s ran
+for four days and Claude's identical failure in June was never noticed at all.
+
+**Who it goes to: the operator, never the customer.** An exhausted API account
+or a dead engine is backend trouble the customer cannot act on, and telling
+them their data is incomplete without being able to fix it is noise about
+someone else's problem. Same reasoning, same channel (`OPS_ALERT_EMAIL`) and
+same plain debugging-oriented format as `sendWebAuditFailedAlertEmail`
+(AUDIT-AFTER-SCAN-1), which this deliberately mirrors rather than reinvents.
+
+**What alerts, and what deliberately does not** (founder's decision at Task
+Intake, 2026-08-04). `analyzeRunHealth` is a pure function so this judgement
+is testable, not buried in plumbing:
+
+| Condition | Alerts | Why |
+|---|---|---|
+| `quota:` on any row | Yes, no threshold | Never heals on its own; only the operator can clear it |
+| `config:` on any row | Yes, no threshold | Wrong key or model id — the ADR 0002 class of failure |
+| An engine answered but extracted **nothing** | Yes | A prompt job succeeds if *any* engine answers, so a dead engine still leaves the run "Completado" |
+| An expected engine produced **no rows at all** (`engine_no_response`) | Yes | It failed at *generation* — a dead API or a rejected model id. Needs the run's expected engine set, because such an engine is simply absent from the data |
+| Run `failed` with auto-retry spent | Yes | It will not try again by itself |
+| Isolated `schema` / `invalid_json` / `empty` / `timeout` | **No** | Model noise: self-corrects next scan, nothing to go fix. Still counts toward `engine_down` when it takes out a whole engine — the point at which it stops being noise |
+
+**Dedupe is cross-project, and that is the load-bearing part.** The daily cron
+sweeps every project, so one exhausted account is a single incident that would
+otherwise send one email per project per day. An alert that arrives twenty
+times is one the operator learns to ignore, which is worse than no alert.
+`SCAN_HEALTH_ALERT_DEDUPE_HOURS` (24h) is keyed on (engine, reason) across
+**all** projects.
+
+The dedupe store is `job_logs`, not `notifications`: this is an operator
+alert, and writing it to `notifications` would surface it in the customer's
+own in-app feed. It also needs no migration. The cost, stated rather than
+hidden: the lookup is an unindexed scan over a time-bounded slice of
+`job_logs`. Fine at private-beta volume, worth revisiting if that table grows.
+
+Two deliberate asymmetries, both favouring a duplicate email over a swallowed
+incident: the dedupe lookup **fails open** if it errors, and the dedupe marker
+is written only *after* a successful send.
+
+### What the first real delivery cost to learn (2026-08-05)
+
+The first end-to-end verification of this phase took four attempts, and every
+failure was the same mistake at a different depth — worth recording, because
+the mistake is the one this ADR is about:
+
+1. `isOpsAlertConfigured` checked the destination (`OPS_ALERT_EMAIL`) but not
+   the transport (`RESEND_API_KEY`), so `sendEmail` no-opped afterwards on
+   `if (!resend) return`. Two silent gates in series.
+2. When an alert could not be delivered, the reason existed only as a
+   `console.error` in Vercel's runtime logs — short-lived and, in practice,
+   unreachable for the operator. "Nothing to report" and "something to report
+   that could not be sent" were indistinguishable. The reason is now persisted
+   to `job_logs` (`scan_health_alert_undeliverable`), diagnosable with the same
+   SQL as everything else here.
+3. `analyzeRunHealth` keyed on the rows that existed, so an engine that failed
+   at *generation* — producing no rows at all — was absent from the data and
+   silently skipped by the check written to catch exactly that. Fixed by
+   passing the run's expected engine set.
+4. The first alert that did arrive carried the wrong body: `engine_down` said
+   "that engine answered the prompts" about an engine that had answered
+   nothing. Split into `engine_down` (answered, extraction failed) and
+   `engine_no_response` (never answered), because they send the operator to
+   different places to look.
+
+The through-line: **a check you cannot consult from where you already work is
+not a check**, and a probe that verifies one segment of a path must not claim
+to have verified the path.
+
 ## What this phase deliberately does NOT do
 
-- **No alerting.** Nothing yet emails the founder when a provider runs out of
-  credit — the incident that motivated this ADR would still go unnoticed for
-  four days. That is Fase B, and it depends on the categories introduced here.
-  Until it ships, the detector is a manual SQL query on `extraction_error`.
+- **No customer-facing signal.** The operator is told; the customer is not.
+  A user whose scan lost an engine sees no banner and gets no email. That is
+  the honest boundary of an operational alert, and closing it needs its own
+  phase.
 - **No UI.** No screen reports extraction coverage; `extraction_error` is
   selected in two pages and rendered in none. Fase C.
 - **No change to generation.** Its existing timeout + single 429 retry is

@@ -3,6 +3,7 @@ import {
   MIN_RESPONSES_FOR_BAND,
   compareRuns,
   computeMentionInterval,
+  deltaWithheldReason,
   hasSufficientSample,
   readComparableRun,
   resolveDelta,
@@ -211,5 +212,59 @@ describe("resolveDelta", () => {
 
   it("treats a missing response count as insufficient rather than assuming", () => {
     expect(resolveDelta(5, run({ responses: null }), run()).kind).toBe("insufficient_sample");
+  });
+});
+
+describe("deltaWithheldReason (DELTA-GUARD-1)", () => {
+  it("distinguishes 'no history' from 'we refuse to compare'", () => {
+    // These are genuinely different states and must never collapse into one
+    // message: the first is an absence of data, the second is a measurement
+    // the product declines to assert.
+    expect(deltaWithheldReason(null)).toBe("Sin escaneo anterior con el que comparar");
+    expect(deltaWithheldReason({ kind: "not_comparable", reason: "x" })).not.toBe(
+      deltaWithheldReason(null)
+    );
+  });
+
+  it("names the sample size and the bar it has to clear", () => {
+    // The founder's motivating run was n=3. The message has to say 3 and say
+    // what would unlock the delta, or it is just a shrug.
+    const text = deltaWithheldReason({ kind: "insufficient_sample", responses: 3 });
+    expect(text).toContain("3 respuestas");
+    expect(text).toContain(String(MIN_RESPONSES_FOR_BAND));
+  });
+
+  it("says 'respuesta' in singular for a one-response run", () => {
+    expect(deltaWithheldReason({ kind: "insufficient_sample", responses: 1 })).toContain(
+      "1 respuesta de IA"
+    );
+  });
+
+  it("carries the comparability reason through verbatim", () => {
+    // compareRuns already writes a specific, actionable cause; re-wording it
+    // here would let the two layers disagree about what went wrong.
+    const reason = "el conjunto de motores de IA cambió entre estos dos escaneos";
+    expect(deltaWithheldReason({ kind: "not_comparable", reason })).toContain(reason);
+  });
+
+  it("returns nothing to say when the delta IS publishable", () => {
+    // Callers render the value in that case; a tooltip explaining a number
+    // that is right there would be noise.
+    expect(deltaWithheldReason({ kind: "publish", value: 12 })).toBe("");
+  });
+
+  it("never returns a phrase that could read as 'no change'", () => {
+    // The specific falsehood ADR 0024 exists to prevent: a withheld delta
+    // rendered as "— sin cambio" reads as evidence of stability the data does
+    // not contain.
+    const withheld = [
+      deltaWithheldReason(null),
+      deltaWithheldReason({ kind: "insufficient_sample", responses: 3 }),
+      deltaWithheldReason({ kind: "not_comparable", reason: "la metodología cambió" })
+    ];
+    for (const text of withheld) {
+      expect(text.toLowerCase()).not.toContain("sin cambio");
+      expect(text.toLowerCase()).not.toContain("igual");
+    }
   });
 });

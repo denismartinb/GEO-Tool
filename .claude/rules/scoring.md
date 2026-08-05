@@ -48,6 +48,14 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   entre dos escaneos idénticos con n=3.
 - La confianza declarada tiene que ser estadísticamente defendible, no una
   etiqueta cosmética (ADR 0015 punto 3).
+- **Ninguna superficie publica una comparación entre escaneos sin pasar por
+  `resolveDelta`** (`lib/scoring/score-reliability.ts`). No hay excepciones
+  para tablas, listas ni tooltips: si una pantalla resta dos scores por su
+  cuenta, está afirmando algo que el ADR 0024 ya decidió no afirmar. Lo
+  aprendimos caro — ADR 0024 se implementó en la Visión general y el historial
+  de Escaneos siguió publicando `+34 pt` sobre 3 respuestas durante meses
+  (DELTA-GUARD-1, log §22). Una capa de honestidad que hay que acordarse de
+  llamar acaba sin llamarse.
 
 ## Tamaño de la muestra (SAMPLING-1, ADR 0030)
 

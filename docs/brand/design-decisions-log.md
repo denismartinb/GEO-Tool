@@ -1321,6 +1321,154 @@ humano: no hay herramienta de generación en el entorno del agente y el stock
 exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
 tiene aquí una dependencia manual.
 
+
+## 15. Gráfico de evolución del puesto — ventana y huecos (TREND-WINDOW-1, 2026-08-04)
+
+> **Nota de coordinación.** Mientras se escribía esto, otra sesión ya había
+> mergeado una §14 (cabecera de artículos) y el PR #315 tenía escrita *otra*
+> §14 — colisión real, del mismo tipo que la de los dos ADR 0026, y en el
+> propio documento que existe para evitarla. Resuelto renumerando: §14 es la
+> del blog (ya en `main`), §15 es esta, §16 la de #315.
+
+**Dos defectos, reportados por el fundador sobre el proyecto Movistar (21
+escaneos completados).**
+
+**1. Banda vertical en blanco en mitad del gráfico.** *"Eso no puede suceder en
+ningún caso."* Tenía razón. Todos los escaneos completados recibían un hueco en
+el eje X, incluidos aquellos sin ranking persistido (sin fila en `run_scores`, o
+con un `details_json` sin `brand_position.ranking`). Para esos, el valor de
+**todas** las series es null, así que **todas** las líneas se cortan en la misma
+x y aparece un agujero.
+
+La distinción que gobierna el arreglo: **una serie suelta en null es
+información** —"esa marca no salió en ese escaneo"— y debe seguir cortando su
+propia línea; **una columna donde nadie tiene valor no informa de nada** y
+renderizarla como hueco sólo comunica "esto está roto".
+
+**2. Demasiados puntos.** Con escaneos acumulándose a diario la línea se
+convierte en ruido. Ventana de los **últimos 15** (`MAX_TREND_POINTS`).
+
+**Orden de las dos operaciones, que no es indiferente:** se filtran primero las
+columnas vacías y se recorta después. Al revés, la ventana gastaría huecos en
+columnas que no pintan nada — justo el defecto que se venía a arreglar. Hay un
+test que fija ese orden.
+
+**Lo que deliberadamente NO cambia.** La lista "puesto medio · último escaneo"
+sigue anclada al último escaneo **real**, no al último punto que sobreviva a la
+ventana. Si se hubiera reusado el punto filtrado, la lista mostraría datos de un
+escaneo anterior bajo un encabezado que dice "último escaneo" — una mentira
+sutil. El contador "X de 2" sí pasa a contarse **dentro de la ventana visible**,
+para que el mensaje y el gráfico no puedan contradecirse.
+
+Lógica extraída a `lib/competitors/trend-window.ts` con tests, siguiendo el
+patrón del resto de la zona (`filterComparableEngines`, `computeTopicComparison`):
+la página es un componente de servidor y la lógica inline ahí no se puede probar.
+
+**Cuarta ronda, ya con el gráfico dibujándose de verdad (2026-08-04).** El
+fundador lanzó un escaneo, Mozilla llegó a 4 puntos y por fin se pudo ver la
+línea recta funcionando. Cuatro ajustes sobre eso:
+
+1. **Sin gráfico no se pinta nada** *(matizado horas después, ver abajo)*. Se
+   quitan tanto el estado vacío como la nota bajo el gráfico. Es una **rectificación de lo que se había hecho dos
+   rondas antes**: se había invertido esfuerzo en explicar honestamente por qué
+   faltaba el dato, y el fundador lo tachó literalmente sobre la captura. La
+   lección que queda escrita: un bloque que sólo sabe decir "todavía no" es
+   ruido en cada visita, y redactarlo mejor no cambia eso. El mensaje honesto
+   resolvió un problema real ("0 de 2" mentía), pero la solución correcta no
+   era mejor copy, era no ocupar sitio.
+2. **El título "puesto medio · último escaneo" se alinea a la derecha**, sobre
+   los números que etiqueta. Había dos lecturas posibles de la petición y se
+   preguntó en vez de adivinar, para no gastar un despliegue en la equivocada
+   (el cupo de Vercel estaba al límite ese día).
+3. **Fuera el InfoTip del encabezado.** Consecuencia directa de alinear el
+   título a la derecha: el icono queda pegado al borde y la burbuja se abre
+   fuera de pantalla, cortada. El fundador lo vio en el mismo despliegue y pidió
+   quitarlo. Un tooltip ilegible estorba más de lo que explica.
+4. **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las 4
+   primeras series arrancan encendidas (`DEFAULT_VISIBLE`); el resto se activan
+   pulsando. El fundador preguntó "¿por qué brave, protón, etc salen
+   deshabilitados?" — señal de que el atenuado al 0.5 comunicaba "no
+   disponible". Subido a 0.8 y añadida una pista explícita.
+
+**Tercer hallazgo: el gráfico era una escalera.** Con los proyectos reducidos a
+2 puntos se hizo visible lo que antes se perdía entre 20: la línea no unía
+punto con punto, sino que trazaba un tramo horizontal y luego caía en vertical.
+Estaba hecho a propósito, con este razonamiento en el código: *"a rank changes
+from one scan to the next, it does not slide through the values in between"*.
+El fundador lo rechazó —*"la línea tiene que unir un punto con otro; es un
+gráfico en escalera que no tiene sentido"*— y tenía razón: **un escalón afirma
+que el valor se mantuvo plano hasta el instante del escaneo siguiente**, que es
+una afirmación sin medir *más* fuerte que la de una diagonal, además de leerse
+como un fallo. Los puntos ya marcan dónde hay medición real; la línea sólo
+conecta. Cambiado a segmentos rectos (`buildSeriesPaths`, con test que prohíbe
+explícitamente `H`/`V` en el trazo).
+
+**Y el umbral sube de 2 a 4 escaneos** (`MIN_TREND_POINTS`). Dos es el mínimo
+matemático de una recta y el número equivocado de producto: son dos rayas planas
+de lado a lado. Decisión del fundador tras ver tres proyectos distintos en ese
+estado.
+
+**Segundo hallazgo, al verlo desplegado: el estado vacío mentía sobre el motivo.**
+El fundador probó el preview y vio dos cosas raras: Movistar decía *"0 de 2
+escaneos"* teniendo **21**, y Mozilla dibujaba dos puntos planos de lado a lado.
+Investigado: **no lo causa la ventana de 15**. Lo causa la decisión 4 de ADR 0026
+(geo-score-v3, sin backfill): un escaneo anterior a v3 no tiene
+`avg_position_when_mentioned` **para ninguna entidad**, así que toda la historia
+previa es una columna vacía. El propio ADR lo advierte: *"Every existing project
+was in that state until its next scan, so this was the default, not an edge
+case."*
+
+O sea: el filtro de columnas vacías funcionaba: lo que hizo fue **destapar** que
+casi todo el histórico no tiene el dato nuevo. Antes esas columnas se dibujaban
+como huecos y disimulaban el problema.
+
+Lo que sí era un fallo nuestro es **el mensaje**. "0 de 2 escaneos" se lee como
+"escanea más", y eso sólo es cierto en un proyecto nuevo; en uno con 21 escaneos
+la verdad es "tus escaneos son anteriores a esta métrica". Dos estados
+distintos llevaban la misma frase. Ahora se distinguen: cuando hay escaneos
+completados sin dato de posición, tanto el estado vacío como una nota bajo el
+gráfico dicen cuántos de cuántos lo traen y por qué, en vez de dejar que el
+usuario concluya que la pantalla está rota.
+
+**Última ronda: la tabla se quedó sin columna de puesto.** Al sustituir la media
+en crudo por el ranking 1..N se eliminó la columna de valor y quedó una sola
+cifra visible por fila —el porcentaje de mención— bajo un encabezado alineado a
+la derecha que decía "ranking · último escaneo". Resultado: **el encabezado
+nombraba los porcentajes**, y el puesto —un dígito gris pequeño a la izquierda—
+se leía como viñeta de lista. El fundador lo cazó en el preview: *"¿no ves que
+no sale la posición en la tabla?"*.
+
+El error de fondo no fue la maqueta, fue la regla que me apunté: había anotado
+"el encabezado va a la derecha" cuando lo que el fundador pidió fue *"que se
+relacione con el dato"*. En el momento en que el dato de la derecha dejó de ser
+el puesto, la regla siguió obedeciéndose y pasó a mentir. La regla correcta es
+**una etiqueta por columna, encima del dato que nombra**: "Puesto · último
+escaneo" a la izquierda, "Mención" a la derecha. Y el puesto se escribe como
+ordinal (`3º`), porque "3" es una viñeta y "3º" es una posición. Corregido
+también el gris del dígito (`--ink-4` → `--ink-3`).
+
+Segundo aviso, para quien lea esto: **una revisión de capturas que sólo verifica
+la lista de criterios del PR no es una revisión**. El ranking 1..N era correcto
+en las tres capturas y aun así la tabla no comunicaba el dato principal. Mirar
+sirve para lo que no estaba en la lista.
+
+**Y aun etiquetado, el puesto seguía sin verse: estaba en el sitio equivocado.**
+Con "1º" a la izquierda y su etiqueta encima, el fundador volvió a decir que no
+salía la posición —incluso sobre una captura donde sí salía—. La explicación,
+en sus palabras: *"me gusta más que la columna de puesto [vaya] a la derecha, no
+la había visto"*. Un ordinal pequeño y gris al principio de la fila se lee como
+viñeta de lista y el ojo lo salta; el peso visual estaba en el porcentaje, que
+no es el dato del bloque. La lista pasa a **tres columnas —marca · mención ·
+puesto—**, con el puesto el último y la cifra más pesada de la fila
+(`--ink-2`, 750). Lección transferible: **el dato principal va donde termina la
+lectura de la fila, no donde empieza**; si la posición estuviera primero tendría
+que competir con el nombre por la atención, y pierde.
+
+**Cierre de fase completo.** El invariante vive en `.claude/rules/competitors.md`
+(secciones "Métricas" y "Gráfico de evolución del puesto") y la celda de
+Competidores del mapa de zonas de `CLAUDE.md` apunta a esta fase — primera fase
+cerrada bajo el protocolo que estrenó §16.
+
 ## 16. Gobernanza del contexto entre sesiones (CONTEXT-GOVERNANCE-1, 2026-08-03)
 
 > Numerada **16** tras una colisión real: esta entrada nació como §14, pero
@@ -1706,6 +1854,69 @@ disfrazada de instrucción.
 un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
 `llms.txt.txt`) y la comprobación distingue mayúsculas.
 
+### Sitemap parseado y distintivo «Solución disponible» (2026-08-04)
+
+Dos preguntas del fundador tras usar la fase 3a, y las dos respuestas útiles
+fueron distintas de las que pedía literalmente.
+
+**«Si el llms.txt es tan importante, ¿le damos más presencia?»** No. Está al
+fondo de la lista porque `pointDelta` es `null`: nuestro propio scoring dice
+que vale cero, y ese cero está bien puesto — `llms.txt` es un estándar
+**propuesto**, sin adopción confirmada por ningún motor. Subirlo a crítico
+sería afirmar un impacto que no podemos sostener; comportamiento de producto
+falso en forma de priorización en vez de en forma de dato. Lo que sí era real
+es que la fila cerrada no delataba que ahora trae solución dentro, así que
+nadie tenía motivo para abrirla: de ahí el distintivo **«Solución disponible»**,
+que informa sin tocar severidad ni orden.
+
+**«¿No deberíamos generar también el sitemap.xml?»** Tampoco, y aquí la
+diferencia no es de esfuerzo sino de qué es cada artefacto. Un `llms.txt` es
+una **guía curada**: que la mantenga una persona es lo normal. Un sitemap es un
+**índice generado por máquina** que debe seguir al sitio: uno estático nuestro
+estaría obsoleto en cuanto publiquen algo, y lo habríamos construido con las
+~15 URLs que conocemos de sus varios cientos. Además, en 2026 un sitio sin
+sitemap casi nunca necesita escribirlo — necesita activarlo. Los pasos apuntan
+al interruptor por plataforma.
+
+**Lo que sí faltaba era parsearlo.** La comprobación vieja era sólo de
+alcanzabilidad, y el fallo más común del mundo real la burla: un **404 blando**
+—página HTML de error servida con 200— contaba como «Encontrado». Ahora se
+distingue `urlset` / `index` / `invalid`. Coste: **cero peticiones nuevas**,
+porque `robots.ts` ya descargaba esos bytes y los tiraba. Ese detalle es la
+frontera de alcance, no una nota de rendimiento: parsear lo que ya tenemos no
+amplía la superficie de fetch, pero **seguir un índice hasta sus sitemaps hijo
+sí** —es seguir enlaces, o sea rastrear— y por eso no se hace; «índice» se
+reporta como estado propio.
+
+**Y mirar la captura destapó el defecto gemelo.** El pilot mostró
+«sitemap.xml — No encontrado» para **mozilla.org**, un sitio que evidentemente
+tiene sitemap. La causa estaba en `fetchTextCapped`: devolvía `null` ante 404,
+403, timeout y error de red por igual, y los cuatro salían como «No
+encontrado». Es el mismo error que el 404 blando pero en el otro sentido — una
+comprobación que colapsa estados distintos en una sola respuesta.
+
+Era tolerable mientras la auditoría sólo **informaba**. Dejó de serlo al añadir
+pasos de arreglo: a un cliente detrás de un WAF corriente le estaríamos
+diciendo que le falta un fichero que ya tiene, con instrucciones para crearlo.
+Decirle a alguien que arregle un problema que no tiene es peor que no decir
+nada.
+
+Ahora hay tres estados (`found` / `absent` / `unknown`) y **un probe sin
+resolver no es incidencia ni «correcto»: es no medido**, y no aparece en
+ninguna de las dos listas. Es la misma regla que `PageCheckDefinition.isMeasured`
+ya aplicaba página a página, aplicada por primera vez a los hechos de
+proyecto. La alcanzabilidad se informa aparte, en la tarjeta de acceso de bots
+(«Sin comprobar»), que es donde vive ese tipo de hecho.
+
+Dos honestidades que el código sostiene con tests: el recuento se muestra como
+«más de N» cuando el fichero vino truncado por el tope de 128 KB, porque un
+prefijo no es un total; y el campo nuevo es **opcional**, de forma que un
+snapshot anterior conserva su lectura de antes en vez de reinterpretarse — dar
+por medido lo que aquella auditoría nunca midió sería inventar una medición
+retroactiva.
+
+---
+
 **Los epígrafes son los prompts, y eso tiene un coste que no es estético.**
 Al mirar la captura real del pilot sobre mozilla.org se vio que las secciones
 salen en forma de pregunta (`## ¿Qué navegador web ofrece la mejor protección
@@ -2022,6 +2233,136 @@ comercial en Hobby queda cerrado (era bloqueante de la Fase 5 de
 de GitHub Actions que consume el piloto en cada deploy, que ninguna de las
 cuatro reglas de esta fase toca de raíz — eso es la fase del piloto por
 etiqueta.
+
+---
+
+## 22. La auditoría, visible en Escaneos (AUDIT-IN-RUNS-1, 2026-08-05)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el 2026-08-05
+("quiero que ahora las auditorías completadas se muestren también en el
+listado de Escaneos completados para verlo de un vistazo").
+
+Columna **«Auditoría»** en la tabla de Escaneos, entre *Lanzamientos* y *GEO
+Score*. Sin esquema nuevo: los dos lados ya estaban persistidos por escaneo.
+
+**Por qué ahora y no antes.** La columna depende de que exista una relación
+1:1 fiable entre un escaneo y una auditoría, y esa relación **nació anoche**
+con AUDIT-AFTER-SCAN-1 (§18). Antes la auditoría era un acto manual y
+esporádico: una columna así habría estado vacía casi siempre y no habría
+significado nada.
+
+**Las cuatro decisiones, con su porqué:**
+
+1. **Estado + nota técnica**, no sólo estado. El número (`40/100`) es lo que
+   de verdad se compara entre escaneos, y tenerlo al lado del GEO Score es
+   justamente el vistazo que se pedía. Va etiquetado por `title`, porque sin
+   etiqueta y a una columna del GEO Score se lee como una segunda puntuación.
+2. **«Auditada» exige las dos mitades.** Cobertura y salud técnica se
+   persisten por separado y pueden aterrizar por separado —es normal, no un
+   fallo: la técnica se aparca a la invocación siguiente cuando no cabe—. Con
+   una sola, la celda dice **«Parcial»**. Llamar completa a media auditoría
+   sería exactamente la clase de progreso fingido que prohíbe el CLAUDE.md.
+3. **Los escaneos sin auditoría muestran `—`, nunca «Pendiente».** Tres
+   pasados distintos caen ahí y ninguno es accionable por el cliente: escaneos
+   anteriores a §18, proyectos por debajo del gate Pro, y auditorías que
+   agotaron sus reintentos. Una raya honesta en vez de tres etiquetas que
+   invitan a tres preguntas. **«En curso» queda reservado a trabajo realmente
+   en cola**, que sí se resolverá solo.
+4. **La celda no es un enlace, y es deliberado.** Esta tabla tiene una fila
+   por escaneo, pero la pantalla de Auditoría web muestra **la última**
+   auditoría, no la de un escaneo concreto. Enlazar la fila del martes
+   llevaría a la auditoría del jueves haciéndola pasar por la del martes. Una
+   vista de auditoría por escaneo es otra fase; hasta entonces la celda
+   informa y no finge navegar.
+
+**Quinto estado, añadido tras verlo en producción (2026-08-05):**
+**«Reintentando»**, separado de «En curso». El backoff de la cola es
+`[1, 5, 25, 120, 600]` minutos, así que un trabajo en su quinto intento se
+queda quieto **diez horas**. Pintarlo «En curso» promete un movimiento que no
+va a llegar en todo el día, y se lee como una tabla congelada en vez de como
+una auditoría con problemas — que es exactamente cómo se leyó: filas inmóviles
+en «En curso» durante cuatro horas y media. «En curso» queda para `pending` y
+`running`, que sí se mueven pronto.
+
+**Pendiente conocido:** una auditoría que falló definitivamente es
+indistinguible de una que nunca existió. Es una decisión, no un olvido —el
+cliente no puede actuar sobre un fallo de backend y el operador ya recibe un
+email—, pero si algún día el fallo pasa a ser accionable, aquí falta un
+estado.
+## 23. El historial de escaneos deja de publicar deltas que la Visión general oculta (DELTA-GUARD-1, 2026-08-05)
+
+**El hallazgo, encontrado mirando capturas del piloto, no auditando código.** La
+Visión general lleva desde GEO-SCORE-RELIABILITY-1 (ADR 0024) negándose a
+publicar un «vs. escaneo anterior» que la muestra no sostiene. La tabla de
+Escaneos, en la pantalla de al lado, seguía restando los dos scores en crudo
+(`curr - prev`) y publicando **`+34 pt`, `-50 pt`, `+67 pt` sobre escaneos de 3
+respuestas**. Es exactamente la falsa precisión que motivó el ADR, viva en la
+pantalla donde el fundador mira su histórico.
+
+Que sobreviviera un año de trabajo sobre el score tiene una explicación
+incómoda: ADR 0024 se implementó *en una pantalla*, no *en el producto*. La
+capa de fiabilidad existía y era correcta; simplemente había un consumidor que
+no la llamaba.
+
+**La decisión.** Un delta sólo se publica si `resolveDelta` lo autoriza —
+mismo punto de decisión, mismos criterios, cero lógica duplicada. Los tres
+casos se renderizan así:
+
+| Veredicto | Render |
+|---|---|
+| `publish` | El valor, como siempre |
+| `insufficient_sample` | Guion, con el tamaño de muestra y el mínimo en el tooltip |
+| `not_comparable` | Guion, con la causa concreta en el tooltip |
+
+**Se retiene deliberadamente el guion, no un aviso.** El 2026-08-03 el fundador
+decidió para la Visión general que una comparación retenida se renderiza como
+nada, porque varios «sin comparación» en una pantalla se leen como un producto
+roto y no como uno cuidadoso. Aquí pesa más: son *filas*, así que un aviso por
+fila sería una columna entera de disculpas. La razón vive en el `title`, para
+quien la busque.
+
+**Consecuencia visible y buscada:** proyectos como Mozilla (1 prompt × 3
+motores) pasan a tener la columna Δ Score casi vacía. No es una regresión —
+es el producto dejando de afirmar lo que nunca pudo medir. Con SAMPLING-1
+(§20) esos mismos proyectos vuelven a llenarla en cuanto alcanzan el suelo de
+respuestas.
+
+**Invariante nuevo, en `.claude/rules/scoring.md`:** ninguna superficie
+publica una comparación entre escaneos sin pasar por `resolveDelta`. La
+lección no es "arreglada la tabla" sino que una capa de honestidad que hay que
+acordarse de llamar acaba sin llamarse.
+
+---
+## 24. El cajón de evidencias dice a qué repetición pertenece cada respuesta (SAMPLING-SURFACE-1, 2026-08-05)
+
+Deuda declarada al cerrar SAMPLING-1 (§20) y saldada aquí. Desde que un escaneo
+puede repetir su set de prompts, `scan_prompt_results` guarda R filas por
+(prompt, motor) en vez de una, y la superficie no se había enterado.
+
+**El cajón mostraba «Gemini / Gemini / Gemini / Claude / Claude / Claude»** sin
+decir por qué. Eso se lee como un fallo de renderizado, cuando en realidad son
+tres respuestas distintas a la misma pregunta — y **su desacuerdo es justamente
+el motivo de muestrear**. Ahora cada fila lleva «· muestra 2 de 3», y las
+repeticiones de un mismo motor van juntas, para que "este motor dijo cosas
+distintas en intentos distintos" se vea de un vistazo.
+
+**«N citas» por prompt sumaba todas las muestras**, así que el mismo prompt con
+el mismo comportamiento de citas reportaba 21 con tres repeticiones y 7 con
+una: dos números describiendo una sola realidad, y no comparables entre
+escaneos. Se añade el denominador («21 citas en 9 respuestas») en vez de
+cambiar la cifra que el usuario ya leía.
+
+**Las dos etiquetas desaparecen cuando no hay repeticiones**, que es la
+inmensa mayoría de escaneos (todo proyecto de 17 prompts para arriba). Poner
+«muestra 1 de 1» en cada fila de cada proyecto para servir a la minoría que
+repite sería ruido puro.
+
+La lógica vive en `lib/scan/sample-display.ts`, pura y testeada, porque el
+recuento y la etiqueta **tienen que coincidir**: si la lista dedujera "3
+muestras" de una forma y el cajón de otra, el producto se contradiría sobre
+cuántas veces preguntó. Cuenta índices distintos y no filas partido motores, a
+propósito: un escaneo donde un motor falló en una repetición tiene un número
+desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal.
 
 ---
 

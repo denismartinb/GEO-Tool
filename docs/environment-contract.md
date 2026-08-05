@@ -145,6 +145,31 @@ six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
 customer: the audit is automatic, so the user never asked for it and cannot
 act on the backend failure. Requires `RESEND_API_KEY` like every other email.
 
+The same address also receives the **scan-health alert**
+(EXTRACTION-RELIABILITY-1 Fase B, `docs/adr/0029`): a provider out of quota, a
+provider rejecting the key or model id, an engine that answered prompts but
+extracted nothing, or a run that failed with its auto-retry already spent.
+Deduped on (engine, reason) across every project for 24 h, so one exhausted
+API account is one email rather than one per project per daily sweep. Also
+operator-only, and for the same reason.
+
+**This variable was not configured at all when Fase B shipped** (founder,
+2026-08-04), which means the web-audit alert above had been inert since the day
+it was written. An unset alert channel swallowing an alert is the same class of
+silent failure this whole ADR exists to remove, so
+`checkAndSendScanHealthAlert` now emits a loud `console.error` when it has
+findings and no address to send them to. The alert still cannot be delivered —
+only setting the variable fixes that — but it stops being invisible. **Set it
+in both Production and Preview**, and note that it needs `RESEND_API_KEY` too:
+without that, `sendEmail` is a no-op for every email in the product.
+
+That second requirement is not theoretical. On 2026-08-05 the Fase B
+verification failed with no email and no log, because `OPS_ALERT_EMAIL` was
+configured but `RESEND_API_KEY` was not — the address probe passed and
+`sendEmail` then returned on `if (!resend) return`. Two silent gates in
+series. `isOpsAlertConfigured` now requires both, so the "not deliverable"
+log fires when either is missing.
+
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
 | Variable | Required | Where | Expected shape |

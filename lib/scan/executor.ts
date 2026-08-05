@@ -13,6 +13,7 @@ import {
 import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
+import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
   EXTRACTION_VERSION,
@@ -1254,6 +1255,20 @@ export async function executePendingScan({
       })
       .eq("id", runId)
       .eq("project_id", projectId);
+
+    // EXTRACTION-RELIABILITY-1 Fase B: a run can reach `completed` and still
+    // have lost a whole engine's data — that is precisely how OpenAI's 429s
+    // stayed invisible for four days. Checked here, after the run's own
+    // status update is durable, so the alert describes a state that really
+    // landed. Fail-soft inside, like every other post-scan side effect.
+    await checkAndSendScanHealthAlert({
+      service,
+      projectId,
+      runId,
+      projectDomain: project.domain as string,
+      expectedEngines: providers,
+      finalizeJobId: finalizeJob.id
+    });
 
     // Emitted only after the run's own status update above is durable — a
     // notification must never describe a state that hasn't actually landed.
