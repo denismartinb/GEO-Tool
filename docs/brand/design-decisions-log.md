@@ -2932,6 +2932,52 @@ tres muestran su contenido completo en esa ventana.
 ventana de recorte real del contenedor CSS, no contra el lienzo completo. El
 propio SVG lo deja escrito en un comentario a partir de ahora.
 
+### Tercer hallazgo, del `ux-pilot` otra vez: había una CUARTA ventana, más agresiva que la probada
+
+La verificación anterior sólo probó **una** ventana de recorte (la del
+artículo en escritorio, 1124×96). Existen otras cuatro contenedores reales, y
+el `ux-pilot` encontró que la más agresiva de todas — la **tarjeta de `/blog`
+y `/blog/sectores` en móvil, 319×170px** — recorta mucho más que la probada:
+sólo sobreviven **563px centrados** del lienzo de 1200, frente a los 1200px
+completos que sobrevivían en el caso ya arreglado. El texto alineado a la
+izquierda de las tres portadas —que empezaba en x≈90— perdía ahí su mitad
+izquierda: "Aquí te enteras tú" se leía "rta ya está hecha".
+
+**Verificado con las cinco ventanas reales, no una sola, antes de aceptar el
+segundo fix:**
+
+| Ventana | Contenedor | Recorte |
+|---|---|---|
+| Artículo, escritorio | 1124×96 | vertical, x completo |
+| Artículo, tablet | 712×96 | vertical, x completo |
+| Artículo, móvil | 319×96 | horizontal, ±102px |
+| Tarjeta, escritorio | 1124×170 | vertical, x completo |
+| Tarjeta, tablet | 712×170 | vertical, x completo |
+| **Tarjeta, móvil** | **319×170** | **horizontal, ±318px — la que manda** |
+
+**Corregido quitando el texto de las tres portadas, no ajustando su posición
+otra vez.** El patrón de "recolocar el mismo contenido dentro de una franja
+más pequeña" ya había fallado dos veces (fila 630→300, ahora la ventana
+horizontal). En vez de perseguir una quinta ventana con texto cada vez más
+frágil, las tres portadas pasan a ser **sólo forma**: el elemento con más
+significado (el hueco vacío punteado en ámbar, el botón sólido, el hilo hacia
+la tarjeta del cliente) va centrado en (600,150) — el único punto que
+sobrevive a las seis combinaciones—, y los elementos decorativos se abren
+hacia los bordes, donde pueden recortarse sin perder nada porque no llevan
+información, sólo ambiente.
+
+**Esto resuelve dos hallazgos a la vez.** Sin texto no hay palabra que cortar
+a la mitad en ningún recorte futuro — el motivo de las dos rondas anteriores
+desaparece por diseño, no por ajuste fino. Y de paso responde a la duda
+abierta sobre la enmienda de ADR 0028 ("¿parece un panel de producto?"): un
+botón sin la palabra "Demo" y unas cajas numeradas sin números leen como pura
+forma abstracta, no como una maqueta de interfaz — el `ux-pilot` había
+marcado el botón como "el elemento más próximo a un CTA real de producto"
+precisamente por su etiqueta de texto, que ya no existe.
+
+Verificado recortando programáticamente las tres portadas contra las **seis**
+ventanas antes de empujar: el motivo central se ve completo en todas.
+
 ---
 
 ## Cómo mantener este documento

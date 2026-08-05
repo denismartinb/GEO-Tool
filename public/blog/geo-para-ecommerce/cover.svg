@@ -18,29 +18,21 @@
   <circle cx="150" cy="150" r="230" fill="url(#glowA)"/>
   <circle cx="1060" cy="150" r="210" fill="url(#glowB)"/>
 
-  <!-- Todo el contenido con valor vive en la franja central (y≈75-225), que
-       es la única zona que sobrevive al recorte real: el contenedor del
-       artículo mide 1124×96px, así que object-fit:cover solo enseña una
-       franja centrada de este lienzo. Ver docs/brand/design-decisions-log.md
-       §31 (hallazgo del ux-pilot en el PR #351). -->
+  <!-- Sin texto: cada recorte de contenedor (artículo/tarjeta, cualquier
+       ancho) parte de un centro distinto, y el texto alineado a la izquierda
+       es justo lo que se rompe ahí (ux-pilot, PR #351, segunda vuelta). Sólo
+       forma, centrada en (600,150) con margen amplio para sobrevivir a la
+       ventana más agresiva medida: la tarjeta de /blog en móvil, ~560px
+       centrados. Ver docs/brand/design-decisions-log.md §31. -->
 
-  <!-- Tres huecos en horizontal: dos ocupados, uno vacío -->
-  <g transform="translate(90 108)">
-    <g fill="#3b4759">
-      <rect x="0" y="0" width="280" height="84" rx="16" opacity=".28"/>
-      <rect x="308" y="0" width="280" height="84" rx="16" opacity=".28"/>
-    </g>
-    <rect x="0" y="0" width="280" height="84" rx="16" fill="none" stroke="#2563eb" stroke-width="2.5"/>
-    <rect x="308" y="0" width="280" height="84" rx="16" fill="none" stroke="#09c5d6" stroke-width="2.5"/>
-    <rect x="616" y="0" width="280" height="84" rx="16" fill="none" stroke="#ffb020" stroke-width="2.5" stroke-dasharray="10 8"/>
+  <!-- Dos huecos ocupados a los lados, el vacío (la marca ausente) en el centro -->
+  <g>
+    <rect x="120" y="110" width="220" height="80" rx="16" fill="#3b4759" opacity=".3"/>
+    <rect x="120" y="110" width="220" height="80" rx="16" fill="none" stroke="#2563eb" stroke-width="3"/>
 
-    <text x="34" y="30" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" font-weight="700" fill="#2563eb">1</text>
-    <rect x="34" y="46" width="180" height="13" rx="6.5" fill="#5b6b82" opacity=".8"/>
+    <rect x="490" y="106" width="220" height="88" rx="18" fill="none" stroke="#ffb020" stroke-width="3" stroke-dasharray="11 9"/>
 
-    <text x="342" y="30" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" font-weight="700" fill="#09c5d6">2</text>
-    <rect x="342" y="46" width="180" height="13" rx="6.5" fill="#5b6b82" opacity=".8"/>
-
-    <text x="650" y="30" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="14" font-weight="700" fill="#ffb020">3</text>
-    <text x="650" y="55" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif" font-size="13" fill="#ffb020" opacity=".9">Este eres tú</text>
+    <rect x="860" y="110" width="220" height="80" rx="16" fill="#3b4759" opacity=".3"/>
+    <rect x="860" y="110" width="220" height="80" rx="16" fill="none" stroke="#09c5d6" stroke-width="3"/>
   </g>
 </svg>
