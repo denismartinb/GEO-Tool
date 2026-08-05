@@ -25,7 +25,29 @@ type LiveRun = {
   total_prompts: number | null;
   successful_prompts: number | null;
   failed_prompts: number | null;
+  /** Analysis-stage counters (EXTRACTION-RELIABILITY-1 Fase C), served by the same poll endpoint. */
+  responses_total?: number | null;
+  responses_processed?: number | null;
 };
+
+/**
+ * True when every launch is done but the run is still working — i.e. it is in
+ * the extraction stage (Fase C, docs/adr/0029).
+ *
+ * The "Lanzamientos" counter is NOT wrong during this window: 6 of 6 launches
+ * really have finished. What was missing is that the status said only "En
+ * curso", so a row reading "En curso · 6/6" gave no hint of what was left,
+ * which is the same "looks stuck" problem the full-screen progress had. This
+ * column stays about launches — a table cell is the wrong place to switch a
+ * counter's unit halfway — and the badge carries the stage instead.
+ */
+export function isAnalyzing(run: Pick<LiveRun, "status" | "total_prompts" | "successful_prompts" | "failed_prompts">): boolean {
+  const total = Number(run.total_prompts ?? 0);
+  if (total <= 0) return false;
+  if (run.status !== "running" && run.status !== "pending") return false;
+  const done = Number(run.successful_prompts ?? 0) + Number(run.failed_prompts ?? 0);
+  return done >= total;
+}
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -70,6 +92,7 @@ export function LiveRunStatusCells({ projectId, initial }: { projectId: string; 
     };
   }, [projectId, initial.id]);
 
+  const analyzing = isAnalyzing(run);
   const total = Number(run.total_prompts ?? 0);
   const ok = Number(run.successful_prompts ?? 0);
   const okPct = total > 0 ? (ok / total) * 100 : 0;
@@ -79,7 +102,9 @@ export function LiveRunStatusCells({ projectId, initial }: { projectId: string; 
   return (
     <>
       <td>
-        <span className={getStatusBadgeClass(run.status)}>{statusLabels[run.status] ?? run.status}</span>
+        <span className={getStatusBadgeClass(run.status)}>
+          {analyzing ? "Analizando" : (statusLabels[run.status] ?? run.status)}
+        </span>
       </td>
       <td>
         <div className="run-bar-wrap">

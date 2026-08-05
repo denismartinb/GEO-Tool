@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeScanStage, type ActiveScanRun } from "./scan-in-progress";
+import { isAnalyzing } from "./live-run-status-cells";
 
 /**
  * EXTRACTION-RELIABILITY-1 Fase C (docs/adr/0029).
@@ -93,5 +94,36 @@ describe("computeScanStage", () => {
 
     expect(stage).toMatchObject({ kind: "analyzing", total: null });
     expect(Number.isFinite(pctOf(stage))).toBe(true);
+  });
+});
+
+/**
+ * Escaneos renders the run through `LiveRunStatusCells`, not through
+ * `ScanInProgress` — which is why the first look at Fase C on that page saw
+ * no change at all (founder report, 2026-08-05). The table keeps counting
+ * launches, because "6 of 6 launches" is genuinely true during extraction;
+ * what was missing is that the badge said only "En curso", so the row read as
+ * finished-but-stuck. The stage moved to the badge instead.
+ */
+describe("isAnalyzing (Escaneos row)", () => {
+  const base = { status: "running", total_prompts: 6, successful_prompts: 0, failed_prompts: 0 };
+
+  it("is false while launches are still going out", () => {
+    expect(isAnalyzing({ ...base, successful_prompts: 3 })).toBe(false);
+  });
+
+  it("is true once every launch is terminal but the run is still working", () => {
+    expect(isAnalyzing({ ...base, successful_prompts: 6 })).toBe(true);
+    expect(isAnalyzing({ ...base, successful_prompts: 4, failed_prompts: 2 })).toBe(true);
+  });
+
+  it("is false for a run that already reached a terminal state", () => {
+    expect(isAnalyzing({ ...base, status: "completed", successful_prompts: 6 })).toBe(false);
+    expect(isAnalyzing({ ...base, status: "failed", successful_prompts: 6 })).toBe(false);
+  });
+
+  it("is false before the launch count is known", () => {
+    expect(isAnalyzing({ ...base, total_prompts: 0 })).toBe(false);
+    expect(isAnalyzing({ ...base, total_prompts: null })).toBe(false);
   });
 });

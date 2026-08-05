@@ -281,6 +281,16 @@ judgement is testable without a DOM. Two properties are load-bearing:
   "no fake progress" rule is actually about. The prototype this screen came
   from animated six fictional steps on a timer; that is the line being held.
 
+**Escaneos was missed on the first pass** (founder report, 2026-08-05: "no he
+visto que cambie ningún título"). That page does not render this component at
+all — it renders `LiveRunStatusCells` for the one in-flight row, which is why
+watching a scan from the most natural place showed exactly the old behaviour.
+Its fix is deliberately different: the "Lanzamientos" counter is **not** wrong
+during extraction — 6 of 6 launches really have finished — so switching that
+column's unit halfway would trade one confusion for another. The stage moved
+to the status badge instead, which reads "Analizando" rather than "En curso"
+once every launch is terminal and the run is still working.
+
 The analysis denominator is **counted from the rows that exist**, not derived
 from `prompts × engines × samples`. That arithmetic has already changed once
 under this code — SAMPLING-1 (ADR 0030) made `total_prompts` count jobs rather
