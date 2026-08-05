@@ -71,9 +71,17 @@ export function renderNotification(
       const resolvedGaps = num(payload.resolvedGaps) ?? 0;
       const promptsProcessed = num(payload.promptsProcessed);
 
+      // `visibilityDelta` is the raw difference between two computed scores,
+      // so it reaches here as a float — the bell was showing "Visibilidad 75
+      // (+2.780000000000001)" in production (pilot capture, PR #336). Round
+      // it the same way the score printed beside it is rounded, and drop the
+      // parenthetical when the rounded value is 0: "(+0)" is noise, not
+      // information. `Math.round(-0.4)` is `-0`, which is falsy, so a
+      // sub-point dip is suppressed as well.
+      const roundedDelta = delta !== null ? Math.round(delta) : null;
       const scoreText =
         score !== null
-          ? `Visibilidad ${Math.round(score)}${delta ? ` (${delta > 0 ? "+" : ""}${delta})` : ""}.`
+          ? `Visibilidad ${Math.round(score)}${roundedDelta ? ` (${roundedDelta > 0 ? "+" : ""}${roundedDelta})` : ""}.`
           : "El escaneo ha finalizado con éxito.";
       const clauses: string[] = [];
       if (newRecs > 0) clauses.push(`${newRecs} ${plural(newRecs, "acción nueva", "acciones nuevas")}`);

@@ -31,6 +31,51 @@ describe("renderNotification", () => {
     expect(r.tone).toBe("pos");
   });
 
+  it("rounds a floating-point visibility delta instead of printing it raw", () => {
+    // Caught by the pilot on PR #336: the bell showed "(+2.780000000000001)".
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 6,
+          providers: ["gemini"],
+          visibilityScore: 75,
+          visibilityDelta: 2.780000000000001,
+          newRecommendations: 13,
+          resolvedGaps: 6
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.body).toBe("Visibilidad 75 (+3). 13 acciones nuevas y 6 brechas cerradas.");
+  });
+
+  it("drops the parenthetical entirely for a sub-point delta rather than printing '(+0)'", () => {
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 6,
+          providers: ["gemini"],
+          visibilityScore: 75,
+          visibilityDelta: 0.4,
+          newRecommendations: 0,
+          resolvedGaps: 0
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.body).toBe("Visibilidad 75.");
+  });
+
   it("renders scan_completed with a negative delta as trendDown/neg", () => {
     const r = renderNotification(
       {
