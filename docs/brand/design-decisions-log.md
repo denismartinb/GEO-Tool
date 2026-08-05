@@ -2366,53 +2366,6 @@ desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal
 
 ---
 
-## 20. El estado del escaneo, visible en móvil (EXTRACTION-RELIABILITY-1 Fase C, 2026-08-05)
-
-**El problema.** En un móvil, en un proyecto con historial, durante un
-escaneo no había **ninguna** señal en pantalla. Tres cosas se sumaban: el chip
-`.scan-status` está oculto bajo el breakpoint móvil (`app/globals.css`), el
-overlay a pantalla completa sólo se monta cuando todavía no hay datos que
-enseñar, y la pastilla del sticky-header seguía diciendo "Escaneado 5 ago".
-Reportado por el fundador desde su propio móvil: *"no veo ningún chip en
-ninguna cabecera móvil que indique el estado de escaneando o actualizando"*.
-
-Y la pastilla no es que faltara: es que **mentía justo cuando importaba**.
-"Escaneado 5 ago" afirma que lo que ves es lo último que hay, mientras se
-están cociendo datos nuevos.
-
-**Qué se decidió.**
-
-1. **El estado vive en la pastilla del sticky-header**, no en la barra de app.
-   Esto es continuación de §3 (BRAND-5b-mobile-header), no una excepción a
-   ella: aquella decisión estableció que la barra móvil no lleva contexto y
-   que *"el contexto vive entero en el sticky-header de cada página"*, y ya
-   descartó explícitamente una versión con esa info incrustada en la barra
-   ("el header y la cabecera del body es redundante"). Esta fase usa el hueco
-   que aquella designó.
-2. **Tres estados en la misma pastilla**: `Escaneando…` mientras se consulta a
-   los motores, `Analizando…` durante la extracción, y `Escaneado <fecha>` en
-   reposo. La etiqueta de escaneo activo sale de `computeScanStage`, el mismo
-   cálculo que la pantalla completa, para que las dos superficies no puedan
-   discrepar.
-3. **`ScanStatePill` es un componente compartido.** Antes la pastilla estaba
-   duplicada en seis pantallas con cinco formateos de fecha distintos y tres
-   condiciones distintas para el chip de al lado.
-4. **Recomendaciones se alinea con las demás pantallas de datos.** Era la
-   única que escondía su contenido entero detrás del overlay durante un
-   escaneo; ahora el overlay sólo sustituye a la pantalla cuando no hay nada
-   que enseñar, igual que en Prompts, Competidores y Páginas citadas.
-
-**Por qué el punto 4 importa más de lo que parece.** Ese comportamiento era la
-causa del `PILOT FAIL` repetido de "recommendations: estado vacío" (2026-08-04
-y 05). Se explicó dos veces como una carrera con los datos del escaneo; no lo
-era. El piloto estaba señalando una inconsistencia real de diseño y la
-explicación cómoda la tapó dos veces.
-
-**Pendiente / roto conocido.** El reparto 50/50 entre las dos etapas de la
-barra a pantalla completa es una convención de presentación, no una medida —
-ajustable con datos reales de duración. Y la Auditoría web mantiene su propio
-chip "Auditando", que es otro concepto y no se ha tocado.
-
 ## 25. Fuera el botón «Auditar ahora» (AUDIT-NO-BUTTON-1, 2026-08-05)
 
 **Estado: implementada.** Petición directa del fundador: *"quita el botón
@@ -2463,6 +2416,160 @@ siguiente render lo reintenta y la cola del backend también—, pero conviene
 que conste: hoy un fallo de esa ruta no se ve en pantalla. El banner de "plan
 pausado a mitad de auditoría" sigue cubriendo el único caso que de verdad deja
 al usuario atascado sin explicación.
+
+---
+
+## 26. El estado del escaneo, visible en móvil (EXTRACTION-RELIABILITY-1 Fase C, 2026-08-05)
+
+**El problema.** En un móvil, en un proyecto con historial, durante un
+escaneo no había **ninguna** señal en pantalla. Tres cosas se sumaban: el chip
+`.scan-status` está oculto bajo el breakpoint móvil (`app/globals.css`), el
+overlay a pantalla completa sólo se monta cuando todavía no hay datos que
+enseñar, y la pastilla del sticky-header seguía diciendo "Escaneado 5 ago".
+Reportado por el fundador desde su propio móvil: *"no veo ningún chip en
+ninguna cabecera móvil que indique el estado de escaneando o actualizando"*.
+
+Y la pastilla no es que faltara: es que **mentía justo cuando importaba**.
+"Escaneado 5 ago" afirma que lo que ves es lo último que hay, mientras se
+están cociendo datos nuevos.
+
+**Qué se decidió.**
+
+1. **El estado vive en la pastilla del sticky-header**, no en la barra de app.
+   Esto es continuación de §3 (BRAND-5b-mobile-header), no una excepción a
+   ella: aquella decisión estableció que la barra móvil no lleva contexto y
+   que *"el contexto vive entero en el sticky-header de cada página"*, y ya
+   descartó explícitamente una versión con esa info incrustada en la barra
+   ("el header y la cabecera del body es redundante"). Esta fase usa el hueco
+   que aquella designó.
+2. **Tres estados en la misma pastilla**: `Escaneando…` mientras se consulta a
+   los motores, `Analizando…` durante la extracción, y `Escaneado <fecha>` en
+   reposo. La etiqueta de escaneo activo sale de `computeScanStage`, el mismo
+   cálculo que la pantalla completa, para que las dos superficies no puedan
+   discrepar.
+3. **`ScanStatePill` es un componente compartido.** Antes la pastilla estaba
+   duplicada en seis pantallas con cinco formateos de fecha distintos y tres
+   condiciones distintas para el chip de al lado.
+4. **Recomendaciones se alinea con las demás pantallas de datos.** Era la
+   única que escondía su contenido entero detrás del overlay durante un
+   escaneo; ahora el overlay sólo sustituye a la pantalla cuando no hay nada
+   que enseñar, igual que en Prompts, Competidores y Páginas citadas.
+
+**Por qué el punto 4 importa más de lo que parece.** Ese comportamiento era la
+causa del `PILOT FAIL` repetido de "recommendations: estado vacío" (2026-08-04
+y 05). Se explicó dos veces como una carrera con los datos del escaneo; no lo
+era. El piloto estaba señalando una inconsistencia real de diseño y la
+explicación cómoda la tapó dos veces.
+
+**Pendiente / roto conocido.** El reparto 50/50 entre las dos etapas de la
+barra a pantalla completa es una convención de presentación, no una medida —
+ajustable con datos reales de duración. Y la Auditoría web mantiene su propio
+chip "Auditando", que es otro concepto y no se ha tocado.
+
+---
+
+## 27. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
+
+**Estado: implementada. Migración `0029_notification_audit_regression_types.sql`
+aplicada a mano en Supabase por el fundador el 2026-08-05**, en el mismo PR.
+Antes de aplicarla el `CHECK` de `notifications.type` rechazaba los cinco tipos
+nuevos y `emitNotification` se limitaba a registrar el fallo — fail-soft por
+contrato, así que no rompía ninguna auditoría, simplemente no avisaba.
+Invariantes de la zona en `.claude/rules/web-audit.md`.
+
+**El problema.** Desde §18 la auditoría se refresca sola tras cada escaneo,
+pero nadie te decía que el resultado de hoy es peor que el de ayer: tenías que
+entrar a mirar. Esta fase invierte eso. Era la otra mitad de WEB-AUDIT-3
+(`docs/specs/web-audit/phase-3-daily-audit.md`), aplazada con razón: dos
+auditorías manuales separadas por semanas no son una regresión, son dos fotos
+sueltas. Con datos que se refrescan solos, la comparación por fin significa
+algo.
+
+**Los seis avisos, y por qué en ese orden.** Se emiten a `notifications` (la
+campana), enlazan a Auditoría web y reutilizan tal cual el leído/no leído que
+ya existe:
+
+| Aviso | Salta cuando | Severidad |
+|---|---|---|
+| `ai_bot_blocked` | un bot de IA pasa de poder leer tu web a estar bloqueado | crítica |
+| `llms_txt_lost` | tenías `llms.txt` y ha desaparecido | crítica |
+| `sitemap_lost` | tenías `sitemap.xml` y ha desaparecido | aviso |
+| `page_unreachable` | una página que se analizó bien ayer hoy no responde | aviso |
+| `surfacing_dropped` | un tema pasa de `performing` a `invisible` | aviso |
+| `coverage_dropped` | un tema pierde cobertura de contenido propio | aviso |
+
+Los cuatro primeros van delante a propósito: son fallos técnicos que ocurren
+sin que nadie los toque a propósito —un cambio en `robots.txt`, un despliegue
+que se lleva un fichero— y que te dejan invisible para la IA sin ningún
+síntoma visible. Hoy te enterabas semanas después, si acaso.
+
+**Los dos que no pedía el diseño, y por qué se añaden.** `sitemap_lost` sale
+gratis (`sitemapFound` ya vivía en el snapshot desde WEB-AUDIT-R3) y es
+exactamente la misma clase de fallo silencioso que `llms_txt_lost`.
+`page_unreachable` es el caso clásico de "un despliegue se llevó una sección":
+se compara sólo contra páginas que **la auditoría anterior analizó con éxito**,
+y sólo cuentan `skipped_timeout` y `skipped_error` — un `skipped_not_html` o
+un `skipped_offsite` son decisiones nuestras sobre una URL, y reportarlas como
+caída sería una falsa alarma en el aviso cuya única virtud es que se le crea.
+
+**La regla que hace que esto no sea ruido: todo es transición, nada es
+estado.** Ningún aviso salta porque algo *esté* mal, sino porque *ha pasado* a
+estarlo desde la auditoría anterior. Un `llms.txt` que sigue sin aparecer
+mañana produce silencio, porque el "anterior" de mañana ya lo tenía perdido.
+De ahí se derivan tres decisiones que parecen detalles y no lo son:
+
+- **Sin lado anterior no hay aviso.** Una primera auditoría no tiene ayer.
+  Tampoco lo tiene un campo que no existía en la fila antigua (`sitemapFound`
+  en snapshots previos a WEB-AUDIT-R3): `undefined → false` es "antes no
+  mirábamos", no "ha desaparecido".
+- **Inconcluso no es regresión.** Un tema que pasa a `inconclusive` (un fallo
+  transitorio de Gemini, un corte por presupuesto) mueve el porcentaje de
+  cobertura sin que nada haya empeorado, y por eso la comparación es **por
+  tema**, nunca entre los dos porcentajes.
+- **Un bot que aparece bloqueado la primera vez que lo vigilamos no es una
+  regresión**, es un descubrimiento sobre un `robots.txt` que no ha cambiado.
+  El diseño decía "de permitido *o inexistente*"; se implementa sólo
+  "permitido", porque disparar una alerta crítica el día que se añade un bot a
+  `TRACKED_BOT_AGENTS` enseña al fundador a desconfiar justo del aviso que más
+  falta hace que se crea.
+
+**No se capa el número de bots bloqueados.** Un `Disallow: /` bajo
+`User-agent: *` bloquea de verdad a los siete a la vez; recortar a tres
+contaría un apagón total como si fuera parcial.
+
+**Qué se ha decidido sobre el esquema, en contra de lo que decía la spec.** El
+diseño de WEB-AUDIT-3 prometía "sin esquema nuevo", y era cierto cuando la
+campana derivaba sus items al vuelo. NOTIF-SERVER-1a lo cambió: hoy `type`
+tiene un `CHECK`, así que un tipo nuevo **es** una migración — una sola línea,
+aditiva, sin tabla ni columna ni datos que migrar (`0029`). `ai_bot_blocked`
+no se añade porque ya estaba permitido desde `0021` y ya tenía copy y clave;
+el "bot_blocked" del diseño es ese mismo tipo, emitido por fin.
+
+**Dónde se emite, y por qué también en la ruta manual.** En
+`lib/web-audit/technical-audit.ts`, justo **después** del insert del snapshot
+(un aviso sobre una auditoría que no llegó a persistir apunta a nada). También
+en la ruta manual, no sólo en la automática: la comparación la hace valiosa el
+refresco diario, pero quien pulsa «Auditar ahora» y se queda en la pestaña de
+Cobertura tampoco se enteraría de que un bot acaba de quedar bloqueado — y la
+regla de transición garantiza que sigue siendo un aviso por cambio real, no
+uno por auditoría.
+
+**Coste y presupuesto.** La mitad técnica no cuesta ninguna consulta: los dos
+snapshots ya están en memoria. La mitad de cobertura cuesta dos lecturas
+acotadas y es la que se sacrifica bajo presión —si fallan o tardan, se emiten
+igualmente los avisos técnicos—. Lee **cuatro** mapas de cobertura, no dos,
+porque `performing`/`invisible` se deciden por mayoría sobre una ventana de
+tres escaneos: con menos, la campana clasificaría distinto que la pantalla a
+la que enlaza. `TECHNICAL_RESERVE_MS` sube en `REGRESSION_ALERTS_BUDGET_MS`
+(4 s) por la regla de la zona: quien añade trabajo por trabajo reajusta la
+reserva, no sólo el límite del lote.
+
+**Lo que queda fuera, a propósito.** `audit_completed` (fase 2 de
+`notifications-v1.md`) sigue sin emitirse: avisar de cada auditoría diaria
+correcta es exactamente el ruido contra el que se diseñaron estos avisos. Los
+toggles de `/dashboard/settings/notifications` siguen en "Próximamente" — son
+la fase 3 de esa spec y son una decisión de producto propia (¿el toggle
+silencia el email, la campana, o ambos?).
 
 ---
 

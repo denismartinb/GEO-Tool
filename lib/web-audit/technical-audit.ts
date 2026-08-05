@@ -12,6 +12,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib/web-audit/fetch-page";
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robots";
+import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
 
 /**
  * "Auditar salud técnica GEO" (WEB-AUDIT-2): a Pro+-gated, deterministic
@@ -340,7 +341,11 @@ export async function runTechnicalAuditCore({
     const { data: latestSnapshotRaw } = await withTimeout(
       service
         .from("web_audit_snapshots")
-        .select("scan_id, readiness_score, pages, bots, created_at")
+        // `id` is not used by the cache check — it is the previous-audit side
+        // of the regression comparison at the bottom of this function
+        // (WEB-AUDIT-ALERTS-1), read here rather than in a second query
+        // because this row IS the previous audit.
+        .select("id, scan_id, readiness_score, pages, bots, created_at")
         .eq("project_id", projectId)
         .order("created_at", { ascending: false })
         .limit(1)
@@ -348,6 +353,7 @@ export async function runTechnicalAuditCore({
       "load_latest_snapshot"
     );
     const latestSnapshot = latestSnapshotRaw as {
+      id: string;
       scan_id: string | null;
       readiness_score: number | null;
       pages: PageAuditEntry[];
@@ -470,21 +476,51 @@ export async function runTechnicalAuditCore({
 
     // Persist unconditionally (invariant 4): every consumed rate-limit unit
     // leaves a row, even a run where every candidate was skipped.
-    const { error: persistError } = await withTimeout(
-      service.from("web_audit_snapshots").insert({
-        project_id: projectId,
-        scan_id: scanId,
-        source: "manual",
-        readiness_score: readinessScore,
-        pages: sanitizedPages,
-        bots
-      }),
+    const { data: insertedRaw, error: persistError } = await withTimeout(
+      service
+        .from("web_audit_snapshots")
+        .insert({
+          project_id: projectId,
+          scan_id: scanId,
+          source: "manual",
+          readiness_score: readinessScore,
+          pages: sanitizedPages,
+          bots
+        })
+        // The new row's id discriminates every regression notice emitted
+        // below, so a retried invocation cannot notify twice for one audit.
+        .select("id")
+        .maybeSingle(),
       "persist_snapshot"
     );
     if (persistError) {
       console.error(`${LOG_PREFIX} persist_failed`, { project_id: projectId });
       return { success: false, error: GENERIC_FAILURE, reason: "generic" };
     }
+    const snapshotId = (insertedRaw as { id: string } | null)?.id ?? null;
+
+    // WEB-AUDIT-ALERTS-1 — tell the owner what got WORSE since the previous
+    // audit. Strictly after the insert (the notice must describe a durable
+    // row) and strictly fail-soft: emitAuditRegressionNotifications never
+    // throws, so an audit that ran and persisted is still a success even if
+    // the bell stays empty.
+    //
+    // Placed in the core rather than in the job runner, so it covers every
+    // way this audit can be reached. As of AUDIT-NO-BUTTON-1 (log §25) that
+    // is only the automatic post-scan path — "Auditar ahora" is gone — but
+    // the emission deliberately does not assume it: the `trigger` distinction
+    // still exists below for the rate limit, and a notice about a regression
+    // is worth sending whoever asked for the audit. The transition rule
+    // (regressions.ts) is what bounds the volume, not the caller.
+    await emitAuditRegressionNotifications({
+      service,
+      projectId,
+      ownerUserId: user.id,
+      projectDomain: projectDomainNormalized,
+      snapshotId,
+      previousSnapshot: latestSnapshot ? { pages: latestSnapshot.pages, bots: latestSnapshot.bots } : null,
+      currentSnapshot: { pages: sanitizedPages, bots }
+    });
 
     console.info(`${LOG_PREFIX} completed`, {
       project_id: projectId,
