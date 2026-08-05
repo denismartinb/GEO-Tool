@@ -2466,6 +2466,61 @@ al usuario atascado sin explicación.
 
 ---
 
+## 26. Verlas es leerlas (NOTIF-AUTOREAD-1, 2026-08-05)
+
+**Estado: implementada.** Petición directa del fundador: *"quiero que las
+notificaciones, una vez que el cliente abre la campana o las ve directamente,
+se marquen como leídas. Si no es un coñazo darle al botón de leída siempre y
+siempre aparece que hay algo pendiente de leer."* Segundo control manual que
+cae en dos días, por la misma razón que el de §25: pedía trabajo para
+confirmar algo que el producto ya sabía.
+
+**El fallo real no era el clic, era el punto azul.** Un badge que nunca se
+apaga solo deja de ser información en la segunda semana. Como marcar leído
+requería un botón aparte, el estado por defecto de la campana era "hay algo
+pendiente" — siempre, incluso justo después de mirarlo. La señal medía la
+memoria del usuario, no si había novedades.
+
+**Qué desaparece.** «Marcar leídas» del panel de la campana y «Marcar como
+leídas» de la cabecera de `/dashboard/notifications`, con sus estilos
+(`.notif-mark-read`, `.notif-page-mark-read`). Abrir el panel marca; abrir la
+página marca. No queda nada en su sitio — la lección de §25 aplica igual.
+
+**Se marca lo que se ha visto, no "todo lo no leído".** `markAllNotificationsRead()`
+(sin argumentos) pasa a `markNotificationsRead(ids)`. Es la diferencia entre
+un cambio correcto y uno que borra datos en silencio: la campana carga como
+mucho 15 filas, así que "marca todo lo no leído del usuario" al abrirla habría
+enterrado notificaciones que nunca llegaron a una pantalla. Con la lista
+explícita, si hay 40 sin leer y la campana enseña 15, quedan 25 esperando en
+la página (que carga 50) — el badge sigue encendido y **con razón**.
+
+**El punto de cada fila no se apaga al abrir, y es deliberado.** Marcar leído
+al abrir tiene un fallo obvio: la lista se blanquea bajo los ojos de quien la
+está leyendo, y la pestaña «No leídas» se vacía sola. Así que hay dos
+preguntas distintas (`lib/notifications/seen.ts`), no una:
+
+- *¿queda algo por ver?* → el punto de la campana y su contador. Se apaga al
+  abrir, sin esperar al round-trip del servidor.
+- *¿esta fila conserva su punto?* → sí, durante el resto de la sesión, aunque
+  el servidor ya haya escrito `read_at`. Desaparece en la siguiente carga
+  completa, cuando ya ha cumplido su función.
+
+La pestaña «No leídas» y su contador se rigen por la segunda, para que
+describan la lista que se está mirando y no el badge que ya se apagó.
+
+**Si la escritura falla**, se olvida el envío y el siguiente abrir lo
+reintenta; los puntos se quedan como estaban. Lo que no hace es fingir
+éxito: sin `revalidatePath`, la próxima navegación vuelve a traer el estado
+real del servidor.
+
+**Riesgo asumido:** ya no hay forma manual de marcar leído ni de marcar **no**
+leído. Lo segundo nunca existió, así que no se pierde nada; lo primero deja de
+tener sentido cuando mirar basta. Lo que sí queda pendiente y conviene que
+conste: **no hay descarte individual** de una notificación (D1 de la spec lo
+contemplaba), y sigue sin haberlo.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

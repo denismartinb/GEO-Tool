@@ -4031,20 +4031,6 @@ textarea.add-prompts-text-input {
   letter-spacing: -0.005em;
 }
 
-.notif-mark-read {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--brand-blue);
-  font-size: 11.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.notif-mark-read:hover {
-  text-decoration: underline;
-}
-
 .notif-tabs {
   display: flex;
   gap: 4px;
@@ -4225,20 +4211,6 @@ textarea.add-prompts-text-input {
   font-weight: 800;
   color: var(--brand-ink);
   margin: 0;
-}
-
-.notif-page-mark-read {
-  background: none;
-  border: none;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--brand-blue);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.notif-page-mark-read:hover {
-  text-decoration: underline;
 }
 
 .notif-page-card .notif-tabs {

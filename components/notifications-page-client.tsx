@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { relativeTime, groupByDay, renderNotification, toneClassName, type NotificationRow } from "@/lib/notifications/render";
-import { markAllNotificationsRead } from "@/app/dashboard/notifications/actions";
+import { useSeenNotifications } from "@/lib/notifications/use-seen-notifications";
 import type { WorkspaceNotification } from "@/lib/project-workspace";
 
 type Tab = "all" | "unread";
@@ -17,34 +17,19 @@ export function NotificationsPageClient({
   domainByProjectId: Record<string, string>;
 }) {
   const [tab, setTab] = useState<Tab>("all");
-  const [locallyRead, setLocallyRead] = useState<Set<string>>(new Set());
-  const [, startTransition] = useTransition();
 
-  function isUnread(n: WorkspaceNotification): boolean {
-    return !n.readAt && !locallyRead.has(n.id);
-  }
+  // Landing on this page is seeing them (NOTIF-AUTOREAD-1): they are marked
+  // read on render, and keep their dot for the rest of the session.
+  const { isVisuallyUnread } = useSeenNotifications(notifications, true);
 
-  const unreadCount = notifications.filter(isUnread).length;
-  const hasUnread = unreadCount > 0;
-  const visible = tab === "unread" ? notifications.filter(isUnread) : notifications;
+  const unreadCount = notifications.filter(isVisuallyUnread).length;
+  const visible = tab === "unread" ? notifications.filter(isVisuallyUnread) : notifications;
   const groups = groupByDay(visible);
-
-  function markAllRead() {
-    setLocallyRead(new Set(notifications.map((n) => n.id)));
-    startTransition(async () => {
-      await markAllNotificationsRead();
-    });
-  }
 
   return (
     <div className="notif-page-card">
       <div className="notif-page-head">
         <h1>Notificaciones</h1>
-        {hasUnread && (
-          <button type="button" className="notif-page-mark-read" onClick={markAllRead}>
-            Marcar como leídas
-          </button>
-        )}
       </div>
       <div className="notif-tabs">
         <button
@@ -59,7 +44,7 @@ export function NotificationsPageClient({
           className={`notif-tab${tab === "unread" ? " active" : ""}`}
           onClick={() => setTab("unread")}
         >
-          No leídas{hasUnread && <span className="notif-tab-count">{unreadCount}</span>}
+          No leídas{unreadCount > 0 && <span className="notif-tab-count">{unreadCount}</span>}
         </button>
       </div>
       {visible.length === 0 ? (
@@ -75,7 +60,7 @@ export function NotificationsPageClient({
                 key={n.id}
                 notification={n}
                 domainByProjectId={domainByProjectId}
-                unread={isUnread(n)}
+                unread={isVisuallyUnread(n)}
               />
             ))}
           </div>
