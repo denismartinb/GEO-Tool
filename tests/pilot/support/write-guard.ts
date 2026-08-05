@@ -252,43 +252,6 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
       () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
       () => page.getByText(/no hay prompts activos/i).isVisible()
     ]);
-
-    // Drive the search box, which is what this sweep always claimed to do and
-    // never actually did.
-    //
-    // Prompt rows live inside TOPIC accordions that start collapsed
-    // (`expandedTopics` is an empty Set on mount, prompts-client.tsx), so on
-    // any project whose prompts carry topics the marker text is simply not in
-    // the DOM and `getByText` finds zero — while the page renders perfectly.
-    // That is the whole failure: the sweep reported "found nothing" and the
-    // journey concluded it had failed to clean up its own prompt.
-    //
-    // Typing into the search box is the lever the product already provides:
-    // `isOpen = expandedTopics.has(category) || query.trim().length > 0`, so a
-    // non-empty query force-opens every matching topic AND filters to it.
-    // Verified against main: this journey has flapped since 2026-08-01 and
-    // failed outright on 2026-08-02, passing only when the project happened to
-    // have no topics.
-    // Two inputs carry this placeholder — a toolbar one below the desktop rail
-    // breakpoint and a list-header one above it — and exactly one is visible at
-    // any viewport. Iterate and fill the visible one rather than guessing with
-    // .first(): picking the hidden one fails silently, which is precisely how
-    // the previous attempt at this fix left the box empty and the sweep still
-    // finding nothing.
-    // Target the aria-label, not the placeholder: the placeholder is
-    // "Buscar prompt…" with a Unicode ellipsis, which is exactly the kind of
-    // character a hand-written selector gets wrong silently.
-    const searchBoxes = page.getByLabel(/buscar prompt/i);
-    const boxCount = await searchBoxes.count();
-    for (let i = 0; i < boxCount; i += 1) {
-      const box = searchBoxes.nth(i);
-      if (!(await box.isVisible().catch(() => false))) continue;
-      await box.fill(PILOT_TEST_PROMPT_MARKER);
-      break;
-    }
-    // The filter is client-side and synchronous, but give the re-render a beat
-    // so the count below never races an empty intermediate list.
-    await page.waitForTimeout(300);
   };
 
   await openList(`sweep-${Date.now()}`);
