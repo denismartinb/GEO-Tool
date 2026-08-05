@@ -17,6 +17,14 @@ pequeñas", no cambiar un peso o un umbral de paso. Si el cambio parece
 justificado, se para y se escribe el ADR primero — es exactamente el proceso
 que produjo ADR 0015, 0024 y 0026.
 
+**Y un ADR no basta si no hay datos.** Los seis números de la composición
+(cuatro pesos, dos bandas) nunca se han validado contra la distribución real de
+proyectos, y **sólo los runs completados desde el 2026-08-05 sirven para
+hacerlo**: los anteriores calcularon sus componentes sobre una extracción
+truncada a 20 filas (ADR 0029) o sobre muestras de 3 respuestas (ADR 0030). El
+plan de medición, con sus consultas y sus criterios de parada fijados de
+antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
+
 ## Composición del score
 
 - Composite v2 según **ADR 0015** (supersede partes de ADR 0008). Los pesos
