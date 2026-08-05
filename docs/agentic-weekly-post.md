@@ -252,3 +252,77 @@ to create and approve pull requests".** Sin eso, el workflow de §7 falla con
 403 y no hay red de seguridad. El propio workflow falla con ese mensaje
 escrito, para que no haya que adivinarlo. Activado por el fundador el
 2026-08-04.
+
+---
+
+## 10. Qué quedó verificado el 2026-08-05, y qué sigue sin estarlo
+
+El 2026-08-05 se escribieron tres artículos seguidos (W1, W2 y W3) y se usó el
+tercero como **prueba real de esta cadena**, a petición del fundador. Esta
+sección existe porque hasta ese día casi todo lo de arriba era diseño razonado,
+no comportamiento observado — y las dos cosas no valen lo mismo.
+
+### Verificado en vivo
+
+**La capa 1 de §8 funciona.** El correo nativo de GitHub, mandado por
+`github-actions[bot]` con el cuerpo del PR, llegó al fundador **a las 18:46 UTC
+del 2026-08-05, el minuto exacto de creación del PR #349**. Lo primero que se
+lee en él es el aviso de que falta la portada, con la ruta del fichero — que es
+justo lo que §4 pretendía.
+
+**La capa 2 de §8 funciona.** El `PushNotification` al móvil llegó, con el
+Control Remoto conectado.
+
+**El workflow de §7 hace su trabajo.** Abrió el PR, lo asignó al fundador y le
+pidió revisión, las tres veces, sin intervención.
+
+### Un diagnóstico equivocado que conviene no repetir
+
+Durante esa tarde se llegó a afirmar —aquí y en el propio PR— que la capa 1 **no
+podía** funcionar. El razonamiento era: los tres workflows `weekly-post-pr`
+corren con `actor: denismartinb`, porque el `git push` va autenticado con las
+credenciales del fundador, y GitHub no notifica a nadie de su propia actividad.
+
+**Es falso, y el correo de las 18:46 lo desmiente.** La notificación se atribuye
+al **autor del PR** (`github-actions[bot]`), no al actor del workflow. Queda
+escrito porque el dato de partida (`actor: denismartinb`) es real y verificable,
+y cualquier sesión futura puede volver a deducir de él la misma conclusión
+errónea.
+
+La lección de método es más útil que el dato: **ante "no me ha llegado el
+aviso", lo primero es preguntar qué se ha mirado, no construir una teoría.**
+
+### NO verificado — y es lo que queda para cerrar esta fase
+
+**Que una sesión disparada arranque con el repositorio clonado.** Sigue siendo
+la duda de §9, intacta. Las tres pasadas del 2026-08-05 corrieron **dentro de
+sesiones ya abiertas**, que ya tenían el repo. El intento de programar un
+disparo en sesión nueva se rechazó **dos veces** con `requires approval` — el
+mismo muro interactivo que §9 documenta.
+
+El sustituto que se usó (`CronCreate`) es **de sesión y muere con ella**: sirvió
+para demostrar la cadena de aviso, y **no sirve para un lunes a las 07:00**. No
+confundir una cosa con la otra.
+
+**Lo que falta no es código de este repositorio.** Es aprobar una vez el permiso
+de creación de rutinas. Mientras eso no ocurra, hay artículos publicados pero no
+hay publicación autónoma.
+
+### Dos hallazgos colaterales, con dueño
+
+**El rojo de la portada no se ve en GitHub.** §4 justifica dejar el artículo sin
+portada diciendo que "un check rojo es una pregunta visible". Hoy esa premisa no
+se cumple: **ningún workflow de este repositorio ejecuta `pnpm test`**
+(`agentic-gates`, `claude-qa`, `claude-qa-handoff`, `codex-build`, los tres
+`ux-pilot` y `weekly-post-pr` — ninguno). Los tests de `lib/blog/covers.test.ts`
+sólo se ven en local. Es el mismo fallo silencioso que ese fichero fue escrito
+para impedir, un piso más arriba. Se arregla con un job mínimo de `pnpm test` en
+`pull_request`, en su propia PR.
+
+**`PILOT_PROJECT_ID` sin fijar rompe todos los PRs a la vez.**
+`resolveProjectId` (`tests/pilot/support/journey.ts`) coge el proyecto **más
+reciente** de la cuenta cuando ese secreto no está puesto. El 2026-08-05 se creó
+un dominio nuevo en la cuenta piloto y el recorrido de auditoría se desvió a un
+proyecto sin solución de `llms.txt` generada: `PILOT FAIL` simultáneo en tres
+ramas sin relación entre sí. No se relajó la aserción —existe porque el PR #319
+pasó en verde sin enseñar la funcionalidad que entregaba—: se fija el secreto.
