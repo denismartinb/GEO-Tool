@@ -170,6 +170,85 @@ export function renderNotification(
       };
     }
 
+    // --- WEB-AUDIT-ALERTS-1: audit-to-audit regressions ------------------
+    //
+    // All five link to /web-audit, which is where both the evidence and the
+    // fix live. The copy names what got worse and what it costs, never the
+    // internal outcome vocabulary ("performing", "invisible") — the founder
+    // reads this at 8am on a phone, not next to the methodology doc.
+
+    case "coverage_dropped": {
+      const count = num(payload.count) ?? 0;
+      const topics = strArray(payload.sampleTopics);
+      const detail = topics[0]
+        ? count > 1
+          ? `«${topics[0]}» y ${count - 1} más.`
+          : `«${topics[0]}».`
+        : "";
+      return {
+        title: count === 1 ? "Un tema ha perdido cobertura" : `${count} temas han perdido cobertura`,
+        body: `Ya no encontramos contenido publicado en tu dominio sobre ${count === 1 ? "este tema" : "estos temas"}. ${detail}`.trim(),
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "trendDown",
+        tone: "warm"
+      };
+    }
+
+    case "surfacing_dropped": {
+      const count = num(payload.count) ?? 0;
+      const topics = strArray(payload.sampleTopics);
+      const detail = topics[0]
+        ? count > 1
+          ? `«${topics[0]}» y ${count - 1} más.`
+          : `«${topics[0]}».`
+        : "";
+      return {
+        title: "La IA ha dejado de citar tus páginas",
+        body: `Tienes contenido sobre ${count === 1 ? "un tema" : `${count} temas`} que la IA ya no cita. ${detail}`.trim(),
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "eye",
+        tone: "neg"
+      };
+    }
+
+    case "llms_txt_lost": {
+      return {
+        title: "Tu llms.txt ha desaparecido",
+        body: "Antes lo servías y ahora no responde. Es el fichero que le dice a la IA qué leer de tu web.",
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "fileText",
+        tone: "neg"
+      };
+    }
+
+    case "sitemap_lost": {
+      return {
+        title: "Tu sitemap.xml ha desaparecido",
+        body: "Antes lo servías y ahora no responde. Sin él los buscadores y los bots de IA descubren tus páginas mucho peor.",
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "layers",
+        tone: "warm"
+      };
+    }
+
+    case "page_unreachable": {
+      const count = num(payload.count) ?? 0;
+      const urls = strArray(payload.sampleUrls);
+      const detail = urls[0] ? (count > 1 ? `${urls[0]} y ${count - 1} más.` : `${urls[0]}.`) : "";
+      return {
+        title: count === 1 ? "Una página tuya ha dejado de responder" : `${count} páginas tuyas han dejado de responder`,
+        body: `En la auditoría anterior ${count === 1 ? "se analizó correctamente" : "se analizaron correctamente"} y ahora no. ${detail}`.trim(),
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "link",
+        tone: "neg"
+      };
+    }
+
     case "trial_ending": {
       const daysLeft = num(payload.daysLeft) ?? 0;
       return {

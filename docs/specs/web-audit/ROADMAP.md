@@ -33,10 +33,15 @@ no como el disparador. Motivo: el disparo por evento audita el escaneo que
 acaba de terminar, y una cola durable convierte un despacho perdido en un
 retraso en vez de en una auditoría que nunca ocurre.
 
-**Sigue pendiente de fila 6:** los avisos derivados de regresión en la
-campana de notificaciones (cobertura o *surfacing* que bajan, un bot de IA que
-pasa a bloqueado, `llms.txt` que desaparece). Nada de eso existe hoy — ahora
-que los datos se refrescan solos, es cuando esa mitad empieza a tener sentido.
+**Fila 6 cerrada (2026-08-05).** La segunda mitad la implementó
+WEB-AUDIT-ALERTS-1 (log §22): los avisos de regresión existen y salen por la
+campana. Con dos desviaciones respecto a lo diseñado, ambas justificadas allí:
+van seis tipos y no cuatro (`sitemap_lost` y `page_unreachable` se añaden
+porque son la misma clase de fallo silencioso y no cuestan una consulta más),
+y **sí hay migración** — la spec prometía "sin esquema" cuando la campana
+derivaba sus items al vuelo, y NOTIF-SERVER-1a puso un `CHECK` sobre
+`notifications.type`, así que un tipo nuevo es hoy exactamente una línea de
+DDL (`0029`).
 
 ## Cabos sueltos post-ACTION (no numerados, siguen el mismo Human Gate)
 

@@ -353,7 +353,18 @@ Tres avisos-empujón el mismo día son ruido.
 - **`audit_completed`** — `lib/web-audit/technical-audit.ts`, después del
   `insert` en `web_audit_snapshots` (~línea 449). Requiere `.select("id")` en
   ese insert para tener `snapshotId`. Severidad `info`.
-- **`ai_bot_blocked`** — mismo sitio. **Emitir solo en la transición**: leer el
+- **`ai_bot_blocked`** — ✅ **implementado 2026-08-05** por WEB-AUDIT-ALERTS-1
+  (log §22), en `lib/web-audit/regression-alerts.ts`, llamado desde
+  `technical-audit.ts` justo tras el insert. Con un matiz sobre lo escrito
+  abajo: se emite sólo cuando el lado anterior tenía `allowed: true`
+  explícito, **no** cuando el agente era "inexistente" — un bot recién añadido
+  a `TRACKED_BOT_AGENTS` que aparece bloqueado es un descubrimiento sobre un
+  `robots.txt` que no ha cambiado, y una alerta crítica por eso enseña a
+  desconfiar del aviso. Esa misma fase añadió cinco tipos más (migración
+  0029): `coverage_dropped`, `surfacing_dropped`, `llms_txt_lost`,
+  `sitemap_lost`, `page_unreachable`. `audit_completed` y
+  `emerging_competitor` siguen **sin emitir**. Texto original de la fase 2:
+  **Emitir solo en la transición**: leer el
   snapshot anterior del proyecto (`order created_at desc, limit 1`, antes del
   insert) y comparar su `bots` con el nuevo. Emitir por cada agente que pase de
   permitido (o inexistente) a `allowed: false`. **No** emitir en cada auditoría

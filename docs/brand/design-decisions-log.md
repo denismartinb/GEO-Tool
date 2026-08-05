@@ -2173,6 +2173,111 @@ etiqueta.
 
 ---
 
+## 22. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
+
+**Estado: implementada. Requiere aplicar a mano la migración
+`0029_notification_audit_regression_types.sql` en Supabase antes de que sirva
+de nada** — hasta entonces el `CHECK` de `notifications.type` rechaza los
+cinco tipos nuevos y `emitNotification` se limita a registrar el fallo (es
+fail-soft por contrato, así que no rompe ninguna auditoría; simplemente no
+avisa). Invariantes de la zona en `.claude/rules/web-audit.md`.
+
+**El problema.** Desde §18 la auditoría se refresca sola tras cada escaneo,
+pero nadie te decía que el resultado de hoy es peor que el de ayer: tenías que
+entrar a mirar. Esta fase invierte eso. Era la otra mitad de WEB-AUDIT-3
+(`docs/specs/web-audit/phase-3-daily-audit.md`), aplazada con razón: dos
+auditorías manuales separadas por semanas no son una regresión, son dos fotos
+sueltas. Con datos que se refrescan solos, la comparación por fin significa
+algo.
+
+**Los seis avisos, y por qué en ese orden.** Se emiten a `notifications` (la
+campana), enlazan a Auditoría web y reutilizan tal cual el leído/no leído que
+ya existe:
+
+| Aviso | Salta cuando | Severidad |
+|---|---|---|
+| `ai_bot_blocked` | un bot de IA pasa de poder leer tu web a estar bloqueado | crítica |
+| `llms_txt_lost` | tenías `llms.txt` y ha desaparecido | crítica |
+| `sitemap_lost` | tenías `sitemap.xml` y ha desaparecido | aviso |
+| `page_unreachable` | una página que se analizó bien ayer hoy no responde | aviso |
+| `surfacing_dropped` | un tema pasa de `performing` a `invisible` | aviso |
+| `coverage_dropped` | un tema pierde cobertura de contenido propio | aviso |
+
+Los cuatro primeros van delante a propósito: son fallos técnicos que ocurren
+sin que nadie los toque a propósito —un cambio en `robots.txt`, un despliegue
+que se lleva un fichero— y que te dejan invisible para la IA sin ningún
+síntoma visible. Hoy te enterabas semanas después, si acaso.
+
+**Los dos que no pedía el diseño, y por qué se añaden.** `sitemap_lost` sale
+gratis (`sitemapFound` ya vivía en el snapshot desde WEB-AUDIT-R3) y es
+exactamente la misma clase de fallo silencioso que `llms_txt_lost`.
+`page_unreachable` es el caso clásico de "un despliegue se llevó una sección":
+se compara sólo contra páginas que **la auditoría anterior analizó con éxito**,
+y sólo cuentan `skipped_timeout` y `skipped_error` — un `skipped_not_html` o
+un `skipped_offsite` son decisiones nuestras sobre una URL, y reportarlas como
+caída sería una falsa alarma en el aviso cuya única virtud es que se le crea.
+
+**La regla que hace que esto no sea ruido: todo es transición, nada es
+estado.** Ningún aviso salta porque algo *esté* mal, sino porque *ha pasado* a
+estarlo desde la auditoría anterior. Un `llms.txt` que sigue sin aparecer
+mañana produce silencio, porque el "anterior" de mañana ya lo tenía perdido.
+De ahí se derivan tres decisiones que parecen detalles y no lo son:
+
+- **Sin lado anterior no hay aviso.** Una primera auditoría no tiene ayer.
+  Tampoco lo tiene un campo que no existía en la fila antigua (`sitemapFound`
+  en snapshots previos a WEB-AUDIT-R3): `undefined → false` es "antes no
+  mirábamos", no "ha desaparecido".
+- **Inconcluso no es regresión.** Un tema que pasa a `inconclusive` (un fallo
+  transitorio de Gemini, un corte por presupuesto) mueve el porcentaje de
+  cobertura sin que nada haya empeorado, y por eso la comparación es **por
+  tema**, nunca entre los dos porcentajes.
+- **Un bot que aparece bloqueado la primera vez que lo vigilamos no es una
+  regresión**, es un descubrimiento sobre un `robots.txt` que no ha cambiado.
+  El diseño decía "de permitido *o inexistente*"; se implementa sólo
+  "permitido", porque disparar una alerta crítica el día que se añade un bot a
+  `TRACKED_BOT_AGENTS` enseña al fundador a desconfiar justo del aviso que más
+  falta hace que se crea.
+
+**No se capa el número de bots bloqueados.** Un `Disallow: /` bajo
+`User-agent: *` bloquea de verdad a los siete a la vez; recortar a tres
+contaría un apagón total como si fuera parcial.
+
+**Qué se ha decidido sobre el esquema, en contra de lo que decía la spec.** El
+diseño de WEB-AUDIT-3 prometía "sin esquema nuevo", y era cierto cuando la
+campana derivaba sus items al vuelo. NOTIF-SERVER-1a lo cambió: hoy `type`
+tiene un `CHECK`, así que un tipo nuevo **es** una migración — una sola línea,
+aditiva, sin tabla ni columna ni datos que migrar (`0029`). `ai_bot_blocked`
+no se añade porque ya estaba permitido desde `0021` y ya tenía copy y clave;
+el "bot_blocked" del diseño es ese mismo tipo, emitido por fin.
+
+**Dónde se emite, y por qué también en la ruta manual.** En
+`lib/web-audit/technical-audit.ts`, justo **después** del insert del snapshot
+(un aviso sobre una auditoría que no llegó a persistir apunta a nada). También
+en la ruta manual, no sólo en la automática: la comparación la hace valiosa el
+refresco diario, pero quien pulsa «Auditar ahora» y se queda en la pestaña de
+Cobertura tampoco se enteraría de que un bot acaba de quedar bloqueado — y la
+regla de transición garantiza que sigue siendo un aviso por cambio real, no
+uno por auditoría.
+
+**Coste y presupuesto.** La mitad técnica no cuesta ninguna consulta: los dos
+snapshots ya están en memoria. La mitad de cobertura cuesta dos lecturas
+acotadas y es la que se sacrifica bajo presión —si fallan o tardan, se emiten
+igualmente los avisos técnicos—. Lee **cuatro** mapas de cobertura, no dos,
+porque `performing`/`invisible` se deciden por mayoría sobre una ventana de
+tres escaneos: con menos, la campana clasificaría distinto que la pantalla a
+la que enlaza. `TECHNICAL_RESERVE_MS` sube en `REGRESSION_ALERTS_BUDGET_MS`
+(4 s) por la regla de la zona: quien añade trabajo por trabajo reajusta la
+reserva, no sólo el límite del lote.
+
+**Lo que queda fuera, a propósito.** `audit_completed` (fase 2 de
+`notifications-v1.md`) sigue sin emitirse: avisar de cada auditoría diaria
+correcta es exactamente el ruido contra el que se diseñaron estos avisos. Los
+toggles de `/dashboard/settings/notifications` siguen en "Próximamente" — son
+la fase 3 de esa spec y son una decisión de producto propia (¿el toggle
+silencia el email, la campana, o ambos?).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

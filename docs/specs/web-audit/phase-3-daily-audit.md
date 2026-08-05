@@ -5,9 +5,18 @@
 > (ADR 0027, log §18) la resolvió como una cola de `jobs` encolada por el
 > escaneo al completarse, no como un barrido diario que busca proyectos
 > candidatos. Lo de abajo se conserva como registro de lo que se diseñó y por
-> qué; **no describe el código**. Lo que sigue vivo de esta spec es la sección
-> de **avisos de regresión**, que sigue sin implementar. Ver
-> `ROADMAP.md` → "Fila 6 — qué se implementó y qué no".
+> qué; **no describe el código**. Ver `ROADMAP.md` → "Fila 6 — qué se
+> implementó y qué no".
+>
+> **Actualización 2026-08-05: los avisos de regresión también están
+> implementados** (WEB-AUDIT-ALERTS-1, log §22), y tampoco con el diseño de
+> abajo. Lo que dice esta sección sobre derivarlos al vuelo en
+> `getWorkspaceCounters` y sobre el `LAST_SEEN_KEY` de `localStorage` describe
+> una campana que ya no existe: NOTIF-SERVER-1a la sustituyó por la tabla
+> `notifications` con leído por fila. Los avisos se **escriben** al detectar la
+> regresión (`lib/web-audit/regression-alerts.ts`), y por eso esta fase sí
+> necesitó una migración (`0029`) pese a lo que promete el "Goal" de abajo.
+> Son seis tipos, no cuatro. **Nada de esta spec queda pendiente.**
 
 **Gates:** extends the background-execution surface (CLAUDE.md forbidden list:
 "background scheduler") — even though it rides the ALREADY-SHIPPED daily cron,

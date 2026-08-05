@@ -205,6 +205,107 @@ describe("renderNotification", () => {
     expect(r.body).toBe("Preparación técnica —/100.");
   });
 
+  // --- WEB-AUDIT-ALERTS-1: audit-to-audit regressions --------------------
+
+  it("renders coverage_dropped in the singular, naming the topic", () => {
+    const r = renderNotification(
+      {
+        type: "coverage_dropped",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { scanId: "scan-1", count: 1, sampleTopics: ["precios"] }
+      },
+      DOMAINS
+    );
+
+    expect(r.title).toBe("Un tema ha perdido cobertura");
+    expect(r.body).toBe("Ya no encontramos contenido publicado en tu dominio sobre este tema. «precios».");
+    expect(r.href).toBe(`/dashboard/projects/${PROJECT_ID}/web-audit`);
+    expect(r.tone).toBe("warm");
+  });
+
+  it("renders coverage_dropped in the plural with a 'y N más' tail", () => {
+    const r = renderNotification(
+      {
+        type: "coverage_dropped",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { scanId: "scan-1", count: 4, sampleTopics: ["precios", "envíos", "garantía"] }
+      },
+      DOMAINS
+    );
+
+    expect(r.title).toBe("4 temas han perdido cobertura");
+    expect(r.body).toContain("«precios» y 3 más.");
+  });
+
+  it("renders surfacing_dropped without leaving a dangling space when there is no sample", () => {
+    const r = renderNotification(
+      {
+        type: "surfacing_dropped",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { scanId: "scan-1", count: 2, sampleTopics: [] }
+      },
+      DOMAINS
+    );
+
+    expect(r.title).toBe("La IA ha dejado de citar tus páginas");
+    expect(r.body).toBe("Tienes contenido sobre 2 temas que la IA ya no cita.");
+    expect(r.tone).toBe("neg");
+  });
+
+  it("renders llms_txt_lost and sitemap_lost pointing at Auditoría web", () => {
+    const llms = renderNotification(
+      { type: "llms_txt_lost", severity: "critical", project_id: PROJECT_ID, payload_json: { snapshotId: "s1" } },
+      DOMAINS
+    );
+    const sitemap = renderNotification(
+      { type: "sitemap_lost", severity: "warning", project_id: PROJECT_ID, payload_json: { snapshotId: "s1" } },
+      DOMAINS
+    );
+
+    expect(llms.title).toBe("Tu llms.txt ha desaparecido");
+    expect(llms.body.length).toBeGreaterThan(0);
+    expect(llms.href).toBe(`/dashboard/projects/${PROJECT_ID}/web-audit`);
+    expect(sitemap.title).toBe("Tu sitemap.xml ha desaparecido");
+    expect(sitemap.targetLabel).toBe("acme.com");
+  });
+
+  it("renders page_unreachable, singular and plural", () => {
+    const one = renderNotification(
+      {
+        type: "page_unreachable",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { snapshotId: "s1", count: 1, sampleUrls: ["https://acme.com/precios"] }
+      },
+      DOMAINS
+    );
+    const many = renderNotification(
+      {
+        type: "page_unreachable",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { snapshotId: "s1", count: 3, sampleUrls: ["https://acme.com/precios"] }
+      },
+      DOMAINS
+    );
+
+    expect(one.title).toBe("Una página tuya ha dejado de responder");
+    expect(one.body).toBe("En la auditoría anterior se analizó correctamente y ahora no. https://acme.com/precios.");
+    expect(many.title).toBe("3 páginas tuyas han dejado de responder");
+    expect(many.body).toContain("https://acme.com/precios y 2 más.");
+  });
+
+  it("never prints a raw null or NaN when a regression payload is malformed", () => {
+    for (const type of ["coverage_dropped", "surfacing_dropped", "page_unreachable"]) {
+      const r = renderNotification({ type, severity: "warning", project_id: PROJECT_ID, payload_json: {} }, DOMAINS);
+      expect(r.title.length).toBeGreaterThan(0);
+      expect(r.body).not.toMatch(/null|NaN|undefined/);
+    }
+  });
+
   it("renders trial_ending with no project target", () => {
     const r = renderNotification(
       { type: "trial_ending", severity: "warning", project_id: null, payload_json: { daysLeft: 3, trialEndsAt: "2026-08-01T00:00:00Z" } },

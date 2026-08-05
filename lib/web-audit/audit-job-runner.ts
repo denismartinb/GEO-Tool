@@ -2,6 +2,7 @@ import "server-only";
 
 import { auditDomainCoverageCore } from "@/lib/recommendations/domain-coverage";
 import { runTechnicalAuditCore, TECH_AUDIT_TOTAL_BUDGET_MS } from "@/lib/web-audit/technical-audit";
+import { REGRESSION_ALERTS_BUDGET_MS } from "@/lib/web-audit/regression-alerts";
 import { isTerminalAuditFailure, type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import {
   nextAuditJobState,
@@ -146,8 +147,21 @@ const MIN_JOB_BUDGET_MS = 34_000;
  * call and the technical audit runs on a fresh clock. Starting it anyway
  * would gamble on a platform kill mid-fetch — which loses the row update, not
  * just the audit.
+ *
+ * WEB-AUDIT-ALERTS-1 widened this by REGRESSION_ALERTS_BUDGET_MS, and that
+ * adjustment is the point rather than an afterthought: the technical core now
+ * ends with the regression comparison and its emits, so the reserve has to
+ * cover the whole tail of that call. `.claude/rules/web-audit.md` names this
+ * exact failure — a phase that adds per-job work and raises only the batch
+ * limit leaves the last step running past `maxDuration`, which loses the row
+ * update rather than just the step.
+ *
+ * MIN_JOB_BUDGET_MS was re-checked against this and deliberately left alone:
+ * it sizes the smallest claim worth making (one coverage batch + write-back),
+ * and a job claimed with that little simply never starts the technical audit
+ * — the reserve check below parks it as a continuation instead.
  */
-const TECHNICAL_RESERVE_MS = TECH_AUDIT_TOTAL_BUDGET_MS + 2_000;
+const TECHNICAL_RESERVE_MS = TECH_AUDIT_TOTAL_BUDGET_MS + REGRESSION_ALERTS_BUDGET_MS + 2_000;
 
 /**
  * After this long, a job still marked 'running' is considered abandoned and
