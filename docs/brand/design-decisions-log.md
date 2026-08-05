@@ -2801,6 +2801,63 @@ consciente, no un efecto colateral.
 
 ---
 
+## 31. El número grande deja de ser un escaneo (SCORE-WINDOW-1, 2026-08-05)
+
+Fundador: *"Implementa el score de ventana en real"*. La decisión técnica está
+en **ADR 0036**; aquí, lo de pantalla.
+
+**Decisión 1 — el titular es la mediana de los 3 últimos escaneos
+comparables.** Es la última palanca contra la varianza que quedaba: los motores
+hacen recuperación viva y ninguna fórmula la quita. Se decidió el mismo día en
+que se midió que tampoco se puede pinear el modelo de Gemini —no existe id
+versionado—, así que esta fuente de ruido no tenía otra salida.
+
+**Decisión 2 — dónde se explica que es una mediana.** La primera versión lo
+decía bajo el gauge: *"Mediana de tus N últimos escaneos comparables · este
+escaneo: X"*. **El fundador la retiró el mismo día, tras verla funcionando**:
+sobraba en la pantalla principal.
+
+La obligación de fondo no se retira con la línea —el usuario tiene que poder
+saber qué cantidad está mirando—, así que la explicación se movió a la página
+pública de metodología, que además estaba desactualizada (seguía describiendo
+cuatro componentes cuando v4 tiene cinco). El riesgo que se asume, dicho:
+alguien que escanee y vea el número apenas moverse no tiene en pantalla nada
+que se lo explique. El número de su escaneo concreto sigue visible en la frase
+de arriba ("aparece en X de Y respuestas… con una puntuación GEO de Z").
+
+**Decisión 3 — todo lo que cuelga del titular mide lo mismo que él.** La banda
+se calcula sobre la ventana; el delta es ventana contra ventana (restarle a la
+mediana de hoy el score crudo de ayer compararía dos cantidades distintas); y
+la evolución dibuja la serie de ventanas, no los runs. Un gauge con mediana
+sobre una línea de scores por escaneo son dos métricas en la misma tarjeta.
+
+**Decisión 4 — la frase narrativa sigue con el score del escaneo.** Dice
+"aparece en X de Y respuestas… con una puntuación GEO de Z": describe *ese*
+escaneo, y emparejar esos datos con la mediana atribuiría una cifra a unos
+datos que no la produjeron.
+
+**El coste, dicho:** una mejora real tarda dos escaneos en llegar del todo al
+titular. Se gana que deje de saltar treinta puntos por ruido.
+
+**Decisión 5 — fuera el GEO Score de la tabla de Escaneos** (fundador,
+2026-08-05: *"Yo veré la puntuación de los Escaneos en la página de debug"*).
+Con el titular convertido en mediana, una columna de scores por escaneo al lado
+enseñaba **dos números distintos del mismo proyecto** sin decir cuál manda. El
+score por escaneo pasa a ser dato de inspección, no de producto.
+
+Se van con ella la columna «Δ Score» y su línea explicativa al pie: existían
+para hacer honesta una comparación que ya no se publica. Esto **supera a
+DELTA-GUARD-1 (§23) en esta pantalla** — no porque aquella decisión fuera
+errónea, sino porque la superficie que arreglaba ha dejado de existir. La
+regla de `resolveDelta` sigue viva y vinculante en todas las demás.
+
+**Hueco declarado, más estrecho que antes:** las tarjetas de dominio (arriba de
+esa misma pantalla) y el resumen semanal siguen mostrando el score del último
+escaneo, no la mediana. Ahí sí puede haber discrepancia con Visión general.
+Está pendiente de decidir si pasan a la ventana o se quedan como están.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

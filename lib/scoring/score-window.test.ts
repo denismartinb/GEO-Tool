@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   computeWindowedScore,
+  computeWindowedSeries,
+  readWindowRun,
   DEFAULT_SCORE_WINDOW_SIZE,
   isWindowEligible,
   MIN_RUNS_FOR_WINDOW,
@@ -138,5 +140,71 @@ describe("isWindowEligible", () => {
 
   it("rejects a run with no responses", () => {
     expect(isWindowEligible(run({ run_id: "x", score: 60, total_results: 0 }), reference)).toBe(false);
+  });
+});
+
+describe("computeWindowedSeries", () => {
+  it("aligns index-for-index with the input and smooths a single spike", () => {
+    const runs = [
+      run({ run_id: "a", score: 70, finished_at: "2026-08-01T12:00:00.000Z" }),
+      run({ run_id: "b", score: 72, finished_at: "2026-08-02T12:00:00.000Z" }),
+      run({ run_id: "c", score: 10, finished_at: "2026-08-03T12:00:00.000Z" }),
+      run({ run_id: "d", score: 71, finished_at: "2026-08-04T12:00:00.000Z" })
+    ];
+
+    const series = computeWindowedSeries(runs);
+
+    expect(series).toHaveLength(4);
+    // First point has no window yet (MIN_RUNS_FOR_WINDOW = 2).
+    expect(series[0]).toBeNull();
+    expect(series[1]).toBe(71);
+    // The spike never becomes the published value.
+    expect(series[2]).toBe(70);
+    expect(series[3]).toBe(71);
+  });
+
+  it("gaps rather than zeroes where no window is publishable", () => {
+    const series = computeWindowedSeries([
+      run({ run_id: "old", score: 40, composite_version: "geo-score-v3", finished_at: "2026-08-01T12:00:00.000Z" }),
+      run({ run_id: "new", score: 80, finished_at: "2026-08-02T12:00:00.000Z" })
+    ]);
+
+    // A v3 run and a v4 run never share a window, so neither point publishes.
+    expect(series).toEqual([null, null]);
+  });
+});
+
+describe("readWindowRun", () => {
+  const details = {
+    total_results: 60,
+    geo_score: { score: 55.5, composite_version: "geo-score-v4", inputs_used: ["presence", "technical"] }
+  };
+
+  it("reads a persisted row into the window's shape", () => {
+    const parsed = readWindowRun({ run_id: "r1", created_at: "2026-08-05T12:00:00.000Z", details_json: details });
+
+    expect(parsed).toMatchObject({
+      run_id: "r1",
+      score: 55.5,
+      composite_version: "geo-score-v4",
+      total_results: 60
+    });
+    expect(parsed?.inputs_used).toEqual(["presence", "technical"]);
+  });
+
+  it("refuses a row with no composite score rather than inventing one", () => {
+    expect(readWindowRun({ run_id: "r1", created_at: null, details_json: { total_results: 10 } })).toBeNull();
+    expect(readWindowRun({ run_id: "r1", created_at: null, details_json: null })).toBeNull();
+  });
+
+  it("carries a missing composite_version through as null so it can never match", () => {
+    const parsed = readWindowRun({
+      run_id: "r1",
+      created_at: "2026-08-05T12:00:00.000Z",
+      details_json: { total_results: 10, geo_score: { score: 40 } }
+    });
+
+    expect(parsed?.composite_version).toBeNull();
+    expect(parsed?.inputs_used).toBeNull();
   });
 });

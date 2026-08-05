@@ -174,3 +174,69 @@ export function computeWindowedScore(
     windowSize
   };
 }
+
+/**
+ * The windowed value at every point of a run history, aligned index-for-index
+ * with the input.
+ *
+ * Exists so the headline figure and the sparkline under it cannot tell
+ * different stories. A gauge showing a stabilised median above a line drawn
+ * from raw per-run scores would look, correctly, like two different metrics —
+ * and the user would have no way to tell which one the number belongs to.
+ *
+ * `runs` must be in chronological order (oldest first). Each position looks
+ * back over at most `windowSize` runs ending at that position; positions with
+ * no publishable window get `null`, which callers render as a gap rather than
+ * as a zero.
+ */
+export function computeWindowedSeries(
+  runs: readonly WindowRunInput[],
+  options?: { windowSize?: number; sampleTolerance?: number }
+): Array<number | null> {
+  const windowSize = options?.windowSize ?? DEFAULT_SCORE_WINDOW_SIZE;
+
+  return runs.map((_, index) => {
+    const slice = runs.slice(Math.max(0, index - windowSize + 1), index + 1);
+    const windowed = computeWindowedScore(slice, options);
+    return windowed.verdict === "published" ? windowed.value : null;
+  });
+}
+
+/**
+ * Reads a persisted `run_scores` row into the shape the window needs.
+ *
+ * Kept here, next to the eligibility rules it feeds, so a caller cannot get
+ * the mapping subtly wrong — reading `inputs_used` from the wrong nesting or
+ * defaulting a missing `composite_version` to something truthy would silently
+ * let incomparable runs into the same median, which is the one thing this
+ * module exists to prevent.
+ */
+export function readWindowRun(row: {
+  run_id?: string | null;
+  created_at?: string | null;
+  details_json?: unknown;
+}): WindowRunInput | null {
+  const details = row.details_json;
+  if (!details || typeof details !== "object") return null;
+  const record = details as Record<string, unknown>;
+  const geoScore = record.geo_score;
+  if (!geoScore || typeof geoScore !== "object") return null;
+
+  const geo = geoScore as Record<string, unknown>;
+  const score = geo.score;
+  if (typeof score !== "number" || !Number.isFinite(score)) return null;
+
+  const inputsUsed = Array.isArray(geo.inputs_used)
+    ? (geo.inputs_used as unknown[]).filter((value): value is string => typeof value === "string")
+    : null;
+  const totalResults = record.total_results;
+
+  return {
+    run_id: typeof row.run_id === "string" ? row.run_id : (row.created_at ?? ""),
+    score,
+    composite_version: typeof geo.composite_version === "string" ? geo.composite_version : null,
+    inputs_used: inputsUsed,
+    total_results: typeof totalResults === "number" ? totalResults : null,
+    finished_at: row.created_at ?? null
+  };
+}
