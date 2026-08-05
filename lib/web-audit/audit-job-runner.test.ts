@@ -465,10 +465,13 @@ describe("backfillMissingWebAuditJobs", () => {
   });
 
   it("leaves runs that already have a job alone", async () => {
+    // One project per run on purpose: after the newest-per-project rule, two
+    // runs of the SAME project would test the dedupe against a row the
+    // backfill no longer even considers.
     const { service, recorded } = makeService({
       completedRuns: [
         { id: "run-ok", project_id: "project-1" },
-        { id: "run-lost", project_id: "project-1" }
+        { id: "run-lost", project_id: "project-2" }
       ],
       runsWithJob: ["run-ok"]
     });
@@ -480,6 +483,33 @@ describe("backfillMissingWebAuditJobs", () => {
       .filter((r) => r.table === "jobs" && r.op === "insert")
       .map((r) => r.payload.run_id);
     expect(inserted).toEqual(["run-lost"]);
+  });
+
+  it("only ever queues the newest run of a project, never its history", async () => {
+    // Both cores audit "the latest completed run of THIS project" and ignore
+    // the job's run_id, so a job naming an older run audits the newest one
+    // anyway. The first version queued nine jobs for one project on its first
+    // production sweep, and painted nine historical rows as "En curso" for
+    // work that could never produce an audit of their own.
+    const { service, recorded } = makeService({
+      completedRuns: [
+        { id: "run-newest", project_id: "project-1" },
+        { id: "run-older", project_id: "project-1" },
+        { id: "run-oldest", project_id: "project-1" },
+        { id: "run-other-project", project_id: "project-2" }
+      ],
+      runsWithJob: []
+    });
+
+    const enqueued = await backfillMissingWebAuditJobs({ service, now: NOW });
+
+    // One per project, and for project-1 it must be the first row the
+    // newest-first query returned.
+    expect(enqueued).toBe(2);
+    const inserted = recorded
+      .filter((r) => r.table === "jobs" && r.op === "insert")
+      .map((r) => r.payload.run_id);
+    expect(inserted).toEqual(["run-newest", "run-other-project"]);
   });
 
   it("does nothing when every completed run is already covered", async () => {

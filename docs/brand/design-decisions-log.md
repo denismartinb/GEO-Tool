@@ -2173,6 +2173,62 @@ etiqueta.
 
 ---
 
+## 19. La auditoría, visible en Escaneos (AUDIT-IN-RUNS-1, 2026-08-05)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el 2026-08-05
+("quiero que ahora las auditorías completadas se muestren también en el
+listado de Escaneos completados para verlo de un vistazo").
+
+Columna **«Auditoría»** en la tabla de Escaneos, entre *Lanzamientos* y *GEO
+Score*. Sin esquema nuevo: los dos lados ya estaban persistidos por escaneo.
+
+**Por qué ahora y no antes.** La columna depende de que exista una relación
+1:1 fiable entre un escaneo y una auditoría, y esa relación **nació anoche**
+con AUDIT-AFTER-SCAN-1 (§18). Antes la auditoría era un acto manual y
+esporádico: una columna así habría estado vacía casi siempre y no habría
+significado nada.
+
+**Las cuatro decisiones, con su porqué:**
+
+1. **Estado + nota técnica**, no sólo estado. El número (`40/100`) es lo que
+   de verdad se compara entre escaneos, y tenerlo al lado del GEO Score es
+   justamente el vistazo que se pedía. Va etiquetado por `title`, porque sin
+   etiqueta y a una columna del GEO Score se lee como una segunda puntuación.
+2. **«Auditada» exige las dos mitades.** Cobertura y salud técnica se
+   persisten por separado y pueden aterrizar por separado —es normal, no un
+   fallo: la técnica se aparca a la invocación siguiente cuando no cabe—. Con
+   una sola, la celda dice **«Parcial»**. Llamar completa a media auditoría
+   sería exactamente la clase de progreso fingido que prohíbe el CLAUDE.md.
+3. **Los escaneos sin auditoría muestran `—`, nunca «Pendiente».** Tres
+   pasados distintos caen ahí y ninguno es accionable por el cliente: escaneos
+   anteriores a §18, proyectos por debajo del gate Pro, y auditorías que
+   agotaron sus reintentos. Una raya honesta en vez de tres etiquetas que
+   invitan a tres preguntas. **«En curso» queda reservado a trabajo realmente
+   en cola**, que sí se resolverá solo.
+4. **La celda no es un enlace, y es deliberado.** Esta tabla tiene una fila
+   por escaneo, pero la pantalla de Auditoría web muestra **la última**
+   auditoría, no la de un escaneo concreto. Enlazar la fila del martes
+   llevaría a la auditoría del jueves haciéndola pasar por la del martes. Una
+   vista de auditoría por escaneo es otra fase; hasta entonces la celda
+   informa y no finge navegar.
+
+**Quinto estado, añadido tras verlo en producción (2026-08-05):**
+**«Reintentando»**, separado de «En curso». El backoff de la cola es
+`[1, 5, 25, 120, 600]` minutos, así que un trabajo en su quinto intento se
+queda quieto **diez horas**. Pintarlo «En curso» promete un movimiento que no
+va a llegar en todo el día, y se lee como una tabla congelada en vez de como
+una auditoría con problemas — que es exactamente cómo se leyó: filas inmóviles
+en «En curso» durante cuatro horas y media. «En curso» queda para `pending` y
+`running`, que sí se mueven pronto.
+
+**Pendiente conocido:** una auditoría que falló definitivamente es
+indistinguible de una que nunca existió. Es una decisión, no un olvido —el
+cliente no puede actuar sobre un fallo de backend y el operador ya recibe un
+email—, pero si algún día el fallo pasa a ser accionable, aquí falta un
+estado.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
