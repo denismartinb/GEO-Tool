@@ -495,8 +495,14 @@ suben** — `SENTRY_ORG`/`SENTRY_PROJECT`/`SENTRY_AUTH_TOKEN` nunca se han
 configurado en Vercel (ver checklist de Fase 5). El fix del boundary
 (#223) queda en su sitio: si el error reapareciera, esta vez sí quedaría
 capturado.
-- [ ] **Subir a Vercel Pro — decisión explícita del fundador (2026-07-10):
-      diferido hasta la primera contratación.** Riesgo registrado y
+- [x] **Subir a Vercel Pro — HECHO el 2026-08-04.** El detonante final no fue
+      el riesgo legal sino operativo: el tope de 100 despliegues/día del plan
+      Hobby congeló producción seis horas esa tarde, con ocho commits mergeados
+      esperando (ver `docs/environment-contract.md` y log §18). Con Pro
+      contratado, el riesgo que sigue descrito abajo queda cerrado. Histórico
+      de la decisión diferida, que se mantiene por trazabilidad:
+      decisión explícita del fundador (2026-07-10),
+      diferida hasta la primera contratación. Riesgo registrado y
       aceptado conscientemente: a diferencia del alta de autónomo (donde el
       disparador legal es cobrar), los términos de Vercel prohíben el plan
       Hobby para **cualquier** proyecto que sea un negocio/SaaS — "even if
@@ -1072,7 +1078,10 @@ de verificaciones. Desglose completo y ordenado:
 
 ### Bloque A — Trámites y decisiones del fundador (sin código)
 
-- [ ] **A1 · Vercel Pro (~20 $/mes)** — diferido conscientemente el
+- [x] **A1 · Vercel Pro (~20 $/mes) — HECHO el 2026-08-04.** Desbloquea el
+      Bloque A. Se contrató tras congelarse producción seis horas por el tope
+      de 100 despliegues/día del plan Hobby. Contexto original, que se mantiene
+      por trazabilidad: diferido conscientemente el
       2026-07-10, pero es el primer paso del camino crítico: los términos
       de Vercel prohíben el plan Hobby para cualquier SaaS comercial
       ("even if the traffic is low") y `genscore.es` ya tiene pricing

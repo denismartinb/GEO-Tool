@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
-import { PROMPT_RETRY_DELAY_MS } from "@/lib/scan/constants";
+import { FINALIZE_LOCK_LEASE_MS, PROMPT_RETRY_DELAY_MS, SCAN_INVOCATION_WORK_BUDGET_MS } from "@/lib/scan/constants";
 import { generateRecommendationsForRun } from "@/lib/recommendations/recommendation-engine";
-import { runStructuredExtractionForRun } from "@/lib/scan/extraction";
+import { countUnprocessedExtractionRows, runStructuredExtractionForRun } from "@/lib/scan/extraction";
 
 // `after()` schedules work outside the request lifecycle Next.js provides in
 // a real deployment; under Vitest there is no such request context, so it
@@ -48,7 +48,11 @@ vi.mock("@/lib/llm/openai", async () => {
 });
 
 vi.mock("@/lib/scan/extraction", () => ({
-  runStructuredExtractionForRun: vi.fn().mockResolvedValue(undefined)
+  runStructuredExtractionForRun: vi.fn().mockResolvedValue({ attempted: 0, succeeded: 0, failed: 0, remaining: 0 }),
+  // EXTRACTION-RELIABILITY-1: the executor asks this before completing a run.
+  // Default 0 = "every answer was extracted", which is the precondition every
+  // pre-existing test in this file implicitly assumed.
+  countUnprocessedExtractionRows: vi.fn().mockResolvedValue(0)
 }));
 
 vi.mock("@/lib/recommendations/recommendation-engine", () => ({
@@ -89,6 +93,9 @@ type JobsRow = {
   payload_json: Record<string, unknown>;
   last_error: string | null;
   created_at: string;
+  /** Lock bookkeeping — read by the finalize lock lease (EXTRACTION-RELIABILITY-1). */
+  locked_at?: string | null;
+  locked_by?: string | null;
 };
 
 /**
@@ -105,19 +112,36 @@ function makeJobsTable(initialJobs: JobsRow[]) {
   const jobs: JobsRow[] = initialJobs.map((j) => ({ ...j }));
   const updates: Array<Partial<JobsRow> & { __id: string }> = [];
 
-  function rowMatches(job: JobsRow, filters: Array<[string, unknown]>, inFilter: { col: string; vals: unknown[] } | null) {
+  function rowMatches(
+    job: JobsRow,
+    filters: Array<[string, unknown]>,
+    inFilter: { col: string; vals: unknown[] } | null,
+    ltFilters: Array<[string, unknown]> = []
+  ) {
     const record = job as unknown as Record<string, unknown>;
     if (!filters.every(([col, val]) => record[col] === val)) return false;
     if (inFilter && !inFilter.vals.includes(record[inFilter.col])) return false;
+    // `.lt()` backs the finalize lock lease (EXTRACTION-RELIABILITY-1): a
+    // null lock never matches, so a job with no `locked_at` is never taken
+    // over by the lease path.
+    if (
+      !ltFilters.every(([col, val]) => {
+        const actual = record[col];
+        return actual !== null && actual !== undefined && String(actual) < String(val);
+      })
+    ) {
+      return false;
+    }
     return true;
   }
 
   function updateBuilder(patch: Partial<JobsRow>) {
     const filters: Array<[string, unknown]> = [];
+    const ltFilters: Array<[string, unknown]> = [];
     let inFilter: { col: string; vals: unknown[] } | null = null;
 
     function applyAndCollectMatches(): JobsRow[] {
-      const matched = jobs.filter((job) => rowMatches(job, filters, inFilter));
+      const matched = jobs.filter((job) => rowMatches(job, filters, inFilter, ltFilters));
       for (const job of matched) {
         Object.assign(job, patch);
         updates.push({ __id: job.id, ...patch });
@@ -132,6 +156,10 @@ function makeJobsTable(initialJobs: JobsRow[]) {
       },
       in(column: string, values: unknown[]) {
         inFilter = { col: column, vals: values };
+        return builder;
+      },
+      lt(column: string, value: unknown) {
+        ltFilters.push([column, value]);
         return builder;
       },
       select(_cols?: string) {
@@ -336,16 +364,27 @@ function makeRecommendationsTable(seed: RecRow[] = []) {
  * only by `run_id`/`project_id`) always sees `[]`, matching every other test
  * in this file.
  */
-function makeScanPromptResultsTable(existingProviders: string[] = []) {
+function makeScanPromptResultsTable(existingProviders: string[] | Record<number, string[]> = []) {
+  // Sample-aware since SAMPLING-1 (ADR 0030): a plain array means "these
+  // providers already have a row for sample 0", the historical meaning; a
+  // record keyed by sample index lets a test seed different samples
+  // differently, which is what proves repetitions are not skipped by an
+  // earlier sample's rows.
+  const bySample: Record<number, string[]> = Array.isArray(existingProviders)
+    ? { 0: existingProviders }
+    : existingProviders;
+
   const inserted: Array<Record<string, unknown>> = [];
   let hasPromptIdFilter = false;
+  let sampleFilter = 0;
   const builder: Record<string, unknown> = {
     insert: (row: Record<string, unknown>) => {
       inserted.push(row);
       return Promise.resolve({ error: null });
     },
-    eq: (column: string) => {
+    eq: (column: string, value?: unknown) => {
       if (column === "prompt_id") hasPromptIdFilter = true;
+      if (column === "sample_index") sampleFilter = Number(value ?? 0);
       return builder;
     },
     select: () => builder,
@@ -353,8 +392,11 @@ function makeScanPromptResultsTable(existingProviders: string[] = []) {
     maybeSingle: () => Promise.resolve({ data: null, error: null }),
     single: () => Promise.resolve({ data: null, error: null }),
     then: (resolve: (value: { data: unknown[]; error: null }) => unknown) => {
-      const data = hasPromptIdFilter ? existingProviders.map((provider) => ({ provider })) : [];
+      const data = hasPromptIdFilter
+        ? (bySample[sampleFilter] ?? []).map((provider) => ({ provider }))
+        : [];
       hasPromptIdFilter = false;
+      sampleFilter = 0;
       return Promise.resolve({ data, error: null }).then(resolve);
     }
   };
@@ -397,9 +439,14 @@ function buildClients(
     previousRunId = null,
     previousRecommendationRows = [],
     ownerPlan,
-    notificationsBehavior = "ok"
+    notificationsBehavior = "ok",
+    promptJobSampleIndex
   }: {
     promptJobMaxAttempts: number;
+    /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
+     *  sample_index in the payload at all, which is exactly what a job created
+     *  before ADR 0030 looks like. */
+    promptJobSampleIndex?: number;
     previousRunId?: string | null;
     previousRecommendationRows?: RecRow[];
     /** PRICING-TRUTH-1 (PR b): owner's `profiles.current_plan`, read by executePendingScan
@@ -409,7 +456,7 @@ function buildClients(
     ownerPlan?: string;
     notificationsBehavior?: "ok" | "error" | "throws";
   },
-  existingProviders: string[] = []
+  existingProviders: string[] | Record<number, string[]> = []
 ) {
   const jobsTable = makeJobsTable([
     {
@@ -432,7 +479,11 @@ function buildClients(
       status: "pending",
       attempt_count: 0,
       max_attempts: promptJobMaxAttempts,
-      payload_json: { prompt_id: PROMPT_ID, prompt_text: "What is the best CRM?" },
+      payload_json: {
+        prompt_id: PROMPT_ID,
+        prompt_text: "What is the best CRM?",
+        ...(promptJobSampleIndex === undefined ? {} : { sample_index: promptJobSampleIndex })
+      },
       last_error: null,
       created_at: "2026-06-13T10:00:01.000Z"
     },
@@ -797,6 +848,86 @@ describe("executePendingScan — multi-engine execution", () => {
     expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted).toHaveLength(1);
     expect(scanPromptResultsTable.inserted[0].provider).toBe("claude");
+  });
+
+  it("SAMPLING-1: persists the sample_index its job carries", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      promptJobSampleIndex: 2
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(scanPromptResultsTable.inserted).toHaveLength(2);
+    expect(scanPromptResultsTable.inserted.map((row) => row.sample_index)).toEqual([2, 2]);
+  });
+
+  it("SAMPLING-1: a job with no sample_index in its payload writes sample 0", async () => {
+    // Jobs created before ADR 0030 have no sample_index. They are sample 0 —
+    // the same value migration 0028 defaults their rows to — and must not
+    // become NaN and break the insert.
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(scanPromptResultsTable.inserted.map((row) => row.sample_index)).toEqual([0, 0]);
+  });
+
+  it("SAMPLING-1: an earlier sample's rows never make a later sample skip its calls", async () => {
+    // The failure this pins down is silent and total: if the per-engine
+    // idempotency check is not scoped to the sample, every repetition after
+    // the first sees sample 0's rows, concludes there is nothing to do, and
+    // completes without one LLM call. The run would report full success and
+    // hold a third of the responses it claims — sampling would cost nothing
+    // and do nothing, which is the worst possible way for this to break.
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients(
+      { promptJobMaxAttempts: 3, promptJobSampleIndex: 1 },
+      // Both engines already answered sample 0. Sample 1 has nothing.
+      { 0: ["gemini", "claude"] }
+    );
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(2);
+    expect(scanPromptResultsTable.inserted.map((row) => row.sample_index)).toEqual([1, 1]);
+  });
+
+  it("SAMPLING-1: the idempotent-retry skip still applies within the same sample", async () => {
+    // The other half of the invariant: scoping to the sample must not lose
+    // the original guarantee that re-running a job never double-writes a row.
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients(
+      { promptJobMaxAttempts: 3, promptJobSampleIndex: 1 },
+      { 1: ["gemini"] }
+    );
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    expect(generateClaudeVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(scanPromptResultsTable.inserted).toHaveLength(1);
+    expect(scanPromptResultsTable.inserted[0]).toMatchObject({ provider: "claude", sample_index: 1 });
   });
 
   it("PRICING-TRUTH-1 (PR b): caps a Free-plan project to 1 engine even with 2 configured", async () => {
@@ -1529,10 +1660,14 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(stillPending).toHaveLength(12 - MAX_REAL_SCAN_PROMPTS);
     expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(MAX_REAL_SCAN_PROMPTS);
 
-    // Campaign is not finalized yet — extraction/scoring/recommendations and
-    // the scan_finalize job must wait for the batch that clears the queue.
+    // Campaign is not finalized yet — scoring/recommendations and the
+    // scan_finalize job must wait for the batch that clears the queue.
     expect(state.status).toBe("running");
-    expect(vi.mocked(runStructuredExtractionForRun)).not.toHaveBeenCalled();
+    // EXTRACTION-RELIABILITY-1: extraction, on the other hand, now runs on
+    // every batch, against the rows that batch just produced. Deferring all
+    // of it to the finalize pass is what forced the old 20-row cap and made
+    // a third of a 30-row run's answers unreachable (docs/adr/0029).
+    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
     expect(finalizeJob.status).toBe("pending");
 
@@ -1570,9 +1705,12 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     const finalizeJob = jobsTable.jobs.find((j) => j.id === "campaign-finalize-job")!;
     expect(finalizeJob.status).toBe("completed");
 
-    // Extraction/scoring/recommendations run exactly once for the whole
-    // campaign, on the final batch — not once per batch.
-    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(1);
+    // Scoring/recommendations run exactly once for the whole campaign, on the
+    // final batch — not once per batch. Extraction runs three times across
+    // this two-invocation campaign (EXTRACTION-RELIABILITY-1): once per batch
+    // for the rows that batch produced, plus the finalize sweep that catches
+    // anything an earlier batch's pass could not reach.
+    expect(vi.mocked(runStructuredExtractionForRun)).toHaveBeenCalledTimes(3);
     expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
 
     // The second invocation had nothing left to batch, so it must not have
@@ -1634,5 +1772,170 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(state.status).toBe("running");
     expect(afterMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * EXTRACTION-RELIABILITY-1 (docs/adr/0029) — the invariant that makes the
+ * silent data loss impossible rather than merely unlikely.
+ *
+ * Scoring reads `extracted_json`, so completing a run whose answers were
+ * never extracted publishes a score computed from a fraction of the run's own
+ * data and calls it done. That is exactly what shipped before this phase: on
+ * production data, 30-row runs completed with 20 rows extracted and 10 never
+ * touched, and nothing anywhere said so.
+ */
+describe("executePendingScan — a run cannot complete with unextracted answers", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    vi.mocked(countUnprocessedExtractionRows).mockReset();
+    vi.mocked(generateRecommendationsForRun).mockClear();
+    afterMock.mockClear();
+  });
+
+  afterEach(() => {
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+  });
+
+  it("defers finalize back to pending instead of completing when rows are still unextracted", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(3);
+
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    // The finalize job is released so a fresh invocation — with a fresh
+    // budget — can finish the extraction work, rather than the run being
+    // completed over a hole in its own data.
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    expect(finalizeJob.status).toBe("pending");
+
+    // Nothing downstream of extraction may run on incomplete data.
+    expect(vi.mocked(generateRecommendationsForRun)).not.toHaveBeenCalled();
+
+    // And the campaign hands off so it actually gets finished.
+    expect(afterMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("completes normally once every answer is extracted", async () => {
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    expect(finalizeJob.status).toBe("completed");
+    expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * Regression: the 2026-08-04 IKEA failure (run 9608d861, `scan_timeout` after
+ * 190.9s with all 26 prompts generated cleanly).
+ *
+ * Since extraction moved inside the finalize step, that step is long enough to
+ * be killed by Vercel's maxDuration mid-flight — and a killed invocation
+ * cannot release the finalize job it claimed. `reconcileStuckScanRuns` only
+ * touches `scan_runs`, never `jobs`, so the abandoned `running` job was
+ * unrecoverable: every later invocation failed the `status = 'pending'` claim,
+ * returned immediately, and nothing wrote progress again until the run was
+ * failed as stuck. Recovering cost a full re-scan.
+ */
+describe("executePendingScan — an abandoned finalize claim is recoverable", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+    vi.mocked(generateRecommendationsForRun).mockClear();
+  });
+
+  async function runWithFinalizeHeldSince(lockedAt: string | null) {
+    const { service, supabase, jobsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    // Simulate the corpse: finalize claimed as `running`, never released.
+    const finalizeJob = jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+    finalizeJob.status = "running";
+    finalizeJob.locked_at = lockedAt;
+    finalizeJob.locked_by = "gemini-executor";
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    return jobsTable.jobs.find((j) => j.id === "finalize-job")!;
+  }
+
+  it("takes over a finalize job whose lock lease has expired", async () => {
+    const staleLock = new Date(Date.now() - FINALIZE_LOCK_LEASE_MS - 60_000).toISOString();
+
+    const finalizeJob = await runWithFinalizeHeldSince(staleLock);
+
+    // The campaign finishes instead of stalling forever.
+    expect(finalizeJob.status).toBe("completed");
+    expect(vi.mocked(generateRecommendationsForRun)).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a finalize job alone while a live invocation still holds it", async () => {
+    const freshLock = new Date(Date.now() - 5_000).toISOString();
+
+    const finalizeJob = await runWithFinalizeHeldSince(freshLock);
+
+    // Still held by whoever is genuinely working on it — taking it over here
+    // would run scoring and recommendations twice for the same campaign.
+    expect(finalizeJob.status).toBe("running");
+    expect(vi.mocked(generateRecommendationsForRun)).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Regression, other half of the 2026-08-04 IKEA failure (docs/adr/0029,
+ * Addendum): the extraction budget must belong to the invocation, not to each
+ * pass.
+ *
+ * The invocation that processes the last batch runs generation, then that
+ * batch's extraction pass, then the finalize sweep. With a per-pass budget
+ * those two passes each started a fresh 25s clock, so the invocation could
+ * queue ~70s of work inside a 60s maxDuration and get killed mid-sweep.
+ */
+describe("executePendingScan — extraction shares one invocation-wide deadline", () => {
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+    vi.mocked(runStructuredExtractionForRun).mockClear();
+  });
+
+  it("passes the same absolute deadline to the batch pass and the finalize sweep", async () => {
+    const { service, supabase } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const before = Date.now();
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+    const after = Date.now();
+
+    const calls = vi.mocked(runStructuredExtractionForRun).mock.calls;
+    // Batch pass + finalize sweep, both in this one invocation.
+    expect(calls).toHaveLength(2);
+
+    const deadlines = calls.map(([args]) => args.deadlineAt);
+    expect(deadlines.every((d) => typeof d === "number")).toBe(true);
+
+    // The crux: the second pass does NOT get a fresh clock. Both draw from the
+    // same absolute deadline, so whatever generation and the first pass spent
+    // is already gone when the sweep starts.
+    expect(deadlines[0]).toBe(deadlines[1]);
+
+    // And that deadline is anchored to when the invocation began, not to when
+    // each pass began.
+    expect(deadlines[0]).toBeGreaterThanOrEqual(before + SCAN_INVOCATION_WORK_BUDGET_MS);
+    expect(deadlines[0]).toBeLessThanOrEqual(after + SCAN_INVOCATION_WORK_BUDGET_MS);
   });
 });

@@ -13,10 +13,84 @@ import "server-only";
 // back down (8 was the conservative fallback considered) rather than adding
 // execution-side mitigations speculatively.
 export const MAX_REAL_SCAN_PROMPTS = 10;
-// One row per prompt per active engine (multi-engine execution, migration
-// 0009) — currently up to 2 engines (Gemini, Claude), so size for
-// MAX_REAL_SCAN_PROMPTS * 2 rather than MAX_REAL_SCAN_PROMPTS alone.
-export const MAX_EXTRACTION_RESULTS = MAX_REAL_SCAN_PROMPTS * 2;
+/**
+ * How many extraction calls may be in flight at once
+ * (EXTRACTION-RELIABILITY-1, docs/adr/0029).
+ *
+ * This replaces the former `MAX_EXTRACTION_RESULTS` cap (= 20), which was a
+ * *row* limit rather than a concurrency limit and silently discarded every
+ * eligible row past the 20th. It was sized when a run was a single batch;
+ * SCAN-CHAIN-1 made a campaign span many batches (up to the plan's prompt
+ * cap × active engines — 300 rows on Pro), and the cap was never revisited,
+ * so a 30-row run persisted 20 extractions and left 10 rows permanently
+ * unprocessed with no error and no log. Measured on production data
+ * (2026-08-04): `procesadas + con_error` summed to exactly 20 on every
+ * 30-row run, across every project.
+ *
+ * A concurrency limit is the right shape for the real constraint. Extraction
+ * requests are the heaviest in the pipeline (full schema instruction + the
+ * entire raw response), and the old code dispatched all of them at once via
+ * `Promise.allSettled`, which is a good way to manufacture the very 429s
+ * that then killed every row. 4 keeps the pass moving without bursting.
+ */
+export const EXTRACTION_CONCURRENCY = 4;
+
+/** Hard per-call timeout for a structured-extraction request. Matches the generation-side budget of all three providers. */
+export const EXTRACTION_CALL_TIMEOUT_MS = 20_000;
+
+/** Total attempts per extraction call, including the first (3 = two retries). */
+export const EXTRACTION_MAX_ATTEMPTS = 3;
+
+/** First backoff delay between extraction attempts; doubles per attempt, with full jitter. */
+export const EXTRACTION_RETRY_BASE_DELAY_MS = 750;
+
+/** Ceiling for any single extraction backoff, including a provider-sent `Retry-After`. */
+export const EXTRACTION_RETRY_MAX_DELAY_MS = 8_000;
+
+/**
+ * Wall-clock budget for **all** the work one `executePendingScan` invocation
+ * may do, measured from the moment it starts — not a per-pass allowance.
+ *
+ * This is a shared deadline on purpose, and the distinction is what a first
+ * cut of EXTRACTION-RELIABILITY-1 got wrong in production (IKEA run
+ * 9608d861, 2026-08-04, `scan_timeout` after 190.9s with all 26 prompts
+ * generated fine). That version gave each extraction pass its own fixed 25s.
+ * The invocation that processes the *last* batch runs three things in a row —
+ * generation (~20s), that batch's extraction pass (25s), then the finalize
+ * sweep (another 25s) — which is ~70s of work inside a 60s `maxDuration`.
+ * Vercel killed it mid-sweep, so it never reached the code that releases the
+ * finalize job or writes progress, and the campaign stalled until the
+ * reconciliation pass failed it.
+ *
+ * One absolute deadline for the whole invocation makes that arithmetic
+ * impossible: whatever generation spends, extraction gets what is left and
+ * not a millisecond more, and a pass that finds no budget simply defers its
+ * rows to the next invocation instead of overrunning. 45s leaves headroom
+ * under the 60s ceiling for the finalize bookkeeping, scoring and
+ * recommendations that follow.
+ */
+export const SCAN_INVOCATION_WORK_BUDGET_MS = 45_000;
+
+/**
+ * How long a claimed `scan_finalize` job may stay `running` before another
+ * invocation is allowed to take it over.
+ *
+ * Finalize used to be near-instant, so a claim that was never released could
+ * not realistically happen. Since extraction runs inside the finalize step it
+ * is long enough to be killed mid-flight, and `reconcileStuckScanRuns` only
+ * ever touches `scan_runs` — it never releases a `jobs` row. Without a lease,
+ * one killed invocation strands the campaign permanently: every later
+ * invocation fails the `status = 'pending'` claim, returns immediately, and
+ * nothing writes progress again (exactly the 2026-08-04 IKEA failure).
+ *
+ * The takeover is still exclusive: the claim is an `UPDATE ... WHERE
+ * locked_at < now - lease RETURNING`, so whichever invocation commits first
+ * moves `locked_at` and every racing one stops matching — the same atomic
+ * claim pattern the prompt batches already use. 90s is comfortably longer
+ * than any live invocation (capped at 45s of work above), so a lease can only
+ * expire on an invocation that is genuinely gone.
+ */
+export const FINALIZE_LOCK_LEASE_MS = 90_000;
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call
@@ -236,3 +310,36 @@ export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
 export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 24;
 
 export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
+
+/**
+ * Marker written to `job_logs` whenever an operator scan-health alert is sent
+ * (EXTRACTION-RELIABILITY-1 Fase B, docs/adr/0029). Doubles as the dedupe
+ * store's lookup key — see `alreadyAlerted` in lib/scan/scan-health-alert.ts
+ * for why `job_logs` rather than `notifications` or a new table.
+ */
+export const SCAN_HEALTH_ALERT_LOG_MESSAGE = "scan_health_alert_sent";
+
+/**
+ * Written to `job_logs` when a run HAS alert-worthy findings but the channel
+ * cannot deliver them (no `OPS_ALERT_EMAIL`, no `RESEND_API_KEY`, or the send
+ * threw).
+ *
+ * A `console.error` alone was not enough: Vercel runtime logs are short-lived
+ * and awkward to reach, so when the first real verification of this phase
+ * produced no email, the reason was unreachable and the failure could not be
+ * told apart from "there was nothing to report" (2026-08-05). Persisting the
+ * breadcrumb makes the alerting path diagnosable with the same SQL everything
+ * else here is diagnosed with — which is this ADR's own thesis applied to its
+ * own code.
+ */
+export const SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE = "scan_health_alert_undeliverable";
+
+/**
+ * How long one (engine, reason) incident stays deduped, across every project.
+ *
+ * 24h is chosen against the daily cron: a single exhausted API account is one
+ * incident, and without a cross-project window it would send one email per
+ * project per sweep. An alert that arrives twenty times teaches the operator
+ * to ignore it, which is worse than not sending it.
+ */
+export const SCAN_HEALTH_ALERT_DEDUPE_HOURS = 24;

@@ -9,7 +9,15 @@
  * `scan_runs` (`successful_prompts + failed_prompts` sobre `total_prompts`).
  * No existe información granular de fases en el esquema, así que el checklist
  * de 6 pasos simulados se omite — se mantiene spinner + título + cuerpo +
- * barra de progreso real + contador real ("X de Y prompts").
+ * barra de progreso real + contador real ("X de Y").
+ *
+ * El contador perdió el sustantivo "prompts" en SAMPLING-1 (ADR 0030): desde
+ * que un escaneo puede repetir su set de prompts, `total_prompts` cuenta
+ * lanzamientos (prompt x repetición), no prompts, así que nombrar la unidad
+ * aquí sería falso en los escaneos que repiten. Recuperar una etiqueta más
+ * rica exige llevar `scan_runs.sample_count` hasta este componente y hasta
+ * `/api/projects/[projectId]/scan-status` — trabajo de la fase de superficie,
+ * no de ésta.
  */
 
 export type ActiveScanRun = {
@@ -43,7 +51,7 @@ export function ScanInProgress({ activeRun }: { activeRun: ActiveScanRun }) {
         <div style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 10, fontFamily: "var(--mono)" }}>
           {hasProgress ? (
             <>
-              {pct}% · {completed} de {total} prompts
+              {pct}% · {completed} de {total}
             </>
           ) : (
             <>Preparando el escaneo…</>

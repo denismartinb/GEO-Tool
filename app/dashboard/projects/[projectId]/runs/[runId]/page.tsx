@@ -38,12 +38,17 @@ export default async function RunDetailPage({
 
   const { data: run } = await supabase
     .from("scan_runs")
-    .select("id, project_id, status, total_prompts, successful_prompts, created_at")
+    .select("id, project_id, status, total_prompts, successful_prompts, sample_count, created_at")
     .eq("id", runId)
     .eq("project_id", projectId)
     .single();
 
   if (!run) notFound();
+
+  // Runs created before migration 0028 have no sample_count; they were all
+  // one pass over their prompt set, which is exactly 1.
+  const sampleCount = Math.max(1, Number(run.sample_count ?? 1));
+  const distinctPrompts = Math.round(Number(run.total_prompts ?? 0) / sampleCount);
 
   const [{ data: promptResults }, { data: score }, { data: recommendations }] = await Promise.all([
     supabase
@@ -87,7 +92,19 @@ export default async function RunDetailPage({
         <CardHeader><h2 className="font-medium">Resumen del escaneo</h2></CardHeader>
         <CardContent className="space-y-1 text-sm text-[var(--ink-2)]">
           <p>Estado: {formatStatus(run.status)}</p>
-          <p>Prompts analizados: {run.successful_prompts} de {run.total_prompts}</p>
+          {/* SAMPLING-1 (ADR 0030): total_prompts cuenta lanzamientos, y un
+              lanzamiento sólo equivale a un prompt cuando el escaneo no
+              repitió su set. Con repeticiones se nombra la unidad real y se
+              muestra de dónde sale, en vez de llamar "prompts" a 60 cuando
+              hay 20. */}
+          {sampleCount > 1 ? (
+            <p>
+              Lanzamientos analizados: {run.successful_prompts} de {run.total_prompts} ·{" "}
+              {distinctPrompts} prompts × {sampleCount} repeticiones
+            </p>
+          ) : (
+            <p>Prompts analizados: {run.successful_prompts} de {run.total_prompts}</p>
+          )}
           <p>Fecha: {new Date(run.created_at).toLocaleString("es-ES", { timeZone: "Europe/Madrid" })}</p>
           {run.status === "pending" ? (
             <form action={executeScan} className="pt-2">

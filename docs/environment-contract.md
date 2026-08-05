@@ -145,6 +145,31 @@ six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
 customer: the audit is automatic, so the user never asked for it and cannot
 act on the backend failure. Requires `RESEND_API_KEY` like every other email.
 
+The same address also receives the **scan-health alert**
+(EXTRACTION-RELIABILITY-1 Fase B, `docs/adr/0029`): a provider out of quota, a
+provider rejecting the key or model id, an engine that answered prompts but
+extracted nothing, or a run that failed with its auto-retry already spent.
+Deduped on (engine, reason) across every project for 24 h, so one exhausted
+API account is one email rather than one per project per daily sweep. Also
+operator-only, and for the same reason.
+
+**This variable was not configured at all when Fase B shipped** (founder,
+2026-08-04), which means the web-audit alert above had been inert since the day
+it was written. An unset alert channel swallowing an alert is the same class of
+silent failure this whole ADR exists to remove, so
+`checkAndSendScanHealthAlert` now emits a loud `console.error` when it has
+findings and no address to send them to. The alert still cannot be delivered —
+only setting the variable fixes that — but it stops being invisible. **Set it
+in both Production and Preview**, and note that it needs `RESEND_API_KEY` too:
+without that, `sendEmail` is a no-op for every email in the product.
+
+That second requirement is not theoretical. On 2026-08-05 the Fase B
+verification failed with no email and no log, because `OPS_ALERT_EMAIL` was
+configured but `RESEND_API_KEY` was not — the address probe passed and
+`sendEmail` then returned on `if (!resend) return`. Two silent gates in
+series. `isOpsAlertConfigured` now requires both, so the "not deliverable"
+log fires when either is missing.
+
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
 | Variable | Required | Where | Expected shape |
@@ -327,20 +352,32 @@ for the payment-failed email to fire.
   trip crosses the Atlantic (docs/architecture-audit-2026-07.md, finding 1.4).
   If the Supabase project is ever migrated to a different region, update this
   value to match.
-- **ignoreCommand**: `vercel.json` skips the build when a commit touched
-  nothing outside internal documentation (`docs/`, `.claude/`, `agents/` and
-  the root `.md` files). Exit `0` means skip, exit `1` means build — so the
-  command ends in `test $? -eq 0`, which collapses every git error (exit `128`
-  when `HEAD^` does not exist on a root commit or a too-shallow clone) to
-  "build". **When in doubt, deploy**: Vercel reading a git failure as `0`
-  would turn it into a silently missing deployment.
-  - **The exclusions are literal paths, never patterns, and that is
+- **ignoreCommand**: `vercel.json` runs `scripts/vercel-should-build.sh`, which
+  skips the build when a push touched nothing outside internal documentation
+  (`docs/`, `.claude/`, `.github/`, `tests/`, `agents/` and the root `.md`
+  files). Exit `0` means skip, any other code means build, and every uncertain
+  path in the script ends in "build". **When in doubt, deploy**: Vercel reading
+  a failure as `0` would turn it into a silently missing deployment.
+  - **It compares against the last *successful deployment* of the branch**
+    (`VERCEL_GIT_PREVIOUS_SHA`), not `HEAD^`. A push of three commits is one
+    deployment, so `HEAD^` would only see the last of them and a branch whose
+    final commit is documentation could skip a build its earlier commits
+    needed — leaving the preview on stale code, and the pilot judging a screen
+    that is not the commit's. That limitation was called out as follow-up work
+    when the inline command shipped (PR #323) and is what BUILD-BUDGET-1
+    Fase 1 closed (PR #325). Vercel clones shallow, so the script deepens the
+    clone to reach that SHA and builds if it cannot.
+  - **Production is never skipped**, whatever changed. A production deploy that
+    silently does not happen is a much worse trade than one wasted build — see
+    the stale-production incident below.
+  - **The safe list is literal directories, never patterns, and that is
     load-bearing.** Every blog article in this product is
     `app/blog/<slug>/page.mdx`, so the obvious first draft — excluding `*.md`,
     or its one-character neighbour `*.mdx` — would have stopped publishing new
-    articles with every check still green. `vercel-ignore-command.test.ts`
-    forbids wildcards and forbids excluding anything under `app/`, `lib/`,
-    `components/`, `public/` or `supabase/`.
+    articles with every check still green. `scripts/vercel-should-build.test.ts`
+    pins both directions of the exit contract and asserts that a change under
+    `app/`, `lib/`, `components/`, `public/` or `supabase/` — including a
+    nested `.mdx` — always builds.
   - **What it does not do, measured rather than assumed:** it does nothing for
     the Hobby plan's `api-deployments-free-per-day` limit. Tested directly on
     2026-08-04 — commit `da8736a` touches only `docs/`, so the rule should
@@ -349,10 +386,17 @@ for the payment-failed email to fire.
     upstream of the build step where `ignoreCommand` runs**, so a build this
     rule would have skipped never gets far enough to skip. This saves build
     minutes and nothing else.
-  - **Consequence to know about:** a documentation-only commit on the
-    production branch does not redeploy production. That is correct — nothing
-    the app serves changed — but the previous deployment stays live.
-- **Deployment rate limit (Hobby).** `api-deployments-free-per-day` rejects
+  - **What it does not buy, and this was measured:** it does not free a slot
+    against a daily deployment cap. Tested 2026-08-04 — a `docs/`-only commit
+    the rule should have skipped was rejected with the same rate-limit error as
+    every other push, because **the cap is applied when the deployment is
+    created, upstream of the build step where `ignoreCommand` runs**. What it
+    saves is build minutes and the `ux-pilot` run that a successful preview
+    deployment would have triggered, not deployments.
+- **Deployment rate limit (Hobby — historical since 2026-08-04).** The account
+  moved to **Vercel Pro on 2026-08-04**, so this no longer binds; it is kept
+  because the failure mode is unmistakable if it ever returns.
+  `api-deployments-free-per-day` rejects
   every new deployment for 24 hours once the account passes 100. Pushing again
   does not clear it: it consumes another attempt against the same counter.
   Observed 2026-08-04 — a retrigger commit failed identically, minutes after
@@ -399,11 +443,33 @@ Two causes seen so far, in the order worth checking:
 1. **Production Branch points somewhere other than `main`** (Vercel → Settings
    → Environments → Production → Branch Tracking), typically left over from the
    non-main smoke procedure above. This is the one that produces *zero*
-   production deployments while previews continue normally.
+   production deployments while previews continue normally. **This was the
+   actual cause on 2026-08-04.**
 2. **The daily deployment cap on the free plan**
    (`api-deployments-free-per-day`, >100/day, resets after 24 h). Vercel does
    not retry a build it refused, so a merge that lands inside that window never
    deploys even after the cap lifts — it needs a new push or a manual Redeploy.
+
+**How to tell the two apart in one look:** a cap rejection leaves a trace — a
+failed deployment and a `vercel[bot]` comment carrying the error. A misrouted
+Production Branch leaves **nothing at all**: query the deployments API for the
+merge commit and you get zero records, because Vercel never attempted a build.
+On 2026-08-04 that distinction cost several hours, because the cap was
+genuinely exhausted earlier the same day and made a convincing false lead —
+including one wrong conclusion in each direction before the "zero records"
+signal settled it.
+
+Two corollaries worth stating, both learned the same day:
+
+- **Upgrading the plan does not retroactively deploy anything.** Fixing the
+  cause only means the *next* push deploys. Two merges to `main` landed between
+  the cap lifting and the branch setting being corrected, and neither ever
+  built. Something has to trigger a fresh build afterwards.
+- **The `ignoreCommand` does not save deployment quota.** Measured directly
+  (PR #323): a commit touching only `docs/` was rejected with the same
+  `api-deployments-free-per-day` error as any other push, so Vercel evaluates
+  the cap *before* running the ignore command. It saves build minutes and
+  noise, not quota.
 
 ---
 

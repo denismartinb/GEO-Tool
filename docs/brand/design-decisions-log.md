@@ -1205,7 +1205,7 @@ Decisiones finales:
   glosario o de "al menos una fila donde gana el competidor" de las
   comparativas.
 - **Imágenes: maquetas SVG/CSS, nunca ilustración generada por IA ni stock.**
-  Decisión completa y motivos en `docs/adr/0026-article-imagery-policy.md`.
+  Decisión completa y motivos en `docs/adr/0028-article-imagery-policy.md`.
   Las capturas reales del producto quedan permitidas solo en `/docs`, nunca
   en marketing, porque la cuenta piloto vive en el mismo proyecto de Supabase
   que producción.
@@ -1244,7 +1244,7 @@ Pendiente / roto conocido:
   correcta.
 
 Referencias: `docs/brand/article-design-system.md`,
-`docs/adr/0026-article-imagery-policy.md`, `components/blog/article/`.
+`docs/adr/0028-article-imagery-policy.md`, `components/blog/article/`.
 
 ---
 
@@ -1302,7 +1302,7 @@ el artículo rompe el índice.
 
 **Qué se decidió — portadas.** Se permite imagen generada o de stock **en
 portada**, manteniendo la prohibición dentro del cuerpo (enmienda a
-`docs/adr/0026-article-imagery-policy.md`, decisión del fundador). Con una
+`docs/adr/0028-article-imagery-policy.md`, decisión del fundador). Con una
 regla: una portada no puede representar una interfaz, un panel, un gráfico ni
 una métrica. Si enseña algo que parece un dato de Genscore, ese dato tiene que
 existir — y entonces ya no es portada, es figura.
@@ -1320,6 +1320,154 @@ en el degradado con icono, que es exactamente lo que se ha rechazado.
 humano: no hay herramienta de generación en el entorno del agente y el stock
 exige licencia. Mientras siga así, la publicación semanal autónoma (Fase A1)
 tiene aquí una dependencia manual.
+
+
+## 15. Gráfico de evolución del puesto — ventana y huecos (TREND-WINDOW-1, 2026-08-04)
+
+> **Nota de coordinación.** Mientras se escribía esto, otra sesión ya había
+> mergeado una §14 (cabecera de artículos) y el PR #315 tenía escrita *otra*
+> §14 — colisión real, del mismo tipo que la de los dos ADR 0026, y en el
+> propio documento que existe para evitarla. Resuelto renumerando: §14 es la
+> del blog (ya en `main`), §15 es esta, §16 la de #315.
+
+**Dos defectos, reportados por el fundador sobre el proyecto Movistar (21
+escaneos completados).**
+
+**1. Banda vertical en blanco en mitad del gráfico.** *"Eso no puede suceder en
+ningún caso."* Tenía razón. Todos los escaneos completados recibían un hueco en
+el eje X, incluidos aquellos sin ranking persistido (sin fila en `run_scores`, o
+con un `details_json` sin `brand_position.ranking`). Para esos, el valor de
+**todas** las series es null, así que **todas** las líneas se cortan en la misma
+x y aparece un agujero.
+
+La distinción que gobierna el arreglo: **una serie suelta en null es
+información** —"esa marca no salió en ese escaneo"— y debe seguir cortando su
+propia línea; **una columna donde nadie tiene valor no informa de nada** y
+renderizarla como hueco sólo comunica "esto está roto".
+
+**2. Demasiados puntos.** Con escaneos acumulándose a diario la línea se
+convierte en ruido. Ventana de los **últimos 15** (`MAX_TREND_POINTS`).
+
+**Orden de las dos operaciones, que no es indiferente:** se filtran primero las
+columnas vacías y se recorta después. Al revés, la ventana gastaría huecos en
+columnas que no pintan nada — justo el defecto que se venía a arreglar. Hay un
+test que fija ese orden.
+
+**Lo que deliberadamente NO cambia.** La lista "puesto medio · último escaneo"
+sigue anclada al último escaneo **real**, no al último punto que sobreviva a la
+ventana. Si se hubiera reusado el punto filtrado, la lista mostraría datos de un
+escaneo anterior bajo un encabezado que dice "último escaneo" — una mentira
+sutil. El contador "X de 2" sí pasa a contarse **dentro de la ventana visible**,
+para que el mensaje y el gráfico no puedan contradecirse.
+
+Lógica extraída a `lib/competitors/trend-window.ts` con tests, siguiendo el
+patrón del resto de la zona (`filterComparableEngines`, `computeTopicComparison`):
+la página es un componente de servidor y la lógica inline ahí no se puede probar.
+
+**Cuarta ronda, ya con el gráfico dibujándose de verdad (2026-08-04).** El
+fundador lanzó un escaneo, Mozilla llegó a 4 puntos y por fin se pudo ver la
+línea recta funcionando. Cuatro ajustes sobre eso:
+
+1. **Sin gráfico no se pinta nada** *(matizado horas después, ver abajo)*. Se
+   quitan tanto el estado vacío como la nota bajo el gráfico. Es una **rectificación de lo que se había hecho dos
+   rondas antes**: se había invertido esfuerzo en explicar honestamente por qué
+   faltaba el dato, y el fundador lo tachó literalmente sobre la captura. La
+   lección que queda escrita: un bloque que sólo sabe decir "todavía no" es
+   ruido en cada visita, y redactarlo mejor no cambia eso. El mensaje honesto
+   resolvió un problema real ("0 de 2" mentía), pero la solución correcta no
+   era mejor copy, era no ocupar sitio.
+2. **El título "puesto medio · último escaneo" se alinea a la derecha**, sobre
+   los números que etiqueta. Había dos lecturas posibles de la petición y se
+   preguntó en vez de adivinar, para no gastar un despliegue en la equivocada
+   (el cupo de Vercel estaba al límite ese día).
+3. **Fuera el InfoTip del encabezado.** Consecuencia directa de alinear el
+   título a la derecha: el icono queda pegado al borde y la burbuja se abre
+   fuera de pantalla, cortada. El fundador lo vio en el mismo despliegue y pidió
+   quitarlo. Un tooltip ilegible estorba más de lo que explica.
+4. **Las marcas apagadas de la leyenda no son marcas rotas.** Sólo las 4
+   primeras series arrancan encendidas (`DEFAULT_VISIBLE`); el resto se activan
+   pulsando. El fundador preguntó "¿por qué brave, protón, etc salen
+   deshabilitados?" — señal de que el atenuado al 0.5 comunicaba "no
+   disponible". Subido a 0.8 y añadida una pista explícita.
+
+**Tercer hallazgo: el gráfico era una escalera.** Con los proyectos reducidos a
+2 puntos se hizo visible lo que antes se perdía entre 20: la línea no unía
+punto con punto, sino que trazaba un tramo horizontal y luego caía en vertical.
+Estaba hecho a propósito, con este razonamiento en el código: *"a rank changes
+from one scan to the next, it does not slide through the values in between"*.
+El fundador lo rechazó —*"la línea tiene que unir un punto con otro; es un
+gráfico en escalera que no tiene sentido"*— y tenía razón: **un escalón afirma
+que el valor se mantuvo plano hasta el instante del escaneo siguiente**, que es
+una afirmación sin medir *más* fuerte que la de una diagonal, además de leerse
+como un fallo. Los puntos ya marcan dónde hay medición real; la línea sólo
+conecta. Cambiado a segmentos rectos (`buildSeriesPaths`, con test que prohíbe
+explícitamente `H`/`V` en el trazo).
+
+**Y el umbral sube de 2 a 4 escaneos** (`MIN_TREND_POINTS`). Dos es el mínimo
+matemático de una recta y el número equivocado de producto: son dos rayas planas
+de lado a lado. Decisión del fundador tras ver tres proyectos distintos en ese
+estado.
+
+**Segundo hallazgo, al verlo desplegado: el estado vacío mentía sobre el motivo.**
+El fundador probó el preview y vio dos cosas raras: Movistar decía *"0 de 2
+escaneos"* teniendo **21**, y Mozilla dibujaba dos puntos planos de lado a lado.
+Investigado: **no lo causa la ventana de 15**. Lo causa la decisión 4 de ADR 0026
+(geo-score-v3, sin backfill): un escaneo anterior a v3 no tiene
+`avg_position_when_mentioned` **para ninguna entidad**, así que toda la historia
+previa es una columna vacía. El propio ADR lo advierte: *"Every existing project
+was in that state until its next scan, so this was the default, not an edge
+case."*
+
+O sea: el filtro de columnas vacías funcionaba: lo que hizo fue **destapar** que
+casi todo el histórico no tiene el dato nuevo. Antes esas columnas se dibujaban
+como huecos y disimulaban el problema.
+
+Lo que sí era un fallo nuestro es **el mensaje**. "0 de 2 escaneos" se lee como
+"escanea más", y eso sólo es cierto en un proyecto nuevo; en uno con 21 escaneos
+la verdad es "tus escaneos son anteriores a esta métrica". Dos estados
+distintos llevaban la misma frase. Ahora se distinguen: cuando hay escaneos
+completados sin dato de posición, tanto el estado vacío como una nota bajo el
+gráfico dicen cuántos de cuántos lo traen y por qué, en vez de dejar que el
+usuario concluya que la pantalla está rota.
+
+**Última ronda: la tabla se quedó sin columna de puesto.** Al sustituir la media
+en crudo por el ranking 1..N se eliminó la columna de valor y quedó una sola
+cifra visible por fila —el porcentaje de mención— bajo un encabezado alineado a
+la derecha que decía "ranking · último escaneo". Resultado: **el encabezado
+nombraba los porcentajes**, y el puesto —un dígito gris pequeño a la izquierda—
+se leía como viñeta de lista. El fundador lo cazó en el preview: *"¿no ves que
+no sale la posición en la tabla?"*.
+
+El error de fondo no fue la maqueta, fue la regla que me apunté: había anotado
+"el encabezado va a la derecha" cuando lo que el fundador pidió fue *"que se
+relacione con el dato"*. En el momento en que el dato de la derecha dejó de ser
+el puesto, la regla siguió obedeciéndose y pasó a mentir. La regla correcta es
+**una etiqueta por columna, encima del dato que nombra**: "Puesto · último
+escaneo" a la izquierda, "Mención" a la derecha. Y el puesto se escribe como
+ordinal (`3º`), porque "3" es una viñeta y "3º" es una posición. Corregido
+también el gris del dígito (`--ink-4` → `--ink-3`).
+
+Segundo aviso, para quien lea esto: **una revisión de capturas que sólo verifica
+la lista de criterios del PR no es una revisión**. El ranking 1..N era correcto
+en las tres capturas y aun así la tabla no comunicaba el dato principal. Mirar
+sirve para lo que no estaba en la lista.
+
+**Y aun etiquetado, el puesto seguía sin verse: estaba en el sitio equivocado.**
+Con "1º" a la izquierda y su etiqueta encima, el fundador volvió a decir que no
+salía la posición —incluso sobre una captura donde sí salía—. La explicación,
+en sus palabras: *"me gusta más que la columna de puesto [vaya] a la derecha, no
+la había visto"*. Un ordinal pequeño y gris al principio de la fila se lee como
+viñeta de lista y el ojo lo salta; el peso visual estaba en el porcentaje, que
+no es el dato del bloque. La lista pasa a **tres columnas —marca · mención ·
+puesto—**, con el puesto el último y la cifra más pesada de la fila
+(`--ink-2`, 750). Lección transferible: **el dato principal va donde termina la
+lectura de la fila, no donde empieza**; si la posición estuviera primero tendría
+que competir con el nombre por la atención, y pierde.
+
+**Cierre de fase completo.** El invariante vive en `.claude/rules/competitors.md`
+(secciones "Métricas" y "Gráfico de evolución del puesto") y la celda de
+Competidores del mapa de zonas de `CLAUDE.md` apunta a esta fase — primera fase
+cerrada bajo el protocolo que estrenó §16.
 
 ## 16. Gobernanza del contexto entre sesiones (CONTEXT-GOVERNANCE-1, 2026-08-03)
 
@@ -1923,6 +2071,224 @@ atrapa las formas comunes, no sustituye a la constitución.
   todavía un detector para el caso "no se produjo absolutamente nada", que el
   workflow no cubre porque se dispara con un push que en ese escenario nunca
   ocurre.
+
+---
+
+## 20. Un escaneo dice cuántos lanzamientos hizo, no cuántos prompts tiene (SAMPLING-1, 2026-08-04)
+
+Decisión técnica completa en **ADR 0030**; aquí sólo lo que cambia en pantalla
+y por qué, que es lo que le toca a este documento.
+
+Desde SAMPLING-1 un escaneo puede **repetir su set de prompts** para alcanzar
+el suelo de 50 respuestas que el score necesita para ser publicable. Eso rompe
+una equivalencia que el producto daba por hecha en su copy: `total_prompts`
+cuenta *jobs*, y en cuanto hay repeticiones un job deja de ser un prompt.
+
+- **Barra de progreso (`components/scan-in-progress.tsx`): se retira el
+  sustantivo.** Pasa de «X de Y prompts» a «X de Y». Nombrar la unidad ahí
+  sería falso en los escaneos que repiten, y llevar `sample_count` hasta ese
+  componente exige tocar 4 páginas más `/api/.../scan-status` — trabajo de la
+  fase de superficie, no de ésta. Precedente que ya existía: la tabla de
+  escaneos (`live-run-status-cells.tsx`) ya mostraba `ok/total` sin sustantivo.
+- **Detalle del escaneo: se nombra la unidad real sólo cuando hace falta.** Con
+  `sample_count = 1` sigue diciendo «Prompts analizados: X de Y». Con
+  repeticiones dice «Lanzamientos analizados: X de Y · N prompts × R
+  repeticiones», que además enseña de dónde sale el número en vez de
+  esconderlo.
+- **Chips de motor en Prompts: agregados, no la última fila.** Construían un
+  `Map` por proveedor, así que con varias muestras el chip «Gemini: marca
+  mencionada» lo decidía la fila que llegara última — una moneda al aire. Ahora
+  el chip significa «este motor nombró la marca en al menos una de sus
+  respuestas», que es la misma regla que la fila ya usaba entre motores.
+
+- **Historial de escaneos: la columna «Prompts» pasa a «Lanzamientos».** Con 6
+  prompts y 3 repeticiones la celda decía `18/18` bajo un encabezado que ponía
+  «Prompts», que en un proyecto de 6 prompts es literalmente falso. Se renombra
+  la columna y, sólo cuando hubo repeticiones, se añade el desglose debajo
+  (*«6 prompts × 3 repeticiones»*) en vez de esconder de dónde sale el número.
+- **Las filas del historial se vuelven clicables.** Hallazgo colateral al
+  verificar lo anterior: `/runs/[runId]` estaba enlazada desde exactamente dos
+  sitios, **ambos dentro de estados vacíos** («no hay citas», «no se generaron
+  recomendaciones»). Un proyecto con datos reales no podía abrir el detalle de
+  ningún escaneo — la página llevaba huérfana quién sabe cuánto. La fecha de
+  cada fila es ahora el enlace; un `<tr>` entero no se puede envolver en un
+  ancla sin producir marcado inválido.
+
+**Roto conocido, aceptado y pendiente de la fase de superficie:** el cajón de
+evidencias muestra R filas por motor sin etiquetar a qué muestra pertenece cada
+una, y el total de citas por prompt suma las R respuestas (por tanto no es
+comparable entre escaneos con distinto R). No se toca aquí para no adelantar a
+medias un diseño que tiene su propia fase.
+
+**Sigue abierto, y no es de esta fase:** la columna **Δ Score** de ese mismo
+historial resta los dos scores en crudo (`curr - prev`), sin pasar por la
+guarda de comparabilidad de ADR 0024 que la Visión general sí aplica. Publica
+`+34 pt` sobre escaneos de 3 respuestas — exactamente el problema de
+credibilidad que motivó SAMPLING-1, en la pantalla de al lado.
+
+---
+
+## 21. Presupuesto de builds del flujo agéntico (BUILD-BUDGET-1 Fase 1, 2026-08-04)
+
+**El problema, medido.** El fundador reportó que se estaba tocando a diario el
+tope de 100 deploys/día del plan Hobby. Censo real vía los eventos
+`deployment_status` del repo (cada uno es un deploy de Vercel):
+
+| Día | Deploys | Ramas activas |
+|---|---|---|
+| 2026-08-03 | 50 | 15 |
+| 2026-08-04 (hasta 17:52) | 40 | 11 |
+
+De los 90 deploys de esos dos días, **43 (48%) salieron de sólo tres ramas** —
+`recommendations-page-redesign` (15), `web-audits-redesign` (14),
+`geo-score-variability` (14) — y 12 fueron de producción (uno por merge). Había
+10 PRs abiertos a la vez. 5 de los 41 commits mergeados desde el 01-08 no tocan
+nada que Next construya (docs, `.claude/`, tests) y aun así costaron un build
+cada uno más su pasada de piloto.
+
+**Segundo techo, no pedido pero encontrado.** El `ux-pilot` consumió 344 min de
+GitHub Actions el 03-08 y 381 min el 04-08. A ese ritmo el plan gratuito de
+Actions para repos privados (2.000 min/mes) se agota en unos 6 días. Misma
+causa raíz, factura distinta.
+
+**El diagnóstico.** No eran "demasiados PRs". El build se había convertido en el
+bucle de feedback: push → build → piloto → falla → arreglo → push. Un PR grande
+pagaba 14-15 builds por lo que debería costar 2 o 3.
+
+**Lo que se decidió (Fase 1 — sólo lo que no cambia ninguna garantía):**
+
+1. `ignoreCommand` en `vercel.json` → `scripts/vercel-should-build.sh`. Salta el
+   build cuando el diff contra el **último deploy con éxito de esa rama**
+   (`VERCEL_GIT_PREVIOUS_SHA`, no `HEAD^`: un push de tres commits es un solo
+   deploy) sólo toca `docs/`, `.claude/`, `.github/`, `tests/` o `*.md` de raíz.
+   Producción nunca se salta. `scripts/` tampoco entra en la lista segura, por
+   contener este mismo script.
+2. Reglas de push en `CLAUDE.md` §"Presupuesto de builds": un push por iteración
+   pilotable; prohibidos los commits vacíos de *retrigger*; no mergear `main` en
+   la rama sin conflicto real; máximo 3 PRs abiertos.
+
+**Fail-open, y por qué importa más que la cuota.** El script construye ante
+cualquier duda (sin SHA previo, SHA inalcanzable en el clon shallow, `git diff`
+que falla). Un build saltado de más dejaría el preview apuntando a código viejo
+y el piloto juzgaría una pantalla que no es la del commit — exactamente el fallo
+del 2026-08-02 (§7 y la nota de Auditoría web) que el piloto existe para
+impedir. `scripts/vercel-should-build.test.ts` fija las dos direcciones del
+contrato invertido de Vercel (0 = saltar, ≠0 = construir), que es justo lo que
+se voltea en silencio en un refactor.
+
+**Ahorro estimado, corregido tras una medición ajena.** El análisis original
+atribuía al `ignoreCommand` un 10-15% de los *deploys*. Es falso, y lo demostró
+PR #323 probándolo en vivo: un commit sólo de `docs/` que la regla debía saltar
+fue rechazado con el mismo error de cuota que el resto, porque **el tope se
+aplica al crear el deployment, aguas arriba del paso de build donde corre el
+`ignoreCommand`**. Lo que ahorra son minutos de build y la pasada de `ux-pilot`
+que habría disparado ese preview — no deployments. La reducción del *número* de
+deploys viene entera de la disciplina de push (reglas 1-4), que era ya el grueso
+de la estimación: de ~50-60/día a ~20-25.
+
+**Colisión con otra sesión, y cómo se resolvió.** Mientras este PR estaba
+bloqueado por la cuota, otra sesión implementó lo mismo por su cuenta y lo
+mergeó: PR #323 metió un `ignoreCommand` en línea
+(`git diff --quiet HEAD^ HEAD -- ':(exclude)…'`). Su propio mensaje de commit
+declara la limitación: *"HEAD^ compara solo el último commit, no el push
+entero… Estrecharlo al rango del push completo es un cambio de una línea y
+merece su propio PR"*. Este PR es ese follow-up, así que se reconcilió en vez de
+competir:
+
+- Se conserva el mecanismo, se sustituye la implementación por el script, que
+  compara contra el último deploy con éxito, nunca salta producción y cubre
+  también `.github/` y `tests/`.
+- Se conserva `agents/` en la lista segura, que venía de su versión.
+- `vercel-ignore-command.test.ts` (raíz) se elimina: verificaba la *forma* de un
+  comando que ya no existe. Su garantía real —que nadie meta un patrón `*.md`
+  que se trague `app/blog/<slug>/page.mdx`— se traslada a
+  `scripts/vercel-should-build.test.ts` como aserción de **comportamiento**, que
+  sobrevive a una reescritura.
+- La consecuencia que documentó PR #326 ("un commit sólo de docs en la rama de
+  producción no redespliega producción") deja de aplicar: producción nunca se
+  salta. La otra causa de producción congelada que ese PR documenta —Production
+  Branch apuntando fuera de `main`— sigue vigente.
+
+**Vercel Pro contratado el 2026-08-04.** El tope de 100/día deja de existir, que
+era el detonante de esta fase. No la invalida: las cuatro reglas siguen
+ahorrando minutos de build, pasadas de piloto y los ~350-380 min/día de GitHub
+Actions, y el bucle "push para ver qué dice el piloto" seguía siendo un mal
+hábito con o sin tope. Lo que sí cambia es la urgencia de las dos fases que
+quedaron fuera.
+
+**Deliberadamente fuera de esta fase, y por qué:**
+
+- **Que el piloto deje de correr en cada deploy** y pase a etiqueta
+  (`status:ready-for-pilot`). Ahorraría otro 10-15% y aliviaría los minutos de
+  Actions, pero **cambia un invariante ya documentado** de `CLAUDE.md` y de
+  `docs/agentic-user-pilot.md`. Necesita su propia aprobación.
+- **Desactivar los deploys automáticos por rama** (`git.deploymentEnabled`) y
+  crear el preview bajo demanda con la CLI de Vercel. Es la única opción que
+  *garantiza* no volver a tocar el techo (~1-2 builds por PR), y también la más
+  invasiva: necesita Task Intake propio con plan de rollback.
+
+**Lo que sigue abierto.** Con Pro contratado, el riesgo legal de operar un SaaS
+comercial en Hobby queda cerrado (era bloqueante de la Fase 5 de
+`docs/launch-plan.md`, ver su ledger). Queda vivo el segundo techo: los minutos
+de GitHub Actions que consume el piloto en cada deploy, que ninguna de las
+cuatro reglas de esta fase toca de raíz — eso es la fase del piloto por
+etiqueta.
+
+---
+
+## 19. La auditoría, visible en Escaneos (AUDIT-IN-RUNS-1, 2026-08-05)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el 2026-08-05
+("quiero que ahora las auditorías completadas se muestren también en el
+listado de Escaneos completados para verlo de un vistazo").
+
+Columna **«Auditoría»** en la tabla de Escaneos, entre *Lanzamientos* y *GEO
+Score*. Sin esquema nuevo: los dos lados ya estaban persistidos por escaneo.
+
+**Por qué ahora y no antes.** La columna depende de que exista una relación
+1:1 fiable entre un escaneo y una auditoría, y esa relación **nació anoche**
+con AUDIT-AFTER-SCAN-1 (§18). Antes la auditoría era un acto manual y
+esporádico: una columna así habría estado vacía casi siempre y no habría
+significado nada.
+
+**Las cuatro decisiones, con su porqué:**
+
+1. **Estado + nota técnica**, no sólo estado. El número (`40/100`) es lo que
+   de verdad se compara entre escaneos, y tenerlo al lado del GEO Score es
+   justamente el vistazo que se pedía. Va etiquetado por `title`, porque sin
+   etiqueta y a una columna del GEO Score se lee como una segunda puntuación.
+2. **«Auditada» exige las dos mitades.** Cobertura y salud técnica se
+   persisten por separado y pueden aterrizar por separado —es normal, no un
+   fallo: la técnica se aparca a la invocación siguiente cuando no cabe—. Con
+   una sola, la celda dice **«Parcial»**. Llamar completa a media auditoría
+   sería exactamente la clase de progreso fingido que prohíbe el CLAUDE.md.
+3. **Los escaneos sin auditoría muestran `—`, nunca «Pendiente».** Tres
+   pasados distintos caen ahí y ninguno es accionable por el cliente: escaneos
+   anteriores a §18, proyectos por debajo del gate Pro, y auditorías que
+   agotaron sus reintentos. Una raya honesta en vez de tres etiquetas que
+   invitan a tres preguntas. **«En curso» queda reservado a trabajo realmente
+   en cola**, que sí se resolverá solo.
+4. **La celda no es un enlace, y es deliberado.** Esta tabla tiene una fila
+   por escaneo, pero la pantalla de Auditoría web muestra **la última**
+   auditoría, no la de un escaneo concreto. Enlazar la fila del martes
+   llevaría a la auditoría del jueves haciéndola pasar por la del martes. Una
+   vista de auditoría por escaneo es otra fase; hasta entonces la celda
+   informa y no finge navegar.
+
+**Quinto estado, añadido tras verlo en producción (2026-08-05):**
+**«Reintentando»**, separado de «En curso». El backoff de la cola es
+`[1, 5, 25, 120, 600]` minutos, así que un trabajo en su quinto intento se
+queda quieto **diez horas**. Pintarlo «En curso» promete un movimiento que no
+va a llegar en todo el día, y se lee como una tabla congelada en vez de como
+una auditoría con problemas — que es exactamente cómo se leyó: filas inmóviles
+en «En curso» durante cuatro horas y media. «En curso» queda para `pending` y
+`running`, que sí se mueven pronto.
+
+**Pendiente conocido:** una auditoría que falló definitivamente es
+indistinguible de una que nunca existió. Es una decisión, no un olvido —el
+cliente no puede actuar sobre un fallo de backend y el operador ya recibe un
+email—, pero si algún día el fallo pasa a ser accionable, aquí falta un
+estado.
 
 ---
 

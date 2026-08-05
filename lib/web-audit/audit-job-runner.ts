@@ -259,6 +259,148 @@ export async function enqueueWebAuditJob({
 }
 
 /**
+ * How far back the backfill looks for completed runs that never got a job.
+ *
+ * A day is generous on purpose: the point is to survive an outage or a bad
+ * deploy window, not just a single unlucky invocation. Auditing a run that
+ * finished 20 hours ago is still worth more than never auditing it.
+ */
+export const BACKFILL_LOOKBACK_MS = 24 * 60 * 60_000;
+
+/**
+ * A run must have been finished at least this long to be backfilled.
+ *
+ * Without it the backfill races the normal path: the executor marks the run
+ * completed and inserts the job milliseconds later, and a sweep landing in
+ * between would insert a second one (the dedupe is a SELECT-then-INSERT, not
+ * a constraint). Five minutes is far longer than that window and far shorter
+ * than the daily cron.
+ */
+export const BACKFILL_GRACE_MS = 5 * 60_000;
+
+/** Runs enqueued per backfill pass. Bounds the cost of a large recovery. */
+const BACKFILL_LIMIT = 10;
+
+/**
+ * Enqueue audits for completed runs that never got one.
+ *
+ * The gap this closes, found in production on 2026-08-04: the inline enqueue
+ * lives in the SAME invocation that has just marked the run `completed`, three
+ * lines earlier. If that invocation dies in between — platform timeout, or an
+ * instance recycled by a deploy landing at that moment, both observed — there
+ * is no row, no log and no catch. And with no row, nothing ever looks at that
+ * run again: the sweep only walks `jobs`, so the audit is lost permanently.
+ *
+ * That made a lie of the phase's own claim that "the row is the contract, the
+ * dispatch is an optimisation". It is only a contract once the row exists;
+ * before that there was nothing. This reconciles against `scan_runs` instead,
+ * so the durable record of "a scan finished" is what drives the audit, not the
+ * liveness of one serverless invocation.
+ *
+ * Deliberately not filtered by plan: `runWebAuditJob` cancels a non-Pro job on
+ * its first cheap query, before any Gemini call, and duplicating the plan gate
+ * here would mean two places to keep in sync for no saving.
+ *
+ * ------------------------------------------------------------------------
+ * Only the newest run of each project, and that is not an optimisation
+ * ------------------------------------------------------------------------
+ *
+ * Both audit cores derive their target themselves — `the latest completed run
+ * of THIS project` — and ignore the `run_id` on the job, which is only a
+ * dedupe key. So a job naming an older run does NOT audit that run: it audits
+ * the newest one, again.
+ *
+ * The first version of this function backfilled every uncovered run in the
+ * window, which on the first production sweep queued nine jobs for one
+ * project — nine jobs that would all have audited the same run, while the
+ * Escaneos table showed nine historical rows as "En curso" for work that
+ * could never produce an audit of their own (caught by reading the pilot's
+ * own capture of PR #333, not by any assertion).
+ *
+ * Restricting to the newest run per project makes the backfill mean what it
+ * says, and still covers the case it exists for: an enqueue lost by a dying
+ * invocation, recovered on the next sweep.
+ */
+export async function backfillMissingWebAuditJobs({
+  service,
+  now = new Date(),
+  limit = BACKFILL_LIMIT
+}: {
+  service: ServiceClient;
+  now?: Date;
+  limit?: number;
+}): Promise<number> {
+  try {
+    const since = new Date(now.getTime() - BACKFILL_LOOKBACK_MS).toISOString();
+    const until = new Date(now.getTime() - BACKFILL_GRACE_MS).toISOString();
+
+    // Over-fetch: most recent runs already have a job, and filtering happens
+    // below. Bounded so a busy day cannot turn this into an unbounded scan.
+    const { data: runRows, error: runsError } = await service
+      .from("scan_runs")
+      .select("id, project_id")
+      .eq("status", "completed")
+      .gte("finished_at", since)
+      .lte("finished_at", until)
+      .order("finished_at", { ascending: false })
+      .limit(limit * 10);
+
+    if (runsError) {
+      console.error(`${LOG_PREFIX} backfill query failed`, { message: runsError.message });
+      return 0;
+    }
+
+    const ordered = (runRows ?? []) as Array<{ id: string; project_id: string }>;
+    if (ordered.length === 0) return 0;
+
+    // Newest-first ordering above means the first row seen for a project IS
+    // its newest completed run in the window. See the header: an older run's
+    // job would audit the newest run anyway, so queueing one is meaningless.
+    const newestByProject = new Map<string, { id: string; project_id: string }>();
+    for (const run of ordered) {
+      if (!newestByProject.has(run.project_id)) newestByProject.set(run.project_id, run);
+    }
+    const runs = [...newestByProject.values()];
+
+    // One query for every candidate rather than one per run: this path runs on
+    // every worker invocation, so it has to stay cheap when there is nothing
+    // to do — which is the normal case.
+    const { data: existingRows } = await service
+      .from("jobs")
+      .select("run_id")
+      .eq("job_type", WEB_AUDIT_JOB_TYPE)
+      .in(
+        "run_id",
+        runs.map((r) => r.id)
+      );
+
+    const alreadyQueued = new Set(((existingRows ?? []) as Array<{ run_id: string }>).map((r) => r.run_id));
+    const missing = runs.filter((r) => !alreadyQueued.has(r.id)).slice(0, limit);
+
+    let enqueued = 0;
+    for (const run of missing) {
+      const result = await enqueueWebAuditJob({ service, projectId: run.project_id, runId: run.id });
+      if (result === "enqueued") {
+        enqueued += 1;
+        console.warn(`${LOG_PREFIX} backfilled a run whose audit was never queued`, {
+          projectId: run.project_id,
+          runId: run.id
+        });
+      }
+    }
+
+    return enqueued;
+  } catch (error) {
+    // Never let recovery break the thing it is recovering: the due-job sweep
+    // must still run even if this pass throws.
+    console.error(`${LOG_PREFIX} backfill threw`, {
+      message: error instanceof Error ? error.message : String(error)
+    });
+    return 0;
+  }
+}
+
+/**
  * Atomically claim due jobs. Same optimistic-claim shape the scan executor
  * uses: flip the status to 'running' filtered on the status we expected to
  * see, and trust only the rows the UPDATE actually returned. Two concurrent

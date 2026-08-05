@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
+import { MAX_PROMPT_SAMPLES } from "@/lib/scan/sampling";
 
 vi.mock("@/lib/scan/reconciliation", () => ({
   reconcileStuckScanRuns: vi.fn().mockResolvedValue(undefined)
@@ -184,14 +185,30 @@ describe("createPendingScanRunCore", () => {
     expect(runId).toBeTruthy();
 
     const STARTER_PROMPT_CAP = 25;
+    // SAMPLING-1 (ADR 0030): no LLM_SCAN_PROVIDERS is set in tests, so the
+    // engine set is Gemini alone. 25 prompts x 1 engine = 25 responses, under
+    // the floor of 50, so the run repeats its prompt set twice (50 >= 50).
+    // total_prompts counts JOBS, which is why it is 50 and not 25.
+    const SAMPLES = 2;
     const scanRun = tables.scan_runs.find((r) => r.id === runId);
-    expect(scanRun?.total_prompts).toBe(STARTER_PROMPT_CAP);
+    expect(scanRun?.total_prompts).toBe(STARTER_PROMPT_CAP * SAMPLES);
+    expect(scanRun?.sample_count).toBe(SAMPLES);
 
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt");
-    expect(promptJobs).toHaveLength(STARTER_PROMPT_CAP);
+    expect(promptJobs).toHaveLength(STARTER_PROMPT_CAP * SAMPLES);
     // Oldest-first cap: prompt-0..prompt-24 get a job, the 5 newest do not.
+    // Sample-major order, so the id sequence is the capped set repeated once
+    // per sample.
     const scannedIds = promptJobs.map((j) => (j.payload_json as Row).prompt_id);
-    expect(scannedIds).toEqual(prompts.slice(0, STARTER_PROMPT_CAP).map((p) => p.id));
+    const cappedIds = prompts.slice(0, STARTER_PROMPT_CAP).map((p) => p.id);
+    expect(scannedIds).toEqual([...cappedIds, ...cappedIds]);
+    // Every job carries the sample it belongs to, and each prompt is asked
+    // exactly `SAMPLES` times — never twice with the same index, which the
+    // (run, prompt, provider, sample_index) unique index would reject.
+    expect(promptJobs.map((j) => (j.payload_json as Row).sample_index)).toEqual([
+      ...cappedIds.map(() => 0),
+      ...cappedIds.map(() => 1)
+    ]);
 
     expect(tables.scan_prompt_results).toHaveLength(0);
   });
@@ -219,8 +236,12 @@ describe("createPendingScanRunCore", () => {
 
     // Every prompt fits well under any plan's cap, so this just proves the
     // lookup doesn't throw/block scanning when there's no profiles row yet.
+    // 5 prompts x 1 engine = 5 responses, so SAMPLING-1 repeats the set to
+    // its cap of MAX_PROMPT_SAMPLES (5 x 5 = 25, still under the floor — this
+    // is the "capped" case, which publishes anyway per decision E2).
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
-    expect(promptJobs).toHaveLength(5);
+    expect(promptJobs).toHaveLength(5 * MAX_PROMPT_SAMPLES);
+    expect(new Set(promptJobs.map((j) => (j.payload_json as Row).prompt_id)).size).toBe(5);
   });
 
   it("onlyPromptIds scans only the given prompts and copies forward the latest results for every other active prompt", async () => {
@@ -308,12 +329,17 @@ describe("createPendingScanRunCore", () => {
       onlyPromptIds: [p3.id]
     });
 
+    // A partial rescan of 1 prompt on 1 engine is the smallest possible
+    // sample, so SAMPLING-1 repeats it up to MAX_PROMPT_SAMPLES.
     const scanRun = tables.scan_runs.find((r) => r.id === runId);
-    expect(scanRun?.total_prompts).toBe(1);
+    expect(scanRun?.total_prompts).toBe(MAX_PROMPT_SAMPLES);
+    expect(scanRun?.sample_count).toBe(MAX_PROMPT_SAMPLES);
 
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
-    expect(promptJobs).toHaveLength(1);
-    expect((promptJobs[0].payload_json as Row).prompt_id).toBe(p3.id);
+    expect(promptJobs).toHaveLength(MAX_PROMPT_SAMPLES);
+    // Only the requested prompt is rescanned — repetitions never widen the
+    // set of prompts a partial rescan touches.
+    expect(new Set(promptJobs.map((j) => (j.payload_json as Row).prompt_id))).toEqual(new Set([p3.id]));
 
     const newRunResults = tables.scan_prompt_results.filter((r) => r.run_id === runId);
     expect(newRunResults).toHaveLength(2);
@@ -359,8 +385,8 @@ describe("createPendingScanRunCore", () => {
 
     expect(runId).toBeTruthy();
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
-    expect(promptJobs).toHaveLength(1);
-    expect((promptJobs[0].payload_json as Row).prompt_id).toBe(p2.id);
+    expect(promptJobs).toHaveLength(MAX_PROMPT_SAMPLES);
+    expect(new Set(promptJobs.map((j) => (j.payload_json as Row).prompt_id))).toEqual(new Set([p2.id]));
     expect(tables.scan_prompt_results).toHaveLength(0);
   });
 
@@ -439,10 +465,14 @@ describe("createPendingScanRunCore", () => {
       onlyPromptIds: newPrompts.map((p) => p.id)
     });
 
+    // 25 prompts x 1 engine = 25 responses -> 2 samples (SAMPLING-1), so the
+    // job count is the plan cap doubled. What this test is about is which
+    // prompts got in, asserted on the distinct set below.
     const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
-    expect(promptJobs).toHaveLength(STARTER_PLAN_CAP);
+    expect(promptJobs).toHaveLength(STARTER_PLAN_CAP * 2);
 
     const scannedIds = new Set(promptJobs.map((j) => (j.payload_json as Row).prompt_id as string));
+    expect(scannedIds.size).toBe(STARTER_PLAN_CAP);
     expect(scannedIds.has(overflowPromptId)).toBe(false);
 
     // The overflow prompt didn't get a job this run, but it does have a row

@@ -14,6 +14,7 @@ import {
   SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS
 } from "@/lib/scan/constants";
+import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -277,6 +278,17 @@ export async function reconcileStuckScanRuns({
       if (!capReached && !autoRetryTriggered) {
         autoRetryTriggered = true;
         await attemptAutoRetry({ projectId, service, reason: errorSummary });
+      } else if (capReached) {
+        // EXTRACTION-RELIABILITY-1 Fase B: a run that timed out AND has spent
+        // its auto-retry will not fix itself, so it is the operator's problem
+        // now. This is the exact shape of the 2026-08-04 IKEA failure, which
+        // nobody was told about — the run just sat there marked `Fallido`.
+        await checkAndSendScanHealthAlert({
+          service,
+          projectId,
+          runId: run.id as string,
+          runFailedWithoutRetry: true
+        });
       }
     }
   }
