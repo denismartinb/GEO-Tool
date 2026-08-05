@@ -30,6 +30,16 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   aviso de "interpretación de la IA".
 - **Puerta Pro**: leer `profiles.current_plan` en crudo vía `isProOrAbove`
   (`lib/billing.ts`), nunca vía `getPlanForUser`/`resolvePlan`.
+- **La puerta cubre la cobertura, no la salud técnica** (ADR 0035). La
+  cobertura es Pro porque son llamadas a Gemini por lotes; la auditoría técnica
+  corre en **todos los planes** porque no gasta LLM y porque su nota es un
+  componente del GeoScore (ADR 0033): gatearla hacía que el número principal
+  midiera distinto número de componentes según el plan.
+- **Un plan sin cobertura no está «Parcial».** Cualquier superficie que informe
+  del estado de una auditoría tiene que distinguir *falta una mitad* de *esa
+  mitad no está en tu plan* (`coverageIncludedInPlan`,
+  `lib/web-audit/run-audit-status.ts`). Etiquetar lo segundo como lo primero
+  marca un defecto permanente donde no falta nada.
 - **Los límites son gasto real**: 5/día/proyecto para cobertura, presupuesto
   propio y separado para la auditoría técnica.
 - **Presupuesto ADR 0003**: todo corre síncrono bajo `maxDuration = 60`.

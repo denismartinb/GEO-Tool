@@ -7,6 +7,7 @@ import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
+import { isProOrAbove } from "@/lib/billing";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
 import {
@@ -66,9 +67,10 @@ function getStatusBadgeClass(status: string): string {
  */
 function RunAuditCell({ status }: { status: RunAuditStatus }) {
   if (status.kind === "none") {
-    // Three different pasts (never audited, below the Pro gate, gave up) that
-    // the user cannot act on differently — so one honest blank, not three
-    // labels that invite three questions.
+    // Different pasts (never audited, gave up) that the user cannot act on
+    // differently — so one honest blank, not several labels that invite
+    // several questions. "Below the Pro gate" is no longer one of them: since
+    // docs/adr/0035 those projects get the technical half and read "Auditada".
     return <span style={{ color: "var(--ink-4)" }}>—</span>;
   }
 
@@ -244,7 +246,7 @@ export default async function RunsPage({
   const { projectId } = await params;
   const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, sample_count, successful_prompts, failed_prompts, created_at, started_at, finished_at";
@@ -398,10 +400,28 @@ export default async function RunsPage({
     ((auditJobRows ?? []) as Array<{ run_id: string; status: string }>).map((row) => [row.run_id, row.status])
   );
 
+  // WEB-AUDIT-TECH-ALL-PLANS-1 (docs/adr/0035): the technical half runs on
+  // every plan, coverage stays Pro. Without knowing which, a plan that only
+  // ever gets the technical half would read "Parcial" on every run forever —
+  // a permanent defect label for something that is not missing anything.
+  // Raw `profiles.current_plan` via isProOrAbove, per .claude/rules/web-audit.md.
+  const { data: planRow } = await supabase
+    .from("profiles")
+    .select("current_plan")
+    .eq("id", user.id)
+    .maybeSingle();
+  const coverageIncludedInPlan = isProOrAbove((planRow as { current_plan?: string } | null)?.current_plan);
+
   const auditStatusByRunId = new Map<string, RunAuditStatus>(
     completedRunIds.map((runId) => [
       runId,
-      deriveRunAuditStatus({ runId, coverageScanIds, readinessByScanId, jobStatusByRunId: auditJobStatusByRunId })
+      deriveRunAuditStatus({
+        runId,
+        coverageScanIds,
+        readinessByScanId,
+        jobStatusByRunId: auditJobStatusByRunId,
+        coverageIncludedInPlan
+      })
     ])
   );
 
