@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DOMAINS-REDESIGN-1 · Pantalla Dominios (referencia de implementación)</title>
+<!--
+  Referencia de implementación pixel-perfect de /dashboard/domains.
+  Autocontenido, sin dependencias externas (el ux-pilot y sesiones futuras
+  tienen que poder abrirlo sin red).
+
+  Fidelidad respecto al producto real:
+  - Shell: --sidebar-w 248px, --header-h 52px, breakpoint móvil 899px.
+  - Contenido: .page (padding 26px 34px 80px) + wrapper de ancho
+    460/640/1200/1280 (estándar de consola, CITATIONS-REDESIGN-1).
+  - Cabecera: réplica exacta de .ov-sticky-header (log §3).
+  - Pastillas: vocabulario de ScanStatePill (log §26).
+  - Tipografía: el producto usa Bricolage Grotesque (display) + Figtree
+    (cuerpo) + JetBrains Mono (datos), cargadas por next/font. Aquí caen a
+    fuentes de sistema con los MISMOS pesos y tracking: proporciones fieles,
+    carácter de la letra no.
+  - Iconos de dominio: en producción es el favicon real vía faviconUrl().
+    Aquí ficha con inicial (el fallback real), porque el fichero no puede
+    hacer peticiones externas.
+-->
+<style>
+:root {
+  --brand-ink:#0B1426; --brand-ink-2:#3B4759; --brand-ink-3:#5B6B82; --brand-ink-4:#98A2B3;
+  --brand-blue:#2563EB; --brand-blue-2:#4F7BFF;
+  --brand-blue-soft:rgba(37,99,235,.10); --brand-blue-soft-2:rgba(37,99,235,.16);
+  --brand-canvas:#F7F8FB; --brand-surface:#FFFFFF;
+  --brand-line:#E7EAF0; --brand-line-soft:#EEF1F6;
+  --brand-pos:#15915A; --brand-pos-soft:#E7F6EE;
+  --brand-neg:#D23B48; --brand-neg-soft:#FDECEE;
+  --brand-shadow-card:0 1px 2px rgba(11,20,38,.04), 0 6px 18px rgba(11,20,38,.05);
+
+  --ink:var(--brand-ink); --ink-2:var(--brand-ink-2); --ink-3:var(--brand-ink-3); --ink-4:var(--brand-ink-4);
+  --canvas:var(--brand-canvas); --surface:var(--brand-surface);
+  --line:var(--brand-line); --line-soft:var(--brand-line-soft);
+  --accent:var(--brand-blue); --accent-soft:var(--brand-blue-soft);
+  --surface-sunk:#F4F6FA;
+
+  --sidebar-w:248px; --header-h:52px;
+  --r-md:10px; --r-lg:14px;
+  --display:"Bricolage Grotesque", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body:"Figtree", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{background:var(--canvas);color:var(--ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------------- shell ---------------- */
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100vh;height:100dvh;overflow:hidden}
+.sb{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;font-family:var(--body)}
+.sb-brand{display:flex;align-items:center;gap:9px;padding:16px 15px 12px}
+.sb-mark{width:24px;height:24px;border-radius:7px;background:var(--ink);display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:13px;position:relative}
+.sb-mark::after{content:"";position:absolute;right:2px;top:2px;width:4px;height:4px;border-radius:999px;background:#FFB020}
+.sb-wordmark{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.02em}
+.brand-sub{font-size:10.5px;color:var(--ink-4);margin-top:1px}
+.proj-switch{display:flex;align-items:center;gap:10px;margin:6px 12px 6px;padding:9px 11px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface);color:var(--ink-2)}
+.proj-switch:hover{background:#FBFBFD}
+.proj-favicon{width:26px;height:26px;flex:0 0 auto;display:grid;place-items:center;border-radius:7px;font-size:12px;font-family:var(--display);font-weight:800;color:#fff}
+.proj-name{font-size:12.5px;font-weight:700;line-height:1.25;color:var(--ink)}
+.proj-dom{font-family:var(--mono);font-size:10px;color:var(--ink-4)}
+.sb-scroll{flex:1;overflow-y:auto;padding:4px 12px}
+.nav-group-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);padding:12px 9px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:8px;font-size:12.5px;color:var(--ink-2);font-weight:600}
+.nav-item:hover{background:var(--surface-sunk)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
+.nav-ic{width:15px;height:15px;border-radius:4px;background:currentColor;opacity:.3;flex:0 0 auto}
+.nav-item.active .nav-ic{opacity:.75}
+.nav-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink-3);background:var(--surface-sunk);border-radius:999px;padding:1px 7px}
+.sb-foot{border-top:1px solid var(--line-soft);padding:10px 12px 12px}
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px}
+.user-chip:hover{background:var(--surface-sunk)}
+.avatar{width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:10.5px;font-weight:700}
+
+.mainpane{overflow-y:auto;min-width:0}
+.page{max-width:1320px;margin:0 auto;padding:26px 34px 80px}
+
+/* topbar sólo móvil */
+.topbar{display:none;height:var(--header-h);align-items:center;justify-content:space-between;padding:0 14px;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:30}
+.burger{width:18px;display:grid;gap:3.5px}
+.burger i{height:2px;background:var(--ink-2);border-radius:2px}
+.bell{width:18px;height:18px;border-radius:5px;background:var(--surface-sunk);border:1px solid var(--line-soft)}
+
+/* ---------------- cabecera .ov-sticky-header ---------------- */
+.ov-sticky-header{
+  position:sticky;top:0;z-index:20;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line-soft);
+  margin:-26px -34px 24px;padding:12px 34px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+}
+.ov-sticky-left{display:flex;align-items:center;gap:10px;min-width:0}
+.ov-sticky-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.kicker{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-4);margin-bottom:2px}
+.hdr-row{display:flex;align-items:center;gap:8px}
+.hdr-name{font-size:15px;font-weight:750;letter-spacing:-.01em;color:var(--ink)}
+.hdr-auto{font-size:11px;color:var(--ink-4)}
+.hdr-auto-compact{display:none}
+
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge-neutral{background:var(--surface-sunk);border:1px solid var(--line-soft);color:var(--ink-3);font-family:var(--mono)}
+.badge-accent{background:var(--accent-soft);color:var(--accent)}
+.badge-pos{background:var(--brand-pos-soft);color:var(--brand-pos)}
+.dot{width:6px;height:6px;border-radius:999px;flex:0 0 auto}
+.dot.run{background:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------------- ancho de consola (dm2) ---------------- */
+.dm2-page{max-width:460px;margin:0 auto}
+@media (min-width:900px){.dm2-page{max-width:640px}}
+@media (min-width:1200px){.dm2-page{max-width:1200px}}
+@media (min-width:1600px){.dm2-page{max-width:1280px}}
+
+/* ---------------- portada ---------------- */
+.dm2-hero{
+  background:var(--surface);border:1px solid var(--line);border-radius:20px;
+  box-shadow:var(--brand-shadow-card);padding:26px 28px;
+  display:flex;align-items:center;gap:26px;flex-wrap:wrap;
+  position:relative;overflow:hidden;transition:box-shadow .18s ease,border-color .18s ease
+}
+.dm2-hero::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:linear-gradient(180deg,var(--brand-blue),var(--brand-blue-2))}
+.dm2-hero:hover{border-color:var(--brand-blue-soft-2);box-shadow:0 2px 4px rgba(11,20,38,.05),0 18px 40px rgba(11,20,38,.09)}
+.dm2-fav{flex:0 0 auto;display:grid;place-items:center;border-radius:16px;width:60px;height:60px;font-size:25px;color:#fff;font-family:var(--display);font-weight:800;letter-spacing:-.02em;box-shadow:inset 0 0 0 1px rgba(11,20,38,.10),0 1px 2px rgba(11,20,38,.10)}
+/* En escritorio el grupo icono+identidad no existe como caja: sus hijos son
+   items directos del flex de .dm2-hero. En móvil sí, para apilar. */
+.dm2-hero-top{display:contents}
+.dm2-id{flex:1;min-width:180px}
+.dm2-name{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.03em;line-height:1.1}
+.dm2-dom{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-top:3px}
+.dm2-fresh{margin-top:12px;display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink-3)}
+.dm2-fresh b{color:var(--ink-2);font-weight:700}
+.dm2-gauge{text-align:center;flex:0 0 auto}
+.dm2-gauge-num{font-family:var(--display);font-weight:800;font-size:33px;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums;margin-top:-26px}
+.dm2-gauge-lbl{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-top:5px}
+.dm2-cta{display:flex;flex-direction:column;gap:9px;min-width:150px}
+.dm2-runs{font-size:11px;color:var(--ink-4);text-align:center}
+.delta{font-family:var(--mono);font-size:11px;font-weight:700}
+.delta.up{color:var(--brand-pos)}.delta.dn{color:var(--brand-neg)}.delta.flat{color:var(--ink-4)}
+
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--accent);color:#fff;border:0;border-radius:var(--r-md);padding:11px 18px;font-family:var(--body);font-size:13px;font-weight:700;cursor:pointer}
+.btn-primary:hover{background:#1D51C7}
+
+/* ---------------- raíl / rejilla ---------------- */
+.dm2-rail-lbl{margin:26px 0 11px;font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:12px}
+.dm2-rail{display:flex;gap:11px;overflow-x:auto;padding-bottom:5px}
+.dm2-card{flex:0 0 auto;width:176px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:13px 14px;box-shadow:var(--brand-shadow-card);transition:border-color .16s ease,transform .16s ease}
+.dm2-card:hover{border-color:var(--brand-blue-soft-2);transform:translateY(-2px)}
+.dm2-card-top{display:flex;align-items:center;gap:9px}
+.dm2-card-fav{width:28px;height:28px;border-radius:8px;font-size:13px;display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(11,20,38,.10)}
+.dm2-card-name{font-size:12.5px;font-weight:700;letter-spacing:-.01em}
+.dm2-card-dom{font-family:var(--mono);font-size:9.5px;color:var(--ink-4)}
+.dm2-card-foot{display:flex;align-items:center;gap:7px;margin-top:12px}
+.dm2-card-score{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.dm2-card-foot .badge{margin-left:auto;font-size:10px}
+
+/* a partir de 4 dominios el raíl es rejilla */
+.dm2-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.dm2-grid .dm2-card,.dm2-grid .dm2-add{width:auto}
+@media (max-width:1199px){.dm2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:899px){.dm2-grid{grid-template-columns:1fr}}
+
+.dm2-add{
+  flex:0 0 auto;width:176px;border:1.5px dashed var(--line);border-radius:var(--r-lg);
+  display:grid;place-content:center;justify-items:center;gap:6px;padding:14px;text-align:center;
+  color:var(--ink-3);font-size:12px;font-weight:700;transition:border-color .16s ease,color .16s ease,background .16s ease
+}
+.dm2-add:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.dm2-add-pl{width:26px;height:26px;border-radius:8px;background:var(--surface-sunk);display:grid;place-items:center;font-size:15px;font-weight:400}
+.dm2-add-sub{font-size:10px;font-weight:600;color:var(--ink-4)}
+.dm2-archived{margin-top:20px;font-size:11.5px;color:var(--ink-4)}
+
+/* colores de ficha (fallback de favicon, hash determinista en producción) */
+.c1{background:linear-gradient(160deg,#0B9BD8,#046FA8)}
+.c2{background:linear-gradient(160deg,#E8404A,#B3121C)}
+.c3{background:linear-gradient(160deg,#FF8A1E,#E1620A)}
+.c4{background:linear-gradient(160deg,#3B4759,#0B1426)}
+
+/* ---------------- móvil ---------------- */
+@media (max-width:899px){
+  .shell{grid-template-columns:1fr}
+  .sb{display:none}
+  .topbar{display:flex}
+  .page{padding:18px 16px 64px}
+  .ov-sticky-header{margin:-18px -16px 18px;padding:10px 16px;top:var(--header-h)}
+  .hdr-auto-full{display:none}
+  .hdr-auto-compact{display:inline}
+  .dm2-hero{flex-direction:column;align-items:stretch;gap:14px;padding:18px 17px;border-radius:16px}
+  .dm2-hero-top{display:flex;align-items:center;gap:12px}
+  .dm2-fav{width:44px;height:44px;font-size:19px;border-radius:12px}
+  .dm2-name{font-size:19px}
+  .dm2-dom{font-size:11px}
+  .dm2-id{min-width:0}
+  .dm2-gauge{text-align:right}
+  .dm2-gauge-num{margin-top:0;font-size:27px}
+  .dm2-gauge-lbl{display:none}
+  .dm2-gauge svg{display:none}
+  .dm2-fresh{margin-top:0;flex-direction:column;gap:2px;font-size:10.5px}
+  .dm2-cta{min-width:0}
+  .btn-primary{width:100%}
+  .dm2-runs{display:none}
+  .dm2-card{width:142px}
+  /* La caja de añadir sale del raíl: a 375px quedaría en 3ª posición,
+     fuera de pantalla. Ancho completo, debajo. */
+  .dm2-add{width:100%;margin-top:12px;padding:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ============ barra lateral ============ -->
+  <aside class="sb">
+    <div class="sb-brand">
+      <div class="sb-mark">G</div>
+      <div>
+        <div class="sb-wordmark">Genscore</div>
+        <div class="brand-sub">Espacio de visibilidad en IA</div>
+      </div>
+    </div>
+
+    <div class="sb-scroll">
+      <a class="nav-item active" href="#" aria-current="page" style="margin-bottom:6px">
+        <span class="nav-ic"></span>Dominios<span class="nav-count">4</span>
+      </a>
+
+      <a class="proj-switch" href="#" style="margin-left:0;margin-right:0">
+        <div class="proj-favicon c1">M</div>
+        <div style="min-width:0">
+          <div class="proj-name">Movistar</div>
+          <div class="proj-dom">movistar.es</div>
+        </div>
+      </a>
+
+      <div class="nav-group-label">Analizar</div>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Visión general</a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Prompts<span class="nav-count">12</span></a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Competidores<span class="nav-count">5</span></a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Páginas citadas</a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Auditoría web</a>
+      <div class="nav-group-label">Actuar</div>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Recomendaciones<span class="nav-count">7</span></a>
+    </div>
+
+    <div class="sb-foot">
+      <a class="nav-item" href="#" style="font-size:12px"><span class="nav-ic"></span>¿Qué es el GEO?</a>
+      <a class="user-chip" href="#">
+        <div class="avatar">DE</div>
+        <div style="min-width:0">
+          <div style="font-size:12.5px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">denis@genscore.app</div>
+        </div>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ============ contenido ============ -->
+  <div class="mainpane">
+    <!-- barra de app: sólo móvil, puramente navegacional (log §3) -->
+    <div class="topbar">
+      <div class="burger" role="button" tabindex="0" aria-label="Abrir menú"><i></i><i></i><i></i></div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="sb-mark" style="width:20px;height:20px;font-size:11px">G</div>
+        <span class="sb-wordmark" style="font-size:13.5px">Genscore</span>
+      </div>
+      <div class="bell" role="button" tabindex="0" aria-label="Notificaciones"></div>
+    </div>
+
+    <div class="page">
+      <!-- cabecera pegajosa -->
+      <div class="ov-sticky-header">
+        <div class="ov-sticky-left">
+          <div>
+            <p class="kicker">Espacio de trabajo</p>
+            <div class="hdr-row">
+              <span class="hdr-name">Dominios</span>
+              <span class="badge badge-neutral">4 activos</span>
+            </div>
+          </div>
+        </div>
+        <div class="ov-sticky-right">
+          <!-- En reposo: sólo la línea informativa. Con algo en curso, la
+               pastilla se añade a su derecha y en móvil sustituye a la línea. -->
+          <span class="hdr-auto">
+            <span class="hdr-auto-full">Escaneo y auditoría automáticos, cada día</span>
+            <span class="hdr-auto-compact">Automático cada día</span>
+          </span>
+          <span class="badge badge-accent" aria-live="polite"><span class="dot run"></span>2 dominios en curso</span>
+        </div>
+      </div>
+
+      <div class="dm2-page">
+
+        <!-- ===== portada del dominio activo ===== -->
+        <a class="dm2-hero" href="#" aria-label="Abrir Visión general de Movistar">
+          <div class="dm2-hero-top">
+            <div class="dm2-fav c1">M</div>
+            <div class="dm2-id">
+              <div class="dm2-name">Movistar</div>
+              <div class="dm2-dom">movistar.es · España · Español</div>
+              <div class="dm2-fresh">
+                <span>Escaneado <b>hoy, 06:14</b></span>
+                <span>Auditado <b>hoy, 07:03</b></span>
+              </div>
+            </div>
+          </div>
+          <div class="dm2-gauge">
+            <svg width="104" height="60" viewBox="0 0 104 60" role="img" aria-label="Puntuación GEO 64 sobre 100">
+              <path d="M10 54 A42 42 0 0 1 94 54" fill="none" stroke="#EEF1F6" stroke-width="9" stroke-linecap="round"/>
+              <path d="M10 54 A42 42 0 0 1 84.5 28.6" fill="none" stroke="#2563EB" stroke-width="9" stroke-linecap="round"/>
+            </svg>
+            <div class="dm2-gauge-num tnum">64</div>
+            <div class="dm2-gauge-lbl">Puntuación GEO</div>
+            <div class="delta up" style="margin-top:6px">▲ 3 pt</div>
+          </div>
+          <div class="dm2-cta">
+            <span class="btn-primary">Visión general</span>
+            <span class="dm2-runs">18 escaneos · 12 prompts</span>
+          </div>
+        </a>
+
+        <!-- ===== raíl (1–3 dominios) / rejilla (4+) ===== -->
+        <div class="dm2-rail-lbl">Cambiar de dominio</div>
+        <div class="dm2-rail">
+          <a class="dm2-card" href="#">
+            <div class="dm2-card-top">
+              <div class="dm2-card-fav c2">V</div>
+              <div style="min-width:0">
+                <div class="dm2-card-name">Vodafone</div>
+                <div class="dm2-card-dom">vodafone.es</div>
+              </div>
+            </div>
+            <div class="dm2-card-foot">
+              <span class="dm2-card-score">58</span>
+              <span class="delta dn">▼ 2</span>
+              <span class="badge badge-pos">Hoy</span>
+            </div>
+          </a>
+
+          <a class="dm2-card" href="#">
+            <div class="dm2-card-top">
+              <div class="dm2-card-fav c3">O</div>
+              <div style="min-width:0">
+                <div class="dm2-card-name">Orange</div>
+                <div class="dm2-card-dom">orange.es</div>
+              </div>
+            </div>
+            <div class="dm2-card-foot">
+              <span class="dm2-card-score">47</span>
+              <span class="badge badge-accent"><span class="dot run"></span>Escaneando…</span>
+            </div>
+          </a>
+
+          <a class="dm2-card" href="#">
+            <div class="dm2-card-top">
+              <div class="dm2-card-fav c4">M</div>
+              <div style="min-width:0">
+                <div class="dm2-card-name">Mozilla</div>
+                <div class="dm2-card-dom">mozilla.org</div>
+              </div>
+            </div>
+            <div class="dm2-card-foot">
+              <span class="dm2-card-score">71</span>
+              <span class="badge badge-accent"><span class="dot run"></span>Auditando</span>
+            </div>
+          </a>
+        </div>
+
+        <!-- Fuera del raíl a propósito: no es un dominio más, y dentro del
+             raíl quedaría fuera de pantalla en móvil. -->
+        <a class="dm2-add" href="#" style="margin-top:12px">
+          <span class="dm2-add-pl">+</span>
+          Añadir dominio
+          <span class="dm2-add-sub">Se escanea desde el primer día</span>
+        </a>
+
+        <p class="dm2-archived">2 dominios archivados</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
