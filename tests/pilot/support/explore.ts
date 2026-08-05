@@ -218,11 +218,23 @@ async function refuseReason(el: import("@playwright/test").Locator): Promise<str
       isSubmit: node.tagName === "BUTTON" && (button.type === "submit" || !button.type),
       href: anchor?.getAttribute("href") ?? null,
       disabled: node.hasAttribute("disabled") || node.getAttribute("aria-disabled") === "true",
+      isNotificationBell: node.matches(".header-bell"),
       name: `${node.textContent ?? ""} ${node.getAttribute("aria-label") ?? ""}`.trim()
     };
   });
 
   if (info.disabled) return "disabled";
+  // The bell is the one control here whose click WRITES: since NOTIF-AUTOREAD-1
+  // (log §28) opening it marks the account's notifications read. The sweep hits
+  // it on ~14 screens × 3 viewports, so it was destroying the very state the
+  // dedicated journey exists to observe — `notifications.spec.ts` found nothing
+  // unread on every run and annotated itself unverifiable, structurally, not by
+  // bad luck (ux-pilot, 2026-08-05). Refusing it here costs nothing: that
+  // journey exercises the bell far better than a blind sweep click, and this
+  // also drops the write from ~42 per run back to one.
+  if (info.isNotificationBell) {
+    return "notification bell — opening it marks notifications read (see notifications.spec.ts)";
+  }
   if (info.inForm) return "inside a form — could write to Supabase";
   if (info.isSubmit) return "submit button — could write to Supabase";
   // A same-page anchor (#hash) is fine; anything else navigates away and would

@@ -204,7 +204,7 @@ decida mostrarlos.
 **La pantalla de Escaneos sigue publicando el GeoScore de cada run histórico
 como número suelto, sin desglose ni enlace a uno.** Es el hueco declarado de
 esta fase, no una excepción a la regla: la obligación sigue en pie y cerrarla
-es trabajo pendiente (log §26, "Pendiente conocido").
+es trabajo pendiente (log §29, "Pendiente conocido").
 
 ## 8 · Lo que este ADR NO hace
 

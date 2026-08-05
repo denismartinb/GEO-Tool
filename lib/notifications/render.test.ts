@@ -31,6 +31,51 @@ describe("renderNotification", () => {
     expect(r.tone).toBe("pos");
   });
 
+  it("rounds a floating-point visibility delta instead of printing it raw", () => {
+    // Caught by the pilot on PR #336: the bell showed "(+2.780000000000001)".
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 6,
+          providers: ["gemini"],
+          visibilityScore: 75,
+          visibilityDelta: 2.780000000000001,
+          newRecommendations: 13,
+          resolvedGaps: 6
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.body).toBe("Visibilidad 75 (+3). 13 acciones nuevas y 6 brechas cerradas.");
+  });
+
+  it("drops the parenthetical entirely for a sub-point delta rather than printing '(+0)'", () => {
+    const r = renderNotification(
+      {
+        type: "scan_completed",
+        severity: "success",
+        project_id: PROJECT_ID,
+        payload_json: {
+          runId: "run-1",
+          promptsProcessed: 6,
+          providers: ["gemini"],
+          visibilityScore: 75,
+          visibilityDelta: 0.4,
+          newRecommendations: 0,
+          resolvedGaps: 0
+        }
+      },
+      DOMAINS
+    );
+
+    expect(r.body).toBe("Visibilidad 75.");
+  });
+
   it("renders scan_completed with a negative delta as trendDown/neg", () => {
     const r = renderNotification(
       {
@@ -203,6 +248,107 @@ describe("renderNotification", () => {
     );
 
     expect(r.body).toBe("Preparación técnica —/100.");
+  });
+
+  // --- WEB-AUDIT-ALERTS-1: audit-to-audit regressions --------------------
+
+  it("renders coverage_dropped in the singular, naming the topic", () => {
+    const r = renderNotification(
+      {
+        type: "coverage_dropped",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { scanId: "scan-1", count: 1, sampleTopics: ["precios"] }
+      },
+      DOMAINS
+    );
+
+    expect(r.title).toBe("Un tema ha perdido cobertura");
+    expect(r.body).toBe("Ya no encontramos contenido publicado en tu dominio sobre este tema. «precios».");
+    expect(r.href).toBe(`/dashboard/projects/${PROJECT_ID}/web-audit`);
+    expect(r.tone).toBe("warm");
+  });
+
+  it("renders coverage_dropped in the plural with a 'y N más' tail", () => {
+    const r = renderNotification(
+      {
+        type: "coverage_dropped",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { scanId: "scan-1", count: 4, sampleTopics: ["precios", "envíos", "garantía"] }
+      },
+      DOMAINS
+    );
+
+    expect(r.title).toBe("4 temas han perdido cobertura");
+    expect(r.body).toContain("«precios» y 3 más.");
+  });
+
+  it("renders surfacing_dropped without leaving a dangling space when there is no sample", () => {
+    const r = renderNotification(
+      {
+        type: "surfacing_dropped",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { scanId: "scan-1", count: 2, sampleTopics: [] }
+      },
+      DOMAINS
+    );
+
+    expect(r.title).toBe("La IA ha dejado de citar tus páginas");
+    expect(r.body).toBe("Tienes contenido sobre 2 temas que la IA ya no cita.");
+    expect(r.tone).toBe("neg");
+  });
+
+  it("renders llms_txt_lost and sitemap_lost pointing at Auditoría web", () => {
+    const llms = renderNotification(
+      { type: "llms_txt_lost", severity: "critical", project_id: PROJECT_ID, payload_json: { snapshotId: "s1" } },
+      DOMAINS
+    );
+    const sitemap = renderNotification(
+      { type: "sitemap_lost", severity: "warning", project_id: PROJECT_ID, payload_json: { snapshotId: "s1" } },
+      DOMAINS
+    );
+
+    expect(llms.title).toBe("Tu llms.txt ha desaparecido");
+    expect(llms.body.length).toBeGreaterThan(0);
+    expect(llms.href).toBe(`/dashboard/projects/${PROJECT_ID}/web-audit`);
+    expect(sitemap.title).toBe("Tu sitemap.xml ha desaparecido");
+    expect(sitemap.targetLabel).toBe("acme.com");
+  });
+
+  it("renders page_unreachable, singular and plural", () => {
+    const one = renderNotification(
+      {
+        type: "page_unreachable",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { snapshotId: "s1", count: 1, sampleUrls: ["https://acme.com/precios"] }
+      },
+      DOMAINS
+    );
+    const many = renderNotification(
+      {
+        type: "page_unreachable",
+        severity: "warning",
+        project_id: PROJECT_ID,
+        payload_json: { snapshotId: "s1", count: 3, sampleUrls: ["https://acme.com/precios"] }
+      },
+      DOMAINS
+    );
+
+    expect(one.title).toBe("Una página tuya ha dejado de responder");
+    expect(one.body).toBe("En la auditoría anterior se analizó correctamente y ahora no. https://acme.com/precios.");
+    expect(many.title).toBe("3 páginas tuyas han dejado de responder");
+    expect(many.body).toContain("https://acme.com/precios y 2 más.");
+  });
+
+  it("never prints a raw null or NaN when a regression payload is malformed", () => {
+    for (const type of ["coverage_dropped", "surfacing_dropped", "page_unreachable"]) {
+      const r = renderNotification({ type, severity: "warning", project_id: PROJECT_ID, payload_json: {} }, DOMAINS);
+      expect(r.title.length).toBeGreaterThan(0);
+      expect(r.body).not.toMatch(/null|NaN|undefined/);
+    }
   });
 
   it("renders trial_ending with no project target", () => {

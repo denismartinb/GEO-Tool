@@ -353,7 +353,18 @@ Tres avisos-empujón el mismo día son ruido.
 - **`audit_completed`** — `lib/web-audit/technical-audit.ts`, después del
   `insert` en `web_audit_snapshots` (~línea 449). Requiere `.select("id")` en
   ese insert para tener `snapshotId`. Severidad `info`.
-- **`ai_bot_blocked`** — mismo sitio. **Emitir solo en la transición**: leer el
+- **`ai_bot_blocked`** — ✅ **implementado 2026-08-05** por WEB-AUDIT-ALERTS-1
+  (log §27), en `lib/web-audit/regression-alerts.ts`, llamado desde
+  `technical-audit.ts` justo tras el insert. Con un matiz sobre lo escrito
+  abajo: se emite sólo cuando el lado anterior tenía `allowed: true`
+  explícito, **no** cuando el agente era "inexistente" — un bot recién añadido
+  a `TRACKED_BOT_AGENTS` que aparece bloqueado es un descubrimiento sobre un
+  `robots.txt` que no ha cambiado, y una alerta crítica por eso enseña a
+  desconfiar del aviso. Esa misma fase añadió cinco tipos más (migración
+  0029): `coverage_dropped`, `surfacing_dropped`, `llms_txt_lost`,
+  `sitemap_lost`, `page_unreachable`. `audit_completed` y
+  `emerging_competitor` siguen **sin emitir**. Texto original de la fase 2:
+  **Emitir solo en la transición**: leer el
   snapshot anterior del proyecto (`order created_at desc, limit 1`, antes del
   insert) y comparar su `bots` con el nuevo. Emitir por cada agente que pase de
   permitido (o inexistente) a `allowed: false`. **No** emitir en cada auditoría
@@ -422,7 +433,13 @@ Copy exacto por tipo (castellano, tú/informal, coherente con el producto):
 
 ### 5.3 Marcar como leídas
 
-Server action nueva, `app/dashboard/notifications/actions.ts`:
+**Superseded por NOTIF-AUTOREAD-1 (2026-08-05, log §28).** La v1 marcaba leído
+con un botón y `markAllNotificationsRead()` (sin argumentos, todo lo no leído
+del usuario). Verlas es leerlas: ya no hay botón en ninguna de las dos
+superficies, y la acción recibe la lista explícita de ids que se han
+renderizado.
+
+Server action, `app/dashboard/notifications/actions.ts`:
 
 ```ts
 "use server";
@@ -430,18 +447,32 @@ Server action nueva, `app/dashboard/notifications/actions.ts`:
 // para `authenticated` (ver migración 0021). La propiedad se reverifica
 // explícitamente en el WHERE, mismo patrón que el resto de acciones
 // service-role del proyecto.
-export async function markAllNotificationsRead(): Promise<{ success: boolean }> {
+export async function markNotificationsRead(ids: string[]): Promise<{ success: boolean }> {
+  const parsed = idsSchema.safeParse(ids);      // uuids, 1..NOTIFICATIONS_PAGE_LIMIT
+  if (!parsed.success) return { success: false };
   const { user } = await requireUser();
   const service = createServiceClient();
   await service
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("owner_user_id", user.id)   // reverificación de propiedad, no opcional
+    .in("id", parsed.data)          // sólo lo que se ha visto, nunca "todo"
     .is("read_at", null);
   revalidatePath("/dashboard", "layout");
   return { success: true };
 }
 ```
+
+**Por qué lista de ids y no "todo lo no leído":** la campana carga como mucho
+`NOTIFICATIONS_BELL_LIMIT` (15) filas. Marcar todo al abrirla borraría en
+silencio notificaciones que nunca llegaron a la pantalla. Lo que se ve es lo
+que se marca; el resto sigue esperando en `/dashboard/notifications` (50).
+
+**Dos preguntas distintas sobre "no leída"** (`lib/notifications/seen.ts`):
+`isPendingUnread` (¿queda algo por ver? → punto de la campana, se apaga al
+abrir, antes del round-trip) e `isVisuallyUnread` (¿esta fila conserva su
+punto? → sí durante toda la sesión, para que la lista no se vacíe mientras se
+lee).
 
 **Eliminar** de `components/notification-bell.tsx` toda la lógica de
 `LAST_SEEN_KEY` / `localStorage`.
@@ -515,9 +546,10 @@ Añadir: pestañas Todas / No leídas con contador, agrupación por día
 
 ### 6.4 Página `/dashboard/notifications`
 
-Server component. Cabecera con el título y el enlace pequeño
-"Marcar como leídas" a la derecha (sin subtítulo descriptivo). Pestañas,
-agrupación por día, filas a ancho completo. Límite 50, sin paginación en v1.
+Server component. Cabecera con el título, sin subtítulo descriptivo y —desde
+NOTIF-AUTOREAD-1— **sin enlace "Marcar como leídas"**: abrir la página es
+verlas. Pestañas, agrupación por día, filas a ancho completo. Límite 50, sin
+paginación en v1.
 
 ---
 
