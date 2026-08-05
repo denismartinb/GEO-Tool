@@ -48,6 +48,17 @@ export type BotAccessReport = {
    * inventing a state for it.
    */
   sitemap?: SitemapReport | null;
+  /**
+   * Whether each probe actually got an answer. Optional: a snapshot taken
+   * before this existed has only the booleans above, and must keep reading
+   * exactly as it did — inventing a state for an audit that never measured it
+   * is the retroactive-measurement trap.
+   *
+   * The booleans stay as they were (`found === true` only), so nothing that
+   * reads them changes meaning. What changes is that `false` no longer has to
+   * carry two incompatible meanings on its own.
+   */
+  probes?: { robots: ProbeState; llmsTxt: ProbeState; sitemap: ProbeState };
 };
 
 type RawGroup = { agents: string[]; disallows: string[] };
@@ -107,16 +118,53 @@ export function resolveBotAccess(content: string): Map<BotAgent, boolean> {
 const TXT_FETCH_TIMEOUT_MS = 4_000;
 const TXT_MAX_BYTES = 128 * 1024;
 
-async function fetchTextCapped(url: string): Promise<string | null> {
+/**
+ * Whether a well-known file is there — and, crucially, whether we could tell.
+ *
+ * `absent` and `unknown` used to be the same thing: `fetchTextCapped` returned
+ * null for a 404, a 403, a timeout and a DNS failure alike, and every one of
+ * them surfaced as "No encontrado". Found live on 2026-08-04 against
+ * mozilla.org, which reported no sitemap — a site that certainly has one.
+ *
+ * That conflation was tolerable while the audit only *reported* the fact. It
+ * stopped being tolerable now that we act on it: a customer behind a WAF that
+ * refuses an unknown user-agent would be told a file is missing and handed
+ * step-by-step instructions to create one that already exists. Telling someone
+ * to fix a problem they do not have is worse than saying nothing.
+ *
+ * It is the same class of bug as the soft 404 this phase already fixed, in the
+ * opposite direction: a check that collapses distinct states into one answer.
+ */
+export type ProbeState =
+  /** 2xx with a body we read. */
+  | "found"
+  /** The server answered, clearly, that there is nothing there (404/410). */
+  | "absent"
+  /** We could not find out: blocked (401/403), server error, timeout, network failure. */
+  | "unknown";
+
+type ProbeResult = { state: ProbeState; content: string | null };
+
+async function fetchTextCapped(url: string): Promise<ProbeResult> {
   try {
     const response = await fetch(url, {
       signal: AbortSignal.timeout(TXT_FETCH_TIMEOUT_MS),
       headers: { "user-agent": AUDIT_USER_AGENT }
     });
-    if (!response.ok) return null;
-    return await readBodyCapped(response, TXT_MAX_BYTES);
+
+    if (response.ok) {
+      return { state: "found", content: await readBodyCapped(response, TXT_MAX_BYTES) };
+    }
+    // Only an explicit "there is nothing here" counts as absent. Everything
+    // else — 403 from a WAF, 500, 429 — means we did not get to look.
+    if (response.status === 404 || response.status === 410) {
+      return { state: "absent", content: null };
+    }
+    return { state: "unknown", content: null };
   } catch {
-    return null;
+    // Timeout, DNS failure, TLS error, connection reset. None of these are
+    // evidence about the file.
+    return { state: "unknown", content: null };
   }
 }
 
@@ -127,27 +175,28 @@ async function fetchTextCapped(url: string): Promise<string | null> {
  * from an explicit "allow everything" robots.txt).
  */
 export async function buildBotAccessReport(domain: string): Promise<BotAccessReport> {
-  const robotsContent = await fetchTextCapped(`https://${domain}/robots.txt`);
-  const robotsFound = robotsContent !== null;
-  const accessMap = robotsFound
-    ? resolveBotAccess(robotsContent)
+  const robotsProbe = await fetchTextCapped(`https://${domain}/robots.txt`);
+  const robotsFound = robotsProbe.content !== null;
+  const accessMap = robotsProbe.content !== null
+    ? resolveBotAccess(robotsProbe.content)
     : new Map(TRACKED_BOT_AGENTS.map((agent) => [agent, true] as const));
   const bots: BotAccessEntry[] = TRACKED_BOT_AGENTS.map((agent) => ({
     agent,
     allowed: accessMap.get(agent) ?? true
   }));
 
-  const llmsContent = await fetchTextCapped(`https://${domain}/llms.txt`);
-  const sitemapContent = await fetchTextCapped(`https://${domain}/sitemap.xml`);
+  const llmsProbe = await fetchTextCapped(`https://${domain}/llms.txt`);
+  const sitemapProbe = await fetchTextCapped(`https://${domain}/sitemap.xml`);
 
   return {
     robotsFound,
     bots,
-    llmsTxtFound: llmsContent !== null,
-    llmsTxtBytes: llmsContent !== null ? Buffer.byteLength(llmsContent, "utf-8") : null,
-    sitemapFound: sitemapContent !== null,
+    llmsTxtFound: llmsProbe.content !== null,
+    llmsTxtBytes: llmsProbe.content !== null ? Buffer.byteLength(llmsProbe.content, "utf-8") : null,
+    sitemapFound: sitemapProbe.content !== null,
     // Zero extra network cost: these are the very bytes fetched on the line
     // above, which used to be discarded after the null check.
-    sitemap: parseSitemap(sitemapContent)
+    sitemap: parseSitemap(sitemapProbe.content),
+    probes: { robots: robotsProbe.state, llmsTxt: llmsProbe.state, sitemap: sitemapProbe.state }
   };
 }

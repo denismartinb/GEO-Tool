@@ -1740,6 +1740,26 @@ amplía la superficie de fetch, pero **seguir un índice hasta sus sitemaps hijo
 sí** —es seguir enlaces, o sea rastrear— y por eso no se hace; «índice» se
 reporta como estado propio.
 
+**Y mirar la captura destapó el defecto gemelo.** El pilot mostró
+«sitemap.xml — No encontrado» para **mozilla.org**, un sitio que evidentemente
+tiene sitemap. La causa estaba en `fetchTextCapped`: devolvía `null` ante 404,
+403, timeout y error de red por igual, y los cuatro salían como «No
+encontrado». Es el mismo error que el 404 blando pero en el otro sentido — una
+comprobación que colapsa estados distintos en una sola respuesta.
+
+Era tolerable mientras la auditoría sólo **informaba**. Dejó de serlo al añadir
+pasos de arreglo: a un cliente detrás de un WAF corriente le estaríamos
+diciendo que le falta un fichero que ya tiene, con instrucciones para crearlo.
+Decirle a alguien que arregle un problema que no tiene es peor que no decir
+nada.
+
+Ahora hay tres estados (`found` / `absent` / `unknown`) y **un probe sin
+resolver no es incidencia ni «correcto»: es no medido**, y no aparece en
+ninguna de las dos listas. Es la misma regla que `PageCheckDefinition.isMeasured`
+ya aplicaba página a página, aplicada por primera vez a los hechos de
+proyecto. La alcanzabilidad se informa aparte, en la tarjeta de acceso de bots
+(«Sin comprobar»), que es donde vive ese tipo de hecho.
+
 Dos honestidades que el código sostiene con tests: el recuento se muestra como
 «más de N» cuando el fichero vino truncado por el tope de 128 KB, porque un
 prefijo no es un total; y el campo nuevo es **opcional**, de forma que un

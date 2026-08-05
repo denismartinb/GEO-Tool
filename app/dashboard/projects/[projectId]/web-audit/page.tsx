@@ -595,6 +595,17 @@ function describeSitemap(bots: BotAccessReport): {
   sitemapBadge: string;
   sitemapDetail: string | null;
 } {
+  // "No pudimos comprobarlo" gana a cualquier lectura del contenido: si el
+  // servidor nos rechazó, lo que tengamos no es evidencia de nada.
+  if (bots.probes?.sitemap === "unknown") {
+    return {
+      sitemapIsReal: false,
+      sitemapBadge: "Sin comprobar",
+      sitemapDetail:
+        "No hemos podido acceder a la dirección (bloqueo, error del servidor o tiempo agotado). No significa que falte."
+    };
+  }
+
   const report = bots.sitemap;
 
   if (report === undefined) {
@@ -647,7 +658,9 @@ function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: 
       <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
         {!bots.robotsFound && (
           <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "0 0 4px" }}>
-            No se ha encontrado robots.txt — se asume acceso permitido por defecto.
+            {bots.probes?.robots === "unknown"
+              ? "No hemos podido acceder a robots.txt (bloqueo, error del servidor o tiempo agotado). Los permisos de abajo son el comportamiento por defecto, no lo que dice tu fichero."
+              : "No se ha encontrado robots.txt — se asume acceso permitido por defecto."}
           </p>
         )}
         {bots.bots.map((bot) => (
@@ -665,7 +678,11 @@ function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
           <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>llms.txt</div>
           <span className={`badge ${bots.llmsTxtFound ? "badge-pos" : "badge-outline"}`}>
-            {bots.llmsTxtFound ? `Encontrado (${bots.llmsTxtBytes} bytes)` : "No encontrado"}
+            {bots.llmsTxtFound
+              ? `Encontrado (${bots.llmsTxtBytes} bytes)`
+              : bots.probes?.llmsTxt === "unknown"
+                ? "Sin comprobar"
+                : "No encontrado"}
           </span>
         </div>
         {/* WEB-AUDIT-SITEMAP-1: ya no es sólo alcanzabilidad. `bots.sitemap`

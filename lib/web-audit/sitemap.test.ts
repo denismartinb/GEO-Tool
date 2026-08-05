@@ -184,3 +184,51 @@ describe("compatibilidad con snapshots antiguos", () => {
     expect(soft404.kind).toBe("invalid");
   });
 });
+
+describe("un probe no resuelto no es una incidencia", () => {
+  it("distingue los tres estados en vez de colapsarlos en un booleano", async () => {
+    // El fallo real (2026-08-04, mozilla.org): 404, 403, timeout y error de
+    // red devolvían todos null, y los cuatro salían como "No encontrado". Era
+    // tolerable mientras sólo informábamos; dejó de serlo al añadir pasos de
+    // arreglo, porque a un cliente detrás de un WAF le diríamos que cree un
+    // fichero que ya tiene.
+    const { buildTechnicalIssuesReport } = await import("./issues");
+    const base = { robotsFound: true, bots: [], llmsTxtFound: false, llmsTxtBytes: null, sitemapFound: false };
+
+    const bloqueado = buildTechnicalIssuesReport([], {
+      ...base,
+      probes: { robots: "found", llmsTxt: "unknown", sitemap: "unknown" }
+    });
+    const ausente = buildTechnicalIssuesReport([], {
+      ...base,
+      probes: { robots: "found", llmsTxt: "absent", sitemap: "absent" }
+    });
+
+    const claves = (r: { issues: Array<{ check: string }> }) => r.issues.map((i) => i.check);
+
+    // Sin comprobar → ni incidencia ni "correcto": simplemente no medido.
+    expect(claves(bloqueado)).not.toContain("sitemap_missing");
+    expect(claves(bloqueado)).not.toContain("llms_txt_missing");
+    expect(bloqueado.passing.map((p) => p.check)).not.toContain("sitemap_missing");
+
+    // Ausente de verdad → incidencia, como siempre.
+    expect(claves(ausente)).toContain("sitemap_missing");
+    expect(claves(ausente)).toContain("llms_txt_missing");
+  });
+
+  it("un snapshot sin `probes` conserva su lectura de antes", async () => {
+    // Sin el campo, false seguía significando "no encontrado". Reinterpretarlo
+    // como "sin comprobar" sería reescribir hacia atrás lo que aquella
+    // auditoría afirmó.
+    const { buildTechnicalIssuesReport } = await import("./issues");
+    const antiguo = buildTechnicalIssuesReport([], {
+      robotsFound: true,
+      bots: [],
+      llmsTxtFound: false,
+      llmsTxtBytes: null,
+      sitemapFound: false
+    });
+
+    expect(antiguo.issues.map((i) => i.check)).toContain("sitemap_missing");
+  });
+});
