@@ -281,3 +281,35 @@ describe("dayLabel / groupByDay", () => {
     expect(groups[1].items.map((i) => i.id)).toEqual(["c"]);
   });
 });
+
+describe("scan_completed — visibility delta rounding", () => {
+  // Surfaced in a real notification on the founder's phone (2026-08-05):
+  // "Visibilidad 72 (+5.549999999999997)". The payload carries the raw float
+  // difference of two scores; the score beside it was already rounded, the
+  // delta was not.
+  it("rounds the delta like the score it sits next to", () => {
+    const rendered = renderNotification(
+      {
+        id: "n1",
+        type: "scan_completed",
+        severity: "success",
+        project_id: "p1",
+        created_at: "2026-08-05T00:00:00.000Z",
+        read_at: null,
+        payload_json: {
+          runId: "r1",
+          promptsProcessed: 6,
+          providers: ["gemini"],
+          visibilityScore: 72.4,
+          visibilityDelta: 5.549999999999997,
+          newRecommendations: 0,
+          resolvedGaps: 0
+        }
+      } as never,
+      { p1: "mozilla.org" }
+    );
+
+    expect(rendered.body).toContain("Visibilidad 72 (+6)");
+    expect(rendered.body).not.toContain("5.54");
+  });
+});

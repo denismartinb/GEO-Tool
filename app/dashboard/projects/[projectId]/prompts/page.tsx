@@ -4,7 +4,9 @@ import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { PromptsClient } from "./prompts-client";
 import { AddPromptsButton } from "./add-prompts-button";
 
@@ -22,6 +24,8 @@ export type ResultRow = {
   extraction_error: string | null;
   category: string | null;
   provider: string | null;
+  /** SAMPLING-1 (ADR 0030): which repetition of this (prompt, engine) the row is. Null on rows written before migration 0028 — which is sample 0. */
+  sample_index: number | null;
 };
 
 export type TopicGroup = {
@@ -98,7 +102,11 @@ export default async function PromptsPage({
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   // 2. Prompts configurados (para category + is_active)
   const { data: projectPrompts } = await supabase
@@ -112,7 +120,7 @@ export default async function PromptsPage({
     ? await supabase
         .from("scan_prompt_results")
         .select(
-          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider"
+          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider, sample_index"
         )
         .eq("project_id", projectId)
         .eq("run_id", latestRun.id)
@@ -244,25 +252,19 @@ export default async function PromptsPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {latestRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado{" "}
-              {new Date(
-                latestRun.finished_at ?? latestRun.created_at
-              ).toLocaleDateString("es-ES", {
-                day: "numeric",
-                month: "short",
-                year: "numeric",
-                timeZone: "Europe/Madrid",
-              })}
-            </span>
-          )}
-          {activeRun && latestRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              latestRun
+                ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    timeZone: "Europe/Madrid"
+                  })
+                : null
+            }
+          />
         </div>
       </header>
 

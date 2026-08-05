@@ -8,6 +8,7 @@ import { ManageCompetitorsPanel } from "./manage-competitors-panel";
 import { PromptGapSection } from "./prompt-gap-section";
 import { SuggestedCompetitorsSection } from "./suggested-competitors-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import {
   computeEntityEngineBreakdown,
   filterComparableEngines,
@@ -20,6 +21,7 @@ import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-win
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
 /* ---- Helpers ---- */
 
@@ -150,7 +152,11 @@ export default async function CompetitorsPage({
   const inactiveCompetitors = configuredCompetitors.filter((c) => !c.is_active);
   const completedRuns = allRuns ?? [];
   const completedRunIds = completedRuns.map((r) => r.id);
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
   const latestCompletedRun = completedRuns[0] ?? null;
   const previousCompletedRun = completedRuns[1] ?? null;
 
@@ -532,18 +538,15 @@ export default async function CompetitorsPage({
             </div>
           </div>
           <div className="ov-sticky-right">
-            {latestCompletedRun && (
-              <span className="badge badge-pos" style={{ fontSize: 11 }}>
-                Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                  .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-              </span>
-            )}
-            {activeRun && completedRuns.length > 0 ? (
-              <span className="scan-status">
-                <span className="dot run" />
-                Escaneo en curso
-              </span>
-            ) : null}
+            <ScanStatePill
+              activeRun={activeRun}
+              lastScanLabel={
+                latestCompletedRun
+                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                      .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                  : null
+              }
+            />
           </div>
         </div>
 

@@ -12,6 +12,7 @@ import { Delta } from "@/components/ui/delta";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -34,6 +35,7 @@ import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
 import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
 /* ---- constants & helpers ---- */
 
@@ -235,7 +237,11 @@ export default async function ProjectDetailPage({
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
   const completedRunsCount = runs?.filter((r) => r.status === "completed").length ?? 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
-  const activeRun = runs?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = runs?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
@@ -685,18 +691,15 @@ export default async function ProjectDetailPage({
           </div>
         </div>
         <div className="ov-sticky-right">
-          {latestCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
-          {activeRun ? (
-            <span className="scan-status">
-              <span className="dot run" />
-              Escaneo en curso
-            </span>
-          ) : null}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              latestCompletedRun
+                ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
+                    .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                : null
+            }
+          />
         </div>
       </div>
 

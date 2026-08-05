@@ -146,7 +146,7 @@ Mahou/San Miguel).
 | −1b | Dedupe de entidades de la misma marca en posición/SoV + revisión de la lista de competidores (forks de Firefox) | Bajo | Pendiente |
 | **−1c** | **UI de alias**: verlos, añadirlos y quitarlos a mano, y decir en «Evidencias de mención» qué nombre casó. Hoy los alias mueven el score y solo se pueden inspeccionar por SQL — el riesgo asumido en ADR 0025 está **sin mitigar** hasta que exista | Bajo | **Pendiente (hueco conocido)** |
 | **1** | Metodología v3: la posición mide **puesto**, no frecuencia — `avg_position_when_mentioned` + tasa de aparición por entidad, `prominence` condicionada a mención y con suelo de muestra, gráfico de evolución rediseñado | Medio · cambia el significado | **Implementada** (ADR 0026) |
-| 1b | Recalibrar pesos (.40/.25/.20/.15) y bandas 70/40 con la distribución observada de proyectos reales; revisar si `prominence` merece 0.25 ahora que deja de duplicar `presence` | Medio | Pendiente · necesita datos que aún no existen |
+| 1b | Recalibrar pesos (.40/.25/.20/.15) y bandas 70/40 con la distribución observada de proyectos reales; revisar si `prominence` merece 0.25 ahora que deja de duplicar `presence` | Medio | **Propuesta escrita** (ADR 0031) · sigue bloqueada por datos: sólo los runs desde el 2026-08-05 son válidos, ver ahí el porqué |
 | **2** | Muestreo: repeticiones por prompt en planes de pago | Coste por escaneo | **Implementada** (SAMPLING-1, ADR 0030) |
 | **3** | Candado: spec normativa, golden set congelado, tests de propiedad, gate de CI | Bajo | Pendiente |
 

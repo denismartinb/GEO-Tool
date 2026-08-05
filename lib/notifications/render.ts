@@ -67,13 +67,17 @@ export function renderNotification(
     case "scan_completed": {
       const score = num(payload.visibilityScore);
       const delta = num(payload.visibilityDelta);
+      // Rounded like the score beside it: the payload carries a raw float
+      // difference of two scores, which surfaced in a real notification as
+      // "Visibilidad 72 (+5.549999999999997)" (founder report, 2026-08-05).
+      const roundedDelta = delta === null ? null : Math.round(delta);
       const newRecs = num(payload.newRecommendations) ?? 0;
       const resolvedGaps = num(payload.resolvedGaps) ?? 0;
       const promptsProcessed = num(payload.promptsProcessed);
 
       const scoreText =
         score !== null
-          ? `Visibilidad ${Math.round(score)}${delta ? ` (${delta > 0 ? "+" : ""}${delta})` : ""}.`
+          ? `Visibilidad ${Math.round(score)}${roundedDelta ? ` (${roundedDelta > 0 ? "+" : ""}${roundedDelta})` : ""}.`
           : "El escaneo ha finalizado con éxito.";
       const clauses: string[] = [];
       if (newRecs > 0) clauses.push(`${newRecs} ${plural(newRecs, "acción nueva", "acciones nuevas")}`);

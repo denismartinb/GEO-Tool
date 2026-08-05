@@ -6,6 +6,7 @@ import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { LiveRunStatusCells } from "@/components/live-run-status-cells";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject, getWorkspaceCounters } from "@/lib/project-workspace";
 import {
@@ -14,6 +15,13 @@ import {
   reconcileStuckScanRuns,
   scanRunsNeedReconciliation
 } from "@/lib/scan/scan-runner";
+import {
+  deltaWithheldReason,
+  readComparableRun,
+  resolveDelta,
+  type ComparableRun,
+  type DeltaVerdict
+} from "@/lib/scoring/score-reliability";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -314,13 +322,23 @@ export default async function RunsPage({
     completedRunIds.length > 0
       ? await supabase
           .from("run_scores")
-          .select("run_id, visibility_score")
+          // details_json (DELTA-GUARD-1): carries the comparability
+          // fingerprint resolveDelta needs — response count, composite
+          // version, surviving components and engine set. Reading it here is
+          // what lets this table apply the same ADR 0024 guard the Overview
+          // already applies, instead of subtracting two numbers that may not
+          // measure the same thing.
+          .select("run_id, visibility_score, details_json")
           .eq("project_id", projectId)
           .in("run_id", completedRunIds)
       : { data: [] };
 
   const scoreByRunId = new Map<string, number>(
     (scores ?? []).map((s) => [s.run_id, Math.round(Number(s.visibility_score ?? 0))])
+  );
+
+  const comparableByRunId = new Map<string, ComparableRun>(
+    (scores ?? []).map((s) => [s.run_id as string, readComparableRun(s.details_json)])
   );
 
   /* AUDIT-IN-RUNS-1 — the "Auditoría" column.
@@ -399,23 +417,53 @@ export default async function RunsPage({
   /* Build ordered list for delta computation (oldest first for completed runs) */
   const completedRunsOldestFirst = [...completedRuns].reverse();
 
-  /* Compute delta for each completed run vs its predecessor */
-  const scoreDeltas = new Map<string, number | null>();
+  /**
+   * Delta for each completed run vs its predecessor (DELTA-GUARD-1).
+   *
+   * This used to be a raw `curr - prev`. The Overview stopped doing that in
+   * GEO-SCORE-RELIABILITY-1 (ADR 0024) because a subtraction of two persisted
+   * scores says nothing on its own: it is only a real change in visibility if
+   * both runs carry enough AI responses to support the claim AND measured the
+   * same thing (same composite version, same surviving components, same
+   * engines, same sample size). This table kept subtracting anyway, so the
+   * screen the founder actually reads was publishing "+34 pt" on runs of
+   * three responses — the exact false precision ADR 0024 exists to remove,
+   * one screen over.
+   *
+   * `resolveDelta` is that ADR's single decision point, so using it here means
+   * the two screens cannot drift apart in what they are willing to assert.
+   */
+  const scoreDeltas = new Map<string, DeltaVerdict | null>();
   for (let i = 0; i < completedRunsOldestFirst.length; i++) {
     const run = completedRunsOldestFirst[i];
     if (i === 0) {
       scoreDeltas.set(run.id, null); // first ever run — no previous
-    } else {
-      const prevRun = completedRunsOldestFirst[i - 1];
-      const curr = scoreByRunId.get(run.id) ?? null;
-      const prev = scoreByRunId.get(prevRun.id) ?? null;
-      if (curr !== null && prev !== null) {
-        scoreDeltas.set(run.id, curr - prev);
-      } else {
-        scoreDeltas.set(run.id, null);
-      }
+      continue;
     }
+
+    const prevRun = completedRunsOldestFirst[i - 1];
+    const curr = scoreByRunId.get(run.id) ?? null;
+    const prev = scoreByRunId.get(prevRun.id) ?? null;
+    const currComparable = comparableByRunId.get(run.id);
+    const prevComparable = comparableByRunId.get(prevRun.id);
+
+    if (curr === null || prev === null || !currComparable || !prevComparable) {
+      scoreDeltas.set(run.id, null);
+      continue;
+    }
+
+    scoreDeltas.set(run.id, resolveDelta(curr - prev, currComparable, prevComparable));
   }
+
+  /**
+   * Whether any run in view has a delta this layer refuses to publish — the
+   * condition for the one-line explanation under the table. Deliberately not
+   * "does any row show a dash": the very first run of a project shows one too,
+   * and "no previous scan to compare against" needs no explaining.
+   */
+  const hasWithheldDelta = Array.from(scoreDeltas.values()).some(
+    (verdict) => verdict !== null && verdict.kind !== "publish"
+  );
 
   /* Assign run number (1 = oldest) */
   const runNumberByRunId = new Map<string, number>();
@@ -480,22 +528,20 @@ export default async function RunsPage({
               >
                 {project.domain}
               </span>
-              {activeRun ? (
-                <span className="scan-status">
-                  <span className="dot run" />
-                  Escaneo en curso
-                </span>
-              ) : null}
+
             </div>
           </div>
         </div>
         <div className="ov-sticky-right">
-          {lastCompletedRun && (
-            <span className="badge badge-pos" style={{ fontSize: 11 }}>
-              Escaneado {new Date(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)
-                .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })}
-            </span>
-          )}
+          <ScanStatePill
+            activeRun={activeRun}
+            lastScanLabel={
+              lastCompletedRun
+                ? new Date(lastCompletedRun.finished_at ?? lastCompletedRun.created_at)
+                    .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
+                : null
+            }
+          />
         </div>
       </div>
 
@@ -900,15 +946,25 @@ export default async function RunsPage({
                           )}
                         </td>
 
-                        {/* Delta (only if >=2 completed runs) */}
+                        {/* Delta (only if >=2 completed runs).
+                            DELTA-GUARD-1: only a "publish" verdict is a real,
+                            assertable change. Everything else renders as the
+                            same em dash the "no previous run" case already
+                            used, with the reason in the tooltip — the founder
+                            decided on 2026-08-03 (Overview) that a withheld
+                            comparison renders as nothing rather than as a
+                            notice, because several "sin comparación" labels on
+                            one screen read as a broken product instead of a
+                            careful one. A whole COLUMN of them would be
+                            worse. */}
                         {hasMultipleCompleted ? (
                           <td className="num">
-                            {delta !== null ? (
-                              <Delta value={delta} suffix=" pt" />
+                            {delta?.kind === "publish" ? (
+                              <Delta value={delta.value} suffix=" pt" />
                             ) : (
                               <span
                                 style={{ fontSize: 11.5, color: "var(--ink-4)" }}
-                                title="Sin histórico previo"
+                                title={deltaWithheldReason(delta)}
                               >
                                 —
                               </span>
@@ -942,6 +998,21 @@ export default async function RunsPage({
               </tbody>
             </table>
           </div>
+          {/* One line, once, and only when there is something to explain
+              (DELTA-GUARD-1). Judged from the pilot's own capture: a column
+              with fifteen consecutive em dashes and the reason hidden in a
+              `title` reads as "something is broken" — and a `title` is
+              invisible on touch, which is where the founder actually reads
+              this. Same pattern the Overview already uses: ONE line that says
+              what unlocks the comparison, never a notice per row. */}
+          {hasWithheldDelta ? (
+            <div style={{ padding: "2px 12px 10px", fontSize: 11.5, color: "var(--ink-4)" }}>
+              Los guiones de «Δ Score» son comparaciones que no podemos afirmar: el escaneo
+              tenía muy pocas respuestas de IA, o midió algo distinto del anterior (otros
+              motores, otra metodología). Pasa el ratón por encima para ver el motivo de cada
+              uno.
+            </div>
+          ) : null}
         </div>
       )}
 
