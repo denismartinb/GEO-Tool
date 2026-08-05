@@ -6544,8 +6544,13 @@ select.set-field {
   .dm2-dom { font-size: 11px; }
   .dm2-id { min-width: 0; }
   .dm2-fresh { margin-top: 6px; flex-direction: column; gap: 2px; font-size: 10.5px; }
-  .dm2-gauge { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .dm2-gauge-lbl { margin-top: 0; }
+  /* Agrupado, no repartido: con `space-between` la etiqueta salía disparada al
+     borde derecho y el número quedaba huérfano a la izquierda — se leían como
+     dos elementos distintos (visto en las capturas de móvil y tablet del
+     piloto). */
+  .dm2-gauge { display: flex; align-items: center; justify-content: flex-start; gap: 12px; }
+  .dm2-gauge-lbl { margin-top: 0; text-align: left; }
+  .dm2-gauge .delta { margin-left: auto; }
   .dm2-cta { min-width: 0; }
   .dm2-cta .btn { width: 100%; justify-content: center; }
   .dm2-runs { display: none; }

@@ -50,7 +50,9 @@ function fallbackColor(seed: string): string {
  * la automatización existe, y «5 ago» no distingue un escaneo de esta mañana de
  * uno de hace catorce horas.
  */
-function formatFreshness(value: string | null | undefined): string | null {
+type Freshness = { label: string; recent: boolean };
+
+function formatFreshness(value: string | null | undefined): Freshness | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
@@ -61,9 +63,9 @@ function formatFreshness(value: string | null | undefined): string | null {
   const today = new Date().toLocaleDateString("es-ES", opts);
   const yesterday = new Date(Date.now() - 86_400_000).toLocaleDateString("es-ES", opts);
 
-  if (day === today) return `hoy, ${time}`;
-  if (day === yesterday) return `ayer, ${time}`;
-  return date.toLocaleDateString("es-ES", { ...opts, day: "numeric", month: "short" });
+  if (day === today) return { label: `hoy, ${time}`, recent: true };
+  if (day === yesterday) return { label: `ayer, ${time}`, recent: true };
+  return { label: date.toLocaleDateString("es-ES", { ...opts, day: "numeric", month: "short" }), recent: false };
 }
 
 function DomainFavicon({
@@ -95,6 +97,18 @@ function DomainFavicon({
     >
       {name.slice(0, 1).toUpperCase()}
     </span>
+  );
+}
+
+function AddDomainCard() {
+  return (
+    <Link href="/dashboard/projects/new" className="dm2-add">
+      <span className="dm2-add-pl">
+        <Icon name="plus" size={16} />
+      </span>
+      <b>Añadir dominio</b>
+      <span className="dm2-add-sub">Se escanea desde el primer día</span>
+    </Link>
   );
 }
 
@@ -257,14 +271,14 @@ export default async function DomainsPage({
                   <>
                     {activeScanned ? (
                       <span>
-                        Escaneado <b>{activeScanned}</b>
+                        Escaneado <b>{activeScanned.label}</b>
                       </span>
                     ) : (
                       <span>Sin escaneos todavía</span>
                     )}
                     {activeAudited ? (
                       <span>
-                        Auditado <b>{activeAudited}</b>
+                        Auditado <b>{activeAudited.label}</b>
                       </span>
                     ) : null}
                     {activeMaturity?.kind === "accumulating" ? (
@@ -331,7 +345,11 @@ export default async function DomainsPage({
                     </div>
                     <div className="dm2-card-foot">
                       <span className="dm2-card-score tnum">{score === null ? "—" : score}</span>
-                      {delta !== null ? <Delta value={delta} /> : null}
+                      {/* Un delta de 0 se pintaba como un «0» pelado junto a la
+                          puntuación y se leía como un segundo número (visto en
+                          la captura del piloto: «43  0»). Cero no es una
+                          noticia: no se pinta. */}
+                      {delta !== null && delta !== 0 ? <Delta value={delta} /> : null}
                       {scanning ? (
                         <span className="badge badge-accent dm2-card-chip">
                           <span className="dot run" style={{ marginRight: 5 }} />
@@ -343,25 +361,32 @@ export default async function DomainsPage({
                           Auditando…
                         </span>
                       ) : scanned ? (
-                        <span className="badge badge-pos dm2-card-chip">{scanned}</span>
+                        // El verde afirma "al día". En la captura del piloto un
+                        // dominio escaneado el 25 de julio llevaba pastilla
+                        // verde: el color decía que estaba fresco y la fecha
+                        // decía que no. Verde sólo hoy/ayer; el resto, neutro.
+                        <span className={`badge dm2-card-chip ${scanned.recent ? "badge-pos" : "badge-neutral"}`}>
+                          {scanned.label}
+                        </span>
                       ) : null}
                     </div>
                   </Link>
                 );
               })}
+              {/* En rejilla, «Añadir dominio» es la última celda y no una banda
+                  aparte: fuera de ella se convertía en un rectángulo punteado a
+                  todo lo ancho bajo una última fila coja (visto en la captura de
+                  escritorio del piloto). Dentro, cierra la serie y tapa el
+                  hueco. En móvil la rejilla es de una columna, así que sigue
+                  siendo la caja a ancho completo del final. */}
+              {railIsGrid ? <AddDomainCard /> : null}
             </div>
           </>
         ) : null}
 
-        {/* Fuera del raíl a propósito: no es un dominio más, y dentro del raíl
-            queda fuera del viewport en móvil. */}
-        <Link href="/dashboard/projects/new" className="dm2-add">
-          <span className="dm2-add-pl">
-            <Icon name="plus" size={16} />
-          </span>
-          <b>Añadir dominio</b>
-          <span className="dm2-add-sub">Se escanea desde el primer día</span>
-        </Link>
+        {/* En raíl (1–3 dominios) va fuera: dentro quedaría fuera del viewport
+            en móvil, que es justo donde más falta hace verla. */}
+        {railIsGrid ? null : <AddDomainCard />}
       </div>
     </div>
   );

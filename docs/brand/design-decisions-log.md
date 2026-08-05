@@ -2682,6 +2682,25 @@ una migración manual todavía no ha creado.** El repo ya escribía las migracio
 con `add column if not exists`; el lado de lectura no tenía la tolerancia
 equivalente.
 
+**Cuatro correcciones salidas de mirar las capturas del piloto, no de su
+tabla.** El run dio `PILOT PASS` con las tres pantallas en verde; el juicio
+visual encontró lo que ninguna aserción mide:
+
+1. **«Añadir dominio» a ancho completo en escritorio** era un rectángulo
+   punteado gigante bajo una última fila coja. En rejilla pasa a ser la última
+   celda: cierra la serie y tapa el hueco. En raíl (1–3 dominios) sigue fuera y
+   a ancho completo, que es lo que la hace visible en móvil.
+2. **La pastilla de frescura era verde siempre**, incluso en un dominio
+   escaneado once días antes: el color afirmaba «al día» mientras la fecha decía
+   lo contrario. Verde sólo hoy/ayer; el resto, neutro.
+3. **Un delta de 0 se pintaba como «0»** pegado a la puntuación («43  0») y se
+   leía como un segundo número. Cero no es una noticia: no se pinta.
+4. **El número del gauge y su etiqueta se separaban** en móvil y tablet
+   (`space-between` los mandaba a bordes opuestos). Agrupados.
+
+Ninguna de las cuatro habría fallado un test: son juicio, y por eso el pilot
+termina con capturas y no con un veredicto.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el
