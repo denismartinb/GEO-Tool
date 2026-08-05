@@ -433,7 +433,7 @@ Copy exacto por tipo (castellano, tú/informal, coherente con el producto):
 
 ### 5.3 Marcar como leídas
 
-**Superseded por NOTIF-AUTOREAD-1 (2026-08-05, log §26).** La v1 marcaba leído
+**Superseded por NOTIF-AUTOREAD-1 (2026-08-05, log §28).** La v1 marcaba leído
 con un botón y `markAllNotificationsRead()` (sin argumentos, todo lo no leído
 del usuario). Verlas es leerlas: ya no hay botón en ninguna de las dos
 superficies, y la acción recibe la lista explícita de ids que se han

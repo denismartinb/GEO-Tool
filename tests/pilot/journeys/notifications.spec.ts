@@ -3,7 +3,7 @@ import { assertFullyVisible, assertPageIsHealthy, captureInteraction, visitAsUse
 import { exploreInteractions } from "../support/explore";
 
 /**
- * NOTIF-AUTOREAD-1 — "verlas es leerlas" (log §26).
+ * NOTIF-AUTOREAD-1 — "verlas es leerlas" (log §28).
  *
  * Why this journey exists at all: the generic interaction sweep already clicks
  * the bell on every screen, but its per-screen budget (4 candidates) is spent

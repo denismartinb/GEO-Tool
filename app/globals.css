@@ -4225,7 +4225,7 @@ textarea.add-prompts-text-input {
   align-items: center;
   /* Enough vertical presence that the card reads as an answer rather than as
      a page that stopped loading — the empty "No leídas" tab is the common
-     state once notifications mark themselves read (log §26). */
+     state once notifications mark themselves read (log §28). */
   padding: 56px 22px 64px;
   text-align: center;
 }
