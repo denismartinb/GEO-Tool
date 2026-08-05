@@ -320,6 +320,21 @@ export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
 export const SCAN_HEALTH_ALERT_LOG_MESSAGE = "scan_health_alert_sent";
 
 /**
+ * Written to `job_logs` when a run HAS alert-worthy findings but the channel
+ * cannot deliver them (no `OPS_ALERT_EMAIL`, no `RESEND_API_KEY`, or the send
+ * threw).
+ *
+ * A `console.error` alone was not enough: Vercel runtime logs are short-lived
+ * and awkward to reach, so when the first real verification of this phase
+ * produced no email, the reason was unreachable and the failure could not be
+ * told apart from "there was nothing to report" (2026-08-05). Persisting the
+ * breadcrumb makes the alerting path diagnosable with the same SQL everything
+ * else here is diagnosed with — which is this ADR's own thesis applied to its
+ * own code.
+ */
+export const SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE = "scan_health_alert_undeliverable";
+
+/**
  * How long one (engine, reason) incident stays deduped, across every project.
  *
  * 24h is chosen against the daily cron: a single exhausted API account is one

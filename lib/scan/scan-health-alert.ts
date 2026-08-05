@@ -5,7 +5,8 @@ import { isOpsAlertConfigured, sendScanHealthAlertEmail } from "@/lib/email/tran
 import {
   EXTRACTION_VERSION,
   SCAN_HEALTH_ALERT_DEDUPE_HOURS,
-  SCAN_HEALTH_ALERT_LOG_MESSAGE
+  SCAN_HEALTH_ALERT_LOG_MESSAGE,
+  SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE
 } from "@/lib/scan/constants";
 
 /**
@@ -175,6 +176,31 @@ async function alreadyAlerted(input: {
 }
 
 /**
+ * Leaves the reason an alert could not be delivered in `job_logs`, so the
+ * alerting path can be diagnosed with SQL rather than with Vercel's
+ * short-lived runtime logs. Best-effort: it must never throw into the caller.
+ */
+async function recordUndeliverable(
+  input: { service: ReturnType<typeof createServiceClient>; projectId: string; runId: string; finalizeJobId?: string | null },
+  findings: readonly ScanHealthFinding[],
+  reason: string
+): Promise<void> {
+  if (!input.finalizeJobId) return;
+  try {
+    await input.service.from("job_logs").insert({
+      job_id: input.finalizeJobId,
+      project_id: input.projectId,
+      run_id: input.runId,
+      level: "error",
+      message: SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE,
+      context_json: { reason, findings: findings.map((f) => `${f.engine}:${f.reason}`) }
+    });
+  } catch {
+    // Nothing left to do — the console.error above is the last resort.
+  }
+}
+
+/**
  * Evaluates a finished run and alerts the operator about anything actionable.
  *
  * Fail-soft by construction, same rule as `checkAndSendScoreDropAlert` and
@@ -233,6 +259,7 @@ export async function checkAndSendScanHealthAlert(input: {
         runId: input.runId,
         findings: findings.map((f) => `${f.engine}:${f.reason}`)
       });
+      await recordUndeliverable(input, findings, "channel_not_configured");
       return;
     }
 
@@ -254,18 +281,28 @@ export async function checkAndSendScanHealthAlert(input: {
       if (await alreadyAlerted({ service: input.service, engine: finding.engine, reason: finding.reason })) continue;
 
       const copy = REASON_COPY[finding.reason];
-      await sendScanHealthAlertEmail({
-        engine: finding.engine,
-        reason: finding.reason,
-        headline: copy.headline,
-        detail: copy.detail,
-        domain,
-        projectId: input.projectId,
-        runId: input.runId,
-        affectedRows: finding.affectedRows,
-        totalRows: finding.totalRows,
-        detectedAt: new Date()
-      });
+      try {
+        await sendScanHealthAlertEmail({
+          engine: finding.engine,
+          reason: finding.reason,
+          headline: copy.headline,
+          detail: copy.detail,
+          domain,
+          projectId: input.projectId,
+          runId: input.runId,
+          affectedRows: finding.affectedRows,
+          totalRows: finding.totalRows,
+          detectedAt: new Date()
+        });
+      } catch (sendError) {
+        console.error("[geo:scan:health] alert send threw", {
+          projectId: input.projectId,
+          runId: input.runId,
+          message: sendError instanceof Error ? sendError.message : String(sendError)
+        });
+        await recordUndeliverable(input, [finding], "send_threw");
+        continue;
+      }
 
       // Written only AFTER the send, so a failed send does not silence the
       // next run's attempt. A duplicate email beats a swallowed incident.
