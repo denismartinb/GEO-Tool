@@ -19,9 +19,25 @@ export function BlogCover({
   compact?: boolean;
 }) {
   if (image) {
+    // `next/image` se niega a optimizar SVG salvo que se active
+    // `dangerouslyAllowSVG` **globalmente**, y ese flag afecta a TODAS las
+    // imágenes del sitio, incluidas futuras remotas — un SVG puede llevar
+    // script dentro. Las portadas SVG son ficheros estáticos de este repo,
+    // escritos aquí, así que se sirven sin optimizar y el flag global no hace
+    // falta: el permiso queda acotado a lo que de verdad lo necesita.
+    // Un SVG tampoco gana nada pasando por el optimizador: ya es vectorial.
+    const isSvg = image.toLowerCase().endsWith(".svg");
     return (
       <div className={`blog-cover blog-cover-image ${compact ? "blog-cover-compact" : ""}`}>
-        <Image src={image} alt={alt ?? ""} fill sizes="(max-width: 760px) 100vw, 760px" style={{ objectFit: "cover" }} priority={!compact} />
+        <Image
+          src={image}
+          alt={alt ?? ""}
+          fill
+          sizes="(max-width: 760px) 100vw, 760px"
+          style={{ objectFit: "cover" }}
+          priority={!compact}
+          unoptimized={isSvg}
+        />
       </div>
     );
   }

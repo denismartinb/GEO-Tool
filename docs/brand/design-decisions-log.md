@@ -2853,3 +2853,46 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
+
+---
+
+## 31. Las portadas dejan de ser una dependencia manual (GROWTH-3, 2026-08-05)
+
+**Estado: implementada.** Los tres artículos del cluster `sectores` pasan a
+tener portada propia, dibujada en SVG en este repositorio:
+`public/blog/<slug>/cover.svg`. Con eso `lib/blog/covers.test.ts` queda **en
+verde entero** y desaparece el aviso que §4 de `docs/agentic-weekly-post.md`
+daba por inevitable en cada artículo semanal.
+
+**No contradice ADR 0028, lo aplica.** Ese ADR eligió como fuente principal la
+**opción 4 — maquetas construidas en SVG/CSS**, y rechazó la ilustración
+generada por IA y el stock. Una portada dibujada a mano en SVG dentro del repo
+es exactamente la opción adoptada: no es una imagen generada ni licenciada, es
+un activo del proyecto, versionado, legible en el diff y editable.
+
+**Y siguen siendo evidencia, no decoración**, que es la regla dura de ADR 0028.
+Cada portada dibuja la tesis de su artículo:
+
+- `geo-para-ecommerce`: una respuesta con tres huecos, dos ocupados y el
+  tercero vacío y punteado — "o sales, o no existes", sin segunda página.
+- `geo-para-saas-b2b`: cuatro preguntas anónimas encadenadas que desembocan en
+  el botón de demo, con la línea de "aquí te enteras tú" al final del todo.
+- `geo-para-agencias`: una capa de respuesta ancha frente a un hilo de clics
+  mínimo que llega a la web — el 1,08% frente a "una de cada cuatro búsquedas".
+
+**Un detalle técnico que no es cosmético.** `next/image` **se niega a servir
+SVG** salvo que se active `dangerouslyAllowSVG`, y ese flag es **global**:
+afectaría a todas las imágenes del sitio, incluidas futuras remotas, y un SVG
+puede llevar script dentro. En vez de eso, `components/blog/blog-cover.tsx`
+marca `unoptimized` sólo cuando la ruta acaba en `.svg`. El permiso queda
+acotado a ficheros estáticos escritos en este repo, y un SVG no gana nada
+pasando por el optimizador porque ya es vectorial.
+
+**Lo que queda pendiente y con dueño.** Los tres artículos de la deuda
+congelada (`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`) siguen sin portada y siguen exentos por
+`COVER_DEBT`. Ahora que existe una vía para producirlas, esa deuda **puede
+encogerse hasta cero** en una fase propia — el test ya está construido para
+eso: la lista sólo puede menguar. Y `docs/agentic-weekly-post.md` §4, que
+describe la ausencia de portada como inevitable, **queda desactualizado**: hay
+que reescribirlo cuando esta vía se dé por buena.

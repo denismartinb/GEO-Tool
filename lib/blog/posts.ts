@@ -160,6 +160,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Una respuesta de IA solo nombra dos o tres tiendas. Qué mover primero si vendes online, y qué no sabemos todavía.",
     datePublished: "2026-08-05",
+    coverImage: "/blog/geo-para-ecommerce/cover.svg",
     coverIcon: "target",
     primaryKeyword: "geo para ecommerce",
     cluster: "sectores"
@@ -170,6 +171,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Tu lista corta se decide antes de que nadie rellene el formulario. Qué pregunta a la IA un comprador B2B en esa fase, y qué hacer con ello.",
     datePublished: "2026-08-05",
+    coverImage: "/blog/geo-para-saas-b2b/cover.svg",
     coverIcon: "building",
     primaryKeyword: "geo para saas b2b",
     cluster: "sectores"
@@ -180,6 +182,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Los chats de IA mandan ~1% de las visitas. Qué se puede vender de verdad, qué no prometer nunca, y cómo se mide.",
     datePublished: "2026-08-05",
+    coverImage: "/blog/geo-para-agencias/cover.svg",
     coverIcon: "users",
     primaryKeyword: "geo para agencias",
     cluster: "sectores"
