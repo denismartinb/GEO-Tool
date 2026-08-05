@@ -101,7 +101,7 @@ function DomainFavicon({
 export default async function DomainsPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{ error?: string; success?: string; active?: string }>;
 }) {
   const feedback = await searchParams;
   const { supabase } = await requireUser();
@@ -120,11 +120,17 @@ export default async function DomainsPage({
     : null;
   const feedbackSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
 
-  // El dominio "activo" es el más reciente: `projects` viene ordenado por
-  // created_at desc y esta pantalla no tiene un proyecto en la URL. Es el mismo
-  // criterio de reserva que ya usa la barra lateral fuera de las rutas de
-  // proyecto, así que las dos coinciden siempre.
-  const [active, ...rest] = projects;
+  // El dominio de portada es el que marca `?active=<id>` (fundador,
+  // 2026-08-05: "pinchar en un dominio de abajo debe seleccionarlo... y
+  // retornar a la misma página con ese dominio en la card principal") — las
+  // tarjetas de la rejilla ya no navegan al proyecto, enlazan aquí mismo con
+  // ese parámetro. Sin él, o si no casa con ningún dominio de la cuenta
+  // (viejo, borrado, ajeno — `projects` ya viene acotado por RLS, así que un
+  // id ajeno simplemente no aparece), se cae al más reciente: mismo criterio
+  // de reserva que la barra lateral fuera de las rutas de proyecto.
+  const requested = feedback.active ? projects.find((p) => p.id === feedback.active) : undefined;
+  const active = requested ?? projects[0];
+  const rest = active ? projects.filter((p) => p.id !== active.id) : [];
 
   if (!active) {
     return (
@@ -303,7 +309,10 @@ export default async function DomainsPage({
             const scanned = formatFreshness(latestScanDateByProject[p.id]);
 
             return (
-              <Link key={p.id} href={`/dashboard/projects/${p.id}`} className="dm2-card">
+              // Selecciona, no navega: lleva de vuelta a esta misma pantalla
+              // con `p` en la portada. "Ver visión general" en la portada
+              // sigue siendo el único sitio que navega de verdad al proyecto.
+              <Link key={p.id} href={`/dashboard/domains?active=${p.id}`} className="dm2-card">
                 <div className="dm2-card-top">
                   <DomainFavicon name={p.name} domain={p.domain} size={38} radius={11} />
                   <div style={{ minWidth: 0 }}>

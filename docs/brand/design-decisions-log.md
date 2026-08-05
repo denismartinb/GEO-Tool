@@ -2787,6 +2787,32 @@ Dos reglas que quedan:
    despliegue real. Cuando el coste de equivocarse es "una pantalla que no
    estoy mirando", la única prueba que vale es la que mira todas.
 
+**Las tarjetas de la rejilla pasan de navegar a seleccionar (2026-08-05,
+mismo día).** Hasta aquí, tocar un dominio de la rejilla llevaba directo a su
+Visión general — el mismo gesto que la portada. El fundador probó eso en el
+preview y pidió lo contrario: *"pinchar en un dominio de abajo debe
+seleccionarlo y por tanto retornar a la misma página con ese dominio en la
+card principal"*. La portada deja de ser sólo un escaparate del dominio más
+reciente y pasa a ser el resultado de una elección.
+
+Implementado con un parámetro en la propia URL —
+`/dashboard/domains?active=<id>`— en vez de estado de cliente o una cookie de
+sesión: la pantalla sigue siendo un Server Component puro, la selección
+sobrevive a recargar y compartir el enlace, y no hace falta inventar
+persistencia nueva para algo que dura lo que dura la navegación. `active` se
+valida contra `projects`, que ya viene acotado por RLS — un id ajeno o
+inexistente simplemente no casa con nada y cae al criterio de reserva de
+siempre (el más reciente), igual que cuando no hay parámetro.
+
+**Deliberadamente no tocado:** el bloque de proyecto de la barra lateral
+(`proj-switch`) sigue sin enterarse de esta selección — deriva el proyecto
+activo de la URL de las rutas `/dashboard/projects/[id]/*`, y `/dashboard/
+domains?active=…` no es una de ellas. Elegir un dominio en Dominios no cambia
+qué dominio ve la barra lateral en el resto de la consola; sólo cambia qué
+portada ves en Dominios. Unificar los dos sería una noción de "dominio
+seleccionado" a nivel de cuenta, persistida más allá de una URL — alcance
+mayor, pedido explícito propio si algún día hace falta.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el

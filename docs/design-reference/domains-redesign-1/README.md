@@ -74,9 +74,18 @@ fidelidad, no una interpretación:
 - **No hay raíl: siempre rejilla**, dos columnas en móvil y cuatro en
   escritorio. La caja «Añadir dominio» es una celda más, del mismo tamaño que
   un dominio.
-- **La portada lleva borde azul y fondo teñido**, con las píldoras
-  «Seleccionado» y, si procede, «En progreso» / «Auditando». El botón «Ver
-  visión general» va a ancho completo con chevron.
+- **La portada lleva borde azul y fondo teñido**, y si procede la píldora
+  «En progreso» / «Auditando». El botón «Ver visión general» va a ancho
+  completo con chevron. La píldora «Seleccionado» que llevaba al lado se quitó
+  (fundador, 2026-08-05): era redundante con el borde, la única marca de esa
+  clase en toda la pantalla.
+- **Pinchar una tarjeta de la rejilla selecciona, no navega.** Vuelve a
+  `/dashboard/domains?active=<id>` con ese dominio en la portada — «Ver visión
+  general» sigue siendo el único control que navega de verdad al proyecto
+  (fundador, 2026-08-05: "pinchar en un dominio de abajo debe seleccionarlo...
+  y retornar a la misma página con ese dominio en la card principal"). Sin
+  parámetro, o si no casa con ningún dominio de la cuenta, cae al más
+  reciente — mismo criterio de reserva que ya usaba antes de este cambio.
 - **A Dominios se llega pinchando el bloque de dominio** de la barra lateral,
   no por una entrada de menú propia. Es el gesto que ya existía para Escaneos
   (founder 2026-07-18, reafirmado 2026-08-05 tras probar la entrada de menú y
