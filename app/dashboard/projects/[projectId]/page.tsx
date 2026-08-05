@@ -36,6 +36,13 @@ import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
 import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
+import {
+  GEO_SCORE_COMPONENT_META,
+  parseEngineCoverage,
+  translateDroppedComponentReason,
+  type GeoScoreEngineCoverage
+} from "./geo-score-breakdown";
 
 /* ---- constants & helpers ---- */
 
@@ -130,8 +137,11 @@ type GeoScoreDetails = {
     presence?: GeoScoreComponent;
     prominence?: GeoScoreComponent;
     standing?: GeoScoreComponent;
+    /** Technical readiness of the site (GEO-SCORE-V4, ADR 0033) — web_audit_snapshots.readiness_score, deterministic, no LLM. */
+    technical?: GeoScoreComponent;
     authority?: GeoScoreComponent;
   };
+  engine_coverage?: GeoScoreEngineCoverage | null;
   formula?: string;
 };
 
@@ -1002,6 +1012,96 @@ export default async function ProjectDetailPage({
           </div>
           </div>
           </div>
+
+          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7): stated
+              obligation, not polish — "wherever the GeoScore is shown, its
+              component breakdown must be visible", so "subió porque
+              arreglaste la web" and "subió porque las IAs te citan más" son
+              distinguibles. Placed right under the gauge, full width, its
+              OWN labelled section — never a bare number beside the gauge,
+              which is exactly what log §22 decisión 1 warned reads as a
+              second score. Only rendered once there is a real score to
+              explain. */}
+          {geoScore?.components ? (
+            <>
+              {geoScore.engine_coverage?.status === "partial" ? (
+                <div
+                  className="feedback"
+                  style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginTop: 14 }}
+                >
+                  <p style={{ fontWeight: 650 }}>{engineCoverageNotice(parseEngineCoverage(geoScore.engine_coverage))}</p>
+                </div>
+              ) : null}
+
+              <div className="ov2-sec-lbl">
+                Desglose del GEO Score
+                <span style={{ fontWeight: 600, color: "var(--ink-4)", textTransform: "none", letterSpacing: 0 }}>
+                  {gaugeScore}/100
+                </span>
+              </div>
+              <div className="card" style={{ padding: "6px 18px" }}>
+                {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
+                  const component = geoScore.components?.[key];
+                  // A run scored before GEO-SCORE-V4 has no `technical` key at
+                  // all — not a null value, the key simply does not exist.
+                  // Returning null there made the row VANISH, so the breakdown
+                  // silently had four rows on older scans and five on new ones,
+                  // with nothing saying why. That is the "no silent gap" failure
+                  // this codebase keeps paying for (.claude/rules/scan.md, "No
+                  // mute rows"). The row now always renders; a pre-v4 run says
+                  // so and tells the user what makes it appear.
+                  const isLegacyRun = !component && key === "technical";
+                  if (!component && !isLegacyRun) return null;
+                  const meta = GEO_SCORE_COMPONENT_META[key];
+                  const isDropped = isLegacyRun || component?.value === null || component?.value === undefined;
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 0",
+                        borderBottom: "1px solid var(--line-soft)"
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                          {meta.label}
+                          {key === "technical" ? (
+                            <Link
+                              href={`/dashboard/projects/${projectId}/web-audit`}
+                              style={{ marginLeft: 8, fontSize: 11, fontWeight: 650, color: "var(--brand-blue)" }}
+                            >
+                              Ver auditoría web →
+                            </Link>
+                          ) : null}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                          {isLegacyRun
+                            ? "Este escaneo es anterior a que la salud técnica entrara en el GEO Score. Se incluirá en tu próximo escaneo."
+                            : isDropped
+                              ? translateDroppedComponentReason(component?.reason)
+                              : meta.hint}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {isDropped ? (
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-4)" }}>No disponible</span>
+                        ) : (
+                          <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
+                            {Math.round(component?.value as number)}
+                            <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+
+          ) : null}
 
           {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
               `display: contents` default as `.ov2-hero` above — no effect on

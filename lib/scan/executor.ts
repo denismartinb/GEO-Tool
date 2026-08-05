@@ -10,7 +10,12 @@ import {
   computeRecommendationTransition,
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
+import { computeEngineCoverage } from "@/lib/scan/engine-coverage";
 import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
+import {
+  resolveTechnicalComponent,
+  TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
+} from "@/lib/scoring/geo-score-technical";
 import { computeRunScoresFromResults, SCORING_VERSION } from "@/lib/scoring/run-scoring";
 import { checkAndSendScoreDropAlert } from "@/lib/scan/score-alert";
 import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
@@ -946,6 +951,37 @@ export async function executePendingScan({
       .eq("run_id", runId);
 
     const completedPromptResults = (promptResults ?? []).filter((row) => row.status === "completed");
+
+    // GEO-SCORE-V4 Fase B (docs/adr/0033): record whether this run actually
+    // measured every engine the plan promises. A prompt job succeeds when at
+    // least one engine returns, so a provider outage removes rows from the
+    // sample without failing anything — worth ~13 GEO points in the
+    // reproduction in docs/geo-score-variability-2026-08.md §1. The score is
+    // still computed over exactly the rows that exist; this only records the
+    // fact so the surfaces can stop presenting a partial run as a full one.
+    const engineCoverage = computeEngineCoverage({
+      expectedProviders: providers,
+      observedProviders: completedPromptResults.map((row) => row.provider)
+    });
+
+    // GEO-SCORE-V4 (docs/adr/0033): the technical component. The audit for
+    // THIS run has not run yet at this point (it is enqueued after the run
+    // completes, docs/adr/0027), so this normally resolves to the project's
+    // most recent earlier snapshot and is re-resolved exactly when this run's
+    // own audit lands (rescoreRunWithTechnicalSnapshot).
+    const { data: auditSnapshots } = await service
+      .from("web_audit_snapshots")
+      .select("id, scan_id, readiness_score, created_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(TECHNICAL_SNAPSHOT_LOOKUP_LIMIT);
+
+    const technicalResolution = resolveTechnicalComponent({
+      runId,
+      runFinishedAt: new Date(),
+      snapshots: auditSnapshots ?? []
+    });
+
     const scores = computeRunScoresFromResults(
       completedPromptResults.map((row) => ({
         id: row.id,
@@ -961,7 +997,12 @@ export async function executePendingScan({
         provider: row.provider,
         extraction_version: row.extraction_version
       })),
-      project.domain
+      project.domain,
+      {
+        technical: technicalResolution.component,
+        technicalReason: technicalResolution.reason,
+        engineCoverage
+      }
     );
 
     await service.from("run_scores").upsert(

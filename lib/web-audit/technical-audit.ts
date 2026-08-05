@@ -7,6 +7,7 @@ import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
+import { rescoreRunWithTechnicalSnapshot } from "@/lib/scoring/rescore-run";
 import { checkSnapshotRateLimit, DEFAULT_SNAPSHOT_RATE_LIMIT } from "@/lib/web-audit/snapshot-rate-limit";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib/web-audit/fetch-page";
@@ -521,6 +522,25 @@ export async function runTechnicalAuditCore({
       previousSnapshot: latestSnapshot ? { pages: latestSnapshot.pages, bots: latestSnapshot.bots } : null,
       currentSnapshot: { pages: sanitizedPages, bots }
     });
+
+    // GEO-SCORE-V4 (docs/adr/0033): this snapshot is the technical component
+    // of the run it was triggered by, so the run's composite is re-resolved
+    // against it now. Fail-soft on purpose and by precedent (the score-drop
+    // alert below the scan's own scoring uses the same reasoning): a scoring
+    // correction must never turn a successful, already-persisted audit into a
+    // failed one. If this throws, the snapshot still stands and the run keeps
+    // the score it already had.
+    if (scanId) {
+      try {
+        await rescoreRunWithTechnicalSnapshot({ service, projectId, runId: scanId });
+      } catch (rescoreError) {
+        console.error(`${LOG_PREFIX} rescore_failed`, {
+          project_id: projectId,
+          scan_id: scanId,
+          error: rescoreError instanceof Error ? rescoreError.message : "unknown"
+        });
+      }
+    }
 
     console.info(`${LOG_PREFIX} completed`, {
       project_id: projectId,

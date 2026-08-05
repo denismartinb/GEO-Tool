@@ -9,6 +9,7 @@ import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { FormattedResponse } from "@/components/ui/formatted-response";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import { sampleCountOf, sampleLabel } from "@/lib/scan/sample-display";
+import { matchDisplayName } from "@/lib/brand-aliases/match-display-name";
 // Same brand-domain matching the Citations page and run-scoring use, so
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
@@ -30,7 +31,7 @@ type Props = {
 };
 
 type ExtractedJson = {
-  brand?: { mentioned?: boolean; evidence?: string[] };
+  brand?: { mentioned?: boolean; evidence?: string[]; display_name_found?: string | null };
   competitors?: Array<{ name?: string; mentioned?: boolean; evidence?: string[] }>;
   citations?: Array<{
     url?: string | null;
@@ -157,7 +158,19 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
       if (aOwn === bOwn) return 0;
       return aOwn ? -1 : 1;
     });
-    return { row: r, meta: getEngineMeta(r.provider), evidence, citations };
+    // Fase −1c (docs/geo-score-variability-2026-08.md §3): WHICH of the
+    // brand's known names this mention actually matched — the tracked brand
+    // string, or one of its aliases. Purely presentational, computed over
+    // this row's OWN snapshot (frozen at scan time, ADR 0025), never over the
+    // project's current brand_aliases, so a later alias edit can't relabel
+    // how an old mention is explained. Falls back to `projectBrand` only for
+    // rows persisted before brand_snapshot existed.
+    const displayNameMatch = matchDisplayName(
+      ext?.brand?.display_name_found,
+      r.brand_snapshot ?? projectBrand,
+      r.brand_aliases_snapshot ?? []
+    );
+    return { row: r, meta: getEngineMeta(r.provider), evidence, citations, displayNameMatch };
   });
   const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0);
   const citationGroups = engineGroups.filter((g) => g.citations.length > 0);
@@ -402,6 +415,17 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                             <EngineGlyph provider={normalizeProvider(g.row.provider)} />
                           </span>
                           <span className="nm">{g.meta.label}</span>
+                          {/* Fase −1c: dice explícitamente si la mención contó
+                              a través de un alias, no de "{projectBrand}"
+                              literal — el hueco que ADR 0025 dejó documentado
+                              sin arreglar ("este panel muestra la cita pero
+                              nunca dice que la mención contó porque casó con
+                              'Firefox' en vez de con 'Mozilla'"). */}
+                          {g.displayNameMatch?.isAlias ? (
+                            <span className="badge badge-accent" style={{ fontSize: 10 }}>
+                              vía alias «{g.displayNameMatch.matchedName}»
+                            </span>
+                          ) : null}
                         </div>
                         {g.evidence.map((ev, i) => (
                           <p key={i} className="pr2-evi">

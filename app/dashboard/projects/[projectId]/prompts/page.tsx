@@ -26,6 +26,18 @@ export type ResultRow = {
   provider: string | null;
   /** SAMPLING-1 (ADR 0030): which repetition of this (prompt, engine) the row is. Null on rows written before migration 0028 — which is sample 0. */
   sample_index: number | null;
+  /**
+   * Brand string and alias set as they were AT SCAN TIME (ADR 0025) — the
+   * ones `verifyMention` actually matched this row's `display_name_found`
+   * against. Used only to show WHICH known name a mention matched (Fase
+   * −1c); never to decide mentioned/not-mentioned, which already happened at
+   * scan time. Deliberately the snapshot, not the project's CURRENT
+   * brand_aliases: aliases can change after a scan, and using today's list
+   * to explain yesterday's verdict would attribute a match to a name that
+   * didn't exist yet when the row was scored.
+   */
+  brand_snapshot: string | null;
+  brand_aliases_snapshot: string[] | null;
 };
 
 export type TopicGroup = {
@@ -120,7 +132,7 @@ export default async function PromptsPage({
     ? await supabase
         .from("scan_prompt_results")
         .select(
-          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider, sample_index"
+          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider, sample_index, brand_snapshot, brand_aliases_snapshot"
         )
         .eq("project_id", projectId)
         .eq("run_id", latestRun.id)

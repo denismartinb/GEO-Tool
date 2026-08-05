@@ -5,6 +5,7 @@ import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { PodiumRow } from "./podium-row";
 import { ManageCompetitorsPanel } from "./manage-competitors-panel";
+import { ManageBrandAliasesPanel } from "./manage-brand-aliases-panel";
 import { PromptGapSection } from "./prompt-gap-section";
 import { SuggestedCompetitorsSection } from "./suggested-competitors-section";
 import { PositionTrendChart, type TrendPoint, type TrendSeries } from "@/components/ui/position-trend-chart";
@@ -124,28 +125,36 @@ export default async function CompetitorsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) + active prompts (for topic map) */
-  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }, { data: projectPrompts }] = await Promise.all([
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain, is_active, created_at")
-      .eq("project_id", projectId)
-      .order("is_active", { ascending: false })
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("scan_runs")
-      .select("id, status, created_at, finished_at")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_runs")
-      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase.from("project_prompts").select("id, category").eq("project_id", projectId).eq("is_active", true)
-  ]);
+  /* 1. Configured competitors + all completed runs + recent runs (for activeRun detection) + active prompts (for topic map) + the project's own brand-identity alias list (Fase −1c) */
+  const [{ data: competitors }, { data: allRuns }, { data: recentRuns }, { data: projectPrompts }, { data: brandAliasesRow }] =
+    await Promise.all([
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain, is_active, created_at")
+        .eq("project_id", projectId)
+        .order("is_active", { ascending: false })
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("scan_runs")
+        .select("id, status, created_at, finished_at")
+        .eq("project_id", projectId)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("scan_runs")
+        .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase.from("project_prompts").select("id, category").eq("project_id", projectId).eq("is_active", true),
+      // requireActiveProject doesn't select brand_aliases (docs/geo-score-
+      // variability-2026-08.md §3, Fase −1c), so it's fetched separately here
+      // rather than widening that shared helper's select outside this
+      // phase's ownership. RLS already scopes this to the owner
+      // (projects_select_owner, supabase/migrations/0002_v0_rls.sql).
+      supabase.from("projects").select("brand_aliases").eq("id", projectId).maybeSingle()
+    ]);
+  const brandAliases = (brandAliasesRow?.brand_aliases as string[] | null) ?? [];
 
   const configuredCompetitors = competitors ?? [];
   const activeCompetitors = configuredCompetitors.filter((c) => c.is_active);
@@ -605,6 +614,46 @@ export default async function CompetitorsPage({
               </>
             )}
           </div>
+        </div>
+
+        {/* Identidad de marca (Fase −1c, docs/geo-score-variability-2026-08.md
+            §3): `brand_aliases` already decides whether an AI answer counts
+            as a mention of the brand (verifyMention, ADR 0021/0025) — this is
+            the first UI that lets the owner see, add or remove them, closing
+            the "unmitigated" risk ADR 0025 shipped with. "Gestionar" sits on
+            the section label, same rule as "Cuota de voz en IA" below
+            (docs/brand/design-decisions-log.md §3.2/§10). Shown unconditionally
+            here (not gated on hasData/hasCompetitiveData): alias identity is a
+            project-level setting independent of whether a scan has run yet. */}
+        {/* id targeted by the Overview's GEO Score breakdown link (Task 3,
+            follow-up to Fase −1c): a user who lands here from "¿La IA
+            recomienda un producto tuyo...?" needs to arrive AT this section,
+            not just at the top of a long page. */}
+        <div id="identidad-de-marca" className="cm2-sec-lbl" style={{ scrollMarginTop: 80 }}>
+          Identidad de marca
+          <ManageBrandAliasesPanel projectId={projectId} brand={project.brand} aliases={brandAliases} />
+        </div>
+        <div className="card" style={{ padding: "14px 16px" }}>
+          <p style={{ fontSize: 12.5, color: "var(--ink-3)", lineHeight: 1.6, margin: 0 }}>
+            {brandAliases.length > 0 ? (
+              <>
+                Además de <b>{project.brand}</b>, una respuesta de IA también cuenta como mención de tu marca cuando
+                nombra: {brandAliases.map((alias, i) => (
+                  <span key={alias}>
+                    {i > 0 ? ", " : ""}
+                    <b>{alias}</b>
+                  </span>
+                ))}
+                .
+              </>
+            ) : (
+              <>
+                Hoy solo cuenta como mención una respuesta que nombre literalmente <b>{project.brand}</b>. Si la IA
+                recomienda un producto tuyo sin nombrar a la empresa —por ejemplo &ldquo;Firefox&rdquo; en vez de
+                &ldquo;Mozilla&rdquo;—, esa respuesta no se cuenta a menos que añadas ese nombre como alias.
+              </>
+            )}
+          </p>
         </div>
 
         {/* Empty: no competitors configured */}

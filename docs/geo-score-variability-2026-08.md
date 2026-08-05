@@ -4,9 +4,12 @@
 prueba "Mozilla" (`mozilla.org`) sin cambiar nada y el GEO Score se movió
 **44 puntos** (30 → 74). *"No nos podemos permitir esta variabilidad."*
 
-**Estado:** Fase 0 implementada (ADR 0024). **Fase −1 implementada**
-(ADR 0025, migración `0025` aprobada por el fundador el 2026-08-02 junto con
-la derivación automática de alias). Fases 1–3 pendientes.
+**Estado (2026-08-05):** Fases 0, −1, −1c, 1 y 2 implementadas. **GEO-SCORE-V4
+implementada** (ADR 0033): la nota de auditoría técnica entra en el compuesto
+con peso .20, y por ser determinista baja un 20 % la desviación típica que el
+ruido de los LLM imprime en el score. Siguen pendientes la Fase 1b
+(recalibración, bloqueada por datos — ADR 0031), la Fase −1b (dedupe de
+entidades de la misma marca) y la Fase 3 (candado).
 
 ---
 
@@ -135,6 +138,18 @@ Mahou/San Miguel).
   lo reintrodujo. Verificable a posteriori: `scan_prompt_results.model`
   guarda el `modelVersion` real devuelto por la API.
 
+  **Medido el 2026-08-05, y el resultado cierra la vía:** las 2.801 filas de
+  Gemini guardan un único valor, `gemini-2.5-flash` — el alias mismo. **No hay
+  ningún id versionado que pinear**, así que la violación de ADR 0002 no se
+  puede cerrar desde nuestro lado. No es que faltara mirar: no existe el dato.
+
+  **Y hay un matiz que conviene no perder**, porque invita a concluir de más:
+  `lib/llm/gemini.ts` persiste `data.modelVersion ?? model`. Como el fallback
+  es exactamente el alias que pedimos, **"la API devolvió el alias" y "la API
+  no devolvió nada" producen la misma fila** y son indistinguibles en la base
+  de datos. Si alguna vez importa saber cuál de las dos es, hay que registrar
+  la ausencia por separado antes de volver a preguntárselo a estos datos.
+
 ---
 
 ## 3 · Plan de fases
@@ -149,6 +164,10 @@ Mahou/San Miguel).
 | 1b | Recalibrar pesos (.40/.25/.20/.15) y bandas 70/40 con la distribución observada de proyectos reales; revisar si `prominence` merece 0.25 ahora que deja de duplicar `presence` | Medio | **Propuesta escrita** (ADR 0031) · sigue bloqueada por datos: sólo los runs desde el 2026-08-05 son válidos, ver ahí el porqué |
 | **2** | Muestreo: repeticiones por prompt en planes de pago | Coste por escaneo | **Implementada** (SAMPLING-1, ADR 0030) |
 | **3** | Candado: spec normativa, golden set congelado, tests de propiedad, gate de CI | Bajo | Pendiente |
+| **V4-A** | UI de alias (cierra la Fase −1c), investigación de titulares de grounding, pin del modelo | Bajo | **UI implementada** · titulares **respondido** (ver §6) · pin **bloqueado**: exige observar un `modelVersion` real en producción |
+| **V4-B** | Cobertura de motores: un run que midió menos motores de los prometidos lo persiste y lo dice | Bajo · no cambia el score | **Implementada** (ADR 0033 §5) |
+| **V4-C** | Quinto componente `technical` (.20), determinista, con re-puntuación al aterrizar la auditoría del run | Medio · **cambia la fórmula** | **Implementada** (ADR 0033) |
+| **V4-D** | Score de ventana: mediana de los últimos 3 runs comparables | Medio · cambia el titular | **Calculado y probado, NO promovido a titular** (ADR 0033 §9) |
 
 La Fase 0 va primero por ser la única sin migración ni cambio de significado.
 La Fase −1 es el P0 real: un número **equivocado** es peor que uno inestable.
@@ -274,3 +293,34 @@ viaja a su lado en columna propia. `prominence` pasa a usar el puesto
 condicionado con su propio suelo de muestra. Los pesos y las bandas no se
 tocan a propósito: cambiar la medición y los pesos a la vez haría que ningún
 efecto fuera atribuible (Fase 1b).
+
+---
+
+## 6 · Titulares de grounding: pregunta cerrada (2026-08-05)
+
+La §2 dejó abierto si los titulares que trae el grounding acaban dentro de
+`raw_response_text` y por tanto se cuentan como menciones que el modelo nunca
+escribió. Trazado el código de los dos proveedores con grounding:
+
+- **Gemini** (`lib/llm/gemini.ts`): el texto se construye **sólo** desde
+  `candidates[0].content.parts[].text`. Los `groundingChunks` (uri, title) van
+  a un campo **separado**, nunca se concatenan al texto.
+- **OpenAI** (`lib/llm/openai.ts`): el texto sale sólo de los bloques
+  `output_text`; las anotaciones `url_citation` (title, url) viajan aparte.
+- **Persistencia** (`lib/scan/executor.ts`): `raw_response_text` y
+  `raw_response_json.grounding_chunks` son dos columnas distintas.
+- **Extracción** (`lib/scan/extraction.ts`): los chunks se consumen por una
+  ruta separada que sólo produce citas; jamás se unen a ningún texto ni tocan
+  la detección de mención.
+
+**Conclusión: no hay ningún punto donde el código pegue metadatos de grounding
+dentro del texto.** V7 queda descartada como defecto de código.
+
+**Lo que el código no puede descartar, y queda como riesgo declarado:** que el
+modelo, en su propio texto generado, parafrasee casi literalmente el titular de
+una página recuperada. El ejemplo de la §2 —*"Descarga Firefox 45, la última
+actualización del navegador de Mozilla"*— tiene exactamente esa pinta, y bajo
+esta tubería cuenta como mención real porque está en el texto generado. Es una
+pregunta de comportamiento del modelo, no un fallo del pipeline, y detectarla
+exigiría pedir y parsear los `groundingSupports` de Gemini (la correspondencia
+tramo→fuente), que hoy no se solicitan.
