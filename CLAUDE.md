@@ -147,7 +147,12 @@ deploys, no las garantías.
 
 `scripts/vercel-should-build.sh` (enganchado como `ignoreCommand` en
 `vercel.json`) salta el build cuando el push sólo toca `docs/`, `.claude/`,
-`.github/`, `tests/`, `agents/` o prosa de raíz (`*.md`). Compara contra el
+`.github/`, `tests/`, `agents/` o prosa de raíz (`*.md`). **Excepción:
+`tests/pilot/**` sí construye** — el piloto sólo corre contra un preview
+(`ux-pilot.yml` se dispara con `deployment_status` y nada más), así que saltar
+el build de un cambio en el propio piloto lo deja imposible de ejercitar
+(pasó el 2026-08-05: un arreglo del barrido se desplegó «Ignored» y ningún
+piloto lo probó). Mismo argumento que ya protegía a `scripts/`. Compara contra el
 último deploy con éxito de la rama, no contra `HEAD^`, y **nunca salta
 producción**. Ahorra minutos de build y pasadas de piloto, no deployments: el
 tope diario se aplica al crear el deployment, aguas arriba del build (medido en
