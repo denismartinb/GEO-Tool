@@ -2304,18 +2304,17 @@ sostenía que la auditoría espera a que alguien la pida. Desde §18 corre sola
 tras cada escaneo, así que el botón ofrecía trabajo que el producto ya no
 necesita — y, peor, insinuaba que sin pulsarlo no pasaría nada.
 
-**Qué queda en su sitio: estado, no control.** Tres frases y ninguna más:
+**Qué queda en su sitio: nada.** La primera versión puso ahí una pastilla de
+estado con la fecha dentro (`Auditoría actualizada · 5 ago 2026`). Al verla en
+el preview el fundador cortó también eso: *"quitamos lo de auditoría
+actualizada, dejamos solo la info de la cabecera"*. Y tenía razón — la
+cabecera pegajosa ya dice **la fecha de la auditoría**, **si cubre el último
+escaneo** (`· sobre el escaneo del …`, que sólo aparece cuando está al día) y
+**«Auditando»** mientras una campaña corre. La pastilla repetía las tres cosas
+un centímetro más abajo.
 
-- `Auditoría actualizada · 5 ago 2026` — **la fecha va aquí** porque el estado
-  y su "cuándo" son un solo hecho, no dos. Antes la pastilla decía el estado y
-  la cabecera decía la fecha, y había que juntarlas mentalmente.
-- `Auditando… 3/6 temas` — mientras una campaña avanza de verdad.
-- `Pendiente del último escaneo` — hay un escaneo más nuevo que la auditoría
-  todavía no ha alcanzado. **Se dice en vez de callarlo**: la cola puede
-  tardar, y no decir nada se leería como "está al día", que es justo la clase
-  de silencio tranquilizador que este producto no debe permitirse.
-
-Nada cuando el proyecto nunca se auditó: el vacío del cuerpo ya lo cuenta.
+Lección, porque se repitió dentro del mismo PR: al quitar un control, la
+tentación es sustituirlo por algo. A veces el hueco es la respuesta.
 
 **La copia que mentía, corregida.** Tres textos seguían describiendo el mundo
 manual: el *hint* de Salud técnica y el vacío del bloque técnico decían "al
@@ -2335,6 +2334,14 @@ manual y pasa a ser lo que siempre debió ser: un atajo invisible.
 automática falla, el usuario no puede forzarla. Es aceptable porque el fallo
 definitivo avisa al operador por email y el cron diario reintenta, pero es un
 grado menos de control del que había ayer.
+
+**Lo que se pierde al quitar también la pastilla, y se acepta:** el mensaje de
+error del reanudado en cliente ya no tiene dónde renderizarse. No es
+silenciar un fallo accionable — el reanudado es invisible para el usuario, el
+siguiente render lo reintenta y la cola del backend también—, pero conviene
+que conste: hoy un fallo de esa ruta no se ve en pantalla. El banner de "plan
+pausado a mitad de auditoría" sigue cubriendo el único caso que de verdad deja
+al usuario atascado sin explicación.
 
 ---
 

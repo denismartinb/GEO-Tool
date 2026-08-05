@@ -19,7 +19,6 @@ import {
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
-import { AuditStatus } from "./audit-status";
 import { WebAuditProvider } from "./web-audit-context";
 import { AuditTabsProvider, AuditTabBar, AuditTabPanel } from "./audit-tabs";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
@@ -1121,21 +1120,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           chrome untouched, matching this repo's established nesting. */}
       <div className="wa2-scope wa2-page">
 
-      {/* AUDIT-NO-BUTTON-1 (founder, 2026-08-05): this was the page's one
-          "Auditar ahora" button. The audit has run on its own after every
-          scan since AUDIT-AFTER-SCAN-1, so the button asked the user to
-          trigger something that had already happened — and implied the audit
-          was waiting for them. What is left is state, not a control. */}
-      {canAudit && (
-        <AuditStatus
-          canAudit={canAudit}
-          // `auditedScanDate` is only non-null when the stored audit was built
-          // from the newest scan, which is exactly "al día". Without a summary
-          // there is nothing audited yet — null, not false.
-          upToDate={summary ? auditedScanDate !== null : null}
-          auditedAt={latestMap ? formatDate(latestMap.generatedAt) : null}
-        />
-      )}
+      {/* AUDIT-NO-BUTTON-1 (founder, 2026-08-05): here lived the page's one
+          "Auditar ahora" button, and briefly after it a status pill. Both are
+          gone. The audit has run on its own after every scan since
+          AUDIT-AFTER-SCAN-1, so the button asked for work already done; and
+          once the pill carried the date too, it repeated what the sticky
+          header above already says ("dejamos solo la info de la cabecera").
+          The header states the audit date, whether it covers the newest scan,
+          and shows its own "Auditando" pill while a campaign runs — there was
+          nothing left for a second element to add. */}
 
       {/* A campaign can be left "running" server-side while the account's
           plan lapses mid-audit (e.g. downgraded via Stripe billing) — the
