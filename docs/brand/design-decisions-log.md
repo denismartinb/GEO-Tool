@@ -2413,6 +2413,59 @@ barra a pantalla completa es una convención de presentación, no una medida —
 ajustable con datos reales de duración. Y la Auditoría web mantiene su propio
 chip "Auditando", que es otro concepto y no se ha tocado.
 
+## 25. Fuera el botón «Auditar ahora» (AUDIT-NO-BUTTON-1, 2026-08-05)
+
+**Estado: implementada.** Petición directa del fundador: *"quita el botón
+auditar ahora y pon la fecha en auditoría actualizada"*. Cierra la secuencia
+que él mismo fijó el 2026-08-04 al aprobar §18 — primero que la auditoría
+funcione sola, después retirar el disparo manual.
+
+**Qué desaparece.** El botón, y con él la última pieza de la pantalla que
+sostenía que la auditoría espera a que alguien la pida. Desde §18 corre sola
+tras cada escaneo, así que el botón ofrecía trabajo que el producto ya no
+necesita — y, peor, insinuaba que sin pulsarlo no pasaría nada.
+
+**Qué queda en su sitio: nada.** La primera versión puso ahí una pastilla de
+estado con la fecha dentro (`Auditoría actualizada · 5 ago 2026`). Al verla en
+el preview el fundador cortó también eso: *"quitamos lo de auditoría
+actualizada, dejamos solo la info de la cabecera"*. Y tenía razón — la
+cabecera pegajosa ya dice **la fecha de la auditoría**, **si cubre el último
+escaneo** (`· sobre el escaneo del …`, que sólo aparece cuando está al día) y
+**«Auditando»** mientras una campaña corre. La pastilla repetía las tres cosas
+un centímetro más abajo.
+
+Lección, porque se repitió dentro del mismo PR: al quitar un control, la
+tentación es sustituirlo por algo. A veces el hueco es la respuesta.
+
+**La copia que mentía, corregida.** Tres textos seguían describiendo el mundo
+manual: el *hint* de Salud técnica y el vacío del bloque técnico decían "al
+pulsar «Auditar ahora»" (ahora "sola tras cada escaneo"), y el aviso de
+conexión interrumpida pedía pulsar un botón que ya no existe (ahora "la
+auditoría continuará sola"). También "Todavía **no has auditado**" pasa a "no
+**se ha** auditado": ya no lo hace el usuario.
+
+**Lo que NO se quita, y es deliberado.** `WebAuditProvider` sigue reanudando
+sola una campaña a medias al abrir la página. No es un resto del botón: es lo
+que hizo que la pantalla se curara sola el 2026-08-04 mientras la cola drenaba
+despacio. No cuesta Gemini extra —es el mismo trabajo que haría el backend— y
+el usuario ni lo pide ni lo ve. Sin control visible, deja de ser una ruta
+manual y pasa a ser lo que siempre debió ser: un atajo invisible.
+
+**Riesgo asumido, dicho claro:** ya no hay escotilla manual. Si la auditoría
+automática falla, el usuario no puede forzarla. Es aceptable porque el fallo
+definitivo avisa al operador por email y el cron diario reintenta, pero es un
+grado menos de control del que había ayer.
+
+**Lo que se pierde al quitar también la pastilla, y se acepta:** el mensaje de
+error del reanudado en cliente ya no tiene dónde renderizarse. No es
+silenciar un fallo accionable — el reanudado es invisible para el usuario, el
+siguiente render lo reintenta y la cola del backend también—, pero conviene
+que conste: hoy un fallo de esa ruta no se ve en pantalla. El banner de "plan
+pausado a mitad de auditoría" sigue cubriendo el único caso que de verdad deja
+al usuario atascado sin explicación.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

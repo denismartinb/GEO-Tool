@@ -19,7 +19,6 @@ import {
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
-import { RunAuditButton } from "./run-audit-button";
 import { WebAuditProvider } from "./web-audit-context";
 import { AuditTabsProvider, AuditTabBar, AuditTabPanel } from "./audit-tabs";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
@@ -1079,7 +1078,9 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             Citations and Prompts, the two other v3-repainted pages, only put
             passive badges/status pills here, never an action button. The
             real "Auditar ahora" button moved into the page body below,
-            leaving this side purely informational. */}
+            leaving this side purely informational. (That button is gone
+            entirely since AUDIT-NO-BUTTON-1; the body now holds only the
+            audit's state.) */}
         <div className="ov-sticky-right" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {/* Two lengths, not one. `.ov-sticky-right` is `flex-shrink: 0`, so
               whatever sits here keeps its intrinsic width — fine for the short
@@ -1119,20 +1120,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           chrome untouched, matching this repo's established nesting. */}
       <div className="wa2-scope wa2-page">
 
-      {/* The one and only "Auditar ahora" control on the page (founder-
-          approved 2026-08-02) — no longer duplicated in the header AND the
-          empty state. It already drives BOTH the coverage campaign and the
-          piggybacked technical audit (WEB-AUDIT-R2), so this is genuinely
-          the single button that "audita todo". */}
-      {canAudit && (
-        <RunAuditButton
-          canAudit={canAudit}
-          // `auditedScanDate` is only non-null when the stored audit was built
-          // from the newest scan, which is exactly "al día". Without a summary
-          // there is nothing audited yet — null, not false.
-          upToDate={summary ? auditedScanDate !== null : null}
-        />
-      )}
+      {/* AUDIT-NO-BUTTON-1 (founder, 2026-08-05): here lived the page's one
+          "Auditar ahora" button, and briefly after it a status pill. Both are
+          gone. The audit has run on its own after every scan since
+          AUDIT-AFTER-SCAN-1, so the button asked for work already done; and
+          once the pill carried the date too, it repeated what the sticky
+          header above already says ("dejamos solo la info de la cabecera").
+          The header states the audit date, whether it covers the newest scan,
+          and shows its own "Auditando" pill while a campaign runs — there was
+          nothing left for a second element to add. */}
 
       {/* A campaign can be left "running" server-side while the account's
           plan lapses mid-audit (e.g. downgraded via Stripe billing) — the
@@ -1275,7 +1271,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                     hint={
                       technicalSnapshot
                         ? `Media de ${analyzedPagesCount} ${analyzedPagesCount === 1 ? "página clave" : "páginas clave"}`
-                        : "Se audita al pulsar «Auditar ahora»"
+                        : "Se audita sola tras cada escaneo"
                     }
                     delta={null}
                     pct={technicalSnapshot?.readiness_score ?? null}
@@ -1454,8 +1450,10 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             ) : (
               <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
                 <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
-                  Todavía no has auditado la salud técnica de tu web.{" "}
-                  {canAudit ? "Se comprueba automáticamente al pulsar «Auditar ahora»." : ""}
+                  {/* "no has auditado" ya no es cierto: nadie audita a mano
+                      desde AUDIT-NO-BUTTON-1. */}
+                  Todavía no se ha auditado la salud técnica de tu web.{" "}
+                  {canAudit ? "Se comprueba sola tras cada escaneo." : ""}
                 </p>
               </div>
             )}
@@ -1622,10 +1620,11 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                 aggregated Problemas/Correcto lists summarize.
                 RunTechnicalAuditButton retirado de aquí (founder-approved
                 2026-08-02: "prefiero que no haya dos botones distintos") —
-                "Auditar ahora" ya dispara la auditoría técnica en el mismo
+                "Auditar ahora" ya disparaba la auditoría técnica en el mismo
                 clic (WEB-AUDIT-R2, piggyback en web-audit-context.tsx), así
                 que este botón era estrictamente redundante, no una segunda
-                función real. */}
+                función real. Desde AUDIT-NO-BUTTON-1 no hay ningún botón: la
+                auditoría técnica corre con la automática tras cada escaneo. */}
             <div className="section-head" style={{ marginTop: 16 }}>
               <div className="section-title">Salud técnica GEO</div>
               <div className="section-desc">
