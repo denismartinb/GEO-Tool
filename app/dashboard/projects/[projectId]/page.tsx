@@ -34,6 +34,7 @@ import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
 import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
 /* ---- constants & helpers ---- */
 
@@ -235,7 +236,11 @@ export default async function ProjectDetailPage({
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
   const completedRunsCount = runs?.filter((r) => r.status === "completed").length ?? 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
-  const activeRun = runs?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = runs?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;

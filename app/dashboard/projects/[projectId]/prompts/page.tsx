@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { PromptsClient } from "./prompts-client";
 import { AddPromptsButton } from "./add-prompts-button";
@@ -98,7 +99,11 @@ export default async function PromptsPage({
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   // 2. Prompts configurados (para category + is_active)
   const { data: projectPrompts } = await supabase

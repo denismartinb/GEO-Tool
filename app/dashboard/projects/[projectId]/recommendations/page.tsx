@@ -6,6 +6,7 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /**
@@ -75,7 +76,11 @@ export default async function RecommendationsPage({
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   const [{ data: recommendations }, { data: resolvedRecommendations }, { data: history }] = latestCompletedRun
     ? await Promise.all([

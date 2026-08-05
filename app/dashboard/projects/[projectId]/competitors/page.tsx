@@ -20,6 +20,7 @@ import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-win
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
 /* ---- Helpers ---- */
 
@@ -150,7 +151,11 @@ export default async function CompetitorsPage({
   const inactiveCompetitors = configuredCompetitors.filter((c) => !c.is_active);
   const completedRuns = allRuns ?? [];
   const completedRunIds = completedRuns.map((r) => r.id);
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
   const latestCompletedRun = completedRuns[0] ?? null;
   const previousCompletedRun = completedRuns[1] ?? null;
 

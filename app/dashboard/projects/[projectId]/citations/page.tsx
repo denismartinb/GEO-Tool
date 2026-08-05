@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
+import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
 import { CitationsClient } from "./citations-client";
 import {
@@ -56,7 +57,11 @@ export default async function CitationsPage({
         .eq("is_active", true)
     ]);
 
-  const activeRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
+  // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
+  // the progress bar keeps moving once generation is done instead of pinning
+  // at 100% while extraction is still working.
+  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
 
   const [{ data: results }, { data: score }] = latestRun
     ? await Promise.all([
