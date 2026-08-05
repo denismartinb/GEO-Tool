@@ -2685,6 +2685,70 @@ la cuenta no tiene nada sin leer, en vez de pasar en silencio.
 
 ---
 
+## 29. GEO para SaaS B2B — el segundo artículo semanal, y el primero apilado (GROWTH-3, W2, 2026-08-05)
+
+**Estado: implementada.** Segunda pieza de la cola semanal autónoma
+(`docs/content-calendar.md`, W2), en el cluster `sectores` que W1 abrió el
+mismo día. Slug `geo-para-saas-b2b`, keyword primaria "geo para saas b2b".
+
+**Se apila sobre la rama de W1, no sobre `main`, y eso fue una decisión.** W1
+(PR #342) no sólo publicó un artículo: le dio a `sectores` su `pillarIntro`,
+metió el cluster en el sitemap, y reescribió tres aserciones que codificaban
+"sectores está vacío" (`lib/blog/posts.test.ts` y
+`tests/pilot/journeys/public-pages.spec.ts`). Desde `main`, un segundo
+artículo del mismo cluster **vuelve a necesitar exactamente esos cambios**, así
+que partir de `main` habría significado escribirlos dos veces y colisionar con
+#342 en el merge. La rama de W2 mergea la de W1 y añade encima su artículo;
+cuando #342 entre en `main`, este PR se queda sólo con lo suyo. La regla
+general que deja: **un artículo que abre un cluster crea una dependencia
+estructural, y el siguiente artículo de ese cluster se apila, no se rehace.**
+
+**Verificación de fuentes, que es donde falló W1.** W1 atribuyó a Capital One
+Shopping Research una cifra que era del *2026 Retail Report* de Alchemer, y lo
+encontró el subagente `qa`. `Stat` exige `source`, pero el tipo protege contra
+la **ausencia** de fuente, no contra la fuente **equivocada** — no hay test
+posible para eso. Aquí las tres cifras se cruzaron contra varias búsquedas
+independientes antes de escribirlas, y una candidata se descartó por eso mismo:
+el "44,2% de las citas sale del primer 30% del contenido" circula atribuido al
+*AI Search Insight Report* de G2 y en realidad es de Growth Memo (Kevin Indig).
+No está en el artículo.
+
+**Dos límites del entorno, dichos porque afectan a lo que se puede afirmar.**
+La política de egress de la sesión bloquea `g2.com`, `6sense.com`,
+`businesswire.com` y `prnewswire.com`, así que **las cifras se verificaron por
+búsqueda cruzada, no abriendo el informe primario**. Y las dos son de estudios
+distintos con muestras distintas: G2 (1.076 responsables de compra, marzo de
+2026) y 6sense (más de 4.000 compradores, noviembre de 2025). El artículo lo
+dice en prosa, debajo del `StatGrid`, en vez de dejar que tres tarjetas
+seguidas parezcan un solo estudio.
+
+**Lo que el artículo declara que no sabe**, además de lo habitual: que no hay
+dato de compradores en castellano, que "publicar el precio aumenta las
+menciones" es deducción y no medición, y que **los dos estudios los publican
+empresas con interés comercial en que esos números sean altos**. Esa última
+línea no la exige ninguna regla; está porque callarla sería el mismo tipo de
+omisión que la atribución mal puesta de W1.
+
+**Un matiz que se cuenta en contra de la tesis.** El 61% del recorrido
+completado antes del primer contacto **había sido un 69%** el año anterior: los
+compradores contactan algo antes que hace un año, no más tarde. Se dice en el
+texto en vez de coger sólo la mitad que conviene.
+
+**Sin portada, en rojo a propósito.** `lib/blog/covers.test.ts` deja dos tests
+rojos (`declara coverImage` y `el fichero de portada existe`) hasta que el
+fundador deje `public/blog/geo-para-saas-b2b/cover.png` y se declare
+`coverImage` en `lib/blog/posts.ts`. Es el diseño de §14 y de
+`docs/agentic-weekly-post.md` §4: un check rojo es una pregunta visible; un
+degradado con icono es un defecto invisible.
+
+**Roto conocido, heredado de W1 y no arreglado aquí:** la `Figure` de
+`geo-para-ecommerce` no pasa `label`, que es obligatorio en el tipo, así que su
+pie renderiza un `<b>` vacío. El MDX no se comprueba con TypeScript, por eso no
+lo para nada. La `Figure` de W2 sí lo pasa. Arreglarlo toca el artículo de otro
+PR abierto y se deja para #342.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

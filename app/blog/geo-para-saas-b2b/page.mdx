@@ -1,0 +1,151 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PromptSet
+} from "@/components/blog/article";
+import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+
+export const post = getBlogPost("geo-para-saas-b2b");
+
+export const metadata = {
+  title: `${getSeoTitle(post)} — Genscore`,
+  description: getMetaDescription(post),
+  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">5 de agosto de 2026</p>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+El GEO para SaaS B2B no se juega en la pregunta *"¿qué tal es tu producto?"*. Se juega **meses antes**, en una secuencia de preguntas donde tu marca todavía no aparece: qué herramientas existen para este problema, cuáles se integran con lo que ya uso, cuánto cuestan de verdad. Cuando alguien pide una demo, la lista corta ya está hecha. Tu web está escrita para quien ya te conoce; esas preguntas las hace quien todavía no.
+
+</KeyTakeaway>
+
+En ecommerce el problema es que la respuesta solo tiene sitio para dos o tres nombres — lo contamos en <a href="/blog/geo-para-ecommerce">GEO para ecommerce</a>. En SaaS B2B el problema es distinto y más incómodo: **no es que la respuesta sea corta, es que llega demasiado pronto.**
+
+El formulario de demo es el primer punto donde tu empresa se entera de que existe una oportunidad. Y para entonces la mayor parte del trabajo de decisión ya ha ocurrido: en conversaciones internas, en un par de sitios de reseñas, en un hilo de Slack de un grupo de profesionales, y cada vez más en un chatbot.
+
+## ¿Cuánta gente decide así?
+
+Antes de reorganizar nada conviene mirar si esto está medido o es un titular. Hay dos estudios de terceros que apuntan en la misma dirección, y conviene no mezclarlos porque miden cosas distintas.
+
+<StatGrid label="Comportamiento del comprador de software B2B, según dos estudios de terceros">
+  <Stat value="51%" label="Compradores de software B2B que empiezan su investigación en un chatbot de IA más a menudo que en Google. Era el 29% un año antes" source="G2, 2026 Buyer Behavior Report" tone="blue" />
+  <Stat value="69%" label="Compradores que acabaron eligiendo un proveedor distinto del que tenían pensado, a partir de lo que les dijo el chatbot" source="G2, 2026 Buyer Behavior Report" tone="cyan" />
+  <Stat value="61%" label="Parte del recorrido de compra ya completada cuando un comprador B2B habla por primera vez con un proveedor" source="6sense, 2025 Buyer Experience Report" tone="warm" />
+</StatGrid>
+
+Las dos primeras cifras son del mismo informe: **G2**, encuesta en línea a 1.076 responsables e influyentes de decisiones de compra, realizada en marzo de 2026 y publicada en abril. La tercera es de un estudio **distinto y anterior**: el *Buyer Experience Report* de **6sense**, publicado en noviembre de 2025 sobre más de 4.000 compradores de Norteamérica, EMEA y APAC. No son datos propios de Genscore y no los presentamos como tales.
+
+Y la tercera merece un matiz que casi nunca se cuenta, porque **se mueve en contra de la versión fácil de esta historia**: ese 61% había sido un 69% en la edición anterior. Es decir, los compradores contactan con los proveedores *un poco antes* que hace un año, no más tarde. Lo que 6sense concluye de ahí no es que el comprador se haya vuelto más accesible, sino lo contrario: la ventana para influir en él se ha estrechado.
+
+El dato de ese mismo informe que más cambia lo que hay que hacer es otro: **el 94% de los grupos de compra ya tenían un proveedor favorito antes del primer contacto, y acabaron comprándole a ese favorito el 77% de las veces.** Aparecer tarde en esa conversación no es aparecer con desventaja. Es aparecer para hacer de comparación.
+
+## ¿Qué pregunta de verdad un comprador antes de pedir una demo?
+
+Aquí está la diferencia práctica con el SEO clásico. La palabra clave de tu categoría —*"software de gestión de gastos"*— es la que menos se parece a lo que alguien escribe en un chat. Lo que se escribe en un chat lleva contexto: tamaño del equipo, herramientas que ya tiene, restricción legal, presupuesto.
+
+<Figure
+  label="Figura 1"
+  caption="Ejemplo ilustrativo de la secuencia de preguntas previa a una demo, en una categoría B2B cualquiera. Las dos primeras no mencionan a ningún proveedor: es ahí donde se forma la lista corta."
+>
+
+<PromptSet
+  prompts={[
+    { text: "¿Qué herramientas hay para controlar los gastos de un equipo de 25 personas que ya usa Holded?", intent: "Descubrimiento con restricción" },
+    { text: "Alternativas más baratas a las de siempre para una pyme española", intent: "Formación de lista corta" },
+    { text: "Diferencias reales entre las dos opciones más recomendadas para una empresa que factura en España", intent: "Comparación" },
+    { text: "¿Cuánto cuesta de verdad? ¿Cobra por usuario o por uso?", intent: "Objeción: precio" },
+    { text: "¿Cumple el RGPD y dónde aloja los datos?", intent: "Objeción: riesgo" }
+  ]}
+/>
+
+</Figure>
+
+Fíjate en dos cosas.
+
+**Las dos primeras preguntas no mencionan a ningún proveedor.** Son las que construyen la lista corta, y son exactamente las que tu web no puede responder: tu web habla de ti, y ahí todavía no hay un "ti".
+
+**Las tres últimas sí te mencionan, pero la respuesta no la escribes tú.** El modelo contesta "¿cuánto cuesta?" con lo que encuentre publicado. Si no hay nada publicado, contesta con quien sí lo publica — o contesta que hay que pedir presupuesto, que en una comparación es la respuesta que pierde.
+
+## Por qué tu web no responde a ninguna de esas preguntas
+
+Tres motivos, y son bastante específicos del SaaS B2B:
+
+**"Precio: consúltanos".** Es la práctica más extendida de la categoría y la que peor encaja con este canal. Un modelo no puede poner una cifra que nadie ha publicado. La pregunta de precio se responde igualmente, con los proveedores que sí la publican y con lo que digan los agregadores. Esto es razonamiento sobre cómo funciona un motor generativo, no una medición nuestra — lo decimos abajo con más detalle.
+
+**Llamas a tu categoría por tu nombre.** El posicionamiento que te diferencia en una web ("plataforma de inteligencia de gasto") es el que te hace invisible en una pregunta que dice "controlar los gastos del equipo". El comprador pregunta por el problema, no por tu nombre para el problema.
+
+**La comparación la escriben otros.** Casi ningún SaaS publica su propia comparativa honesta frente al líder de su categoría. Los sitios de reseñas, los agregadores y los blogs del sector sí — y son ellos los que están respondiendo la tercera pregunta de la figura. Es el mismo patrón que en ecommerce: **la mayor parte del trabajo útil está fuera de tu dominio.**
+
+## Qué hacer, y en qué orden
+
+<Checklist
+  items={[
+    "Escribe primero las preguntas de la fase previa a la demo, no las de marca. Si todos tus prompts contienen tu nombre, estás midiendo tu reputación, no tu descubribilidad.",
+    "Mide la línea base: en qué preguntas apareces, en qué posición, y qué fuentes se citan cuando no apareces. Sin eso, cualquier cambio es una corazonada.",
+    "Mira quién ocupa tu hueco. En B2B suele haber tres o cuatro dominios que salen una y otra vez: reseñas, un par de comparativas y algún medio del sector.",
+    "Publica una cifra en tu página de precios, aunque sea un rango o un desde. Es el cambio más barato de todos y el único que responde una pregunta que hoy contesta tu competencia.",
+    "Publica lo que tu equipo de ventas ya contesta cien veces: integraciones concretas, dónde se alojan los datos, qué pasa al migrar. Esas páginas responden preguntas literales.",
+    "Escribe tu propia comparativa frente al líder de tu categoría, con los casos en los que pierdes. Una comparativa que gana en todas las filas no la cita nadie."
+  ]}
+/>
+
+El cuarto punto es el que más discusión genera en una empresa y el que menos cuesta ejecutar. No hace falta publicar toda la tarifa: hace falta que exista una cifra que un modelo pueda citar. Casi todo el GEO para SaaS B2B se parece a esto — no es contenido nuevo, es hacer citable lo que tu equipo de ventas ya dice por teléfono.
+
+## Lo que no sabemos, y no vamos a fingir que sí
+
+Cuatro cosas, dichas con la misma claridad con la que están las cifras de arriba:
+
+**No tenemos dato de España ni de compradores en castellano.** Los dos estudios citados son anglosajones —G2 encuesta sobre todo mercado estadounidense, 6sense reparte entre Norteamérica, EMEA y APAC—. No sabemos si un comité de compra de una pyme española se comporta como ese 51%, y no vamos a extrapolarlo.
+
+**No hemos medido que publicar el precio aumente las menciones.** Es una deducción de cómo funciona un motor generativo: no puede citar lo que no existe. Es razonable, no está medido, y lo marcamos como lo que es.
+
+**No sabemos cuánto tarda en notarse.** En B2B esto es peor que en ecommerce: con ciclos de compra de meses, entre publicar algo y ver un efecto en el pipeline hay demasiadas variables intermedias como para atribuir nada con honestidad.
+
+**Los dos estudios los publican empresas interesadas en la conclusión.** G2 es un sitio de reseñas de software y 6sense vende inteligencia de compra B2B; a ambos les conviene que estos números sean altos. Eso no los invalida —son las mejores fuentes públicas que hemos encontrado sobre esto— pero es parte del dato y callarlo sería hacer justo lo que este blog no hace.
+
+## Empieza por las preguntas, no por la web
+
+La tentación al plantearse el GEO para SaaS B2B es rehacer la home. Es caro, tarda un trimestre y no toca ninguna de las cinco preguntas de la figura.
+
+El primer paso barato es distinto: **escribir las veinte preguntas que hace tu comprador antes de conocerte, y ver qué contesta hoy la IA a cada una.** Eso se hace en una tarde y decide todo lo demás. La metodología para construir esa lista está en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts correctos</a>; para decidir contra quién compararte —que en B2B casi nunca es quien crees—, en <a href="/blog/como-elegir-competidores-analisis-geo">cómo seleccionar competidores</a>. Y si lo que quieres es entender qué se está midiendo exactamente, la <a href="/glosario/cuota-de-voz-en-ia">cuota de voz en IA</a> y la diferencia entre mención y <a href="/glosario/citacion-en-ia">citación</a> están en el glosario.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Sale tu producto cuando alguien le pregunta a la IA por tu categoría?"
+  text="Genscore lo mide sobre las preguntas que hace tu comprador antes de pedir una demo, y te dice qué fuentes se están citando en tu lugar."
+/>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

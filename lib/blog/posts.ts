@@ -163,6 +163,16 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "target",
     primaryKeyword: "geo para ecommerce",
     cluster: "sectores"
+  },
+  {
+    slug: "geo-para-saas-b2b",
+    title: "GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo",
+    description:
+      "Tu lista corta se decide antes de que nadie rellene el formulario. Qué pregunta a la IA un comprador B2B en esa fase, y qué hacer con ello.",
+    datePublished: "2026-08-05",
+    coverIcon: "building",
+    primaryKeyword: "geo para saas b2b",
+    cluster: "sectores"
   }
 ];
 

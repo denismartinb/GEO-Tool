@@ -81,7 +81,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | # | Tema | Cluster | Estado | PR |
 |---|---|---|---|---|
 | W1 | GEO para ecommerce: cómo aparecer cuando la IA recomienda productos | `sectores` | ✅ Publicado | #342 |
-| W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | 🔲 Pendiente | — |
+| W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | ✅ Publicado | #346 |
 | W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | 🔲 Pendiente | — |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
 | W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🔲 Pendiente | — |
@@ -89,8 +89,15 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
-para cerrar un hueco visible del sitio. **W1 lo abrió el 2026-08-05**; quedan
-W2 y W3 para completarlo.
+para cerrar un hueco visible del sitio. **W1 lo abrió el 2026-08-05** y **W2 lo
+siguió el mismo día**; queda W3 para completarlo.
+
+**W2 va apilado sobre la rama de W1, no sobre `main`.** Es el segundo artículo
+del cluster que W1 abrió, así que depende de su trabajo estructural (el
+`pillarIntro` de `sectores`, el mapa `BLOG_POSTS_BY_CLUSTER` del pilot y los
+tests que dejaron de codificar "sectores está vacío"). Rehacerlo desde `main`
+habría duplicado esos cambios y garantizado un conflicto contra la PR #342. Al
+mergear #342 primero, el PR de W2 se queda solo con su artículo.
 
 ---
 

@@ -38,7 +38,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "genscore-vs-herramientas-geo": "fundamentos",
   "llms-txt-guia-practica": "playbooks",
   "como-conseguir-que-chatgpt-te-cite": "playbooks",
-  "geo-para-ecommerce": "sectores"
+  "geo-para-ecommerce": "sectores",
+  "geo-para-saas-b2b": "sectores"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
