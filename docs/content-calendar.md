@@ -82,15 +82,25 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 |---|---|---|---|---|
 | W1 | GEO para ecommerce: cómo aparecer cuando la IA recomienda productos | `sectores` | ✅ Publicado | #342 |
 | W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | ✅ Publicado | #346 |
-| W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | 🔲 Pendiente | — |
+| W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | ✅ Publicado | #347 |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
 | W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🔲 Pendiente | — |
 | W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
-para cerrar un hueco visible del sitio. **W1 lo abrió el 2026-08-05** y **W2 lo
-siguió el mismo día**; queda W3 para completarlo.
+para cerrar un hueco visible del sitio. **Las tres se escribieron el
+2026-08-05** — W1 lo abrió, W2 y W3 lo completaron. El cluster ya no tiene
+huecos: ecommerce (comprador), SaaS B2B (comprador) y agencias (quien vende el
+servicio).
+
+**La cola queda vacía a partir de W4.** Al llegar ahí, la sesión semanal tiene
+que pedir un brief nuevo a `seo-geo-research` y añadirlo aquí en el mismo PR
+(ver `docs/agentic-weekly-post.md` §2, paso 2).
+
+**W2 y W3 van apilados, no salen de `main`.** W2 se apila sobre W1 y W3 sobre
+W2, así que el PR de W3 contiene los tres artículos hasta que los de abajo se
+mergeen. El orden de merge correcto es #342 → #346 → #347.
 
 **W2 va apilado sobre la rama de W1, no sobre `main`.** Es el segundo artículo
 del cluster que W1 abrió, así que depende de su trabajo estructural (el

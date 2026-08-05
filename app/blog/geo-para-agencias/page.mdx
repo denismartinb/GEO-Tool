@@ -1,0 +1,158 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  ShareOfVoice
+} from "@/components/blog/article";
+import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+
+export const post = getBlogPost("geo-para-agencias");
+
+export const metadata = {
+  title: `${getSeoTitle(post)} — Genscore`,
+  description: getMetaDescription(post),
+  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">5 de agosto de 2026</p>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+El GEO para agencias tiene una trampa comercial en la primera reunión: **lo que se vende no es tráfico.** Hoy los chats de IA mandan alrededor del 1% de las visitas de una web, así que una propuesta construida sobre "vas a recibir visitas desde ChatGPT" se cae sola en la primera renovación. Lo que sí se puede vender —y medir— es **presencia en la respuesta**: si el modelo te nombra, en qué puesto y con qué fuente, en las preguntas que hacen tus clientes.
+
+</KeyTakeaway>
+
+Este artículo va dirigido a quien tiene que **vender** el servicio, no a quien lo compra. Si buscas el lado del cliente, están <a href="/blog/geo-para-ecommerce">GEO para ecommerce</a> y <a href="/blog/geo-para-saas-b2b">GEO para SaaS B2B</a>.
+
+La tentación al montar una oferta de visibilidad en IA es empaquetarla como si fuera SEO con otro nombre: auditoría, informe mensual, promesa de crecimiento. El problema es que la métrica que sostiene el SEO —sesiones orgánicas— aquí todavía no existe en volumen suficiente para justificar una factura. Y el cliente lo va a comprobar en su analítica antes de que acabe el trimestre.
+
+## ¿Hay mercado, o es humo?
+
+Conviene mirar los números antes de montar una oferta encima. Hay dos estudios recientes de terceros que miden cosas distintas, y esa diferencia es justo lo que hay que entender para vender esto sin mentir.
+
+<StatGrid label="Tamaño real del canal de IA, según dos estudios de terceros">
+  <Stat value="1,08%" label="Cuota del tráfico web total que llega desde chats de IA, en una muestra de 13.770 dominios" source="Conductor, 2026 AEO/GEO Benchmarks Report" tone="warm" />
+  <Stat value="25%" label="Cuota que sigue llegando desde búsqueda orgánica clásica, en ese mismo estudio" source="Conductor, 2026 AEO/GEO Benchmarks Report" tone="blue" />
+  <Stat value="+70%" label="Crecimiento interanual de las visitas a plataformas de IA generativa (9.500 millones al mes de media)" source="Similarweb, 2026 Generative AI Landscape Report" tone="cyan" />
+</StatGrid>
+
+Las dos primeras cifras son del mismo informe: **Conductor**, publicado en noviembre de 2025, sobre 13.770 dominios de 10 sectores y más de 3.300 millones de sesiones, de las cuales unos 35,7 millones venían de chats de IA. La tercera es de un estudio **distinto**: el *Generative AI Landscape Report* de **Similarweb**, de julio de 2026, que mide visitas **a** las plataformas de IA, no clics **desde** ellas. Ninguna es un dato propio de Genscore.
+
+Puestas juntas dicen algo incómodo y útil: **el canal crece rápido y sigue siendo pequeño.** Las dos cosas son verdad a la vez, y una propuesta honesta tiene que sostener las dos.
+
+### El número que descoloca a todo el mundo
+
+Hay una aparente contradicción entre los dos estudios que merece la pena entender antes de que la saque un cliente en una reunión:
+
+- Conductor mide que **el 87,4% del tráfico de referencia de IA viene de ChatGPT**.
+- Similarweb mide que ChatGPT ha pasado de ~76% a ~53% de las **visitas** a plataformas de IA entre junio de 2025 y mayo de 2026, mientras Gemini subía a en torno a una cuarta parte y Claude a cerca de un 10%.
+
+No se contradicen: **miden cosas distintas.** Uno cuenta de dónde llegan los clics; el otro, dónde está la gente. El motor donde más gente pregunta ya no es, ni de lejos, el único que importa — pero sí sigue siendo el que más clics manda. Para una agencia esto tiene una consecuencia directa: **una oferta que solo mire ChatGPT ya está desactualizada**, aunque los clics sigan viniendo mayoritariamente de ahí.
+
+## Lo que no puedes vender
+
+Esta lista importa más que la de al lado. Casi todo el riesgo reputacional de una agencia en este servicio está aquí.
+
+<Checklist
+  tone="evitar"
+  items={[
+    "No prometas tráfico. Con el canal en torno al 1% de las visitas, cualquier objetivo de sesiones desde IA es una promesa que la analítica del cliente desmiente sola.",
+    "No prometas posiciones. No hay un ranking estable que escalar: la misma pregunta devuelve respuestas distintas en momentos distintos, y eso no es un fallo, es cómo funciona.",
+    "No enseñes una captura de un chat como prueba. Una respuesta suelta no es reproducible, y el cliente puede abrir el mismo chat y ver otra cosa delante de ti.",
+    "Nunca presentes una cifra de mercado de un tercero como si fuera un resultado que has conseguido tú. Es la línea que separa un informe de un folleto.",
+    "No vendas llms.txt como palanca principal. No hay evidencia pública sólida de que mueva las citaciones por sí solo, y montar una oferta sobre eso es construir sobre arena."
+  ]}
+/>
+
+## Lo que sí puedes vender, y se mide
+
+El entregable que aguanta una renovación no es una promesa de tráfico: es **una serie temporal de presencia en la respuesta**, sobre un conjunto de preguntas que el cliente reconoce como las de sus compradores.
+
+<Figure
+  label="Figura 1"
+  caption="Maqueta con datos de ejemplo: el reparto de menciones entre marcas sobre un conjunto de prompts. Es el entregable que sí se puede medir mes a mes, a diferencia del tráfico. Los datos no corresponden a ninguna marca real."
+>
+
+<ShareOfVoice
+  total="sobre 30 prompts, 3 motores"
+  brands={[
+    { name: "Competidor A", value: 41 },
+    { name: "Competidor B", value: 28 },
+    { name: "Tu cliente", value: 19, you: true },
+    { name: "Competidor C", value: 12 }
+  ]}
+/>
+
+</Figure>
+
+Sobre esa base, un servicio se empaqueta en tres piezas que sí tienen entregable:
+
+**Línea base y conjunto de preguntas.** Es el trabajo que más valor aporta y el que casi nadie hace bien: convertir el negocio del cliente en las preguntas que de verdad hace su comprador. La metodología está en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts correctos</a>, y elegir mal aquí invalida todo lo demás.
+
+**Diagnóstico de fuentes.** Qué dominios cita el modelo cuando responde a esas preguntas. Suelen ser pocos y repetirse, y ahí está casi todo el trabajo accionable — que en la mayoría de los casos está **fuera** de la web del cliente. Es lo mismo que ya vimos en ecommerce y en SaaS.
+
+**Seguimiento y reporte.** La <a href="/glosario/cuota-de-voz-en-ia">cuota de voz en IA</a>, la posición cuando se te menciona, y si la mención va respaldada por una <a href="/glosario/citacion-en-ia">citación</a> a tu dominio o no. Tres números que se mueven, se explican y se comparan mes a mes.
+
+## El problema que te va a hundir la renovación
+
+Es este, y conviene ponerlo encima de la mesa en la primera reunión en vez de en la quinta: **no vas a poder atribuir ingresos a este trabajo.**
+
+Con el canal en el 1% de las visitas, y con la mayor parte del efecto ocurriendo *antes* de que el usuario llegue a la web —en la lista corta de marcas que se forma dentro de la respuesta—, el recorrido que acaba en una compra se atribuirá a lo que sea que traiga la última visita. No es un defecto de tu medición; es la naturaleza del canal en este momento.
+
+Las agencias que sobreviven a esa conversación son las que la tienen al principio y venden lo que sí pueden demostrar: que el cliente aparece más veces, mejor colocado y respaldado por más fuentes que hace tres meses. Las que prometen ROI atribuido pierden la cuenta en el segundo trimestre.
+
+## Lo que no sabemos, y no vamos a fingir que sí
+
+Tres cosas, dichas con la misma claridad que las cifras de arriba:
+
+**Cuánto se puede cobrar.** No hemos encontrado ninguna encuesta pública fiable de tarifas de servicios GEO en el mercado español. Las cifras que circulan vienen de agencias que se anuncian, no de un estudio, y no vamos a repetirlas como si fueran un mercado.
+
+**Cuánto tarda en moverse.** No hemos medido cuánto pasa entre publicar contenido nuevo y verlo reflejado en las respuestas. Depende del motor, de si usa <a href="/glosario/grounding">grounding</a> con búsqueda en vivo o memoria de entrenamiento, y de cada cuánto se reindexan las fuentes que cita.
+
+**Si el 1% seguirá siendo el 1%.** Puede multiplicarse o estancarse; los dos estudios citados miden el pasado, no el futuro. Cualquiera que te dé un porcentaje para 2027 se lo está inventando, y una agencia que construya su oferta sobre esa cifra está vendiendo una previsión ajena como si fuera propia.
+
+**Un apunte sobre las dos fuentes.** Conductor y Similarweb venden, respectivamente, software de visibilidad en IA y datos de tráfico: a los dos les conviene que este canal parezca importante. Son las mejores fuentes públicas que hemos encontrado, y aun así conviene saber quién paga el estudio. Es exactamente lo mismo que tú tendrás que decirle a tu cliente cuando le enseñes estos números.
+
+## Cómo empezar sin montar un departamento
+
+No hace falta una herramienta propia ni un equipo nuevo para vender la primera vez. Hace falta poder enseñar, en una reunión, **dónde aparece hoy el cliente y quién aparece en su lugar**.
+
+Eso es una tarde de trabajo sobre un conjunto de preguntas bien elegido, y es la propuesta comercial en sí: el diagnóstico no se regala como cebo, se cobra como primera fase, porque es donde está el criterio. Si además quieres entender qué hay detrás del número que le vas a enseñar, está en <a href="/blog/que-es-el-geo-score">qué es el GEO Score y cómo se calcula</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Vas a vender visibilidad en IA a tus clientes?"
+  text="Genscore mide en qué preguntas aparece cada marca, en qué puesto y con qué fuentes — el entregable que sí se puede enseñar mes a mes."
+/>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

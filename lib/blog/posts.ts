@@ -173,6 +173,16 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "building",
     primaryKeyword: "geo para saas b2b",
     cluster: "sectores"
+  },
+  {
+    slug: "geo-para-agencias",
+    title: "GEO para agencias: cómo vender un servicio de visibilidad en IA",
+    description:
+      "Los chats de IA mandan ~1% de las visitas. Qué se puede vender de verdad, qué no prometer nunca, y cómo se mide.",
+    datePublished: "2026-08-05",
+    coverIcon: "users",
+    primaryKeyword: "geo para agencias",
+    cluster: "sectores"
   }
 ];
 

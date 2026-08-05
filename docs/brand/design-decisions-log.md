@@ -2749,6 +2749,77 @@ PR abierto y se deja para #342.
 
 ---
 
+## 30. GEO para agencias — el cluster `sectores` cerrado, y la primera prueba de la cadena autónoma (GROWTH-3, W3, 2026-08-05)
+
+**Estado: implementada.** Tercera y última pieza de la cola semanal en el
+cluster `sectores`. Slug `geo-para-agencias`, keyword primaria "geo para
+agencias". Con ella el cluster deja de tener huecos: ecommerce y SaaS B2B miran
+al comprador; este mira a **quien vende el servicio**, que es un lector
+distinto y por eso el artículo tiene una sección de "lo que NO puedes vender"
+que los otros dos no necesitan.
+
+**El ángulo salió del dato, no al revés.** Conductor mide que el tráfico de
+referencia desde chats de IA es el **1,08%** de las visitas de una web, frente
+al 25% de la búsqueda orgánica. Ese número hace inviable la propuesta comercial
+obvia ("vas a recibir visitas desde ChatGPT") y obliga a vender otra cosa:
+presencia medida en la respuesta. El artículo se construyó sobre esa tensión en
+vez de esquivarla.
+
+**Dos estudios que parecen contradecirse y no se contradicen.** Conductor dice
+que ChatGPT es el 87,4% del tráfico de referencia de IA; Similarweb dice que
+ChatGPT cayó del ~76% al ~53% de las **visitas** a plataformas de IA entre junio
+de 2025 y mayo de 2026. Miden cosas distintas —clics que salen frente a gente
+que entra— y el artículo lo explica en lugar de elegir la mitad que conviene.
+Es el mismo criterio que W2 aplicó a G2 y 6sense.
+
+**Verificación de fuentes: una atribución se corrigió a tiempo.** La primera
+búsqueda devolvió el 1,08% atribuido a "Similarweb y Semrush". Una búsqueda
+dirigida lo desmintió: es de **Conductor**, informe de noviembre de 2025. Es
+exactamente el fallo de W1 (Capital One / Alchemer) a punto de repetirse, y lo
+que lo evitó no fue el tipo `Stat` —que sólo exige que haya `source`— sino
+buscar dos veces. También se descartó una segunda cifra por inconsistente: el
+peso de ChatGPT en el tráfico de referencia aparece como 87,4% y como 92,4%
+según la fuente secundaria; se publica la que casa con la metodología descrita
+por Conductor, y sólo esa.
+
+**Qué se declara no saber:** que no hay encuesta pública fiable de tarifas GEO
+en el mercado español (las cifras que circulan son de agencias anunciándose, no
+de un estudio), que no está medido el tiempo hasta ver efecto, y que nadie sabe
+si el 1% seguirá siendo el 1%. Más el apunte de conflicto de interés que ya
+estrenó W2: Conductor vende software de visibilidad en IA y Similarweb vende
+datos de tráfico; a los dos les conviene que el canal parezca grande.
+
+### Lo que esta pieza probó además del artículo
+
+W3 se escribió como **prueba real de la cadena de publicación semanal**, a
+petición del fundador. Resultado, sin adornos:
+
+**Lo que quedó demostrado:** redactar → validar → empujar → `weekly-post-pr.yml`
+abre el PR y pide revisión → aviso a GitHub y push al móvil. La cadena funciona
+de punta a punta.
+
+**Lo que NO quedó demostrado, y es lo que importaba:** esta pasada corrió
+**dentro de una sesión ya abierta**, que ya tenía el repositorio. La duda de
+`docs/agentic-weekly-post.md` §9 —si una sesión disparada arranca con el
+repositorio clonado— **sigue abierta**. Se intentó resolverla con un trigger de
+sesión nueva y la llamada fue rechazada dos veces con `requires approval`: el
+mismo muro que el §9 documenta. El sustituto usado (`CronCreate`) es
+**de sesión y muere con ella**, así que no sirve para los lunes.
+
+**Consecuencia para quien retome esto:** la automatización semanal sigue sin
+estar cerrada, y lo que falta no es código de este repositorio — es aprobar una
+vez el permiso de creación de rutinas. No lo des por resuelto porque haya tres
+artículos publicados.
+
+**Tres PRs apilados a la vez.** W2 sobre W1 y W3 sobre W2. Funciona y evita
+duplicar el trabajo estructural, pero el orden de merge deja de ser opcional:
+#342 → #346 → #347. Con esto hay **6 PRs abiertos** y `CLAUDE.md` fija el
+máximo en 3 — se hizo porque el fundador pidió la prueba explícitamente, y
+queda dicho aquí para que conste que fue una excepción consciente y no un
+descuido.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
