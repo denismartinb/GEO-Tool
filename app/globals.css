@@ -4018,7 +4018,6 @@ textarea.add-prompts-text-input {
 .notif-panel-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
   padding: 14px 16px 10px;
 }
@@ -4200,7 +4199,6 @@ textarea.add-prompts-text-input {
 .notif-page-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: 12px;
   padding: 18px 22px 14px;
 }

@@ -2519,6 +2519,29 @@ tener sentido cuando mirar basta. Lo que sí queda pendiente y conviene que
 conste: **no hay descarte individual** de una notificación (D1 de la spec lo
 contemplaba), y sigue sin haberlo.
 
+**Efecto colateral sobre el piloto, dicho antes de que lo descubra alguien.**
+El barrido de interacciones del piloto ya casaba con la campana
+(`[aria-expanded]` está en su allow-list), así que **cada pasada del piloto
+escribe ahora `read_at`** en las notificaciones de su cuenta. El piloto
+siempre-activo se anunciaba como "estrictamente de sólo lectura"; desde esta
+fase es "sin escrituras salvo ésta, nombrada"
+(`docs/agentic-user-pilot.md`, Scope guard). Se acepta sin aprobación aparte
+porque está acotado en las cuatro dimensiones que importan —idempotente, sólo
+filas de la propia cuenta del piloto, sin coste de LLM, sin consumir cupo de
+plan— y porque impedirlo obligaría a sacar la campana del barrido, que es
+justo el control que hay que mirar.
+
+**El primer PASS del piloto no probaba nada de esta fase.** El run mecánico
+del commit inicial dio ✅ en 41 pantallas a tres viewports y ni una era
+notificaciones: el barrido genérico agota su presupuesto (4 candidatos por
+pantalla) en nav/campana/InfoTip antes de poder afirmar nada sobre *qué hizo*
+el clic. Mismo patrón que dejó sin ver las pestañas de auditoría en el PR #289
+(§17). De ahí `tests/pilot/journeys/notifications.spec.ts`: fija con
+aserciones lo que ninguna captura demuestra —que el punto de la cabecera se
+apaga, que los de fila **no**, que no vuelve ningún botón de marcar leídas, y
+que al navegar y volver la escritura persistió— y **anota en voz alta** cuando
+la cuenta no tiene nada sin leer, en vez de pasar en silencio.
+
 ---
 
 ## Cómo mantener este documento
