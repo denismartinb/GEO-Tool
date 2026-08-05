@@ -6456,8 +6456,11 @@ select.set-field {
 }
 .dm2-last svg { color: var(--brand-ink-4); flex: 0 0 auto; }
 
-/* Las dos píldoras de la esquina. «Seleccionado» es un estado, no una acción:
-   fondo claro y borde, nunca relleno sólido, para que no compita con el botón. */
+/* La píldora de la esquina. «Seleccionado» (dm2-flag-sel) se quitó
+   (fundador, 2026-08-05): la tarjeta ya es la única con borde azul, así que
+   el texto sólo repetía lo que la forma ya decía — y quitarla acorta la
+   tarjeta sin perder información. Sólo queda «En progreso»/«Auditando»,
+   condicionada a que haya algo corriendo. */
 .dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; }
 .dm2-flag {
   display: inline-flex;
@@ -6468,11 +6471,6 @@ select.set-field {
   border-radius: 999px;
   padding: 7px 12px;
   white-space: nowrap;
-}
-.dm2-flag-sel {
-  background: var(--brand-surface);
-  border: 1px solid var(--brand-blue-soft-2);
-  color: var(--brand-blue);
 }
 .dm2-flag-run { background: var(--brand-blue-soft); color: var(--brand-blue); }
 .dm2-flag-run .dot {
@@ -6491,7 +6489,16 @@ select.set-field {
    132/14 la suma daba exactamente el alto de la caja y el número se salía por
    encima del arco — visible en las capturas del piloto a los tres tamaños,
    2026-08-05. El gauge se agranda y el numeral baja: el arco manda sobre el
-   número, no al revés. */
+   número, no al revés.
+
+   El hueco vertical entre la curva y el numeral es, matemáticamente,
+   `radio - alto_del_numeral` — el punto más alto del arco cae siempre a
+   `stroke / 2` del borde superior de la caja, sea cual sea el tamaño, así que
+   agrandar el radio (sin tocar el grosor del trazo) es lo único que separa el
+   uno del otro. `size` sube de 124 a 140 para eso (fundador, 2026-08-05:
+   "separa un poco el gauge de la cifra"); `stroke` se queda en 12 para que el
+   trazo no adelgace. Prop del componente, en app/dashboard/domains/page.tsx —
+   no hay nada que cambiar aquí en font-size. */
 .dm2-hero .gauge-num {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;

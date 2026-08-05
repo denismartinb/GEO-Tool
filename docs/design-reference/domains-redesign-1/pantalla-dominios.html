@@ -103,7 +103,6 @@ a{color:inherit;text-decoration:none}
 .dm2-last{display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12.5px;color:var(--brand-ink-3)}
 .dm2-flags{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex:0 0 auto}
 .dm2-flag{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;border-radius:999px;padding:7px 12px;white-space:nowrap}
-.dm2-flag-sel{background:var(--brand-surface);border:1px solid var(--brand-blue-soft-2);color:var(--brand-blue)}
 .dm2-flag-run{background:var(--brand-blue-soft);color:var(--brand-blue)}
 .dm2-score{display:flex;align-items:center;gap:18px;margin:22px 0 24px;flex-wrap:wrap}
 .gauge-wrap{position:relative;flex:0 0 auto}
@@ -234,22 +233,29 @@ a{color:inherit;text-decoration:none}
                 Último escaneo: hoy, 19:42
               </div>
             </div>
+            <!-- «Seleccionado» se quitó (fundador, 2026-08-05): la tarjeta ya
+                 es la única con borde azul, así que el texto sólo repetía lo
+                 que la forma decía. Sin él, .dm2-flags desaparece entera
+                 cuando no hay nada corriendo — aquí queda porque el ejemplo
+                 muestra un escaneo en curso. -->
             <div class="dm2-flags">
-              <span class="dm2-flag dm2-flag-sel">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg>
-                Seleccionado
-              </span>
               <span class="dm2-flag dm2-flag-run"><span class="dot"></span>En progreso</span>
             </div>
           </div>
 
           <div class="dm2-score">
-            <div class="gauge-wrap" style="width:124px;height:68px">
-              <svg width="124" height="68" aria-label="Puntuación GEO 33 sobre 100">
-                <path d="M12 62 A50 50 0 0 1 112 62" fill="none" stroke="#F4F6FA" stroke-width="12" stroke-linecap="round"/>
-                <path d="M12 62 A50 50 0 0 1 30.7 23.5" fill="none" stroke="#2563EB" stroke-width="12" stroke-linecap="round"/>
+            <!-- size 124→140, stroke se queda en 12: el hueco entre la curva y
+                 el numeral es `radio - alto_del_numeral`, y el punto más alto
+                 del arco cae siempre a stroke/2 del borde de la caja sea cual
+                 sea el tamaño — agrandar el radio es lo único que separa el
+                 uno del otro (fundador, 2026-08-05: "separa un poco el gauge
+                 de la cifra"). -->
+            <div class="gauge-wrap" style="width:140px;height:76px">
+              <svg width="140" height="76" aria-label="Puntuación GEO 33 sobre 100">
+                <path d="M6 70 A64 64 0 0 1 134 70" fill="none" stroke="#F4F6FA" stroke-width="12" stroke-linecap="round"/>
+                <path d="M6 70 A64 64 0 0 1 37.4 15.0" fill="none" stroke="#2563EB" stroke-width="12" stroke-linecap="round"/>
               </svg>
-              <div class="gauge-center" style="padding-bottom:7.5px">
+              <div class="gauge-center" style="padding-bottom:6px">
                 <div>
                   <div class="gauge-num tnum">33</div>
                   <div class="gauge-cap">Puntuación GEO</div>

@@ -247,30 +247,38 @@ export default async function DomainsPage({
                 )}
               </div>
             </div>
-            <div className="dm2-flags">
-              <span className="dm2-flag dm2-flag-sel">
-                <Icon name="check" size={14} />
-                Seleccionado
-              </span>
-              {activeRun ? (
-                <span className="dm2-flag dm2-flag-run">
-                  <span className="dot" />
-                  En progreso
-                </span>
-              ) : activeAuditing ? (
-                <span className="dm2-flag dm2-flag-run">
-                  <span className="dot" />
-                  Auditando
-                </span>
-              ) : null}
-            </div>
+            {/* «Seleccionado» se quitó (fundador, 2026-08-05: "quita el chip de
+                seleccionado para que quede la tarjeta menos alta") — era
+                redundante con el borde azul, que ya es la única tarjeta de la
+                pantalla que lo lleva. Sin contenido que mostrar, el
+                contenedor entero desaparece en vez de dejar un hueco vacío
+                con su propio margen. */}
+            {activeRun || activeAuditing ? (
+              <div className="dm2-flags">
+                {activeRun ? (
+                  <span className="dm2-flag dm2-flag-run">
+                    <span className="dot" />
+                    En progreso
+                  </span>
+                ) : (
+                  <span className="dm2-flag dm2-flag-run">
+                    <span className="dot" />
+                    Auditando
+                  </span>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <div className="dm2-score">
             {activeScore === null ? (
               <div className="dm2-score-empty">—</div>
             ) : (
-              <Gauge value={activeScore} size={124} stroke={12} variant="semi" label="Puntuación GEO" />
+              // size sube de 124 a 140, stroke se queda en 12: agranda el
+              // radio sin engordar el trazo, que es lo que separa el numeral
+              // del arco (ver la nota en app/globals.css junto a
+              // .dm2-hero .gauge-num).
+              <Gauge value={activeScore} size={140} stroke={12} variant="semi" label="Puntuación GEO" />
             )}
             <p className="dm2-score-copy">
               {activeScore === null
