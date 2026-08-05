@@ -311,9 +311,12 @@ const BACKFILL_LIMIT = 10;
  * so the durable record of "a scan finished" is what drives the audit, not the
  * liveness of one serverless invocation.
  *
- * Deliberately not filtered by plan: `runWebAuditJob` cancels a non-Pro job on
- * its first cheap query, before any Gemini call, and duplicating the plan gate
- * here would mean two places to keep in sync for no saving.
+ * Deliberately not filtered by plan, and since WEB-AUDIT-TECH-ALL-PLANS-1
+ * (docs/adr/0035) that matters more than it used to: a non-Pro job is no
+ * longer cancelled on its first cheap query — it skips the coverage half and
+ * runs the technical one, which every plan now gets. Backfilling regardless
+ * of plan is therefore the correct behaviour, not a tolerated cost, and
+ * duplicating the plan gate here would still mean two places to keep in sync.
  *
  * ------------------------------------------------------------------------
  * Only the newest run of each project, and that is not an optimisation

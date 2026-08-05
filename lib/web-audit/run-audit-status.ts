@@ -37,12 +37,15 @@ export type RunAuditStatus =
    */
   | { kind: "retrying" }
   /**
-   * Nothing, and nothing pending. Covers three different pasts that all look
-   * identical to the user and all mean "there is nothing to show here": runs
-   * that predate the automatic audit, projects below the Pro gate (their job
-   * is cancelled before spending anything), and audits that exhausted their
-   * retries. The last one is deliberately not surfaced: the customer cannot
-   * act on a backend failure, and the operator already gets an email.
+   * Nothing, and nothing pending. Covers pasts that look identical to the user
+   * and all mean "there is nothing to show here": runs that predate the
+   * automatic audit, and audits that exhausted their retries. The latter is
+   * deliberately not surfaced — the customer cannot act on a backend failure,
+   * and the operator already gets an email.
+   *
+   * "Below the Pro gate" USED to belong here, when a non-Pro job was cancelled
+   * before spending anything. Since WEB-AUDIT-TECH-ALL-PLANS-1 (docs/adr/0035)
+   * those projects get the technical half and land on `audited` instead.
    */
   | { kind: "none" };
 

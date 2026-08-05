@@ -67,9 +67,10 @@ function getStatusBadgeClass(status: string): string {
  */
 function RunAuditCell({ status }: { status: RunAuditStatus }) {
   if (status.kind === "none") {
-    // Three different pasts (never audited, below the Pro gate, gave up) that
-    // the user cannot act on differently — so one honest blank, not three
-    // labels that invite three questions.
+    // Different pasts (never audited, gave up) that the user cannot act on
+    // differently — so one honest blank, not several labels that invite
+    // several questions. "Below the Pro gate" is no longer one of them: since
+    // docs/adr/0035 those projects get the technical half and read "Auditada".
     return <span style={{ color: "var(--ink-4)" }}>—</span>;
   }
 
