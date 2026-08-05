@@ -2838,24 +2838,6 @@ descuido.
 
 ---
 
-## Cómo mantener este documento
-
-Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
-cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
-tipografía o patrones de navegación:
-
-1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
-   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
-   o roto conocido.
-2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
-   `superseded por §X` y explicar el porqué del cambio, igual que hace
-   `docs/adr/` con las decisiones técnicas.
-3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
-   técnico aquí (este documento es "qué se decidió", no "cómo se
-   implementó").
-
----
-
 ## 31. Las portadas dejan de ser una dependencia manual (GROWTH-3, 2026-08-05)
 
 **Estado: implementada.** Los tres artículos del cluster `sectores` pasan a
@@ -2918,3 +2900,54 @@ encogerse hasta cero** en una fase propia — el test ya está construido para
 eso: la lista sólo puede menguar. Y `docs/agentic-weekly-post.md` §4, que
 describe la ausencia de portada como inevitable, **queda desactualizado**: hay
 que reescribirlo cuando esta vía se dé por buena.
+
+### Segundo hallazgo, del `ux-pilot`: el lienzo no cabía en su propio marco
+
+La primera versión de las tres portadas usaba un `viewBox` de 1200×630 — un
+lienzo casi cuadrado — dentro de un contenedor real que mide **1124×96px** en
+la portada compacta del artículo en desktop (`.blog-cover-compact`, CSS línea
+~4873). Con `object-fit: cover` centrado, el navegador escala hasta cubrir el
+ancho y recorta el resto en vertical: en ese caso concreto sólo sobrevive el
+**16% central** del lienzo (y≈264–366 de 630).
+
+El `ux-pilot` lo detectó comparando el SVG fuente contra las capturas reales,
+no a ojo: la fila 3 de `ecommerce` (el hueco vacío, la tesis explícita del
+artículo), la etiqueta "Aquí te enteras tú" de `saas-b2b`, y el título y las
+frases de `agencias` **no aparecían en ninguna captura de escritorio ni de
+tablet** — sólo en móvil, donde el contenedor es proporcionalmente más
+parecido al lienzo y por eso recorta menos. Verificado de forma independiente
+con la propia matemática del CSS antes de aceptar el hallazgo: el número
+coincide.
+
+**Corregido cambiando la proporción del lienzo, no sólo su contenido.** Las
+tres portadas pasan de `viewBox="0 0 1200 630"` a `viewBox="0 0 1200 300"`, con
+todo el contenido con valor recolocado dentro de la franja y≈100–200 —la única
+que sobrevive al recorte real del peor caso (escritorio)—, dejando el resto del
+lienzo para el resplandor decorativo, que no pierde nada al recortarse. Se
+verificó recortando programáticamente cada SVG a la ventana exacta que vería
+un navegador en el peor caso (1124×96px) antes de dar el fix por bueno — las
+tres muestran su contenido completo en esa ventana.
+
+**La lección, para la próxima portada que se dibuje**: diseñar contra la
+ventana de recorte real del contenedor CSS, no contra el lienzo completo. El
+propio SVG lo deja escrito en un comentario a partir de ahora.
+
+---
+
+## Cómo mantener este documento
+
+Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
+cambio de header/menú, rediseño de una pantalla) que toque layout, paleta,
+tipografía o patrones de navegación:
+
+1. Añadir una entrada nueva a la zona correspondiente (o crear una zona
+   nueva si no existe) con: qué se decidió, por qué, y qué queda pendiente
+   o roto conocido.
+2. Si una decisión previa queda **sustituida**, no borrarla — marcarla como
+   `superseded por §X` y explicar el porqué del cambio, igual que hace
+   `docs/adr/` con las decisiones técnicas.
+3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
+   técnico aquí (este documento es "qué se decidió", no "cómo se
+   implementó").
+
+---
