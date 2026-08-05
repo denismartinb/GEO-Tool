@@ -1068,14 +1068,6 @@ export default async function ProjectDetailPage({
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
                           {meta.label}
-                          {key === "technical" ? (
-                            <Link
-                              href={`/dashboard/projects/${projectId}/web-audit`}
-                              style={{ marginLeft: 8, fontSize: 11, fontWeight: 650, color: "var(--brand-blue)" }}
-                            >
-                              Ver auditoría web →
-                            </Link>
-                          ) : null}
                         </div>
                         <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
                           {isLegacyRun

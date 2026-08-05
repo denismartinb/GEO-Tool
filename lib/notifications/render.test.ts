@@ -247,7 +247,7 @@ describe("renderNotification", () => {
       DOMAINS
     );
 
-    expect(r.body).toBe("Preparación técnica —/100.");
+    expect(r.body).toBe("Diagnóstico técnico —/100.");
   });
 
   // --- WEB-AUDIT-ALERTS-1: audit-to-audit regressions --------------------

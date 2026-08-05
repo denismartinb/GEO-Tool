@@ -174,7 +174,7 @@ export function renderNotification(
       const score = num(payload.readinessScore);
       return {
         title: "Auditoría web completada",
-        body: `Preparación técnica ${score !== null ? Math.round(score) : "—"}/100.`,
+        body: `Diagnóstico técnico ${score !== null ? Math.round(score) : "—"}/100.`,
         targetLabel: domain,
         href: hrefForProject(row.project_id, "/web-audit"),
         icon: "shield",

@@ -27,7 +27,7 @@ export const GEO_SCORE_COMPONENT_META: Record<GeoScoreComponentKey, { label: str
   prominence: { label: "Prominencia", hint: "Puesto medio de tu marca cuando la IA la menciona." },
   standing: { label: "Cuota de voz", hint: "Tus menciones frente a las de tus competidores." },
   authority: { label: "Autoridad", hint: "Citas de la IA a páginas de tu propio dominio." },
-  technical: { label: "Preparación técnica", hint: "Salud técnica de tu web para motores de IA — determinista, sin IA de por medio." }
+  technical: { label: "Diagnóstico técnico", hint: "Salud técnica de tu web para motores de IA." }
 };
 
 /**
