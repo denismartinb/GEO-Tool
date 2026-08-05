@@ -275,7 +275,10 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
     // .first(): picking the hidden one fails silently, which is precisely how
     // the previous attempt at this fix left the box empty and the sweep still
     // finding nothing.
-    const searchBoxes = page.getByPlaceholder(/buscar prompt/i);
+    // Target the aria-label, not the placeholder: the placeholder is
+    // "Buscar prompt…" with a Unicode ellipsis, which is exactly the kind of
+    // character a hand-written selector gets wrong silently.
+    const searchBoxes = page.getByLabel(/buscar prompt/i);
     const boxCount = await searchBoxes.count();
     for (let i = 0; i < boxCount; i += 1) {
       const box = searchBoxes.nth(i);
