@@ -77,3 +77,53 @@ describe("deriveRunAuditStatus", () => {
     });
   });
 });
+
+describe("deriveRunAuditStatus — planes sin cobertura (WEB-AUDIT-TECH-ALL-PLANS-1)", () => {
+  const base = {
+    runId: "run-1",
+    coverageScanIds: new Set<string>(),
+    readinessByScanId: new Map<string, number | null>([["run-1", 62]]),
+    jobStatusByRunId: new Map<string, string>()
+  };
+
+  it("calls a technical-only run AUDITED when the plan has no coverage half", () => {
+    // "Parcial" means work stopped halfway and something is still missing. On
+    // a plan without coverage nothing is missing, and the label would invite
+    // the user to wait for something that is never coming.
+    const status = deriveRunAuditStatus({ ...base, coverageIncludedInPlan: false });
+
+    expect(status.kind).toBe("audited");
+    expect(status.kind === "audited" && status.readinessScore).toBe(62);
+  });
+
+  it("still calls it PARTIAL when the plan does include coverage", () => {
+    // Same data, different plan: here the coverage half really is missing.
+    const status = deriveRunAuditStatus({ ...base, coverageIncludedInPlan: true });
+
+    expect(status.kind).toBe("partial");
+  });
+
+  it("defaults to the pre-existing meaning when the flag is omitted", () => {
+    expect(deriveRunAuditStatus(base).kind).toBe("partial");
+  });
+
+  it("does not invent an audit for a run that has neither half", () => {
+    const status = deriveRunAuditStatus({
+      ...base,
+      readinessByScanId: new Map(),
+      coverageIncludedInPlan: false
+    });
+
+    expect(status.kind).toBe("none");
+  });
+
+  it("lets an active job win over the plan shortcut", () => {
+    const status = deriveRunAuditStatus({
+      ...base,
+      jobStatusByRunId: new Map([["run-1", "running"]]),
+      coverageIncludedInPlan: false
+    });
+
+    expect(status.kind).toBe("in_progress");
+  });
+});

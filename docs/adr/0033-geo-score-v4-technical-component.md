@@ -213,13 +213,12 @@ es trabajo pendiente (log §29, "Pendiente conocido").
 - **No toca las bandas** 70/40.
 - **No toca la capa de fiabilidad.** Margen de Wilson, suelo de muestra y
   `resolveDelta` siguen siendo obligatorios (ADR 0024, DELTA-GUARD-1).
-- **No cambia qué planes tienen auditoría web.** La puerta Pro es una frontera
-  comercial (`.claude/rules/web-audit.md`) y moverla es decisión del fundador,
-  no un efecto colateral de esta fase. **Consecuencia que hay que mirar de
-  frente: en los planes sin auditoría el componente se cae siempre, así que su
-  GeoScore es el de cuatro componentes — v3 en la práctica.** Extender una
-  auditoría *sólo técnica* (que no gasta LLM) a todos los planes es la
-  recomendación de ADR 0032 §4 C.2 y queda pendiente de decisión explícita.
+- **No cambia qué planes tienen auditoría web** — *superado por ADR 0035
+  (2026-08-05)*. Cuando se escribió esto, la puerta Pro dejaba el
+  componente técnico caído en todo plan por debajo de Pro, así que su
+  GeoScore era el de cuatro componentes. Esa asimetría duró horas: el
+  fundador aprobó extender la mitad técnica (que no gasta LLM) a todos los
+  planes el mismo día. La cobertura sigue siendo Pro. Ver ADR 0035.
 - **No repuntúa runs históricos.** Sin backfill, misma postura que ADR 0026.
 
 ## 9 · Fase D — el score de ventana

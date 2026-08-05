@@ -618,6 +618,8 @@ export async function runWebAuditJob({
     // and the chain would dispatch forever achieving nothing until the
     // continuation cap stopped it.
     let coverageDone = false;
+    /** True when coverage was skipped because the plan does not include it (docs/adr/0035). */
+    let coverageSkippedForPlan = false;
     let batches = 0;
     let topicsBefore = -1;
 
@@ -626,6 +628,20 @@ export async function runWebAuditJob({
       batches += 1;
 
       if (!coverage.success) {
+        // WEB-AUDIT-TECH-ALL-PLANS-1 (docs/adr/0035): `plan_required` from
+        // COVERAGE is no longer terminal for the whole job. Coverage stays
+        // Pro-only, but the technical half now runs on every plan, so
+        // cancelling here would deny a free project the one component of its
+        // GEO Score it can actually act on (docs/adr/0033).
+        //
+        // Deliberately narrow: only this one reason falls through, and only
+        // from coverage. Every other terminal reason (project_not_found,
+        // project_archived, no_prompts) still cancels, because those mean
+        // there is nothing to audit at all — not "this half isn't yours".
+        if (coverage.reason === "plan_required") {
+          coverageSkippedForPlan = true;
+          break;
+        }
         if (isTerminalAuditFailure(coverage.reason)) {
           return finishCancelled(service, job, coverage.reason);
         }
@@ -646,7 +662,10 @@ export async function runWebAuditJob({
       topicsBefore = topicsAfter;
     } while (batches < MAX_BATCHES_PER_INVOCATION && Date.now() - startedAt < batchStartCutoffMs);
 
-    if (!coverageDone) {
+    // A plan without coverage is not an unfinished campaign: there is nothing
+    // to come back for, so parking as a continuation would re-dispatch this
+    // job until the continuation cap stopped it, achieving nothing each time.
+    if (!coverageDone && !coverageSkippedForPlan) {
       return finishContinuation(service, job, continuations + 1, now);
     }
 

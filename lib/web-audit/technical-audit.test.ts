@@ -318,7 +318,10 @@ describe("runTechnicalAuditCore", () => {
     dateNowSpy.mockRestore();
   });
 
-  it("returns the Pro-required message for a non-Pro plan without touching the rate limiter", async () => {
+  it("audits a non-Pro plan instead of refusing it (docs/adr/0035)", async () => {
+    // The technical half costs no LLM calls, and its score is a component of
+    // the GEO Score (docs/adr/0033). Gating it made the headline metric
+    // measure a different number of components per plan.
     const tables = baseTables({ profiles: { select: { data: { current_plan: "starter" }, error: null } } });
     const supabase = makeClient(tables) as unknown as Supabase;
     const service = makeClient(tables) as unknown as ServiceClient;
@@ -330,10 +333,22 @@ describe("runTechnicalAuditCore", () => {
       user: { id: "user-1" } as AuthenticatedContext["user"]
     });
 
-    expect(result.success).toBe(false);
-    if (result.success) return;
-    expect(result.error).toContain("Pro");
-    expect(mockedCheckSnapshotRateLimit).not.toHaveBeenCalled();
+    expect(result.success).toBe(true);
+  });
+
+  it("audits a free plan too — the floor, not just the tier below Pro", async () => {
+    const tables = baseTables({ profiles: { select: { data: { current_plan: "free" }, error: null } } });
+    const supabase = makeClient(tables) as unknown as Supabase;
+    const service = makeClient(tables) as unknown as ServiceClient;
+
+    const result = await runTechnicalAuditCore({
+      projectId: "project-1",
+      supabase,
+      service,
+      user: { id: "user-1" } as AuthenticatedContext["user"]
+    });
+
+    expect(result.success).toBe(true);
   });
 
   it("returns a blocking message and persists nothing when the rate limit is exceeded", async () => {

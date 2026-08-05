@@ -2767,6 +2767,40 @@ quitan desde el producto.
 
 ---
 
+## 30. La salud técnica deja de ser de pago (WEB-AUDIT-TECH-ALL-PLANS-1, 2026-08-05)
+
+Decisión del fundador el mismo día que se cerró GEO-SCORE-V4: *"Auditoría en no
+pro: la extendemos"*. El razonamiento técnico completo está en **ADR 0035**;
+aquí quedan las consecuencias de pantalla.
+
+**Por qué había que decidirlo ya.** El GeoScore acababa de incorporar la nota
+técnica con peso 0,20 (§29). Con la auditoría cerrada por plan, ese componente
+se caía siempre por debajo de Pro y el score renormalizaba a cuatro
+componentes: el número principal del producto **medía cosas distintas según lo
+que pagaras**. La asimetría duró horas.
+
+**Decisión 1 — la mitad técnica se abre, la de cobertura no.** La cobertura son
+llamadas a Gemini por lotes y ahí sí hay gasto; la técnica es fetch y regex.
+Lo que sigue siendo Pro es la parte cara y la que interpreta contenido.
+
+**Decisión 2 — «no está en tu plan» nunca se pinta como «sin auditar».** Son
+hechos distintos: uno se arregla escaneando, el otro cambiando de plan.
+Confundirlos le dice al usuario algo falso sobre sus propios datos, y es la
+misma familia de error que §22 ya señaló con la nota técnica junto al GeoScore.
+
+**Decisión 3 — un plan sin cobertura no está «Parcial».** En la columna
+Auditoría de Escaneos, «Parcial» significa *el trabajo se quedó a medias*, e
+invita a esperar algo que no va a llegar nunca. Un plan que sólo tiene la
+mitad técnica tiene su auditoría **completa** para lo que incluye, y así se
+etiqueta.
+
+**Coste comercial, dicho de frente:** la auditoría técnica era parte de lo que
+distinguía a Pro, y abrirla resta un motivo para subir de plan. A cambio, el
+número principal significa lo mismo para todo el mundo. Fue una decisión
+consciente, no un efecto colateral.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

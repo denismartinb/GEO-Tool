@@ -53,7 +53,8 @@ export function deriveRunAuditStatus({
   runId,
   coverageScanIds,
   readinessByScanId,
-  jobStatusByRunId
+  jobStatusByRunId,
+  coverageIncludedInPlan = true
 }: {
   runId: string;
   /** Scan ids that have a persisted coverage map. */
@@ -62,6 +63,18 @@ export function deriveRunAuditStatus({
   readinessByScanId: Map<string, number | null>;
   /** run_id → `jobs.status` for the web_audit job, when one exists. */
   jobStatusByRunId: Map<string, string>;
+  /**
+   * Whether this project's plan includes the coverage half at all
+   * (WEB-AUDIT-TECH-ALL-PLANS-1, docs/adr/0035). Defaults to true so every
+   * existing caller and test keeps its current meaning.
+   *
+   * Load-bearing: without it, a plan that gets the technical half and never
+   * the coverage half would read "Parcial" on every run it will ever have.
+   * "Parcial" means work stopped halfway and something is missing — it invites
+   * the user to wait for or retry something that is never coming. Nothing is
+   * missing there: the audit is complete for what the plan includes.
+   */
+  coverageIncludedInPlan?: boolean;
 }): RunAuditStatus {
   const jobStatus = jobStatusByRunId.get(runId);
 
@@ -84,6 +97,11 @@ export function deriveRunAuditStatus({
   const readinessScore = hasTechnical ? (readinessByScanId.get(runId) ?? null) : null;
 
   if (hasCoverage && hasTechnical) return { kind: "audited", readinessScore };
+
+  // On a plan without coverage, the technical half alone IS the complete
+  // audit. See `coverageIncludedInPlan` above for why this is not cosmetic.
+  if (hasTechnical && !coverageIncludedInPlan) return { kind: "audited", readinessScore };
+
   if (hasCoverage || hasTechnical) return { kind: "partial", readinessScore };
   return { kind: "none" };
 }
