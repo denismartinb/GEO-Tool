@@ -113,6 +113,23 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   "no mención" a un motor que jamás contestó: eso sería inventar datos. Lo que
   se arregla es la presentación, no el número.
 
+## La cifra publicada es una ventana (SCORE-WINDOW-1, ADR 0036)
+
+- **El titular de Visión general es la mediana de los 3 últimos escaneos
+  comparables**, no el score del último run. Existe porque los motores hacen
+  recuperación viva y esa varianza no la quita ninguna fórmula — y porque el
+  pin de modelo quedó descartado al medir que no hay id versionado.
+- **La ventana cae al score del run cuando no puede publicar.** Nunca a una
+  mediana de cosas incomparables: rehúsa exactamente lo que `compareRuns`
+  rehúsa (versión de compuesto, `inputs_used`, tamaño de muestra).
+- **Todo lo que cuelga del titular mide lo mismo que él.** La banda se calcula
+  sobre la ventana, el delta es ventana-contra-ventana, y la evolución dibuja
+  la serie de ventanas. Mezclarlos pone dos métricas en la misma tarjeta sin
+  decir cuál es cuál.
+- **Las alertas de caída siguen mirando runs, a propósito** (ADR 0036 §5):
+  meterlas detrás de una mediana las retrasaría dos escaneos justo cuando
+  llegar tarde importa.
+
 ## Referencias
 
 `docs/geo-methodology-audit-2026-07.md` (hallazgos abiertos),
