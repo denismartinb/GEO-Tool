@@ -465,8 +465,19 @@ export async function sendAccountDeletedEmail(to: string): Promise<void> {
  * unconfigured alert channel must never turn into a crash on a code path
  * whose whole job is handling a failure gracefully.
  */
+/**
+ * True only when an operator alert can ACTUALLY be delivered — which needs
+ * both a destination (`OPS_ALERT_EMAIL`) and a transport (`RESEND_API_KEY`).
+ *
+ * Checking only the address was not enough, and the gap cost a failed
+ * verification of the very phase that introduced it (2026-08-05): the
+ * address was configured, this returned true, and `sendEmail` then no-opped
+ * on `if (!resend) return` without a word. Two silent gates in series is
+ * exactly the shape of failure ADR 0029 exists to remove, so the probe has
+ * to cover the whole path it claims to have checked.
+ */
 export function isOpsAlertConfigured(): boolean {
-  return getOpsAlertAddress() !== null;
+  return getOpsAlertAddress() !== null && getResendClient() !== null;
 }
 
 function getOpsAlertAddress(): string | null {

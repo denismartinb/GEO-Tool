@@ -163,6 +163,13 @@ only setting the variable fixes that — but it stops being invisible. **Set it
 in both Production and Preview**, and note that it needs `RESEND_API_KEY` too:
 without that, `sendEmail` is a no-op for every email in the product.
 
+That second requirement is not theoretical. On 2026-08-05 the Fase B
+verification failed with no email and no log, because `OPS_ALERT_EMAIL` was
+configured but `RESEND_API_KEY` was not — the address probe passed and
+`sendEmail` then returned on `if (!resend) return`. Two silent gates in
+series. `isOpsAlertConfigured` now requires both, so the "not deliverable"
+log fires when either is missing.
+
 ### Weekly digest email (ALERTS-1 Fase 6b)
 
 | Variable | Required | Where | Expected shape |

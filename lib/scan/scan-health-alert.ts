@@ -228,7 +228,7 @@ export async function checkAndSendScanHealthAlert(input: {
     // (AUDIT-AFTER-SCAN-1) had been inert since the day it was written.
     // The alert still cannot be delivered, but it is no longer invisible.
     if (!isOpsAlertConfigured()) {
-      console.error("[geo:scan:health] scan health findings with no OPS_ALERT_EMAIL configured — alert not delivered", {
+      console.error("[geo:scan:health] scan health findings but the alert channel is not deliverable (needs OPS_ALERT_EMAIL and RESEND_API_KEY) — alert not delivered", {
         projectId: input.projectId,
         runId: input.runId,
         findings: findings.map((f) => `${f.engine}:${f.reason}`)
