@@ -2519,6 +2519,16 @@ tener sentido cuando mirar basta. Lo que sí queda pendiente y conviene que
 conste: **no hay descarte individual** de una notificación (D1 de la spec lo
 contemplaba), y sigue sin haberlo.
 
+**El vacío deja de ser un agujero, porque pasa a ser el estado normal.** Con
+auto-read, la pestaña «No leídas» se queda en cero en cuanto alguien abre la
+pantalla una vez: el estado que antes era el raro es ahora el que más se va a
+ver. Y era una línea gris centrada bajo una tarjeta de 150px con 700px de
+lienzo en blanco debajo — el piloto lo leyó como *"¿esto ha terminado de
+cargar?"* en vez de *"no tienes pendientes"*. Ahora lleva icono en círculo
+tenue (misma pareja `--brand-blue-soft` que ya usan las filas, no un color
+nuevo), titular —**«Estás al día»**, que responde a la pregunta en vez de
+describir la ausencia— y una línea que dice dónde aparecerán las nuevas.
+
 **Efecto colateral sobre el piloto, dicho antes de que lo descubra alguien.**
 El barrido de interacciones del piloto ya casaba con la campana
 (`[aria-expanded]` está en su allow-list), así que **cada pasada del piloto

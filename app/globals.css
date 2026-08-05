@@ -4220,9 +4220,43 @@ textarea.add-prompts-text-input {
 }
 
 .notif-page-empty {
-  padding: 40px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Enough vertical presence that the card reads as an answer rather than as
+     a page that stopped loading — the empty "No leídas" tab is the common
+     state once notifications mark themselves read (log §26). */
+  padding: 56px 22px 64px;
   text-align: center;
-  font-size: 13px;
+}
+
+.notif-page-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  /* Same soft-tint pairing the notification rows already use
+     (.notif-icon-blue), not a new colour invented for one empty state. */
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+}
+
+.notif-page-empty-title {
+  margin: 0;
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand-ink);
+}
+
+.notif-page-empty-body {
+  margin: 5px 0 0;
+  max-width: 34ch;
+  font-size: 12.5px;
+  line-height: 1.5;
   color: var(--brand-ink-4);
 }
 

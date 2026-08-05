@@ -48,8 +48,23 @@ export function NotificationsPageClient({
         </button>
       </div>
       {visible.length === 0 ? (
+        // Auto-read makes the "No leídas" empty state the COMMON case, not the
+        // edge one: the count collapses to zero the moment the page is opened.
+        // A bare centred line under a short card read as "did this finish
+        // loading?" rather than "you're up to date" (ux-pilot, 2026-08-05), so
+        // the state a user will see most often gets an icon and a real answer.
         <div className="notif-page-empty">
-          {tab === "unread" ? "No tienes notificaciones sin leer." : "Sin notificaciones todavía."}
+          <span className="notif-page-empty-icon">
+            <Icon name={tab === "unread" ? "check" : "bell"} size={20} />
+          </span>
+          <p className="notif-page-empty-title">
+            {tab === "unread" ? "Estás al día" : "Sin notificaciones todavía"}
+          </p>
+          <p className="notif-page-empty-body">
+            {tab === "unread"
+              ? "No te queda nada por leer. Las nuevas aparecerán aquí y en la campana."
+              : "Te avisaremos cuando termine un escaneo o cambie algo en tu visibilidad."}
+          </p>
         </div>
       ) : (
         groups.map((group) => (
