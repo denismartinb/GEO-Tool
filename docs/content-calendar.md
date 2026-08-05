@@ -79,7 +79,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 
 | # | Tema | Cluster | Estado | PR |
 |---|---|---|---|---|
-| W1 | GEO para ecommerce: cómo aparecer cuando la IA recomienda productos | `sectores` | 🔲 Pendiente | — |
+| W1 | GEO para ecommerce: cómo aparecer cuando la IA recomienda productos | `sectores` | ✅ Publicado | #342 |
 | W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | 🔲 Pendiente | — |
 | W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | 🔲 Pendiente | — |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
