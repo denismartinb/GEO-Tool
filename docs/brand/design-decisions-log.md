@@ -2878,7 +2878,29 @@ Cada portada dibuja la tesis de su artículo:
 - `geo-para-saas-b2b`: cuatro preguntas anónimas encadenadas que desembocan en
   el botón de demo, con la línea de "aquí te enteras tú" al final del todo.
 - `geo-para-agencias`: una capa de respuesta ancha frente a un hilo de clics
-  mínimo que llega a la web — el 1,08% frente a "una de cada cuatro búsquedas".
+  mínimo que llega a la web del cliente.
+
+**QA bloqueó la primera versión de `geo-para-agencias`, y tenía razón —
+distinto ADR, mismo tipo de error que el de las cifras.** La primera versión
+del SVG llevaba texto real incrustado: "1,08%" y "1 de cada 4 búsquedas ya se
+responde antes del clic". La enmienda de 2026-08-04 a ADR 0028 dice, literal:
+*"Una portada puede ser generada o de stock, pero no puede representar una
+interfaz de producto, un gráfico, un panel ni una métrica. Si la portada
+enseña algo que parece un dato de Genscore, ese dato tiene que existir — y
+entonces ya no es una portada, es una figura, y le aplica la regla del
+cuerpo."* Una cifra citable no basta: una portada no tiene pie de figura donde
+colgar la fuente, así que una cifra ahí queda huérfana de cita aunque sea
+verdadera. Corregido quitando las dos cifras y dejando sólo la forma —la
+franja ancha frente al hilo fino— con dos frases sin números ("La respuesta
+está en todas partes. La visita, casi en ninguna."). El número exacto sigue
+viviendo donde tiene que vivir: en el `StatGrid` del cuerpo, con su fuente.
+
+La rejilla de 21 bloques de opacidad variable no cuenta como "un gráfico" en el
+sentido de la enmienda: no traza ningún valor medido a lo largo de un eje, es
+textura decorativa del mismo tipo que las tarjetas de respuesta de los otros
+dos SVG. La tarjeta "la web del cliente" tampoco cuenta como "un panel" de
+producto: son barras grises genéricas sin texto real, el mismo lenguaje visual
+que ya usan las otras dos portadas para "una respuesta genérica".
 
 **Un detalle técnico que no es cosmético.** `next/image` **se niega a servir
 SVG** salvo que se active `dangerouslyAllowSVG`, y ese flag es **global**:
