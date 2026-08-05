@@ -2175,12 +2175,12 @@ etiqueta.
 
 ## 22. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
 
-**Estado: implementada. Requiere aplicar a mano la migración
-`0029_notification_audit_regression_types.sql` en Supabase antes de que sirva
-de nada** — hasta entonces el `CHECK` de `notifications.type` rechaza los
-cinco tipos nuevos y `emitNotification` se limita a registrar el fallo (es
-fail-soft por contrato, así que no rompe ninguna auditoría; simplemente no
-avisa). Invariantes de la zona en `.claude/rules/web-audit.md`.
+**Estado: implementada. Migración `0029_notification_audit_regression_types.sql`
+aplicada a mano en Supabase por el fundador el 2026-08-05**, en el mismo PR.
+Antes de aplicarla el `CHECK` de `notifications.type` rechazaba los cinco tipos
+nuevos y `emitNotification` se limitaba a registrar el fallo — fail-soft por
+contrato, así que no rompía ninguna auditoría, simplemente no avisaba.
+Invariantes de la zona en `.claude/rules/web-audit.md`.
 
 **El problema.** Desde §18 la auditoría se refresca sola tras cada escaneo,
 pero nadie te decía que el resultado de hoy es peor que el de ayer: tenías que
