@@ -2,7 +2,11 @@ import "server-only";
 import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
-import { MAX_AUDIT_WORKER_CHAIN, processDueWebAuditJobs } from "@/lib/web-audit/audit-job-runner";
+import {
+  backfillMissingWebAuditJobs,
+  MAX_AUDIT_WORKER_CHAIN,
+  processDueWebAuditJobs
+} from "@/lib/web-audit/audit-job-runner";
 import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 
 /**
@@ -80,15 +84,26 @@ async function runWorker(chainIndex: number) {
   const service = createServiceClient();
 
   try {
+    // Only at the head of a chain: the self-dispatches below are draining a
+    // queue this pass already reconciled, so repeating it on each link would
+    // be pure cost. Both real entry points (the executor's after() and the
+    // daily cron) arrive with chainIndex 0, so recovery is fast — minutes
+    // after the lost enqueue, not at 07:00 the next day.
+    const backfilled = chainIndex === 0 ? await backfillMissingWebAuditJobs({ service }) : 0;
+
     const { processed, outcomes, hasMoreWork } = await processDueWebAuditJobs({ service });
 
-    const continuationScheduled = hasMoreWork && chainIndex + 1 < MAX_AUDIT_WORKER_CHAIN;
+    // A backfill that found work means there are now due jobs behind this
+    // pass, whether or not the sweep happened to claim them.
+    const continuationScheduled =
+      (hasMoreWork || backfilled > 0) && chainIndex + 1 < MAX_AUDIT_WORKER_CHAIN;
     if (continuationScheduled) {
       after(() => triggerWebAuditRun({ chainIndex: chainIndex + 1 }));
     }
 
     return NextResponse.json({
       processed,
+      backfilled,
       results: outcomes.map((o) => o.result),
       continuationScheduled
     });

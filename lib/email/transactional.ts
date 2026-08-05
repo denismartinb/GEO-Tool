@@ -465,6 +465,21 @@ export async function sendAccountDeletedEmail(to: string): Promise<void> {
  * unconfigured alert channel must never turn into a crash on a code path
  * whose whole job is handling a failure gracefully.
  */
+/**
+ * True only when an operator alert can ACTUALLY be delivered — which needs
+ * both a destination (`OPS_ALERT_EMAIL`) and a transport (`RESEND_API_KEY`).
+ *
+ * Checking only the address was not enough, and the gap cost a failed
+ * verification of the very phase that introduced it (2026-08-05): the
+ * address was configured, this returned true, and `sendEmail` then no-opped
+ * on `if (!resend) return` without a word. Two silent gates in series is
+ * exactly the shape of failure ADR 0029 exists to remove, so the probe has
+ * to cover the whole path it claims to have checked.
+ */
+export function isOpsAlertConfigured(): boolean {
+  return getOpsAlertAddress() !== null && getResendClient() !== null;
+}
+
 function getOpsAlertAddress(): string | null {
   const raw = process.env.OPS_ALERT_EMAIL?.trim();
   return raw ? raw : null;
@@ -532,6 +547,69 @@ export async function sendWebAuditFailedAlertEmail(input: {
        <pre style="margin:0;padding:12px;background:#F7F8FB;border:1px solid #E7EAF0;border-radius:10px;font-size:12.5px;white-space:pre-wrap;word-break:break-word;">${escapeHtml(
          input.lastError
        )}</pre>
+     </body></html>`
+  );
+}
+
+/**
+ * Alerts the operator that a scan could not produce complete data
+ * (EXTRACTION-RELIABILITY-1 Fase B, docs/adr/0029).
+ *
+ * Goes to the OPERATOR, never to the customer — same reasoning as
+ * `sendWebAuditFailedAlertEmail` above. An exhausted API account or a dead
+ * engine is backend trouble the customer cannot act on, and telling them
+ * their data is incomplete without being able to fix it is noise about
+ * someone else's problem.
+ *
+ * This exists because the failure it reports was invisible for four days:
+ * OpenAI extraction returned HTTP 429 on every call from 2026-08-01 while
+ * the product kept marking every scan "Completado", and Claude had failed
+ * the same way in June without anyone noticing either. The subject line
+ * leads with the engine and the reason precisely so the inbox itself
+ * answers "what do I have to go fix".
+ *
+ * Deliberately plain and dense rather than brand-wrapped: the reader is
+ * debugging.
+ */
+export async function sendScanHealthAlertEmail(input: {
+  engine: string;
+  reason: string;
+  headline: string;
+  detail: string;
+  domain: string;
+  projectId: string;
+  runId: string;
+  affectedRows: number;
+  totalRows: number;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#5B6B82;font-size:13px;white-space:nowrap;">${label}</td>` +
+    `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
+
+  await sendEmail(
+    to,
+    `[GenScore] Escaneo incompleto — ${input.engine}: ${input.reason}`,
+    `<!doctype html><html><head><meta charset="utf-8"></head>
+     <body style="margin:0;padding:24px;background:#FFFFFF;font-family:${FONT_STACK};color:#0B1426;">
+       <h1 style="margin:0 0 6px;font-size:17px;">${escapeHtml(input.headline)}</h1>
+       <p style="margin:0 0 18px;font-size:13.5px;color:#5B6B82;">${escapeHtml(input.detail)}</p>
+       <table role="presentation" cellpadding="0" cellspacing="0">
+         ${row("Motor", input.engine)}
+         ${row("Causa", input.reason)}
+         ${input.totalRows > 0 ? row("Filas afectadas", `${input.affectedRows} de ${input.totalRows}`) : row("Filas", "ninguna: el motor no llegó a responder")}
+         ${row("Dominio", input.domain)}
+         ${row("Proyecto", input.projectId)}
+         ${row("Escaneo", input.runId)}
+         ${row("Detectado", input.detectedAt.toISOString())}
+       </table>
+       <p style="margin:18px 0 0;font-size:12.5px;color:#5B6B82;">
+         Sólo se envía un aviso por motor y causa cada 24 h, aunque el problema afecte a varios proyectos.
+         El resto queda registrado en <code>scan_prompt_results.extraction_error</code>.
+       </p>
      </body></html>`
   );
 }

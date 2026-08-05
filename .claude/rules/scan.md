@@ -35,6 +35,21 @@ worse than no rule, because a future session will obey it anyway.
   job left `running` by a dead invocation is stranded forever unless something
   can take it over. Use the atomic `UPDATE ... WHERE locked_at < now - lease
   RETURNING` pattern (`docs/adr/0029`, Addendum).
+- **A failure the operator can fix must reach the operator.** Persisting a
+  categorized error is half the job; if nothing reads it, the incident is still
+  invisible — OpenAI's 429s ran four days and Claude's ran unnoticed entirely
+  (`docs/adr/0029`, Fase B). Alert on what is actionable (`quota`, `config`, a
+  dead engine, a run out of retries), stay silent about model noise, and dedupe
+  across projects: an alert that fires twenty times is one that gets ignored.
+- **An alert's own failure must be diagnosable where you already work.** A
+  `console.error` in a short-lived runtime log is not a diagnosis — persist the
+  reason (`docs/adr/0029`, "What the first real delivery cost to learn"). And a
+  probe that checks one segment of a delivery path must not report on the whole
+  path: destination configured is not transport configured.
+- **Operator alerts never go to the customer.** Backend trouble a customer
+  cannot act on is noise about someone else's problem — use `OPS_ALERT_EMAIL`,
+  never their address (`lib/email/transactional.ts`, precedent
+  AUDIT-AFTER-SCAN-1).
 - **Terminal states stay terminal, and progress must bump `updated_at`.** Any
   path that defers work instead of finishing it must write to `scan_runs` so
   `reconcileStuckScanRuns` can tell a deferring run from a stalled one

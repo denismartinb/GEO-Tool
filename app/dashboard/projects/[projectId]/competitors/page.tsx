@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
@@ -17,6 +16,7 @@ import {
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
+import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { faviconUrl } from "@/lib/domains/favicon";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
@@ -405,10 +405,19 @@ export default async function CompetitorsPage({
     return { date: run.finished_at ?? run.created_at, values };
   });
 
-  const validTrendPoints = trendData.filter((d) => d.values.brand != null).length;
-  const hasTrendData = validTrendPoints >= 2;
+  /* What the chart actually draws: informative scans only, most recent window.
+     See lib/competitors/trend-window.ts for both defects this fixes. Kept
+     separate from `trendData` on purpose — the "último escaneo" list below
+     must stay anchored to the real latest run, not to the last point that
+     happened to survive this window, or its heading would be a lie. */
+  const chartTrendData = selectTrendWindow({ points: trendData });
 
-  const trendPositionValues = trendData
+  // Counted over the visible window, so the countdown copy and the chart can
+  // never disagree about how much position data there is.
+  const validTrendPoints = chartTrendData.filter((d) => d.values.brand != null).length;
+  const hasTrendData = validTrendPoints >= MIN_TREND_POINTS;
+
+  const trendPositionValues = chartTrendData
     .flatMap((d) => Object.values(d.values))
     .filter((v): v is number => v != null);
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
@@ -468,17 +477,26 @@ export default async function CompetitorsPage({
       }))
     ]
       .filter((entry): entry is typeof entry & { position: number } => entry.position != null)
-      .sort((a, b) => a.position - b.position);
+      /* Ranked 1..N with no repeats, so the column reads as an order rather
+         than a measurement (founder, 2026-08-04). The underlying number is a
+         mean rank — "2,18º" — which is exactly what made it confusing: a mean
+         is almost never 1,00, so the list looked like nobody was in first
+         place. The order it produces is still the honest signal; the decimal
+         behind it is not what the user is asking this list.
 
-    let lastPosition: number | null = null;
-    let lastRank = 0;
-    return sorted.map((entry, index) => {
-      if (lastPosition === null || entry.position !== lastPosition) {
-        lastRank = index + 1;
-        lastPosition = entry.position;
-      }
-      return { ...entry, rank: lastRank };
-    });
+         Ties broken by mention rate: at the same mean rank, the brand the AI
+         names in more answers is genuinely ahead, and that number is already
+         on screen beside the name, so the tiebreak is visible rather than
+         arbitrary. Name last, purely so the order is stable between renders
+         instead of depending on array order. */
+      .sort(
+        (a, b) =>
+          a.position - b.position ||
+          (b.mentionRate ?? -1) - (a.mentionRate ?? -1) ||
+          a.label.localeCompare(b.label, "es")
+      );
+
+    return sorted.map((entry, index) => ({ ...entry, rank: index + 1 }));
   })();
 
   // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
@@ -754,56 +772,67 @@ export default async function CompetitorsPage({
                   share-of-voice podium (founder feedback: it was buried at the
                   bottom of the desktop rail). The ranked list repeats the
                   chart's endpoint as a readable number, so "who is ahead right
-                  now" doesn't require tracing a line. */}
-              <div className="cm2-sec-lbl">Evolución del puesto cuando apareces</div>
-              <div className="card cm2-pos-card">
-                {hasTrendData ? (
-                  <>
-                    <div className="cm2-pos-chart">
-                      <PositionTrendChart series={trendSeries} data={trendData} maxPosition={maxTrendPosition} />
-                    </div>
+                  now" doesn't require tracing a line.
+
+                  The CHART waits for enough scans; the LIST does not. A trend
+                  needs history, but "who is ahead right now" is answerable from
+                  the very first scan, and hiding it until the fourth threw away
+                  real data the user already had (founder, 2026-08-04: "la tabla
+                  sí debe salir desde el primer escaneo, solo se oculta el
+                  gráfico").
+
+                  What is never rendered is an empty shell: no section label and
+                  no card unless at least one of the two has something real to
+                  say. An earlier version explained the wait honestly and the
+                  founder still cut it — a block that only ever says "not yet"
+                  is noise on every visit, and better wording did not fix that.
+
+                  The label tracks what is actually below it, so it never
+                  promises an evolution the card is not showing. */}
+              {hasTrendData || latestPositions.length > 0 ? (
+                <>
+                  <div className="cm2-sec-lbl">
+                    {hasTrendData ? "Evolución del puesto cuando apareces" : "Puesto en el último escaneo"}
+                  </div>
+                  <div className={`card cm2-pos-card${hasTrendData ? "" : " list-only"}`}>
+                    {hasTrendData ? (
+                      <div className="cm2-pos-chart">
+                        <PositionTrendChart series={trendSeries} data={chartTrendData} maxPosition={maxTrendPosition} />
+                      </div>
+                    ) : null}
                     {latestPositions.length > 0 ? (
                       <div className="cm2-pos-list">
+                        {/* The position is the point of this block, so it is the
+                            last column and the heaviest — the founder looked
+                            for it on the right and did not see it on the left
+                            ("me gusta más que la columna de puesto [vaya] a la
+                            derecha, no la había visto", 2026-08-04). Each label
+                            sits over its own column; a single heading used to
+                            name the wrong one. No InfoTip: right-aligned its
+                            bubble opens off-screen and renders clipped. */}
                         <div className="cm2-pos-list-hd">
-                          Puesto medio · último escaneo
-                          {/* Kept short on purpose: InfoTip renders its text as the
-                              element's aria-label, and a screen reader announces that
-                              in one breath. */}
-                          <InfoTip text="Puesto medio en que la IA nombra cada marca, contando solo las respuestas donde aparece. 1,0 es salir siempre la primera. Al lado, en cuántas respuestas aparece." />
+                          <span className="cm2-pos-hd-nm">Último escaneo</span>
+                          <span className="cm2-pos-rate">Mención</span>
+                          <span className="cm2-pos-n">Puesto</span>
                         </div>
                         {latestPositions.map((entry) => (
                           <div className={`cm2-pos-row${entry.isBrand ? " you" : ""}`} key={entry.key}>
-                            <span className="cm2-pos-n">{entry.rank}</span>
                             <span className="cm2-pos-nm">{entry.label}</span>
-                            {entry.mentionRate != null ? (
-                              <span style={{ fontSize: 11.5, color: "var(--ink-4)", fontVariantNumeric: "tabular-nums" }}>
-                                {Math.round(entry.mentionRate)}%
-                              </span>
-                            ) : null}
-                            <span className="cm2-pos-v">{entry.position.toFixed(2)}º</span>
+                            {/* Also the tiebreaker for the order, so a shared
+                                mean rank never resolves invisibly. */}
+                            <span className="cm2-pos-rate">
+                              {entry.mentionRate != null ? `${Math.round(entry.mentionRate)}%` : ""}
+                            </span>
+                            {/* Ordinal, not a row number: "3º" is a standing,
+                                "3" is a bullet. */}
+                            <span className="cm2-pos-n">{entry.rank}º</span>
                           </div>
                         ))}
                       </div>
                     ) : null}
-                  </>
-                ) : (
-                  <div style={{ padding: "32px 20px", textAlign: "center" }}>
-                    <div style={{ fontSize: 13.5, color: "var(--ink-3)" }}>
-                      {/* Show progress, not just a gate. A flat "available from
-                          2 scans" is a dead end; the count turns it into a
-                          countdown the user can act on — and, right after a
-                          scoring change, it is also the honest explanation for
-                          why a project with plenty of scans still shows zero
-                          here (pilot proposal, 2026-08-03). */}
-                      Disponible a partir de 2 escaneos con datos de posición.{" "}
-                      <b className="tnum">
-                        {validTrendPoints} de 2
-                      </b>{" "}
-                      por ahora.
-                    </div>
                   </div>
-                )}
-              </div>
+                </>
+              ) : null}
 
               {/* Brecha de prompts */}
               {promptGapSummary && (
