@@ -2813,7 +2813,7 @@ artículos publicados.
 
 **Tres PRs apilados a la vez.** W2 sobre W1 y W3 sobre W2. Funciona y evita
 duplicar el trabajo estructural, pero el orden de merge deja de ser opcional:
-#342 → #346 → #347. Con esto hay **6 PRs abiertos** y `CLAUDE.md` fija el
+#342 → #346 → #349. Con esto hay **6 PRs abiertos** y `CLAUDE.md` fija el
 máximo en 3 — se hizo porque el fundador pidió la prueba explícitamente, y
 queda dicho aquí para que conste que fue una excepción consciente y no un
 descuido.
