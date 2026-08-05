@@ -2839,10 +2839,22 @@ datos que no la produjeron.
 **El coste, dicho:** una mejora real tarda dos escaneos en llegar del todo al
 titular. Se gana que deje de saltar treinta puntos por ruido.
 
-**Hueco declarado:** Escaneos, las tarjetas de dominio y el resumen semanal
-siguen mostrando el score por run, así que **el titular de Visión general y la
-columna de Escaneos pueden enseñar números distintos del mismo proyecto**.
-Unificarlas es trabajo pendiente, no un descuido.
+**Decisión 5 — fuera el GEO Score de la tabla de Escaneos** (fundador,
+2026-08-05: *"Yo veré la puntuación de los Escaneos en la página de debug"*).
+Con el titular convertido en mediana, una columna de scores por escaneo al lado
+enseñaba **dos números distintos del mismo proyecto** sin decir cuál manda. El
+score por escaneo pasa a ser dato de inspección, no de producto.
+
+Se van con ella la columna «Δ Score» y su línea explicativa al pie: existían
+para hacer honesta una comparación que ya no se publica. Esto **supera a
+DELTA-GUARD-1 (§23) en esta pantalla** — no porque aquella decisión fuera
+errónea, sino porque la superficie que arreglaba ha dejado de existir. La
+regla de `resolveDelta` sigue viva y vinculante en todas las demás.
+
+**Hueco declarado, más estrecho que antes:** las tarjetas de dominio (arriba de
+esa misma pantalla) y el resumen semanal siguen mostrando el score del último
+escaneo, no la mediana. Ahí sí puede haber discrepancia con Visión general.
+Está pendiente de decidir si pasan a la ventana o se quedan como están.
 
 ---
 

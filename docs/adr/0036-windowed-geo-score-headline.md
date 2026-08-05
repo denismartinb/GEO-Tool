@@ -98,11 +98,16 @@ cosas incomparables.
 - **No repuntúa nada.** `run_scores` sigue guardando el score de cada run; la
   ventana se calcula al renderizar, así que revertir esta decisión es quitar
   código de pantalla, no migrar datos.
-- **No cambia otras superficies.** Escaneos, las tarjetas de dominio y el
-  resumen semanal siguen mostrando el score por run. Unificarlas es trabajo
-  pendiente, y hasta que ocurra **el titular de Visión general y la columna de
-  Escaneos pueden mostrar números distintos para el mismo proyecto** — un
-  hueco declarado, no un descuido.
+- **No unifica todas las superficies.** La tabla de Escaneos **dejó de
+  mostrar el score por escaneo** el mismo día (decisión del fundador: pasa a
+  ser dato de inspección), y con ella se fueron la columna «Δ Score» y su nota
+  al pie — superan a DELTA-GUARD-1 *en esa pantalla*, porque la superficie que
+  aquella fase hizo honesta ya no existe. La regla de `resolveDelta` sigue
+  vinculante en todas las demás.
+
+  **Siguen sin unificar** las tarjetas de dominio y el resumen semanal, que
+  muestran el score del último escaneo y por tanto pueden discrepar del
+  titular. Hueco declarado, pendiente de decisión.
 
 ## Referencias
 

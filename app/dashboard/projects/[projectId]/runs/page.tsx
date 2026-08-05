@@ -16,13 +16,6 @@ import {
   reconcileStuckScanRuns,
   scanRunsNeedReconciliation
 } from "@/lib/scan/scan-runner";
-import {
-  deltaWithheldReason,
-  readComparableRun,
-  resolveDelta,
-  type ComparableRun,
-  type DeltaVerdict
-} from "@/lib/scoring/score-reliability";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -96,8 +89,8 @@ function RunAuditCell({ status }: { status: RunAuditStatus }) {
         {isComplete ? "Auditada" : "Parcial"}
       </span>
       {status.readinessScore !== null && (
-        // Labelled by `title` rather than inline text: unlabelled, "40/100"
-        // sitting one column from "GEO Score" reads as a second score.
+        // Labelled by `title` rather than inline text: an unlabelled
+        // "40/100" in a table of scan outcomes reads as a score of the scan.
         <div
           className="tnum"
           style={{ fontSize: 11, color: "var(--ink-4)", marginTop: 2 }}
@@ -319,35 +312,11 @@ export default async function RunsPage({
   const completedRuns = allRuns.filter((r) => r.status === "completed");
   const completedRunIds = completedRuns.map((r) => r.id);
 
-  /* Fetch scores only for completed runs */
-  const { data: scores } =
-    completedRunIds.length > 0
-      ? await supabase
-          .from("run_scores")
-          // details_json (DELTA-GUARD-1): carries the comparability
-          // fingerprint resolveDelta needs — response count, composite
-          // version, surviving components and engine set. Reading it here is
-          // what lets this table apply the same ADR 0024 guard the Overview
-          // already applies, instead of subtracting two numbers that may not
-          // measure the same thing.
-          .select("run_id, visibility_score, details_json")
-          .eq("project_id", projectId)
-          .in("run_id", completedRunIds)
-      : { data: [] };
-
-  const scoreByRunId = new Map<string, number>(
-    (scores ?? []).map((s) => [s.run_id, Math.round(Number(s.visibility_score ?? 0))])
-  );
-
-  const comparableByRunId = new Map<string, ComparableRun>(
-    (scores ?? []).map((s) => [s.run_id as string, readComparableRun(s.details_json)])
-  );
-
   /* AUDIT-IN-RUNS-1 — the "Auditoría" column.
    *
    * Three bounded queries and three Maps, deliberately not one lookup per row:
    * this table lists every run a project has, so a per-row query would grow
-   * with history. Same shape as scoreByRunId directly above.
+   * with history.
    *
    * Both halves of the audit are read from what is actually PERSISTED rather
    * than from the job's status, because the job says what was attempted and
@@ -453,38 +422,6 @@ export default async function RunsPage({
    * `resolveDelta` is that ADR's single decision point, so using it here means
    * the two screens cannot drift apart in what they are willing to assert.
    */
-  const scoreDeltas = new Map<string, DeltaVerdict | null>();
-  for (let i = 0; i < completedRunsOldestFirst.length; i++) {
-    const run = completedRunsOldestFirst[i];
-    if (i === 0) {
-      scoreDeltas.set(run.id, null); // first ever run — no previous
-      continue;
-    }
-
-    const prevRun = completedRunsOldestFirst[i - 1];
-    const curr = scoreByRunId.get(run.id) ?? null;
-    const prev = scoreByRunId.get(prevRun.id) ?? null;
-    const currComparable = comparableByRunId.get(run.id);
-    const prevComparable = comparableByRunId.get(prevRun.id);
-
-    if (curr === null || prev === null || !currComparable || !prevComparable) {
-      scoreDeltas.set(run.id, null);
-      continue;
-    }
-
-    scoreDeltas.set(run.id, resolveDelta(curr - prev, currComparable, prevComparable));
-  }
-
-  /**
-   * Whether any run in view has a delta this layer refuses to publish — the
-   * condition for the one-line explanation under the table. Deliberately not
-   * "does any row show a dash": the very first run of a project shows one too,
-   * and "no previous scan to compare against" needs no explaining.
-   */
-  const hasWithheldDelta = Array.from(scoreDeltas.values()).some(
-    (verdict) => verdict !== null && verdict.kind !== "publish"
-  );
-
   /* Assign run number (1 = oldest) */
   const runNumberByRunId = new Map<string, number>();
   const runsOldestFirst = [...allRuns].reverse();
@@ -510,7 +447,6 @@ export default async function RunsPage({
   const shouldAutoExecute =
     ENABLE_SYNC_SCAN_EXECUTION && (activeRun?.status === "pending" || activeRun?.status === "running");
 
-  const hasMultipleCompleted = completedRuns.length >= 2;
 
   /* First-scan / scan-in-progress banner state */
   const otherScanningDomains = domainCards.filter((d) => d.id !== projectId && d.isScanning);
@@ -826,8 +762,6 @@ export default async function RunsPage({
                       sola tras cada escaneo existe una relación 1:1 fiable
                       entre una fila de esta tabla y una auditoría. */}
                   <th>Auditoría</th>
-                  <th className="num">GEO Score</th>
-                  {hasMultipleCompleted ? <th className="num">Δ Score</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -848,9 +782,6 @@ export default async function RunsPage({
                       ? "var(--pos)"
                       : "var(--accent)";
 
-                  const geoScore =
-                    run.status === "completed" ? (scoreByRunId.get(run.id) ?? null) : null;
-                  const delta = hasMultipleCompleted ? (scoreDeltas.get(run.id) ?? null) : null;
                   const errorDisplay =
                     run.status === "failed" ? getRunErrorDisplay(run.error_summary) : null;
                   const durationLabel = formatDurationSeconds(run.started_at, run.finished_at);
@@ -955,42 +886,6 @@ export default async function RunsPage({
                           <RunAuditCell status={auditStatusByRunId.get(run.id) ?? { kind: "none" }} />
                         </td>
 
-                        {/* GEO Score */}
-                        <td className="num">
-                          {geoScore !== null ? (
-                            <b className="tnum" style={{ fontSize: 14, color: "var(--ink)" }}>
-                              {geoScore}
-                            </b>
-                          ) : (
-                            <span style={{ color: "var(--ink-4)" }}>—</span>
-                          )}
-                        </td>
-
-                        {/* Delta (only if >=2 completed runs).
-                            DELTA-GUARD-1: only a "publish" verdict is a real,
-                            assertable change. Everything else renders as the
-                            same em dash the "no previous run" case already
-                            used, with the reason in the tooltip — the founder
-                            decided on 2026-08-03 (Overview) that a withheld
-                            comparison renders as nothing rather than as a
-                            notice, because several "sin comparación" labels on
-                            one screen read as a broken product instead of a
-                            careful one. A whole COLUMN of them would be
-                            worse. */}
-                        {hasMultipleCompleted ? (
-                          <td className="num">
-                            {delta?.kind === "publish" ? (
-                              <Delta value={delta.value} suffix=" pt" />
-                            ) : (
-                              <span
-                                style={{ fontSize: 11.5, color: "var(--ink-4)" }}
-                                title={deltaWithheldReason(delta)}
-                              >
-                                —
-                              </span>
-                            )}
-                          </td>
-                        ) : null}
                       </tr>
 
                       {/* Error / notice detail sub-row. Raw `error_summary` values
@@ -1001,7 +896,7 @@ export default async function RunsPage({
                           failure) treatment. See PR #78. */}
                       {errorDisplay ? (
                         <tr key={`${run.id}-err`} className="run-error-row">
-                          <td colSpan={hasMultipleCompleted ? 6 : 5}>
+                          <td colSpan={5}>
                             <div className={errorDisplay.kind === "notice" ? "run-notice-pill" : "run-error-pill"}>
                               <Icon name={errorDisplay.kind === "notice" ? "refresh" : "info"} size={14} />
                               <span>
@@ -1025,14 +920,6 @@ export default async function RunsPage({
               invisible on touch, which is where the founder actually reads
               this. Same pattern the Overview already uses: ONE line that says
               what unlocks the comparison, never a notice per row. */}
-          {hasWithheldDelta ? (
-            <div style={{ padding: "2px 12px 10px", fontSize: 11.5, color: "var(--ink-4)" }}>
-              Los guiones de «Δ Score» son comparaciones que no podemos afirmar: el escaneo
-              tenía muy pocas respuestas de IA, o midió algo distinto del anterior (otros
-              motores, otra metodología). Pasa el ratón por encima para ver el motivo de cada
-              uno.
-            </div>
-          ) : null}
         </div>
       )}
 
