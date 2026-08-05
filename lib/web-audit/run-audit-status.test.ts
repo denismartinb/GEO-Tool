@@ -1,0 +1,69 @@
+import { describe, expect, it } from "vitest";
+import { deriveRunAuditStatus, type RunAuditStatus } from "./run-audit-status";
+
+function derive(input: {
+  coverage?: string[];
+  readiness?: Array<[string, number | null]>;
+  jobs?: Array<[string, string]>;
+  runId?: string;
+}): RunAuditStatus {
+  return deriveRunAuditStatus({
+    runId: input.runId ?? "run-1",
+    coverageScanIds: new Set(input.coverage ?? []),
+    readinessByScanId: new Map(input.readiness ?? []),
+    jobStatusByRunId: new Map(input.jobs ?? [])
+  });
+}
+
+describe("deriveRunAuditStatus", () => {
+  it("reports audited only when BOTH halves landed", () => {
+    expect(derive({ coverage: ["run-1"], readiness: [["run-1", 40]] })).toEqual({
+      kind: "audited",
+      readinessScore: 40
+    });
+  });
+
+  it("never calls one half a finished audit", () => {
+    // Showing "Auditada" off the coverage half alone would claim technical
+    // health was checked when it was not — the kind of false completeness
+    // CLAUDE.md rules out.
+    expect(derive({ coverage: ["run-1"] }).kind).toBe("partial");
+    expect(derive({ readiness: [["run-1", 40]] }).kind).toBe("partial");
+  });
+
+  it("shows nothing for a run that was never audited and has no work queued", () => {
+    // Runs from before the automatic audit, and projects below the Pro gate.
+    expect(derive({})).toEqual({ kind: "none" });
+  });
+
+  it("treats an active job as in-progress even when one half already landed", () => {
+    // Coverage lands first and the technical half is often parked to the next
+    // invocation by design. That run is working, not stalled.
+    expect(derive({ coverage: ["run-1"], jobs: [["run-1", "pending"]] })).toEqual({ kind: "in_progress" });
+    expect(derive({ jobs: [["run-1", "running"]] })).toEqual({ kind: "in_progress" });
+    expect(derive({ jobs: [["run-1", "retrying"]] })).toEqual({ kind: "in_progress" });
+  });
+
+  it("stops calling it in-progress once the job reaches a terminal state", () => {
+    // The promise of "En curso" is that it will resolve on its own. A
+    // cancelled or failed job never will, so it must not keep saying so.
+    expect(derive({ jobs: [["run-1", "cancelled"]] })).toEqual({ kind: "none" });
+    expect(derive({ jobs: [["run-1", "failed"]] })).toEqual({ kind: "none" });
+    expect(derive({ coverage: ["run-1"], jobs: [["run-1", "failed"]] }).kind).toBe("partial");
+  });
+
+  it("keeps a null readiness score as audited rather than missing", () => {
+    // readiness_score is nullable on a real snapshot (no page could be
+    // scored). The audit still happened; only the number is absent.
+    expect(derive({ coverage: ["run-1"], readiness: [["run-1", null]] })).toEqual({
+      kind: "audited",
+      readinessScore: null
+    });
+  });
+
+  it("does not leak another run's audit into this row", () => {
+    expect(derive({ runId: "run-1", coverage: ["run-2"], readiness: [["run-2", 90]] })).toEqual({
+      kind: "none"
+    });
+  });
+});
