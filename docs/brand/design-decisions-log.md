@@ -2761,6 +2761,32 @@ evaluar y descartar alternativas, y además introduce dos secciones que no
 existen. Cambiar la navegación de toda la consola es su propia fase, no un
 efecto colateral del rediseño de una pantalla.
 
+**El día que borré 955 líneas de CSS sin enterarme (2026-08-05).** Al aplicar
+la bajada de escala de Dominios usé sustitución de texto sobre
+`app/globals.css` entero. El bloque móvil lo localicé buscando
+`@media (max-width: 560px)` — y esa cadena aparece **antes** en el fichero, en
+el sistema de artículos del blog. El corte se llevó por delante ~930 líneas
+intermedias: el arreglo del auto-zoom de iOS, el sistema `.art-*` completo y
+todo lo que había entre medias.
+
+**Nada del pipeline local lo detectó.** `pnpm test` (1526) y
+`pnpm run validate` —build, typecheck y lint— pasaron en verde con el fichero
+mutilado, porque borrar CSS no rompe ninguna de las tres cosas. Lo cazó el
+piloto, y no en la pantalla que yo estaba tocando: `web-audit @ mobile:
+horizontal overflow — scrollWidth 438px > viewport 375px`. Una pantalla que
+este PR no toca, rota por CSS que este PR borró.
+
+Dos reglas que quedan:
+
+1. **Ninguna sustitución ciega sobre un fichero de 6.700 líneas.** Se acota
+   primero el bloque (por sus marcadores de inicio y fin), se opera dentro y se
+   comprueba después que el diff no sale de ahí. Es lo que se hizo al rehacerlo.
+2. **Verde en local no es verde.** Es la segunda vez el mismo día que el
+   pipeline aprueba algo roto — la primera fueron las seis pantallas en 404 por
+   una columna que no existía. Las dos las encontró el piloto sobre un
+   despliegue real. Cuando el coste de equivocarse es "una pantalla que no
+   estoy mirando", la única prueba que vale es la que mira todas.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el

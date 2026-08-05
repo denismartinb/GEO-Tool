@@ -5715,6 +5715,945 @@ select.set-field {
   .gx-vs-row > div:nth-child(3)::before { content: "GEO · "; font-weight: 800; font-size: 11px; letter-spacing: .04em; color: var(--accent-ink); }
 }
 @media (max-width: 560px) {
+  .gx-metric-grid { grid-template-columns: 1fr; }
+}
+
+/* iOS Safari auto-zooms the whole page when a text input/select/textarea
+ * whose font-size is under 16px receives focus. Because this app is an SPA
+ * (client-side route transitions), that zoom can persist across the very
+ * next navigation instead of resetting the way a full page load would —
+ * so the founder could focus one of these smaller fields, navigate on, and
+ * "land" on an unrelated page already zoomed in (founder report,
+ * 2026-07-18). Bumping these specific fields to 16px on phone-sized
+ * viewports removes the trigger without touching their desktop appearance,
+ * where the bug doesn't occur. Selectors mirror their base definitions
+ * above so this wins purely on source order (equal specificity, declared
+ * later) — no !important needed.
+ */
+@media (max-width: 767px) {
+  .domain-input,
+  .pr-search input,
+  .add-prompts-text-input,
+  .set-field,
+  .cit-select {
+    font-size: 16px;
+  }
+}
+
+/* ==========================================================================
+   GROWTH-3 Fase 3.1 — Sistema de diseño de artículos (.art-*)
+   --------------------------------------------------------------------------
+   Librería de composición para artículos del blog. Namespaced con `art-`
+   a propósito: PR #292 nos costó una colisión de clases entre ramas, y este
+   bloque introduce ~15 clases nuevas de golpe.
+
+   Principio rector (docs/brand/article-design-system.md): ningún bloque de
+   estos es decorativo. Cada uno codifica algo verdadero del contenido —
+   una respuesta, un veredicto, un paso de una secuencia, una cifra con su
+   fuente. Un bloque usado por estética y no por estructura es un bug.
+
+   Tokens: los de marca ya existentes (--brand-*). Cero colores nuevos.
+   Tema: claro únicamente, como el resto del sitio.
+   ========================================================================== */
+
+.art-tone-blue { color: var(--brand-blue); }
+.art-tone-cyan { color: var(--brand-cyan); }
+.art-tone-warm { color: var(--brand-warm); }
+.art-tone-pos { color: var(--brand-pos); }
+.art-tone-neg { color: var(--brand-neg); }
+.art-tone-bg-blue { background: var(--brand-blue); }
+.art-tone-bg-blue2 { background: var(--brand-blue-2); }
+.art-tone-bg-cyan { background: var(--brand-cyan); }
+.art-tone-bg-warm { background: var(--brand-warm); }
+
+/* --- Respuesta rápida ---------------------------------------------------- */
+.art-takeaway {
+  background: var(--brand-surface); border: 1px solid var(--line);
+  border-left: 3px solid var(--brand-blue); border-radius: 12px;
+  padding: 22px 24px; margin: 0 0 34px; box-shadow: var(--brand-shadow-card);
+}
+.art-takeaway-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--brand-blue); margin-bottom: 9px;
+}
+.art-takeaway p { margin: 0; color: var(--ink); font-size: 17px; line-height: 1.65; }
+
+/* --- Veredicto ----------------------------------------------------------- */
+.art-verdict {
+  display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: start;
+  background: rgba(255, 176, 32, .13); border: 1px solid rgba(255, 176, 32, .42);
+  border-radius: 12px; padding: 20px 22px; margin: 30px 0;
+}
+.art-verdict-badge {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink);
+  background: var(--brand-warm); padding: 5px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-verdict-body h4 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 750; margin: 0 0 5px; color: var(--ink);
+}
+.art-verdict-body p { margin: 0; font-size: 15px; color: var(--ink-2); }
+@media (max-width: 560px) {
+  .art-verdict { grid-template-columns: 1fr; gap: 12px; }
+}
+
+/* --- Sección numerada + acción rápida ------------------------------------ */
+.art-numsec { margin: 44px 0; }
+.art-numsec-h { display: grid; grid-template-columns: auto 1fr; gap: 15px; align-items: baseline; margin-bottom: 13px; }
+.art-numsec-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 15px; font-weight: 800; color: var(--brand-blue); background: var(--brand-blue-soft);
+  width: 31px; height: 31px; border-radius: 8px; display: grid; place-items: center; transform: translateY(3px);
+}
+.art-numsec-h h3 { margin: 0; font-size: 20px; font-weight: 750; letter-spacing: -.01em; color: var(--ink); }
+.art-quick {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  background: var(--surface-2); border: 1px dashed var(--line); border-radius: 10px;
+  padding: 14px 17px; margin: 17px 0 0;
+}
+.art-quick-lbl {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--brand-pos);
+  background: var(--brand-pos-soft); padding: 4px 8px; border-radius: 5px; white-space: nowrap;
+}
+.art-quick-body p { margin: 0; font-size: 14.8px; }
+@media (max-width: 560px) {
+  .art-quick { grid-template-columns: 1fr; gap: 9px; }
+  .art-quick-lbl { justify-self: start; }
+}
+
+/* --- Figura + marco ------------------------------------------------------ */
+.art-figure { margin: 34px 0; }
+.art-frame {
+  position: relative; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 14px; padding: 26px; box-shadow: var(--brand-shadow-card); overflow: hidden;
+}
+.art-caption {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; line-height: 1.55;
+  color: var(--ink-3); margin-top: 11px; display: flex; gap: 8px;
+}
+.art-caption b { color: var(--ink-2); font-weight: 700; white-space: nowrap; }
+
+/* --- Maqueta del panel de producto --------------------------------------- */
+.art-mock { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+@media (max-width: 640px) { .art-mock { grid-template-columns: 1fr; gap: 20px; } }
+.art-gauge { position: relative; width: 132px; height: 132px; justify-self: center; }
+.art-gauge-val { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.art-gauge-num {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.art-gauge-cap {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 9.5px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--ink-4); margin-top: 3px;
+}
+.art-rows { display: flex; flex-direction: column; gap: 13px; min-width: 0; }
+.art-row { position: relative; }
+.art-row-hl {
+  border: 2px solid var(--brand-blue); border-radius: 9px; padding: 10px 12px;
+  margin: 22px -12px 0; box-shadow: 0 0 0 4px var(--brand-blue-soft);
+}
+.art-anno-lbl {
+  position: absolute; top: -13px; left: 10px; display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700;
+  color: #fff; background: var(--brand-blue); padding: 4px 9px; border-radius: 5px; white-space: nowrap;
+}
+.art-row-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 5px; }
+.art-row-l { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.art-row-l em { display: block; font-style: normal; font-size: 11.5px; font-weight: 400; color: var(--ink-4); margin-top: 1px; }
+.art-row-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 13px; font-weight: 700;
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink);
+}
+.art-row-v small { color: var(--ink-4); font-weight: 400; margin-left: 6px; }
+.art-track { height: 7px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 99px; overflow: hidden; }
+.art-fill { height: 100%; border-radius: 99px; }
+
+/* --- Cifras destacadas --------------------------------------------------- */
+.art-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 13px; margin: 30px 0; }
+/* Con solo dos tarjetas, `auto-fit` las estira a media columna cada una y el
+   bloque se lee suelto en pantallas anchas (hallazgo del ux-pilot, PR #310).
+   `auto-fill` sobre un ancho máximo las deja del tamaño que les toca. */
+@media (min-width: 900px) {
+  .art-stats:has(> :nth-child(2):last-child) {
+    grid-template-columns: repeat(2, minmax(148px, 300px)); justify-content: center;
+  }
+}
+.art-stat { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; padding: 17px 18px; box-shadow: var(--brand-shadow-card); }
+.art-stat-n {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 31px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.art-stat-l { font-size: 13px; color: var(--ink-2); margin-top: 7px; line-height: 1.45; }
+.art-stat-src {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; color: var(--ink-4);
+  margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line-soft);
+}
+
+/* --- Cita ---------------------------------------------------------------- */
+.art-pull {
+  border-left: 3px solid var(--brand-cyan); background: rgba(9, 197, 214, .07);
+  border-radius: 0 11px 11px 0; padding: 19px 24px; margin: 30px 0;
+}
+.art-pull-text {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 19px; font-weight: 600; line-height: 1.45; color: var(--ink);
+  margin: 0 0 10px; letter-spacing: -.01em;
+}
+/* MDX envuelve el contenido en bloque en su propio <p>: hereda, no duplica. */
+.art-pull-text p { margin: 0; font: inherit; color: inherit; letter-spacing: inherit; }
+.art-pull cite { font-family: var(--font-mono, ui-monospace, monospace); font-size: 11.5px; font-style: normal; color: var(--ink-3); }
+
+/* --- Bloque de código ---------------------------------------------------- */
+.art-code { background: var(--brand-surface); border: 1px solid var(--line); border-radius: 11px; overflow: hidden; margin: 24px 0; box-shadow: var(--brand-shadow-card); }
+.art-code-h {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 9px 15px; border-bottom: 1px solid var(--line); background: var(--surface-2);
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 11px; color: var(--ink-3);
+}
+.art-code pre {
+  margin: 0; padding: 17px 19px; overflow-x: auto;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.8px; line-height: 1.75; color: var(--ink-2);
+}
+/* Mismo problema que .art-tablewrap resolvió en la PR #306: en móvil el código
+   se lee como cortado en vez de como deslizable. El pilot lo señaló también
+   aquí (PR #309), así que la pista va en los dos sitios, no solo en la tabla. */
+@media (max-width: 640px) {
+  .art-code-h::after {
+    content: "Desliza →"; flex: none; white-space: nowrap; color: var(--ink-3); opacity: .8;
+  }
+}
+
+/* --- Tabla comparativa --------------------------------------------------- */
+.art-tablewrap {
+  overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 26px 0;
+  border: 1px solid var(--line); border-radius: 11px; background: var(--brand-surface); box-shadow: var(--brand-shadow-card);
+}
+.art-tablewrap table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 14px; margin: 0; }
+.art-tablewrap th, .art-tablewrap td { text-align: left; padding: 13px 16px; border-bottom: 1px solid var(--line-soft); vertical-align: top; color: var(--ink-2); }
+.art-tablewrap thead th {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); background: var(--surface-2); font-weight: 700;
+}
+.art-tablewrap tbody tr:last-child td { border-bottom: 0; }
+.art-tablewrap td strong { color: var(--ink); }
+/* Misma pista de scroll que .cmp-table-wrap: sin ella, en móvil las columnas
+   se leen como cortadas en vez de como deslizables (PILOT FAIL, PR #306). */
+@media (max-width: 640px) {
+  .art-tablewrap { position: relative; }
+  .art-tablewrap::before {
+    content: "Desliza para ver todas las columnas →"; display: block;
+    font-family: var(--font-mono, ui-monospace, monospace); font-size: 12px; color: var(--ink-3);
+    padding: 9px 14px 0;
+  }
+}
+.art-pill { display: inline-block; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; font-weight: 700; padding: 3px 8px; border-radius: 5px; white-space: nowrap; }
+.art-pill-no { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.art-pill-si { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.art-pill-neutral { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+
+/* --- Maqueta de cuota de voz --------------------------------------------- */
+.art-sov { display: flex; flex-direction: column; gap: 11px; }
+.art-sov-h {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3); padding-bottom: 4px; border-bottom: 1px solid var(--line);
+}
+.art-sov-total { text-transform: none; letter-spacing: 0; }
+.art-sov-row { display: grid; grid-template-columns: minmax(88px, 132px) 1fr auto; gap: 12px; align-items: center; }
+.art-sov-n { font-size: 13.5px; color: var(--ink-2); display: flex; flex-direction: column; }
+.art-sov-n em {
+  font-style: normal; font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--brand-blue);
+}
+.art-sov-track { height: 9px; border-radius: 5px; background: var(--surface-2); overflow: hidden; }
+.art-sov-fill { height: 100%; border-radius: 5px; background: var(--line-strong, var(--ink-3)); opacity: .45; }
+.art-sov-you .art-sov-n { color: var(--ink); font-weight: 700; }
+.art-sov-you .art-sov-fill { background: var(--brand-blue); opacity: 1; }
+.art-sov-v {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 12.5px;
+  color: var(--ink-2); font-variant-numeric: tabular-nums;
+}
+.art-sov-you .art-sov-v { color: var(--brand-blue); font-weight: 700; }
+@media (max-width: 480px) {
+  .art-sov-row { grid-template-columns: 1fr auto; }
+  .art-sov-track { grid-column: 1 / -1; }
+}
+
+/* --- Maqueta de respuesta generativa (mención vs citación) ---------------- */
+.art-ans-pair { display: grid; gap: 13px; }
+/* En dos columnas el hueco tiene que separar dos textos largos, no dos
+   tarjetas apiladas: 13px se queda corto ahí (mejora del ux-pilot, PR #311). */
+@media (min-width: 700px) { .art-ans-pair { grid-template-columns: 1fr 1fr; gap: 20px; } }
+.art-ans {
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 15px 16px; border-radius: 10px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.art-ans-cited { background: var(--brand-surface); border-color: var(--brand-pos); }
+.art-ans-h {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.art-ans-cited .art-ans-h { color: var(--brand-pos); }
+.art-ans-body { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+.art-ans-src, .art-ans-nosrc {
+  display: flex; align-items: center; gap: 7px; margin-top: auto; padding-top: 9px;
+  border-top: 1px dashed var(--line); font-size: 12.5px;
+}
+.art-ans-src { color: var(--brand-pos); font-weight: 600; }
+.art-ans-nosrc { color: var(--ink-3); font-style: italic; }
+
+/* --- Maqueta de recomendación -------------------------------------------- */
+.art-rec {
+  padding: 16px 17px; border-radius: 10px;
+  background: var(--brand-surface); border: 1px solid var(--line); box-shadow: var(--brand-shadow-card);
+}
+.art-rec-h { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 11px; }
+.art-rec-pri, .art-rec-conf {
+  font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+}
+/* No hay `--brand-warm-soft` en la paleta; se compone del token real con
+   `color-mix` en vez de inventar un hex nuevo (regla: cero colores nuevos). */
+.art-rec-pri { background: color-mix(in srgb, var(--brand-warm) 18%, transparent); color: var(--ink); }
+.art-rec-conf { background: var(--surface-2); color: var(--ink-3); border: 1px solid var(--line); }
+.art-rec-t {
+  margin: 0 0 7px; font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 16.5px; font-weight: 700; color: var(--ink);
+}
+.art-rec-why { margin: 0; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+
+/* --- Maqueta de conjunto de prompts -------------------------------------- */
+.art-prompts { display: flex; flex-direction: column; gap: 9px; }
+.art-prompt-row {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 11px 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+}
+.art-prompt-q { font-size: 14px; color: var(--ink-2); font-style: italic; }
+.art-prompt-i {
+  flex: none; font-family: var(--font-mono, ui-monospace, monospace); font-size: 10px;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--brand-blue);
+  background: var(--brand-blue-soft, var(--brand-surface)); border-radius: 5px; padding: 3px 8px;
+}
+
+/* --- Checklist ----------------------------------------------------------- */
+.art-check { list-style: none; padding: 0; margin: 22px 0; display: flex; flex-direction: column; gap: 8px; }
+.art-check li {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  padding: 12px 15px; background: var(--brand-surface); border: 1px solid var(--line);
+  border-radius: 9px; margin: 0; font-size: 14.8px; color: var(--ink-2);
+}
+.art-check li svg { margin-top: 3px; }
+/* El color del icono es semántico, no decorativo: verde = hazlo, rojo = evítalo. */
+.art-check-hacer li svg { color: var(--brand-pos); }
+.art-check-evitar li svg { color: var(--brand-neg); }
+
+/* --- Bio de autor -------------------------------------------------------- */
+.art-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(140deg, var(--brand-blue), var(--brand-cyan));
+  display: grid; place-items: center; color: #fff;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-weight: 800; font-size: 18px;
+}
+.art-bio {
+  display: grid; grid-template-columns: auto 1fr; gap: 17px; background: var(--brand-surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; margin: 42px 0 0;
+  box-shadow: var(--brand-shadow-card);
+}
+.art-bio h4 { font-family: var(--font-display), "Hanken Grotesk", sans-serif; font-size: 16px; font-weight: 750; margin: 0 0 5px; color: var(--ink); }
+.art-bio p { margin: 0; font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+/* --- CTA de cierre ------------------------------------------------------- */
+.art-cta {
+  position: relative; overflow: hidden;
+  background: linear-gradient(135deg, var(--brand-ink), #152a4d);
+  border-radius: 15px; padding: 34px; margin: 44px 0 0; text-align: center;
+}
+.art-cta-glow {
+  position: absolute; width: 340px; height: 340px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, .5), transparent 68%);
+  top: -150px; right: -90px; pointer-events: none;
+}
+.art-cta-body { position: relative; z-index: 2; }
+.art-cta h3 {
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  color: #fff; font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 8px;
+}
+.art-cta p { color: rgba(255, 255, 255, .72); margin: 0 0 20px; font-size: 15px; }
+.art-btn {
+  display: inline-block; background: #fff; color: var(--brand-ink); font-weight: 700;
+  font-size: 15px; padding: 12px 24px; border-radius: 9px; border: 0; text-decoration: none;
+}
+.art-btn:hover { background: #f0f3f9; }
+
+/* ============================================================
+   Web audit page (Auditoría web) — WEB-AUDIT-ISSUES-1 fase 2.
+   Adopts the SAME rollout mechanism as .ov2-scope/.pr2-scope/.cit2-scope (a
+   wrapper that re-points shared token names) AND their exact width
+   convention (460px base, 640px ≥900px, 1200px ≥1200px, 1280px ≥1600px) —
+   the founder-approved standard width for every console screen since
+   CITATIONS-REDESIGN-1 (docs/brand/design-decisions-log.md §5). Wraps only
+   the content BELOW the sticky header, same nesting as citations-client.tsx
+   — the header stays on the shared `.ov-sticky-header` chrome untouched.
+   ============================================================ */
+.wa2-scope {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+
+  /* Issue severity — a distinct semantic scale from --pos/--neg (which mean
+     "good outcome / bad outcome" for a metric), because a technical issue's
+     severity is a triage priority, not a verdict. "warning" reuses the
+     shared --warn/--warn-ink tokens (same amber every other warning badge in
+     the app already uses); critical/improvement get their own tokens here
+     since nothing else in :root models a 3-tier severity scale. */
+  --wa-crit: var(--brand-neg);
+  --wa-crit-soft: var(--brand-neg-soft);
+  --wa-improve: var(--ink-4);
+  --wa-improve-soft: var(--brand-line-soft);
+}
+.wa2-scope .card { box-shadow: var(--brand-shadow-card); }
+/* Same rule .ov2-scope/.cit2-scope give the shared Gauge component's number — the hero score is a display-face numeral, not body text. */
+.wa2-scope .gauge-num {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+}
+/* Tooltip overflow fix for this row (the "Diagnóstico general" ⓘ, third of
+   four real cases) folded into the shared `.info-tip-anchor` rule near the
+   base `.info-tip` definition (2026-08-03) — `.wa2-diag-title` is already
+   in that rule's selector list, so this class name alone is enough; no
+   separate override needed here. */
+/* Audit-date line in the sticky header. Deliberately NOT inside .wa2-scope:
+   the header stays on the shared token system (see the .wa2-scope comment
+   above), so these are plain global classes.
+
+   Two lengths because `.ov-sticky-right` never shrinks (`flex-shrink: 0`).
+   The full sentence is ~340px wide, which at 375px starved the left block to
+   ~25px and made its kicker overlap this text — an invisible defect to every
+   mechanical check (nothing overflows when two elements share pixels), found
+   only by looking at the pilot's mobile capture. Below 900px is the same
+   breakpoint at which `.scan-status`/`.hdr-scan` already step out of this
+   header. */
+.wa2-hdr-audit-compact { display: none; }
+
+@media (max-width: 899px) {
+  .wa2-hdr-audit-full { display: none; }
+  .wa2-hdr-audit-compact { display: inline; }
+}
+
+/* Audit toolbar: freshness state on the left, the single action on the right.
+   Before this the button floated alone, right-aligned, and its confirmation
+   rendered as a right-aligned paragraph whose leading icon broke onto its own
+   line (founder review 2026-08-04). A real two-slot row gives the button an
+   anchor and the state a permanent home that does not jump. */
+.wa2-auditbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.wa2-auditbar-state {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+/* Flex, not inline text: this is what stops the check icon orphaning itself
+   from its own sentence when the row wraps. */
+.wa2-auditbar-notice,
+.wa2-auditbar-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+.wa2-auditbar-notice { color: var(--ink-3); }
+.wa2-auditbar-error { color: var(--neg-ink); }
+
+/* Fase 3b — copyable fixes inside a page's row in the Páginas tab. */
+.wa2-fixes { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.wa2-fix { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); overflow: hidden; }
+.wa2-fix-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 10px; border-bottom: 1px solid var(--line-soft);
+}
+.wa2-fix-where { font-size: 11px; color: var(--ink-3); line-height: 1.4; min-width: 0; }
+.wa2-fix-copy { flex: 0 0 auto; font-size: 12px; padding: 4px 10px; }
+/* overflow-x on the block itself: a JSON-LD line is easily wider than a
+   375px viewport, and the console shell clips horizontally rather than
+   scrolling (see journey.ts's SHELL_CLIPPING_CLASSES) — without this the
+   snippet would simply be unreachable on mobile. */
+.wa2-fix-code {
+  margin: 0; padding: 10px; overflow-x: auto;
+  font-family: var(--mono); font-size: 11px; line-height: 1.55;
+  color: var(--ink-2); background: var(--surface-2);
+  white-space: pre; tab-size: 2;
+}
+.wa2-fix-note { margin: 0; padding: 8px 10px; font-size: 10.5px; color: var(--ink-4); border-top: 1px solid var(--line-soft); }
+
+/* Fase 3a — el llms.txt generado y sus pasos de publicación. Reutiliza el
+   chrome de .wa2-fix a propósito: un artefacto copiable debe verse igual en
+   toda la pantalla, no reinventarse por fase. */
+/* Distintivo de fila cerrada: la incidencia trae solución dentro. Verde
+   deliberadamente apagado y sin peso tipográfico: informa de que hay algo
+   accionable, no compite con la pastilla de severidad ni con los puntos, que
+   son los que ordenan la lista. */
+.wa2-fix-ready {
+  background: var(--pos-soft); color: var(--pos); border-color: transparent;
+  font-size: 10px; font-weight: 600; gap: 3px; flex-shrink: 0;
+}
+
+.wa2-llms { display: flex; flex-direction: column; gap: 12px; margin: 4px 0 10px; }
+.wa2-llms-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+/* El fichero entero cabe de sobra en pantalla, pero una campaña con muchos
+   temas lo hace largo — se acota y scrollea en vez de empujar los pasos de
+   publicación fuera de la vista, que es lo que el usuario necesita leer.
+
+   `pre-wrap` (no `pre`, como en .wa2-fix-code) por una razón medida, no por
+   gusto: en el pilot del 2026-08-04 sobre mozilla.org, las URLs reales
+   (https://support.mozilla.org/es/kb/navegacion-privada-Firefox-no-guardar…)
+   dejaban visible menos de la mitad de cada línea a 375px. Ahí sí importa
+   scrollear en horizontal — en un fragmento de JSON-LD la línea exacta es el
+   producto —, pero esto es un fichero de texto plano que el usuario copia o
+   descarga entero: partir la línea en pantalla no cambia lo que se lleva, y
+   sin ello la vista previa en móvil no sirve para nada. */
+.wa2-llms .wa2-fix-code {
+  max-height: 260px; overflow-y: auto; overflow-x: hidden;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+.wa2-llms-steps {
+  margin: 0; padding: 0; list-style: none;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.wa2-llms-step { display: flex; gap: 9px; align-items: flex-start; }
+.wa2-llms-num {
+  flex: 0 0 auto; width: 18px; height: 18px; border-radius: 999px; margin-top: 1px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent-ink);
+  font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.wa2-llms-step-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.wa2-llms-step-title { font-size: 12px; font-weight: 650; color: var(--ink); line-height: 1.35; }
+.wa2-llms-step-text { margin: 0; font-size: 11.5px; color: var(--ink-3); line-height: 1.5; }
+.wa2-llms-code {
+  align-self: flex-start; max-width: 100%; overflow-x: auto;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-2);
+  background: var(--surface-2); border: 1px solid var(--line-soft);
+  border-radius: 6px; padding: 3px 7px; overflow-wrap: anywhere;
+}
+
+.wa2-page { max-width: 460px; margin: 0 auto; }
+
+@media (min-width: 900px) {
+  .wa2-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .wa2-page { max-width: 1200px; }
+}
+@media (min-width: 1600px) {
+  .wa2-page { max-width: 1280px; }
+}
+
+/* Technical issue / passing-check rows reuse .wa-details for the collapsible
+   shell (same component PageAuditRow already uses) — only the severity
+   stripe and the point-delta badge are new here. */
+.wa2-issue-stripe {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 3px;
+  border-radius: 3px;
+  margin-right: 2px;
+}
+.wa2-passing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.wa2-check-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pos-soft);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+}
+
+/* ============================================================
+   DOMAINS-REDESIGN-1 — «Dominios» (.dm2-*)
+
+   Rev. 2 (2026-08-05): rediseño pixel-perfect contra el mockup que aprobó el
+   fundador, `docs/design-reference/domains-redesign-1/dominios-rev2-aprobado.png`.
+   La rev. 1 (`pantalla-dominios.html`) queda superada — el fichero se
+   actualiza en el mismo PR para que la referencia no mienta.
+
+   Los colores NO son los del mockup: son los tokens de marca v3
+   (`--brand-*`, docs/brand/brand-guidelines.md §2), por petición explícita del
+   fundador. El mockup fija estructura, proporción y jerarquía; la paleta la
+   fija la marca.
+
+   Mismo mecanismo de despliegue que .ov2-scope/.cm2-scope (log §2): un
+   envoltorio que reapunta los MISMOS nombres de variables que sus
+   descendientes ya consumen, de modo que `.card`, `.badge-*`, `Gauge` y
+   `Delta` se repintan en v3 sólo dentro de este subárbol.
+   ============================================================ */
+.dm2-page {
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ink: var(--brand-ink);
+  --ink-2: var(--brand-ink-2);
+  --ink-3: var(--brand-ink-3);
+  --ink-4: var(--brand-ink-4);
+  --line: var(--brand-line);
+  --line-soft: var(--brand-line-soft);
+  --accent: var(--brand-blue);
+  --accent-soft: var(--brand-blue-soft);
+  --accent-ink: var(--brand-blue);
+  --accent-ring: var(--brand-blue-soft-2);
+  --pos-soft: var(--brand-pos-soft);
+  --pos-ink: var(--brand-pos);
+  --neg-soft: var(--brand-neg-soft);
+  --neg-ink: var(--brand-neg);
+  max-width: 460px;
+  margin: 0 auto;
+}
+@media (min-width: 900px)  { .dm2-page { max-width: 640px; } }
+@media (min-width: 1200px) { .dm2-page { max-width: 1200px; } }
+@media (min-width: 1600px) { .dm2-page { max-width: 1280px; } }
+
+/* ---- Cabecera de la pantalla ----
+   Bloque de título propio, no el `.ov-sticky-header` de 15px de las pantallas
+   de proyecto (log §3). Aquel describe UN proyecto — kicker + nombre + dominio
+   —; ésta es de cuenta y su contexto es el espacio de trabajo entero. El
+   mockup lo resuelve con un titular grande, y es lo que se implementa. */
+.dm2-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.dm2-kicker {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-ink-4);
+  margin-bottom: 2px;
+}
+.dm2-title-row { display: flex; align-items: center; gap: 10px; }
+.dm2-title {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: -.035em;
+  line-height: 1.1;
+  color: var(--brand-ink);
+}
+.dm2-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-ink-3);
+  background: var(--surface-sunk);
+  border-radius: 999px;
+  padding: 4px 11px;
+  white-space: nowrap;
+}
+/* Pastilla de estado agregado. Sólo aparece con algo en curso: en reposo no
+   hay una fecha única de cuenta que poner ahí (ver computeAccountScanState). */
+.dm2-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--brand-blue);
+  background: var(--brand-blue-soft);
+  border-radius: 999px;
+  padding: 7px 13px;
+  margin-top: 6px;
+}
+.dm2-state .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-blue);
+  flex: 0 0 auto;
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+@keyframes dm2Pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+
+/* ---- Portada del dominio seleccionado ---- */
+.dm2-hero {
+  display: block;
+  border: 2px solid var(--brand-blue);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(37, 99, 235, .05), rgba(37, 99, 235, .015));
+  padding: 22px;
+  margin-bottom: 26px;
+  transition: box-shadow .18s ease;
+}
+.dm2-hero:hover { box-shadow: 0 8px 28px rgba(37, 99, 235, .14); }
+.dm2-hero-top { display: flex; align-items: flex-start; gap: 15px; }
+.dm2-fav {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  object-fit: cover;
+  background: var(--brand-surface);
+  box-shadow: inset 0 0 0 1px rgba(11, 20, 38, .08), 0 2px 8px rgba(11, 20, 38, .10);
+}
+.dm2-fav-letter {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+.dm2-id { flex: 1; min-width: 0; }
+.dm2-name {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  color: var(--brand-ink);
+}
+.dm2-dom {
+  font-size: 13px;
+  color: var(--brand-ink-3);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dm2-dom .sep { color: var(--brand-ink-4); margin: 0 5px; }
+.dm2-last {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--brand-ink-3);
+}
+.dm2-last svg { color: var(--brand-ink-4); flex: 0 0 auto; }
+
+/* Las dos píldoras de la esquina. «Seleccionado» es un estado, no una acción:
+   fondo claro y borde, nunca relleno sólido, para que no compita con el botón. */
+.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; }
+.dm2-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 7px 12px;
+  white-space: nowrap;
+}
+.dm2-flag-sel {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-blue-soft-2);
+  color: var(--brand-blue);
+}
+.dm2-flag-run { background: var(--brand-blue-soft); color: var(--brand-blue); }
+.dm2-flag-run .dot {
+  width: 8px; height: 8px; border-radius: 999px;
+  background: var(--brand-blue);
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+
+/* Gauge + explicación, en fila. El texto no es relleno: es lo único de la
+   pantalla que dice QUÉ mide el número, y sin él la puntuación es un dato
+   suelto para quien entra por primera vez. */
+.dm2-score { display: flex; align-items: center; gap: 18px; margin: 22px 0 24px; flex-wrap: wrap; }
+.dm2-score .gauge-wrap { flex: 0 0 auto; }
+/* El semicírculo mide `size/2 + stroke/2` de alto, y ahí dentro cabe el
+   numeral MÁS la leyenda, que parte en dos líneas («PUNTUACIÓN / GEO»). Con
+   132/14 la suma daba exactamente el alto de la caja y el número se salía por
+   encima del arco — visible en las capturas del piloto a los tres tamaños,
+   2026-08-05. El gauge se agranda y el numeral baja: el arco manda sobre el
+   número, no al revés. */
+.dm2-hero .gauge-num {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  letter-spacing: -.04em;
+  color: var(--brand-ink);
+}
+.dm2-hero .gauge-cap {
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--brand-ink-4);
+  margin-top: 3px;
+  max-width: 72px;
+  line-height: 1.25;
+}
+.dm2-score-copy {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--brand-ink-3);
+}
+.dm2-score-empty {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: -.04em;
+  color: var(--brand-ink-4);
+}
+
+.dm2-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  background: var(--brand-blue);
+  color: #fff;
+  border-radius: 12px;
+  padding: 13px 18px;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+.dm2-hero:hover .dm2-open { background: #1d51c7; }
+.dm2-open svg { position: absolute; right: 18px; }
+
+/* ---- Rejilla de los demás dominios ---- */
+.dm2-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (min-width: 1200px) { .dm2-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+.dm2-card {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: 14px;
+  box-shadow: var(--brand-shadow-card);
+  padding: 16px;
+  transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+.dm2-card:hover {
+  border-color: var(--brand-blue-soft-2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(11, 20, 38, .09);
+}
+.dm2-card-top { display: flex; align-items: center; gap: 10px; }
+.dm2-card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  color: var(--brand-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dm2-card-dom {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--brand-ink-4);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dm2-card-foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+.dm2-card-score {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800;
+  font-size: 21px;
+  letter-spacing: -.035em;
+  line-height: 1;
+  color: var(--brand-ink);
+}
+.dm2-card-chip {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+.dm2-chip-fresh { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.dm2-chip-stale { background: var(--surface-sunk); color: var(--brand-ink-3); }
+.dm2-chip-run {
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dm2-chip-run .dot {
+  width: 7px; height: 7px; border-radius: 999px;
+  background: var(--brand-blue);
+  animation: dm2Pulse 1.6s ease-in-out infinite;
+}
+
+/* Una celda más de la rejilla, del mismo tamaño que un dominio: fuera de ella
+   se convertía en una banda punteada a todo lo ancho bajo una fila coja
+   (corregido tras leer la captura del piloto, 2026-08-05). */
+.dm2-add {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 22px 16px;
+  text-align: center;
+  border: 1.5px dashed var(--brand-blue-soft-2);
+  border-radius: 14px;
+  background: rgba(37, 99, 235, .035);
+  transition: border-color .16s ease, background .16s ease;
+}
+.dm2-add:hover { border-color: var(--brand-blue); background: var(--brand-blue-soft); }
+.dm2-add-pl {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--brand-blue-soft);
+  color: var(--brand-blue);
+  display: grid;
+  place-items: center;
+}
+.dm2-add-t { font-size: 13.5px; font-weight: 700; color: var(--brand-blue); }
+.dm2-add-sub { font-size: 12px; color: var(--brand-ink-4); line-height: 1.4; }
+
+.dm2-archived { margin-top: 20px; font-size: 12.5px; color: var(--brand-ink-4); }
+
+.dm2-empty { padding: 48px 40px; text-align: center; display: grid; justify-items: center; gap: 10px; }
+.dm2-empty-ico {
+  width: 48px; height: 48px; border-radius: 999px;
+  background: var(--surface-sunk);
+  display: grid; place-items: center;
+  color: var(--brand-ink-3);
+}
+.dm2-empty-t {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800; font-size: 17px; letter-spacing: -.02em; color: var(--brand-ink);
+}
+.dm2-empty-d { font-size: 13.5px; color: var(--brand-ink-3); max-width: 380px; line-height: 1.6; margin-bottom: 8px; }
+
+@media (max-width: 560px) {
   /* Escala general más pequeña y más aire entre bloques (fundador,
      2026-08-05: "haz todo más pequeño, con más aire"). El contenido encoge;
      los paddings y los huecos NO bajan en la misma proporción, que es
@@ -5727,10 +6666,9 @@ select.set-field {
   .dm2-name { font-size: 18px; }
   .dm2-dom { font-size: 12px; overflow: visible; text-overflow: clip; }
   .dm2-last { margin-top: 7px; font-size: 12px; }
-  /* Las píldoras bajan a su propia fila. Compartiendo fila con la identidad le
-     robaban el ancho: el dominio salía como «xataka.co…» y «Último escaneo»
-     partía en tres líneas (capturas del piloto a 375px). Un estado no puede
-     comerse al sujeto del que habla. */
+  /* Las píldoras bajan a su propia fila: compartiendo fila con la identidad le
+     robaban el ancho — el dominio salía «xataka.co…» y «Último escaneo» partía
+     en tres líneas (capturas del piloto a 375px). */
   .dm2-flags { flex-direction: row; order: 3; width: 100%; justify-content: flex-start; margin-top: 3px; }
   .dm2-flag { font-size: 11.5px; padding: 6px 11px; }
   .dm2-score { gap: 14px; margin: 20px 0 22px; }
