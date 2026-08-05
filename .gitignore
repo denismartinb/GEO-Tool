@@ -20,5 +20,13 @@ Documentacion/
 /findings.jsonl
 /interactions.jsonl
 /summary.md
+# Playwright's own report tree, which the same checkout also drops at the root.
+# Missing from the 2026-08-03 list, so it staged ~300 more files on 2026-08-05.
+/output/
+# WARNING — ignoring is not enough. That branch carries its own README.md, so
+# checking it out at the repo root OVERWRITES the tracked one (happened
+# 2026-08-05, caught before the commit). .gitignore cannot protect a tracked
+# file: after reading pilot evidence, run `git restore README.md` and check
+# `git status` for tracked modifications before committing anything.
 playwright-report/
 test-results/
