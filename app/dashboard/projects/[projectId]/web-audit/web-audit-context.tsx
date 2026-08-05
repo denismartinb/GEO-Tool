@@ -85,7 +85,7 @@ export function WebAuditProvider({
   // Pro, then the plan lapsed (e.g. downgraded via the new Stripe billing
   // flow) before it finished. Auto-resuming would call a server action that
   // immediately fails the Pro gate — a single silent failure nothing here
-  // renders, since the only consumer that reads this context (RunAuditButton)
+  // renders, since the only consumer that reads this context (AuditStatus)
   // bails out before mounting when !canAudit. Never start a doomed call;
   // page.tsx now shows an explicit "plan changed mid-campaign" message using
   // the same server-computed `autoStart` snapshot instead.
@@ -119,7 +119,7 @@ export function WebAuditProvider({
           if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
             setError(
               progress
-                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). Pulsa «Auditar ahora» para continuar.`
+                ? `Se ha interrumpido la conexión, pero tu progreso está guardado (${progress.covered}/${progress.total} temas). La auditoría continuará sola.`
                 : "No se ha podido auditar la cobertura de tu dominio en este momento. Inténtalo de nuevo en unos minutos."
             );
             return;

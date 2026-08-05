@@ -2292,6 +2292,52 @@ estado.
 
 ---
 
+## 20. Fuera el botón «Auditar ahora» (AUDIT-NO-BUTTON-1, 2026-08-05)
+
+**Estado: implementada.** Petición directa del fundador: *"quita el botón
+auditar ahora y pon la fecha en auditoría actualizada"*. Cierra la secuencia
+que él mismo fijó el 2026-08-04 al aprobar §18 — primero que la auditoría
+funcione sola, después retirar el disparo manual.
+
+**Qué desaparece.** El botón, y con él la última pieza de la pantalla que
+sostenía que la auditoría espera a que alguien la pida. Desde §18 corre sola
+tras cada escaneo, así que el botón ofrecía trabajo que el producto ya no
+necesita — y, peor, insinuaba que sin pulsarlo no pasaría nada.
+
+**Qué queda en su sitio: estado, no control.** Tres frases y ninguna más:
+
+- `Auditoría actualizada · 5 ago 2026` — **la fecha va aquí** porque el estado
+  y su "cuándo" son un solo hecho, no dos. Antes la pastilla decía el estado y
+  la cabecera decía la fecha, y había que juntarlas mentalmente.
+- `Auditando… 3/6 temas` — mientras una campaña avanza de verdad.
+- `Pendiente del último escaneo` — hay un escaneo más nuevo que la auditoría
+  todavía no ha alcanzado. **Se dice en vez de callarlo**: la cola puede
+  tardar, y no decir nada se leería como "está al día", que es justo la clase
+  de silencio tranquilizador que este producto no debe permitirse.
+
+Nada cuando el proyecto nunca se auditó: el vacío del cuerpo ya lo cuenta.
+
+**La copia que mentía, corregida.** Tres textos seguían describiendo el mundo
+manual: el *hint* de Salud técnica y el vacío del bloque técnico decían "al
+pulsar «Auditar ahora»" (ahora "sola tras cada escaneo"), y el aviso de
+conexión interrumpida pedía pulsar un botón que ya no existe (ahora "la
+auditoría continuará sola"). También "Todavía **no has auditado**" pasa a "no
+**se ha** auditado": ya no lo hace el usuario.
+
+**Lo que NO se quita, y es deliberado.** `WebAuditProvider` sigue reanudando
+sola una campaña a medias al abrir la página. No es un resto del botón: es lo
+que hizo que la pantalla se curara sola el 2026-08-04 mientras la cola drenaba
+despacio. No cuesta Gemini extra —es el mismo trabajo que haría el backend— y
+el usuario ni lo pide ni lo ve. Sin control visible, deja de ser una ruta
+manual y pasa a ser lo que siempre debió ser: un atajo invisible.
+
+**Riesgo asumido, dicho claro:** ya no hay escotilla manual. Si la auditoría
+automática falla, el usuario no puede forzarla. Es aceptable porque el fallo
+definitivo avisa al operador por email y el cron diario reintenta, pero es un
+grado menos de control del que había ayer.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
