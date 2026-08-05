@@ -2701,6 +2701,16 @@ visual encontró lo que ninguna aserción mide:
 Ninguna de las cuatro habría fallado un test: son juicio, y por eso el pilot
 termina con capturas y no con un veredicto.
 
+**Un atajo que faltaba, encontrado por el fundador en el primer smoke.**
+`/debug` no está enlazada desde ningún sitio a propósito, y el efecto
+secundario era que la única forma de llegar consistía en teclear a mano una URL
+con un UUID dentro. `/dashboard/debug` redirige al `/debug` del dominio más
+reciente (mismo criterio de reserva que la barra lateral y la portada de
+Dominios). Sigue sin aparecer en ningún menú: es una URL que se recuerda, no un
+enlace que se ve. La lección, que es del mismo tipo que la del cargador
+compartido: **ocultar una pantalla no puede significar dejarla inalcanzable
+también para quien la necesita.**
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el

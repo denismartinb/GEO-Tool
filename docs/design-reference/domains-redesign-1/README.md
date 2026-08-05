@@ -70,7 +70,11 @@ fidelidad, no una interpretación:
   AUDIT-NO-BUTTON-1 (§25).
 - **La caja «Añadir dominio» va fuera del raíl, a ancho completo**, también en
   móvil: dentro del raíl cae fuera del viewport a 375 px.
-- **`/debug` no aparece en el menú.** La propuesta de protegerla además con
+- **`/debug` no aparece en el menú, pero es alcanzable.** `/dashboard/debug`
+  redirige al `/debug` del dominio más reciente. Una pantalla de operación a la
+  que el operador no puede llegar no es discreta, es inservible — y sin ese
+  atajo la única vía era teclear una URL con un UUID dentro.
+- **`/debug` no está en el menú de cliente.** La propuesta de protegerla además con
   `OPS_USER_EMAILS` + 404 la descartó el fundador el 2026-08-05 ("no he
   publicado aún la web"). La página pasa por `requireActiveProject`, así que un
   cliente sólo podría ver los internos de SUS proyectos, nunca los de otra
