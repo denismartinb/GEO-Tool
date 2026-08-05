@@ -2333,7 +2333,36 @@ lección no es "arreglada la tabla" sino que una capa de honestidad que hay que
 acordarse de llamar acaba sin llamarse.
 
 ---
+## 24. El cajón de evidencias dice a qué repetición pertenece cada respuesta (SAMPLING-SURFACE-1, 2026-08-05)
 
+Deuda declarada al cerrar SAMPLING-1 (§20) y saldada aquí. Desde que un escaneo
+puede repetir su set de prompts, `scan_prompt_results` guarda R filas por
+(prompt, motor) en vez de una, y la superficie no se había enterado.
+
+**El cajón mostraba «Gemini / Gemini / Gemini / Claude / Claude / Claude»** sin
+decir por qué. Eso se lee como un fallo de renderizado, cuando en realidad son
+tres respuestas distintas a la misma pregunta — y **su desacuerdo es justamente
+el motivo de muestrear**. Ahora cada fila lleva «· muestra 2 de 3», y las
+repeticiones de un mismo motor van juntas, para que "este motor dijo cosas
+distintas en intentos distintos" se vea de un vistazo.
+
+**«N citas» por prompt sumaba todas las muestras**, así que el mismo prompt con
+el mismo comportamiento de citas reportaba 21 con tres repeticiones y 7 con
+una: dos números describiendo una sola realidad, y no comparables entre
+escaneos. Se añade el denominador («21 citas en 9 respuestas») en vez de
+cambiar la cifra que el usuario ya leía.
+
+**Las dos etiquetas desaparecen cuando no hay repeticiones**, que es la
+inmensa mayoría de escaneos (todo proyecto de 17 prompts para arriba). Poner
+«muestra 1 de 1» en cada fila de cada proyecto para servir a la minoría que
+repite sería ruido puro.
+
+La lógica vive en `lib/scan/sample-display.ts`, pura y testeada, porque el
+recuento y la etiqueta **tienen que coincidir**: si la lista dedujera "3
+muestras" de una forma y el cajón de otra, el producto se contradiría sobre
+cuántas veces preguntó. Cuenta índices distintos y no filas partido motores, a
+propósito: un escaneo donde un motor falló en una repetición tiene un número
+desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal.
 
 ---
 
