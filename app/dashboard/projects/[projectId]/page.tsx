@@ -1042,15 +1042,18 @@ export default async function ProjectDetailPage({
               <div className="card" style={{ padding: "6px 18px" }}>
                 {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
                   const component = geoScore.components?.[key];
-                  if (!component) return null;
+                  // A run scored before GEO-SCORE-V4 has no `technical` key at
+                  // all — not a null value, the key simply does not exist.
+                  // Returning null there made the row VANISH, so the breakdown
+                  // silently had four rows on older scans and five on new ones,
+                  // with nothing saying why. That is the "no silent gap" failure
+                  // this codebase keeps paying for (.claude/rules/scan.md, "No
+                  // mute rows"). The row now always renders; a pre-v4 run says
+                  // so and tells the user what makes it appear.
+                  const isLegacyRun = !component && key === "technical";
+                  if (!component && !isLegacyRun) return null;
                   const meta = GEO_SCORE_COMPONENT_META[key];
-                  const isDropped = component.value === null || component.value === undefined;
-                  // The persisted weight is the NORMALIZED one actually applied
-                  // this run (weights renormalize when a component drops) — never
-                  // the nominal .32/.20/.16/.12/.20 split, which would silently
-                  // misreport every run with a dropped component
-                  // (.claude/rules/scoring.md, ADR 0017).
-                  const weightPct = typeof component.weight === "number" ? Math.round(component.weight * 100) : null;
+                  const isDropped = isLegacyRun || component?.value === null || component?.value === undefined;
                   return (
                     <div
                       key={key}
@@ -1075,42 +1078,29 @@ export default async function ProjectDetailPage({
                           ) : null}
                         </div>
                         <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
-                          {isDropped ? translateDroppedComponentReason(component.reason) : meta.hint}
+                          {isLegacyRun
+                            ? "Este escaneo es anterior a que la salud técnica entrara en el GEO Score. Se incluirá en tu próximo escaneo."
+                            : isDropped
+                              ? translateDroppedComponentReason(component?.reason)
+                              : meta.hint}
                         </div>
                       </div>
                       <div style={{ textAlign: "right", flexShrink: 0 }}>
                         {isDropped ? (
                           <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-4)" }}>No disponible</span>
                         ) : (
-                          <>
-                            <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
-                              {Math.round(component.value as number)}
-                              <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
-                            </span>
-                            {weightPct !== null ? (
-                              <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 1 }}>peso {weightPct}%</div>
-                            ) : null}
-                          </>
+                          <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
+                            {Math.round(component?.value as number)}
+                            <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
+                          </span>
                         )}
                       </div>
                     </div>
                   );
                 })}
               </div>
-              {/* Fase −1c (docs/geo-score-variability-2026-08.md §3): la
-                  Presencia depende de qué nombres cuentan como mención — un
-                  usuario que se pregunte por qué la IA no "le suma" al
-                  recomendar su producto en vez de su empresa necesita este
-                  enlace justo aquí, no solo en Competidores. */}
-              <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "8px 2px 0" }}>
-                ¿La IA recomienda un producto tuyo sin nombrar a tu empresa? Eso también puede contar como Presencia si
-                lo añades como alias en{" "}
-                <Link href={`/dashboard/projects/${projectId}/competitors#identidad-de-marca`} style={{ color: "var(--brand-blue)", fontWeight: 650 }}>
-                  Identidad de marca
-                </Link>
-                .
-              </p>
             </>
+
           ) : null}
 
           {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same

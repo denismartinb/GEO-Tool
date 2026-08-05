@@ -192,7 +192,15 @@ naturalezas sin desglose visible es un número que no se puede accionar.
 
 **Qué cumple hoy esa obligación y qué no** —dicho aquí para que el ADR no
 afirme de más—: la Visión general renderiza el desglose del escaneo más
-reciente, con el peso realmente aplicado y el motivo de cada componente caído.
+reciente, con el valor de cada componente y el motivo de los que se caen.
+
+**Los pesos no se muestran** (decisión del fundador, 2026-08-05). La
+obligación es que se pueda ver *qué componente movió el score*, y para eso
+basta el valor; publicar además cinco porcentajes convertía la tarjeta en una
+lección de metodología en la pantalla principal. Los pesos siguen persistidos
+en `details_json` y siguen siendo los renormalizados reales — la regla de ADR
+0017 (no publicar el peso nominal) sigue vigente para cualquier superficie que
+decida mostrarlos.
 **La pantalla de Escaneos sigue publicando el GeoScore de cada run histórico
 como número suelto, sin desglose ni enlace a uno.** Es el hueco declarado de
 esta fase, no una excepción a la regla: la obligación sigue en pie y cerrarla

@@ -2487,10 +2487,23 @@ te nombren?".
 que mezcla dos naturalezas sin desglose visible es un número que no se puede
 accionar: el usuario no puede distinguir "subió porque arreglaste la web" de
 "subió porque las IAs te citan más". El desglose estaba *tipado* en la Visión
-general desde v2 y no se renderizaba nunca. Con v4 se renderiza, con el peso
-**realmente aplicado** en cada run (los pesos renormalizan; publicar el nominal
-sería la propuesta que ADR 0017 ya rechazó) y con el motivo persistido cuando
-un componente se cae. Un componente caído se pinta como caído, jamás como cero.
+general desde v2 y no se renderizaba nunca. Con v4 se renderiza, con el valor
+de cada componente y el motivo persistido cuando uno se cae. Un componente
+caído se pinta como caído, jamás como cero.
+
+**Sin pesos** (fundador, 2026-08-05): la primera versión mostraba el peso
+aplicado bajo cada valor y sobraba — para saber qué movió el score basta el
+valor, y cinco porcentajes convertían la tarjeta principal en una explicación
+de metodología. Los pesos siguen en `details_json`; si alguna superficie
+futura los muestra, tienen que ser los renormalizados (ADR 0017).
+
+**La fila técnica nunca desaparece.** Un escaneo anterior a v4 no tiene el
+componente persistido, y la primera versión simplemente no pintaba la fila: el
+desglose tenía cuatro filas en unos proyectos y cinco en otros, sin decir por
+qué — el fundador lo detectó en el preview antes del Human Gate. Ahora la fila
+aparece siempre y, cuando el escaneo es anterior, dice que lo es y que el
+próximo escaneo la incluirá. Es la misma regla que `.claude/rules/scan.md`
+aplica a las filas mudas: un hueco sin explicar es peor que un dato ausente.
 
 Esto **supersede parcialmente §17 decisión 4 y §22 decisión 1**, que decidieron
 no mezclar técnica con resultado. No se borran: aquella lectura era correcta
