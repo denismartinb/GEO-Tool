@@ -2573,6 +2573,118 @@ silencia el email, la campana, o ambos?).
 
 ---
 
+## 28. Verlas es leerlas (NOTIF-AUTOREAD-1, 2026-08-05)
+
+**Estado: implementada.** Petición directa del fundador: *"quiero que las
+notificaciones, una vez que el cliente abre la campana o las ve directamente,
+se marquen como leídas. Si no es un coñazo darle al botón de leída siempre y
+siempre aparece que hay algo pendiente de leer."* Segundo control manual que
+cae en dos días, por la misma razón que el de §25: pedía trabajo para
+confirmar algo que el producto ya sabía.
+
+**El fallo real no era el clic, era el punto azul.** Un badge que nunca se
+apaga solo deja de ser información en la segunda semana. Como marcar leído
+requería un botón aparte, el estado por defecto de la campana era "hay algo
+pendiente" — siempre, incluso justo después de mirarlo. La señal medía la
+memoria del usuario, no si había novedades.
+
+**Qué desaparece.** «Marcar leídas» del panel de la campana y «Marcar como
+leídas» de la cabecera de `/dashboard/notifications`, con sus estilos
+(`.notif-mark-read`, `.notif-page-mark-read`). Abrir el panel marca; abrir la
+página marca. No queda nada en su sitio — la lección de §25 aplica igual.
+
+**Se marca lo que se ha visto, no "todo lo no leído".** `markAllNotificationsRead()`
+(sin argumentos) pasa a `markNotificationsRead(ids)`. Es la diferencia entre
+un cambio correcto y uno que borra datos en silencio: la campana carga como
+mucho 15 filas, así que "marca todo lo no leído del usuario" al abrirla habría
+enterrado notificaciones que nunca llegaron a una pantalla. Con la lista
+explícita, si hay 40 sin leer y la campana enseña 15, quedan 25 esperando en
+la página (que carga 50) — el badge sigue encendido y **con razón**.
+
+**El punto de cada fila no se apaga al abrir, y es deliberado.** Marcar leído
+al abrir tiene un fallo obvio: la lista se blanquea bajo los ojos de quien la
+está leyendo, y la pestaña «No leídas» se vacía sola. Así que hay dos
+preguntas distintas (`lib/notifications/seen.ts`), no una:
+
+- *¿queda algo por ver?* → el punto de la campana y su contador. Se apaga al
+  abrir, sin esperar al round-trip del servidor.
+- *¿esta fila conserva su punto?* → sí, durante el resto de la sesión, aunque
+  el servidor ya haya escrito `read_at`. Desaparece en la siguiente carga
+  completa, cuando ya ha cumplido su función.
+
+La pestaña «No leídas» y su contador se rigen por la segunda, para que
+describan la lista que se está mirando y no el badge que ya se apagó.
+
+**Si la escritura falla**, se olvida el envío y el siguiente abrir lo
+reintenta; los puntos se quedan como estaban. Lo que no hace es fingir
+éxito: sin `revalidatePath`, la próxima navegación vuelve a traer el estado
+real del servidor.
+
+**Riesgo asumido:** ya no hay forma manual de marcar leído ni de marcar **no**
+leído. Lo segundo nunca existió, así que no se pierde nada; lo primero deja de
+tener sentido cuando mirar basta. Lo que sí queda pendiente y conviene que
+conste: **no hay descarte individual** de una notificación (D1 de la spec lo
+contemplaba), y sigue sin haberlo.
+
+**El vacío deja de ser un agujero, porque pasa a ser el estado normal.** Con
+auto-read, la pestaña «No leídas» se queda en cero en cuanto alguien abre la
+pantalla una vez: el estado que antes era el raro es ahora el que más se va a
+ver. Y era una línea gris centrada bajo una tarjeta de 150px con 700px de
+lienzo en blanco debajo — el piloto lo leyó como *"¿esto ha terminado de
+cargar?"* en vez de *"no tienes pendientes"*. Ahora lleva icono en círculo
+tenue (misma pareja `--brand-blue-soft` que ya usan las filas, no un color
+nuevo), titular —**«Estás al día»**, que responde a la pregunta en vez de
+describir la ausencia— y una línea que dice dónde aparecerán las nuevas.
+
+**Efecto colateral sobre el piloto, dicho antes de que lo descubra alguien.**
+El barrido de interacciones del piloto ya casaba con la campana
+(`[aria-expanded]` está en su allow-list), así que **cada pasada del piloto
+escribe ahora `read_at`** en las notificaciones de su cuenta. El piloto
+siempre-activo se anunciaba como "estrictamente de sólo lectura"; desde esta
+fase es "sin escrituras salvo ésta, nombrada"
+(`docs/agentic-user-pilot.md`, Scope guard). Se acepta sin aprobación aparte
+porque está acotado en las cuatro dimensiones que importan —idempotente, sólo
+filas de la propia cuenta del piloto, sin coste de LLM, sin consumir cupo de
+plan— y porque impedirlo obligaría a sacar la campana del barrido, que es
+justo el control que hay que mirar.
+
+**El piloto se comía el estado que venía a medir.** Segundo intento, segundo
+hueco, y éste era estructural: el barrido genérico de interacciones abre la
+campana en ~14 pantallas × 3 viewports *antes* de que el journey dedicado
+llegue a su primera aserción (`core-flow.spec.ts` va antes por orden de
+fichero, con `workers: 1`). Y abrir la campana **es** la escritura que se
+quería observar, así que el journey encontraba siempre cero sin leer y se
+anotaba a sí mismo como no verificable — cada pasada, no sólo aquella. No se
+arregla sembrando datos una vez. Se arregla en la raíz: **el barrido ya no
+toca la campana** (`explore.ts`, `refuseReason`). No cuesta cobertura —el
+journey dedicado la ejercita mucho mejor que un clic a ciegas— y de paso
+devuelve la escritura de ~42 por pasada a una sola.
+
+**La captura mentía, y el juicio sobre ella también.** El agente leyó el panel
+a 375px como "descentrado y solapando el título". Mirando la PNG, ni una cosa
+ni la otra: el panel está anclado a la derecha bajo la campana y ocupa casi
+todo el ancho porque 320px en 375 es casi todo el ancho. Lo que sí se veía era
+**medio transparente, con la página traspasándolo**, y eso tampoco era un
+defecto del producto: `menuIn` anima la opacidad 0→1 en 140 ms y la captura se
+tomaba a mitad del fundido. `captureInteraction` no pasaba
+`animations: "disabled"`, así que **toda** la suite llevaba fotografiando
+popovers, menús y cajones a medio aparecer. Arreglado ahí, no en el CSS del
+panel: el defecto estaba en el instrumento, y "arreglar" el componente habría
+sido cambiar código bueno por una foto mala.
+
+**El primer PASS del piloto no probaba nada de esta fase.** El run mecánico
+del commit inicial dio ✅ en 41 pantallas a tres viewports y ni una era
+notificaciones: el barrido genérico agota su presupuesto (4 candidatos por
+pantalla) en nav/campana/InfoTip antes de poder afirmar nada sobre *qué hizo*
+el clic. Mismo patrón que dejó sin ver las pestañas de auditoría en el PR #289
+(§17). De ahí `tests/pilot/journeys/notifications.spec.ts`: fija con
+aserciones lo que ninguna captura demuestra —que el punto de la cabecera se
+apaga, que los de fila **no**, que no vuelve ningún botón de marcar leídas, y
+que al navegar y volver la escritura persistió— y **anota en voz alta** cuando
+la cuenta no tiene nada sin leer, en vez de pasar en silencio.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

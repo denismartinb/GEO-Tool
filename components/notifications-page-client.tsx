@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { relativeTime, groupByDay, renderNotification, toneClassName, type NotificationRow } from "@/lib/notifications/render";
-import { markAllNotificationsRead } from "@/app/dashboard/notifications/actions";
+import { useSeenNotifications } from "@/lib/notifications/use-seen-notifications";
 import { NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
 import type { WorkspaceNotification } from "@/lib/project-workspace";
 
@@ -18,40 +18,25 @@ export function NotificationsPageClient({
   domainByProjectId: Record<string, string>;
 }) {
   const [tab, setTab] = useState<Tab>("all");
-  const [locallyRead, setLocallyRead] = useState<Set<string>>(new Set());
-  const [, startTransition] = useTransition();
 
-  function isUnread(n: WorkspaceNotification): boolean {
-    return !n.readAt && !locallyRead.has(n.id);
-  }
+  // Landing on this page is seeing them (NOTIF-AUTOREAD-1): they are marked
+  // read on render, and keep their dot for the rest of the session.
+  const { isVisuallyUnread } = useSeenNotifications(notifications, true);
 
-  const unreadCount = notifications.filter(isUnread).length;
-  const hasUnread = unreadCount > 0;
+  const unreadCount = notifications.filter(isVisuallyUnread).length;
   // Same truncation guard the bell already applies (notification-bell.tsx):
   // at most NOTIFICATIONS_PAGE_LIMIT rows are loaded, so an unread count that
   // reaches that limit cannot be told apart from "more than that". Printing a
   // confident "50" understates the truth — the bell chose "15+" for exactly
   // this reason and the page was left printing the raw number.
   const unreadBadge = unreadCount >= NOTIFICATIONS_PAGE_LIMIT ? `${NOTIFICATIONS_PAGE_LIMIT}+` : String(unreadCount);
-  const visible = tab === "unread" ? notifications.filter(isUnread) : notifications;
+  const visible = tab === "unread" ? notifications.filter(isVisuallyUnread) : notifications;
   const groups = groupByDay(visible);
-
-  function markAllRead() {
-    setLocallyRead(new Set(notifications.map((n) => n.id)));
-    startTransition(async () => {
-      await markAllNotificationsRead();
-    });
-  }
 
   return (
     <div className="notif-page-card">
       <div className="notif-page-head">
         <h1>Notificaciones</h1>
-        {hasUnread && (
-          <button type="button" className="notif-page-mark-read" onClick={markAllRead}>
-            Marcar como leídas
-          </button>
-        )}
       </div>
       <div className="notif-tabs">
         <button
@@ -66,12 +51,27 @@ export function NotificationsPageClient({
           className={`notif-tab${tab === "unread" ? " active" : ""}`}
           onClick={() => setTab("unread")}
         >
-          No leídas{hasUnread && <span className="notif-tab-count">{unreadBadge}</span>}
+          No leídas{unreadCount > 0 && <span className="notif-tab-count">{unreadBadge}</span>}
         </button>
       </div>
       {visible.length === 0 ? (
+        // Auto-read makes the "No leídas" empty state the COMMON case, not the
+        // edge one: the count collapses to zero the moment the page is opened.
+        // A bare centred line under a short card read as "did this finish
+        // loading?" rather than "you're up to date" (ux-pilot, 2026-08-05), so
+        // the state a user will see most often gets an icon and a real answer.
         <div className="notif-page-empty">
-          {tab === "unread" ? "No tienes notificaciones sin leer." : "Sin notificaciones todavía."}
+          <span className="notif-page-empty-icon">
+            <Icon name={tab === "unread" ? "check" : "bell"} size={20} />
+          </span>
+          <p className="notif-page-empty-title">
+            {tab === "unread" ? "Estás al día" : "Sin notificaciones todavía"}
+          </p>
+          <p className="notif-page-empty-body">
+            {tab === "unread"
+              ? "No te queda nada por leer. Las nuevas aparecerán aquí y en la campana."
+              : "Te avisaremos cuando termine un escaneo o cambie algo en tu visibilidad."}
+          </p>
         </div>
       ) : (
         groups.map((group) => (
@@ -82,7 +82,7 @@ export function NotificationsPageClient({
                 key={n.id}
                 notification={n}
                 domainByProjectId={domainByProjectId}
-                unread={isUnread(n)}
+                unread={isVisuallyUnread(n)}
               />
             ))}
           </div>

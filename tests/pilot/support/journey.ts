@@ -234,7 +234,7 @@ async function captureFullContent(page: Page, path: string): Promise<CaptureResu
   const contentHeight = await measureContentHeight(page);
 
   if (!viewport || contentHeight <= viewport.height + 2) {
-    await page.screenshot({ path, fullPage: true });
+    await page.screenshot({ path, fullPage: true, animations: "disabled" });
     return { contentHeight, capturedHeight: viewport?.height ?? contentHeight, captureTruncated: false };
   }
 
@@ -243,7 +243,7 @@ async function captureFullContent(page: Page, path: string): Promise<CaptureResu
   // Let the app reflow and any viewport-dependent client component settle.
   await page.waitForTimeout(400);
   try {
-    await page.screenshot({ path, fullPage: true });
+    await page.screenshot({ path, fullPage: true, animations: "disabled" });
   } finally {
     await page.setViewportSize(viewport);
     await page.waitForTimeout(200);
@@ -492,7 +492,13 @@ export async function captureInteraction(
   const screenshot = `${SCREENS_DIR}/${slug(testInfo.project.name)}--${slug(label)}.png`;
   mkdirSync(SCREENS_DIR, { recursive: true });
   if (opts.fullContent) await captureFullContent(page, screenshot);
-  else await page.screenshot({ path: screenshot });
+  // `animations: "disabled"` finishes running CSS animations and pins them to
+  // their end state. Without it a capture taken right after a reveal catches
+  // the element mid-fade: the notifications panel (`menuIn`, opacity 0→1 over
+  // 140ms) was photographed half-transparent with the page bleeding through,
+  // and a reviewing agent read that as a real rendering defect (2026-08-05).
+  // Every popover, menu and drawer in the suite was subject to the same lie.
+  else await page.screenshot({ path: screenshot, animations: "disabled" });
   await testInfo.attach(attachmentName(`${label} (${testInfo.project.name})`), {
     path: screenshot,
     contentType: "image/png"

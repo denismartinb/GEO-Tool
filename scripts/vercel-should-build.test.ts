@@ -111,9 +111,21 @@ describe("vercel-should-build", () => {
       decideFor([
         ".claude/rules/scoring.md",
         ".github/workflows/ux-pilot.yml",
-        "tests/pilot/journeys/overview.spec.ts"
+        "tests/adr-numbering.test.ts"
       ]).code
     ).toBe(SKIP);
+  });
+
+  it("builds when the pilot itself changes — it needs a preview to run against", () => {
+    // The pilot only runs on `deployment_status`, so a skipped build means the
+    // change to it is never exercised (2026-08-05: a fix to the interaction
+    // sweep deployed "Ignored" and no pilot ran).
+    const { code, output } = decideFor([
+      "docs/agentic-user-pilot.md",
+      "tests/pilot/support/explore.ts"
+    ]);
+    expect(code).toBe(BUILD);
+    expect(output).toContain("tests/pilot/support/explore.ts");
   });
 
   it("skips root-level prose such as CLAUDE.md", () => {

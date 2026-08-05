@@ -433,7 +433,13 @@ Copy exacto por tipo (castellano, tú/informal, coherente con el producto):
 
 ### 5.3 Marcar como leídas
 
-Server action nueva, `app/dashboard/notifications/actions.ts`:
+**Superseded por NOTIF-AUTOREAD-1 (2026-08-05, log §26).** La v1 marcaba leído
+con un botón y `markAllNotificationsRead()` (sin argumentos, todo lo no leído
+del usuario). Verlas es leerlas: ya no hay botón en ninguna de las dos
+superficies, y la acción recibe la lista explícita de ids que se han
+renderizado.
+
+Server action, `app/dashboard/notifications/actions.ts`:
 
 ```ts
 "use server";
@@ -441,18 +447,32 @@ Server action nueva, `app/dashboard/notifications/actions.ts`:
 // para `authenticated` (ver migración 0021). La propiedad se reverifica
 // explícitamente en el WHERE, mismo patrón que el resto de acciones
 // service-role del proyecto.
-export async function markAllNotificationsRead(): Promise<{ success: boolean }> {
+export async function markNotificationsRead(ids: string[]): Promise<{ success: boolean }> {
+  const parsed = idsSchema.safeParse(ids);      // uuids, 1..NOTIFICATIONS_PAGE_LIMIT
+  if (!parsed.success) return { success: false };
   const { user } = await requireUser();
   const service = createServiceClient();
   await service
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("owner_user_id", user.id)   // reverificación de propiedad, no opcional
+    .in("id", parsed.data)          // sólo lo que se ha visto, nunca "todo"
     .is("read_at", null);
   revalidatePath("/dashboard", "layout");
   return { success: true };
 }
 ```
+
+**Por qué lista de ids y no "todo lo no leído":** la campana carga como mucho
+`NOTIFICATIONS_BELL_LIMIT` (15) filas. Marcar todo al abrirla borraría en
+silencio notificaciones que nunca llegaron a la pantalla. Lo que se ve es lo
+que se marca; el resto sigue esperando en `/dashboard/notifications` (50).
+
+**Dos preguntas distintas sobre "no leída"** (`lib/notifications/seen.ts`):
+`isPendingUnread` (¿queda algo por ver? → punto de la campana, se apaga al
+abrir, antes del round-trip) e `isVisuallyUnread` (¿esta fila conserva su
+punto? → sí durante toda la sesión, para que la lista no se vacíe mientras se
+lee).
 
 **Eliminar** de `components/notification-bell.tsx` toda la lógica de
 `LAST_SEEN_KEY` / `localStorage`.
@@ -526,9 +546,10 @@ Añadir: pestañas Todas / No leídas con contador, agrupación por día
 
 ### 6.4 Página `/dashboard/notifications`
 
-Server component. Cabecera con el título y el enlace pequeño
-"Marcar como leídas" a la derecha (sin subtítulo descriptivo). Pestañas,
-agrupación por día, filas a ancho completo. Límite 50, sin paginación en v1.
+Server component. Cabecera con el título, sin subtítulo descriptivo y —desde
+NOTIF-AUTOREAD-1— **sin enlace "Marcar como leídas"**: abrir la página es
+verlas. Pestañas, agrupación por día, filas a ancho completo. Límite 50, sin
+paginación en v1.
 
 ---
 

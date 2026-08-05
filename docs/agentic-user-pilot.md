@@ -374,6 +374,22 @@ inside this guard: every journey it runs is the same read-only pair of screens.
 It exists because one project only ever exercises one shape of data — see
 "Known limits". Nothing about it needed an exception.
 
+**Abrir la campana ya no es del todo una lectura, y conviene decirlo.** Desde
+NOTIF-AUTOREAD-1 (2026-08-05, log §26) abrir el panel de notificaciones escribe
+`read_at` en las notificaciones sin leer de la cuenta del piloto. No es una
+excepción que nadie pidiera: el allow-list del barrido ya casaba con la campana
+(`[aria-expanded]`). **El barrido ya no la toca** (`refuseReason` la rechaza por
+nombre desde 2026-08-05): abría la campana en ~14 pantallas × 3 viewports y
+destruía el estado "sin leer" antes de que el journey dedicado pudiera
+observarlo, así que la escritura queda en una sola por pasada, la del propio
+`notifications.spec.ts`. Se acepta sin pedir una
+aprobación aparte porque es acotado en las cuatro dimensiones que importan —
+idempotente, sólo sobre filas de la propia cuenta del piloto, sin coste de LLM
+y sin consumir ningún cupo de plan — y porque prohibirlo exigiría sacar la
+campana del barrido, que es justo el control que hay que mirar. Lo que sí
+cambia es la letra pequeña de esta sección: "estrictamente de sólo lectura" es
+ahora "sin escrituras salvo ésta, nombrada".
+
 **Launching a scan needs one, and now has it — see UX-PILOT-3 below.**
 
 ## UX-PILOT-3 — the pilot asks for a scan (opt-in, never automatic)
