@@ -252,6 +252,30 @@ export async function sweepTestPrompts(page: Page, projectId: string): Promise<n
       () => page.getByRole("button", { name: /añadir prompts/i }).first().isVisible(),
       () => page.getByText(/no hay prompts activos/i).isVisible()
     ]);
+
+    // Drive the search box, which is what this sweep always claimed to do and
+    // never actually did.
+    //
+    // Prompt rows live inside TOPIC accordions that start collapsed
+    // (`expandedTopics` is an empty Set on mount, prompts-client.tsx), so on
+    // any project whose prompts carry topics the marker text is simply not in
+    // the DOM and `getByText` finds zero — while the page renders perfectly.
+    // That is the whole failure: the sweep reported "found nothing" and the
+    // journey concluded it had failed to clean up its own prompt.
+    //
+    // Typing into the search box is the lever the product already provides:
+    // `isOpen = expandedTopics.has(category) || query.trim().length > 0`, so a
+    // non-empty query force-opens every matching topic AND filters to it.
+    // Verified against main: this journey has flapped since 2026-08-01 and
+    // failed outright on 2026-08-02, passing only when the project happened to
+    // have no topics.
+    const search = page.getByPlaceholder(/buscar prompt/i).filter({ visible: true }).first();
+    if (await search.isVisible().catch(() => false)) {
+      await search.fill(PILOT_TEST_PROMPT_MARKER);
+      // The filter is client-side and synchronous, but give the re-render a
+      // beat so the first count below never races an empty intermediate list.
+      await page.waitForTimeout(250);
+    }
   };
 
   await openList(`sweep-${Date.now()}`);

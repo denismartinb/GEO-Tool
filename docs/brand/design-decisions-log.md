@@ -2514,6 +2514,12 @@ quitan desde el producto.
 
 **Pendiente conocido, escrito para que nadie lo lea como cerrado:**
 
+- **La pantalla de Escaneos aún no cumple la decisión 2.** Publica el GeoScore
+  de cada run histórico como número suelto, sin desglose ni enlace a uno, así
+  que desde ahí no se puede saber que el número incluye ahora un componente
+  técnico que vale hasta un 20 %. La obligación del ADR 0033 §7 sigue en pie:
+  esto es un hueco, no una excepción.
+
 - En los planes sin auditoría web (todo lo que no es Pro) el componente
   técnico se cae siempre, así que su GeoScore es el de cuatro componentes —v3
   en la práctica—. Extender una auditoría *sólo técnica* (que no gasta LLM) a

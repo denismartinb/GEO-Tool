@@ -131,6 +131,19 @@ El primer escaneo de un proyecto nuevo no tiene snapshot previo, así que
 `technical` se cae y los otros cuatro renormalizan a sus pesos v3. No cuesta
 estabilidad: en un primer escaneo no hay run anterior con el que comparar.
 
+**Limitación heredada, declarada porque ahora pesa más que antes.** Los dos
+núcleos de auditoría derivan su objetivo solos —"la última ejecución
+completada de ESTE proyecto"— e ignoran el `run_id` del trabajo, que sólo es
+clave de deduplicado (`.claude/rules/web-audit.md`). Si la auditoría del run A
+se retrasa y el run B termina antes, el snapshot se persiste con
+`scan_id = B`: **el run A no llega a tener snapshot propio nunca** y se queda
+con el del vecino anterior, o sin componente. Antes esto sólo despistaba en la
+pantalla de Auditoría web; ahora deja el score publicado de A ligeramente
+desfasado respecto a lo que su propia auditoría habría dicho. No fabrica
+ninguna discontinuidad visible —`compareRuns` rehúsa el delta si `inputs_used`
+cambia—, pero es un desfase silencioso y conviene que la próxima sesión lo sepa
+antes de tocar esta ruta.
+
 ## 5 · Fase B — cobertura de motores
 
 Un job de prompt se da por bueno **si al menos un motor responde**, y un motor
@@ -176,6 +189,14 @@ intención: **allí donde se muestre el GeoScore tiene que poder verse su
 desglose por componentes**, para que "subió porque arreglaste la web" y "subió
 porque las IAs te citan más" sean distinguibles. Un compuesto que mezcla dos
 naturalezas sin desglose visible es un número que no se puede accionar.
+
+**Qué cumple hoy esa obligación y qué no** —dicho aquí para que el ADR no
+afirme de más—: la Visión general renderiza el desglose del escaneo más
+reciente, con el peso realmente aplicado y el motivo de cada componente caído.
+**La pantalla de Escaneos sigue publicando el GeoScore de cada run histórico
+como número suelto, sin desglose ni enlace a uno.** Es el hueco declarado de
+esta fase, no una excepción a la regla: la obligación sigue en pie y cerrarla
+es trabajo pendiente (log §26, "Pendiente conocido").
 
 ## 8 · Lo que este ADR NO hace
 
