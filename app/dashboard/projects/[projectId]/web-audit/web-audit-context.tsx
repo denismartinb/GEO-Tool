@@ -83,11 +83,20 @@ const WebAuditRunnerContext = createContext<WebAuditRunnerState | null>(null);
 export function WebAuditProvider({
   projectId,
   autoStart,
-  canAudit,
+  canAudit: canAuditCoverage,
   children
 }: {
   projectId: string;
   autoStart?: Progress;
+  /**
+   * Named `canAudit` at the call site historically, but this has only ever
+   * meant "can drive the coverage campaign" — the coverage half stays
+   * Pro-only (WEB-AUDIT-TECH-ALL-PLANS-1, 2026-08-05); the technical half is
+   * not gated at all and this component never drove it directly anyway (it
+   * only piggybacks a technical re-check onto a coverage batch below).
+   * Destructured under its real name so nothing inside this file has to
+   * remember the distinction.
+   */
   canAudit: boolean;
   children: ReactNode;
 }) {
@@ -100,7 +109,7 @@ export function WebAuditProvider({
   // doomed call;
   // page.tsx now shows an explicit "plan changed mid-campaign" message using
   // the same server-computed `autoStart` snapshot instead.
-  const [isPending, setIsPending] = useState(canAudit && Boolean(autoStart));
+  const [isPending, setIsPending] = useState(canAuditCoverage && Boolean(autoStart));
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<Progress>(autoStart ?? null);
   const abortedRef = useRef(false);
@@ -189,7 +198,7 @@ export function WebAuditProvider({
   }
 
   useEffect(() => {
-    if (!canAudit || !autoStart || firedRef.current) return;
+    if (!canAuditCoverage || !autoStart || firedRef.current) return;
     firedRef.current = true;
     void drive();
     // Deliberately fires once on mount only (autoStart is the server-provided

@@ -222,12 +222,36 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
 
     // El distintivo vive en la fila CERRADA, así que una captura de la fila
-    // abierta no lo prueba. Se comprueba aquí, mecánicamente, sobre la propia
-    // incidencia que sabemos que trae solución.
-    await expect(
-      llmsIssue.locator(".wa2-fix-ready"),
-      'la incidencia llms.txt no muestra el distintivo "Solución disponible"'
-    ).toBeVisible();
+    // abierta no lo prueba. Se comprueba aquí, mecánicamente.
+    //
+    // Pero se comprueba CONDICIONADO a que la incidencia traiga solución de
+    // verdad, que no siempre ocurre: `buildLlmsTxt` devuelve null cuando
+    // ninguna campaña de cobertura ha verificado una página, porque se niega
+    // a emitir un fichero que sería sólo marcadores de posición. En un
+    // proyecto así la fila correctamente NO lleva distintivo.
+    //
+    // La versión anterior afirmaba "sabemos que trae solución" y sólo era
+    // cierto del proyecto que el piloto elegía entonces. Sin PILOT_PROJECT_ID
+    // el piloto autodescubre proyecto, así que el día que eligió uno con 0
+    // páginas verificadas (Xataka, 2026-08-05) la aserción falló describiendo
+    // como rota una pantalla que estaba bien. El invariante real es más
+    // estrecho y no depende del proyecto: **si dentro hay solución, la fila
+    // cerrada tiene que anunciarla**.
+    const hasGeneratedFix = (await llmsIssue.locator(".wa2-llms").count()) > 0;
+    if (hasGeneratedFix) {
+      await expect(
+        llmsIssue.locator(".wa2-fix-ready"),
+        'la incidencia llms.txt trae solución dentro pero no muestra el distintivo "Solución disponible"'
+      ).toBeVisible();
+    } else {
+      // Anotado, no silenciado: un salto invisible es como una pantalla vacía
+      // pasa por verificada (incidente del 2026-08-02).
+      testInfo.annotations.push({
+        type: "skipped-assertion",
+        description:
+          "llms.txt sin solución generable en este proyecto (sin páginas verificadas), así que el distintivo no aplica."
+      });
+    }
   }
 
   // Misma incidencia estructural que las dos anteriores: los pasos del sitemap

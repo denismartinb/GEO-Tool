@@ -26,7 +26,7 @@ import { requireUser } from "@/lib/auth";
  * `requireUser` la protege igual que a cualquier pantalla de la consola — sin
  * sesión redirige a /login —, así que estar fuera de `/dashboard` no la deja
  * abierta. Lo que NO hace es distinguir operador de cliente: eso sigue
- * pendiente para antes de publicar la web (ver histórico §28).
+ * pendiente para antes de publicar la web (ver histórico §32).
  */
 export default async function DebugShortcutPage() {
   const { supabase } = await requireUser();

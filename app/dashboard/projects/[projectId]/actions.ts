@@ -48,6 +48,13 @@ import {
   suggestedCompetitorsInputSchema,
   type SuggestedCompetitorsResult
 } from "@/lib/competitors/suggest-competitors";
+import {
+  addBrandAliasCore,
+  addBrandAliasInputSchema,
+  removeBrandAliasCore,
+  removeBrandAliasInputSchema,
+  type ManageBrandAliasesResult
+} from "@/lib/brand-aliases/manage-brand-aliases";
 
 const promptCreateSchema = z.object({
   projectId: z.string().uuid(),
@@ -206,6 +213,58 @@ export async function deactivateCompetitorAction(input: {
 
   const { supabase, user } = await requireUser();
   const result = await deactivateCompetitorCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
+}
+
+/**
+ * Alias de marca (Fase −1c, docs/geo-score-variability-2026-08.md §3): add/
+ * remove UI for `projects.brand_aliases`. That column already exists
+ * (migration 0025) and already decides — via `verifyMention`, ADR 0021/0025
+ * — whether an AI answer counts as a mention of the brand, but until this
+ * phase the only way to inspect or change it was a direct SQL query (ADR
+ * 0025 "Correction (2026-08-03)": the accepted risk of a bad alias moving
+ * the score with no owner-visible way to fix it was explicitly unmitigated).
+ * Same call pattern as `createCompetitorAction` — typed input + `useTransition`,
+ * no FormData, no redirect, inline error in the modal.
+ */
+export async function addBrandAliasAction(input: {
+  projectId: string;
+  alias: string;
+}): Promise<ManageBrandAliasesResult> {
+  const parsed = addBrandAliasInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await addBrandAliasCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+  }
+
+  return result;
+}
+
+/** Symmetric to addBrandAliasAction. Removal is always allowed, even below MIN_ALIAS_LENGTH — those bounds only gate what can be ADDED. */
+export async function removeBrandAliasAction(input: {
+  projectId: string;
+  alias: string;
+}): Promise<ManageBrandAliasesResult> {
+  const parsed = removeBrandAliasInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0]?.message ?? "Datos no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await removeBrandAliasCore({ ...parsed.data, supabase, user });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);

@@ -836,7 +836,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     };
 
     expect(geoScore).toBeDefined();
-    expect(geoScore.composite_version).toBe("geo-score-v3");
+    expect(geoScore.composite_version).toBe("geo-score-v4");
     expect(geoScore.inputs_used).toEqual(["presence", "prominence", "standing", "authority"]);
     expect(geoScore.components.presence).toMatchObject({ value: 100, weight: 0.4 });
     expect(geoScore.components.prominence).toMatchObject({ value: 100, weight: 0.25 });
@@ -927,7 +927,7 @@ describe("computeRunScoresFromResults — geo_score composite (docs/adr/0008)", 
     ).toBe(true);
 
     const geoScore = result.details_json.geo_score as { composite_version: string; formula: string };
-    expect(geoScore.composite_version).toBe("geo-score-v3");
+    expect(geoScore.composite_version).toBe("geo-score-v4");
     expect(geoScore.formula).toContain("standing = share of voice");
     expect(geoScore.formula).toContain("standing_v1");
     expect(geoScore.formula).toContain("prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100");
@@ -1472,5 +1472,173 @@ describe("computeJointPotentialPoints", () => {
       { recommendationType: "close_competitor_gap", affectedPromptIds: ["gap-a"] }
     ]);
     expect(result).toBeNull();
+  });
+});
+
+describe("geo_score v4 — the technical component (docs/adr/0033)", () => {
+  function positionRow(overrides: {
+    id: string;
+    brand?: { mentioned: boolean; position: number | null };
+    competitors?: Array<{ name: string; mentioned: boolean; position: number | null }>;
+    brand_mentioned?: boolean;
+    citation_found?: boolean;
+    citations?: unknown[];
+  }): ScoreInputRow {
+    return row({
+      id: overrides.id,
+      brand_snapshot: "MiMarca",
+      brand_mentioned: overrides.brand_mentioned ?? false,
+      citation_found: overrides.citation_found ?? false,
+      mentioned_competitors_count: (overrides.competitors ?? []).filter((c) => c.mentioned).length,
+      extraction_version: EXTRACTION_VERSION,
+      extracted_json: {
+        brand: overrides.brand ?? { mentioned: false, position: null },
+        competitors: overrides.competitors ?? [],
+        citations: overrides.citations ?? []
+      }
+    });
+  }
+
+  const technical = (value: number) => ({
+    value,
+    snapshot_id: "snapshot-1",
+    captured_at: "2026-08-05T11:00:00.000Z",
+    source: "this_run" as const,
+    age_days: 0
+  });
+
+  /** 20 clean rows, brand mentioned and own-domain cited everywhere. */
+  function perfectRun() {
+    return Array.from({ length: 20 }, (_, i) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: true,
+        citation_found: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }],
+        citations: [ownDomainCitation()]
+      })
+    );
+  }
+
+  it("renormalizes to EXACTLY the v3 weights when no audit is available", () => {
+    // The load-bearing property of this phase: v4 is strictly ADDITIVE. A
+    // project with no technical audit must score identically to what v3 gave
+    // it, so nobody's historical number moves because of a weight change.
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: null });
+    const geoScore = result.details_json.geo_score as {
+      components: Record<string, { value: number | null; weight: number }>;
+      inputs_used: string[];
+    };
+
+    expect(geoScore.components.presence.weight).toBe(0.4);
+    expect(geoScore.components.prominence.weight).toBe(0.25);
+    expect(geoScore.components.standing.weight).toBe(0.2);
+    expect(geoScore.components.authority.weight).toBe(0.15);
+    expect(geoScore.inputs_used).not.toContain("technical");
+  });
+
+  it("produces the identical score with and without the option object", () => {
+    const withoutOptions = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN);
+    const withNullTechnical = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: null });
+
+    expect((withNullTechnical.details_json.geo_score as { score: number }).score).toBe(
+      (withoutOptions.details_json.geo_score as { score: number }).score
+    );
+  });
+
+  it("applies the v4 weights when the audit is present", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: technical(50) });
+    const geoScore = result.details_json.geo_score as {
+      score: number;
+      inputs_used: string[];
+      components: Record<string, { value: number | null; weight: number }>;
+    };
+
+    expect(geoScore.inputs_used).toContain("technical");
+    expect(geoScore.components.technical).toMatchObject({ value: 50, weight: 0.2 });
+    expect(geoScore.components.presence.weight).toBe(0.32);
+    expect(geoScore.components.prominence.weight).toBe(0.2);
+    expect(geoScore.components.standing.weight).toBe(0.16);
+    expect(geoScore.components.authority.weight).toBe(0.12);
+
+    // Everything else is 100, technical is 50: 100*0.8 + 50*0.2 = 90.
+    expect(geoScore.score).toBeCloseTo(90, 5);
+  });
+
+  it("records which snapshot the score was computed against", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, { technical: technical(64) });
+    const geoScore = result.details_json.geo_score as {
+      technical_snapshot: { snapshot_id: string; source: string; age_days: number } | null;
+    };
+
+    expect(geoScore.technical_snapshot).toMatchObject({ snapshot_id: "snapshot-1", source: "this_run", age_days: 0 });
+  });
+
+  it("carries the resolver's reason when the component is dropped", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, {
+      technical: null,
+      technicalReason: "no technical audit has been recorded for this project yet (docs/adr/0027)"
+    });
+    const geoScore = result.details_json.geo_score as {
+      components: Record<string, { value: number | null; weight: number; reason?: string }>;
+    };
+
+    expect(geoScore.components.technical.value).toBeNull();
+    expect(geoScore.components.technical.weight).toBe(0);
+    expect(geoScore.components.technical.reason).toContain("no technical audit has been recorded");
+  });
+
+  it("damps run-to-run movement by exactly the technical weight — the reason it earns real weight", () => {
+    // The stability claim of docs/adr/0033, asserted rather than argued.
+    // `technical` is deterministic (no LLM in lib/web-audit/page-checks.ts),
+    // so a swing in the LLM-measured components reaches the composite scaled
+    // by (1 - technical_weight).
+    const mentioned = (i: number) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: true,
+        citation_found: true,
+        brand: { mentioned: true, position: 1 },
+        competitors: [{ name: "Competitor", mentioned: false, position: null }],
+        citations: [ownDomainCitation()]
+      });
+    const notMentioned = (i: number) =>
+      positionRow({
+        id: String(i),
+        brand_mentioned: false,
+        citation_found: false,
+        brand: { mentioned: false, position: null },
+        competitors: [{ name: "Competitor", mentioned: true, position: 1 }],
+        citations: []
+      });
+
+    const good = Array.from({ length: 20 }, (_, i) => mentioned(i));
+    const worse = [...Array.from({ length: 10 }, (_, i) => mentioned(i)), ...Array.from({ length: 10 }, (_, i) => notMentioned(i + 10))];
+
+    const scoreOf = (rows: typeof good, tech: ReturnType<typeof technical> | null) =>
+      (computeRunScoresFromResults(rows, PROJECT_DOMAIN, { technical: tech }).details_json.geo_score as { score: number }).score;
+
+    const swingWithoutTechnical = scoreOf(good, null) - scoreOf(worse, null);
+    // Same site, same readiness score on both runs — only the AI answers moved.
+    const swingWithTechnical = scoreOf(good, technical(70)) - scoreOf(worse, technical(70));
+
+    expect(swingWithoutTechnical).toBeGreaterThan(0);
+    expect(swingWithTechnical).toBeCloseTo(swingWithoutTechnical * 0.8, 5);
+  });
+
+  it("persists the engine-coverage verdict alongside the score (Fase B)", () => {
+    const result = computeRunScoresFromResults(perfectRun(), PROJECT_DOMAIN, {
+      engineCoverage: {
+        status: "partial",
+        expected: ["gemini", "openai"],
+        observed: ["gemini"],
+        missing: ["openai"],
+        unexpected: []
+      }
+    });
+    const geoScore = result.details_json.geo_score as { engine_coverage: { status: string; missing: string[] } | null };
+
+    expect(geoScore.engine_coverage).toMatchObject({ status: "partial", missing: ["openai"] });
   });
 });

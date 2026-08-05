@@ -30,6 +30,11 @@ import {
   resolveDelta,
   type DeltaVerdict
 } from "@/lib/scoring/score-reliability";
+import {
+  computeWindowedScore,
+  computeWindowedSeries,
+  readWindowRun
+} from "@/lib/scoring/score-window";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/executor";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
@@ -38,6 +43,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { countRanked, normalizeRanking } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
+import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
+import {
+  GEO_SCORE_COMPONENT_META,
+  parseEngineCoverage,
+  translateDroppedComponentReason,
+  type GeoScoreEngineCoverage
+} from "./geo-score-breakdown";
 
 /**
  * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
@@ -149,8 +161,11 @@ type GeoScoreDetails = {
     presence?: GeoScoreComponent;
     prominence?: GeoScoreComponent;
     standing?: GeoScoreComponent;
+    /** Technical readiness of the site (GEO-SCORE-V4, ADR 0033) — web_audit_snapshots.readiness_score, deterministic, no LLM. */
+    technical?: GeoScoreComponent;
     authority?: GeoScoreComponent;
   };
+  engine_coverage?: GeoScoreEngineCoverage | null;
   formula?: string;
 };
 
@@ -300,7 +315,7 @@ export default async function ProjectDetailPage({
             .order("priority_rank", { ascending: true }),
           supabase
             .from("run_scores")
-            .select("visibility_score, citation_score, competitor_gap_score, created_at, details_json")
+            .select("run_id, visibility_score, citation_score, competitor_gap_score, created_at, details_json")
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
             .limit(7)
@@ -340,7 +355,8 @@ export default async function ProjectDetailPage({
   const geoScore = scoreDetails.geo_score;
   // Fallback to legacy visibility_score for runs scored before geo-score-v1
   // existed (no backfill, per ADR 0008).
-  const gaugeScore = Math.round(geoScore?.score ?? visibilityScore);
+  /** This scan's own composite — kept as the detail figure under the gauge. */
+  const perRunScore = Math.round(geoScore?.score ?? visibilityScore);
 
   const computedMentionRate = allPromptResults?.length
     ? Math.round((allPromptResults.filter((r) => r.brand_mentioned).length / allPromptResults.length) * 100)
@@ -387,12 +403,54 @@ export default async function ProjectDetailPage({
   // GEO Score history for the gauge (audit phase B, finding 10). Pre-composite
   // runs fall back to visibility_score inside getEffectiveGeoScore — the same
   // fallback the gauge itself applies (ADR 0008, no backfill).
-  const geoTrend = trendHistory.map((r) => Math.round(getEffectiveGeoScore(r)));
+  const perRunTrend = trendHistory.map((r) => Math.round(getEffectiveGeoScore(r)));
+
+  /* ---- SCORE-WINDOW-1 — the headline is a window, not one scan ----------
+   *
+   * The engines run live retrieval, and `temperature: 0` does not control
+   * what Google Search or web_search return on any given call, so two
+   * identical scans genuinely see a different internet. That residual
+   * variance is the one Fases A–C could not remove
+   * (docs/geo-score-variability-2026-08.md §2), and the only honest
+   * instrument against per-observation noise is to stop treating one
+   * observation as the answer.
+   *
+   * `computeWindowedScore` refuses to mix runs that `compareRuns` would
+   * refuse to compare, so when it publishes nothing we fall back to the
+   * latest run's own score — never to a median of incomparable things.
+   */
+  const windowRuns = trendHistory
+    .map((r) => readWindowRun(r as { run_id?: string | null; created_at?: string | null; details_json?: unknown }))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  const scoreWindow = computeWindowedScore(windowRuns);
+  const windowPublished = scoreWindow.verdict === "published" && scoreWindow.value !== null;
+
+  /** The number the gauge shows: the window when it exists, the run otherwise. */
+  const gaugeScore = windowPublished ? Math.round(scoreWindow.value as number) : perRunScore;
+
+  // The sparkline must plot the same quantity as the gauge above it, or the
+  // two read as different metrics and the user cannot tell which the headline
+  // belongs to. Gaps (null) stay gaps — never zeroes.
+  const windowedSeries = computeWindowedSeries(windowRuns);
+  const geoTrend = windowPublished
+    ? windowedSeries.filter((v): v is number => v !== null).map((v) => Math.round(v))
+    : perRunTrend;
 
   const prevScore = trendHistory.length >= 2 ? trendHistory[trendHistory.length - 2] : null;
   const visDelta = prevScore ? visibilityScore - n(prevScore.visibility_score) : 0;
   const gapDelta = prevScore ? competitorPressureScore - n(prevScore.competitor_gap_score) : 0;
-  const gaugeDelta = geoTrend.length >= 2 ? gaugeScore - geoTrend[geoTrend.length - 2] : 0;
+
+  // Window-over-window, not window-minus-run: subtracting last scan's raw
+  // score from this window's median would compare two different quantities
+  // and call the difference a change.
+  const previousWindow = computeWindowedScore(windowRuns.slice(0, -1));
+  const gaugeDelta = windowPublished
+    ? previousWindow.verdict === "published" && previousWindow.value !== null
+      ? Math.round(scoreWindow.value as number) - Math.round(previousWindow.value)
+      : 0
+    : perRunTrend.length >= 2
+      ? gaugeScore - perRunTrend[perRunTrend.length - 2]
+      : 0;
 
   /* ---- GEO-SCORE-RELIABILITY-1 — precision and comparability ----
    * Every "vs. escaneo anterior" number above is a raw subtraction of two
@@ -775,7 +833,10 @@ export default async function ProjectDetailPage({
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
               <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
               ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}), con una{" "}
-              <b>puntuación GEO de {gaugeScore}/100</b>.
+              {/* perRunScore, not gaugeScore: this sentence is about THIS
+                  scan's responses, so pairing them with the windowed median
+                  would attribute a figure to data that did not produce it. */}
+              <b>puntuación GEO de {perRunScore}/100</b>.
               {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
                 <>
                   {" "}Tu rival más visible,{" "}
@@ -1036,6 +1097,88 @@ export default async function ProjectDetailPage({
           </div>
           </div>
           </div>
+
+          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7): stated
+              obligation, not polish — "wherever the GeoScore is shown, its
+              component breakdown must be visible", so "subió porque
+              arreglaste la web" and "subió porque las IAs te citan más" son
+              distinguibles. Placed right under the gauge, full width, its
+              OWN labelled section — never a bare number beside the gauge,
+              which is exactly what log §22 decisión 1 warned reads as a
+              second score. Only rendered once there is a real score to
+              explain. */}
+          {geoScore?.components ? (
+            <>
+              {geoScore.engine_coverage?.status === "partial" ? (
+                <div
+                  className="feedback"
+                  style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginTop: 14 }}
+                >
+                  <p style={{ fontWeight: 650 }}>{engineCoverageNotice(parseEngineCoverage(geoScore.engine_coverage))}</p>
+                </div>
+              ) : null}
+
+              <div className="ov2-sec-lbl">
+                Desglose del GEO Score
+                <span style={{ fontWeight: 600, color: "var(--ink-4)", textTransform: "none", letterSpacing: 0 }}>
+                  {gaugeScore}/100
+                </span>
+              </div>
+              <div className="card" style={{ padding: "6px 18px" }}>
+                {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
+                  const component = geoScore.components?.[key];
+                  // A run scored before GEO-SCORE-V4 has no `technical` key at
+                  // all — not a null value, the key simply does not exist.
+                  // Returning null there made the row VANISH, so the breakdown
+                  // silently had four rows on older scans and five on new ones,
+                  // with nothing saying why. That is the "no silent gap" failure
+                  // this codebase keeps paying for (.claude/rules/scan.md, "No
+                  // mute rows"). The row now always renders; a pre-v4 run says
+                  // so and tells the user what makes it appear.
+                  const isLegacyRun = !component && key === "technical";
+                  if (!component && !isLegacyRun) return null;
+                  const meta = GEO_SCORE_COMPONENT_META[key];
+                  const isDropped = isLegacyRun || component?.value === null || component?.value === undefined;
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 0",
+                        borderBottom: "1px solid var(--line-soft)"
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                          {meta.label}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                          {isLegacyRun
+                            ? "Este escaneo es anterior a que la salud técnica entrara en el GEO Score. Se incluirá en tu próximo escaneo."
+                            : isDropped
+                              ? translateDroppedComponentReason(component?.reason)
+                              : meta.hint}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {isDropped ? (
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-4)" }}>No disponible</span>
+                        ) : (
+                          <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
+                            {Math.round(component?.value as number)}
+                            <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+
+          ) : null}
 
           {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
               `display: contents` default as `.ov2-hero` above — no effect on

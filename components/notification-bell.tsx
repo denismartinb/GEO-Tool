@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { relativeTime, groupByDay, renderNotification, toneClassName, type NotificationRow } from "@/lib/notifications/render";
-import { markAllNotificationsRead } from "@/app/dashboard/notifications/actions";
+import { useSeenNotifications } from "@/lib/notifications/use-seen-notifications";
 import { NOTIFICATIONS_BELL_LIMIT } from "@/lib/notifications/types";
 import type { WorkspaceNotification, WorkspaceProjectSummary } from "@/lib/project-workspace";
 
@@ -19,38 +19,30 @@ export function NotificationBell({
 }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("all");
-  const [locallyRead, setLocallyRead] = useState<Set<string>>(new Set());
-  const [, startTransition] = useTransition();
   const panelRef = useRef<HTMLDivElement | null>(null);
+
+  // Opening the panel is what marks these read (NOTIF-AUTOREAD-1) — there is
+  // no button to press, and the dot stops lying about work the user already did.
+  const { isVisuallyUnread, pendingUnreadCount } = useSeenNotifications(notifications, open);
 
   const domainByProjectId = projects.reduce<Record<string, string>>((acc, p) => {
     acc[p.id] = p.domain;
     return acc;
   }, {});
 
-  function isUnread(n: WorkspaceNotification): boolean {
-    return !n.readAt && !locallyRead.has(n.id);
-  }
-
-  const unreadCount = notifications.filter(isUnread).length;
-  const hasUnread = unreadCount > 0;
+  const hasPendingUnread = pendingUnreadCount > 0;
+  // Rows keep their dot for the rest of the session even after the write lands,
+  // so the tab and its counter describe the list the user is looking at, not
+  // the badge that already went out.
+  const sessionUnreadCount = notifications.filter(isVisuallyUnread).length;
   // NOTIFICATIONS_BELL_LIMIT rows load at most, so an unread count that hits
   // that limit can't be distinguished from "more than that" — shown as "15+"
   // rather than a number that would silently understate the truth.
-  const unreadBadge = unreadCount >= NOTIFICATIONS_BELL_LIMIT ? `${NOTIFICATIONS_BELL_LIMIT}+` : String(unreadCount);
+  const unreadBadge =
+    sessionUnreadCount >= NOTIFICATIONS_BELL_LIMIT ? `${NOTIFICATIONS_BELL_LIMIT}+` : String(sessionUnreadCount);
 
-  const visible = tab === "unread" ? notifications.filter(isUnread) : notifications;
+  const visible = tab === "unread" ? notifications.filter(isVisuallyUnread) : notifications;
   const groups = groupByDay(visible);
-
-  function markAllRead() {
-    // Optimistic: hide the badge immediately: markAllNotificationsRead's
-    // revalidatePath refreshes the real `readAt` values shortly after, this
-    // just avoids a visible delay on a mobile connection.
-    setLocallyRead(new Set(notifications.map((n) => n.id)));
-    startTransition(async () => {
-      await markAllNotificationsRead();
-    });
-  }
 
   useEffect(() => {
     if (!open) return;
@@ -73,17 +65,12 @@ export function NotificationBell({
         onClick={() => setOpen((v) => !v)}
       >
         <Icon name="bell" size={16} />
-        {hasUnread && <span className="notif-dot" aria-hidden="true" />}
+        {hasPendingUnread && <span className="notif-dot" aria-hidden="true" />}
       </button>
       {open && (
         <div className="notif-panel">
           <div className="notif-panel-head">
             <span className="notif-panel-title">Notificaciones</span>
-            {hasUnread && (
-              <button type="button" className="notif-mark-read" onClick={markAllRead}>
-                Marcar leídas
-              </button>
-            )}
           </div>
           <div className="notif-tabs">
             <button
@@ -98,7 +85,7 @@ export function NotificationBell({
               className={`notif-tab${tab === "unread" ? " active" : ""}`}
               onClick={() => setTab("unread")}
             >
-              No leídas{hasUnread && <span className="notif-tab-count">{unreadBadge}</span>}
+              No leídas{sessionUnreadCount > 0 && <span className="notif-tab-count">{unreadBadge}</span>}
             </button>
           </div>
           {visible.length === 0 ? (
@@ -115,7 +102,7 @@ export function NotificationBell({
                       key={n.id}
                       notification={n}
                       domainByProjectId={domainByProjectId}
-                      unread={isUnread(n)}
+                      unread={isVisuallyUnread(n)}
                       onNavigate={() => setOpen(false)}
                     />
                   ))}

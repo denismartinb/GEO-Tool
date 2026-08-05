@@ -2573,7 +2573,291 @@ silencia el email, la campana, o ambos?).
 
 ---
 
-## 28. Escaneos se parte en dos: «Dominios» y `/debug` (DOMAINS-REDESIGN-1 Fase A, 2026-08-05)
+## 28. Verlas es leerlas (NOTIF-AUTOREAD-1, 2026-08-05)
+
+**Estado: implementada.** Petición directa del fundador: *"quiero que las
+notificaciones, una vez que el cliente abre la campana o las ve directamente,
+se marquen como leídas. Si no es un coñazo darle al botón de leída siempre y
+siempre aparece que hay algo pendiente de leer."* Segundo control manual que
+cae en dos días, por la misma razón que el de §25: pedía trabajo para
+confirmar algo que el producto ya sabía.
+
+**El fallo real no era el clic, era el punto azul.** Un badge que nunca se
+apaga solo deja de ser información en la segunda semana. Como marcar leído
+requería un botón aparte, el estado por defecto de la campana era "hay algo
+pendiente" — siempre, incluso justo después de mirarlo. La señal medía la
+memoria del usuario, no si había novedades.
+
+**Qué desaparece.** «Marcar leídas» del panel de la campana y «Marcar como
+leídas» de la cabecera de `/dashboard/notifications`, con sus estilos
+(`.notif-mark-read`, `.notif-page-mark-read`). Abrir el panel marca; abrir la
+página marca. No queda nada en su sitio — la lección de §25 aplica igual.
+
+**Se marca lo que se ha visto, no "todo lo no leído".** `markAllNotificationsRead()`
+(sin argumentos) pasa a `markNotificationsRead(ids)`. Es la diferencia entre
+un cambio correcto y uno que borra datos en silencio: la campana carga como
+mucho 15 filas, así que "marca todo lo no leído del usuario" al abrirla habría
+enterrado notificaciones que nunca llegaron a una pantalla. Con la lista
+explícita, si hay 40 sin leer y la campana enseña 15, quedan 25 esperando en
+la página (que carga 50) — el badge sigue encendido y **con razón**.
+
+**El punto de cada fila no se apaga al abrir, y es deliberado.** Marcar leído
+al abrir tiene un fallo obvio: la lista se blanquea bajo los ojos de quien la
+está leyendo, y la pestaña «No leídas» se vacía sola. Así que hay dos
+preguntas distintas (`lib/notifications/seen.ts`), no una:
+
+- *¿queda algo por ver?* → el punto de la campana y su contador. Se apaga al
+  abrir, sin esperar al round-trip del servidor.
+- *¿esta fila conserva su punto?* → sí, durante el resto de la sesión, aunque
+  el servidor ya haya escrito `read_at`. Desaparece en la siguiente carga
+  completa, cuando ya ha cumplido su función.
+
+La pestaña «No leídas» y su contador se rigen por la segunda, para que
+describan la lista que se está mirando y no el badge que ya se apagó.
+
+**Si la escritura falla**, se olvida el envío y el siguiente abrir lo
+reintenta; los puntos se quedan como estaban. Lo que no hace es fingir
+éxito: sin `revalidatePath`, la próxima navegación vuelve a traer el estado
+real del servidor.
+
+**Riesgo asumido:** ya no hay forma manual de marcar leído ni de marcar **no**
+leído. Lo segundo nunca existió, así que no se pierde nada; lo primero deja de
+tener sentido cuando mirar basta. Lo que sí queda pendiente y conviene que
+conste: **no hay descarte individual** de una notificación (D1 de la spec lo
+contemplaba), y sigue sin haberlo.
+
+**El vacío deja de ser un agujero, porque pasa a ser el estado normal.** Con
+auto-read, la pestaña «No leídas» se queda en cero en cuanto alguien abre la
+pantalla una vez: el estado que antes era el raro es ahora el que más se va a
+ver. Y era una línea gris centrada bajo una tarjeta de 150px con 700px de
+lienzo en blanco debajo — el piloto lo leyó como *"¿esto ha terminado de
+cargar?"* en vez de *"no tienes pendientes"*. Ahora lleva icono en círculo
+tenue (misma pareja `--brand-blue-soft` que ya usan las filas, no un color
+nuevo), titular —**«Estás al día»**, que responde a la pregunta en vez de
+describir la ausencia— y una línea que dice dónde aparecerán las nuevas.
+
+**Efecto colateral sobre el piloto, dicho antes de que lo descubra alguien.**
+El barrido de interacciones del piloto ya casaba con la campana
+(`[aria-expanded]` está en su allow-list), así que **cada pasada del piloto
+escribe ahora `read_at`** en las notificaciones de su cuenta. El piloto
+siempre-activo se anunciaba como "estrictamente de sólo lectura"; desde esta
+fase es "sin escrituras salvo ésta, nombrada"
+(`docs/agentic-user-pilot.md`, Scope guard). Se acepta sin aprobación aparte
+porque está acotado en las cuatro dimensiones que importan —idempotente, sólo
+filas de la propia cuenta del piloto, sin coste de LLM, sin consumir cupo de
+plan— y porque impedirlo obligaría a sacar la campana del barrido, que es
+justo el control que hay que mirar.
+
+**El piloto se comía el estado que venía a medir.** Segundo intento, segundo
+hueco, y éste era estructural: el barrido genérico de interacciones abre la
+campana en ~14 pantallas × 3 viewports *antes* de que el journey dedicado
+llegue a su primera aserción (`core-flow.spec.ts` va antes por orden de
+fichero, con `workers: 1`). Y abrir la campana **es** la escritura que se
+quería observar, así que el journey encontraba siempre cero sin leer y se
+anotaba a sí mismo como no verificable — cada pasada, no sólo aquella. No se
+arregla sembrando datos una vez. Se arregla en la raíz: **el barrido ya no
+toca la campana** (`explore.ts`, `refuseReason`). No cuesta cobertura —el
+journey dedicado la ejercita mucho mejor que un clic a ciegas— y de paso
+devuelve la escritura de ~42 por pasada a una sola.
+
+**La captura mentía, y el juicio sobre ella también.** El agente leyó el panel
+a 375px como "descentrado y solapando el título". Mirando la PNG, ni una cosa
+ni la otra: el panel está anclado a la derecha bajo la campana y ocupa casi
+todo el ancho porque 320px en 375 es casi todo el ancho. Lo que sí se veía era
+**medio transparente, con la página traspasándolo**, y eso tampoco era un
+defecto del producto: `menuIn` anima la opacidad 0→1 en 140 ms y la captura se
+tomaba a mitad del fundido. `captureInteraction` no pasaba
+`animations: "disabled"`, así que **toda** la suite llevaba fotografiando
+popovers, menús y cajones a medio aparecer. Arreglado ahí, no en el CSS del
+panel: el defecto estaba en el instrumento, y "arreglar" el componente habría
+sido cambiar código bueno por una foto mala.
+
+**El primer PASS del piloto no probaba nada de esta fase.** El run mecánico
+del commit inicial dio ✅ en 41 pantallas a tres viewports y ni una era
+notificaciones: el barrido genérico agota su presupuesto (4 candidatos por
+pantalla) en nav/campana/InfoTip antes de poder afirmar nada sobre *qué hizo*
+el clic. Mismo patrón que dejó sin ver las pestañas de auditoría en el PR #289
+(§17). De ahí `tests/pilot/journeys/notifications.spec.ts`: fija con
+aserciones lo que ninguna captura demuestra —que el punto de la cabecera se
+apaga, que los de fila **no**, que no vuelve ningún botón de marcar leídas, y
+que al navegar y volver la escritura persistió— y **anota en voz alta** cuando
+la cuenta no tiene nada sin leer, en vez de pasar en silencio.
+
+---
+
+## 29. El GeoScore incorpora la salud técnica, y el número se explica (GEO-SCORE-V4, 2026-08-05)
+
+Petición del fundador: *"quiero que tu prioridad sea que esa métrica sea lo
+menos variable posible, escaneo a escaneo, porque a veces, de uno a otro, han
+cambiado treinta puntos"*, y *"que tenga en cuenta la nota de auditoría técnica
+dentro de la puntuación de GeoScore de manera importante"*.
+
+La decisión técnica completa —pesos, resolución del snapshot, coste de la
+frontera de versión— vive en **ADR 0033**. Aquí quedan sólo las decisiones de
+producto y de pantalla.
+
+**Decisión 1 — el GeoScore cambia de significado, y se dice.** Pasa de medir
+*resultado observado* a medir *resultado + preparación*. Es un cambio de
+naturaleza, no un ajuste: hasta hoy el número respondía "¿te nombran las IAs?"
+y a partir de ahora responde "¿te nombran, y está tu web en condiciones de que
+te nombren?".
+
+**Decisión 2 — el desglose por componentes deja de ser opcional.** Un compuesto
+que mezcla dos naturalezas sin desglose visible es un número que no se puede
+accionar: el usuario no puede distinguir "subió porque arreglaste la web" de
+"subió porque las IAs te citan más". El desglose estaba *tipado* en la Visión
+general desde v2 y no se renderizaba nunca. Con v4 se renderiza, con el valor
+de cada componente y el motivo persistido cuando uno se cae. Un componente
+caído se pinta como caído, jamás como cero.
+
+**Sin pesos** (fundador, 2026-08-05): la primera versión mostraba el peso
+aplicado bajo cada valor y sobraba — para saber qué movió el score basta el
+valor, y cinco porcentajes convertían la tarjeta principal en una explicación
+de metodología. Los pesos siguen en `details_json`; si alguna superficie
+futura los muestra, tienen que ser los renormalizados (ADR 0017).
+
+**La fila técnica nunca desaparece.** Un escaneo anterior a v4 no tiene el
+componente persistido, y la primera versión simplemente no pintaba la fila: el
+desglose tenía cuatro filas en unos proyectos y cinco en otros, sin decir por
+qué — el fundador lo detectó en el preview antes del Human Gate. Ahora la fila
+aparece siempre y, cuando el escaneo es anterior, dice que lo es y que el
+próximo escaneo la incluirá. Es la misma regla que `.claude/rules/scan.md`
+aplica a las filas mudas: un hueco sin explicar es peor que un dato ausente.
+
+Esto **supersede parcialmente §17 decisión 4 y §22 decisión 1**, que decidieron
+no mezclar técnica con resultado. No se borran: aquella lectura era correcta
+mientras el GeoScore midiera sólo resultado. El aviso de §22 —que la nota
+técnica a una columna del GeoScore se lee como una segunda puntuación— sigue
+vivo y es justo lo que el desglose etiquetado resuelve.
+
+**Decisión 3 — un escaneo medido sobre menos motores lo dice en la cara.**
+Hasta hoy, si un proveedor tenía un mal minuto, el escaneo no fallaba: perdía
+filas en silencio y el score se recalculaba sobre otra escala (13 puntos en la
+reproducción de `docs/geo-score-variability-2026-08.md` §1). Ahora se persiste
+el veredicto de cobertura y la pantalla lo dice, nombrando el motor que faltó.
+El número no se toca: se toca lo que se afirma sobre él.
+
+**Decisión 4 — los alias de marca salen del SQL.** `projects.brand_aliases`
+decide desde ADR 0025 si una respuesta cuenta como mención —es decir, mueve el
+score— y sólo se podían inspeccionar por consulta directa. Era el riesgo que
+ADR 0025 aceptó sin mitigar y la causa raíz del salto de 44 puntos del
+fundador ("Firefox" no casaba con "Mozilla"). Ahora se ven, se añaden y se
+quitan desde el producto.
+
+**Pendiente conocido, escrito para que nadie lo lea como cerrado:**
+
+- **La pantalla de Escaneos aún no cumple la decisión 2.** Publica el GeoScore
+  de cada run histórico como número suelto, sin desglose ni enlace a uno, así
+  que desde ahí no se puede saber que el número incluye ahora un componente
+  técnico que vale hasta un 20 %. La obligación del ADR 0033 §7 sigue en pie:
+  esto es un hueco, no una excepción.
+
+- En los planes sin auditoría web (todo lo que no es Pro) el componente
+  técnico se cae siempre, así que su GeoScore es el de cuatro componentes —v3
+  en la práctica—. Extender una auditoría *sólo técnica* (que no gasta LLM) a
+  todos los planes es una decisión comercial del fundador, no un efecto
+  colateral de esta fase.
+- El score de ventana (mediana de los últimos 3 escaneos comparables) está
+  calculado y probado, pero **no se ha promovido a cifra principal de ninguna
+  pantalla**. Cambiar el número que el usuario ve como titular merece su propia
+  validación con el fundador delante.
+- El pin del modelo de Gemini sigue pendiente: `gemini-2.5-flash` es un alias
+  flotante que ADR 0002 prohíbe, y re-pinearlo exige observar un `modelVersion`
+  real en producción. Inventar un id versionado rompería todos los escaneos.
+
+---
+
+## 30. La salud técnica deja de ser de pago (WEB-AUDIT-TECH-ALL-PLANS-1, 2026-08-05)
+
+Decisión del fundador el mismo día que se cerró GEO-SCORE-V4: *"Auditoría en no
+pro: la extendemos"*. El razonamiento técnico completo está en **ADR 0035**;
+aquí quedan las consecuencias de pantalla.
+
+**Por qué había que decidirlo ya.** El GeoScore acababa de incorporar la nota
+técnica con peso 0,20 (§29). Con la auditoría cerrada por plan, ese componente
+se caía siempre por debajo de Pro y el score renormalizaba a cuatro
+componentes: el número principal del producto **medía cosas distintas según lo
+que pagaras**. La asimetría duró horas.
+
+**Decisión 1 — la mitad técnica se abre, la de cobertura no.** La cobertura son
+llamadas a Gemini por lotes y ahí sí hay gasto; la técnica es fetch y regex.
+Lo que sigue siendo Pro es la parte cara y la que interpreta contenido.
+
+**Decisión 2 — «no está en tu plan» nunca se pinta como «sin auditar».** Son
+hechos distintos: uno se arregla escaneando, el otro cambiando de plan.
+Confundirlos le dice al usuario algo falso sobre sus propios datos, y es la
+misma familia de error que §22 ya señaló con la nota técnica junto al GeoScore.
+
+**Decisión 3 — un plan sin cobertura no está «Parcial».** En la columna
+Auditoría de Escaneos, «Parcial» significa *el trabajo se quedó a medias*, e
+invita a esperar algo que no va a llegar nunca. Un plan que sólo tiene la
+mitad técnica tiene su auditoría **completa** para lo que incluye, y así se
+etiqueta.
+
+**Coste comercial, dicho de frente:** la auditoría técnica era parte de lo que
+distinguía a Pro, y abrirla resta un motivo para subir de plan. A cambio, el
+número principal significa lo mismo para todo el mundo. Fue una decisión
+consciente, no un efecto colateral.
+
+---
+
+## 31. El número grande deja de ser un escaneo (SCORE-WINDOW-1, 2026-08-05)
+
+Fundador: *"Implementa el score de ventana en real"*. La decisión técnica está
+en **ADR 0036**; aquí, lo de pantalla.
+
+**Decisión 1 — el titular es la mediana de los 3 últimos escaneos
+comparables.** Es la última palanca contra la varianza que quedaba: los motores
+hacen recuperación viva y ninguna fórmula la quita. Se decidió el mismo día en
+que se midió que tampoco se puede pinear el modelo de Gemini —no existe id
+versionado—, así que esta fuente de ruido no tenía otra salida.
+
+**Decisión 2 — dónde se explica que es una mediana.** La primera versión lo
+decía bajo el gauge: *"Mediana de tus N últimos escaneos comparables · este
+escaneo: X"*. **El fundador la retiró el mismo día, tras verla funcionando**:
+sobraba en la pantalla principal.
+
+La obligación de fondo no se retira con la línea —el usuario tiene que poder
+saber qué cantidad está mirando—, así que la explicación se movió a la página
+pública de metodología, que además estaba desactualizada (seguía describiendo
+cuatro componentes cuando v4 tiene cinco). El riesgo que se asume, dicho:
+alguien que escanee y vea el número apenas moverse no tiene en pantalla nada
+que se lo explique. El número de su escaneo concreto sigue visible en la frase
+de arriba ("aparece en X de Y respuestas… con una puntuación GEO de Z").
+
+**Decisión 3 — todo lo que cuelga del titular mide lo mismo que él.** La banda
+se calcula sobre la ventana; el delta es ventana contra ventana (restarle a la
+mediana de hoy el score crudo de ayer compararía dos cantidades distintas); y
+la evolución dibuja la serie de ventanas, no los runs. Un gauge con mediana
+sobre una línea de scores por escaneo son dos métricas en la misma tarjeta.
+
+**Decisión 4 — la frase narrativa sigue con el score del escaneo.** Dice
+"aparece en X de Y respuestas… con una puntuación GEO de Z": describe *ese*
+escaneo, y emparejar esos datos con la mediana atribuiría una cifra a unos
+datos que no la produjeron.
+
+**El coste, dicho:** una mejora real tarda dos escaneos en llegar del todo al
+titular. Se gana que deje de saltar treinta puntos por ruido.
+
+**Decisión 5 — fuera el GEO Score de la tabla de Escaneos** (fundador,
+2026-08-05: *"Yo veré la puntuación de los Escaneos en la página de debug"*).
+Con el titular convertido en mediana, una columna de scores por escaneo al lado
+enseñaba **dos números distintos del mismo proyecto** sin decir cuál manda. El
+score por escaneo pasa a ser dato de inspección, no de producto.
+
+Se van con ella la columna «Δ Score» y su línea explicativa al pie: existían
+para hacer honesta una comparación que ya no se publica. Esto **supera a
+DELTA-GUARD-1 (§23) en esta pantalla** — no porque aquella decisión fuera
+errónea, sino porque la superficie que arreglaba ha dejado de existir. La
+regla de `resolveDelta` sigue viva y vinculante en todas las demás.
+
+**Hueco declarado, más estrecho que antes:** las tarjetas de dominio (arriba de
+esa misma pantalla) y el resumen semanal siguen mostrando el score del último
+escaneo, no la mediana. Ahí sí puede haber discrepancia con Visión general.
+Está pendiente de decidir si pasan a la ventana o se quedan como están.
+---
+
+## 32. Escaneos se parte en dos: «Dominios» y `/debug` (DOMAINS-REDESIGN-1 Fase A, 2026-08-05)
 
 **Estado: implementada la Fase A.** Diseño explorado en tres iteraciones con el
 fundador el mismo día y aprobado ("Apruebo el plan"). La referencia visual vive
@@ -2813,6 +3097,8 @@ portada ves en Dominios. Unificar los dos sería una noción de "dominio
 seleccionado" a nivel de cuenta, persistida más allá de una URL — alcance
 mayor, pedido explícito propio si algún día hace falta.
 
+**Por qué `/debug` sí conserva la columna GEO Score y su delta.** El mismo día, SCORE-WINDOW-1 (§31) retiró esa columna de la pantalla de cliente con una condición explícita del fundador: *"Yo veré la puntuación de los Escaneos en la página de debug"*. No es una omisión de esta fase — es la mitad complementaria de esa decisión. La regla de `resolveDelta` (DELTA-GUARD-1, §23) sigue vigente aquí tal cual: §31 sólo la da por superada en la pantalla que dejó de existir.
+
 **Pendiente / roto conocido.**
 
 - **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el
@@ -2828,7 +3114,6 @@ mayor, pedido explícito propio si algún día hace falta.
   `pantalla-debug.html`, sin implementar.
 - `/runs` queda como redirección a `/debug`; `/runs/[runId]` (detalle de
   escaneo) sigue donde estaba.
-
 ---
 
 ## Cómo mantener este documento
