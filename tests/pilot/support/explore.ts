@@ -225,7 +225,7 @@ async function refuseReason(el: import("@playwright/test").Locator): Promise<str
 
   if (info.disabled) return "disabled";
   // The bell is the one control here whose click WRITES: since NOTIF-AUTOREAD-1
-  // (log §26) opening it marks the account's notifications read. The sweep hits
+  // (log §28) opening it marks the account's notifications read. The sweep hits
   // it on ~14 screens × 3 viewports, so it was destroying the very state the
   // dedicated journey exists to observe — `notifications.spec.ts` found nothing
   // unread on every run and annotated itself unverifiable, structurally, not by
