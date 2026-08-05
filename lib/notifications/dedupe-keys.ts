@@ -43,3 +43,29 @@ export function auditCompletedKey(snapshotId: string): string {
 export function trialEndingKey(userId: string, trialEndsAt: string): string {
   return `trial_ending:${userId}:${trialEndsAt}`;
 }
+
+/**
+ * WEB-AUDIT-ALERTS-1 — one key per (audit snapshot, kind), so an audit can
+ * emit at most one notice of each kind however many times its invocation is
+ * retried.
+ *
+ * Audit-scoped rather than "forever" like gapPendingKey, and that is safe
+ * from noise for a different reason: every regression here is detected as a
+ * TRANSITION between two audits (lib/web-audit/regressions.ts), so a
+ * condition that persists produces exactly one notice — the day it appeared —
+ * and silence afterwards. A "forever" key would instead mean a domain that
+ * loses llms.txt, restores it, and loses it again is only ever told once.
+ *
+ * `auditId` is NOT the same identifier for every kind, and that difference is
+ * load-bearing: the technical kinds pass the `web_audit_snapshots` row id,
+ * while the two coverage kinds pass the SCAN id their coverage map belongs
+ * to. A technical audit re-run 24h later against the same scan produces a new
+ * snapshot but reads the very same, unregenerated coverage map — keyed by
+ * snapshot, that identical comparison would notify a second time.
+ */
+export function auditRegressionKey(
+  kind: "coverage_dropped" | "surfacing_dropped" | "llms_txt_lost" | "sitemap_lost" | "page_unreachable",
+  auditId: string
+): string {
+  return `${kind}:${auditId}`;
+}

@@ -68,8 +68,16 @@ export function renderNotification(
       const score = num(payload.visibilityScore);
       const delta = num(payload.visibilityDelta);
       // Rounded like the score beside it: the payload carries a raw float
-      // difference of two scores, which surfaced in a real notification as
-      // "Visibilidad 72 (+5.549999999999997)" (founder report, 2026-08-05).
+      // difference of two scores, which surfaced in real notifications as
+      // "Visibilidad 72 (+5.549999999999997)" (founder report, 2026-08-05)
+      // and "Visibilidad 75 (+2.780000000000001)" (pilot capture, PR #336).
+      //
+      // Found and fixed twice independently, on main and on this branch; the
+      // merge kept both declarations and broke the build. This is the single
+      // survivor, and it keeps the stricter half of the two: the parenthetical
+      // disappears when the rounded value is 0, because "(+0)" is noise rather
+      // than information. `Math.round(-0.4)` is `-0`, falsy, so a sub-point
+      // dip is suppressed the same way.
       const roundedDelta = delta === null ? null : Math.round(delta);
       const newRecs = num(payload.newRecommendations) ?? 0;
       const resolvedGaps = num(payload.resolvedGaps) ?? 0;
@@ -171,6 +179,85 @@ export function renderNotification(
         href: hrefForProject(row.project_id, "/web-audit"),
         icon: "shield",
         tone: "blue"
+      };
+    }
+
+    // --- WEB-AUDIT-ALERTS-1: audit-to-audit regressions ------------------
+    //
+    // All five link to /web-audit, which is where both the evidence and the
+    // fix live. The copy names what got worse and what it costs, never the
+    // internal outcome vocabulary ("performing", "invisible") — the founder
+    // reads this at 8am on a phone, not next to the methodology doc.
+
+    case "coverage_dropped": {
+      const count = num(payload.count) ?? 0;
+      const topics = strArray(payload.sampleTopics);
+      const detail = topics[0]
+        ? count > 1
+          ? `«${topics[0]}» y ${count - 1} más.`
+          : `«${topics[0]}».`
+        : "";
+      return {
+        title: count === 1 ? "Un tema ha perdido cobertura" : `${count} temas han perdido cobertura`,
+        body: `Ya no encontramos contenido publicado en tu dominio sobre ${count === 1 ? "este tema" : "estos temas"}. ${detail}`.trim(),
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "trendDown",
+        tone: "warm"
+      };
+    }
+
+    case "surfacing_dropped": {
+      const count = num(payload.count) ?? 0;
+      const topics = strArray(payload.sampleTopics);
+      const detail = topics[0]
+        ? count > 1
+          ? `«${topics[0]}» y ${count - 1} más.`
+          : `«${topics[0]}».`
+        : "";
+      return {
+        title: "La IA ha dejado de citar tus páginas",
+        body: `Tienes contenido sobre ${count === 1 ? "un tema" : `${count} temas`} que la IA ya no cita. ${detail}`.trim(),
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "eye",
+        tone: "neg"
+      };
+    }
+
+    case "llms_txt_lost": {
+      return {
+        title: "Tu llms.txt ha desaparecido",
+        body: "Antes lo servías y ahora no responde. Es el fichero que le dice a la IA qué leer de tu web.",
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "fileText",
+        tone: "neg"
+      };
+    }
+
+    case "sitemap_lost": {
+      return {
+        title: "Tu sitemap.xml ha desaparecido",
+        body: "Antes lo servías y ahora no responde. Sin él los buscadores y los bots de IA descubren tus páginas mucho peor.",
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "layers",
+        tone: "warm"
+      };
+    }
+
+    case "page_unreachable": {
+      const count = num(payload.count) ?? 0;
+      const urls = strArray(payload.sampleUrls);
+      const detail = urls[0] ? (count > 1 ? `${urls[0]} y ${count - 1} más.` : `${urls[0]}.`) : "";
+      return {
+        title: count === 1 ? "Una página tuya ha dejado de responder" : `${count} páginas tuyas han dejado de responder`,
+        body: `En la auditoría anterior ${count === 1 ? "se analizó correctamente" : "se analizaron correctamente"} y ahora no. ${detail}`.trim(),
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit"),
+        icon: "link",
+        tone: "neg"
       };
     }
 

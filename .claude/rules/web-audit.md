@@ -129,6 +129,43 @@ de Escaneos como «En curso» por un trabajo que jamás produciría su propia
 auditoría (2026-08-05, visto leyendo la captura del pilot de la PR #333, no por
 ninguna aserción).
 
+### Un aviso de regresión es una transición, nunca un estado
+
+`lib/web-audit/regressions.ts` (WEB-AUDIT-ALERTS-1, log §27) compara la
+auditoría anterior con la actual. Ningún aviso salta porque algo *esté* mal,
+sólo porque *ha pasado* a estarlo. Es lo único que impide que un trabajo
+diario se convierta en una regañina diaria: una condición que persiste produce
+exactamente un aviso, el día que apareció.
+
+De ahí, y son consecuencias de la regla, no preferencias:
+
+- **Sin lado anterior explícito no hay aviso.** Primera auditoría, campo que
+  no existía en la fila antigua (`sitemapFound` es `undefined` en snapshots
+  previos a WEB-AUDIT-R3), agente que la auditoría anterior no vigilaba:
+  todos son *desconocido*, no *empeorado*. Comparar con `=== true` /
+  `=== false`, nunca por veracidad.
+- **`inconclusive` no es regresión.** Un tema que pasa a inconcluso mueve el
+  porcentaje de cobertura sin que nada haya empeorado, porque encoge el
+  denominador. Por eso la comparación de cobertura es **por tema**, jamás
+  entre los dos porcentajes agregados.
+- **El suavizado ya existe aguas arriba.** `performing`/`invisible` se deciden
+  por mayoría sobre `CITATION_WINDOW_SIZE` escaneos (`opportunity-matrix.ts`,
+  WEB-AUDIT-R6 fase 2) precisamente porque el grounding es un sensor ruidoso.
+  No añadir una segunda capa de suavizado encima: sólo retrasaría una
+  regresión real.
+
+Consecuencia para la carga de datos: la comparación de cobertura lee
+**cuatro** mapas, no dos (`COVERAGE_SCANS_COMPARED`), porque cada lado se
+clasifica sobre la ventana de los tres escaneos anteriores a su propia fecha.
+Con menos, la campana clasificaría un tema distinto que la pantalla a la que
+enlaza — y un aviso que contradice su propia pantalla es peor que ningún
+aviso.
+
+Cualquier aviso nuevo de esta zona hereda las tres reglas y **debe emitirse
+después** de que la fila que describe sea durable, con `emitNotification`
+(fail-soft: un fallo al avisar nunca convierte una auditoría persistida en un
+fallo).
+
 ### `jobs.last_error` lo lee el dueño del proyecto
 
 `jobs` lleva RLS `jobs_select_owner`, así que el propietario puede leer
