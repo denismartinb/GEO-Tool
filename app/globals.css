@@ -6486,22 +6486,29 @@ select.set-field {
    suelto para quien entra por primera vez. */
 .dm2-score { display: flex; align-items: center; gap: 20px; margin: 18px 0 20px; flex-wrap: wrap; }
 .dm2-score .gauge-wrap { flex: 0 0 auto; }
+/* El semicírculo mide `size/2 + stroke/2` de alto, y ahí dentro cabe el
+   numeral MÁS la leyenda, que parte en dos líneas («PUNTUACIÓN / GEO»). Con
+   132/14 la suma daba exactamente el alto de la caja y el número se salía por
+   encima del arco — visible en las capturas del piloto a los tres tamaños,
+   2026-08-05. El gauge se agranda y el numeral baja: el arco manda sobre el
+   número, no al revés. */
 .dm2-hero .gauge-num {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
   font-weight: 800;
-  font-size: 38px;
+  font-size: 32px;
+  line-height: 1;
   letter-spacing: -.04em;
   color: var(--brand-ink);
 }
 .dm2-hero .gauge-cap {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: .11em;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: var(--brand-ink-4);
-  margin-top: 2px;
-  max-width: 88px;
-  line-height: 1.3;
+  margin-top: 3px;
+  max-width: 84px;
+  line-height: 1.25;
 }
 .dm2-score-copy {
   flex: 1;
@@ -6649,11 +6656,17 @@ select.set-field {
 @media (max-width: 560px) {
   .dm2-title { font-size: 24px; }
   .dm2-hero { padding: 17px; border-radius: 18px; }
-  .dm2-hero-top { gap: 13px; }
+  .dm2-hero-top { gap: 13px; flex-wrap: wrap; }
   .dm2-name { font-size: 21px; }
-  .dm2-dom { font-size: 13px; }
-  .dm2-flags { flex-direction: column; }
+  .dm2-fav { width: 60px !important; height: 60px !important; border-radius: 17px !important; }
+  /* Las píldoras bajan a su propia fila. Compartiendo fila con la identidad le
+     robaban el ancho: el dominio salía como «xataka.co…» y «Último escaneo»
+     partía en tres líneas (capturas del piloto a 375px). Un estado no puede
+     comerse al sujeto del que habla. */
+  .dm2-flags { flex-direction: row; order: 3; width: 100%; justify-content: flex-start; margin-top: 2px; }
   .dm2-flag { font-size: 12px; padding: 7px 11px; }
+  .dm2-dom { font-size: 13px; overflow: visible; text-overflow: clip; }
+  .dm2-last { margin-top: 7px; }
   .dm2-score { gap: 14px; margin: 16px 0 18px; }
   .dm2-score-copy { font-size: 13.5px; min-width: 150px; }
   .dm2-grid { gap: 11px; }

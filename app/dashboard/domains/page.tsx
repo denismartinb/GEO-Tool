@@ -270,7 +270,7 @@ export default async function DomainsPage({
             {activeScore === null ? (
               <div className="dm2-score-empty">—</div>
             ) : (
-              <Gauge value={activeScore} size={132} stroke={14} variant="semi" label="Puntuación GEO" />
+              <Gauge value={activeScore} size={150} stroke={15} variant="semi" label="Puntuación GEO" />
             )}
             <p className="dm2-score-copy">
               {activeScore === null
