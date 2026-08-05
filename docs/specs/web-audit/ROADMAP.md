@@ -16,6 +16,8 @@ orden — el orden lo fija la columna `#`.
 | 6 | Auditoría diaria + alertas de regresión | WEB-AUDIT-3 | `phase-3-daily-audit.md` | ⚠️ Parcial — ver fila 6a | Cron adicional (background scheduler) | **Aprobación explícita + reliability** |
 | 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
 
+| 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §19 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
+
 ### Fila 6 — qué se implementó y qué no (2026-08-04)
 
 `phase-3-daily-audit.md` juntaba dos cosas que resultaron ser separables:
@@ -34,7 +36,7 @@ acaba de terminar, y una cola durable convierte un despacho perdido en un
 retraso en vez de en una auditoría que nunca ocurre.
 
 **Fila 6 cerrada (2026-08-05).** La segunda mitad la implementó
-WEB-AUDIT-ALERTS-1 (log §22): los avisos de regresión existen y salen por la
+WEB-AUDIT-ALERTS-1 (log §25): los avisos de regresión existen y salen por la
 campana. Con dos desviaciones respecto a lo diseñado, ambas justificadas allí:
 van seis tipos y no cuatro (`sitemap_lost` y `page_unreachable` se añaden
 porque son la misma clase de fallo silencioso y no cuestan una consulta más),

@@ -310,3 +310,36 @@ export const SCAN_TIMEOUT_AUTO_RETRY_CAP = 1;
 export const SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS = 24;
 
 export const RECONCILE_LOG_PREFIX = "[geo:scan:reconcile]";
+
+/**
+ * Marker written to `job_logs` whenever an operator scan-health alert is sent
+ * (EXTRACTION-RELIABILITY-1 Fase B, docs/adr/0029). Doubles as the dedupe
+ * store's lookup key — see `alreadyAlerted` in lib/scan/scan-health-alert.ts
+ * for why `job_logs` rather than `notifications` or a new table.
+ */
+export const SCAN_HEALTH_ALERT_LOG_MESSAGE = "scan_health_alert_sent";
+
+/**
+ * Written to `job_logs` when a run HAS alert-worthy findings but the channel
+ * cannot deliver them (no `OPS_ALERT_EMAIL`, no `RESEND_API_KEY`, or the send
+ * threw).
+ *
+ * A `console.error` alone was not enough: Vercel runtime logs are short-lived
+ * and awkward to reach, so when the first real verification of this phase
+ * produced no email, the reason was unreachable and the failure could not be
+ * told apart from "there was nothing to report" (2026-08-05). Persisting the
+ * breadcrumb makes the alerting path diagnosable with the same SQL everything
+ * else here is diagnosed with — which is this ADR's own thesis applied to its
+ * own code.
+ */
+export const SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE = "scan_health_alert_undeliverable";
+
+/**
+ * How long one (engine, reason) incident stays deduped, across every project.
+ *
+ * 24h is chosen against the daily cron: a single exhausted API account is one
+ * incident, and without a cross-project window it would send one email per
+ * project per sweep. An alert that arrives twenty times teaches the operator
+ * to ignore it, which is worse than not sending it.
+ */
+export const SCAN_HEALTH_ALERT_DEDUPE_HOURS = 24;

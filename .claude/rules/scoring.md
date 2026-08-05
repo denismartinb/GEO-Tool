@@ -17,6 +17,14 @@ pequeñas", no cambiar un peso o un umbral de paso. Si el cambio parece
 justificado, se para y se escribe el ADR primero — es exactamente el proceso
 que produjo ADR 0015, 0024 y 0026.
 
+**Y un ADR no basta si no hay datos.** Los seis números de la composición
+(cuatro pesos, dos bandas) nunca se han validado contra la distribución real de
+proyectos, y **sólo los runs completados desde el 2026-08-05 sirven para
+hacerlo**: los anteriores calcularon sus componentes sobre una extracción
+truncada a 20 filas (ADR 0029) o sobre muestras de 3 respuestas (ADR 0030). El
+plan de medición, con sus consultas y sus criterios de parada fijados de
+antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
+
 ## Composición del score
 
 - Composite v2 según **ADR 0015** (supersede partes de ADR 0008). Los pesos
@@ -40,6 +48,14 @@ que produjo ADR 0015, 0024 y 0026.
   entre dos escaneos idénticos con n=3.
 - La confianza declarada tiene que ser estadísticamente defendible, no una
   etiqueta cosmética (ADR 0015 punto 3).
+- **Ninguna superficie publica una comparación entre escaneos sin pasar por
+  `resolveDelta`** (`lib/scoring/score-reliability.ts`). No hay excepciones
+  para tablas, listas ni tooltips: si una pantalla resta dos scores por su
+  cuenta, está afirmando algo que el ADR 0024 ya decidió no afirmar. Lo
+  aprendimos caro — ADR 0024 se implementó en la Visión general y el historial
+  de Escaneos siguió publicando `+34 pt` sobre 3 respuestas durante meses
+  (DELTA-GUARD-1, log §22). Una capa de honestidad que hay que acordarse de
+  llamar acaba sin llamarse.
 
 ## Tamaño de la muestra (SAMPLING-1, ADR 0030)
 

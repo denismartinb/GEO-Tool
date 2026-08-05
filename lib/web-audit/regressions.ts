@@ -1,4 +1,4 @@
-import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
+import type { BotAccessReport, BotAgent, ProbeState } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { WebAuditSummary } from "@/lib/web-audit/opportunity-matrix";
 
@@ -162,12 +162,32 @@ export function detectNewlyBlockedBots(previous: AuditSide, current: AuditSide):
 /**
  * A file the project used to serve and no longer does.
  *
- * `=== true` / `=== false` rather than truthiness: `sitemapFound` only exists
- * on snapshots written after WEB-AUDIT-R3, so it is `undefined` on older
- * rows. `undefined → false` is "we did not use to look", not "it vanished".
+ * Two guards, for two different ways this alert could lie.
+ *
+ * 1. `before === true`, never truthiness. `sitemapFound` only exists on
+ *    snapshots written after WEB-AUDIT-R3, so it is `undefined` on older rows,
+ *    and `undefined → false` is "we did not use to look", not "it vanished".
+ *
+ * 2. The current side must have been *told* the file is gone. WEB-AUDIT-SITEMAP-1
+ *    gave the report a per-probe `ProbeState`, and it is what makes this alert
+ *    worth believing: `found: false` on its own conflates "the server answered
+ *    404" with "a WAF returned 403 / it timed out / DNS failed". Firing a
+ *    *critical* «tu llms.txt ha desaparecido» on a transient blip is precisely
+ *    the false positive that teaches the founder to ignore the alert — and the
+ *    two file alerts exist because they are the ones that most need believing.
+ *
+ * A snapshot written before probes existed has no state to consult, so it
+ * falls back to presence-only. That is strictly the old behaviour for old
+ * rows, and never applies to a snapshot written from here on.
  */
-function lostFile(before: boolean | undefined, after: boolean | undefined): boolean {
-  return before === true && after === false;
+function lostFile(
+  before: boolean | undefined,
+  after: boolean | undefined,
+  afterProbe: ProbeState | undefined
+): boolean {
+  if (before !== true) return false;
+  if (afterProbe) return afterProbe === "absent";
+  return after === false;
 }
 
 /**
@@ -201,11 +221,11 @@ export function detectAuditRegressions(previous: AuditSide, current: AuditSide):
     regressions.push({ kind: "ai_bot_blocked", agent });
   }
 
-  if (lostFile(previous.bots?.llmsTxtFound, current.bots?.llmsTxtFound)) {
+  if (lostFile(previous.bots?.llmsTxtFound, current.bots?.llmsTxtFound, current.bots?.probes?.llmsTxt)) {
     regressions.push({ kind: "llms_txt_lost" });
   }
 
-  if (lostFile(previous.bots?.sitemapFound, current.bots?.sitemapFound)) {
+  if (lostFile(previous.bots?.sitemapFound, current.bots?.sitemapFound, current.bots?.probes?.sitemap)) {
     regressions.push({ kind: "sitemap_lost" });
   }
 

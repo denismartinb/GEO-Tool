@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { PromptDrawer } from "@/components/prompts/prompt-drawer";
+import { citationsLabel, sampleCountOf } from "@/lib/scan/sample-display";
 import { Icon } from "@/components/ui/icon";
 import { Gauge } from "@/components/ui/gauge";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
@@ -37,6 +38,8 @@ type PromptGroup = {
   key: string;
   promptText: string | null;
   engines: ResultRow[];
+  sampleCount: number;
+  responseCount: number;
   brandMentioned: boolean;
   citationsTotal: number;
   competitorsCount: number;
@@ -175,6 +178,12 @@ function groupByPrompt(rows: ResultRow[]): PromptGroup[] {
       promptText: engines[0].prompt_text_snapshot,
       engines,
       brandMentioned: engines.some((r) => r.brand_mentioned),
+      // SAMPLING-SURFACE-1: the sum spans every sample, so it silently
+      // rescales with the repetition count. `citationsLabel` names the
+      // denominator when there is more than one sample; the figure itself is
+      // unchanged.
+      sampleCount: sampleCountOf(engines),
+      responseCount: engines.length,
       citationsTotal: engines.reduce((sum, r) => sum + (r.citations_count ?? 0), 0),
       competitorsCount: mentionedCompetitorsUnion(engines),
       sentimentDominant: dominantSentiment(engines),
@@ -211,7 +220,8 @@ function PromptRow({
             {sentimentLabel(group.sentimentDominant)}
           </span>
           <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
-            {group.competitorsCount} competidores · {group.citationsTotal} citas
+            {group.competitorsCount} competidores ·{" "}
+            {citationsLabel(group.citationsTotal, group.responseCount, group.sampleCount)}
           </span>
         </div>
       </div>

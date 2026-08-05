@@ -314,6 +314,26 @@ const BACKFILL_LIMIT = 10;
  * Deliberately not filtered by plan: `runWebAuditJob` cancels a non-Pro job on
  * its first cheap query, before any Gemini call, and duplicating the plan gate
  * here would mean two places to keep in sync for no saving.
+ *
+ * ------------------------------------------------------------------------
+ * Only the newest run of each project, and that is not an optimisation
+ * ------------------------------------------------------------------------
+ *
+ * Both audit cores derive their target themselves — `the latest completed run
+ * of THIS project` — and ignore the `run_id` on the job, which is only a
+ * dedupe key. So a job naming an older run does NOT audit that run: it audits
+ * the newest one, again.
+ *
+ * The first version of this function backfilled every uncovered run in the
+ * window, which on the first production sweep queued nine jobs for one
+ * project — nine jobs that would all have audited the same run, while the
+ * Escaneos table showed nine historical rows as "En curso" for work that
+ * could never produce an audit of their own (caught by reading the pilot's
+ * own capture of PR #333, not by any assertion).
+ *
+ * Restricting to the newest run per project makes the backfill mean what it
+ * says, and still covers the case it exists for: an enqueue lost by a dying
+ * invocation, recovered on the next sweep.
  */
 export async function backfillMissingWebAuditJobs({
   service,
@@ -344,8 +364,17 @@ export async function backfillMissingWebAuditJobs({
       return 0;
     }
 
-    const runs = (runRows ?? []) as Array<{ id: string; project_id: string }>;
-    if (runs.length === 0) return 0;
+    const ordered = (runRows ?? []) as Array<{ id: string; project_id: string }>;
+    if (ordered.length === 0) return 0;
+
+    // Newest-first ordering above means the first row seen for a project IS
+    // its newest completed run in the window. See the header: an older run's
+    // job would audit the newest run anyway, so queueing one is meaningless.
+    const newestByProject = new Map<string, { id: string; project_id: string }>();
+    for (const run of ordered) {
+      if (!newestByProject.has(run.project_id)) newestByProject.set(run.project_id, run);
+    }
+    const runs = [...newestByProject.values()];
 
     // One query for every candidate rather than one per run: this path runs on
     // every worker invocation, so it has to stay cheap when there is nothing

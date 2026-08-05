@@ -252,6 +252,46 @@ describe("detectAuditRegressions", () => {
     expect(detectAuditRegressions(previous, current).map((r) => r.kind)).toEqual(["llms_txt_lost", "sitemap_lost"]);
   });
 
+  it("does NOT fire a file alert when the probe could not find out", () => {
+    // WEB-AUDIT-SITEMAP-1's ProbeState is what makes these two alerts worth
+    // believing: a WAF 403, a 500 or a timeout leaves `found: false` without
+    // being any evidence that the file is gone. Firing a *critical* notice on
+    // a transient blip is how an alert stops being read.
+    const previous = side();
+    for (const state of ["unknown", "found"] as const) {
+      const current = side({
+        bots: bots({
+          llmsTxtFound: false,
+          llmsTxtBytes: null,
+          sitemapFound: false,
+          probes: { robots: "found", llmsTxt: state, sitemap: state }
+        })
+      });
+      expect(detectAuditRegressions(previous, current).map((r) => r.kind)).toEqual([]);
+    }
+  });
+
+  it("fires a file alert when the server answered that the file is gone", () => {
+    const previous = side();
+    const current = side({
+      bots: bots({
+        llmsTxtFound: false,
+        llmsTxtBytes: null,
+        sitemapFound: false,
+        probes: { robots: "found", llmsTxt: "absent", sitemap: "absent" }
+      })
+    });
+
+    expect(detectAuditRegressions(previous, current).map((r) => r.kind)).toEqual(["llms_txt_lost", "sitemap_lost"]);
+  });
+
+  it("falls back to presence-only on a snapshot written before probes existed", () => {
+    const previous = side();
+    const current = side({ bots: bots({ llmsTxtFound: false, llmsTxtBytes: null }) });
+
+    expect(detectAuditRegressions(previous, current).map((r) => r.kind)).toEqual(["llms_txt_lost"]);
+  });
+
   it("treats a field that did not exist on the older snapshot as unknown, not lost", () => {
     // sitemapFound only exists on snapshots written after WEB-AUDIT-R3. The
     // double cast is the point of the test: `bots` is read straight out of a

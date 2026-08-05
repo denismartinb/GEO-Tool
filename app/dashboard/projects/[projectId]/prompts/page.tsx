@@ -22,6 +22,8 @@ export type ResultRow = {
   extraction_error: string | null;
   category: string | null;
   provider: string | null;
+  /** SAMPLING-1 (ADR 0030): which repetition of this (prompt, engine) the row is. Null on rows written before migration 0028 — which is sample 0. */
+  sample_index: number | null;
 };
 
 export type TopicGroup = {
@@ -112,7 +114,7 @@ export default async function PromptsPage({
     ? await supabase
         .from("scan_prompt_results")
         .select(
-          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider"
+          "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, raw_response_text, extracted_json, extraction_error, provider, sample_index"
         )
         .eq("project_id", projectId)
         .eq("run_id", latestRun.id)

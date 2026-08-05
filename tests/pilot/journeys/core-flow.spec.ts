@@ -224,6 +224,29 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     // five publishing steps underneath — which are half of what this phase
     // ships. Confirmed on the first run: 800px tall, steps nowhere in it.
     await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
+
+    // El distintivo vive en la fila CERRADA, así que una captura de la fila
+    // abierta no lo prueba. Se comprueba aquí, mecánicamente, sobre la propia
+    // incidencia que sabemos que trae solución.
+    await expect(
+      llmsIssue.locator(".wa2-fix-ready"),
+      'la incidencia llms.txt no muestra el distintivo "Solución disponible"'
+    ).toBeVisible();
+  }
+
+  // Misma incidencia estructural que las dos anteriores: los pasos del sitemap
+  // están dentro de un <details> colapsado, y sin abrirlo la fase no tiene
+  // ninguna evidencia visual. Es el tercer sitio hoy donde el mismo patrón
+  // habría pasado como verde sin enseñar nada.
+  const sitemapIssue = page
+    .locator('[role="tabpanel"]:not([hidden]) details.wa-details')
+    .filter({ hasText: "sitemap.xml" })
+    .first();
+
+  if ((await sitemapIssue.count()) > 0) {
+    await sitemapIssue.locator("summary").click();
+    await expect(sitemapIssue, "clicking the sitemap issue did not expand it").toHaveAttribute("open", "");
+    await captureInteraction(page, testInfo, "web-audit-sitemap-open", { fullContent: true });
   }
 });
 

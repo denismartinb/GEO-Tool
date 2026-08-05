@@ -1854,6 +1854,69 @@ disfrazada de instrucción.
 un editor y guardarlo es justo donde el nombre se estropea (`llms.TXT`,
 `llms.txt.txt`) y la comprobación distingue mayúsculas.
 
+### Sitemap parseado y distintivo «Solución disponible» (2026-08-04)
+
+Dos preguntas del fundador tras usar la fase 3a, y las dos respuestas útiles
+fueron distintas de las que pedía literalmente.
+
+**«Si el llms.txt es tan importante, ¿le damos más presencia?»** No. Está al
+fondo de la lista porque `pointDelta` es `null`: nuestro propio scoring dice
+que vale cero, y ese cero está bien puesto — `llms.txt` es un estándar
+**propuesto**, sin adopción confirmada por ningún motor. Subirlo a crítico
+sería afirmar un impacto que no podemos sostener; comportamiento de producto
+falso en forma de priorización en vez de en forma de dato. Lo que sí era real
+es que la fila cerrada no delataba que ahora trae solución dentro, así que
+nadie tenía motivo para abrirla: de ahí el distintivo **«Solución disponible»**,
+que informa sin tocar severidad ni orden.
+
+**«¿No deberíamos generar también el sitemap.xml?»** Tampoco, y aquí la
+diferencia no es de esfuerzo sino de qué es cada artefacto. Un `llms.txt` es
+una **guía curada**: que la mantenga una persona es lo normal. Un sitemap es un
+**índice generado por máquina** que debe seguir al sitio: uno estático nuestro
+estaría obsoleto en cuanto publiquen algo, y lo habríamos construido con las
+~15 URLs que conocemos de sus varios cientos. Además, en 2026 un sitio sin
+sitemap casi nunca necesita escribirlo — necesita activarlo. Los pasos apuntan
+al interruptor por plataforma.
+
+**Lo que sí faltaba era parsearlo.** La comprobación vieja era sólo de
+alcanzabilidad, y el fallo más común del mundo real la burla: un **404 blando**
+—página HTML de error servida con 200— contaba como «Encontrado». Ahora se
+distingue `urlset` / `index` / `invalid`. Coste: **cero peticiones nuevas**,
+porque `robots.ts` ya descargaba esos bytes y los tiraba. Ese detalle es la
+frontera de alcance, no una nota de rendimiento: parsear lo que ya tenemos no
+amplía la superficie de fetch, pero **seguir un índice hasta sus sitemaps hijo
+sí** —es seguir enlaces, o sea rastrear— y por eso no se hace; «índice» se
+reporta como estado propio.
+
+**Y mirar la captura destapó el defecto gemelo.** El pilot mostró
+«sitemap.xml — No encontrado» para **mozilla.org**, un sitio que evidentemente
+tiene sitemap. La causa estaba en `fetchTextCapped`: devolvía `null` ante 404,
+403, timeout y error de red por igual, y los cuatro salían como «No
+encontrado». Es el mismo error que el 404 blando pero en el otro sentido — una
+comprobación que colapsa estados distintos en una sola respuesta.
+
+Era tolerable mientras la auditoría sólo **informaba**. Dejó de serlo al añadir
+pasos de arreglo: a un cliente detrás de un WAF corriente le estaríamos
+diciendo que le falta un fichero que ya tiene, con instrucciones para crearlo.
+Decirle a alguien que arregle un problema que no tiene es peor que no decir
+nada.
+
+Ahora hay tres estados (`found` / `absent` / `unknown`) y **un probe sin
+resolver no es incidencia ni «correcto»: es no medido**, y no aparece en
+ninguna de las dos listas. Es la misma regla que `PageCheckDefinition.isMeasured`
+ya aplicaba página a página, aplicada por primera vez a los hechos de
+proyecto. La alcanzabilidad se informa aparte, en la tarjeta de acceso de bots
+(«Sin comprobar»), que es donde vive ese tipo de hecho.
+
+Dos honestidades que el código sostiene con tests: el recuento se muestra como
+«más de N» cuando el fichero vino truncado por el tope de 128 KB, porque un
+prefijo no es un total; y el campo nuevo es **opcional**, de forma que un
+snapshot anterior conserva su lectura de antes en vez de reinterpretarse — dar
+por medido lo que aquella auditoría nunca midió sería inventar una medición
+retroactiva.
+
+---
+
 **Los epígrafes son los prompts, y eso tiene un coste que no es estético.**
 Al mirar la captura real del pilot sobre mozilla.org se vio que las secciones
 salen en forma de pregunta (`## ¿Qué navegador web ofrece la mejor protección
@@ -2173,7 +2236,137 @@ etiqueta.
 
 ---
 
-## 22. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
+## 22. La auditoría, visible en Escaneos (AUDIT-IN-RUNS-1, 2026-08-05)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el 2026-08-05
+("quiero que ahora las auditorías completadas se muestren también en el
+listado de Escaneos completados para verlo de un vistazo").
+
+Columna **«Auditoría»** en la tabla de Escaneos, entre *Lanzamientos* y *GEO
+Score*. Sin esquema nuevo: los dos lados ya estaban persistidos por escaneo.
+
+**Por qué ahora y no antes.** La columna depende de que exista una relación
+1:1 fiable entre un escaneo y una auditoría, y esa relación **nació anoche**
+con AUDIT-AFTER-SCAN-1 (§18). Antes la auditoría era un acto manual y
+esporádico: una columna así habría estado vacía casi siempre y no habría
+significado nada.
+
+**Las cuatro decisiones, con su porqué:**
+
+1. **Estado + nota técnica**, no sólo estado. El número (`40/100`) es lo que
+   de verdad se compara entre escaneos, y tenerlo al lado del GEO Score es
+   justamente el vistazo que se pedía. Va etiquetado por `title`, porque sin
+   etiqueta y a una columna del GEO Score se lee como una segunda puntuación.
+2. **«Auditada» exige las dos mitades.** Cobertura y salud técnica se
+   persisten por separado y pueden aterrizar por separado —es normal, no un
+   fallo: la técnica se aparca a la invocación siguiente cuando no cabe—. Con
+   una sola, la celda dice **«Parcial»**. Llamar completa a media auditoría
+   sería exactamente la clase de progreso fingido que prohíbe el CLAUDE.md.
+3. **Los escaneos sin auditoría muestran `—`, nunca «Pendiente».** Tres
+   pasados distintos caen ahí y ninguno es accionable por el cliente: escaneos
+   anteriores a §18, proyectos por debajo del gate Pro, y auditorías que
+   agotaron sus reintentos. Una raya honesta en vez de tres etiquetas que
+   invitan a tres preguntas. **«En curso» queda reservado a trabajo realmente
+   en cola**, que sí se resolverá solo.
+4. **La celda no es un enlace, y es deliberado.** Esta tabla tiene una fila
+   por escaneo, pero la pantalla de Auditoría web muestra **la última**
+   auditoría, no la de un escaneo concreto. Enlazar la fila del martes
+   llevaría a la auditoría del jueves haciéndola pasar por la del martes. Una
+   vista de auditoría por escaneo es otra fase; hasta entonces la celda
+   informa y no finge navegar.
+
+**Quinto estado, añadido tras verlo en producción (2026-08-05):**
+**«Reintentando»**, separado de «En curso». El backoff de la cola es
+`[1, 5, 25, 120, 600]` minutos, así que un trabajo en su quinto intento se
+queda quieto **diez horas**. Pintarlo «En curso» promete un movimiento que no
+va a llegar en todo el día, y se lee como una tabla congelada en vez de como
+una auditoría con problemas — que es exactamente cómo se leyó: filas inmóviles
+en «En curso» durante cuatro horas y media. «En curso» queda para `pending` y
+`running`, que sí se mueven pronto.
+
+**Pendiente conocido:** una auditoría que falló definitivamente es
+indistinguible de una que nunca existió. Es una decisión, no un olvido —el
+cliente no puede actuar sobre un fallo de backend y el operador ya recibe un
+email—, pero si algún día el fallo pasa a ser accionable, aquí falta un
+estado.
+## 23. El historial de escaneos deja de publicar deltas que la Visión general oculta (DELTA-GUARD-1, 2026-08-05)
+
+**El hallazgo, encontrado mirando capturas del piloto, no auditando código.** La
+Visión general lleva desde GEO-SCORE-RELIABILITY-1 (ADR 0024) negándose a
+publicar un «vs. escaneo anterior» que la muestra no sostiene. La tabla de
+Escaneos, en la pantalla de al lado, seguía restando los dos scores en crudo
+(`curr - prev`) y publicando **`+34 pt`, `-50 pt`, `+67 pt` sobre escaneos de 3
+respuestas**. Es exactamente la falsa precisión que motivó el ADR, viva en la
+pantalla donde el fundador mira su histórico.
+
+Que sobreviviera un año de trabajo sobre el score tiene una explicación
+incómoda: ADR 0024 se implementó *en una pantalla*, no *en el producto*. La
+capa de fiabilidad existía y era correcta; simplemente había un consumidor que
+no la llamaba.
+
+**La decisión.** Un delta sólo se publica si `resolveDelta` lo autoriza —
+mismo punto de decisión, mismos criterios, cero lógica duplicada. Los tres
+casos se renderizan así:
+
+| Veredicto | Render |
+|---|---|
+| `publish` | El valor, como siempre |
+| `insufficient_sample` | Guion, con el tamaño de muestra y el mínimo en el tooltip |
+| `not_comparable` | Guion, con la causa concreta en el tooltip |
+
+**Se retiene deliberadamente el guion, no un aviso.** El 2026-08-03 el fundador
+decidió para la Visión general que una comparación retenida se renderiza como
+nada, porque varios «sin comparación» en una pantalla se leen como un producto
+roto y no como uno cuidadoso. Aquí pesa más: son *filas*, así que un aviso por
+fila sería una columna entera de disculpas. La razón vive en el `title`, para
+quien la busque.
+
+**Consecuencia visible y buscada:** proyectos como Mozilla (1 prompt × 3
+motores) pasan a tener la columna Δ Score casi vacía. No es una regresión —
+es el producto dejando de afirmar lo que nunca pudo medir. Con SAMPLING-1
+(§20) esos mismos proyectos vuelven a llenarla en cuanto alcanzan el suelo de
+respuestas.
+
+**Invariante nuevo, en `.claude/rules/scoring.md`:** ninguna superficie
+publica una comparación entre escaneos sin pasar por `resolveDelta`. La
+lección no es "arreglada la tabla" sino que una capa de honestidad que hay que
+acordarse de llamar acaba sin llamarse.
+
+---
+## 24. El cajón de evidencias dice a qué repetición pertenece cada respuesta (SAMPLING-SURFACE-1, 2026-08-05)
+
+Deuda declarada al cerrar SAMPLING-1 (§20) y saldada aquí. Desde que un escaneo
+puede repetir su set de prompts, `scan_prompt_results` guarda R filas por
+(prompt, motor) en vez de una, y la superficie no se había enterado.
+
+**El cajón mostraba «Gemini / Gemini / Gemini / Claude / Claude / Claude»** sin
+decir por qué. Eso se lee como un fallo de renderizado, cuando en realidad son
+tres respuestas distintas a la misma pregunta — y **su desacuerdo es justamente
+el motivo de muestrear**. Ahora cada fila lleva «· muestra 2 de 3», y las
+repeticiones de un mismo motor van juntas, para que "este motor dijo cosas
+distintas en intentos distintos" se vea de un vistazo.
+
+**«N citas» por prompt sumaba todas las muestras**, así que el mismo prompt con
+el mismo comportamiento de citas reportaba 21 con tres repeticiones y 7 con
+una: dos números describiendo una sola realidad, y no comparables entre
+escaneos. Se añade el denominador («21 citas en 9 respuestas») en vez de
+cambiar la cifra que el usuario ya leía.
+
+**Las dos etiquetas desaparecen cuando no hay repeticiones**, que es la
+inmensa mayoría de escaneos (todo proyecto de 17 prompts para arriba). Poner
+«muestra 1 de 1» en cada fila de cada proyecto para servir a la minoría que
+repite sería ruido puro.
+
+La lógica vive en `lib/scan/sample-display.ts`, pura y testeada, porque el
+recuento y la etiqueta **tienen que coincidir**: si la lista dedujera "3
+muestras" de una forma y el cajón de otra, el producto se contradiría sobre
+cuántas veces preguntó. Cuenta índices distintos y no filas partido motores, a
+propósito: un escaneo donde un motor falló en una repetición tiene un número
+desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal.
+
+---
+
+## 25. La auditoría te busca a ti cuando algo empeora (WEB-AUDIT-ALERTS-1, 2026-08-05)
 
 **Estado: implementada. Migración `0029_notification_audit_regression_types.sql`
 aplicada a mano en Supabase por el fundador el 2026-08-05**, en el mismo PR.

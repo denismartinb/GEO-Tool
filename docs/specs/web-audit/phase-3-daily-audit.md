@@ -9,7 +9,7 @@
 > implementó y qué no".
 >
 > **Actualización 2026-08-05: los avisos de regresión también están
-> implementados** (WEB-AUDIT-ALERTS-1, log §22), y tampoco con el diseño de
+> implementados** (WEB-AUDIT-ALERTS-1, log §25), y tampoco con el diseño de
 > abajo. Lo que dice esta sección sobre derivarlos al vuelo en
 > `getWorkspaceCounters` y sobre el `LAST_SEEN_KEY` de `localStorage` describe
 > una campana que ya no existe: NOTIF-SERVER-1a la sustituyó por la tabla

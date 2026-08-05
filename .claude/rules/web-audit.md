@@ -118,9 +118,20 @@ El desfase de `BACKFILL_GRACE_MS` (5 min) no es cosmético: sin él la
 reconciliación compite con el encolado en línea, y como el deduplicado es un
 SELECT-luego-INSERT y no una restricción, se insertarían dos filas.
 
+**El backfill sólo mira la ejecución más reciente de cada proyecto**, y eso
+tampoco es una optimización. Los dos núcleos derivan su objetivo solos —«la
+última ejecución completada de ESTE proyecto»— e ignoran el `run_id` del
+trabajo, que es sólo clave de deduplicado. Un trabajo que nombra una ejecución
+vieja **no audita esa ejecución**: audita otra vez la más reciente. La primera
+versión encolaba todo lo no cubierto de la ventana y en su primer barrido real
+creó nueve trabajos para un proyecto, además de pintar nueve filas históricas
+de Escaneos como «En curso» por un trabajo que jamás produciría su propia
+auditoría (2026-08-05, visto leyendo la captura del pilot de la PR #333, no por
+ninguna aserción).
+
 ### Un aviso de regresión es una transición, nunca un estado
 
-`lib/web-audit/regressions.ts` (WEB-AUDIT-ALERTS-1, log §22) compara la
+`lib/web-audit/regressions.ts` (WEB-AUDIT-ALERTS-1, log §25) compara la
 auditoría anterior con la actual. Ningún aviso salta porque algo *esté* mal,
 sólo porque *ha pasado* a estarlo. Es lo único que impide que un trabajo
 diario se convierta en una regañina diaria: una condición que persiste produce
