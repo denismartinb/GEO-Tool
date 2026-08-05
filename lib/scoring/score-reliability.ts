@@ -267,6 +267,32 @@ export type DeltaVerdict =
  * explicit, honest absence — never as "— sin cambio", which would read as
  * evidence of stability the data does not contain.
  */
+/**
+ * The one-line explanation for a delta this layer refuses to publish, for use
+ * as a tooltip where the withheld state renders as an em dash (DELTA-GUARD-1).
+ *
+ * Lives here, next to the verdicts, because the wording is part of the claim:
+ * a caller that invented its own phrasing could describe "we cannot compare
+ * these two runs" as "no change", which is the specific falsehood this whole
+ * module exists to prevent. `null` (no previous run at all) is a genuine
+ * absence of history, not a withheld comparison, and says so.
+ */
+export function deltaWithheldReason(verdict: DeltaVerdict | null): string {
+  if (!verdict) return "Sin escaneo anterior con el que comparar";
+
+  switch (verdict.kind) {
+    case "publish":
+      // Callers render the value in this case; a reason would be meaningless.
+      return "";
+    case "insufficient_sample":
+      return `Muestra insuficiente para afirmar un cambio: ${verdict.responses} ${
+        verdict.responses === 1 ? "respuesta" : "respuestas"
+      } de IA (hacen falta ${MIN_RESPONSES_FOR_BAND})`;
+    case "not_comparable":
+      return `Sin comparación fiable: ${verdict.reason}`;
+  }
+}
+
 export function resolveDelta(
   value: number,
   current: ComparableRun,
