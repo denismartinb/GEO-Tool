@@ -252,3 +252,42 @@ to create and approve pull requests".** Sin eso, el workflow de §7 falla con
 403 y no hay red de seguridad. El propio workflow falla con ese mensaje
 escrito, para que no haya que adivinarlo. Activado por el fundador el
 2026-08-04.
+
+---
+
+## 10. El recordatorio de GitHub — y por qué no escribe el artículo
+
+**La causa raíz, encontrada el 2026-08-05.** La rutina de claude.ai se disparó
+tres veces el 04-08 y no produjo nada. Una rutina de diagnóstico con la tarea
+más corta posible (crear rama, un commit, empujar) reveló el motivo: **las
+sesiones disparadas arrancan sin el repositorio clonado** — `/home/user` vacío.
+No era el encargo, ni los permisos, ni las herramientas de GitHub: no tenían
+dónde trabajar. Adjuntar el repo a una rutina **no se puede hacer por API**,
+sólo desde la interfaz de claude.ai.
+
+El fundador eligió, ese mismo día, una solución que viviera en GitHub antes que
+depender de esa interfaz. De ahí `.github/workflows/weekly-post-reminder.yml`.
+
+**Lo que hace y lo que no**, dicho sin suavizar porque es fácil confundirlo:
+
+- **No escribe el artículo.** GitHub Actions no puede: `CLAUDE.md` declara
+  superseded la vía de llamar a la API de Anthropic desde CI, y no se
+  reintroduce por la puerta de atrás. Escribir sigue necesitando una sesión.
+- **Recuerda.** Cada lunes abre una incidencia con el siguiente tema pendiente
+  ya leído del calendario, para que quien se ponga no tenga que decidir nada.
+- **Detecta el silencio.** Si esa semana ya existe una rama
+  `claude/weekly-post/**`, se calla. Ese es el punto: el fallo del 04-08 no fue
+  ruidoso, fue que no pasó nada y nadie se enteró en 16 horas.
+- **No se duplica.** Con una incidencia ya abierta, no abre otra. Un
+  recordatorio semanal repetido se convierte en ruido, y el ruido se ignora —
+  justo lo que esto viene a evitar.
+
+**El coste de esta elección, explícito:** el lunes ya no aparece un artículo
+solo. Aparece un aviso de que toca escribirlo. Es un recordatorio fiable en vez
+de una automatización rota, y esa es toda la mejora — que no es poca, pero no es
+lo que A1 prometía.
+
+**Lo que sí funciona y conviene no olvidar:** una rutina **vinculada a una
+sesión existente** (las de check-in de este mismo día) sí ejecuta, porque hereda
+el repo de esa sesión. Sólo fallan las de sesión nueva. Si algún día se quiere
+volver a intentar la automatización completa, ese es el hilo del que tirar.
