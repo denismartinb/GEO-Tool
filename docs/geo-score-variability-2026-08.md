@@ -138,6 +138,18 @@ Mahou/San Miguel).
   lo reintrodujo. Verificable a posteriori: `scan_prompt_results.model`
   guarda el `modelVersion` real devuelto por la API.
 
+  **Medido el 2026-08-05, y el resultado cierra la vía:** las 2.801 filas de
+  Gemini guardan un único valor, `gemini-2.5-flash` — el alias mismo. **No hay
+  ningún id versionado que pinear**, así que la violación de ADR 0002 no se
+  puede cerrar desde nuestro lado. No es que faltara mirar: no existe el dato.
+
+  **Y hay un matiz que conviene no perder**, porque invita a concluir de más:
+  `lib/llm/gemini.ts` persiste `data.modelVersion ?? model`. Como el fallback
+  es exactamente el alias que pedimos, **"la API devolvió el alias" y "la API
+  no devolvió nada" producen la misma fila** y son indistinguibles en la base
+  de datos. Si alguna vez importa saber cuál de las dos es, hay que registrar
+  la ausencia por separado antes de volver a preguntárselo a estos datos.
+
 ---
 
 ## 3 · Plan de fases
