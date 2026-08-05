@@ -26,6 +26,17 @@ export type RunAuditStatus =
   /** A job for this run is queued or mid-flight. */
   | { kind: "in_progress" }
   /**
+   * The job has failed at least once and is waiting out its backoff.
+   *
+   * Deliberately NOT folded into `in_progress`, even though both eventually
+   * resolve on their own. The backoff is `[1, 5, 25, 120, 600]` minutes, so a
+   * job on its fifth attempt sits untouched for ten hours: "En curso" there
+   * promises motion that will not come for most of a day, and reads as a bug
+   * in the table rather than as trouble in the audit. Observed exactly that
+   * way on 2026-08-05 — rows frozen on "En curso" for four and a half hours.
+   */
+  | { kind: "retrying" }
+  /**
    * Nothing, and nothing pending. Covers three different pasts that all look
    * identical to the user and all mean "there is nothing to show here": runs
    * that predate the automatic audit, projects below the Pro gate (their job
@@ -35,7 +46,8 @@ export type RunAuditStatus =
    */
   | { kind: "none" };
 
-const ACTIVE_JOB_STATUSES = new Set(["pending", "running", "retrying"]);
+/** Queued or mid-flight: will move on its own, and soon. */
+const ACTIVE_JOB_STATUSES = new Set(["pending", "running"]);
 
 export function deriveRunAuditStatus({
   runId,
@@ -58,6 +70,13 @@ export function deriveRunAuditStatus({
   // partial — "Parcial" is for work that has stopped.
   if (jobStatus && ACTIVE_JOB_STATUSES.has(jobStatus)) {
     return { kind: "in_progress" };
+  }
+
+  // Before the persisted halves, for the same reason as above: a job that has
+  // already failed is the more important thing to say about this run, and
+  // half-landed data does not make it "Parcial and fine".
+  if (jobStatus === "retrying") {
+    return { kind: "retrying" };
   }
 
   const hasCoverage = coverageScanIds.has(runId);

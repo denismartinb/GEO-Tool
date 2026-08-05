@@ -41,7 +41,17 @@ describe("deriveRunAuditStatus", () => {
     // invocation by design. That run is working, not stalled.
     expect(derive({ coverage: ["run-1"], jobs: [["run-1", "pending"]] })).toEqual({ kind: "in_progress" });
     expect(derive({ jobs: [["run-1", "running"]] })).toEqual({ kind: "in_progress" });
-    expect(derive({ jobs: [["run-1", "retrying"]] })).toEqual({ kind: "in_progress" });
+  });
+
+  it("separates a job waiting out its backoff from one actually working", async () => {
+    // The backoff is [1, 5, 25, 120, 600] minutes: a job on its fifth attempt
+    // sits untouched for ten hours. Calling that "En curso" promises motion
+    // that will not come for most of a day, and reads as a frozen table
+    // rather than as an audit in trouble — observed exactly that way on
+    // 2026-08-05, rows unchanged across four and a half hours.
+    expect(derive({ jobs: [["run-1", "retrying"]] })).toEqual({ kind: "retrying" });
+    // Half-landed data does not soften it into "Parcial and fine".
+    expect(derive({ coverage: ["run-1"], jobs: [["run-1", "retrying"]] })).toEqual({ kind: "retrying" });
   });
 
   it("stops calling it in-progress once the job reaches a terminal state", () => {

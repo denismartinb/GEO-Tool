@@ -68,6 +68,16 @@ function RunAuditCell({ status }: { status: RunAuditStatus }) {
     return <span className="badge badge-accent">En curso</span>;
   }
 
+  if (status.kind === "retrying") {
+    // Not "En curso": the backoff reaches ten hours, so that label would
+    // promise motion that is not coming today and read as a frozen table.
+    return (
+      <span className="badge badge-neutral" title="La auditoría falló y volverá a intentarse">
+        Reintentando
+      </span>
+    );
+  }
+
   const isComplete = status.kind === "audited";
 
   return (

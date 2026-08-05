@@ -2212,6 +2212,15 @@ significado nada.
    vista de auditoría por escaneo es otra fase; hasta entonces la celda
    informa y no finge navegar.
 
+**Quinto estado, añadido tras verlo en producción (2026-08-05):**
+**«Reintentando»**, separado de «En curso». El backoff de la cola es
+`[1, 5, 25, 120, 600]` minutos, así que un trabajo en su quinto intento se
+queda quieto **diez horas**. Pintarlo «En curso» promete un movimiento que no
+va a llegar en todo el día, y se lee como una tabla congelada en vez de como
+una auditoría con problemas — que es exactamente cómo se leyó: filas inmóviles
+en «En curso» durante cuatro horas y media. «En curso» queda para `pending` y
+`running`, que sí se mueven pronto.
+
 **Pendiente conocido:** una auditoría que falló definitivamente es
 indistinguible de una que nunca existió. Es una decisión, no un olvido —el
 cliente no puede actuar sobre un fallo de backend y el operador ya recibe un
