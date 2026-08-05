@@ -2466,6 +2466,69 @@ al usuario atascado sin explicación.
 
 ---
 
+## 26. El GeoScore incorpora la salud técnica, y el número se explica (GEO-SCORE-V4, 2026-08-05)
+
+Petición del fundador: *"quiero que tu prioridad sea que esa métrica sea lo
+menos variable posible, escaneo a escaneo, porque a veces, de uno a otro, han
+cambiado treinta puntos"*, y *"que tenga en cuenta la nota de auditoría técnica
+dentro de la puntuación de GeoScore de manera importante"*.
+
+La decisión técnica completa —pesos, resolución del snapshot, coste de la
+frontera de versión— vive en **ADR 0033**. Aquí quedan sólo las decisiones de
+producto y de pantalla.
+
+**Decisión 1 — el GeoScore cambia de significado, y se dice.** Pasa de medir
+*resultado observado* a medir *resultado + preparación*. Es un cambio de
+naturaleza, no un ajuste: hasta hoy el número respondía "¿te nombran las IAs?"
+y a partir de ahora responde "¿te nombran, y está tu web en condiciones de que
+te nombren?".
+
+**Decisión 2 — el desglose por componentes deja de ser opcional.** Un compuesto
+que mezcla dos naturalezas sin desglose visible es un número que no se puede
+accionar: el usuario no puede distinguir "subió porque arreglaste la web" de
+"subió porque las IAs te citan más". El desglose estaba *tipado* en la Visión
+general desde v2 y no se renderizaba nunca. Con v4 se renderiza, con el peso
+**realmente aplicado** en cada run (los pesos renormalizan; publicar el nominal
+sería la propuesta que ADR 0017 ya rechazó) y con el motivo persistido cuando
+un componente se cae. Un componente caído se pinta como caído, jamás como cero.
+
+Esto **supersede parcialmente §17 decisión 4 y §22 decisión 1**, que decidieron
+no mezclar técnica con resultado. No se borran: aquella lectura era correcta
+mientras el GeoScore midiera sólo resultado. El aviso de §22 —que la nota
+técnica a una columna del GeoScore se lee como una segunda puntuación— sigue
+vivo y es justo lo que el desglose etiquetado resuelve.
+
+**Decisión 3 — un escaneo medido sobre menos motores lo dice en la cara.**
+Hasta hoy, si un proveedor tenía un mal minuto, el escaneo no fallaba: perdía
+filas en silencio y el score se recalculaba sobre otra escala (13 puntos en la
+reproducción de `docs/geo-score-variability-2026-08.md` §1). Ahora se persiste
+el veredicto de cobertura y la pantalla lo dice, nombrando el motor que faltó.
+El número no se toca: se toca lo que se afirma sobre él.
+
+**Decisión 4 — los alias de marca salen del SQL.** `projects.brand_aliases`
+decide desde ADR 0025 si una respuesta cuenta como mención —es decir, mueve el
+score— y sólo se podían inspeccionar por consulta directa. Era el riesgo que
+ADR 0025 aceptó sin mitigar y la causa raíz del salto de 44 puntos del
+fundador ("Firefox" no casaba con "Mozilla"). Ahora se ven, se añaden y se
+quitan desde el producto.
+
+**Pendiente conocido, escrito para que nadie lo lea como cerrado:**
+
+- En los planes sin auditoría web (todo lo que no es Pro) el componente
+  técnico se cae siempre, así que su GeoScore es el de cuatro componentes —v3
+  en la práctica—. Extender una auditoría *sólo técnica* (que no gasta LLM) a
+  todos los planes es una decisión comercial del fundador, no un efecto
+  colateral de esta fase.
+- El score de ventana (mediana de los últimos 3 escaneos comparables) está
+  calculado y probado, pero **no se ha promovido a cifra principal de ninguna
+  pantalla**. Cambiar el número que el usuario ve como titular merece su propia
+  validación con el fundador delante.
+- El pin del modelo de Gemini sigue pendiente: `gemini-2.5-flash` es un alias
+  flotante que ADR 0002 prohíbe, y re-pinearlo exige observar un `modelVersion`
+  real en producción. Inventar un id versionado rompería todos los escaneos.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

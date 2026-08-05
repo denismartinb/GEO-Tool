@@ -121,6 +121,15 @@ type GeoScoreComponent = {
   reason?: string;
 };
 
+/** GEO-SCORE-V4 (ADR 0033 §5) — persisted verdict on whether every engine the plan promised actually produced rows this run. */
+type GeoScoreEngineCoverage = {
+  status?: "complete" | "partial" | "unknown";
+  expected?: string[];
+  observed?: string[];
+  missing?: string[];
+  unexpected?: string[];
+};
+
 type GeoScoreDetails = {
   score?: number;
   composite_version?: string;
@@ -130,10 +139,86 @@ type GeoScoreDetails = {
     presence?: GeoScoreComponent;
     prominence?: GeoScoreComponent;
     standing?: GeoScoreComponent;
+    /** Technical readiness of the site (GEO-SCORE-V4, ADR 0033) — web_audit_snapshots.readiness_score, deterministic, no LLM. */
+    technical?: GeoScoreComponent;
     authority?: GeoScoreComponent;
   };
+  engine_coverage?: GeoScoreEngineCoverage | null;
   formula?: string;
 };
+
+/**
+ * GEO-SCORE-V4 (ADR 0033 §7): "wherever the GeoScore is shown, its component
+ * breakdown must be visible" — the composite now mixes two natures (observed
+ * AI results + the site's own technical readiness), and without the
+ * breakdown "subió porque arreglaste la web" and "subió porque las IAs te
+ * citan más" are indistinguishable, so the number stops being actionable.
+ * This was declared in the type (GeoScoreDetails.components) since v3 but
+ * never actually rendered anywhere on this page — this is that render.
+ */
+const GEO_SCORE_COMPONENT_META: Record<
+  "presence" | "prominence" | "standing" | "authority" | "technical",
+  { label: string; hint: string }
+> = {
+  presence: { label: "Presencia", hint: "Menciones de tu marca en las respuestas de IA." },
+  prominence: { label: "Prominencia", hint: "Puesto medio de tu marca cuando la IA la menciona." },
+  standing: { label: "Cuota de voz", hint: "Tus menciones frente a las de tus competidores." },
+  authority: { label: "Autoridad", hint: "Citas de la IA a páginas de tu propio dominio." },
+  technical: { label: "Preparación técnica", hint: "Salud técnica de tu web para motores de IA — determinista, sin IA de por medio." }
+};
+
+/**
+ * Translates a dropped component's persisted `reason` (a self-authored,
+ * internal-English, ADR-referencing string — lib/scoring/run-scoring.ts /
+ * lib/scoring/geo-score-technical.ts) into the honest, user-facing Spanish
+ * copy CLAUDE.md requires, without inventing detail the reason doesn't
+ * carry. Matched by content rather than trusting a fixed set of literal
+ * strings, so a future wording tweak on the scoring side degrades to the
+ * generic fallback instead of leaking English — the exact tradeoff already
+ * accepted by `feedbackErrorMessages` (lib/projects/feedback-messages.ts)
+ * for redirect error codes.
+ */
+function translateDroppedComponentReason(reason: string | undefined | null): string {
+  const r = reason ?? "";
+  if (r.includes("extraction predates")) {
+    return "Este escaneo usa una versión de extracción anterior a la verificación de menciones — no es fiable para este cálculo.";
+  }
+  if (r.includes("rank-when-mentioned needs at least")) {
+    const match = r.match(/mentioned in (\d+) prompts/);
+    const count = match ? match[1] : null;
+    return count
+      ? `Tu marca solo apareció en ${count} ${count === "1" ? "respuesta" : "respuestas"} de IA — hacen falta más para calcular un puesto fiable.`
+      : "Tu marca apareció en muy pocas respuestas de IA para calcular un puesto fiable.";
+  }
+  if (r.includes("brand_position absent") || r.includes("brand was never mentioned")) {
+    return "Tu marca no apareció en ninguna respuesta de este escaneo.";
+  }
+  if (r.includes("no competitors tracked")) {
+    return "No tienes competidores configurados con los que comparar tu cuota de voz.";
+  }
+  if (r.includes("share-of-voice denominator is 0")) {
+    return "Ni tu marca ni tus competidores aparecieron en las respuestas de este escaneo.";
+  }
+  if (r.includes("no grounded")) {
+    return "Ningún motor con capacidad de citar fuentes participó en este escaneo, o no hay un dominio con el que comparar.";
+  }
+  if (r.includes("has been recorded for this project yet")) {
+    return "Tu web todavía no tiene ninguna auditoría técnica.";
+  }
+  if (r.includes("produced no readiness score")) {
+    return "La auditoría técnica no pudo analizar ninguna página de tu web.";
+  }
+  if (r.includes("no finish time")) {
+    return "Este escaneo no tiene una fecha de fin con la que emparejar una auditoría técnica.";
+  }
+  if (r.includes("no technical audit within")) {
+    return "No hay ninguna auditoría técnica reciente para este escaneo (últimos 30 días).";
+  }
+  if (r.includes("no technical readiness audit available")) {
+    return "Todavía no hay una auditoría técnica disponible para este proyecto.";
+  }
+  return "No disponible para este escaneo.";
+}
 
 function parseExt(raw: unknown): ExtractedJsonPartial {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
@@ -1002,6 +1087,106 @@ export default async function ProjectDetailPage({
           </div>
           </div>
           </div>
+
+          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7): stated
+              obligation, not polish — "wherever the GeoScore is shown, its
+              component breakdown must be visible", so "subió porque
+              arreglaste la web" and "subió porque las IAs te citan más" son
+              distinguibles. Placed right under the gauge, full width, its
+              OWN labelled section — never a bare number beside the gauge,
+              which is exactly what log §22 decisión 1 warned reads as a
+              second score. Only rendered once there is a real score to
+              explain. */}
+          {geoScore?.components ? (
+            <>
+              {geoScore.engine_coverage?.status === "partial" ? (
+                <div
+                  className="feedback"
+                  style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginTop: 14 }}
+                >
+                  <p style={{ fontWeight: 650 }}>{engineCoverageNotice(geoScore.engine_coverage as EngineCoverage)}</p>
+                </div>
+              ) : null}
+
+              <div className="ov2-sec-lbl">
+                Desglose del GEO Score
+                <span style={{ fontWeight: 600, color: "var(--ink-4)", textTransform: "none", letterSpacing: 0 }}>
+                  {gaugeScore}/100
+                </span>
+              </div>
+              <div className="card" style={{ padding: "6px 18px" }}>
+                {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
+                  const component = geoScore.components?.[key];
+                  if (!component) return null;
+                  const meta = GEO_SCORE_COMPONENT_META[key];
+                  const isDropped = component.value === null || component.value === undefined;
+                  // The persisted weight is the NORMALIZED one actually applied
+                  // this run (weights renormalize when a component drops) — never
+                  // the nominal .32/.20/.16/.12/.20 split, which would silently
+                  // misreport every run with a dropped component
+                  // (.claude/rules/scoring.md, ADR 0017).
+                  const weightPct = typeof component.weight === "number" ? Math.round(component.weight * 100) : null;
+                  return (
+                    <div
+                      key={key}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "12px 0",
+                        borderBottom: "1px solid var(--line-soft)"
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                          {meta.label}
+                          {key === "technical" ? (
+                            <Link
+                              href={`/dashboard/projects/${projectId}/web-audit`}
+                              style={{ marginLeft: 8, fontSize: 11, fontWeight: 650, color: "var(--brand-blue)" }}
+                            >
+                              Ver auditoría web →
+                            </Link>
+                          ) : null}
+                        </div>
+                        <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
+                          {isDropped ? translateDroppedComponentReason(component.reason) : meta.hint}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        {isDropped ? (
+                          <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--ink-4)" }}>No disponible</span>
+                        ) : (
+                          <>
+                            <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)" }}>
+                              {Math.round(component.value as number)}
+                              <small style={{ fontSize: 11, fontWeight: 600, color: "var(--ink-4)" }}>/100</small>
+                            </span>
+                            {weightPct !== null ? (
+                              <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 1 }}>peso {weightPct}%</div>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Fase −1c (docs/geo-score-variability-2026-08.md §3): la
+                  Presencia depende de qué nombres cuentan como mención — un
+                  usuario que se pregunte por qué la IA no "le suma" al
+                  recomendar su producto en vez de su empresa necesita este
+                  enlace justo aquí, no solo en Competidores. */}
+              <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "8px 2px 0" }}>
+                ¿La IA recomienda un producto tuyo sin nombrar a tu empresa? Eso también puede contar como Presencia si
+                lo añades como alias en{" "}
+                <Link href={`/dashboard/projects/${projectId}/competitors#identidad-de-marca`} style={{ color: "var(--brand-blue)", fontWeight: 650 }}>
+                  Identidad de marca
+                </Link>
+                .
+              </p>
+            </>
+          ) : null}
 
           {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
               `display: contents` default as `.ov2-hero` above — no effect on

@@ -27,10 +27,30 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
 
 ## Composición del score
 
-- Composite v2 según **ADR 0015** (supersede partes de ADR 0008). Los pesos
-  **se renormalizan** cuando falta un componente: el peso real de `presence` no
-  es 0.40 fijo. Cualquier cálculo derivado debe recomputar, no multiplicar por
-  el peso nominal (esta fue la propuesta rechazada en ADR 0017).
+- Composite **v4** según **ADR 0033** (supersede los pesos de ADR 0015/0026,
+  no su significado). Cinco componentes: `presence` .32 / `prominence` .20 /
+  `standing` .16 / `authority` .12 / `technical` .20.
+- **Los cuatro componentes originales sólo se escalan; sus proporciones son
+  intocables sin datos.** v4 los multiplicó por `1 − technical_weight`, así que
+  al caerse `technical` renormalizan a exactamente .40/.25/.20/.15 y un
+  proyecto sin auditoría puntúa idéntico a v3. Esa propiedad es la garantía de
+  que v4 es **estrictamente aditivo**, y está aserida en
+  `run-scoring.test.ts` ("renormalizes to EXACTLY the v3 weights"). Si alguna
+  vez toca cambiar los pesos relativos de esos cuatro, es la recalibración de
+  **ADR 0031** y sigue bloqueada por datos (ADR 0033 §3).
+- **`technical` es determinista y por eso puede pesar.** `readiness_score` se
+  calcula sin LLM (`lib/web-audit/page-checks.ts`). Ese es el motivo por el que
+  darle peso *reduce* la varianza en vez de importarla: escala la parte
+  volátil por `1 − w` (ADR 0033 §2). Si algún día una parte de esa nota pasara
+  a decidirla un modelo, esta justificación se cae y hay que rehacerla.
+- **Un run nunca se puntúa contra la auditoría de un run posterior.**
+  `resolveTechnicalComponent` sólo acepta el snapshot propio del run o el más
+  reciente *anterior* dentro de 30 días. Aceptar snapshots posteriores
+  reescribiría scores históricos cada vez que un escaneo nuevo audita el sitio
+  (ADR 0033 §4, misma objeción que ADR 0026 contra el backfill).
+- Los pesos **se renormalizan** cuando falta un componente: el peso real de
+  `presence` no es fijo. Cualquier cálculo derivado debe recomputar, no
+  multiplicar por el peso nominal (esta fue la propuesta rechazada en ADR 0017).
 - `standing` es **Share of Voice real**, no `100 - competitor_gap_score`. La v1
   daba 100 a una marca invisible en un mercado sin competidores mencionados
   (ADR 0015).
@@ -81,6 +101,17 @@ antemano, está en **ADR 0031** — que es una propuesta, no una decisión.
   extracción vuelve a invertir el signo de esta fase.
 - Free queda fuera del suelo por decisión de producto (D1, ADR 0030), no por
   limitación técnica.
+
+## Cobertura de motores (GEO-SCORE-V4 Fase B, ADR 0033 §5)
+
+- **Un run parcial puntúa sobre las filas que tiene, y lo dice.** Un job de
+  prompt se da por bueno si responde al menos un motor, así que una caída de
+  proveedor encoge la muestra sin fallar nada — 13 puntos de score en la
+  reproducción de `docs/geo-score-variability-2026-08.md` §1. El veredicto de
+  `computeEngineCoverage` se persiste en `geo_score.engine_coverage`.
+- **Nunca se rellenan las filas que faltan.** Ni fabricarlas, ni contar como
+  "no mención" a un motor que jamás contestó: eso sería inventar datos. Lo que
+  se arregla es la presentación, no el número.
 
 ## Referencias
 

@@ -1,8 +1,10 @@
 import { isBrandDomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { EXTRACTION_VERSION } from "@/lib/scan/constants";
+import type { EngineCoverage } from "@/lib/scan/engine-coverage";
+import type { ResolvedTechnicalComponent } from "@/lib/scoring/geo-score-technical";
 import { MIN_RESPONSES_FOR_BAND } from "@/lib/scoring/score-reliability";
 
-export const SCORING_VERSION = "phase9-geo-score-v3";
+export const SCORING_VERSION = "phase9-geo-score-v4";
 
 export type ScoreInputRow = {
   id: string;
@@ -356,7 +358,31 @@ function computeBrandPosition(results: ScoreInputRow[], totalResults: number): B
   };
 }
 
-export function computeRunScoresFromResults(results: ScoreInputRow[], projectDomain: string): RunScoreOutput {
+export function computeRunScoresFromResults(
+  results: ScoreInputRow[],
+  projectDomain: string,
+  options?: {
+    /**
+     * The resolved `technical` component for this run (GEO-SCORE-V4,
+     * docs/adr/0033), or null/absent when no technical audit is available.
+     *
+     * Optional on purpose: every existing call site and test that omits it
+     * keeps producing a four-component composite whose weights renormalise to
+     * exactly the v3 values, so omitting it is not a silent behaviour change.
+     * See `lib/scoring/geo-score-technical.ts` for how it is resolved.
+     */
+    technical?: ResolvedTechnicalComponent | null;
+    /** Why `technical` is absent, when it is — surfaced in the dropped-component reason. */
+    technicalReason?: string | null;
+    /**
+     * Engine-coverage verdict for this run (GEO-SCORE-V4 Fase B,
+     * `lib/scan/engine-coverage.ts`). Recorded in details_json so downstream
+     * surfaces can tell a run that measured every engine the plan promises
+     * from one that silently measured fewer.
+     */
+    engineCoverage?: EngineCoverage | null;
+  }
+): RunScoreOutput {
   const totalResults = results.length;
   const projectDomainNormalized = projectDomain ? normalizeDomain(projectDomain) : "";
   const safeTotal = Math.max(totalResults, 1);
@@ -457,8 +483,8 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
   // the project's actual tracked list — see hasUntrustedCompetitorSet.
   const brandPosition = untrustedCompetitorSet ? null : computeBrandPosition(results, totalResults);
 
-  // --- GEO Score composite (ADR 0008, revised by ADR 0015) ---
-  const COMPOSITE_VERSION = "geo-score-v3";
+  // --- GEO Score composite (ADR 0008, revised by ADR 0015, 0026, 0033) ---
+  const COMPOSITE_VERSION = "geo-score-v4";
 
   const presenceScore = visibilityScore; // 0..100, higher better
   const authorityScore: number | null = citationScoreDataAvailable ? citationScore : null; // 0..100, higher better
@@ -523,11 +549,40 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     prominenceScore = clamp(0, 100, (1 - (p - 1) / n) * 100);
   }
 
+  // --- technical = readiness of the site itself (geo-score-v4, ADR 0033) ---
+  // Founder decision, 2026-08-05: a site AI engines cannot read cleanly cannot
+  // benefit from any other GEO work, so readiness belongs INSIDE the headline
+  // number, not beside it.
+  //
+  // The weights below are NOT a recalibration. The four existing components
+  // keep their v3 ratios exactly and are scaled by (1 - TECHNICAL_WEIGHT):
+  //
+  //     presence   .40 x .80 = .32        standing   .20 x .80 = .16
+  //     prominence .25 x .80 = .20        authority  .15 x .80 = .12
+  //
+  // That is load-bearing in two ways, both deliberate:
+  //
+  //  1. It keeps ADR 0031's prohibition intact. Recalibrating the four while
+  //     also adding a fifth would make no effect attributable to either
+  //     change, and the calibration data (runs from 2026-08-05 onward) does
+  //     not exist yet. Their RELATIVE weights are untouched, so every
+  //     movement is attributable to the new component alone.
+  //  2. Dropping `technical` renormalises the other four back to EXACTLY
+  //     .40/.25/.20/.15 — .32/.80 = .40, and so on. A project with no audit
+  //     therefore scores identically to v3. The change is strictly additive:
+  //     nobody's number moves because of a weight, only because a real new
+  //     measurement of their real site entered the composite.
+  const TECHNICAL_WEIGHT = 0.2;
+  const LEGACY_SCALE = 1 - TECHNICAL_WEIGHT;
+  const technicalComponent = options?.technical ?? null;
+  const technicalScore: number | null = technicalComponent ? technicalComponent.value : null;
+
   const geoScoreComponents = [
-    { key: "presence", value: presenceScore, weight: 0.4 },
-    { key: "prominence", value: prominenceScore, weight: 0.25 },
-    { key: "standing", value: standingScore, weight: 0.2 },
-    { key: "authority", value: authorityScore, weight: 0.15 }
+    { key: "presence", value: presenceScore, weight: round2(0.4 * LEGACY_SCALE) },
+    { key: "prominence", value: prominenceScore, weight: round2(0.25 * LEGACY_SCALE) },
+    { key: "standing", value: standingScore, weight: round2(0.2 * LEGACY_SCALE) },
+    { key: "authority", value: authorityScore, weight: round2(0.15 * LEGACY_SCALE) },
+    { key: "technical", value: technicalScore, weight: TECHNICAL_WEIGHT }
   ];
 
   const availableGeoScoreComponents = geoScoreComponents.filter((c) => c.value !== null);
@@ -543,8 +598,18 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
     const droppedProminence = prominenceScore === null;
     const droppedAuthority = authorityScore === null;
     const droppedStanding = standingScore === null;
+    // `technical` is deliberately NOT part of this cap. The other three
+    // components drop because the LLM measurement itself was too thin or too
+    // stale to trust, which is exactly what `confidence` reports. A missing
+    // technical audit says nothing about the quality of the AI-answer
+    // measurement — it is normal on a project's first scan and structural on
+    // plans without the audit. Folding it in would mark those runs less
+    // confident than they are, which is its own kind of dishonesty.
     const compositeConfidence =
       (droppedProminence || droppedAuthority || droppedStanding) && confidence === "high" ? "medium" : confidence;
+
+    /** Normalised weight actually applied to a component this run. */
+    const normWeight = (baseWeight: number) => round2(baseWeight / geoScoreWeightSum);
 
     geoScore = {
       score: round2(score),
@@ -554,8 +619,17 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       // v1 standing (100 - competitor_gap_score), retained for comparison
       // only across the v1 -> v2 transition (ADR 0015) — not part of the score.
       standing_v1: round2(standingV1),
+      engine_coverage: options?.engineCoverage ?? null,
+      technical_snapshot: technicalComponent
+        ? {
+            snapshot_id: technicalComponent.snapshot_id,
+            captured_at: technicalComponent.captured_at,
+            source: technicalComponent.source,
+            age_days: technicalComponent.age_days
+          }
+        : null,
       components: {
-        presence: { value: presenceScore, weight: round2(0.4 / geoScoreWeightSum) },
+        presence: { value: presenceScore, weight: normWeight(0.4 * LEGACY_SCALE) },
         prominence:
           prominenceScore === null
             ? {
@@ -567,7 +641,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
                     ? `the brand was mentioned in ${brandPosition.brand_mention_count} prompts; rank-when-mentioned needs at least ${MIN_RESPONSES_FOR_BAND} to mean anything (geo-score-v3)`
                     : "brand_position absent, or the brand was never mentioned in this run"
               }
-            : { value: round2(prominenceScore), weight: round2(0.25 / geoScoreWeightSum) },
+            : { value: round2(prominenceScore), weight: normWeight(0.25 * LEGACY_SCALE) },
         standing:
           standingScore === null
             ? {
@@ -579,7 +653,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
                     ? "no competitors tracked for this project (nothing to share voice with, docs/adr/0018)"
                     : "no brand or tracked-competitor mentions in this run (share-of-voice denominator is 0, ADR 0015)"
               }
-            : { value: round2(standingScore), weight: round2(0.2 / geoScoreWeightSum) },
+            : { value: round2(standingScore), weight: normWeight(0.2 * LEGACY_SCALE) },
         authority:
           authorityScore === null
             ? {
@@ -588,13 +662,24 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
                 reason:
                   "no grounded (citation-capable) provider rows in this run, or no project domain to match citations against (docs/adr/0012, docs/adr/0013)"
               }
-            : { value: authorityScore, weight: round2(0.15 / geoScoreWeightSum) }
+            : { value: authorityScore, weight: normWeight(0.15 * LEGACY_SCALE) },
+        technical:
+          technicalScore === null
+            ? {
+                value: null,
+                weight: 0,
+                reason: options?.technicalReason ?? "no technical readiness audit available for this run (docs/adr/0027, docs/adr/0033)"
+              }
+            : { value: round2(technicalScore), weight: normWeight(TECHNICAL_WEIGHT) }
       },
       formula:
-        "geo_score = Σ(component_value * normalized_weight); base weights presence .40 / prominence .25 / standing .20 / authority .15; " +
+        "geo_score = Σ(component_value * normalized_weight); base weights presence .32 / prominence .20 / standing .16 / authority .12 / technical .20 " +
+        "(geo-score-v4, ADR 0033: the four v3 components keep their exact v3 ratios, scaled by 1-technical_weight, so dropping `technical` " +
+        "renormalizes them back to precisely .40/.25/.20/.15 and a project with no audit scores identically to v3); " +
         "standing = share of voice = brand_mentioned_count / (brand_mentioned_count + total_competitor_mentions) * 100 " +
         "(v1 formula 100 - competitor_gap_score kept as standing_v1 for comparison, ADR 0015); " +
         "prominence = (1 - (brand_avg_position_when_mentioned-1)/total_entities)*100, dropped unless the brand was mentioned in at least MIN_RESPONSES_FOR_BAND prompts (geo-score-v3); " +
+        "technical = web_audit_snapshots.readiness_score, a deterministic (no-LLM) measure of how readable the site is to AI engines (docs/adr/0033); " +
         "absent components dropped and remaining weights renormalized."
     };
   }
@@ -607,7 +692,7 @@ export function computeRunScoresFromResults(results: ScoreInputRow[], projectDom
       ? "Some prompts have partial extraction coverage. Confidence forced to low."
       : "Extraction coverage is complete.",
     "brand_position (geo-score-v3): position = 1-based rank of an entity's first mention per prompt (dense ranking, brand and competitors share one ranking). avg_position_when_mentioned = mean rank over ONLY the prompts where that entity was mentioned; lower is better and 1.0 means always listed first. Never-mentioned entities have null and sort last. mention_rate carries the other half of the story — how often the entity appeared at all. The pre-v3 figure, which averaged an N+1 penalty for every non-mention into the same number and therefore re-encoded the mention rate as if it were a rank, is retained per entity as avg_position_penalized for comparison only.",
-    "geo_score (geo-score-v3, ADR 0026): composite of presence (visibility_score), prominence (rank WHEN MENTIONED, derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions) and authority (citation_score), weighted .40/.25/.20/.15. Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
+    "geo_score (geo-score-v4, ADR 0033): composite of presence (visibility_score), prominence (rank WHEN MENTIONED, derived from brand_position), standing (share of voice: brand mentions / brand + tracked competitor mentions), authority (citation_score) and technical (web_audit_snapshots.readiness_score — a deterministic, no-LLM measure of how readable the site is to AI engines), weighted .32/.20/.16/.12/.20. The four non-technical weights are the v3 values (.40/.25/.20/.15) scaled by 1-technical_weight, so their RELATIVE weights are unchanged and dropping `technical` renormalizes them back to exactly v3 — the addition is strictly additive, not a recalibration (that remains ADR 0031, still blocked on data). Any unavailable component (prominence without position data, standing with a zero share-of-voice denominator, authority without grounded rows, technical without a recent audit) is dropped and the remaining weights renormalized; composite confidence is capped at medium in that case, except for a missing technical component, which says nothing about the quality of the AI-answer measurement. The v1 standing (100 - competitor_gap_score) is kept as standing_v1 for comparison only.",
     `confidence: high requires >=20 fully-extracted results (one LLM sample per prompt/engine is noisy at small sizes); ${MIN_RESPONSES_FOR_BAND}-19 clean results are medium; below ${MIN_RESPONSES_FOR_BAND} responses a single AI answer moves the mention rate by >=${Math.round(100 / MIN_RESPONSES_FOR_BAND)} points, so the run is low confidence regardless of extraction quality (ADR 0015 + GEO-SCORE-RELIABILITY-1).`
   ];
 
