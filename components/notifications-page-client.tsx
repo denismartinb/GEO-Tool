@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { relativeTime, groupByDay, renderNotification, toneClassName, type NotificationRow } from "@/lib/notifications/render";
 import { markAllNotificationsRead } from "@/app/dashboard/notifications/actions";
+import { NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
 import type { WorkspaceNotification } from "@/lib/project-workspace";
 
 type Tab = "all" | "unread";
@@ -26,6 +27,12 @@ export function NotificationsPageClient({
 
   const unreadCount = notifications.filter(isUnread).length;
   const hasUnread = unreadCount > 0;
+  // Same truncation guard the bell already applies (notification-bell.tsx):
+  // at most NOTIFICATIONS_PAGE_LIMIT rows are loaded, so an unread count that
+  // reaches that limit cannot be told apart from "more than that". Printing a
+  // confident "50" understates the truth — the bell chose "15+" for exactly
+  // this reason and the page was left printing the raw number.
+  const unreadBadge = unreadCount >= NOTIFICATIONS_PAGE_LIMIT ? `${NOTIFICATIONS_PAGE_LIMIT}+` : String(unreadCount);
   const visible = tab === "unread" ? notifications.filter(isUnread) : notifications;
   const groups = groupByDay(visible);
 
@@ -59,7 +66,7 @@ export function NotificationsPageClient({
           className={`notif-tab${tab === "unread" ? " active" : ""}`}
           onClick={() => setTab("unread")}
         >
-          No leídas{hasUnread && <span className="notif-tab-count">{unreadCount}</span>}
+          No leídas{hasUnread && <span className="notif-tab-count">{unreadBadge}</span>}
         </button>
       </div>
       {visible.length === 0 ? (
