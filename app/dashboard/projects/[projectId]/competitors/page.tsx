@@ -625,7 +625,11 @@ export default async function CompetitorsPage({
             (docs/brand/design-decisions-log.md §3.2/§10). Shown unconditionally
             here (not gated on hasData/hasCompetitiveData): alias identity is a
             project-level setting independent of whether a scan has run yet. */}
-        <div className="cm2-sec-lbl">
+        {/* id targeted by the Overview's GEO Score breakdown link (Task 3,
+            follow-up to Fase −1c): a user who lands here from "¿La IA
+            recomienda un producto tuyo...?" needs to arrive AT this section,
+            not just at the top of a long page. */}
+        <div id="identidad-de-marca" className="cm2-sec-lbl" style={{ scrollMarginTop: 80 }}>
           Identidad de marca
           <ManageBrandAliasesPanel projectId={projectId} brand={project.brand} aliases={brandAliases} />
         </div>
