@@ -383,7 +383,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Auditoría web | `web-audit.md` | WEB-AUDIT-SITEMAP-1 (2026-08-05) | log §17, §18, §22 · ADR 0027 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | DELTA-GUARD-1 (2026-08-05) · GEO-SCORE-CALIBRATION-1 propuesta (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031 · log §8b, §20, §23 |
 | Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
-| Escaneo (pipeline) | `scan.md` | EXTRACTION-RELIABILITY-1 Fase B (2026-08-04) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029 |
+| Escaneo (pipeline) | `scan.md` | EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029 |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |

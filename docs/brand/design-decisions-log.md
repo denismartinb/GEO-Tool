@@ -2366,6 +2366,53 @@ desigual de filas, y dividir daría una cifra falsa justo cuando algo salió mal
 
 ---
 
+## 20. El estado del escaneo, visible en móvil (EXTRACTION-RELIABILITY-1 Fase C, 2026-08-05)
+
+**El problema.** En un móvil, en un proyecto con historial, durante un
+escaneo no había **ninguna** señal en pantalla. Tres cosas se sumaban: el chip
+`.scan-status` está oculto bajo el breakpoint móvil (`app/globals.css`), el
+overlay a pantalla completa sólo se monta cuando todavía no hay datos que
+enseñar, y la pastilla del sticky-header seguía diciendo "Escaneado 5 ago".
+Reportado por el fundador desde su propio móvil: *"no veo ningún chip en
+ninguna cabecera móvil que indique el estado de escaneando o actualizando"*.
+
+Y la pastilla no es que faltara: es que **mentía justo cuando importaba**.
+"Escaneado 5 ago" afirma que lo que ves es lo último que hay, mientras se
+están cociendo datos nuevos.
+
+**Qué se decidió.**
+
+1. **El estado vive en la pastilla del sticky-header**, no en la barra de app.
+   Esto es continuación de §3 (BRAND-5b-mobile-header), no una excepción a
+   ella: aquella decisión estableció que la barra móvil no lleva contexto y
+   que *"el contexto vive entero en el sticky-header de cada página"*, y ya
+   descartó explícitamente una versión con esa info incrustada en la barra
+   ("el header y la cabecera del body es redundante"). Esta fase usa el hueco
+   que aquella designó.
+2. **Tres estados en la misma pastilla**: `Escaneando…` mientras se consulta a
+   los motores, `Analizando…` durante la extracción, y `Escaneado <fecha>` en
+   reposo. La etiqueta de escaneo activo sale de `computeScanStage`, el mismo
+   cálculo que la pantalla completa, para que las dos superficies no puedan
+   discrepar.
+3. **`ScanStatePill` es un componente compartido.** Antes la pastilla estaba
+   duplicada en seis pantallas con cinco formateos de fecha distintos y tres
+   condiciones distintas para el chip de al lado.
+4. **Recomendaciones se alinea con las demás pantallas de datos.** Era la
+   única que escondía su contenido entero detrás del overlay durante un
+   escaneo; ahora el overlay sólo sustituye a la pantalla cuando no hay nada
+   que enseñar, igual que en Prompts, Competidores y Páginas citadas.
+
+**Por qué el punto 4 importa más de lo que parece.** Ese comportamiento era la
+causa del `PILOT FAIL` repetido de "recommendations: estado vacío" (2026-08-04
+y 05). Se explicó dos veces como una carrera con los datos del escaneo; no lo
+era. El piloto estaba señalando una inconsistencia real de diseño y la
+explicación cómoda la tapó dos veces.
+
+**Pendiente / roto conocido.** El reparto 50/50 entre las dos etapas de la
+barra a pantalla completa es una convención de presentación, no una medida —
+ajustable con datos reales de duración. Y la Auditoría web mantiene su propio
+chip "Auditando", que es otro concepto y no se ha tocado.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

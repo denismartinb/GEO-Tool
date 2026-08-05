@@ -240,6 +240,18 @@ already spent its bounded retries and carries a truthful error. Re-queueing it
 every pass would let one systematic failure consume the whole budget and
 starve rows nothing has looked at yet.
 
+**What the user sees while it runs (Fase C).** The progress screen
+(`components/scan-in-progress.tsx`) covers **both** stages: generation over the
+first half of the bar, extraction over the second, each with its own measured
+counter. It never reaches 100% while the run is in flight. Before Fase C it
+measured generation only, so from Fase A onwards it pinned at "100% · X de X"
+for the whole extraction stretch — with the project section behind the overlay,
+which reads as a hung scan. The analysis denominator is counted from the rows
+that exist rather than derived from `prompts × engines × samples`, because that
+arithmetic already changed once (SAMPLING-1, ADR 0030). `withAnalysisProgress`
+(`lib/scan/active-run-progress.ts`) is the single place that computes it for
+the five screens that render the component and for the 3s poll endpoint.
+
 **A run that loses data alerts the operator (Fase B).** After a run reaches a
 terminal state, `checkAndSendScanHealthAlert` (`lib/scan/scan-health-alert.ts`)
 evaluates its rows and emails `OPS_ALERT_EMAIL` when something actionable
