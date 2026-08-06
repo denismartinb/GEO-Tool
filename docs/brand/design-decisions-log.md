@@ -3116,6 +3116,40 @@ mayor, pedido explícito propio si algún día hace falta.
   escaneo) sigue donde estaba.
 ---
 
+## 33. `/debug` sigue al dominio que la consola tiene abierto, no al más reciente (DEBUG-ACTIVE-PROJECT-1, 2026-08-06)
+
+**El problema, reportado por el fundador.** El atajo `/debug` (§32) resolvía
+"el proyecto" con el mismo criterio de reserva que la barra lateral fuera de
+una ruta de proyecto: el más reciente por `created_at`. En la práctica eso
+fijaba `/debug` al último dominio creado en la cuenta — que en beta suele ser
+`mozilla.org`, el proyecto reservado del piloto de escritura (ver CLAUDE.md,
+"Pilot write scope") — en vez de al dominio que el fundador tenía realmente
+abierto en la consola.
+
+**Por qué esto sí es el "pedido explícito propio" que §32 dejó pendiente.**
+Esa misma fase documentó, deliberadamente, que la barra lateral NO se entera
+de una selección hecha en Dominios porque unificar ambas cosas exigiría "una
+noción de 'dominio seleccionado' a nivel de cuenta, persistida más allá de
+una URL — alcance mayor, pedido explícito propio si algún día hace falta".
+Esta fase es exactamente esa petición, y deliberadamente acotada a `/debug`:
+el bloque de la barra lateral (`proj-switch`) y la portada de Dominios siguen
+sin tocarse.
+
+**Implementación.** `middleware.ts` ya corre en cada request (refresco de
+sesión de Supabase); ahora además escribe un cookie httpOnly
+(`geo_active_project`, `lib/active-project-cookie.ts`) con el `projectId`
+cada vez que la ruta visitada es `/dashboard/projects/[projectId]/...` — la
+misma señal que ya usa `components/sidebar.tsx` para decidir qué dominio está
+"activo". `/debug` lo lee y redirige ahí si el proyecto sigue existiendo y no
+está archivado; si no, cae al criterio anterior (el más reciente), igual que
+si el cookie no existiera. El cookie nunca autoriza nada por sí mismo — sólo
+decide a qué URL redirige un atajo; `requireActiveProject` vuelve a
+comprobar propiedad vía RLS en la página de destino, como siempre.
+
+**Pendiente / roto conocido.** Ninguno nuevo. Sigue pendiente lo ya anotado en
+§32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
