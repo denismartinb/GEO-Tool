@@ -7,6 +7,7 @@ import { DataMaturityBanner } from "@/components/data-maturity-banner";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
+import { TourProvider } from "@/components/tour-provider";
 import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +26,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <MobileShellProvider>
+      {/* ONBOARDING-TOUR-1: el popup «Aprende cómo funciona». Envuelve la
+          consola entera porque tiene que poder abrirse desde el menú lateral
+          y saltar solo en el primer acceso, sea cual sea la pantalla. */}
+      <TourProvider>
       <Sidebar
         projects={projects ?? []}
         promptCountByProject={promptCountByProject}
@@ -54,6 +59,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <DataMaturityBanner dataMaturityByProject={dataMaturityByProject} />
         <main className="dash-content">{children}</main>
       </div>
+      </TourProvider>
     </MobileShellProvider>
   );
 }

@@ -6742,3 +6742,432 @@ select.set-field {
 .dbg-switch-txt b { font-size: 13px; font-weight: 750; color: var(--ink); display: block; }
 .dbg-switch-txt small { font-size: 11.5px; color: var(--ink-3); }
 .switch-toggle:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ============================================================================
+   ONBOARDING-TOUR-1 — tour «Aprende cómo funciona»
+   (components/product-tour.tsx · docs/design-reference/onboarding-tour-1/)
+
+   Dos variantes de la MISMA pieza, intercambiadas por modificador:
+   `.ptour--hero`  → integrado en el hero de la landing, dentro de
+                     `.browserframe` (reutiliza el cromo ya aprobado, log §1).
+   `.ptour--modal` → popup de bienvenida en la consola.
+
+   Todo va prefijado `pt-` y anidado bajo `.ptour` a propósito: el prototipo
+   usaba nombres genéricos (.card, .badge, .nav, .dot, .chip, .field…) que ya
+   existen en este fichero y se pisarían en ambos sentidos.
+
+   La animación no vive aquí. Se deriva de un único reloj en JS y se escribe
+   por refs sobre el DOM; este bloque sólo define el aspecto y las
+   transiciones de estado. Ver el README de la referencia de diseño.
+   ============================================================================ */
+
+.ptour {
+  --pt-canvas: var(--canvas);
+  --pt-surface: var(--surface);
+  --pt-line: var(--line);
+  --pt-blue: var(--brand-blue);
+  --pt-blue-2: var(--brand-blue-2);
+  --pt-blue-soft: var(--brand-blue-soft);
+  --pt-warn-soft: #fff4e0;
+  --pt-warn-ink: #93610b;
+  color: var(--ink);
+  /* El hero de la landing centra su texto y el tour lo heredaba: el
+     mini-producto entero salía centrado, títulos de pantalla incluidos.
+     La consola no tiene ese problema, pero la regla vale para las dos. */
+  text-align: left;
+}
+
+/* --- Cabecera: título fijo, subtítulo que explica lo de abajo ------------- */
+.pt-head { padding: 17px 22px 0; }
+.pt-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--pt-blue); background: var(--pt-blue-soft);
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 9px;
+}
+.pt-title {
+  font-size: 19px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--ink);
+  text-wrap: balance;
+}
+/* El subtítulo es la única línea que cambia entre pasos, y sus ocho textos
+   tienen longitudes muy distintas: si el contenedor creciera con cada uno, la
+   pieza daría un salto de altura al avanzar. Los ocho se apilan en la misma
+   celda de rejilla y sólo uno es visible, así que la altura del contenedor es
+   siempre la del más alto — sin medir nada en JS y correcto a cualquier ancho,
+   con cualquier tipografía y en cualquier idioma. */
+.pt-sub {
+  margin: 0; padding: 6px 22px 12px;
+  font-size: 13px; line-height: 1.45; color: var(--ink-3);
+  display: grid;
+}
+.pt-sub > span { grid-area: 1 / 1; }
+.pt-sub > span[aria-hidden="true"] { visibility: hidden; pointer-events: none; }
+.pt-sub b { color: var(--ink-2); font-weight: 700; }
+
+/* --- Lienzo -------------------------------------------------------------- */
+.pt-stage {
+  position: relative;
+  margin: 0 22px;
+  aspect-ratio: 2 / 1;
+  background: var(--pt-canvas);
+  border: 1px solid var(--pt-line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  user-select: none;
+}
+.ptour--hero .pt-stage { margin: 0; border: none; border-radius: 0; }
+
+.pt-side {
+  width: 23%; min-width: 118px; flex: 0 0 auto;
+  background: var(--pt-surface); border-right: 1px solid var(--pt-line);
+  padding: 8px 7px; display: flex; flex-direction: column; gap: 1px;
+}
+.pt-sbrand {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 6px 8px; font-size: 11px; font-weight: 800; letter-spacing: -.02em;
+}
+.pt-sdot {
+  width: 13px; height: 13px; border-radius: 4px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--pt-blue-2), var(--pt-blue));
+}
+.pt-slabel {
+  font-size: 8.5px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-4); padding: 6px 6px 3px;
+}
+.pt-nav {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border-radius: var(--r-sm);
+  font-size: 10px; font-weight: 600; color: var(--ink-2);
+  transition: background .18s, color .18s;
+}
+.pt-nav i { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .36; }
+.pt-nav.is-on { background: var(--pt-blue-soft); color: var(--pt-blue); font-weight: 750; }
+.pt-nav.is-on i { opacity: .85; }
+
+.pt-main { flex: 1 1 auto; position: relative; min-width: 0; }
+/* El contenido llena el lienzo: una tarjeta pequeña flotando en un lienzo
+   medio vacío se lee como una maqueta a medio hacer, no como una pantalla. */
+.pt-act {
+  position: absolute; inset: 0; padding: 11px 13px; opacity: 0;
+  transition: opacity .26s ease;
+  display: flex; flex-direction: column;
+}
+.pt-act.is-on { opacity: 1; }
+.pt-card { background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: var(--r-md); padding: 9px 10px; }
+.pt-card.pt-fill { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.pt-card.pt-fill.pt-center { justify-content: center; }
+.pt-recs.pt-fill { flex: 1 1 auto; justify-content: center; }
+.pt-genstack { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+.pt-h { font-size: 11.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 0 0 1px; }
+.pt-hsub { font-size: 9.5px; color: var(--ink-4); margin: 0 0 9px; }
+
+.pt-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
+.pt-badge-pos { background: var(--pos-soft); color: var(--pos); }
+.pt-badge-mid { background: var(--pt-blue-soft); color: var(--pt-blue); }
+.pt-badge-warn { background: var(--pt-warn-soft); color: var(--pt-warn-ink); }
+
+/* ---------- Paso 1 — dominio, competidores y prompts ---------- */
+.pt-field {
+  height: 28px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--pt-surface); display: flex; align-items: center; gap: 7px; padding: 0 10px;
+  font-size: 11px; color: var(--ink); transition: border-color .2s, box-shadow .2s;
+}
+.pt-field.is-focus { border-color: var(--pt-blue); box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+.pt-fico { width: 11px; height: 11px; border-radius: 999px; border: 1.5px solid var(--ink-4); flex: 0 0 auto; }
+.pt-caret { display: inline-block; width: 1.5px; height: 12px; background: var(--pt-blue); vertical-align: -2px; }
+.pt-load {
+  display: flex; align-items: center; gap: 7px; margin-top: 8px;
+  font-size: 9.5px; font-weight: 650; color: var(--ink-3); transition: color .25s;
+}
+.pt-load.is-done { color: var(--pos); }
+.pt-load .pt-ok { display: none; }
+.pt-load.is-done .pt-ok { display: inline; }
+.pt-load.is-done .pt-spin { display: none; }
+
+/* Los prompts pesan más que los competidores: son la parte que el usuario no
+   sabe escribir y la que explica de dónde sale todo lo demás. */
+.pt-2col { display: grid; grid-template-columns: 0.78fr 1.22fr; gap: 8px; margin-top: 8px; flex: 1 1 auto; min-height: 0; align-items: start; }
+.pt-collabel { font-size: 8px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px; }
+.pt-chip {
+  font-size: 9px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--pt-line); color: var(--ink-3);
+  display: inline-block; margin: 0 3px 3px 0;
+}
+.pt-prompts {
+  background: var(--pt-blue-soft); border: 1px solid rgba(37, 99, 235, .20);
+  border-radius: var(--r-sm); padding: 6px 8px;
+}
+.pt-prompts .pt-collabel { color: var(--pt-blue); }
+.pt-pline {
+  font-size: 9.5px; font-weight: 600; color: var(--ink-2);
+  padding: 2px 0 2px 12px; position: relative;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-pline::before {
+  content: ""; position: absolute; left: 2px; top: 8px;
+  width: 4px; height: 4px; border-radius: 999px; background: var(--pt-blue);
+}
+.pt-pmore { font-size: 8.5px; font-weight: 650; color: var(--pt-blue); padding: 3px 0 0 12px; opacity: .85; }
+
+/* ---------- Paso 2 — escaneo ---------- */
+.pt-engines { display: flex; gap: 6px; }
+.pt-eng {
+  flex: 1; display: flex; align-items: center; gap: 5px; padding: 6px 7px;
+  border: 1px solid var(--pt-line); border-radius: var(--r-sm); background: var(--pt-surface);
+  font-size: 9.5px; font-weight: 700; color: var(--ink-2);
+  transition: border-color .25s, background .25s;
+}
+.pt-bulb { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+.pt-tick { margin-left: auto; color: var(--pos); opacity: 0; transition: opacity .25s; }
+.pt-eng.is-done { border-color: rgba(21, 145, 90, .35); background: rgba(21, 145, 90, .05); }
+.pt-eng.is-done .pt-tick { opacity: 1; }
+.pt-bar { height: 6px; border-radius: 999px; background: var(--pt-canvas); overflow: hidden; margin-top: 11px; }
+.pt-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--pt-blue-2), var(--pt-blue)); }
+.pt-barcap { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-4); margin-top: 5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Pasos 3 y 8 — el gauge ---------- */
+.pt-hero { display: flex; gap: 13px; align-items: center; }
+.pt-gwrap { position: relative; flex: 0 0 auto; }
+.pt-gcenter { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.pt-gnum { font-size: 20px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.pt-gcap { font-size: 8.5px; color: var(--ink-4); font-weight: 650; margin-top: 2px; }
+.pt-compose { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pt-ctop { display: flex; justify-content: space-between; font-size: 9.5px; }
+.pt-cl { color: var(--ink-3); font-weight: 600; }
+.pt-cv { color: var(--ink); font-weight: 750; font-variant-numeric: tabular-nums; }
+.pt-sov { height: 5px; border-radius: 999px; background: var(--pt-canvas); overflow: hidden; margin-top: 3px; }
+.pt-sovfill { display: block; height: 100%; border-radius: 999px; }
+.pt-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
+.pt-kpi { border: 1px solid var(--pt-line); border-radius: var(--r-sm); padding: 6px 8px; }
+.pt-kpil { font-size: 8px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.pt-kpiv { font-size: 15px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.pt-kpiv span { font-size: 10px; font-weight: 700; color: var(--ink-3); }
+
+/* ---------- Pasos 4 y 8 — la gráfica de tendencia ---------- */
+.pt-chartwrap { position: relative; }
+.pt-chartbox { flex: 1 1 auto; min-height: 64px; position: relative; }
+.pt-chartbox > svg { display: block; width: 100%; height: 100%; }
+.pt-chartfoot { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--ink-4); margin-top: 4px; }
+.pt-charttip {
+  position: absolute; z-index: 6; background: var(--ink); color: #fff;
+  font-size: 9.5px; font-weight: 650; padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+  transform: translate(-50%, -150%); pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+}
+.pt-charttip.is-on { opacity: 1; }
+.pt-trendhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.pt-trendv { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.pt-trendv span { font-size: 11px; font-weight: 700; color: var(--ink-4); margin-left: 2px; }
+.pt-trendl { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.pt-deltarow { display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ---------- Pasos 5 y 6 — recomendaciones ---------- */
+.pt-recs { display: flex; flex-direction: column; gap: 6px; }
+.pt-rec {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: var(--r-md);
+  padding: 7px 9px;
+  transition: transform .35s cubic-bezier(.2, .8, .3, 1), box-shadow .35s, opacity .35s, border-color .35s;
+}
+.pt-rec.is-focus { transform: scale(1.025); border-color: rgba(37, 99, 235, .42); box-shadow: 0 6px 20px rgba(37, 99, 235, .14); }
+.pt-rec.is-dim { opacity: .38; transform: scale(.985); }
+.pt-recpri {
+  width: 22px; height: 22px; flex: 0 0 auto; border-radius: 6px;
+  display: grid; place-items: center; font-size: 10px; font-weight: 800;
+  background: var(--pt-blue-soft); color: var(--pt-blue);
+}
+.pt-recbody { flex: 1 1 auto; min-width: 0; }
+.pt-rect { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.pt-recd { display: block; font-size: 9px; color: var(--ink-4); margin-top: 1px; }
+.pt-recd b { color: var(--pt-blue); font-weight: 750; }
+.pt-reccta {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 9.5px; font-weight: 700; color: #fff; background: var(--pt-blue);
+  border: 1px solid var(--pt-blue); border-radius: 999px; padding: 4px 11px;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.pt-reccta.pt-ghost { background: var(--pt-surface); color: var(--pt-blue); }
+.pt-reccta.is-press { transform: scale(.94); }
+.pt-reccta.is-busy { background: var(--pt-surface); color: var(--ink-4); border-color: var(--line-strong); }
+.pt-spin {
+  width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto; display: inline-block;
+  border: 1.5px solid var(--line-strong); border-right-color: var(--pt-blue);
+  animation: ptSpin .8s linear infinite;
+}
+@keyframes ptSpin { to { transform: rotate(360deg); } }
+
+.pt-gen { margin-top: 8px; border: 1px solid var(--pt-line); border-radius: var(--r-md); background: var(--pt-surface); overflow: hidden; }
+.pt-genhead {
+  display: flex; align-items: center; gap: 7px; padding: 5px 9px;
+  border-bottom: 1px solid var(--line-soft); background: var(--surface-2);
+  font-size: 8.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4);
+}
+.pt-genbody { padding: 7px 9px; display: flex; flex-direction: column; gap: 5px; transition: filter .3s; }
+.pt-qaq { font-size: 9.5px; font-weight: 750; color: var(--ink); }
+.pt-qaa { font-size: 9px; color: var(--ink-3); line-height: 1.4; }
+.pt-genfoot { display: flex; align-items: center; gap: 6px; padding: 0 9px 7px; }
+.pt-minibtn {
+  font-size: 9.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
+  border: 1px solid var(--line-strong); background: var(--pt-surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.pt-minibtn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
+.pt-minibtn.is-press { transform: scale(.94); }
+.pt-minibtn.is-done { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
+
+/* ---------- Paso 7 — auditoría técnica ---------- */
+.pt-audittop { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+.pt-auditlist { display: flex; flex-direction: column; gap: 5px; }
+.pt-auditrow {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--pt-line); border-radius: var(--r-sm); padding: 5px 8px;
+  background: var(--pt-surface); transition: border-color .3s, box-shadow .3s;
+}
+.pt-auditrow.is-focus { border-color: rgba(255, 176, 32, .55); box-shadow: 0 4px 14px rgba(255, 176, 32, .16); }
+.pt-auditico {
+  width: 16px; height: 16px; flex: 0 0 auto; border-radius: 5px;
+  display: grid; place-items: center; font-size: 9px; font-weight: 800;
+  background: var(--pt-warn-soft); color: var(--pt-warn-ink);
+}
+.pt-auditbody { flex: 1 1 auto; min-width: 0; }
+.pt-auditt { display: block; font-size: 9.5px; font-weight: 700; color: var(--ink); }
+.pt-auditd { display: block; font-size: 8.5px; color: var(--ink-4); }
+.pt-auditpt { margin-left: auto; flex: 0 0 auto; font-size: 9.5px; font-weight: 800; color: var(--pos); font-variant-numeric: tabular-nums; }
+
+/* --- Cursor -------------------------------------------------------------- */
+.pt-cursor {
+  position: absolute; z-index: 20; width: 20px; height: 20px;
+  margin: -2px 0 0 -2px; pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(16, 24, 40, .32));
+  will-change: transform;
+}
+.pt-ripple {
+  position: absolute; z-index: 19; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px;
+  border-radius: 999px; border: 2px solid var(--pt-blue); opacity: 0; pointer-events: none;
+}
+.pt-ripple.is-go { animation: ptRipple .45s cubic-bezier(.2, .8, .3, 1); }
+@keyframes ptRipple {
+  from { opacity: .9; transform: scale(.35); }
+  to { opacity: 0; transform: scale(2.4); }
+}
+
+/* --- Pie: puntos + ¿Qué es el GEO? + Atrás / Siguiente ------------------- */
+.pt-foot {
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 22px 16px; margin-top: 13px; border-top: 1px solid var(--line-soft);
+}
+.ptour--hero .pt-foot { border-top: none; margin-top: 9px; }
+.pt-dots { display: flex; gap: 5px; }
+.pt-dot {
+  width: 15px; height: 4px; border-radius: 999px; background: var(--line-strong);
+  border: none; padding: 0; cursor: pointer; transition: background .2s, width .25s;
+}
+.pt-dot:hover { background: var(--ink-4); }
+.pt-dot.is-on { background: var(--pt-blue); width: 24px; }
+.pt-dot:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 3px; }
+.pt-sp { margin-left: auto; }
+.pt-lnk {
+  background: none; border: none; font: inherit; font-size: 12.5px; font-weight: 650;
+  color: var(--ink-4); cursor: pointer; padding: 7px 4px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pt-lnk:hover { color: var(--ink-2); }
+.pt-btn {
+  height: 32px; padding: 0 14px; border-radius: var(--r-sm); font: inherit;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--line-strong); background: var(--pt-surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pt-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.pt-btn:disabled { opacity: .4; cursor: default; }
+.pt-btn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
+.pt-btn.pt-primary:hover { background: #1d4fd0; color: #fff; }
+.pt-lnk:focus-visible, .pt-btn:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; border-radius: 6px; }
+
+/* --- Variante hero: dentro del .browserframe de la landing --------------- */
+/* El tour está dibujado a una densidad fija, pensada para un lienzo de ~715px
+   (el ancho del popup). El `.lp-shot` de la landing mide 1060px, y a ese ancho
+   el mini-producto se ve diminuto y flotando en su tarjeta. Se acota el marco
+   en vez de reescalar cuarenta tamaños de letra: mantiene la densidad exacta
+   del diseño aprobado y sigue leyéndose como un hero. */
+.ptour--hero .pt-frame { max-width: 860px; margin-inline: auto; }
+.ptour--hero .pt-head { display: none; }
+.ptour--hero .pt-sub {
+  text-align: center; max-width: 62ch; margin: 0 auto; padding: 0 22px 14px;
+  font-size: 14px;
+}
+
+/* --- Variante popup: el modal de la consola ------------------------------ */
+.ptour-scrim {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(15, 23, 41, .58);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px 16px; overflow-y: auto;
+  animation: ptScrimIn .2s ease;
+}
+@keyframes ptScrimIn { from { opacity: 0; } to { opacity: 1; } }
+.ptour--modal {
+  width: 100%; max-width: 760px; margin: auto;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); box-shadow: var(--sh-pop);
+  overflow: hidden; position: relative;
+  animation: ptModalIn .26s cubic-bezier(.2, .8, .3, 1);
+}
+@keyframes ptModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.pt-close {
+  position: absolute; top: 12px; right: 12px; z-index: 5;
+  width: 30px; height: 30px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+  display: grid; place-items: center; cursor: pointer;
+}
+.pt-close:hover { background: var(--surface-2); color: var(--ink); }
+.pt-close:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .pt-head { padding: 14px 14px 0; }
+  .pt-sub { padding: 6px 14px 10px; }
+  .ptour--hero .pt-sub { padding: 0 14px 12px; }
+  .pt-stage { margin: 0 14px; }
+  .pt-foot { padding: 12px 14px 14px; }
+  .pt-title { font-size: 17px; }
+  .ptour-scrim { padding: 10px 8px; }
+}
+
+/* Por debajo de 560px el mini-menú no cabe: encogerlo deja el contenido
+   ilegible. Se retira y el lienzo se hace más alto — que es además la forma
+   real de la consola en móvil, donde el sidebar vive en un cajón. El cursor
+   deja de señalar el menú y señala el título de cada pantalla. */
+@media (max-width: 560px) {
+  .pt-side { display: none; }
+  .pt-stage { aspect-ratio: 4 / 5; }
+  .pt-2col { grid-template-columns: 1fr; gap: 6px; }
+  .pt-hero { flex-direction: column; align-items: stretch; gap: 9px; }
+  .pt-gwrap { align-self: center; }
+  .pt-kpis { display: none; }
+  .pt-engines { flex-wrap: wrap; }
+  .pt-eng { flex: 1 1 44%; }
+  .pt-audittop { justify-content: center; }
+  /* Puntos + enlace + Atrás + Siguiente en una fila desbordaban el viewport
+     (medido a 375px). Los puntos bajan a su propia línea. */
+  .pt-foot { flex-wrap: wrap; justify-content: flex-end; }
+  .pt-sp { display: none; }
+  .pt-dots { order: 3; width: 100%; justify-content: center; margin-top: 11px; }
+  .pt-btn { padding: 0 12px; }
+  /* Con los puntos en su propia línea, el enlace se va al extremo izquierdo de
+     la fila de botones — que es donde el fundador lo marcó. */
+  .pt-lnk { font-size: 12px; padding: 7px 0; margin-right: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-spin { animation: none; }
+  .pt-ripple.is-go { animation: none; }
+  .pt-rec, .pt-auditrow { transition: none; }
+  .ptour-scrim, .ptour--modal { animation: none; }
+}

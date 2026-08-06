@@ -3116,6 +3116,86 @@ mayor, pedido explícito propio si algún día hace falta.
   escaneo) sigue donde estaba.
 ---
 
+## 33. El tour «Aprende cómo funciona» (ONBOARDING-TOUR-1, 2026-08-06)
+
+**Estado: implementado y en las dos superficies.**
+
+Una misma pieza —`components/product-tour.tsx`— en dos sitios:
+
+- **Landing**: sustituye la captura estática del hero (`.lp-shot`), dentro del
+  mismo `.browserframe` que §1 ya daba por aprobado. El marco no cambia; lo que
+  cambia es que el producto se mueve.
+- **Consola**: popup de bienvenida que salta solo en el primer acceso, y que
+  después se reabre desde «¿Qué es el GEO?» del menú lateral.
+
+Ocho pasos, 50 s: dominio y sugerencias → escaneo → GeoScore → evolución →
+recomendaciones → generar la solución → auditoría web → el siguiente escaneo.
+Los subtítulos son literalmente los del fundador.
+
+### Decisiones y por qué
+
+- **Tour filmado, no *coach marks*.** El patrón habitual —globitos sobre los
+  elementos reales de la pantalla— no sirve aquí: en el instante en que el
+  popup aparece, el escaneo está en `pending` y la Visión general no tiene
+  datos, así que los globitos apuntarían a pantallas vacías. Un tour filmado
+  funciona con independencia del estado de los datos y además enseña lo que
+  está a punto de aparecer.
+- **El montaje se lleva 8,3 s de 50.** Dominio, competidores, prompts y
+  escaneo son lo que menos importa; el 83% del metraje va a la puntuación, la
+  tendencia, generar una recomendación de principio a fin y la auditoría. El
+  paso de generar es el más largo del tour a propósito: es el único que enseña
+  que el producto no se limita a señalar el problema.
+- **Cabecera fija, subtítulo variable.** Título «Aprende cómo funciona» y una
+  única línea que cambia por paso explicando lo que se ve. Sustituye a la banda
+  de rótulos bajo el lienzo que tenían las versiones previas del prototipo.
+- **Todos los pasos miden lo mismo de alto.** Los ocho subtítulos se apilan en
+  la misma celda de rejilla con sólo uno visible, así que el contenedor mide
+  siempre lo que el más alto — sin medir nada en JS, correcto a cualquier
+  ancho, tipografía o idioma. Sin esto la pieza pega un salto en cada paso.
+- **`ProductShot` se retira.** Quedó sin uso al sustituir el hero, y con
+  `prefers-reduced-motion` el tour se queda quieto en su último fotograma (la
+  Visión general con su gauge y su curva), que es exactamente la captura que
+  `ProductShot` daba. Se elimina en vez de dejarla muerta.
+- **El marco del hero se acota a 860 px.** El tour tiene una densidad fija
+  pensada para un lienzo de ~715 px; a los 1060 px del `.lp-shot` el
+  mini-producto se veía diminuto y flotando. Se acota el marco en vez de
+  reescalar cuarenta tamaños de letra.
+- **«¿Qué es el GEO?» del menú lateral pasa de enlace a botón que abre el
+  tour** (fundador: «luego estará en el menú, en qué es el GEO»). La página
+  `/geo` no se pierde: el propio popup la enlaza en su pie, abajo a la
+  izquierda, donde el fundador la marcó. El coste, dicho: llegar a `/geo`
+  desde el menú pasa de un clic a dos.
+
+### Lo que el tour afirma, y por qué se puede afirmar
+
+Tres textos hacen afirmaciones sobre el producto y las tres se comprobaron
+antes de escribirlas:
+
+- «Se escanea continuamente» → `lib/scan/cron.ts` reescanea a diario en
+  free/pro/agency y semanalmente en starter. **Si esa cadencia cambia, el
+  texto cambia con ella.**
+- La auditoría del paso 7 usa las comprobaciones y pesos reales del diseño
+  aprobado en §17 (`docs/design-reference/web-audit-issues-1/`): datos
+  estructurados 15 pt/página, metadatos 5, formato respuesta-primero 5.
+- **El salto de 48 a 71 es ilustrativo, no una promesa.** Enseña el mecanismo
+  —cada escaneo recalcula la puntuación—, y el subtítulo está escrito con esas
+  palabras a propósito. Convertirlo en «+23 puntos garantizados» lo volvería
+  una promesa que el producto no puede cumplir.
+
+### Pendiente / roto conocido
+
+- **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una
+  migración de esquema está prohibida sin aprobación explícita. Consecuencia
+  asumida: el popup reaparece en un navegador nuevo o tras limpiar el
+  almacenamiento. Convertirlo en columna sería una fase con su propio Task
+  Intake.
+- **No se pudo ver la referencia de Semrush** que el fundador citó: el proxy
+  del entorno devuelve 403 y su web bloquea peticiones automáticas. La versión
+  de landing está construida sobre los componentes ya aprobados de este repo,
+  no sobre un análisis de la suya.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

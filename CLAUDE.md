@@ -394,6 +394,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
+| Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-06)** | log §33 · `docs/design-reference/onboarding-tour-1/` |
 | Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21 · "Presupuesto de builds" arriba |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
@@ -531,6 +532,7 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `scan.md` | `lib/scan/**` |
 | `scoring.md` | `lib/scoring/**` |
 | `growth-content.md` | `app/{blog,comparativas,docs,glosario}/**`, `lib/{blog,comparativas,docs,glosario}/**` |
+| `onboarding.md` | `components/product-tour.tsx`, `components/tour-provider.tsx`, `lib/onboarding/**` |
 
 ### Documentation (`docs/`)
 

@@ -1,9 +1,14 @@
 # ONBOARDING-TOUR-1 — «Aprende cómo funciona»
 
-**Estado: Fase 0 (prototipo). Ninguna línea de producto implementada todavía.**
+**Estado: implementado.** Fase A cerrada el 2026-08-06 — ver
+`docs/brand/design-decisions-log.md` §33 y `.claude/rules/onboarding.md`.
 
-`prototype.html` es la referencia de diseño de un tour animado de **50,0 s en
-ocho pasos**, en **dos carcasas** que se intercambian con el selector de arriba:
+`prototype.html` se conserva como la referencia contra la que el `ux-pilot`
+compara: es el diseño aprobado. La implementación vive en
+`components/product-tour.tsx` y `components/tour-provider.tsx`.
+
+El tour dura **50,0 s** y tiene **ocho pasos**. El prototipo lleva un selector
+arriba para ver sus dos carcasas:
 
 - **Modal de consola** — se muestra la primera vez que un usuario entra.
 - **Hero de la landing** — el mismo tour dentro del `.browserframe` en la
@@ -123,15 +128,28 @@ Con Playwright sobre Chromium, en **las dos carcasas**, los **ocho pasos** y a
 - sin errores de consola;
 - `prefers-reduced-motion` aterriza en el fotograma final, en pausa.
 
+## Qué se decidió al implementar
+
+Las dos carcasas se quedaron: el hero de la landing **y** el popup de la
+consola, que salta solo en el primer acceso y se reabre desde «¿Qué es el GEO?»
+del menú lateral. El popup enlaza `/geo` en su pie.
+
+Dos cosas cambiaron respecto a este prototipo, y las dos por lo mismo — sólo
+aparecieron al montarlo sobre la landing real:
+
+1. **El hero centra su texto y el tour lo heredaba**, así que el mini-producto
+   salía centrado entero. `.ptour { text-align: left }`.
+2. **El marco del hero mide 1060px y el tour está dibujado para ~715**, de modo
+   que el mini-producto se veía diminuto. Se acota el marco a 860px en vez de
+   reescalar cuarenta tamaños de letra.
+
+La altura constante se resolvió mejor que aquí: en vez de medirla con JS, los
+ocho subtítulos se apilan en la misma celda de rejilla con sólo uno visible.
+Sin JS, correcto a cualquier ancho y en cualquier idioma.
+
 ## Pendiente
 
-- **Decidir la carcasa.** Es lo único que bloquea la Fase A.
-- **Fase A** — implementar `<ProductTour />`. Si la elegida es la consola,
-  requiere decidir dónde se persiste «ya visto»: `localStorage` (sin migración)
-  frente a columna en la tabla de usuario (**migración de esquema, prohibida
-  sin aprobación explícita del fundador**). Si la elegida es la landing, esa
-  decisión desaparece: no hay nada que recordar por usuario.
-- Entrada en `docs/brand/design-decisions-log.md` — se escribe en el PR que
-  implemente la Fase A, no antes: hasta entonces no hay decisión cerrada que
-  registrar.
-- Casilla de la zona en el mapa de `CLAUDE.md` (zona nueva: «Onboarding»).
+- **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una
+  migración de esquema está prohibida sin aprobación explícita del fundador.
+  Consecuencia asumida: el popup reaparece en un navegador nuevo. Convertirlo
+  en columna sería una fase con su propio Task Intake.
