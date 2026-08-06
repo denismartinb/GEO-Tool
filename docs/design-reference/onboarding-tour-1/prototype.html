@@ -2,19 +2,19 @@
 <style>
 /* ============================================================================
    ONBOARDING-TOUR-1 · Fase 0 — prototipo de referencia (NO es código de
-   producción). Reproduce con los tokens reales de app/globals.css el modal de
-   bienvenida que se mostraría en la consola tras el primer login, con un tour
-   animado de 20,0 s exactos.
+   producción). Reproduce con los tokens reales de app/globals.css un tour
+   animado de 44,0 s en siete pasos, en dos carcasas intercambiables: modal de
+   consola y hero integrado en la landing.
 
    Toda la animación se deriva de UN reloj (`t` en ms). Nada usa
-   `animation-delay`: por eso el tour es rebobinable a cualquier instante y el
-   piloto agéntico puede congelarlo en un acto concreto y fotografiarlo.
+   `animation-delay`: por eso el tour es rebobinable a cualquier instante, los
+   botones Atrás/Siguiente pueden saltar a cualquier paso, y el piloto agéntico
+   puede congelarlo en un paso concreto y fotografiarlo.
    ============================================================================ */
 
 /* --- Envoltorio del prototipo: se adapta al tema del visor ---------------- */
 :root {
   --pg-bg: #eceef2;
-  --pg-bg-2: #f6f7f9;
   --pg-ink: #0f1729;
   --pg-ink-2: #5b6b82;
   --pg-line: #dcdfe6;
@@ -23,32 +23,17 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --pg-bg: #0a1220;
-    --pg-bg-2: #0f1c33;
-    --pg-ink: #f2f4f8;
-    --pg-ink-2: #93a1b8;
-    --pg-line: #21304a;
-    --pg-accent: #6f9bff;
-    --pg-code-bg: #16233a;
+    --pg-bg: #0a1220; --pg-ink: #f2f4f8; --pg-ink-2: #93a1b8;
+    --pg-line: #21304a; --pg-accent: #6f9bff; --pg-code-bg: #16233a;
   }
 }
 :root[data-theme="dark"] {
-  --pg-bg: #0a1220;
-  --pg-bg-2: #0f1c33;
-  --pg-ink: #f2f4f8;
-  --pg-ink-2: #93a1b8;
-  --pg-line: #21304a;
-  --pg-accent: #6f9bff;
-  --pg-code-bg: #16233a;
+  --pg-bg: #0a1220; --pg-ink: #f2f4f8; --pg-ink-2: #93a1b8;
+  --pg-line: #21304a; --pg-accent: #6f9bff; --pg-code-bg: #16233a;
 }
 :root[data-theme="light"] {
-  --pg-bg: #eceef2;
-  --pg-bg-2: #f6f7f9;
-  --pg-ink: #0f1729;
-  --pg-ink-2: #5b6b82;
-  --pg-line: #dcdfe6;
-  --pg-accent: #2563eb;
-  --pg-code-bg: #e6e9ef;
+  --pg-bg: #eceef2; --pg-ink: #0f1729; --pg-ink-2: #5b6b82;
+  --pg-line: #dcdfe6; --pg-accent: #2563eb; --pg-code-bg: #e6e9ef;
 }
 
 /* --- Tokens reales del producto (app/globals.css). El lienzo del producto
@@ -57,7 +42,6 @@
   --canvas: #f6f7f9;
   --surface: #ffffff;
   --surface-2: #fbfbfd;
-  --surface-sunk: #f6f7f9;
   --line: #e8eaef;
   --line-soft: #eef0f4;
   --line-strong: #dfe3ea;
@@ -72,7 +56,6 @@
   --pos: #15915a;
   --pos-soft: #e7f6ee;
   --neg: #d23b48;
-  --neg-soft: #fdecee;
   --warn: #ffb020;
   --violet: #7c3aed;
   --teal: #0d9488;
@@ -81,7 +64,6 @@
   --r-md: 10px;
   --r-lg: 14px;
   --r-xl: 18px;
-  --sh-2: 0 2px 4px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.06);
   --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
 }
 
@@ -100,22 +82,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.wrap { max-width: 1000px; margin: 0 auto; padding: 40px 22px 72px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding: 36px 22px 64px; }
 
-.pg-head { display: flex; flex-direction: column; gap: 10px; margin-bottom: 30px; }
+.pg-head { display: flex; flex-direction: column; gap: 9px; margin-bottom: 22px; }
 .pg-eyebrow {
   font-size: 11.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
   color: var(--pg-accent);
 }
-.pg-title { font-size: 27px; font-weight: 800; letter-spacing: -.025em; margin: 0; text-wrap: balance; }
+.pg-title { font-size: 26px; font-weight: 800; letter-spacing: -.025em; margin: 0; text-wrap: balance; }
 .pg-sub { font-size: 14.5px; color: var(--pg-ink-2); margin: 0; max-width: 62ch; }
 
 .pg-note {
-  border-left: 2px solid var(--pg-line);
-  padding: 2px 0 2px 14px;
+  border-left: 2px solid var(--pg-line); padding: 2px 0 2px 14px;
   font-size: 13.5px; color: var(--pg-ink-2);
-  display: flex; flex-direction: column; gap: 7px;
-  margin: 26px 0 0;
+  display: flex; flex-direction: column; gap: 7px; margin: 24px 0 0;
 }
 .pg-note b { color: var(--pg-ink); font-weight: 700; }
 code {
@@ -129,22 +109,20 @@ code {
   background: var(--canvas);
   border: 1px solid rgba(15,23,41,.10);
   border-radius: 20px;
-  padding: 26px;
+  padding: 22px;
   color: var(--ink);
   box-shadow: 0 24px 60px rgba(8,16,32,.22);
-  overflow-x: auto;
 }
 
-/* El scrim simula el fondo de consola oscurecido detrás del modal */
+/* Scrim: el fondo de consola oscurecido detrás del modal. */
 .pt-scrim {
   background: linear-gradient(180deg, rgba(15,23,41,.55), rgba(15,23,41,.62));
-  border-radius: 14px;
-  padding: 26px 20px;
+  border-radius: 14px; padding: 22px 18px;
   display: flex; justify-content: center;
 }
 
 .modal {
-  width: 100%; max-width: 720px;
+  width: 100%; max-width: 760px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
@@ -152,24 +130,32 @@ code {
   overflow: hidden;
 }
 
-.m-head { padding: 22px 26px 16px; border-bottom: 1px solid var(--line-soft); }
+/* --- Cabecera: título fijo, subtítulo que explica lo de abajo ------------- */
+.m-head { padding: 17px 22px 0; }
 .m-eyebrow {
   display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
   color: var(--brand-blue); background: var(--brand-blue-soft);
-  padding: 4px 9px; border-radius: 999px; margin-bottom: 11px;
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 9px;
 }
 .m-title {
-  font-size: 21px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--ink);
+  font-size: 19px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--ink);
   text-wrap: balance;
 }
-.m-sub { font-size: 13.5px; color: var(--ink-3); margin: 7px 0 0; max-width: 54ch; }
+/* El subtítulo es la única línea de texto que cambia: dice qué se está viendo
+   en el lienzo. Altura mínima fija para que el modal no dé saltos entre pasos. */
+.sub {
+  margin: 0; padding: 6px 22px 12px;
+  font-size: 13px; line-height: 1.45; color: var(--ink-3);
+  min-height: 40px;
+}
+.sub b { color: var(--ink-2); font-weight: 700; }
 
 /* --- Lienzo animado ------------------------------------------------------ */
 .stage {
   position: relative;
-  margin: 0 26px;
-  aspect-ratio: 16 / 9;
+  margin: 0 22px;
+  aspect-ratio: 2 / 1;
   background: var(--canvas);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -177,192 +163,208 @@ code {
   display: flex;
   user-select: none;
 }
-.m-body { padding: 18px 0 0; }
 
 /* Mini-sidebar */
 .side {
-  width: 27%; min-width: 128px; flex: 0 0 auto;
-  background: var(--surface);
-  border-right: 1px solid var(--line);
-  padding: 12px 9px;
-  display: flex; flex-direction: column; gap: 3px;
+  width: 23%; min-width: 118px; flex: 0 0 auto;
+  background: var(--surface); border-right: 1px solid var(--line);
+  padding: 9px 7px; display: flex; flex-direction: column; gap: 2px;
 }
 .side-brand {
-  display: flex; align-items: center; gap: 7px;
-  padding: 2px 7px 12px; font-size: 12px; font-weight: 800; letter-spacing: -.02em;
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 6px 9px; font-size: 11px; font-weight: 800; letter-spacing: -.02em;
 }
-.side-dot { width: 15px; height: 15px; border-radius: 5px; background: linear-gradient(135deg, var(--brand-blue-2), var(--brand-blue)); flex: 0 0 auto; }
+.side-dot { width: 13px; height: 13px; border-radius: 4px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--brand-blue-2), var(--brand-blue)); }
 .side-label {
-  font-size: 9px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--ink-4); padding: 9px 7px 4px;
+  font-size: 8.5px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-4); padding: 7px 6px 3px;
 }
 .nav {
-  display: flex; align-items: center; gap: 7px;
-  padding: 6px 7px; border-radius: var(--r-sm);
-  font-size: 11.5px; font-weight: 600; color: var(--ink-2);
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 6px; border-radius: var(--r-sm);
+  font-size: 10.5px; font-weight: 600; color: var(--ink-2);
   transition: background .18s, color .18s;
 }
-.nav i { width: 13px; height: 13px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .38; }
+.nav i { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .36; }
 .nav.on { background: var(--brand-blue-soft); color: var(--brand-blue); font-weight: 750; }
 .nav.on i { opacity: .85; }
 
 /* Área de contenido */
-.main { flex: 1 1 auto; position: relative; padding: 14px 16px; min-width: 0; }
-.act { position: absolute; inset: 0; padding: 14px 16px; opacity: 0; transition: opacity .28s ease; pointer-events: none; }
+.main { flex: 1 1 auto; position: relative; min-width: 0; }
+/* El contenido llena el lienzo: una tarjeta pequeña flotando en un lienzo
+   medio vacío no se lee como una pantalla del producto, se lee como una
+   maqueta a medio hacer. */
+.act {
+  position: absolute; inset: 0; padding: 11px 13px; opacity: 0;
+  transition: opacity .26s ease;
+  display: flex; flex-direction: column;
+}
+.card.fill { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.card.fill.center { justify-content: center; }
+.recs.fill { flex: 1 1 auto; justify-content: center; }
+.gen-stack { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
 .act.on { opacity: 1; }
 
-.h { font-size: 12.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 0 0 2px; }
-.hsub { font-size: 10px; color: var(--ink-4); margin: 0 0 11px; }
+.h { font-size: 11.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 0 0 1px; }
+.hsub { font-size: 9.5px; color: var(--ink-4); margin: 0 0 9px; }
 
-.card {
-  background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--r-md); padding: 11px 12px;
-}
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 10px; }
 
-/* ACTO 1 — dominio */
+.badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
+.badge-pos { background: var(--pos-soft); color: var(--pos); }
+.badge-mid { background: var(--brand-blue-soft); color: var(--brand-blue); }
+
+/* ---------- PASO 1 — dominio, competidores y prompts ---------- */
 .field {
-  height: 34px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
-  background: var(--surface); display: flex; align-items: center; gap: 8px; padding: 0 11px;
-  font-size: 12px; color: var(--ink); transition: border-color .2s, box-shadow .2s;
+  height: 29px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--surface); display: flex; align-items: center; gap: 7px; padding: 0 10px;
+  font-size: 11px; color: var(--ink); transition: border-color .2s, box-shadow .2s;
 }
 .field.focus { border-color: var(--brand-blue); box-shadow: 0 0 0 3px var(--brand-blue-soft); }
-.field-ico { width: 13px; height: 13px; border-radius: 999px; border: 1.6px solid var(--ink-4); flex: 0 0 auto; }
-.caret { display: inline-block; width: 1.5px; height: 14px; background: var(--brand-blue); vertical-align: -3px; margin-left: 1px; }
-.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.field-ico { width: 11px; height: 11px; border-radius: 999px; border: 1.5px solid var(--ink-4); flex: 0 0 auto; }
+.caret { display: inline-block; width: 1.5px; height: 12px; background: var(--brand-blue); vertical-align: -2px; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 9px; }
+.col-l { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 5px; }
 .chip {
-  font-size: 10.5px; font-weight: 650; padding: 3px 9px; border-radius: 999px;
+  font-size: 9.5px; font-weight: 650; padding: 3px 8px; border-radius: 999px;
   background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2);
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-block; margin: 0 4px 4px 0;
 }
-.chip.done { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
-.btn {
-  height: 30px; padding: 0 14px; border-radius: var(--r-sm);
-  background: var(--brand-blue); color: #fff; font-size: 11.5px; font-weight: 700;
-  display: inline-flex; align-items: center; justify-content: center; border: none;
-  transition: transform .16s, box-shadow .16s;
+.pline {
+  font-size: 9.5px; color: var(--ink-2); padding: 3px 0 3px 12px; position: relative;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.btn.press { transform: scale(.965); }
-.btn.pulse { box-shadow: 0 0 0 0 var(--brand-blue-soft); animation: btnPulse 1.5s ease-out infinite; }
-@keyframes btnPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(37,99,235,.42); }
-  70%  { box-shadow: 0 0 0 11px rgba(37,99,235,0); }
-  100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); }
+.pline::before {
+  content: ""; position: absolute; left: 2px; top: 9px;
+  width: 4px; height: 4px; border-radius: 999px; background: var(--brand-blue); opacity: .55;
 }
 
-/* ACTO 2 — escaneo */
-.checklist { display: flex; flex-direction: column; gap: 7px; margin-top: 3px; }
-.cl { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-4); transition: color .25s; }
-.cl .mark {
-  width: 15px; height: 15px; border-radius: 999px; flex: 0 0 auto;
-  border: 1.6px solid var(--line-strong); display: grid; place-items: center;
-  font-size: 9px; font-weight: 800; line-height: 1;
-  color: transparent;      /* el ✓ sólo aparece al completarse */
-  transition: background .25s, border-color .25s, color .2s;
-}
-.cl.active { color: var(--ink-2); }
-.cl.active .mark { border-color: var(--brand-blue); border-right-color: transparent; animation: spin .8s linear infinite; }
-.cl.done { color: var(--ink-2); }
-.cl.done .mark { background: var(--pos); border-color: var(--pos); color: #fff; animation: none; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.engines { display: flex; gap: 7px; margin-top: 12px; }
+/* ---------- PASO 2 — escaneo ---------- */
+.engines { display: flex; gap: 6px; }
 .eng {
-  flex: 1; display: flex; align-items: center; gap: 6px; padding: 7px 8px;
+  flex: 1; display: flex; align-items: center; gap: 5px; padding: 6px 7px;
   border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface);
-  font-size: 10.5px; font-weight: 700; color: var(--ink-2);
+  font-size: 9.5px; font-weight: 700; color: var(--ink-2);
   transition: border-color .25s, background .25s;
 }
-.eng .bulb { width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto; }
+.eng .bulb { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
 .eng .tick { margin-left: auto; color: var(--pos); opacity: 0; transition: opacity .25s; }
-.eng.done { border-color: rgba(21,145,90,.35); background: rgba(21,145,90,.045); }
+.eng.done { border-color: rgba(21,145,90,.35); background: rgba(21,145,90,.05); }
 .eng.done .tick { opacity: 1; }
-
-.bar { height: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; margin-top: 13px; }
+.bar { height: 6px; border-radius: 999px; background: var(--canvas); overflow: hidden; margin-top: 11px; }
 .bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand-blue-2), var(--brand-blue)); }
-.bar-cap { display: flex; justify-content: space-between; font-size: 10px; color: var(--ink-4); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.bar-cap { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-4); margin-top: 5px; font-variant-numeric: tabular-nums; }
 
-/* ACTO 3 — visión general */
-.hero-v2 { display: flex; gap: 14px; align-items: center; }
+/* ---------- PASOS 3 y 7 — el gauge ---------- */
+.hero-v2 { display: flex; gap: 13px; align-items: center; }
 .gauge-wrap { position: relative; flex: 0 0 auto; }
-.gauge-center {
-  position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
-}
-.gauge-num { font-size: 21px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
-.gauge-cap { font-size: 9px; color: var(--ink-4); font-weight: 650; margin-top: 2px; }
-.compose { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 7px; }
-.compose-row { display: flex; flex-direction: column; gap: 3px; }
-.compose-top { display: flex; justify-content: space-between; font-size: 10px; }
+.gauge-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.gauge-num { font-size: 20px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.gauge-cap { font-size: 8.5px; color: var(--ink-4); font-weight: 650; margin-top: 2px; }
+.compose { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.compose-top { display: flex; justify-content: space-between; font-size: 9.5px; }
 .compose-l { color: var(--ink-3); font-weight: 600; }
 .compose-v { color: var(--ink); font-weight: 750; font-variant-numeric: tabular-nums; }
-.sov-bar { height: 5px; border-radius: 999px; background: var(--canvas); overflow: hidden; }
+.sov-bar { height: 5px; border-radius: 999px; background: var(--canvas); overflow: hidden; margin-top: 3px; }
 .sov-fill { display: block; height: 100%; border-radius: 999px; }
+.kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
+.kpi { border: 1px solid var(--line); border-radius: var(--r-sm); padding: 6px 8px; }
+.kpi-l { font-size: 8px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.kpi-v { font-size: 15px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.kpi-v span { font-size: 10px; font-weight: 700; color: var(--ink-3); }
 
-.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
-.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); padding: 8px 10px; }
-.kpi-l { font-size: 9.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-4); }
-.kpi-v { font-size: 17px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 1px; }
-.kpi-v .unit { font-size: 11px; font-weight: 700; color: var(--ink-3); margin-left: 1px; }
-.badge {
-  font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 999px;
-  display: inline-flex; align-items: center; gap: 4px;
+/* ---------- PASOS 4 y 7 — la gráfica de tendencia ---------- */
+.chart-wrap { position: relative; }
+.chart-box { flex: 1 1 auto; min-height: 64px; position: relative; }
+.chart-box > svg { display: block; width: 100%; height: 100%; }
+.trend-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 6px; }
+.trend-v { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.trend-v span { font-size: 11px; font-weight: 700; color: var(--ink-4); margin-left: 2px; }
+.trend-l { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.chart-foot { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--ink-4); margin-top: 4px; }
+.chart-tip {
+  position: absolute; z-index: 6; background: var(--ink); color: #fff;
+  font-size: 9.5px; font-weight: 650; padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+  transform: translate(-50%, -150%); pointer-events: none;
+  opacity: 0; transition: opacity .2s;
 }
-.badge-pos { background: var(--pos-soft); color: var(--pos); }
-.badge-neg { background: var(--neg-soft); color: var(--neg); }
+.chart-tip.on { opacity: 1; }
+.delta-row { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
 
-.tip {
-  position: absolute; z-index: 6; max-width: 176px;
-  left: 5%; top: 74%;
-  background: var(--ink); color: #fff; font-size: 10px; line-height: 1.45;
-  padding: 7px 9px; border-radius: var(--r-sm);
-  box-shadow: 0 6px 20px rgba(16,24,40,.28);
-  opacity: 0; transform: translateY(4px); transition: opacity .2s, transform .2s;
-  pointer-events: none;
-}
-.tip.on { opacity: 1; transform: translateY(0); }
-
-/* ACTO 4 — competidores */
-.rows { display: flex; flex-direction: column; gap: 8px; }
-.row { display: flex; align-items: center; gap: 9px; }
-.row-name { width: 33%; font-size: 10.5px; font-weight: 650; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.row.you .row-name { color: var(--brand-blue); font-weight: 800; }
-.row-track { display: block; flex: 1 1 auto; height: 9px; border-radius: 999px; background: var(--canvas); overflow: hidden; }
-.row-fill { display: block; height: 100%; border-radius: 999px; background: var(--ink-4); }
-.row.you .row-fill { background: linear-gradient(90deg, var(--brand-blue-2), var(--brand-blue)); }
-.row-v { width: 34px; text-align: right; font-size: 10.5px; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--ink-2); }
-
-/* ACTO 5 — recomendaciones */
-.recs { display: flex; flex-direction: column; gap: 8px; }
+/* ---------- PASOS 5 y 6 — recomendaciones ---------- */
+.recs { display: flex; flex-direction: column; gap: 6px; }
 .rec {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 9px;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
-  padding: 9px 11px;
+  padding: 7px 9px;
+  transition: transform .35s cubic-bezier(.2,.8,.3,1), box-shadow .35s, opacity .35s, border-color .35s;
 }
+.rec.focus {
+  transform: scale(1.025); border-color: rgba(37,99,235,.42);
+  box-shadow: 0 6px 20px rgba(37,99,235,.14);
+}
+.rec.dim { opacity: .38; transform: scale(.985); }
 .rec-pri {
-  width: 26px; height: 26px; flex: 0 0 auto; border-radius: 7px;
-  display: grid; place-items: center; font-size: 11px; font-weight: 800;
+  width: 22px; height: 22px; flex: 0 0 auto; border-radius: 6px;
+  display: grid; place-items: center; font-size: 10px; font-weight: 800;
   background: var(--brand-blue-soft); color: var(--brand-blue);
 }
 .rec-body { flex: 1 1 auto; min-width: 0; }
-.rec-t { display: block; font-size: 11px; font-weight: 700; color: var(--ink); line-height: 1.3; }
-.rec-d { display: block; font-size: 9.5px; color: var(--ink-4); margin-top: 1px; }
+.rec-t { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.rec-d { display: block; font-size: 9px; color: var(--ink-4); margin-top: 1px; }
+.rec-d b { color: var(--brand-blue); font-weight: 750; }
 .rec-cta {
   margin-left: auto; flex: 0 0 auto;
-  font-size: 10px; font-weight: 700; color: var(--brand-blue);
-  border: 1px solid rgba(37,99,235,.28); border-radius: 999px; padding: 4px 10px;
-  background: var(--surface);
+  font-size: 9.5px; font-weight: 700; color: #fff; background: var(--brand-blue);
+  border: 1px solid var(--brand-blue); border-radius: 999px; padding: 4px 11px;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
 }
+.rec-cta.ghost { background: var(--surface); color: var(--brand-blue); }
+.rec-cta.press { transform: scale(.94); }
+.rec-cta.busy { background: var(--surface); color: var(--ink-4); border-color: var(--line-strong); }
+.spin {
+  width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto;
+  border: 1.5px solid var(--line-strong); border-right-color: transparent;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* El bloque generado */
+.gen {
+  margin-top: 8px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface); overflow: hidden;
+}
+.gen-head {
+  display: flex; align-items: center; gap: 7px; padding: 5px 9px;
+  border-bottom: 1px solid var(--line-soft); background: var(--surface-2);
+  font-size: 8.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4);
+}
+.gen-body { padding: 7px 9px; display: flex; flex-direction: column; gap: 5px; transition: filter .3s; }
+.qa-q { font-size: 9.5px; font-weight: 750; color: var(--ink); }
+.qa-a { font-size: 9px; color: var(--ink-3); line-height: 1.4; }
+.gen-foot { display: flex; align-items: center; gap: 6px; padding: 0 9px 7px; }
+.mini-btn {
+  font-size: 9.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.mini-btn.primary { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+.mini-btn.press { transform: scale(.94); }
+.mini-btn.done { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
 
 /* --- Cursor -------------------------------------------------------------- */
 .cursor {
-  position: absolute; z-index: 20; width: 22px; height: 22px;
+  position: absolute; z-index: 20; width: 20px; height: 20px;
   margin: -2px 0 0 -2px; pointer-events: none;
   filter: drop-shadow(0 3px 6px rgba(16,24,40,.32));
   will-change: transform;
 }
 .ripple {
-  position: absolute; z-index: 19; width: 16px; height: 16px; margin: -8px 0 0 -8px;
-  border-radius: 999px; border: 2px solid var(--brand-blue);
-  opacity: 0; pointer-events: none;
+  position: absolute; z-index: 19; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px;
+  border-radius: 999px; border: 2px solid var(--brand-blue); opacity: 0; pointer-events: none;
 }
 .ripple.go { animation: rip .45s cubic-bezier(.2,.8,.3,1); }
 @keyframes rip {
@@ -370,58 +372,45 @@ code {
   to   { opacity: 0;  transform: scale(2.4); }
 }
 
-/* --- Pie del modal ------------------------------------------------------- */
-.caption {
-  margin: 14px 26px 0; min-height: 40px;
-  display: flex; align-items: flex-start; gap: 10px;
-}
-.cap-n {
-  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 999px;
-  background: var(--ink); color: #fff; font-size: 10.5px; font-weight: 800;
-  display: grid; place-items: center; font-variant-numeric: tabular-nums; margin-top: 1px;
-}
-.cap-t { display: block; font-size: 13.5px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; }
-.cap-d { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
-
+/* --- Pie: puntos + Atrás / Siguiente ------------------------------------- */
 .m-foot {
-  display: flex; align-items: center; gap: 12px;
-  padding: 16px 26px 20px; margin-top: 14px; border-top: 1px solid var(--line-soft);
+  display: flex; align-items: center; gap: 9px;
+  padding: 13px 22px 16px; margin-top: 13px; border-top: 1px solid var(--line-soft);
 }
-.dots { display: flex; gap: 6px; }
+.dots { display: flex; gap: 5px; }
 .dot {
-  width: 22px; height: 5px; border-radius: 999px; background: var(--line-strong);
+  width: 16px; height: 4px; border-radius: 999px; background: var(--line-strong);
   border: none; padding: 0; cursor: pointer; transition: background .2s, width .25s;
 }
 .dot:hover { background: var(--ink-4); }
-.dot.on { background: var(--brand-blue); width: 30px; }
+.dot.on { background: var(--brand-blue); width: 26px; }
 .dot:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
 .foot-sp { margin-left: auto; }
 .lnk {
   background: none; border: none; font: inherit; font-size: 12.5px; font-weight: 650;
-  color: var(--ink-3); cursor: pointer; padding: 8px 4px;
+  color: var(--ink-4); cursor: pointer; padding: 7px 4px;
 }
-.lnk:hover { color: var(--ink); }
-.lnk:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; border-radius: 6px; }
-.btn-lg {
-  height: 36px; padding: 0 18px; border-radius: var(--r-sm); border: none;
-  background: var(--brand-blue); color: #fff; font: inherit; font-size: 13px; font-weight: 700;
-  cursor: pointer; transition: background .16s;
+.lnk:hover { color: var(--ink-2); }
+.btn-nav {
+  height: 32px; padding: 0 14px; border-radius: var(--r-sm); font: inherit;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 6px;
 }
-.btn-lg:hover { background: #1d4fd0; }
-.btn-lg:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
+.btn-nav:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.btn-nav:disabled { opacity: .4; cursor: default; }
+.btn-nav.primary { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
+.btn-nav.primary:hover { background: #1d4fd0; color: #fff; }
+.lnk:focus-visible, .btn-nav:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; border-radius: 6px; }
 
 /* ==========================================================================
-   Dos carcasas, un mismo tour. El escenario, el reloj y los cinco actos son
+   Dos carcasas, un mismo tour. El escenario, el reloj y los siete pasos son
    idénticos; sólo cambia lo que los rodea. Se intercambian por CSS sobre el
    mismo DOM: duplicar el marcado sería garantizar que las dos versiones se
    separen a la primera corrección.
    ========================================================================== */
-
-/* --- Selector del prototipo (no va al producto) --- */
-.shell-switch {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
-}
-.ss-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pg-ink-2); margin-right: 2px; }
+.shell-switch { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.ss-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pg-ink-2); }
 .ss-btn {
   font: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
   padding: 7px 14px; border-radius: 999px;
@@ -431,72 +420,61 @@ code {
 .ss-btn.on { background: var(--pg-accent); border-color: var(--pg-accent); color: #fff; }
 .ss-btn:focus-visible { outline: 2px solid var(--pg-accent); outline-offset: 3px; }
 
-/* --- Qué se ve en cada carcasa --- */
 .lp-head, .only-landing { display: none; }
 .pt[data-shell="landing"] .m-head,
 .pt[data-shell="landing"] .only-console { display: none; }
 .pt[data-shell="landing"] .lp-head { display: block; }
 .pt[data-shell="landing"] .only-landing { display: inline-flex; }
 
-/* --- Carcasa B: hero público --- */
 .pt[data-shell="landing"] .pt-scrim {
   /* Aurora de la landing, no el scrim oscuro de un modal. */
   background:
     radial-gradient(70% 60% at 18% 0%, rgba(79,123,255,.20), transparent 60%),
     radial-gradient(60% 55% at 88% 10%, rgba(9,197,214,.16), transparent 62%),
     linear-gradient(180deg, #ffffff, #eef2fb);
-  padding: 34px 20px 30px;
+  padding: 28px 18px 24px;
 }
 .pt[data-shell="landing"] .modal {
-  max-width: 860px; background: transparent; border: none; box-shadow: none; overflow: visible;
+  max-width: 880px; background: transparent; border: none; box-shadow: none; overflow: visible;
 }
-.lp-head { text-align: center; margin-bottom: 24px; }
+.lp-head { text-align: center; padding: 0 22px; }
 .lp-h1 {
-  font-size: clamp(26px, 4.4vw, 40px); font-weight: 800; letter-spacing: -.035em;
+  font-size: clamp(24px, 4vw, 36px); font-weight: 800; letter-spacing: -.035em;
   line-height: 1.1; margin: 0; color: var(--ink); text-wrap: balance;
 }
 .lp-h1-accent { color: var(--brand-blue); }
-.lp-lead {
-  font-size: clamp(13.5px, 1.5vw, 16px); color: var(--ink-3);
-  margin: 12px auto 0; max-width: 54ch; line-height: 1.55;
-}
+.pt[data-shell="landing"] .sub { text-align: center; max-width: 60ch; margin: 0 auto; padding-top: 10px; }
 
 /* Cromo de navegador — sólo en landing. */
 .bf-bar { display: none; }
 .pt[data-shell="landing"] .frame {
   border-radius: 14px; border: 1px solid var(--line-strong); background: #fff;
   box-shadow: 0 30px 80px rgba(16,24,40,.18), 0 8px 24px rgba(16,24,40,.08);
-  overflow: hidden; margin: 0 26px;
+  overflow: hidden; margin: 0 22px;
 }
 .pt[data-shell="landing"] .bf-bar {
-  height: 34px; background: var(--surface-2); border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; gap: 7px; padding: 0 13px;
+  height: 30px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 6px; padding: 0 12px;
 }
-.bf-dot { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
+.bf-dot { width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto; }
 .bf-url {
-  margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: 7px;
-  height: 22px; display: flex; align-items: center; padding: 0 14px;
+  margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: 6px;
+  height: 20px; display: flex; align-items: center; padding: 0 13px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px; color: var(--ink-3); min-width: 240px; justify-content: center;
+  font-size: 10.5px; color: var(--ink-3); min-width: 220px; justify-content: center;
 }
-/* Dentro del marco el lienzo pierde su propio borde y sus esquinas. */
 .pt[data-shell="landing"] .stage { margin: 0; border: none; border-radius: 0; }
-.pt[data-shell="landing"] .m-foot { border-top: none; }
-.pt[data-shell="landing"] .caption { margin: 16px 26px 0; justify-content: center; }
-
-@media (max-width: 640px) {
-  .pt[data-shell="landing"] .frame { margin: 0 16px; }
-  .pt[data-shell="landing"] .caption { margin: 12px 16px 0; }
-  /* El relleno ancho de la aurora dejaba el lienzo 24px más estrecho que en la
-     carcasa de consola y, con proporción fija, 40px más bajo: el acto 5 se
-     recortaba por abajo (medido a 375px). Se iguala al de consola. */
-  .pt[data-shell="landing"] .pt-scrim { padding: 22px 8px 18px; }
-}
+.pt[data-shell="landing"] .m-foot { border-top: none; margin-top: 9px; }
+/* Sobre el fondo claro del hero, --line-strong deja los puntos inactivos casi
+   invisibles: sin contraste no se lee cuántos pasos quedan. */
+.pt[data-shell="landing"] .dot { background: rgba(15,23,41,.18); }
+.pt[data-shell="landing"] .dot:hover { background: rgba(15,23,41,.38); }
+.pt[data-shell="landing"] .dot.on { background: var(--brand-blue); }
 
 /* --- Controles del prototipo (no van al producto) ------------------------ */
 .ctl {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-top: 18px; padding-top: 16px; border-top: 1px dashed rgba(15,23,41,.16);
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+  margin-top: 16px; padding-top: 14px; border-top: 1px dashed rgba(15,23,41,.16);
   font-size: 12.5px; color: var(--ink-3);
 }
 .ctl button {
@@ -510,67 +488,57 @@ code {
 .ctl-note { font-size: 11.5px; color: var(--ink-4); }
 
 @media (max-width: 640px) {
-  .wrap { padding: 26px 14px 56px; }
-  .pt { padding: 14px; border-radius: 14px; }
+  .wrap { padding: 24px 12px 52px; }
+  .pt { padding: 12px; border-radius: 14px; }
   .pt-scrim { padding: 12px 8px; }
-  .m-head { padding: 16px 16px 12px; }
-  .stage { margin: 0 16px; }
-  .caption { margin: 12px 16px 0; }
-  .m-foot { padding: 14px 16px 16px; flex-wrap: wrap; }
-  .m-title { font-size: 18px; }
+  .pt[data-shell="landing"] .pt-scrim { padding: 16px 8px 12px; }
+  .m-head { padding: 14px 14px 0; }
+  .lp-head { padding: 0 14px; }
+  .sub { padding: 6px 14px 10px; }
+  .stage { margin: 0 14px; }
+  .pt[data-shell="landing"] .frame { margin: 0 14px; }
+  .m-foot { padding: 12px 14px 14px; }
+  .m-title { font-size: 17px; }
 }
 
-/* En móvil el mini-menú no cabe: encogerlo deja el contenido ilegible (medido
-   a 375px). Se retira y el lienzo pasa a vertical, que es además la forma real
-   de la consola en móvil — el sidebar allí vive en un cajón, no en columna.
-   El cursor deja de señalar el menú y señala el título de cada pantalla. */
+/* Por debajo de 560px el mini-menú no cabe: encogerlo deja el contenido
+   ilegible. Se retira y el lienzo se hace más alto — que es además la forma
+   real de la consola en móvil, donde el sidebar vive en un cajón. El cursor
+   deja de señalar el menú y señala el título de cada pantalla. */
 @media (max-width: 560px) {
   .side { display: none; }
-  /* Alturas medidas a 375px: el acto 5 necesita 414px de contenido y el 2,
-     390px. Un lienzo 3/4 daba 356px y los recortaba a los dos. */
-  .stage { aspect-ratio: 3 / 5; }
-  .h { font-size: 13.5px; }
-  .hsub { font-size: 11px; }
-  /* En vertical el gauge + composición ya llenan el lienzo; las dos KPI
-     secundarias se recortaban por abajo (medido a 375px). Se retiran en vez
-     de estirar el lienzo, que empujaría el pie fuera de pantalla. */
-  .kpis { display: none; }
-  .hero-v2 { flex-direction: column; align-items: stretch; gap: 12px; }
+  .stage { aspect-ratio: 4 / 5; }
+  .two-col { grid-template-columns: 1fr; gap: 5px; }
+  .hero-v2 { flex-direction: column; align-items: stretch; gap: 9px; }
   .gauge-wrap { align-self: center; }
-  /* La tarjeta de recomendación en fila deja el texto en ~50px y parte el
-     título palabra a palabra (medido a 375px). En vertical el botón baja. */
-  /* En vertical la tarjeta del hero ocupa el lienzo entero, así que cualquier
-     posición del tooltip tapa una de las cuatro señales. Se retira: las
-     propias barras ya son el mensaje del acto. */
-  .tip { display: none; }
-  /* Tres pastillas de motor en fila no caben en 375px; apilarlas costaba
-     28px de más. Van en dos filas. */
+  .kpis { display: none; }
   .engines { flex-wrap: wrap; }
   .eng { flex: 1 1 44%; }
-  .rec { flex-wrap: wrap; padding: 7px 9px; }
-  .rec-body { flex: 1 1 calc(100% - 34px); }
-  /* El cursor sólo se posa sobre el botón de la primera acción; repetirlo en
-     las otras dos desbordaba el lienzo por abajo (medido a 375px). */
-  .rec-cta { margin-left: 34px; margin-top: 7px; }
-  .rec:not([data-rec="0"]) .rec-cta { display: none; }
-  .row-name { width: 40%; }
+  .lnk { display: none; }   /* «Saltar» cede el sitio a Atrás/Siguiente */
+  /* Puntos + Atrás + Siguiente en una sola fila desbordaban el viewport
+     (medido a 375px en la carcasa de landing: 421px). Los puntos bajan. */
+  .m-foot { flex-wrap: wrap; justify-content: flex-end; }
+  .foot-sp { display: none; }
+  .dots { order: 3; width: 100%; justify-content: center; margin-top: 11px; }
+  .btn-nav { padding: 0 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cl.active .mark { animation: none; }
-  .btn.pulse { animation: none; }
+  .spin { animation: none; }
   .ripple.go { animation: none; }
+  .rec { transition: none; }
 }
 </style>
 
 <div class="wrap">
   <header class="pg-head">
     <span class="pg-eyebrow">ONBOARDING-TOUR-1 · Fase 0 · prototipo</span>
-    <h1 class="pg-title">Tour de bienvenida en la consola — 20,0 s</h1>
+    <h1 class="pg-title">Aprende cómo funciona — 7 pasos, 44 s</h1>
     <p class="pg-sub">
-      Lo que vería un usuario nada más entrar en la consola por primera vez, mientras su
-      primer escaneo todavía está corriendo. Cinco actos, un cursor, cero datos inventados
-      que no estén ya aprobados en la landing.
+      El mismo tour en dos carcasas: modal de bienvenida en la consola y hero integrado
+      en la landing. El montaje es corto hasta llegar a la puntuación; a partir de ahí se
+      toma su tiempo, porque el 83% del metraje está en el GeoScore, la tendencia y en
+      generar una recomendación de principio a fin.
     </p>
   </header>
 
@@ -582,34 +550,30 @@ code {
 
   <div class="pt" id="pt" data-shell="console">
     <div class="pt-scrim">
-      <div class="modal" role="dialog" aria-label="Bienvenido a GenScore">
+      <div class="modal" role="dialog" aria-label="Aprende cómo funciona">
 
-        <!-- Carcasa A: modal de bienvenida en la consola -->
+        <!-- Carcasa A: modal de consola -->
         <div class="m-head">
-          <span class="m-eyebrow">Tu primer escaneo está en marcha</span>
-          <h2 class="m-title">Mientras la IA responde, esto es lo que vas a ver</h2>
-          <p class="m-sub">Menos de medio minuto. Puedes saltártelo y volver cuando quieras.</p>
+          <span class="m-eyebrow">Tour de bienvenida</span>
+          <h2 class="m-title">Aprende cómo funciona</h2>
         </div>
 
-        <!-- Carcasa B: hero público. Titular y lead literales de app/page.tsx -->
+        <!-- Carcasa B: hero público. Titular literal de app/page.tsx -->
         <div class="lp-head">
           <h2 class="lp-h1">Que la IA <span class="lp-h1-accent">hable de tu marca</span></h2>
-          <p class="lp-lead">
-            Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y
-            exactamente qué cambiar primero.
-          </p>
         </div>
 
-        <div class="m-body">
-          <div class="frame">
-            <!-- Cromo de navegador: .browserframe / .bf-bar ya existen en
-                 app/globals.css y el log §1 los da por aprobados. Sólo en landing. -->
-            <div class="bf-bar">
-              <span class="bf-dot" style="background:#ff5f57"></span>
-              <span class="bf-dot" style="background:#febc2e"></span>
-              <span class="bf-dot" style="background:#28c840"></span>
-              <span class="bf-url">app.genscore.com</span>
-            </div>
+        <!-- La única línea que cambia: dice qué se está viendo abajo -->
+        <p class="sub" id="sub"></p>
+
+        <div class="frame">
+          <div class="bf-bar">
+            <span class="bf-dot" style="background:#ff5f57"></span>
+            <span class="bf-dot" style="background:#febc2e"></span>
+            <span class="bf-dot" style="background:#28c840"></span>
+            <span class="bf-url">app.genscore.com</span>
+          </div>
+
           <div class="stage" id="stage">
             <!-- Mini-sidebar (refleja components/sidebar.tsx) -->
             <aside class="side">
@@ -618,42 +582,43 @@ code {
               <div class="nav" data-nav="1"><i></i>Visión general</div>
               <div class="nav" data-nav="2"><i></i>Prompts</div>
               <div class="nav" data-nav="3"><i></i>Competidores</div>
-              <div class="nav" data-nav="4"><i></i>Páginas citadas</div>
               <div class="side-label">Actuar</div>
               <div class="nav" data-nav="5"><i></i>Recomendaciones</div>
             </aside>
 
             <div class="main">
 
-              <!-- ============ ACTO 1 — el dominio ============ -->
-              <section class="act" data-act="1" aria-hidden="true">
+              <!-- ============ 1 — dominio, competidores y prompts ============ -->
+              <section class="act" data-act="1">
                 <p class="h">Nuevo dominio</p>
-                <p class="hsub">Paso 1 de 3 · Dominio y mercado</p>
-                <div class="card">
+                <p class="hsub">Dominio y mercado</p>
+                <div class="card fill center">
                   <div class="field" id="a1-field">
                     <span class="field-ico"></span>
                     <span id="a1-typed"></span><span class="caret" id="a1-caret"></span>
                   </div>
-                  <div class="chips">
-                    <span class="chip">🇪🇸 España</span>
-                    <span class="chip" id="a1-chip">Idioma · Castellano</span>
-                  </div>
-                  <div style="display:flex;justify-content:flex-end;margin-top:12px">
-                    <span class="btn" id="a1-btn">Continuar</span>
+                  <div class="two-col">
+                    <div>
+                      <div class="col-l">Competidores</div>
+                      <span class="chip" data-c="0">rival-uno.com</span>
+                      <span class="chip" data-c="1">rival-dos.es</span>
+                      <span class="chip" data-c="2">rival-tres.io</span>
+                    </div>
+                    <div>
+                      <div class="col-l">Prompts</div>
+                      <div class="pline" data-p="0">mejores gafas graduadas online</div>
+                      <div class="pline" data-p="1">alternativas a comprar en óptica</div>
+                      <div class="pline" data-p="2">gafas de sol con receta baratas</div>
+                    </div>
                   </div>
                 </div>
               </section>
 
-              <!-- ============ ACTO 2 — el escaneo ============ -->
-              <section class="act" data-act="2" aria-hidden="true">
+              <!-- ============ 2 — escaneo ============ -->
+              <section class="act" data-act="2">
                 <p class="h">Escaneando miempresa.io</p>
-                <p class="hsub">Lanzando tus prompts en los motores de IA</p>
-                <div class="card">
-                  <div class="checklist">
-                    <div class="cl" data-cl="0"><span class="mark">✓</span>Leyendo el contenido de miempresa.io</div>
-                    <div class="cl" data-cl="1"><span class="mark">✓</span>Buscando competidores relevantes</div>
-                    <div class="cl" data-cl="2"><span class="mark">✓</span>Generando prompts de monitorización</div>
-                  </div>
+                <p class="hsub">30 lanzamientos en tres motores</p>
+                <div class="card fill center">
                   <div class="engines">
                     <div class="eng" data-eng="0"><span class="bulb" style="background:#4285f4"></span>Gemini<span class="tick">✓</span></div>
                     <div class="eng" data-eng="1"><span class="bulb" style="background:#d97757"></span>Claude<span class="tick">✓</span></div>
@@ -664,94 +629,200 @@ code {
                 </div>
               </section>
 
-              <!-- ============ ACTO 3 — visión general ============ -->
-              <section class="act" data-act="3" aria-hidden="true">
+              <!-- ============ 3 — el GeoScore ============ -->
+              <section class="act" data-act="3">
                 <p class="h">Visión general</p>
                 <p class="hsub">Señales reales · último escaneo hoy</p>
-                <div class="card"><div class="hero-v2">
-                  <div class="gauge-wrap" style="width:104px;height:104px">
-                    <svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
-                      <defs>
-                        <linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stop-color="#4f7bff"></stop>
-                          <stop offset="100%" stop-color="#15915a"></stop>
-                        </linearGradient>
-                      </defs>
-                      <path id="g-track" fill="none" stroke="#f6f7f9" stroke-width="11" stroke-linecap="round"></path>
-                      <path id="g-fill" fill="none" stroke="url(#gg)" stroke-width="11" stroke-linecap="round"></path>
-                    </svg>
-                    <div class="gauge-center">
-                      <div>
-                        <div class="gauge-num" id="g-num">0</div>
-                        <div class="gauge-cap">/ 100</div>
+                <div class="card fill center">
+                  <div class="hero-v2">
+                    <div class="gauge-wrap" style="width:92px;height:92px">
+                      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="gg3" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#4f7bff"></stop>
+                            <stop offset="100%" stop-color="#4f46e5"></stop>
+                          </linearGradient>
+                        </defs>
+                        <path id="g3-track" fill="none" stroke="#f6f7f9" stroke-width="10" stroke-linecap="round"></path>
+                        <path id="g3-fill" fill="none" stroke="url(#gg3)" stroke-width="10" stroke-linecap="round"></path>
+                      </svg>
+                      <div class="gauge-center">
+                        <div>
+                          <div class="gauge-num" id="g3-num">0</div>
+                          <div class="gauge-cap">/ 100</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="compose">
+                      <div data-comp="0">
+                        <div class="compose-top"><span class="compose-l">Presencia (mención)</span><span class="compose-v">61%</span></div>
+                        <div class="sov-bar"><i class="sov-fill" style="background:#4f46e5;width:0"></i></div>
+                      </div>
+                      <div data-comp="1">
+                        <div class="compose-top"><span class="compose-l">Prominencia (posición)</span><span class="compose-v">44%</span></div>
+                        <div class="sov-bar"><i class="sov-fill" style="background:#7c3aed;width:0"></i></div>
+                      </div>
+                      <div data-comp="2">
+                        <div class="compose-top"><span class="compose-l">Cuota de voz</span><span class="compose-v">38%</span></div>
+                        <div class="sov-bar"><i class="sov-fill" style="background:#0d9488;width:0"></i></div>
+                      </div>
+                      <div data-comp="3">
+                        <div class="compose-top"><span class="compose-l">Autoridad (citas)</span><span class="compose-v">27%</span></div>
+                        <div class="sov-bar"><i class="sov-fill" style="background:#e54563;width:0"></i></div>
                       </div>
                     </div>
                   </div>
-                  <div class="compose">
-                    <div class="compose-row" data-comp="0">
-                      <div class="compose-top"><span class="compose-l">Presencia (mención)</span><span class="compose-v">92%</span></div>
-                      <div class="sov-bar"><i class="sov-fill" style="background:#4f46e5;width:0"></i></div>
+                  <div class="kpis">
+                    <div class="kpi">
+                      <div class="kpi-l">Tasa de mención</div>
+                      <div class="kpi-v">61<span>%</span></div>
                     </div>
-                    <div class="compose-row" data-comp="1">
-                      <div class="compose-top"><span class="compose-l">Prominencia (posición)</span><span class="compose-v">68%</span></div>
-                      <div class="sov-bar"><i class="sov-fill" style="background:#7c3aed;width:0"></i></div>
+                    <div class="kpi">
+                      <div class="kpi-l">Presión competitiva</div>
+                      <div class="kpi-v">42<span>%</span></div>
                     </div>
-                    <div class="compose-row" data-comp="2">
-                      <div class="compose-top"><span class="compose-l">Cuota de voz</span><span class="compose-v">54%</span></div>
-                      <div class="sov-bar"><i class="sov-fill" style="background:#0d9488;width:0"></i></div>
+                    <div class="kpi">
+                      <div class="kpi-l">Sentimiento</div>
+                      <div class="kpi-v" style="font-size:13px">Neutro</div>
                     </div>
-                    <div class="compose-row" data-comp="3">
-                      <div class="compose-top"><span class="compose-l">Autoridad (citas)</span><span class="compose-v">41%</span></div>
-                      <div class="sov-bar"><i class="sov-fill" style="background:#e54563;width:0"></i></div>
-                    </div>
-                  </div>
-                </div></div>
-                <div class="kpis">
-                  <div class="kpi">
-                    <div class="kpi-l">Tasa de mención</div>
-                    <div class="kpi-v">92<span class="unit">%</span></div>
-                  </div>
-                  <div class="kpi">
-                    <div class="kpi-l">Presión competitiva</div>
-                    <div class="kpi-v">18<span class="unit">%</span> <span class="badge badge-pos">Baja</span></div>
-                  </div>
-                </div>
-                <div class="tip" id="a3-tip">Tu GeoScore resume mención, posición, cuota de voz y citas en un solo número de 0 a 100.</div>
-              </section>
-
-              <!-- ============ ACTO 4 — competidores ============ -->
-              <section class="act" data-act="4" aria-hidden="true">
-                <p class="h">Competidores</p>
-                <p class="hsub">Cuota de voz en respuestas de IA</p>
-                <div class="card">
-                  <div class="rows" id="a4-rows">
-                    <div class="row" data-cmp="a"><span class="row-name">rival-uno.com</span><span class="row-track"><i class="row-fill" style="width:0"></i></span><span class="row-v">41%</span></div>
-                    <div class="row you" data-cmp="you"><span class="row-name">miempresa.io</span><span class="row-track"><i class="row-fill" style="width:0"></i></span><span class="row-v">34%</span></div>
-                    <div class="row" data-cmp="b"><span class="row-name">rival-dos.es</span><span class="row-track"><i class="row-fill" style="width:0"></i></span><span class="row-v">16%</span></div>
-                    <div class="row" data-cmp="c"><span class="row-name">rival-tres.io</span><span class="row-track"><i class="row-fill" style="width:0"></i></span><span class="row-v">9%</span></div>
                   </div>
                 </div>
               </section>
 
-              <!-- ============ ACTO 5 — recomendaciones ============ -->
-              <section class="act" data-act="5" aria-hidden="true">
+              <!-- ============ 4 — la tendencia ============ -->
+              <section class="act" data-act="4">
+                <p class="h">Evolución de tu GeoScore</p>
+                <p class="hsub">Un punto por escaneo</p>
+                <div class="card fill chart-wrap">
+                  <div class="trend-head">
+                    <div>
+                      <div class="trend-v" id="a4-v">48<span>/ 100</span></div>
+                      <div class="trend-l">GeoScore actual</div>
+                    </div>
+                    <span class="badge badge-pos" id="a4-delta">+17 pt en 5 escaneos</span>
+                  </div>
+                  <div class="chart-box">
+                    <svg id="ch4" aria-hidden="true">
+                      <defs>
+                        <linearGradient id="chg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="#2563eb" stop-opacity=".22"></stop>
+                          <stop offset="100%" stop-color="#2563eb" stop-opacity="0"></stop>
+                        </linearGradient>
+                      </defs>
+                      <g id="ch4-grid"></g>
+                      <path id="ch4-area" fill="url(#chg)"></path>
+                      <path id="ch4-line" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                      <circle id="ch4-dot" r="3.6" fill="#2563eb" stroke="#fff" stroke-width="2" opacity="0"></circle>
+                    </svg>
+                  </div>
+                  <div class="chart-foot"><span>hace 5 escaneos</span><span>último</span></div>
+                  <div class="chart-tip" id="ch4-tip">48 · escaneo de hoy</div>
+                </div>
+              </section>
+
+              <!-- ============ 5 — recomendaciones ============ -->
+              <section class="act" data-act="5">
                 <p class="h">Recomendaciones</p>
-                <p class="hsub">Priorizadas por impacto estimado</p>
-                <div class="recs">
+                <p class="hsub">Ordenadas por impacto estimado</p>
+                <div class="recs fill">
                   <div class="rec" data-rec="0">
                     <span class="rec-pri">1</span>
-                    <span class="rec-body"><span class="rec-t">Añade un FAQ a /precios</span><span class="rec-d">4 prompts te citan sin responder a la pregunta</span></span>
-                    <span class="rec-cta" id="a5-cta">Generar solución</span>
+                    <span class="rec-body">
+                      <span class="rec-t">Añade un FAQ a /precios</span>
+                      <span class="rec-d">4 prompts te citan sin responder a la pregunta · <b>+9 pts est.</b></span>
+                    </span>
+                    <span class="rec-cta ghost">Generar</span>
                   </div>
                   <div class="rec" data-rec="1">
                     <span class="rec-pri">2</span>
-                    <span class="rec-body"><span class="rec-t">Marca Organization en schema.org</span><span class="rec-d">Falta en 12 de 14 páginas indexadas</span></span>
-                    <span class="rec-cta">Generar solución</span>
+                    <span class="rec-body">
+                      <span class="rec-t">Marca Organization en schema.org</span>
+                      <span class="rec-d">Falta en 12 de 14 páginas · <b>+6 pts est.</b></span>
+                    </span>
+                    <span class="rec-cta ghost">Generar</span>
                   </div>
                   <div class="rec" data-rec="2">
                     <span class="rec-pri">3</span>
-                    <span class="rec-body"><span class="rec-t">Compara tu producto con rival-uno</span><span class="rec-d">Gana 3 prompts donde tú no apareces</span></span>
-                    <span class="rec-cta">Generar solución</span>
+                    <span class="rec-body">
+                      <span class="rec-t">Compara tu producto con rival-uno</span>
+                      <span class="rec-d">Gana 3 prompts donde tú no apareces · <b>+5 pts est.</b></span>
+                    </span>
+                    <span class="rec-cta ghost">Generar</span>
+                  </div>
+                </div>
+              </section>
+
+              <!-- ============ 6 — generar la solución ============ -->
+              <section class="act" data-act="6">
+                <p class="h">Añade un FAQ a /precios</p>
+                <p class="hsub">Impacto estimado +9 pts · esfuerzo bajo</p>
+                <div class="gen-stack">
+                <div class="rec">
+                  <span class="rec-pri">1</span>
+                  <span class="rec-body">
+                    <span class="rec-t">Añade un FAQ a /precios</span>
+                    <span class="rec-d" id="a6-state">Listo para generar</span>
+                  </span>
+                  <span class="rec-cta" id="a6-btn">Generar solución</span>
+                </div>
+                <div class="gen" id="a6-gen">
+                  <div class="gen-head"><span id="a6-genhead">FAQ generado · listo para pegar</span></div>
+                  <div class="gen-body" id="a6-body">
+                    <div>
+                      <div class="qa-q">¿Cuánto cuestan las gafas graduadas?</div>
+                      <div class="qa-a">Desde 95 € con cristales incluidos. El precio no cambia según la graduación.</div>
+                    </div>
+                    <div>
+                      <div class="qa-q">¿El envío y la devolución son gratis?</div>
+                      <div class="qa-a">Sí, en toda España, con 30 días para devolver sin coste.</div>
+                    </div>
+                  </div>
+                  <div class="gen-foot">
+                    <span class="mini-btn" id="a6-copy">Copiar HTML</span>
+                    <span class="mini-btn primary" id="a6-apply">Marcar como aplicada</span>
+                  </div>
+                </div>
+                </div>
+              </section>
+
+              <!-- ============ 7 — el score sube ============ -->
+              <section class="act" data-act="7">
+                <p class="h">Visión general</p>
+                <p class="hsub">Escaneo posterior a la acción aplicada</p>
+                <div class="card fill center">
+                  <div class="hero-v2">
+                    <div class="gauge-wrap" style="width:92px;height:92px">
+                      <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="gg7" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#4f7bff"></stop>
+                            <stop offset="100%" stop-color="#15915a"></stop>
+                          </linearGradient>
+                        </defs>
+                        <path id="g7-track" fill="none" stroke="#f6f7f9" stroke-width="10" stroke-linecap="round"></path>
+                        <path id="g7-fill" fill="none" stroke="url(#gg7)" stroke-width="10" stroke-linecap="round"></path>
+                      </svg>
+                      <div class="gauge-center">
+                        <div>
+                          <div class="gauge-num" id="g7-num">48</div>
+                          <div class="gauge-cap">/ 100</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="chart-wrap" style="flex:1 1 auto;min-width:0">
+                      <div class="chart-box" style="min-height:76px;height:96px">
+                      <svg id="ch7" aria-hidden="true">
+                        <g id="ch7-grid"></g>
+                        <path id="ch7-area" fill="url(#chg)"></path>
+                        <path id="ch7-line" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        <circle id="ch7-dot" r="3.6" fill="#15915a" stroke="#fff" stroke-width="2" opacity="0"></circle>
+                      </svg>
+                      </div>
+                      <div class="delta-row">
+                        <span class="badge badge-pos" id="a7-delta">+23 pt</span>
+                        <span class="badge badge-mid" id="a7-band">Franja «medio»</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -763,24 +834,14 @@ code {
                     fill="#0f1729" stroke="#ffffff" stroke-width="1.4" stroke-linejoin="round"></path>
             </svg>
           </div>
-
-          </div>
-
-          <div class="caption">
-            <span class="cap-n" id="cap-n">1</span>
-            <span>
-              <span class="cap-t" id="cap-t">Tu dominio ya está dentro</span>
-              <span class="cap-d" id="cap-d">Lo añadiste hace un momento. No hay nada más que configurar.</span>
-            </span>
-          </div>
         </div>
 
         <div class="m-foot">
-          <div class="dots" id="dots" role="tablist" aria-label="Actos del tour"></div>
+          <div class="dots" id="dots" role="tablist" aria-label="Pasos del tour"></div>
           <span class="foot-sp"></span>
-          <button class="lnk only-console" type="button" id="skip">Saltar</button>
-          <button class="btn-lg only-console" type="button" id="done">Ir a mi panel</button>
-          <button class="btn-lg only-landing" type="button" id="cta">Prueba gratis</button>
+          <button class="lnk" type="button" id="skip">Saltar</button>
+          <button class="btn-nav" type="button" id="prev">← Atrás</button>
+          <button class="btn-nav primary" type="button" id="next">Siguiente →</button>
         </div>
 
       </div>
@@ -789,16 +850,16 @@ code {
     <div class="ctl">
       <button type="button" id="play">⏸ Pausa</button>
       <button type="button" id="restart">↻ Repetir</button>
-      <span class="clock" id="clock">0,0 s / 20,0 s</span>
-      <span class="ctl-note">Pincha un punto del pie para congelar el tour en ese acto — es el mismo mecanismo que usaría el piloto para fotografiarlo.</span>
+      <span class="clock" id="clock">0,0 s / 44,0 s</span>
+      <span class="ctl-note">Atrás y Siguiente cambian de paso y se detienen al acabarlo. Los puntos del pie congelan el tour donde el piloto lo fotografiaría.</span>
     </div>
   </div>
 
   <div class="pg-note">
     <span><b>Esto es un prototipo de referencia, no código de producción.</b> Ni un fichero de <code>app/</code>, <code>components/</code> o <code>lib/</code> ha cambiado.</span>
-    <span><b>Toda la animación cuelga de un único reloj.</b> No hay ningún <code>animation-delay</code>: el gauge, las barras, el checklist y el cursor se calculan a partir de <code>t</code>. Por eso se puede rebobinar a cualquier instante y congelar en un acto exacto — sin eso, el piloto fotografiaría un fotograma al azar y su veredicto no valdría nada.</span>
-    <span><b>Tipografías.</b> La CSP del artefacto bloquea los CDN de fuentes, así que aquí se ven con la cara del sistema. En producción llegan Figtree y Bricolage Grotesque por <code>next/font</code>, igual que en el resto de la app.</span>
-    <span><b>Datos.</b> Los números son los mismos que la landing ya tiene aprobados como ilustrativos; el dominio es ficticio a propósito.</span>
+    <span><b>Toda la animación cuelga de un único reloj.</b> No hay ningún <code>animation-delay</code>: el gauge, la gráfica, las barras y el cursor se calculan a partir de <code>t</code>. Por eso Atrás y Siguiente pueden saltar a cualquier paso y el piloto puede congelarlo — sin eso, fotografiaría un fotograma al azar y su veredicto no valdría nada.</span>
+    <span><b>El salto de 48 a 71 es ilustrativo, no una promesa.</b> Lo que el paso 7 enseña es el mecanismo real: cada escaneo recalcula la puntuación, así que lo que aplicas se refleja en el siguiente. El número concreto depende del sitio.</span>
+    <span><b>Tipografías.</b> La CSP del artefacto bloquea los CDN de fuentes, así que aquí se ven con la cara del sistema. En producción llegan Figtree y Bricolage Grotesque por <code>next/font</code>.</span>
   </div>
 </div>
 
@@ -806,86 +867,87 @@ code {
 (function () {
   "use strict";
 
-  var DURATION = 20000;
+  var DURATION = 44000;
 
-  // Los rótulos cambian con la carcasa, y no por adorno: en la consola el
-  // usuario YA ha añadido su dominio y su escaneo YA está corriendo, así que
-  // los actos 1-3 hablan en pasado y presente. En la landing todavía no ha
-  // hecho nada: los mismos actos hablan en futuro. El resto es idéntico.
-  var ACTS = [
-    { n: 1, from: 800,   to: 3500,
-      console: ["Tu dominio ya está dentro",
-                "Lo añadiste hace un momento. No hay nada más que configurar."],
-      landing: ["Empieza por tu dominio",
-                "Nada más. Nosotros buscamos los competidores y escribimos los prompts."] },
-    { n: 2, from: 3500,  to: 8000,
-      console: ["Ahora mismo estamos escaneando",
-                "Tus prompts corren en Gemini, Claude y ChatGPT. Es lo que está pasando mientras lees."],
-      landing: ["Lanzamos tus prompts en varios motores",
-                "Gemini, Claude y ChatGPT en la misma pasada, sin coste extra por motor."] },
-    { n: 3, from: 8000,  to: 12500,
-      console: ["Cuando acabe: tu GeoScore",
-                "Un número de 0 a 100, y las cuatro señales de las que sale."],
-      landing: ["Tu GeoScore, y de qué se compone",
-                "Un número de 0 a 100, y las cuatro señales de las que sale."] },
-    { n: 4, from: 12500, to: 16200,
-      console: ["Frente a quién pierdes",
-                "Cuánta de la conversación es tuya y cuánta de cada competidor."],
-      landing: ["Frente a quién pierdes",
-                "Cuánta de la conversación es tuya y cuánta de cada competidor."] },
-    { n: 5, from: 16200, to: 20000,
-      console: ["Y qué cambiar primero",
-                "Acciones ordenadas por impacto, con la solución generada de un clic."],
-      landing: ["Y exactamente qué cambiar primero",
-                "Acciones ordenadas por impacto, con la solución generada de un clic."] }
+  // Los siete pasos. El montaje (1-2) ocupa 7,3 s de 44; el resto — puntuación,
+  // tendencia y generar una recomendación de principio a fin — se lleva el 83%
+  // del metraje, que es donde está el producto.
+  var STEPS = [
+    { n: 1, from: 700,   to: 4700,
+      console: "Pones tu dominio y <b>la IA propone</b> a quién vigilar y qué preguntas lanzar. No hay nada más que configurar.",
+      landing: "Pones tu dominio y <b>la IA propone</b> a quién vigilar y qué preguntas lanzar. No hay nada más que configurar." },
+    { n: 2, from: 4700,  to: 8000,
+      console: "Esas preguntas se lanzan en <b>Gemini, Claude y ChatGPT</b> a la vez. Es lo que está pasando ahora mismo con tu dominio.",
+      landing: "Esas preguntas se lanzan en <b>Gemini, Claude y ChatGPT</b> a la vez, sin coste extra por motor." },
+    { n: 3, from: 8000,  to: 15000,
+      console: "De ahí sale tu <b>GeoScore</b>: un número de 0 a 100 y las cuatro señales que lo forman — cuánto te mencionan, en qué posición, qué parte de la conversación es tuya y cuántas veces te citan como fuente.",
+      landing: "De ahí sale tu <b>GeoScore</b>: un número de 0 a 100 y las cuatro señales que lo forman — cuánto te mencionan, en qué posición, qué parte de la conversación es tuya y cuántas veces te citan como fuente." },
+    { n: 4, from: 15000, to: 21000,
+      console: "Cada escaneo añade un punto a la curva, así que <b>ves si mejoras o retrocedes</b> en vez de quedarte con una foto suelta.",
+      landing: "Cada escaneo añade un punto a la curva, así que <b>ves si mejoras o retrocedes</b> en vez de quedarte con una foto suelta." },
+    { n: 5, from: 21000, to: 26500,
+      console: "El número solo no sirve. Cada hueco se convierte en una <b>acción concreta</b>, ordenada por lo que estimamos que va a subirte.",
+      landing: "El número solo no sirve. Cada hueco se convierte en una <b>acción concreta</b>, ordenada por lo que estimamos que va a subirte." },
+    { n: 6, from: 26500, to: 36000,
+      console: "Y no te dejamos con la tarea: pulsas <b>Generar</b> y sale el contenido escrito, listo para pegar en tu web.",
+      landing: "Y no te dejamos con la tarea: pulsas <b>Generar</b> y sale el contenido escrito, listo para pegar en tu web." },
+    { n: 7, from: 36000, to: 44000,
+      console: "El siguiente escaneo <b>recalcula tu puntuación</b> con eso ya publicado. Ese es el bucle entero: medir, actuar, volver a medir.",
+      landing: "El siguiente escaneo <b>recalcula tu puntuación</b> con eso ya publicado. Ese es el bucle entero: medir, actuar, volver a medir." }
   ];
 
-  // Waypoints del cursor. `sel` resuelve el centro del elemento en tiempo real,
-  // así que las coordenadas siguen siendo correctas a cualquier ancho.
+  // Waypoints del cursor. `sel` resuelve el centro real del elemento en cada
+  // fotograma, así que sigue siendo correcto a cualquier ancho. `mob` es la
+  // alternativa donde el mini-menú no existe.
   var PATH = [
     { t: 0,     xy: [112, 118] },
-    { t: 1100,  sel: "#a1-field", off: [-20, 0] },
-    { t: 2300,  sel: "#a1-field", off: [-20, 0] },
-    { t: 2750,  sel: "#a1-btn" },
-    { t: 3450,  sel: "#a1-btn" },
-    { t: 4300,  xy: [90, 14] },
-    { t: 7900,  xy: [90, 16] },
-    { t: 8800,  sel: "#g-num", off: [10, 6] },
-    { t: 12100, sel: "#g-num", off: [10, 6] },
-    { t: 12700, sel: '[data-nav="3"]', mob: '[data-act="4"] .h' },
-    { t: 15900, sel: '[data-nav="3"]', mob: '[data-act="4"] .h' },
-    { t: 16350, sel: '[data-nav="5"]', mob: '[data-act="5"] .h' },
-    { t: 18300, sel: "#a5-cta" },
-    { t: 20000, sel: "#a5-cta" }
+    { t: 1000,  sel: "#a1-field", off: [-20, 0] },
+    { t: 2100,  sel: "#a1-field", off: [-20, 0] },
+    { t: 2600,  xy: [92, 12] },
+    { t: 8300,  xy: [92, 14] },
+    { t: 9000,  sel: "#g3-num", off: [12, 8] },
+    { t: 14200, sel: "#g3-num", off: [12, 8] },
+    { t: 16400, sel: "#ch4-dot" },
+    { t: 20400, sel: "#ch4-dot" },
+    { t: 21200, sel: '[data-nav="5"]', mob: '[data-act="5"] .h' },
+    { t: 23000, sel: '[data-nav="5"]', mob: '[data-act="5"] .h' },
+    { t: 24200, sel: '[data-rec="0"] .rec-cta' },
+    { t: 26900, sel: '[data-rec="0"] .rec-cta' },
+    { t: 27600, sel: "#a6-btn" },
+    { t: 31500, sel: "#a6-btn" },
+    { t: 33200, sel: "#a6-apply" },
+    { t: 35400, sel: "#a6-apply" },
+    { t: 36600, sel: "#g7-num", off: [14, 10] },
+    { t: 44000, sel: "#g7-num", off: [14, 10] }
   ];
 
-  var CLICKS = [2300, 3450, 13000, 16700];
+  var CLICKS = [2100, 21600, 28000, 33600];
 
   var stage   = document.getElementById("stage");
+  var pt      = document.getElementById("pt");
   var cursor  = document.getElementById("cursor");
   var ripple  = document.getElementById("ripple");
-  var capN    = document.getElementById("cap-n");
-  var capT    = document.getElementById("cap-t");
-  var capD    = document.getElementById("cap-d");
+  var subEl   = document.getElementById("sub");
   var clock   = document.getElementById("clock");
   var dotsBox = document.getElementById("dots");
   var playBtn = document.getElementById("play");
+  var prevBtn = document.getElementById("prev");
+  var nextBtn = document.getElementById("next");
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var pt = document.getElementById("pt");
   function shell() { return pt.getAttribute("data-shell"); }
+  function $(sel) { return document.querySelector(sel); }
 
   // ---- utilidades --------------------------------------------------------
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
   function ease(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
-  // Progreso de `t` dentro de la ventana [a,b], suavizado.
   function seg(t, a, b) { return ease(clamp01((t - a) / (b - a))); }
   function lin(t, a, b) { return clamp01((t - a) / (b - a)); }
 
   function pointAt(wp) {
     var sel = wp.sel;
     // Un elemento con `display:none` mide 0x0: apuntar ahí dejaría el cursor
-    // clavado en la esquina. Por eso cada waypoint del menú lleva alternativa.
+    // clavado en la esquina. Por eso los waypoints del menú llevan alternativa.
     if (sel && wp.mob) {
       var probe = stage.querySelector(sel);
       if (!probe || probe.getBoundingClientRect().width === 0) sel = wp.mob;
@@ -894,163 +956,256 @@ code {
       var el = stage.querySelector(sel);
       if (el) {
         var r = el.getBoundingClientRect();
-        var s = stage.getBoundingClientRect();
-        var off = wp.off || [0, 0];
-        return [
-          ((r.left + r.width / 2 - s.left) / s.width) * 100 + off[0] / s.width * 100,
-          ((r.top + r.height / 2 - s.top) / s.height) * 100 + off[1] / s.height * 100
-        ];
+        if (r.width > 0) {
+          var s = stage.getBoundingClientRect();
+          var off = wp.off || [0, 0];
+          return [
+            ((r.left + r.width / 2 - s.left) / s.width) * 100 + off[0] / s.width * 100,
+            ((r.top + r.height / 2 - s.top) / s.height) * 100 + off[1] / s.height * 100
+          ];
+        }
       }
     }
     return wp.xy || [50, 50];
   }
 
-  // ---- construcción de los puntos del pie --------------------------------
-  ACTS.forEach(function (a) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "dot";
-    b.setAttribute("role", "tab");
-    b.setAttribute("aria-label", "Acto " + a.n);
-    b.addEventListener("click", function () {
-      pause();
-      // +1800 ms, no +100: congelar al principio del acto captura sus barras a
-      // cero y da una foto que no representa el acto. El piloto tendrá el
-      // mismo problema, así que el punto de congelación es parte del diseño.
-      seek(a.from + 1800);
+  // ---- el gauge: arco de 270° desde 135°, idéntico al componente Gauge ----
+  function makeArc(size, stroke) {
+    var R = (size - stroke) / 2, C = size / 2;
+    function polar(deg) {
+      var rad = ((deg - 90) * Math.PI) / 180;
+      return [C + R * Math.cos(rad), C + R * Math.sin(rad)];
+    }
+    return function (from, to) {
+      var p1 = polar(from), p2 = polar(to);
+      return "M " + p1[0].toFixed(2) + " " + p1[1].toFixed(2) +
+             " A " + R.toFixed(2) + " " + R.toFixed(2) + " 0 " + (to - from > 180 ? 1 : 0) + " 1 " +
+             p2[0].toFixed(2) + " " + p2[1].toFixed(2);
+    };
+  }
+  var arc92 = makeArc(92, 10);
+  $("#g3-track").setAttribute("d", arc92(135, 405));
+  $("#g7-track").setAttribute("d", arc92(135, 405));
+  function setGauge(id, frac) {
+    var el = $(id);
+    if (frac <= 0.005) { el.setAttribute("d", ""); return; }
+    el.setAttribute("d", arc92(135, 135 + 270 * frac));
+  }
+
+  // ---- la gráfica de tendencia -------------------------------------------
+  // Seis escaneos hasta 48, y un séptimo a 71 que sólo aparece en el paso 7.
+  var TREND = [31, 34, 33, 39, 43, 48];
+  var TREND_AFTER = TREND.concat([71]);
+
+  function drawChart(prefix, series, progress, showDot) {
+    var svg = $("#" + prefix);
+    var box = svg.getBoundingClientRect();
+    var w = box.width, h = box.height;
+    if (!w || !h) return null;
+    var padY = 9;
+    // Escala ajustada a la serie, no fija: con 20-80 los seis primeros
+    // escaneos (31→48) ocupaban un cuarto de la altura y la mejora no se leía.
+    var lo = Math.min.apply(null, series), hi = Math.max.apply(null, series);
+    var pad = Math.max(6, (hi - lo) * 0.28);
+    var min = lo - pad, max = hi + pad;
+    var pts = series.map(function (v, i) {
+      return [
+        (i / (series.length - 1)) * (w - 8) + 4,
+        h - padY - ((v - min) / (max - min)) * (h - padY * 2)
+      ];
     });
+
+    var grid = "";
+    for (var g = 0; g <= 2; g++) {
+      var y = padY + (g / 2) * (h - padY * 2);
+      grid += '<line x1="0" y1="' + y.toFixed(1) + '" x2="' + w + '" y2="' + y.toFixed(1) +
+              '" stroke="#eef0f4" stroke-width="1"/>';
+    }
+    $("#" + prefix + "-grid").innerHTML = grid;
+
+    var line = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    var lineEl = $("#" + prefix + "-line");
+    lineEl.setAttribute("d", line);
+    $("#" + prefix + "-area").setAttribute("d",
+      line + " L" + pts[pts.length - 1][0].toFixed(1) + " " + h + " L" + pts[0][0].toFixed(1) + " " + h + " Z");
+
+    // El trazo se dibuja progresivamente; el área lo acompaña en opacidad.
+    var L = lineEl.getTotalLength();
+    lineEl.style.strokeDasharray = L;
+    lineEl.style.strokeDashoffset = L * (1 - progress);
+    $("#" + prefix + "-area").style.opacity = progress;
+
+    var lastPt = pts[pts.length - 1];
+    var dot = $("#" + prefix + "-dot");
+    dot.setAttribute("cx", lastPt[0].toFixed(1));
+    dot.setAttribute("cy", lastPt[1].toFixed(1));
+    dot.setAttribute("opacity", showDot ? 1 : 0);
+    return { x: lastPt[0], y: lastPt[1] };
+  }
+
+  // ---- puntos del pie ----------------------------------------------------
+  STEPS.forEach(function (s, i) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "dot"; b.setAttribute("role", "tab");
+    b.setAttribute("aria-label", "Paso " + s.n + " de " + STEPS.length);
+    b.addEventListener("click", function () { freezeAt(i); });
     dotsBox.appendChild(b);
   });
   var dots = Array.prototype.slice.call(dotsBox.children);
 
   // ---- estado ------------------------------------------------------------
-  var t = 0, last = null, playing = !reduced, raf = null;
+  var t = 0, last = null, playing = !reduced, holdAt = null;
+
+  function stepIndex(time) {
+    var idx = 0;
+    for (var i = 0; i < STEPS.length; i++) if (time >= STEPS[i].from) idx = i;
+    return idx;
+  }
 
   function render(t) {
-    var actIdx = 0;
-    for (var i = 0; i < ACTS.length; i++) if (t >= ACTS[i].from) actIdx = i;
-    var act = ACTS[actIdx];
+    var idx = stepIndex(t), step = STEPS[idx];
 
-    // pantallas
-    for (var k = 0; k < ACTS.length; k++) {
-      var el = stage.querySelector('[data-act="' + ACTS[k].n + '"]');
-      var on = k === actIdx;
-      el.classList.toggle("on", on);
-      el.setAttribute("aria-hidden", on ? "false" : "true");
+    for (var k = 0; k < STEPS.length; k++) {
+      stage.querySelector('[data-act="' + STEPS[k].n + '"]').classList.toggle("on", k === idx);
     }
 
-    // sidebar activo: 1 en actos 1-3, Competidores en el 4, Recomendaciones en el 5
-    var navOn = act.n === 1 ? 0 : act.n === 4 ? 3 : act.n === 5 ? 5 : 1;
-    for (var n = 1; n <= 5; n++) {
+    // El menú: el paso 1 no resalta nada («Nuevo dominio» no es una entrada).
+    var navOn = step.n === 1 ? 0 : (step.n === 5 || step.n === 6) ? 5 : 1;
+    [1, 2, 3, 5].forEach(function (n) {
       var nv = stage.querySelector('[data-nav="' + n + '"]');
       if (nv) nv.classList.toggle("on", n === navOn);
-    }
-
-    // pie
-    var copy = act[shell()] || act.console;
-    capN.textContent = String(act.n);
-    capT.textContent = copy[0];
-    capD.textContent = copy[1];
-    dots.forEach(function (d, i) {
-      d.classList.toggle("on", i === actIdx);
-      d.setAttribute("aria-selected", i === actIdx ? "true" : "false");
     });
 
-    // ---------- ACTO 1: tecleo del dominio ----------
-    var DOMAIN = "miempresa.io";
-    var typed = Math.round(lin(t, 1250, 2250) * DOMAIN.length);
-    document.getElementById("a1-typed").textContent = DOMAIN.slice(0, typed);
-    document.getElementById("a1-field").classList.toggle("focus", t > 1150 && t < 3300);
-    document.getElementById("a1-caret").style.opacity =
-      (t > 1150 && t < 3300 && Math.floor(t / 500) % 2 === 0) ? "1" : "0";
-    document.getElementById("a1-chip").classList.toggle("done", t > 2500);
-    document.getElementById("a1-btn").classList.toggle("press", t > 3400 && t < 3560);
+    subEl.innerHTML = step[shell()] || step.console;
+    dots.forEach(function (d, i) {
+      d.classList.toggle("on", i === idx);
+      d.setAttribute("aria-selected", i === idx ? "true" : "false");
+    });
+    prevBtn.disabled = idx === 0;
+    nextBtn.textContent = idx === STEPS.length - 1
+      ? (shell() === "landing" ? "Prueba gratis" : "Ir a mi panel")
+      : "Siguiente →";
 
-    // ---------- ACTO 2: escaneo ----------
-    var clAt = [3900, 4900, 5900];
+    // ---------- 1 — dominio, competidores y prompts ----------
+    var DOMAIN = "miempresa.io";
+    var typed = Math.round(lin(t, 1000, 2050) * DOMAIN.length);
+    $("#a1-typed").textContent = DOMAIN.slice(0, typed);
+    $("#a1-field").classList.toggle("focus", t > 950 && t < 2600);
+    $("#a1-caret").style.opacity = (t > 950 && t < 2600 && Math.floor(t / 480) % 2 === 0) ? "1" : "0";
     for (var c = 0; c < 3; c++) {
-      var cl = stage.querySelector('[data-cl="' + c + '"]');
-      cl.classList.toggle("active", t >= clAt[c] && t < clAt[c] + 900);
-      cl.classList.toggle("done", t >= clAt[c] + 900);
+      var pc = seg(t, 2300 + c * 200, 3000 + c * 200);
+      var ce = stage.querySelector('[data-c="' + c + '"]');
+      ce.style.opacity = pc; ce.style.transform = "translateY(" + ((1 - pc) * 4).toFixed(1) + "px)";
+      var pp = seg(t, 2900 + c * 220, 3600 + c * 220);
+      var pe = stage.querySelector('[data-p="' + c + '"]');
+      pe.style.opacity = pp; pe.style.transform = "translateY(" + ((1 - pp) * 4).toFixed(1) + "px)";
     }
-    var engAt = [6300, 6900, 7400];
+
+    // ---------- 2 — escaneo ----------
+    var engAt = [5900, 6600, 7300];
     for (var e = 0; e < 3; e++) {
       stage.querySelector('[data-eng="' + e + '"]').classList.toggle("done", t >= engAt[e]);
     }
-    var p2 = lin(t, 3800, 7800);
-    document.getElementById("a2-bar").style.width = (p2 * 100).toFixed(1) + "%";
-    document.getElementById("a2-num").textContent = Math.round(p2 * 30) + " / 30";
+    var p2 = lin(t, 4900, 7700);
+    $("#a2-bar").style.width = (p2 * 100).toFixed(1) + "%";
+    $("#a2-num").textContent = Math.round(p2 * 30) + " / 30";
 
-    // ---------- ACTO 3: gauge + composición ----------
-    var score = Math.round(seg(t, 8200, 9800) * 78);
-    document.getElementById("g-num").textContent = String(score);
-    setArc(score / 100);
-    var comps = [92, 68, 54, 41];
+    // ---------- 3 — el GeoScore ----------
+    var score3 = Math.round(seg(t, 8200, 10400) * 48);
+    $("#g3-num").textContent = String(score3);
+    setGauge("#g3-fill", score3 / 100);
+    var comps = [61, 44, 38, 27];
     for (var m = 0; m < 4; m++) {
-      var w = seg(t, 8700 + m * 260, 9700 + m * 260) * comps[m];
-      stage.querySelector('[data-comp="' + m + '"] .sov-fill').style.width = w.toFixed(1) + "%";
+      var w3 = seg(t, 9400 + m * 300, 10600 + m * 300) * comps[m];
+      stage.querySelector('[data-comp="' + m + '"] .sov-fill').style.width = w3.toFixed(1) + "%";
     }
-    document.getElementById("a3-tip").classList.toggle("on", t > 9900 && t < 12100);
 
-    // ---------- ACTO 4: cuota de voz ----------
-    // Las filas se pintan ya ordenadas, igual que la pantalla real: animar una
-    // reordenación sería enseñar un comportamiento que el producto no tiene.
-    // Sólo crecen las barras, escalonadas de mayor a menor.
-    var cmps = [["a", 41], ["you", 34], ["b", 16], ["c", 9]];
-    cmps.forEach(function (pair, idx) {
-      var w = seg(t, 12800 + idx * 220, 13900 + idx * 220) * (pair[1] / 41) * 100;
-      stage.querySelector('[data-cmp="' + pair[0] + '"] .row-fill').style.width = w.toFixed(1) + "%";
-    });
+    // ---------- 4 — la tendencia ----------
+    var p4 = seg(t, 15300, 18300);
+    var geo4 = drawChart("ch4", TREND, p4, t > 18100);
+    $("#a4-v").innerHTML = Math.round(31 + p4 * 17) + "<span>/ 100</span>";
+    $("#a4-delta").textContent = "+" + Math.round(p4 * 17) + " pt en 5 escaneos";
+    $("#a4-delta").style.opacity = p4 > 0.08 ? 1 : 0;
+    var tip4 = $("#ch4-tip");
+    if (geo4) {
+      // El último punto está pegado al borde derecho: sin limitar, el globo
+      // se sale del lienzo (medido: 350px frente a 327px de lienzo).
+      var half = tip4.offsetWidth / 2;
+      var wrapW = tip4.parentNode.getBoundingClientRect().width;
+      tip4.style.left = Math.max(half + 2, Math.min(geo4.x, wrapW - half - 2)) + "px";
+      tip4.style.top = Math.max(22, geo4.y) + "px";
+    }
+    tip4.classList.toggle("on", t > 18600 && t < 20600);
 
-    // ---------- ACTO 5: recomendaciones ----------
+    // ---------- 5 — recomendaciones ----------
+    var zoom = t > 23600 && t < 26500;
     for (var r = 0; r < 3; r++) {
       var rec = stage.querySelector('[data-rec="' + r + '"]');
-      var pr = seg(t, 16500 + r * 320, 17200 + r * 320);
-      rec.style.opacity = pr;
-      rec.style.transform = "translateY(" + ((1 - pr) * 10).toFixed(1) + "px)";
+      rec.classList.toggle("focus", zoom && r === 0);
+      rec.classList.toggle("dim", zoom && r !== 0);
+      if (zoom) {
+        rec.style.opacity = ""; rec.style.transform = "";
+      } else {
+        var pr = seg(t, 21200 + r * 260, 21900 + r * 260);
+        rec.style.opacity = pr;
+        rec.style.transform = "translateY(" + ((1 - pr) * 8).toFixed(1) + "px)";
+      }
     }
-    document.getElementById("a5-cta").classList.toggle("pulse", t > 18500 && !reduced);
+
+    // ---------- 6 — generar la solución ----------
+    var btn6 = $("#a6-btn"), gen6 = $("#a6-gen"), apply6 = $("#a6-apply");
+    var generating = t >= 28000 && t < 30600;
+    var generated = t >= 30600;
+    btn6.classList.toggle("press", t >= 27950 && t < 28150);
+    btn6.classList.toggle("busy", generating);
+    btn6.innerHTML = generating ? '<span class="spin"></span>Generando…'
+      : generated ? "✓ Generado" : "Generar solución";
+    $("#a6-state").textContent = generating ? "Escribiendo el contenido con IA…"
+      : generated ? "Contenido listo" : "Listo para generar";
+
+    // El bloque aparece cuando hay algo que enseñar, no antes.
+    var vis6 = t < 28000 ? 0 : generating ? 0.35 : seg(t, 30600, 31600);
+    gen6.style.opacity = vis6;
+    gen6.style.transform = "translateY(" + ((1 - vis6) * 6).toFixed(1) + "px)";
+    $("#a6-genhead").textContent = generating ? "Generando…" : "FAQ generado · listo para pegar";
+    $("#a6-body").style.filter = generating ? "blur(3px)" : "none";
+
+    apply6.classList.toggle("press", t >= 33550 && t < 33750);
+    var applied = t >= 33750;
+    apply6.classList.toggle("done", applied);
+    apply6.classList.toggle("primary", !applied);
+    apply6.textContent = applied ? "✓ Aplicada" : "Marcar como aplicada";
+
+    // ---------- 7 — el score sube ----------
+    var pg7 = seg(t, 36600, 39600);
+    var score7 = Math.round(48 + pg7 * 23);
+    $("#g7-num").textContent = String(score7);
+    setGauge("#g7-fill", score7 / 100);
+    drawChart("ch7", TREND_AFTER, seg(t, 36600, 39600), t > 39400);
+    var d7 = $("#a7-delta");
+    d7.textContent = "+" + Math.round(pg7 * 23) + " pt";
+    d7.style.opacity = pg7 > 0.05 ? 1 : 0;
+    var band = $("#a7-band");
+    band.textContent = score7 >= 70 ? "Franja «competitivo»" : "Franja «medio»";
+    band.className = "badge " + (score7 >= 70 ? "badge-pos" : "badge-mid");
 
     // ---------- cursor ----------
     var a = PATH[0], b = PATH[PATH.length - 1];
     for (var w2 = 0; w2 < PATH.length - 1; w2++) {
       if (t >= PATH[w2].t && t <= PATH[w2 + 1].t) { a = PATH[w2]; b = PATH[w2 + 1]; break; }
-      if (t > PATH[PATH.length - 1].t) { a = b = PATH[PATH.length - 1]; }
     }
+    if (t > PATH[PATH.length - 1].t) { a = b = PATH[PATH.length - 1]; }
     var pa = pointAt(a), pb = pointAt(b);
     var pr2 = a === b ? 1 : ease(clamp01((t - a.t) / (b.t - a.t)));
     var cx = pa[0] + (pb[0] - pa[0]) * pr2;
     var cy = pa[1] + (pb[1] - pa[1]) * pr2;
-    cursor.style.left = cx + "%";
-    cursor.style.top = cy + "%";
-    ripple.style.left = cx + "%";
-    ripple.style.top = cy + "%";
+    cursor.style.left = cx + "%"; cursor.style.top = cy + "%";
+    ripple.style.left = cx + "%"; ripple.style.top = cy + "%";
 
-    clock.textContent = (t / 1000).toFixed(1).replace(".", ",") + " s / 20,0 s";
+    clock.textContent = (t / 1000).toFixed(1).replace(".", ",") + " s / 44,0 s";
   }
 
-  // Arco de 270° empezando en 135°, idéntico al componente Gauge del producto.
-  var SIZE = 104, STROKE = 11, R = (SIZE - STROKE) / 2, C = SIZE / 2;
-  function polar(deg) {
-    var rad = ((deg - 90) * Math.PI) / 180;
-    return [C + R * Math.cos(rad), C + R * Math.sin(rad)];
-  }
-  function arc(from, to) {
-    var p1 = polar(from), p2 = polar(to);
-    var large = to - from > 180 ? 1 : 0;
-    return "M " + p1[0].toFixed(2) + " " + p1[1].toFixed(2) +
-           " A " + R.toFixed(2) + " " + R.toFixed(2) + " 0 " + large + " 1 " +
-           p2[0].toFixed(2) + " " + p2[1].toFixed(2);
-  }
-  document.getElementById("g-track").setAttribute("d", arc(135, 405));
-  function setArc(frac) {
-    var el = document.getElementById("g-fill");
-    if (frac <= 0.005) { el.setAttribute("d", ""); return; }
-    el.setAttribute("d", arc(135, 135 + 270 * frac));
-  }
-
-  // ---- disparo de los clics ----------------------------------------------
-  var firedUpTo = -1;
+  // ---- clics -------------------------------------------------------------
   function fireClicks(prev, now) {
     CLICKS.forEach(function (ct) {
       if (prev < ct && now >= ct && !reduced) {
@@ -1059,28 +1214,51 @@ code {
         ripple.classList.add("go");
       }
     });
-    firedUpTo = now;
   }
 
   // ---- bucle -------------------------------------------------------------
   function frame(now) {
     if (last === null) last = now;
-    var dt = now - last;
-    last = now;
+    var dt = now - last; last = now;
     if (playing) {
       var prev = t;
       t += dt;
+      // Navegación manual: se detiene al terminar el paso al que se saltó.
+      if (holdAt !== null && t >= holdAt) { t = holdAt; playing = false; holdAt = null; syncPlayBtn(); }
       if (t >= DURATION) { t = DURATION; playing = false; syncPlayBtn(); }
       fireClicks(prev, t);
     }
     render(t);
-    raf = requestAnimationFrame(frame);
+    requestAnimationFrame(frame);
   }
 
-  function pause() { playing = false; syncPlayBtn(); }
-  function resume() { if (t >= DURATION) t = 0; playing = true; syncPlayBtn(); }
+  function pause() { playing = false; holdAt = null; syncPlayBtn(); }
+  function resume() { if (t >= DURATION) t = 0; playing = true; holdAt = null; syncPlayBtn(); }
   function seek(ms) { t = Math.max(0, Math.min(DURATION, ms)); render(t); }
   function syncPlayBtn() { playBtn.textContent = playing ? "⏸ Pausa" : "▶ Reanudar"; }
+
+  // Reproduce un paso de principio a fin y se detiene ahí.
+  function goToStep(i) {
+    i = Math.max(0, Math.min(STEPS.length - 1, i));
+    t = STEPS[i].from;
+    holdAt = STEPS[i].to - 40;
+    playing = !reduced;
+    syncPlayBtn(); render(t);
+  }
+  // Congela un paso donde su animación ya se ha desarrollado — congelar en el
+  // arranque captura las barras a cero y da una foto que no representa nada.
+  function freezeAt(i) {
+    var s = STEPS[i];
+    playing = false; holdAt = null; syncPlayBtn();
+    seek(Math.min(s.from + 3200, s.to - 200));
+  }
+
+  prevBtn.addEventListener("click", function () { goToStep(stepIndex(t) - 1); });
+  nextBtn.addEventListener("click", function () {
+    var i = stepIndex(t);
+    if (i === STEPS.length - 1) { pause(); seek(DURATION); return; }
+    goToStep(i + 1);
+  });
 
   Array.prototype.forEach.call(document.querySelectorAll(".ss-btn"), function (btn) {
     btn.addEventListener("click", function () {
@@ -1090,32 +1268,30 @@ code {
         o.classList.toggle("on", on);
         o.setAttribute("aria-pressed", on ? "true" : "false");
       });
-      t = 0; playing = !reduced; syncPlayBtn();   // se reinicia: los rótulos cambian
-      render(t);
+      t = 0; holdAt = null; playing = !reduced; syncPlayBtn(); render(t);
     });
   });
 
   playBtn.addEventListener("click", function () { playing ? pause() : resume(); });
-  document.getElementById("restart").addEventListener("click", function () { t = 0; playing = true; syncPlayBtn(); });
+  document.getElementById("restart").addEventListener("click", function () {
+    t = 0; holdAt = null; playing = true; syncPlayBtn();
+  });
   document.getElementById("skip").addEventListener("click", function () { pause(); seek(DURATION); });
-  document.getElementById("done").addEventListener("click", function () { pause(); seek(DURATION); });
-  document.getElementById("cta").addEventListener("click", function () { pause(); seek(DURATION); });
 
-  // Se para al salir del viewport: una animación en bucle fuera de pantalla es
-  // consumo de CPU a cambio de nada.
+  // Se para al salir del viewport: una animación fuera de pantalla es consumo
+  // de CPU a cambio de nada.
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (!en.isIntersecting) pause(); });
     }, { threshold: 0.25 }).observe(stage);
   }
 
-  if (reduced) {
-    // Sin movimiento: se muestra el fotograma final y ya.
-    t = DURATION;
-    playing = false;
-  }
+  // Las gráficas se miden del DOM: hay que redibujarlas al cambiar de tamaño.
+  window.addEventListener("resize", function () { render(t); });
+
+  if (reduced) { t = DURATION; playing = false; }
   syncPlayBtn();
   render(t);
-  raf = requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
 })();
 </script>
