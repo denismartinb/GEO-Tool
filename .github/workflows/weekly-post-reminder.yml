@@ -1,0 +1,137 @@
+name: Weekly Post Reminder
+
+# GROWTH-3 Fase A3 — el recordatorio semanal, y el detector de silencio.
+#
+# POR QUÉ EXISTE, dicho sin adornos. La rutina de claude.ai que debía escribir
+# el artículo cada lunes se disparó tres veces el 2026-08-04 y produjo cero. La
+# causa se encontró al día siguiente con una rutina de diagnóstico: las sesiones
+# disparadas arrancan SIN el repositorio clonado (`/home/user` vacío), así que
+# no tenían dónde trabajar. Adjuntar el repo a una rutina no se puede hacer por
+# API — sólo desde la interfaz de claude.ai. El fundador prefirió, el
+# 2026-08-05, una solución que viviera en GitHub antes que depender de esa
+# interfaz.
+#
+# LO QUE ESTE WORKFLOW NO HACE, y hay que decirlo cada vez que se lea: **no
+# escribe el artículo**. GitHub Actions no puede: `CLAUDE.md` declara superseded
+# la vía de llamar a la API de Anthropic desde CI, y no se reintroduce por la
+# puerta de atrás. Esto convierte "se me olvidó" en un email, no en prosa.
+# Escribir sigue necesitando una sesión de agente.
+#
+# HACE DOS COSAS QUE ANTES NO HACÍA NADIE:
+#
+#   1. **Recuerda.** Cada lunes abre una incidencia con el siguiente tema
+#      pendiente de la cola, ya leído del calendario, para que quien se ponga
+#      no tenga que decidir nada.
+#
+#   2. **Detecta el silencio.** Si esa semana YA hay una rama
+#      `claude/weekly-post/**` reciente, se calla. Ese es el punto: el fallo del
+#      2026-08-04 no fue que algo se rompiera ruidosamente, fue que no pasó nada
+#      y nadie se enteró en 16 horas. Un fallo silencioso pasa a ser un email.
+#
+# ES IDEMPOTENTE. Si ya hay una incidencia abierta con la etiqueta del
+# recordatorio, no abre otra. Un recordatorio que se duplica cada semana se
+# convierte en ruido, y el ruido se ignora — que es exactamente el fallo que
+# esto viene a evitar.
+
+on:
+  schedule:
+    # Lunes 07:00 UTC (09:00 en España con el horario de verano vigente).
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: weekly-post-reminder
+  cancel-in-progress: false
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Remind — unless the week's article already exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          # --- 1. ¿Ya hay artículo esta semana? -------------------------------
+          # Se mira la rama, no el PR: la rama es lo primero que existe, y si
+          # alguien empujó y el PR falló, el trabajo está hecho igualmente y no
+          # queremos molestar.
+          since="$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)"
+          recent="$(gh api "repos/${GITHUB_REPOSITORY}/branches?per_page=100" \
+            --jq '[.[] | select(.name | startswith("claude/weekly-post/"))] | length')"
+
+          if [ "${recent:-0}" -gt 0 ]; then
+            echo "Ya existe al menos una rama claude/weekly-post/** — alguien está en ello. Silencio."
+            exit 0
+          fi
+
+          # --- 2. ¿Ya hay un recordatorio abierto? ----------------------------
+          open_issue="$(gh issue list --label "articulo-semanal" --state open \
+            --json number --jq '.[0].number // empty')"
+          if [ -n "$open_issue" ]; then
+            echo "La incidencia #${open_issue} sigue abierta. No se duplica."
+            exit 0
+          fi
+
+          # --- 3. El siguiente tema pendiente del calendario -------------------
+          # El calendario es el libro mayor (docs/content-calendar.md). Leerlo
+          # aquí evita que el recordatorio diga "toca escribir algo" y obligue a
+          # alguien a ir a buscar qué.
+          row="$(grep -m1 -E '^\| W[0-9]+ \|.*🔲 Pendiente' docs/content-calendar.md || true)"
+
+          if [ -z "$row" ]; then
+            tema="La cola semanal está VACÍA."
+            detalle="No queda ningún tema pendiente en \`docs/content-calendar.md\`. Antes de escribir nada hay que pedir un brief nuevo al agente \`seo-geo-research\` y añadirlo a la cola en el mismo PR."
+            slug_hint="—"
+          else
+            id="$(echo "$row" | awk -F'|' '{gsub(/ /,"",$2); print $2}')"
+            tema="$(echo "$row" | awk -F'|' '{sub(/^ +/,"",$3); sub(/ +$/,"",$3); print $3}')"
+            cluster="$(echo "$row" | awk -F'|' '{gsub(/[ `]/,"",$4); print $4}')"
+            detalle="Siguiente tema pendiente de la cola: **${id} — ${tema}** (cluster \`${cluster}\`)."
+            slug_hint="\`claude/weekly-post/<slug-del-tema>\`"
+          fi
+
+          # --- 4. La incidencia ------------------------------------------------
+          gh label create "articulo-semanal" --color "0E8A16" \
+            --description "Recordatorio de la publicación semanal del blog" 2>/dev/null || true
+
+          body_file="$(mktemp)"
+          cat > "$body_file" <<BODY
+          Toca el artículo semanal del blog, y esta semana **no lo ha escrito nadie**: no existe ninguna rama \`claude/weekly-post/**\`.
+
+          ${detalle}
+
+          ## Cómo se hace
+
+          El encargo completo está en \`docs/agentic-weekly-post.md\` — se lee entero antes de escribir nada, junto con \`CLAUDE.md\`, \`docs/content-strategy.md\` §4 y \`docs/brand/article-design-system.md\`.
+
+          Dos invariantes que no son cosméticos:
+
+          - La rama se llama ${slug_hint}. Fuera de ese prefijo, el workflow que abre el PR solo (\`weekly-post-pr.yml\`) no dispara.
+          - **El mensaje del último commit es el cuerpo del PR.** Ahí va, arriba del todo, que falta la portada.
+
+          ## Por qué recibes esto en vez de un PR
+
+          Porque la automatización de escritura no está resuelta. La rutina de claude.ai que debía hacerlo arranca sin el repositorio clonado, y adjuntárselo sólo se puede desde su interfaz. Este workflow no escribe el artículo — GitHub Actions no puede — pero se asegura de que un lunes sin artículo **se vea** en vez de pasar en silencio.
+
+          Cierra esta incidencia cuando el PR del artículo esté abierto.
+          BODY
+          # Quita la indentación del heredoc sin comerse la del markdown.
+          sed -i 's/^          //' "$body_file"
+
+          printf '\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n' >> "$body_file"
+
+          gh issue create \
+            --title "Toca el artículo semanal del blog" \
+            --label "articulo-semanal" \
+            --assignee "$OWNER" \
+            --body-file "$body_file"

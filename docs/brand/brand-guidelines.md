@@ -70,7 +70,7 @@ favicons de terceros —Google S2 entre ellos, que es el que alimenta los iconos
 de la consola— prueban primero las rutas convencionales. Sin ellas, genscore.es
 salía en nuestro propio producto con el globo genérico mientras mahou.es y
 vodafone.es salían bien. Si regeneras los PNG de marca, regenera también estos
-dos. Ver `docs/brand/design-decisions-log.md` §33.
+dos. Ver `docs/brand/design-decisions-log.md` §36.
 
 ### Reglas de uso
 

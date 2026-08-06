@@ -9,7 +9,7 @@
  * (alberdiderma.es y el nuestro, 2 de 10 en la cuenta del fundador). Aquí sí
  * podemos mirar los bytes.
  *
- * Ver docs/brand/design-decisions-log.md §33.
+ * Ver docs/brand/design-decisions-log.md §36.
  */
 
 import { createHash } from "node:crypto";

@@ -1,5 +1,7 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project-cookie";
 
 /**
  * DOMAINS-REDESIGN-1 — atajo de operación a `/debug`.
@@ -13,11 +15,21 @@ import { requireUser } from "@/lib/auth";
  * UUID dentro. Una pantalla de operación a la que el operador no puede llegar
  * no es discreta, es inservible.
  *
- * Esta ruta resuelve el proyecto por él —el más reciente, el mismo criterio de
- * reserva que usan la barra lateral y la portada de Dominios— y redirige. Sigue
- * sin aparecer en ningún menú: es una URL que se recuerda, no un enlace que se
- * ve. Si la cuenta no tiene proyectos, manda a Dominios, que es donde se crea
- * el primero.
+ * Esta ruta resuelve el proyecto por él y redirige. Sigue sin aparecer en
+ * ningún menú: es una URL que se recuerda, no un enlace que se ve. Si la
+ * cuenta no tiene proyectos, manda a Dominios, que es donde se crea el
+ * primero.
+ *
+ * DEBUG-ACTIVE-PROJECT-1 (2026-08-06): antes resolvía siempre "el más
+ * reciente" (mismo criterio que la barra lateral fuera de una ruta de
+ * proyecto), lo que en la práctica fijaba `/debug` al último dominio creado en
+ * la cuenta y no al que el fundador tenía abierto en ese momento — lo reportó
+ * él mismo. Ahora usa el cookie que `middleware.ts` escribe en cada visita a
+ * `/dashboard/projects/[projectId]/...` (`lib/active-project-cookie.ts`), que
+ * es la misma señal que ya usa la barra lateral para decidir qué dominio está
+ * "seleccionado". El cookie sólo decide REDIRECCIÓN, nunca autorización: si
+ * apunta a un proyecto archivado, borrado o de otra cuenta, la consulta de
+ * abajo no lo encuentra y cae al criterio anterior (el más reciente).
  *
  * En la raíz (`/debug`) y no bajo `/dashboard`, por petición del fundador: es
  * la URL que tecleó de memoria cuando fue a buscarla, y el 404 que se llevó fue
@@ -30,6 +42,19 @@ import { requireUser } from "@/lib/auth";
  */
 export default async function DebugShortcutPage() {
   const { supabase } = await requireUser();
+  const cookieStore = await cookies();
+  const lastActiveProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;
+
+  if (lastActiveProjectId) {
+    const { data: activeProject } = await supabase
+      .from("projects")
+      .select("id")
+      .eq("id", lastActiveProjectId)
+      .eq("is_archived", false)
+      .maybeSingle();
+
+    if (activeProject) redirect(`/dashboard/projects/${activeProject.id}/debug`);
+  }
 
   const { data: project } = await supabase
     .from("projects")

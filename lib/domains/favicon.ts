@@ -12,7 +12,7 @@
  * size times the device pixel ratio, never fixed. A hardcoded `sz=64` was
  * being upscaled by the browser on every retina display — worst on the
  * Domains hero, 56 CSS px = 112 device px from a 64 px source. See
- * docs/brand/design-decisions-log.md §33.
+ * docs/brand/design-decisions-log.md §36.
  */
 
 /** Sizes Google's S2 service actually serves. Anything else is rounded up by
@@ -51,9 +51,9 @@ function cleanDomain(domain: string | null | undefined): string | null {
 /**
  * FAVICON-QUALITY-3a: apunta a nuestra propia ruta, no a Google directamente.
  * Lo que se gana no es un rodeo — es que el servidor puede mirar los bytes y
- * devolver **404** cuando lo que Google manda es su globo genérico, y un 404 sí
- * dispara el `onError` del `<img>`. De paso, el navegador del usuario deja de
- * contarle a Google qué cuenta está mirando.
+ * devolver **204 sin cuerpo** cuando lo que Google manda es su globo genérico,
+ * y un `<img>` sin cuerpo que decodificar dispara `onError`. De paso, el
+ * navegador del usuario deja de contarle a Google qué cuenta está mirando.
  */
 export function faviconUrl(domain: string | null | undefined, size = 64): string | null {
   const clean = cleanDomain(domain);
