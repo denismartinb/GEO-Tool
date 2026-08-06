@@ -3235,6 +3235,54 @@ la 3 (no es la fuente). Si algún día molesta, lo único que funciona es no
 enseñar la marca a ese tamaño y usar el avatar de letra, y eso exige distinguir
 un logotipo de un símbolo, que no es detectable de forma fiable. Queda anotado
 como límite conocido, no como pendiente.
+
+**Fase 3a, pedida por el fundador el mismo día** (*"siempre que una web no
+devuelva favicon en lugar de mostrar icono mostramos las iniciales como
+antes"*). Lo que suena a cambio de icono es un cambio de arquitectura, porque
+**Google responde 200 con el globo, no un 404**: desde el navegador no hay forma
+de distinguir "este es su icono" de "no tengo ni idea", y por eso la Fase 2 que
+yo había planteado en cliente no era implementable. Hay que mirar los bytes en
+servidor.
+
+1. **`/api/favicon` (`app/api/favicon/route.ts`).** Trae el icono de S2 desde el
+   servidor y devuelve **404 cuando es el comodín**. Un 404 sí dispara el
+   `onError` del `<img>`, que es lo único que el cliente necesita para pintar
+   iniciales.
+2. **La detección se autocalibra; no hay ningún hash incrustado.** Se pide el
+   icono de `no-such-site.invalid` —`.invalid` está reservado por el RFC 2606 y
+   no puede existir, así que lo que devuelva S2 para él *es* el comodín— y se
+   compara por SHA-256. El día que Google redibuje el globo, sigue funcionando.
+   Se calibra **por tamaño** (el globo no es el mismo dibujo a 32 que a 256) y se
+   memoiza **por promesa**, para que un arranque en frío con veinte iconos en
+   pantalla no dispare veinte calibraciones.
+3. **Falla abierto, a propósito.** Sin calibración disponible se sirve el icono
+   tal cual en vez de arriesgarse a esconder uno bueno: enseñar un globo de más
+   es feo, ocultar la marca real de un competidor es información perdida. Mismo
+   criterio que `scripts/vercel-should-build.sh`.
+4. **Caché de edge escalonada por significado**, no un número al azar: una
+   semana para un icono (no cambian), un día para un 404 de "no hay icono" (un
+   dominio sin icono hoy puede tener uno mañana y no queremos que el 404 se
+   quede pegado), un minuto para un fallo transitorio.
+5. **`components/ui/favicon-img.tsx`** centraliza el comportamiento y **no la
+   apariencia**: recibe el avatar de iniciales ya renderizado como `fallback`.
+   Cada pantalla conserva su clase y su color determinista — unificarlos habría
+   sido un rediseño encubierto colado en un PR de infraestructura.
+6. **Efecto colateral que era un problema declarado desde 2026-07-23:** el
+   navegador del usuario deja de contarle a Google qué cuenta está mirando.
+
+**Lo que NO se hizo y por qué.** La 3b —pedir `https://<dominio>/apple-touch-icon.png`
+para conseguir 180 px reales— sigue sin hacer. Es la única parte que implica
+fetch saliente a dominios de terceros, roza la línea «crawler» de la lista de
+prohibidos y necesita guardia anti-SSRF propia. Sin ella, **un icono que Google
+tiene en baja resolución seguirá viéndose regular** (mahou.es es el caso). La
+3a no lo arregla y no debe venderse como que lo hace.
+
+**Límite de verificación, otra vez y peor.** El contenedor donde se implementó
+tiene bloqueado todo dominio externo, así que `/api/favicon` **nunca ha hablado
+con Google**. La lógica está cubierta con `fetch` simulado (10 casos: comodín,
+icono real, fallo de calibración, cuerpo vacío, red caída, memoización por
+promesa y por tamaño), pero el camino real sólo se ejercita en el preview. Si
+algo va a fallar aquí, fallará ahí y no en los tests.
 ---
 
 ## Cómo mantener este documento

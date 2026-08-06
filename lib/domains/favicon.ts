@@ -48,10 +48,17 @@ function cleanDomain(domain: string | null | undefined): string | null {
   return clean || null;
 }
 
+/**
+ * FAVICON-QUALITY-3a: apunta a nuestra propia ruta, no a Google directamente.
+ * Lo que se gana no es un rodeo — es que el servidor puede mirar los bytes y
+ * devolver **404** cuando lo que Google manda es su globo genérico, y un 404 sí
+ * dispara el `onError` del `<img>`. De paso, el navegador del usuario deja de
+ * contarle a Google qué cuenta está mirando.
+ */
 export function faviconUrl(domain: string | null | undefined, size = 64): string | null {
   const clean = cleanDomain(domain);
   if (!clean) return null;
-  return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(clean)}&sz=${snapFaviconSize(size)}`;
+  return `/api/favicon?domain=${encodeURIComponent(clean)}&sz=${snapFaviconSize(size)}`;
 }
 
 /** Density descriptors for an icon rendered at `cssSize` CSS pixels. The

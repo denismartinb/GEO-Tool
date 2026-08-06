@@ -30,13 +30,13 @@ describe("snapFaviconSize", () => {
 describe("faviconUrl", () => {
   it("normalizes the domain and snaps the requested size", () => {
     expect(faviconUrl("  WWW.Ikea.ES ", 38)).toBe(
-      "https://www.google.com/s2/favicons?domain=ikea.es&sz=64"
+      "/api/favicon?domain=ikea.es&sz=64"
     );
   });
 
   it("defaults to 64 to preserve the pre-FAVICON-QUALITY-1 behaviour", () => {
     expect(faviconUrl("ikea.es")).toBe(
-      "https://www.google.com/s2/favicons?domain=ikea.es&sz=64"
+      "/api/favicon?domain=ikea.es&sz=64"
     );
   });
 
@@ -51,23 +51,23 @@ describe("faviconSrcSet", () => {
   it("covers 2x and 3x for the Domains hero, the worst offender at 56 CSS px", () => {
     // 56 -> 64, 112 -> 128, 168 -> 256. Before this change every density got 64.
     expect(faviconSrcSet("ikea.es", 56)).toBe(
-      "https://www.google.com/s2/favicons?domain=ikea.es&sz=64 1x, " +
-        "https://www.google.com/s2/favicons?domain=ikea.es&sz=128 2x, " +
-        "https://www.google.com/s2/favicons?domain=ikea.es&sz=256 3x"
+      "/api/favicon?domain=ikea.es&sz=64 1x, " +
+        "/api/favicon?domain=ikea.es&sz=128 2x, " +
+        "/api/favicon?domain=ikea.es&sz=256 3x"
     );
   });
 
   it("collapses densities that snap to the same size", () => {
     // 38 -> 64, 76 -> 128, 114 -> 128. The 3x candidate would duplicate 2x.
     expect(faviconSrcSet("ikea.es", 38)).toBe(
-      "https://www.google.com/s2/favicons?domain=ikea.es&sz=64 1x, " +
-        "https://www.google.com/s2/favicons?domain=ikea.es&sz=128 2x"
+      "/api/favicon?domain=ikea.es&sz=64 1x, " +
+        "/api/favicon?domain=ikea.es&sz=128 2x"
     );
   });
 
   it("emits a single candidate once every density saturates at 256", () => {
     expect(faviconSrcSet("ikea.es", 300)).toBe(
-      "https://www.google.com/s2/favicons?domain=ikea.es&sz=256 1x"
+      "/api/favicon?domain=ikea.es&sz=256 1x"
     );
   });
 
@@ -80,7 +80,7 @@ describe("faviconSrcSet", () => {
 describe("faviconImgProps", () => {
   it("uses the 1x candidate as src so srcset-blind browsers are not oversized", () => {
     const props = faviconImgProps("ikea.es", 26);
-    expect(props?.src).toBe("https://www.google.com/s2/favicons?domain=ikea.es&sz=32");
+    expect(props?.src).toBe("/api/favicon?domain=ikea.es&sz=32");
     // srcSet es opcional desde que nuestro propio dominio se sirve como SVG
     // local; para un dominio de terceros tiene que estar.
     expect(props?.srcSet).toBeDefined();
@@ -100,7 +100,7 @@ describe("faviconImgProps", () => {
   });
 
   it("no confunde un dominio que sólo contiene el nuestro", () => {
-    expect(faviconImgProps("notgenscore.es", 26)?.src).toContain("google.com");
-    expect(faviconImgProps("genscore.es.evil.com", 26)?.src).toContain("google.com");
+    expect(faviconImgProps("notgenscore.es", 26)?.src).toContain("domain=notgenscore.es");
+    expect(faviconImgProps("genscore.es.evil.com", 26)?.src).toContain("domain=genscore.es.evil.com");
   });
 });

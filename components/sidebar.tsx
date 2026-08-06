@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
-import { faviconImgProps } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 
 type WorkspaceProject = {
   id: string;
@@ -66,8 +66,6 @@ export function Sidebar({
   // project so "Analizar"/"Actuar" still link somewhere instead of going
   // fully disabled whenever the account isn't currently inside a project.
   const project = projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? null;
-  // .proj-favicon renders at 26 CSS px (app/globals.css).
-  const projectFavicon = faviconImgProps(project?.domain, 26);
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
   const asideRef = useRef<HTMLElement | null>(null);
 
@@ -119,14 +117,15 @@ export function Sidebar({
           title="Cambiar de dominio"
           onClick={handleNavSelect}
         >
-          {projectFavicon ? (
-            // key por dominio: mismo motivo que la portada de Dominios — sin
-            // él el conmutador se queda con el icono del proyecto anterior.
-            // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-            <img key={project.domain} {...projectFavicon} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
-          ) : (
-            <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
-          )}
+          {/* key por dominio: sin él el conmutador se queda con el icono del
+              proyecto anterior mientras carga el nuevo. */}
+          <FaviconImg
+            key={project.domain}
+            domain={project.domain}
+            cssSize={26}
+            className="proj-favicon"
+            fallback={<div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>}
+          />
           <div className="proj-meta">
             <div className="proj-name">{project.name}</div>
             <div className="proj-dom">{project.domain}</div>

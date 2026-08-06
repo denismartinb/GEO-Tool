@@ -20,7 +20,7 @@ import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
-import { faviconImgProps } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
@@ -438,7 +438,6 @@ export default async function CompetitorsPage({
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
-  const brandFavicon = faviconImgProps(project.domain, 26);
 
   // Engine columns worth showing — see filterComparableEngines
   // (lib/competitors/engine-share.ts) for the rule and its tests.
@@ -760,14 +759,16 @@ export default async function CompetitorsPage({
               <div className="card">
                 <div className="cm2-rank you">
                   <span className="cm2-rank-n">1</span>
-                  {brandFavicon ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as Overview's panorama)
-                    <img {...brandFavicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
-                  ) : (
-                    <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
-                      {getInitial(project.brand)}
-                    </span>
-                  )}
+                  <FaviconImg
+                    domain={project.domain}
+                    cssSize={26}
+                    className="cm2-rank-fav-img"
+                    fallback={
+                      <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
+                        {getInitial(project.brand)}
+                      </span>
+                    }
+                  />
                   <div className="cm2-rank-main">
                     <div className="cm2-rank-nm">
                       <span className="cm2-rank-nm-txt">{project.brand}</span>

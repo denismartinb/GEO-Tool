@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import { faviconImgProps } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import type { SuggestedCompetitor } from "@/lib/llm/gemini";
 import { createCompetitorAction, getSuggestedCompetitorsAction } from "../actions";
 
@@ -36,8 +36,6 @@ function SuggestionRow({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [failedFavicon, setFailedFavicon] = useState(false);
-  const favicon = faviconImgProps(suggestion.domain, 26);
 
   function follow() {
     setError(null);
@@ -60,22 +58,16 @@ function SuggestionRow({
 
   return (
     <div className="cm2-emg">
-      {!favicon || failedFavicon ? (
-        <span className="cm2-rank-fav" style={{ background: "var(--ink-4)" }}>
-          {suggestion.name.slice(0, 1).toUpperCase()}
-        </span>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as podium-row)
-        <img
-          {...favicon}
-          alt=""
-          className="cm2-rank-fav-img"
-          width={26}
-          height={26}
-          loading="lazy"
-          onError={() => setFailedFavicon(true)}
-        />
-      )}
+      <FaviconImg
+        domain={suggestion.domain}
+        cssSize={26}
+        className="cm2-rank-fav-img"
+        fallback={
+          <span className="cm2-rank-fav" style={{ background: "var(--ink-4)" }}>
+            {suggestion.name.slice(0, 1).toUpperCase()}
+          </span>
+        }
+      />
       <div className="cm2-emg-main">
         <div className="cm2-rank-nm">
           <span className="cm2-rank-nm-txt">{suggestion.name}</span>
