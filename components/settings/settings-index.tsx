@@ -1,45 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-export type SettingsIndexEntry = {
-  /** Matches the `id` of the section heading it points at. */
-  id: string;
-  label: string;
-  /** The section's live state, shown under the label. */
-  detail: string;
-};
-
-/**
- * Pure so the "a member never sees Plan" rule can be tested — this repo has no
- * component-test infrastructure, so a rule left inline in the page component
- * would be covered by nothing at all.
- *
- * `planLabel` is null for a non-admin, which is the same condition that hides
- * the Plan section itself. Note what is deliberately absent: "Eliminar cuenta"
- * is the last block of the page and never an entry here.
- */
-export function buildSettingsIndex({
-  fullName,
-  email,
-  activeAlerts,
-  planLabel
-}: {
-  fullName: string;
-  email: string;
-  activeAlerts: number;
-  planLabel: string | null;
-}): SettingsIndexEntry[] {
-  return [
-    { id: "cuenta", label: "Cuenta", detail: fullName.trim() || email },
-    {
-      id: "avisos",
-      label: "Avisos",
-      detail: `${activeAlerts} ${activeAlerts === 1 ? "activo" : "activos"}`
-    },
-    ...(planLabel ? [{ id: "plan", label: "Plan", detail: planLabel }] : [])
-  ];
-}
+import type { SettingsIndexEntry } from "@/lib/settings/index-entries";
 
 /**
  * CONSOLE-REDESIGN-1. The spine of the single settings page.
@@ -55,6 +17,10 @@ export function buildSettingsIndex({
  * Hidden below 900px by CSS rather than by a viewport check here: mobile is one
  * scroll with no section navigation at all, and a JS media query would flash
  * the index on first paint before deciding to remove it.
+ *
+ * `buildSettingsIndex` lives in `lib/settings/index-entries.ts`, NOT here — the
+ * page is a Server Component and calling a function exported from a
+ * `"use client"` module during a server render throws. See that file.
  */
 export function SettingsIndex({ entries }: { entries: SettingsIndexEntry[] }) {
   const [active, setActive] = useState(entries[0]?.id ?? "");

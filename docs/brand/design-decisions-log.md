@@ -3195,6 +3195,21 @@ settings.spec.ts` esta pantalla se habría implementado sin que ningún piloto l
 viera nunca — el mismo fallo que el incidente de Auditoría web del 2026-08-02,
 por otra puerta.
 
+**Lo que costó aprender, y la regla que deja.** El primer intento se desplegó y
+el piloto lo tumbó en los tres viewports: *«An error occurred in the Server
+Components render»*, la pantalla entera sustituida por «Algo ha ido mal». La
+causa: `buildSettingsIndex` estaba exportada desde `settings-index.tsx`, que es
+`"use client"`, y la llamaba el Server Component de la página. **Todo lo que
+exporta un módulo de frontera de cliente se convierte en una referencia de
+cliente**; invocarla durante el render del servidor lanza.
+
+Ni el build ni el test podían cogerlo: `tsc` ve una función normal y Vitest no
+respeta la directiva `"use client"`. La regla que queda es estructural, no de
+cuidado: **una función que llama un Server Component nunca vive en un fichero
+`"use client"`.** Vive en `lib/` (aquí, `lib/settings/index-entries.ts`) y el
+componente de cliente importa de ahí. Lo único que lo detectó fue la journey de
+piloto que esta misma fase tuvo que crear.
+
 **Pendiente / roto conocido:**
 
 - **Fase B, sin aprobar:** los otros cuatro hallazgos del modal de plan — un

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSettingsIndex } from "./settings-index";
+import { buildSettingsIndex } from "./index-entries";
 
 /**
  * CONSOLE-REDESIGN-1. Folding four screens into one moved the admin check:

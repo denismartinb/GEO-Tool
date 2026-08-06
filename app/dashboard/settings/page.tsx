@@ -6,7 +6,8 @@ import { PLANS } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
-import { SettingsIndex, buildSettingsIndex } from "@/components/settings/settings-index";
+import { SettingsIndex } from "@/components/settings/settings-index";
+import { buildSettingsIndex } from "@/lib/settings/index-entries";
 import { BillingContent } from "@/components/billing/billing-content";
 import { readBillingDetails, readCompanyDetails } from "@/lib/settings/company-details";
 
