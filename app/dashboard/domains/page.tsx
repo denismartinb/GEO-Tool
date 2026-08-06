@@ -235,7 +235,13 @@ export default async function DomainsPage({
         {/* ---- Portada del dominio seleccionado ---- */}
         <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero">
           <div className="dm2-hero-top">
-            <DomainFavicon name={active.name} domain={active.domain} size={56} radius={16} />
+            {/* `key` por dominio, no por estética: sin él React reutiliza el
+                mismo <img> al cambiar de dominio y sólo le cambia el src, así
+                que el navegador sigue pintando el icono del dominio anterior
+                hasta que descarga el nuevo — la portada de una farmacia con el
+                logo de Mozilla. Enseñar un hueco un instante es peor de ver y
+                mejor de fiar que enseñar la marca equivocada. */}
+            <DomainFavicon key={active.domain} name={active.name} domain={active.domain} size={56} radius={16} />
             <div className="dm2-id">
               <div className="dm2-name">{active.name}</div>
               <div className="dm2-dom">

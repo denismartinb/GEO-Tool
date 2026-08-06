@@ -120,8 +120,10 @@ export function Sidebar({
           onClick={handleNavSelect}
         >
           {projectFavicon ? (
+            // key por dominio: mismo motivo que la portada de Dominios — sin
+            // él el conmutador se queda con el icono del proyecto anterior.
             // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-            <img {...projectFavicon} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
+            <img key={project.domain} {...projectFavicon} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
           ) : (
             <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
           )}
