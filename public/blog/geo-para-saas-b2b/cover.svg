@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Una secuencia de preguntas anónimas que desemboca en una petición de demo">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowC" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowD" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gate" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#4f7bff"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bg2)"/>
+  <circle cx="140" cy="150" r="220" fill="url(#glowC)"/>
+  <circle cx="1080" cy="150" r="210" fill="url(#glowD)"/>
+
+  <!-- Sin texto (misma razón que ecommerce/cover.svg): el botón, que es el
+       elemento con más significado, va centrado en (600,150) para sobrevivir
+       a la ventana más agresiva medida (tarjeta de /blog en móvil, ~560px
+       centrados). Las preguntas se abren a los lados, decorativas fuera de
+       esa ventana. -->
+
+  <!-- Preguntas anónimas, cayendo hacia el centro -->
+  <g fill="#09c5d6">
+    <circle cx="90" cy="150" r="7" opacity=".85"/>
+    <circle cx="230" cy="150" r="7" opacity=".65"/>
+    <circle cx="370" cy="150" r="7" opacity=".48"/>
+  </g>
+  <g fill="#5b6b82" opacity=".55">
+    <rect x="112" y="143" width="96" height="14" rx="7"/>
+    <rect x="252" y="143" width="96" height="14" rx="7"/>
+  </g>
+
+  <!-- El botón: única forma con relleno sólido, centrada -->
+  <g transform="translate(510 108)">
+    <rect width="180" height="84" rx="20" fill="url(#gate)"/>
+  </g>
+
+  <g fill="#5b6b82" opacity=".4">
+    <rect x="830" y="143" width="96" height="14" rx="7"/>
+    <rect x="970" y="143" width="96" height="14" rx="7"/>
+  </g>
+  <g fill="#09c5d6" opacity=".3">
+    <circle cx="1110" cy="150" r="7"/>
+  </g>
+</svg>

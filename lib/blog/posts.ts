@@ -51,7 +51,9 @@ export const BLOG_CLUSTERS: BlogCluster[] = [
   {
     key: "sectores",
     title: "GEO por sector",
-    description: "GEO aplicado a ecommerce, SaaS y agencias."
+    description: "GEO aplicado a ecommerce, SaaS y agencias.",
+    pillarIntro:
+      "Las reglas del GEO son las mismas para todos, pero la pregunta que hace un comprador no se parece en nada a la que hace un comité de compra de software. Un cliente de ecommerce pregunta por una decisión con presupuesto y restricción —\"un regalo para alguien que empieza a correr, menos de 60 euros\"— y recibe dos o tres nombres. Un comprador B2B hace una secuencia larga de preguntas antes de pedir una demo, y ninguna de ellas menciona todavía a un proveedor. Medir lo mismo en los dos casos da un número que no significa nada.\n\nEsta sección traduce la metodología a cada sector: qué preguntas representan de verdad a sus clientes, qué fuentes cita el modelo en ese mercado, y cuál es la palanca que rinde primero. Empieza por ecommerce, donde la lista corta de marcas es literalmente corta y el trabajo útil está casi todo fuera de tu propia web."
   }
 ];
 
@@ -151,6 +153,39 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "cite",
     primaryKeyword: "cómo conseguir que chatgpt te cite",
     cluster: "playbooks"
+  },
+  {
+    slug: "geo-para-ecommerce",
+    title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
+    description:
+      "Una respuesta de IA solo nombra dos o tres tiendas. Qué mover primero si vendes online, y qué no sabemos todavía.",
+    datePublished: "2026-08-05",
+    coverImage: "/blog/geo-para-ecommerce/cover.svg",
+    coverIcon: "target",
+    primaryKeyword: "geo para ecommerce",
+    cluster: "sectores"
+  },
+  {
+    slug: "geo-para-saas-b2b",
+    title: "GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo",
+    description:
+      "Tu lista corta se decide antes de que nadie rellene el formulario. Qué pregunta a la IA un comprador B2B en esa fase, y qué hacer con ello.",
+    datePublished: "2026-08-05",
+    coverImage: "/blog/geo-para-saas-b2b/cover.svg",
+    coverIcon: "building",
+    primaryKeyword: "geo para saas b2b",
+    cluster: "sectores"
+  },
+  {
+    slug: "geo-para-agencias",
+    title: "GEO para agencias: cómo vender un servicio de visibilidad en IA",
+    description:
+      "Los chats de IA mandan ~1% de las visitas. Qué se puede vender de verdad, qué no prometer nunca, y cómo se mide.",
+    datePublished: "2026-08-05",
+    coverImage: "/blog/geo-para-agencias/cover.svg",
+    coverIcon: "users",
+    primaryKeyword: "geo para agencias",
+    cluster: "sectores"
   }
 ];
 
