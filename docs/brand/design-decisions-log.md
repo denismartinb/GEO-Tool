@@ -3245,9 +3245,20 @@ yo había planteado en cliente no era implementable. Hay que mirar los bytes en
 servidor.
 
 1. **`/api/favicon` (`app/api/favicon/route.ts`).** Trae el icono de S2 desde el
-   servidor y devuelve **404 cuando es el comodín**. Un 404 sí dispara el
-   `onError` del `<img>`, que es lo único que el cliente necesita para pintar
-   iniciales.
+   servidor y devuelve **204 sin cuerpo cuando es el comodín**. Un `<img>` con
+   cuerpo vacío no puede decodificar nada y dispara `onError`, que es lo único
+   que el cliente necesita para pintar iniciales.
+
+   **Se implementó con 404 y el piloto lo tumbó** (`PILOT FAIL` sobre `ffcbe51`,
+   Dominios y p2-overview en los tres viewports). El 404 hacía exactamente lo
+   que se le pedía —de hecho el detector acertó de pleno: las dos peticiones
+   marcadas eran `alberdiderma.es` y `damm.com`, los dos únicos dominios sin
+   icono— pero **un 4xx para un estado normal y esperado le miente a todo lo que
+   mire el tráfico**. El piloto lo leyó como pantalla rota, y detrás habrían
+   venido la consola del navegador y Sentry. Que un dominio no tenga favicon no
+   es fallo de nadie. Hay un test de regresión que fija el 204
+   (`app/api/favicon/route.test.ts`). **Regla que deja: el código de estado
+   describe qué pasó, no qué quieres que haga el cliente.**
 2. **La detección se autocalibra; no hay ningún hash incrustado.** Se pide el
    icono de `no-such-site.invalid` —`.invalid` está reservado por el RFC 2606 y
    no puede existir, así que lo que devuelva S2 para él *es* el comodín— y se
