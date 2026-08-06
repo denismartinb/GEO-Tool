@@ -81,10 +81,26 @@ describe("faviconImgProps", () => {
   it("uses the 1x candidate as src so srcset-blind browsers are not oversized", () => {
     const props = faviconImgProps("ikea.es", 26);
     expect(props?.src).toBe("https://www.google.com/s2/favicons?domain=ikea.es&sz=32");
-    expect(props?.srcSet.startsWith(`${props.src} 1x`)).toBe(true);
+    // srcSet es opcional desde que nuestro propio dominio se sirve como SVG
+    // local; para un dominio de terceros tiene que estar.
+    expect(props?.srcSet).toBeDefined();
+    expect(props?.srcSet?.startsWith(`${props.src} 1x`)).toBe(true);
   });
 
   it("is null for a missing domain so call sites keep their letter fallback", () => {
     expect(faviconImgProps(null, 26)).toBeNull();
+  });
+
+  it("sirve nuestro propio icono en local, sin pasar por Google", () => {
+    // El piloto capturó genscore.es con el globo genérico dentro de nuestro
+    // propio producto: S2 nunca lo había rastreado.
+    expect(faviconImgProps("genscore.es", 56)).toEqual({ src: "/brand/genscore-tile.svg" });
+    expect(faviconImgProps("www.genscore.es", 26)).toEqual({ src: "/brand/genscore-tile.svg" });
+    expect(faviconImgProps("  GENSCORE.ES ", 38)).toEqual({ src: "/brand/genscore-tile.svg" });
+  });
+
+  it("no confunde un dominio que sólo contiene el nuestro", () => {
+    expect(faviconImgProps("notgenscore.es", 26)?.src).toContain("google.com");
+    expect(faviconImgProps("genscore.es.evil.com", 26)?.src).toContain("google.com");
   });
 });

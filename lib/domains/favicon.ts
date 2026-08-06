@@ -28,6 +28,20 @@ export function snapFaviconSize(px: number): number {
   return S2_SIZES.find((size) => size >= px) ?? S2_SIZES[S2_SIZES.length - 1];
 }
 
+/**
+ * Nuestro propio dominio no pasa por Google. Teníamos el icono en el repo y
+ * aun así genscore.es salía con el globo genérico dentro de nuestro propio
+ * producto, porque el índice de S2 se puebla por rastreo y a genscore.es no
+ * había llegado. Servirlo local lo arregla al instante, es vectorial (nítido a
+ * cualquier densidad, sin `srcSet`) y de paso no le contamos a Google que
+ * alguien está mirando su propia cuenta.
+ *
+ * No es una excepción cosmética: es el único dominio del que tenemos el icono
+ * auténtico, así que es el único donde adivinar sobra.
+ */
+const OWN_DOMAIN = "genscore.es";
+const OWN_ICON = "/brand/genscore-tile.svg";
+
 function cleanDomain(domain: string | null | undefined): string | null {
   if (!domain) return null;
   const clean = domain.trim().toLowerCase().replace(/^www\./, "");
@@ -76,7 +90,10 @@ export function faviconSrcSet(domain: string | null | undefined, cssSize: number
 export function faviconImgProps(
   domain: string | null | undefined,
   cssSize: number
-): { src: string; srcSet: string } | null {
+): { src: string; srcSet?: string } | null {
+  // Un SVG no necesita candidatos por densidad: escala solo.
+  if (cleanDomain(domain) === OWN_DOMAIN) return { src: OWN_ICON };
+
   const src = faviconUrl(domain, cssSize);
   const srcSet = faviconSrcSet(domain, cssSize);
   if (!src || !srcSet) return null;

@@ -3213,6 +3213,28 @@ salieron de una captura del fundador en un iPhone.
    necesaria, no suficiente — y refuerza el caso de la Fase 3a, que al servir
    los iconos por proxy propio deja de depender de cuándo le apetezca a Google
    rastrearnos.
+3. **Y por eso nuestro dominio dejó de preguntarle a Google.** Corolario del
+   punto anterior: teníamos el icono auténtico en el repo y aun así
+   enseñábamos un globo, porque preguntábamos por él a un tercero que no lo
+   conocía. `faviconImgProps` devuelve `/brand/genscore-tile.svg` para
+   `genscore.es`. Es vectorial, así que no necesita `srcSet` — de ahí que el
+   campo pasara a opcional. Arregla uno de los dos globos **al instante**, sin
+   esperar a ningún rastreo ni a la Fase 3a. Regla que deja: **del único
+   dominio del que tenemos el icono de verdad, no se adivina.**
+
+**Lo que el piloto midió y yo había estado estimando.** La captura de Dominios
+del run sobre `c7aa69b` da la primera cifra real: **de 10 dominios, 8 traían
+icono de marca y 2 salían con el globo genérico** (alberdiderma.es y
+genscore.es). Ese 20% es el tamaño verdadero de la causa B en esta cuenta, y
+sustituye a la mano alzada con la que abrí la fase.
+
+**Tercer modo de fallo, que no había nombrado nadie.** farmaciamunozpereira.com
+tiene icono real y de resolución suficiente, pero es un **logotipo con texto**:
+a 38 px es una mancha ilegible. No lo arregla la Fase 1 (no es resolución) ni
+la 3 (no es la fuente). Si algún día molesta, lo único que funciona es no
+enseñar la marca a ese tamaño y usar el avatar de letra, y eso exige distinguir
+un logotipo de un símbolo, que no es detectable de forma fiable. Queda anotado
+como límite conocido, no como pendiente.
 ---
 
 ## Cómo mantener este documento
