@@ -62,29 +62,74 @@ código nuevo que mantener en producción.
 
 ---
 
-## 4. Las portadas — la dependencia manual, dicha sin rodeos
+## 4. Las portadas — el agente las dibuja él, en SVG
 
-**El agente no puede generar imágenes.** No hay herramienta de generación en
-su entorno y el stock exige licencia (ver la enmienda de
-`docs/adr/0028-article-imagery-policy.md`).
+**Esta sección decía lo contrario hasta el 2026-08-06.** Decía que el agente no
+podía generar imágenes y que un artículo semanal debía dejar el test de portada
+en rojo a propósito. Eso ya no es verdad, y dejarlo escrito habría hecho que
+cada lunes se entregara un artículo sin portada **pudiendo tenerla**. Si vienes
+buscando la versión antigua: está en el histórico, `design-decisions-log.md`
+§35.
 
-Y `lib/blog/covers.test.ts` **exige portada a todo artículo nuevo**: la lista
-de exentos está congelada y no admite altas. Así que un artículo semanal sin
-portada **deja el check en rojo a propósito**.
+**Lo que sí es verdad:** el agente no puede generar imágenes de mapa de bits ni
+usar stock con licencia. Pero **sí puede escribir un SVG**, que es texto. Y ADR
+0028 ya adoptó como fuente principal la **opción 4 — maquetas construidas en
+SVG/CSS**: una portada dibujada a mano en el repo no es una excepción a esa
+política, es exactamente lo que eligió.
 
-Esto es deliberado, no un descuido. El fundador señaló el 2026-08-04 que una
-portada ausente "parece un icono de algo que no carga bien"; la alternativa
-—dejar publicar sin portada— automatizaría exactamente ese defecto una vez por
-semana. Un check rojo es una pregunta visible; un degradado con icono es un
-defecto invisible.
+### Cómo se dibuja una portada que no se rompe
 
-**Qué hace el agente:** abre el PR igualmente, con el artículo terminado, y
-dice en el cuerpo, arriba del todo, que falta la portada y dónde va el
-fichero (`public/blog/<slug>/cover.png`). El fundador la deja, el agente la
-declara en `lib/blog/posts.ts`, y el check pasa a verde.
+Tres portadas se rehicieron dos veces el 2026-08-05 antes de dar con esto. Las
+reglas son consecuencia de fallos reales, no preferencias estéticas:
 
-**Si algún día hay banco de portadas** en `public/blog/_banco/`, el agente
-coge la siguiente sin usar y esta dependencia desaparece.
+- **`viewBox="0 0 1200 300"`.** No 1200×630. El contenedor real del artículo
+  mide 1124×96px en escritorio, y con `object-fit: cover` un lienzo casi
+  cuadrado pierde el 84% de su alto.
+- **Todo lo que signifique algo va centrado en (600,150).** Es el único punto
+  común a las **seis** ventanas de recorte que existen (artículo y tarjeta de
+  índice, cada una en escritorio/tablet/móvil). La más agresiva es la tarjeta
+  en móvil: 319×170px, que sólo deja ver **563px centrados** de los 1200.
+- **Sin texto dentro del SVG.** Es la regla que resuelve el problema de raíz:
+  un texto alineado a la izquierda pierde su primera palabra en el recorte
+  horizontal, y perseguir la posición correcta falló dos veces seguidas. Sólo
+  forma. Lo decorativo (resplandores, elementos de relleno) se abre hacia los
+  bordes, donde puede recortarse sin perder nada.
+- **Ninguna cifra, ningún gráfico, ninguna maqueta de interfaz.** La enmienda
+  de ADR 0028 lo prohíbe explícitamente, y con razón: una portada no tiene pie
+  de figura donde citar la fuente, así que un dato ahí queda huérfano aunque
+  sea cierto. Los números viven en el `StatGrid` del cuerpo.
+- **La portada sigue siendo evidencia, no adorno.** Debe dibujar la tesis del
+  artículo. Los tres ejemplos ya publicados están en
+  `public/blog/geo-para-{ecommerce,saas-b2b,agencias}/cover.svg`; cópialos como
+  punto de partida antes que empezar de cero.
+
+### Cómo se conecta
+
+1. El fichero va en `public/blog/<slug>/cover.svg`.
+2. Se declara `coverImage: "/blog/<slug>/cover.svg"` en `lib/blog/posts.ts`.
+3. `components/blog/blog-cover.tsx` ya marca `unoptimized` cuando la ruta acaba
+   en `.svg` — `next/image` se niega a servir SVG de otro modo, y el flag
+   global `dangerouslyAllowSVG` no se activa a propósito.
+
+Con eso `lib/blog/covers.test.ts` queda **en verde**. Un artículo semanal ya no
+deja tests rojos, y la lista `COVER_DEBT` sigue congelada: no se añade nada a
+ella nunca.
+
+### Verifícalo antes de darlo por bueno
+
+No basta con que el SVG sea válido. Recórtalo a las ventanas reales y **mira el
+resultado** — es lo que atrapó los dos fallos anteriores, y ninguna de las dos
+veces se habría visto revisando el fichero a ojo:
+
+```python
+# cairosvg + PIL, contra las seis ventanas
+for w, h in [(1124,96), (712,96), (319,96), (1124,170), (712,170), (319,170)]:
+    escala = max(w/1200, h/300)
+    # recortar centrado y comprobar que el motivo central sobrevive
+```
+
+**Si el `ux-pilot` dice que una portada se ve recortada, créele y mídelo**: dos
+veces tuvo razón y dos veces el fallo era invisible desde el código fuente.
 
 ---
 
@@ -179,7 +224,8 @@ que se lee en el móvil y en el email, y un "he terminado" no sirve de nada:
 - la **URL del PR** y la **URL del preview de Vercel** (o que no hay preview y
   por qué);
 - **qué mirar**, en castellano y en términos de comportamiento, no del diff;
-- **qué queda en rojo** — la portada casi siempre (§4);
+- **qué queda en rojo**, si es que queda algo — la portada ya no cuenta: el
+  agente la dibuja (§4);
 - **qué no se pudo verificar**, si el pilot no vio algo.
 
 Esto es la misma exigencia que `CLAUDE.md` pone a cualquier Human Gate. Aquí se
@@ -291,3 +337,53 @@ lo que A1 prometía.
 sesión existente** (las de check-in de este mismo día) sí ejecuta, porque hereda
 el repo de esa sesión. Sólo fallan las de sesión nueva. Si algún día se quiere
 volver a intentar la automatización completa, ese es el hilo del que tirar.
+
+## 11. Quién firma un aviso decide si llega — medido el 2026-08-06
+
+Este apartado existe porque se perdieron varias horas persiguiendo un fallo
+que no era un fallo, y la conclusión no es deducible sin medirla.
+
+**GitHub no notifica a nadie de su propia actividad.** Las herramientas MCP de
+GitHub comentan autenticadas **con la cuenta del fundador**, así que un
+comentario escrito por el agente lo firma él mismo — y por tanto **no genera
+ningún email**. No es un problema de configuración, ni de spam, ni del
+contenido del mensaje: es el emisor.
+
+Medido sobre el PR #351, once comentarios:
+
+| Emisor | Comentarios | ¿Email? |
+|---|---|---|
+| `denismartinb` (el agente vía MCP) | 5 | **Ninguno** |
+| `github-actions[bot]` | 6 | **Todos** |
+
+**Lo que esto significa para la publicación semanal, y es tranquilizador: el
+aviso del lunes no está afectado.** El email que importa lo dispara la
+*creación del PR* por `weekly-post-pr.yml`, que corre como
+`github-actions[bot]`. Ese canal está verificado en vivo — el 2026-08-05 el
+correo llegó al minuto exacto de crearse el PR.
+
+**Lo que sí estaba roto** era avisar sobre un PR que **ya existe** (un
+recordatorio, un "ya está listo", una corrección). Para eso está
+`.github/workflows/notify-founder.yml`: se dispara a mano
+(`workflow_dispatch`), recibe el número de PR y el mensaje, y comenta como el
+bot. Sin él, la única forma de mandar un email era abrir un PR nuevo.
+
+**Regla práctica para cualquier sesión futura:** si necesitas que al fundador
+le llegue un email, tiene que escribirlo un workflow. Un comentario tuyo por
+MCP sólo lo verá si entra a mirar. El `PushNotification` al móvil sí funciona
+y es independiente de todo esto.
+
+### Un aviso sobre el diagnóstico equivocado que se llegó a escribir
+
+Ese mismo día se afirmó —aquí y en un PR— que la capa 1 del §8 no podía
+funcionar **en absoluto**, razonando que los workflows corren con
+`actor: denismartinb`. Es media verdad, y la mitad falsa hizo perder tiempo:
+
+- El **actor del workflow** es el fundador (el push va con sus credenciales),
+  pero eso **no** determina la notificación.
+- Lo que la determina es **el autor del comentario o del PR**. Un PR creado por
+  `GITHUB_TOKEN` lo firma `github-actions[bot]`, y por eso sí notifica.
+
+Si una sesión futura vuelve a ver `actor: denismartinb` en los logs y deduce
+que por eso no llegan los emails: la deducción es incorrecta, y la tabla de
+arriba es la medición que lo desmiente.
