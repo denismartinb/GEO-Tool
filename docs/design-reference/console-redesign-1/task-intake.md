@@ -142,6 +142,7 @@ sobre rama propia partiendo de `main` una vez mergeada la A.
 | `app/globals.css` | `.set-*` bajo el scope de marca; se retiran `.set-tabs`/`.set-tab`; `.cp-sales` para la celda de Agencia |
 | `app/dashboard/settings/organization/actions.test.ts` | *(nuevo)* cubre el reparto de `org_tax_info` |
 | `app/dashboard/settings/billing/actions.test.ts` | ampliar: la sección Plan no se renderiza para un no-admin |
+| `tests/pilot/journeys/settings.spec.ts` | *(nuevo)* **la journey no existe hoy** — ver punto 9 |
 | `docs/design-reference/console-redesign-1/` | maqueta aprobada + este intake |
 | `docs/brand/design-decisions-log.md` | entrada §33 de cierre de fase |
 | `docs/brand/brand-guidelines.md` | regla de forma: redondo = persona, squircle = dominio |
@@ -184,7 +185,9 @@ sobre rama propia partiendo de `main` una vez mergeada la A.
 10. Ningún hex de color escrito a mano en `plan-billing-section.tsx`; todo vía
     token.
 11. Cero cambios visuales fuera de `/dashboard/settings` y el modal de plan.
-12. `pnpm test` y `pnpm run validate` en verde; `git diff --check` limpio.
+12. Existe `tests/pilot/journeys/settings.spec.ts` y la pantalla aparece en la
+    tabla del piloto en los tres viewports.
+13. `pnpm test` y `pnpm run validate` en verde; `git diff --check` limpio.
 
 ## 9. Comandos de validación
 
@@ -196,12 +199,25 @@ bash scripts/agentic-handoff-check.sh
 pnpm pilot --url https://<preview>.vercel.app   # journeys de lectura
 ```
 
-**Nota para el piloto.** Ajustes es una pantalla de formulario: siempre
-«renderiza» aunque no haya datos, así que un pase verde no prueba nada por sí
-solo. La `ContentExpectation` de esta journey debe exigir **el email real de la
-cuenta piloto** en el campo Email y **el nombre real del plan** en la sección
-Plan. Un campo vacío o un «—» es fallo, no estado válido — es exactamente el
-fallo de Auditoría web del 2026-08-02.
+**Nota para el piloto — hueco detectado el 2026-08-06.** La journey de Ajustes
+**no existe**. Se comprobó contra la pasada del piloto en este mismo PR: barrió
+44 pantallas en tres viewports y `/dashboard/settings` no está en ninguna fila,
+porque ninguna journey de lectura la visita (`tests/pilot/journeys/` sólo
+cubre core-flow, docs, notificaciones, páginas públicas y el segundo proyecto).
+Sin crearla, la Fase A se implementaría y **ningún piloto la vería nunca**.
+
+Al escribirla, la `ContentExpectation` debe exigir **el email real de la cuenta
+piloto** en el campo Email y **el nombre real del plan** en la sección Plan.
+Ajustes es una pantalla de formulario: siempre «renderiza» aunque no haya datos,
+así que un pase verde no prueba nada por sí solo. Un campo vacío o un «—» es
+fallo, no estado válido — es exactamente el fallo de Auditoría web del
+2026-08-02.
+
+Además debe cubrir tres cosas que sólo se ven interactuando, y que de otro modo
+quedarían «no verificadas»: que el **plegable de empresa** abre y su contenido
+no se renderiza cortado, que el **índice desaparece a 375 px** sin dejar ningún
+pegajoso, y que **«Eliminar cuenta» no aparece en el índice** en ningún
+viewport.
 
 ## 10. Acción recomendada
 
