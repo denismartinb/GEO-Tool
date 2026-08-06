@@ -6,7 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { EmptyState } from "@/components/empty-state";
 import { Gauge } from "@/components/ui/gauge";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { faviconImgProps } from "@/lib/domains/favicon";
 import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
@@ -1247,14 +1247,16 @@ export default async function ProjectDetailPage({
               )}
               <div className="card" style={{ marginTop: brandPositionAvailable && posbarsData.length > 0 ? 11 : 0 }}>
                 {panoramaListRows.map((row) => {
-                  const favicon = faviconUrl(row.domain);
+                  // 26 px por defecto, 30 px a partir del breakpoint de la
+                  // columna de análisis (globals.css) — se pide para 30.
+                  const favicon = faviconImgProps(row.domain, 30);
                   const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
                   return (
                     <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
                       <span className="ov2-cmp-n">{row.rank ?? "·"}</span>
                       {favicon ? (
                         // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-                        <img src={favicon} alt="" className="ov2-cmp-fav" width={26} height={26} loading="lazy" />
+                        <img {...favicon} alt="" className="ov2-cmp-fav" width={26} height={26} loading="lazy" />
                       ) : (
                         <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
                           {row.name.slice(0, 1).toUpperCase()}

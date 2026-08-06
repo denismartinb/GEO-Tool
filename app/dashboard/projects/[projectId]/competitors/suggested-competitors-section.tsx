@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { faviconImgProps } from "@/lib/domains/favicon";
 import type { SuggestedCompetitor } from "@/lib/llm/gemini";
 import { createCompetitorAction, getSuggestedCompetitorsAction } from "../actions";
 
@@ -37,7 +37,7 @@ function SuggestionRow({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [failedFavicon, setFailedFavicon] = useState(false);
-  const favicon = faviconUrl(suggestion.domain);
+  const favicon = faviconImgProps(suggestion.domain, 26);
 
   function follow() {
     setError(null);
@@ -67,7 +67,7 @@ function SuggestionRow({
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as podium-row)
         <img
-          src={favicon}
+          {...favicon}
           alt=""
           className="cm2-rank-fav-img"
           width={26}

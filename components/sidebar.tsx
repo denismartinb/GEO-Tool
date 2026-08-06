@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { faviconImgProps } from "@/lib/domains/favicon";
 
 type WorkspaceProject = {
   id: string;
@@ -66,6 +66,8 @@ export function Sidebar({
   // project so "Analizar"/"Actuar" still link somewhere instead of going
   // fully disabled whenever the account isn't currently inside a project.
   const project = projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? null;
+  // .proj-favicon renders at 26 CSS px (app/globals.css).
+  const projectFavicon = faviconImgProps(project?.domain, 26);
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
   const asideRef = useRef<HTMLElement | null>(null);
 
@@ -117,9 +119,9 @@ export function Sidebar({
           title="Cambiar de dominio"
           onClick={handleNavSelect}
         >
-          {faviconUrl(project.domain) ? (
+          {projectFavicon ? (
             // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-            <img src={faviconUrl(project.domain)!} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
+            <img {...projectFavicon} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
           ) : (
             <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
           )}

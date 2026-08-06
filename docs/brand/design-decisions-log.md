@@ -3116,6 +3116,70 @@ mayor, pedido explícito propio si algún día hace falta.
   escaneo) sigue donde estaba.
 ---
 
+## 33. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fase 1, 2026-08-06)
+
+**Estado: implementada la Fase 1 de tres.** Task Intake aprobado por el
+fundador el 2026-08-06 ("Sí, entero el plan con todas las fases"), a partir de
+la observación de que los iconos de dominio *"salen pixelados la mayoría"*.
+
+**El problema, que eran dos problemas.** `lib/domains/favicon.ts` pedía siempre
+`sz=64` a Google S2, un número fijo escrito una vez y nunca revisado cuando las
+pantallas que lo usan crecieron. Al comparar ese 64 con lo que de verdad se
+pinta, la mitad de los sitios se quedaban cortos en cuanto la pantalla es
+Retina:
+
+| Sitio | Tamaño CSS | Píxeles reales @2x | ¿Cubría `sz=64`? |
+|---|---|---|---|
+| Portada del dominio activo (Dominios) | 56 px | 112 | no, upscale ×1,75 |
+| Rejilla de dominios | 38 px | 76 | no |
+| Panorama de Visión general (≥ breakpoint) | 30 px | 60 | justo, y a 3x no |
+| Sidebar y ranking de Competidores | 26 px | 52 | sí |
+
+Esa es la **causa A**, nuestra y gratuita. La **causa B** es que S2 devuelve un
+lienzo del tamaño pedido relleno con la mejor fuente que Google tenga, que para
+muchos dominios es un `favicon.ico` de 16 o 32 px: ahí el borroso viene de
+origen y subir `sz` no arregla nada. Separarlas importa porque sólo la primera
+se arregla sin tocar la fuente de los iconos.
+
+**Qué se decidió (Fase 1 — sólo la causa A).**
+
+1. **El tamaño se deriva del tamaño CSS por la densidad de pantalla, nunca es
+   fijo.** `faviconImgProps(domain, cssSize)` devuelve `src` + `srcSet` con
+   candidatos 1x/2x/3x. El navegador elige por `devicePixelRatio`, así que una
+   pantalla no-Retina sigue descargando el icono pequeño: esto no cuesta bytes
+   a quien no los necesita.
+2. **Los tamaños se redondean a lo que el servicio sirve de verdad** (16/32/64/
+   128/256) en vez de mandar cualquier número y dejar que S2 redondee por su
+   cuenta. La URL dice lo que vuelve.
+3. **Candidatos duplicados colapsados.** A 38 px, 2x y 3x caen los dos en 128;
+   ofrecer el mismo fichero dos veces hace al navegador decidir sobre una
+   distinción que no existe.
+4. **`src` es el candidato 1x**, no el mayor, para que un navegador que ignore
+   `srcSet` no se trague el de 256.
+
+**Por qué no se tocó el `object-fit: cover`** de `.ov2-cmp-fav` y
+`.cm2-rank-fav-img`, que sí es discutible en un icono no cuadrado: es un cambio
+visual independiente de la nitidez y habría mezclado dos concernidos en un PR.
+Queda anotado, no hecho.
+
+**Pendiente / roto conocido.**
+
+- **La causa B sigue entera.** Un dominio cuyo mejor icono conocido por Google
+  sea de 16 px se seguirá viendo borroso en la portada de 56 px, y esta fase no
+  lo puede evitar. Es lo que atacan las fases 2 y 3.
+- **Fase 2 pendiente:** detectar el icono degenerado (el globo genérico de S2)
+  y caer al avatar de letra determinista que ya existe en `citations-client.tsx`
+  en vez de enseñar un borrón.
+- **Fase 3 pendiente:** proxy propio con caché de edge que prefiera el
+  `apple-touch-icon` del sitio. Resuelve la causa B y de paso el problema de
+  privacidad que `favicon.ts` lleva documentado desde 2026-07-23 — hoy mandamos
+  el dominio de cada cliente a Google en cada carga de página.
+- **No verificado con bytes reales.** El contenedor donde se implementó tiene
+  `www.google.com` bloqueado por política de red, así que la tabla de arriba es
+  aritmética sobre el código, no una medición de los PNG. Lo que lo cierra es
+  el piloto mirando capturas a `deviceScaleFactor: 2`.
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

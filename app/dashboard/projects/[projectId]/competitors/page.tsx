@@ -20,7 +20,7 @@ import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { faviconImgProps } from "@/lib/domains/favicon";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
@@ -438,7 +438,7 @@ export default async function CompetitorsPage({
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
-  const brandFavicon = faviconUrl(project.domain);
+  const brandFavicon = faviconImgProps(project.domain, 26);
 
   // Engine columns worth showing — see filterComparableEngines
   // (lib/competitors/engine-share.ts) for the rule and its tests.
@@ -762,7 +762,7 @@ export default async function CompetitorsPage({
                   <span className="cm2-rank-n">1</span>
                   {brandFavicon ? (
                     // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as Overview's panorama)
-                    <img src={brandFavicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
+                    <img {...brandFavicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
                   ) : (
                     <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
                       {getInitial(project.brand)}

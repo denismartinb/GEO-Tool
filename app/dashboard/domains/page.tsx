@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { Gauge } from "@/components/ui/gauge";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { faviconImgProps } from "@/lib/domains/favicon";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { computeAccountScanState } from "@/lib/domains/account-scan-state";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
@@ -77,13 +77,16 @@ function DomainFavicon({
   size: number;
   radius: number;
 }) {
-  const url = faviconUrl(domain);
+  // El tamaño se pasa al helper: estas fichas se pintan a 38 y 56 px, que en
+  // una pantalla Retina son 76 y 112 px reales — muy por encima del sz=64 fijo
+  // que se pedía antes (FAVICON-QUALITY-1).
+  const img = faviconImgProps(domain, size);
   const style = { width: size, height: size, borderRadius: radius } as const;
 
-  if (url) {
+  if (img) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- servicio externo de favicons, no un asset estático
-      <img src={url} alt="" className="dm2-fav" style={style} width={size} height={size} loading="lazy" />
+      <img {...img} alt="" className="dm2-fav" style={style} width={size} height={size} loading="lazy" />
     );
   }
 
