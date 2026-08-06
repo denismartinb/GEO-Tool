@@ -5,9 +5,24 @@ import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import type { Plan } from "@/app/pricing/plans-data";
 import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
+import { readComparableRun, resolveDelta, type ComparableRun } from "@/lib/scoring/score-reliability";
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
 
+/**
+ * Cargador compartido de las pantallas de proyecto (Prompts, Competidores,
+ * Páginas citadas, Recomendaciones, Auditoría web y /debug).
+ *
+ * **No añadas aquí una columna de una migración recién escrita.** Las
+ * migraciones de este repo se aplican a mano en el editor SQL de Supabase, así
+ * que entre que se mergea el código y alguien pega el SQL hay una ventana en la
+ * que la columna no existe — y en esa ventana PostgREST devuelve error, `data`
+ * queda `null` y este `notFound()` convierte las SEIS pantallas en un 404.
+ *
+ * No es hipotético: DOMAINS-REDESIGN-1 añadió aquí `auto_web_audit_enabled` y
+ * el piloto encontró exactamente eso en el preview (PR #345, 2026-08-05). Una
+ * columna nueva se lee donde se usa, con tolerancia a que todavía no exista.
+ */
 export async function requireActiveProject(projectId: string) {
   const { supabase } = await requireUser();
   const { data: project } = await supabase
@@ -152,7 +167,18 @@ export type WorkspaceCounters = {
   latestScanStatusByProject: Record<string, string>;
   latestScanDateByProject: Record<string, string | null>;
   latestScoreByProject: Record<string, number | null>;
+  /**
+   * DELTA-GUARD-1: `null` no significa sólo "no hay escaneo anterior" — también
+   * "hay uno, pero la comparación no es afirmable" (muy pocas respuestas, u
+   * otra metodología/motores). Pasa por `resolveDelta`, el mismo punto de
+   * decisión que usan Visión general y el historial, para que tres pantallas no
+   * puedan publicar tres verdades distintas sobre el mismo par de escaneos.
+   */
   scoreDeltaByProject: Record<string, number | null>;
+  /** Fecha de la última auditoría web persistida, por proyecto. */
+  latestAuditDateByProject: Record<string, string | null>;
+  /** Proyectos con una campaña de auditoría viva (job encolado o corriendo). */
+  auditingByProject: Record<string, boolean>;
   dataMaturityByProject: Record<string, DataMaturityState>;
   /** Account plan, already fetched once here for `dataMaturityByProject` — exposed so callers (e.g. the sidebar's plan badge) don't issue a second `getPlanForUser` round trip. */
   plan: Plan;
@@ -197,6 +223,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     { data: completedRuns },
     { data: allRecs },
     { data: scores },
+    { data: auditSnapshots },
+    { data: auditJobs },
     { data: notificationRows },
     plan
   ] = await Promise.all([
@@ -228,9 +256,24 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
       .eq("status", "active"),
     supabase
       .from("run_scores")
-      .select("project_id, run_id, visibility_score, created_at")
+      // details_json (DELTA-GUARD-1): la huella de comparabilidad que
+      // `resolveDelta` necesita — número de respuestas, versión del compuesto,
+      // componentes supervivientes y conjunto de motores.
+      .select("project_id, run_id, visibility_score, details_json, created_at")
       .order("created_at", { ascending: false })
       .limit(WORKSPACE_RECENCY_QUERY_LIMIT),
+    supabase
+      .from("web_audit_snapshots")
+      .select("project_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(WORKSPACE_RECENCY_QUERY_LIMIT),
+    // Una campaña de auditoría viva es un `jobs` sin terminar, no un snapshot:
+    // el snapshot sólo existe cuando la auditoría YA acabó.
+    supabase
+      .from("jobs")
+      .select("project_id, status")
+      .eq("job_type", "web_audit")
+      .in("status", ["pending", "running", "retrying"]),
     // No .eq("owner_user_id", ...) — the notifications_select_owner RLS
     // policy (migration 0021) already scopes this to the current user, same
     // as every other query in this function relies on RLS for scoping.
@@ -276,22 +319,44 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
 
   const latestScoreByProject: Record<string, number | null> = {};
   const scoreDeltaByProject: Record<string, number | null> = {};
-  const seenScoresByProject = new Map<string, number[]>();
+  const seenScoresByProject = new Map<string, Array<{ score: number; comparable: ComparableRun }>>();
 
   for (const s of scores ?? []) {
     const value = Number(s.visibility_score ?? NaN);
-    const rounded = Number.isFinite(value) ? Math.round(value) : null;
+    if (!Number.isFinite(value)) continue;
     const seen = seenScoresByProject.get(s.project_id) ?? [];
-    if (seen.length < 2 && rounded !== null) {
-      seen.push(rounded);
+    if (seen.length < 2) {
+      seen.push({ score: Math.round(value), comparable: readComparableRun(s.details_json) });
       seenScoresByProject.set(s.project_id, seen);
     }
   }
 
   for (const [projectId, seen] of seenScoresByProject.entries()) {
-    latestScoreByProject[projectId] = seen[0] ?? null;
-    scoreDeltaByProject[projectId] = seen.length >= 2 ? seen[0] - seen[1] : null;
+    latestScoreByProject[projectId] = seen[0]?.score ?? null;
+
+    // Antes: `seen[0] - seen[1]`. Una resta cruda de dos puntuaciones no dice
+    // nada por sí sola — es un cambio real de visibilidad sólo si los dos
+    // escaneos tienen respuestas suficientes Y midieron lo mismo (ADR 0024).
+    // Es exactamente el fallo que DELTA-GUARD-1 corrigió en el historial de
+    // escaneos, y esta función lo seguía cometiendo.
+    if (seen.length < 2) {
+      scoreDeltaByProject[projectId] = null;
+      continue;
+    }
+
+    const verdict = resolveDelta(seen[0].score - seen[1].score, seen[0].comparable, seen[1].comparable);
+    scoreDeltaByProject[projectId] = verdict.kind === "publish" ? verdict.value : null;
   }
+
+  const latestAuditDateByProject = (auditSnapshots ?? []).reduce<Record<string, string | null>>((dates, row) => {
+    if (!(row.project_id in dates)) dates[row.project_id] = row.created_at ?? null;
+    return dates;
+  }, {});
+
+  const auditingByProject = (auditJobs ?? []).reduce<Record<string, boolean>>((acc, row) => {
+    acc[row.project_id] = true;
+    return acc;
+  }, {});
 
   const notifications: WorkspaceNotification[] = (notificationRows ?? []).map(mapNotificationRow);
 
@@ -316,6 +381,8 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     latestScoreByProject,
     dataMaturityByProject,
     scoreDeltaByProject,
+    latestAuditDateByProject,
+    auditingByProject,
     plan,
     notifications
   };

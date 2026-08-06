@@ -1,12 +1,12 @@
 import "server-only";
 
 import { z } from "zod";
-import { isProOrAbove } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
+import { rescoreRunWithTechnicalSnapshot } from "@/lib/scoring/rescore-run";
 import { checkSnapshotRateLimit, DEFAULT_SNAPSHOT_RATE_LIMIT } from "@/lib/web-audit/snapshot-rate-limit";
 import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib/web-audit/fetch-page";
@@ -15,7 +15,7 @@ import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robo
 import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
 
 /**
- * "Auditar salud técnica GEO" (WEB-AUDIT-2): a Pro+-gated, deterministic
+ * "Auditar salud técnica GEO" (WEB-AUDIT-2): a deterministic
  * (no-LLM) technical audit of up to MAX_AUDIT_PAGES own-domain pages the
  * product already knows about, plus AI-bot access (robots.txt / llms.txt).
  * Lives on the "Auditoría web" page, sibling to domain-coverage.ts's
@@ -23,7 +23,9 @@ import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-ale
  *
  * 1. Ownership proven with the user-context (RLS-scoped) client before any
  *    service-role write.
- * 2. Pro-plan gate reads `profiles.current_plan` directly via isProOrAbove.
+ * 2. NOT Pro-gated (WEB-AUDIT-TECH-ALL-PLANS-1, docs/adr/0035): this half
+ *    costs no LLM calls, and gating it made the GEO Score measure a
+ *    different number of components per plan (docs/adr/0033).
  * 3. Cache check runs BEFORE the rate-limit check (data-guardian R4): a cache
  *    hit returns immediately, so repeated legitimate cache hits never
  *    consume rate-limit budget.
@@ -85,7 +87,6 @@ export type TechnicalAuditResult =
     };
 
 const GENERIC_FAILURE = "No se ha podido auditar la salud técnica de tu web en este momento. Inténtalo de nuevo en unos minutos.";
-const PLAN_REQUIRED_FAILURE = "Auditar la salud técnica de tu web está disponible a partir del plan Pro.";
 const RATE_LIMIT_FAILURE =
   "Has alcanzado el límite de auditorías técnicas para este proyecto por hoy. Vuelve a intentarlo más tarde.";
 const NO_SCAN_FAILURE = "Necesitas al menos un escaneo completado antes de auditar la salud técnica de tu web.";
@@ -311,13 +312,18 @@ export async function runTechnicalAuditCore({
       return { success: false, error: feedbackErrorMessages.project_archived, reason: "project_archived" };
     }
 
-    const { data: profileRaw } = await withTimeout(
-      supabase.from("profiles").select("current_plan").eq("id", user.id).maybeSingle(),
-      "load_plan"
-    );
-    if (!isProOrAbove((profileRaw as { current_plan?: string } | null)?.current_plan)) {
-      return { success: false, error: PLAN_REQUIRED_FAILURE, reason: "plan_required" };
-    }
+    // WEB-AUDIT-TECH-ALL-PLANS-1 (founder-approved 2026-08-05): the technical
+    // audit is NO LONGER Pro-gated. Coverage still is — it runs batched Gemini
+    // calls — but this half is pure fetch + regex with zero LLM spend
+    // (lib/web-audit/page-checks.ts), so the commercial argument for gating it
+    // never applied to cost.
+    //
+    // What forced the change is GEO-SCORE-V4 (docs/adr/0033): `readiness_score`
+    // is now a component of the GEO Score worth .20. Gating it meant the
+    // headline metric measured a different number of components depending on
+    // the plan — a free project's score silently renormalised to the old
+    // four-component scale. A metric that means something different per plan is
+    // not a metric. See docs/adr/0035.
 
     const { data: latestRunRaw } = await withTimeout(
       supabase
@@ -521,6 +527,25 @@ export async function runTechnicalAuditCore({
       previousSnapshot: latestSnapshot ? { pages: latestSnapshot.pages, bots: latestSnapshot.bots } : null,
       currentSnapshot: { pages: sanitizedPages, bots }
     });
+
+    // GEO-SCORE-V4 (docs/adr/0033): this snapshot is the technical component
+    // of the run it was triggered by, so the run's composite is re-resolved
+    // against it now. Fail-soft on purpose and by precedent (the score-drop
+    // alert below the scan's own scoring uses the same reasoning): a scoring
+    // correction must never turn a successful, already-persisted audit into a
+    // failed one. If this throws, the snapshot still stands and the run keeps
+    // the score it already had.
+    if (scanId) {
+      try {
+        await rescoreRunWithTechnicalSnapshot({ service, projectId, runId: scanId });
+      } catch (rescoreError) {
+        console.error(`${LOG_PREFIX} rescore_failed`, {
+          project_id: projectId,
+          scan_id: scanId,
+          error: rescoreError instanceof Error ? rescoreError.message : "unknown"
+        });
+      }
+    }
 
     console.info(`${LOG_PREFIX} completed`, {
       project_id: projectId,

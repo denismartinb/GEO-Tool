@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
 import { Gauge } from "@/components/ui/gauge";
+import { ScanStatePill } from "@/components/scan-state-pill";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { isProOrAbove } from "@/lib/billing";
@@ -432,6 +433,36 @@ function SubScoreTile({
   );
 }
 
+/**
+ * WEB-AUDIT-TECH-ALL-PLANS-1: coverage/surfacing stay Pro-only (batched
+ * Gemini grounding, genuinely expensive) while the technical tile next to
+ * them now works on every plan. Reusing SubScoreTile's "—"/"Sin auditar"
+ * here would claim "never run" when the real fact is "not included in your
+ * plan" — a different, false claim about the user's own account
+ * (`.claude/rules/web-audit.md`: "Ningún número de relleno"). Same box, same
+ * grid slot as SubScoreTile so the three-tile row never reflows by plan.
+ */
+function LockedSubScoreTile({ label, hint }: { label: string; hint: string }) {
+  return (
+    <div style={{ padding: "9px 11px", background: "var(--surface-2)", borderRadius: 10, minWidth: 0 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--ink-4)" }}>
+        {label}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 3 }}>
+        <Icon name="lock" size={12} />
+        <span style={{ fontSize: 14, fontWeight: 750, color: "var(--ink-3)" }}>No está en tu plan</span>
+      </div>
+      <div style={{ fontSize: 10.5, color: "var(--ink-4)", marginTop: 5 }}>{hint}</div>
+      <Link
+        href="/dashboard/settings/billing"
+        style={{ fontSize: 10.5, fontWeight: 650, color: "var(--accent)", marginTop: 4, display: "inline-block" }}
+      >
+        Ver planes
+      </Link>
+    </div>
+  );
+}
+
 function PageAuditRow({ page, fixContext }: { page: PageAuditEntry; fixContext: PageFixContext }) {
   let path: string;
   try {
@@ -828,14 +859,25 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
-  // Pro+-gated (DOMAIN-COVERAGE-1): read the raw plan column directly via
-  // isProOrAbove, never via getPlanForUser/resolvePlan.
+  // Two capabilities, not one (WEB-AUDIT-TECH-ALL-PLANS-1, founder-approved
+  // 2026-08-05). Coverage (DOMAIN-COVERAGE-1) still reads the raw plan
+  // column directly via isProOrAbove, never getPlanForUser/resolvePlan
+  // (route rule, .claude/rules/web-audit.md) — it runs batched Gemini
+  // grounding calls and stays genuinely Pro-only. The technical half (pure
+  // fetch + regex, zero LLM — lib/web-audit/technical-audit.ts) is now
+  // available on every plan: GEO-SCORE-V4 (docs/adr/0033) made
+  // `readiness_score` a real .20 GEO Score component, so gating it made the
+  // headline metric measure a different number of signals depending on plan.
   const { data: profileRow } = await supabase
     .from("profiles")
     .select("current_plan")
     .eq("id", user.id)
     .maybeSingle();
-  const canAudit = isProOrAbove(profileRow?.current_plan as string | undefined);
+  const canAuditCoverage = isProOrAbove(profileRow?.current_plan as string | undefined);
+  // Always true today. Kept as a named capability rather than inlining
+  // `true` at every call site so a future plan tier ever needs to gate it
+  // again, there is one place to flip.
+  const canAuditTechnical = true;
 
   const { data: latestRunRow } = await supabase
     .from("scan_runs")
@@ -865,7 +907,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // a single row to the last 8 — the "Problemas" tab's críticos/avisos
   // mini-trend and the readiness-score delta both need more than the latest
   // snapshot, which nothing on this page loaded before this phase.
-  const { data: technicalHistoryRows } = canAudit
+  //
+  // WEB-AUDIT-TECH-ALL-PLANS-1: queried for every plan now — this used to be
+  // skipped entirely under `!canAudit` (the old single Pro gate), which made
+  // a non-Pro project's technical snapshot null by construction even on a
+  // project that had one. `canAuditTechnical` is always true; the ternary
+  // stays so a future gate has one line to change, not this query's shape.
+  const { data: technicalHistoryRows } = canAuditTechnical
     ? await supabase
         .from("web_audit_snapshots")
         .select("readiness_score, pages, bots, created_at")
@@ -1028,6 +1076,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     technicalScore: technicalSnapshot?.readiness_score ?? null
   });
 
+  // WEB-AUDIT-TECH-ALL-PLANS-1 (Director's call, 2026-08-05): a non-Pro
+  // account can never populate coverage/surfacing, so `globalScore.score`
+  // would silently equal the technical score anyway (mean of one value is
+  // itself) — the actual problem was never the number, it was the caption
+  // ("Media de 1 señal disponible… audita el resto para completarla"), which
+  // reads as "not run yet" when the true fact is "not included in your
+  // plan". Rather than keep the composite framing with a patched caption,
+  // the non-Pro headline IS the technical score — one named signal, not a
+  // same-valued disguised average. Pro's composite is untouched.
+  const heroScore = canAuditCoverage ? globalScore.score : (technicalSnapshot?.readiness_score ?? null);
+
   // WEB-AUDIT-ISSUES-1 fase 2 (founder-approved 2026-08-02): el Plan de
   // acción (competitor extraction, join con `recommendations`, buildActionPlan
   // y su expansor) se retiró de esta pantalla entero — "no tiene sentido
@@ -1048,7 +1107,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const analyzedPagesCount = technicalSnapshot ? technicalSnapshot.pages.filter((p) => p.status === "analyzed").length : 0;
 
   return (
-    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAudit}>
+    <WebAuditProvider projectId={projectId} autoStart={activeCampaignProgress} canAudit={canAuditCoverage}>
     <div className="page">
       {/* Sticky header */}
       <div className="ov-sticky-header">
@@ -1065,9 +1124,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               {/* Was hardcoded unconditionally — read as "your account is
                   Pro" sitting right next to a "Disponible en plan Pro"
                   button when it wasn't (founder report: contradictory at a
-                  glance after a plan downgrade). Now reflects the actual
-                  gate this page enforces below. */}
-              {canAudit && <span className="badge badge-accent" style={{ fontSize: 10 }}>PRO</span>}
+                  glance after a plan downgrade). Reflects `canAuditCoverage`
+                  specifically (WEB-AUDIT-TECH-ALL-PLANS-1): coverage is the
+                  one half of this page that's still actually Pro-only, so
+                  this is the one badge that still means something by plan —
+                  the technical panels below render for every plan now. */}
+              {canAuditCoverage && <span className="badge badge-accent" style={{ fontSize: 10 }}>PRO</span>}
             </div>
           </div>
         </div>
@@ -1093,7 +1155,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               nothing overflowed: two elements simply shared the same pixels.
               The compact form keeps the audit date on mobile (it is the only
               place in the page that shows audit freshness) while fitting. */}
-          {latestMap && (
+          {latestMap ? (
             <span style={{ fontSize: 11, color: "var(--ink-4)" }}>
               <span className="wa2-hdr-audit-full">
                 Última auditoría: {formatDate(latestMap.generatedAt)}
@@ -1101,13 +1163,27 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               </span>
               <span className="wa2-hdr-audit-compact">Auditada {formatDate(latestMap.generatedAt)}</span>
             </span>
+          ) : (
+            // WEB-AUDIT-TECH-ALL-PLANS-1: `latestMap` only ever exists for a
+            // coverage campaign, so a non-Pro project (which never has one)
+            // used to show no date here at all — even with a real, fresh
+            // technical snapshot. That reads as "never audited", which is
+            // false. Falls back to the technical snapshot's own date; still
+            // nothing when neither exists.
+            technicalSnapshot && (
+              <span style={{ fontSize: 11, color: "var(--ink-4)" }}>Auditada {formatDate(technicalSnapshot.created_at)}</span>
+            )
           )}
-          {activeCampaignProgress && canAudit && (
-            <span className="scan-status">
-              <span className="dot run" />
-              Auditando
-            </span>
-          )}
+          {/* DOMAINS-REDESIGN-1: era un `.scan-status`, que el CSS oculta bajo
+              el breakpoint móvil — el mismo fallo que §26 arregló para el
+              escaneo y dejó anotado como pendiente para la auditoría. La
+              pastilla compartida lo hace visible también en móvil y unifica el
+              vocabulario de estado de toda la consola. Gate renombrado a
+              `canAuditCoverage` por WEB-AUDIT-TECH-ALL-PLANS-1 (ADR 0035):
+              este chip anuncia la campaña de COBERTURA, que sigue siendo Pro
+              — la auditoría técnica corre en todos los planes y no tiene
+              campaña que anunciar aquí. */}
+          {activeCampaignProgress && canAuditCoverage && <ScanStatePill auditing />}
         </div>
       </div>
 
@@ -1134,10 +1210,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           plan lapses mid-audit (e.g. downgraded via Stripe billing) — the
           banner must never promise "seguirá por donde se quedó" when it
           genuinely can't: WebAuditProvider won't auto-resume without
-          canAudit, and the button that would show any driving state is
-          hidden entirely under the plan gate. Founder report: the old
+          canAuditCoverage, and the button that would show any driving state
+          is hidden entirely under the plan gate. Founder report: the old
           unconditional version left the page looking permanently stuck with
-          no error, no explanation. */}
+          no error, no explanation. This banner is about the COVERAGE
+          campaign specifically — the technical half never had a "campaign"
+          to pause, so WEB-AUDIT-TECH-ALL-PLANS-1 leaves this whole block
+          keyed on canAuditCoverage unchanged. */}
       {/* Sólo la variante de plan pausado. La de "Auditoría en curso" se
           retiró (founder review 2026-08-04): mientras se audita, el propio
           botón ya lleva el spinner y el conteo de temas en vivo, así que el
@@ -1146,7 +1225,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           redundante: cuando el plan decae a mitad de auditoría el botón
           desaparece entero bajo el gate, y entonces este banner es lo único
           que explica por qué la página parece atascada. */}
-      {activeCampaignProgress && !canAudit && (
+      {activeCampaignProgress && !canAuditCoverage && (
           <div className="firstscan-banner">
             <div className="fb-ico">
               <Icon name="search" size={18} />
@@ -1165,21 +1244,19 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           </div>
         )}
 
-      {/* Gated / empty states */}
-      {!canAudit ? (
-        <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
-          <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
-            Disponible en el plan Pro
-          </div>
-          <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-            Auditar la cobertura y la implementación de tu web es una función del plan Pro. Compara lo que publicas
-            con lo que la IA realmente cita en sus respuestas.
-          </p>
-          <Link href="/dashboard/settings/billing" className="btn btn-primary btn-sm">
-            Ver planes
-          </Link>
-        </div>
-      ) : !latestRunRow ? (
+      {/* Gated / empty states. WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05): the
+          old single `!canAudit` branch blanked out the ENTIRE page —
+          technical panels included — for any non-Pro account. That was
+          exactly the asymmetry GEO-SCORE-V4 (docs/adr/0033) turned into a
+          scoring bug, not just a UX one: `readiness_score` is a real .20 GEO
+          Score component, so a plan that can never see it structurally
+          scored on four signals instead of five. The ladder below now gates
+          on real data only — a completed scan, then either kind of audit
+          result — never on plan. The plan-specific "not included" fact is
+          told per-signal instead, inside the tiles/sections that need it
+          (LockedSubScoreTile, the coverage-only Evolución/Historial blocks
+          that stay empty by construction for a non-Pro project). */}
+      {!latestRunRow ? (
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
             Todavía no hay ningún escaneo completado
@@ -1191,15 +1268,29 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             Ir a la visión general
           </Link>
         </div>
-      ) : !summary ? (
+      ) : !summary && !technicalSnapshot ? (
+        // Neither signal exists yet for THIS account — true empty state,
+        // reachable on any plan (e.g. right after a scan finishes, before
+        // the async post-scan audit job has run). Copy branches on
+        // canAuditCoverage because the two plans are waiting on different
+        // things: a Pro account is waiting on ITS OWN next audit; a non-Pro
+        // account will only ever get the technical half, so telling it
+        // "hasta 5 auditorías al día" would describe a feature it can't use.
         <div className="card" style={{ marginTop: 14, padding: "24px 22px", textAlign: "center" }}>
           <div style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", marginBottom: 8 }}>
             Todavía no has auditado tu web
           </div>
-          <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
-            Tu dominio visto como lo ve la IA: la auditoría comprueba, tema a tema, si tu dominio publica contenido
-            que Google encuentra, y lo cruza con las citas de tu último escaneo.
-          </p>
+          {canAuditCoverage ? (
+            <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
+              Tu dominio visto como lo ve la IA: la auditoría comprueba, tema a tema, si tu dominio publica contenido
+              que Google encuentra, y lo cruza con las citas de tu último escaneo.
+            </p>
+          ) : (
+            <p style={{ fontSize: 13.5, color: "var(--ink-3)", maxWidth: 460, margin: "0 auto 16px", lineHeight: 1.6 }}>
+              La salud técnica de tu web se audita sola tras cada escaneo — vuelve en unos minutos. Comparar lo que
+              publicas con lo que la IA cita en sus respuestas es una función del plan Pro.
+            </p>
+          )}
           <p style={{ fontSize: 11.5, color: "var(--ink-4)", marginBottom: 16 }}>Hasta 5 auditorías al día por proyecto.</p>
         </div>
       ) : (
@@ -1226,39 +1317,70 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
                       sigue visible al lado, en los tres tiles. */}
                   <InfoTip text="Lo preparada que está tu web para que la IA te cite como fuente. Sube al cubrir los temas que te importan, al conseguir que la IA te mencione en ellos y al dejar tus páginas legibles para los motores." />
                 </div>
-                <ScoreGauge score={globalScore.score} />
+                {/* WEB-AUDIT-TECH-ALL-PLANS-1: `heroScore` (computed above)
+                    is the composite for a Pro account, same as before, and
+                    the technical score alone for a non-Pro one — see its own
+                    comment for why that's the honest headline rather than a
+                    same-valued 1-of-3 average with a misleading caption. */}
+                <ScoreGauge score={heroScore} />
               </div>
               <div style={{ flex: 1, minWidth: 240 }}>
-                {globalScore.includedCount < 3 && (
+                {/* Caption above the tiles: for a non-Pro account this is
+                    always shown (coverage/surfacing can never be computed —
+                    that's a plan fact, not a "not run yet" one); for Pro it
+                    only shows below 3 signals, same as before
+                    WEB-AUDIT-TECH-ALL-PLANS-1. */}
+                {(!canAuditCoverage || globalScore.includedCount < 3) && (
                   <div style={{ fontSize: 11.5, color: "var(--ink-3)", margin: "2px 0 10px" }}>
-                    Media de {globalScore.includedCount} {globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.
+                    {!canAuditCoverage
+                      ? "Tu salud técnica — el contenido propio y lo que la IA cita se destapan en el plan Pro."
+                      : `Media de ${globalScore.includedCount} ${globalScore.includedCount === 1 ? "señal disponible" : "señales disponibles"} — audita el resto para completarla.`}
                   </div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: globalScore.includedCount < 3 ? 0 : 10 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8, marginTop: !canAuditCoverage || globalScore.includedCount < 3 ? 0 : 10 }}>
                   {/* Sin sparklines. Se probaron con 4 auditorías reales
                       (founder review 2026-08-04) y a 64×22px no se leen: "no
                       aportan mucho porque se ven muy pequeñas". Es además
                       información duplicada — el gráfico de Evolución, justo
                       debajo, dibuja exactamente la misma serie con ejes y
                       fechas. */}
-                  <SubScoreTile
-                    label="Contenido"
-                    value={summary.coveragePct === null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
-                    hint="Temas con contenido propio verificado"
-                    delta={coverageDelta}
-                    pct={summary.coveragePct}
-                  />
-                  <SubScoreTile
-                    label="Implementado"
-                    value={summary.surfacingPct === null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
-                    hint={
-                      summary.surfacingPct !== null && grouped.invisible.length > 0
-                        ? `Palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
-                        : "De tus temas con contenido, cuántos cita la IA"
-                    }
-                    delta={surfacingDelta}
-                    pct={summary.surfacingPct}
-                  />
+                  {/* Contenido/Implementado: coverage stays Pro-only, and
+                      `summary` is always null on a non-Pro account (no
+                      coverage campaign ever runs) — locked, never "—", per
+                      WEB-AUDIT-TECH-ALL-PLANS-1 (see LockedSubScoreTile). On
+                      Pro, `summary` can ALSO be null transiently (a scan just
+                      completed technical-first, coverage not through yet —
+                      the structural fix that let this hero render at all
+                      without a coverage summary), so this branch keeps its
+                      own null-safety instead of assuming the old ladder's
+                      guarantee. */}
+                  {canAuditCoverage ? (
+                    <>
+                      <SubScoreTile
+                        label="Contenido"
+                        value={summary?.coveragePct == null ? "—" : `${summary.coveredCount} / ${summary.conclusiveCount}`}
+                        hint="Temas con contenido propio verificado"
+                        delta={coverageDelta}
+                        pct={summary?.coveragePct ?? null}
+                      />
+                      <SubScoreTile
+                        label="Implementado"
+                        value={summary?.surfacingPct == null ? "—" : `${summary.surfacedCount} / ${summary.coveredCount}`}
+                        hint={
+                          summary?.surfacingPct != null && grouped.invisible.length > 0
+                            ? `Palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
+                            : "De tus temas con contenido, cuántos cita la IA"
+                        }
+                        delta={surfacingDelta}
+                        pct={summary?.surfacingPct ?? null}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <LockedSubScoreTile label="Contenido" hint="Temas con contenido propio verificado por la IA" />
+                      <LockedSubScoreTile label="Implementado" hint="Cuánto de ese contenido cita la IA en sus respuestas" />
+                    </>
+                  )}
                   <SubScoreTile
                     label="Salud técnica"
                     value={
@@ -1451,9 +1573,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               <div className="card" style={{ marginTop: 12, padding: "14px 16px" }}>
                 <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
                   {/* "no has auditado" ya no es cierto: nadie audita a mano
-                      desde AUDIT-NO-BUTTON-1. */}
-                  Todavía no se ha auditado la salud técnica de tu web.{" "}
-                  {canAudit ? "Se comprueba sola tras cada escaneo." : ""}
+                      desde AUDIT-NO-BUTTON-1. Unconditional now
+                      (WEB-AUDIT-TECH-ALL-PLANS-1): this used to only claim
+                      "se comprueba sola" for canAudit (Pro) accounts, but the
+                      technical half isn't plan-gated at all any more — it
+                      auto-checks after every scan on every plan. */}
+                  Todavía no se ha auditado la salud técnica de tu web. Se comprueba sola tras cada escaneo.
                 </p>
               </div>
             )}
@@ -1678,12 +1803,15 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           flexWrap: "wrap"
         }}
       >
+        {/* DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. El
+            pie enlaza a Dominios, que es lo que ese enlace le resolvía al
+            usuario — cambiar de dominio — y no al historial interno. */}
         <Link
-          href={`/dashboard/projects/${projectId}/runs`}
+          href="/dashboard/domains"
           style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, color: "var(--ink-3)", fontWeight: 600 }}
         >
-          <Icon name="runs" size={13} />
-          Escaneos
+          <Icon name="globe" size={13} />
+          Dominios
         </Link>
         <Link
           href={`/dashboard/projects/${projectId}/recommendations`}

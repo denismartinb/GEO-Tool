@@ -2685,7 +2685,437 @@ la cuenta no tiene nada sin leer, en vez de pasar en silencio.
 
 ---
 
-## 29. GEO para SaaS B2B — el segundo artículo semanal, y el primero apilado (GROWTH-3, W2, 2026-08-05)
+## 29. El GeoScore incorpora la salud técnica, y el número se explica (GEO-SCORE-V4, 2026-08-05)
+
+Petición del fundador: *"quiero que tu prioridad sea que esa métrica sea lo
+menos variable posible, escaneo a escaneo, porque a veces, de uno a otro, han
+cambiado treinta puntos"*, y *"que tenga en cuenta la nota de auditoría técnica
+dentro de la puntuación de GeoScore de manera importante"*.
+
+La decisión técnica completa —pesos, resolución del snapshot, coste de la
+frontera de versión— vive en **ADR 0033**. Aquí quedan sólo las decisiones de
+producto y de pantalla.
+
+**Decisión 1 — el GeoScore cambia de significado, y se dice.** Pasa de medir
+*resultado observado* a medir *resultado + preparación*. Es un cambio de
+naturaleza, no un ajuste: hasta hoy el número respondía "¿te nombran las IAs?"
+y a partir de ahora responde "¿te nombran, y está tu web en condiciones de que
+te nombren?".
+
+**Decisión 2 — el desglose por componentes deja de ser opcional.** Un compuesto
+que mezcla dos naturalezas sin desglose visible es un número que no se puede
+accionar: el usuario no puede distinguir "subió porque arreglaste la web" de
+"subió porque las IAs te citan más". El desglose estaba *tipado* en la Visión
+general desde v2 y no se renderizaba nunca. Con v4 se renderiza, con el valor
+de cada componente y el motivo persistido cuando uno se cae. Un componente
+caído se pinta como caído, jamás como cero.
+
+**Sin pesos** (fundador, 2026-08-05): la primera versión mostraba el peso
+aplicado bajo cada valor y sobraba — para saber qué movió el score basta el
+valor, y cinco porcentajes convertían la tarjeta principal en una explicación
+de metodología. Los pesos siguen en `details_json`; si alguna superficie
+futura los muestra, tienen que ser los renormalizados (ADR 0017).
+
+**La fila técnica nunca desaparece.** Un escaneo anterior a v4 no tiene el
+componente persistido, y la primera versión simplemente no pintaba la fila: el
+desglose tenía cuatro filas en unos proyectos y cinco en otros, sin decir por
+qué — el fundador lo detectó en el preview antes del Human Gate. Ahora la fila
+aparece siempre y, cuando el escaneo es anterior, dice que lo es y que el
+próximo escaneo la incluirá. Es la misma regla que `.claude/rules/scan.md`
+aplica a las filas mudas: un hueco sin explicar es peor que un dato ausente.
+
+Esto **supersede parcialmente §17 decisión 4 y §22 decisión 1**, que decidieron
+no mezclar técnica con resultado. No se borran: aquella lectura era correcta
+mientras el GeoScore midiera sólo resultado. El aviso de §22 —que la nota
+técnica a una columna del GeoScore se lee como una segunda puntuación— sigue
+vivo y es justo lo que el desglose etiquetado resuelve.
+
+**Decisión 3 — un escaneo medido sobre menos motores lo dice en la cara.**
+Hasta hoy, si un proveedor tenía un mal minuto, el escaneo no fallaba: perdía
+filas en silencio y el score se recalculaba sobre otra escala (13 puntos en la
+reproducción de `docs/geo-score-variability-2026-08.md` §1). Ahora se persiste
+el veredicto de cobertura y la pantalla lo dice, nombrando el motor que faltó.
+El número no se toca: se toca lo que se afirma sobre él.
+
+**Decisión 4 — los alias de marca salen del SQL.** `projects.brand_aliases`
+decide desde ADR 0025 si una respuesta cuenta como mención —es decir, mueve el
+score— y sólo se podían inspeccionar por consulta directa. Era el riesgo que
+ADR 0025 aceptó sin mitigar y la causa raíz del salto de 44 puntos del
+fundador ("Firefox" no casaba con "Mozilla"). Ahora se ven, se añaden y se
+quitan desde el producto.
+
+**Pendiente conocido, escrito para que nadie lo lea como cerrado:**
+
+- **La pantalla de Escaneos aún no cumple la decisión 2.** Publica el GeoScore
+  de cada run histórico como número suelto, sin desglose ni enlace a uno, así
+  que desde ahí no se puede saber que el número incluye ahora un componente
+  técnico que vale hasta un 20 %. La obligación del ADR 0033 §7 sigue en pie:
+  esto es un hueco, no una excepción.
+
+- En los planes sin auditoría web (todo lo que no es Pro) el componente
+  técnico se cae siempre, así que su GeoScore es el de cuatro componentes —v3
+  en la práctica—. Extender una auditoría *sólo técnica* (que no gasta LLM) a
+  todos los planes es una decisión comercial del fundador, no un efecto
+  colateral de esta fase.
+- El score de ventana (mediana de los últimos 3 escaneos comparables) está
+  calculado y probado, pero **no se ha promovido a cifra principal de ninguna
+  pantalla**. Cambiar el número que el usuario ve como titular merece su propia
+  validación con el fundador delante.
+- El pin del modelo de Gemini sigue pendiente: `gemini-2.5-flash` es un alias
+  flotante que ADR 0002 prohíbe, y re-pinearlo exige observar un `modelVersion`
+  real en producción. Inventar un id versionado rompería todos los escaneos.
+
+---
+
+## 30. La salud técnica deja de ser de pago (WEB-AUDIT-TECH-ALL-PLANS-1, 2026-08-05)
+
+Decisión del fundador el mismo día que se cerró GEO-SCORE-V4: *"Auditoría en no
+pro: la extendemos"*. El razonamiento técnico completo está en **ADR 0035**;
+aquí quedan las consecuencias de pantalla.
+
+**Por qué había que decidirlo ya.** El GeoScore acababa de incorporar la nota
+técnica con peso 0,20 (§29). Con la auditoría cerrada por plan, ese componente
+se caía siempre por debajo de Pro y el score renormalizaba a cuatro
+componentes: el número principal del producto **medía cosas distintas según lo
+que pagaras**. La asimetría duró horas.
+
+**Decisión 1 — la mitad técnica se abre, la de cobertura no.** La cobertura son
+llamadas a Gemini por lotes y ahí sí hay gasto; la técnica es fetch y regex.
+Lo que sigue siendo Pro es la parte cara y la que interpreta contenido.
+
+**Decisión 2 — «no está en tu plan» nunca se pinta como «sin auditar».** Son
+hechos distintos: uno se arregla escaneando, el otro cambiando de plan.
+Confundirlos le dice al usuario algo falso sobre sus propios datos, y es la
+misma familia de error que §22 ya señaló con la nota técnica junto al GeoScore.
+
+**Decisión 3 — un plan sin cobertura no está «Parcial».** En la columna
+Auditoría de Escaneos, «Parcial» significa *el trabajo se quedó a medias*, e
+invita a esperar algo que no va a llegar nunca. Un plan que sólo tiene la
+mitad técnica tiene su auditoría **completa** para lo que incluye, y así se
+etiqueta.
+
+**Coste comercial, dicho de frente:** la auditoría técnica era parte de lo que
+distinguía a Pro, y abrirla resta un motivo para subir de plan. A cambio, el
+número principal significa lo mismo para todo el mundo. Fue una decisión
+consciente, no un efecto colateral.
+
+---
+
+## 31. El número grande deja de ser un escaneo (SCORE-WINDOW-1, 2026-08-05)
+
+Fundador: *"Implementa el score de ventana en real"*. La decisión técnica está
+en **ADR 0036**; aquí, lo de pantalla.
+
+**Decisión 1 — el titular es la mediana de los 3 últimos escaneos
+comparables.** Es la última palanca contra la varianza que quedaba: los motores
+hacen recuperación viva y ninguna fórmula la quita. Se decidió el mismo día en
+que se midió que tampoco se puede pinear el modelo de Gemini —no existe id
+versionado—, así que esta fuente de ruido no tenía otra salida.
+
+**Decisión 2 — dónde se explica que es una mediana.** La primera versión lo
+decía bajo el gauge: *"Mediana de tus N últimos escaneos comparables · este
+escaneo: X"*. **El fundador la retiró el mismo día, tras verla funcionando**:
+sobraba en la pantalla principal.
+
+La obligación de fondo no se retira con la línea —el usuario tiene que poder
+saber qué cantidad está mirando—, así que la explicación se movió a la página
+pública de metodología, que además estaba desactualizada (seguía describiendo
+cuatro componentes cuando v4 tiene cinco). El riesgo que se asume, dicho:
+alguien que escanee y vea el número apenas moverse no tiene en pantalla nada
+que se lo explique. El número de su escaneo concreto sigue visible en la frase
+de arriba ("aparece en X de Y respuestas… con una puntuación GEO de Z").
+
+**Decisión 3 — todo lo que cuelga del titular mide lo mismo que él.** La banda
+se calcula sobre la ventana; el delta es ventana contra ventana (restarle a la
+mediana de hoy el score crudo de ayer compararía dos cantidades distintas); y
+la evolución dibuja la serie de ventanas, no los runs. Un gauge con mediana
+sobre una línea de scores por escaneo son dos métricas en la misma tarjeta.
+
+**Decisión 4 — la frase narrativa sigue con el score del escaneo.** Dice
+"aparece en X de Y respuestas… con una puntuación GEO de Z": describe *ese*
+escaneo, y emparejar esos datos con la mediana atribuiría una cifra a unos
+datos que no la produjeron.
+
+**El coste, dicho:** una mejora real tarda dos escaneos en llegar del todo al
+titular. Se gana que deje de saltar treinta puntos por ruido.
+
+**Decisión 5 — fuera el GEO Score de la tabla de Escaneos** (fundador,
+2026-08-05: *"Yo veré la puntuación de los Escaneos en la página de debug"*).
+Con el titular convertido en mediana, una columna de scores por escaneo al lado
+enseñaba **dos números distintos del mismo proyecto** sin decir cuál manda. El
+score por escaneo pasa a ser dato de inspección, no de producto.
+
+Se van con ella la columna «Δ Score» y su línea explicativa al pie: existían
+para hacer honesta una comparación que ya no se publica. Esto **supera a
+DELTA-GUARD-1 (§23) en esta pantalla** — no porque aquella decisión fuera
+errónea, sino porque la superficie que arreglaba ha dejado de existir. La
+regla de `resolveDelta` sigue viva y vinculante en todas las demás.
+
+**Hueco declarado, más estrecho que antes:** las tarjetas de dominio (arriba de
+esa misma pantalla) y el resumen semanal siguen mostrando el score del último
+escaneo, no la mediana. Ahí sí puede haber discrepancia con Visión general.
+Está pendiente de decidir si pasan a la ventana o se quedan como están.
+---
+
+## 32. Escaneos se parte en dos: «Dominios» y `/debug` (DOMAINS-REDESIGN-1 Fase A, 2026-08-05)
+
+**Estado: implementada la Fase A.** Diseño explorado en tres iteraciones con el
+fundador el mismo día y aprobado ("Apruebo el plan"). La referencia visual vive
+en `docs/design-reference/domains-redesign-1/` — dos HTML a pantalla completa
+más el artefacto de exploración y el Task Intake.
+
+**El problema.** `/runs` mezclaba tres cosas de tres dueños: una rejilla de
+dominios (del cliente), un historial con lanzamientos, duraciones, auditoría,
+deltas y errores (nuestro), y un interruptor de escaneo diario (nuestro
+mientras contenemos coste antes de producción). Petición del fundador: *"la
+información que tiene a día de hoy no se debe presentar al usuario"*.
+
+**Qué se decidió.**
+
+1. **`/dashboard/domains` — «Dominios»**, opción B («Escenario») de las tres
+   exploradas: portada del dominio activo (icono, identidad, puntuación GEO,
+   frescura de escaneo y auditoría, botón «Visión general») y raíl inferior para
+   cambiar. **A partir de cuatro dominios el raíl pasa a rejilla**, que es la
+   opción A absorbida como estado de desbordamiento: un scroll horizontal
+   esconde lo que no cabe, y el dominio que no se ve deja de existir para quien
+   tiene que elegirlo.
+2. **Cero controles en la pantalla de cliente.** Que escanee y audite cada día
+   se cuenta con una línea informativa y con la frescura, nunca con un botón.
+   Mismo criterio que AUDIT-NO-BUTTON-1 (§25).
+3. **Sólo la puntuación GEO y su delta.** Ninguna segunda métrica, por regla y
+   no por gusto: el día que esta pantalla y Visión general calculen lo mismo por
+   caminos distintos, se contradicen.
+4. **`/debug`** se queda el historial íntegro, los interruptores y el borrado de
+   dominio, con una banda «Interno» arriba. Sin entrada en el menú.
+5. **Estado en cabecera, agregado.** Dominios es la primera cabecera de cuenta
+   del producto, así que `computeAccountScanState` (`lib/domains/`) decide:
+   un dominio activo → «Escaneando movistar.es»; varios → «N dominios en
+   curso» (no se mezclan etapas: cada tarjeta lleva la suya); el escaneo gana a
+   la auditoría, porque la auditoría corre *después* (§18); en reposo, sin
+   pastilla.
+6. **«Auditando» entra en `ScanStatePill`** y deja de ser el chip
+   `.scan-status`. Cierra el pendiente literal que dejó §26 — ese chip está
+   oculto bajo el breakpoint móvil, o sea el mismo fallo que §26 arregló para el
+   escaneo, sin arreglar para la auditoría.
+
+**Lo que se encontró leyendo el código, y era lo más importante del PR.**
+
+- **`AutoExecuteScan` estaba montado en un único sitio del producto**
+  (`runs/page.tsx`), y `createProject` redirigía justo ahí. Vaciar esa pantalla
+  sin mover el driver habría dejado el primer escaneo de cada cliente nuevo
+  colgado hasta que lo rescatase el cron. Ahora vive en Visión general, que es
+  donde aterriza el onboarding.
+- **Visión general no exportaba `maxDuration`.** `autoExecutePendingScan` es una
+  Server Action y hereda el de su página (ADR 0003), así que mover el driver sin
+  añadir `export const maxDuration = 60` habría matado cada ventana de lotes al
+  límite por defecto de Vercel — en producción, en silencio, y presentándose
+  después como un timeout de escaneo.
+- **El driver va también en `/debug`**, porque el botón «Repetir escaneo» vive
+  ahí (el de Visión general sólo existe en su estado vacío). Sin driver, ese
+  botón crearía un run que nada empuja. Dos montajes son seguros por
+  construcción: cada lote se reclama con un UPDATE atómico (SCAN-CHAIN-1).
+- **`getWorkspaceCounters` publicaba una resta cruda como delta.** Es
+  exactamente lo que DELTA-GUARD-1 (§23) corrigió en el historial, un mes antes,
+  en la función de al lado. Ahora pasa por `resolveDelta`.
+
+**El interruptor de auditoría, y por qué hubo migración.** El intake proponía
+dejarlo global y de sólo lectura para no gastar una migración en un control que
+el cliente nunca verá. El fundador pidió lo contrario —*"necesito el interruptor
+para ahorrar costes en esa fase de pruebas"*—, así que la 0030 añade
+`projects.auto_web_audit_enabled`, por defecto **true** (por defecto false
+habría apagado las auditorías de todos los proyectos existentes al aplicarla,
+que es un cambio de comportamiento que nadie pidió y que se vería igual que la
+tubería rota).
+
+El gate vive en `enqueueWebAuditJob` y no en el ejecutor, y esa colocación es la
+decisión, no un detalle: hay **dos** rutas de encolado —el ejecutor en línea y
+`backfillMissingWebAuditJobs` en el cron diario—, así que un gate en el ejecutor
+lo habría deshecho el backfill horas después, reencolando justo la auditoría que
+el fundador acababa de apagar. Falla **abierto** a propósito: si la lectura del
+flag falla, se audita. De los dos errores posibles, "auditamos algo apagado"
+cuesta una campaña y "dejamos de auditar todo" es invisible.
+
+**Riesgo asumido, dicho claro:** apagar el interruptor no cancela un trabajo ya
+encolado — el flag se mira al encolar, no al ejecutar. La copia lo dice ("no se
+auditarán los **próximos** escaneos") en vez de prometer lo que no hace.
+
+**Lo que se movió de sitio y el cliente pierde:** el borrado duro de dominio
+(DATA-MGMT-1) vivía en cada tarjeta de la rejilla de Escaneos. La rejilla es
+ahora Dominios, que por diseño no lleva controles, así que el borrado se queda
+en `/debug`. Deja de estar al alcance del cliente en la consola. Es reversible y
+está aquí escrito para que se note si algún día molesta.
+
+**El fallo que encontró el piloto, y por qué la suite no podía verlo.** La
+primera versión añadió `auto_web_audit_enabled` al `select` de
+`requireActiveProject`, que es el cargador de **seis** pantallas y hace
+`notFound()` si la consulta no devuelve fila. Como las migraciones se aplican a
+mano, en el preview la columna todavía no existía: PostgREST devolvió error y
+Prompts, Competidores, Páginas citadas, Recomendaciones, Auditoría web y
+`/debug` daban **404 a la vez**. `pnpm test` (1525) y `pnpm run validate`
+estaban en verde, porque nada en este proyecto comprueba el esquema real — el
+fallo era estructuralmente invisible hasta abrir un navegador contra una base
+sin migrar.
+
+Corregido leyendo el flag donde se usa (`/debug`, con su propia consulta que
+degrada a "activado" si la columna falta) y con una guarda estática sobre ese
+`select` (`lib/project-workspace.test.ts`): añadir una columna ahí obliga a
+editar el test, y editarlo obliga a leer por qué.
+
+Regla que queda: **un cargador compartido no puede depender de una columna que
+una migración manual todavía no ha creado.** El repo ya escribía las migraciones
+con `add column if not exists`; el lado de lectura no tenía la tolerancia
+equivalente.
+
+**Cuatro correcciones salidas de mirar las capturas del piloto, no de su
+tabla.** El run dio `PILOT PASS` con las tres pantallas en verde; el juicio
+visual encontró lo que ninguna aserción mide:
+
+1. **«Añadir dominio» a ancho completo en escritorio** era un rectángulo
+   punteado gigante bajo una última fila coja. En rejilla pasa a ser la última
+   celda: cierra la serie y tapa el hueco. En raíl (1–3 dominios) sigue fuera y
+   a ancho completo, que es lo que la hace visible en móvil.
+2. **La pastilla de frescura era verde siempre**, incluso en un dominio
+   escaneado once días antes: el color afirmaba «al día» mientras la fecha decía
+   lo contrario. Verde sólo hoy/ayer; el resto, neutro.
+3. **Un delta de 0 se pintaba como «0»** pegado a la puntuación («43  0») y se
+   leía como un segundo número. Cero no es una noticia: no se pinta.
+4. **El número del gauge y su etiqueta se separaban** en móvil y tablet
+   (`space-between` los mandaba a bordes opuestos). Agrupados.
+
+Ninguna de las cuatro habría fallado un test: son juicio, y por eso el pilot
+termina con capturas y no con un veredicto.
+
+**Un atajo que faltaba, encontrado por el fundador en el primer smoke.**
+`/debug` no está enlazada desde ningún sitio a propósito, y el efecto
+secundario era que la única forma de llegar consistía en teclear a mano una URL
+con un UUID dentro. `/dashboard/debug` redirige al `/debug` del dominio más
+reciente (mismo criterio de reserva que la barra lateral y la portada de
+Dominios). Sigue sin aparecer en ningún menú: es una URL que se recuerda, no un
+enlace que se ve. La lección, que es del mismo tipo que la del cargador
+compartido: **ocultar una pantalla no puede significar dejarla inalcanzable
+también para quien la necesita.**
+
+**El atajo, y el interruptor que mentía sobre por qué fallaba.** Dos hallazgos
+del primer smoke real del fundador, el mismo día:
+
+- `/debug` no estaba enlazada desde ningún sitio y la única vía era teclear una
+  URL con un UUID dentro. La URL que él tecleó de memoria fue `/debug`, así que
+  ahí vive ahora el atajo: resuelve el dominio más reciente y redirige.
+  Protegida por `requireUser` como cualquier pantalla de consola. **Ocultar una
+  pantalla no puede significar dejarla inalcanzable para quien la necesita.**
+- Con la migración 0030 sin aplicar, el interruptor de auditoría se pintaba
+  encendido y al pulsarlo devolvía «No se ha podido actualizar… vuelve a
+  intentarlo». Reintentar no crea una columna: era un consejo imposible de
+  seguir, y un control que parece operable y no puede funcionar gasta un intento
+  del operador y además le miente sobre la causa. Ahora la lectura distingue
+  tres estados y, si la columna no está, la fila dice qué falta
+  (`0030_project_auto_web_audit.sql`) y no ofrece interruptor. El server action
+  distingue además `42703`/`PGRST204` por si alguien fuerza el envío.
+
+**Rev. 2 de Dominios (2026-08-05, mismo día).** Tras ver la pantalla en el
+preview el fundador la rechazó entera —*"no me gusta nada"*— y aportó un mockup
+propio, que queda como diseño aprobado en
+`docs/design-reference/domains-redesign-1/dominios-rev2-aprobado.png`. Qué
+cambia respecto a la rev. 1:
+
+- **Bloque de título propio** en vez de la cabecera de 15 px: *kicker* +
+  «Dominios» a 27 px + contador, con la pastilla de estado agregado a la
+  derecha. No contradice §3: aquello describe la cabecera de las pantallas de
+  **proyecto**, y ésta es de cuenta.
+- **Portada con borde azul y fondo teñido**, icono a 72 px, píldoras
+  «Seleccionado» y «En progreso», gauge semicircular junto a una frase que dice
+  **qué mide** el número — lo único de la pantalla que lo explicaba, y no
+  estaba—, y botón «Ver visión general» a ancho completo con chevron.
+- **Se acabó el raíl**: siempre rejilla, dos columnas en móvil y cuatro en
+  escritorio, con «Añadir dominio» como una celda más. La distinción
+  raíl/rejilla por número de dominios desaparece con ella.
+- **Los colores son los de marca, no los del mockup**, por petición explícita
+  del fundador. El mockup fija estructura y jerarquía; la paleta la fija
+  `brand-guidelines.md` §2.
+- **Fuera la entrada «Dominios» del menú.** Se vuelve al gesto anterior:
+  pinchar el bloque de dominio de la barra lateral. Es exactamente lo que la
+  decisión de 2026-07-18 había establecido para Escaneos y que esta fase había
+  roto al añadir una entrada propia — *"que no se enlace con un enlace nuevo
+  desde el menú, sino pinchando en el propio dominio como ocurría antes"*.
+
+**Descartado de ese mockup, y por qué:** lleva una **barra de pestañas inferior**
+en móvil (Dominios / Informes / Alertas / Ajustes). No se implementa: contradice
+§3, que decidió el drawer lateral como mecanismo de navegación móvil tras
+evaluar y descartar alternativas, y además introduce dos secciones que no
+existen. Cambiar la navegación de toda la consola es su propia fase, no un
+efecto colateral del rediseño de una pantalla.
+
+**El día que borré 955 líneas de CSS sin enterarme (2026-08-05).** Al aplicar
+la bajada de escala de Dominios usé sustitución de texto sobre
+`app/globals.css` entero. El bloque móvil lo localicé buscando
+`@media (max-width: 560px)` — y esa cadena aparece **antes** en el fichero, en
+el sistema de artículos del blog. El corte se llevó por delante ~930 líneas
+intermedias: el arreglo del auto-zoom de iOS, el sistema `.art-*` completo y
+todo lo que había entre medias.
+
+**Nada del pipeline local lo detectó.** `pnpm test` (1526) y
+`pnpm run validate` —build, typecheck y lint— pasaron en verde con el fichero
+mutilado, porque borrar CSS no rompe ninguna de las tres cosas. Lo cazó el
+piloto, y no en la pantalla que yo estaba tocando: `web-audit @ mobile:
+horizontal overflow — scrollWidth 438px > viewport 375px`. Una pantalla que
+este PR no toca, rota por CSS que este PR borró.
+
+Dos reglas que quedan:
+
+1. **Ninguna sustitución ciega sobre un fichero de 6.700 líneas.** Se acota
+   primero el bloque (por sus marcadores de inicio y fin), se opera dentro y se
+   comprueba después que el diff no sale de ahí. Es lo que se hizo al rehacerlo.
+2. **Verde en local no es verde.** Es la segunda vez el mismo día que el
+   pipeline aprueba algo roto — la primera fueron las seis pantallas en 404 por
+   una columna que no existía. Las dos las encontró el piloto sobre un
+   despliegue real. Cuando el coste de equivocarse es "una pantalla que no
+   estoy mirando", la única prueba que vale es la que mira todas.
+
+**Las tarjetas de la rejilla pasan de navegar a seleccionar (2026-08-05,
+mismo día).** Hasta aquí, tocar un dominio de la rejilla llevaba directo a su
+Visión general — el mismo gesto que la portada. El fundador probó eso en el
+preview y pidió lo contrario: *"pinchar en un dominio de abajo debe
+seleccionarlo y por tanto retornar a la misma página con ese dominio en la
+card principal"*. La portada deja de ser sólo un escaparate del dominio más
+reciente y pasa a ser el resultado de una elección.
+
+Implementado con un parámetro en la propia URL —
+`/dashboard/domains?active=<id>`— en vez de estado de cliente o una cookie de
+sesión: la pantalla sigue siendo un Server Component puro, la selección
+sobrevive a recargar y compartir el enlace, y no hace falta inventar
+persistencia nueva para algo que dura lo que dura la navegación. `active` se
+valida contra `projects`, que ya viene acotado por RLS — un id ajeno o
+inexistente simplemente no casa con nada y cae al criterio de reserva de
+siempre (el más reciente), igual que cuando no hay parámetro.
+
+**Deliberadamente no tocado:** el bloque de proyecto de la barra lateral
+(`proj-switch`) sigue sin enterarse de esta selección — deriva el proyecto
+activo de la URL de las rutas `/dashboard/projects/[id]/*`, y `/dashboard/
+domains?active=…` no es una de ellas. Elegir un dominio en Dominios no cambia
+qué dominio ve la barra lateral en el resto de la consola; sólo cambia qué
+portada ves en Dominios. Unificar los dos sería una noción de "dominio
+seleccionado" a nivel de cuenta, persistida más allá de una URL — alcance
+mayor, pedido explícito propio si algún día hace falta.
+
+**Por qué `/debug` sí conserva la columna GEO Score y su delta.** El mismo día, SCORE-WINDOW-1 (§31) retiró esa columna de la pantalla de cliente con una condición explícita del fundador: *"Yo veré la puntuación de los Escaneos en la página de debug"*. No es una omisión de esta fase — es la mitad complementaria de esa decisión. La regla de `resolveDelta` (DELTA-GUARD-1, §23) sigue vigente aquí tal cual: §31 sólo la da por superada en la pantalla que dejó de existir.
+
+**Pendiente / roto conocido.**
+
+- **`/debug` no está protegida.** El intake proponía `OPS_USER_EMAILS` + 404; el
+  fundador lo descartó por ahora (*"no he publicado aún la web"*). Matiz que yo
+  mismo había exagerado y conviene dejar recto: la página pasa por
+  `requireActiveProject`, que ya filtra por dueño, así que nunca hubo riesgo
+  entre cuentas — lo peor era que un cliente viese sus propios internos y
+  pudiera encender su escaneo diario. **Hay que cerrarla antes de abrir la web
+  al público.**
+- **Fase B pendiente:** los bloques de `/debug` que necesitan consultas nuevas
+  (motores, salud de extracción por categoría, alertas al operador, cola de
+  trabajos, respuestas con coste/latencia). Están diseñados en
+  `pantalla-debug.html`, sin implementar.
+- `/runs` queda como redirección a `/debug`; `/runs/[runId]` (detalle de
+  escaneo) sigue donde estaba.
+
+## 33. GEO para SaaS B2B — el segundo artículo semanal, y el primero apilado (GROWTH-3, W2, 2026-08-05)
 
 **Estado: implementada.** Segunda pieza de la cola semanal autónoma
 (`docs/content-calendar.md`, W2), en el cluster `sectores` que W1 abrió el
@@ -2749,7 +3179,7 @@ PR abierto y se deja para #342.
 
 ---
 
-## 30. GEO para agencias — el cluster `sectores` cerrado, y la primera prueba de la cadena autónoma (GROWTH-3, W3, 2026-08-05)
+## 34. GEO para agencias — el cluster `sectores` cerrado, y la primera prueba de la cadena autónoma (GROWTH-3, W3, 2026-08-05)
 
 **Estado: implementada.** Tercera y última pieza de la cola semanal en el
 cluster `sectores`. Slug `geo-para-agencias`, keyword primaria "geo para
@@ -2838,7 +3268,7 @@ descuido.
 
 ---
 
-## 31. Las portadas dejan de ser una dependencia manual (GROWTH-3, 2026-08-05)
+## 35. Las portadas dejan de ser una dependencia manual (GROWTH-3, 2026-08-05)
 
 **Estado: implementada.** Los tres artículos del cluster `sectores` pasan a
 tener portada propia, dibujada en SVG en este repositorio:

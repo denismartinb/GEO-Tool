@@ -223,6 +223,20 @@ function readContinuations(payload: Record<string, unknown>): number {
  * `jobs.run_id` is NOT NULL with an FK to `scan_runs`, so the job is
  * inherently tied to the run it audits — which is also exactly the dedupe
  * key we want.
+ *
+ * DOMAINS-REDESIGN-1: this is also where the per-project opt-out
+ * (`projects.auto_web_audit_enabled`, migration 0030) is enforced, and that
+ * placement is deliberate rather than convenient. Two paths enqueue audits —
+ * the executor's inline call after a run completes, and
+ * `backfillMissingWebAuditJobs` on the daily cron — so a check at the executor
+ * alone would be undone hours later by the backfill queueing the very audit the
+ * founder had switched off. Gating the single function both go through makes
+ * that impossible, and makes a future third caller safe by construction.
+ *
+ * The check costs one indexed read per call. The backfill calls this in a loop
+ * bounded to `BACKFILL_LIMIT`, so the worst case is ten tiny reads on a daily
+ * cron — cheaper than the alternative of duplicating the gate in two places and
+ * keeping them in sync.
  */
 export async function enqueueWebAuditJob({
   service,
@@ -232,8 +246,26 @@ export async function enqueueWebAuditJob({
   service: ServiceClient;
   projectId: string;
   runId: string;
-}): Promise<"enqueued" | "already_queued" | "error"> {
+}): Promise<"enqueued" | "already_queued" | "disabled" | "error"> {
   try {
+    // Read the flag before the dedupe query: when a project has audits off,
+    // this returns without touching `jobs` at all.
+    const { data: projectRow, error: projectError } = await service
+      .from("projects")
+      .select("auto_web_audit_enabled")
+      .eq("id", projectId)
+      .maybeSingle();
+
+    // Fail OPEN, on purpose. A read failure here must not silently stop audits
+    // for every project — the same reasoning as `isAutoWebAuditEnabled`
+    // defaulting to on. A missing column (migration 0030 not yet applied) and a
+    // transient error are indistinguishable at this layer, and of the two
+    // possible mistakes, "audited something the founder had switched off" costs
+    // one Gemini campaign while "stopped auditing everything" is invisible.
+    if (!projectError && projectRow && projectRow.auto_web_audit_enabled === false) {
+      return "disabled";
+    }
+
     const { data: existing } = await service
       .from("jobs")
       .select("id")
@@ -311,9 +343,12 @@ const BACKFILL_LIMIT = 10;
  * so the durable record of "a scan finished" is what drives the audit, not the
  * liveness of one serverless invocation.
  *
- * Deliberately not filtered by plan: `runWebAuditJob` cancels a non-Pro job on
- * its first cheap query, before any Gemini call, and duplicating the plan gate
- * here would mean two places to keep in sync for no saving.
+ * Deliberately not filtered by plan, and since WEB-AUDIT-TECH-ALL-PLANS-1
+ * (docs/adr/0035) that matters more than it used to: a non-Pro job is no
+ * longer cancelled on its first cheap query — it skips the coverage half and
+ * runs the technical one, which every plan now gets. Backfilling regardless
+ * of plan is therefore the correct behaviour, not a tolerated cost, and
+ * duplicating the plan gate here would still mean two places to keep in sync.
  *
  * ------------------------------------------------------------------------
  * Only the newest run of each project, and that is not an optimisation
@@ -618,6 +653,8 @@ export async function runWebAuditJob({
     // and the chain would dispatch forever achieving nothing until the
     // continuation cap stopped it.
     let coverageDone = false;
+    /** True when coverage was skipped because the plan does not include it (docs/adr/0035). */
+    let coverageSkippedForPlan = false;
     let batches = 0;
     let topicsBefore = -1;
 
@@ -626,6 +663,20 @@ export async function runWebAuditJob({
       batches += 1;
 
       if (!coverage.success) {
+        // WEB-AUDIT-TECH-ALL-PLANS-1 (docs/adr/0035): `plan_required` from
+        // COVERAGE is no longer terminal for the whole job. Coverage stays
+        // Pro-only, but the technical half now runs on every plan, so
+        // cancelling here would deny a free project the one component of its
+        // GEO Score it can actually act on (docs/adr/0033).
+        //
+        // Deliberately narrow: only this one reason falls through, and only
+        // from coverage. Every other terminal reason (project_not_found,
+        // project_archived, no_prompts) still cancels, because those mean
+        // there is nothing to audit at all — not "this half isn't yours".
+        if (coverage.reason === "plan_required") {
+          coverageSkippedForPlan = true;
+          break;
+        }
         if (isTerminalAuditFailure(coverage.reason)) {
           return finishCancelled(service, job, coverage.reason);
         }
@@ -646,7 +697,10 @@ export async function runWebAuditJob({
       topicsBefore = topicsAfter;
     } while (batches < MAX_BATCHES_PER_INVOCATION && Date.now() - startedAt < batchStartCutoffMs);
 
-    if (!coverageDone) {
+    // A plan without coverage is not an unfinished campaign: there is nothing
+    // to come back for, so parking as a continuation would re-dispatch this
+    // job until the continuation cap stopped it, achieving nothing each time.
+    if (!coverageDone && !coverageSkippedForPlan) {
       return finishContinuation(service, job, continuations + 1, now);
     }
 

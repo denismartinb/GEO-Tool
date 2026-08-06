@@ -111,26 +111,22 @@ test("recommendations screen renders", async ({ page }, testInfo) => {
   await exploreInteractions(page, testInfo, "recommendations");
 });
 
-test("scan history screen renders", async ({ page }, testInfo) => {
-  const id = await projectId(page);
-  const findings = await visitAsUser(page, testInfo, `/dashboard/projects/${id}/runs`, "runs", {
-    // `.run-tbl` (the history table) and NOT the status text: the first
-    // version of this anchor matched /completado|en curso|.../, which on this
-    // page lives inside `.scan-status` — and globals.css hides that element
-    // entirely below 900px. The result was a mobile-only failure on a screen
-    // that renders perfectly at every width (caught by the pilot on its first
-    // real run, 2026-08-02).
-    //
-    // Rule for every anchor here: it must be (a) absent in the empty state,
-    // so it actually discriminates, and (b) visible at all three viewports,
-    // so it never reports a CSS breakpoint as missing data. Prefer a
-    // structural element that only exists with data over prose that a media
-    // query might hide.
-    describedAs: "la tabla del historial de escaneos",
-    anyOf: [{ selector: ".run-tbl" }]
+test("domains screen renders", async ({ page }, testInfo) => {
+  // DOMAINS-REDESIGN-1: «Escaneos» ya no es una pantalla de cliente. Su mitad
+  // de cliente es Dominios; el historial se fue a /debug, que es interna y
+  // deliberadamente NO forma parte del recorrido del piloto.
+  const findings = await visitAsUser(page, testInfo, "/dashboard/domains", "domains", {
+    // La portada del dominio activo, no la pastilla de estado ni la línea de
+    // automatización: la primera desaparece en reposo y la segunda se oculta
+    // bajo el breakpoint móvil. Misma regla que ya regía aquí — el ancla debe
+    // (a) faltar en el estado vacío, para discriminar de verdad, y (b) verse
+    // en los tres viewports, para no reportar un breakpoint como falta de
+    // datos.
+    describedAs: "la portada del dominio activo",
+    anyOf: [{ selector: ".dm2-hero" }]
   });
   assertPageIsHealthy(findings);
-  await exploreInteractions(page, testInfo, "runs");
+  await exploreInteractions(page, testInfo, "domains");
 });
 
 test("citations screen renders", async ({ page }, testInfo) => {
@@ -226,12 +222,36 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
 
     // El distintivo vive en la fila CERRADA, así que una captura de la fila
-    // abierta no lo prueba. Se comprueba aquí, mecánicamente, sobre la propia
-    // incidencia que sabemos que trae solución.
-    await expect(
-      llmsIssue.locator(".wa2-fix-ready"),
-      'la incidencia llms.txt no muestra el distintivo "Solución disponible"'
-    ).toBeVisible();
+    // abierta no lo prueba. Se comprueba aquí, mecánicamente.
+    //
+    // Pero se comprueba CONDICIONADO a que la incidencia traiga solución de
+    // verdad, que no siempre ocurre: `buildLlmsTxt` devuelve null cuando
+    // ninguna campaña de cobertura ha verificado una página, porque se niega
+    // a emitir un fichero que sería sólo marcadores de posición. En un
+    // proyecto así la fila correctamente NO lleva distintivo.
+    //
+    // La versión anterior afirmaba "sabemos que trae solución" y sólo era
+    // cierto del proyecto que el piloto elegía entonces. Sin PILOT_PROJECT_ID
+    // el piloto autodescubre proyecto, así que el día que eligió uno con 0
+    // páginas verificadas (Xataka, 2026-08-05) la aserción falló describiendo
+    // como rota una pantalla que estaba bien. El invariante real es más
+    // estrecho y no depende del proyecto: **si dentro hay solución, la fila
+    // cerrada tiene que anunciarla**.
+    const hasGeneratedFix = (await llmsIssue.locator(".wa2-llms").count()) > 0;
+    if (hasGeneratedFix) {
+      await expect(
+        llmsIssue.locator(".wa2-fix-ready"),
+        'la incidencia llms.txt trae solución dentro pero no muestra el distintivo "Solución disponible"'
+      ).toBeVisible();
+    } else {
+      // Anotado, no silenciado: un salto invisible es como una pantalla vacía
+      // pasa por verificada (incidente del 2026-08-02).
+      testInfo.annotations.push({
+        type: "skipped-assertion",
+        description:
+          "llms.txt sin solución generable en este proyecto (sin páginas verificadas), así que el distintivo no aplica."
+      });
+    }
   }
 
   // Misma incidencia estructural que las dos anteriores: los pasos del sitemap

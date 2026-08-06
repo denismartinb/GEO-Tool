@@ -321,14 +321,44 @@ describe("runWebAuditJob", () => {
   });
 
   it("cancels without alerting on a terminal failure — nothing is broken", async () => {
+    // `project_archived`, not `plan_required`: since WEB-AUDIT-TECH-ALL-PLANS-1
+    // (docs/adr/0035) the latter is no longer terminal for the job, it only
+    // skips the coverage half. This test still guards the cancel path with a
+    // reason that genuinely means "there is nothing to audit".
+    mockedCoverage.mockResolvedValue({ success: false, error: "archived", reason: "project_archived" });
+    const { service, recorded } = makeService({});
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(outcome).toEqual({ result: "cancelled", reason: "project_archived" });
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "cancelled", last_error: "project_archived" });
+    expect(mockedAlert).not.toHaveBeenCalled();
+  });
+
+  it("runs the technical half when coverage is not in the plan, instead of cancelling", async () => {
+    // The whole point of docs/adr/0035: a plan without coverage still gets the
+    // component of its GEO Score it can act on. Cancelling here would deny it.
     mockedCoverage.mockResolvedValue({ success: false, error: "plan", reason: "plan_required" });
     const { service, recorded } = makeService({});
 
     const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
 
-    expect(outcome).toEqual({ result: "cancelled", reason: "plan_required" });
-    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "cancelled", last_error: "plan_required" });
+    expect(mockedTechnical).toHaveBeenCalled();
+    expect(outcome.result).toBe("completed");
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "completed" });
     expect(mockedAlert).not.toHaveBeenCalled();
+  });
+
+  it("does not park a coverage-less plan as a continuation", async () => {
+    // There is nothing to come back for, so re-dispatching would burn
+    // invocations until the continuation cap stopped it.
+    mockedCoverage.mockResolvedValue({ success: false, error: "plan", reason: "plan_required" });
+    const { service, recorded } = makeService({});
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(outcome.result).not.toBe("continuation");
+    expect(jobUpdates(recorded).at(-1)?.status).not.toBe("pending");
   });
 
   it("retries a transient failure with the documented backoff", async () => {

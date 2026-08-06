@@ -375,7 +375,7 @@ It exists because one project only ever exercises one shape of data — see
 "Known limits". Nothing about it needed an exception.
 
 **Abrir la campana ya no es del todo una lectura, y conviene decirlo.** Desde
-NOTIF-AUTOREAD-1 (2026-08-05, log §26) abrir el panel de notificaciones escribe
+NOTIF-AUTOREAD-1 (2026-08-05, log §28) abrir el panel de notificaciones escribe
 `read_at` en las notificaciones sin leer de la cuenta del piloto. No es una
 excepción que nadie pidiera: el allow-list del barrido ya casaba con la campana
 (`[aria-expanded]`). **El barrido ya no la toca** (`refuseReason` la rechaza por

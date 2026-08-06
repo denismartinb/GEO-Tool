@@ -84,7 +84,11 @@ no es cosmético: es la frontera de validez explicada arriba.
 ```sql
 -- 0 · Tamaño del conjunto utilizable. Si esto no llega a ~30 runs sobre >=8
 --     proyectos distintos, PARAR: no hay con qué calibrar.
-select count(*) as runs, count(distinct project_id) as proyectos
+-- `project_id` va cualificado a propósito: existe en run_scores Y en
+-- scan_runs, así que sin prefijo Postgres lo rechaza con
+-- "42702: column reference project_id is ambiguous". La primera versión de
+-- este ADR lo traía sin cualificar y falló al ejecutarse (2026-08-05).
+select count(*) as runs, count(distinct sr.project_id) as proyectos
 from public.run_scores rs
 join public.scan_runs sr on sr.id = rs.run_id
 where sr.status = 'completed' and sr.finished_at >= '2026-08-05';

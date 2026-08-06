@@ -17,6 +17,11 @@ export const feedbackErrorMessages: Record<string, string> = {
   recurring_requires_completed_scan:
     "Completa al menos un escaneo manual antes de activar el escaneo automático diario.",
   recurring_update_failed: "No se ha podido actualizar el escaneo automático. Vuelve a intentarlo.",
+  auto_audit_update_failed: "No se ha podido actualizar la auditoría automática. Vuelve a intentarlo.",
+  // Sin "vuelve a intentarlo" a propósito: reintentar no crea una columna. Dice
+  // qué hay que hacer y quién puede hacerlo.
+  auto_audit_migration_pending:
+    "La auditoría automática todavía no se puede configurar por dominio: falta aplicar la migración 0030 en Supabase.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
   unauthorized: "No tienes permisos para realizar esta acción.",
@@ -29,5 +34,10 @@ export const feedbackSuccessMessages: Record<string, string> = {
   scan_completed: "Escaneo completado. Los resultados ya están disponibles en esta visión general.",
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno.",
   recurring_enabled: "Escaneo automático diario activado. Este dominio se escaneará cada día.",
-  recurring_disabled: "Escaneo automático diario desactivado."
+  recurring_disabled: "Escaneo automático diario desactivado.",
+  auto_audit_enabled: "Auditoría automática activada. Este dominio se auditará tras cada escaneo.",
+  // Says "los próximos", not "las auditorías": a job already queued still runs
+  // (see setAutoWebAudit) and promising otherwise would be a lie the user could
+  // catch on the very next page load.
+  auto_audit_disabled: "Auditoría automática desactivada. No se auditarán los próximos escaneos de este dominio."
 };

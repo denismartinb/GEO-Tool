@@ -428,12 +428,12 @@ Copy exacto por tipo (castellano, tú/informal, coherente con el producto):
 | `gap_pending` | Brecha pendiente de resolver | `«{recommendationTitle}» sigue abierta {consecutiveRuns} escaneos después.` |
 | `emerging_competitor` | Marca emergente en tus respuestas | `La IA menciona a {competitor} en {promptCount} consultas y no la monitorizas.` |
 | `ai_bot_blocked` | `{agent} no puede acceder a tu web` | `Tu robots.txt lo bloquea. Mientras siga así no puedes aparecer en sus respuestas.` |
-| `audit_completed` | Auditoría web completada | `Preparación técnica {readinessScore}/100.` |
+| `audit_completed` | Auditoría web completada | `Diagnóstico técnico {readinessScore}/100.` |
 | `trial_ending` | Tu prueba termina pronto | `Quedan {daysLeft} días. Después pasarás al plan Free.` |
 
 ### 5.3 Marcar como leídas
 
-**Superseded por NOTIF-AUTOREAD-1 (2026-08-05, log §26).** La v1 marcaba leído
+**Superseded por NOTIF-AUTOREAD-1 (2026-08-05, log §28).** La v1 marcaba leído
 con un botón y `markAllNotificationsRead()` (sin argumentos, todo lo no leído
 del usuario). Verlas es leerlas: ya no hay botón en ninguna de las dos
 superficies, y la acción recibe la lista explícita de ids que se han
