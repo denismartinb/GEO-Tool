@@ -3177,7 +3177,42 @@ Queda anotado, no hecho.
 - **No verificado con bytes reales.** El contenedor donde se implementó tiene
   `www.google.com` bloqueado por política de red, así que la tabla de arriba es
   aritmética sobre el código, no una medición de los PNG. Lo que lo cierra es
-  el piloto mirando capturas a `deviceScaleFactor: 2`.
+  el piloto mirando capturas a `deviceScaleFactor: 2` — **que el arnés no sabe
+  hacer**: `playwright.config.ts` monta los viewports sin `deviceScaleFactor` y
+  el valor por defecto de Playwright es 1. El fundador decidió no tocar el arnés
+  (2026-08-06), así que la nitidez la verificó su ojo sobre el preview y no
+  queda capturada como evidencia. **La próxima sesión que toque favicons
+  arrancará igual de ciega**; si eso molesta, el arreglo es un `PILOT_DPR`
+  opcional con valor por defecto 1, que no cambiaría el comportamiento de
+  ningún PR existente.
+
+**Addendum del mismo día: dos fallos que sólo aparecieron al mirar el producto
+de verdad.** Ninguno de los dos lo habría encontrado la aritmética; los dos
+salieron de una captura del fundador en un iPhone.
+
+1. **La portada de Dominios se quedaba con el icono del dominio anterior.** El
+   `<img>` de la portada no llevaba `key`, así que al cambiar de dominio React
+   reutilizaba el mismo nodo y sólo le cambiaba el `src`: el navegador seguía
+   pintando la imagen ya decodificada hasta que llegaba la nueva. En la captura,
+   una farmacia con el logo de Mozilla. **El bug era anterior, pero la Fase 1 lo
+   agravó**: al derivar el tamaño del tamaño CSS, la portada (56 px → 256 a
+   densidad 3) y la rejilla (38 px → 128) dejaron de compartir URL, y la portada
+   perdió el acierto de caché que antes la tapaba. Arreglado con `key={domain}`
+   en la portada y en el conmutador de la barra lateral. Se acepta un hueco
+   vacío durante la carga: **enseñar la marca equivocada es peor que no enseñar
+   nada**, porque el hueco se lee como "cargando" y el logo ajeno se lee como un
+   dato.
+2. **genscore.es salía con el globo genérico en nuestro propio producto.** No
+   servíamos nada en `/favicon.ico` ni en `/apple-touch-icon.png`: todos los
+   iconos vivían bajo `/brand/`, descubribles sólo parseando las `<link>` del
+   HTML. Los recolectores de terceros prueban primero las rutas convencionales,
+   y por eso mahou.es y vodafone.es sí tenían icono y nosotros no. Añadidos
+   `public/favicon.ico` y `public/apple-touch-icon.png`. **No arregla la consola
+   al instante**: el índice de Google S2 se puebla por rastreo, así que hasta
+   que vuelva a pasar por genscore.es seguirá devolviendo el globo. Es condición
+   necesaria, no suficiente — y refuerza el caso de la Fase 3a, que al servir
+   los iconos por proxy propio deja de depender de cuándo le apetezca a Google
+   rastrearnos.
 ---
 
 ## Cómo mantener este documento
