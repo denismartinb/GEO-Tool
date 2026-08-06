@@ -69,8 +69,14 @@ describe("getPostsByCluster", () => {
     }
   });
 
-  it("returns an empty array for a cluster with no posts yet", () => {
-    expect(getPostsByCluster("sectores")).toEqual([]);
+  it("returns an empty array for a cluster key with no posts", () => {
+    // Ya no queda ningún cluster real vacío: "sectores" se abrió con
+    // `geo-para-ecommerce` (GROWTH-3, primera pieza de la cola semanal), y era
+    // el último que quedaba sin artículos. La función tiene que seguir
+    // devolviendo [] sin romperse para una clave que no case con nada, que es
+    // la propiedad que este test protege — no que un cluster concreto esté
+    // vacío, porque eso caduca en cuanto se publica su primer artículo.
+    expect(getPostsByCluster("cluster-inexistente" as never)).toEqual([]);
   });
 
   it("every post is reachable from exactly one cluster (no post is orphaned)", () => {
@@ -97,7 +103,14 @@ describe("BLOG_CLUSTERS pillarIntro (GROWTH-2 Fase 2.9, B1b)", () => {
     }
   });
 
-  it("'sectores' has no pillarIntro — it has zero real posts, nothing to synthesize honestly yet", () => {
-    expect(getBlogCluster("sectores")?.pillarIntro).toBeUndefined();
+  it("'sectores' now has a pillarIntro — it stopped being empty when its first post shipped", () => {
+    // Este test decía lo contrario hasta GROWTH-3: `sectores` no tenía
+    // pillarIntro *a propósito*, porque sin artículos no había nada que
+    // sintetizar honestamente y un pilar de relleno es peor que un estado
+    // vacío. `geo-para-ecommerce` lo abrió, así que la condición que lo
+    // justificaba ya no se cumple. La regla de fondo no cambia y sigue
+    // vigilada por el test de arriba: un cluster con posts reales necesita
+    // pilar; uno vacío no debe fingir que lo tiene.
+    expect(getBlogCluster("sectores")?.pillarIntro).toBeTruthy();
   });
 });

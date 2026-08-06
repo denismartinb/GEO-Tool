@@ -1,0 +1,137 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+
+export const post = getBlogPost("geo-para-ecommerce");
+
+export const metadata = {
+  title: `${getSeoTitle(post)} — Genscore`,
+  description: getMetaDescription(post),
+  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">5 de agosto de 2026</p>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+En una ficha de producto compites por **el clic**. En una respuesta de IA compites por **ser uno de los tres nombres que se mencionan**, y ahí no hay segunda página a la que caer: o sales, o no existes. La diferencia no la decide tu catálogo, sino si alguien fuera de tu web ha escrito sobre tus productos en términos que el modelo pueda citar.
+
+</KeyTakeaway>
+
+Un comprador que antes escribía "mejores zapatillas trail para pronadores" en Google y abría seis pestañas, hoy cada vez más se lo pregunta a un chatbot y recibe tres nombres. Ese cambio no afecta a tu tienda como un canal más: **afecta al momento anterior a la visita**, cuando todavía se está decidiendo la lista corta de marcas que merecen una.
+
+Y la lista corta es corta de verdad. Ese es todo el problema.
+
+## Cuánta gente compra ya así
+
+Antes de rediseñar nada conviene saber si esto es una tendencia real o ruido de titular. Los datos de terceros disponibles a mediados de 2026 apuntan a que ya es real, con una salvedad importante que viene después.
+
+<StatGrid label="Adopción de la IA en la investigación de compra (dos estudios de terceros, 2026)">
+  <Stat value="43%" label="Compradores online en EE. UU. que usaron un asistente de IA para investigar un producto en los últimos 90 días" source="Capital One Shopping Research, 2026" tone="blue" />
+  <Stat value="74%" label="Compradores de 18 a 29 años que han usado IA para investigar una compra, frente al 20% de los mayores de 61" source="Alchemer, 2026 Retail Report" tone="cyan" />
+  <Stat value="86%" label="De quienes usan IA para investigar, los que verifican la recomendación en otra fuente antes de comprar" source="Capital One Shopping Research, 2026" tone="warm" />
+</StatGrid>
+
+Estas cifras son de terceros —dos estudios distintos, y cada una lleva el suyo— y se refieren al mercado estadounidense. No son datos propios de Genscore ni de tiendas españolas, y no las presentamos como tales. Sirven para dimensionar el fenómeno, no para prometerte un resultado.
+
+Fíjate en la tercera, que es la que más cambia lo que hay que hacer: **la mayoría de la gente no compra directamente lo que le dice la IA, lo contrasta.** Eso significa que la respuesta generativa no sustituye a tu ficha de producto ni a tus reseñas — decide **si llegan a mirarlas**. Aparecer en la respuesta es el filtro; convencer sigue ocurriendo después, en tu web.
+
+## Por qué el SEO de producto no arrastra
+
+Una tienda con buen SEO da por hecho que si posiciona, aparecerá. Con los motores generativos ese arrastre falla por tres motivos concretos:
+
+**Los modelos citan poco tu dominio y mucho el de otros.** Cuando un modelo responde "¿cuál es la mejor freidora de aire por menos de 100 euros?", lo natural es que se apoye en comparativas, foros y medios que ya han hecho ese trabajo. Tu ficha describe **tu** producto; el comparador describe **la decisión**. Y la pregunta del usuario es una decisión, no un producto.
+
+**El catálogo es enorme y la respuesta es minúscula.** Puedes tener 40.000 referencias y aun así no aparecer en ninguna respuesta, porque la respuesta solo tiene sitio para dos o tres. La cobertura de catálogo no se traduce en cobertura de menciones.
+
+**Muchas fichas dicen lo mismo.** Si tu descripción viene del fabricante, es literalmente el mismo texto que la de tus competidores. No hay nada ahí que un modelo pueda usar para preferirte a ti.
+
+<Figure
+  caption="La pregunta de compra no coincide con la estructura de tu catálogo: el usuario pregunta por una decisión con restricciones, y tu web está organizada por categorías y productos."
+  alt="Comparación entre una consulta de compra con restricciones y la estructura por categorías de una tienda"
+>
+
+**Lo que pregunta el comprador:** *"Regalo para alguien que empieza a correr, menos de 60 €, que no sea una tontería."*
+
+**Cómo está organizada tu tienda:** Running › Accesorios › Precio: 50-75 € › 214 resultados.
+
+Entre esas dos cosas hay un trabajo de traducción que hoy hacen los comparadores y los foros. Quien lo haga en tu sector es quien será citado.
+
+</Figure>
+
+## Qué mover primero si vendes online
+
+El orden importa, porque casi todo el trabajo útil está **fuera** de tu web y eso es lo contrario de lo que dicta el instinto.
+
+<Checklist
+  title="Prioridades para una tienda que quiere aparecer en respuestas de IA"
+  items={[
+    "Averigua primero si ya te mencionan y en qué preguntas. Sin esa línea base, cualquier cambio que hagas es una corazonada.",
+    "Escribe las preguntas como las hace un comprador —con presupuesto, con caso de uso, con restricción— no como palabras clave de categoría.",
+    "Identifica qué fuentes cita el modelo en tus preguntas. Suelen ser tres o cuatro dominios recurrentes: ahí es donde se juega tu presencia.",
+    "Consigue estar en esas comparativas y listados, con datos verificables. Un producto sin ficha en el sitio que el modelo cita es un producto invisible.",
+    "Haz que tus fichas digan algo que no diga el fabricante: para quién no es, con qué se compara, qué falla.",
+    "Marca tus productos con datos estructurados. No te hace aparecer, pero evita que te descarten por ambigüedad."
+  ]}
+/>
+
+El cuarto punto es el que más incomoda y el que más rinde. **Tu visibilidad en IA depende en buena parte de sitios que no controlas.** Es incómodo, pero es más accionable de lo que parece: son pocos dominios, son identificables, y en la mayoría de los sectores nadie de tu competencia los está trabajando todavía con esta intención.
+
+## Lo que no sabemos, y no vamos a fingir que sí
+
+Hay tres preguntas que un artículo honesto sobre GEO para ecommerce no puede responder hoy:
+
+**Cuánto vende esto.** No tenemos —ni conocemos— un estudio fiable que relacione aparecer en respuestas de IA con ingresos incrementales en una tienda concreta. La atribución aquí es genuinamente difícil: el 86% que contrasta antes de comprar llega a tu web por otro camino, y esa visita se atribuirá a lo que sea que la traiga al final.
+
+**Cuánto tarda.** No hemos medido cuánto pasa entre publicar contenido nuevo y verlo reflejado en las respuestas. Depende del modelo, de si usa <a href="/glosario/grounding">grounding</a> con búsqueda en vivo o memoria del entrenamiento, y de con qué frecuencia se reindexan las fuentes que cita.
+
+**Si hay atajos.** No los hemos encontrado. Lo que sí hemos visto es que las tiendas que aparecen suelen estar en los sitios que el modelo cita — que es una conclusión aburrida, pero es la que sostienen los datos.
+
+Preferimos decirlo así a rellenar el hueco con una cifra que suene bien. Un dato inventado sobre GEO envejece muy rápido y deja al lector peor de lo que estaba.
+
+## Empieza por medir, no por reescribir
+
+La tentación es lanzarse a reescribir 40.000 fichas. Es caro, es lento y, por lo que se ve en las respuestas reales, no es donde está la palanca.
+
+El primer paso barato es saber **en qué preguntas de compra de tu categoría apareces hoy, quién aparece en tu lugar y qué fuentes se están citando**. Eso es una tarde de trabajo y decide todo lo demás. Si quieres el detalle de cómo se construye esa lista de preguntas, está en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts correctos</a>; y para elegir contra quién compararte, en <a href="/blog/como-elegir-competidores-analisis-geo">cómo seleccionar competidores</a>. Los términos que aparecen aquí están en el <a href="/glosario/geo">glosario</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Aparece tu tienda cuando la IA recomienda productos como los tuyos?"
+  text="Genscore lo mide con escaneos reales sobre las preguntas que hacen tus compradores, y te dice qué fuentes se están citando en tu lugar."
+/>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>
