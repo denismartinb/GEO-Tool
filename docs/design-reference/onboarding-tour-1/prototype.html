@@ -410,6 +410,89 @@ code {
 .btn-lg:hover { background: #1d4fd0; }
 .btn-lg:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
 
+/* ==========================================================================
+   Dos carcasas, un mismo tour. El escenario, el reloj y los cinco actos son
+   idénticos; sólo cambia lo que los rodea. Se intercambian por CSS sobre el
+   mismo DOM: duplicar el marcado sería garantizar que las dos versiones se
+   separen a la primera corrección.
+   ========================================================================== */
+
+/* --- Selector del prototipo (no va al producto) --- */
+.shell-switch {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.ss-label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pg-ink-2); margin-right: 2px; }
+.ss-btn {
+  font: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
+  padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--pg-line); background: transparent; color: var(--pg-ink-2);
+}
+.ss-btn:hover { color: var(--pg-ink); border-color: var(--pg-ink-2); }
+.ss-btn.on { background: var(--pg-accent); border-color: var(--pg-accent); color: #fff; }
+.ss-btn:focus-visible { outline: 2px solid var(--pg-accent); outline-offset: 3px; }
+
+/* --- Qué se ve en cada carcasa --- */
+.lp-head, .only-landing { display: none; }
+.pt[data-shell="landing"] .m-head,
+.pt[data-shell="landing"] .only-console { display: none; }
+.pt[data-shell="landing"] .lp-head { display: block; }
+.pt[data-shell="landing"] .only-landing { display: inline-flex; }
+
+/* --- Carcasa B: hero público --- */
+.pt[data-shell="landing"] .pt-scrim {
+  /* Aurora de la landing, no el scrim oscuro de un modal. */
+  background:
+    radial-gradient(70% 60% at 18% 0%, rgba(79,123,255,.20), transparent 60%),
+    radial-gradient(60% 55% at 88% 10%, rgba(9,197,214,.16), transparent 62%),
+    linear-gradient(180deg, #ffffff, #eef2fb);
+  padding: 34px 20px 30px;
+}
+.pt[data-shell="landing"] .modal {
+  max-width: 860px; background: transparent; border: none; box-shadow: none; overflow: visible;
+}
+.lp-head { text-align: center; margin-bottom: 24px; }
+.lp-h1 {
+  font-size: clamp(26px, 4.4vw, 40px); font-weight: 800; letter-spacing: -.035em;
+  line-height: 1.1; margin: 0; color: var(--ink); text-wrap: balance;
+}
+.lp-h1-accent { color: var(--brand-blue); }
+.lp-lead {
+  font-size: clamp(13.5px, 1.5vw, 16px); color: var(--ink-3);
+  margin: 12px auto 0; max-width: 54ch; line-height: 1.55;
+}
+
+/* Cromo de navegador — sólo en landing. */
+.bf-bar { display: none; }
+.pt[data-shell="landing"] .frame {
+  border-radius: 14px; border: 1px solid var(--line-strong); background: #fff;
+  box-shadow: 0 30px 80px rgba(16,24,40,.18), 0 8px 24px rgba(16,24,40,.08);
+  overflow: hidden; margin: 0 26px;
+}
+.pt[data-shell="landing"] .bf-bar {
+  height: 34px; background: var(--surface-2); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 7px; padding: 0 13px;
+}
+.bf-dot { width: 10px; height: 10px; border-radius: 999px; flex: 0 0 auto; }
+.bf-url {
+  margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: 7px;
+  height: 22px; display: flex; align-items: center; padding: 0 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px; color: var(--ink-3); min-width: 240px; justify-content: center;
+}
+/* Dentro del marco el lienzo pierde su propio borde y sus esquinas. */
+.pt[data-shell="landing"] .stage { margin: 0; border: none; border-radius: 0; }
+.pt[data-shell="landing"] .m-foot { border-top: none; }
+.pt[data-shell="landing"] .caption { margin: 16px 26px 0; justify-content: center; }
+
+@media (max-width: 640px) {
+  .pt[data-shell="landing"] .frame { margin: 0 16px; }
+  .pt[data-shell="landing"] .caption { margin: 12px 16px 0; }
+  /* El relleno ancho de la aurora dejaba el lienzo 24px más estrecho que en la
+     carcasa de consola y, con proporción fija, 40px más bajo: el acto 5 se
+     recortaba por abajo (medido a 375px). Se iguala al de consola. */
+  .pt[data-shell="landing"] .pt-scrim { padding: 22px 8px 18px; }
+}
+
 /* --- Controles del prototipo (no van al producto) ------------------------ */
 .ctl {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -491,17 +574,42 @@ code {
     </p>
   </header>
 
-  <div class="pt">
+  <div class="shell-switch" role="group" aria-label="Contexto del tour">
+    <span class="ss-label">Ver como</span>
+    <button type="button" class="ss-btn on" data-shell="console" aria-pressed="true">Modal de consola</button>
+    <button type="button" class="ss-btn" data-shell="landing" aria-pressed="false">Hero de la landing</button>
+  </div>
+
+  <div class="pt" id="pt" data-shell="console">
     <div class="pt-scrim">
       <div class="modal" role="dialog" aria-label="Bienvenido a GenScore">
 
+        <!-- Carcasa A: modal de bienvenida en la consola -->
         <div class="m-head">
           <span class="m-eyebrow">Tu primer escaneo está en marcha</span>
           <h2 class="m-title">Mientras la IA responde, esto es lo que vas a ver</h2>
           <p class="m-sub">Menos de medio minuto. Puedes saltártelo y volver cuando quieras.</p>
         </div>
 
+        <!-- Carcasa B: hero público. Titular y lead literales de app/page.tsx -->
+        <div class="lp-head">
+          <h2 class="lp-h1">Que la IA <span class="lp-h1-accent">hable de tu marca</span></h2>
+          <p class="lp-lead">
+            Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y
+            exactamente qué cambiar primero.
+          </p>
+        </div>
+
         <div class="m-body">
+          <div class="frame">
+            <!-- Cromo de navegador: .browserframe / .bf-bar ya existen en
+                 app/globals.css y el log §1 los da por aprobados. Sólo en landing. -->
+            <div class="bf-bar">
+              <span class="bf-dot" style="background:#ff5f57"></span>
+              <span class="bf-dot" style="background:#febc2e"></span>
+              <span class="bf-dot" style="background:#28c840"></span>
+              <span class="bf-url">app.genscore.com</span>
+            </div>
           <div class="stage" id="stage">
             <!-- Mini-sidebar (refleja components/sidebar.tsx) -->
             <aside class="side">
@@ -656,6 +764,8 @@ code {
             </svg>
           </div>
 
+          </div>
+
           <div class="caption">
             <span class="cap-n" id="cap-n">1</span>
             <span>
@@ -668,8 +778,9 @@ code {
         <div class="m-foot">
           <div class="dots" id="dots" role="tablist" aria-label="Actos del tour"></div>
           <span class="foot-sp"></span>
-          <button class="lnk" type="button" id="skip">Saltar</button>
-          <button class="btn-lg" type="button" id="done">Ir a mi panel</button>
+          <button class="lnk only-console" type="button" id="skip">Saltar</button>
+          <button class="btn-lg only-console" type="button" id="done">Ir a mi panel</button>
+          <button class="btn-lg only-landing" type="button" id="cta">Prueba gratis</button>
         </div>
 
       </div>
@@ -697,17 +808,36 @@ code {
 
   var DURATION = 20000;
 
+  // Los rótulos cambian con la carcasa, y no por adorno: en la consola el
+  // usuario YA ha añadido su dominio y su escaneo YA está corriendo, así que
+  // los actos 1-3 hablan en pasado y presente. En la landing todavía no ha
+  // hecho nada: los mismos actos hablan en futuro. El resto es idéntico.
   var ACTS = [
-    { n: 1, from: 800,   to: 3500,  t: "Tu dominio ya está dentro",
-      d: "Lo añadiste hace un momento. No hay nada más que configurar." },
-    { n: 2, from: 3500,  to: 8000,  t: "Ahora mismo estamos escaneando",
-      d: "Tus prompts corren en Gemini, Claude y ChatGPT. Esto es lo que está pasando mientras lees." },
-    { n: 3, from: 8000,  to: 12500, t: "Cuando acabe: tu GeoScore",
-      d: "Un número de 0 a 100, y las cuatro señales de las que sale." },
-    { n: 4, from: 12500, to: 16200, t: "Frente a quién pierdes",
-      d: "Cuánta de la conversación es tuya y cuánta de cada competidor." },
-    { n: 5, from: 16200, to: 20000, t: "Y qué cambiar primero",
-      d: "Acciones ordenadas por impacto, con la solución generada de un clic." }
+    { n: 1, from: 800,   to: 3500,
+      console: ["Tu dominio ya está dentro",
+                "Lo añadiste hace un momento. No hay nada más que configurar."],
+      landing: ["Empieza por tu dominio",
+                "Nada más. Nosotros buscamos los competidores y escribimos los prompts."] },
+    { n: 2, from: 3500,  to: 8000,
+      console: ["Ahora mismo estamos escaneando",
+                "Tus prompts corren en Gemini, Claude y ChatGPT. Es lo que está pasando mientras lees."],
+      landing: ["Lanzamos tus prompts en varios motores",
+                "Gemini, Claude y ChatGPT en la misma pasada, sin coste extra por motor."] },
+    { n: 3, from: 8000,  to: 12500,
+      console: ["Cuando acabe: tu GeoScore",
+                "Un número de 0 a 100, y las cuatro señales de las que sale."],
+      landing: ["Tu GeoScore, y de qué se compone",
+                "Un número de 0 a 100, y las cuatro señales de las que sale."] },
+    { n: 4, from: 12500, to: 16200,
+      console: ["Frente a quién pierdes",
+                "Cuánta de la conversación es tuya y cuánta de cada competidor."],
+      landing: ["Frente a quién pierdes",
+                "Cuánta de la conversación es tuya y cuánta de cada competidor."] },
+    { n: 5, from: 16200, to: 20000,
+      console: ["Y qué cambiar primero",
+                "Acciones ordenadas por impacto, con la solución generada de un clic."],
+      landing: ["Y exactamente qué cambiar primero",
+                "Acciones ordenadas por impacto, con la solución generada de un clic."] }
   ];
 
   // Waypoints del cursor. `sel` resuelve el centro del elemento en tiempo real,
@@ -742,6 +872,8 @@ code {
   var playBtn = document.getElementById("play");
 
   var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var pt = document.getElementById("pt");
+  function shell() { return pt.getAttribute("data-shell"); }
 
   // ---- utilidades --------------------------------------------------------
   function clamp01(v) { return v < 0 ? 0 : v > 1 ? 1 : v; }
@@ -779,7 +911,7 @@ code {
     b.type = "button";
     b.className = "dot";
     b.setAttribute("role", "tab");
-    b.setAttribute("aria-label", "Acto " + a.n + ": " + a.t);
+    b.setAttribute("aria-label", "Acto " + a.n);
     b.addEventListener("click", function () {
       pause();
       // +1800 ms, no +100: congelar al principio del acto captura sus barras a
@@ -815,9 +947,10 @@ code {
     }
 
     // pie
+    var copy = act[shell()] || act.console;
     capN.textContent = String(act.n);
-    capT.textContent = act.t;
-    capD.textContent = act.d;
+    capT.textContent = copy[0];
+    capD.textContent = copy[1];
     dots.forEach(function (d, i) {
       d.classList.toggle("on", i === actIdx);
       d.setAttribute("aria-selected", i === actIdx ? "true" : "false");
@@ -949,10 +1082,24 @@ code {
   function seek(ms) { t = Math.max(0, Math.min(DURATION, ms)); render(t); }
   function syncPlayBtn() { playBtn.textContent = playing ? "⏸ Pausa" : "▶ Reanudar"; }
 
+  Array.prototype.forEach.call(document.querySelectorAll(".ss-btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      pt.setAttribute("data-shell", btn.getAttribute("data-shell"));
+      Array.prototype.forEach.call(document.querySelectorAll(".ss-btn"), function (o) {
+        var on = o === btn;
+        o.classList.toggle("on", on);
+        o.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      t = 0; playing = !reduced; syncPlayBtn();   // se reinicia: los rótulos cambian
+      render(t);
+    });
+  });
+
   playBtn.addEventListener("click", function () { playing ? pause() : resume(); });
   document.getElementById("restart").addEventListener("click", function () { t = 0; playing = true; syncPlayBtn(); });
   document.getElementById("skip").addEventListener("click", function () { pause(); seek(DURATION); });
   document.getElementById("done").addEventListener("click", function () { pause(); seek(DURATION); });
+  document.getElementById("cta").addEventListener("click", function () { pause(); seek(DURATION); });
 
   // Se para al salir del viewport: una animación en bucle fuera de pantalla es
   // consumo de CPU a cambio de nada.
