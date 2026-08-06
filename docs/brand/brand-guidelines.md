@@ -99,6 +99,31 @@ BRAND-5b hace el repintado real de la UI sobre estos valores.
 
 ---
 
+## 2b. Forma de los iconos de identidad (CONSOLE-REDESIGN-1, 2026-08-06)
+
+**Redondo es una persona. Squircle es un dominio.**
+
+La app ya usaba las dos formas —`.avatar`/`.set-avatar-lg` redondos para el
+usuario, `.proj-favicon`/`.dm2-fav` de esquina redondeada para los dominios—
+pero en ningún sitio estaba escrito que fuese a propósito, así que la siguiente
+pantalla lo habría roto sin enterarse. Ajustes puso las dos formas a pocos
+píxeles una de otra, y ahí se fijó la regla:
+
+- **Persona → círculo** (`border-radius: 999px`), iniciales sobre azul suave,
+  **tinta plana sin degradado** (hallazgo 4 de BRAND-4). Nunca lleva imagen: la
+  foto de perfil se descartó el 2026-08-06 — se veía en un solo sitio y no
+  resolvía nada en una herramienta de analítica B2B.
+- **Dominio o marca → squircle**, radio 7–16 px según tamaño, con el favicon
+  real dentro (`faviconUrl()`) y una ficha con inicial sobre color determinista
+  como reserva.
+
+Evita la confusión más probable de la pantalla de cuenta: que alguien mire su
+avatar y crea que está viendo su marca. Un icono de dominio editable por el
+usuario sigue **sin implementar** — necesitaría Supabase Storage y una columna
+nueva, así que sería fase propia.
+
+---
+
 ## 3. Tipografía v3
 
 **Decisión (sesión de diseño, opción "C"):**

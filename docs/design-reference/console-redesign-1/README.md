@@ -89,13 +89,41 @@ fidelidad, no una interpretación:
 
 ## Estado
 
-**Pendiente de aprobación.** Nada implementado. La foto de perfil y el icono de
-dominio editable quedaron **descartados** por el fundador el 2026-08-06 («de
-momento nos quedamos con las iniciales»); el icono editable necesitaría Supabase
-Storage y una columna nueva, así que sería fase propia si algún día se retoma.
+**Fase A implementada** (2026-08-06, mismo PR). Cierre documental en
+`docs/brand/design-decisions-log.md` §33.
+
+La foto de perfil y el icono de dominio editable quedaron **descartados** por el
+fundador el 2026-08-06 («de momento nos quedamos con las iniciales»); el icono
+editable necesitaría Supabase Storage y una columna nueva, así que sería fase
+propia si algún día se retoma.
+
+### En qué se desvió la implementación del intake, y por qué
+
+- **Dos ficheros nuevos que el intake no listaba.**
+  `lib/settings/company-details.ts` existe porque un módulo `"use server"` sólo
+  puede exportar funciones async: los lectores puros no podían vivir junto a sus
+  server actions, y mantenerlos puros es lo que los hace testables.
+  `components/settings/billing-details.tsx` es el formulario de Razón social +
+  NIF en la sección Plan, que el intake describía sin darle casa.
+- **Se arregló una segunda entrada al mismo callejón.** El intake sólo hablaba
+  del radio de Agencia dentro del modal. Al implementarlo apareció que el botón
+  «Comparar planes» de `plan-billing-section.tsx` abría el modal **con Agencia
+  preseleccionada**, así que «Continuar» nacía apagado desde el camino por
+  defecto. Se corrigió en la misma fase.
+- **El modo `embedded` de `BillingContent` desapareció** en vez de
+  reutilizarse: al pasar `/dashboard/settings/billing` a redirect, la rama de
+  página independiente quedó sin ninguna llamada.
+- **La cobertura de la sección Plan es parcial y se declara.** El intake pedía
+  test de que un no-admin no la ve. El repo no tiene infraestructura de test de
+  componentes (ni Testing Library ni jsdom), así que se extrajo
+  `buildSettingsIndex` como función pura y se cubre ahí la entrada de índice; el
+  renderizado de la sección en sí no está cubierto por test.
+- **La altura de campo de esta maqueta se subió de 36 a 44 px** para igualar
+  `.set-field` de producción, que además cumple el área táctil mínima. Manda
+  producción; se corrigió la referencia en vez de acumular una desviación.
 
 **Fase B declarada y no aprobada**: los cuatro hallazgos restantes del modal de
 cambiar de plan (ver `task-intake.md` §4). El hallazgo 1 —Agencia es un radio
-seleccionable que no lleva a ninguna parte— sí entra en la Fase A, porque está
+seleccionable que no lleva a ninguna parte— sí entró en la Fase A, porque está
 contenido en una celda de la rejilla y es el único de los cinco que ve el
 usuario.

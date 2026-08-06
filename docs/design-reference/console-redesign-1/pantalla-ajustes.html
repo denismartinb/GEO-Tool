@@ -104,9 +104,12 @@ a{color:inherit;text-decoration:none}
 .set-idmail{font-family:var(--mono);font-size:11.5px;color:var(--brand-ink-4);margin-top:2px}
 
 .set-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
-.field-label{font-size:12px;font-weight:600;color:var(--brand-ink-2);display:block;margin-bottom:5px}
-.set-field{height:36px;border:1px solid var(--brand-line);border-radius:9px;background:var(--brand-surface);display:flex;align-items:center;padding:0 11px;font-size:13px;color:var(--brand-ink)}
-.set-field.ro{background:var(--surface-sunk);color:var(--brand-ink-3);font-family:var(--mono);font-size:11.5px}
+/* Altura y tipo exactos de produccion (.set-field, app/globals.css): 44px y
+   14.5px. La maqueta de exploracion los dibujaba a 36/13 por escala del
+   documento; manda produccion, que ademas cumple el area tactil minima. */
+.field-label{font-size:13px;font-weight:600;color:var(--brand-ink-2);display:block;margin-bottom:5px}
+.set-field{height:44px;border:1px solid var(--brand-line);border-radius:10px;background:var(--brand-surface);display:flex;align-items:center;padding:0 14px;font-size:14.5px;font-weight:500;color:var(--brand-ink)}
+.set-field.ro{background:var(--surface-sunk);color:var(--brand-ink-3);font-family:var(--mono);font-size:12px}
 .set-hint{font-size:11px;color:var(--brand-ink-4);margin-top:5px}
 
 .btn{display:inline-flex;align-items:center;gap:7px;height:35px;padding:0 15px;border-radius:9px;background:var(--brand-blue);color:#fff;font-size:13px;font-weight:650;letter-spacing:-.01em;border:0;cursor:pointer;font-family:inherit}

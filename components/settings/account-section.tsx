@@ -3,31 +3,44 @@
 import { useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
-import { SettingRow } from "@/components/settings/setting-row";
-import { DeleteAccountButton } from "@/components/settings/delete-account-button";
-import type { AccountRole } from "@/lib/account-role";
+import { Card, CardContent } from "@/components/ui/card";
+import { CompanyFold } from "@/components/settings/company-fold";
+import type { CompanyDetails } from "@/lib/settings/company-details";
 import { updateProfileName, changePassword } from "@/app/dashboard/settings/profile/actions";
 
 type Feedback = { type: "ok" | "err"; text: string };
 
-export function ProfileTab({
+/**
+ * CONSOLE-REDESIGN-1. The "Cuenta" section of the single settings page —
+ * what used to be the Perfil tab, minus everything that was not connected to
+ * anything.
+ *
+ * Removed with founder approval (2026-08-06): Idioma and Zona horaria (both
+ * held React state that vanished on reload), Cambiar foto (no backend, and
+ * enabled, so it looked live), Activar 2FA (no backend), and the
+ * Administrador/Miembro pill (with no teams, every account is admin of itself,
+ * so it hinted at a feature that does not exist).
+ *
+ * The avatar stays as initials, round, flat ink — round is a person, squircle
+ * is a domain (see docs/brand/brand-guidelines.md).
+ */
+export function AccountSection({
   email,
-  role,
   initials,
   firstName,
-  lastName
+  lastName,
+  company,
+  companyReadOnly
 }: {
   email: string;
-  role: AccountRole;
   initials: string;
   firstName: string;
   lastName: string;
+  company: CompanyDetails;
+  companyReadOnly: boolean;
 }) {
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(lastName);
-  const [lang, setLang] = useState("Español");
-  const [tz, setTz] = useState("(GMT+1) Madrid");
 
   const [isSavingName, startSavingName] = useTransition();
   const [nameFeedback, setNameFeedback] = useState<Feedback | null>(null);
@@ -36,9 +49,7 @@ export function ProfileTab({
     setNameFeedback(null);
     startSavingName(async () => {
       const result = await updateProfileName(first, last);
-      setNameFeedback(
-        result.success ? { type: "ok", text: "Cambios guardados." } : { type: "err", text: result.error }
-      );
+      setNameFeedback(result.success ? { type: "ok", text: "Guardado." } : { type: "err", text: result.error });
     });
   };
 
@@ -88,22 +99,14 @@ export function ProfileTab({
   };
 
   return (
-    <div className="set-pane">
+    <>
       <Card>
-        <CardHeader>
-          <p className="card-title">Datos personales</p>
-        </CardHeader>
         <CardContent>
-          <div className="set-profile-head">
+          <div className="set-idrow">
             <div className="set-avatar-lg">{initials}</div>
-            <div>
-              <Button type="button" variant="outline">
-                <Icon name="image" size={14} />
-                Cambiar foto
-              </Button>
-              <div className="set-hint" style={{ marginTop: 7 }}>
-                JPG o PNG, máx. 2&nbsp;MB. Si no, usamos tus iniciales.
-              </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="set-idname">{[first, last].filter(Boolean).join(" ") || "Tu cuenta"}</div>
+              <div className="set-idmail">{email}</div>
             </div>
           </div>
 
@@ -134,52 +137,20 @@ export function ProfileTab({
               <label className="field-label" htmlFor="profile-email">
                 Email
               </label>
-              <input id="profile-email" className="set-field" value={email} disabled style={{ opacity: 0.7 }} />
+              <input id="profile-email" className="set-field" value={email} disabled readOnly />
               <div className="set-hint">
                 <Icon name="lock" size={11} />
-                El email es tu identificador de acceso.
+                Es tu identificador de acceso.
               </div>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="profile-lang">
-                Idioma
-              </label>
-              <select
-                id="profile-lang"
-                className="set-field"
-                value={lang}
-                onChange={(event) => setLang(event.target.value)}
-              >
-                <option>Español</option>
-                <option>English</option>
-                <option>Français</option>
-              </select>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="profile-tz">
-                Zona horaria
-              </label>
-              <select
-                id="profile-tz"
-                className="set-field"
-                value={tz}
-                onChange={(event) => setTz(event.target.value)}
-              >
-                <option>(GMT+1) Madrid</option>
-                <option>(GMT+0) Londres</option>
-                <option>(GMT-5) Nueva York</option>
-              </select>
             </div>
           </div>
 
+          <CompanyFold initial={company} readOnly={companyReadOnly} />
+
           <div className="set-actions">
             <Button type="button" onClick={saveName} disabled={isSavingName}>
-              {isSavingName ? "Guardando…" : "Guardar cambios"}
+              {isSavingName ? "Guardando…" : "Guardar"}
             </Button>
-            <span className="set-role-pill">
-              <Icon name={role === "admin" ? "shield" : "user"} size={13} />
-              {role === "admin" ? "Administrador" : "Miembro"}
-            </span>
           </div>
           {nameFeedback && (
             <div
@@ -194,19 +165,15 @@ export function ProfileTab({
       </Card>
 
       <Card>
-        <CardHeader>
-          <p className="card-title">Seguridad</p>
-        </CardHeader>
         <CardContent>
-          <div className="set-row" style={showPasswordForm ? { borderBottom: "none" } : undefined}>
+          <div className="set-row last">
             <div className="set-row-txt">
               <div className="set-row-t">Contraseña</div>
-              <div className="set-row-d">Actualízala cuando quieras</div>
             </div>
             {!showPasswordForm && (
               <div className="set-row-ctrl">
                 <Button type="button" variant="outline" onClick={openPasswordForm}>
-                  Cambiar contraseña
+                  Cambiar
                 </Button>
               </div>
             )}
@@ -278,35 +245,13 @@ export function ProfileTab({
             </div>
           )}
 
-          <SettingRow
-            title="Verificación en dos pasos"
-            desc="Añade una capa extra de seguridad al iniciar sesión"
-            last
-          >
-            <Button type="button" variant="outline">
-              <Icon name="shield" size={13} />
-              Activar 2FA
-            </Button>
-          </SettingRow>
+          {!showPasswordForm && passwordFeedback?.type === "ok" && (
+            <div className="field-ok" style={{ justifyContent: "flex-start" }}>
+              {passwordFeedback.text}
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <Card className="card-danger-zone">
-        <CardHeader>
-          <p className="card-title" style={{ color: "var(--neg-ink)" }}>
-            Zona de peligro
-          </p>
-        </CardHeader>
-        <CardContent>
-          <SettingRow
-            title="Eliminar cuenta"
-            desc="Elimina tu cuenta y todos tus datos de forma permanente. Esta acción no se puede deshacer."
-            last
-          >
-            <DeleteAccountButton email={email} />
-          </SettingRow>
-        </CardContent>
-      </Card>
-    </div>
+    </>
   );
 }

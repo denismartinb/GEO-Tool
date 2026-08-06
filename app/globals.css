@@ -1292,7 +1292,12 @@ a {
    (none of which are edited here) automatically repaint in v3 colors
    for any instance rendered inside this wrapper, while every other
    page keeps reading the unmodified `:root` values. */
-.ov2-scope {
+/* CONSOLE-REDESIGN-1 reuses this remap for Ajustes (`.set-scope`) rather than
+   inventing a second mechanism, as the design log §2 requires. The two share
+   the token block below; only `.ov2-scope` gets Overview's 460px column, which
+   is why the width rule stays on its own selector further down. */
+.ov2-scope,
+.set-scope {
   font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ink: var(--brand-ink);
   --ink-2: var(--brand-ink-2);
@@ -1312,7 +1317,8 @@ a {
 .ov2-scope .card,
 .ov2-scope .ov2-insight,
 .ov2-scope .ov2-kpi,
-.ov2-scope .ov2-opps {
+.ov2-scope .ov2-opps,
+.set-scope .card {
   box-shadow: var(--brand-shadow-card);
 }
 /* Gauge component's inner number is a shared component (not an ov2 class), so
@@ -5318,61 +5324,110 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 }
 
 /* ============================================================
-   Ajustes de cuenta — tabs, formularios, equipo, switch
+   Ajustes de cuenta — CONSOLE-REDESIGN-1: one page, three sections.
+   The tab bar (.set-tabs/.set-tab) was removed with the four routes it
+   navigated between. Approved design:
+   docs/design-reference/console-redesign-1/.
    ============================================================ */
-.set-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-  margin: 4px 0 22px;
-  overflow-x: auto;
+.set-page { max-width: 900px; }
+.set-pane { display: flex; flex-direction: column; gap: 12px; }
+
+/* Cabecera de pantalla de CUENTA — mismo patrón que Dominios (log §32):
+   kicker + titular grande + pastilla de estado. */
+.set-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.set-kicker { font-size: 12.5px; font-weight: 500; color: var(--ink-4); margin: 0 0 2px; }
+.set-title {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800; font-size: 26px; letter-spacing: -.035em; line-height: 1.1; margin: 0;
+}
+.set-pill {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border-radius: 999px; padding: 6px 12px; margin-top: 5px;
 }
 
-.set-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 40px;
-  padding: 0 14px;
-  border: none;
-  background: none;
-  font-size: 13.5px;
-  font-weight: 650;
-  color: var(--ink-3);
-  cursor: pointer;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color .14s;
+.set-two { display: grid; grid-template-columns: 186px 1fr; gap: 34px; align-items: start; }
+.set-col { min-width: 0; }
+
+/* El índice lleva estado, no sólo enlaces — con tres entradas, una columna que
+   sólo navegase no se ganaría su sitio. */
+.set-idx { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; }
+.set-ie { display: block; padding: 9px 12px; border-left: 2px solid var(--line); line-height: 1.25; }
+.set-ie b { display: block; font-size: 12.5px; font-weight: 650; color: var(--ink-3); }
+.set-ie span {
+  display: block; font-size: 11px; color: var(--ink-4); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.set-ie:hover b { color: var(--ink); }
+.set-ie.on { border-left-color: var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+.set-ie.on b { color: var(--accent); }
+
+.set-sech {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-size: 16px; font-weight: 750; letter-spacing: -.022em; margin: 0 0 10px;
+  scroll-margin-top: 18px;
+}
+.set-sech.sp { margin-top: 30px; }
+
+.set-idrow {
+  display: flex; align-items: center; gap: 14px;
+  padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line-soft);
+}
+.set-idname { font-size: 15px; font-weight: 700; letter-spacing: -.015em; }
+.set-idmail {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11.5px; color: var(--ink-4); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis;
 }
 
-.set-tab .ico { color: var(--ink-4); }
-.set-tab:hover { color: var(--ink); }
-.set-tab.on { color: var(--accent-ink); border-bottom-color: var(--accent); }
-.set-tab.on .ico { color: var(--accent); }
-
-.set-pane { display: flex; flex-direction: column; gap: 14px; max-width: 920px; }
-
-.set-profile-head {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
+/* REGLA DE FORMA (docs/brand/brand-guidelines.md): redondo es una persona,
+   squircle es un dominio. Tinta plana, sin degradado — hallazgo de BRAND-4. */
 .set-avatar-lg {
-  width: 58px; height: 58px; border-radius: 999px;
-  background: linear-gradient(135deg, #8b8df5, #4f46e5); color: #fff;
-  display: grid; place-items: center; font-weight: 750; font-size: 21px; flex: 0 0 auto;
+  width: 44px; height: 44px; border-radius: 999px;
+  background: var(--accent-ring); color: var(--accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px; flex: 0 0 auto;
 }
 
-.set-org-logo {
-  width: 58px; height: 58px; border-radius: var(--r-lg);
-  background: linear-gradient(135deg, #34507a, #0f1729); color: #fff;
-  display: grid; place-items: center; font-weight: 800; font-size: 24px; flex: 0 0 auto;
+/* Plegable de empresa — cerrado por defecto. */
+.set-fold { border: 1px solid var(--line); border-radius: 11px; margin-top: 16px; overflow: hidden; }
+.set-fold-h {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 14px; font-size: 13px; background: none; border: 0;
+  font-family: inherit; text-align: left; cursor: pointer; color: inherit;
 }
+.set-fold-h:hover { background: var(--surface-sunk); }
+.set-caret {
+  width: 0; height: 0; flex: 0 0 auto;
+  border-left: 5px solid var(--ink-4); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+.set-caret.open {
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--accent); border-bottom: 0;
+}
+.set-fold-t { font-weight: 650; color: var(--ink); }
+.set-fold-d { color: var(--ink-4); font-size: 12px; margin-left: auto; }
+.set-fold-b { padding: 14px; border-top: 1px solid var(--line-soft); }
+
+.set-quiet {
+  font-size: 12px; color: var(--ink-4); line-height: 1.5;
+  margin: 14px 0 0; padding-top: 13px; border-top: 1px solid var(--line-soft);
+}
+
+.set-billing-details-t { font-size: 14.5px; font-weight: 700; letter-spacing: -.015em; margin: 0 0 14px; }
+
+/* Borrado de cuenta: último bloque de la página, fuera del índice y en tono
+   bajo. A una acción irreversible se llega bajando, no de un clic. */
+.set-end {
+  margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+}
+.set-end-t { font-size: 13.5px; font-weight: 650; color: var(--ink-2); }
+.set-end-d { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.5; max-width: 46ch; }
+.set-end-btn { color: var(--neg-ink); border-color: rgba(210, 59, 72, .25); }
+.set-end-btn:hover { background: var(--neg-soft); }
 
 .set-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; }
 .set-form-grid .field-label { font-size: 13px; color: var(--ink-2); }
@@ -5400,12 +5455,6 @@ select.set-field {
 .set-hint b { color: var(--ink-3); font-weight: 700; }
 .set-actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
 
-.set-role-pill {
-  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
-  border-radius: var(--r-pill); font-size: 12px; font-weight: 700;
-  background: var(--accent-soft); color: var(--accent-ink);
-}
-.set-role-pill.ghost { background: var(--surface-sunk); color: var(--ink-3); }
 
 .set-row { display: flex; align-items: center; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .set-row.last { border-bottom: none; }
@@ -5472,6 +5521,19 @@ select.set-field {
   .set-invite-bar { width: 100%; }
 }
 
+/* CONSOLE-REDESIGN-1 — móvil es un solo scroll. El índice desaparece entero:
+   ni pastillas, ni pestañas, ni ningún elemento pegajoso propio de la página.
+   El argumento de esta pantalla es «una página», y meter navegación por
+   secciones en el viewport más pequeño la contradice (fundador, 2026-08-06).
+   Se corta en el mismo 899px que el shell, no en 720. */
+@media (max-width: 899px) {
+  .set-two { grid-template-columns: 1fr; gap: 0; }
+  .set-idx { display: none; }
+  .set-title { font-size: 24px; }
+  .set-end { flex-direction: column; gap: 14px; }
+  .set-end .btn { width: 100%; }
+}
+
 /* --- Chip de plan elegido en el registro --- */
 .signup-plan-chip { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 8px 8px 8px 12px;
   border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 600; }
@@ -5519,6 +5581,22 @@ select.set-field {
 .cp-flag.cur { background: var(--ink); color: #fff; }
 .cp-flag.rec { background: var(--accent); color: #fff; }
 .cp-plan.has-flag { margin-top: 4px; }
+
+/* CONSOLE-REDESIGN-1: Agencia ocupa la misma celda de la rejilla que un plan,
+   pero no es un radio — no tiene precio self-serve en Stripe, así que se le da
+   una salida real en vez de una selección que apagaba «Continuar». */
+.cp-sales {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  padding: 15px 16px; border-radius: var(--r-lg);
+  border: 1.5px dashed var(--line-strong); background: var(--surface-2);
+}
+.cp-sales-t { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.cp-sales-d { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 4px; line-height: 1.4; }
+.cp-sales-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+}
+.cp-sales-cta:hover { text-decoration: underline; }
 
 .cp-confirm-head { display: flex; align-items: center; gap: 12px; padding: 4px 0 18px; }
 .cp-confirm-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 750; }

@@ -3116,6 +3116,101 @@ mayor, pedido explícito propio si algún día hace falta.
   escaneo) sigue donde estaba.
 ---
 
+## 33. Ajustes de cuenta: cuatro pantallas pasan a una (CONSOLE-REDESIGN-1 Fase A, 2026-08-06)
+
+**Estado: implementado.** Diseño aprobado y navegable en
+`docs/design-reference/console-redesign-1/`; Task Intake en esa misma carpeta.
+
+**El problema no era que sobrase una pestaña.** Las cuatro pantallas —Perfil,
+Organización, Notificaciones, Plan y facturación— estaban organizadas por
+*tema*. Ordenadas por el trabajo que alguien viene a hacer salen tres: quién soy
+y cómo entro, qué me llega al correo, y qué pago. Y la mitad de los controles no
+estaban conectados a nada.
+
+Se exploraron tres opciones estructurales (pestañas, página única, sacar el plan
+de Ajustes) y el fundador eligió **la página única**. Las otras dos quedan
+descartadas con motivo: las pestañas no arreglaban que lo más consultado
+siguiera a dos clics; sacar el plan al menú contradice el §3 punto 5 y hoy son
+dos barras de progreso — se deja anotado para cuando Plan gane peso.
+
+Decisiones finales:
+
+1. **Una sola ruta**, `/dashboard/settings`, con tres secciones en orden
+   Cuenta → Avisos → Plan. La más pesada y la que más va a crecer va la última,
+   para que al crecer no empuje nada.
+2. **El índice lleva estado, no sólo enlaces** — nombre, avisos activos, plan.
+   Con tres entradas, una columna de 186 px que sólo navegase no se ganaría su
+   sitio; llevar estado es lo que hace que la página única gane a las pestañas.
+3. **Las cuatro rutas viejas son redirects PERMANENTES**, no transitorios.
+   Cuatro emails de `lib/email/transactional.ts` y los enlaces que genera
+   `lib/notifications/render.ts` apuntan a ellas y están en bandejas que no
+   podemos reescribir. Por eso esta fase no toca los emails.
+4. **Móvil es un solo scroll.** La primera propuesta llevaba pastillas de
+   sección pegajosas; el fundador las descartó (2026-08-06) porque contradicen
+   el argumento entero de la opción elegida. Se corta en 899 px, el mismo
+   breakpoint del shell.
+5. **«Eliminar cuenta» cierra la página y no está en el índice**, tras una línea
+   y 44 px de aire, en gris y con botón de contorno en vez del bloque rojo
+   relleno. A una acción irreversible se llega bajando, no de un clic (fundador,
+   2026-08-06). Copy suyo: «Esta acción es irreversible. Se borrará el historial
+   y todos los datos asociados a tu cuenta.»
+6. **Fuera cuatro controles muertos**: Idioma y Zona horaria (guardaban estado
+   de React que se perdía al recargar), Cambiar foto (sin backend y **habilitado**,
+   así que aparentaba funcionar) y Activar 2FA (sin backend). También la
+   pastilla de rol «Administrador/Miembro»: sin equipos, toda cuenta es admin de
+   sí misma. La foto se descartó explícitamente — el avatar se queda en
+   iniciales (fundador, 2026-08-06).
+7. **Organización no tiene pantalla: se reparte.** Nombre, sitio web y sector
+   van a un plegable cerrado dentro de Cuenta; los fiscales suben a Plan, porque
+   existen para la factura. El botón de logo desaparece: un botón deshabilitado
+   que promete «Próximamente» sigue siendo un control que no hace nada.
+8. **Las cuatro filas «Próximamente» de Notificaciones** pasan a una línea de
+   texto al pie. Seis filas con cuatro apagadas se leían como hoja de ruta.
+9. **Repintado a marca v3 con `.set-scope`**, que comparte bloque de tokens con
+   `.ov2-scope` (§2) en vez de inventar un mecanismo por zona. El import de
+   Hanken Grotesk **no se retira**: sigue siendo el `body` de las zonas sin
+   migrar. Ajustes era la última zona de consola pendiente.
+10. **Regla de forma nueva**: redondo es una persona, squircle es un dominio.
+    Ver `docs/brand/brand-guidelines.md` §2b.
+
+**Dos hallazgos arreglados de paso, ambos en facturación:**
+
+- `plan-billing-section.tsx` pintaba sus dos avisos con cuatro hexes escritos a
+  mano (`#f0c36d`, `#fdf6e8`, `#92600a`, `#6b4b09`) que se saltaban los tokens
+  `--warn`/`--warn-soft`/`--warn-ink`. Era una **regresión de BRAND-4 hallazgo 2
+  en el mismo fichero que BRAND-4 arregló**. Matiz importante para el futuro: lo
+  prohibido no es el ámbar de aviso, que tiene familia de tokens legítima, sino
+  `--brand-warm` (#FFB020), que es sólo el punto del logo.
+- **Agencia era un callejón sin salida** en el modal de cambiar de plan: un
+  radio seleccionable que apagaba «Continuar» y mostraba dos mensajes distintos
+  para el mismo estado. Peor aún, el botón «Comparar planes» abría el modal
+  **con Agencia ya preseleccionada**, así que el callejón se alcanzaba desde el
+  camino por defecto. Ahora ocupa la misma celda pero sin radio, con enlace a
+  ventas.
+
+**Hueco de verificación que esta fase cierra.** No existía ninguna journey de
+piloto para `/dashboard/settings`: la pasada del PR #357 barrió 44 pantallas en
+tres viewports y Ajustes no estaba en ninguna fila. Sin `tests/pilot/journeys/
+settings.spec.ts` esta pantalla se habría implementado sin que ningún piloto la
+viera nunca — el mismo fallo que el incidente de Auditoría web del 2026-08-02,
+por otra puerta.
+
+**Pendiente / roto conocido:**
+
+- **Fase B, sin aprobar:** los otros cuatro hallazgos del modal de plan — un
+  camino avisa antes de salir a Stripe y el otro no; el bloque de archivar
+  dominios duplicado en los pasos `confirm` y `overage`; el distintivo «Bajada
+  de plan» fijo con un `.cp-confirm-badge.up` muerto en CSS; y el icono `grid`
+  de la cabecera. Necesita su propio Task Intake: es un flujo de pago.
+- **La sección Plan sólo está cubierta por test en su entrada de índice**
+  (`buildSettingsIndex`), no en su renderizado: el repo no tiene infraestructura
+  de test de componentes. Con equipos ocultos no hay no-admins reales, pero la
+  cobertura es parcial y conviene saberlo.
+- **`org_tax_info` sigue en `user_metadata`** de las cuentas que lo tuvieran, a
+  propósito: es la fuente de reserva de Razón social hasta que su dueño guarde.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

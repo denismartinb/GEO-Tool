@@ -1,0 +1,158 @@
+import { expect, test } from "@playwright/test";
+import { assertFullyVisible, assertPageIsHealthy, captureInteraction, visitAsUser } from "../support/journey";
+
+/**
+ * CONSOLE-REDESIGN-1 — Ajustes, one page with three sections.
+ *
+ * Why this journey exists at all: it did not, and nothing noticed. The pilot
+ * run on PR #357 swept 44 screens at three viewports and `/dashboard/settings`
+ * was in none of them, because no read journey ever visited it. Shipping this
+ * redesign without adding one would mean no pilot ever sees the screen.
+ *
+ * Ajustes is a form screen, so it always "renders" whether or not the account
+ * has data — a clean load proves nothing on its own. The content expectations
+ * below demand the pilot account's real email and its real plan name, which is
+ * the whole lesson of the 2026-08-02 Auditoría web incident: a screen that
+ * loads an empty state has not been seen.
+ *
+ * SCOPE: strictly read-only. It fills in no field, saves nothing, and never
+ * touches the delete-account flow — it only asserts that block is present,
+ * quiet and last.
+ */
+
+test.describe.configure({ mode: "serial" });
+
+const INDEX = ".set-idx";
+const COMPANY_FOLD = ".set-fold";
+const COMPANY_FOLD_TRIGGER = ".set-fold-h";
+const COMPANY_FOLD_BODY = "#company-fold-body";
+const DELETE_BLOCK = ".set-end";
+
+test("Ajustes shows the real account, not an empty form", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings", {
+    describedAs: "el email real de la cuenta piloto en el campo Email",
+    anyOf: [{ selector: "#profile-email" }, { selector: ".set-idmail" }]
+  });
+
+  assertPageIsHealthy(findings);
+
+  // The old four screens are gone; anything that still paints a tab bar means
+  // the fold-into-one-page did not actually happen.
+  await expect(page.locator(".set-tabs"), "la barra de pestañas sigue en el DOM").toHaveCount(0);
+
+  const emailField = page.locator("#profile-email");
+  await expect(emailField, "el campo Email no lleva el email real de la cuenta").toHaveValue(/@/);
+
+  await expect(page.locator("h1.set-title"), "falta el titular de la pantalla").toHaveText(/ajustes/i);
+});
+
+test("the three sections are all present and in order", async ({ page }, testInfo) => {
+  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-sections", {
+    describedAs: "los títulos de sección Cuenta y Avisos",
+    anyOf: [{ selector: "#cuenta" }]
+  });
+
+  await expect(page.locator("#cuenta"), "falta la sección Cuenta").toBeVisible();
+  await expect(page.locator("#avisos"), "falta la sección Avisos").toBeVisible();
+
+  // Plan is admin-only. The pilot account is an admin, so its absence is a
+  // finding rather than an accepted branch — but say which one failed.
+  await expect(page.locator("#plan"), "falta la sección Plan en una cuenta admin").toBeVisible();
+
+  const order = await page
+    .locator("h2.set-sech")
+    .evaluateAll((nodes) => nodes.map((node) => node.id).filter(Boolean));
+  expect(order, "las secciones no van en el orden Cuenta → Avisos → Plan").toEqual([
+    "cuenta",
+    "avisos",
+    "plan"
+  ]);
+});
+
+test("the company fold opens and its content is not clipped", async ({ page }, testInfo) => {
+  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-company-fold-closed", {
+    describedAs: "el plegable de datos de empresa",
+    anyOf: [{ selector: COMPANY_FOLD }]
+  });
+
+  const trigger = page.locator(COMPANY_FOLD_TRIGGER);
+  await expect(trigger, "el plegable de empresa nace abierto").toHaveAttribute("aria-expanded", "false");
+  await expect(page.locator(COMPANY_FOLD_BODY), "el cuerpo del plegable se ve cerrado").toHaveCount(0);
+
+  await trigger.click();
+
+  await expect(trigger, "el plegable no se abrió").toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(COMPANY_FOLD_BODY)).toBeVisible();
+
+  // A reveal that renders half-cut behind its own container is green to an
+  // assertion and broken to a person (founder, 2026-08-02).
+  await assertFullyVisible(page, "#company-name", "el campo Nombre del plegable de empresa");
+  // fullContent: the fold reveals three fields plus a save button, taller than
+  // the viewport frame at 375px — the very thing being verified would be cut.
+  await captureInteraction(page, testInfo, "settings-company-fold-open", { fullContent: true });
+});
+
+test("«Eliminar cuenta» closes the page and is never in the index", async ({ page }, testInfo) => {
+  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-delete-block", {
+    describedAs: "el bloque de eliminar cuenta al pie de la página",
+    anyOf: [{ selector: DELETE_BLOCK }]
+  });
+
+  await expect(page.locator(DELETE_BLOCK), "falta el bloque de eliminar cuenta").toBeVisible();
+  await expect(
+    page.locator(`${DELETE_BLOCK} .set-end-d`),
+    "el aviso de irreversibilidad no dice lo aprobado"
+  ).toHaveText(/irreversible/i);
+
+  // Reaching an irreversible action takes scrolling, not one click — so it
+  // must not be reachable from the spine at any viewport.
+  await expect(
+    page.locator(`${INDEX} a`).filter({ hasText: /eliminar/i }),
+    "«Eliminar cuenta» aparece en el índice"
+  ).toHaveCount(0);
+
+  // It is also the LAST thing on the page: if a section ever lands below it,
+  // the block stops being the quiet foot it was designed as.
+  const deleteIsLast = await page.evaluate(() => {
+    const block = document.querySelector(".set-end");
+    const sections = Array.from(document.querySelectorAll("h2.set-sech"));
+    if (!block || !sections.length) return false;
+    const blockTop = block.getBoundingClientRect().top;
+    return sections.every((section) => section.getBoundingClientRect().top < blockTop);
+  });
+  expect(deleteIsLast, "hay una sección por debajo del bloque de eliminar cuenta").toBe(true);
+});
+
+test("mobile is one scroll: no index, no chips, nothing sticky", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings-no-section-nav", {
+    describedAs: "la página de ajustes con sus secciones",
+    anyOf: [{ selector: "#cuenta" }]
+  });
+
+  const width = page.viewportSize()?.width ?? 0;
+
+  if (width <= 899) {
+    await expect(page.locator(INDEX), "el índice sigue visible en móvil").toBeHidden();
+
+    // The point is not just that the index is gone — it is that NOTHING of the
+    // page's own navigation stays pinned. `.topbar` is the app shell and is
+    // allowed; anything else sticky inside the page is a finding.
+    const stickyInsidePage = await page.evaluate(() =>
+      Array.from(document.querySelectorAll(".page *"))
+        .filter((node) => {
+          const position = window.getComputedStyle(node).position;
+          return position === "sticky" || position === "fixed";
+        })
+        .map((node) => node.className?.toString?.() ?? "")
+    );
+    expect(stickyInsidePage, `elementos pegajosos dentro de la página: ${stickyInsidePage.join(", ")}`).toEqual(
+      []
+    );
+  } else {
+    await expect(page.locator(INDEX), "falta el índice en escritorio").toBeVisible();
+    await expect(page.locator(`${INDEX} a`), "el índice no tiene tres entradas").toHaveCount(3);
+  }
+
+  // Nothing scrolls sideways at any viewport.
+  expect(findings.scrollWidth, "la página desborda en horizontal").toBeLessThanOrEqual(width);
+});
