@@ -3,7 +3,7 @@
 /* ============================================================================
    ONBOARDING-TOUR-1 · Fase 0 — prototipo de referencia (NO es código de
    producción). Reproduce con los tokens reales de app/globals.css un tour
-   animado de 44,0 s en siete pasos, en dos carcasas intercambiables: modal de
+   animado de 50,0 s en ocho pasos, en dos carcasas intercambiables: modal de
    consola y hero integrado en la landing.
 
    Toda la animación se deriva de UN reloj (`t` en ms). Nada usa
@@ -56,7 +56,9 @@
   --pos: #15915a;
   --pos-soft: #e7f6ee;
   --neg: #d23b48;
+  --neg-soft: #fdecee;
   --warn: #ffb020;
+  --warn-soft: #fff4e0;
   --violet: #7c3aed;
   --teal: #0d9488;
   --rose: #e54563;
@@ -142,12 +144,12 @@ code {
   font-size: 19px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--ink);
   text-wrap: balance;
 }
-/* El subtítulo es la única línea de texto que cambia: dice qué se está viendo
-   en el lienzo. Altura mínima fija para que el modal no dé saltos entre pasos. */
+/* El subtítulo es la única línea de texto que cambia. Su altura la fija el JS
+   midiendo el más largo de los ocho: si se dejara crecer, el modal daría un
+   salto de altura en cada paso. */
 .sub {
   margin: 0; padding: 6px 22px 12px;
   font-size: 13px; line-height: 1.45; color: var(--ink-3);
-  min-height: 40px;
 }
 .sub b { color: var(--ink-2); font-weight: 700; }
 
@@ -168,43 +170,42 @@ code {
 .side {
   width: 23%; min-width: 118px; flex: 0 0 auto;
   background: var(--surface); border-right: 1px solid var(--line);
-  padding: 9px 7px; display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 7px; display: flex; flex-direction: column; gap: 1px;
 }
 .side-brand {
   display: flex; align-items: center; gap: 6px;
-  padding: 2px 6px 9px; font-size: 11px; font-weight: 800; letter-spacing: -.02em;
+  padding: 2px 6px 8px; font-size: 11px; font-weight: 800; letter-spacing: -.02em;
 }
 .side-dot { width: 13px; height: 13px; border-radius: 4px; flex: 0 0 auto;
   background: linear-gradient(135deg, var(--brand-blue-2), var(--brand-blue)); }
 .side-label {
   font-size: 8.5px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase;
-  color: var(--ink-4); padding: 7px 6px 3px;
+  color: var(--ink-4); padding: 6px 6px 3px;
 }
 .nav {
   display: flex; align-items: center; gap: 6px;
-  padding: 5px 6px; border-radius: var(--r-sm);
-  font-size: 10.5px; font-weight: 600; color: var(--ink-2);
+  padding: 4px 6px; border-radius: var(--r-sm);
+  font-size: 10px; font-weight: 600; color: var(--ink-2);
   transition: background .18s, color .18s;
 }
-.nav i { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .36; }
+.nav i { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .36; }
 .nav.on { background: var(--brand-blue-soft); color: var(--brand-blue); font-weight: 750; }
 .nav.on i { opacity: .85; }
 
 /* Área de contenido */
 .main { flex: 1 1 auto; position: relative; min-width: 0; }
 /* El contenido llena el lienzo: una tarjeta pequeña flotando en un lienzo
-   medio vacío no se lee como una pantalla del producto, se lee como una
-   maqueta a medio hacer. */
+   medio vacío se lee como una maqueta a medio hacer, no como una pantalla. */
 .act {
   position: absolute; inset: 0; padding: 11px 13px; opacity: 0;
   transition: opacity .26s ease;
   display: flex; flex-direction: column;
 }
+.act.on { opacity: 1; }
 .card.fill { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
 .card.fill.center { justify-content: center; }
 .recs.fill { flex: 1 1 auto; justify-content: center; }
 .gen-stack { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
-.act.on { opacity: 1; }
 
 .h { font-size: 11.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 0 0 1px; }
 .hsub { font-size: 9.5px; color: var(--ink-4); margin: 0 0 9px; }
@@ -214,30 +215,55 @@ code {
 .badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
 .badge-pos { background: var(--pos-soft); color: var(--pos); }
 .badge-mid { background: var(--brand-blue-soft); color: var(--brand-blue); }
+.badge-warn { background: var(--warn-soft); color: #93610b; }
 
 /* ---------- PASO 1 — dominio, competidores y prompts ---------- */
 .field {
-  height: 29px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  height: 28px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
   background: var(--surface); display: flex; align-items: center; gap: 7px; padding: 0 10px;
   font-size: 11px; color: var(--ink); transition: border-color .2s, box-shadow .2s;
 }
 .field.focus { border-color: var(--brand-blue); box-shadow: 0 0 0 3px var(--brand-blue-soft); }
 .field-ico { width: 11px; height: 11px; border-radius: 999px; border: 1.5px solid var(--ink-4); flex: 0 0 auto; }
 .caret { display: inline-block; width: 1.5px; height: 12px; background: var(--brand-blue); vertical-align: -2px; }
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 9px; }
-.col-l { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 5px; }
-.chip {
-  font-size: 9.5px; font-weight: 650; padding: 3px 8px; border-radius: 999px;
-  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2);
-  display: inline-block; margin: 0 4px 4px 0;
+
+/* La fila de carga: mientras la IA piensa, se ve que sigue trabajando. */
+.load-row {
+  display: flex; align-items: center; gap: 7px; margin-top: 8px;
+  font-size: 9.5px; font-weight: 650; color: var(--ink-3);
+  transition: color .25s;
 }
+.load-row.done { color: var(--pos); }
+.load-row .ok { display: none; }
+.load-row.done .ok { display: inline; }
+.load-row.done .spin { display: none; }
+
+/* Los prompts pesan más que los competidores: son la parte que el usuario no
+   sabe escribir y la que explica de dónde sale todo lo demás. */
+.two-col { display: grid; grid-template-columns: 0.78fr 1.22fr; gap: 8px; margin-top: 8px; flex: 1 1 auto; min-height: 0; align-items: start; }
+.col-l { font-size: 8px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px; }
+.chip {
+  font-size: 9px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-3);
+  display: inline-block; margin: 0 3px 3px 0;
+}
+.prompts-panel {
+  background: var(--brand-blue-soft); border: 1px solid rgba(37,99,235,.20);
+  border-radius: var(--r-sm); padding: 6px 8px;
+}
+.prompts-panel .col-l { color: var(--brand-blue); }
 .pline {
-  font-size: 9.5px; color: var(--ink-2); padding: 3px 0 3px 12px; position: relative;
+  font-size: 9.5px; font-weight: 600; color: var(--ink-2);
+  padding: 2px 0 2px 12px; position: relative;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.pmore {
+  font-size: 8.5px; font-weight: 650; color: var(--brand-blue);
+  padding: 3px 0 0 12px; opacity: .85;
+}
 .pline::before {
-  content: ""; position: absolute; left: 2px; top: 9px;
-  width: 4px; height: 4px; border-radius: 999px; background: var(--brand-blue); opacity: .55;
+  content: ""; position: absolute; left: 2px; top: 8px;
+  width: 4px; height: 4px; border-radius: 999px; background: var(--brand-blue);
 }
 
 /* ---------- PASO 2 — escaneo ---------- */
@@ -256,7 +282,7 @@ code {
 .bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--brand-blue-2), var(--brand-blue)); }
 .bar-cap { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-4); margin-top: 5px; font-variant-numeric: tabular-nums; }
 
-/* ---------- PASOS 3 y 7 — el gauge ---------- */
+/* ---------- PASOS 3 y 8 — el gauge ---------- */
 .hero-v2 { display: flex; gap: 13px; align-items: center; }
 .gauge-wrap { position: relative; flex: 0 0 auto; }
 .gauge-center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
@@ -274,14 +300,10 @@ code {
 .kpi-v { font-size: 15px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 1px; }
 .kpi-v span { font-size: 10px; font-weight: 700; color: var(--ink-3); }
 
-/* ---------- PASOS 4 y 7 — la gráfica de tendencia ---------- */
+/* ---------- PASOS 4 y 8 — la gráfica de tendencia ---------- */
 .chart-wrap { position: relative; }
 .chart-box { flex: 1 1 auto; min-height: 64px; position: relative; }
 .chart-box > svg { display: block; width: 100%; height: 100%; }
-.trend-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 6px; }
-.trend-v { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
-.trend-v span { font-size: 11px; font-weight: 700; color: var(--ink-4); margin-left: 2px; }
-.trend-l { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
 .chart-foot { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--ink-4); margin-top: 4px; }
 .chart-tip {
   position: absolute; z-index: 6; background: var(--ink); color: #fff;
@@ -290,7 +312,11 @@ code {
   opacity: 0; transition: opacity .2s;
 }
 .chart-tip.on { opacity: 1; }
-.delta-row { display: flex; align-items: center; gap: 7px; margin-top: 8px; }
+.trend-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.trend-v { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.trend-v span { font-size: 11px; font-weight: 700; color: var(--ink-4); margin-left: 2px; }
+.trend-l { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.delta-row { display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
 
 /* ---------- PASOS 5 y 6 — recomendaciones ---------- */
 .recs { display: flex; flex-direction: column; gap: 6px; }
@@ -326,16 +352,12 @@ code {
 .rec-cta.busy { background: var(--surface); color: var(--ink-4); border-color: var(--line-strong); }
 .spin {
   width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto;
-  border: 1.5px solid var(--line-strong); border-right-color: transparent;
+  border: 1.5px solid var(--line-strong); border-right-color: var(--brand-blue);
   animation: spin .8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* El bloque generado */
-.gen {
-  margin-top: 8px; border: 1px solid var(--line); border-radius: var(--r-md);
-  background: var(--surface); overflow: hidden;
-}
+.gen { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
 .gen-head {
   display: flex; align-items: center; gap: 7px; padding: 5px 9px;
   border-bottom: 1px solid var(--line-soft); background: var(--surface-2);
@@ -354,6 +376,25 @@ code {
 .mini-btn.primary { background: var(--brand-blue); border-color: var(--brand-blue); color: #fff; }
 .mini-btn.press { transform: scale(.94); }
 .mini-btn.done { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
+
+/* ---------- PASO 7 — auditoría técnica ---------- */
+.audit-top { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+.audit-list { display: flex; flex-direction: column; gap: 5px; }
+.audit-row {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 5px 8px;
+  background: var(--surface); transition: border-color .3s, box-shadow .3s;
+}
+.audit-row.focus { border-color: rgba(255,176,32,.55); box-shadow: 0 4px 14px rgba(255,176,32,.16); }
+.audit-ico {
+  width: 16px; height: 16px; flex: 0 0 auto; border-radius: 5px;
+  display: grid; place-items: center; font-size: 9px; font-weight: 800;
+  background: var(--warn-soft); color: #93610b;
+}
+.audit-body { flex: 1 1 auto; min-width: 0; }
+.audit-t { display: block; font-size: 9.5px; font-weight: 700; color: var(--ink); }
+.audit-d { display: block; font-size: 8.5px; color: var(--ink-4); }
+.audit-pt { margin-left: auto; flex: 0 0 auto; font-size: 9.5px; font-weight: 800; color: var(--pos); font-variant-numeric: tabular-nums; }
 
 /* --- Cursor -------------------------------------------------------------- */
 .cursor {
@@ -379,11 +420,11 @@ code {
 }
 .dots { display: flex; gap: 5px; }
 .dot {
-  width: 16px; height: 4px; border-radius: 999px; background: var(--line-strong);
+  width: 15px; height: 4px; border-radius: 999px; background: var(--line-strong);
   border: none; padding: 0; cursor: pointer; transition: background .2s, width .25s;
 }
 .dot:hover { background: var(--ink-4); }
-.dot.on { background: var(--brand-blue); width: 26px; }
+.dot.on { background: var(--brand-blue); width: 24px; }
 .dot:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
 .foot-sp { margin-left: auto; }
 .lnk {
@@ -404,7 +445,7 @@ code {
 .lnk:focus-visible, .btn-nav:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; border-radius: 6px; }
 
 /* ==========================================================================
-   Dos carcasas, un mismo tour. El escenario, el reloj y los siete pasos son
+   Dos carcasas, un mismo tour. El escenario, el reloj y los ocho pasos son
    idénticos; sólo cambia lo que los rodea. Se intercambian por CSS sobre el
    mismo DOM: duplicar el marcado sería garantizar que las dos versiones se
    separen a la primera corrección.
@@ -443,7 +484,7 @@ code {
   line-height: 1.1; margin: 0; color: var(--ink); text-wrap: balance;
 }
 .lp-h1-accent { color: var(--brand-blue); }
-.pt[data-shell="landing"] .sub { text-align: center; max-width: 60ch; margin: 0 auto; padding-top: 10px; }
+.pt[data-shell="landing"] .sub { text-align: center; max-width: 62ch; margin: 0 auto; padding-top: 10px; }
 
 /* Cromo de navegador — sólo en landing. */
 .bf-bar { display: none; }
@@ -508,12 +549,13 @@ code {
 @media (max-width: 560px) {
   .side { display: none; }
   .stage { aspect-ratio: 4 / 5; }
-  .two-col { grid-template-columns: 1fr; gap: 5px; }
+  .two-col { grid-template-columns: 1fr; gap: 6px; }
   .hero-v2 { flex-direction: column; align-items: stretch; gap: 9px; }
   .gauge-wrap { align-self: center; }
   .kpis { display: none; }
   .engines { flex-wrap: wrap; }
   .eng { flex: 1 1 44%; }
+  .audit-top { justify-content: center; }
   .lnk { display: none; }   /* «Saltar» cede el sitio a Atrás/Siguiente */
   /* Puntos + Atrás + Siguiente en una sola fila desbordaban el viewport
      (medido a 375px en la carcasa de landing: 421px). Los puntos bajan. */
@@ -526,19 +568,18 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .spin { animation: none; }
   .ripple.go { animation: none; }
-  .rec { transition: none; }
+  .rec, .audit-row { transition: none; }
 }
 </style>
 
 <div class="wrap">
   <header class="pg-head">
     <span class="pg-eyebrow">ONBOARDING-TOUR-1 · Fase 0 · prototipo</span>
-    <h1 class="pg-title">Aprende cómo funciona — 7 pasos, 44 s</h1>
+    <h1 class="pg-title">Aprende cómo funciona — 8 pasos, 50 s</h1>
     <p class="pg-sub">
       El mismo tour en dos carcasas: modal de bienvenida en la consola y hero integrado
-      en la landing. El montaje es corto hasta llegar a la puntuación; a partir de ahí se
-      toma su tiempo, porque el 83% del metraje está en el GeoScore, la tendencia y en
-      generar una recomendación de principio a fin.
+      en la landing. Todos los pasos miden exactamente lo mismo de alto, así que la pieza
+      no da saltos al avanzar.
     </p>
   </header>
 
@@ -582,6 +623,7 @@ code {
               <div class="nav" data-nav="1"><i></i>Visión general</div>
               <div class="nav" data-nav="2"><i></i>Prompts</div>
               <div class="nav" data-nav="3"><i></i>Competidores</div>
+              <div class="nav" data-nav="4"><i></i>Auditoría web</div>
               <div class="side-label">Actuar</div>
               <div class="nav" data-nav="5"><i></i>Recomendaciones</div>
             </aside>
@@ -592,10 +634,14 @@ code {
               <section class="act" data-act="1">
                 <p class="h">Nuevo dominio</p>
                 <p class="hsub">Dominio y mercado</p>
-                <div class="card fill center">
+                <div class="card fill">
                   <div class="field" id="a1-field">
                     <span class="field-ico"></span>
                     <span id="a1-typed"></span><span class="caret" id="a1-caret"></span>
+                  </div>
+                  <div class="load-row" id="a1-load">
+                    <span class="spin"></span><span class="ok">✓</span>
+                    <span id="a1-loadtxt">Analizando miempresa.io con IA…</span>
                   </div>
                   <div class="two-col">
                     <div>
@@ -604,11 +650,14 @@ code {
                       <span class="chip" data-c="1">rival-dos.es</span>
                       <span class="chip" data-c="2">rival-tres.io</span>
                     </div>
-                    <div>
-                      <div class="col-l">Prompts</div>
+                    <div class="prompts-panel">
+                      <div class="col-l">Prompts que se lanzarán</div>
                       <div class="pline" data-p="0">mejores gafas graduadas online</div>
                       <div class="pline" data-p="1">alternativas a comprar en óptica</div>
                       <div class="pline" data-p="2">gafas de sol con receta baratas</div>
+                      <div class="pline" data-p="3">qué marca de gafas dura más</div>
+                      <div class="pline" data-p="4">gafas progresivas relación calidad precio</div>
+                      <div class="pmore" data-p="5">y 5 más · todos editables</div>
                     </div>
                   </div>
                 </div>
@@ -689,17 +738,20 @@ code {
                 </div>
               </section>
 
-              <!-- ============ 4 — la tendencia ============ -->
+              <!-- ============ 4 — escaneo continuo ============ -->
               <section class="act" data-act="4">
                 <p class="h">Evolución de tu GeoScore</p>
-                <p class="hsub">Un punto por escaneo</p>
+                <p class="hsub">Un punto por escaneo · automático</p>
                 <div class="card fill chart-wrap">
                   <div class="trend-head">
                     <div>
                       <div class="trend-v" id="a4-v">48<span>/ 100</span></div>
                       <div class="trend-l">GeoScore actual</div>
                     </div>
-                    <span class="badge badge-pos" id="a4-delta">+17 pt en 5 escaneos</span>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                      <span class="badge badge-pos" id="a4-delta">+17 pt en 5 escaneos</span>
+                      <span class="badge badge-mid"><span class="spin" style="width:7px;height:7px;border-width:1.2px"></span>Escaneo automático a diario</span>
+                    </div>
                   </div>
                   <div class="chart-box">
                     <svg id="ch4" aria-hidden="true">
@@ -757,70 +809,132 @@ code {
                 <p class="h">Añade un FAQ a /precios</p>
                 <p class="hsub">Impacto estimado +9 pts · esfuerzo bajo</p>
                 <div class="gen-stack">
-                <div class="rec">
-                  <span class="rec-pri">1</span>
-                  <span class="rec-body">
-                    <span class="rec-t">Añade un FAQ a /precios</span>
-                    <span class="rec-d" id="a6-state">Listo para generar</span>
-                  </span>
-                  <span class="rec-cta" id="a6-btn">Generar solución</span>
-                </div>
-                <div class="gen" id="a6-gen">
-                  <div class="gen-head"><span id="a6-genhead">FAQ generado · listo para pegar</span></div>
-                  <div class="gen-body" id="a6-body">
-                    <div>
-                      <div class="qa-q">¿Cuánto cuestan las gafas graduadas?</div>
-                      <div class="qa-a">Desde 95 € con cristales incluidos. El precio no cambia según la graduación.</div>
+                  <div class="rec">
+                    <span class="rec-pri">1</span>
+                    <span class="rec-body">
+                      <span class="rec-t">Añade un FAQ a /precios</span>
+                      <span class="rec-d" id="a6-state">Listo para generar</span>
+                    </span>
+                    <span class="rec-cta" id="a6-btn">Generar solución</span>
+                  </div>
+                  <div class="gen" id="a6-gen">
+                    <div class="gen-head"><span id="a6-genhead">FAQ generado · listo para pegar</span></div>
+                    <div class="gen-body" id="a6-body">
+                      <div>
+                        <div class="qa-q">¿Cuánto cuestan las gafas graduadas?</div>
+                        <div class="qa-a">Desde 95 € con cristales incluidos. El precio no cambia según la graduación.</div>
+                      </div>
+                      <div>
+                        <div class="qa-q">¿El envío y la devolución son gratis?</div>
+                        <div class="qa-a">Sí, en toda España, con 30 días para devolver sin coste.</div>
+                      </div>
                     </div>
-                    <div>
-                      <div class="qa-q">¿El envío y la devolución son gratis?</div>
-                      <div class="qa-a">Sí, en toda España, con 30 días para devolver sin coste.</div>
+                    <div class="gen-foot">
+                      <span class="mini-btn" id="a6-copy">Copiar HTML</span>
+                      <span class="mini-btn primary" id="a6-apply">Marcar como aplicada</span>
                     </div>
                   </div>
-                  <div class="gen-foot">
-                    <span class="mini-btn" id="a6-copy">Copiar HTML</span>
-                    <span class="mini-btn primary" id="a6-apply">Marcar como aplicada</span>
-                  </div>
-                </div>
                 </div>
               </section>
 
-              <!-- ============ 7 — el score sube ============ -->
+              <!-- ============ 7 — auditoría técnica ============ -->
+              <!-- Comprobaciones y pesos reales del diseño aprobado
+                   (docs/design-reference/web-audit-issues-1/). -->
               <section class="act" data-act="7">
+                <p class="h">Auditoría web</p>
+                <p class="hsub">14 páginas analizadas · hoy</p>
+                <div class="card fill center">
+                  <div class="audit-top">
+                    <div class="gauge-wrap" style="width:74px;height:74px">
+                      <svg width="74" height="74" viewBox="0 0 74 74" aria-hidden="true">
+                        <defs>
+                          <linearGradient id="gg7" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#4f7bff"></stop>
+                            <stop offset="100%" stop-color="#ffb020"></stop>
+                          </linearGradient>
+                        </defs>
+                        <path id="g7-track" fill="none" stroke="#f6f7f9" stroke-width="8" stroke-linecap="round"></path>
+                        <path id="g7-fill" fill="none" stroke="url(#gg7)" stroke-width="8" stroke-linecap="round"></path>
+                      </svg>
+                      <div class="gauge-center">
+                        <div>
+                          <div class="gauge-num" id="g7-num" style="font-size:17px">0</div>
+                          <div class="gauge-cap">salud</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="audit-t" style="font-size:10.5px">Salud técnica del sitio</div>
+                      <div class="audit-d">Media de las 14 páginas analizadas</div>
+                      <div style="margin-top:5px"><span class="badge badge-warn">3 arreglos disponibles</span></div>
+                    </div>
+                  </div>
+                  <div class="audit-list">
+                    <div class="audit-row" data-au="0">
+                      <span class="audit-ico">!</span>
+                      <span class="audit-body">
+                        <span class="audit-t">4 páginas sin datos estructurados</span>
+                        <span class="audit-d">JSON-LD ausente · 15 pt por página</span>
+                      </span>
+                      <span class="audit-pt">+6,0 pt</span>
+                    </div>
+                    <div class="audit-row" data-au="1">
+                      <span class="audit-ico">!</span>
+                      <span class="audit-body">
+                        <span class="audit-t">6 páginas sin meta descripción</span>
+                        <span class="audit-d">Metadatos · 5 pt por página</span>
+                      </span>
+                      <span class="audit-pt">+3,0 pt</span>
+                    </div>
+                    <div class="audit-row" data-au="2">
+                      <span class="audit-ico">!</span>
+                      <span class="audit-body">
+                        <span class="audit-t">3 páginas con más de un H1</span>
+                        <span class="audit-d">Formato respuesta-primero · 5 pt por página</span>
+                      </span>
+                      <span class="audit-pt">+1,1 pt</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- ============ 8 — el siguiente escaneo ============ -->
+              <section class="act" data-act="8">
                 <p class="h">Visión general</p>
-                <p class="hsub">Escaneo posterior a la acción aplicada</p>
+                <p class="hsub">Escaneo posterior a las acciones aplicadas</p>
                 <div class="card fill center">
                   <div class="hero-v2">
                     <div class="gauge-wrap" style="width:92px;height:92px">
                       <svg width="92" height="92" viewBox="0 0 92 92" aria-hidden="true">
                         <defs>
-                          <linearGradient id="gg7" x1="0" y1="0" x2="1" y2="1">
+                          <linearGradient id="gg8" x1="0" y1="0" x2="1" y2="1">
                             <stop offset="0%" stop-color="#4f7bff"></stop>
                             <stop offset="100%" stop-color="#15915a"></stop>
                           </linearGradient>
                         </defs>
-                        <path id="g7-track" fill="none" stroke="#f6f7f9" stroke-width="10" stroke-linecap="round"></path>
-                        <path id="g7-fill" fill="none" stroke="url(#gg7)" stroke-width="10" stroke-linecap="round"></path>
+                        <path id="g8-track" fill="none" stroke="#f6f7f9" stroke-width="10" stroke-linecap="round"></path>
+                        <path id="g8-fill" fill="none" stroke="url(#gg8)" stroke-width="10" stroke-linecap="round"></path>
                       </svg>
                       <div class="gauge-center">
                         <div>
-                          <div class="gauge-num" id="g7-num">48</div>
+                          <div class="gauge-num" id="g8-num">48</div>
                           <div class="gauge-cap">/ 100</div>
                         </div>
                       </div>
                     </div>
                     <div class="chart-wrap" style="flex:1 1 auto;min-width:0">
                       <div class="chart-box" style="min-height:76px;height:96px">
-                      <svg id="ch7" aria-hidden="true">
-                        <g id="ch7-grid"></g>
-                        <path id="ch7-area" fill="url(#chg)"></path>
-                        <path id="ch7-line" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                        <circle id="ch7-dot" r="3.6" fill="#15915a" stroke="#fff" stroke-width="2" opacity="0"></circle>
-                      </svg>
+                        <svg id="ch8" aria-hidden="true">
+                          <g id="ch8-grid"></g>
+                          <path id="ch8-area" fill="url(#chg)"></path>
+                          <path id="ch8-line" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                          <circle id="ch8-dot" r="3.6" fill="#15915a" stroke="#fff" stroke-width="2" opacity="0"></circle>
+                        </svg>
                       </div>
                       <div class="delta-row">
-                        <span class="badge badge-pos" id="a7-delta">+23 pt</span>
-                        <span class="badge badge-mid" id="a7-band">Franja «medio»</span>
+                        <span class="badge badge-pos" id="a8-delta">+23 pt</span>
+                        <span class="badge badge-mid" id="a8-band">Franja «medio»</span>
+                        <span class="badge badge-warn" id="a8-new">2 ajustes nuevos</span>
                       </div>
                     </div>
                   </div>
@@ -850,16 +964,17 @@ code {
     <div class="ctl">
       <button type="button" id="play">⏸ Pausa</button>
       <button type="button" id="restart">↻ Repetir</button>
-      <span class="clock" id="clock">0,0 s / 44,0 s</span>
+      <span class="clock" id="clock">0,0 s / 50,0 s</span>
       <span class="ctl-note">Atrás y Siguiente cambian de paso y se detienen al acabarlo. Los puntos del pie congelan el tour donde el piloto lo fotografiaría.</span>
     </div>
   </div>
 
   <div class="pg-note">
     <span><b>Esto es un prototipo de referencia, no código de producción.</b> Ni un fichero de <code>app/</code>, <code>components/</code> o <code>lib/</code> ha cambiado.</span>
-    <span><b>Toda la animación cuelga de un único reloj.</b> No hay ningún <code>animation-delay</code>: el gauge, la gráfica, las barras y el cursor se calculan a partir de <code>t</code>. Por eso Atrás y Siguiente pueden saltar a cualquier paso y el piloto puede congelarlo — sin eso, fotografiaría un fotograma al azar y su veredicto no valdría nada.</span>
-    <span><b>El salto de 48 a 71 es ilustrativo, no una promesa.</b> Lo que el paso 7 enseña es el mecanismo real: cada escaneo recalcula la puntuación, así que lo que aplicas se refleja en el siguiente. El número concreto depende del sitio.</span>
-    <span><b>Tipografías.</b> La CSP del artefacto bloquea los CDN de fuentes, así que aquí se ven con la cara del sistema. En producción llegan Figtree y Bricolage Grotesque por <code>next/font</code>.</span>
+    <span><b>Todos los pasos miden lo mismo de alto.</b> Lo único que variaba era el subtítulo, que cambia en cada paso: el JS mide los ocho textos al cargar y al redimensionar, y fija la altura al más largo. Sin eso, el modal pega un salto cada vez que se avanza.</span>
+    <span><b>«Se escanea continuamente» es verdad, no una frase de folleto.</b> <code>lib/scan/cron.ts</code> reescanea a diario en free/pro/agency y semanalmente en starter. Si esa cadencia cambia, este texto cambia con ella.</span>
+    <span><b>La auditoría usa las comprobaciones y los pesos reales</b> del diseño aprobado en <code>docs/design-reference/web-audit-issues-1/</code> — datos estructurados 15 pt/página, metadatos 5, formato respuesta-primero 5 — y los reparte entre las 14 páginas del ejemplo.</span>
+    <span><b>El salto de 48 a 71 es ilustrativo, no una promesa.</b> Lo que el paso 8 enseña es el mecanismo: cada escaneo recalcula la puntuación. El número concreto depende del sitio.</span>
   </div>
 </div>
 
@@ -867,33 +982,26 @@ code {
 (function () {
   "use strict";
 
-  var DURATION = 44000;
+  var DURATION = 50000;
 
-  // Los siete pasos. El montaje (1-2) ocupa 7,3 s de 44; el resto — puntuación,
-  // tendencia y generar una recomendación de principio a fin — se lleva el 83%
-  // del metraje, que es donde está el producto.
+  // Los ocho pasos. El texto del subtítulo es el del fundador, literal.
   var STEPS = [
-    { n: 1, from: 700,   to: 4700,
-      console: "Pones tu dominio y <b>la IA propone</b> a quién vigilar y qué preguntas lanzar. No hay nada más que configurar.",
-      landing: "Pones tu dominio y <b>la IA propone</b> a quién vigilar y qué preguntas lanzar. No hay nada más que configurar." },
-    { n: 2, from: 4700,  to: 8000,
-      console: "Esas preguntas se lanzan en <b>Gemini, Claude y ChatGPT</b> a la vez. Es lo que está pasando ahora mismo con tu dominio.",
-      landing: "Esas preguntas se lanzan en <b>Gemini, Claude y ChatGPT</b> a la vez, sin coste extra por motor." },
-    { n: 3, from: 8000,  to: 15000,
-      console: "De ahí sale tu <b>GeoScore</b>: un número de 0 a 100 y las cuatro señales que lo forman — cuánto te mencionan, en qué posición, qué parte de la conversación es tuya y cuántas veces te citan como fuente.",
-      landing: "De ahí sale tu <b>GeoScore</b>: un número de 0 a 100 y las cuatro señales que lo forman — cuánto te mencionan, en qué posición, qué parte de la conversación es tuya y cuántas veces te citan como fuente." },
-    { n: 4, from: 15000, to: 21000,
-      console: "Cada escaneo añade un punto a la curva, así que <b>ves si mejoras o retrocedes</b> en vez de quedarte con una foto suelta.",
-      landing: "Cada escaneo añade un punto a la curva, así que <b>ves si mejoras o retrocedes</b> en vez de quedarte con una foto suelta." },
+    { n: 1, from: 700,   to: 5700,
+      sub: "Escribe tu dominio y GenScore te propondrá <b>a quién vigilar y qué prompts lanzar</b>. No hay que configurar nada más." },
+    { n: 2, from: 5700,  to: 9000,
+      sub: "Todos tus prompts se analizan en <b>Gemini, Claude y ChatGPT</b>. Este análisis reflejará lo que está pasando ahora mismo con tu web, tu marca y la de tu competencia." },
+    { n: 3, from: 9000,  to: 15500,
+      sub: "Tu <b>GeoScore</b> mide la capacidad de tu web y tu marca para aparecer de forma optimizada en los motores de IA." },
+    { n: 4, from: 15500, to: 21000,
+      sub: "Tu dominio <b>se escanea continuamente</b> para mostrarte siempre la visión más actualizada de tu web." },
     { n: 5, from: 21000, to: 26500,
-      console: "El número solo no sirve. Cada hueco se convierte en una <b>acción concreta</b>, ordenada por lo que estimamos que va a subirte.",
-      landing: "El número solo no sirve. Cada hueco se convierte en una <b>acción concreta</b>, ordenada por lo que estimamos que va a subirte." },
-    { n: 6, from: 26500, to: 36000,
-      console: "Y no te dejamos con la tarea: pulsas <b>Generar</b> y sale el contenido escrito, listo para pegar en tu web.",
-      landing: "Y no te dejamos con la tarea: pulsas <b>Generar</b> y sale el contenido escrito, listo para pegar en tu web." },
-    { n: 7, from: 36000, to: 44000,
-      console: "El siguiente escaneo <b>recalcula tu puntuación</b> con eso ya publicado. Ese es el bucle entero: medir, actuar, volver a medir.",
-      landing: "El siguiente escaneo <b>recalcula tu puntuación</b> con eso ya publicado. Ese es el bucle entero: medir, actuar, volver a medir." }
+      sub: "El algoritmo de GenScore encontrará <b>acciones concretas</b> para que puedas mejorar tu posicionamiento rápidamente." },
+    { n: 6, from: 26500, to: 35500,
+      sub: "GenScore se encarga también de <b>generarte una solución</b> a cada problema encontrado, lista para aplicar en tu web." },
+    { n: 7, from: 35500, to: 41500,
+      sub: "Además GenScore <b>auditará técnicamente tu web</b> para que sepas si hay algo que optimizar." },
+    { n: 8, from: 41500, to: 50000,
+      sub: "El siguiente escaneo detectará las mejoras aplicadas y los movimientos de tus competidores. <b>Recalculará tu puntuación</b> y te sugerirá nuevos ajustes para tener el mejor posicionamiento." }
   ];
 
   // Waypoints del cursor. `sel` resuelve el centro real del elemento en cada
@@ -903,25 +1011,29 @@ code {
     { t: 0,     xy: [112, 118] },
     { t: 1000,  sel: "#a1-field", off: [-20, 0] },
     { t: 2100,  sel: "#a1-field", off: [-20, 0] },
-    { t: 2600,  xy: [92, 12] },
-    { t: 8300,  xy: [92, 14] },
-    { t: 9000,  sel: "#g3-num", off: [12, 8] },
-    { t: 14200, sel: "#g3-num", off: [12, 8] },
-    { t: 16400, sel: "#ch4-dot" },
+    { t: 2600,  xy: [93, 10] },
+    { t: 9300,  xy: [93, 12] },
+    { t: 10000, sel: "#g3-num", off: [12, 8] },
+    { t: 14700, sel: "#g3-num", off: [12, 8] },
+    { t: 16900, sel: "#ch4-dot" },
     { t: 20400, sel: "#ch4-dot" },
     { t: 21200, sel: '[data-nav="5"]', mob: '[data-act="5"] .h' },
     { t: 23000, sel: '[data-nav="5"]', mob: '[data-act="5"] .h' },
     { t: 24200, sel: '[data-rec="0"] .rec-cta' },
     { t: 26900, sel: '[data-rec="0"] .rec-cta' },
     { t: 27600, sel: "#a6-btn" },
-    { t: 31500, sel: "#a6-btn" },
-    { t: 33200, sel: "#a6-apply" },
-    { t: 35400, sel: "#a6-apply" },
-    { t: 36600, sel: "#g7-num", off: [14, 10] },
-    { t: 44000, sel: "#g7-num", off: [14, 10] }
+    { t: 31000, sel: "#a6-btn" },
+    { t: 32700, sel: "#a6-apply" },
+    { t: 34900, sel: "#a6-apply" },
+    { t: 35800, sel: '[data-nav="4"]', mob: '[data-act="7"] .h' },
+    { t: 37400, sel: '[data-nav="4"]', mob: '[data-act="7"] .h' },
+    { t: 38600, sel: '[data-au="0"]' },
+    { t: 41300, sel: '[data-au="0"]' },
+    { t: 42300, sel: "#g8-num", off: [14, 10] },
+    { t: 50000, sel: "#g8-num", off: [14, 10] }
   ];
 
-  var CLICKS = [2100, 21600, 28000, 33600];
+  var CLICKS = [2100, 21600, 28000, 33100, 36200];
 
   var stage   = document.getElementById("stage");
   var pt      = document.getElementById("pt");
@@ -943,6 +1055,25 @@ code {
   function ease(p) { return p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2; }
   function seg(t, a, b) { return ease(clamp01((t - a) / (b - a))); }
   function lin(t, a, b) { return clamp01((t - a) / (b - a)); }
+
+  /**
+   * Todos los pasos deben medir exactamente lo mismo. Lo único que varía es
+   * este subtítulo: se miden los ocho textos al ancho actual y se fija la
+   * altura al más alto. Se recalcula en `resize` porque el número de líneas
+   * depende del ancho, y al cambiar de carcasa porque el subtítulo se centra
+   * y se estrecha en la landing.
+   */
+  function lockSubHeight() {
+    var keep = subEl.innerHTML;
+    subEl.style.height = "auto";
+    var max = 0;
+    STEPS.forEach(function (s) {
+      subEl.innerHTML = s.sub;
+      max = Math.max(max, subEl.scrollHeight);
+    });
+    subEl.innerHTML = keep;
+    subEl.style.height = max + "px";
+  }
 
   function pointAt(wp) {
     var sel = wp.sel;
@@ -984,16 +1115,18 @@ code {
     };
   }
   var arc92 = makeArc(92, 10);
+  var arc74 = makeArc(74, 8);
   $("#g3-track").setAttribute("d", arc92(135, 405));
-  $("#g7-track").setAttribute("d", arc92(135, 405));
-  function setGauge(id, frac) {
+  $("#g8-track").setAttribute("d", arc92(135, 405));
+  $("#g7-track").setAttribute("d", arc74(135, 405));
+  function setGauge(id, frac, arc) {
     var el = $(id);
     if (frac <= 0.005) { el.setAttribute("d", ""); return; }
-    el.setAttribute("d", arc92(135, 135 + 270 * frac));
+    el.setAttribute("d", arc(135, 135 + 270 * frac));
   }
 
   // ---- la gráfica de tendencia -------------------------------------------
-  // Seis escaneos hasta 48, y un séptimo a 71 que sólo aparece en el paso 7.
+  // Seis escaneos hasta 48, y un séptimo a 71 que sólo aparece en el paso 8.
   var TREND = [31, 34, 33, 39, 43, 48];
   var TREND_AFTER = TREND.concat([71]);
 
@@ -1070,13 +1203,15 @@ code {
     }
 
     // El menú: el paso 1 no resalta nada («Nuevo dominio» no es una entrada).
-    var navOn = step.n === 1 ? 0 : (step.n === 5 || step.n === 6) ? 5 : 1;
-    [1, 2, 3, 5].forEach(function (n) {
+    var navOn = step.n === 1 ? 0
+      : (step.n === 5 || step.n === 6) ? 5
+      : step.n === 7 ? 4 : 1;
+    [1, 2, 3, 4, 5].forEach(function (n) {
       var nv = stage.querySelector('[data-nav="' + n + '"]');
       if (nv) nv.classList.toggle("on", n === navOn);
     });
 
-    subEl.innerHTML = step[shell()] || step.console;
+    subEl.innerHTML = step.sub;
     dots.forEach(function (d, i) {
       d.classList.toggle("on", i === idx);
       d.setAttribute("aria-selected", i === idx ? "true" : "false");
@@ -1092,50 +1227,60 @@ code {
     $("#a1-typed").textContent = DOMAIN.slice(0, typed);
     $("#a1-field").classList.toggle("focus", t > 950 && t < 2600);
     $("#a1-caret").style.opacity = (t > 950 && t < 2600 && Math.floor(t / 480) % 2 === 0) ? "1" : "0";
+    // El spinner de arriba: mientras la IA piensa, se ve que sigue trabajando.
+    var loadRow = $("#a1-load");
+    var loadDone = t >= 4900;
+    loadRow.style.opacity = t > 2150 ? 1 : 0;
+    loadRow.classList.toggle("done", loadDone);
+    $("#a1-loadtxt").textContent = loadDone
+      ? "3 competidores y 10 prompts propuestos"
+      : "Analizando miempresa.io con IA…";
     for (var c = 0; c < 3; c++) {
-      var pc = seg(t, 2300 + c * 200, 3000 + c * 200);
+      var pc = seg(t, 2500 + c * 180, 3200 + c * 180);
       var ce = stage.querySelector('[data-c="' + c + '"]');
       ce.style.opacity = pc; ce.style.transform = "translateY(" + ((1 - pc) * 4).toFixed(1) + "px)";
-      var pp = seg(t, 2900 + c * 220, 3600 + c * 220);
-      var pe = stage.querySelector('[data-p="' + c + '"]');
-      pe.style.opacity = pp; pe.style.transform = "translateY(" + ((1 - pp) * 4).toFixed(1) + "px)";
+    }
+    for (var q = 0; q < 6; q++) {
+      var pp = seg(t, 3000 + q * 250, 3800 + q * 250);
+      var pe = stage.querySelector('[data-p="' + q + '"]');
+      pe.style.opacity = pp; pe.style.transform = "translateY(" + ((1 - pp) * 5).toFixed(1) + "px)";
     }
 
     // ---------- 2 — escaneo ----------
-    var engAt = [5900, 6600, 7300];
+    var engAt = [6900, 7600, 8300];
     for (var e = 0; e < 3; e++) {
       stage.querySelector('[data-eng="' + e + '"]').classList.toggle("done", t >= engAt[e]);
     }
-    var p2 = lin(t, 4900, 7700);
+    var p2 = lin(t, 5900, 8700);
     $("#a2-bar").style.width = (p2 * 100).toFixed(1) + "%";
     $("#a2-num").textContent = Math.round(p2 * 30) + " / 30";
 
     // ---------- 3 — el GeoScore ----------
-    var score3 = Math.round(seg(t, 8200, 10400) * 48);
+    var score3 = Math.round(seg(t, 9200, 11400) * 48);
     $("#g3-num").textContent = String(score3);
-    setGauge("#g3-fill", score3 / 100);
+    setGauge("#g3-fill", score3 / 100, arc92);
     var comps = [61, 44, 38, 27];
     for (var m = 0; m < 4; m++) {
-      var w3 = seg(t, 9400 + m * 300, 10600 + m * 300) * comps[m];
+      var w3 = seg(t, 10400 + m * 300, 11600 + m * 300) * comps[m];
       stage.querySelector('[data-comp="' + m + '"] .sov-fill').style.width = w3.toFixed(1) + "%";
     }
 
-    // ---------- 4 — la tendencia ----------
-    var p4 = seg(t, 15300, 18300);
-    var geo4 = drawChart("ch4", TREND, p4, t > 18100);
+    // ---------- 4 — escaneo continuo ----------
+    var p4 = seg(t, 15800, 18800);
+    var geo4 = drawChart("ch4", TREND, p4, t > 18600);
     $("#a4-v").innerHTML = Math.round(31 + p4 * 17) + "<span>/ 100</span>";
     $("#a4-delta").textContent = "+" + Math.round(p4 * 17) + " pt en 5 escaneos";
     $("#a4-delta").style.opacity = p4 > 0.08 ? 1 : 0;
     var tip4 = $("#ch4-tip");
     if (geo4) {
       // El último punto está pegado al borde derecho: sin limitar, el globo
-      // se sale del lienzo (medido: 350px frente a 327px de lienzo).
+      // se sale del lienzo.
       var half = tip4.offsetWidth / 2;
       var wrapW = tip4.parentNode.getBoundingClientRect().width;
       tip4.style.left = Math.max(half + 2, Math.min(geo4.x, wrapW - half - 2)) + "px";
       tip4.style.top = Math.max(22, geo4.y) + "px";
     }
-    tip4.classList.toggle("on", t > 18600 && t < 20600);
+    tip4.classList.toggle("on", t > 19000 && t < 20700);
 
     // ---------- 5 — recomendaciones ----------
     var zoom = t > 23600 && t < 26500;
@@ -1154,8 +1299,8 @@ code {
 
     // ---------- 6 — generar la solución ----------
     var btn6 = $("#a6-btn"), gen6 = $("#a6-gen"), apply6 = $("#a6-apply");
-    var generating = t >= 28000 && t < 30600;
-    var generated = t >= 30600;
+    var generating = t >= 28000 && t < 30400;
+    var generated = t >= 30400;
     btn6.classList.toggle("press", t >= 27950 && t < 28150);
     btn6.classList.toggle("busy", generating);
     btn6.innerHTML = generating ? '<span class="spin"></span>Generando…'
@@ -1164,30 +1309,43 @@ code {
       : generated ? "Contenido listo" : "Listo para generar";
 
     // El bloque aparece cuando hay algo que enseñar, no antes.
-    var vis6 = t < 28000 ? 0 : generating ? 0.35 : seg(t, 30600, 31600);
+    var vis6 = t < 28000 ? 0 : generating ? 0.35 : seg(t, 30400, 31400);
     gen6.style.opacity = vis6;
     gen6.style.transform = "translateY(" + ((1 - vis6) * 6).toFixed(1) + "px)";
     $("#a6-genhead").textContent = generating ? "Generando…" : "FAQ generado · listo para pegar";
     $("#a6-body").style.filter = generating ? "blur(3px)" : "none";
 
-    apply6.classList.toggle("press", t >= 33550 && t < 33750);
-    var applied = t >= 33750;
+    apply6.classList.toggle("press", t >= 33050 && t < 33250);
+    var applied = t >= 33250;
     apply6.classList.toggle("done", applied);
     apply6.classList.toggle("primary", !applied);
     apply6.textContent = applied ? "✓ Aplicada" : "Marcar como aplicada";
 
-    // ---------- 7 — el score sube ----------
-    var pg7 = seg(t, 36600, 39600);
-    var score7 = Math.round(48 + pg7 * 23);
-    $("#g7-num").textContent = String(score7);
-    setGauge("#g7-fill", score7 / 100);
-    drawChart("ch7", TREND_AFTER, seg(t, 36600, 39600), t > 39400);
-    var d7 = $("#a7-delta");
-    d7.textContent = "+" + Math.round(pg7 * 23) + " pt";
-    d7.style.opacity = pg7 > 0.05 ? 1 : 0;
-    var band = $("#a7-band");
-    band.textContent = score7 >= 70 ? "Franja «competitivo»" : "Franja «medio»";
-    band.className = "badge " + (score7 >= 70 ? "badge-pos" : "badge-mid");
+    // ---------- 7 — auditoría técnica ----------
+    var health = Math.round(seg(t, 36400, 38200) * 64);
+    $("#g7-num").textContent = String(health);
+    setGauge("#g7-fill", health / 100, arc74);
+    for (var u = 0; u < 3; u++) {
+      var au = stage.querySelector('[data-au="' + u + '"]');
+      var pu = seg(t, 37600 + u * 320, 38400 + u * 320);
+      au.style.opacity = pu;
+      au.style.transform = "translateY(" + ((1 - pu) * 6).toFixed(1) + "px)";
+      au.classList.toggle("focus", u === 0 && t > 39000 && t < 41400);
+    }
+
+    // ---------- 8 — el siguiente escaneo ----------
+    var pg8 = seg(t, 42300, 45300);
+    var score8 = Math.round(48 + pg8 * 23);
+    $("#g8-num").textContent = String(score8);
+    setGauge("#g8-fill", score8 / 100, arc92);
+    drawChart("ch8", TREND_AFTER, seg(t, 42300, 45300), t > 45100);
+    var d8 = $("#a8-delta");
+    d8.textContent = "+" + Math.round(pg8 * 23) + " pt";
+    d8.style.opacity = pg8 > 0.05 ? 1 : 0;
+    var band = $("#a8-band");
+    band.textContent = score8 >= 70 ? "Franja «competitivo»" : "Franja «medio»";
+    band.className = "badge " + (score8 >= 70 ? "badge-pos" : "badge-mid");
+    $("#a8-new").style.opacity = seg(t, 45600, 46600);
 
     // ---------- cursor ----------
     var a = PATH[0], b = PATH[PATH.length - 1];
@@ -1202,7 +1360,7 @@ code {
     cursor.style.left = cx + "%"; cursor.style.top = cy + "%";
     ripple.style.left = cx + "%"; ripple.style.top = cy + "%";
 
-    clock.textContent = (t / 1000).toFixed(1).replace(".", ",") + " s / 44,0 s";
+    clock.textContent = (t / 1000).toFixed(1).replace(".", ",") + " s / 50,0 s";
   }
 
   // ---- clics -------------------------------------------------------------
@@ -1246,11 +1404,11 @@ code {
     syncPlayBtn(); render(t);
   }
   // Congela un paso donde su animación ya se ha desarrollado — congelar en el
-  // arranque captura las barras a cero y da una foto que no representa nada.
+  // arranque captura el gauge a cero y da una foto que no representa nada.
   function freezeAt(i) {
     var s = STEPS[i];
     playing = false; holdAt = null; syncPlayBtn();
-    seek(Math.min(s.from + 3200, s.to - 200));
+    seek(Math.min(s.from + 3400, s.to - 200));
   }
 
   prevBtn.addEventListener("click", function () { goToStep(stepIndex(t) - 1); });
@@ -1268,7 +1426,8 @@ code {
         o.classList.toggle("on", on);
         o.setAttribute("aria-pressed", on ? "true" : "false");
       });
-      t = 0; holdAt = null; playing = !reduced; syncPlayBtn(); render(t);
+      t = 0; holdAt = null; playing = !reduced; syncPlayBtn();
+      lockSubHeight(); render(t);
     });
   });
 
@@ -1286,11 +1445,13 @@ code {
     }, { threshold: 0.25 }).observe(stage);
   }
 
-  // Las gráficas se miden del DOM: hay que redibujarlas al cambiar de tamaño.
-  window.addEventListener("resize", function () { render(t); });
+  // Las gráficas y la altura del subtítulo se miden del DOM: hay que
+  // recalcularlas al cambiar de tamaño.
+  window.addEventListener("resize", function () { lockSubHeight(); render(t); });
 
   if (reduced) { t = DURATION; playing = false; }
   syncPlayBtn();
+  lockSubHeight();
   render(t);
   requestAnimationFrame(frame);
 })();
