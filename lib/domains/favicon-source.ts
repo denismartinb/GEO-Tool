@@ -117,6 +117,17 @@ function sentinelHash(size: number): Promise<string | null> {
     .then((buf) => (buf ? hash(buf) : null))
     .catch(() => null);
 
+  // Sólo se cachea el acierto. Una calibración fallida se olvida, porque
+  // cachearla dejaría esta instancia **en fallo-abierto permanente y en
+  // silencio** para ese tamaño: un corte de red de un segundo y, mientras la
+  // función siga caliente, todo globo genérico se serviría como si fuera una
+  // marca. El fallo-abierto está pensado como estado momentáneo, no heredado.
+  // La promesa se guarda igualmente antes de ceder el control, así que las
+  // peticiones concurrentes siguen compartiendo una única llamada.
+  void pending.then((result) => {
+    if (result === null) sentinelBySize.delete(size);
+  });
+
   sentinelBySize.set(size, pending);
   return pending;
 }

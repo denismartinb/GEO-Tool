@@ -3444,9 +3444,21 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
 ---
 
-## 36. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1 y 3a, 2026-08-06)
+## 36. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1, 3a y 3b, 2026-08-06)
 
-**Estado: implementada la Fase 1 de tres.** Task Intake aprobado por el
+**Estado: implementadas las Fases 1, 3a y 3b — todas las que quedaron en pie.**
+La Fase 2 original **no se implementó y ya no existe**: era detectar el globo
+desde el cliente, y resultó imposible porque Google responde 200 con él (ver
+más abajo). La 3a absorbió su objetivo. Lo que sigue sin hacer es leer el
+`<link rel="apple-touch-icon">` del HTML, que sí sería rastrear y necesita su
+propia aprobación.
+
+Esta entrada se lee de arriba abajo como una cronología: la Fase 1 primero, los
+dos fallos que aparecieron al mirar el producto, y luego 3a y 3b. **Los
+apartados "Pendiente" de cada fase valen sólo para su momento**; el estado real
+es este párrafo.
+
+Task Intake aprobado por el
 fundador el 2026-08-06 ("Sí, entero el plan con todas las fases"), a partir de
 la observación de que los iconos de dominio *"salen pixelados la mayoría"*.
 
@@ -3495,10 +3507,11 @@ Queda anotado, no hecho.
 - **La causa B sigue entera.** Un dominio cuyo mejor icono conocido por Google
   sea de 16 px se seguirá viendo borroso en la portada de 56 px, y esta fase no
   lo puede evitar. Es lo que atacan las fases 2 y 3.
-- **Fase 2 pendiente:** detectar el icono degenerado (el globo genérico de S2)
+- **Fase 2 pendiente** *(escrito antes de saber que era imposible; la resolvió
+  la 3a — ver abajo)*: detectar el icono degenerado (el globo genérico de S2)
   y caer al avatar de letra determinista que ya existe en `citations-client.tsx`
   en vez de enseñar un borrón.
-- **Fase 3 pendiente:** proxy propio con caché de edge que prefiera el
+- **Fase 3 pendiente** *(hecha después, 3a y 3b)*: proxy propio con caché de edge que prefiera el
   `apple-touch-icon` del sitio. Resuelve la causa B y de paso el problema de
   privacidad que `favicon.ts` lleva documentado desde 2026-07-23 — hoy mandamos
   el dominio de cada cliente a Google en cada carga de página.
@@ -3599,8 +3612,8 @@ servidor.
    es feo, ocultar la marca real de un competidor es información perdida. Mismo
    criterio que `scripts/vercel-should-build.sh`.
 4. **Caché de edge escalonada por significado**, no un número al azar: una
-   semana para un icono (no cambian), un día para un 404 de "no hay icono" (un
-   dominio sin icono hoy puede tener uno mañana y no queremos que el 404 se
+   semana para un icono (no cambian), un día para un 204 de "no hay icono" (un
+   dominio sin icono hoy puede tener uno mañana y no queremos que ese "no hay" se
    quede pegado), un minuto para un fallo transitorio.
 5. **`components/ui/favicon-img.tsx`** centraliza el comportamiento y **no la
    apariencia**: recibe el avatar de iniciales ya renderizado como `fallback`.

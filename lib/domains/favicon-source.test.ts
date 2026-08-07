@@ -274,6 +274,29 @@ describe("fetchFavicon — 3a, el comodín de Google", () => {
     expect(sentinelCalls).toHaveLength(2);
   });
 
+  it("no cachea una calibración fallida: la reintenta en la siguiente petición", async () => {
+    // Cachear el fallo dejaría la instancia en fallo-abierto PERMANENTE y en
+    // silencio para ese tamaño: un corte de un segundo y, mientras la función
+    // siga caliente, todo globo se serviría como si fuera una marca.
+    let sentinelOk = false;
+    const fetchMock = mockFetch({
+      s2: (d) => {
+        if (!d.endsWith(".invalid")) return res(GLOBE);
+        return sentinelOk ? res(GLOBE) : res(new ArrayBuffer(0), { ok: false });
+      }
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Primera pasada: la calibración falla, así que falla abierto.
+    const first = await fetchFavicon("alberdiderma.es", 64);
+    expect(first.kind).toBe("icon");
+
+    // Segunda pasada, ya con calibración: debe reconocer el comodín.
+    sentinelOk = true;
+    const second = await fetchFavicon("alberdiderma.es", 64);
+    expect(second.kind).toBe("generic");
+  });
+
   it("sobrevive a que la red se caiga entera", async () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("ECONNREFUSED"))));
     await expect(fetchFavicon("mahou.es", 64)).resolves.toEqual({ kind: "unavailable" });

@@ -27,7 +27,7 @@ import { snapFaviconSize } from "@/lib/domains/favicon";
  *  invocación de función y una llamada a Google que no ocurren. */
 const CACHE_ICON = "public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400";
 /** Un día: un dominio sin icono hoy puede tener uno mañana, y no queremos que
- *  el 404 se quede pegado una semana. */
+ *  el «no hay» se quede pegado una semana. */
 const CACHE_GENERIC = "public, max-age=600, s-maxage=86400";
 /** Un fallo transitorio no se cachea apenas: se reintenta pronto. */
 const CACHE_UNAVAILABLE = "public, max-age=0, s-maxage=60";

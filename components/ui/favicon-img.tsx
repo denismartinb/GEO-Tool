@@ -10,7 +10,8 @@ import type { ReactNode } from "react";
  * Existe por una razón concreta (FAVICON-QUALITY-3a): hasta ahora la caída sólo
  * ocurría cuando **faltaba el dominio**, así que un dominio cuyo icono Google
  * desconoce enseñaba el globo genérico para siempre. Ahora `/api/favicon`
- * devuelve 404 en ese caso, `onError` dispara, y aquí se pinta el `fallback`.
+ * devuelve **204 sin cuerpo** en ese caso; un `<img>` sin nada que decodificar
+ * dispara `onError`, y aquí se pinta el `fallback`.
  *
  * El `fallback` es un ReactNode y no props de estilo a propósito: cada pantalla
  * ya tenía su propio avatar de iniciales, con su clase y su color determinista,
