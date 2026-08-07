@@ -145,6 +145,26 @@ cuando el run sí existe.
 que no deben importarse entre sí: el executor y la reconciliación (que ya es
 alcanzable desde `run-creation.ts`).
 
+### 5. Un despacho rechazado se registra como rechazado
+
+`fetch` sólo rechaza ante un fallo de transporte: un 401 de la protección de
+despliegue de Vercel, un 404 por un `getSiteUrl()` obsoleto o un 500 **se
+resuelven normalmente**. El `await fetch(...)` original no miraba
+`response.status`, así que los tres eran indistinguibles de un despacho que
+funcionó.
+
+Eso importa justo ahora que la cadena de fondo pasa a ser la red de seguridad:
+la única pregunta que vale la pena hacerse cuando una campaña deja de avanzar
+es «¿llegó el relevo?», y el código respondía «sí» siempre. Es la misma regla
+que `.claude/rules/scan.md` ya exigía para las alertas —«el fallo de la propia
+alerta tiene que ser diagnosticable»— aplicada al mecanismo que la sustituye.
+Se registra, nunca se lanza: un relevo perdido sigue sin poder hundir a quien
+lo programó.
+
+El mismo agujero existe en `triggerWebAuditRun`
+(`lib/web-audit/audit-dispatch.ts`), que es zona distinta y queda propuesto,
+no arreglado aquí.
+
 ## Consecuencias
 
 - Un escaneo termina con el móvil bloqueado, la pestaña cerrada o el portátil

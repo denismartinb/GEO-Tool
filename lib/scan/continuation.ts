@@ -36,11 +36,27 @@ export async function triggerScanContinuation({
   }
 
   try {
-    await fetch(`${getSiteUrl()}/api/scan/continue`, {
+    const response = await fetch(`${getSiteUrl()}/api/scan/continue`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({ projectId, runId })
     });
+
+    // `fetch` only rejects on a transport failure: a 401 from Vercel's
+    // deployment protection, a 404 from a stale `getSiteUrl()`, a 500 — all
+    // resolve, and without this check every one of them reads exactly like a
+    // dispatch that worked. That is the difference between "the safety net is
+    // running" and "the safety net is silently unreachable", which is the only
+    // question worth asking when a campaign stops advancing. Logged, never
+    // thrown: the caller still must not be sunk by a lost hand-off.
+    if (!response.ok) {
+      console.error("[scan-runner] scan continuation was rejected", {
+        projectId,
+        runId,
+        status: response.status,
+        url: `${getSiteUrl()}/api/scan/continue`
+      });
+    }
   } catch (error) {
     console.error("[scan-runner] failed to dispatch scan continuation", {
       projectId,

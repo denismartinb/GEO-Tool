@@ -57,6 +57,11 @@ worse than no rule, because a future session will obey it anyway.
 - **A retry must start what it creates.** Creating a replacement `scan_runs`
   row is not a retry: nothing on the server executes a `pending` run on its own.
   Whatever creates one dispatches it too (`docs/adr/0037`).
+- **A dispatch is delivered only if the response says so.** `fetch` resolves on
+  401/404/500 and rejects only on transport failure, so an unchecked
+  `await fetch(...)` reports a blocked self-call as a successful hand-off — and
+  a safety net that cannot be seen failing is not a safety net. Check
+  `response.ok` and log the status and the URL (`docs/adr/0037`).
 - **A failure the operator can fix must reach the operator.** Persisting a
   categorized error is half the job; if nothing reads it, the incident is still
   invisible — OpenAI's 429s ran four days and Claude's ran unnoticed entirely
