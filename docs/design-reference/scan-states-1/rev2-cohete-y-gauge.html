@@ -86,7 +86,11 @@ code{font-family:var(--mono);font-size:.87em;background:var(--d-surface-2);borde
 .scrub input{width:130px;accent-color:var(--d-accent)}
 .demo-body{display:grid;gap:0}
 @media (min-width:860px){.demo-body{grid-template-columns:minmax(0,1fr) 300px}}
-.demo-stage{padding:0;min-width:0}
+/* El panel se pinta con el color de ARRIBA del cielo y el dibujo se pega
+   abajo: así el relleno sobrante se funde con el degradado en vez de
+   dibujar una banda. */
+.demo-stage{padding:0;min-width:0;display:flex;align-items:flex-end;background:#FFFFFF;transition:background .25s ease}
+.demo-stage.dark{background:#040A16}
 .demo-side{border-top:1px solid var(--d-line-soft);padding:18px;display:flex;flex-direction:column;gap:14px}
 @media (min-width:860px){.demo-side{border-top:none;border-left:1px solid var(--d-line-soft)}}
 .tel{font-family:var(--mono);font-size:11.5px;color:var(--d-ink-3);display:flex;flex-direction:column;gap:6px}
@@ -100,8 +104,65 @@ code{font-family:var(--mono);font-size:.87em;background:var(--d-surface-2);borde
 .phase.on .pk{background:var(--d-accent)}
 .phase.done .pk{background:var(--p-pos)}
 
-/* ---------- escenario del cohete ---------- */
-.sky{display:block;width:100%;height:auto;background:var(--p-navy)}
+/* ---------- bloque de hallazgo ---------- */
+.fix{margin-top:26px;background:var(--d-surface);border:1px solid var(--d-line);border-left:3px solid var(--d-warn);border-radius:16px;overflow:hidden;box-shadow:var(--d-shadow)}
+.fix-head{padding:20px 22px 4px}
+.fix-k{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--d-warn)}
+.fix-head h3{margin:8px 0 10px;font-size:21px}
+.fix-head p{font-size:14px;line-height:1.6;color:var(--d-ink-2);max-width:72ch}
+.fix-cmp{display:grid;gap:18px;padding:18px 22px 4px}
+@media (min-width:760px){.fix-cmp{grid-template-columns:170px 170px minmax(0,1fr);align-items:start}}
+.fix-fig{width:auto;margin:0}
+.fix-fig svg{width:100%;max-width:170px;height:auto;background:var(--d-surface-2);border:1px solid var(--d-line-soft);border-radius:12px;padding:10px}
+.fix-fig figcaption{margin-top:8px;font-size:11.5px;color:var(--d-ink-4);line-height:1.45}
+.fix-fig figcaption b{display:block;color:var(--d-ink);font-size:12.5px;font-weight:700;margin-bottom:2px}
+.fix-num{display:flex;flex-direction:column;gap:4px}
+.fix-big{font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:-.045em;line-height:1;color:var(--d-accent)}
+.fix-lab{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--d-ink-4);margin-bottom:6px}
+.fix-num p{font-size:13.5px;line-height:1.55;color:var(--d-ink-3)}
+.fix-params{font-family:var(--mono);font-size:10.5px;line-height:1.6;color:var(--d-ink-4);background:var(--d-surface-2);border:1px solid var(--d-line-soft);border-radius:8px;padding:9px 11px}
+.fix-foot{margin:0;padding:14px 22px 20px;font-size:13.5px;line-height:1.6;color:var(--d-ink-3);border-top:1px solid var(--d-line-soft)}
+
+/* ---------- escenario del cohete: mismo dibujo, dos cielos ---------- */
+.sky{display:block;width:100%;height:auto;align-self:flex-end}
+.sk-bg{fill:url(#sky-dark)}
+.sk-stars{display:block}
+.sk-alt{display:none}
+.sk-pad{fill:#0A1526}
+.sk-padline{fill:rgba(127,162,255,.28)}
+.sk-tower{fill:#16263F}
+.sk-tower2{fill:#1D3252}
+.sk-plume{fill:url(#plume-dark)}
+.sk-nozzle{fill:#22344F}
+.sk-fin{fill:#2563EB}
+.sk-body{fill:#F7F8FB}
+.sk-body2{fill:#E4E9F2}
+.sk-win{fill:#0B1426}
+.sk-stripe{fill:#DCE3EE}
+.sk-k{font-family:var(--mono);font-size:11px;letter-spacing:1.6px;fill:#8FB0FF}
+.sk-h{font-family:system-ui,sans-serif;font-weight:800;font-size:27px;letter-spacing:-1px;fill:#F7F8FB}
+.sk-s{font-family:var(--mono);font-size:11.5px;fill:#9FB0C8}
+.sk-pw{font-family:var(--mono);font-size:11px;letter-spacing:1.4px;fill:#7FE3EC}
+
+.sky.light .sk-bg{fill:url(#sky-light)}
+.sky.light .sk-stars{display:none}
+.sky.light .sk-alt{display:block}
+.sky.light .sk-alt line{stroke:#CFDAEE;stroke-width:1}
+.sky.light .sk-alt text{font-family:var(--mono);font-size:10px;fill:#98A2B3}
+.sky.light .sk-pad{fill:#DCE5F5}
+.sky.light .sk-padline{fill:#B9C7DF}
+.sky.light .sk-tower{fill:#C3D0E5}
+.sky.light .sk-tower2{fill:#AEBED8}
+.sky.light .sk-plume{fill:url(#plume-light)}
+.sky.light .sk-nozzle{fill:#3B4759}
+.sky.light .sk-body{fill:#0B1426}
+.sky.light .sk-body2{fill:#1B2B45}
+.sky.light .sk-win{fill:#F7F8FB}
+.sky.light .sk-stripe{fill:#3B4759}
+.sky.light .sk-k{fill:#2563EB}
+.sky.light .sk-h{fill:#0B1426}
+.sky.light .sk-s{fill:#5B6B82}
+.sky.light .sk-pw{fill:#15915A}
 
 /* ---------- tira de maquetas ---------- */
 .strip{display:flex;gap:18px;overflow-x:auto;padding:28px 4px 22px;scroll-snap-type:x proximity}
@@ -159,6 +220,18 @@ figcaption .real{display:block;margin-top:7px;font-family:var(--mono);font-size:
 .m-eng span{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:999px;padding:4px 9px;color:#D6DFEC}
 .m-eng i{width:6px;height:6px;border-radius:99px;display:block}
 
+/* maquetas del cohete en claro (por defecto tras la revisión del fundador) */
+.dev-body.mlight{background:var(--p-canvas);color:var(--p-ink);padding:0;gap:0}
+.mlight .m-k{color:var(--p-blue)}
+.mlight .m-k .dot{background:var(--p-blue)}
+.mlight .m-h .fade{color:var(--p-ink-4)}
+.mlight .m-tel{color:var(--p-ink-3);border-top-color:var(--p-line)}
+.mlight .m-tel-row b{color:var(--p-ink)}
+.mlight .m-tel-row .on{color:var(--p-blue)}
+.mlight .m-joke{color:var(--p-ink-4)}
+.mlight .m-eng span{background:var(--p-surface);border-color:var(--p-line);color:var(--p-ink-2)}
+.m-power{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;color:var(--p-pos);font-weight:700}
+
 .table-wrap{overflow-x:auto;margin-top:24px;border:1px solid var(--d-line);border-radius:14px;background:var(--d-surface);box-shadow:var(--d-shadow)}
 table{border-collapse:collapse;width:100%;min-width:620px;font-size:13.5px}
 th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--d-line-soft);vertical-align:top}
@@ -194,8 +267,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     Elegiste A y B, y las dos pedían lo mismo para funcionar de verdad: un <em>instrumento</em>
     propio en lugar de un spinner. Aquí están las dos terminadas — A con la metáfora del
     lanzamiento llevada hasta el final (motores que encienden, cuenta atrás, órbita), y B
-    construida sobre los trazados reales de <code>public/brand/genscore-mark.svg</code> y la
-    geometría del <code>Gauge</code> que ya usa Visión general. Las dos consolas de abajo son
+    sobre la geometría del <code>Gauge</code> que ya usa Visión general y una <strong>G
+    redibujada con arcos de verdad</strong> — la del repositorio está calcada, y a este
+    tamaño se le ve. Las dos consolas de abajo son
     interactivas: dale a <em>Lanzar</em>.
   </p>
 </header>
@@ -209,7 +283,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     que no está. Tres motores de IA se convierten en tres motores de cohete, y cada uno
     <strong>enciende cuando esa IA devuelve su primera respuesta</strong>: una tobera apagada
     significa que ese motor no ha contestado todavía, no que el dibujo aún no ha llegado.
-    Ahí está la gracia de la broma — <em>es literal</em>.
+    Ahí está la gracia de la broma — <em>es literal</em>. Y por eso la voz de misión puede
+    permitirse frases como <strong>«motores a toda potencia»</strong>: no es un adorno, es la
+    lectura de cuántas IA están respondiendo ahora mismo.
   </p>
 
   <div class="demo" data-demo="rocket">
@@ -220,38 +296,50 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <input id="scrub-r" type="range" min="0" max="100" value="0" data-scrub="rocket">
         <span data-out="rocket-pct">0 %</span>
       </span>
+      <button class="btn" data-theme-toggle>Cielo oscuro</button>
       <button class="btn pri" data-play="rocket">Lanzar</button>
       <button class="btn" data-reset="rocket">Reiniciar</button>
     </div>
     <div class="demo-body">
       <div class="demo-stage">
-        <svg class="sky" viewBox="0 0 560 380" role="img" aria-label="Simulación del lanzamiento con tres motores">
+        <svg class="sky light" data-sky viewBox="0 0 560 380" role="img" aria-label="Simulación del lanzamiento con tres motores">
           <defs>
-            <linearGradient id="sky-g" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="sky-dark" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="#040A16"/><stop offset="1" stop-color="#0E2038"/>
             </linearGradient>
-            <linearGradient id="plume-g" x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id="sky-light" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E8EFFC"/>
+            </linearGradient>
+            <linearGradient id="plume-dark" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0" stop-color="rgba(127,162,255,.55)"/><stop offset="1" stop-color="rgba(127,162,255,0)"/>
             </linearGradient>
-            <clipPath id="sky-clip"><rect x="0" y="0" width="560" height="380" rx="0"/></clipPath>
+            <linearGradient id="plume-light" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(37,99,235,.28)"/><stop offset="1" stop-color="rgba(37,99,235,0)"/>
+            </linearGradient>
+            <clipPath id="sky-clip"><rect x="0" y="0" width="560" height="380"/></clipPath>
           </defs>
-          <rect width="560" height="380" fill="url(#sky-g)"/>
+          <rect class="sk-bg" width="560" height="380"/>
           <g clip-path="url(#sky-clip)">
-            <g data-stars></g>
-            <!-- horizonte / plataforma -->
-            <g data-pad>
-              <rect x="0" y="330" width="560" height="50" fill="#0A1526"/>
-              <rect x="0" y="329" width="560" height="1.5" fill="rgba(127,162,255,.28)"/>
-              <rect x="196" y="300" width="8" height="30" fill="#16263F"/>
-              <rect x="188" y="296" width="24" height="5" rx="2" fill="#1D3252"/>
-              <rect x="356" y="300" width="8" height="30" fill="#16263F"/>
-              <rect x="348" y="296" width="24" height="5" rx="2" fill="#1D3252"/>
+            <!-- oscuro: estrellas. claro: marcas de altitud, que además dicen algo -->
+            <g data-stars class="sk-stars"></g>
+            <g class="sk-alt">
+              <line x1="24" y1="112" x2="536" y2="112" stroke-dasharray="3 7"/>
+              <line x1="24" y1="221" x2="536" y2="221" stroke-dasharray="3 7"/>
+              <line x1="24" y1="329" x2="536" y2="329" stroke-dasharray="3 7"/>
+              <text x="536" y="107" text-anchor="end">90 respuestas</text>
+              <text x="536" y="216" text-anchor="end">45</text>
+              <text x="536" y="324" text-anchor="end">0</text>
             </g>
-            <!-- penacho -->
-            <path data-plume d="M266 300 L294 300 L302 380 L258 380 Z" fill="url(#plume-g)" opacity="0"/>
-            <!-- cohete -->
+            <g>
+              <rect class="sk-pad" x="0" y="330" width="560" height="50"/>
+              <rect class="sk-padline" x="0" y="329" width="560" height="1.5"/>
+              <rect class="sk-tower" x="196" y="300" width="8" height="30"/>
+              <rect class="sk-tower2" x="188" y="296" width="24" height="5" rx="2"/>
+              <rect class="sk-tower" x="356" y="300" width="8" height="30"/>
+              <rect class="sk-tower2" x="348" y="296" width="24" height="5" rx="2"/>
+            </g>
+            <path data-plume class="sk-plume" d="M266 300 L294 300 L302 380 L258 380 Z" opacity="0"/>
             <g data-rocket transform="translate(0,0)">
-              <!-- llamas, una por motor -->
               <g data-flames>
                 <g data-flame="gemini" opacity="0">
                   <path class="flame" d="M262 300 q6 26 0 38 q-6 -12 0 -38 Z" fill="#8B5CF6"/>
@@ -266,28 +354,24 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
                   <path class="flame" d="M298 300 q3.5 17 0 25 q-3.5 -8 0 -25 Z" fill="#FBD5C4"/>
                 </g>
               </g>
-              <!-- toberas -->
-              <rect x="256" y="292" width="12" height="10" rx="2.5" fill="#22344F"/>
-              <rect x="274" y="292" width="12" height="12" rx="2.5" fill="#22344F"/>
-              <rect x="292" y="292" width="12" height="10" rx="2.5" fill="#22344F"/>
-              <!-- aletas -->
-              <path d="M256 268 L242 296 L256 292 Z" fill="#2563EB"/>
-              <path d="M304 268 L318 296 L304 292 Z" fill="#2563EB"/>
-              <!-- fuselaje -->
-              <path d="M280 196 q22 22 22 54 v42 h-44 v-42 q0 -32 22 -54 Z" fill="#F7F8FB"/>
-              <path d="M280 196 q22 22 22 54 h-44 q0 -32 22 -54 Z" fill="#E4E9F2"/>
-              <!-- ventana -->
-              <circle cx="280" cy="248" r="9" fill="#0B1426"/>
+              <rect class="sk-nozzle" x="256" y="292" width="12" height="10" rx="2.5"/>
+              <rect class="sk-nozzle" x="274" y="292" width="12" height="12" rx="2.5"/>
+              <rect class="sk-nozzle" x="292" y="292" width="12" height="10" rx="2.5"/>
+              <path class="sk-fin" d="M256 268 L242 296 L256 292 Z"/>
+              <path class="sk-fin" d="M304 268 L318 296 L304 292 Z"/>
+              <path class="sk-body" d="M280 196 q22 22 22 54 v42 h-44 v-42 q0 -32 22 -54 Z"/>
+              <path class="sk-body2" d="M280 196 q22 22 22 54 h-44 q0 -32 22 -54 Z"/>
+              <circle class="sk-win" cx="280" cy="248" r="9"/>
               <circle cx="280" cy="248" r="5.5" fill="#2563EB"/>
               <circle cx="282" cy="245.5" r="1.8" fill="#FFB020"/>
-              <rect x="258" y="272" width="44" height="3" fill="#DCE3EE"/>
+              <rect class="sk-stripe" x="258" y="272" width="44" height="3"/>
             </g>
           </g>
-          <!-- HUD -->
-          <g data-hud>
-            <text data-hud-k x="24" y="38" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.6" fill="#8FB0FF">SECUENCIA DE LANZAMIENTO</text>
-            <text data-hud-h x="24" y="70" font-family="system-ui,sans-serif" font-weight="800" font-size="27" letter-spacing="-1" fill="#F7F8FB">En cuenta atrás</text>
-            <text data-hud-s x="24" y="94" font-family="ui-monospace,monospace" font-size="11.5" fill="#9FB0C8">0 de 90 respuestas · 3 motores en espera</text>
+          <g>
+            <text data-hud-k class="sk-k" x="24" y="38">SECUENCIA DE LANZAMIENTO</text>
+            <text data-hud-h class="sk-h" x="24" y="70">En cuenta atrás</text>
+            <text data-hud-s class="sk-s" x="24" y="94">0 de 90 respuestas · 3 motores en espera</text>
+            <text data-power class="sk-pw" x="24" y="360">MOTORES FRÍOS · 0 DE 3 ENCENDIDOS</text>
           </g>
         </svg>
       </div>
@@ -308,9 +392,17 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </div>
         <div class="note" style="padding:12px 13px">
           <b>Qué es dato y qué es dibujo</b>
-          Altura y llamas salen de filas escritas. Las estrellas, el penacho y el temblor de
-          la llama son ambiente y no dicen nada — si una tobera está apagada es porque ese
-          motor no ha devuelto <em>nada</em> todavía.
+          Altura, llamas y la frase de abajo salen de filas escritas. Las marcas de altitud,
+          el penacho y el temblor de la llama son ambiente — si una tobera está apagada es
+          porque ese motor no ha devuelto <em>nada</em> todavía.
+        </div>
+        <div class="note win" style="padding:12px 13px">
+          <b>«Motores a toda potencia»</b>
+          Buena idea, y sale gratis porque el dato ya está: la frase cuenta cuántos motores
+          han contestado. Con los tres, <em>a toda potencia</em>; con dos, lo dice; con
+          ninguno, <em>motores fríos</em>. Baja el <em>slider</em> para verlo. La broma sólo
+          aguanta mientras sea verdad — una pantalla que grita «a toda potencia» con ChatGPT
+          caído es peor que no decir nada.
         </div>
       </div>
     </div>
@@ -338,25 +430,27 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     <figure>
       <div class="dev">
         <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
-        <div class="dev-body dark">
+        <div class="dev-body mlight">
           <div class="mission">
             <span class="m-k"><span class="dot"></span>T–5 min · genscore.es</span>
             <div class="m-h">Secuencia de lanzamiento<br><span class="fade">iniciada.</span></div>
             <svg viewBox="0 0 268 150" style="width:100%;height:auto">
               <rect width="268" height="150" fill="none"/>
-              <circle cx="30" cy="26" r="1.2" fill="#8FB0FF" opacity=".5"/>
-              <circle cx="212" cy="42" r="1.5" fill="#8FB0FF" opacity=".35"/>
-              <circle cx="86" cy="16" r="1" fill="#8FB0FF" opacity=".6"/>
-              <rect x="0" y="126" width="268" height="24" fill="#0A1526"/>
-              <rect x="0" y="125" width="268" height="1.2" fill="rgba(127,162,255,.3)"/>
+              <circle cx="30" cy="26" r="1.2" fill="#CFDAEE"/>
+              <circle cx="212" cy="42" r="1.5" fill="#CFDAEE"/>
+              <circle cx="86" cy="16" r="1" fill="#CFDAEE"/>
+              <rect x="0" y="126" width="268" height="24" fill="#DCE5F5"/>
+              <rect x="0" y="125" width="268" height="1.2" fill="#B9C7DF"/>
+              <rect x="96" y="108" width="4" height="18" fill="#C3D0E5"/><rect x="92" y="105" width="12" height="3" rx="1.5" fill="#AEBED8"/>
+              <rect x="168" y="108" width="4" height="18" fill="#C3D0E5"/><rect x="164" y="105" width="12" height="3" rx="1.5" fill="#AEBED8"/>
               <g transform="translate(0,-8)">
-                <rect x="118" y="112" width="8" height="8" rx="2" fill="#22344F"/>
-                <rect x="130" y="112" width="8" height="9" rx="2" fill="#22344F"/>
-                <rect x="142" y="112" width="8" height="8" rx="2" fill="#22344F"/>
+                <rect x="118" y="112" width="8" height="8" rx="2" fill="#3B4759"/>
+                <rect x="130" y="112" width="8" height="9" rx="2" fill="#3B4759"/>
+                <rect x="142" y="112" width="8" height="8" rx="2" fill="#3B4759"/>
                 <path d="M118 96 L108 116 L118 112 Z" fill="#2563EB"/>
                 <path d="M150 96 L160 116 L150 112 Z" fill="#2563EB"/>
-                <path d="M134 52 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#F7F8FB"/>
-                <circle cx="134" cy="88" r="6.5" fill="#0B1426"/><circle cx="134" cy="88" r="4" fill="#2563EB"/>
+                <path d="M134 52 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#0B1426"/>
+                <circle cx="134" cy="88" r="6.5" fill="#F7F8FB"/><circle cx="134" cy="88" r="4" fill="#2563EB"/>
               </g>
             </svg>
             <div class="m-tel">
@@ -379,30 +473,31 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     <figure>
       <div class="dev">
         <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
-        <div class="dev-body dark">
+        <div class="dev-body mlight">
           <div class="mission">
             <span class="m-k"><span class="dot"></span>Ignición · 3 motores encendidos</span>
             <div class="m-h">38 de 90<br><span class="fade">respuestas a bordo.</span></div>
             <svg viewBox="0 0 268 150" style="width:100%;height:auto">
-              <circle class="twinkle" cx="40" cy="30" r="1.3" fill="#8FB0FF"/>
-              <circle class="twinkle" cx="222" cy="20" r="1" fill="#8FB0FF"/>
-              <circle class="twinkle" cx="70" cy="62" r="1.1" fill="#8FB0FF"/>
-              <rect x="0" y="126" width="268" height="24" fill="#0A1526"/>
-              <rect x="0" y="125" width="268" height="1.2" fill="rgba(127,162,255,.3)"/>
-              <path d="M124 100 L144 100 L152 150 L116 150 Z" fill="rgba(127,162,255,.16)"/>
+              <circle class="twinkle" cx="40" cy="30" r="1.3" fill="#CFDAEE"/>
+              <circle class="twinkle" cx="222" cy="20" r="1" fill="#CFDAEE"/>
+              <circle class="twinkle" cx="70" cy="62" r="1.1" fill="#CFDAEE"/>
+              <rect x="0" y="126" width="268" height="24" fill="#DCE5F5"/>
+              <rect x="0" y="125" width="268" height="1.2" fill="#B9C7DF"/>
+              <path d="M124 100 L144 100 L152 150 L116 150 Z" fill="rgba(37,99,235,.14)"/>
               <g transform="translate(0,-38)">
                 <path class="flame" d="M122 120 q4 18 0 26 q-4 -8 0 -26 Z" fill="#8B5CF6"/>
                 <path class="flame f2" d="M134 121 q5 21 0 31 q-5 -10 0 -31 Z" fill="#10A37F"/>
                 <path class="flame f3" d="M146 120 q4 18 0 26 q-4 -8 0 -26 Z" fill="#D97757"/>
-                <rect x="118" y="112" width="8" height="8" rx="2" fill="#22344F"/>
-                <rect x="130" y="112" width="8" height="9" rx="2" fill="#22344F"/>
-                <rect x="142" y="112" width="8" height="8" rx="2" fill="#22344F"/>
+                <rect x="118" y="112" width="8" height="8" rx="2" fill="#3B4759"/>
+                <rect x="130" y="112" width="8" height="9" rx="2" fill="#3B4759"/>
+                <rect x="142" y="112" width="8" height="8" rx="2" fill="#3B4759"/>
                 <path d="M118 96 L108 116 L118 112 Z" fill="#2563EB"/>
                 <path d="M150 96 L160 116 L150 112 Z" fill="#2563EB"/>
-                <path d="M134 52 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#F7F8FB"/>
-                <circle cx="134" cy="88" r="6.5" fill="#0B1426"/><circle cx="134" cy="88" r="4" fill="#2563EB"/>
+                <path d="M134 52 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#0B1426"/>
+                <circle cx="134" cy="88" r="6.5" fill="#F7F8FB"/><circle cx="134" cy="88" r="4" fill="#2563EB"/>
               </g>
             </svg>
+            <div class="m-power">MOTORES A TODA POTENCIA · 3 DE 3</div>
             <div class="m-eng">
               <span><i style="background:#8B5CF6"></i>Gemini 16</span>
               <span><i style="background:#10A37F"></i>ChatGPT 13</span>
@@ -426,25 +521,25 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     <figure>
       <div class="dev">
         <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
-        <div class="dev-body dark">
+        <div class="dev-body mlight">
           <div class="mission">
-            <span class="m-k" style="color:#7FE3EC"><span class="dot" style="background:#7FE3EC"></span>Reentrada · con la carga a bordo</span>
+            <span class="m-k" style="color:#0E8C99"><span class="dot" style="background:#0E8C99"></span>Reentrada · con la carga a bordo</span>
             <div class="m-h">64 de 90<br><span class="fade">respuestas leídas.</span></div>
             <svg viewBox="0 0 268 150" style="width:100%;height:auto">
-              <circle class="twinkle" cx="34" cy="24" r="1.2" fill="#7FE3EC"/>
-              <circle class="twinkle" cx="230" cy="52" r="1.4" fill="#8FB0FF"/>
-              <ellipse cx="134" cy="118" rx="66" ry="14" fill="rgba(9,197,214,.10)"/>
+              <circle class="twinkle" cx="34" cy="24" r="1.2" fill="#9FE4EC"/>
+              <circle class="twinkle" cx="230" cy="52" r="1.4" fill="#CFDAEE"/>
+              <ellipse cx="134" cy="118" rx="66" ry="14" fill="rgba(9,197,214,.16)"/>
               <path d="M134 104 a30 30 0 0 1 0 0" fill="none"/>
               <g transform="translate(0,-24)">
                 <path d="M112 128 q22 12 44 0" stroke="rgba(9,197,214,.5)" stroke-width="2" fill="none"/>
-                <path d="M134 60 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#F7F8FB"/>
-                <circle cx="134" cy="96" r="6.5" fill="#0B1426"/><circle cx="134" cy="96" r="4" fill="#09C5D6"/>
+                <path d="M134 60 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#0B1426"/>
+                <circle cx="134" cy="96" r="6.5" fill="#F7F8FB"/><circle cx="134" cy="96" r="4" fill="#09C5D6"/>
                 <path d="M118 104 L108 124 L118 120 Z" fill="#09C5D6"/>
                 <path d="M150 104 L160 124 L150 120 Z" fill="#09C5D6"/>
               </g>
             </svg>
             <div class="m-tel">
-              <span class="m-tel-row"><span>menciones tuyas</span><b class="on">29</b></span>
+              <span class="m-tel-row"><span>menciones tuyas</span><b class="on" style="color:#0E8C99">29</b></span>
               <span class="m-tel-row"><span>competidores</span><b>9</b></span>
               <span class="m-tel-row"><span>queda</span><b>~1 min</b></span>
             </div>
@@ -502,12 +597,63 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 <section id="gauge">
   <div class="sec-head"><span class="opt-letter">B</span><h2>El símbolo, medido</h2></div>
   <p class="sec-note">
-    Esta versión no dibuja un anillo parecido al logo: <strong>es el logo</strong>. Las dos
-    formas del centro son los trazados literales de <code>genscore-mark.svg</code>, sin
-    redibujar ni un punto, y el dial exterior usa la geometría exacta del componente
-    <code>Gauge</code> de Visión general — 270°, hueco abajo, inicio a 135°, degradado
-    <code>--brand-blue-2</code> → acento, extremos redondeados.
+    Esta versión no dibuja un anillo parecido al logo: <strong>es el logo</strong>. El dial
+    exterior usa la geometría exacta del componente <code>Gauge</code> de Visión general —
+    270°, inicio a 135°, degradado <code>--brand-blue-2</code> → acento, extremos
+    redondeados. Y la G del centro ya no es la del fichero: <strong>está redibujada con
+    arcos de verdad</strong>, por la razón que cuenta el bloque siguiente.
   </p>
+
+  <div class="fix">
+    <div class="fix-head">
+      <span class="fix-k">Hallazgo · afecta a toda la marca, no a esta pantalla</span>
+      <h3>La G del repo está calcada, no construida</h3>
+      <p>
+        <code>public/brand/genscore-mark.svg</code> son <strong>170 segmentos rectos y cero
+        curvas</strong>: es el calco automático de un mapa de bits. A 19 px en la cabecera no
+        se nota; a 173 px en este instrumento se ven los polígonos, los bordes tiemblan y hay
+        muescas que nadie dibujó. Lo viste tú antes que yo — «parece hecho a mano» es
+        literalmente lo que es.
+      </p>
+    </div>
+    <div class="fix-cmp">
+      <figure class="fix-fig">
+        <svg viewBox="0 0 285 292" aria-label="Símbolo calcado del repositorio">
+          <use href="#mk-ink"/><use href="#mk-blue"/>
+        </svg>
+        <figcaption><b>Hoy · calcado</b>170 rectas · 0 curvas</figcaption>
+      </figure>
+      <figure class="fix-fig">
+        <svg viewBox="0 0 285 292" aria-label="Símbolo reconstruido con arcos">
+          <use href="#mk-geo"/>
+        </svg>
+        <figcaption><b>Reconstruido</b>3 arcos + 1 barra · nítido a cualquier tamaño</figcaption>
+      </figure>
+      <div class="fix-num">
+        <span class="fix-big">93 %</span>
+        <span class="fix-lab">de solape con el original</span>
+        <p>
+          Medido de verdad, no a ojo: los dos SVG rasterizados a 420 px en Chromium y
+          comparados píxel a píxel, con un optimizador ajustando centro, radio, grosor y
+          ángulos. El 7 % que falta <strong>es el temblor del calco</strong> — la
+          reconstrucción cubre más superficie que el original en los bordes, no menos.
+        </p>
+        <p class="fix-params">
+          centro 142,5 · 147 — radio medio 113 — grosor 54 — arcos 99→240, 244→275, 288→383 —
+          barra y 151,5, grosor 49, tapa redonda
+        </p>
+      </div>
+    </div>
+    <p class="fix-foot">
+      <strong>Lo que esto pide de verdad:</strong> regenerar <code>public/brand/*.svg</code>
+      desde esta construcción. El calco no está sólo aquí — está en el favicon, en el
+      <em>tile</em>, en los <em>lockups</em>, en la imagen de Open Graph y en la cabecera de
+      los ocho emails. Arreglarlo sólo dentro de esta pantalla dejaría el producto con dos
+      logos distintos, y el bueno escondido en la pantalla de carga. Es una fase de marca
+      propia (BRAND-6), no parte de SCAN-STATES-1 — pero sale de aquí y conviene que quede
+      escrito.
+    </p>
+  </div>
 
   <div class="demo" data-demo="gauge">
     <div class="demo-head">
@@ -530,13 +676,10 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
                 fill="none" stroke="url(#dial-g)" stroke-width="29.5" stroke-linecap="round"
                 pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
 
-          <!-- SÍMBOLO REAL — trazados verbatim de public/brand/genscore-mark.svg.
-               El punto ámbar vive fuera, en el dial: es lo único que se mueve. -->
+          <!-- SÍMBOLO RECONSTRUIDO (ver #mk-geo): mismos ángulos y proporciones
+               que el asset, pero con arcos de verdad en vez de 170 rectas. -->
           <svg data-mark x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
-            <path d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z"
-                  transform="translate(3 3)" fill="#0B1426" fill-rule="evenodd"/>
-            <path d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M18.50,198.00 L20.75,199.25 L18.75,201.50 L16.75,200.25 L18.25,198.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z"
-                  transform="translate(3 3)" fill="#2563EB" fill-rule="evenodd"/>
+            <use href="#mk-geo"/>
           </svg>
 
           <!-- el número del score, que sólo existe al final -->
@@ -613,7 +756,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
             <svg viewBox="0 0 340 300" style="width:100%;height:auto" aria-hidden="true">
               <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
               <svg x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
-                <use href="#mk-ink"/><use href="#mk-blue"/>
+                <use href="#mk-geo"/>
               </svg>
               <circle r="19.7" cx="221.5" cy="120.8" fill="#FFB020"/>
             </svg>
@@ -648,7 +791,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
               <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
               <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="url(#dial-g)" stroke-width="29.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="58"/>
               <svg x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
-                <use href="#mk-ink"/><use href="#mk-blue"/>
+                <use href="#mk-geo"/>
               </svg>
               <circle r="19" cx="43.73" cy="218.47" fill="#FFB020"/>
             </svg>
@@ -685,7 +828,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
               <path d="M 243.36 243.36 A 103.75 103.75 0 1 1 243.36 96.64" fill="none" stroke="#EDF1F7" stroke-width="14" stroke-linecap="round"/>
               <path d="M 243.36 243.36 A 103.75 103.75 0 1 1 243.36 96.64" fill="none" stroke="#09C5D6" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="29"/>
               <svg x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
-                <use href="#mk-ink"/><use href="#mk-blue"/>
+                <use href="#mk-geo"/>
               </svg>
               <circle r="19" cx="265.64" cy="74.36" fill="#FFB020"/>
             </svg>
@@ -806,7 +949,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
   <div class="rec">
     <h3>Lo que propongo llevar a Task Intake</h3>
     <ol>
-      <li><strong>Fase 1 — el gauge.</strong> <code>ScanGauge</code> como componente nuevo sobre los trazados reales y la geometría del <code>Gauge</code>, los cuatro estados, contador en respuestas, rango de duración y estado incompleto. Es el que sirve para todo y no depende de backend nuevo.</li>
+      <li><strong>Fase 1 — el gauge.</strong> <code>ScanGauge</code> como componente nuevo sobre la G reconstruida y la geometría del <code>Gauge</code>, los cuatro estados, contador en respuestas, rango de duración y estado incompleto. Es el que sirve para todo y no depende de backend nuevo.</li>
       <li><strong>Fase 2 — el aviso por email.</strong> Sin cambios respecto a la rev. 1: columna de preferencia, envío en el finalize, plantilla. Lleva migración.</li>
       <li><strong>Fase 3 — el cohete.</strong> Sólo en el primer escaneo de un dominio, con el desglose por motor que necesita (y que es el coste real: dos lecturas más en el <em>poll</em>).</li>
     </ol>
@@ -821,8 +964,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 <p class="foot">
   <strong>Desviaciones declaradas.</strong> Tipografía de sistema en vez de Bricolage
   Grotesque + Figtree (esta página no carga fuentes externas), así que el peso y el
-  interletrado de los titulares son una aproximación — el <em>símbolo</em>, en cambio, sí es
-  pixel perfect: son los trazados literales del SVG, sin redibujar. Los colores de los
+  interletrado de los titulares son una aproximación. El <em>símbolo</em> ya no es el del
+  fichero: es la reconstrucción geométrica descrita arriba, con 93&nbsp;% de solape medido
+  contra el calco original — mejor que el asset, no igual que él. Los colores de los
   motores en las llamas son los de sus marcas reales (los mismos que usa el onboarding), no
   paleta nuestra. Datos de ejemplo inventados en el valor; cada maqueta anota de qué fila
   saldrían. El ámbar <code>#FFB020</code> aparece sólo como el punto del símbolo — nunca
@@ -835,6 +979,19 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
   <path id="mk-ink" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" transform="translate(3 3)" fill="#0B1426" fill-rule="evenodd"/>
   <path id="mk-blue" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M18.50,198.00 L20.75,199.25 L18.75,201.50 L16.75,200.25 L18.25,198.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" transform="translate(3 3)" fill="#2563EB" fill-rule="evenodd"/>
+  <g id="mk-geo">
+    <!-- G RECONSTRUIDA: arcos reales, no polígonos. Centro (142,5 · 147),
+         línea media del anillo r=113, grosor 54. Los ángulos y el grosor salen
+         de medir el calco original y ajustarlos con un optimizador (93 % de
+         solape); los valores finales están redondeados a números que un humano
+         puede leer y volver a dibujar. -->
+    <g fill="none" stroke-width="54">
+      <path d="M 254.11 164.68 A 113 113 0 0 1 44.64 203.50" stroke="#0B1426"/>
+      <path d="M 40.94 196.54 A 113 113 0 0 1 29.93 137.15" stroke="#2563EB"/>
+      <path d="M 35.03 112.08 A 113 113 0 0 1 186.65 42.98" stroke="#2563EB"/>
+    </g>
+    <path d="M 160 151.5 L 257 151.5" fill="none" stroke="#0B1426" stroke-width="49" stroke-linecap="round"/>
+  </g>
   <linearGradient id="dial-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4F7BFF"/><stop offset="100%" stop-color="#2563EB"/></linearGradient>
 </defs></svg>
 
@@ -914,6 +1071,21 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     if (h) h.textContent = hud[1];
     if (s) s.textContent = hud[2];
 
+    // La frase de potencia sale del recuento real de motores que ya han
+    // contestado. Con uno muerto NO dice "a toda potencia": esa es toda la
+    // gracia — la broma sólo funciona mientras sea verdad.
+    var lit = (gem > 0 ? 1 : 0) + (oai > 0 ? 1 : 0) + (cla > 0 ? 1 : 0);
+    var pw = $("[data-power]");
+    if (pw) {
+      pw.textContent =
+        phase >= 4 ? "ÓRBITA ESTABLE · CARGA ENTREGADA" :
+        phase === 3 ? "MOTORES APAGADOS · LEYENDO LA CARGA" :
+        lit === 3 ? "MOTORES A TODA POTENCIA · 3 DE 3" :
+        lit === 2 ? "DOS MOTORES A TODA POTENCIA · UNO SIN RESPONDER" :
+        lit === 1 ? "UN MOTOR ENCENDIDO · ESPERANDO A LOS OTROS DOS" :
+        "MOTORES FRÍOS · 0 DE 3 ENCENDIDOS";
+    }
+
     out("rocket-pct", Math.round(f * 100) + " %");
     out("rocket-resp", responses + " / " + TOTAL);
     out("rocket-gem", gem > 0 ? gem + " respuestas" : "apagado");
@@ -936,9 +1108,13 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     var bead = $("[data-bead]");
     var deg = START + SWEEP * shown;
     if (bead) {
-      var p = polar(deg, R);
-      bead.setAttribute("cx", p[0].toFixed(2));
-      bead.setAttribute("cy", p[1].toFixed(2));
+      // En reposo el punto está en SU sitio dentro del símbolo: lo que se ve es
+      // el logo entero. Al arrancar sale a la pista. Coordenadas medidas sobre
+      // el propio símbolo, no colocadas a ojo.
+      var p = f === 0 ? [221.5, 120.8] : polar(deg, R);
+      bead.setAttribute("cx", (+p[0]).toFixed(2));
+      bead.setAttribute("cy", (+p[1]).toFixed(2));
+      bead.setAttribute("r", f === 0 ? "19.7" : "19");
     }
     var comet = $("[data-comet]");
     if (comet) {
@@ -989,6 +1165,18 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       if (f < 1) timers[which] = requestAnimationFrame(step);
     }
     timers[which] = requestAnimationFrame(step);
+  }
+
+  var toggle = document.querySelector("[data-theme-toggle]");
+  if (toggle) {
+    toggle.addEventListener("click", function () {
+      var sky = document.querySelector("[data-sky]");
+      var light = sky.classList.toggle("light");
+      // El panel que rodea al cielo lo acompaña; si no, el recuadro delata que
+      // el dibujo no llena su marco.
+      sky.closest(".demo-stage").classList.toggle("dark", !light);
+      toggle.textContent = light ? "Cielo oscuro" : "Cielo claro";
+    });
   }
 
   document.querySelectorAll("[data-play]").forEach(function (b) {
