@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { after } from "next/server";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -20,7 +21,11 @@ import {
 import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
+import { WEB_AUDIT_JOB_TYPE, WEB_AUDIT_STALE_LOCK_MS } from "@/lib/web-audit/audit-job";
+import { deriveAuditPillState, isWebAuditJobDue } from "@/lib/web-audit/audit-liveness";
+import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { WebAuditProvider } from "./web-audit-context";
+import { WebAuditDriveNotice } from "./web-audit-drive-notice";
 import { AuditTabsProvider, AuditTabBar, AuditTabPanel } from "./audit-tabs";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
@@ -954,7 +959,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // client-only state, so it survives a full page reload.
   const { data: activeCampaignRow } = await supabase
     .from("generated_solutions")
-    .select("sanitized_content")
+    .select("sanitized_content, updated_at")
     .eq("project_id", projectId)
     .eq("generation_type", "domain_coverage")
     .is("recommendation_id", null)
@@ -966,6 +971,52 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   const hasActiveCampaign = Boolean(
     activeCampaignMap && latestRunRow && activeCampaignMap.scanId === latestRunRow.id
   );
+
+  // WEB-AUDIT-DRIVE-1: the audit job for this run, read through RLS
+  // (`jobs_select_owner`) rather than the service client — this is a render
+  // path and the owner is entitled to its own job's state.
+  //
+  // Two things depend on it, and neither could be answered from the campaign
+  // row alone: whether the pill may claim the audit is moving, and whether
+  // anything is owed that opening this page should wake up.
+  const { data: auditJobRow } = latestRunRow
+    ? await supabase
+        .from("jobs")
+        .select("status, next_attempt_at, locked_at")
+        .eq("project_id", projectId)
+        .eq("run_id", latestRunRow.id)
+        .eq("job_type", WEB_AUDIT_JOB_TYPE)
+        .maybeSingle()
+    : { data: null };
+
+  const auditPillState = deriveAuditPillState({
+    campaignUpdatedAt: hasActiveCampaign ? activeCampaignRow?.updated_at : null,
+    jobStatus: auditJobRow?.status
+  });
+
+  // Wake the worker when this project has an audit owed to it. Until now the
+  // only things that could start one were the `after()` dispatch at the end of
+  // a scan and the 07:00 daily cron, so a lost dispatch meant the screen sat
+  // on "Auditando…" until the next morning — and on a preview deployment,
+  // where Vercel runs no crons at all, forever (2026-08-07).
+  //
+  // Safe to fire on a render: the worker claims jobs with the same atomic
+  // conditional UPDATE the scan batches use, so a duplicate dispatch is a
+  // no-op rather than a second audit, and the predicate only passes for a job
+  // that is genuinely due or genuinely abandoned. Fire-and-forget via
+  // `after()`, so the page's own response is never held up by it.
+  if (
+    auditJobRow &&
+    isAutoWebAuditEnabled() &&
+    isWebAuditJobDue({
+      status: auditJobRow.status as string,
+      nextAttemptAt: auditJobRow.next_attempt_at as string | null,
+      lockedAt: auditJobRow.locked_at as string | null,
+      staleLockMs: WEB_AUDIT_STALE_LOCK_MS
+    })
+  ) {
+    after(() => triggerWebAuditRun());
+  }
   let activeCampaignProgress: { covered: number; total: number } | null = null;
   if (hasActiveCampaign && activeCampaignMap) {
     const { count: activePromptCount } = await supabase
@@ -1183,7 +1234,17 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
               este chip anuncia la campaña de COBERTURA, que sigue siendo Pro
               — la auditoría técnica corre en todos los planes y no tiene
               campaña que anunciar aquí. */}
-          {activeCampaignProgress && canAuditCoverage && <ScanStatePill auditing />}
+          {/* WEB-AUDIT-DRIVE-1: the pill used to render off `status='running'`
+              alone, with no notion of when that row last moved — so a campaign
+              whose driver stopped 13 minutes earlier said "Auditando…"
+              indefinitely (2026-08-07). `auditPillState` is the same claim
+              measured against the clock and against the job's own status. */}
+          {canAuditCoverage && auditPillState === "auditing" && <ScanStatePill auditing />}
+          {canAuditCoverage && auditPillState === "pending" && (
+            <span className="badge" style={{ fontSize: 11 }}>
+              Auditoría pendiente
+            </span>
+          )}
         </div>
       </div>
 
@@ -1225,6 +1286,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
           redundante: cuando el plan decae a mitad de auditoría el botón
           desaparece entero bajo el gate, y entonces este banner es lo único
           que explica por qué la página parece atascada. */}
+      {/* WEB-AUDIT-DRIVE-1: the coverage driver's own failures, which had no
+          renderer at all until this phase — see the component. Placed above
+          the plan-lapsed banner because the two are mutually exclusive in
+          practice (that one only shows when the driver never starts) and this
+          one is about work that did start and then stopped. */}
+      <WebAuditDriveNotice />
+
       {activeCampaignProgress && !canAuditCoverage && (
           <div className="firstscan-banner">
             <div className="fb-ico">
