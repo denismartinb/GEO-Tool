@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 
-// The "Equipo" tab is hidden (founder decision 2026-07-12, not a launch
-// priority — see components/settings/settings-tabs.tsx). This route redirects
-// rather than 404ing so a stale link or bookmark still lands somewhere useful,
-// mirroring the /dashboard/billing -> /dashboard/settings/billing pattern.
+// The "Equipo" tab was hidden in 2026-07-12 (multi-user accounts are not a
+// launch priority) and CONSOLE-REDESIGN-1 removed the tab bar entirely. The
+// route still redirects rather than 404ing so a stale link or bookmark lands
+// somewhere useful.
 export default function TeamSettingsPage() {
-  redirect("/dashboard/settings/profile");
+  redirect("/dashboard/settings#cuenta");
 }

@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CONSOLE-REDESIGN-1 rev.2 · Pantalla Ajustes (referencia de implementación)</title>
+<!--
+  Rev. 2 — reconstrucción navegable del diseño aprobado por el fundador el
+  2026-08-06 (opción B de tres exploradas, más dos correcciones suyas:
+  «Eliminar cuenta» al pie y fuera del índice, y móvil sin pastillas).
+
+  Colores: tokens de marca v3 (`--brand-*`), no los de la v2 índigo. Clases con
+  el vocabulario de producción para que la comparación sea directa.
+
+  Tres desviaciones declaradas, las mismas que la referencia de Dominios:
+  tipografía de sistema en vez de Bricolage/Figtree, y datos inventados. La
+  tercera aquí no aplica (no hay favicons en esta pantalla).
+
+  Modo claro únicamente: el producto es sólo claro (`color-scheme: light`;
+  BRAND-5d, el dark mode, no está hecho).
+-->
+<style>
+:root{
+  --brand-ink:#0B1426; --brand-ink-2:#3B4759; --brand-ink-3:#5B6B82; --brand-ink-4:#98A2B3;
+  --brand-blue:#2563EB; --brand-blue-2:#4F7BFF;
+  --brand-blue-soft:rgba(37,99,235,.10); --brand-blue-soft-2:rgba(37,99,235,.18);
+  --brand-canvas:#F7F8FB; --brand-surface:#FFFFFF;
+  --brand-line:#E7EAF0; --brand-line-soft:#EEF1F6;
+  --brand-pos:#15915A; --brand-pos-soft:#E7F6EE;
+  --brand-neg:#D23B48; --brand-neg-soft:#FDECEE;
+  --brand-warm:#FFB020;
+  --warn:#C47E12; --warn-soft:#FDF3E2; --warn-ink:#9A6312;
+  --surface-sunk:#F4F6FA;
+  --brand-shadow-card:0 1px 2px rgba(11,20,38,.04),0 6px 18px rgba(11,20,38,.05);
+  --sidebar-w:248px; --header-h:52px;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--body);-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--brand-blue);outline-offset:2px;border-radius:6px}
+
+/* shell */
+.shell{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:100vh;height:100dvh;overflow:hidden}
+.sb{background:var(--brand-surface);border-right:1px solid var(--brand-line);display:flex;flex-direction:column;min-height:0}
+.sb-brand{display:flex;align-items:center;gap:9px;padding:16px 15px 12px}
+.sb-mark{width:24px;height:24px;border-radius:7px;background:var(--brand-ink);display:grid;place-items:center;color:#fff;font-family:var(--display);font-weight:800;font-size:13px;position:relative;flex:0 0 auto}
+.sb-mark::after{content:"";position:absolute;right:2px;top:2px;width:4px;height:4px;border-radius:999px;background:var(--brand-warm)}
+.sb-wordmark{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.02em}
+.brand-sub{font-size:10.5px;color:var(--brand-ink-4);margin-top:1px}
+.proj-switch{display:flex;align-items:center;gap:10px;margin:6px 12px;padding:9px 11px;border:1px solid var(--brand-line);border-radius:10px}
+.proj-favicon{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-family:var(--display);font-weight:800;color:#fff;flex:0 0 auto;background:linear-gradient(160deg,#3B4759,#0B1426)}
+.proj-name{font-size:12.5px;font-weight:700;line-height:1.25}
+.proj-dom{font-family:var(--mono);font-size:10px;color:var(--brand-ink-4)}
+.sb-scroll{flex:1;overflow-y:auto;padding:4px 12px}
+.nav-group-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-ink-4);padding:12px 9px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:8px;font-size:12.5px;color:var(--brand-ink-2);font-weight:600}
+.nav-item:hover{background:var(--surface-sunk)}
+.nav-ic{width:15px;height:15px;border-radius:4px;background:currentColor;opacity:.3;flex:0 0 auto}
+.nav-count{margin-left:auto;font-size:11px;font-weight:700;color:var(--brand-ink-3);background:var(--surface-sunk);border-radius:999px;padding:1px 7px}
+.sb-foot{border-top:1px solid var(--brand-line-soft);padding:10px 12px 12px}
+/* user-chip apunta a /dashboard/settings (ruta única), no a /settings/profile */
+.user-chip{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;font-size:12.5px;font-weight:650;color:var(--brand-blue);background:var(--brand-blue-soft)}
+/* REGLA DE FORMA: redondo = persona. Squircle = dominio. Tinta plana, sin degradado (BRAND-4). */
+.avatar{width:26px;height:26px;border-radius:999px;background:var(--brand-blue-soft-2);color:var(--brand-blue);display:grid;place-items:center;font-size:10.5px;font-weight:700;flex:0 0 auto}
+.mainpane{overflow-y:auto;min-width:0}
+.page{max-width:1320px;margin:0 auto;padding:26px 34px 80px}
+.topbar{display:none;height:var(--header-h);align-items:center;justify-content:space-between;padding:0 14px;background:var(--brand-surface);border-bottom:1px solid var(--brand-line);position:sticky;top:0;z-index:30}
+.burger{width:18px;display:grid;gap:3.5px}
+.burger i{height:2px;background:var(--brand-ink-2);border-radius:2px}
+.bell{width:18px;height:18px;border-radius:5px;background:var(--surface-sunk);border:1px solid var(--brand-line-soft)}
+
+/* cabecera de pantalla de CUENTA (mismo patrón que Dominios, log §32) */
+.set-page{max-width:900px}
+.set-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:20px}
+.set-kicker{font-size:12.5px;font-weight:500;color:var(--brand-ink-4);margin:0 0 2px}
+.set-title{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.035em;line-height:1.1;margin:0}
+.set-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--brand-blue);background:var(--brand-blue-soft);border-radius:999px;padding:6px 12px;margin-top:5px;white-space:nowrap}
+
+/* índice pegajoso: lleva estado, no sólo enlaces. Sólo ≥900px. */
+.set-two{display:grid;grid-template-columns:186px 1fr;gap:34px;align-items:start}
+.set-idx{display:flex;flex-direction:column;gap:2px;position:sticky;top:0}
+.set-ie{display:block;padding:9px 12px;border-left:2px solid var(--brand-line);line-height:1.25}
+.set-ie b{display:block;font-size:12.5px;font-weight:650;color:var(--brand-ink-3)}
+.set-ie span{display:block;font-size:11px;color:var(--brand-ink-4);margin-top:2px}
+.set-ie.on{border-left-color:var(--brand-blue);background:var(--brand-blue-soft);border-radius:0 8px 8px 0}
+.set-ie.on b{color:var(--brand-blue)}
+.set-ie.on span{color:var(--brand-blue-2)}
+
+.set-sech{font-family:var(--display);font-size:16px;font-weight:750;letter-spacing:-.022em;margin:0 0 10px}
+.set-sech.sp{margin-top:30px}
+
+.card{background:var(--brand-surface);border:1px solid var(--brand-line);border-radius:14px;box-shadow:var(--brand-shadow-card);margin-bottom:12px}
+.card-b{padding:16px 18px 18px}
+.card-b.tight{padding:4px 18px 8px}
+
+.set-idrow{display:flex;align-items:center;gap:14px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--brand-line-soft)}
+.set-avatar-lg{width:44px;height:44px;border-radius:999px;background:var(--brand-blue-soft-2);color:var(--brand-blue);display:grid;place-items:center;font-size:15px;font-weight:700;flex:0 0 auto}
+.set-idname{font-size:15px;font-weight:700;letter-spacing:-.015em}
+.set-idmail{font-family:var(--mono);font-size:11.5px;color:var(--brand-ink-4);margin-top:2px}
+
+.set-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px 16px}
+/* Altura y tipo exactos de produccion (.set-field, app/globals.css): 44px y
+   14.5px. La maqueta de exploracion los dibujaba a 36/13 por escala del
+   documento; manda produccion, que ademas cumple el area tactil minima. */
+.field-label{font-size:13px;font-weight:600;color:var(--brand-ink-2);display:block;margin-bottom:5px}
+.set-field{height:44px;border:1px solid var(--brand-line);border-radius:10px;background:var(--brand-surface);display:flex;align-items:center;padding:0 14px;font-size:14.5px;font-weight:500;color:var(--brand-ink)}
+.set-field.ro{background:var(--surface-sunk);color:var(--brand-ink-3);font-family:var(--mono);font-size:12px}
+.set-hint{font-size:11px;color:var(--brand-ink-4);margin-top:5px}
+
+.btn{display:inline-flex;align-items:center;gap:7px;height:35px;padding:0 15px;border-radius:9px;background:var(--brand-blue);color:#fff;font-size:13px;font-weight:650;letter-spacing:-.01em;border:0;cursor:pointer;font-family:inherit}
+.btn.outline{background:var(--brand-surface);color:var(--brand-ink-2);border:1px solid var(--brand-line)}
+.btn.quiet{background:transparent;color:var(--brand-neg);border:1px solid rgba(210,59,72,.25)}
+.btn.sm{height:31px;padding:0 12px;font-size:12.5px}
+.set-actions{margin-top:18px}
+
+/* plegable de empresa: cerrado por defecto */
+.set-fold{border:1px solid var(--brand-line);border-radius:11px;background:var(--brand-surface);margin-top:16px;overflow:hidden}
+.set-fold-h{display:flex;align-items:center;gap:10px;padding:12px 14px;font-size:13px;width:100%;background:none;border:0;font-family:inherit;text-align:left;cursor:pointer}
+.set-caret{width:0;height:0;border-left:5px solid var(--brand-ink-4);border-top:4px solid transparent;border-bottom:4px solid transparent;flex:0 0 auto}
+.set-fold-t{font-weight:650;color:var(--brand-ink)}
+.set-fold-d{color:var(--brand-ink-4);font-size:12px;margin-left:auto}
+
+.set-row{display:flex;align-items:center;gap:18px;padding:14px 0;border-bottom:1px solid var(--brand-line-soft)}
+.set-row:last-child{border-bottom:none}
+.set-row-t{font-size:13.5px;font-weight:650}
+.set-row-d{font-size:12px;color:var(--brand-ink-3);margin-top:2px;line-height:1.45}
+.set-row-txt{flex:1;min-width:0}
+.switch{width:36px;height:20px;border-radius:999px;background:var(--brand-blue);position:relative;flex:0 0 auto;border:0}
+.switch::after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;background:#fff}
+
+.set-folds{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.set-folds .set-fold{margin-top:0}
+/* La caja de seguridad, con aire (fundador, 2026-08-06). */
+.set-security .card-b{padding:24px 20px}
+.set-security .set-row{padding:2px 0}
+.set-quiet{font-size:12px;color:var(--brand-ink-4);line-height:1.5;margin-top:14px;padding-top:13px;border-top:1px solid var(--brand-line-soft)}
+
+/* borrado: último bloque, fuera del índice, tono bajo */
+.set-end{margin-top:44px;padding-top:20px;border-top:1px solid var(--brand-line);display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.set-end-t{font-size:13.5px;font-weight:650;color:var(--brand-ink-2)}
+.set-end-d{font-size:12.5px;color:var(--brand-ink-4);margin-top:3px;line-height:1.5;max-width:46ch}
+
+/* aviso de prueba: tokens --warn, nunca hex a mano */
+.set-warn{display:flex;align-items:center;gap:13px;padding:13px 15px;border-radius:13px;border:1px solid rgba(196,126,18,.28);background:var(--warn-soft);margin-bottom:12px}
+.set-warn-ic{width:32px;height:32px;border-radius:9px;background:#fff;color:var(--warn-ink);display:grid;place-items:center;font-size:15px;flex:0 0 auto}
+.set-warn-t{font-size:12.5px;color:var(--warn-ink);line-height:1.5;flex:1;min-width:120px}
+.set-warn-t b{font-weight:750}
+
+.plan-top{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.plan-name{font-family:var(--display);font-size:21px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.plan-sub{font-size:12.5px;color:var(--brand-ink-3);margin-top:3px}
+.badge-pos{font-size:11px;font-weight:650;border-radius:999px;padding:4px 9px;background:var(--brand-pos-soft);color:var(--brand-pos);white-space:nowrap}
+.usage{display:flex;flex-direction:column;gap:13px;margin-top:18px;padding-top:16px;border-top:1px solid var(--brand-line-soft)}
+.usage-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--brand-ink-2);margin-bottom:6px}
+.usage-h b{font-variant-numeric:tabular-nums;color:var(--brand-ink)}
+.run-bar{height:6px;border-radius:999px;background:var(--surface-sunk);overflow:hidden}
+.run-bar i{display:block;height:100%;border-radius:999px;background:var(--brand-blue)}
+.run-bar i.full{background:var(--brand-ink-3)}
+
+@media (max-width:899px){
+  .shell{grid-template-columns:1fr}
+  .sb{display:none}
+  .topbar{display:flex}
+  .page{padding:18px 16px 64px}
+  /* el índice NO existe en móvil: ni pastillas, ni pegajosos, ni pestañas */
+  .set-two{grid-template-columns:1fr;gap:0}
+  .set-idx{display:none}
+  .set-form-grid{grid-template-columns:1fr}
+  .set-title{font-size:24px}
+  .btn{width:100%;justify-content:center;height:40px}
+  .btn.sm{width:auto;height:31px}
+  .set-end{flex-direction:column;gap:14px}
+  .set-end .btn{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <aside class="sb">
+    <div class="sb-brand">
+      <div class="sb-mark">G</div>
+      <div><div class="sb-wordmark">Genscore</div><div class="brand-sub">Espacio de visibilidad en IA</div></div>
+    </div>
+
+    <a class="proj-switch" href="#" title="Cambiar de dominio">
+      <div class="proj-favicon">X</div>
+      <div style="min-width:0"><div class="proj-name">Xataka</div><div class="proj-dom">xataka.com</div></div>
+    </a>
+
+    <div class="sb-scroll">
+      <div class="nav-group-label">Analizar</div>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Visión general</a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Prompts<span class="nav-count">12</span></a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Competidores<span class="nav-count">5</span></a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Páginas citadas</a>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Auditoría web</a>
+      <div class="nav-group-label">Actuar</div>
+      <a class="nav-item" href="#"><span class="nav-ic"></span>Recomendaciones<span class="nav-count">15</span></a>
+    </div>
+
+    <div class="sb-foot">
+      <a class="user-chip" href="/dashboard/settings"><div class="avatar">DM</div>de5@gmail.com</a>
+    </div>
+  </aside>
+
+  <div class="mainpane">
+    <div class="topbar">
+      <div class="burger" role="button" tabindex="0" aria-label="Abrir menú"><i></i><i></i><i></i></div>
+      <div style="display:flex;align-items:center;gap:7px">
+        <div class="sb-mark" style="width:20px;height:20px;font-size:11px">G</div>
+        <span class="sb-wordmark" style="font-size:13.5px">Genscore</span>
+      </div>
+      <div class="bell" role="button" tabindex="0" aria-label="Notificaciones"></div>
+    </div>
+
+    <div class="page">
+      <div class="set-page">
+
+        <div class="set-head">
+          <div>
+            <p class="set-kicker">Espacio de trabajo</p>
+            <h1 class="set-title">Ajustes</h1>
+          </div>
+          <span class="set-pill">Plan Pro · 9 días de prueba</span>
+        </div>
+
+        <div class="set-two">
+          <nav class="set-idx" aria-label="Secciones">
+            <a class="set-ie on" href="#cuenta"><b>Cuenta</b><span>Denis Martín</span></a>
+            <a class="set-ie" href="#avisos"><b>Avisos</b><span>2 activos</span></a>
+            <a class="set-ie" href="#plan"><b>Plan</b><span>Pro · 179 €/mes</span></a>
+          </nav>
+
+          <div>
+            <h2 class="set-sech" id="cuenta">Cuenta</h2>
+            <div class="card">
+              <div class="card-b">
+                <div class="set-idrow">
+                  <div class="set-avatar-lg">DM</div>
+                  <div>
+                    <div class="set-idname">Denis Martín</div>
+                    <div class="set-idmail">de5@gmail.com</div>
+                  </div>
+                </div>
+                <div class="set-form-grid">
+                  <div>
+                    <label class="field-label" for="first">Nombre</label>
+                    <div class="set-field" id="first">Denis</div>
+                  </div>
+                  <div>
+                    <label class="field-label" for="last">Apellidos</label>
+                    <div class="set-field" id="last">Martín</div>
+                  </div>
+                  <div>
+                    <label class="field-label" for="mail">Email</label>
+                    <div class="set-field ro" id="mail">de5@gmail.com</div>
+                    <div class="set-hint">Es tu identificador de acceso.</div>
+                  </div>
+                </div>
+
+                <!-- Dos acordeones gemelos, cerrados por defecto. Los fiscales
+                     NO están en Plan: van aquí, justo debajo de empresa
+                     (fundador, 2026-08-06). -->
+                <div class="set-folds">
+                  <div class="set-fold">
+                    <button type="button" class="set-fold-h" aria-expanded="false">
+                      <span class="set-caret"></span>
+                      <span class="set-fold-t">Datos de empresa</span>
+                      <span class="set-fold-d">Opcional</span>
+                    </button>
+                  </div>
+                  <div class="set-fold">
+                    <button type="button" class="set-fold-h" aria-expanded="false">
+                      <span class="set-caret"></span>
+                      <span class="set-fold-t">Datos de facturación</span>
+                      <span class="set-fold-d">Salen en la factura</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="set-actions"><button type="button" class="btn">Guardar</button></div>
+              </div>
+            </div>
+
+            <div class="card set-security">
+              <div class="card-b">
+                <div class="set-row">
+                  <div class="set-row-txt"><div class="set-row-t">Contraseña</div></div>
+                  <button type="button" class="btn outline sm">Cambiar</button>
+                </div>
+              </div>
+            </div>
+
+            <h2 class="set-sech sp" id="avisos">Avisos</h2>
+            <div class="card">
+              <div class="card-b tight">
+                <div class="set-row">
+                  <div class="set-row-txt">
+                    <div class="set-row-t">Cambios de visibilidad</div>
+                    <div class="set-row-d">Si tu GeoScore se mueve de forma significativa</div>
+                  </div>
+                  <button type="button" class="switch" role="switch" aria-checked="true" aria-label="Cambios de visibilidad"></button>
+                </div>
+                <div class="set-row">
+                  <div class="set-row-txt">
+                    <div class="set-row-t">Resumen semanal</div>
+                    <div class="set-row-d">Cada lunes, cómo fue la semana</div>
+                  </div>
+                  <button type="button" class="switch" role="switch" aria-checked="true" aria-label="Resumen semanal"></button>
+                </div>
+                <p class="set-quiet">Iremos añadiendo avisos de competidores, recomendaciones y escaneos. Te lo diremos cuando estén.</p>
+              </div>
+            </div>
+
+            <h2 class="set-sech sp" id="plan">Plan</h2>
+            <div class="set-warn">
+              <span class="set-warn-ic" aria-hidden="true">&#9201;</span>
+              <span class="set-warn-t">Estás probando <b>Pro</b> gratis — te quedan <b>9 días</b>. Cuando termine bajarás a Free si no contratas antes.</span>
+              <button type="button" class="btn sm">Contratar</button>
+            </div>
+            <div class="card">
+              <div class="card-b">
+                <div class="plan-top">
+                  <div style="flex:1;min-width:170px">
+                    <div class="plan-name">Pro</div>
+                    <div class="plan-sub">179 €/mes · renueva el 4 de septiembre</div>
+                  </div>
+                  <span class="badge-pos">Activo</span>
+                </div>
+                <div class="usage">
+                  <div>
+                    <div class="usage-h"><span>Prompts monitorizados</span><b>62/100</b></div>
+                    <div class="run-bar"><i style="width:62%"></i></div>
+                  </div>
+                  <div>
+                    <div class="usage-h"><span>Dominios</span><b>3/5</b></div>
+                    <div class="run-bar"><i style="width:60%"></i></div>
+                  </div>
+
+                </div>
+                <div class="set-actions" style="display:flex;gap:9px;flex-wrap:wrap">
+                  <button type="button" class="btn sm">Cambiar de plan</button>
+                  <button type="button" class="btn outline sm">Facturas y pago</button>
+                </div>
+                <p class="set-quiet">Las facturas y el método de pago se gestionan en Stripe.</p>
+              </div>
+            </div>
+
+            <!-- Bloque genérico de soporte: sustituye al que describía el estado
+                 de pago de cuatro maneras distintas y acababa diciéndole a una
+                 cuenta Agencia que no tenía plan de pago (fundador,
+                 2026-08-06). El acceso a facturas de Stripe no desaparece con
+                 él: sube junto a «Cambiar de plan». -->
+            <div class="card">
+              <div class="card-b" style="text-align:center;padding:22px 18px">
+                <div class="set-quiet" style="margin:0;padding:0;border:0">
+                  ¿Tienes alguna incidencia o consulta? Escríbenos a
+                  <b style="color:var(--brand-blue)">soporte@genscore.es</b> y te respondemos.
+                </div>
+              </div>
+            </div>
+
+            <!-- Último bloque de la página. NO está en el índice: a una acción
+                 irreversible se llega bajando, no de un clic. -->
+            <div class="set-end">
+              <div class="set-row-txt">
+                <div class="set-end-t">Eliminar cuenta</div>
+                <div class="set-end-d">Esta acción es irreversible. Se borrará el historial y todos los datos asociados a tu cuenta.</div>
+              </div>
+              <button type="button" class="btn quiet sm">Eliminar cuenta</button>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

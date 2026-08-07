@@ -3490,6 +3490,174 @@ PRs. No se ha hecho limpieza retroactiva de esas ramas — force-pushear
 sólo cierra la fuente del problema hacia delante.
 ---
 
+## 38. Ajustes de cuenta: cuatro pantallas pasan a una (CONSOLE-REDESIGN-1 Fase A, 2026-08-06)
+
+**Estado: implementado.** Diseño aprobado y navegable en
+`docs/design-reference/console-redesign-1/`; Task Intake en esa misma carpeta.
+
+**El problema no era que sobrase una pestaña.** Las cuatro pantallas —Perfil,
+Organización, Notificaciones, Plan y facturación— estaban organizadas por
+*tema*. Ordenadas por el trabajo que alguien viene a hacer salen tres: quién soy
+y cómo entro, qué me llega al correo, y qué pago. Y la mitad de los controles no
+estaban conectados a nada.
+
+Se exploraron tres opciones estructurales (pestañas, página única, sacar el plan
+de Ajustes) y el fundador eligió **la página única**. Las otras dos quedan
+descartadas con motivo: las pestañas no arreglaban que lo más consultado
+siguiera a dos clics; sacar el plan al menú contradice el §3 punto 5 y hoy son
+dos barras de progreso — se deja anotado para cuando Plan gane peso.
+
+Decisiones finales:
+
+1. **Una sola ruta**, `/dashboard/settings`, con tres secciones en orden
+   Cuenta → Avisos → Plan. La más pesada y la que más va a crecer va la última,
+   para que al crecer no empuje nada.
+2. **El índice lleva estado, no sólo enlaces** — nombre, avisos activos, plan.
+   Con tres entradas, una columna de 186 px que sólo navegase no se ganaría su
+   sitio; llevar estado es lo que hace que la página única gane a las pestañas.
+3. **Las cuatro rutas viejas son redirects PERMANENTES**, no transitorios.
+   Cuatro emails de `lib/email/transactional.ts` y los enlaces que genera
+   `lib/notifications/render.ts` apuntan a ellas y están en bandejas que no
+   podemos reescribir. Por eso esta fase no toca los emails.
+4. **Móvil es un solo scroll.** La primera propuesta llevaba pastillas de
+   sección pegajosas; el fundador las descartó (2026-08-06) porque contradicen
+   el argumento entero de la opción elegida. Se corta en 899 px, el mismo
+   breakpoint del shell.
+5. **«Eliminar cuenta» cierra la página y no está en el índice**, tras una línea
+   y 44 px de aire, en gris y con botón de contorno en vez del bloque rojo
+   relleno. A una acción irreversible se llega bajando, no de un clic (fundador,
+   2026-08-06). Copy suyo: «Esta acción es irreversible. Se borrará el historial
+   y todos los datos asociados a tu cuenta.»
+6. **Fuera cuatro controles muertos**: Idioma y Zona horaria (guardaban estado
+   de React que se perdía al recargar), Cambiar foto (sin backend y **habilitado**,
+   así que aparentaba funcionar) y Activar 2FA (sin backend). También la
+   pastilla de rol «Administrador/Miembro»: sin equipos, toda cuenta es admin de
+   sí misma. La foto se descartó explícitamente — el avatar se queda en
+   iniciales (fundador, 2026-08-06).
+7. **Organización no tiene pantalla: dos acordeones gemelos en Cuenta.**
+   «Datos de empresa» (nombre, sitio web, sector) y, justo debajo y con la misma
+   forma, «Datos de facturación» (razón social, NIF). La primera implementación
+   mandó los fiscales a la sección Plan, junto a la factura, con el argumento de
+   que un NIF se rellena cuando vas a pagar; **el fundador lo corrigió el
+   2026-08-06** — los dos bloques son «datos que rellenas una vez» y se leen
+   mejor emparejados. El botón de logo desaparece: un botón deshabilitado que
+   promete «Próximamente» sigue siendo un control que no hace nada.
+8. **Las cuatro filas «Próximamente» de Notificaciones** pasan a una línea de
+   texto al pie. Seis filas con cuatro apagadas se leían como hoja de ruta.
+9. **Repintado a marca v3 con `.set-scope`**, que comparte bloque de tokens con
+   `.ov2-scope` (§2) en vez de inventar un mecanismo por zona. El import de
+   Hanken Grotesk **no se retira**: sigue siendo el `body` de las zonas sin
+   migrar. Ajustes era la última zona de consola pendiente.
+10. **Regla de forma nueva**: redondo es una persona, squircle es un dominio.
+    Ver `docs/brand/brand-guidelines.md` §2b.
+
+**Tres correcciones tras la primera revisión del fundador (2026-08-06):** aire
+en la caja de seguridad, que iba ahogada con una fila de una línea dentro del
+padding por defecto; los datos de facturación a acordeón gemelo en Cuenta; y el
+bloque de pago, que le decía «todavía no tienes ningún plan de pago activo»
+**siendo una cuenta Agencia**. Ese último era un error de fondo, no de copy:
+`hasStripeCustomer` significa «ha tenido alguna vez ficha de cliente en Stripe»,
+y el texto lo confundía con «no tiene plan de pago». Agencia se vende fuera de
+Stripe (no tiene precio self-serve, PRICING-TRUTH-1), así que la cuenta que más
+paga era la que leía que no pagaba. Ahora hay cuatro estados y cada uno dice lo
+que es cierto de él.
+
+Al mirar las capturas del piloto en verde apareció **una tercera instancia del
+mismo defecto**: la tarjeta «¿Gestionas varios clientes? El plan Agencia es para
+ti» se le mostraba a una cuenta que ya está en Agencia. El patrón que deja esta
+fase escrito: **un bloque que le dice algo al cliente sobre un plan tiene que
+mirar antes en qué plan está**. Aparecía tres veces en la misma pantalla.
+
+**Dos hallazgos arreglados de paso, ambos en facturación:**
+
+- `plan-billing-section.tsx` pintaba sus dos avisos con cuatro hexes escritos a
+  mano (`#f0c36d`, `#fdf6e8`, `#92600a`, `#6b4b09`) que se saltaban los tokens
+  `--warn`/`--warn-soft`/`--warn-ink`. Era una **regresión de BRAND-4 hallazgo 2
+  en el mismo fichero que BRAND-4 arregló**. Matiz importante para el futuro: lo
+  prohibido no es el ámbar de aviso, que tiene familia de tokens legítima, sino
+  `--brand-warm` (#FFB020), que es sólo el punto del logo.
+- **Agencia era un callejón sin salida** en el modal de cambiar de plan: un
+  radio seleccionable que apagaba «Continuar» y mostraba dos mensajes distintos
+  para el mismo estado. Peor aún, el botón «Comparar planes» abría el modal
+  **con Agencia ya preseleccionada**, así que el callejón se alcanzaba desde el
+  camino por defecto. Ahora ocupa la misma celda pero sin radio, con enlace a
+  ventas.
+
+**Hueco de verificación que esta fase cierra.** No existía ninguna journey de
+piloto para `/dashboard/settings`: la pasada del PR #357 barrió 44 pantallas en
+tres viewports y Ajustes no estaba en ninguna fila. Sin `tests/pilot/journeys/
+settings.spec.ts` esta pantalla se habría implementado sin que ningún piloto la
+viera nunca — el mismo fallo que el incidente de Auditoría web del 2026-08-02,
+por otra puerta.
+
+**Lo que costó aprender, y la regla que deja.** El primer intento se desplegó y
+el piloto lo tumbó en los tres viewports: *«An error occurred in the Server
+Components render»*, la pantalla entera sustituida por «Algo ha ido mal». La
+causa: `buildSettingsIndex` estaba exportada desde `settings-index.tsx`, que es
+`"use client"`, y la llamaba el Server Component de la página. **Todo lo que
+exporta un módulo de frontera de cliente se convierte en una referencia de
+cliente**; invocarla durante el render del servidor lanza.
+
+Ni el build ni el test podían cogerlo: `tsc` ve una función normal y Vitest no
+respeta la directiva `"use client"`. La regla que queda es estructural, no de
+cuidado: **una función que llama un Server Component nunca vive en un fichero
+`"use client"`.** Vive en `lib/` (aquí, `lib/settings/index-entries.ts`) y el
+componente de cliente importa de ahí. Lo único que lo detectó fue la journey de
+piloto que esta misma fase tuvo que crear.
+
+**Tres ajustes finales tras la segunda revisión (2026-08-06):**
+
+- **Un solo «Guardar» en la tarjeta de Cuenta.** Los dos acordeones tenían el
+  suyo, así que escribir en «Datos de empresa» y pulsar el botón de la tarjeta
+  descartaba el cambio en silencio. Era una regresión introducida por esta misma
+  fase: antes Organización era pantalla propia con un único guardado y no había
+  ambigüedad. Ahora `saveAccount` escribe nombre, empresa y facturación en una
+  sola llamada y los acordeones son presentacionales.
+- **Fuera «Motores de IA» del uso del ciclo.** Todos los planes de pago llevan
+  los tres motores que existen, así que la fila vivía en 3/3 y levantaba «Cerca
+  del límite del plan» para un límite sin nada por encima a lo que subir.
+- **El bloque final pasa a soporte genérico.** Describía el estado de pago de
+  cuatro maneras distintas —de ahí que le dijera a una cuenta Agencia que no
+  tenía plan— y ahora dice lo único que es cierto siempre: escríbenos si tienes
+  una incidencia. **El acceso a facturas de Stripe no desapareció con él**: el
+  botón sube junto a «Cambiar de plan», visible para cualquier cuenta con
+  cliente de Stripe. Quitarlo sin más habría sido una regresión peor que la que
+  se arreglaba.
+
+**Pendiente / roto conocido:**
+
+- **Fase B, sin aprobar:** los otros cuatro hallazgos del modal de plan — un
+  camino avisa antes de salir a Stripe y el otro no; el bloque de archivar
+  dominios duplicado en los pasos `confirm` y `overage`; el distintivo «Bajada
+  de plan» fijo con un `.cp-confirm-badge.up` muerto en CSS; y el icono `grid`
+  de la cabecera. Necesita su propio Task Intake: es un flujo de pago.
+- **La sección Plan sólo está cubierta por test en su entrada de índice**
+  (`buildSettingsIndex`), no en su renderizado: el repo no tiene infraestructura
+  de test de componentes. Con equipos ocultos no hay no-admins reales, pero la
+  cobertura es parcial y conviene saberlo.
+- **`org_tax_info` sigue en `user_metadata`** de las cuentas que lo tuvieran, a
+  propósito: es la fuente de reserva de Razón social hasta que su dueño guarde.
+- **`updateProfileName` queda sin usar** en `profile/actions.ts` tras el guardado
+  único. No se retira aquí para no ensanchar el PR; una server action huérfana
+  sigue siendo un endpoint invocable, así que conviene borrarla en la fase
+  siguiente.
+- **La sesión del piloto se cae a mitad de pasada, y no es de esta zona.** En
+  la pasada de `cfe77eb`, móvil completó las 44 pantallas —las cinco de Ajustes
+  con contenido real y cero errores de consola— y a partir de
+  `tablet notifications-bell` todo rebotó a `/login`. El `storageState` de
+  `.pilot/auth.json` lo comparten los tres proyectos de viewport; cuando el
+  token rota durante la primera pasada, las dos siguientes arrancan con una
+  sesión ya inválida. Es intermitente (la pasada anterior, con las mismas
+  pantallas, fue verde) y afecta a **todas** las journeys, no a Ajustes.
+  Arreglarlo toca `tests/pilot/support/auth.setup.ts` —re-autenticar por
+  proyecto en vez de reutilizar el fichero— y merece fase propia.
+- **Replanteo pendiente de la sección Plan.** Las cuatro pegas de la revisión
+  del fundador caían todas ahí, no en Cuenta ni en Avisos: jerarquía duplicada
+  («Plan» → «Tu plan» → «Uso de este ciclo»), y «Facturación mensual» junto a un
+  plan «a medida». Va con la Fase B del modal, que es su misma zona.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

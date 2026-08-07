@@ -223,7 +223,7 @@ export function Sidebar({
           <Icon name="info" size={15} />
           <span className="hide-collapsed">¿Qué es el GEO?</span>
         </a>
-        <Link href="/dashboard/settings/profile" className="user-chip" onClick={handleNavSelect}>
+        <Link href="/dashboard/settings" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>
           <div className="hide-collapsed" style={{ minWidth: 0 }}>
             <div
