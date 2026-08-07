@@ -1551,11 +1551,11 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <span class="rule-k">Ya existe</span>
       <span class="rule-t">El interruptor</span>
       <span class="rule-b">
-        Ajustes → Notificaciones ya muestra «Escaneos completados · Aviso cada vez que
+        La sección «Avisos» de Ajustes ya muestra «Escaneos completados · Aviso cada vez que
         termina un escaneo»… <strong>desactivado y con badge «Próximamente»</strong>. Esta
         fase es literalmente quitarle el «próximamente».
       </span>
-      <span class="rule-src">components/settings/notifications-tab.tsx</span>
+      <span class="rule-src">components/settings/notifications-section.tsx</span>
     </div>
     <div class="rule">
       <span class="rule-k">Ya existe</span>
@@ -1676,7 +1676,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           <div class="cta" style="border-radius:10px">Ver tu visión general</div>
           <div style="font-size:11px;line-height:1.5;color:var(--p-ink-4);border-top:1px solid var(--p-line-soft);padding-top:12px">
             Te escribimos porque era tu primer escaneo. Los avisos de escaneos siguientes se
-            activan en Ajustes → Notificaciones.
+            activan en Ajustes, sección «Avisos».
           </div>
         </div>
       </div>
@@ -1698,11 +1698,12 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </div>
         <div class="dev-sub">
           <div>
-            <div class="dev-kicker">Ajustes</div>
-            <div class="dev-titlerow"><span class="dev-title">Notificaciones</span></div>
+            <div class="dev-kicker">Espacio de trabajo</div>
+            <div class="dev-titlerow"><span class="dev-title">Ajustes</span></div>
           </div>
         </div>
         <div class="dev-body">
+          <div style="font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.025em">Avisos</div>
           <div class="card" style="padding:0">
             <div style="padding:13px 14px;border-bottom:1px solid var(--p-line-soft);display:flex;gap:10px;align-items:center">
               <span style="flex:1">
@@ -1732,7 +1733,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <figcaption>
         <b>El interruptor, ya real</b>
         Apagado por defecto y con la excepción escrita en la propia descripción, para que
-        nadie se pregunte por qué recibió uno con el interruptor en «off».
+        nadie se pregunte por qué recibió uno con el interruptor en «off». Dibujado ya dentro
+        de la sección «Avisos» de la página única de Ajustes (CONSOLE-REDESIGN-1 Fase A,
+        en <code>main</code> desde el 7-ago), no en la pantalla propia que tenía antes.
         <span class="real">real: preferencia persistida (columna nueva, requiere migración)</span>
       </figcaption>
     </figure>
