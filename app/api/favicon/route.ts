@@ -1,71 +1,78 @@
 import { NextResponse } from "next/server";
 import { fetchFavicon, isPlausibleDomain } from "@/lib/domains/favicon-source";
-import { snapFaviconSize } from "@/lib/domains/favicon";
+import { normalizeDomain, snapFaviconSize } from "@/lib/domains/favicon";
 
 /**
- * FAVICON-QUALITY-3a. Sirve el icono de un dominio, o **204 sin cuerpo cuando
- * no hay uno de verdad**, que es el punto entero de esta ruta: un `<img>` con
- * cuerpo vacío no puede decodificar nada y dispara `onError`, y ahí el cliente
- * pinta las iniciales. Google responde 200 con un globo genérico, y desde el
- * navegador eso es indistinguible de una marca.
+ * Serves a domain's brand icon, or **204 with no body when there is no real
+ * one** — which is the entire point of this route. An `<img>` with nothing to
+ * decode fires `onError`, and that is what lets the client draw letter
+ * initials instead. Google answers 200 with a generic globe, which from the
+ * browser is indistinguishable from a brand.
  *
- * **204 y no 404**, corregido tras un `PILOT FAIL` (2026-08-06): el 404 hacía
- * exactamente lo que se le pedía, pero un 4xx para un estado normal y esperado
- * le miente a todo lo que mire el tráfico — el piloto lo marcó como petición
- * rota, y detrás de él vendrían la consola del navegador y Sentry. Que un
- * dominio no tenga favicon no es un fallo de nadie. 204 dice justo lo que pasa:
- * la petición se atendió bien y no hay nada que devolver.
+ * **204 and not 404**, corrected after a real `PILOT FAIL` (2026-08-06): the
+ * 404 did exactly what it was asked to, but a 4xx for a normal, expected state
+ * lies to everything that watches traffic — the pilot read it as a broken
+ * screen, and the browser console and Sentry would have followed. A domain
+ * without a favicon is nobody's failure. The rule this left behind: **the
+ * status code describes what happened, not what you want the client to do.**
  *
- * No es una ruta autenticada a propósito: sólo reenvía a un servicio público
- * lo que ya se le enviaba desde el navegador de cada usuario, y meter sesión
- * aquí impediría que la caché de edge sirviera a todo el mundo la misma
- * respuesta. Lo que sí gana el usuario es que su navegador deja de contarle a
- * Google qué cuenta está mirando.
+ * Unauthenticated on purpose. It forwards to a public service what the
+ * browser already sent there directly, and requiring a session would stop the
+ * edge cache from serving one response to everyone. What the user gains is
+ * that their browser stops telling Google which account they are looking at.
  */
 
-/** Una semana. Los iconos de marca no cambian, y cada acierto de caché es una
- *  invocación de función y una llamada a Google que no ocurren. */
+/** A week. Brand icons do not change, and every cache hit is one function
+ *  invocation and one upstream call that never happen. */
 const CACHE_ICON = "public, max-age=3600, s-maxage=604800, stale-while-revalidate=86400";
-/** Un día: un dominio sin icono hoy puede tener uno mañana, y no queremos que
- *  el «no hay» se quede pegado una semana. */
-const CACHE_GENERIC = "public, max-age=600, s-maxage=86400";
-/** Un fallo transitorio no se cachea apenas: se reintenta pronto. */
-const CACHE_UNAVAILABLE = "public, max-age=0, s-maxage=60";
+
+/** A day. A domain with no icon today may have one tomorrow, so "there is
+ *  none" must not stick for a week. */
+const CACHE_NO_ICON = "public, max-age=600, s-maxage=86400";
+
+/** A minute: a transient upstream failure should be retried soon. */
+const CACHE_TRANSIENT = "public, max-age=0, s-maxage=60";
+
+/** A malformed domain cannot become well-formed, so this answer is permanent —
+ *  unlike the other two, nothing is being retried here. */
+const CACHE_MALFORMED = "public, max-age=86400, s-maxage=604800";
+
+/** Google's S2 serves PNG. Derived from what the upstream contract says, not
+ *  echoed from its response header, which we do not control. */
+const ICON_CONTENT_TYPE = "image/png";
+
+/** Used when `sz` is missing or unparseable. Every real caller sends one — this
+ *  is for a hand-typed URL, and 64 is the historical default rather than the
+ *  16 px that `Number(null)` would otherwise collapse to. */
+const DEFAULT_SIZE = 64;
+
+function noBody(cacheControl: string): NextResponse {
+  return new NextResponse(null, { status: 204, headers: { "Cache-Control": cacheControl } });
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const domain = (searchParams.get("domain") ?? "").trim().toLowerCase().replace(/^www\./, "");
-  const size = snapFaviconSize(Number(searchParams.get("sz") ?? 64));
+  // Normalised through the same helper the client uses to build the URL, so
+  // the two can never disagree about what counts as the same domain.
+  const domain = normalizeDomain(searchParams.get("domain"));
+  const requested = Number(searchParams.get("sz"));
+  const size = snapFaviconSize(Number.isFinite(requested) && requested > 0 ? requested : DEFAULT_SIZE);
 
-  if (!isPlausibleDomain(domain)) {
-    return new NextResponse(null, { status: 204, headers: { "Cache-Control": CACHE_GENERIC } });
-  }
+  if (!domain || !isPlausibleDomain(domain)) return noBody(CACHE_MALFORMED);
 
   const result = await fetchFavicon(domain, size);
 
   if (result.kind === "icon") {
     return new NextResponse(result.body, {
       status: 200,
-      headers: {
-        "Content-Type": result.contentType,
-        "Cache-Control": CACHE_ICON
-      }
+      headers: { "Content-Type": ICON_CONTENT_TYPE, "Cache-Control": CACHE_ICON }
     });
   }
 
-  // 204 en ambos casos: el cliente sólo necesita saber "pinta las iniciales".
-  // La diferencia está en cuánto tiempo se cachea esa respuesta.
-  //
-  // Sí, eso significa que un fallo de Google (`unavailable`) se sirve con el
-  // mismo código que un dominio sin icono, y no es un descuido: el usuario ve
-  // lo mismo en los dos casos, y devolver 5xx llenaría el monitor de ruido cada
-  // vez que Google tosa sin que nadie pueda hacer nada al respecto. Lo que
-  // distingue los dos casos es la caché — 60 s frente a un día — para que un
-  // fallo pasajero se reintente enseguida.
-  return new NextResponse(null, {
-    status: 204,
-    headers: {
-      "Cache-Control": result.kind === "generic" ? CACHE_GENERIC : CACHE_UNAVAILABLE
-    }
-  });
+  // Both remaining cases are 204: the client only needs to know "draw the
+  // initials". A transient upstream failure deliberately does not surface as
+  // 5xx — the user sees the same thing either way, and it would fill the
+  // monitor with noise nobody can act on. What separates them is how long the
+  // answer is cached.
+  return noBody(result.kind === "generic" ? CACHE_NO_ICON : CACHE_TRANSIENT);
 }

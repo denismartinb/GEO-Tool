@@ -18,12 +18,8 @@ afterEach(() => {
 });
 
 describe("GET /api/favicon", () => {
-  it("devuelve el icono con caché larga cuando hay uno real", async () => {
-    fetchFavicon.mockResolvedValue({
-      kind: "icon",
-      body: new Uint8Array([1, 2, 3]).buffer,
-      contentType: "image/png"
-    });
+  it("serves the icon with a long cache when there is a real one", async () => {
+    fetchFavicon.mockResolvedValue({ kind: "icon", body: new Uint8Array([1, 2, 3]).buffer });
 
     const res = await call("domain=mahou.es&sz=64");
 
@@ -32,19 +28,20 @@ describe("GET /api/favicon", () => {
     expect(res.headers.get("cache-control")).toContain("s-maxage=604800");
   });
 
-  it("devuelve 204 y NO 404 cuando no hay icono", async () => {
-    // Regresión de un PILOT FAIL real (2026-08-06): con 404, el piloto marcaba
-    // Dominios como pantalla rota por alberdiderma.es, y detrás habrían venido
-    // la consola del navegador y Sentry. Un dominio sin favicon no es un error.
+  it("answers 204 and NOT 404 when there is no icon", async () => {
+    // Regression test for a real PILOT FAIL (2026-08-06): with 404 the pilot
+    // flagged Domains as a broken screen because of alberdiderma.es, and the
+    // browser console and Sentry would have followed. A domain without a
+    // favicon is nobody's failure.
     fetchFavicon.mockResolvedValue({ kind: "generic" });
 
     const res = await call("domain=alberdiderma.es&sz=64");
 
     expect(res.status).toBe(204);
-    expect(res.status).toBeLessThan(400);
+    expect(res.headers.get("cache-control")).toContain("s-maxage=86400");
   });
 
-  it("un fallo transitorio también es 204, pero se cachea un minuto", async () => {
+  it("caches a transient failure for a minute, not for a day", async () => {
     fetchFavicon.mockResolvedValue({ kind: "unavailable" });
 
     const res = await call("domain=mahou.es&sz=64");
@@ -53,22 +50,21 @@ describe("GET /api/favicon", () => {
     expect(res.headers.get("cache-control")).toContain("s-maxage=60");
   });
 
-  it("un dominio sin icono se cachea un día, no un minuto ni una semana", async () => {
-    fetchFavicon.mockResolvedValue({ kind: "generic" });
-
-    const res = await call("domain=alberdiderma.es&sz=64");
-
-    expect(res.headers.get("cache-control")).toContain("s-maxage=86400");
-  });
-
-  it("rechaza lo que no es un dominio sin gastar una llamada", async () => {
-    const res = await call("domain=" + encodeURIComponent("https://evil.com/x"));
+  it("rejects a non-domain without spending a request", async () => {
+    const res = await call(`domain=${encodeURIComponent("https://evil.com/x")}`);
 
     expect(res.status).toBe(204);
     expect(fetchFavicon).not.toHaveBeenCalled();
   });
 
-  it("normaliza www y mayúsculas, y ajusta el tamaño al que sirve S2", async () => {
+  it("caches a malformed domain for a week — it cannot become valid", async () => {
+    const res = await call("domain=nodot");
+
+    expect(res.headers.get("cache-control")).toContain("s-maxage=604800");
+    expect(fetchFavicon).not.toHaveBeenCalled();
+  });
+
+  it("normalizes www and case, and snaps the size to what is served", async () => {
     fetchFavicon.mockResolvedValue({ kind: "generic" });
 
     await call("domain=WWW.Mahou.ES&sz=100");
@@ -76,11 +72,20 @@ describe("GET /api/favicon", () => {
     expect(fetchFavicon).toHaveBeenCalledWith("mahou.es", 128);
   });
 
-  it("sobrevive a que falte el tamaño", async () => {
+  it("falls back to 64 rather than 16 when the size is missing or junk", async () => {
     fetchFavicon.mockResolvedValue({ kind: "generic" });
 
     await call("domain=mahou.es");
+    expect(fetchFavicon).toHaveBeenLastCalledWith("mahou.es", 64);
 
-    expect(fetchFavicon).toHaveBeenCalledWith("mahou.es", 64);
+    await call("domain=mahou.es&sz=abc");
+    expect(fetchFavicon).toHaveBeenLastCalledWith("mahou.es", 64);
+  });
+
+  it("handles a missing domain parameter", async () => {
+    const res = await call("sz=64");
+
+    expect(res.status).toBe(204);
+    expect(fetchFavicon).not.toHaveBeenCalled();
   });
 });

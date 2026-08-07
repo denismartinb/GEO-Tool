@@ -1,74 +1,45 @@
 /**
- * Lado servidor de FAVICON-QUALITY-3: de dónde sale el icono de un dominio.
+ * Server side of the favicon pipeline: fetches a domain's icon and decides
+ * whether what came back is a real brand icon or the service's generic globe.
  *
- * Dos fuentes, en este orden:
+ * **Why a server is needed for something this small.** Google's S2 answers
+ * `200` with a globe when it does not know a domain — not a `404`. From the
+ * browser that is indistinguishable from a real icon (`onError` never fires),
+ * so the console spent months showing globes as if they were brands:
+ * alberdiderma.es and our own genscore.es, 2 of 10 domains in the founder's
+ * account. Here we can look at the bytes.
  *
- * 1. **El propio sitio** (3b) — `https://<dominio>/apple-touch-icon.png`, que
- *    suele ser de 180 px reales. Es lo único que arregla un dominio cuyo icono
- *    en Google es un `.ico` de 16 px estirado (el caso mahou.es).
- * 2. **Google S2** (3a) como respaldo, con detección del comodín: S2 responde
- *    **200 con un globo** cuando no conoce el dominio, no un 404, así que desde
- *    el navegador es indistinguible de un icono real —`onError` no dispara
- *    nunca— y la consola llevaba meses enseñando globos como si fueran marcas
- *    (alberdiderma.es y el nuestro, 2 de 10 en la cuenta del fundador). Aquí sí
- *    podemos mirar los bytes.
- *
- * La 3b pide a un dominio que escribe el usuario, así que **toda petición pasa
- * por la guardia de `./public-host`**. No se parsea HTML en ningún momento:
- * pedir una ruta fija conocida no es rastrear.
- *
- * Ver docs/brand/design-decisions-log.md §36.
+ * Only ever talks to the fixed host below. The user-supplied domain travels as
+ * a query parameter and never determines where the request goes — see
+ * `docs/brand/design-decisions-log.md` §36 for why fetching the site's own
+ * `apple-touch-icon` was built, measured and then reverted.
  */
 
 import { createHash } from "node:crypto";
-import { MAX_REDIRECTS, isPublicHttpsUrl, rasterImageType } from "./public-host";
 
-const S2 = "https://www.google.com/s2/favicons";
+const ICON_SERVICE = "https://www.google.com/s2/favicons";
 
 /**
- * FAVICON-QUALITY-3b. Rutas convencionales donde un sitio publica su icono
- * grande. **No se parsea el HTML para descubrirlas**: eso ya sería rastrear, y
- * está en la lista de prohibidos de CLAUDE.md. Pedir una ruta fija conocida no
- * sigue enlaces ni descubre URLs.
+ * A domain that cannot exist: `.invalid` is reserved by RFC 2606 and will
+ * never resolve, so whatever the service returns for it *is* its generic
+ * placeholder. That is the calibration.
  *
- * Se prueban en orden y gana la primera que responda una imagen.
+ * Preferred over embedding a hash of the globe, which would go stale in
+ * silence the day Google redraws it.
  */
-const SITE_ICON_PATHS = ["/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"];
-
-/** Un apple-touch-icon son ~10-40 KB. Más generoso que el de S2 porque estas
- *  imágenes son de 180 px, pero sigue siendo un tope, no un ajuste fino. */
-const SITE_MAX_BYTES = 500_000;
-
-/**
- * Presupuesto **total** de la fase 3b, no por llamada.
- *
- * Con un timeout por llamada, dos rutas por hasta cuatro saltos cada una salen
- * a 40 s antes siquiera de empezar a preguntarle a Google. La ruta que pinta
- * los iconos no puede tardar eso, y el sitio de un tercero no tiene por qué
- * responder rápido. Se mide un instante absoluto al entrar y se reparte: lo que
- * no quepa, no se intenta, y S2 sigue detrás. Mismo criterio que
- * `.claude/rules/scan.md` («presupuesta contra la invocación, no contra sí
- * mismo»).
- */
-const SITE_TOTAL_BUDGET_MS = 3_000;
-
-/**
- * Dominio que no puede existir: `.invalid` está reservado por el RFC 2606 y
- * nunca resolverá, así que S2 sólo puede devolver su comodín. Es la calibración
- * — preferible a incrustar un hash del globo, que quedaría obsoleto en silencio
- * el día que Google lo redibuje.
- */
-const SENTINEL = "no-such-site.invalid";
+const SENTINEL_DOMAIN = "no-such-site.invalid";
 
 const FETCH_TIMEOUT_MS = 5_000;
-/** Un favicon son unos pocos KB. El tope es defensivo, no un ajuste fino. */
+
+/** A favicon is a few KB. The cap is defensive, not a tuned number. */
 const MAX_BYTES = 200_000;
 
-export type FaviconFetch =
-  | { kind: "icon"; body: ArrayBuffer; contentType: string }
-  /** Google no tiene icono para este dominio: el cliente debe pintar iniciales. */
+export type FaviconResult =
+  /** A real brand icon, ready to serve. */
+  | { kind: "icon"; body: ArrayBuffer }
+  /** The service has no icon for this domain: the client should draw initials. */
   | { kind: "generic" }
-  /** No hemos podido averiguarlo. También pinta iniciales, pero se cachea poco. */
+  /** We could not find out. Also draws initials, but is cached briefly so it retries. */
   | { kind: "unavailable" };
 
 function hash(buf: ArrayBuffer): string {
@@ -77,179 +48,82 @@ function hash(buf: ArrayBuffer): string {
 
 async function fetchIcon(domain: string, size: number): Promise<ArrayBuffer | null> {
   try {
-    const res = await fetch(`${S2}?domain=${encodeURIComponent(domain)}&sz=${size}`, {
+    const res = await fetch(`${ICON_SERVICE}?domain=${encodeURIComponent(domain)}&sz=${size}`, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      // Nuestra propia caché de edge es la que manda; ver route.ts.
+      // Our own edge cache is the one that matters; see the route.
       cache: "no-store"
     });
     if (!res.ok) return null;
 
-    const length = Number(res.headers.get("content-length") ?? 0);
-    if (length > MAX_BYTES) return null;
+    if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) return null;
 
     const body = await res.arrayBuffer();
     if (body.byteLength === 0 || body.byteLength > MAX_BYTES) return null;
     return body;
   } catch {
-    // Timeout, DNS, red. Sin mensaje del proveedor: lo categoriza quien llama.
+    // Timeout, DNS, transport. No provider message is kept: the caller
+    // categorises, per `.claude/rules/gemini.md` ("sanitize all errors").
     return null;
   }
 }
 
 /**
- * Hash del comodín para un tamaño dado. Memoizado por tamaño **y por promesa**,
- * no por valor: varias peticiones concurrentes en un arranque en frío
- * comparten la misma llamada en vez de disparar una calibración cada una.
+ * Hash of the placeholder for a given size, memoised per size **and by
+ * promise** — several icons rendering at once on a cold start share one
+ * calibration call instead of firing one each.
  *
- * El globo cambia con el tamaño, de ahí la clave por tamaño.
+ * The placeholder differs per size, hence the per-size key.
  */
-const sentinelBySize = new Map<number, Promise<string | null>>();
+const placeholderBySize = new Map<number, Promise<string | null>>();
 
-export function resetSentinelCache(): void {
-  sentinelBySize.clear();
+/** Test seam: module state would otherwise leak between cases. */
+export function resetPlaceholderCache(): void {
+  placeholderBySize.clear();
 }
 
-function sentinelHash(size: number): Promise<string | null> {
-  const cached = sentinelBySize.get(size);
+function placeholderHash(size: number): Promise<string | null> {
+  const cached = placeholderBySize.get(size);
   if (cached) return cached;
 
-  const pending = fetchIcon(SENTINEL, size)
+  const pending = fetchIcon(SENTINEL_DOMAIN, size)
     .then((buf) => (buf ? hash(buf) : null))
     .catch(() => null);
 
-  // Sólo se cachea el acierto. Una calibración fallida se olvida, porque
-  // cachearla dejaría esta instancia **en fallo-abierto permanente y en
-  // silencio** para ese tamaño: un corte de red de un segundo y, mientras la
-  // función siga caliente, todo globo genérico se serviría como si fuera una
-  // marca. El fallo-abierto está pensado como estado momentáneo, no heredado.
-  // La promesa se guarda igualmente antes de ceder el control, así que las
-  // peticiones concurrentes siguen compartiendo una única llamada.
+  // Only a success is kept. Caching a failure would leave this instance
+  // permanently and silently fail-open for that size: one second of network
+  // trouble and, for as long as the function stays warm, every generic globe
+  // would be served as if it were a brand. Fail-open is meant to be a moment,
+  // not an inheritance. The promise is still stored before yielding, so
+  // concurrent callers keep sharing the single in-flight call.
   void pending.then((result) => {
-    if (result === null) sentinelBySize.delete(size);
+    if (result === null) placeholderBySize.delete(size);
   });
 
-  sentinelBySize.set(size, pending);
+  placeholderBySize.set(size, pending);
   return pending;
 }
 
 /**
- * Pide una URL siguiendo las redirecciones **a mano**, revalidando el host en
- * cada salto.
+ * Fetches the icon and says whether it is real or the placeholder.
  *
- * Seguirlas con `redirect: "follow"` validaría el primer host y confiaría en
- * todos los siguientes, que es exactamente el agujero que esta función existe
- * para tapar: un dominio público que redirige a `169.254.169.254` pasaría el
- * control de entrada. Y prohibirlas del todo dejaría la 3b inútil, porque casi
- * todo dominio raíz redirige a `www`.
+ * **Fails open on purpose.** With no calibration available we serve the icon
+ * rather than risk hiding a good one: showing one globe too many is ugly,
+ * hiding a competitor's real brand mark is lost information. Same bias as
+ * `scripts/vercel-should-build.sh`.
  */
-async function fetchThroughRedirects(url: string, deadline: number): Promise<Response | null> {
-  let current = url;
-
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const remaining = deadline - Date.now();
-    if (remaining <= 0) return null;
-
-    if (!(await isPublicHttpsUrl(current))) return null;
-
-    let res: Response;
-    try {
-      res = await fetch(current, {
-        signal: AbortSignal.timeout(Math.min(FETCH_TIMEOUT_MS, Math.max(1, deadline - Date.now()))),
-        redirect: "manual",
-        cache: "no-store"
-      });
-    } catch {
-      return null;
-    }
-
-    if (res.status >= 300 && res.status < 400) {
-      const location = res.headers.get("location");
-      if (!location) return null;
-      try {
-        current = new URL(location, current).toString();
-      } catch {
-        return null;
-      }
-      continue;
-    }
-
-    return res.ok ? res : null;
-  }
-
-  // Más saltos que el tope: o hay un bucle o el sitio está mal configurado.
-  return null;
-}
-
-/**
- * Icono del propio sitio (FAVICON-QUALITY-3b), que es la única forma de
- * arreglar un dominio cuyo icono en Google es de baja resolución — el caso
- * mahou.es. Devuelve null en cuanto algo no cuadra: aquí rendirse es barato
- * porque S2 sigue estando detrás como respaldo.
- */
-async function fetchSiteIcon(domain: string): Promise<{ body: ArrayBuffer; contentType: string } | null> {
-  const deadline = Date.now() + SITE_TOTAL_BUDGET_MS;
-
-  for (const path of SITE_ICON_PATHS) {
-    if (Date.now() >= deadline) return null;
-
-    const res = await fetchThroughRedirects(`https://${domain}${path}`, deadline);
-    if (!res) continue;
-
-    const type = res.headers.get("content-type") ?? "";
-    if (!type.startsWith("image/")) continue;
-
-    const declared = Number(res.headers.get("content-length") ?? 0);
-    if (declared > SITE_MAX_BYTES) continue;
-
-    let body: ArrayBuffer;
-    try {
-      body = await res.arrayBuffer();
-    } catch {
-      continue;
-    }
-
-    if (body.byteLength === 0 || body.byteLength > SITE_MAX_BYTES) continue;
-    // La cabecera y la extensión las controla el otro extremo; los bytes no.
-    const contentType = rasterImageType(new Uint8Array(body.slice(0, 12)));
-    if (!contentType) continue;
-
-    return { body, contentType };
-  }
-
-  return null;
-}
-
-/**
- * Trae el icono y dice si es real o el comodín.
- *
- * **Falla abierto a propósito.** Si la calibración no está disponible
- * devolvemos el icono tal cual en vez de arriesgarnos a ocultar uno bueno:
- * enseñar un globo de más es feo, esconder la marca real de un competidor es
- * información perdida. Mismo criterio que `scripts/vercel-should-build.sh`.
- */
-export async function fetchFavicon(domain: string, size: number): Promise<FaviconFetch> {
-  // 3b primero: el icono del propio sitio es de 180 px de verdad, mientras que
-  // el de Google puede ser un .ico de 16 px estirado. Si existe, no hay nada
-  // que decidir — es suyo por definición, así que no pasa por el centinela.
-  const own = await fetchSiteIcon(domain);
-  if (own) return { kind: "icon", body: own.body, contentType: own.contentType };
-
-  const [icon, sentinel] = await Promise.all([fetchIcon(domain, size), sentinelHash(size)]);
+export async function fetchFavicon(domain: string, size: number): Promise<FaviconResult> {
+  const [icon, placeholder] = await Promise.all([fetchIcon(domain, size), placeholderHash(size)]);
 
   if (!icon) return { kind: "unavailable" };
-  if (sentinel && hash(icon) === sentinel) return { kind: "generic" };
-
-  return { kind: "icon", body: icon, contentType: "image/png" };
+  if (placeholder && hash(icon) === placeholder) return { kind: "generic" };
+  return { kind: "icon", body: icon };
 }
 
 /**
- * Un dominio plausible: sin esquema, sin ruta, sin espacios.
- *
- * **Esto ya no es sólo higiene.** Mientras el único destino era el host fijo de
- * S2 no había superficie SSRF que proteger; desde la 3b este valor acaba dentro
- * de una URL a la que pedimos de verdad, así que es la primera de dos barreras.
- * La segunda, la que de verdad cuenta, es `isPublicHttpsUrl` — ésta sólo evita
- * gastar una llamada en algo que no tiene forma de dominio.
+ * Shape check before spending a request. Not a security boundary — the
+ * destination host is the constant at the top of this file, so the domain
+ * cannot redirect us anywhere — but a value that is not domain-shaped can only
+ * produce a useless answer, so it is rejected before the call.
  */
 export function isPlausibleDomain(value: string): boolean {
   if (!value || value.length > 253) return false;

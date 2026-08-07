@@ -3444,14 +3444,24 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
 ---
 
-## 36. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1, 3a y 3b, 2026-08-06)
+## 36. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1 y 3a, 2026-08-06)
 
-**Estado: implementadas las Fases 1, 3a y 3b — todas las que quedaron en pie.**
-La Fase 2 original **no se implementó y ya no existe**: era detectar el globo
-desde el cliente, y resultó imposible porque Google responde 200 con él (ver
-más abajo). La 3a absorbió su objetivo. Lo que sigue sin hacer es leer el
-`<link rel="apple-touch-icon">` del HTML, que sí sería rastrear y necesita su
-propia aprobación.
+**Estado: implementadas las Fases 1 y 3a. La 2 nunca existió y la 3b se
+revirtió.**
+
+- **Fase 1** — el tamaño pedido se deriva del tamaño CSS por la densidad de
+  pantalla, más dos bugs que salieron de mirar el producto de verdad.
+- **Fase 2** — **no se implementó y ya no existe**: era detectar el globo desde
+  el cliente, y resultó imposible porque Google responde 200 con él. La 3a
+  absorbió su objetivo.
+- **Fase 3a** — proxy propio que mira los bytes y responde 204 cuando no hay
+  icono, que es lo que hace posible la caída a iniciales.
+- **Fase 3b** — pedir el icono al propio sitio. **Construida, medida y
+  revertida el mismo día**; el apartado se conserva más abajo porque la
+  medición es el valor que dejó.
+
+Lo que sigue sin hacer, y necesita aprobación propia por ser rastrear de
+verdad, es leer el `<link rel="apple-touch-icon">` del HTML.
 
 Esta entrada se lee de arriba abajo como una cronología: la Fase 1 primero, los
 dos fallos que aparecieron al mirar el producto, y luego 3a y 3b. **Los
@@ -3621,6 +3631,41 @@ servidor.
    sido un rediseño encubierto colado en un PR de infraestructura.
 6. **Efecto colateral que era un problema declarado desde 2026-07-23:** el
    navegador del usuario deja de contarle a Google qué cuenta está mirando.
+
+### Fase 3b — construida, medida y **revertida el mismo día**
+
+> **Estado: revertida.** El código no está en el producto. Se conserva este
+> apartado entero, y no se borra, porque el valor que dejó no es el código sino
+> la medición: **es la prueba de que la causa B no se arregla por esta vía**, y
+> sin ella la próxima sesión que vea a Mahou borroso volverá a proponer
+> exactamente lo mismo. Lo implementado vive en el historial del PR #354
+> (`1f80df8`, `a2bb385`).
+>
+> **Por qué se revirtió, con los números delante.** De los 10 dominios de la
+> cuenta del fundador, la 3b cambió **uno**: movistar.es. Los otros nueve
+> quedaron idénticos píxel a píxel — comparación de regiones sobre las capturas
+> del piloto, no impresión visual. **Mahou, que era la razón entera de la fase,
+> ni se inmutó**: no publica `/apple-touch-icon.png` en la ruta convencional.
+> Y el único que sí cambió quedó **peor**: un `apple-touch-icon` está diseñado
+> para un tile de pantalla de inicio, con márgenes generosos porque iOS aplica
+> su propia máscara, así que a 38 px la marca se ve más pequeña y más débil que
+> la versión recortada de Google. La fase cambiaba resolución por peso visual,
+> y a tamaños pequeños perdía.
+>
+> **Lo que costaba mantener, a cambio de eso:** una ruta pública sin autenticar
+> haciendo peticiones salientes a dominios que escribe el usuario, una guardia
+> SSRF entera (`lib/domains/public-host.ts`) que había que entender y mantener
+> para siempre, un hueco de DNS rebinding declarado y no cerrado, y hasta 3 s
+> extra en la primera petición de cada dominio.
+>
+> **Lo que quedó sin resolver.** No pude distinguir dos explicaciones del 1 de
+> 10: o esos sitios no publican el icono en la ruta convencional, o el
+> presupuesto de 3 s era demasiado corto y sólo llegó el más rápido. Apple,
+> Vodafone y Ryanair casi seguro que sí lo publican, lo que apunta a lo segundo.
+> **Quien retome esto debe medir eso primero** — y aun resolviéndolo, seguiría
+> teniendo encima el problema del margen, que es de diseño y no de red.
+
+Lo que sigue es el diseño tal como se implementó, conservado como registro:
 
 **Fase 3b, aprobada por el fundador el mismo día** (*"empieza con 3b"*, tras
 haberla planteado por separado por tocar la lista de prohibidos). Pide
