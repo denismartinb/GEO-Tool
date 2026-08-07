@@ -1,0 +1,1022 @@
+<title>SCAN-STATES-1 rev.2 · El cohete y el gauge</title>
+
+<style>
+:root{
+  color-scheme: light dark;
+  --p-ink:#0B1426; --p-ink-2:#3B4759; --p-ink-3:#5B6B82; --p-ink-4:#98A2B3;
+  --p-blue:#2563EB; --p-blue-2:#4F7BFF; --p-cyan:#09C5D6;
+  --p-blue-soft:rgba(37,99,235,.10); --p-blue-soft-2:rgba(37,99,235,.18);
+  --p-canvas:#F7F8FB; --p-surface:#FFFFFF; --p-sunk:#F4F6FA;
+  --p-line:#E7EAF0; --p-line-soft:#EEF1F6;
+  --p-pos:#15915A; --p-pos-soft:#E7F6EE; --p-neg:#D23B48;
+  --p-amber:#FFB020;
+  --p-navy:#081223; --p-navy-2:#0F1C33;
+  --p-shadow:0 1px 2px rgba(11,20,38,.04),0 6px 18px rgba(11,20,38,.05);
+
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+
+  --d-bg:#ECEFF4; --d-surface:#FFFFFF; --d-surface-2:#F7F8FB;
+  --d-ink:#0B1426; --d-ink-2:#3B4759; --d-ink-3:#5B6B82; --d-ink-4:#8C97A8;
+  --d-line:#DEE3EC; --d-line-soft:#E9EDF3;
+  --d-accent:#2563EB; --d-accent-soft:rgba(37,99,235,.10);
+  --d-warn:#B3541E; --d-warn-soft:rgba(179,84,30,.10);
+  --d-shadow:0 1px 2px rgba(11,20,38,.05),0 10px 30px rgba(11,20,38,.07);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --d-bg:#081223; --d-surface:#0F1C33; --d-surface-2:#0B1729;
+    --d-ink:#F7F8FB; --d-ink-2:#C6D0DE; --d-ink-3:#95A3B6; --d-ink-4:#6F7F94;
+    --d-line:#1D2C46; --d-line-soft:#16233A;
+    --d-accent:#7FA2FF; --d-accent-soft:rgba(127,162,255,.14);
+    --d-warn:#E8A56B; --d-warn-soft:rgba(232,165,107,.13);
+    --d-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --d-bg:#081223; --d-surface:#0F1C33; --d-surface-2:#0B1729;
+  --d-ink:#F7F8FB; --d-ink-2:#C6D0DE; --d-ink-3:#95A3B6; --d-ink-4:#6F7F94;
+  --d-line:#1D2C46; --d-line-soft:#16233A;
+  --d-accent:#7FA2FF; --d-accent-soft:rgba(127,162,255,.14);
+  --d-warn:#E8A56B; --d-warn-soft:rgba(232,165,107,.13);
+  --d-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--d-bg);color:var(--d-ink);font-family:var(--body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--d-accent);outline-offset:3px;border-radius:6px}
+.tnum{font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 96px}
+@media (max-width:640px){.wrap{padding:0 16px 72px}}
+
+.doc-head{padding:56px 0 34px;border-bottom:1px solid var(--d-line)}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--d-ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eyebrow .sep{width:22px;height:1px;background:var(--d-line);display:inline-block}
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.04em;line-height:1.02;font-size:clamp(34px,6vw,58px);margin:16px 0 0;text-wrap:balance;max-width:17ch}
+.lede{font-size:clamp(16px,2.1vw,19px);line-height:1.6;color:var(--d-ink-2);max-width:64ch;margin:18px 0 0}
+section{padding-top:56px}
+.sec-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+h2{font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:1.08;font-size:clamp(24px,3.4vw,34px);margin:0;text-wrap:balance}
+h3{font-family:var(--display);font-weight:800;letter-spacing:-.025em;font-size:18px;margin:0 0 8px}
+.sec-note{font-size:15px;color:var(--d-ink-2);max-width:70ch;margin:10px 0 0}
+p{margin:0 0 12px}p:last-child{margin-bottom:0}
+strong{font-weight:700;color:var(--d-ink)}
+em{font-style:normal;font-weight:600;color:var(--d-ink)}
+code{font-family:var(--mono);font-size:.87em;background:var(--d-surface-2);border:1px solid var(--d-line-soft);border-radius:5px;padding:1px 5px}
+.opt-letter{font-family:var(--display);font-weight:800;font-size:13px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--d-accent-soft);color:var(--d-accent);flex:0 0 auto}
+
+.cols{display:grid;gap:16px;margin-top:18px}
+@media (min-width:640px){.cols{grid-template-columns:1fr 1fr}}
+.note{background:var(--d-surface);border:1px solid var(--d-line);border-left:3px solid var(--d-line);border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.55;color:var(--d-ink-3)}
+.note b{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--d-ink-4);margin-bottom:5px}
+.note.win{border-left-color:var(--d-accent)}
+.note.cost{border-left-color:var(--d-warn)}
+.note.cost b{color:var(--d-warn)}
+
+/* ---------- consola de demo ---------- */
+.demo{margin-top:26px;background:var(--d-surface);border:1px solid var(--d-line);border-radius:18px;box-shadow:var(--d-shadow);overflow:hidden}
+.demo-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--d-line-soft);background:var(--d-surface-2)}
+.demo-k{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--d-ink-4);margin-right:auto}
+.btn{font-family:var(--body);font-size:13px;font-weight:700;border:1px solid var(--d-line);background:var(--d-surface);color:var(--d-ink);border-radius:9px;padding:8px 15px;cursor:pointer}
+.btn:hover{border-color:var(--d-accent);color:var(--d-accent)}
+.btn.pri{background:var(--d-accent);border-color:var(--d-accent);color:#fff}
+.btn.pri:hover{filter:brightness(1.08);color:#fff}
+.scrub{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:11px;color:var(--d-ink-3)}
+.scrub input{width:130px;accent-color:var(--d-accent)}
+.demo-body{display:grid;gap:0}
+@media (min-width:860px){.demo-body{grid-template-columns:minmax(0,1fr) 300px}}
+.demo-stage{padding:0;min-width:0}
+.demo-side{border-top:1px solid var(--d-line-soft);padding:18px;display:flex;flex-direction:column;gap:14px}
+@media (min-width:860px){.demo-side{border-top:none;border-left:1px solid var(--d-line-soft)}}
+.tel{font-family:var(--mono);font-size:11.5px;color:var(--d-ink-3);display:flex;flex-direction:column;gap:6px}
+.tel-row{display:flex;justify-content:space-between;gap:10px}
+.tel-row b{color:var(--d-ink);font-weight:600;font-variant-numeric:tabular-nums}
+.tel-row .on{color:var(--d-accent)}
+.phase-list{display:flex;flex-direction:column;gap:2px}
+.phase{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--d-ink-4);padding:5px 0}
+.phase .pk{width:7px;height:7px;border-radius:99px;background:var(--d-line);flex:0 0 auto}
+.phase.on{color:var(--d-ink);font-weight:600}
+.phase.on .pk{background:var(--d-accent)}
+.phase.done .pk{background:var(--p-pos)}
+
+/* ---------- escenario del cohete ---------- */
+.sky{display:block;width:100%;height:auto;background:var(--p-navy)}
+
+/* ---------- tira de maquetas ---------- */
+.strip{display:flex;gap:18px;overflow-x:auto;padding:28px 4px 22px;scroll-snap-type:x proximity}
+.strip::-webkit-scrollbar{height:9px}
+.strip::-webkit-scrollbar-thumb{background:var(--d-line);border-radius:99px}
+figure{margin:0;flex:0 0 auto;width:296px;scroll-snap-align:start}
+figcaption{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--d-ink-3)}
+figcaption b{display:block;color:var(--d-ink);font-weight:700;font-size:13px;margin-bottom:3px}
+figcaption .real{display:block;margin-top:7px;font-family:var(--mono);font-size:10.5px;line-height:1.5;color:var(--d-ink-4);border-top:1px dashed var(--d-line);padding-top:7px}
+
+.dev{width:296px;border-radius:30px;background:var(--p-canvas);overflow:hidden;border:1px solid var(--p-line);box-shadow:0 2px 4px rgba(11,20,38,.10),0 20px 44px rgba(11,20,38,.22);font-family:var(--body);color:var(--p-ink);line-height:1.5;display:flex;flex-direction:column;min-height:520px}
+.dev-top{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--p-surface);border-bottom:1px solid var(--p-line)}
+.dev-burger{display:grid;gap:3.5px;width:17px}
+.dev-burger i{height:2px;background:var(--p-ink-2);border-radius:2px;display:block}
+.dev-logo{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.03em;display:flex;align-items:center;gap:5px}
+.dev-mark{width:19px;height:19px;border-radius:6px;background:var(--p-ink);color:#fff;display:grid;place-items:center;font-size:11px;position:relative}
+.dev-mark::after{content:"";position:absolute;right:1.5px;top:1.5px;width:3.5px;height:3.5px;border-radius:99px;background:var(--p-amber)}
+.dev-logo .blue{color:var(--p-blue)}
+.dev-bell{width:17px;height:17px;border-radius:5px;border:1px solid var(--p-line);background:var(--p-sunk)}
+.dev-sub{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:11px 14px 12px;background:var(--p-surface);border-bottom:1px solid var(--p-line)}
+.dev-kicker{font-size:11px;color:var(--p-ink-4);font-weight:500}
+.dev-titlerow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:1px}
+.dev-title{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.03em}
+.dev-dom{font-family:var(--mono);font-size:9.5px;background:var(--p-sunk);border-radius:5px;padding:2px 5px;color:var(--p-ink-3)}
+.dev-loc{font-size:10px;color:var(--p-ink-4)}
+.dev-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px}
+.dev-body.dark{background:var(--p-navy);color:#F7F8FB;padding:0;gap:0}
+
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;border-radius:999px;padding:5px 9px;white-space:nowrap;flex:0 0 auto}
+.pill-run{background:var(--p-blue-soft);color:var(--p-blue)}
+.pill-ok{background:var(--p-pos-soft);color:var(--p-pos)}
+.pill .dot{width:6px;height:6px;border-radius:99px;background:currentColor;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.bar{height:5px;border-radius:99px;background:var(--p-sunk);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--p-blue)}
+.meta{font-family:var(--mono);font-size:10px;color:var(--p-ink-4)}
+.card{background:var(--p-surface);border:1px solid var(--p-line);border-radius:14px;box-shadow:var(--p-shadow);padding:14px}
+.cta{display:flex;align-items:center;justify-content:center;background:var(--p-blue);color:#fff;border-radius:11px;padding:12px 16px;font-size:13.5px;font-weight:700}
+.hero-num{font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:-.05em;line-height:1}
+.hero-num small{font-size:18px;color:var(--p-ink-4);letter-spacing:-.03em}
+.lab{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--p-blue)}
+
+/* voz de misión, dentro de las maquetas oscuras */
+.mission{padding:14px;display:flex;flex-direction:column;gap:11px;flex:1}
+.m-k{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:#8FB0FF}
+.m-k .dot{width:5px;height:5px;border-radius:99px;background:#8FB0FF;animation:pulse 1.6s ease-in-out infinite}
+.m-h{font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em;line-height:1.1}
+.m-h .fade{color:#7C8DA8}
+.m-tel{font-family:var(--mono);font-size:10.5px;color:#9FB0C8;display:flex;flex-direction:column;gap:5px;border-top:1px solid rgba(255,255,255,.10);padding-top:10px}
+.m-tel-row{display:flex;justify-content:space-between;gap:10px}
+.m-tel-row b{color:#F7F8FB;font-weight:600}
+.m-tel-row .on{color:#7FE3EC}
+.m-joke{font-size:11px;line-height:1.5;color:#6F819A;font-style:italic}
+.m-eng{display:flex;gap:7px;flex-wrap:wrap}
+.m-eng span{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:999px;padding:4px 9px;color:#D6DFEC}
+.m-eng i{width:6px;height:6px;border-radius:99px;display:block}
+
+.table-wrap{overflow-x:auto;margin-top:24px;border:1px solid var(--d-line);border-radius:14px;background:var(--d-surface);box-shadow:var(--d-shadow)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:13.5px}
+th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--d-line-soft);vertical-align:top}
+thead th{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--d-ink-4);background:var(--d-surface-2);border-bottom:1px solid var(--d-line);white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
+
+.rec{margin-top:30px;background:var(--d-surface);border:1px solid var(--d-line);border-top:3px solid var(--d-accent);border-radius:14px;padding:24px;box-shadow:var(--d-shadow)}
+.rec ol{margin:14px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:9px;font-size:14.5px;color:var(--d-ink-2)}
+.rec .ask{margin-top:20px;padding-top:16px;border-top:1px solid var(--d-line-soft);font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-.02em;color:var(--d-ink)}
+.foot{margin-top:44px;padding-top:20px;border-top:1px solid var(--d-line);font-size:12.5px;color:var(--d-ink-4);line-height:1.6}
+
+/* llamas y humo */
+.flame{transform-origin:center top;animation:flick .16s steps(2,end) infinite alternate}
+.flame.f2{animation-duration:.19s}
+.flame.f3{animation-duration:.13s}
+@keyframes flick{from{transform:scaleY(.86) scaleX(1.04)}to{transform:scaleY(1.1) scaleX(.94)}}
+.twinkle{animation:tw 3.2s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.25}50%{opacity:.9}}
+.orbit-dot{animation:orbfade 2.4s ease-in-out infinite}
+@keyframes orbfade{0%,100%{opacity:.55}50%{opacity:.15}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="doc-head">
+  <div class="eyebrow">SCAN-STATES-1<span class="sep"></span>rev. 2<span class="sep"></span>A y B, llevadas al final</div>
+  <h1>Un cohete que no miente y un gauge que es nuestro logo</h1>
+  <p class="lede">
+    Elegiste A y B, y las dos pedían lo mismo para funcionar de verdad: un <em>instrumento</em>
+    propio en lugar de un spinner. Aquí están las dos terminadas — A con la metáfora del
+    lanzamiento llevada hasta el final (motores que encienden, cuenta atrás, órbita), y B
+    construida sobre los trazados reales de <code>public/brand/genscore-mark.svg</code> y la
+    geometría del <code>Gauge</code> que ya usa Visión general. Las dos consolas de abajo son
+    interactivas: dale a <em>Lanzar</em>.
+  </p>
+</header>
+
+<!-- ══════════════════════════ A · EL COHETE ══════════════════════════ -->
+<section id="cohete">
+  <div class="sec-head"><span class="opt-letter">A</span><h2>Cuenta atrás</h2></div>
+  <p class="sec-note">
+    La palabra ya estaba en el producto: el escaneo hace <strong>lanzamientos</strong> y los
+    manda a <strong>motores</strong>. No hay que forzar la metáfora — sólo dejar de fingir
+    que no está. Tres motores de IA se convierten en tres motores de cohete, y cada uno
+    <strong>enciende cuando esa IA devuelve su primera respuesta</strong>: una tobera apagada
+    significa que ese motor no ha contestado todavía, no que el dibujo aún no ha llegado.
+    Ahí está la gracia de la broma — <em>es literal</em>.
+  </p>
+
+  <div class="demo" data-demo="rocket">
+    <div class="demo-head">
+      <span class="demo-k">Consola de vuelo · demo</span>
+      <span class="scrub">
+        <label for="scrub-r">progreso</label>
+        <input id="scrub-r" type="range" min="0" max="100" value="0" data-scrub="rocket">
+        <span data-out="rocket-pct">0 %</span>
+      </span>
+      <button class="btn pri" data-play="rocket">Lanzar</button>
+      <button class="btn" data-reset="rocket">Reiniciar</button>
+    </div>
+    <div class="demo-body">
+      <div class="demo-stage">
+        <svg class="sky" viewBox="0 0 560 380" role="img" aria-label="Simulación del lanzamiento con tres motores">
+          <defs>
+            <linearGradient id="sky-g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#040A16"/><stop offset="1" stop-color="#0E2038"/>
+            </linearGradient>
+            <linearGradient id="plume-g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(127,162,255,.55)"/><stop offset="1" stop-color="rgba(127,162,255,0)"/>
+            </linearGradient>
+            <clipPath id="sky-clip"><rect x="0" y="0" width="560" height="380" rx="0"/></clipPath>
+          </defs>
+          <rect width="560" height="380" fill="url(#sky-g)"/>
+          <g clip-path="url(#sky-clip)">
+            <g data-stars></g>
+            <!-- horizonte / plataforma -->
+            <g data-pad>
+              <rect x="0" y="330" width="560" height="50" fill="#0A1526"/>
+              <rect x="0" y="329" width="560" height="1.5" fill="rgba(127,162,255,.28)"/>
+              <rect x="196" y="300" width="8" height="30" fill="#16263F"/>
+              <rect x="188" y="296" width="24" height="5" rx="2" fill="#1D3252"/>
+              <rect x="356" y="300" width="8" height="30" fill="#16263F"/>
+              <rect x="348" y="296" width="24" height="5" rx="2" fill="#1D3252"/>
+            </g>
+            <!-- penacho -->
+            <path data-plume d="M266 300 L294 300 L302 380 L258 380 Z" fill="url(#plume-g)" opacity="0"/>
+            <!-- cohete -->
+            <g data-rocket transform="translate(0,0)">
+              <!-- llamas, una por motor -->
+              <g data-flames>
+                <g data-flame="gemini" opacity="0">
+                  <path class="flame" d="M262 300 q6 26 0 38 q-6 -12 0 -38 Z" fill="#8B5CF6"/>
+                  <path class="flame f2" d="M262 300 q3.5 17 0 25 q-3.5 -8 0 -25 Z" fill="#C4B5FD"/>
+                </g>
+                <g data-flame="openai" opacity="0">
+                  <path class="flame f2" d="M280 302 q7 30 0 44 q-7 -14 0 -44 Z" fill="#10A37F"/>
+                  <path class="flame f3" d="M280 302 q4 19 0 29 q-4 -10 0 -29 Z" fill="#A7F3D0"/>
+                </g>
+                <g data-flame="claude" opacity="0">
+                  <path class="flame f3" d="M298 300 q6 26 0 38 q-6 -12 0 -38 Z" fill="#D97757"/>
+                  <path class="flame" d="M298 300 q3.5 17 0 25 q-3.5 -8 0 -25 Z" fill="#FBD5C4"/>
+                </g>
+              </g>
+              <!-- toberas -->
+              <rect x="256" y="292" width="12" height="10" rx="2.5" fill="#22344F"/>
+              <rect x="274" y="292" width="12" height="12" rx="2.5" fill="#22344F"/>
+              <rect x="292" y="292" width="12" height="10" rx="2.5" fill="#22344F"/>
+              <!-- aletas -->
+              <path d="M256 268 L242 296 L256 292 Z" fill="#2563EB"/>
+              <path d="M304 268 L318 296 L304 292 Z" fill="#2563EB"/>
+              <!-- fuselaje -->
+              <path d="M280 196 q22 22 22 54 v42 h-44 v-42 q0 -32 22 -54 Z" fill="#F7F8FB"/>
+              <path d="M280 196 q22 22 22 54 h-44 q0 -32 22 -54 Z" fill="#E4E9F2"/>
+              <!-- ventana -->
+              <circle cx="280" cy="248" r="9" fill="#0B1426"/>
+              <circle cx="280" cy="248" r="5.5" fill="#2563EB"/>
+              <circle cx="282" cy="245.5" r="1.8" fill="#FFB020"/>
+              <rect x="258" y="272" width="44" height="3" fill="#DCE3EE"/>
+            </g>
+          </g>
+          <!-- HUD -->
+          <g data-hud>
+            <text data-hud-k x="24" y="38" font-family="ui-monospace,monospace" font-size="11" letter-spacing="1.6" fill="#8FB0FF">SECUENCIA DE LANZAMIENTO</text>
+            <text data-hud-h x="24" y="70" font-family="system-ui,sans-serif" font-weight="800" font-size="27" letter-spacing="-1" fill="#F7F8FB">En cuenta atrás</text>
+            <text data-hud-s x="24" y="94" font-family="ui-monospace,monospace" font-size="11.5" fill="#9FB0C8">0 de 90 respuestas · 3 motores en espera</text>
+          </g>
+        </svg>
+      </div>
+      <div class="demo-side">
+        <div class="phase-list" data-phases>
+          <span class="phase" data-phase="0"><i class="pk"></i>Cuenta atrás · preparando la cola</span>
+          <span class="phase" data-phase="1"><i class="pk"></i>Ignición · motores encendidos</span>
+          <span class="phase" data-phase="2"><i class="pk"></i>Ascenso · llegando respuestas</span>
+          <span class="phase" data-phase="3"><i class="pk"></i>Reentrada · analizando</span>
+          <span class="phase" data-phase="4"><i class="pk"></i>Órbita · medición lista</span>
+        </div>
+        <div class="tel">
+          <span class="tel-row"><span>respuestas</span><b data-out="rocket-resp">0 / 90</b></span>
+          <span class="tel-row"><span>Gemini</span><b data-out="rocket-gem">apagado</b></span>
+          <span class="tel-row"><span>ChatGPT</span><b data-out="rocket-oai">apagado</b></span>
+          <span class="tel-row"><span>Claude</span><b data-out="rocket-cla">apagado</b></span>
+          <span class="tel-row"><span>estimado</span><b data-out="rocket-eta" class="on">5–7 min</b></span>
+        </div>
+        <div class="note" style="padding:12px 13px">
+          <b>Qué es dato y qué es dibujo</b>
+          Altura y llamas salen de filas escritas. Las estrellas, el penacho y el temblor de
+          la llama son ambiente y no dicen nada — si una tobera está apagada es porque ese
+          motor no ha devuelto <em>nada</em> todavía.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="note win">
+      <b>Por qué la broma aguanta</b>
+      Porque no es una broma encima del producto, es el producto dicho en voz alta. El
+      vocabulario ya era ese: lanzamientos, motores. Y la tobera apagada es la mejor pieza
+      de diagnóstico que hemos tenido nunca en esta pantalla — hoy, si ChatGPT no contesta,
+      no te enteras hasta el final.
+    </div>
+    <div class="note cost">
+      <b>Por qué no puede salir siempre</b>
+      Encantador la primera vez, cansino en el escaneo diario número treinta. La propuesta es
+      la misma regla que el email: <strong>el cohete sólo despega en el primer escaneo de un
+      dominio</strong>; los diarios se quedan con la versión callada — mismo layout, mismos
+      contadores, sin misión ni cuenta atrás.
+    </div>
+  </div>
+
+  <div class="strip">
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-body dark">
+          <div class="mission">
+            <span class="m-k"><span class="dot"></span>T–5 min · genscore.es</span>
+            <div class="m-h">Secuencia de lanzamiento<br><span class="fade">iniciada.</span></div>
+            <svg viewBox="0 0 268 150" style="width:100%;height:auto">
+              <rect width="268" height="150" fill="none"/>
+              <circle cx="30" cy="26" r="1.2" fill="#8FB0FF" opacity=".5"/>
+              <circle cx="212" cy="42" r="1.5" fill="#8FB0FF" opacity=".35"/>
+              <circle cx="86" cy="16" r="1" fill="#8FB0FF" opacity=".6"/>
+              <rect x="0" y="126" width="268" height="24" fill="#0A1526"/>
+              <rect x="0" y="125" width="268" height="1.2" fill="rgba(127,162,255,.3)"/>
+              <g transform="translate(0,-8)">
+                <rect x="118" y="112" width="8" height="8" rx="2" fill="#22344F"/>
+                <rect x="130" y="112" width="8" height="9" rx="2" fill="#22344F"/>
+                <rect x="142" y="112" width="8" height="8" rx="2" fill="#22344F"/>
+                <path d="M118 96 L108 116 L118 112 Z" fill="#2563EB"/>
+                <path d="M150 96 L160 116 L150 112 Z" fill="#2563EB"/>
+                <path d="M134 52 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#F7F8FB"/>
+                <circle cx="134" cy="88" r="6.5" fill="#0B1426"/><circle cx="134" cy="88" r="4" fill="#2563EB"/>
+              </g>
+            </svg>
+            <div class="m-tel">
+              <span class="m-tel-row"><span>respuestas a traer</span><b>90</b></span>
+              <span class="m-tel-row"><span>motores</span><b>3 · en espera</b></span>
+              <span class="m-tel-row"><span>duración estimada</span><b class="on">5–7 min</b></span>
+            </div>
+            <span class="m-joke">Sí, es un cohete. También son 90 llamadas a tres IA distintas.</span>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>1 · Cuenta atrás</b>
+        Toberas frías, cohete en la plataforma. El estado dice lo mismo que diría una barra
+        al 0 %, pero se aguanta mirar.
+        <span class="real">real: total_prompts × motores · motores del plan</span>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-body dark">
+          <div class="mission">
+            <span class="m-k"><span class="dot"></span>Ignición · 3 motores encendidos</span>
+            <div class="m-h">38 de 90<br><span class="fade">respuestas a bordo.</span></div>
+            <svg viewBox="0 0 268 150" style="width:100%;height:auto">
+              <circle class="twinkle" cx="40" cy="30" r="1.3" fill="#8FB0FF"/>
+              <circle class="twinkle" cx="222" cy="20" r="1" fill="#8FB0FF"/>
+              <circle class="twinkle" cx="70" cy="62" r="1.1" fill="#8FB0FF"/>
+              <rect x="0" y="126" width="268" height="24" fill="#0A1526"/>
+              <rect x="0" y="125" width="268" height="1.2" fill="rgba(127,162,255,.3)"/>
+              <path d="M124 100 L144 100 L152 150 L116 150 Z" fill="rgba(127,162,255,.16)"/>
+              <g transform="translate(0,-38)">
+                <path class="flame" d="M122 120 q4 18 0 26 q-4 -8 0 -26 Z" fill="#8B5CF6"/>
+                <path class="flame f2" d="M134 121 q5 21 0 31 q-5 -10 0 -31 Z" fill="#10A37F"/>
+                <path class="flame f3" d="M146 120 q4 18 0 26 q-4 -8 0 -26 Z" fill="#D97757"/>
+                <rect x="118" y="112" width="8" height="8" rx="2" fill="#22344F"/>
+                <rect x="130" y="112" width="8" height="9" rx="2" fill="#22344F"/>
+                <rect x="142" y="112" width="8" height="8" rx="2" fill="#22344F"/>
+                <path d="M118 96 L108 116 L118 112 Z" fill="#2563EB"/>
+                <path d="M150 96 L160 116 L150 112 Z" fill="#2563EB"/>
+                <path d="M134 52 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#F7F8FB"/>
+                <circle cx="134" cy="88" r="6.5" fill="#0B1426"/><circle cx="134" cy="88" r="4" fill="#2563EB"/>
+              </g>
+            </svg>
+            <div class="m-eng">
+              <span><i style="background:#8B5CF6"></i>Gemini 16</span>
+              <span><i style="background:#10A37F"></i>ChatGPT 13</span>
+              <span><i style="background:#D97757"></i>Claude 9</span>
+            </div>
+            <div class="m-tel">
+              <span class="m-tel-row"><span>queda</span><b class="on">~3 min</b></span>
+              <span class="m-tel-row"><span>puedes cerrar</span><b>sí, seguimos</b></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>2 · Ignición y ascenso</b>
+        Tres llamas, tres motores, cada una del color de su IA. La altura del cohete es el
+        porcentaje: subir <em>es</em> el progreso, no un adorno que acompaña a la barra.
+        <span class="real">real: respuestas por motor · altura = filas escritas / total</span>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-body dark">
+          <div class="mission">
+            <span class="m-k" style="color:#7FE3EC"><span class="dot" style="background:#7FE3EC"></span>Reentrada · con la carga a bordo</span>
+            <div class="m-h">64 de 90<br><span class="fade">respuestas leídas.</span></div>
+            <svg viewBox="0 0 268 150" style="width:100%;height:auto">
+              <circle class="twinkle" cx="34" cy="24" r="1.2" fill="#7FE3EC"/>
+              <circle class="twinkle" cx="230" cy="52" r="1.4" fill="#8FB0FF"/>
+              <ellipse cx="134" cy="118" rx="66" ry="14" fill="rgba(9,197,214,.10)"/>
+              <path d="M134 104 a30 30 0 0 1 0 0" fill="none"/>
+              <g transform="translate(0,-24)">
+                <path d="M112 128 q22 12 44 0" stroke="rgba(9,197,214,.5)" stroke-width="2" fill="none"/>
+                <path d="M134 60 q16 16 16 39 v21 h-32 v-21 q0 -23 16 -39 Z" fill="#F7F8FB"/>
+                <circle cx="134" cy="96" r="6.5" fill="#0B1426"/><circle cx="134" cy="96" r="4" fill="#09C5D6"/>
+                <path d="M118 104 L108 124 L118 120 Z" fill="#09C5D6"/>
+                <path d="M150 104 L160 124 L150 120 Z" fill="#09C5D6"/>
+              </g>
+            </svg>
+            <div class="m-tel">
+              <span class="m-tel-row"><span>menciones tuyas</span><b class="on">29</b></span>
+              <span class="m-tel-row"><span>competidores</span><b>9</b></span>
+              <span class="m-tel-row"><span>queda</span><b>~1 min</b></span>
+            </div>
+            <span class="m-joke">Traer los datos era la mitad. Ahora hay que leerlos.</span>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>3 · Reentrada</b>
+        La segunda etapa tiene su propia escena y su propio contador, así que no hay ningún
+        momento en el que el 100 % conviva con un spinner.
+        <span class="real">real: responses_processed / responses_total · menciones extraídas</span>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-sub">
+          <div><div class="dev-kicker">Visión general</div>
+          <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span></div></div>
+          <span class="pill pill-ok">Escaneado hoy</span>
+        </div>
+        <div class="dev-body">
+          <div class="card" style="border-color:var(--p-blue-soft-2);background:linear-gradient(180deg,rgba(37,99,235,.06),rgba(37,99,235,.015))">
+            <span class="lab">Órbita alcanzada · 5 min 12 s</span>
+            <div style="display:flex;align-items:center;gap:14px;margin-top:12px">
+              <svg viewBox="0 0 78 78" width="78" height="78" aria-hidden="true">
+                <circle cx="39" cy="39" r="33" fill="none" stroke="#E7EAF0" stroke-width="8"/>
+                <circle cx="39" cy="39" r="33" fill="none" stroke="#2563EB" stroke-width="8" stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="118.2" transform="rotate(-90 39 39)"/>
+                <text x="39" y="46" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="23" fill="#0B1426">43</text>
+              </svg>
+              <span style="font-size:12.5px;line-height:1.5;color:var(--p-ink-3)">
+                <b style="display:block;font-family:var(--display);font-size:15px;color:var(--p-ink);margin-bottom:3px">Puntuación GEO</b>
+                Sales en 41 de 90 respuestas. 6 acciones esperándote.
+              </span>
+            </div>
+          </div>
+          <div class="cta">Ver la visión general</div>
+          <div class="meta" style="text-align:center">90 respuestas · 3 motores · sin bajas</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>4 · Órbita</b>
+        Se acaba la misión y se acaba la metáfora: la pantalla vuelve al lienzo claro y al
+        gauge de siempre. La broma no se queda a vivir en el producto.
+        <span class="real">real: puntuación GEO · duración · menciones · fallos</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════ B · EL GAUGE ══════════════════════════ -->
+<section id="gauge">
+  <div class="sec-head"><span class="opt-letter">B</span><h2>El símbolo, medido</h2></div>
+  <p class="sec-note">
+    Esta versión no dibuja un anillo parecido al logo: <strong>es el logo</strong>. Las dos
+    formas del centro son los trazados literales de <code>genscore-mark.svg</code>, sin
+    redibujar ni un punto, y el dial exterior usa la geometría exacta del componente
+    <code>Gauge</code> de Visión general — 270°, hueco abajo, inicio a 135°, degradado
+    <code>--brand-blue-2</code> → acento, extremos redondeados.
+  </p>
+
+  <div class="demo" data-demo="gauge">
+    <div class="demo-head">
+      <span class="demo-k">Instrumento · demo</span>
+      <span class="scrub">
+        <label for="scrub-g">progreso</label>
+        <input id="scrub-g" type="range" min="0" max="100" value="0" data-scrub="gauge">
+        <span data-out="gauge-pct">0 %</span>
+      </span>
+      <button class="btn pri" data-play="gauge">Lanzar</button>
+      <button class="btn" data-reset="gauge">Reiniciar</button>
+    </div>
+    <div class="demo-body">
+      <div class="demo-stage" style="display:grid;place-items:center;padding:26px 18px;background:var(--p-canvas)">
+        <svg viewBox="0 0 340 372" style="width:100%;max-width:340px;height:auto" role="img" aria-label="Instrumento de escaneo construido sobre el símbolo de marca">
+          <!-- pista del dial: mismos 270° con hueco abajo que el Gauge de Visión general -->
+          <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36"
+                fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
+          <path data-dial-fill d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36"
+                fill="none" stroke="url(#dial-g)" stroke-width="29.5" stroke-linecap="round"
+                pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+
+          <!-- SÍMBOLO REAL — trazados verbatim de public/brand/genscore-mark.svg.
+               El punto ámbar vive fuera, en el dial: es lo único que se mueve. -->
+          <svg data-mark x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
+            <path d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z"
+                  transform="translate(3 3)" fill="#0B1426" fill-rule="evenodd"/>
+            <path d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M18.50,198.00 L20.75,199.25 L18.75,201.50 L16.75,200.25 L18.25,198.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z"
+                  transform="translate(3 3)" fill="#2563EB" fill-rule="evenodd"/>
+          </svg>
+
+          <!-- el número del score, que sólo existe al final -->
+          <text data-score x="170" y="182" text-anchor="middle" opacity="0"
+                font-family="system-ui,sans-serif" font-weight="800" font-size="76" letter-spacing="-4" fill="#0B1426">43</text>
+          <text data-score-cap x="170" y="206" text-anchor="middle" opacity="0"
+                font-family="system-ui,sans-serif" font-weight="700" font-size="11" letter-spacing="1.6" fill="#98A2B3">PUNTUACIÓN GEO</text>
+
+          <!-- cometa de ambiente: va por delante, en gris, y no afirma nada -->
+          <circle data-comet class="orbit-dot" r="6" cx="265.64" cy="265.64" fill="#C7D2E4"/>
+          <!-- EL PUNTO: el mismo ámbar del símbolo, montado en el dial -->
+          <circle data-bead r="19" cx="265.64" cy="265.64" fill="#FFB020"/>
+
+          <text data-cap x="170" y="330" text-anchor="middle"
+                font-family="ui-monospace,monospace" font-size="12.5" fill="#5B6B82">0 de 90 respuestas</text>
+          <text data-cap2 x="170" y="352" text-anchor="middle"
+                font-family="system-ui,sans-serif" font-weight="700" font-size="13" fill="#0B1426">Preparando la medición</text>
+        </svg>
+      </div>
+      <div class="demo-side">
+        <div class="phase-list">
+          <span class="phase" data-gphase="0"><i class="pk"></i>El símbolo, entero y quieto</span>
+          <span class="phase" data-gphase="1"><i class="pk"></i>El punto sale a la pista</span>
+          <span class="phase" data-gphase="2"><i class="pk"></i>Recorre el dial con las respuestas</span>
+          <span class="phase" data-gphase="3"><i class="pk"></i>Cierra vuelta y se convierte en score</span>
+        </div>
+        <div class="tel">
+          <span class="tel-row"><span>respuestas</span><b data-out="gauge-resp">0 / 90</b></span>
+          <span class="tel-row"><span>ángulo del punto</span><b data-out="gauge-ang">135,0°</b></span>
+          <span class="tel-row"><span>punto del logo</span><b>46,38°</b></span>
+          <span class="tel-row"><span>fin del dial</span><b class="on">45,00°</b></span>
+        </div>
+        <div class="note" style="padding:12px 13px">
+          <b>La coincidencia que sostiene la idea</b>
+          Medido sobre el SVG real: el punto ámbar del símbolo está a <em>46,38°</em> del
+          centro. El dial del <code>Gauge</code> termina a <em>45°</em>. <strong>Una
+          puntuación de 100 deja el punto exactamente donde el logo lo tiene</strong>, con
+          1,38° de diferencia. Nadie lo diseñó así; estaba ahí.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="note win">
+      <b>Por qué el punto es lo que se mueve</b>
+      La guía de marca ya dice qué es ese punto: «marca la posición del score». Aquí hace
+      literalmente eso — durante el escaneo marca cuántas respuestas llevamos, y al terminar
+      viaja a la posición de tu puntuación y se queda ahí. No es un adorno girando: es la
+      única pieza del símbolo que <em>significa</em> un número.
+    </div>
+    <div class="note cost">
+      <b>La tensión que hay que declarar</b>
+      La guía también dice «no recolorear, distorsionar ni separar» el símbolo. Esto separa
+      el punto. La salida es que el instrumento sea un componente <strong>aparte</strong>
+      (<code>ScanGauge</code>), no el logo: <code>BrandLogo</code>/<code>BrandMark</code> no
+      se tocan ni se animan en ninguna cabecera. Si al verlo te chirría, se corrige con un
+      punto propio en azul y la idea sobrevive igual.
+    </div>
+  </div>
+
+  <div class="strip">
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-sub">
+          <div><div class="dev-kicker">Visión general</div>
+          <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div></div>
+          <span class="pill pill-run"><i class="dot"></i>Preparando</span>
+        </div>
+        <div class="dev-body" style="justify-content:center">
+          <div style="display:grid;place-items:center">
+            <svg viewBox="0 0 340 300" style="width:100%;height:auto" aria-hidden="true">
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
+              <svg x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
+                <use href="#mk-ink"/><use href="#mk-blue"/>
+              </svg>
+              <circle r="19.7" cx="221.5" cy="120.8" fill="#FFB020"/>
+            </svg>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.03em">Preparando tu medición</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-3);margin-top:6px">
+              90 respuestas por delante. Suele tardar entre 5 y 7 minutos — puedes cerrar esta página.
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>1 · En reposo, es el logo</b>
+        Antes de arrancar, el punto está en su sitio y lo que ves es exactamente la marca. Es
+        el único estado en el que el símbolo aparece íntegro, y por eso el arranque se nota.
+        <span class="real">real: total de respuestas · rango de duración</span>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-sub">
+          <div><div class="dev-kicker">Visión general</div>
+          <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div></div>
+          <span class="pill pill-run"><i class="dot"></i>Escaneando…</span>
+        </div>
+        <div class="dev-body" style="justify-content:center">
+          <div style="display:grid;place-items:center">
+            <svg viewBox="0 0 340 300" style="width:100%;height:auto" aria-hidden="true">
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="url(#dial-g)" stroke-width="29.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="58"/>
+              <svg x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
+                <use href="#mk-ink"/><use href="#mk-blue"/>
+              </svg>
+              <circle r="19" cx="43.73" cy="218.47" fill="#FFB020"/>
+            </svg>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.03em">38 de 90 respuestas</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-3);margin-top:6px">
+              Quedan unos 3 minutos. Gemini 16 · ChatGPT 13 · Claude 9.
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>2 · El punto recorre</b>
+        Cada respuesta escrita empuja el punto un poco más. La distancia recorrida es la
+        única afirmación que hace la pantalla, y es medida.
+        <span class="real">real: filas escritas / total · recuento por motor</span>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-sub">
+          <div><div class="dev-kicker">Visión general</div>
+          <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div></div>
+          <span class="pill pill-run"><i class="dot"></i>Analizando…</span>
+        </div>
+        <div class="dev-body" style="justify-content:center">
+          <div style="display:grid;place-items:center">
+            <svg viewBox="0 0 340 300" style="width:100%;height:auto" aria-hidden="true">
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#DCE3F1" stroke-width="29.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="0"/>
+              <path d="M 243.36 243.36 A 103.75 103.75 0 1 1 243.36 96.64" fill="none" stroke="#EDF1F7" stroke-width="14" stroke-linecap="round"/>
+              <path d="M 243.36 243.36 A 103.75 103.75 0 1 1 243.36 96.64" fill="none" stroke="#09C5D6" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="29"/>
+              <svg x="83.5" y="81.4" width="173" height="177.3" viewBox="0 0 285 292" overflow="visible">
+                <use href="#mk-ink"/><use href="#mk-blue"/>
+              </svg>
+              <circle r="19" cx="265.64" cy="74.36" fill="#FFB020"/>
+            </svg>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.03em">64 de 90 leídas</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-3);margin-top:6px">
+              Extraemos menciones, posiciones y citas. Queda alrededor de un minuto.
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>3 · El anillo interior</b>
+        La segunda etapa entra por dentro, en cian, con su propio contador. El punto ya ha
+        cerrado su vuelta y espera: no vuelve atrás, que sería mentir.
+        <span class="real">real: responses_processed / responses_total</span>
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="dev">
+        <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span><span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span><span class="dev-bell"></span></div>
+        <div class="dev-sub">
+          <div><div class="dev-kicker">Visión general</div>
+          <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div></div>
+          <span class="pill pill-ok">Escaneado hoy</span>
+        </div>
+        <div class="dev-body" style="justify-content:center">
+          <div style="display:grid;place-items:center">
+            <svg viewBox="0 0 340 300" style="width:100%;height:auto" aria-hidden="true">
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="#E7EAF0" stroke-width="29.5" stroke-linecap="round"/>
+              <path d="M 265.64 265.64 A 135.25 135.25 0 1 1 265.64 74.36" fill="none" stroke="url(#dial-g)" stroke-width="29.5" stroke-linecap="round" pathLength="100" stroke-dasharray="100" stroke-dashoffset="57"/>
+              <text x="170" y="182" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="76" letter-spacing="-4" fill="#0B1426">43</text>
+              <text x="170" y="206" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="700" font-size="11" letter-spacing="1.6" fill="#98A2B3">PUNTUACIÓN GEO</text>
+              <circle r="19" cx="42.04" cy="213.81" fill="#FFB020"/>
+            </svg>
+          </div>
+          <div style="text-align:center;margin-top:4px">
+            <div style="font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.03em">Tu primera medición</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-3);margin-top:6px">
+              Sales en 41 de 90 respuestas. 6 acciones priorizadas te esperan.
+            </div>
+          </div>
+          <div class="cta">Ver la visión general</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>4 · El punto se queda en tu nota</b>
+        El símbolo se retira, entra el número y el punto retrocede desde el final del dial
+        hasta los 43 puntos. Ese viaje hacia atrás es el gesto: <em>esta es tu posición</em>.
+        <span class="real">real: puntuación GEO · menciones · recomendaciones</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════ SPEC ══════════════════════════ -->
+<section id="spec">
+  <div class="sec-head"><h2>Especificación de la animación</h2></div>
+  <p class="sec-note">
+    Para que esto no se pierda al implementarlo: qué se mueve, cuánto tarda y —lo que más
+    importa— <strong>qué está atado a un dato y qué es ambiente</strong>. La regla es que
+    nada que se mueva solo puede parecer progreso.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Elemento</th><th>Atado a</th><th>Duración / curva</th><th>Naturaleza</th></tr></thead>
+      <tbody>
+        <tr><td>Altura del cohete</td><td>respuestas escritas / total</td><td>900 ms · <code>cubic-bezier(.22,.8,.28,1)</code></td><td>Dato</td></tr>
+        <tr><td>Encendido de tobera</td><td>primera respuesta de ese motor</td><td>260 ms de aparición, luego bucle</td><td>Dato</td></tr>
+        <tr><td>Temblor de la llama</td><td>nada</td><td>130–190 ms alterno</td><td>Ambiente</td></tr>
+        <tr><td>Estrellas / penacho</td><td>nada</td><td>3,2 s de parpadeo</td><td>Ambiente</td></tr>
+        <tr><td>Relleno del dial</td><td>respuestas escritas / total</td><td>600 ms · <code>ease-out</code></td><td>Dato</td></tr>
+        <tr><td>Punto ámbar</td><td>la misma fracción, en ángulo</td><td>600 ms, sincronizado con el dial</td><td>Dato</td></tr>
+        <tr><td>Cometa gris</td><td>nada</td><td>2,4 s en bucle</td><td>Ambiente</td></tr>
+        <tr><td>Anillo interior cian</td><td>respuestas analizadas / total</td><td>600 ms · <code>ease-out</code></td><td>Dato</td></tr>
+        <tr><td>Viaje final del punto</td><td>puntuación GEO</td><td>1100 ms · <code>cubic-bezier(.34,1.2,.4,1)</code></td><td>Dato</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cols">
+    <div class="note">
+      <b>Movimiento reducido</b>
+      Con <code>prefers-reduced-motion</code>, todo lo de la columna «Ambiente» desaparece y
+      lo de «Dato» pasa a saltar sin transición. La pantalla sigue diciendo lo mismo: se
+      pierde el espectáculo, no la información.
+    </div>
+    <div class="note">
+      <b>El caso feo, que hay que diseñar antes</b>
+      Un escaneo que falla a mitad deja el cohete a media altura y el punto a mitad de dial.
+      Ninguno de los dos puede quedarse ahí «como si siguiera». Se congelan, pierden color y
+      la copia pasa a «escaneo incompleto» — el estado que ya va dibujado en la rev. 1.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ CÓMO CONVIVEN ══════════════════════════ -->
+<section id="convivencia">
+  <div class="sec-head"><h2>No son excluyentes</h2></div>
+  <p class="sec-note">
+    Después de dibujarlas al final, la conclusión honesta es que resuelven cosas distintas y
+    se pueden repartir el trabajo sin mezclarse:
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Momento</th><th>Qué sale</th><th>Por qué</th></tr></thead>
+      <tbody>
+        <tr><td>Primer escaneo de un dominio</td><td>El cohete, entero</td><td>Es el único momento en que la espera es el producto y el cliente no ha visto nada todavía. Se paga con emoción porque no hay datos que ofrecer.</td></tr>
+        <tr><td>Escaneos siguientes</td><td>El gauge</td><td>Misma información, sin misión ni cuenta atrás. Es el instrumento diario, y encima es el logo, así que nunca se hace viejo.</td></tr>
+        <tr><td>Auditoría web y onboarding</td><td>El gauge</td><td>El cohete no aplica —no hay motores que encender— y el gauge sí: cambia la unidad y ya está.</td></tr>
+        <tr><td>Escaneo largo (Pro/Agency)</td><td>Gauge + aviso por email</td><td>Quince minutos no se sostienen con ninguna animación. Ahí manda la fase 2 de la rev. 1.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rec">
+    <h3>Lo que propongo llevar a Task Intake</h3>
+    <ol>
+      <li><strong>Fase 1 — el gauge.</strong> <code>ScanGauge</code> como componente nuevo sobre los trazados reales y la geometría del <code>Gauge</code>, los cuatro estados, contador en respuestas, rango de duración y estado incompleto. Es el que sirve para todo y no depende de backend nuevo.</li>
+      <li><strong>Fase 2 — el aviso por email.</strong> Sin cambios respecto a la rev. 1: columna de preferencia, envío en el finalize, plantilla. Lleva migración.</li>
+      <li><strong>Fase 3 — el cohete.</strong> Sólo en el primer escaneo de un dominio, con el desglose por motor que necesita (y que es el coste real: dos lecturas más en el <em>poll</em>).</li>
+    </ol>
+    <p style="margin-top:14px;font-size:14.5px;color:var(--d-ink-2)">
+      El orden no es por gusto: el gauge se reutiliza en cinco pantallas y el cohete en una.
+      Si sólo se hiciera una cosa, tiene que ser el gauge.
+    </p>
+    <p class="ask">¿Apruebas este reparto, o prefieres que el cohete vaya primero? No implemento hasta que lo confirmes.</p>
+  </div>
+</section>
+
+<p class="foot">
+  <strong>Desviaciones declaradas.</strong> Tipografía de sistema en vez de Bricolage
+  Grotesque + Figtree (esta página no carga fuentes externas), así que el peso y el
+  interletrado de los titulares son una aproximación — el <em>símbolo</em>, en cambio, sí es
+  pixel perfect: son los trazados literales del SVG, sin redibujar. Los colores de los
+  motores en las llamas son los de sus marcas reales (los mismos que usa el onboarding), no
+  paleta nuestra. Datos de ejemplo inventados en el valor; cada maqueta anota de qué fila
+  saldrían. El ámbar <code>#FFB020</code> aparece sólo como el punto del símbolo — nunca
+  como color de aviso.
+</p>
+
+</div>
+
+<!-- definiciones reutilizables del símbolo (mismos trazados, una sola copia) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <path id="mk-ink" d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" transform="translate(3 3)" fill="#0B1426" fill-rule="evenodd"/>
+  <path id="mk-blue" d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M18.50,198.00 L20.75,199.25 L18.75,201.50 L16.75,200.25 L18.25,198.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" transform="translate(3 3)" fill="#2563EB" fill-rule="evenodd"/>
+  <linearGradient id="dial-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4F7BFF"/><stop offset="100%" stop-color="#2563EB"/></linearGradient>
+</defs></svg>
+
+<script>
+(function () {
+  var TOTAL = 90;                       // respuestas del escaneo de ejemplo
+  var SCORE = 43;                       // puntuación final
+  var CX = 170, CY = 170, R = 135.25;   // dial: misma geometría que components/ui/gauge.tsx
+  var START = 135, SWEEP = 270;         // 270°, hueco abajo, inicio a 135°
+
+  function polar(deg, radius) {
+    var a = (deg - 90) * Math.PI / 180;
+    return [CX + radius * Math.cos(a), CY + radius * Math.sin(a)];
+  }
+
+  /* ---------- estrellas del cielo (deterministas: nada de Math.random) ---------- */
+  var sky = document.querySelector("[data-stars]");
+  if (sky) {
+    var seed = 20260807;
+    function rnd() { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+    for (var i = 0; i < 46; i++) {
+      var c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      c.setAttribute("cx", (rnd() * 560).toFixed(1));
+      c.setAttribute("cy", (rnd() * 310).toFixed(1));
+      c.setAttribute("r", (0.6 + rnd() * 1.1).toFixed(2));
+      c.setAttribute("fill", "#8FB0FF");
+      c.setAttribute("class", "twinkle");
+      c.style.animationDelay = (rnd() * 3.2).toFixed(2) + "s";
+      sky.appendChild(c);
+    }
+  }
+
+  /* ---------- estado compartido ---------- */
+  var state = { rocket: 0, gauge: 0 };
+  var timers = {};
+
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function out(name, text) { var el = $('[data-out="' + name + '"]'); if (el) el.textContent = text; }
+
+  /* ---------- cohete ---------- */
+  function renderRocket(f) {
+    var responses = Math.round(TOTAL * f);
+    // Reparto por motor: mismas proporciones que el ejemplo (16/13/9 de 38).
+    var gem = Math.round(responses * 0.42), oai = Math.round(responses * 0.34);
+    var cla = responses - gem - oai;
+
+    var rocket = $("[data-rocket]");
+    if (rocket) {
+      // Sube hasta 236 px; el último tramo (análisis) ya no sube: está en órbita.
+      var climb = Math.min(1, f / 0.75);
+      rocket.setAttribute("transform", "translate(0," + (-185 * climb).toFixed(1) + ")");
+    }
+    var plume = $("[data-plume]");
+    if (plume) plume.setAttribute("opacity", f > 0.02 && f < 0.8 ? "1" : "0");
+
+    [["gemini", gem], ["openai", oai], ["claude", cla]].forEach(function (pair) {
+      var g = document.querySelector('[data-flame="' + pair[0] + '"]');
+      if (g) g.setAttribute("opacity", pair[1] > 0 && f < 0.75 ? "1" : "0");
+    });
+
+    var phase = f === 0 ? 0 : f < 0.06 ? 1 : f < 0.75 ? 2 : f < 1 ? 3 : 4;
+    document.querySelectorAll("[data-phase]").forEach(function (el) {
+      var idx = +el.dataset.phase;
+      el.classList.toggle("on", idx === phase);
+      el.classList.toggle("done", idx < phase);
+    });
+
+    var hud = {
+      0: ["SECUENCIA DE LANZAMIENTO", "En cuenta atrás", responses + " de " + TOTAL + " respuestas · 3 motores en espera"],
+      1: ["IGNICIÓN", "Motores encendidos", "las tres IA han empezado a contestar"],
+      2: ["ASCENSO", responses + " de " + TOTAL, "respuestas a bordo · puedes cerrar esta página"],
+      3: ["REENTRADA", "Leyendo la carga", "extrayendo menciones, posiciones y citas"],
+      4: ["ÓRBITA ALCANZADA", "Puntuación GEO " + SCORE, TOTAL + " respuestas · 3 motores · 5 min 12 s"]
+    }[phase];
+    var k = $("[data-hud-k]"), h = $("[data-hud-h]"), s = $("[data-hud-s]");
+    if (k) k.textContent = hud[0];
+    if (h) h.textContent = hud[1];
+    if (s) s.textContent = hud[2];
+
+    out("rocket-pct", Math.round(f * 100) + " %");
+    out("rocket-resp", responses + " / " + TOTAL);
+    out("rocket-gem", gem > 0 ? gem + " respuestas" : "apagado");
+    out("rocket-oai", oai > 0 ? oai + " respuestas" : "apagado");
+    out("rocket-cla", cla > 0 ? cla + " respuestas" : "apagado");
+    out("rocket-eta", f >= 1 ? "completado" : f < 0.05 ? "5–7 min" : "~" + Math.max(1, Math.ceil((1 - f) * 6)) + " min");
+  }
+
+  /* ---------- gauge ---------- */
+  function renderGauge(f) {
+    var responses = Math.round(TOTAL * f);
+    var done = f >= 1;
+    // Al terminar, el dial deja de medir respuestas y pasa a medir la puntuación:
+    // dos magnitudes distintas, por eso cambia también la etiqueta de debajo.
+    var shown = done ? SCORE / 100 : f;
+
+    var fill = $("[data-dial-fill]");
+    if (fill) fill.setAttribute("stroke-dashoffset", (100 - shown * 100).toFixed(2));
+
+    var bead = $("[data-bead]");
+    var deg = START + SWEEP * shown;
+    if (bead) {
+      var p = polar(deg, R);
+      bead.setAttribute("cx", p[0].toFixed(2));
+      bead.setAttribute("cy", p[1].toFixed(2));
+    }
+    var comet = $("[data-comet]");
+    if (comet) {
+      var cp = polar(START + SWEEP * Math.min(1, shown + 0.07), R);
+      comet.setAttribute("cx", cp[0].toFixed(2));
+      comet.setAttribute("cy", cp[1].toFixed(2));
+      comet.setAttribute("opacity", done ? "0" : "1");
+    }
+    var mark = $("[data-mark]");
+    if (mark) mark.style.opacity = done ? "0" : "1";
+    var score = $("[data-score]"), cap = $("[data-score-cap]");
+    if (score) score.setAttribute("opacity", done ? "1" : "0");
+    if (cap) cap.setAttribute("opacity", done ? "1" : "0");
+
+    var c1 = $("[data-cap]"), c2 = $("[data-cap2]");
+    if (c1) c1.textContent = done ? "90 respuestas · 3 motores · 5 min 12 s" : responses + " de " + TOTAL + " respuestas";
+    if (c2) c2.textContent = done ? "Tu primera medición" : f === 0 ? "Preparando la medición" : "Preguntando a las IA por ti";
+
+    out("gauge-pct", Math.round(f * 100) + " %");
+    out("gauge-resp", responses + " / " + TOTAL);
+    out("gauge-ang", (deg % 360).toFixed(1).replace(".", ",") + "°");
+
+    var gphase = f === 0 ? 0 : f < 0.08 ? 1 : f < 1 ? 2 : 3;
+    document.querySelectorAll("[data-gphase]").forEach(function (el) {
+      var idx = +el.dataset.gphase;
+      el.classList.toggle("on", idx === gphase);
+      el.classList.toggle("done", idx < gphase);
+    });
+  }
+
+  var renderers = { rocket: renderRocket, gauge: renderGauge };
+
+  function set(which, f) {
+    state[which] = Math.max(0, Math.min(1, f));
+    renderers[which](state[which]);
+    var sc = document.querySelector('[data-scrub="' + which + '"]');
+    if (sc) sc.value = Math.round(state[which] * 100);
+  }
+
+  function play(which) {
+    clearInterval(timers[which]);
+    set(which, 0);
+    var t0 = null, DUR = 13000;
+    function step(ts) {
+      if (t0 === null) t0 = ts;
+      var f = Math.min(1, (ts - t0) / DUR);
+      set(which, f);
+      if (f < 1) timers[which] = requestAnimationFrame(step);
+    }
+    timers[which] = requestAnimationFrame(step);
+  }
+
+  document.querySelectorAll("[data-play]").forEach(function (b) {
+    b.addEventListener("click", function () { play(b.dataset.play); });
+  });
+  document.querySelectorAll("[data-reset]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      cancelAnimationFrame(timers[b.dataset.reset]);
+      set(b.dataset.reset, 0);
+    });
+  });
+  document.querySelectorAll("[data-scrub]").forEach(function (r) {
+    r.addEventListener("input", function () {
+      cancelAnimationFrame(timers[r.dataset.scrub]);
+      set(r.dataset.scrub, +r.value / 100);
+    });
+  });
+
+  set("rocket", 0);
+  set("gauge", 0);
+
+  // Transiciones suaves sólo cuando el usuario no ha pedido lo contrario.
+  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    var r = $("[data-rocket]"), d = $("[data-dial-fill]"), b = $("[data-bead]"), m = $("[data-mark]");
+    if (r) r.style.transition = "transform .9s cubic-bezier(.22,.8,.28,1)";
+    if (d) d.style.transition = "stroke-dashoffset .6s ease-out";
+    if (b) b.style.transition = "cx .6s ease-out, cy .6s ease-out";
+    if (m) m.style.transition = "opacity .5s ease";
+  }
+})();
+</script>
