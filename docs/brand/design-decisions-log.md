@@ -3267,6 +3267,16 @@ piloto que esta misma fase tuvo que crear.
   único. No se retira aquí para no ensanchar el PR; una server action huérfana
   sigue siendo un endpoint invocable, así que conviene borrarla en la fase
   siguiente.
+- **La sesión del piloto se cae a mitad de pasada, y no es de esta zona.** En
+  la pasada de `cfe77eb`, móvil completó las 44 pantallas —las cinco de Ajustes
+  con contenido real y cero errores de consola— y a partir de
+  `tablet notifications-bell` todo rebotó a `/login`. El `storageState` de
+  `.pilot/auth.json` lo comparten los tres proyectos de viewport; cuando el
+  token rota durante la primera pasada, las dos siguientes arrancan con una
+  sesión ya inválida. Es intermitente (la pasada anterior, con las mismas
+  pantallas, fue verde) y afecta a **todas** las journeys, no a Ajustes.
+  Arreglarlo toca `tests/pilot/support/auth.setup.ts` —re-autenticar por
+  proyecto en vez de reutilizar el fichero— y merece fase propia.
 - **Replanteo pendiente de la sección Plan.** Las cuatro pegas de la revisión
   del fundador caían todas ahí, no en Cuenta ni en Avisos: jerarquía duplicada
   («Plan» → «Tu plan» → «Uso de este ciclo»), y «Facturación mensual» junto a un
