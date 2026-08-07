@@ -81,5 +81,16 @@ setup("authenticate as the pilot user", async ({ page }) => {
     );
   }
 
+  // `storageState()` persiste también el `localStorage`, y el login aterriza en
+  // /dashboard, donde el tour de bienvenida salta y se marca como visto. Sin
+  // borrar esa marca aquí, el estado compartido llegaría a TODAS las pasadas
+  // diciendo «este navegador ya lo vio» y el popup no volvería a salir jamás
+  // — es decir, el piloto no podría verlo nunca, que es justo la trampa que el
+  // CLAUDE.md documenta del 2026-08-02: dar por verificado lo que no se miró.
+  // Se limpia para que cada pasada arranque como un navegador estrenado.
+  await page
+    .evaluate(() => window.localStorage.removeItem("genscore.onboarding-tour.seen.v1"))
+    .catch(() => undefined);
+
   await page.context().storageState({ path: AUTH_STATE_PATH });
 });

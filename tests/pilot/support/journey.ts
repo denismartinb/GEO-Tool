@@ -88,6 +88,12 @@ export interface PageFindings {
    * now on, on every page, without needing anyone to notice a screenshot.
    */
   headerInteractiveControls: string[];
+  /**
+   * El popup de bienvenida estaba abierto al llegar y se cerró antes de mirar
+   * nada. Se registra en vez de silenciarse: si empieza a salir en pantallas
+   * donde no debería, esto es lo que lo delata.
+   */
+  dismissedWelcomeTour: boolean;
   /** Real content height, including inside the shell's inner scroll container. */
   contentHeight: number;
   /** Viewport height the screenshot was taken at. */
@@ -262,6 +268,25 @@ async function captureFullContent(page: Page, path: string): Promise<CaptureResu
  * sure the agent never has to guess about the things a machine can know for
  * certain.
  */
+/** Selector del scrim del popup de bienvenida (`components/tour-provider.tsx`). */
+export const WELCOME_TOUR_SCRIM = ".ptour-scrim";
+
+/**
+ * Cierra el popup de bienvenida si está abierto. Devuelve si había uno.
+ *
+ * Pulsa su propia X, no `Escape` ni un clic fuera: si algún día la X deja de
+ * cerrar, esto tiene que fallar en vez de taparlo con una vía alternativa.
+ */
+export async function dismissWelcomeTour(page: Page): Promise<boolean> {
+  const scrim = page.locator(WELCOME_TOUR_SCRIM);
+  if ((await scrim.count()) === 0) return false;
+  if (!(await scrim.first().isVisible().catch(() => false))) return false;
+
+  await page.locator(`${WELCOME_TOUR_SCRIM} .pt-close`).first().click({ timeout: 5_000 });
+  await scrim.first().waitFor({ state: "hidden", timeout: 5_000 });
+  return true;
+}
+
 export async function visitAsUser(
   page: Page,
   testInfo: TestInfo,
@@ -308,6 +333,19 @@ export async function visitAsUser(
 
     // Give client components a beat to hydrate before measuring layout.
     await page.waitForTimeout(1_000);
+
+    // El tour de bienvenida (ONBOARDING-TOUR-1) salta solo la primera vez que
+    // se entra en la consola, y el piloto estrena navegador en cada pasada, así
+    // que se lo encuentra abierto. Se cierra igual que haría una persona: es un
+    // modal, tapa la pantalla entera y bloquea cualquier hover o clic detrás.
+    // Sin esto, el 2026-08-07 tumbó seis pruebas —el tooltip de Páginas citadas
+    // y la campana, en las tres anchuras— por `Timeout exceeded` contra
+    // elementos que estaban perfectamente bien, sólo tapados.
+    //
+    // Cerrarlo no lo deja sin mirar: `onboarding-tour.spec.ts` es una pasada
+    // dedicada que lo abre, comprueba que trae contenido de verdad y lo
+    // fotografía antes de cerrarlo. Aquí sólo se quita de en medio.
+    const dismissedWelcomeTour = await dismissWelcomeTour(page);
 
     const viewport = page.viewportSize() ?? { width: 0, height: 0 };
     // `.dash-content` (see the horizontal-overflow note above), not
@@ -382,6 +420,7 @@ export async function visitAsUser(
       renderedRealContent,
       expectedContent: expectation?.describedAs ?? null,
       headerInteractiveControls,
+      dismissedWelcomeTour,
       ...capture
     };
 

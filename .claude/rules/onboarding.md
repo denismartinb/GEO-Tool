@@ -59,3 +59,16 @@ obedecerá igual.
 - **El «ya visto» va en `localStorage`, no en el esquema.** Una migración está
   prohibida sin aprobación explícita del fundador (CLAUDE.md). El coste
   asumido y declarado: el popup reaparece en un navegador nuevo.
+- **La marca de «visto» se escribe AL MOSTRARLO, nunca al cerrarlo.** Escribirla
+  al cerrar convierte «salta en el primer acceso» en «salta en cada carga hasta
+  que lo cierres»: quien lo mira y navega o recarga se lo vuelve a encontrar
+  encima, indefinidamente. Lo encontró el `ux-pilot` el 2026-08-07, que nunca
+  cierra nada, con el popup tapando Páginas citadas y la campana en las tres
+  anchuras (log §33).
+- **El popup es un modal y tapa la consola entera, así que el piloto tiene que
+  poder sortearlo.** `visitAsUser` lo cierra con su propia X y lo anota en
+  `dismissedWelcomeTour`; `auth.setup` borra la marca de «visto» antes de
+  guardar el `storageState`, porque si no el estado compartido diría «ya lo
+  vio» y el piloto no podría verlo nunca. Si tocas cualquiera de las dos cosas,
+  `tests/pilot/journeys/onboarding-tour.spec.ts` es lo que impide que el tour
+  vuelva a quedarse sin mirar (log §33).

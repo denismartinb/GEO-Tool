@@ -3220,6 +3220,47 @@ trece segundos después, los ocho pasos se recorren uno por clic sin encadenarse
 altura constante, sin desbordamiento ni errores de consola, y
 `prefers-reduced-motion` sigue aterrizando en el último fotograma.
 
+### El popup salía en cada carga, no en el primer acceso (2026-08-07)
+
+Lo encontró el `ux-pilot`, que es exactamente para lo que existe. Tumbó seis
+pruebas —el tooltip de Páginas citadas y la campana de notificaciones, en las
+tres anchuras— con `Timeout exceeded` contra elementos que estaban
+perfectamente sanos. La captura del fallo lo explicó de un vistazo: el popup de
+bienvenida abierto encima de Páginas citadas, tapándolo todo.
+
+**El fallo real, y no era del piloto.** La marca de «ya visto» se escribía **al
+cerrar** el popup, no al mostrarlo. Así que «salta solo en el primer acceso» era
+en realidad «salta en cada carga hasta que lo cierres»: quien lo miraba y
+pinchaba en el menú, o recargaba, se lo volvía a encontrar encima,
+indefinidamente. El piloto no cierra nada, así que se comió el caso extremo de
+ese comportamiento y lo dejó a la vista. Ahora la marca se escribe al mostrarlo.
+Coste asumido: quien recargue en el primer segundo se lo pierde, y vuelve por
+«¿Qué es el GEO?» del menú, que es justo la puerta que el fundador pidió.
+
+**Y dos arreglos en el propio piloto**, porque un modal de bienvenida es algo
+que el harness tiene que saber sortear:
+
+- `visitAsUser` cierra el popup si está abierto, con su propia X, y lo anota en
+  `dismissedWelcomeTour` en vez de silenciarlo. Un modal que tapa la pantalla
+  bloquea cualquier hover o clic detrás; sortearlo es lo que hace una persona.
+- `auth.setup` **borra la marca de «visto» antes de guardar el estado**.
+  `storageState()` de Playwright persiste el `localStorage`, y el login aterriza
+  en /dashboard, donde el tour salta y se marca: sin borrarlo, ese estado
+  compartido habría llegado a todas las pasadas diciendo «este navegador ya lo
+  vio» y el popup no habría vuelto a salir jamás. Es decir, el piloto no habría
+  podido verlo nunca — la misma trampa del 2026-08-02, por otra puerta.
+
+**Y una pasada que sí lo mira**: `tests/pilot/journeys/onboarding-tour.spec.ts`.
+Comprueba que sale solo en el primer acceso, que trae contenido real y no un
+lienzo en blanco, que se detiene al acabar el paso 1, que «Siguiente» avanza de
+verdad, que conserva el enlace a `/geo`, que se cierra con su X, que **no vuelve
+a saltar tras recargar** y que el menú lo reabre. Va todo en una sola prueba
+porque Playwright estrena contexto por `test` y «ya no vuelve» sólo se puede
+comprobar sin salir de la misma sesión.
+
+Cierra el hueco que llevaba dos días declarado en este PR: el popup de la
+consola nunca se había visto sobre el preview con sesión real.
+
 ### Pendiente / roto conocido
 
 - **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una

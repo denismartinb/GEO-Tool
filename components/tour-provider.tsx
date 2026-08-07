@@ -37,16 +37,25 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   const open = useCallback(() => setIsOpen(true), []);
-  const close = useCallback(() => {
-    setIsOpen(false);
-    markTourSeen(typeof window === "undefined" ? null : window.localStorage);
-  }, []);
+  const close = useCallback(() => setIsOpen(false), []);
 
   // Primera visita. Se decide en el cliente tras montar, nunca en el render
   // inicial: `localStorage` no existe en el servidor y leerlo durante el
   // render daría una discrepancia de hidratación.
+  //
+  // La marca de «visto» se escribe AL MOSTRARLO, no al cerrarlo. Escribirla al
+  // cerrar convertía «salta en el primer acceso» en «salta en cada carga hasta
+  // que lo cierres»: quien miraba el popup y pinchaba en el menú, o recargaba,
+  // se lo volvía a encontrar encima, indefinidamente. Lo encontró el `ux-pilot`
+  // el 2026-08-07 — nunca cierra nada, así que se topó con el popup tapando
+  // Páginas citadas y la campana en las tres anchuras (ver log §33).
+  //
+  // El coste asumido: si alguien recarga en el primer segundo y se lo pierde,
+  // ya no vuelve solo. Para eso está «¿Qué es el GEO?» en el menú lateral, que
+  // es justo la puerta de vuelta que el fundador pidió.
   useEffect(() => {
     if (hasSeenTour(window.localStorage)) return;
+    markTourSeen(window.localStorage);
     setIsOpen(true);
   }, []);
 
