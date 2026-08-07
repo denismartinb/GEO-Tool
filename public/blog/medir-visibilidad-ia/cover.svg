@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Una línea muy ruidosa y, superpuesta, la línea suave que resulta de medir con una ventana">
+  <defs>
+    <linearGradient id="bgM" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowM1" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowM2" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgM)"/>
+  <circle cx="230" cy="150" r="230" fill="url(#glowM1)"/>
+  <circle cx="990" cy="150" r="200" fill="url(#glowM2)"/>
+
+  <!-- Sin texto y con el motivo centrado en (600,150): es la única zona que
+       sobrevive a las seis ventanas de recorte (ver docs/agentic-weekly-post.md
+       §4). El ruido se abre hacia los bordes, donde puede recortarse sin
+       perder el significado. -->
+
+  <!-- El ruido: lo que ves midiendo escaneos sueltos -->
+  <path d="M120 150 L165 92 L210 196 L255 108 L300 205 L345 96 L390 188 L435 118
+           L480 200 L525 100 L570 192 L615 112 L660 198 L705 98 L750 190 L795 116
+           L840 202 L885 104 L930 186 L975 120 L1020 194 L1065 100 L1080 150"
+        fill="none" stroke="#ffb020" stroke-width="2.5" stroke-opacity=".55"
+        stroke-linejoin="round"/>
+
+  <!-- La ventana: la misma realidad, medida bien -->
+  <path d="M120 150 C 300 146, 480 154, 600 149 C 760 143, 940 152, 1080 148"
+        fill="none" stroke="#2563eb" stroke-width="7" stroke-linecap="round"/>
+
+  <circle cx="600" cy="149" r="11" fill="#09c5d6"/>
+  <circle cx="600" cy="149" r="20" fill="none" stroke="#09c5d6" stroke-width="2.5" stroke-opacity=".45"/>
+</svg>

@@ -1,0 +1,132 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { BlogCover } from "@/components/blog/blog-cover";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  Verdict
+} from "@/components/blog/article";
+import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+
+export const post = getBlogPost("medir-visibilidad-ia");
+
+export const metadata = {
+  title: `${getSeoTitle(post)} — Genscore`,
+  description: getMetaDescription(post),
+  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
+};
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
+
+<BlogPageShell>
+
+<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact />
+
+# {post.title}
+
+<p className="blog-post-meta">6 de agosto de 2026</p>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Antes de preguntarte si tu contenido ha funcionado, comprueba que tu medición sabe distinguir una mejora real del ruido. **Dos escaneos consecutivos del mismo proyecto, sin cambiar absolutamente nada, movieron nuestro GEO Score 44 puntos.** Y sobre la segunda mitad de la pregunta —cuánto tarda— la respuesta honesta es que **no hay evidencia pública fiable**: las cifras que circulan las publican empresas que venden la solución.
+
+</KeyTakeaway>
+
+Medir visibilidad en IA parece fácil: lanzas la pregunta, miras si sale tu marca, repites dentro de un mes y comparas. El problema es que ese "comparas" da por hecho que las dos medidas son comparables, y **por defecto no lo son**.
+
+## El ruido es más grande que casi cualquier mejora que vayas a conseguir
+
+Esto no es una advertencia teórica. Es un incidente nuestro, documentado.
+
+El fundador lanzó dos escaneos seguidos del mismo proyecto de prueba, sin tocar ni el contenido ni los prompts ni nada. El GEO Score pasó de **30 a 74**.
+
+La reproducción contra el código de scoring real explicó los 44 puntos por completo, y la causa es aritmética, no un fallo: **ese proyecto tenía 1 prompt lanzado en 3 motores, o sea 3 respuestas.** Con tres respuestas, que el modelo te nombre una vez más vale ~24 puntos de GEO.
+
+<StatGrid label="Por qué una medición pequeña no mide nada (datos propios, reproducidos contra el código de scoring)">
+  <Stat value="44 pts" label="Movimiento del GEO Score entre dos escaneos consecutivos, sin cambiar nada del proyecto" source="Genscore, incidente documentado 2026-08" tone="warm" />
+  <Stat value="~24 pts" label="Lo que valía una sola respuesta más cuando el proyecto tenía 3 respuestas en total" source="Genscore, reproducción contra computeRunScoresFromResults" tone="blue" />
+  <Stat value="10" label="Respuestas mínimas que exige hoy el producto antes de publicar banda cualitativa o delta (MIN_RESPONSES_FOR_BAND)" source="lib/scoring/score-reliability.ts" tone="cyan" />
+</StatGrid>
+
+Las dos primeras cifras son **nuestras**, de un incidente real que está documentado en `docs/geo-score-variability-2026-08.md` y reproducido contra la función de scoring de producción — no son una estimación. La tercera es una constante del código, no una opinión.
+
+## De dónde viene ese ruido, exactamente
+
+Que un modelo dé respuestas distintas a la misma pregunta no es un defecto: es cómo funciona. Un trabajo académico de 2026 —*Where Does the Noise Come From? A Variance-Components Decomposition of Non-Determinism in LLM Brand Answers*, en arXiv— descompone la varianza de las respuestas de marca en cuatro fuentes separables: **repetir el mismo prompt, parafrasearlo, cambiar de modelo y cambiar de idioma**.
+
+Es un preprint de terceros, no un dato nuestro, y lo citamos por lo que aporta: nombra las cuatro palancas que tienes que fijar si quieres que dos medidas sean comparables. Si entre marzo y abril cambias el prompt "un poco", ya no estás midiendo lo mismo.
+
+<Figure
+  label="Figura 1"
+  caption="Ejemplo ilustrativo del mismo proyecto medido de dos maneras. Los datos son de ejemplo, no de una marca real."
+>
+
+**Lo que ves si miras un escaneo suelto:** 30 → 74 → 41 → 68. Parece que algo pasa cada semana. No pasa nada: es el mismo proyecto, sin cambios.
+
+**Lo que ves con una ventana de tres:** 48 → 52 → 50. Una línea aburrida, que es exactamente lo que debería verse cuando no has hecho nada.
+
+La diferencia entre las dos lecturas no es el contenido del proyecto. Es cuántas medidas hay debajo de cada punto.
+
+</Figure>
+
+## Cómo medir para que la comparación signifique algo
+
+<Checklist
+  items={[
+    "Fija el conjunto de prompts y no lo toques. Si cambias la lista, el número siguiente no es comparable con el anterior — estarás midiendo otra cosa con el mismo nombre.",
+    "Repite cada prompt varias veces, no una. La práctica del sector converge en unas cinco repeticiones por prompt; una sola medida no distingue señal de ruido.",
+    "Ten suficientes respuestas antes de sacar conclusiones. Genscore no publica banda ni delta por debajo de 10 respuestas, precisamente por el incidente de arriba.",
+    "Compara ventanas, no puntos sueltos. El número principal de Genscore es la mediana de los 3 últimos escaneos comparables, no el último escaneo.",
+    "Mide varias señales, no solo si te nombran: en qué posición apareces y si la mención va respaldada por una citación a tu dominio son cosas distintas que se mueven distinto."
+  ]}
+/>
+
+## ¿Y cuánto tarda en notarse?
+
+Aquí es donde el artículo se vuelve corto, porque la respuesta honesta es breve.
+
+<Verdict title="No hay evidencia pública fiable sobre cuánto tarda">
+
+Circulan cifras concretas —que Perplexity refleja contenido nuevo en horas, ChatGPT en una a tres semanas, los AI Overviews de Google en cuatro a ocho—, pero **al rastrear su origen aparecen blogs de herramientas de GEO**, sin muestra, sin metodología y sin fecha de medición. Son empresas que venden la solución al problema que están dimensionando.
+
+No las reproducimos como si fueran un hecho. **Nosotros tampoco lo hemos medido**: haría falta publicar contenido controlado y rastrear su aparición a lo largo de meses en varios motores, y eso es un estudio que no hemos hecho.
+
+</Verdict>
+
+Lo que sí se puede decir sin inventar nada es cómo se comportan los motores por diseño: uno que hace búsqueda en vivo (<a href="/glosario/grounding">grounding</a>) puede recoger algo publicado hoy; uno que responde desde memoria de entrenamiento no lo hará hasta que se reentrene o hasta que la fuente que te cita entre en su índice. Esa diferencia es real y estructural. Traducirla a un número de semanas es lo que nadie ha demostrado.
+
+**La consecuencia práctica es incómoda pero útil:** no montes tu plan sobre una promesa de plazo. Monta la línea base ahora, mide con suficientes repeticiones, y deja que la ventana te diga cuándo se ha movido algo de verdad.
+
+## Por dónde empezar
+
+Si no tienes línea base, cualquier medición futura no tiene con qué compararse. Ese es el primer trabajo, y es barato: elegir bien las preguntas —la metodología está en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts correctos</a>—, decidir contra quién te comparas en <a href="/blog/como-elegir-competidores-analisis-geo">cómo seleccionar competidores</a>, y entender qué hay detrás del número en <a href="/blog/que-es-el-geo-score">qué es el GEO Score</a>.
+
+Y si lo que quieres es la definición de las señales que vas a ver moverse, están en el glosario: la <a href="/glosario/cuota-de-voz-en-ia">cuota de voz en IA</a> y la <a href="/glosario/citacion-en-ia">citación</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Tu medición distingue una mejora real del ruido?"
+  text="Genscore repite cada prompt, exige un mínimo de respuestas antes de publicar un número, y compara ventanas en vez de escaneos sueltos."
+/>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

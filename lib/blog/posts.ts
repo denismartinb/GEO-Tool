@@ -186,6 +186,17 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "users",
     primaryKeyword: "geo para agencias",
     cluster: "sectores"
+  },
+  {
+    slug: "medir-visibilidad-ia",
+    title: "Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo)",
+    description:
+      "Dos escaneos idénticos movieron nuestro score 44 puntos. Cómo separar una mejora real del ruido, y por qué nadie sabe cuánto tarda.",
+    datePublished: "2026-08-06",
+    coverIcon: "trendUp",
+    coverImage: "/blog/medir-visibilidad-ia/cover.svg",
+    primaryKeyword: "medir visibilidad en ia",
+    cluster: "medicion"
   }
 ];
 
