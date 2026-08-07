@@ -39,7 +39,13 @@ obedecerá igual.
   encima ni el foco la apagan: existe para conseguir ese clic, así que mientras
   no llegue no ha terminado su trabajo (fundador, 2026-08-07; log §33). Es la
   única animación del tour que no se detiene sola, y la excepción es
-  deliberada. Sólo sale tras la reproducción automática del paso 1.
+  deliberada.
+- **La pista arranca en el mismo instante que el paso 1, no cuando éste se
+  detiene.** Corregido el 2026-08-08: al principio sólo se encendía al pausarse
+  la reproducción automática, así que invitaba al clic cuatro segundos y medio
+  tarde. Ahora se enciende a la vez que el reloj empieza a correr —al montar el
+  popup, o al verse entero el lienzo en la landing— y se mantiene puesta
+  mientras el paso 1 se reproduce solo y después, hasta el clic.
 - **No hay reproducción perpetua en el tour.** Arranca al verse entero y se para
   al salir de pantalla. Una animación fuera de pantalla es CPU y batería a cambio de
   nada. Al volver a entrar retoma donde estaba: la parada por scroll conserva

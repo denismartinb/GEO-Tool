@@ -158,7 +158,9 @@ test("el tour del hero arranca al verse entero y para en el paso 1", async ({ pa
     })
     .toBeGreaterThan(0);
 
-  // Se detiene al acabar el paso 1 y la pista aparece en «Siguiente».
+  // La pista de «Siguiente» arranca con el paso 1, no al detenerse (fundador,
+  // 2026-08-08) — se comprueba una vez el tour ya está parado, que es el
+  // instante en que más importa que siga puesta.
   await page.waitForTimeout(7_000);
   await expect(
     page.locator(".ptour--hero .pt-dot").first(),

@@ -147,13 +147,16 @@ export function ProductTour({
   /**
    * La pista del botón «Siguiente» (fundador, 2026-08-07).
    *
-   * El tour se detiene al acabar el primer paso y ese silencio deja una
-   * pregunta sin responder: ¿y ahora qué? El problema no es que el botón sea
-   * poco visible —es azul, sólido y está solo en su esquina— sino que la
-   * mirada está arriba, en el lienzo que acaba de pararse, y hay que bajarla.
-   * De ahí las dos mitades: el halo trae la mirada, la flecha dice hacia dónde.
+   * El problema no es que el botón sea poco visible —es azul, sólido y está
+   * solo en su esquina— sino que la mirada está arriba, en el lienzo, y hay
+   * que bajarla. De ahí las dos mitades: el halo trae la mirada, la flecha
+   * dice hacia dónde.
    *
-   *   "idle" → aún no toca (el paso 1 sigue corriendo)
+   * Arranca en el mismo instante que el paso 1 (fundador, 2026-08-08): no
+   * espera a que el paso se detenga. Así el botón ya está invitando al clic
+   * mientras el paso 1 todavía se reproduce solo, no sólo después.
+   *
+   *   "idle" → aún no ha arrancado el tour
    *   "on"   → en bucle hasta que se pulse el botón
    *   "done" → ya se ha pulsado; no vuelve en toda la sesión
    */
@@ -241,6 +244,10 @@ export function ProductTour({
       clock.current.holdAt = null;
       firedClick.current = TOUR_DURATION_MS;
       hasStarted.current = true;
+    } else if (variant === "modal") {
+      // El popup siempre está entero delante, así que el reloj arranca en el
+      // montaje — y la pista, con él.
+      setHintState("on");
     }
 
     const trackAttrs: Array<[string, number, number]> = [
@@ -547,14 +554,9 @@ export function ProductTour({
         // tanto el primero (automático) como los que trae «Siguiente».
         if (c.holdAt !== null && c.t >= c.holdAt) {
           const wasLast = c.holdAt >= holdTimeFor(TOUR_STEPS.length - 1);
-          const wasAutoplay = c.holdAt === holdTimeFor(AUTOPLAY_THROUGH_STEP_INDEX);
           c.t = c.holdAt;
           c.playing = false;
           c.holdAt = null;
-          // El momento exacto en que el tour se calla es cuando la pista tiene
-          // que hablar. Sólo tras la reproducción automática: si el usuario ya
-          // ha navegado a mano, sabe de sobra cómo se avanza.
-          if (wasAutoplay && hintRef.current === "idle") setHintState("on");
           if (wasLast) onFinish?.();
         }
         if (c.t >= TOUR_DURATION_MS) {
@@ -599,6 +601,9 @@ export function ProductTour({
               if (!hasStarted.current) {
                 hasStarted.current = true;
                 c.playing = true;
+                // Arranca con el paso 1, no cuando éste se detiene: el botón
+                // ya invita al clic mientras el paso todavía se reproduce solo.
+                if (hintRef.current === "idle") setHintState("on");
               } else if (pausedByScroll.current) {
                 pausedByScroll.current = false;
                 c.playing = true;

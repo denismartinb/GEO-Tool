@@ -3326,6 +3326,24 @@ desbordamiento y sin errores de consola.
   el tour se leía «pegado» a los bordes. Alinearlo se lleva además otros 28 px
   de alto: **594 → 566 px** a 375.
 
+### Y un tercero, un día después: la pista arranca con el paso 1 (2026-08-08)
+
+La pista sólo se encendía al **detenerse** la reproducción automática, es
+decir, cuatro segundos y medio después de que el paso 1 empezara. El fundador
+lo corrigió: tiene que arrancar en el mismo instante que el paso 1, no después.
+Ahora se enciende a la vez que el reloj empieza a correr —al montar el popup, o
+al verse entero el lienzo en la landing— y sigue puesta durante toda la
+reproducción del paso 1 y después, hasta el clic. La regla de «en bucle hasta
+el clic» del ajuste anterior no cambia; sólo cambia el instante en que arranca
+el bucle.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies: la pista está puesta a los 0,5 s de arrancar el reloj —antes de
+que el dominio del paso 1 empiece siquiera a teclearse—, sigue puesta cuando el
+paso 1 se detiene, y el clic la apaga. Repetidas también las comprobaciones de
+altura constante, sin recortes, sin desbordamiento y `prefers-reduced-motion`
+en las tres anchuras: sin regresión.
+
 ### Pendiente / roto conocido
 
 - **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una
