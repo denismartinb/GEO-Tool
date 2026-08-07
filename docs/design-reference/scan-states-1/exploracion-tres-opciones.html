@@ -142,6 +142,31 @@ code{font-family:var(--mono);font-size:.87em;background:var(--d-surface-2);borde
 .rule-b{font-size:13.5px;line-height:1.5;color:var(--d-ink-3)}
 .rule-src{font-family:var(--mono);font-size:10.5px;color:var(--d-ink-4);margin-top:auto;padding-top:6px}
 
+/* ---------- bloque de cálculo ---------- */
+.calc{display:grid;gap:16px;margin-top:26px}
+@media (min-width:960px){.calc{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:start}}
+.calc-formula{
+  background:var(--d-surface);border:1px solid var(--d-line);border-radius:14px;
+  padding:20px;box-shadow:var(--d-shadow);
+}
+.calc-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.calc-cell{display:flex;flex-direction:column;line-height:1.1}
+.calc-cell b{font-family:var(--display);font-weight:800;font-size:30px;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.calc-cell span{font-size:11px;color:var(--d-ink-3);margin-top:4px;max-width:9ch}
+.calc-cell.hi b{color:var(--d-accent);font-size:38px}
+.calc-cell.hi span{color:var(--d-accent);font-weight:600;max-width:12ch}
+.calc-op{font-family:var(--display);font-weight:800;font-size:20px;color:var(--d-ink-4);padding-bottom:20px}
+.calc-note{font-size:13.5px;line-height:1.55;color:var(--d-ink-3);margin:16px 0 0;padding-top:14px;border-top:1px solid var(--d-line-soft)}
+.calc-note em{font-style:normal;font-weight:600;color:var(--d-ink)}
+.calc-chain{display:flex;flex-direction:column;gap:1px;background:var(--d-line);border:1px solid var(--d-line);border-radius:14px;overflow:hidden}
+.calc-step{background:var(--d-surface);padding:14px 18px;display:grid;grid-template-columns:minmax(0,1fr);gap:3px}
+@media (min-width:620px){.calc-step{grid-template-columns:96px 150px minmax(0,1fr);align-items:baseline;gap:14px}}
+.calc-step-k{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--d-ink-4)}
+.calc-step-t{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-.025em}
+.calc-step-b{font-size:12.5px;line-height:1.5;color:var(--d-ink-3)}
+.calc-step.out{background:var(--d-accent-soft)}
+.calc-step.out .calc-step-k,.calc-step.out .calc-step-t{color:var(--d-accent)}
+
 /* ---------- cabecera de opción ---------- */
 .opt-head{
   display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:start;
@@ -418,13 +443,14 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
 <header class="doc-head">
   <div class="eyebrow">SCAN-STATES-1<span class="sep"></span>Propuesta de diseño<span class="sep"></span>7 ago 2026</div>
-  <h1>Los tres minutos en los que no tenemos nada que enseñar</h1>
+  <h1>Los cinco minutos en los que no tenemos nada que enseñar</h1>
   <p class="lede">
     El primer escaneo es el primer aterrizaje de un cliente: paga con su atención antes de
     recibir un solo dato. Hoy esa pantalla es un cuadrado violeta con un spinner dentro,
-    heredado del prototipo y sin repintar a la identidad v3. Aquí van tres direcciones para
-    convertir la espera en la primera demostración de qué hace el producto — y, aplicadas
-    después, al resto de estados que hacen esperar.
+    heredado del prototipo, sin repintar a la identidad v3 — y prometiendo «un par de
+    minutos» cuando la realidad medida son cinco, y en Pro pueden ser quince. Aquí van tres
+    direcciones para convertir la espera en la primera demostración de qué hace el producto,
+    empezando por decir la verdad sobre cuánto dura.
   </p>
   <div class="doc-meta">
     <span class="tag">Marca v3 · azul/navy</span>
@@ -478,6 +504,113 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       </span>
       <span class="rule-src">log §25 · §32 punto 2</span>
     </div>
+    <div class="rule">
+      <span class="rule-k">Regla 5</span>
+      <span class="rule-t">Una estimación se dice que lo es</span>
+      <span class="rule-b">
+        La duración se calcula del tamaño real del escaneo y se enseña como rango
+        («4–6 min»), nunca como cuenta atrás que corre sola. Un reloj que descuenta segundos
+        es progreso falso con otra ropa.
+      </span>
+      <span class="rule-src">CLAUDE.md · nuevo, de esta fase</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CUÁNTO TARDA DE VERDAD ═══════════════════════ -->
+<section id="duracion">
+  <div class="sec-head"><h2>Cuánto tarda de verdad</h2></div>
+  <p class="sec-note">
+    La pantalla dice hoy «esto suele tardar un par de minutos». Tu escaneo de 30 preguntas
+    pasó de cinco. No es que el pipeline vaya lento: es que <strong>la pantalla cuenta la
+    unidad barata y esconde la cara</strong>. Y con el muestreo (ADR 0030), los tres motores
+    y la auditoría encadenada, la distancia entre lo que promete y lo que dura sólo crece.
+  </p>
+
+  <div class="calc">
+    <div class="calc-formula">
+      <div class="calc-row">
+        <span class="calc-cell"><b>30</b><span>preguntas activas</span></span>
+        <span class="calc-op">×</span>
+        <span class="calc-cell"><b>3</b><span>motores</span></span>
+        <span class="calc-op">×</span>
+        <span class="calc-cell"><b>1</b><span>repetición</span></span>
+        <span class="calc-op">=</span>
+        <span class="calc-cell hi"><b>90</b><span>respuestas de IA</span></span>
+      </div>
+      <p class="calc-note">
+        La pantalla enseña hoy «0 de 31»: eso son <em>lanzamientos</em>, no respuestas. Cada
+        lanzamiento se abre en una llamada por motor, y cada una de esas respuestas hay que
+        pedirla <em>y</em> analizarla después. La cifra que manda en el reloj es la de la
+        derecha, y es la única que no está en pantalla.
+      </p>
+    </div>
+
+    <div class="calc-chain">
+      <div class="calc-step">
+        <span class="calc-step-k">Por invocación</span>
+        <span class="calc-step-t">45 s de trabajo</span>
+        <span class="calc-step-b">Presupuesto duro bajo el techo de 60 s de Vercel
+        (<code>SCAN_INVOCATION_WORK_BUDGET_MS</code>). Lo que no cabe se aplaza a la
+        siguiente.</span>
+      </div>
+      <div class="calc-step">
+        <span class="calc-step-k">Generación</span>
+        <span class="calc-step-t">10 lanzamientos</span>
+        <span class="calc-step-b">Se reclaman en lote y se lanzan a la vez
+        (<code>MAX_REAL_SCAN_PROMPTS</code>), o sea hasta 30 llamadas concurrentes; ~10–15 s
+        del presupuesto.</span>
+      </div>
+      <div class="calc-step">
+        <span class="calc-step-k">Análisis</span>
+        <span class="calc-step-t">4 a la vez</span>
+        <span class="calc-step-b">La extracción es la llamada más pesada y va a
+        <code>EXTRACTION_CONCURRENCY = 4</code> para no fabricar los 429 que la mataban. Con
+        lo que sobra del presupuesto entran ~20 respuestas por invocación.</span>
+      </div>
+      <div class="calc-step out">
+        <span class="calc-step-k">Resultado</span>
+        <span class="calc-step-t">≈ 1 min / 15–20 respuestas</span>
+        <span class="calc-step-b">Cinco invocaciones encadenadas para 90 respuestas ≈ 4,5 min
+        de modelo. Mediste algo más de 5. El modelo va corto, no largo.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Escenario</th><th>Preguntas</th><th>Motores</th><th>Repeticiones</th>
+          <th>Respuestas</th><th>Duración estimada</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Free</td><td>10</td><td>1</td><td>5</td><td>50</td><td>3–5 min</td></tr>
+        <tr><td>Starter</td><td>25</td><td>3</td><td>1</td><td>75</td><td>4–6 min</td></tr>
+        <tr><td>Tu escaneo</td><td>30</td><td>3</td><td>1</td><td>90</td><td><strong>5–7 min</strong> · medido &gt;5</td></tr>
+        <tr><td>Pro lleno</td><td>100</td><td>3</td><td>1</td><td>300</td><td>15–20 min</td></tr>
+        <tr><td>Agency lleno</td><td>300</td><td>3</td><td>1</td><td>900</td><td>45–60 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="opt-cols" style="margin-top:20px">
+    <div class="note cost">
+      <b>Lo que esta tabla decide por nosotros</b>
+      Con 3–7 minutos, «puedes salir de esta página» basta. A partir de <strong>Pro</strong>
+      no basta: nadie espera quince minutos mirando, así que el aviso por email deja de ser
+      un extra y pasa a ser la condición para que la espera sea aceptable. La fase 2 que
+      propones no es un adorno — es lo que hace vendible el plan Pro.
+    </div>
+    <div class="note">
+      <b>Honestidad de esta estimación</b>
+      Sale de las constantes del pipeline y está calibrada contra <em>una</em> medición tuya.
+      Es suficiente para escribir un rango en pantalla, no para prometer un minutaje. La
+      calibración de verdad ya está en la base de datos:
+      <code>scan_runs.started_at</code> / <code>finished_at</code>, que <code>/debug</code>
+      ya pinta como «Duración» en cada run. Antes de fijar la constante, se lee de ahí.
+    </div>
   </div>
 </section>
 
@@ -502,7 +635,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <b>Por qué funciona</b>
         Es la única de las tres en la que el contenido de la espera <em>es</em> el producto.
         Nadie mira un spinner dos minutos; una lista que crece con las preguntas de tu
-        sector sí se mira. Y explica sola por qué tarda: son 31 conversaciones, no una carga.
+        sector sí se mira. Y explica sola por qué tarda: son 90 conversaciones, no una carga.
       </div>
       <div class="note cost">
         <b>Lo que cuesta</b>
@@ -538,10 +671,10 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           </div>
           <div class="a-hero">
             <span class="a-lab">Preparando el escaneo</span>
-            <div class="a-num">31<small> lanzamientos</small></div>
-            <div class="a-num-cap">10 prompts · 3 motores de IA</div>
+            <div class="a-num">90<small> respuestas</small></div>
+            <div class="a-num-cap">30 preguntas × 3 motores de IA</div>
             <div class="bar"><i style="width:3%"></i></div>
-            <div class="meta">colocando la cola de trabajo…</div>
+            <div class="meta">estimado 5–7 min · puedes cerrar esta página</div>
           </div>
           <div class="a-eng">
             <span class="a-eng-h">Motores</span>
@@ -549,19 +682,19 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
               <span class="a-eng-ic"><svg><use href="#eg-gemini"/></svg></span>
               <span class="a-eng-n">Gemini</span>
               <span class="a-eng-bar"><i style="width:0"></i></span>
-              <span class="a-eng-c">0/11</span>
+              <span class="a-eng-c">0/30</span>
             </div>
             <div class="a-eng-row idle">
               <span class="a-eng-ic"><svg><use href="#eg-openai"/></svg></span>
               <span class="a-eng-n">ChatGPT</span>
               <span class="a-eng-bar"><i style="width:0"></i></span>
-              <span class="a-eng-c">0/10</span>
+              <span class="a-eng-c">0/30</span>
             </div>
             <div class="a-eng-row idle">
               <span class="a-eng-ic"><svg><use href="#eg-claude"/></svg></span>
               <span class="a-eng-n">Claude</span>
               <span class="a-eng-bar"><i style="width:0"></i></span>
-              <span class="a-eng-c">0/10</span>
+              <span class="a-eng-c">0/30</span>
             </div>
           </div>
           <div class="a-feed">
@@ -574,8 +707,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <figcaption>
         <b>1 · Aterrizaje</b>
         Sustituye al mensaje verde suelto de hoy: la confirmación entra en la pantalla, no
-        encima. El «31» aparece ya, porque se conoce antes de empezar.
-        <span class="real">real: total_prompts · nº de prompts · motores activos</span>
+        encima. El «90» aparece ya, porque se conoce antes de empezar — y es la cifra que de
+        verdad explica por qué esto tarda.
+        <span class="real">real: total_prompts × motores del plan · rango de la tabla</span>
       </figcaption>
     </figure>
 
@@ -597,34 +731,34 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <div class="dev-body">
           <div class="a-hero">
             <span class="a-lab">Consultando motores</span>
-            <div class="a-num">14<small>/31</small></div>
+            <div class="a-num">38<small>/90</small></div>
             <div class="a-num-cap">respuestas recibidas</div>
-            <div class="bar"><i style="width:45%"></i></div>
-            <div class="meta">45 % · quedan ~1 min</div>
+            <div class="bar"><i style="width:42%"></i></div>
+            <div class="meta">quedan ~3 min · puedes cerrar esta página</div>
           </div>
           <div class="a-eng">
             <span class="a-eng-h">Motores</span>
             <div class="a-eng-row">
               <span class="a-eng-ic"><svg><use href="#eg-gemini"/></svg></span>
               <span class="a-eng-n">Gemini</span>
-              <span class="a-eng-bar"><i style="width:73%"></i></span>
-              <span class="a-eng-c">8/11</span>
+              <span class="a-eng-bar"><i style="width:53%"></i></span>
+              <span class="a-eng-c">16/30</span>
             </div>
             <div class="a-eng-row">
               <span class="a-eng-ic"><svg><use href="#eg-openai"/></svg></span>
               <span class="a-eng-n">ChatGPT</span>
-              <span class="a-eng-bar"><i style="width:40%"></i></span>
-              <span class="a-eng-c">4/10</span>
+              <span class="a-eng-bar"><i style="width:43%"></i></span>
+              <span class="a-eng-c">13/30</span>
             </div>
             <div class="a-eng-row">
               <span class="a-eng-ic"><svg><use href="#eg-claude"/></svg></span>
               <span class="a-eng-n">Claude</span>
-              <span class="a-eng-bar"><i style="width:20%"></i></span>
-              <span class="a-eng-c">2/10</span>
+              <span class="a-eng-bar"><i style="width:30%"></i></span>
+              <span class="a-eng-c">9/30</span>
             </div>
           </div>
           <div class="a-feed">
-            <div class="a-feed-h"><span>Últimas respuestas</span><span class="meta">14</span></div>
+            <div class="a-feed-h"><span>Últimas respuestas</span><span class="meta">38</span></div>
             <div class="a-item new">
               <span class="a-item-ic"><svg><use href="#eg-gemini"/></svg></span>
               <span>
@@ -652,8 +786,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <figcaption>
         <b>2 · Consultando motores</b>
         El feed es el efecto wow y a la vez la prueba de que no hay progreso falso: cada
-        línea existe porque una fila se ha escrito.
-        <span class="real">real: successful+failed / total · prompt · engine · menciones</span>
+        línea existe porque una fila se ha escrito. El «quedan ~3 min» se recalcula del ritmo
+        ya medido de este escaneo, no de una tabla fija.
+        <span class="real">real: filas escritas / total · prompt · engine · menciones · ritmo medido</span>
       </figcaption>
     </figure>
 
@@ -675,10 +810,10 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <div class="dev-body">
           <div class="a-hero">
             <span class="a-lab" style="color:var(--p-cyan)">Analizando respuestas</span>
-            <div class="a-num">24<small>/31</small></div>
+            <div class="a-num">64<small>/90</small></div>
             <div class="a-num-cap">respuestas leídas</div>
-            <div class="bar warm"><i style="width:88%"></i></div>
-            <div class="meta">extrayendo menciones, posiciones y citas</div>
+            <div class="bar warm"><i style="width:71%"></i></div>
+            <div class="meta">quedan ~1 min · extrayendo menciones, posiciones y citas</div>
           </div>
           <div class="a-eng">
             <span class="a-eng-h">Motores</span>
@@ -686,27 +821,27 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
               <span class="a-eng-ic"><svg><use href="#eg-gemini"/></svg></span>
               <span class="a-eng-n">Gemini</span>
               <span class="a-eng-bar"><i style="width:100%;background:var(--p-pos)"></i></span>
-              <span class="a-eng-c">11/11</span>
+              <span class="a-eng-c">30/30</span>
             </div>
             <div class="a-eng-row done">
               <span class="a-eng-ic"><svg><use href="#eg-openai"/></svg></span>
               <span class="a-eng-n">ChatGPT</span>
               <span class="a-eng-bar"><i style="width:100%;background:var(--p-pos)"></i></span>
-              <span class="a-eng-c">10/10</span>
+              <span class="a-eng-c">30/30</span>
             </div>
             <div class="a-eng-row done">
               <span class="a-eng-ic"><svg><use href="#eg-claude"/></svg></span>
               <span class="a-eng-n">Claude</span>
               <span class="a-eng-bar"><i style="width:100%;background:var(--p-pos)"></i></span>
-              <span class="a-eng-c">10/10</span>
+              <span class="a-eng-c">30/30</span>
             </div>
           </div>
           <div class="card" style="padding:13px">
             <div class="a-feed-h" style="padding-bottom:9px"><span>Lo que llevamos</span></div>
             <div style="display:flex;gap:14px">
-              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">17</span><span style="font-size:11px;color:var(--p-ink-3);display:block">menciones tuyas</span></span>
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">29</span><span style="font-size:11px;color:var(--p-ink-3);display:block">menciones tuyas</span></span>
               <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">9</span><span style="font-size:11px;color:var(--p-ink-3);display:block">competidores</span></span>
-              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">28</span><span style="font-size:11px;color:var(--p-ink-3);display:block">citas</span></span>
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">41</span><span style="font-size:11px;color:var(--p-ink-3);display:block">citas</span></span>
             </div>
           </div>
         </div>
@@ -748,17 +883,17 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
               </span>
               <span class="g-copy">
                 <b>Puntuación GEO</b>
-                Sales en 17 de 31 respuestas. Tienes 6 acciones priorizadas esperando.
+                Sales en 41 de 90 respuestas. Tienes 6 acciones priorizadas esperando.
               </span>
             </div>
           </div>
           <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
           <div class="a-feed">
-            <div class="a-feed-h"><span>Escaneo completado</span><span class="meta">2 min 14 s</span></div>
+            <div class="a-feed-h"><span>Escaneo completado</span><span class="meta">5 min 12 s</span></div>
             <div class="a-item">
               <span class="a-item-ic" style="color:var(--p-pos)"><svg><use href="#ic-check"/></svg></span>
-              <span><span class="a-item-q">31 respuestas recibidas y analizadas</span>
-              <span class="a-item-m">3 motores · 10 prompts</span></span>
+              <span><span class="a-item-q">90 respuestas recibidas y analizadas</span>
+              <span class="a-item-m">3 motores · 30 preguntas</span></span>
             </div>
             <div class="a-item">
               <span class="a-item-ic" style="color:var(--p-pos)"><svg><use href="#ic-check"/></svg></span>
@@ -789,8 +924,8 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       </div>
       <p class="opt-thesis">
         El símbolo de la marca <em>es</em> el instrumento. El anillo segmentado del logo —cada
-        segmento, una señal— se convierte en el medidor: <em>31 segmentos para 31
-        lanzamientos</em>, y cada uno se enciende cuando llega su respuesta. Al acabar la
+        segmento, una señal— se convierte en el medidor: <em>una marca por respuesta:
+        90 marcas para 90 respuestas</em>, y cada uno se enciende cuando llega su respuesta. Al acabar la
         generación, un segundo anillo interior mide el análisis. Cuando ambos cierran, el
         centro deja de ser la G y pasa a ser tu puntuación.
       </p>
@@ -836,18 +971,18 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
             <span>Dominio creado. Tu primera medición está arrancando.</span>
           </div>
           <div class="b-stage">
-            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="0" data-inner="0" data-inner-total="0" aria-hidden="true"></svg>
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="90" data-done="0" data-inner="0" data-inner-total="0" aria-hidden="true"></svg>
             <span class="b-center"><span class="b-center-in">
               <span class="b-glyph">G</span>
-              <span class="b-cap">31 señales</span>
+              <span class="b-cap">90 señales</span>
             </span></span>
           </div>
           <div>
             <div class="b-title">Preparando tu medición</div>
-            <div class="b-body">Un segmento por cada pregunta que vamos a hacer. Se encienden según llegan las respuestas.</div>
+            <div class="b-body">Una marca por cada respuesta que vamos a pedir. Se encienden según llegan.<br><strong style="color:var(--p-ink-2)">Suele tardar entre 5 y 7 minutos.</strong></div>
           </div>
           <div class="b-legend">
-            <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Preguntas a los motores</span><span class="b-leg-c">0 / 31</span></span>
+            <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Respuestas de los motores</span><span class="b-leg-c">0 / 90</span></span>
             <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">—</span></span>
           </div>
         </div>
@@ -877,24 +1012,24 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </div>
         <div class="dev-body">
           <div class="b-stage">
-            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="14" data-inner="0" data-inner-total="0" data-sweep="1" aria-hidden="true"></svg>
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="90" data-done="38" data-inner="0" data-inner-total="0" data-sweep="1" aria-hidden="true"></svg>
             <span class="b-center"><span class="b-center-in">
-              <span class="b-pct">14<small>/31</small></span>
+              <span class="b-pct">38<small>/90</small></span>
               <span class="b-cap">respuestas</span>
             </span></span>
           </div>
           <div>
             <div class="b-title">Preguntando a las IA por ti</div>
-            <div class="b-body">Puedes salir de esta página — seguimos trabajando y te avisamos al terminar.</div>
+            <div class="b-body">Quedan unos 3 minutos. Puedes cerrar esta página — seguimos trabajando.</div>
           </div>
           <div class="b-legend">
-            <span class="b-leg"><i class="b-leg-k out"></i><span class="b-leg-t">Preguntas a los motores</span><span class="b-leg-c">14 / 31</span></span>
+            <span class="b-leg"><i class="b-leg-k out"></i><span class="b-leg-t">Respuestas de los motores</span><span class="b-leg-c">38 / 90</span></span>
             <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">en espera</span></span>
           </div>
           <div class="c-engs" style="margin-top:2px">
-            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick" style="color:var(--p-blue)">8</span></span>
-            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick" style="color:var(--p-blue)">4</span></span>
-            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-claude"/></svg>Claude<span class="tick" style="color:var(--p-blue)">2</span></span>
+            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick" style="color:var(--p-blue)">16</span></span>
+            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick" style="color:var(--p-blue)">13</span></span>
+            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-claude"/></svg>Claude<span class="tick" style="color:var(--p-blue)">9</span></span>
           </div>
         </div>
       </div>
@@ -923,19 +1058,19 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </div>
         <div class="dev-body">
           <div class="b-stage">
-            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="31" data-inner="24" data-inner-total="31" aria-hidden="true"></svg>
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="90" data-done="90" data-inner="64" data-inner-total="90" aria-hidden="true"></svg>
             <span class="b-center"><span class="b-center-in">
-              <span class="b-pct">24<small>/31</small></span>
+              <span class="b-pct">64<small>/90</small></span>
               <span class="b-cap">analizadas</span>
             </span></span>
           </div>
           <div>
             <div class="b-title">Leyendo lo que han contestado</div>
-            <div class="b-body">Extraemos de cada respuesta las menciones, las posiciones y las citas.</div>
+            <div class="b-body">Extraemos de cada respuesta las menciones, las posiciones y las citas. Queda alrededor de un minuto.</div>
           </div>
           <div class="b-legend">
-            <span class="b-leg"><i class="b-leg-k out"></i><span class="b-leg-t">Preguntas a los motores</span><span class="b-leg-c" style="color:var(--p-pos)">31 / 31</span></span>
-            <span class="b-leg"><i class="b-leg-k in"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">24 / 31</span></span>
+            <span class="b-leg"><i class="b-leg-k out"></i><span class="b-leg-t">Respuestas de los motores</span><span class="b-leg-c" style="color:var(--p-pos)">90 / 90</span></span>
+            <span class="b-leg"><i class="b-leg-k in"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">64 / 90</span></span>
           </div>
         </div>
       </div>
@@ -964,7 +1099,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </div>
         <div class="dev-body">
           <div class="b-stage">
-            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="31" data-inner="31" data-inner-total="31" aria-hidden="true"></svg>
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="90" data-done="90" data-inner="90" data-inner-total="90" aria-hidden="true"></svg>
             <span class="b-center"><span class="b-center-in">
               <span class="b-pct" style="font-size:46px">43</span>
               <span class="b-cap">Puntuación GEO</span>
@@ -972,10 +1107,10 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           </div>
           <div>
             <div class="b-title">Tu primera medición está lista</div>
-            <div class="b-body">Sales en 17 de 31 respuestas. Hay 6 acciones priorizadas esperándote.</div>
+            <div class="b-body">Sales en 41 de 90 respuestas. Hay 6 acciones priorizadas esperándote.</div>
           </div>
           <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
-          <div class="meta" style="text-align:center">31 respuestas · 3 motores · 2 min 14 s</div>
+          <div class="meta" style="text-align:center">90 respuestas · 3 motores · 5 min 12 s</div>
         </div>
       </div>
       <figcaption>
@@ -1037,10 +1172,12 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           <div class="c-pad">
             <span class="c-eyebrow"><span class="dot"></span>genscore.es · ES/es</span>
             <div class="c-h">Dominio creado.<br><span class="fade">Empezamos a preguntar por ti.</span></div>
+            <div style="font-size:12px;line-height:1.5;color:#9FB0C8">Tardaremos unos minutos. Puedes cerrar esta página.</div>
             <div class="c-tel">
-              <span class="c-tel-row"><span>prompts</span><b>10</b></span>
-              <span class="c-tel-row"><span>lanzamientos</span><b>31</b></span>
+              <span class="c-tel-row"><span>preguntas</span><b>30</b></span>
+              <span class="c-tel-row"><span>respuestas a recibir</span><b>90</b></span>
               <span class="c-tel-row"><span>estado</span><b class="on">preparando cola</b></span>
+              <span class="c-tel-row"><span>duración estimada</span><b>5–7 min</b></span>
             </div>
             <div class="c-engs">
               <span class="c-eng"><svg><use href="#eg-gemini"/></svg>Gemini</span>
@@ -1079,16 +1216,17 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           <div class="c-rail"><i style="width:45%"></i></div>
           <div class="c-pad">
             <span class="c-eyebrow"><span class="dot"></span>consultando motores</span>
-            <div class="c-h">14 de 31<br><span class="fade">respuestas recibidas.</span></div>
+            <div class="c-h">38 de 90<br><span class="fade">respuestas recibidas.</span></div>
             <div class="c-tel">
               <span class="c-tel-row"><span>última</span><b>«software para medir marca en IA»</b></span>
               <span class="c-tel-row"><span>motor</span><b class="on">Claude</b></span>
-              <span class="c-tel-row"><span>menciones hasta ahora</span><b>8</b></span>
+              <span class="c-tel-row"><span>menciones hasta ahora</span><b>18</b></span>
+              <span class="c-tel-row"><span>queda</span><b class="on">~3 min</b></span>
             </div>
             <div class="c-engs">
-              <span class="c-eng on"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick">8/11</span></span>
-              <span class="c-eng on"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick">4/10</span></span>
-              <span class="c-eng on"><svg><use href="#eg-claude"/></svg>Claude<span class="tick">2/10</span></span>
+              <span class="c-eng on"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick">16/30</span></span>
+              <span class="c-eng on"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick">13/30</span></span>
+              <span class="c-eng on"><svg><use href="#eg-claude"/></svg>Claude<span class="tick">9/30</span></span>
             </div>
             <div class="c-teach">
               <span class="c-teach-k">Mientras esperamos · 2 de 3</span>
@@ -1124,14 +1262,14 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
             <span class="c-eyebrow" style="color:#7FE3EC"><span class="dot" style="background:#7FE3EC"></span>analizando respuestas</span>
             <div class="c-h">Ya las tenemos todas.<br><span class="fade">Ahora las leemos.</span></div>
             <div class="c-tel">
-              <span class="c-tel-row"><span>analizadas</span><b>24 / 31</b></span>
-              <span class="c-tel-row"><span>menciones tuyas</span><b class="on">17</b></span>
+              <span class="c-tel-row"><span>analizadas</span><b>64 / 90</b></span>
+              <span class="c-tel-row"><span>menciones tuyas</span><b class="on">29</b></span>
               <span class="c-tel-row"><span>competidores detectados</span><b>9</b></span>
             </div>
             <div class="c-engs">
-              <span class="c-eng on"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick">11/11</span></span>
-              <span class="c-eng on"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick">10/10</span></span>
-              <span class="c-eng on"><svg><use href="#eg-claude"/></svg>Claude<span class="tick">10/10</span></span>
+              <span class="c-eng on"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick">30/30</span></span>
+              <span class="c-eng on"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick">30/30</span></span>
+              <span class="c-eng on"><svg><use href="#eg-claude"/></svg>Claude<span class="tick">30/30</span></span>
             </div>
             <div class="c-teach">
               <span class="c-teach-k">Mientras esperamos · 3 de 3</span>
@@ -1170,7 +1308,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </div>
         <div class="dev-body c-done">
           <div class="c-flash">
-            <span class="a-lab">Listo en 2 min 14 s</span>
+            <span class="a-lab">Listo en 5 min 12 s</span>
             <div style="font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.035em;line-height:1.15;margin-top:8px">
               Ya sabemos cómo te ven las IA
             </div>
@@ -1185,7 +1323,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
               </span>
               <span class="g-copy">
                 <b>Puntuación GEO</b>
-                Sales en 17 de 31 respuestas, casi siempre por detrás de dos competidores.
+                Sales en 41 de 90 respuestas, casi siempre por detrás de dos competidores.
               </span>
             </div>
           </div>
@@ -1362,15 +1500,15 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <div class="dev-body">
           <div class="a-hero" style="border-color:rgba(210,59,72,.22)">
             <span class="a-lab" style="color:var(--p-neg)">Escaneo incompleto</span>
-            <div class="a-num">27<small>/31</small></div>
+            <div class="a-num">82<small>/90</small></div>
             <div class="a-num-cap">respuestas recibidas</div>
-            <div class="bar"><i style="width:87%;background:var(--p-neg)"></i></div>
-            <div class="meta">4 lanzamientos sin respuesta · ChatGPT no contestó</div>
+            <div class="bar"><i style="width:91%;background:var(--p-neg)"></i></div>
+            <div class="meta">8 respuestas sin llegar · ChatGPT no contestó</div>
           </div>
           <div class="card" style="padding:13px">
             <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-2)">
-              Tu puntuación está calculada con lo que sí llegó. Volveremos a intentar los
-              cuatro que faltan en el próximo escaneo diario.
+              Tu puntuación está calculada con lo que sí llegó. Volveremos a intentar las
+              ocho que faltan en el próximo escaneo diario.
             </div>
           </div>
           <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
@@ -1382,6 +1520,220 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         El estado que hoy no existe como diseño. La regla: decir qué falta, qué se hizo con
         lo que hay y quién lo arregla — nunca un mensaje de proveedor en crudo.
         <span class="real">real: failed_prompts · motor afectado · categoría del error</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ═════════════════════════ FASE 2 · EL AVISO ═════════════════════════ -->
+<section id="aviso">
+  <div class="sec-head"><h2>Fase 2 · «Te avisamos cuando esté»</h2></div>
+  <p class="sec-note">
+    Con 5 minutos, «puedes cerrar esta página» es un permiso. Con los 15–20 de un Pro lleno,
+    es una promesa que hay que cumplir por otro canal. Lo bueno es que <strong>casi todo lo
+    que hace falta ya está construido</strong>, y esto no es una estimación optimista sino
+    tres cosas que están hoy en el repo.
+  </p>
+
+  <div class="rules" style="margin-top:22px">
+    <div class="rule">
+      <span class="rule-k">Ya existe</span>
+      <span class="rule-t">El evento</span>
+      <span class="rule-b">
+        <code>executor.ts</code> ya emite una notificación <code>scan_completed</code> al
+        finalizar, con su clave de deduplicación y su delta de visibilidad. No hay que
+        detectar nada nuevo: hay que enchufar un canal a un evento que ya se dispara.
+      </span>
+      <span class="rule-src">lib/notifications/emit.ts · dedupe-keys.ts</span>
+    </div>
+    <div class="rule">
+      <span class="rule-k">Ya existe</span>
+      <span class="rule-t">El interruptor</span>
+      <span class="rule-b">
+        Ajustes → Notificaciones ya muestra «Escaneos completados · Aviso cada vez que
+        termina un escaneo»… <strong>desactivado y con badge «Próximamente»</strong>. Esta
+        fase es literalmente quitarle el «próximamente».
+      </span>
+      <span class="rule-src">components/settings/notifications-tab.tsx</span>
+    </div>
+    <div class="rule">
+      <span class="rule-k">Ya existe</span>
+      <span class="rule-t">El canal</span>
+      <span class="rule-b">
+        Ocho emails por Resend con la cabecera de marca v3 y su <code>@media</code> responsive
+        resuelto. El email nuevo hereda plantilla, colores y remitente — no se diseña
+        de cero.
+      </span>
+      <span class="rule-src">lib/email/transactional.ts · BRAND-5c</span>
+    </div>
+    <div class="rule">
+      <span class="rule-k">Falta</span>
+      <span class="rule-t">Tres piezas</span>
+      <span class="rule-b">
+        Una columna de preferencia (<code>notify_scan_completed</code>), el envío en el
+        finalize, y la plantilla. La columna es migración: <strong>necesita tu aprobación
+        explícita</strong>, como todas.
+      </span>
+      <span class="rule-src">CLAUDE.md · Forbidden Without Explicit Approval</span>
+    </div>
+  </div>
+
+  <div class="note win" style="margin-top:18px">
+    <b>La decisión de producto que hay debajo</b>
+    Tú has dicho «cuando termine el <em>primer</em> escaneo», y creo que hay que tomárselo al
+    pie de la letra: <strong>el primero se avisa siempre</strong> —es el pago de la promesa
+    del alta, y sin él la cuenta nueva se queda sin cierre—, mientras que los escaneos
+    diarios van detrás del interruptor y <strong>apagados por defecto</strong>. Un email
+    diario diciendo «tu escaneo ha terminado» es exactamente el tipo de correo que enseña a
+    ignorar los nuestros, y ese criterio ya está escrito para las alertas de operación.
+  </div>
+
+  <div class="strip">
+
+    <!-- E1 · la promesa en pantalla -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Escaneando…</span>
+        </div>
+        <div class="dev-body">
+          <div class="a-hero">
+            <span class="a-lab">Consultando motores</span>
+            <div class="a-num">38<small>/300</small></div>
+            <div class="a-num-cap">respuestas recibidas</div>
+            <div class="bar"><i style="width:13%"></i></div>
+            <div class="meta">quedan ~14 min · 100 preguntas × 3 motores</div>
+          </div>
+          <div class="card" style="border-color:var(--p-blue-soft-2);background:linear-gradient(180deg,rgba(37,99,235,.06),rgba(37,99,235,.015))">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="width:16px;height:16px;flex:0 0 auto;margin-top:2px;color:var(--p-blue)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M3 7l9 6 9-6"/></svg></span>
+              <span>
+                <span style="font-family:var(--display);font-weight:800;font-size:14px;letter-spacing:-.02em;display:block">Te avisamos por email</span>
+                <span style="font-size:12px;line-height:1.5;color:var(--p-ink-3);display:block;margin-top:4px">
+                  Este escaneo es largo. Cierra la pestaña tranquilo: te escribimos a
+                  denis@genscore.es en cuanto esté.
+                </span>
+              </span>
+            </div>
+          </div>
+          <div class="meta" style="text-align:center">Sólo el primer escaneo. Los siguientes, si tú quieres, en Ajustes.</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>La promesa, sólo cuando toca</b>
+        La tarjeta aparece <em>si el escaneo se estima largo</em> (aquí un Pro lleno, 300
+        respuestas). En uno de 5 minutos sobra: prometer un email para algo que dura menos
+        que un café es ruido.
+        <span class="real">real: email de la cuenta · tamaño del run · umbral de duración</span>
+      </figcaption>
+    </figure>
+
+    <!-- E2 · el email -->
+    <figure>
+      <div class="dev" style="min-height:auto">
+        <div style="background:var(--p-ink);padding:18px 16px;display:flex;align-items:center;gap:7px">
+          <span class="dev-mark" style="background:#fff;color:var(--p-ink)">G</span>
+          <span style="font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.03em;color:#fff">Genscore</span>
+        </div>
+        <div style="padding:20px 18px;background:#fff;display:flex;flex-direction:column;gap:14px">
+          <div style="font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.03em;line-height:1.2">
+            Tu primera medición está lista
+          </div>
+          <div style="font-size:13px;line-height:1.6;color:var(--p-ink-2)">
+            Hemos preguntado por <strong>genscore.es</strong> a Gemini, ChatGPT y Claude —
+            300 respuestas en total. Esto es lo que hemos encontrado:
+          </div>
+          <div style="border:1px solid var(--p-line);border-radius:12px;padding:14px">
+            <div class="g-wrap">
+              <span class="g-ring">
+                <svg viewBox="0 0 78 78" aria-hidden="true">
+                  <circle cx="39" cy="39" r="33" fill="none" stroke="#E7EAF0" stroke-width="8"/>
+                  <circle cx="39" cy="39" r="33" fill="none" stroke="#2563EB" stroke-width="8"
+                          stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="118.2"/>
+                </svg>
+                <span class="g-num">43</span>
+              </span>
+              <span class="g-copy">
+                <b>Puntuación GEO</b>
+                Apareces en 41 de 300 respuestas.
+              </span>
+            </div>
+          </div>
+          <div style="font-size:13px;line-height:1.6;color:var(--p-ink-2)">
+            Dos competidores aparecen por delante de ti en la mayoría de respuestas, y hay
+            <strong>6 acciones priorizadas</strong> esperándote.
+          </div>
+          <div class="cta" style="border-radius:10px">Ver tu visión general</div>
+          <div style="font-size:11px;line-height:1.5;color:var(--p-ink-4);border-top:1px solid var(--p-line-soft);padding-top:12px">
+            Te escribimos porque era tu primer escaneo. Los avisos de escaneos siguientes se
+            activan en Ajustes → Notificaciones.
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>El email</b>
+        No es «tu escaneo ha terminado»: trae el resultado. Un aviso que obliga a entrar para
+        saber si merece la pena entrar es un aviso que se deja de abrir.
+        <span class="real">real: puntuación · menciones · nº de recomendaciones · dominio</span>
+      </figcaption>
+    </figure>
+
+    <!-- E3 · ajustes -->
+    <figure>
+      <div class="dev" style="min-height:auto">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Ajustes</div>
+            <div class="dev-titlerow"><span class="dev-title">Notificaciones</span></div>
+          </div>
+        </div>
+        <div class="dev-body">
+          <div class="card" style="padding:0">
+            <div style="padding:13px 14px;border-bottom:1px solid var(--p-line-soft);display:flex;gap:10px;align-items:center">
+              <span style="flex:1">
+                <span style="font-size:12.5px;font-weight:700;display:block">Cambios de visibilidad</span>
+                <span style="font-size:11px;color:var(--p-ink-3)">Cuando tu puntuación sube o baja</span>
+              </span>
+              <span style="width:32px;height:19px;border-radius:99px;background:var(--p-blue);position:relative;flex:0 0 auto"><i style="position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:99px;background:#fff;display:block"></i></span>
+            </div>
+            <div style="padding:13px 14px;border-bottom:1px solid var(--p-line-soft);display:flex;gap:10px;align-items:center;background:var(--p-blue-soft)">
+              <span style="flex:1">
+                <span style="font-size:12.5px;font-weight:700;display:block">Escaneos completados</span>
+                <span style="font-size:11px;color:var(--p-ink-3)">Aviso cada vez que termina un escaneo. El primero de cada dominio se avisa siempre.</span>
+              </span>
+              <span style="width:32px;height:19px;border-radius:99px;background:var(--p-line);position:relative;flex:0 0 auto"><i style="position:absolute;left:2px;top:2px;width:15px;height:15px;border-radius:99px;background:#fff;display:block"></i></span>
+            </div>
+            <div style="padding:13px 14px;display:flex;gap:10px;align-items:center">
+              <span style="flex:1">
+                <span style="font-size:12.5px;font-weight:700;display:block">Resumen semanal</span>
+                <span style="font-size:11px;color:var(--p-ink-3)">Un email cada lunes con la evolución</span>
+              </span>
+              <span style="width:32px;height:19px;border-radius:99px;background:var(--p-blue);position:relative;flex:0 0 auto"><i style="position:absolute;right:2px;top:2px;width:15px;height:15px;border-radius:99px;background:#fff;display:block"></i></span>
+            </div>
+          </div>
+          <div class="meta">Se acaba un «Próximamente» que lleva meses en pantalla.</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>El interruptor, ya real</b>
+        Apagado por defecto y con la excepción escrita en la propia descripción, para que
+        nadie se pregunte por qué recibió uno con el interruptor en «off».
+        <span class="real">real: preferencia persistida (columna nueva, requiere migración)</span>
       </figcaption>
     </figure>
 
@@ -1439,6 +1791,12 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           <td>Directa, pero cada estado necesita su tarjeta didáctica escrita</td>
         </tr>
         <tr>
+          <td>Aguanta un escaneo largo</td>
+          <td>Sí — a más respuestas, más feed que mirar</td>
+          <td>Regular: 90 marcas se leen, 300 se convierten en una línea continua y habría que agrupar</td>
+          <td>Sí, pero tres tarjetas didácticas no llenan 15 minutos</td>
+        </tr>
+        <tr>
           <td>Riesgo</td>
           <td>Feed vacío si un escaneo va lento al arrancar</td>
           <td>Se lee como «otro spinner» en un vistazo rápido</td>
@@ -1462,10 +1820,35 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       cancela una deuda ya reconocida en el log. Es la mejora más barata de las tres.
     </p>
     <ol>
-      <li><strong>Fase 1 — repintado y honestidad.</strong> Estados 1–4 de A sin desglose por motor ni feed: héroe v3, dos medidores, copy nuevo, estado «incompleto». Cero backend nuevo.</li>
-      <li><strong>Fase 2 — la retransmisión.</strong> Desglose por motor y últimas respuestas, con el coste del <em>poll</em> acotado y medido antes de mergear.</li>
-      <li><strong>Fase 3 — los hermanos.</strong> Onboarding, auditoría y estados vacíos migrados a la misma familia.</li>
+      <li>
+        <strong>Fase 1 — decir la verdad sobre el tiempo.</strong> Estados 1–4 de A sin
+        desglose por motor ni feed: héroe v3, dos medidores, el contador en
+        <em>respuestas</em> en vez de lanzamientos, el rango de duración calculado del tamaño
+        del run, «puedes cerrar esta página» y el estado «incompleto». Cero backend nuevo:
+        <code>total_prompts</code> y los motores del plan ya viajan. Antes de fijar la
+        constante, una lectura de <code>scan_runs</code> para calibrarla con runs reales en
+        vez de con tu única medición.
+      </li>
+      <li>
+        <strong>Fase 2 — el aviso.</strong> Columna de preferencia, envío en el finalize y
+        plantilla, enganchados al <code>scan_completed</code> que ya se emite. Primer escaneo
+        siempre; el resto detrás del interruptor, apagado. Lleva migración, así que necesita
+        tu aprobación aparte.
+      </li>
+      <li>
+        <strong>Fase 3 — la retransmisión.</strong> Desglose por motor y últimas respuestas,
+        con el coste del <em>poll</em> acotado y medido antes de mergear.
+      </li>
+      <li>
+        <strong>Fase 4 — los hermanos.</strong> Onboarding, auditoría y estados vacíos
+        migrados a la misma familia.
+      </li>
     </ol>
+    <p style="margin-top:14px;font-size:14.5px;color:var(--d-ink-2)">
+      Fíjate en que las fases 1 y 2 cambiaron de orden respecto a lo que propuse antes de tu
+      apunte. Con Pro en 15–20 minutos, el aviso por email deja de ser el remate agradable y
+      pasa a ser lo que hace la espera aceptable — antes que cualquier feed.
+    </p>
     <p class="ask">¿Cuál de las tres quieres que lleve a Task Intake? No implemento nada hasta que lo confirmes.</p>
   </div>
 </section>
@@ -1485,10 +1868,13 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 </div>
 
 <script>
-/* Anillos de la opción B — se generan aquí en vez de escribir 62 segmentos a mano.
-   Cada tick es una unidad real de trabajo: exterior = un lanzamiento, interior = una
+/* Anillos de la opción B — se generan aquí en vez de escribir 180 segmentos a mano.
+   Cada tick es una unidad real de trabajo: exterior = una respuesta recibida, interior = una
    respuesta analizada. Sin `total`, no habría anillo que dibujar (degradaría a
-   indeterminado), que es justo la razón de generarlos desde datos y no de decorar. */
+   indeterminado), que es justo la razón de generarlos desde datos y no de decorar.
+   El grosor se adapta al recuento: 30 respuestas piden un dial grueso y 900 uno finísimo,
+   y por encima de ~120 el anillo deja de leerse como marcas contables — ahí la opción B
+   necesitaría agrupar, que es la limitación anotada en la comparativa. */
 (function () {
   var NS = "http://www.w3.org/2000/svg";
   var CX = 93, CY = 93;
@@ -1520,9 +1906,16 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     }
   }
 
+  function widthFor(total, base) {
+    if (total <= 40) return base;
+    if (total <= 100) return Math.max(2, base - 2);
+    return 1.5;
+  }
+
   document.querySelectorAll("[data-ring]").forEach(function (svg) {
-    ring(svg, +svg.dataset.total, +svg.dataset.done, 74, 88, "#2563EB", 5);
-    ring(svg, +svg.dataset.innerTotal, +svg.dataset.inner, 58, 68, "#09C5D6", 4);
+    var t = +svg.dataset.total;
+    ring(svg, t, +svg.dataset.done, 74, 88, "#2563EB", widthFor(t, 5));
+    ring(svg, +svg.dataset.innerTotal, +svg.dataset.inner, 58, 68, "#09C5D6", widthFor(+svg.dataset.innerTotal, 4));
     if (svg.dataset.sweep) {
       var s = document.createElementNS(NS, "path");
       s.setAttribute("d", "M93 12 A81 81 0 0 1 158 45");
