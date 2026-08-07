@@ -67,9 +67,18 @@ fidelidad, no una interpretación:
   2026-08-06).
 - **Cabecera de pantalla de cuenta según §32**: kicker + titular grande +
   pastilla de estado. La pastilla dice el plan y los días de prueba.
-- **Organización no tiene pantalla: se reparte.** Lo declarativo va a un
-  plegable cerrado dentro de Cuenta; el NIF sube a Plan, porque existe para la
-  factura y ahí es donde se entiende.
+- **Organización no tiene pantalla: dos acordeones gemelos en Cuenta.**
+  «Datos de empresa» (nombre, sitio web, sector) y, justo debajo y con la misma
+  forma, «Datos de facturación» (razón social, NIF). Ambos cerrados por
+  defecto. La primera implementación mandó los fiscales a la sección Plan
+  —junto a la factura— y el fundador lo corrigió el 2026-08-06: los dos bloques
+  son «datos que rellenas una vez», así que se leen mejor emparejados que
+  repartidos entre secciones.
+- **El bloque de pago dice la verdad para cada estado.** «No tienes plan de
+  pago activo» sólo aparece en Free. Una cuenta Agencia paga y no tiene cliente
+  de Stripe (su plan no tiene precio self-serve), así que se le dice que su plan
+  se gestiona fuera de Stripe; una cuenta en prueba, que verá ahí sus facturas
+  cuando contrate.
 - **Ningún control sin backend.** Fuera Idioma, Zona horaria, Cambiar foto,
   Activar 2FA y la pastilla de rol «Administrador / Miembro» (sin equipos, toda
   cuenta es admin de sí misma). Los cuatro avisos «Próximamente» de

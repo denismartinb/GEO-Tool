@@ -5,7 +5,8 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CompanyFold } from "@/components/settings/company-fold";
-import type { CompanyDetails } from "@/lib/settings/company-details";
+import { BillingDetailsFold } from "@/components/settings/billing-details";
+import type { BillingDetails, CompanyDetails } from "@/lib/settings/company-details";
 import { updateProfileName, changePassword } from "@/app/dashboard/settings/profile/actions";
 
 type Feedback = { type: "ok" | "err"; text: string };
@@ -30,7 +31,8 @@ export function AccountSection({
   firstName,
   lastName,
   company,
-  companyReadOnly
+  companyReadOnly,
+  billingDetails
 }: {
   email: string;
   initials: string;
@@ -38,6 +40,7 @@ export function AccountSection({
   lastName: string;
   company: CompanyDetails;
   companyReadOnly: boolean;
+  billingDetails: BillingDetails;
 }) {
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(lastName);
@@ -145,7 +148,14 @@ export function AccountSection({
             </div>
           </div>
 
-          <CompanyFold initial={company} readOnly={companyReadOnly} />
+          {/* Twin folds, «empresa» then «facturación» — founder, 2026-08-06:
+              "mete datos de facturación en un acordeón similar a datos de
+              empresa justo debajo". Both are things you fill in once, so they
+              read better as a pair than split across two sections. */}
+          <div className="set-folds">
+            <CompanyFold initial={company} readOnly={companyReadOnly} />
+            <BillingDetailsFold initial={billingDetails} />
+          </div>
 
           <div className="set-actions">
             <Button type="button" onClick={saveName} disabled={isSavingName}>
@@ -164,7 +174,7 @@ export function AccountSection({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="set-security">
         <CardContent>
           <div className="set-row last">
             <div className="set-row-txt">

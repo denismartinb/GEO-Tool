@@ -110,6 +110,7 @@ export default async function SettingsPage({
               lastName={lastName}
               company={company}
               companyReadOnly={!isAdmin}
+              billingDetails={billingDetails}
             />
 
             <h2 className="set-sech sp" id="avisos">
@@ -122,7 +123,7 @@ export default async function SettingsPage({
                 <h2 className="set-sech sp" id="plan">
                   Plan
                 </h2>
-                <BillingContent checkoutStatus={checkout} billingDetails={billingDetails} />
+                <BillingContent checkoutStatus={checkout} />
               </>
             )}
 

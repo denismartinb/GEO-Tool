@@ -3,25 +3,24 @@
 import { useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { SettingsFold } from "@/components/settings/settings-fold";
 import { updateBillingDetails } from "@/app/dashboard/settings/organization/actions";
-import type { BillingDetails as BillingDetailsValue } from "@/lib/settings/company-details";
+import type { BillingDetails } from "@/lib/settings/company-details";
 
 type Feedback = { type: "ok" | "err"; text: string };
 
 /**
- * CONSOLE-REDESIGN-1. Razón social + NIF, in the Plan section rather than in
- * the personal profile.
+ * CONSOLE-REDESIGN-1. Razón social + NIF.
  *
- * A NIF gets filled in when someone is about to pay, and that is exactly the
- * moment they are looking at Plan — asking for it on the identity screen asks
- * for it where nobody needs it. It replaces the old single free-text "Datos
- * fiscales" field, which never said what to write inside.
+ * It replaces the old single free-text "Datos fiscales" field, which never said
+ * what to write inside.
  *
- * Open by default, unlike the company fold: these two fields have a real
- * destination (the invoice), so hiding them behind a click would bury the one
- * part of the old Organización screen that was actually load-bearing.
+ * It sits in Cuenta, directly under «Datos de empresa» and with the same
+ * chrome — founder's call (2026-08-06), overriding the first implementation
+ * that put it in the Plan section next to the invoice. Both blocks are "things
+ * you fill in once", so they read better as twins than split across sections.
  */
-export function BillingDetailsForm({ initial }: { initial: BillingDetailsValue }) {
+export function BillingDetailsFold({ initial }: { initial: BillingDetails }) {
   const [legalName, setLegalName] = useState(initial.legalName);
   const [taxId, setTaxId] = useState(initial.taxId);
 
@@ -37,8 +36,7 @@ export function BillingDetailsForm({ initial }: { initial: BillingDetailsValue }
   };
 
   return (
-    <div className="set-billing-details">
-      <p className="set-billing-details-t">Datos de facturación</p>
+    <SettingsFold id="billing-fold" title="Datos de facturación" hint="Salen en la factura">
       <div className="set-form-grid">
         <div>
           <label className="field-label" htmlFor="billing-legal-name">
@@ -63,11 +61,13 @@ export function BillingDetailsForm({ initial }: { initial: BillingDetailsValue }
           />
         </div>
       </div>
+
       <div className="set-actions">
         <Button type="button" variant="outline" onClick={save} disabled={isSaving}>
-          {isSaving ? "Guardando…" : "Guardar datos de facturación"}
+          {isSaving ? "Guardando…" : "Guardar facturación"}
         </Button>
       </div>
+
       {feedback && (
         <div
           className={feedback.type === "err" ? "field-err" : "field-ok"}
@@ -77,6 +77,6 @@ export function BillingDetailsForm({ initial }: { initial: BillingDetailsValue }
           {feedback.text}
         </div>
       )}
-    </div>
+    </SettingsFold>
   );
 }

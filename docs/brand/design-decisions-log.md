@@ -3160,10 +3160,14 @@ Decisiones finales:
    pastilla de rol «Administrador/Miembro»: sin equipos, toda cuenta es admin de
    sí misma. La foto se descartó explícitamente — el avatar se queda en
    iniciales (fundador, 2026-08-06).
-7. **Organización no tiene pantalla: se reparte.** Nombre, sitio web y sector
-   van a un plegable cerrado dentro de Cuenta; los fiscales suben a Plan, porque
-   existen para la factura. El botón de logo desaparece: un botón deshabilitado
-   que promete «Próximamente» sigue siendo un control que no hace nada.
+7. **Organización no tiene pantalla: dos acordeones gemelos en Cuenta.**
+   «Datos de empresa» (nombre, sitio web, sector) y, justo debajo y con la misma
+   forma, «Datos de facturación» (razón social, NIF). La primera implementación
+   mandó los fiscales a la sección Plan, junto a la factura, con el argumento de
+   que un NIF se rellena cuando vas a pagar; **el fundador lo corrigió el
+   2026-08-06** — los dos bloques son «datos que rellenas una vez» y se leen
+   mejor emparejados. El botón de logo desaparece: un botón deshabilitado que
+   promete «Próximamente» sigue siendo un control que no hace nada.
 8. **Las cuatro filas «Próximamente» de Notificaciones** pasan a una línea de
    texto al pie. Seis filas con cuatro apagadas se leían como hoja de ruta.
 9. **Repintado a marca v3 con `.set-scope`**, que comparte bloque de tokens con
@@ -3172,6 +3176,17 @@ Decisiones finales:
    migrar. Ajustes era la última zona de consola pendiente.
 10. **Regla de forma nueva**: redondo es una persona, squircle es un dominio.
     Ver `docs/brand/brand-guidelines.md` §2b.
+
+**Tres correcciones tras la primera revisión del fundador (2026-08-06):** aire
+en la caja de seguridad, que iba ahogada con una fila de una línea dentro del
+padding por defecto; los datos de facturación a acordeón gemelo en Cuenta; y el
+bloque de pago, que le decía «todavía no tienes ningún plan de pago activo»
+**siendo una cuenta Agencia**. Ese último era un error de fondo, no de copy:
+`hasStripeCustomer` significa «ha tenido alguna vez ficha de cliente en Stripe»,
+y el texto lo confundía con «no tiene plan de pago». Agencia se vende fuera de
+Stripe (no tiene precio self-serve, PRICING-TRUTH-1), así que la cuenta que más
+paga era la que leía que no pagaba. Ahora hay cuatro estados y cada uno dice lo
+que es cierto de él.
 
 **Dos hallazgos arreglados de paso, ambos en facturación:**
 

@@ -133,6 +133,11 @@ a{color:inherit;text-decoration:none}
 .switch{width:36px;height:20px;border-radius:999px;background:var(--brand-blue);position:relative;flex:0 0 auto;border:0}
 .switch::after{content:"";position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;background:#fff}
 
+.set-folds{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.set-folds .set-fold{margin-top:0}
+/* La caja de seguridad, con aire (fundador, 2026-08-06). */
+.set-security .card-b{padding:24px 20px}
+.set-security .set-row{padding:2px 0}
 .set-quiet{font-size:12px;color:var(--brand-ink-4);line-height:1.5;margin-top:14px;padding-top:13px;border-top:1px solid var(--brand-line-soft)}
 
 /* borrado: último bloque, fuera del índice, tono bajo */
@@ -260,21 +265,32 @@ a{color:inherit;text-decoration:none}
                   </div>
                 </div>
 
-                <!-- Organización, plegada y cerrada. Sin el NIF: sube a Plan. -->
-                <div class="set-fold">
-                  <button type="button" class="set-fold-h" aria-expanded="false">
-                    <span class="set-caret"></span>
-                    <span class="set-fold-t">Datos de empresa</span>
-                    <span class="set-fold-d">Opcional</span>
-                  </button>
+                <!-- Dos acordeones gemelos, cerrados por defecto. Los fiscales
+                     NO están en Plan: van aquí, justo debajo de empresa
+                     (fundador, 2026-08-06). -->
+                <div class="set-folds">
+                  <div class="set-fold">
+                    <button type="button" class="set-fold-h" aria-expanded="false">
+                      <span class="set-caret"></span>
+                      <span class="set-fold-t">Datos de empresa</span>
+                      <span class="set-fold-d">Opcional</span>
+                    </button>
+                  </div>
+                  <div class="set-fold">
+                    <button type="button" class="set-fold-h" aria-expanded="false">
+                      <span class="set-caret"></span>
+                      <span class="set-fold-t">Datos de facturación</span>
+                      <span class="set-fold-d">Salen en la factura</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div class="set-actions"><button type="button" class="btn">Guardar</button></div>
               </div>
             </div>
 
-            <div class="card">
-              <div class="card-b tight">
+            <div class="card set-security">
+              <div class="card-b">
                 <div class="set-row">
                   <div class="set-row-txt"><div class="set-row-t">Contraseña</div></div>
                   <button type="button" class="btn outline sm">Cambiar</button>

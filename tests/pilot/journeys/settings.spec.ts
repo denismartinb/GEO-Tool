@@ -23,9 +23,12 @@ import { assertFullyVisible, assertPageIsHealthy, captureInteraction, visitAsUse
 test.describe.configure({ mode: "serial" });
 
 const INDEX = ".set-idx";
-const COMPANY_FOLD = ".set-fold";
-const COMPANY_FOLD_TRIGGER = ".set-fold-h";
+// Two twin folds now live in Cuenta, so `.set-fold-h` alone is ambiguous.
+// aria-controls is the exact, behaviour-carrying handle for each.
+const COMPANY_FOLD_TRIGGER = '[aria-controls="company-fold-body"]';
 const COMPANY_FOLD_BODY = "#company-fold-body";
+const BILLING_FOLD_TRIGGER = '[aria-controls="billing-fold-body"]';
+const BILLING_FOLD_BODY = "#billing-fold-body";
 const DELETE_BLOCK = ".set-end";
 
 test("Ajustes shows the real account, not an empty form", async ({ page }, testInfo) => {
@@ -69,27 +72,36 @@ test("the three sections are all present and in order", async ({ page }, testInf
   ]);
 });
 
-test("the company fold opens and its content is not clipped", async ({ page }, testInfo) => {
-  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-company-fold-closed", {
-    describedAs: "el plegable de datos de empresa",
-    anyOf: [{ selector: COMPANY_FOLD }]
+test("both optional folds open, and their content is not clipped", async ({ page }, testInfo) => {
+  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-folds-closed", {
+    describedAs: "los dos plegables opcionales de Cuenta",
+    anyOf: [{ selector: COMPANY_FOLD_TRIGGER }]
   });
 
-  const trigger = page.locator(COMPANY_FOLD_TRIGGER);
-  await expect(trigger, "el plegable de empresa nace abierto").toHaveAttribute("aria-expanded", "false");
+  // Both are twins in Cuenta, one under the other (founder, 2026-08-06). Razón
+  // social lives in the second one, NOT in the Plan section.
+  const company = page.locator(COMPANY_FOLD_TRIGGER);
+  const billing = page.locator(BILLING_FOLD_TRIGGER);
+
+  await expect(company, "el plegable de empresa nace abierto").toHaveAttribute("aria-expanded", "false");
+  await expect(billing, "el plegable de facturación nace abierto").toHaveAttribute("aria-expanded", "false");
   await expect(page.locator(COMPANY_FOLD_BODY), "el cuerpo del plegable se ve cerrado").toHaveCount(0);
+  await expect(page.locator(BILLING_FOLD_BODY), "el cuerpo del plegable se ve cerrado").toHaveCount(0);
 
-  await trigger.click();
-
-  await expect(trigger, "el plegable no se abrió").toHaveAttribute("aria-expanded", "true");
+  await company.click();
+  await expect(company, "el plegable de empresa no se abrió").toHaveAttribute("aria-expanded", "true");
   await expect(page.locator(COMPANY_FOLD_BODY)).toBeVisible();
-
   // A reveal that renders half-cut behind its own container is green to an
   // assertion and broken to a person (founder, 2026-08-02).
   await assertFullyVisible(page, "#company-name", "el campo Nombre del plegable de empresa");
-  // fullContent: the fold reveals three fields plus a save button, taller than
-  // the viewport frame at 375px — the very thing being verified would be cut.
-  await captureInteraction(page, testInfo, "settings-company-fold-open", { fullContent: true });
+
+  await billing.click();
+  await expect(billing, "el plegable de facturación no se abrió").toHaveAttribute("aria-expanded", "true");
+  await assertFullyVisible(page, "#billing-legal-name", "el campo Razón social");
+
+  // fullContent: both folds open are taller than the 375px viewport frame, so
+  // the very thing being verified would be cut off.
+  await captureInteraction(page, testInfo, "settings-folds-open", { fullContent: true });
 });
 
 test("«Eliminar cuenta» closes the page and is never in the index", async ({ page }, testInfo) => {
