@@ -55,10 +55,17 @@ test("Ajustes shows the real account, not an empty form", async ({ page }, testI
 });
 
 test("the three sections are all present and in order", async ({ page }, testInfo) => {
-  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-sections", {
+  const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings-sections", {
     describedAs: "los títulos de sección Cuenta y Avisos",
     anyOf: [{ selector: "#cuenta" }]
   });
+
+  // Every test asserts health, not just the first. Without it a rejected
+  // session reports "falta la sección Cuenta" — the login page genuinely has
+  // no such section — and buries the real cause under a misleading one. That
+  // noise showed up the moment these stopped being serial: they no longer skip
+  // after the first failure, so each has to name its own blocker.
+  assertPageIsHealthy(findings);
 
   await expect(page.locator("#cuenta"), "falta la sección Cuenta").toBeVisible();
   await expect(page.locator("#avisos"), "falta la sección Avisos").toBeVisible();
@@ -78,10 +85,17 @@ test("the three sections are all present and in order", async ({ page }, testInf
 });
 
 test("both optional folds open, and their content is not clipped", async ({ page }, testInfo) => {
-  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-folds-closed", {
+  const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings-folds-closed", {
     describedAs: "los dos plegables opcionales de Cuenta",
     anyOf: [{ selector: COMPANY_FOLD_TRIGGER }]
   });
+
+  // Every test asserts health, not just the first. Without it a rejected
+  // session reports "falta la sección Cuenta" — the login page genuinely has
+  // no such section — and buries the real cause under a misleading one. That
+  // noise showed up the moment these stopped being serial: they no longer skip
+  // after the first failure, so each has to name its own blocker.
+  assertPageIsHealthy(findings);
 
   // Both are twins in Cuenta, one under the other (founder, 2026-08-06). Razón
   // social lives in the second one, NOT in the Plan section.
@@ -118,10 +132,17 @@ test("both optional folds open, and their content is not clipped", async ({ page
 });
 
 test("«Eliminar cuenta» closes the page and is never in the index", async ({ page }, testInfo) => {
-  await visitAsUser(page, testInfo, "/dashboard/settings", "settings-delete-block", {
+  const findings = await visitAsUser(page, testInfo, "/dashboard/settings", "settings-delete-block", {
     describedAs: "el bloque de eliminar cuenta al pie de la página",
     anyOf: [{ selector: DELETE_BLOCK }]
   });
+
+  // Every test asserts health, not just the first. Without it a rejected
+  // session reports "falta la sección Cuenta" — the login page genuinely has
+  // no such section — and buries the real cause under a misleading one. That
+  // noise showed up the moment these stopped being serial: they no longer skip
+  // after the first failure, so each has to name its own blocker.
+  assertPageIsHealthy(findings);
 
   await expect(page.locator(DELETE_BLOCK), "falta el bloque de eliminar cuenta").toBeVisible();
   await expect(
@@ -153,6 +174,8 @@ test("mobile is one scroll: no index, no chips, nothing sticky", async ({ page }
     describedAs: "la página de ajustes con sus secciones",
     anyOf: [{ selector: "#cuenta" }]
   });
+
+  assertPageIsHealthy(findings);
 
   const width = page.viewportSize()?.width ?? 0;
 
