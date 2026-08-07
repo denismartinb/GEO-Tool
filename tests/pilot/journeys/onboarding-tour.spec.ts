@@ -8,7 +8,7 @@ import {
 } from "../support/journey";
 
 /**
- * ONBOARDING-TOUR-1 — el tour «Aprende cómo funciona» (log §33).
+ * ONBOARDING-TOUR-1 — el tour «Aprende cómo funciona» (log §40).
  *
  * Por qué existe esta pasada. `visitAsUser` cierra el popup nada más llegar,
  * porque es un modal que tapa la pantalla y bloquea todo lo que hay detrás
@@ -62,7 +62,7 @@ test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ 
     .toBeGreaterThan(0);
   await captureInteraction(page, testInfo, "onboarding-tour-paso-1");
 
-  // Sólo el primer paso se reproduce solo (log §33). Comprobado midiendo, no
+  // Sólo el primer paso se reproduce solo (log §40). Comprobado midiendo, no
   // asumido: pasados varios segundos el paso activo tiene que seguir siendo el
   // primero. Si alguien devuelve la reproducción encadenada, esto lo caza.
   await page.waitForTimeout(6_000);
@@ -145,7 +145,7 @@ test("el tour del hero arranca al verse entero y para en el paso 1", async ({ pa
   // capturar la página completa, con lo que el lienzo pasa a verse entero y el
   // tour arranca durante la propia captura. La comprobación pasaría siempre sin
   // demostrar nada, que es peor que no tenerla. Ese arranque está verificado con
-  // Playwright contra el build de producción en local (log §33); aquí se
+  // Playwright contra el build de producción en local (log §40); aquí se
   // verifica lo que esta pasada sí puede ver.
   const typed = page.locator("[data-pt=typed]").first();
   await page.evaluate(() => {

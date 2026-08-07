@@ -1,7 +1,7 @@
 # ONBOARDING-TOUR-1 — «Aprende cómo funciona»
 
 **Estado: implementado.** Fase A cerrada el 2026-08-06 — ver
-`docs/brand/design-decisions-log.md` §33 y `.claude/rules/onboarding.md`.
+`docs/brand/design-decisions-log.md` §40 y `.claude/rules/onboarding.md`.
 
 `prototype.html` se conserva como la referencia contra la que el `ux-pilot`
 compara: es el diseño aprobado. La implementación vive en
@@ -68,7 +68,7 @@ entero y **se detienen al acabarlo**. En el último paso, Siguiente se convierte
 en la llamada a la acción («Ir a mi panel» o «Prueba gratis» según la carcasa).
 Los ocho puntos del pie congelan el tour en el paso que se pinche.
 
-**Sólo el primer paso se reproduce solo** (2026-08-07, ver log §33). Los otros
+**Sólo el primer paso se reproduce solo** (2026-08-07, ver log §40). Los otros
 siete los pide el usuario con Siguiente. Este prototipo todavía los encadena;
 la implementación no, y manda la implementación: encadenados no da tiempo a
 leer el subtítulo antes de que cambie la pantalla.
@@ -158,7 +158,7 @@ Sin JS, correcto a cualquier ancho y en cualquier idioma.
 
 Y tras probarlo en el preview (2026-08-07), el reloj dejó de correr solo más
 allá del primer paso, y en la landing dejó de arrancar antes de verse entero.
-Las dos cosas están arriba y detalladas en el log §33.
+Las dos cosas están arriba y detalladas en el log §40.
 
 ## Pendiente
 

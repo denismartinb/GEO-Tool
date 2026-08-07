@@ -52,7 +52,12 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   el artículo se queda en una rama que nadie mira.
 - **El mensaje del último commit es el PR**: asunto → título, cuerpo → cuerpo.
   Si el PR lo abre el workflow, ese mensaje es lo único que el agente controla,
-  y ahí va —arriba del todo— que falta la portada.
+  así que ahí va lo que el fundador necesita para decidir: qué se publica, la
+  URL de preview y qué queda pendiente. **Corto** — se lee en el móvil.
+- **La portada la dibuja el agente**, en SVG, dentro del repo
+  (`docs/agentic-weekly-post.md` §4). Un artículo semanal ya no deja tests
+  rojos por falta de portada, y `COVER_DEBT` sigue congelada: no se añade nada
+  a esa lista nunca.
 
 ## Al cerrar una pieza
 

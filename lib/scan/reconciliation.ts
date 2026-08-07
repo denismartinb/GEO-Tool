@@ -14,6 +14,7 @@ import {
   SCAN_TIMEOUT_RETRY_EXHAUSTED_ERROR_SUMMARY,
   SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS
 } from "@/lib/scan/constants";
+import { scheduleScanContinuation } from "@/lib/scan/continuation";
 import { checkAndSendScanHealthAlert } from "@/lib/scan/scan-health-alert";
 import { createServiceClient } from "@/lib/supabase/service";
 
@@ -123,9 +124,11 @@ async function attemptAutoRetry({
   service: ReturnType<typeof createServiceClient>;
   reason: string;
 }): Promise<void> {
+  let newRunId: string;
+
   try {
     const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
-    const newRunId = await createPendingScanRunCore({
+    newRunId = await createPendingScanRunCore({
       projectId,
       readClient: service,
       service,
@@ -143,6 +146,29 @@ async function attemptAutoRetry({
       projectId,
       reason,
       message: retryError instanceof Error ? retryError.message : String(retryError)
+    });
+    return;
+  }
+
+  // Start it (SCAN-DRIVE-1, docs/adr/0037). Creating the run used to be the
+  // whole auto-retry: the row was left `pending` for "whatever drives scans"
+  // to pick up, and the only thing that did was the foreground driver in a
+  // browser sitting on one of the project's screens. With nobody looking, the
+  // replacement run just aged out into `scan_pending_timeout` — a retry that
+  // fails the same way as the failure it was retrying is not a retry.
+  //
+  // Guarded separately from the creation above, and not folded into its
+  // try/catch, so a hand-off that cannot be scheduled is never reported as
+  // "auto-retry failed": the run exists either way, and a driver arriving on
+  // a page render still picks it up.
+  try {
+    await scheduleScanContinuation({ projectId, runId: newRunId });
+  } catch (dispatchError) {
+    console.error(`${RECONCILE_LOG_PREFIX} auto-retry created a run but could not start it`, {
+      projectId,
+      reason,
+      newRunId,
+      message: dispatchError instanceof Error ? dispatchError.message : String(dispatchError)
     });
   }
 }

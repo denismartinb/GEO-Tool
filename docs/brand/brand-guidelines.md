@@ -61,6 +61,17 @@ render en pantalla.
 
 `app/icon.svg` es el favicon que Next.js sirve automáticamente y usa el tile.
 
+**Rutas convencionales en la raíz (FAVICON-QUALITY-1, 2026-08-06).** Además de
+lo anterior, `public/favicon.ico` (ICO con 16 y 32 px embebidos) y
+`public/apple-touch-icon.png` (copia de `brand/apple-touch-icon.png`) se sirven
+en `/favicon.ico` y `/apple-touch-icon.png`. **No son redundantes con la
+metadata `icons`**: esa sólo emite `<link>` en el HTML, y los recolectores de
+favicons de terceros —Google S2 entre ellos, que es el que alimenta los iconos
+de la consola— prueban primero las rutas convencionales. Sin ellas, genscore.es
+salía en nuestro propio producto con el globo genérico mientras mahou.es y
+vodafone.es salían bien. Si regeneras los PNG de marca, regenera también estos
+dos. Ver `docs/brand/design-decisions-log.md` §39.
+
 ### Reglas de uso
 
 - En cabeceras dentro de la app, usar `components/ui/brand-logo.tsx`
@@ -96,6 +107,31 @@ BRAND-5b hace el repintado real de la UI sobre estos valores.
 | Superficie oscura | `--brand-surface-dark` | `#0F1C33` | Tarjetas en oscuro |
 | Texto secundario | `--brand-muted` | `#5B6B82` | Body/labels secundarios |
 | Positivo / negativo | `--brand-pos` / `--brand-neg` | `#15915A` / `#D23B48` | Semántica de datos, sin cambio de valor respecto a v2 |
+
+---
+
+## 2b. Forma de los iconos de identidad (CONSOLE-REDESIGN-1, 2026-08-06)
+
+**Redondo es una persona. Squircle es un dominio.**
+
+La app ya usaba las dos formas —`.avatar`/`.set-avatar-lg` redondos para el
+usuario, `.proj-favicon`/`.dm2-fav` de esquina redondeada para los dominios—
+pero en ningún sitio estaba escrito que fuese a propósito, así que la siguiente
+pantalla lo habría roto sin enterarse. Ajustes puso las dos formas a pocos
+píxeles una de otra, y ahí se fijó la regla:
+
+- **Persona → círculo** (`border-radius: 999px`), iniciales sobre azul suave,
+  **tinta plana sin degradado** (hallazgo 4 de BRAND-4). Nunca lleva imagen: la
+  foto de perfil se descartó el 2026-08-06 — se veía en un solo sitio y no
+  resolvía nada en una herramienta de analítica B2B.
+- **Dominio o marca → squircle**, radio 7–16 px según tamaño, con el favicon
+  real dentro (`faviconUrl()`) y una ficha con inicial sobre color determinista
+  como reserva.
+
+Evita la confusión más probable de la pantalla de cuenta: que alguien mire su
+avatar y crea que está viendo su marca. Un icono de dominio editable por el
+usuario sigue **sin implementar** — necesitaría Supabase Storage y una columna
+nueva, así que sería fase propia.
 
 ---
 

@@ -7,7 +7,7 @@ import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
 import { useTour } from "@/components/tour-provider";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 
 type WorkspaceProject = {
   id: string;
@@ -119,12 +119,15 @@ export function Sidebar({
           title="Cambiar de dominio"
           onClick={handleNavSelect}
         >
-          {faviconUrl(project.domain) ? (
-            // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-            <img src={faviconUrl(project.domain)!} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
-          ) : (
-            <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
-          )}
+          {/* key por dominio: sin él el conmutador se queda con el icono del
+              proyecto anterior mientras carga el nuevo. */}
+          <FaviconImg
+            key={project.domain}
+            domain={project.domain}
+            cssSize={26}
+            className="proj-favicon"
+            fallback={<div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>}
+          />
           <div className="proj-meta">
             <div className="proj-name">{project.name}</div>
             <div className="proj-dom">{project.domain}</div>
@@ -232,7 +235,7 @@ export function Sidebar({
           <Icon name="info" size={15} />
           <span className="hide-collapsed">¿Qué es el GEO?</span>
         </button>
-        <Link href="/dashboard/settings/profile" className="user-chip" onClick={handleNavSelect}>
+        <Link href="/dashboard/settings" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>
           <div className="hide-collapsed" style={{ minWidth: 0 }}>
             <div

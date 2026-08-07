@@ -1,13 +1,15 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { Gauge } from "@/components/ui/gauge";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { computeAccountScanState } from "@/lib/domains/account-scan-state";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { requireUser } from "@/lib/auth";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { ACTIVE_PROJECT_COOKIE, resolveSelectedProject } from "@/lib/active-project-cookie";
 
 /**
  * DOMAINS-REDESIGN-1 — «Dominios».
@@ -77,24 +79,27 @@ function DomainFavicon({
   size: number;
   radius: number;
 }) {
-  const url = faviconUrl(domain);
+  // El tamaño se pasa al helper: estas fichas se pintan a 38 y 56 px, que en
+  // una pantalla Retina son 76 y 112 px reales — muy por encima del sz=64 fijo
+  // que se pedía antes (FAVICON-QUALITY-1).
   const style = { width: size, height: size, borderRadius: radius } as const;
 
-  if (url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- servicio externo de favicons, no un asset estático
-      <img src={url} alt="" className="dm2-fav" style={style} width={size} height={size} loading="lazy" />
-    );
-  }
-
   return (
-    <span
-      className="dm2-fav dm2-fav-letter"
-      style={{ ...style, background: fallbackColor(domain || name), fontSize: Math.round(size * 0.42) }}
-      aria-hidden="true"
-    >
-      {name.slice(0, 1).toUpperCase()}
-    </span>
+    <FaviconImg
+      domain={domain}
+      cssSize={size}
+      className="dm2-fav"
+      style={style}
+      fallback={
+        <span
+          className="dm2-fav dm2-fav-letter"
+          style={{ ...style, background: fallbackColor(domain || name), fontSize: Math.round(size * 0.42) }}
+          aria-hidden="true"
+        >
+          {name.slice(0, 1).toUpperCase()}
+        </span>
+      }
+    />
   );
 }
 
@@ -124,12 +129,19 @@ export default async function DomainsPage({
   // 2026-08-05: "pinchar en un dominio de abajo debe seleccionarlo... y
   // retornar a la misma página con ese dominio en la card principal") — las
   // tarjetas de la rejilla ya no navegan al proyecto, enlazan aquí mismo con
-  // ese parámetro. Sin él, o si no casa con ningún dominio de la cuenta
-  // (viejo, borrado, ajeno — `projects` ya viene acotado por RLS, así que un
-  // id ajeno simplemente no aparece), se cae al más reciente: mismo criterio
-  // de reserva que la barra lateral fuera de las rutas de proyecto.
-  const requested = feedback.active ? projects.find((p) => p.id === feedback.active) : undefined;
-  const active = requested ?? projects[0];
+  // ese parámetro. Sin él se cae al dominio que el cookie `geo_active_project`
+  // recuerda (DOMAINS-ACTIVE-COOKIE-1, 2026-08-07): la misma señal que ya usa
+  // `/debug` y que `middleware.ts` escribe en cada visita a
+  // `/dashboard/projects/[projectId]/...`, así que entrar en un proyecto desde
+  // aquí y volver — por la barra lateral, sin `?active=` — sigue mostrando ese
+  // mismo dominio en vez de reiniciar a "el más reciente". Un id que no case
+  // con ningún dominio de la cuenta (viejo, borrado, ajeno — `projects` ya
+  // viene acotado por RLS) simplemente no aparece y cae al siguiente criterio;
+  // sin selección ni cookie útiles, el último recurso sigue siendo el más
+  // reciente.
+  const cookieStore = await cookies();
+  const rememberedProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;
+  const active = resolveSelectedProject(projects, feedback.active ?? null, rememberedProjectId);
   const rest = active ? projects.filter((p) => p.id !== active.id) : [];
 
   if (!active) {
@@ -232,7 +244,13 @@ export default async function DomainsPage({
         {/* ---- Portada del dominio seleccionado ---- */}
         <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero">
           <div className="dm2-hero-top">
-            <DomainFavicon name={active.name} domain={active.domain} size={56} radius={16} />
+            {/* `key` por dominio, no por estética: sin él React reutiliza el
+                mismo <img> al cambiar de dominio y sólo le cambia el src, así
+                que el navegador sigue pintando el icono del dominio anterior
+                hasta que descarga el nuevo — la portada de una farmacia con el
+                logo de Mozilla. Enseñar un hueco un instante es peor de ver y
+                mejor de fiar que enseñar la marca equivocada. */}
+            <DomainFavicon key={active.domain} name={active.name} domain={active.domain} size={56} radius={16} />
             <div className="dm2-id">
               <div className="dm2-name">{active.name}</div>
               <div className="dm2-dom">

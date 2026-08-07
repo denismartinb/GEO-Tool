@@ -27,7 +27,7 @@ obedecerá igual.
   usuario.** `AUTOPLAY_THROUGH_STEP_INDEX` es 0 y no es un ajuste cosmético:
   encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a leer
   el subtítulo, y el tour pasa a ser algo que se mira pasar en vez de algo que
-  se lee (fundador, 2026-08-07; log §33). Ampliarlo exige volver a medir si el
+  se lee (fundador, 2026-08-07; log §40). Ampliarlo exige volver a medir si el
   subtítulo del último paso automático da tiempo a leerse.
 - **En la landing no arranca hasta que el lienzo se ve ENTERO.** Con el umbral
   de asomo (`0.25`) quien bajaba hasta el hero se lo encontraba con el paso 1 ya
@@ -37,7 +37,7 @@ obedecerá igual.
   nunca y el tour no arranca jamás.
 - **La pista del botón «Siguiente» va en bucle hasta el clic.** Ni el ratón por
   encima ni el foco la apagan: existe para conseguir ese clic, así que mientras
-  no llegue no ha terminado su trabajo (fundador, 2026-08-07; log §33). Es la
+  no llegue no ha terminado su trabajo (fundador, 2026-08-07; log §40). Es la
   única animación del tour que no se detiene sola, y la excepción es
   deliberada.
 - **La pista arranca en el mismo instante que el paso 1, no cuando éste se
@@ -75,14 +75,14 @@ obedecerá igual.
   popup, escribía la marca de «visto» y la redirección se lo llevaba por
   delante — y como el primer login aterriza justo en `/dashboard`, el efecto
   era que **el tour no salía nunca** en el único momento para el que se hizo
-  (log §33). La pasada del piloto entra por `/dashboard` a propósito: entrar
+  (log §40). La pasada del piloto entra por `/dashboard` a propósito: entrar
   por la pantalla final ocultaría este fallo.
 - **La marca de «visto» se escribe AL MOSTRARLO, nunca al cerrarlo.** Escribirla
   al cerrar convierte «salta en el primer acceso» en «salta en cada carga hasta
   que lo cierres»: quien lo mira y navega o recarga se lo vuelve a encontrar
   encima, indefinidamente. Lo encontró el `ux-pilot` el 2026-08-07, que nunca
   cierra nada, con el popup tapando Páginas citadas y la campana en las tres
-  anchuras (log §33).
+  anchuras (log §40).
 - **El popup es un modal y tapa la consola entera, así que el piloto tiene que
   poder sortearlo.** `visitAsUser` lo cierra con su propia X y lo anota en
   `dismissedWelcomeTour`; `auth.setup` **filtra la marca de «visto» del
@@ -93,4 +93,4 @@ obedecerá igual.
   marca y el efecto la repone justo a tiempo de que la capture (2026-08-07, el
   popup no salió en ninguna anchura). Si tocas cualquiera de las dos cosas,
   `tests/pilot/journeys/onboarding-tour.spec.ts` es lo que impide que el tour
-  vuelva a quedarse sin mirar (log §33).
+  vuelva a quedarse sin mirar (log §40).

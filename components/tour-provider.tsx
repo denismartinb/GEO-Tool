@@ -49,7 +49,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // que lo cierres»: quien miraba el popup y pinchaba en el menú, o recargaba,
   // se lo volvía a encontrar encima, indefinidamente. Lo encontró el `ux-pilot`
   // el 2026-08-07 — nunca cierra nada, así que se topó con el popup tapando
-  // Páginas citadas y la campana en las tres anchuras (ver log §33).
+  // Páginas citadas y la campana en las tres anchuras (ver log §40).
   //
   // El coste asumido: si alguien recarga en el primer segundo y se lo pierde,
   // ya no vuelve solo. Para eso está «¿Qué es el GEO?» en el menú lateral, que
