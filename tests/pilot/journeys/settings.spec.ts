@@ -20,7 +20,12 @@ import { assertFullyVisible, assertPageIsHealthy, captureInteraction, visitAsUse
  * quiet and last.
  */
 
-test.describe.configure({ mode: "serial" });
+// Deliberately NOT serial, unlike the notifications journey: every test here
+// does its own `visitAsUser` and shares no state, so a failure in one has no
+// bearing on the next. Serial mode cost real information on the 0fe3845 run —
+// one desktop failure skipped the two tests after it, and their verdict was
+// exactly what would have said whether the problem was broad or local.
+// The runner is still sequential (workers: 1 in playwright.config.ts).
 
 const INDEX = ".set-idx";
 // Two twin folds now live in Cuenta, so `.set-fold-h` alone is ambiguous.
@@ -97,6 +102,14 @@ test("both optional folds open, and their content is not clipped", async ({ page
 
   await billing.click();
   await expect(billing, "el plegable de facturación no se abrió").toHaveAttribute("aria-expanded", "true");
+
+  // Scroll it into view BEFORE asserting. `.dash-content` is the page's scroll
+  // container (`overflow-y: auto`), and assertFullyVisible flags anything whose
+  // rect escapes an ancestor that is not `overflow: visible` — for a scroll
+  // container that fires on anything merely below the fold, which is not a
+  // defect. Scrolled into view, the assertion measures what it exists to
+  // measure: whether the field is cut off by the fold's own `overflow: hidden`.
+  await page.locator("#billing-legal-name").scrollIntoViewIfNeeded();
   await assertFullyVisible(page, "#billing-legal-name", "el campo Razón social");
 
   // fullContent: both folds open are taller than the 375px viewport frame, so
@@ -149,11 +162,20 @@ test("mobile is one scroll: no index, no chips, nothing sticky", async ({ page }
     // The point is not just that the index is gone — it is that NOTHING of the
     // page's own navigation stays pinned. `.topbar` is the app shell and is
     // allowed; anything else sticky inside the page is a finding.
+    //
+    // Only RENDERED elements count. `.set-idx` keeps `position: sticky` in its
+    // computed style while `display: none` hides it below 900px, and an element
+    // the user cannot see is not pinned to anything — counting it reported a
+    // defect that does not exist. `getClientRects()` is empty exactly when the
+    // element generates no boxes, which is the property that matters here
+    // (`offsetParent` would be wrong: it is null for `position: fixed` too, so
+    // it would silently excuse the very thing this guards against).
     const stickyInsidePage = await page.evaluate(() =>
       Array.from(document.querySelectorAll(".page *"))
         .filter((node) => {
           const position = window.getComputedStyle(node).position;
-          return position === "sticky" || position === "fixed";
+          if (position !== "sticky" && position !== "fixed") return false;
+          return node.getClientRects().length > 0;
         })
         .map((node) => node.className?.toString?.() ?? "")
     );
