@@ -256,6 +256,12 @@ export function PlanBillingSection({
           </CardContent>
         </Card>
 
+        {/* Not shown to an account already on Agencia — it was pitching the
+            plan they are already paying for ("El plan Agencia es para ti"),
+            the same defect the founder caught in the payment block below
+            (2026-08-06): a block that does not check the current plan before
+            telling the customer something about it. */}
+        {planId !== agencyPlanId && (
         <Card className="bg-[var(--surface-2)]">
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
@@ -279,6 +285,7 @@ export function PlanBillingSection({
             </Button>
           </CardContent>
         </Card>
+        )}
       </section>
 
       {modal && (

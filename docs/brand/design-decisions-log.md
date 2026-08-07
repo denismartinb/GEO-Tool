@@ -3188,6 +3188,12 @@ Stripe (no tiene precio self-serve, PRICING-TRUTH-1), así que la cuenta que má
 paga era la que leía que no pagaba. Ahora hay cuatro estados y cada uno dice lo
 que es cierto de él.
 
+Al mirar las capturas del piloto en verde apareció **una tercera instancia del
+mismo defecto**: la tarjeta «¿Gestionas varios clientes? El plan Agencia es para
+ti» se le mostraba a una cuenta que ya está en Agencia. El patrón que deja esta
+fase escrito: **un bloque que le dice algo al cliente sobre un plan tiene que
+mirar antes en qué plan está**. Aparecía tres veces en la misma pantalla.
+
 **Dos hallazgos arreglados de paso, ambos en facturación:**
 
 - `plan-billing-section.tsx` pintaba sus dos avisos con cuatro hexes escritos a
