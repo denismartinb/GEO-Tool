@@ -1306,7 +1306,7 @@ export default async function ProjectDetailPage({
                           Absent, not dashed, when the scan has no positions —
                           every row would carry the same "—". */}
                       {row.rank !== null ? (
-                        <span className="ov2-cmp-sc">{row.rank}<small>º</small></span>
+                        <span className="ov2-cmp-sc">{row.rank}º</span>
                       ) : null}
                     </div>
                   );

@@ -1506,7 +1506,11 @@ a {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
   font-size: 13px; font-weight: 800; flex: 0 0 auto; width: 52px; text-align: right; color: var(--ink);
 }
-.ov2-cmp-sc small { font-size: 9.5px; color: var(--ink-4); font-weight: 700; }
+/* The ordinal's "º" is NOT a <small>: at 9.5px and --ink-4 it floated off the
+   digit and read as a degree sign or a stray dot ("1°"), which is exactly the
+   "a bullet, not a standing" failure §15 spent two rounds on. It carries the
+   digit's own size and weight, as on Competidores. The old `.ov2-cmp-sc small`
+   rule existed for the raw mean's superscript and left with it. */
 
 /* 6 · Oportunidades (light card, matches prototype) */
 .ov2-opps { overflow: hidden; }
