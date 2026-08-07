@@ -3732,6 +3732,52 @@ promesa y por tamaño), pero el camino real sólo se ejercita en el preview. Si
 algo va a fallar aquí, fallará ahí y no en los tests.
 ---
 
+## 37. La rama de evidencia del piloto deja de fingir ser un deploy (PILOT-EVIDENCE-IGNORE-1, 2026-08-07)
+
+**El problema, reportado por el fundador:** correos de Vercel de *"Failed
+preview deployment"* llegando de todas las sesiones a la vez, sin relación
+aparente con ningún cambio de producto.
+
+**Causa.** Cada pasada de `ux-pilot.yml` publica sus capturas force-pusheando
+una rama `pilot-evidence/pr-<N>` (paso "Publish screenshots to an evidence
+branch"). Esa rama contiene sólo `screens/`, `output/`, los `.jsonl` y un
+`README.md` — nunca `package.json` ni `vercel.json`. Vercel construye *toda*
+rama que se empuja al repo por defecto; sin manifiesto de Next.js que
+construir, cada pasada del piloto de cualquier PR generaba un deploy
+condenado a fallar, y un correo por pasada. Con 76 ramas `pilot-evidence/*`
+vivas en el momento del reporte — una por cada PR que hubiera corrido el
+piloto alguna vez — y varias sesiones trabajando en paralelo, el goteo se
+leía como ruido de fondo permanente.
+
+**Por qué importa más que el spam en sí.** Un canal de alerta que falla
+constantemente por un motivo sin relación con el producto es un canal que
+deja de mirarse — el mismo patrón que dejó cuatro días de 429 de OpenAI sin
+que nadie los viera (`docs/adr/0029`, Fase B). El día que un deploy de
+verdad falle, se leerá como uno más.
+
+**Arreglo.** El paso que publica la evidencia escribe también un
+`vercel.json` estático dentro de la rama:
+
+```json
+{ "ignoreCommand": "exit 0" }
+```
+
+Contrato de Vercel: salida 0 significa "no construyas". A diferencia de
+`scripts/vercel-should-build.sh` (que decide caso por caso y falla abierto
+hacia construir), aquí no hace falta ningún script — esta rama nunca es
+otra cosa que evidencia, así que la respuesta es siempre la misma. El deploy
+pasa a `Canceled by Ignored Build Step`, que Vercel cuenta como éxito: cero
+build, cero correo, la evidencia se sigue publicando igual porque el `push`
+ocurre antes de que Vercel decida si construye.
+
+**Pendiente / roto conocido.** Las 76 ramas ya existentes no llevan el
+`vercel.json` hasta que se les haga otra pasada de piloto encima; hasta
+entonces pueden seguir generando un correo aislado si alguien reabre esos
+PRs. No se ha hecho limpieza retroactiva de esas ramas — force-pushear
+`vercel.json` a 76 ramas por separado es una operación aparte, y esta fase
+sólo cierra la fuente del problema hacia delante.
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
