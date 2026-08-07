@@ -3243,12 +3243,20 @@ que el harness tiene que saber sortear:
 - `visitAsUser` cierra el popup si está abierto, con su propia X, y lo anota en
   `dismissedWelcomeTour` en vez de silenciarlo. Un modal que tapa la pantalla
   bloquea cualquier hover o clic detrás; sortearlo es lo que hace una persona.
-- `auth.setup` **borra la marca de «visto» antes de guardar el estado**.
+- `auth.setup` **quita la marca de «visto» del estado compartido**.
   `storageState()` de Playwright persiste el `localStorage`, y el login aterriza
-  en /dashboard, donde el tour salta y se marca: sin borrarlo, ese estado
-  compartido habría llegado a todas las pasadas diciendo «este navegador ya lo
-  vio» y el popup no habría vuelto a salir jamás. Es decir, el piloto no habría
-  podido verlo nunca — la misma trampa del 2026-08-02, por otra puerta.
+  en /dashboard, donde el tour salta y se marca: sin quitarlo, ese estado habría
+  llegado a todas las pasadas diciendo «este navegador ya lo vio» y el popup no
+  habría vuelto a salir jamás. Es decir, el piloto no habría podido verlo nunca
+  — la misma trampa del 2026-08-02, por otra puerta.
+
+  El primer intento lo hizo con un `removeItem` sobre la página y **perdió la
+  carrera**: `waitForURL` resuelve al navegar, antes de que React hidrate, así
+  que el borrado se adelantó al efecto que escribe la marca y el efecto la
+  repuso justo a tiempo de que `storageState()` la capturara. El piloto lo dijo
+  en la misma tarde: el popup no salió en ninguna de las tres anchuras y la
+  consola se veía impecable detrás. Ahora se filtra del objeto ya capturado,
+  que no depende de ningún instante.
 
 **Y una pasada que sí lo mira**: `tests/pilot/journeys/onboarding-tour.spec.ts`.
 Comprueba que sale solo en el primer acceso, que trae contenido real y no un

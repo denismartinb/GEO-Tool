@@ -67,8 +67,12 @@ obedecerá igual.
   anchuras (log §33).
 - **El popup es un modal y tapa la consola entera, así que el piloto tiene que
   poder sortearlo.** `visitAsUser` lo cierra con su propia X y lo anota en
-  `dismissedWelcomeTour`; `auth.setup` borra la marca de «visto» antes de
-  guardar el `storageState`, porque si no el estado compartido diría «ya lo
-  vio» y el piloto no podría verlo nunca. Si tocas cualquiera de las dos cosas,
+  `dismissedWelcomeTour`; `auth.setup` **filtra la marca de «visto» del
+  `storageState` ya capturado**, porque si no el estado compartido diría «ya lo
+  vio» y el piloto no podría verlo nunca. Que sea un filtro sobre el objeto y no
+  un `removeItem` sobre la página no es estilo: `waitForURL` resuelve antes de
+  que React hidrate, así que el borrado se adelanta al efecto que escribe la
+  marca y el efecto la repone justo a tiempo de que la capture (2026-08-07, el
+  popup no salió en ninguna anchura). Si tocas cualquiera de las dos cosas,
   `tests/pilot/journeys/onboarding-tour.spec.ts` es lo que impide que el tour
   vuelva a quedarse sin mirar (log §33).

@@ -1,5 +1,6 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type Page, test as setup } from "@playwright/test";
+import { TOUR_SEEN_STORAGE_KEY } from "../../../lib/onboarding/tour-steps";
 import { readPilotEnv, redact } from "./env";
 
 const AUTH_STATE_PATH = ".pilot/auth.json";
@@ -83,14 +84,24 @@ setup("authenticate as the pilot user", async ({ page }) => {
 
   // `storageState()` persiste también el `localStorage`, y el login aterriza en
   // /dashboard, donde el tour de bienvenida salta y se marca como visto. Sin
-  // borrar esa marca aquí, el estado compartido llegaría a TODAS las pasadas
+  // quitar esa marca, el estado compartido llegaría a TODAS las pasadas
   // diciendo «este navegador ya lo vio» y el popup no volvería a salir jamás
   // — es decir, el piloto no podría verlo nunca, que es justo la trampa que el
   // CLAUDE.md documenta del 2026-08-02: dar por verificado lo que no se miró.
-  // Se limpia para que cada pasada arranque como un navegador estrenado.
-  await page
-    .evaluate(() => window.localStorage.removeItem("genscore.onboarding-tour.seen.v1"))
-    .catch(() => undefined);
-
-  await page.context().storageState({ path: AUTH_STATE_PATH });
+  //
+  // Se filtra del estado ya capturado, NO con un `removeItem` sobre la página.
+  // Borrarlo en la página es una carrera que se pierde: `waitForURL` resuelve
+  // al navegar, antes de que React hidrate, así que el borrado se adelanta al
+  // efecto que escribe la marca y el efecto la vuelve a poner justo a tiempo de
+  // que `storageState()` la capture. Pasó exactamente eso (2026-08-07): el
+  // popup no salió en ninguna de las tres anchuras y la consola se veía
+  // impecable detrás. Filtrar el objeto no depende de ningún instante.
+  const state = await page.context().storageState();
+  for (const origin of state.origins ?? []) {
+    origin.localStorage = (origin.localStorage ?? []).filter(
+      (entry) => entry.name !== TOUR_SEEN_STORAGE_KEY
+    );
+  }
+  mkdirSync(".pilot", { recursive: true });
+  writeFileSync(AUTH_STATE_PATH, JSON.stringify(state, null, 2));
 });
