@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { WELCOME_TOUR_SCRIM, captureInteraction, dismissWelcomeTour } from "../support/journey";
+import {
+  WELCOME_TOUR_SCRIM,
+  assertPageIsHealthy,
+  captureInteraction,
+  dismissWelcomeTour,
+  visitAsUser
+} from "../support/journey";
 
 /**
  * ONBOARDING-TOUR-1 — el tour «Aprende cómo funciona» (log §33).
@@ -113,4 +119,62 @@ test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ 
   await captureInteraction(page, testInfo, "onboarding-tour-reabierto-desde-el-menu");
 
   await dismissWelcomeTour(page);
+});
+
+/**
+ * El mismo tour, en su otra superficie: el hero de la landing pública.
+ *
+ * Existe porque el piloto **no visitaba `/`** — cubre el blog, /geo, docs,
+ * comparativas y las legales, pero no la portada. Media fase vive ahí (la
+ * captura estática del hero se sustituyó por el tour), así que un PILOT PASS
+ * sin esta pasada estaba certificando sólo la mitad. Es exactamente el hueco
+ * que el CLAUDE.md manda declarar en vez de dar por bueno.
+ *
+ * SCOPE GUARD: página pública, sólo navegación y los controles del propio
+ * tour. No envía nada.
+ */
+test("el tour del hero arranca al verse entero y para en el paso 1", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/", "landing-hero-tour", {
+    describedAs: "el tour dentro del marco del hero de la landing",
+    anyOf: [{ selector: ".ptour--hero .pt-stage" }]
+  });
+  assertPageIsHealthy(findings);
+
+  // NO se comprueba aquí que el tour espere a verse entero antes de arrancar.
+  // Se intentó y sería mentira: `visitAsUser` redimensiona el viewport para
+  // capturar la página completa, con lo que el lienzo pasa a verse entero y el
+  // tour arranca durante la propia captura. La comprobación pasaría siempre sin
+  // demostrar nada, que es peor que no tenerla. Ese arranque está verificado con
+  // Playwright contra el build de producción en local (log §33); aquí se
+  // verifica lo que esta pasada sí puede ver.
+  const typed = page.locator("[data-pt=typed]").first();
+  await page.evaluate(() => {
+    document.querySelector(".ptour--hero .pt-stage")?.scrollIntoView({ block: "center" });
+  });
+  await expect
+    .poll(async () => (await typed.textContent())?.trim().length ?? 0, {
+      message: "el tour del hero no arrancó ni viéndose entero",
+      timeout: 15_000
+    })
+    .toBeGreaterThan(0);
+
+  // Se detiene al acabar el paso 1 y la pista aparece en «Siguiente».
+  await page.waitForTimeout(7_000);
+  await expect(
+    page.locator(".ptour--hero .pt-dot").first(),
+    "el tour del hero siguió solo más allá del paso 1"
+  ).toHaveClass(/is-on/);
+  await expect(
+    page.locator(".ptour--hero .pt-foot .pt-primary"),
+    "el botón «Siguiente» no llamó la atención al detenerse el tour"
+  ).toHaveClass(/pt-hint/);
+  await captureInteraction(page, testInfo, "landing-hero-tour-paso-1");
+
+  // Y avanza a mano, un paso por clic.
+  await page.locator(".ptour--hero").getByRole("button", { name: /Siguiente/ }).click();
+  await expect(
+    page.locator(".ptour--hero .pt-dot").nth(1),
+    "«Siguiente» no avanzó al paso 2 en la landing"
+  ).toHaveClass(/is-on/, { timeout: 5_000 });
+  await captureInteraction(page, testInfo, "landing-hero-tour-paso-2");
 });
