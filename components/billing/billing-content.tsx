@@ -1,20 +1,26 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { getUsageSummary } from "@/lib/billing";
-import { PLANS } from "@/app/pricing/plans-data";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
-import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 import { CheckoutSuccessPoller } from "@/components/billing/checkout-success-poller";
+
+/** Single place the support address is written, so it cannot drift. */
+const SUPPORT_EMAIL = "soporte@genscore.es";
 
 /**
  * CONSOLE-REDESIGN-1: this is the "Plan" section of the single settings page.
  *
- * The `embedded` prop and the standalone-page branch are gone — /dashboard/
- * settings/billing is now a redirect, so this component has exactly one caller
- * and the alternative layout was unreachable code carrying its own heading.
+ * The block at the foot used to describe the payment state in four different
+ * ways depending on the plan, which is how it ended up telling an Agencia
+ * customer they had no paid plan. It is now a plain support block (founder,
+ * 2026-08-06) — always true, whatever the plan.
  *
- * Razón social + NIF are NOT here: they live as a fold in Cuenta, next to
- * «Datos de empresa» (founder, 2026-08-06).
+ * The route to invoices and payment method did NOT disappear with it: the
+ * Stripe portal button moved next to "Cambiar de plan" in the plan card, where
+ * it is shown to any account with a Stripe customer.
+ *
+ * Razón social + NIF are not here either: they live as a fold in Cuenta, next
+ * to «Datos de empresa».
  */
 export async function BillingContent({
   checkoutStatus
@@ -23,23 +29,6 @@ export async function BillingContent({
   checkoutStatus?: string;
 }) {
   const usage = await getUsageSummary();
-  const plan = PLANS.find((candidate) => candidate.id === usage.planId);
-
-  /**
-   * `hasStripeCustomer` means "has ever had a Stripe customer record", which is
-   * NOT the same as "has no paid plan" — and the copy used to conflate them.
-   * An Agencia account is a paying customer billed outside Stripe (the plan has
-   * no self-serve price, PRICING-TRUTH-1), so it was being told "todavía no
-   * tienes ningún plan de pago activo" while sitting on the top plan (founder,
-   * 2026-08-06). Each state now says what is actually true of it.
-   */
-  const paymentState: "stripe" | "trialing" | "offline" | "none" = usage.hasStripeCustomer
-    ? "stripe"
-    : usage.trialEndsAt
-      ? "trialing"
-      : usage.planId !== "free"
-        ? "offline"
-        : "none";
 
   return (
     <div className="set-pane">
@@ -63,24 +52,15 @@ export async function BillingContent({
       />
 
       <Card>
-        <CardContent className="space-y-3 py-6 text-center">
-          <Icon name="card" size={22} className="mx-auto text-[var(--ink-3)]" />
-          {paymentState === "stripe" && (
-            <>
-              <p className="sub">Actualiza tu método de pago o consulta tu historial de facturas en Stripe.</p>
-              <ManageBillingButton />
-            </>
-          )}
-          {paymentState === "trialing" && (
-            <p className="sub">Cuando contrates un plan, aquí verás tu método de pago y tus facturas.</p>
-          )}
-          {paymentState === "offline" && (
-            <p className="sub">
-              Tu plan <b>{plan?.name ?? usage.planId}</b> lo gestionamos contigo, no se cobra por Stripe.
-              Para cualquier cambio, escríbenos a <b>soporte@genscore.es</b>.
-            </p>
-          )}
-          {paymentState === "none" && <p className="sub">Todavía no tienes ningún plan de pago activo.</p>}
+        <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
+          <Icon name="mail" size={22} className="text-[var(--ink-3)]" />
+          <p className="sub">
+            ¿Tienes alguna incidencia o consulta? Escríbenos a{" "}
+            <a className="font-semibold text-[var(--accent)]" href={`mailto:${SUPPORT_EMAIL}`}>
+              {SUPPORT_EMAIL}
+            </a>{" "}
+            y te respondemos.
+          </p>
         </CardContent>
       </Card>
     </div>

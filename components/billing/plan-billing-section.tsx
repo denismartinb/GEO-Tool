@@ -230,11 +230,21 @@ export function PlanBillingSection({
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-2 border-t border-[var(--line-soft)] pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-[var(--line-soft)] pt-4">
                 <Button type="button" onClick={() => setModal({})}>
                   <Icon name="arrUp" size={14} />
                   Cambiar de plan
                 </Button>
+                {/* Moved here from the block at the foot of the section, which
+                    became generic support (founder, 2026-08-06). Without this
+                    an account with a Stripe customer would have lost its only
+                    route to invoices and payment method. */}
+                {usage.hasStripeCustomer && (
+                  <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
+                    <Icon name="card" size={14} />
+                    {isPortalPending ? "Abriendo…" : "Facturas y pago"}
+                  </Button>
+                )}
                 {usage.hasStripeSubscription && (
                   <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
                     {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
@@ -250,9 +260,12 @@ export function PlanBillingSection({
         <h2 className="text-lg font-semibold text-[var(--ink)]">Uso de este ciclo</h2>
         <Card>
           <CardContent className="space-y-4">
+            {/* "Motores de IA" removed (founder, 2026-08-06). Every plan above
+                Free carries all three engines that exist, so the row sat at
+                3/3 and raised "Cerca del límite del plan" for a limit with
+                nothing above it to move to. */}
             <UsageRow icon="prompts" label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
             <UsageRow icon="globe" label="Dominios" value={usage.projectCount} cap={usage.projectCap} />
-            <UsageRow icon="layers" label="Motores de IA" value={usage.engineCount} cap={usage.engineCap} />
           </CardContent>
         </Card>
 

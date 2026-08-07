@@ -7,7 +7,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CompanyFold } from "@/components/settings/company-fold";
 import { BillingDetailsFold } from "@/components/settings/billing-details";
 import type { BillingDetails, CompanyDetails } from "@/lib/settings/company-details";
-import { updateProfileName, changePassword } from "@/app/dashboard/settings/profile/actions";
+import { changePassword } from "@/app/dashboard/settings/profile/actions";
+import { saveAccount } from "@/app/dashboard/settings/organization/actions";
 
 type Feedback = { type: "ok" | "err"; text: string };
 
@@ -44,15 +45,30 @@ export function AccountSection({
 }) {
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(lastName);
+  // Lifted out of the two folds: they used to own this state and carry their
+  // own «Guardar», so the card's button silently dropped whatever had been
+  // typed inside them (founder, 2026-08-06). One card, one save.
+  const [companyValue, setCompanyValue] = useState(company);
+  const [billingValue, setBillingValue] = useState(billingDetails);
 
-  const [isSavingName, startSavingName] = useTransition();
-  const [nameFeedback, setNameFeedback] = useState<Feedback | null>(null);
+  const [isSaving, startSaving] = useTransition();
+  const [saveFeedback, setSaveFeedback] = useState<Feedback | null>(null);
 
-  const saveName = () => {
-    setNameFeedback(null);
-    startSavingName(async () => {
-      const result = await updateProfileName(first, last);
-      setNameFeedback(result.success ? { type: "ok", text: "Guardado." } : { type: "err", text: result.error });
+  const save = () => {
+    setSaveFeedback(null);
+    startSaving(async () => {
+      const result = await saveAccount({
+        firstName: first,
+        lastName: last,
+        companyName: companyValue.name,
+        companyWebsite: companyValue.website,
+        companySector: companyValue.sector,
+        legalName: billingValue.legalName,
+        taxId: billingValue.taxId
+      });
+      setSaveFeedback(
+        result.success ? { type: "ok", text: "Cambios guardados." } : { type: "err", text: result.error }
+      );
     });
   };
 
@@ -153,22 +169,22 @@ export function AccountSection({
               empresa justo debajo". Both are things you fill in once, so they
               read better as a pair than split across two sections. */}
           <div className="set-folds">
-            <CompanyFold initial={company} readOnly={companyReadOnly} />
-            <BillingDetailsFold initial={billingDetails} />
+            <CompanyFold value={companyValue} onChange={setCompanyValue} readOnly={companyReadOnly} />
+            <BillingDetailsFold value={billingValue} onChange={setBillingValue} />
           </div>
 
           <div className="set-actions">
-            <Button type="button" onClick={saveName} disabled={isSavingName}>
-              {isSavingName ? "Guardando…" : "Guardar"}
+            <Button type="button" onClick={save} disabled={isSaving}>
+              {isSaving ? "Guardando…" : "Guardar"}
             </Button>
           </div>
-          {nameFeedback && (
+          {saveFeedback && (
             <div
-              className={nameFeedback.type === "err" ? "field-err" : "field-ok"}
+              className={saveFeedback.type === "err" ? "field-err" : "field-ok"}
               style={{ justifyContent: "flex-start", marginTop: 8 }}
             >
-              {nameFeedback.type === "err" && <Icon name="alertCircle" size={13} />}
-              {nameFeedback.text}
+              {saveFeedback.type === "err" && <Icon name="alertCircle" size={13} />}
+              {saveFeedback.text}
             </div>
           )}
         </CardContent>

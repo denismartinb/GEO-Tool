@@ -3231,6 +3231,25 @@ cuidado: **una función que llama un Server Component nunca vive en un fichero
 componente de cliente importa de ahí. Lo único que lo detectó fue la journey de
 piloto que esta misma fase tuvo que crear.
 
+**Tres ajustes finales tras la segunda revisión (2026-08-06):**
+
+- **Un solo «Guardar» en la tarjeta de Cuenta.** Los dos acordeones tenían el
+  suyo, así que escribir en «Datos de empresa» y pulsar el botón de la tarjeta
+  descartaba el cambio en silencio. Era una regresión introducida por esta misma
+  fase: antes Organización era pantalla propia con un único guardado y no había
+  ambigüedad. Ahora `saveAccount` escribe nombre, empresa y facturación en una
+  sola llamada y los acordeones son presentacionales.
+- **Fuera «Motores de IA» del uso del ciclo.** Todos los planes de pago llevan
+  los tres motores que existen, así que la fila vivía en 3/3 y levantaba «Cerca
+  del límite del plan» para un límite sin nada por encima a lo que subir.
+- **El bloque final pasa a soporte genérico.** Describía el estado de pago de
+  cuatro maneras distintas —de ahí que le dijera a una cuenta Agencia que no
+  tenía plan— y ahora dice lo único que es cierto siempre: escríbenos si tienes
+  una incidencia. **El acceso a facturas de Stripe no desapareció con él**: el
+  botón sube junto a «Cambiar de plan», visible para cualquier cuenta con
+  cliente de Stripe. Quitarlo sin más habría sido una regresión peor que la que
+  se arreglaba.
+
 **Pendiente / roto conocido:**
 
 - **Fase B, sin aprobar:** los otros cuatro hallazgos del modal de plan — un
@@ -3244,6 +3263,14 @@ piloto que esta misma fase tuvo que crear.
   cobertura es parcial y conviene saberlo.
 - **`org_tax_info` sigue en `user_metadata`** de las cuentas que lo tuvieran, a
   propósito: es la fuente de reserva de Razón social hasta que su dueño guarde.
+- **`updateProfileName` queda sin usar** en `profile/actions.ts` tras el guardado
+  único. No se retira aquí para no ensanchar el PR; una server action huérfana
+  sigue siendo un endpoint invocable, así que conviene borrarla en la fase
+  siguiente.
+- **Replanteo pendiente de la sección Plan.** Las cuatro pegas de la revisión
+  del fundador caían todas ahí, no en Cuenta ni en Avisos: jerarquía duplicada
+  («Plan» → «Tu plan» → «Uso de este ciclo»), y «Facturación mensual» junto a un
+  plan «a medida». Va con la Fase B del modal, que es su misma zona.
 
 ---
 
