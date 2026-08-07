@@ -56,6 +56,14 @@ function ipv6IsPublic(ip: string): boolean {
   const mapped = addr.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return ipv4IsPublic(mapped[1]);
 
+  // Cualquier otra forma que empiece por `::` se rechaza en bloque. Cubre las
+  // «IPv4-compatible» obsoletas (`::127.0.0.1`, `::7f00:1`), donde además el
+  // cálculo de prefijo de abajo daría 0 y las dejaría pasar. Hoy un Linux
+  // moderno no las enruta hasta la IPv4 que llevan dentro —da ENETUNREACH—,
+  // así que esto es profundidad y no un agujero conocido; pero costaba una
+  // línea y el clasificador queda sin un caso que devuelva `true` por accidente.
+  if (addr.startsWith("::")) return false;
+
   const head = addr.split(":")[0];
   const prefix = parseInt(head || "0", 16);
 
@@ -63,6 +71,10 @@ function ipv6IsPublic(ip: string): boolean {
   if ((prefix & 0xffc0) === 0xfe80) return false; // fe80::/10 — link-local
   if (addr.startsWith("2001:db8:")) return false; // documentación
   if (addr.startsWith("64:ff9b:")) return false; // NAT64
+  // 6to4: los 32 bits siguientes al prefijo son una IPv4 arbitraria, privada
+  // incluida, así que juzgarla por el prefijo diría «pública» de un túnel a
+  // 192.168.x.x. Se rechaza el rango entero en vez de desenvolverlo.
+  if (addr.startsWith("2002:")) return false;
   if ((prefix & 0xff00) === 0xff00) return false; // multicast
 
   return true;

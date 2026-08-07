@@ -56,6 +56,15 @@ describe("isPublicIp", () => {
     }
   });
 
+  it("rechaza las formas IPv6 obsoletas que envuelven una IPv4", () => {
+    // Señaladas por la revisión de seguridad como no enrutables hoy, así que no
+    // eran un agujero — pero el clasificador las daba por públicas, y un
+    // clasificador que devuelve `true` por accidente es el que falla mañana.
+    expect(isPublicIp("::127.0.0.1")).toBe(false); // IPv4-compatible obsoleta
+    expect(isPublicIp("::7f00:1")).toBe(false); // la misma, en hexadecimal
+    expect(isPublicIp("2002:c0a8:101::1")).toBe(false); // 6to4 sobre 192.168.1.1
+  });
+
   it("mira dentro de una IPv4 mapeada en IPv6", () => {
     // Sin esto, ::ffff:169.254.169.254 se saltaría el filtro entero.
     expect(isPublicIp("::ffff:169.254.169.254")).toBe(false);

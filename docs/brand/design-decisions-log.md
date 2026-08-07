@@ -3657,6 +3657,19 @@ con lo que tenga Google. Es lo único que arregla mahou.es.
    instante absoluto al entrar y se reparte; lo que no quepa no se intenta y S2
    sigue detrás. Mismo criterio que `.claude/rules/scan.md`.
 
+**Revisión de seguridad dedicada (2026-08-06): cero hallazgos.** La QA había
+corrido sobre el commit anterior y no llegó a ver la 3b, así que se pasó una
+revisión aparte sobre la ruta. Confirmó lo que la fase pretendía: no hay control
+del host ni del protocolo (`isPlausibleDomain` sólo admite etiquetas
+`[a-z0-9-]`, así que la URL no puede crecer credenciales, puerto, otro host ni
+ruta), las codificaciones alternativas de IP no burlan nada porque se juzga la
+dirección **resuelta** y no el texto del host, cada salto de redirección se
+revalida, y el `Content-Type` nunca sale del servidor remoto. Señaló dos formas
+IPv6 obsoletas que el clasificador daba por públicas —«IPv4-compatible»
+(`::7f00:1`) y 6to4 (`2002::/16`)— y las descartó por no enrutables hoy;
+**se cerraron igual**, porque un clasificador que devuelve `true` por accidente
+es el que falla el día que cambia el entorno.
+
 **Lo que la 3b NO cubre, dicho antes de que alguien lo asuma.** **DNS
 rebinding**: se valida la IP antes de cada petición, pero entre esa comprobación
 y el socket real hay una ventana en la que el DNS puede cambiar de respuesta.
