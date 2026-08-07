@@ -1,0 +1,96 @@
+name: URL de preview del artículo semanal
+
+# POR QUÉ EXISTE. El cuerpo del PR de un artículo semanal es el mensaje del
+# último commit (`weekly-post-pr.yml`), y ese mensaje se escribe **antes** del
+# push. En ese momento la URL de Vercel no existe todavía: el deploy ocurre
+# después. Consecuencia: el email que recibe el fundador el lunes puede llevar
+# como mucho una ruta relativa (`/blog/<slug>`), que no se puede abrir desde el
+# correo.
+#
+# Pasó el 2026-08-06 con el artículo W4 (PR #359): el fundador recibió el aviso
+# y no pudo revisarlo porque no había dominio al que ir. No es un descuido del
+# redactor — es imposible de resolver desde el commit.
+#
+# Este workflow cierra el hueco: espera al deploy real de Vercel y publica la
+# URL como comentario. Al firmarlo `github-actions[bot]`, genera email — que es
+# justo lo que un comentario escrito por el agente NO hace
+# (`docs/agentic-weekly-post.md` §11).
+#
+# Se dispara con `deployment_status`, igual que `ux-pilot.yml`, porque es el
+# único evento que trae la URL ya resuelta en `environment_url`.
+#
+# LO QUE NO HACE: no mergea, no aprueba, no toca `main`. Sólo comenta.
+
+on:
+  deployment_status:
+
+permissions:
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: preview-url-${{ github.event.deployment.sha }}
+  cancel-in-progress: true
+
+jobs:
+  publicar-url:
+    # Sólo previews correctos, y sólo de ramas de artículo semanal: cualquier
+    # otra rama ya tiene su propio flujo y no necesita este aviso.
+    if: >-
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Preview' &&
+      startsWith(github.event.deployment.ref, 'claude/weekly-post/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolver el PR y el slug del artículo
+        id: ctx
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.deployment.sha }}
+          REF: ${{ github.event.deployment.ref }}
+        run: |
+          set -euo pipefail
+          pr="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}/pulls" \
+            --jq 'map(select(.state == "open")) | .[0].number // empty')"
+          if [ -z "$pr" ]; then
+            echo "El deploy no cuelga de ningún PR abierto; no hay a quién avisar."
+            echo "pr=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # `claude/weekly-post/<slug>` -> `<slug>`. El slug de la rama es el
+          # del artículo por convención (docs/agentic-weekly-post.md §7).
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+          echo "slug=${REF#claude/weekly-post/}" >> "$GITHUB_OUTPUT"
+
+      - name: Comentar la URL, una sola vez por PR
+        if: steps.ctx.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ steps.ctx.outputs.pr }}
+          SLUG: ${{ steps.ctx.outputs.slug }}
+          URL: ${{ github.event.deployment_status.environment_url }}
+        run: |
+          set -euo pipefail
+          # Idempotencia: cada push genera un deploy nuevo, y un aviso por
+          # commit convertiría el correo en ruido. Se avisa del primero — que
+          # es el que el fundador necesita para revisar— y se calla después.
+          marca="<!-- agentic:weekly-preview-url -->"
+          if gh pr view "$PR" --repo "$GITHUB_REPOSITORY" --json comments \
+               --jq '.comments[].body' | grep -qF "$marca"; then
+            echo "Ya se avisó de la URL en este PR. No se repite."
+            exit 0
+          fi
+
+          # Si la rama no casa el patrón esperado, se enlaza el índice del blog
+          # en vez de inventar una ruta que daría 404.
+          if [ -n "$SLUG" ]; then destino="${URL}/blog/${SLUG}"; else destino="${URL}/blog"; fi
+
+          {
+            printf '%s\n' "$marca"
+            printf '**Preview listo:** %s\n\n' "$destino"
+            printf 'Ábrelo para revisar el artículo tal y como se verá publicado.\n\n'
+            printf 'Para publicarlo: pulsa **Merge pull request** en este PR.\n\n'
+            printf -- '---\n'
+            printf '_El cuerpo del PR no puede llevar esta URL: se escribe en el commit, antes de que Vercel despliegue. Por eso llega en un comentario aparte._\n'
+          } > url.md
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body-file url.md

@@ -368,6 +368,25 @@ recordatorio, un "ya está listo", una corrección). Para eso está
 (`workflow_dispatch`), recibe el número de PR y el mensaje, y comenta como el
 bot. Sin él, la única forma de mandar un email era abrir un PR nuevo.
 
+### La URL de preview no cabe en el cuerpo del PR, y no es culpa de nadie
+
+El cuerpo del PR es el mensaje del último commit, y ese mensaje se escribe
+**antes** del push. La URL de Vercel no existe hasta después. Así que el email
+del lunes puede llevar, como mucho, una ruta relativa (`/blog/<slug>`) que no
+se puede abrir desde el correo.
+
+Pasó el 2026-08-06 con el artículo W4 (PR #359): el fundador recibió el aviso y
+no pudo revisarlo. **No intentes resolverlo escribiendo la URL en el commit** —
+es imposible, no un descuido.
+
+Lo resuelve `.github/workflows/weekly-post-preview-url.yml`: se dispara con
+`deployment_status` (el único evento que trae la URL ya resuelta), comprueba
+que la rama es `claude/weekly-post/**`, y comenta el enlace **una sola vez por
+PR**. Al firmarlo el bot, genera email.
+
+Lo que tú tienes que hacer al respecto: **nada**. Ya funciona solo. Sólo no te
+extrañes de que el enlace llegue en un correo aparte del primero.
+
 **Regla práctica para cualquier sesión futura:** si necesitas que al fundador
 le llegue un email, tiene que escribirlo un workflow. Un comentario tuyo por
 MCP sólo lo verá si entra a mirar. El `PushNotification` al móvil sí funciona
