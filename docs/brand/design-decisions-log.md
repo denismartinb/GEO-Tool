@@ -3989,6 +3989,46 @@ piloto que esta misma fase tuvo que crear.
 
 ---
 
+## 39. La alerta de escaneo incompleto deja de ser un email sin marca (EMAIL-OPS-ALERT-BRAND-1, 2026-08-07)
+
+**El problema, reportado por el fundador con captura propia.** El aviso de
+`sendScanHealthAlertEmail` (`lib/scan/scan-health-alert.ts` →
+`lib/email/transactional.ts`) —el que llega a `OPS_ALERT_EMAIL` cuando un
+escaneo se queda sin datos de un motor— se renderizaba como HTML suelto sin
+cabecera, sin paleta v3 y sin el sistema `wrap()`/`eyebrow()`/`heading()` que
+ya usan los otros ocho emails de Resend. Al lado del resto de la bandeja
+parecía un email roto, no uno de GenScore.
+
+**Por qué estaba así a propósito.** El comentario del código lo decía en dos
+sitios: "Deliberately plain and dense rather than brand-wrapped: the reader
+is debugging." La decisión original (EXTRACTION-RELIABILITY-1 Fase B,
+`docs/adr/0029`) priorizaba densidad de datos sobre identidad — este email
+nunca lo ve un cliente, solo el operador diagnosticando un fallo real.
+
+**Lo que cambia.** Se repinta con el mismo sistema v3 (`docs/brand/
+email-design-proposal.md`) que ya llevan los ocho emails de Resend: cabecera
+de marca, eyebrow rojo `#D23B48` ("Alerta operativa · sólo equipo GenScore"),
+titular y detalle con los componentes compartidos. **Ningún dato de
+diagnóstico se pierde** — motor, causa, filas afectadas, dominio, proyecto,
+escaneo y fecha de detección siguen todos presentes, ahora en una tabla de
+filas con los valores en monoespaciada (`JetBrains Mono`, la fuente de datos
+de la marca) en vez de la tabla suelta anterior. El pie deja claro que es un
+aviso interno, no algo que vea un cliente.
+
+**Qué no se toca.** `sendWebAuditFailedAlertEmail` (el aviso gemelo de
+auditoría web fallida) mantiene el mismo patrón "deliberadamente plano" — el
+fundador pidió rediseñar el email de la captura, que era este, no el otro.
+Si se decide unificar también ese, es una fase propia de una línea: mismo
+cambio, mismo archivo, otra función.
+
+**Fuera de alcance original.** `docs/brand/email-design-proposal.md` (BRAND-5c)
+catalogaba los diez emails de cliente/auth y marcaba "cualquier email nuevo"
+como fuera de alcance; los dos avisos de operador ni siquiera estaban en su
+tabla porque no son emails de cliente. Esta entrada es la que los trae al
+mismo sistema de marca, no una ampliación de BRAND-5c.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
