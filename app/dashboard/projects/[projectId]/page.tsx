@@ -40,7 +40,7 @@ import { getLLMScanProviders } from "@/lib/scan/executor";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createServiceClient } from "@/lib/supabase/service";
-import { rankLatestPositions } from "@/lib/competitors/latest-positions";
+import { computePanoramaState } from "@/lib/competitors/panorama-state";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
@@ -574,117 +574,51 @@ export default async function ProjectDetailPage({
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
 
-  /* ---- unified competitive panorama (PANORAMA-PARITY-1) ----
+  /* ---- unified competitive panorama (PANORAMA-PARITY-1, PANORAMA-EMPTY-1) ----
    * Merges the two previously-separate real sections (brand position ranking +
    * competitor table) into one list, per founder request (Task Intake
    * 2026-07-23).
    *
-   * The ranking itself is NOT computed here: it comes from
-   * `rankLatestPositions`, the same call the Competidores page makes. Until
-   * 2026-08-06 each screen ordered the persisted ranking for itself, and on
-   * the founder's Mozilla project they disagreed — Proton VPN 1º here, 2º
-   * there, because only one of the two broke the 1,00 tie by mention rate.
+   * The ranking and the state it implies are NOT decided here: they come from
+   * `computePanoramaState` (lib/competitors/panorama-state.ts), which the
+   * module header explains at length — four real states (empty / unranked /
+   * ranked-in-top-5 / ranked-beyond-top-5-or-unmentioned), not the one this
+   * block used to assume. It calls `rankLatestPositions`, the same ordering
+   * the Competidores page uses: until 2026-08-06 each screen ordered the
+   * persisted ranking for itself and disagreed on ties (PANORAMA-PARITY-1).
    *
-   * Both screens also publish the SAME figure per row: the mention rate of
-   * this scan. The panorama used to show cumulative share of voice instead,
-   * so the same brand read 37% here and 48% there — two percentages, one
-   * apparent meaning ("cuánto sale"), different values. Share of voice is
-   * still a real metric and still has its home: the Competidores podium.
+   * Both screens publish the SAME figure per row: the mention rate of this
+   * scan, not cumulative share of voice (which is still real, still shown —
+   * on the Competidores podium, labelled as itself).
    */
-  type PanoramaRow = {
-    key: string;
-    name: string;
-    domain: string | null;
-    isBrand: boolean;
-    /** % of this scan's answers naming the entity, 0-100 — the Competidores figure. */
-    mentionRate: number | null;
-    /** Mean rank when mentioned. Encoded as bar height, never published as a number. */
-    position: number | null;
-    /** 1..N standing among the entities the AI named, or null with no position data. */
-    rank: number | null;
-  };
-
-  // Entities, not ranking entries: a competitor deactivated after the scan is
-  // still inside the persisted ranking, and passing the entity list is what
-  // makes both screens drop it on the same render instead of one of them
-  // keeping a row the other no longer has.
-  const rankedPanorama = rankLatestPositions({
+  const panoramaState = computePanoramaState({
     entities: [
-      { key: "brand", label: project.brand, isBrand: true, domain: project.domain as string | null },
+      { key: "brand", name: project.brand, domain: project.domain, isBrand: true, fallbackMentionRate: computedMentionRate },
       ...competitorRows.map((c) => ({
         key: c.name,
-        label: c.name,
+        name: c.name,
+        domain: c.domain,
         isBrand: false,
-        domain: c.domain as string | null
+        fallbackMentionRate: c.mentionRate
       }))
     ],
-    ranking: brandPosition?.ranking
+    ranking: brandPosition?.ranking,
+    hasPositionData: brandPositionAvailable
   });
-  // A run scored before geo-score-v3 has no position for anybody (docs/adr/0026,
-  // no backfill), so the ranked list comes back empty and the panorama falls
-  // back to mention rate alone — the same metric, minus the standing.
-  const panoramaRanked = brandPositionAvailable && rankedPanorama.length > 0;
 
-  const panoramaRows: PanoramaRow[] = panoramaRanked
-    ? rankedPanorama.map((row) => ({
-        key: row.key,
-        name: row.label,
-        domain: row.domain,
-        isBrand: Boolean(row.isBrand),
-        mentionRate: row.mentionRate,
-        position: row.position,
-        rank: row.rank
-      }))
-    : [
-        {
-          key: "brand",
-          name: project.brand,
-          domain: project.domain,
-          isBrand: true,
-          mentionRate: computedMentionRate,
-          position: null,
-          rank: null
-        },
-        ...competitorRows
-          .slice()
-          .sort((a, b) => b.mentionRate - a.mentionRate)
-          .map((c) => ({
-            key: c.name,
-            name: c.name,
-            domain: c.domain,
-            isBrand: false,
-            mentionRate: c.mentionRate,
-            position: null,
-            rank: null
-          }))
-      ];
-  const maxPanoramaMention = Math.max(1, ...panoramaRows.map((r) => r.mentionRate ?? 0));
-
-  /* ---- position summary + bars (real brand_position data) ----
-   * "Tu puesto cuando apareces X / N" = the brand's standing among the
-   * entities the AI actually named in this scan. Both figures come off the
-   * same ranked list as the rows below, so the headline and the list can not
-   * disagree; N counts ranked entities only, never every brand we track.
-   */
-  const brandRank = rankedPanorama.find((r) => r.isBrand)?.rank ?? null;
-  const totalRanked = rankedPanorama.length;
-
-  // Top 5 — the exact same rows feed both the bars and the list. If the brand
-  // falls outside the top 5, its real row is appended so "dónde estoy" never
-  // disappears, but the top-5 podium itself stays intact.
-  const topPanoramaRows = panoramaRows.slice(0, 5);
-  const brandRow = panoramaRows.find((r) => r.isBrand);
-  const panoramaListRows =
-    brandRow && !topPanoramaRows.some((r) => r.isBrand)
-      ? [...topPanoramaRows, brandRow]
-      : topPanoramaRows;
+  const panoramaListRows = panoramaState.kind === "ranked" ? panoramaState.listRows : panoramaState.kind === "unranked" ? panoramaState.rows : [];
+  const maxPanoramaMention = Math.max(1, ...panoramaListRows.map((r) => r.mentionRate ?? 0));
+  const panoramaRanked = panoramaState.kind === "ranked";
+  const brandRank = panoramaState.kind === "ranked" ? panoramaState.brandRank : null;
+  const totalRanked = panoramaState.kind === "ranked" ? panoramaState.totalRanked : 0;
+  const brandAppendedBeyondTop5 = panoramaState.kind === "ranked" && panoramaState.brandAppended;
 
   const posbarsData = (() => {
-    if (!panoramaRanked) return [];
+    if (panoramaState.kind !== "ranked") return [];
     // Every ranked row has a position by construction; the guard stays because
     // coercing a missing one to 0 would draw it as the best-placed brand on
     // the chart, the exact inversion of the truth.
-    const ranked = topPanoramaRows.filter(
+    const ranked = panoramaState.topRows.filter(
       (r): r is typeof r & { position: number } => r.position !== null
     );
     if (ranked.length === 0) return [];
@@ -1230,89 +1164,133 @@ export default async function ProjectDetailPage({
             ) : null}
           </div>
           {competitorRows.length > 0 ? (
-            <>
-              {posbarsData.length > 0 && (
-                <div className="card" style={{ padding: "17px 16px 6px" }}>
-                  <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
-                  <div
-                    className="ov2-pm-val"
-                    title={
-                      brandRank === null
-                        ? "La IA no te nombró en este escaneo, así que no tienes puesto."
-                        : undefined
-                    }
-                  >
-                    {brandRank ?? "—"}<small> / {totalRanked}</small>
-                  </div>
-                  <div className="ov2-posbars">
-                    {posbarsData.map((b, i) => (
-                      <div key={`${b.name}-${i}`} className={`b ${b.isBrand ? "you" : ""}`} style={{ height: b.height }}>
-                        <span>{b.name}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="card" style={{ marginTop: posbarsData.length > 0 ? 11 : 0 }}>
-                {/* One label per column, over the data it names — the rule that
-                    the Competidores list arrived at the hard way (log §15): a
-                    single heading ends up naming the wrong column the moment
-                    the layout changes under it. The panorama had NO headers at
-                    all, which is how a share-of-voice percentage passed for the
-                    mention rate shown on the other screen. */}
-                <div className="ov2-cmp-hd">
-                  <span className="ov2-cmp-hd-nm">Último escaneo</span>
-                  <span className="ov2-cmp-sov">Mención</span>
-                  {/* No column at all when this scan has no position data,
-                      rather than a "Puesto" heading over five dashes: a labelled
-                      empty column reads as a broken screen, an absent one reads
-                      as what it is (log §15, "ni etiqueta ni tarjeta si no hay
-                      nada debajo"). */}
-                  {panoramaRanked ? <span className="ov2-cmp-sc">Puesto</span> : null}
-                </div>
-                {panoramaListRows.map((row) => {
-                  const favicon = faviconUrl(row.domain);
-                  const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
-                  return (
-                    <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
-                      {favicon ? (
-                        // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-                        <img src={favicon} alt="" className="ov2-cmp-fav" width={26} height={26} loading="lazy" />
-                      ) : (
-                        <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
-                          {row.name.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                      <div className="ov2-cmp-nm">
-                        <div className="t">
-                          {row.name}
-                          {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
-                        </div>
-                      </div>
-                      <div className="ov2-cmp-sov">
-                        <div className="track">
-                          <i
-                            style={{
-                              width: `${((row.mentionRate ?? 0) / maxPanoramaMention) * 100}%`,
-                              background: barColor
-                            }}
-                          />
-                        </div>
-                        <div className="pct">{row.mentionRate !== null ? `${Math.round(row.mentionRate)}%` : "—"}</div>
-                      </div>
-                      {/* Ordinal, and the heaviest figure of the row: "5º" is a
-                          standing, "5" is a bullet, and on the left it gets read
-                          as one (log §15, twice). Same shape as Competidores.
-                          Absent, not dashed, when the scan has no positions —
-                          every row would carry the same "—". */}
-                      {row.rank !== null ? (
-                        <span className="ov2-cmp-sc">{row.rank}º</span>
-                      ) : null}
-                    </div>
-                  );
-                })}
+            panoramaState.kind === "empty" ? (
+              /* PANORAMA-EMPTY-1. Six rows of "0%" answered a question nobody
+                 asked — a live customer's first scan (genscore.es, zero
+                 mentions across the board, 2026-08-07) rendered exactly that,
+                 with no explanation. Nobody named is real, reportable
+                 information; it reads better as a sentence than as a table
+                 that happens to be all zeros. */
+              <div className="card" style={{ padding: "16px 18px" }}>
+                <EmptyState
+                  title="Ninguna marca apareció en este escaneo"
+                  description={`La IA no nombró a ${project.brand} ni a ninguno de tus ${competitorRows.length} ${competitorRows.length === 1 ? "competidor" : "competidores"} en ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"}. Puede pasar en un dominio nuevo o con prompts muy genéricos.`}
+                />
+                <Link
+                  href={`/dashboard/projects/${projectId}/prompts`}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
+                >
+                  Revisar mis prompts <Icon name="arrRight" size={13} />
+                </Link>
               </div>
-            </>
+            ) : (
+              <>
+                {posbarsData.length > 0 && (
+                  <div className="card" style={{ padding: "17px 16px 6px" }}>
+                    <div className="ov2-pm-lbl">Tu puesto cuando apareces</div>
+                    <div className="ov2-pm-val">
+                      {brandRank !== null ? (
+                        <>{brandRank}<small> / {totalRanked}</small></>
+                      ) : (
+                        // The brand itself was never named this scan, even though
+                        // others were — a real state (dormant or newly-tracked
+                        // domain next to established competitors), not the "—"
+                        // this used to render with the actual reason buried in a
+                        // tooltip nobody on mobile ever opens.
+                        <span className="ov2-pm-val-text">No apareciste en este escaneo</span>
+                      )}
+                    </div>
+                    {/* The bars are always the real top 5, never padded with the
+                        brand's own row — forcing "your" bars to include you when
+                        you're 6th is the inversion of what a leaderboard means
+                        (founder, 2026-08-07). Labelled so the headline number
+                        above (your standing) and the bars below (who's actually
+                        top 5) are never read as the same claim. */}
+                    <div className="ov2-pm-bars-lbl">Top 5 posiciones</div>
+                    <div className="ov2-posbars">
+                      {posbarsData.map((b, i) => (
+                        <div key={`${b.name}-${i}`} className={`b ${b.isBrand ? "you" : ""}`} style={{ height: b.height }}>
+                          <span>{b.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="card" style={{ marginTop: posbarsData.length > 0 ? 11 : 0 }}>
+                  {/* One label per column, over the data it names — the rule that
+                      the Competidores list arrived at the hard way (log §15): a
+                      single heading ends up naming the wrong column the moment
+                      the layout changes under it. The panorama had NO headers at
+                      all, which is how a share-of-voice percentage passed for the
+                      mention rate shown on the other screen. */}
+                  <div className="ov2-cmp-hd">
+                    <span className="ov2-cmp-hd-nm">Último escaneo</span>
+                    <span className="ov2-cmp-sov">Mención</span>
+                    {/* No column at all when this scan has no position data,
+                        rather than a "Puesto" heading over five dashes: a labelled
+                        empty column reads as a broken screen, an absent one reads
+                        as what it is (log §15, "ni etiqueta ni tarjeta si no hay
+                        nada debajo"). */}
+                    {panoramaRanked ? <span className="ov2-cmp-sc">Puesto</span> : null}
+                  </div>
+                  {panoramaListRows.flatMap((row, i) => {
+                    const favicon = faviconUrl(row.domain);
+                    const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
+                    const nodes = [];
+                    // A gap between the top 5 and your own row must LOOK like a
+                    // skip, not like a missing row — an unexplained hole at rank
+                    // 6 reads as a bug (founder, 2026-08-07).
+                    if (brandAppendedBeyondTop5 && i === panoramaListRows.length - 1) {
+                      nodes.push(
+                        <div className="ov2-cmp-gap" key="gap" aria-hidden="true">
+                          <span />
+                          <span />
+                          <span />
+                        </div>
+                      );
+                    }
+                    nodes.push(
+                      <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
+                        {favicon ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
+                          <img src={favicon} alt="" className="ov2-cmp-fav" width={26} height={26} loading="lazy" />
+                        ) : (
+                          <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
+                            {row.name.slice(0, 1).toUpperCase()}
+                          </span>
+                        )}
+                        <div className="ov2-cmp-nm">
+                          <div className="t">
+                            {row.name}
+                            {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
+                          </div>
+                        </div>
+                        <div className="ov2-cmp-sov">
+                          <div className="track">
+                            <i
+                              style={{
+                                width: `${((row.mentionRate ?? 0) / maxPanoramaMention) * 100}%`,
+                                background: barColor
+                              }}
+                            />
+                          </div>
+                          <div className="pct">{row.mentionRate !== null ? `${Math.round(row.mentionRate)}%` : "—"}</div>
+                        </div>
+                        {/* Ordinal, and the heaviest figure of the row: "5º" is a
+                            standing, "5" is a bullet, and on the left it gets read
+                            as one (log §15, twice). Same shape as Competidores.
+                            Absent, not dashed, when the scan has no positions —
+                            every row would carry the same "—". */}
+                        {row.rank !== null ? (
+                          <span className="ov2-cmp-sc">{row.rank}º</span>
+                        ) : null}
+                      </div>
+                    );
+                    return nodes;
+                  })}
+                </div>
+              </>
+            )
           ) : (
             <div className="card" style={{ padding: "16px 18px" }}>
               <EmptyState

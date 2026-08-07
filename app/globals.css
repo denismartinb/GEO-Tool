@@ -1460,6 +1460,25 @@ a {
   margin: 3px 0 6px;
 }
 .ov2-pm-val small { font-size: 14px; color: var(--ink-4); font-weight: 700; }
+/* PANORAMA-EMPTY-1. "No apareciste en este escaneo" replaces the number in
+   this same slot when the brand itself was never named — the sentence must
+   not inherit the giant display-font digit styling meant for "5 / 7", or it
+   renders as an oversized, badly-wrapped headline. */
+.ov2-pm-val-text {
+  display: block;
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: normal;
+  color: var(--ink-3);
+}
+/* The bars are always the true top 5, not "your" top 5 — this caption keeps
+   the headline number above (your standing) and the bars below (who's
+   actually top 5) from being read as the same claim (founder, 2026-08-07). */
+.ov2-pm-bars-lbl {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); margin: 10px 0 4px;
+}
 .ov2-posbars { display: flex; align-items: flex-end; gap: 9px; height: 60px; padding: 0 2px; margin: 6px 0 26px; }
 .ov2-posbars .b { flex: 1; border-radius: 6px 6px 0 0; position: relative; background: var(--line); min-height: 6px; }
 .ov2-posbars .b.you { background: var(--brand-blue); }
@@ -1471,6 +1490,12 @@ a {
 .ov2-cmp-row { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid var(--line-soft); }
 .ov2-cmp-row:last-child { border-bottom: none; }
 .ov2-cmp-row.you { background: var(--brand-blue-soft); }
+/* PANORAMA-EMPTY-1. When the brand falls outside the real top 5, its row is
+   still appended so "dónde estoy" never disappears — but an unexplained gap
+   at rank 6 reads as a missing row, not a skip (founder, 2026-08-07). Three
+   dots mark it as a deliberate break, not a broken list. */
+.ov2-cmp-gap { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 7px 0; }
+.ov2-cmp-gap span { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-4); }
 /* PANORAMA-PARITY-1. The leading `.ov2-cmp-n` rank digit is gone: the standing
    now sits at the end of the row as an ordinal, the same shape Competidores
    reached after the founder twice failed to see it on the left (log §15).
@@ -1643,6 +1668,7 @@ a {
   .ov2-posbars { height: 86px; margin: 10px 0 30px; gap: 12px; }
   .ov2-posbars .b span { font-size: 10.5px; }
   .ov2-pm-val { font-size: 26px; }
+  .ov2-pm-val-text { font-size: 17px; }
   .ov2-cmp-row { padding: 14px 18px; gap: 14px; }
   .ov2-cmp-fav, .ov2-cmp-row .fav { width: 30px !important; height: 30px !important; border-radius: 9px; }
   .ov2-cmp-nm .t { font-size: 13.5px; }

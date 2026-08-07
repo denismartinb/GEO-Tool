@@ -57,6 +57,34 @@ limpio (log §11).
   §36). La cuota de voz sigue viva y visible en el **pódium** de Competidores,
   donde está etiquetada como tal y calculada sobre todos los escaneos. Un número
   sin etiqueta hereda el significado del número parecido que el usuario ya vio.
+
+## La panorámica de Visión general tiene cuatro estados, no uno
+
+`computePanoramaState` (`lib/competitors/panorama-state.ts`) es la única
+fuente de qué estado aplica; no derivar ninguno de estos casos inline en la
+página. Tratar los tres últimos como variaciones del primero es exactamente el
+bug que motivó PANORAMA-EMPTY-1 (log §36, addendum 2026-08-07): seis filas de
+`0%` sin explicación en el primer escaneo de un cliente nuevo, y una tarjeta
+titulada "Tu puesto cuando apareces" cuyas barras no incluían la fila de la
+propia marca cuando caía fuera del top 5.
+
+- **`empty`** — nadie fue mencionado. Se decide por `mentionRate`, nunca por
+  el ranking: tiene que dispararse con o sin datos de posición, porque "¿hubo
+  alguien?" es una pregunta distinta de "¿hay puesto?". Sin tabla, sin
+  gráfico — un bloque que lo dice con palabras.
+- **`unranked`** — escaneo anterior a geo-score-v3 (ADR 0026, sin backfill)
+  con menciones reales. Lista sólo-mención, sin columna de puesto.
+- **`ranked` dentro del top 5** — el caso que valida el piloto.
+- **`ranked` fuera del top 5, o marca sin mención mientras otros sí tienen
+  puesto** — las barras (`topRows`) son **siempre** el top 5 real, nunca
+  rellenadas con la fila de la marca para fingir que la incluyen; van
+  etiquetadas "Top 5 posiciones" para no leerse como la misma afirmación que
+  el titular. Si la marca cae fuera del top 5, su fila se añade al final de
+  la **tabla** (no del gráfico) tras un separador visual — nunca un hueco sin
+  explicar. **Si la marca no tiene puesto en absoluto, no se le añade fila**:
+  el titular dice "No apareciste en este escaneo" y eso basta (decisión
+  explícita del fundador, 2026-08-07: *"En el D que lo diga el titular. No
+  hace falta la fila al final"*).
 - **La lista muestra un ranking 1..N sin repetidos, no la media en crudo.** El
   dato de fondo sigue siendo `avg_position_when_mentioned`, pero una media casi
   nunca vale 1,00, así que enseñarla hacía que la lista pareciera no tener a
