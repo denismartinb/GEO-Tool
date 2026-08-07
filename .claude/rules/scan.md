@@ -29,12 +29,34 @@ worse than no rule, because a future session will obey it anyway.
   else already there. Compute one absolute deadline at entry and thread it
   down; never give a new step its own fixed allowance. Giving extraction a
   per-pass 25s put the final batch's invocation at ~70s of work in a 60s
-  function and killed a real scan (`docs/adr/0029`, Addendum).
+  function and killed a real scan (`docs/adr/0029`, Addendum). The same
+  arithmetic applies to any loop that *calls* `executePendingScan`: ask
+  before an iteration whether its whole worst case fits, never after one
+  whether time has already run out — a `do { … } while (elapsed < budget)` lets
+  an iteration start at 39s and run another 45 (`docs/adr/0037`,
+  `lib/scan/drive-budget.ts`).
 - **Any claim held across a step long enough to be killed needs a lease.**
   `reconcileStuckScanRuns` only ever touches `scan_runs`, never `jobs`, so a
   job left `running` by a dead invocation is stranded forever unless something
   can take it over. Use the atomic `UPDATE ... WHERE locked_at < now - lease
-  RETURNING` pattern (`docs/adr/0029`, Addendum).
+  RETURNING` pattern (`docs/adr/0029`, Addendum). This covers **every** job
+  kind, not just the one that prompted it: the same rule was written for
+  `scan_finalize` and left unapplied to `scan_prompt` for months, even though a
+  prompt batch spends longer in provider calls than finalize ever does
+  (`docs/adr/0037`). A lease must also be **bounded** — a stale job with no
+  attempts left is failed, not reclaimed again, or one poison job consumes
+  every pass forever.
+- **Never let a browser be the only thing driving a scan.** Work that continues
+  after a response is sent must be dispatched server-side; a client-side loop
+  is an accelerator, never the engine. A phone that locks its screen suspends
+  the tab's JavaScript, and the campaign then stops with its remaining jobs
+  `pending` and nothing able to claim them — 31 prompts, two failed runs, 50
+  real answers discarded (`docs/adr/0037`). Two drivers racing is safe here
+  *because* batch claims are atomic; suppressing one to avoid "redundant" work
+  is what removed the only driver that survives a locked phone.
+- **A retry must start what it creates.** Creating a replacement `scan_runs`
+  row is not a retry: nothing on the server executes a `pending` run on its own.
+  Whatever creates one dispatches it too (`docs/adr/0037`).
 - **A failure the operator can fix must reach the operator.** Persisting a
   categorized error is half the job; if nothing reads it, the incident is still
   invisible — OpenAI's 429s ran four days and Claude's ran unnoticed entirely

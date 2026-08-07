@@ -24,11 +24,13 @@ import {
   EXTRACTION_VERSION,
   FINALIZE_LOCK_LEASE_MS,
   MAX_REAL_SCAN_PROMPTS,
+  PROMPT_LOCK_LEASE_MS,
   PROMPT_RETRY_DELAY_MS,
   PROMPT_RETRY_MAX_TOTAL_ATTEMPTS,
   PROMPT_VERSION,
   SCAN_INVOCATION_WORK_BUDGET_MS
 } from "@/lib/scan/constants";
+import { triggerScanContinuation } from "@/lib/scan/continuation";
 import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
 import { logJob } from "@/lib/scan/job-logging";
@@ -455,66 +457,14 @@ async function refreshRunProgressCounters({
  */
 export { getSiteUrl };
 
-/**
- * Fires the next batch of a multi-batch campaign (SCAN-CHAIN-1) without
- * making the caller wait for it: called from inside `after()`, so Next.js
- * keeps this invocation's function instance alive just long enough for the
- * POST to actually reach `/api/scan/continue`, but the *response* to
- * whoever called `executePendingScan` (the manual "Lanzar escaneo" action,
- * the cron sweep, ...) has already been sent — this does not add to their
- * wait time. `/api/scan/continue` itself resolves quickly relative to its
- * own 60s budget; awaiting its response here just means "the next batch was
- * accepted," not "the whole remaining campaign finished."
- *
- * Errors are swallowed (logged only): if this dispatch is lost, the campaign
- * simply stalls until `reconcileStuckScanRuns` notices no progress and
- * auto-retries, same safety net as any other execution failure.
- */
-async function triggerScanContinuation({ projectId, runId }: { projectId: string; runId: string }): Promise<void> {
-  const secret = process.env.SCAN_CONTINUE_SECRET;
-  if (!secret) {
-    console.error("[scan-runner] cannot self-chain scan batch: SCAN_CONTINUE_SECRET is not configured", {
-      projectId,
-      runId
-    });
-    return;
-  }
-
-  try {
-    await fetch(`${getSiteUrl()}/api/scan/continue`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
-      body: JSON.stringify({ projectId, runId })
-    });
-  } catch (error) {
-    console.error("[scan-runner] failed to dispatch scan continuation", {
-      projectId,
-      runId,
-      message: error instanceof Error ? error.message : String(error)
-    });
-  }
-}
-
 export async function executePendingScan({
   projectId,
   runId,
-  supabase,
-  scheduleContinuation = true
+  supabase
 }: {
   projectId: string;
   runId: string;
   supabase: AuthenticatedContext["supabase"];
-  /**
-   * When a batch finishes with prompts still pending, whether to self-schedule
-   * the next batch via `after()` + a fetch to `/api/scan/continue`
-   * (docs/adr/0014). Default `true` keeps the background self-chain used by the
-   * cron / browser-closed path. The foreground driver (`autoExecutePendingScan`)
-   * passes `false`: it loops the batches itself within one request budget and
-   * re-drives from the client, so it neither needs the secret-gated
-   * continuation endpoint (which a preview deploy may not reach) nor wants a
-   * duplicate dispatch racing its own loop.
-   */
-  scheduleContinuation?: boolean;
 }) {
   // One absolute deadline for everything this invocation does. Generation
   // spends from it first; whatever remains is what extraction gets, across
@@ -567,7 +517,7 @@ export async function executePendingScan({
       .order("created_at", { ascending: true }),
     service
       .from("jobs")
-      .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at")
+      .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at, locked_at")
       .eq("project_id", projectId)
       .eq("run_id", runId)
       .order("created_at", { ascending: true })
@@ -600,16 +550,37 @@ export async function executePendingScan({
   const jobs = jobsRaw as unknown as (JobRow & { created_at: string })[];
   const startJob = jobs.find((job) => job.job_type === "scan_start");
   const finalizeJob = jobs.find((job) => job.job_type === "scan_finalize");
-  // Only the pending scan_prompt jobs, oldest first — the batch this
-  // invocation is responsible for (SCAN-CHAIN-1). Jobs already
-  // completed/failed by an earlier batch of this same campaign are left
-  // alone; anything beyond MAX_REAL_SCAN_PROMPTS stays pending for the next
-  // self-chained invocation.
-  const batchCandidates = jobs
-    .filter((job) => job.job_type === "scan_prompt" && job.status === "pending")
-    .slice(0, MAX_REAL_SCAN_PROMPTS);
-
   const nowIso = new Date().toISOString();
+  const promptLeaseExpiredBefore = new Date(Date.now() - PROMPT_LOCK_LEASE_MS).toISOString();
+
+  const promptJobs = jobs.filter((job) => job.job_type === "scan_prompt");
+
+  // A `running` prompt job whose lock is older than the lease belongs to an
+  // invocation that is gone (SCAN-DRIVE-1). Nothing else recovers it —
+  // `reconcileStuckScanRuns` only ever touches `scan_runs` — so before this,
+  // one killed batch left its jobs `running` forever, the campaign could never
+  // observe "every prompt job terminal", and finalize was unreachable. Same
+  // lease the finalize job has had since docs/adr/0029; it was simply never
+  // extended to the batches, which are the part that actually spends tens of
+  // seconds on provider calls.
+  const staleRunningJobs = promptJobs.filter(
+    (job) => job.status === "running" && Boolean(job.locked_at) && String(job.locked_at) < promptLeaseExpiredBefore
+  );
+
+  // A job that has already spent its attempts must not be reclaimed forever:
+  // it is failed instead, which takes it out of the unfinished set and lets
+  // the campaign reach finalize with a truthful count. Without this split, a
+  // job that reliably kills its invocation would be re-claimed on every pass.
+  const reclaimableJobs = staleRunningJobs.filter((job) => job.attempt_count < job.max_attempts);
+  const exhaustedStaleJobs = staleRunningJobs.filter((job) => job.attempt_count >= job.max_attempts);
+
+  // Oldest work first — a reclaimed job is older than anything still pending,
+  // and it is what blocks the campaign from finalizing. Anything beyond
+  // MAX_REAL_SCAN_PROMPTS waits for the next self-chained invocation.
+  const batchCandidates = [
+    ...reclaimableJobs,
+    ...promptJobs.filter((job) => job.status === "pending")
+  ].slice(0, MAX_REAL_SCAN_PROMPTS);
 
   if (isFirstBatch) {
     const { data: runningRun, error: runStartError } = await service
@@ -676,30 +647,103 @@ export async function executePendingScan({
         .eq("run_id", runId);
     }
 
+    // A stale-locked job that has no attempts left is failed rather than
+    // reclaimed, so it stops blocking the campaign's path to finalize. The
+    // error is a constant this codebase authored (never a provider string),
+    // per .claude/rules/scan.md.
+    if (exhaustedStaleJobs.length > 0) {
+      const staleJobErrorSummary = getSanitizedScanError(null);
+
+      await service
+        .from("jobs")
+        .update({ status: "failed", locked_at: null, locked_by: null, last_error: staleJobErrorSummary })
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running")
+        .lt("locked_at", promptLeaseExpiredBefore)
+        .in(
+          "id",
+          exhaustedStaleJobs.map((job) => job.id)
+        );
+
+      for (const job of exhaustedStaleJobs) {
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "error",
+          message: "Prompt job failed: lock lease expired with no attempts left.",
+          context: { attempt_count: job.attempt_count, max_attempts: job.max_attempts }
+        });
+      }
+    }
+
     // Atomically claim this batch's candidates (SCAN-CHAIN-1): a duplicate
     // continuation dispatch (network retry, an `after()` re-fire) racing
     // against this invocation can only ever "win" jobs that are still
     // `pending` at the moment of the update — whichever invocation's UPDATE
     // commits first for a given row is the only one that processes it.
-    let claimedJobs: (JobRow & { created_at: string })[] = [];
-    if (batchCandidates.length > 0) {
+    //
+    // Two claims, not one, because a candidate is either still `pending` or a
+    // `running` job whose lease expired (SCAN-DRIVE-1). Both are the same
+    // atomic conditional UPDATE — the reclaim additionally requires the lock
+    // to be older than the lease, so whichever invocation commits first moves
+    // `locked_at` and every racing one stops matching. Splitting them keeps
+    // each predicate exact: a claim that matched `running` unconditionally
+    // would steal work from a live invocation.
+    const claimPatch = { status: "running", locked_at: nowIso, locked_by: "gemini-executor" };
+    const claimedColumns = "id, job_type, status, attempt_count, max_attempts, payload_json, created_at, locked_at";
+    const claimedJobs: (JobRow & { created_at: string })[] = [];
+
+    const pendingCandidateIds = batchCandidates.filter((job) => job.status === "pending").map((job) => job.id);
+    const reclaimCandidateIds = batchCandidates.filter((job) => job.status === "running").map((job) => job.id);
+
+    if (pendingCandidateIds.length > 0) {
       const { data: claimedRows, error: claimError } = await service
         .from("jobs")
-        .update({ status: "running", locked_at: nowIso, locked_by: "gemini-executor" })
+        .update(claimPatch)
         .eq("project_id", projectId)
         .eq("run_id", runId)
         .eq("status", "pending")
-        .in(
-          "id",
-          batchCandidates.map((job) => job.id)
-        )
-        .select("id, job_type, status, attempt_count, max_attempts, payload_json, created_at");
+        .in("id", pendingCandidateIds)
+        .select(claimedColumns);
 
       if (claimError) {
         throw new ProjectActionError("scan_failed");
       }
 
-      claimedJobs = (claimedRows ?? []) as unknown as (JobRow & { created_at: string })[];
+      claimedJobs.push(...((claimedRows ?? []) as unknown as (JobRow & { created_at: string })[]));
+    }
+
+    if (reclaimCandidateIds.length > 0) {
+      const { data: reclaimedRows, error: reclaimError } = await service
+        .from("jobs")
+        .update(claimPatch)
+        .eq("project_id", projectId)
+        .eq("run_id", runId)
+        .eq("status", "running")
+        .lt("locked_at", promptLeaseExpiredBefore)
+        .in("id", reclaimCandidateIds)
+        .select(claimedColumns);
+
+      if (reclaimError) {
+        throw new ProjectActionError("scan_failed");
+      }
+
+      const reclaimed = (reclaimedRows ?? []) as unknown as (JobRow & { created_at: string })[];
+
+      for (const job of reclaimed) {
+        await logJob(service, {
+          jobId: job.id,
+          projectId,
+          runId,
+          level: "warn",
+          message: "Reclaimed a prompt job whose lock lease expired.",
+          context: { attempt_count: job.attempt_count, max_attempts: job.max_attempts, providers }
+        });
+      }
+
+      claimedJobs.push(...reclaimed);
     }
 
     if (claimedJobs.length > 0) {
@@ -771,8 +815,8 @@ export async function executePendingScan({
       .in("status", ["pending", "running"]);
 
     if ((unfinishedCount ?? 0) > 0) {
-      // Work remains. If this invocation just made real progress
-      // (claimedJobs.length > 0), it owns handing off to the next batch
+      // Work remains, and this invocation made real progress
+      // (claimedJobs.length > 0), so it owns handing off to the next batch
       // without making whoever called executePendingScan (the manual scan
       // action, the cron sweep, a prior continuation) wait for it. If this
       // invocation claimed nothing — every candidate was already claimed by
@@ -780,11 +824,25 @@ export async function executePendingScan({
       // other invocation; scheduling a second continuation here would just
       // be redundant.
       //
-      // `scheduleContinuation === false` means the caller (the foreground
-      // driver) is looping the batches itself, so it does not want a
-      // self-fetch continuation — which it doesn't need and which a preview
-      // deploy may not even be able to reach (docs/adr/0014).
-      if (scheduleContinuation && claimedJobs.length > 0) {
+      // The hand-off is now unconditional (SCAN-DRIVE-1). It used to be
+      // suppressed for the foreground driver, on the reasoning that the
+      // driver loops the batches itself and a preview deploy may not be able
+      // to reach the secret-gated endpoint anyway (docs/adr/0014). What that
+      // missed is that the foreground driver lives in the user's *browser*:
+      // when a phone locks the screen or the tab is backgrounded, iOS Safari
+      // suspends its JavaScript, the loop stops asking for batches, and the
+      // campaign has no other driver anywhere. That is the 2026-08-07
+      // genscore.es failure — two runs, 31 prompts, 50 real answers
+      // generated and thrown away, with every unfinished job left `pending`
+      // and nothing in the system able to claim it (docs/adr/0037).
+      //
+      // A duplicate dispatch racing the foreground loop is safe by
+      // construction, not by luck: batches are claimed with an atomic
+      // conditional UPDATE, so whichever invocation commits first is the only
+      // one that processes a given job. The cost of an unreachable
+      // continuation on a preview deploy is a logged error; the cost of not
+      // scheduling one is a scan that only advances while a screen is awake.
+      if (claimedJobs.length > 0) {
         after(() => triggerScanContinuation({ projectId, runId }));
       }
       return;
@@ -936,9 +994,7 @@ export async function executePendingScan({
       // still advancing.
       await refreshRunProgressCounters({ service, projectId, runId });
 
-      if (scheduleContinuation) {
-        after(() => triggerScanContinuation({ projectId, runId }));
-      }
+      after(() => triggerScanContinuation({ projectId, runId }));
       return;
     }
 
