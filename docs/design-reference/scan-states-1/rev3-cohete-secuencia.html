@@ -131,8 +131,12 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     Tenías razón con el reparto, y encima es el que hace el pipeline de verdad:
     <strong>el escaneo mira hacia fuera</strong> —lo que las IA dicen de ti, ahí arriba— y
     cuando acaba, <strong>la auditoría mira hacia dentro</strong>, tu propia web. Eso es
-    exactamente subir, traer la carga y reentrar. Siete momentos, siete frases cortas, y el
-    cielo que se oscurece al subir para que las estrellas vuelvan donde tocan.
+    exactamente subir, traer la carga y reentrar. Siete momentos, siete frases cortas, el
+    cielo que se oscurece al subir para que las estrellas vuelvan donde tocan, y la carga
+    que se descarga punto a punto hasta formar tu puntuación.
+    <br><br>
+    Se ve <strong>una sola vez: en el primer escaneo de un dominio nuevo</strong>. Es el
+    final del onboarding, no un estado del producto.
   </p>
 </header>
 
@@ -141,8 +145,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
   <h2>La misión completa</h2>
   <p class="sec-note">
     Arrastra la barra por toda la misión o salta por capítulos. Cada frase de la pantalla
-    sale de un dato: si un motor no ha contestado, no se enciende su tobera; si la auditoría
-    está apagada en el proyecto, no hay reentrada.
+    sale de un dato: si un motor no ha contestado no se enciende su tobera, y cada punto del
+    anillo de la órbita es una respuesta que ya hemos leído. Los siete momentos van siempre
+    completos — la auditoría web queda activa en el producto final.
   </p>
 
   <div class="demo">
@@ -204,11 +209,15 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
             <path data-plume d="M296 318 L324 318 L332 400 L288 400 Z" fill="url(#plume)" opacity="0"/>
 
-            <!-- carga entregada: el resultado del escaneo, soltado en órbita -->
-            <g data-payload opacity="0">
-              <circle cx="392" cy="150" r="30" fill="#FFFFFF" stroke="#E7EAF0" stroke-width="2"/>
-              <text x="392" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="24" fill="#0B1426">43</text>
-              <text x="392" y="196" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="#8FB0FF">PUNTUACIÓN</text>
+            <!-- ÓRBITA: la bodega se abre y cada respuesta analizada sale y ocupa
+                 su sitio en el anillo. 90 puntos, uno por respuesta: el score no
+                 aparece de la nada, se monta delante de ti. -->
+            <g data-analysis opacity="0">
+              <line data-beam x1="310" y1="92" x2="508" y2="92" stroke="#7FE3EC" stroke-width="1.2" opacity=".7"/>
+              <g data-ringdots transform="rotate(0 508 150)"></g>
+              <circle data-core cx="508" cy="150" r="34" fill="rgba(15,28,51,.85)" stroke="#2C4468" stroke-width="1.5"/>
+              <text data-coretxt x="508" y="158" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="26" fill="#F7F8FB">0</text>
+              <text data-corecap x="508" y="222" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" letter-spacing="1.3" fill="#8FB0FF">RESPUESTAS LEÍDAS</text>
             </g>
 
             <g data-rocket transform="translate(0,0)">
@@ -357,25 +366,26 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
     <div class="beat">
       <svg class="beat-art" viewBox="0 0 280 130"><rect width="280" height="130" fill="#0A1526"/>
-        <circle class="tw" cx="40" cy="26" r="1.4" fill="#CFE0FF"/><circle class="tw" cx="228" cy="40" r="1.2" fill="#CFE0FF"/>
-        <circle class="tw" cx="86" cy="98" r="1" fill="#CFE0FF"/><circle class="tw" cx="196" cy="102" r="1.3" fill="#CFE0FF"/>
-        <circle class="tw" cx="130" cy="20" r="1" fill="#CFE0FF"/>
-        <g transform="translate(-28,0)">
+        <circle class="tw" cx="40" cy="26" r="1.4" fill="#CFE0FF"/><circle class="tw" cx="120" cy="112" r="1.2" fill="#CFE0FF"/>
+        <circle class="tw" cx="66" cy="98" r="1" fill="#CFE0FF"/>
+        <g transform="translate(-44,0)">
           <rect x="128" y="82" width="8" height="7" rx="2" fill="#3B4759"/><rect x="140" y="82" width="8" height="8" rx="2" fill="#3B4759"/><rect x="152" y="82" width="8" height="7" rx="2" fill="#3B4759"/>
           <path d="M128 66 L118 86 L128 82 Z" fill="#2563EB"/><path d="M160 66 L170 86 L160 82 Z" fill="#2563EB"/>
           <path d="M144 28 q16 16 16 39 v15 h-32 v-15 q0 -23 16 -39 Z" fill="#F7F8FB"/>
           <rect x="126" y="58" width="36" height="4" rx="2" fill="#2563EB"/>
           <circle cx="144" cy="60" r="6" fill="#0B1426"/><circle cx="144" cy="60" r="3.6" fill="#09C5D6"/>
         </g>
-        <circle cx="206" cy="66" r="20" fill="#0F1C33" stroke="#2C4468" stroke-width="1.5"/>
-        <text x="206" y="72" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="16" fill="#F7F8FB">43</text>
+        <line x1="118" y1="60" x2="196" y2="30" stroke="#7FE3EC" stroke-width="1" opacity=".7"/>
+        <circle cx="196.0" cy="30.0" r="1.7" fill="#7FE3EC"/><circle cx="198.4" cy="30.1" r="1.7" fill="#7FE3EC"/><circle cx="200.7" cy="30.3" r="1.7" fill="#7FE3EC"/><circle cx="203.1" cy="30.7" r="1.7" fill="#7FE3EC"/><circle cx="205.4" cy="31.3" r="1.7" fill="#7FE3EC"/><circle cx="207.6" cy="32.1" r="1.7" fill="#7FE3EC"/><circle cx="209.8" cy="32.9" r="1.7" fill="#7FE3EC"/><circle cx="212.0" cy="34.0" r="1.7" fill="#7FE3EC"/><circle cx="214.0" cy="35.2" r="1.7" fill="#7FE3EC"/><circle cx="216.0" cy="36.5" r="1.7" fill="#7FE3EC"/><circle cx="217.9" cy="38.0" r="1.7" fill="#7FE3EC"/><circle cx="219.6" cy="39.5" r="1.7" fill="#7FE3EC"/><circle cx="221.3" cy="41.2" r="1.7" fill="#7FE3EC"/><circle cx="222.8" cy="43.1" r="1.7" fill="#7FE3EC"/><circle cx="224.2" cy="45.0" r="1.7" fill="#7FE3EC"/><circle cx="225.4" cy="47.0" r="1.7" fill="#7FE3EC"/><circle cx="226.6" cy="49.1" r="1.7" fill="#7FE3EC"/><circle cx="227.5" cy="51.3" r="1.7" fill="#7FE3EC"/><circle cx="228.3" cy="53.5" r="1.7" fill="#7FE3EC"/><circle cx="229.0" cy="55.8" r="1.7" fill="#7FE3EC"/><circle cx="229.5" cy="58.1" r="1.7" fill="#7FE3EC"/><circle cx="229.8" cy="60.4" r="1.7" fill="#7FE3EC"/><circle cx="230.0" cy="62.8" r="1.7" fill="#7FE3EC"/><circle cx="230.0" cy="65.2" r="1.7" fill="#7FE3EC"/><circle cx="229.8" cy="67.6" r="1.7" fill="#7FE3EC"/><circle cx="229.5" cy="69.9" r="1.7" fill="#7FE3EC"/><circle cx="229.0" cy="72.2" r="1.7" fill="#7FE3EC"/><circle cx="228.3" cy="74.5" r="1.7" fill="#7FE3EC"/><circle cx="227.5" cy="76.7" r="1.7" fill="#7FE3EC"/><circle cx="226.6" cy="78.9" r="1.7" fill="#7FE3EC"/><circle cx="225.4" cy="81.0" r="1.7" fill="#7FE3EC"/><circle cx="224.2" cy="83.0" r="1.7" fill="#7FE3EC"/><circle cx="222.8" cy="84.9" r="1.7" fill="#7FE3EC"/><circle cx="221.3" cy="86.8" r="1.7" fill="#7FE3EC"/><circle cx="219.6" cy="88.5" r="1.7" fill="#7FE3EC"/><circle cx="217.9" cy="90.0" r="1.7" fill="#7FE3EC"/><circle cx="216.0" cy="91.5" r="1.7" fill="#7FE3EC"/><circle cx="214.0" cy="92.8" r="1.7" fill="#7FE3EC"/><circle cx="212.0" cy="94.0" r="1.7" fill="#7FE3EC"/><circle cx="209.8" cy="95.1" r="1.7" fill="#7FE3EC"/><circle cx="207.6" cy="95.9" r="1.7" fill="#7FE3EC"/><circle cx="205.4" cy="96.7" r="1.7" fill="#7FE3EC"/><circle cx="203.1" cy="97.3" r="1.7" fill="#7FE3EC"/><circle cx="200.7" cy="97.7" r="1.7" fill="#7FE3EC"/><circle cx="198.4" cy="97.9" r="1.7" fill="#7FE3EC"/><circle cx="196.0" cy="98.0" r="1.7" fill="#7FE3EC"/><circle cx="193.6" cy="97.9" r="1.7" fill="#7FE3EC"/><circle cx="191.3" cy="97.7" r="1.7" fill="#7FE3EC"/><circle cx="188.9" cy="97.3" r="1.7" fill="#7FE3EC"/><circle cx="186.6" cy="96.7" r="1.7" fill="#7FE3EC"/><circle cx="184.4" cy="95.9" r="1.7" fill="#7FE3EC"/><circle cx="182.2" cy="95.1" r="1.7" fill="#7FE3EC"/><circle cx="180.0" cy="94.0" r="1.7" fill="#7FE3EC"/><circle cx="178.0" cy="92.8" r="1.7" fill="#7FE3EC"/><circle cx="176.0" cy="91.5" r="1.7" fill="#7FE3EC"/><circle cx="174.1" cy="90.0" r="1.7" fill="#7FE3EC"/><circle cx="172.4" cy="88.5" r="1.7" fill="#7FE3EC"/><circle cx="170.7" cy="86.8" r="1.7" fill="#7FE3EC"/><circle cx="169.2" cy="84.9" r="1.7" fill="#7FE3EC"/><circle cx="167.8" cy="83.0" r="1.7" fill="#7FE3EC"/><circle cx="166.6" cy="81.0" r="1.7" fill="#7FE3EC"/><circle cx="165.4" cy="78.9" r="1.7" fill="#7FE3EC"/><circle cx="164.5" cy="76.7" r="1.7" fill="#7FE3EC"/><circle cx="163.7" cy="74.5" r="1.7" fill="#7FE3EC"/><circle cx="163.0" cy="72.2" r="1.1" fill="#28405F"/><circle cx="162.5" cy="69.9" r="1.1" fill="#28405F"/><circle cx="162.2" cy="67.6" r="1.1" fill="#28405F"/><circle cx="162.0" cy="65.2" r="1.1" fill="#28405F"/><circle cx="162.0" cy="62.8" r="1.1" fill="#28405F"/><circle cx="162.2" cy="60.4" r="1.1" fill="#28405F"/><circle cx="162.5" cy="58.1" r="1.1" fill="#28405F"/><circle cx="163.0" cy="55.8" r="1.1" fill="#28405F"/><circle cx="163.7" cy="53.5" r="1.1" fill="#28405F"/><circle cx="164.5" cy="51.3" r="1.1" fill="#28405F"/><circle cx="165.4" cy="49.1" r="1.1" fill="#28405F"/><circle cx="166.6" cy="47.0" r="1.1" fill="#28405F"/><circle cx="167.8" cy="45.0" r="1.1" fill="#28405F"/><circle cx="169.2" cy="43.1" r="1.1" fill="#28405F"/><circle cx="170.7" cy="41.2" r="1.1" fill="#28405F"/><circle cx="172.4" cy="39.5" r="1.1" fill="#28405F"/><circle cx="174.1" cy="38.0" r="1.1" fill="#28405F"/><circle cx="176.0" cy="36.5" r="1.1" fill="#28405F"/><circle cx="178.0" cy="35.2" r="1.1" fill="#28405F"/><circle cx="180.0" cy="34.0" r="1.1" fill="#28405F"/><circle cx="182.2" cy="32.9" r="1.1" fill="#28405F"/><circle cx="184.4" cy="32.1" r="1.1" fill="#28405F"/><circle cx="186.6" cy="31.3" r="1.1" fill="#28405F"/><circle cx="188.9" cy="30.7" r="1.1" fill="#28405F"/><circle cx="191.3" cy="30.3" r="1.1" fill="#28405F"/><circle cx="193.6" cy="30.1" r="1.1" fill="#28405F"/>
+        <circle cx="196" cy="64" r="21" fill="rgba(15,28,51,.9)" stroke="#2C4468" stroke-width="1.2"/>
+        <text x="196" y="70" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="15" fill="#F7F8FB">64</text>
       </svg>
       <div class="beat-txt">
         <span class="beat-n">4 · ÓRBITA</span>
         <span class="beat-h">Abriendo la carga</span>
-        <span class="beat-s">Quién te nombra, en qué puesto, a quién cita.</span>
+        <span class="beat-s">64 de 90 leídas. Cada punto del anillo es una respuesta.</span>
         <span class="beat-j">Traerlas era la mitad del viaje.</span>
-        <span class="beat-r">respuestas analizadas / total</span>
+        <span class="beat-r">un punto por respuesta · se encienden al analizarse</span>
       </div>
     </div>
 
@@ -470,11 +480,13 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       cambio cada minuto y medio, y <em>ninguno es decorativo</em>: cada uno se corresponde
       con un paso real del pipeline que hoy no se ve.
     </div>
-    <div class="note cost">
-      <b>Cuando no hay reentrada</b>
-      Si el proyecto tiene la auditoría apagada (<code>auto_web_audit_enabled</code>), no hay
-      paso 6: de «carga entregada» se va directo a aterrizaje. La pantalla no puede prometer
-      una reentrada que no va a ocurrir — sería la versión bonita de mentir.
+    <div class="note">
+      <b>La reentrada no es opcional</b>
+      Decidido: en el producto final <strong>la auditoría web va siempre activa</strong>, así
+      que los siete momentos son siempre siete. El interruptor
+      <code>auto_web_audit_enabled</code> se queda como lo que es —un freno de coste de la
+      fase de pruebas—, no como una variante de producto que la pantalla tenga que
+      contemplar. Un guion con una escena opcional es un guion que nadie recuerda.
     </div>
   </div>
 </section>
@@ -494,7 +506,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <tr><td>1 · Rampa</td><td>En la rampa</td><td>90 respuestas por traer</td><td>Tú no tienes que hacer nada.</td></tr>
         <tr><td>2 · Ignición</td><td>Motores a toda potencia</td><td>Gemini, ChatGPT y Claude, encendidos</td><td>Los tres a la vez. Sí, se puede.</td></tr>
         <tr><td>3 · Ascenso</td><td>38 de 90 a bordo</td><td>Quedan unos 3 minutos</td><td>Puedes cerrar la pestaña. Esto no se cae.</td></tr>
-        <tr><td>4 · Órbita</td><td>Abriendo la carga</td><td>Quién te nombra y en qué puesto</td><td>Traerlas era la mitad del viaje.</td></tr>
+        <tr><td>4 · Órbita</td><td>Abriendo la carga</td><td>64 de 90 leídas · un punto por respuesta</td><td>Traerlas era la mitad del viaje.</td></tr>
         <tr><td>5 · Entrega</td><td>43 puntos</td><td>Sales en 41 de 90 respuestas</td><td>Ya podrías irte. No hemos terminado.</td></tr>
         <tr><td>6 · Reentrada</td><td>Volvemos a tu suelo</td><td>18 de 40 páginas revisadas</td><td>Ya sabemos qué dicen de ti. Ahora, qué dices tú.</td></tr>
         <tr><td>7 · Aterrizaje</td><td>Todo listo</td><td>43 puntos y 6 acciones</td><td>Repetimos mañana. Tú a lo tuyo.</td></tr>
@@ -542,9 +554,12 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <li><strong>Fase 3 — las toberas por motor.</strong> Es lo único que pide lectura nueva (respuestas agrupadas por motor en un endpoint que se sondea cada 4 s). Hasta entonces, las tres encienden juntas al llegar la primera respuesta — menos gracioso, igual de honesto.</li>
     </ol>
     <p style="margin-top:14px;font-size:14.5px;color:var(--d-ink-2)">
-      Y una recomendación que mantengo aunque te quedes con el cohete: <strong>esto sale en
-      el primer escaneo de un dominio</strong>. En el escaneo diario número treinta, la misma
-      cuenta atrás cansa. Los diarios se quedan con la barra callada.
+      <strong>Decidido:</strong> esto es el aterrizaje del onboarding y nada más — se ve
+      <em>una vez por dominio nuevo</em>. Los escaneos diarios se quedan con la barra
+      callada. Eso descarga el diseño de un peso que no tenía por qué llevar: no hace falta
+      que el chiste aguante treinta repeticiones, sólo que la primera vez sea memorable.
+      También simplifica el código: la misión es un componente de onboarding, no un estado
+      global del proyecto.
     </p>
     <p class="ask">¿Te vale este guion de siete? ¿Y confirmas que el cohete es sólo para el primer escaneo?</p>
   </div>
@@ -613,6 +628,21 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     stars.appendChild(c);
   }
 
+  // Un punto por respuesta. No es una cifra decorativa: si el proyecto tiene
+  // 300 respuestas, hay 300 puntos y el anillo se ve más denso.
+  var RING = [];
+  var ringHost = $("[data-ringdots]");
+  for (var n = 0; n < TOTAL; n++) {
+    var a = (n / TOTAL) * 360 - 90;
+    var dot = document.createElementNS(NS, "circle");
+    dot.setAttribute("cx", (508 + 58 * Math.cos(a * Math.PI / 180)).toFixed(2));
+    dot.setAttribute("cy", (150 + 58 * Math.sin(a * Math.PI / 180)).toFixed(2));
+    dot.setAttribute("r", "1.9");
+    dot.setAttribute("fill", "#28405F");
+    ringHost.appendChild(dot);
+    RING.push(dot);
+  }
+
   var chapters = $("[data-chapters]");
   BEATS.forEach(function (b, idx) {
     var el = document.createElement("button");
@@ -632,7 +662,15 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     var climb = seg(f, .05, .52), fall = seg(f, .76, .93);
     var alt = climb * (1 - fall);
     var rocket = $("[data-rocket]");
-    rocket.setAttribute("transform", "translate(0," + (-232 * alt).toFixed(1) + ")");
+        // Balanceo suave sólo en órbita: un cohete perfectamente quieto durante
+    // dos minutos parece una imagen congelada, que es justo lo que esta
+    // pantalla existe para no ser.
+    var sway = (f > .52 && f < .78) ? Math.sin(f * 90) * 2.2 : 0;
+    // Deriva lateral al entrar en órbita: es lo que despeja el titular, y de
+    // paso hace que el cohete "se coloque" en vez de quedarse clavado.
+    var drift = 86 * seg(f, .50, .60) * (1 - fall);
+    rocket.setAttribute("transform",
+      "translate(" + drift.toFixed(1) + "," + (-200 * alt).toFixed(1) + ") rotate(" + sway.toFixed(2) + " 310 266)");
 
     // El cielo oscurece con la altura. Ahí vuelven las estrellas.
     $("[data-night]").setAttribute("opacity", alt.toFixed(3));
@@ -667,7 +705,31 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     });
     $("[data-plume]").setAttribute("opacity", burning && alt < .5 ? "1" : "0");
     $("[data-retro]").setAttribute("opacity", (f > .76 && f < .94) ? "1" : "0");
-    $("[data-payload]").setAttribute("opacity", (f > .70 && f < .93) ? "1" : "0");
+
+    // El anillo vive desde que se abre la bodega hasta que empieza la reentrada.
+    var showRing = f > .52 && f < .80;
+    $("[data-analysis]").setAttribute("opacity", showRing ? "1" : "0");
+    if (showRing) {
+      var readDots = analysed;
+      RING.forEach(function (d, i) {
+        var on = i < readDots;
+        d.setAttribute("fill", on ? "#7FE3EC" : "#28405F");
+        d.setAttribute("r", on ? "2.8" : "1.9");
+      });
+      $("[data-ringdots]").setAttribute("transform", "rotate(" + (f * 240).toFixed(1) + " 508 150)");
+      // El haz apunta al punto que se está colocando ahora mismo.
+      var k = Math.min(TOTAL - 1, readDots), ang = (k / TOTAL) * 360 - 90 + f * 240;
+      var bx = 508 + 58 * Math.cos(ang * Math.PI / 180), by = 150 + 58 * Math.sin(ang * Math.PI / 180);
+      var beam = $("[data-beam]");
+      beam.setAttribute("x1", (310 + drift).toFixed(1)); beam.setAttribute("y1", (92 + (1 - alt) * 200).toFixed(1));
+      beam.setAttribute("x2", bx.toFixed(1)); beam.setAttribute("y2", by.toFixed(1));
+      beam.setAttribute("opacity", f < .70 ? ".7" : "0");
+      var done = f >= .70;
+      $("[data-coretxt]").textContent = done ? SCORE : analysed;
+      $("[data-coretxt]").setAttribute("font-size", done ? "34" : "26");
+      $("[data-corecap]").textContent = done ? "PUNTUACIÓN GEO" : "RESPUESTAS LEÍDAS";
+      $("[data-core]").setAttribute("r", done ? "38" : "34");
+    }
     $("[data-ground-label]").textContent = (f > .76 && f < .94) ? "genscore.es · auditando" : "genscore.es";
 
     var sub =
