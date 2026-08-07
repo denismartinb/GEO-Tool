@@ -21,3 +21,27 @@ export function getProjectIdFromPathname(pathname: string): string | null {
   if (!match || !UUID_RE.test(match)) return null;
   return match;
 }
+
+/**
+ * Picks which project a screen without its own explicit selection should
+ * show, in the same priority order `/debug` already applies: an explicit
+ * request (e.g. `?active=<id>`) wins, then the cookie above (the project the
+ * console was last actually pointed at), then the first project of the list
+ * (the account's most recently created one, the historical fallback).
+ *
+ * `projects` is expected already account-scoped (RLS) and archived-filtered
+ * by the caller, so a stale or foreign id in `requestedId`/`rememberedId`
+ * simply fails to match and falls through — same safety property `/debug`
+ * relies on for its own cookie read.
+ */
+export function resolveSelectedProject<T extends { id: string }>(
+  projects: T[],
+  requestedId: string | null | undefined,
+  rememberedId: string | null | undefined
+): T | undefined {
+  const requested = requestedId ? projects.find((p) => p.id === requestedId) : undefined;
+  if (requested) return requested;
+  const remembered = rememberedId ? projects.find((p) => p.id === rememberedId) : undefined;
+  if (remembered) return remembered;
+  return projects[0];
+}

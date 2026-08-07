@@ -3444,6 +3444,51 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
 ---
 
+## 36. La portada de Dominios sigue al dominio abierto, no al más reciente (DOMAINS-ACTIVE-COOKIE-1, 2026-08-07)
+
+**El problema, reportado por el fundador.** Seleccionar un dominio en Dominios
+y navegar a Visión general, Prompts o cualquier otra pantalla de proyecto
+funcionaba bien — la URL lleva el `projectId`. Pero volver a Dominios (por la
+barra lateral, sin el parámetro `?active=<id>` de la rejilla) siempre volvía a
+mostrar el mismo dominio en la card grande: el más reciente por `created_at`,
+que en beta suele ser `mozilla.org`, el proyecto reservado del piloto de
+escritura (ver CLAUDE.md, "Pilot write scope"). §32 ya documentó esta caída
+como criterio de reserva deliberado, y §33 dejó dicho explícitamente que "el
+bloque de la barra lateral (`proj-switch`) y la portada de Dominios siguen sin
+tocarse" al resolver el mismo problema para `/debug`. Este reporte es
+justamente el pedido explícito que ambas fases dejaron pendiente.
+
+**La solución reutiliza, no inventa.** DEBUG-ACTIVE-PROJECT-1 (§33) ya
+construyó la única pieza que faltaba: el cookie httpOnly `geo_active_project`
+(`lib/active-project-cookie.ts`), que `middleware.ts` escribe en cada visita a
+`/dashboard/projects/[projectId]/...`. `app/dashboard/domains/page.tsx` ahora
+lo lee con `cookies()` y resuelve la card principal con la misma prioridad que
+`/debug`: `?active=<id>` explícito (clic en una tarjeta de la rejilla) → el
+cookie (el proyecto que la consola tenía realmente abierto) → el más reciente,
+como último recurso si ninguno de los dos casa con un dominio de la cuenta. La
+resolución se extrajo a una función pura y testeada,
+`resolveSelectedProject` (mismo módulo, `lib/active-project-cookie.test.ts`),
+en vez de quedar en línea dentro del Server Component. El cookie sigue sin
+autorizar nada por sí mismo: `projects` ya viene acotado por RLS y filtrado de
+archivados desde `getWorkspaceCounters`, así que un id obsoleto, borrado o
+ajeno simplemente no aparece en la lista y cae al criterio siguiente — misma
+propiedad de seguridad que ya tenía `/debug`.
+
+**Deliberadamente fuera de esta fase.** Elegir un dominio en la rejilla de
+Dominios (`?active=<id>`) sin llegar a entrar en el proyecto (sin pulsar "Ver
+visión general") no actualiza el cookie — sólo se escribe al visitar
+`/dashboard/projects/[projectId]/...`. Si en ese estado intermedio el usuario
+sale por otro camino y vuelve a Dominios sin el parámetro, verá el dominio
+recordado por el cookie, no el que acababa de tocar en la rejilla. No es el
+caso reportado (el fundador describe navegar primero a Visión general/Prompts,
+que sí escribe el cookie) y ampliar la escritura del cookie a la propia
+pantalla de Dominios es un cambio de superficie distinto — se deja para si
+algún día se reporta.
+
+**Pendiente / roto conocido.** Ninguno nuevo.
+
+---
+
 ## 37. La rama de evidencia del piloto deja de fingir ser un deploy (PILOT-EVIDENCE-IGNORE-1, 2026-08-07)
 
 **El problema, reportado por el fundador:** correos de Vercel de *"Failed
