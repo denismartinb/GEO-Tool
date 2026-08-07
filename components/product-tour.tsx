@@ -154,14 +154,13 @@ export function ProductTour({
    * De ahí las dos mitades: el halo trae la mirada, la flecha dice hacia dónde.
    *
    *   "idle" → aún no toca (el paso 1 sigue corriendo)
-   *   "on"   → animando, tres ciclos y se acaba sola
-   *   "rest" → anillo fino permanente, sin movimiento
-   *   "done" → el usuario ya ha tocado algo; no vuelve en toda la sesión
+   *   "on"   → en bucle hasta que se pulse el botón
+   *   "done" → ya se ha pulsado; no vuelve en toda la sesión
    */
-  const [hint, setHint] = useState<"idle" | "on" | "rest" | "done">("idle");
-  const hintRef = useRef<"idle" | "on" | "rest" | "done">("idle");
+  const [hint, setHint] = useState<"idle" | "on" | "done">("idle");
+  const hintRef = useRef<"idle" | "on" | "done">("idle");
 
-  const setHintState = useCallback((next: "idle" | "on" | "rest" | "done") => {
+  const setHintState = useCallback((next: "idle" | "on" | "done") => {
     hintRef.current = next;
     setHint(next);
   }, []);
@@ -1109,18 +1108,11 @@ export function ProductTour({
         ) : (
           <button
             type="button"
-            className={`pt-btn pt-primary${hint === "on" ? " pt-hint" : ""}${hint === "rest" ? " pt-hint-rest" : ""}`}
-            // La pista se gasta al primer contacto, sea del tipo que sea. Ya ha
-            // cumplido: quien pasa el ratón o llega con el tabulador ya ha
-            // encontrado el botón, y seguir insistiendo lo convierte en un
-            // incordio.
-            onPointerEnter={endHint}
-            onFocus={endHint}
-            onAnimationEnd={(e) => {
-              // Sólo la del halo: la de la flecha corre en un hijo y burbujea
-              // hasta aquí, así que sin filtrar esto se dispararía dos veces.
-              if (e.animationName === "ptHintHalo" && hintRef.current === "on") setHintState("rest");
-            }}
+            className={`pt-btn pt-primary${hint === "on" ? " pt-hint" : ""}`}
+            // La pista sólo se apaga con el CLIC (fundador, 2026-08-07). Ni el
+            // ratón por encima ni el foco de teclado la cortan: existe para
+            // conseguir ese clic, así que mientras no llegue no ha terminado su
+            // trabajo.
             onClick={() => {
               endHint();
               if (isLast) {

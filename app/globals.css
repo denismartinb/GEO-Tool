@@ -7095,12 +7095,12 @@ select.set-field {
 
 /* Pista del paso 1 (fundador, 2026-08-07; log §33).
    El halo trae la mirada desde el lienzo que acaba de pararse; la flecha dice
-   hacia dónde. Tres ciclos y se acaba: una pista que no termina deja de ser
-   una pista y pasa a ser un incordio. Después queda el anillo fino, que marca
-   el botón sin mover nada, y desaparece en cuanto el usuario toca algo. */
-.pt-btn.pt-primary.pt-hint { animation: ptHintHalo 1.6s ease-out 3; }
-.pt-btn.pt-primary.pt-hint .pt-arrow { animation: ptHintArrow 1.6s ease-in-out 3; }
-.pt-btn.pt-primary.pt-hint-rest { box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+   hacia dónde. En bucle hasta que se pulsa el botón, no un número fijo de
+   ciclos (fundador, 2026-08-07): la pista existe para conseguir ese clic, así
+   que mientras no llegue no ha terminado su trabajo. Ni el ratón por encima ni
+   el foco la apagan — sólo el clic. */
+.pt-btn.pt-primary.pt-hint { animation: ptHintHalo 1.6s ease-out infinite; }
+.pt-btn.pt-primary.pt-hint .pt-arrow { animation: ptHintArrow 1.6s ease-in-out infinite; }
 
 @keyframes ptHintHalo {
   0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45); }
@@ -7179,6 +7179,12 @@ select.set-field {
    real de la consola en móvil, donde el sidebar vive en un cajón. El cursor
    deja de señalar el menú y señala el título de cada pantalla. */
 @media (max-width: 560px) {
+  /* El marco iba a sangre mientras el párrafo del hero respira 24 px a cada
+     lado, así que el tour parecía «pegado» a los bordes (fundador, 2026-08-07:
+     «un pelín más estrecho... alineado con el párrafo de texto»). Se alinea con
+     `.lp-lead`, que es el texto justo encima. */
+  .lp-shot { padding-inline: 24px; }
+
   .pt-side { display: none; }
   .pt-stage { aspect-ratio: 1 / 1; }
   .pt-2col { grid-template-columns: 1fr; gap: 6px; }

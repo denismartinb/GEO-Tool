@@ -35,8 +35,13 @@ obedecerá igual.
   tiene que seguir contemplando que el lienzo sea más alto que la ventana: con
   un `intersectionRatio >= 0.98` a secas, en una pantalla corta no se cumple
   nunca y el tour no arranca jamás.
-- **No hay reproducción perpetua.** Arranca al verse entero y se para al salir
-  de pantalla. Una animación fuera de pantalla es CPU y batería a cambio de
+- **La pista del botón «Siguiente» va en bucle hasta el clic.** Ni el ratón por
+  encima ni el foco la apagan: existe para conseguir ese clic, así que mientras
+  no llegue no ha terminado su trabajo (fundador, 2026-08-07; log §33). Es la
+  única animación del tour que no se detiene sola, y la excepción es
+  deliberada. Sólo sale tras la reproducción automática del paso 1.
+- **No hay reproducción perpetua en el tour.** Arranca al verse entero y se para
+  al salir de pantalla. Una animación fuera de pantalla es CPU y batería a cambio de
   nada. Al volver a entrar retoma donde estaba: la parada por scroll conserva
   el destino del paso en curso en vez de descartarlo.
 - **El cursor apunta a elementos, no a coordenadas.** Cada waypoint resuelve el

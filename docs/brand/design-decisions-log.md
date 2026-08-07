@@ -3309,10 +3309,22 @@ al destino real. La pasada del piloto entra por `/dashboard` a propósito:
 entrar por la pantalla final habría ocultado el fallo.
 
 Verificado con Playwright sobre el build de producción en local, en las dos
-superficies y a 375/768/1280 px (15 comprobaciones): la pista aparece al
-detenerse el paso 1, se apaga al primer contacto, altura constante en los ocho
-pasos, sin recortes dentro del lienzo, sin desbordamiento y sin errores de
-consola.
+superficies y a 375/768/1280 px: la pista aparece al detenerse el paso 1,
+altura constante en los ocho pasos, sin recortes dentro del lienzo, sin
+desbordamiento y sin errores de consola.
+
+**Dos ajustes del fundador el mismo día, ya sobre el preview:**
+
+- **La pista va en bucle hasta el clic**, no tres ciclos. Yo había propuesto que
+  se apagara al primer contacto —ratón, foco o clic— por no volverla un
+  incordio; el fundador lo corrigió y tiene razón en el fondo: la pista existe
+  para conseguir ese clic, así que mientras no llegue no ha cumplido. Ahora ni
+  el hover ni el foco la cortan. Es la única animación del tour que no se
+  detiene sola, y la excepción está declarada en la regla de ruta.
+- **En móvil el marco se estrecha hasta alinearse con el párrafo del hero.**
+  Iba a sangre (0→375) mientras `.lp-lead` respiraba 24 px a cada lado, así que
+  el tour se leía «pegado» a los bordes. Alinearlo se lleva además otros 28 px
+  de alto: **594 → 566 px** a 375.
 
 ### Pendiente / roto conocido
 
