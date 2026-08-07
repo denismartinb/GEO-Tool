@@ -3182,6 +3182,44 @@ antes de escribirlas:
   palabras a propósito. Convertirlo en «+23 puntos garantizados» lo volvería
   una promesa que el producto no puede cumplir.
 
+### El tour se lee, no se mira pasar (2026-08-07)
+
+Corrección del fundador tras probarlo en el preview desde el móvil. Dos cambios,
+los dos sobre **cuándo** corre el reloj, ninguno sobre lo que se ve:
+
+1. **Sólo el primer paso se reproduce solo.** Los otros siete los trae
+   «Siguiente». El motivo es el que el fundador dio y conviene no perder: *«en
+   caso contrario, no hay tiempo suficiente para leer toda la información»*.
+   Encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a
+   leer el subtítulo — el tour se convierte en algo que se mira pasar. Un paso
+   por clic lo convierte en algo que se lee. Sustituye a la reproducción
+   continua de 50 s que describía este mismo §33: los 50 s siguen siendo la
+   longitud del reloj, pero ya nadie los consume del tirón salvo que pulse
+   siete veces. La mecánica no era nueva —Atrás/Siguiente ya reproducían un
+   paso y paraban—, sólo se extiende al arranque.
+2. **En la landing no arranca hasta que el lienzo se ve entero.** Antes bastaba
+   con que asomara un 25 %, así que quien bajaba hasta el hero se lo encontraba
+   con el paso 1 empezado o terminado. Ahora espera a verlo completo, con la
+   salvedad de que si el lienzo es más alto que la ventana se conforma con que
+   cubra el 90 % de ella: un `intersectionRatio >= 0.98` a secas no se cumple
+   jamás en una pantalla corta y el tour no arrancaría nunca.
+
+Efecto en la landing que conviene tener presente: **el hero ya no se
+autodemuestra entero.** Un visitante que no pulse nada ve el paso 1 y ahí se
+queda. Es exactamente lo pedido, y el intercambio está aceptado: se prefiere un
+paso que se lee a ocho que se pierden.
+
+`AUTOPLAY_THROUGH_STEP_INDEX` y `holdTimeFor()` viven en
+`lib/onboarding/tour-steps.ts` con tests, no en el componente, por la misma
+razón que el resto de la línea de tiempo.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies y a 375/768/1280 px (52 comprobaciones): no arranca sin verse
+entero, arranca al verse entero, se detiene al acabar el paso 1 y sigue quieto
+trece segundos después, los ocho pasos se recorren uno por clic sin encadenarse,
+altura constante, sin desbordamiento ni errores de consola, y
+`prefers-reduced-motion` sigue aterrizando en el último fotograma.
+
 ### Pendiente / roto conocido
 
 - **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una

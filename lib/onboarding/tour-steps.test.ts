@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AUTOPLAY_THROUGH_STEP_INDEX,
   FREEZE_OFFSET_MS,
+  STEP_END_MARGIN_MS,
   TOUR_DURATION_MS,
   TOUR_SEEN_STORAGE_KEY,
   TOUR_STEPS,
   freezeTimeFor,
   hasSeenTour,
+  holdTimeFor,
   markTourSeen,
   stepIndexAt
 } from "./tour-steps";
@@ -83,6 +86,51 @@ describe("freezeTimeFor", () => {
   it("acota los índices fuera de rango en vez de reventar", () => {
     expect(freezeTimeFor(-5)).toBe(freezeTimeFor(0));
     expect(freezeTimeFor(999)).toBe(freezeTimeFor(TOUR_STEPS.length - 1));
+  });
+});
+
+describe("holdTimeFor", () => {
+  it("se detiene dentro del paso, no en el siguiente", () => {
+    TOUR_STEPS.forEach((step, i) => {
+      const t = holdTimeFor(i);
+      expect(t).toBeGreaterThan(step.from);
+      expect(t).toBeLessThan(step.to);
+      // Lo que hace que la parada sirva: el fotograma congelado sigue siendo
+      // de este paso, así que el subtítulo que se queda leyendo es el suyo.
+      expect(stepIndexAt(t)).toBe(i);
+    });
+  });
+
+  it("para lo más tarde posible dentro del paso", () => {
+    TOUR_STEPS.forEach((step, i) => {
+      expect(holdTimeFor(i)).toBe(step.to - STEP_END_MARGIN_MS);
+    });
+  });
+
+  it("acota los índices fuera de rango en vez de reventar", () => {
+    expect(holdTimeFor(-3)).toBe(holdTimeFor(0));
+    expect(holdTimeFor(999)).toBe(holdTimeFor(TOUR_STEPS.length - 1));
+  });
+
+  it("el último paso no se pasa del reloj", () => {
+    expect(holdTimeFor(TOUR_STEPS.length - 1)).toBeLessThan(TOUR_DURATION_MS);
+  });
+});
+
+describe("reproducción automática", () => {
+  it("sólo cubre el primer paso", () => {
+    // Si algún día se amplía, hay que revisar que el subtítulo del último
+    // paso autorreproducido dé tiempo a leerse antes de la parada.
+    expect(AUTOPLAY_THROUGH_STEP_INDEX).toBe(0);
+  });
+
+  it("para en un instante que pertenece al paso autorreproducido", () => {
+    const t = holdTimeFor(AUTOPLAY_THROUGH_STEP_INDEX);
+    expect(stepIndexAt(t)).toBe(AUTOPLAY_THROUGH_STEP_INDEX);
+  });
+
+  it("deja los demás pasos al usuario", () => {
+    expect(AUTOPLAY_THROUGH_STEP_INDEX).toBeLessThan(TOUR_STEPS.length - 1);
   });
 });
 

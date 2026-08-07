@@ -90,6 +90,30 @@ export function stepIndexAt(ms: number): number {
 }
 
 /**
+ * Margen con el que se detiene la reproducción de un paso: se para justo
+ * antes de su final para que el fotograma en el que queda quieto siga
+ * perteneciendo a ese paso y no al siguiente.
+ */
+export const STEP_END_MARGIN_MS = 40;
+
+/** Instante en el que se detiene la reproducción de un paso. */
+export function holdTimeFor(index: number): number {
+  const step = TOUR_STEPS[Math.max(0, Math.min(TOUR_STEPS.length - 1, index))];
+  return Math.max(step.from + 1, step.to - STEP_END_MARGIN_MS);
+}
+
+/**
+ * Hasta dónde llega la reproducción automática. Sólo el primer paso se
+ * reproduce solo; a partir de ahí avanza el usuario con «Siguiente».
+ *
+ * Es una decisión de producto, no una limitación técnica (fundador,
+ * 2026-08-07): encadenados, los ocho pasos no dan tiempo a leer el subtítulo
+ * antes de que la pantalla cambie. Un paso por clic convierte el tour en algo
+ * que se lee en vez de algo que se mira pasar.
+ */
+export const AUTOPLAY_THROUGH_STEP_INDEX = 0;
+
+/**
  * Instante en el que congelar un paso para fotografiarlo o para dejarlo
  * quieto tras pulsar un punto del pie. No es su inicio a propósito: congelar
  * en el arranque captura el gauge a cero y las barras vacías, y da una imagen

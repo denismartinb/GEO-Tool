@@ -68,6 +68,11 @@ entero y **se detienen al acabarlo**. En el último paso, Siguiente se convierte
 en la llamada a la acción («Ir a mi panel» o «Prueba gratis» según la carcasa).
 Los ocho puntos del pie congelan el tour en el paso que se pinche.
 
+**Sólo el primer paso se reproduce solo** (2026-08-07, ver log §33). Los otros
+siete los pide el usuario con Siguiente. Este prototipo todavía los encadena;
+la implementación no, y manda la implementación: encadenados no da tiempo a
+leer el subtítulo antes de que cambie la pantalla.
+
 ## Invariantes que el prototipo ya respeta
 
 Estos no son detalles de la maqueta: son las decisiones que la implementación
@@ -82,8 +87,12 @@ tiene que conservar.
 2. **Altura constante.** Ver arriba. Cualquier elemento nuevo cuyo tamaño
    dependa del paso rompe esto y hay que medirlo igual que el subtítulo.
 3. **`prefers-reduced-motion: reduce` → fotograma final, en pausa.**
-4. **No hay reproducción perpetua.** Arranca al entrar en el viewport, se para
-   al salir y se para al terminar. Hay «Repetir».
+4. **No hay reproducción perpetua.** Se para al salir de pantalla y al
+   terminar el paso en curso. En la landing **arranca cuando el lienzo se ve
+   entero**, no cuando asoma (2026-08-07): con el umbral de asomo, quien bajaba
+   hasta el hero se lo encontraba con el paso 1 ya empezado. «Entero» admite
+   que el lienzo sea más alto que la ventana — si no, en una pantalla corta no
+   arrancaría nunca.
 5. **El cursor apunta a elementos, no a coordenadas.** Cada waypoint resuelve
    el centro real del elemento en cada fotograma. Los waypoints que señalan el
    menú llevan alternativa para móvil, donde el menú no existe.
@@ -146,6 +155,10 @@ aparecieron al montarlo sobre la landing real:
 La altura constante se resolvió mejor que aquí: en vez de medirla con JS, los
 ocho subtítulos se apilan en la misma celda de rejilla con sólo uno visible.
 Sin JS, correcto a cualquier ancho y en cualquier idioma.
+
+Y tras probarlo en el preview (2026-08-07), el reloj dejó de correr solo más
+allá del primer paso, y en la landing dejó de arrancar antes de verse entero.
+Las dos cosas están arriba y detalladas en el log §33.
 
 ## Pendiente
 

@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import {
+  AUTOPLAY_THROUGH_STEP_INDEX,
   TOUR_DURATION_MS,
   TOUR_STEPS,
   freezeTimeFor,
+  holdTimeFor,
   stepIndexAt
 } from "@/lib/onboarding/tour-steps";
 
@@ -143,8 +145,25 @@ export function ProductTour({
   const [stepIdx, setStepIdx] = useState(0);
 
   // Estado de reproducción fuera de React: lo lee y escribe el bucle.
-  const clock = useRef({ t: 0, last: null as number | null, playing: true, holdAt: null as number | null });
+  //
+  // La reproducción automática se detiene al acabar el primer paso: encadenar
+  // los ocho no da tiempo a leer el subtítulo antes de que cambie la pantalla
+  // (fundador, 2026-08-07). A partir de ahí manda «Siguiente».
+  //
+  // En la landing arranca parado: no empieza hasta que el lienzo se ve entero,
+  // porque si no el visitante llega al hero con el paso 1 ya empezado o
+  // terminado. En el popup siempre está entero delante, así que arranca solo.
+  const clock = useRef({
+    t: 0,
+    last: null as number | null,
+    playing: variant === "modal",
+    holdAt: holdTimeFor(AUTOPLAY_THROUGH_STEP_INDEX) as number | null
+  });
   const firedClick = useRef(0);
+  /** El lienzo ya ha llegado a verse entero alguna vez (sólo landing). */
+  const hasStarted = useRef(variant === "modal");
+  /** Se paró porque se salió de pantalla, no porque acabara el paso. */
+  const pausedByScroll = useRef(false);
 
   const isLast = stepIdx === TOUR_STEPS.length - 1;
 
@@ -153,9 +172,13 @@ export function ProductTour({
     const idx = Math.max(0, Math.min(TOUR_STEPS.length - 1, i));
     const step = TOUR_STEPS[idx];
     clock.current.t = step.from;
-    clock.current.holdAt = step.to - 40;
+    clock.current.holdAt = holdTimeFor(idx);
     clock.current.playing = true;
     firedClick.current = step.from;
+    // Navegar a mano cuenta como arrancar: si el usuario ya ha tocado el tour,
+    // volver a entrar en pantalla no debe reiniciar nada.
+    hasStarted.current = true;
+    pausedByScroll.current = false;
     setStepIdx(idx);
   }, []);
 
@@ -165,6 +188,8 @@ export function ProductTour({
     clock.current.holdAt = null;
     clock.current.playing = false;
     firedClick.current = clock.current.t;
+    hasStarted.current = true;
+    pausedByScroll.current = false;
     setStepIdx(i);
   }, []);
 
@@ -183,7 +208,9 @@ export function ProductTour({
     if (reduced) {
       clock.current.t = TOUR_DURATION_MS;
       clock.current.playing = false;
+      clock.current.holdAt = null;
       firedClick.current = TOUR_DURATION_MS;
+      hasStarted.current = true;
     }
 
     const trackAttrs: Array<[string, number, number]> = [
@@ -486,11 +513,14 @@ export function ProductTour({
       if (c.playing) {
         const prev = firedClick.current;
         c.t += dt;
-        // Navegación manual: se detiene al terminar el paso al que se saltó.
+        // Un paso por reproducción: se detiene al terminar el paso en curso,
+        // tanto el primero (automático) como los que trae «Siguiente».
         if (c.holdAt !== null && c.t >= c.holdAt) {
+          const wasLast = c.holdAt >= holdTimeFor(TOUR_STEPS.length - 1);
           c.t = c.holdAt;
           c.playing = false;
           c.holdAt = null;
+          if (wasLast) onFinish?.();
         }
         if (c.t >= TOUR_DURATION_MS) {
           c.t = TOUR_DURATION_MS;
@@ -509,21 +539,47 @@ export function ProductTour({
     }
     raf = requestAnimationFrame(frame);
 
-    // Se para al salir del viewport: una animación fuera de pantalla es
-    // consumo de CPU y batería a cambio de nada. En el popup siempre está
-    // visible, así que sólo importa en la landing.
+    // En la landing el tour arranca cuando el lienzo se ve ENTERO, no cuando
+    // asoma (fundador, 2026-08-07): entrando a 0,25 de visibilidad, quien
+    // bajaba hasta el hero se lo encontraba con el paso 1 ya empezado. Y se
+    // para al salir de pantalla, porque animar lo que nadie mira es gastar
+    // batería a cambio de nada. En el popup siempre está entero delante.
     let io: IntersectionObserver | null = null;
     if (variant === "hero" && typeof IntersectionObserver === "function") {
       io = new IntersectionObserver(
         (entries) => {
           entries.forEach((en) => {
-            if (!en.isIntersecting) {
-              clock.current.playing = false;
-              clock.current.holdAt = null;
+            const c = clock.current;
+            if (reduced) return; // nada se anima nunca; el contrato manda.
+
+            // «Entero» tiene que admitir el caso de que el lienzo sea más alto
+            // que la ventana: con `ratio >= 0.98` a secas, en una pantalla
+            // corta no se cumpliría jamás y el tour no arrancaría nunca.
+            const tallerThanViewport = en.boundingClientRect.height > window.innerHeight;
+            const fullyVisible = tallerThanViewport
+              ? en.intersectionRect.height >= window.innerHeight * 0.9
+              : en.intersectionRatio >= 0.98;
+
+            if (fullyVisible) {
+              if (!hasStarted.current) {
+                hasStarted.current = true;
+                c.playing = true;
+              } else if (pausedByScroll.current) {
+                pausedByScroll.current = false;
+                c.playing = true;
+              }
+              return;
+            }
+
+            if (!en.isIntersecting && c.playing) {
+              c.playing = false;
+              // El destino de parada se conserva: al volver, el paso termina
+              // donde tenía que terminar en vez de seguir hasta el final.
+              pausedByScroll.current = true;
             }
           });
         },
-        { threshold: 0.25 }
+        { threshold: [0, 0.5, 0.9, 0.98, 1] }
       );
       io.observe(stage);
     }

@@ -23,8 +23,22 @@ obedecerá igual.
   fotograma.** No es una degradación, es el contrato: nada se anima nunca. En
   la landing ese fotograma final ES la captura del hero, así que no hay
   alternativa estática que mantener.
-- **No hay reproducción perpetua.** Arranca al entrar en el viewport y se para
-  al salir. Una animación fuera de pantalla es CPU y batería a cambio de nada.
+- **Sólo el primer paso se reproduce solo; los otros siete los pide el
+  usuario.** `AUTOPLAY_THROUGH_STEP_INDEX` es 0 y no es un ajuste cosmético:
+  encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a leer
+  el subtítulo, y el tour pasa a ser algo que se mira pasar en vez de algo que
+  se lee (fundador, 2026-08-07; log §33). Ampliarlo exige volver a medir si el
+  subtítulo del último paso automático da tiempo a leerse.
+- **En la landing no arranca hasta que el lienzo se ve ENTERO.** Con el umbral
+  de asomo (`0.25`) quien bajaba hasta el hero se lo encontraba con el paso 1 ya
+  empezado o terminado (fundador, 2026-08-07). La comprobación de «entero»
+  tiene que seguir contemplando que el lienzo sea más alto que la ventana: con
+  un `intersectionRatio >= 0.98` a secas, en una pantalla corta no se cumple
+  nunca y el tour no arranca jamás.
+- **No hay reproducción perpetua.** Arranca al verse entero y se para al salir
+  de pantalla. Una animación fuera de pantalla es CPU y batería a cambio de
+  nada. Al volver a entrar retoma donde estaba: la parada por scroll conserva
+  el destino del paso en curso en vez de descartarlo.
 - **El cursor apunta a elementos, no a coordenadas.** Cada waypoint resuelve el
   centro real del elemento en cada fotograma. Los que señalan el mini-menú
   llevan alternativa (`mob`) porque bajo 560 px ese menú no existe y un
