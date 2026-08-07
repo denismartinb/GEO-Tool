@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
 import { Gauge } from "@/components/ui/gauge";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { computeAccountScanState } from "@/lib/domains/account-scan-state";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
@@ -79,24 +79,27 @@ function DomainFavicon({
   size: number;
   radius: number;
 }) {
-  const url = faviconUrl(domain);
+  // El tamaño se pasa al helper: estas fichas se pintan a 38 y 56 px, que en
+  // una pantalla Retina son 76 y 112 px reales — muy por encima del sz=64 fijo
+  // que se pedía antes (FAVICON-QUALITY-1).
   const style = { width: size, height: size, borderRadius: radius } as const;
 
-  if (url) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- servicio externo de favicons, no un asset estático
-      <img src={url} alt="" className="dm2-fav" style={style} width={size} height={size} loading="lazy" />
-    );
-  }
-
   return (
-    <span
-      className="dm2-fav dm2-fav-letter"
-      style={{ ...style, background: fallbackColor(domain || name), fontSize: Math.round(size * 0.42) }}
-      aria-hidden="true"
-    >
-      {name.slice(0, 1).toUpperCase()}
-    </span>
+    <FaviconImg
+      domain={domain}
+      cssSize={size}
+      className="dm2-fav"
+      style={style}
+      fallback={
+        <span
+          className="dm2-fav dm2-fav-letter"
+          style={{ ...style, background: fallbackColor(domain || name), fontSize: Math.round(size * 0.42) }}
+          aria-hidden="true"
+        >
+          {name.slice(0, 1).toUpperCase()}
+        </span>
+      }
+    />
   );
 }
 
@@ -241,7 +244,13 @@ export default async function DomainsPage({
         {/* ---- Portada del dominio seleccionado ---- */}
         <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero">
           <div className="dm2-hero-top">
-            <DomainFavicon name={active.name} domain={active.domain} size={56} radius={16} />
+            {/* `key` por dominio, no por estética: sin él React reutiliza el
+                mismo <img> al cambiar de dominio y sólo le cambia el src, así
+                que el navegador sigue pintando el icono del dominio anterior
+                hasta que descarga el nuevo — la portada de una farmacia con el
+                logo de Mozilla. Enseñar un hueco un instante es peor de ver y
+                mejor de fiar que enseñar la marca equivocada. */}
+            <DomainFavicon key={active.domain} name={active.name} domain={active.domain} size={56} radius={16} />
             <div className="dm2-id">
               <div className="dm2-name">{active.name}</div>
               <div className="dm2-dom">

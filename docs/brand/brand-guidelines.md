@@ -61,6 +61,17 @@ render en pantalla.
 
 `app/icon.svg` es el favicon que Next.js sirve automáticamente y usa el tile.
 
+**Rutas convencionales en la raíz (FAVICON-QUALITY-1, 2026-08-06).** Además de
+lo anterior, `public/favicon.ico` (ICO con 16 y 32 px embebidos) y
+`public/apple-touch-icon.png` (copia de `brand/apple-touch-icon.png`) se sirven
+en `/favicon.ico` y `/apple-touch-icon.png`. **No son redundantes con la
+metadata `icons`**: esa sólo emite `<link>` en el HTML, y los recolectores de
+favicons de terceros —Google S2 entre ellos, que es el que alimenta los iconos
+de la consola— prueban primero las rutas convencionales. Sin ellas, genscore.es
+salía en nuestro propio producto con el globo genérico mientras mahou.es y
+vodafone.es salían bien. Si regeneras los PNG de marca, regenera también estos
+dos. Ver `docs/brand/design-decisions-log.md` §39.
+
 ### Reglas de uso
 
 - En cabeceras dentro de la app, usar `components/ui/brand-logo.tsx`

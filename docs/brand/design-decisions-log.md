@@ -3444,6 +3444,292 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
 ---
 
+## 39. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1 y 3a, 2026-08-06)
+
+**Estado: implementadas las Fases 1 y 3a. La 2 nunca existió y la 3b se
+revirtió.**
+
+- **Fase 1** — el tamaño pedido se deriva del tamaño CSS por la densidad de
+  pantalla, más dos bugs que salieron de mirar el producto de verdad.
+- **Fase 2** — **no se implementó y ya no existe**: era detectar el globo desde
+  el cliente, y resultó imposible porque Google responde 200 con él. La 3a
+  absorbió su objetivo.
+- **Fase 3a** — proxy propio que mira los bytes y responde 204 cuando no hay
+  icono, que es lo que hace posible la caída a iniciales.
+- **Fase 3b** — pedir el icono al propio sitio. **Construida, medida y
+  revertida el mismo día**; el apartado se conserva más abajo porque la
+  medición es el valor que dejó.
+
+Lo que sigue sin hacer, y necesita aprobación propia por ser rastrear de
+verdad, es leer el `<link rel="apple-touch-icon">` del HTML.
+
+Esta entrada se lee de arriba abajo como una cronología: la Fase 1 primero, los
+dos fallos que aparecieron al mirar el producto, y luego 3a y 3b. **Los
+apartados "Pendiente" de cada fase valen sólo para su momento**; el estado real
+es este párrafo.
+
+Task Intake aprobado por el
+fundador el 2026-08-06 ("Sí, entero el plan con todas las fases"), a partir de
+la observación de que los iconos de dominio *"salen pixelados la mayoría"*.
+
+**El problema, que eran dos problemas.** `lib/domains/favicon.ts` pedía siempre
+`sz=64` a Google S2, un número fijo escrito una vez y nunca revisado cuando las
+pantallas que lo usan crecieron. Al comparar ese 64 con lo que de verdad se
+pinta, la mitad de los sitios se quedaban cortos en cuanto la pantalla es
+Retina:
+
+| Sitio | Tamaño CSS | Píxeles reales @2x | ¿Cubría `sz=64`? |
+|---|---|---|---|
+| Portada del dominio activo (Dominios) | 56 px | 112 | no, upscale ×1,75 |
+| Rejilla de dominios | 38 px | 76 | no |
+| Panorama de Visión general (≥ breakpoint) | 30 px | 60 | justo, y a 3x no |
+| Sidebar y ranking de Competidores | 26 px | 52 | sí |
+
+Esa es la **causa A**, nuestra y gratuita. La **causa B** es que S2 devuelve un
+lienzo del tamaño pedido relleno con la mejor fuente que Google tenga, que para
+muchos dominios es un `favicon.ico` de 16 o 32 px: ahí el borroso viene de
+origen y subir `sz` no arregla nada. Separarlas importa porque sólo la primera
+se arregla sin tocar la fuente de los iconos.
+
+**Qué se decidió (Fase 1 — sólo la causa A).**
+
+1. **El tamaño se deriva del tamaño CSS por la densidad de pantalla, nunca es
+   fijo.** `faviconImgProps(domain, cssSize)` devuelve `src` + `srcSet` con
+   candidatos 1x/2x/3x. El navegador elige por `devicePixelRatio`, así que una
+   pantalla no-Retina sigue descargando el icono pequeño: esto no cuesta bytes
+   a quien no los necesita.
+2. **Los tamaños se redondean a lo que el servicio sirve de verdad** (16/32/64/
+   128/256) en vez de mandar cualquier número y dejar que S2 redondee por su
+   cuenta. La URL dice lo que vuelve.
+3. **Candidatos duplicados colapsados.** A 38 px, 2x y 3x caen los dos en 128;
+   ofrecer el mismo fichero dos veces hace al navegador decidir sobre una
+   distinción que no existe.
+4. **`src` es el candidato 1x**, no el mayor, para que un navegador que ignore
+   `srcSet` no se trague el de 256.
+
+**Por qué no se tocó el `object-fit: cover`** de `.ov2-cmp-fav` y
+`.cm2-rank-fav-img`, que sí es discutible en un icono no cuadrado: es un cambio
+visual independiente de la nitidez y habría mezclado dos concernidos en un PR.
+Queda anotado, no hecho.
+
+**Pendiente / roto conocido.**
+
+- **La causa B sigue entera.** Un dominio cuyo mejor icono conocido por Google
+  sea de 16 px se seguirá viendo borroso en la portada de 56 px, y esta fase no
+  lo puede evitar. Es lo que atacan las fases 2 y 3.
+- **Fase 2 pendiente** *(escrito antes de saber que era imposible; la resolvió
+  la 3a — ver abajo)*: detectar el icono degenerado (el globo genérico de S2)
+  y caer al avatar de letra determinista que ya existe en `citations-client.tsx`
+  en vez de enseñar un borrón.
+- **Fase 3 pendiente** *(hecha después, 3a y 3b)*: proxy propio con caché de edge que prefiera el
+  `apple-touch-icon` del sitio. Resuelve la causa B y de paso el problema de
+  privacidad que `favicon.ts` lleva documentado desde 2026-07-23 — hoy mandamos
+  el dominio de cada cliente a Google en cada carga de página.
+- **No verificado con bytes reales.** El contenedor donde se implementó tiene
+  `www.google.com` bloqueado por política de red, así que la tabla de arriba es
+  aritmética sobre el código, no una medición de los PNG. Lo que lo cierra es
+  el piloto mirando capturas a `deviceScaleFactor: 2` — **que el arnés no sabe
+  hacer**: `playwright.config.ts` monta los viewports sin `deviceScaleFactor` y
+  el valor por defecto de Playwright es 1. El fundador decidió no tocar el arnés
+  (2026-08-06), así que la nitidez la verificó su ojo sobre el preview y no
+  queda capturada como evidencia. **La próxima sesión que toque favicons
+  arrancará igual de ciega**; si eso molesta, el arreglo es un `PILOT_DPR`
+  opcional con valor por defecto 1, que no cambiaría el comportamiento de
+  ningún PR existente.
+
+**Addendum del mismo día: dos fallos que sólo aparecieron al mirar el producto
+de verdad.** Ninguno de los dos lo habría encontrado la aritmética; los dos
+salieron de una captura del fundador en un iPhone.
+
+1. **La portada de Dominios se quedaba con el icono del dominio anterior.** El
+   `<img>` de la portada no llevaba `key`, así que al cambiar de dominio React
+   reutilizaba el mismo nodo y sólo le cambiaba el `src`: el navegador seguía
+   pintando la imagen ya decodificada hasta que llegaba la nueva. En la captura,
+   una farmacia con el logo de Mozilla. **El bug era anterior, pero la Fase 1 lo
+   agravó**: al derivar el tamaño del tamaño CSS, la portada (56 px → 256 a
+   densidad 3) y la rejilla (38 px → 128) dejaron de compartir URL, y la portada
+   perdió el acierto de caché que antes la tapaba. Arreglado con `key={domain}`
+   en la portada y en el conmutador de la barra lateral. Se acepta un hueco
+   vacío durante la carga: **enseñar la marca equivocada es peor que no enseñar
+   nada**, porque el hueco se lee como "cargando" y el logo ajeno se lee como un
+   dato.
+2. **genscore.es salía con el globo genérico en nuestro propio producto.** No
+   servíamos nada en `/favicon.ico` ni en `/apple-touch-icon.png`: todos los
+   iconos vivían bajo `/brand/`, descubribles sólo parseando las `<link>` del
+   HTML. Los recolectores de terceros prueban primero las rutas convencionales,
+   y por eso mahou.es y vodafone.es sí tenían icono y nosotros no. Añadidos
+   `public/favicon.ico` y `public/apple-touch-icon.png`. **No arregla la consola
+   al instante**: el índice de Google S2 se puebla por rastreo, así que hasta
+   que vuelva a pasar por genscore.es seguirá devolviendo el globo. Es condición
+   necesaria, no suficiente — y refuerza el caso de la Fase 3a, que al servir
+   los iconos por proxy propio deja de depender de cuándo le apetezca a Google
+   rastrearnos.
+3. **Y por eso nuestro dominio dejó de preguntarle a Google.** Corolario del
+   punto anterior: teníamos el icono auténtico en el repo y aun así
+   enseñábamos un globo, porque preguntábamos por él a un tercero que no lo
+   conocía. `faviconImgProps` devuelve `/brand/genscore-tile.svg` para
+   `genscore.es`. Es vectorial, así que no necesita `srcSet` — de ahí que el
+   campo pasara a opcional. Arregla uno de los dos globos **al instante**, sin
+   esperar a ningún rastreo ni a la Fase 3a. Regla que deja: **del único
+   dominio del que tenemos el icono de verdad, no se adivina.**
+
+**Lo que el piloto midió y yo había estado estimando.** La captura de Dominios
+del run sobre `c7aa69b` da la primera cifra real: **de 10 dominios, 8 traían
+icono de marca y 2 salían con el globo genérico** (alberdiderma.es y
+genscore.es). Ese 20% es el tamaño verdadero de la causa B en esta cuenta, y
+sustituye a la mano alzada con la que abrí la fase.
+
+**Tercer modo de fallo, que no había nombrado nadie.** farmaciamunozpereira.com
+tiene icono real y de resolución suficiente, pero es un **logotipo con texto**:
+a 38 px es una mancha ilegible. No lo arregla la Fase 1 (no es resolución) ni
+la 3 (no es la fuente). Si algún día molesta, lo único que funciona es no
+enseñar la marca a ese tamaño y usar el avatar de letra, y eso exige distinguir
+un logotipo de un símbolo, que no es detectable de forma fiable. Queda anotado
+como límite conocido, no como pendiente.
+
+**Fase 3a, pedida por el fundador el mismo día** (*"siempre que una web no
+devuelva favicon en lugar de mostrar icono mostramos las iniciales como
+antes"*). Lo que suena a cambio de icono es un cambio de arquitectura, porque
+**Google responde 200 con el globo, no un 404**: desde el navegador no hay forma
+de distinguir "este es su icono" de "no tengo ni idea", y por eso la Fase 2 que
+yo había planteado en cliente no era implementable. Hay que mirar los bytes en
+servidor.
+
+1. **`/api/favicon` (`app/api/favicon/route.ts`).** Trae el icono de S2 desde el
+   servidor y devuelve **204 sin cuerpo cuando es el comodín**. Un `<img>` con
+   cuerpo vacío no puede decodificar nada y dispara `onError`, que es lo único
+   que el cliente necesita para pintar iniciales.
+
+   **Se implementó con 404 y el piloto lo tumbó** (`PILOT FAIL` sobre `ffcbe51`,
+   Dominios y p2-overview en los tres viewports). El 404 hacía exactamente lo
+   que se le pedía —de hecho el detector acertó de pleno: las dos peticiones
+   marcadas eran `alberdiderma.es` y `damm.com`, los dos únicos dominios sin
+   icono— pero **un 4xx para un estado normal y esperado le miente a todo lo que
+   mire el tráfico**. El piloto lo leyó como pantalla rota, y detrás habrían
+   venido la consola del navegador y Sentry. Que un dominio no tenga favicon no
+   es fallo de nadie. Hay un test de regresión que fija el 204
+   (`app/api/favicon/route.test.ts`). **Regla que deja: el código de estado
+   describe qué pasó, no qué quieres que haga el cliente.**
+2. **La detección se autocalibra; no hay ningún hash incrustado.** Se pide el
+   icono de `no-such-site.invalid` —`.invalid` está reservado por el RFC 2606 y
+   no puede existir, así que lo que devuelva S2 para él *es* el comodín— y se
+   compara por SHA-256. El día que Google redibuje el globo, sigue funcionando.
+   Se calibra **por tamaño** (el globo no es el mismo dibujo a 32 que a 256) y se
+   memoiza **por promesa**, para que un arranque en frío con veinte iconos en
+   pantalla no dispare veinte calibraciones.
+3. **Falla abierto, a propósito.** Sin calibración disponible se sirve el icono
+   tal cual en vez de arriesgarse a esconder uno bueno: enseñar un globo de más
+   es feo, ocultar la marca real de un competidor es información perdida. Mismo
+   criterio que `scripts/vercel-should-build.sh`.
+4. **Caché de edge escalonada por significado**, no un número al azar: una
+   semana para un icono (no cambian), un día para un 204 de "no hay icono" (un
+   dominio sin icono hoy puede tener uno mañana y no queremos que ese "no hay" se
+   quede pegado), un minuto para un fallo transitorio.
+5. **`components/ui/favicon-img.tsx`** centraliza el comportamiento y **no la
+   apariencia**: recibe el avatar de iniciales ya renderizado como `fallback`.
+   Cada pantalla conserva su clase y su color determinista — unificarlos habría
+   sido un rediseño encubierto colado en un PR de infraestructura.
+6. **Efecto colateral que era un problema declarado desde 2026-07-23:** el
+   navegador del usuario deja de contarle a Google qué cuenta está mirando.
+
+### Fase 3b — construida, medida y **revertida el mismo día**
+
+> **Estado: revertida.** El código no está en el producto. Se conserva este
+> apartado entero, y no se borra, porque el valor que dejó no es el código sino
+> la medición: **es la prueba de que la causa B no se arregla por esta vía**, y
+> sin ella la próxima sesión que vea a Mahou borroso volverá a proponer
+> exactamente lo mismo. Lo implementado vive en el historial del PR #354
+> (`1f80df8`, `a2bb385`).
+>
+> **Por qué se revirtió, con los números delante.** De los 10 dominios de la
+> cuenta del fundador, la 3b cambió **uno**: movistar.es. Los otros nueve
+> quedaron idénticos píxel a píxel — comparación de regiones sobre las capturas
+> del piloto, no impresión visual. **Mahou, que era la razón entera de la fase,
+> ni se inmutó**: no publica `/apple-touch-icon.png` en la ruta convencional.
+> Y el único que sí cambió quedó **peor**: un `apple-touch-icon` está diseñado
+> para un tile de pantalla de inicio, con márgenes generosos porque iOS aplica
+> su propia máscara, así que a 38 px la marca se ve más pequeña y más débil que
+> la versión recortada de Google. La fase cambiaba resolución por peso visual,
+> y a tamaños pequeños perdía.
+>
+> **Lo que costaba mantener, a cambio de eso:** una ruta pública sin autenticar
+> haciendo peticiones salientes a dominios que escribe el usuario, una guardia
+> SSRF entera (`lib/domains/public-host.ts`) que había que entender y mantener
+> para siempre, un hueco de DNS rebinding declarado y no cerrado, y hasta 3 s
+> extra en la primera petición de cada dominio.
+>
+> **Lo que quedó sin resolver.** No pude distinguir dos explicaciones del 1 de
+> 10: o esos sitios no publican el icono en la ruta convencional, o el
+> presupuesto de 3 s era demasiado corto y sólo llegó el más rápido. Apple,
+> Vodafone y Ryanair casi seguro que sí lo publican, lo que apunta a lo segundo.
+> **Quien retome esto debe medir eso primero** — y aun resolviéndolo, seguiría
+> teniendo encima el problema del margen, que es de diseño y no de red.
+
+Lo que sigue es el diseño tal como se implementó, conservado como registro:
+
+**Fase 3b, aprobada por el fundador el mismo día** (*"empieza con 3b"*, tras
+haberla planteado por separado por tocar la lista de prohibidos). Pide
+`https://<dominio>/apple-touch-icon.png` —180 px reales— antes de conformarse
+con lo que tenga Google. Es lo único que arregla mahou.es.
+
+1. **No es un crawler, y la distinción es la que autoriza la fase.** Se piden
+   dos rutas fijas conocidas (`/apple-touch-icon.png` y su variante
+   `-precomposed`). **No se parsea HTML, no se siguen enlaces, no se descubren
+   URLs.** El día que alguien quiera leer el `<link rel="apple-touch-icon">`
+   para cubrir a los sitios que no usan la ruta convencional, eso **sí** es
+   rastrear y necesita su propia aprobación.
+2. **La guardia SSRF es la pieza central, no un accesorio**
+   (`lib/domains/public-host.ts`). El dominio lo escribe el usuario al dar de
+   alta un proyecto o un competidor, así que sin ella `/api/favicon` convierte
+   el servidor en un ariete contra la red interna y, como la respuesta vuelve al
+   navegador, en un canal de exfiltración. Sólo https; se rechaza toda IP
+   literal; se resuelve el host y **todas** sus direcciones deben ser públicas
+   —no la primera, que un host con un registro público y otro privado pasaría el
+   filtro y luego conectaría al segundo—; y se bloquean privadas, loopback,
+   link-local (`169.254.169.254`, el objetivo clásico en la nube), CGNAT,
+   multicast y sus equivalentes IPv6, mirando dentro de las IPv4 mapeadas.
+3. **Las redirecciones se siguen a mano, revalidando cada salto.** Con
+   `redirect: "follow"` se validaría el primer host y se confiaría en el resto —
+   un dominio público que redirige a `169.254.169.254` entraría por la puerta.
+   Prohibirlas del todo tampoco valía: casi todo dominio raíz redirige a `www`,
+   así que la 3b no habría servido justo donde hacía falta.
+4. **El tipo de imagen se deriva de los bytes, no de la cabecera.** El
+   `Content-Type` y la extensión los controla el otro extremo. **SVG se rechaza
+   a propósito** aunque sea el formato más nítido: puede llevar script y lo
+   serviríamos desde nuestro propio origen. Nitidez no vale un XSS.
+5. **Presupuesto total, no por llamada.** Dos rutas por hasta cuatro saltos con
+   5 s cada uno son 40 s antes siquiera de preguntarle a Google. Se calcula un
+   instante absoluto al entrar y se reparte; lo que no quepa no se intenta y S2
+   sigue detrás. Mismo criterio que `.claude/rules/scan.md`.
+
+**Revisión de seguridad dedicada (2026-08-06): cero hallazgos.** La QA había
+corrido sobre el commit anterior y no llegó a ver la 3b, así que se pasó una
+revisión aparte sobre la ruta. Confirmó lo que la fase pretendía: no hay control
+del host ni del protocolo (`isPlausibleDomain` sólo admite etiquetas
+`[a-z0-9-]`, así que la URL no puede crecer credenciales, puerto, otro host ni
+ruta), las codificaciones alternativas de IP no burlan nada porque se juzga la
+dirección **resuelta** y no el texto del host, cada salto de redirección se
+revalida, y el `Content-Type` nunca sale del servidor remoto. Señaló dos formas
+IPv6 obsoletas que el clasificador daba por públicas —«IPv4-compatible»
+(`::7f00:1`) y 6to4 (`2002::/16`)— y las descartó por no enrutables hoy;
+**se cerraron igual**, porque un clasificador que devuelve `true` por accidente
+es el que falla el día que cambia el entorno.
+
+**Lo que la 3b NO cubre, dicho antes de que alguien lo asuma.** **DNS
+rebinding**: se valida la IP antes de cada petición, pero entre esa comprobación
+y el socket real hay una ventana en la que el DNS puede cambiar de respuesta.
+Cerrarla exige fijar la IP en el socket, que `fetch` no permite. El daño
+residual queda acotado por lo demás —sólo https, sólo respuestas con firma de
+imagen ráster, tope de tamaño—, pero **no está cerrado**, y quien toque esto
+debe saberlo. Tampoco cubre a los sitios que publican su icono sólo en el HTML:
+ésos siguen cayendo a Google.
+
+**Límite de verificación, otra vez y peor.** El contenedor donde se implementó
+tiene bloqueado todo dominio externo, así que `/api/favicon` **nunca ha hablado
+con Google**. La lógica está cubierta con `fetch` simulado (10 casos: comodín,
+icono real, fallo de calibración, cuerpo vacío, red caída, memoización por
+promesa y por tamaño), pero el camino real sólo se ejercita en el preview. Si
+algo va a fallar aquí, fallará ahí y no en los tests.
 ## 36. La portada de Dominios sigue al dominio abierto, no al más reciente (DOMAINS-ACTIVE-COOKIE-1, 2026-08-07)
 
 **El problema, reportado por el fundador.** Seleccionar un dominio en Dominios
