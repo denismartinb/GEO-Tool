@@ -1,19 +1,10 @@
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
-import { getAccountRole } from "@/lib/account-role";
-import { BillingContent } from "@/components/billing/billing-content";
 
-export default async function BillingSettingsPage({
-  searchParams
-}: {
-  searchParams: Promise<{ checkout?: string }>;
-}) {
-  await requireUser();
-
-  const role = await getAccountRole();
-  if (role !== "admin") redirect("/dashboard/settings/profile");
-
-  const { checkout } = await searchParams;
-
-  return <BillingContent embedded checkoutStatus={checkout} />;
+// CONSOLE-REDESIGN-1. Permanent redirect: four transactional emails and the
+// in-app notification renderer link here (lib/email/transactional.ts,
+// lib/notifications/render.ts). The admin check that used to live in this file
+// now guards the Plan section itself in app/dashboard/settings/page.tsx, so a
+// non-admin landing here simply arrives at a page without that section.
+export default function BillingSettingsPage() {
+  redirect("/dashboard/settings#plan");
 }

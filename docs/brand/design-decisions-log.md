@@ -3444,6 +3444,337 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
 ---
 
+## 39. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1 y 3a, 2026-08-06)
+
+**Estado: implementadas las Fases 1 y 3a. La 2 nunca existió y la 3b se
+revirtió.**
+
+- **Fase 1** — el tamaño pedido se deriva del tamaño CSS por la densidad de
+  pantalla, más dos bugs que salieron de mirar el producto de verdad.
+- **Fase 2** — **no se implementó y ya no existe**: era detectar el globo desde
+  el cliente, y resultó imposible porque Google responde 200 con él. La 3a
+  absorbió su objetivo.
+- **Fase 3a** — proxy propio que mira los bytes y responde 204 cuando no hay
+  icono, que es lo que hace posible la caída a iniciales.
+- **Fase 3b** — pedir el icono al propio sitio. **Construida, medida y
+  revertida el mismo día**; el apartado se conserva más abajo porque la
+  medición es el valor que dejó.
+
+Lo que sigue sin hacer, y necesita aprobación propia por ser rastrear de
+verdad, es leer el `<link rel="apple-touch-icon">` del HTML.
+
+Esta entrada se lee de arriba abajo como una cronología: la Fase 1 primero, los
+dos fallos que aparecieron al mirar el producto, y luego 3a y 3b. **Los
+apartados "Pendiente" de cada fase valen sólo para su momento**; el estado real
+es este párrafo.
+
+Task Intake aprobado por el
+fundador el 2026-08-06 ("Sí, entero el plan con todas las fases"), a partir de
+la observación de que los iconos de dominio *"salen pixelados la mayoría"*.
+
+**El problema, que eran dos problemas.** `lib/domains/favicon.ts` pedía siempre
+`sz=64` a Google S2, un número fijo escrito una vez y nunca revisado cuando las
+pantallas que lo usan crecieron. Al comparar ese 64 con lo que de verdad se
+pinta, la mitad de los sitios se quedaban cortos en cuanto la pantalla es
+Retina:
+
+| Sitio | Tamaño CSS | Píxeles reales @2x | ¿Cubría `sz=64`? |
+|---|---|---|---|
+| Portada del dominio activo (Dominios) | 56 px | 112 | no, upscale ×1,75 |
+| Rejilla de dominios | 38 px | 76 | no |
+| Panorama de Visión general (≥ breakpoint) | 30 px | 60 | justo, y a 3x no |
+| Sidebar y ranking de Competidores | 26 px | 52 | sí |
+
+Esa es la **causa A**, nuestra y gratuita. La **causa B** es que S2 devuelve un
+lienzo del tamaño pedido relleno con la mejor fuente que Google tenga, que para
+muchos dominios es un `favicon.ico` de 16 o 32 px: ahí el borroso viene de
+origen y subir `sz` no arregla nada. Separarlas importa porque sólo la primera
+se arregla sin tocar la fuente de los iconos.
+
+**Qué se decidió (Fase 1 — sólo la causa A).**
+
+1. **El tamaño se deriva del tamaño CSS por la densidad de pantalla, nunca es
+   fijo.** `faviconImgProps(domain, cssSize)` devuelve `src` + `srcSet` con
+   candidatos 1x/2x/3x. El navegador elige por `devicePixelRatio`, así que una
+   pantalla no-Retina sigue descargando el icono pequeño: esto no cuesta bytes
+   a quien no los necesita.
+2. **Los tamaños se redondean a lo que el servicio sirve de verdad** (16/32/64/
+   128/256) en vez de mandar cualquier número y dejar que S2 redondee por su
+   cuenta. La URL dice lo que vuelve.
+3. **Candidatos duplicados colapsados.** A 38 px, 2x y 3x caen los dos en 128;
+   ofrecer el mismo fichero dos veces hace al navegador decidir sobre una
+   distinción que no existe.
+4. **`src` es el candidato 1x**, no el mayor, para que un navegador que ignore
+   `srcSet` no se trague el de 256.
+
+**Por qué no se tocó el `object-fit: cover`** de `.ov2-cmp-fav` y
+`.cm2-rank-fav-img`, que sí es discutible en un icono no cuadrado: es un cambio
+visual independiente de la nitidez y habría mezclado dos concernidos en un PR.
+Queda anotado, no hecho.
+
+**Pendiente / roto conocido.**
+
+- **La causa B sigue entera.** Un dominio cuyo mejor icono conocido por Google
+  sea de 16 px se seguirá viendo borroso en la portada de 56 px, y esta fase no
+  lo puede evitar. Es lo que atacan las fases 2 y 3.
+- **Fase 2 pendiente** *(escrito antes de saber que era imposible; la resolvió
+  la 3a — ver abajo)*: detectar el icono degenerado (el globo genérico de S2)
+  y caer al avatar de letra determinista que ya existe en `citations-client.tsx`
+  en vez de enseñar un borrón.
+- **Fase 3 pendiente** *(hecha después, 3a y 3b)*: proxy propio con caché de edge que prefiera el
+  `apple-touch-icon` del sitio. Resuelve la causa B y de paso el problema de
+  privacidad que `favicon.ts` lleva documentado desde 2026-07-23 — hoy mandamos
+  el dominio de cada cliente a Google en cada carga de página.
+- **No verificado con bytes reales.** El contenedor donde se implementó tiene
+  `www.google.com` bloqueado por política de red, así que la tabla de arriba es
+  aritmética sobre el código, no una medición de los PNG. Lo que lo cierra es
+  el piloto mirando capturas a `deviceScaleFactor: 2` — **que el arnés no sabe
+  hacer**: `playwright.config.ts` monta los viewports sin `deviceScaleFactor` y
+  el valor por defecto de Playwright es 1. El fundador decidió no tocar el arnés
+  (2026-08-06), así que la nitidez la verificó su ojo sobre el preview y no
+  queda capturada como evidencia. **La próxima sesión que toque favicons
+  arrancará igual de ciega**; si eso molesta, el arreglo es un `PILOT_DPR`
+  opcional con valor por defecto 1, que no cambiaría el comportamiento de
+  ningún PR existente.
+
+**Addendum del mismo día: dos fallos que sólo aparecieron al mirar el producto
+de verdad.** Ninguno de los dos lo habría encontrado la aritmética; los dos
+salieron de una captura del fundador en un iPhone.
+
+1. **La portada de Dominios se quedaba con el icono del dominio anterior.** El
+   `<img>` de la portada no llevaba `key`, así que al cambiar de dominio React
+   reutilizaba el mismo nodo y sólo le cambiaba el `src`: el navegador seguía
+   pintando la imagen ya decodificada hasta que llegaba la nueva. En la captura,
+   una farmacia con el logo de Mozilla. **El bug era anterior, pero la Fase 1 lo
+   agravó**: al derivar el tamaño del tamaño CSS, la portada (56 px → 256 a
+   densidad 3) y la rejilla (38 px → 128) dejaron de compartir URL, y la portada
+   perdió el acierto de caché que antes la tapaba. Arreglado con `key={domain}`
+   en la portada y en el conmutador de la barra lateral. Se acepta un hueco
+   vacío durante la carga: **enseñar la marca equivocada es peor que no enseñar
+   nada**, porque el hueco se lee como "cargando" y el logo ajeno se lee como un
+   dato.
+2. **genscore.es salía con el globo genérico en nuestro propio producto.** No
+   servíamos nada en `/favicon.ico` ni en `/apple-touch-icon.png`: todos los
+   iconos vivían bajo `/brand/`, descubribles sólo parseando las `<link>` del
+   HTML. Los recolectores de terceros prueban primero las rutas convencionales,
+   y por eso mahou.es y vodafone.es sí tenían icono y nosotros no. Añadidos
+   `public/favicon.ico` y `public/apple-touch-icon.png`. **No arregla la consola
+   al instante**: el índice de Google S2 se puebla por rastreo, así que hasta
+   que vuelva a pasar por genscore.es seguirá devolviendo el globo. Es condición
+   necesaria, no suficiente — y refuerza el caso de la Fase 3a, que al servir
+   los iconos por proxy propio deja de depender de cuándo le apetezca a Google
+   rastrearnos.
+3. **Y por eso nuestro dominio dejó de preguntarle a Google.** Corolario del
+   punto anterior: teníamos el icono auténtico en el repo y aun así
+   enseñábamos un globo, porque preguntábamos por él a un tercero que no lo
+   conocía. `faviconImgProps` devuelve `/brand/genscore-tile.svg` para
+   `genscore.es`. Es vectorial, así que no necesita `srcSet` — de ahí que el
+   campo pasara a opcional. Arregla uno de los dos globos **al instante**, sin
+   esperar a ningún rastreo ni a la Fase 3a. Regla que deja: **del único
+   dominio del que tenemos el icono de verdad, no se adivina.**
+
+**Lo que el piloto midió y yo había estado estimando.** La captura de Dominios
+del run sobre `c7aa69b` da la primera cifra real: **de 10 dominios, 8 traían
+icono de marca y 2 salían con el globo genérico** (alberdiderma.es y
+genscore.es). Ese 20% es el tamaño verdadero de la causa B en esta cuenta, y
+sustituye a la mano alzada con la que abrí la fase.
+
+**Tercer modo de fallo, que no había nombrado nadie.** farmaciamunozpereira.com
+tiene icono real y de resolución suficiente, pero es un **logotipo con texto**:
+a 38 px es una mancha ilegible. No lo arregla la Fase 1 (no es resolución) ni
+la 3 (no es la fuente). Si algún día molesta, lo único que funciona es no
+enseñar la marca a ese tamaño y usar el avatar de letra, y eso exige distinguir
+un logotipo de un símbolo, que no es detectable de forma fiable. Queda anotado
+como límite conocido, no como pendiente.
+
+**Fase 3a, pedida por el fundador el mismo día** (*"siempre que una web no
+devuelva favicon en lugar de mostrar icono mostramos las iniciales como
+antes"*). Lo que suena a cambio de icono es un cambio de arquitectura, porque
+**Google responde 200 con el globo, no un 404**: desde el navegador no hay forma
+de distinguir "este es su icono" de "no tengo ni idea", y por eso la Fase 2 que
+yo había planteado en cliente no era implementable. Hay que mirar los bytes en
+servidor.
+
+1. **`/api/favicon` (`app/api/favicon/route.ts`).** Trae el icono de S2 desde el
+   servidor y devuelve **204 sin cuerpo cuando es el comodín**. Un `<img>` con
+   cuerpo vacío no puede decodificar nada y dispara `onError`, que es lo único
+   que el cliente necesita para pintar iniciales.
+
+   **Se implementó con 404 y el piloto lo tumbó** (`PILOT FAIL` sobre `ffcbe51`,
+   Dominios y p2-overview en los tres viewports). El 404 hacía exactamente lo
+   que se le pedía —de hecho el detector acertó de pleno: las dos peticiones
+   marcadas eran `alberdiderma.es` y `damm.com`, los dos únicos dominios sin
+   icono— pero **un 4xx para un estado normal y esperado le miente a todo lo que
+   mire el tráfico**. El piloto lo leyó como pantalla rota, y detrás habrían
+   venido la consola del navegador y Sentry. Que un dominio no tenga favicon no
+   es fallo de nadie. Hay un test de regresión que fija el 204
+   (`app/api/favicon/route.test.ts`). **Regla que deja: el código de estado
+   describe qué pasó, no qué quieres que haga el cliente.**
+2. **La detección se autocalibra; no hay ningún hash incrustado.** Se pide el
+   icono de `no-such-site.invalid` —`.invalid` está reservado por el RFC 2606 y
+   no puede existir, así que lo que devuelva S2 para él *es* el comodín— y se
+   compara por SHA-256. El día que Google redibuje el globo, sigue funcionando.
+   Se calibra **por tamaño** (el globo no es el mismo dibujo a 32 que a 256) y se
+   memoiza **por promesa**, para que un arranque en frío con veinte iconos en
+   pantalla no dispare veinte calibraciones.
+3. **Falla abierto, a propósito.** Sin calibración disponible se sirve el icono
+   tal cual en vez de arriesgarse a esconder uno bueno: enseñar un globo de más
+   es feo, ocultar la marca real de un competidor es información perdida. Mismo
+   criterio que `scripts/vercel-should-build.sh`.
+4. **Caché de edge escalonada por significado**, no un número al azar: una
+   semana para un icono (no cambian), un día para un 204 de "no hay icono" (un
+   dominio sin icono hoy puede tener uno mañana y no queremos que ese "no hay" se
+   quede pegado), un minuto para un fallo transitorio.
+5. **`components/ui/favicon-img.tsx`** centraliza el comportamiento y **no la
+   apariencia**: recibe el avatar de iniciales ya renderizado como `fallback`.
+   Cada pantalla conserva su clase y su color determinista — unificarlos habría
+   sido un rediseño encubierto colado en un PR de infraestructura.
+6. **Efecto colateral que era un problema declarado desde 2026-07-23:** el
+   navegador del usuario deja de contarle a Google qué cuenta está mirando.
+
+### Fase 3b — construida, medida y **revertida el mismo día**
+
+> **Estado: revertida.** El código no está en el producto. Se conserva este
+> apartado entero, y no se borra, porque el valor que dejó no es el código sino
+> la medición: **es la prueba de que la causa B no se arregla por esta vía**, y
+> sin ella la próxima sesión que vea a Mahou borroso volverá a proponer
+> exactamente lo mismo. Lo implementado vive en el historial del PR #354
+> (`1f80df8`, `a2bb385`).
+>
+> **Por qué se revirtió, con los números delante.** De los 10 dominios de la
+> cuenta del fundador, la 3b cambió **uno**: movistar.es. Los otros nueve
+> quedaron idénticos píxel a píxel — comparación de regiones sobre las capturas
+> del piloto, no impresión visual. **Mahou, que era la razón entera de la fase,
+> ni se inmutó**: no publica `/apple-touch-icon.png` en la ruta convencional.
+> Y el único que sí cambió quedó **peor**: un `apple-touch-icon` está diseñado
+> para un tile de pantalla de inicio, con márgenes generosos porque iOS aplica
+> su propia máscara, así que a 38 px la marca se ve más pequeña y más débil que
+> la versión recortada de Google. La fase cambiaba resolución por peso visual,
+> y a tamaños pequeños perdía.
+>
+> **Lo que costaba mantener, a cambio de eso:** una ruta pública sin autenticar
+> haciendo peticiones salientes a dominios que escribe el usuario, una guardia
+> SSRF entera (`lib/domains/public-host.ts`) que había que entender y mantener
+> para siempre, un hueco de DNS rebinding declarado y no cerrado, y hasta 3 s
+> extra en la primera petición de cada dominio.
+>
+> **Lo que quedó sin resolver.** No pude distinguir dos explicaciones del 1 de
+> 10: o esos sitios no publican el icono en la ruta convencional, o el
+> presupuesto de 3 s era demasiado corto y sólo llegó el más rápido. Apple,
+> Vodafone y Ryanair casi seguro que sí lo publican, lo que apunta a lo segundo.
+> **Quien retome esto debe medir eso primero** — y aun resolviéndolo, seguiría
+> teniendo encima el problema del margen, que es de diseño y no de red.
+
+Lo que sigue es el diseño tal como se implementó, conservado como registro:
+
+**Fase 3b, aprobada por el fundador el mismo día** (*"empieza con 3b"*, tras
+haberla planteado por separado por tocar la lista de prohibidos). Pide
+`https://<dominio>/apple-touch-icon.png` —180 px reales— antes de conformarse
+con lo que tenga Google. Es lo único que arregla mahou.es.
+
+1. **No es un crawler, y la distinción es la que autoriza la fase.** Se piden
+   dos rutas fijas conocidas (`/apple-touch-icon.png` y su variante
+   `-precomposed`). **No se parsea HTML, no se siguen enlaces, no se descubren
+   URLs.** El día que alguien quiera leer el `<link rel="apple-touch-icon">`
+   para cubrir a los sitios que no usan la ruta convencional, eso **sí** es
+   rastrear y necesita su propia aprobación.
+2. **La guardia SSRF es la pieza central, no un accesorio**
+   (`lib/domains/public-host.ts`). El dominio lo escribe el usuario al dar de
+   alta un proyecto o un competidor, así que sin ella `/api/favicon` convierte
+   el servidor en un ariete contra la red interna y, como la respuesta vuelve al
+   navegador, en un canal de exfiltración. Sólo https; se rechaza toda IP
+   literal; se resuelve el host y **todas** sus direcciones deben ser públicas
+   —no la primera, que un host con un registro público y otro privado pasaría el
+   filtro y luego conectaría al segundo—; y se bloquean privadas, loopback,
+   link-local (`169.254.169.254`, el objetivo clásico en la nube), CGNAT,
+   multicast y sus equivalentes IPv6, mirando dentro de las IPv4 mapeadas.
+3. **Las redirecciones se siguen a mano, revalidando cada salto.** Con
+   `redirect: "follow"` se validaría el primer host y se confiaría en el resto —
+   un dominio público que redirige a `169.254.169.254` entraría por la puerta.
+   Prohibirlas del todo tampoco valía: casi todo dominio raíz redirige a `www`,
+   así que la 3b no habría servido justo donde hacía falta.
+4. **El tipo de imagen se deriva de los bytes, no de la cabecera.** El
+   `Content-Type` y la extensión los controla el otro extremo. **SVG se rechaza
+   a propósito** aunque sea el formato más nítido: puede llevar script y lo
+   serviríamos desde nuestro propio origen. Nitidez no vale un XSS.
+5. **Presupuesto total, no por llamada.** Dos rutas por hasta cuatro saltos con
+   5 s cada uno son 40 s antes siquiera de preguntarle a Google. Se calcula un
+   instante absoluto al entrar y se reparte; lo que no quepa no se intenta y S2
+   sigue detrás. Mismo criterio que `.claude/rules/scan.md`.
+
+**Revisión de seguridad dedicada (2026-08-06): cero hallazgos.** La QA había
+corrido sobre el commit anterior y no llegó a ver la 3b, así que se pasó una
+revisión aparte sobre la ruta. Confirmó lo que la fase pretendía: no hay control
+del host ni del protocolo (`isPlausibleDomain` sólo admite etiquetas
+`[a-z0-9-]`, así que la URL no puede crecer credenciales, puerto, otro host ni
+ruta), las codificaciones alternativas de IP no burlan nada porque se juzga la
+dirección **resuelta** y no el texto del host, cada salto de redirección se
+revalida, y el `Content-Type` nunca sale del servidor remoto. Señaló dos formas
+IPv6 obsoletas que el clasificador daba por públicas —«IPv4-compatible»
+(`::7f00:1`) y 6to4 (`2002::/16`)— y las descartó por no enrutables hoy;
+**se cerraron igual**, porque un clasificador que devuelve `true` por accidente
+es el que falla el día que cambia el entorno.
+
+**Lo que la 3b NO cubre, dicho antes de que alguien lo asuma.** **DNS
+rebinding**: se valida la IP antes de cada petición, pero entre esa comprobación
+y el socket real hay una ventana en la que el DNS puede cambiar de respuesta.
+Cerrarla exige fijar la IP en el socket, que `fetch` no permite. El daño
+residual queda acotado por lo demás —sólo https, sólo respuestas con firma de
+imagen ráster, tope de tamaño—, pero **no está cerrado**, y quien toque esto
+debe saberlo. Tampoco cubre a los sitios que publican su icono sólo en el HTML:
+ésos siguen cayendo a Google.
+
+**Límite de verificación, otra vez y peor.** El contenedor donde se implementó
+tiene bloqueado todo dominio externo, así que `/api/favicon` **nunca ha hablado
+con Google**. La lógica está cubierta con `fetch` simulado (10 casos: comodín,
+icono real, fallo de calibración, cuerpo vacío, red caída, memoización por
+promesa y por tamaño), pero el camino real sólo se ejercita en el preview. Si
+algo va a fallar aquí, fallará ahí y no en los tests.
+## 36. La portada de Dominios sigue al dominio abierto, no al más reciente (DOMAINS-ACTIVE-COOKIE-1, 2026-08-07)
+
+**El problema, reportado por el fundador.** Seleccionar un dominio en Dominios
+y navegar a Visión general, Prompts o cualquier otra pantalla de proyecto
+funcionaba bien — la URL lleva el `projectId`. Pero volver a Dominios (por la
+barra lateral, sin el parámetro `?active=<id>` de la rejilla) siempre volvía a
+mostrar el mismo dominio en la card grande: el más reciente por `created_at`,
+que en beta suele ser `mozilla.org`, el proyecto reservado del piloto de
+escritura (ver CLAUDE.md, "Pilot write scope"). §32 ya documentó esta caída
+como criterio de reserva deliberado, y §33 dejó dicho explícitamente que "el
+bloque de la barra lateral (`proj-switch`) y la portada de Dominios siguen sin
+tocarse" al resolver el mismo problema para `/debug`. Este reporte es
+justamente el pedido explícito que ambas fases dejaron pendiente.
+
+**La solución reutiliza, no inventa.** DEBUG-ACTIVE-PROJECT-1 (§33) ya
+construyó la única pieza que faltaba: el cookie httpOnly `geo_active_project`
+(`lib/active-project-cookie.ts`), que `middleware.ts` escribe en cada visita a
+`/dashboard/projects/[projectId]/...`. `app/dashboard/domains/page.tsx` ahora
+lo lee con `cookies()` y resuelve la card principal con la misma prioridad que
+`/debug`: `?active=<id>` explícito (clic en una tarjeta de la rejilla) → el
+cookie (el proyecto que la consola tenía realmente abierto) → el más reciente,
+como último recurso si ninguno de los dos casa con un dominio de la cuenta. La
+resolución se extrajo a una función pura y testeada,
+`resolveSelectedProject` (mismo módulo, `lib/active-project-cookie.test.ts`),
+en vez de quedar en línea dentro del Server Component. El cookie sigue sin
+autorizar nada por sí mismo: `projects` ya viene acotado por RLS y filtrado de
+archivados desde `getWorkspaceCounters`, así que un id obsoleto, borrado o
+ajeno simplemente no aparece en la lista y cae al criterio siguiente — misma
+propiedad de seguridad que ya tenía `/debug`.
+
+**Deliberadamente fuera de esta fase.** Elegir un dominio en la rejilla de
+Dominios (`?active=<id>`) sin llegar a entrar en el proyecto (sin pulsar "Ver
+visión general") no actualiza el cookie — sólo se escribe al visitar
+`/dashboard/projects/[projectId]/...`. Si en ese estado intermedio el usuario
+sale por otro camino y vuelve a Dominios sin el parámetro, verá el dominio
+recordado por el cookie, no el que acababa de tocar en la rejilla. No es el
+caso reportado (el fundador describe navegar primero a Visión general/Prompts,
+que sí escribe el cookie) y ampliar la escritura del cookie a la propia
+pantalla de Dominios es un cambio de superficie distinto — se deja para si
+algún día se reporta.
+
+**Pendiente / roto conocido.** Ninguno nuevo.
+
+---
+
 ## 37. La rama de evidencia del piloto deja de fingir ser un deploy (PILOT-EVIDENCE-IGNORE-1, 2026-08-07)
 
 **El problema, reportado por el fundador:** correos de Vercel de *"Failed
@@ -3488,6 +3819,214 @@ entonces pueden seguir generando un correo aislado si alguien reabre esos
 PRs. No se ha hecho limpieza retroactiva de esas ramas — force-pushear
 `vercel.json` a 76 ramas por separado es una operación aparte, y esta fase
 sólo cierra la fuente del problema hacia delante.
+---
+
+## 38. Ajustes de cuenta: cuatro pantallas pasan a una (CONSOLE-REDESIGN-1 Fase A, 2026-08-06)
+
+**Estado: implementado.** Diseño aprobado y navegable en
+`docs/design-reference/console-redesign-1/`; Task Intake en esa misma carpeta.
+
+**El problema no era que sobrase una pestaña.** Las cuatro pantallas —Perfil,
+Organización, Notificaciones, Plan y facturación— estaban organizadas por
+*tema*. Ordenadas por el trabajo que alguien viene a hacer salen tres: quién soy
+y cómo entro, qué me llega al correo, y qué pago. Y la mitad de los controles no
+estaban conectados a nada.
+
+Se exploraron tres opciones estructurales (pestañas, página única, sacar el plan
+de Ajustes) y el fundador eligió **la página única**. Las otras dos quedan
+descartadas con motivo: las pestañas no arreglaban que lo más consultado
+siguiera a dos clics; sacar el plan al menú contradice el §3 punto 5 y hoy son
+dos barras de progreso — se deja anotado para cuando Plan gane peso.
+
+Decisiones finales:
+
+1. **Una sola ruta**, `/dashboard/settings`, con tres secciones en orden
+   Cuenta → Avisos → Plan. La más pesada y la que más va a crecer va la última,
+   para que al crecer no empuje nada.
+2. **El índice lleva estado, no sólo enlaces** — nombre, avisos activos, plan.
+   Con tres entradas, una columna de 186 px que sólo navegase no se ganaría su
+   sitio; llevar estado es lo que hace que la página única gane a las pestañas.
+3. **Las cuatro rutas viejas son redirects PERMANENTES**, no transitorios.
+   Cuatro emails de `lib/email/transactional.ts` y los enlaces que genera
+   `lib/notifications/render.ts` apuntan a ellas y están en bandejas que no
+   podemos reescribir. Por eso esta fase no toca los emails.
+4. **Móvil es un solo scroll.** La primera propuesta llevaba pastillas de
+   sección pegajosas; el fundador las descartó (2026-08-06) porque contradicen
+   el argumento entero de la opción elegida. Se corta en 899 px, el mismo
+   breakpoint del shell.
+5. **«Eliminar cuenta» cierra la página y no está en el índice**, tras una línea
+   y 44 px de aire, en gris y con botón de contorno en vez del bloque rojo
+   relleno. A una acción irreversible se llega bajando, no de un clic (fundador,
+   2026-08-06). Copy suyo: «Esta acción es irreversible. Se borrará el historial
+   y todos los datos asociados a tu cuenta.»
+6. **Fuera cuatro controles muertos**: Idioma y Zona horaria (guardaban estado
+   de React que se perdía al recargar), Cambiar foto (sin backend y **habilitado**,
+   así que aparentaba funcionar) y Activar 2FA (sin backend). También la
+   pastilla de rol «Administrador/Miembro»: sin equipos, toda cuenta es admin de
+   sí misma. La foto se descartó explícitamente — el avatar se queda en
+   iniciales (fundador, 2026-08-06).
+7. **Organización no tiene pantalla: dos acordeones gemelos en Cuenta.**
+   «Datos de empresa» (nombre, sitio web, sector) y, justo debajo y con la misma
+   forma, «Datos de facturación» (razón social, NIF). La primera implementación
+   mandó los fiscales a la sección Plan, junto a la factura, con el argumento de
+   que un NIF se rellena cuando vas a pagar; **el fundador lo corrigió el
+   2026-08-06** — los dos bloques son «datos que rellenas una vez» y se leen
+   mejor emparejados. El botón de logo desaparece: un botón deshabilitado que
+   promete «Próximamente» sigue siendo un control que no hace nada.
+8. **Las cuatro filas «Próximamente» de Notificaciones** pasan a una línea de
+   texto al pie. Seis filas con cuatro apagadas se leían como hoja de ruta.
+9. **Repintado a marca v3 con `.set-scope`**, que comparte bloque de tokens con
+   `.ov2-scope` (§2) en vez de inventar un mecanismo por zona. El import de
+   Hanken Grotesk **no se retira**: sigue siendo el `body` de las zonas sin
+   migrar. Ajustes era la última zona de consola pendiente.
+10. **Regla de forma nueva**: redondo es una persona, squircle es un dominio.
+    Ver `docs/brand/brand-guidelines.md` §2b.
+
+**Tres correcciones tras la primera revisión del fundador (2026-08-06):** aire
+en la caja de seguridad, que iba ahogada con una fila de una línea dentro del
+padding por defecto; los datos de facturación a acordeón gemelo en Cuenta; y el
+bloque de pago, que le decía «todavía no tienes ningún plan de pago activo»
+**siendo una cuenta Agencia**. Ese último era un error de fondo, no de copy:
+`hasStripeCustomer` significa «ha tenido alguna vez ficha de cliente en Stripe»,
+y el texto lo confundía con «no tiene plan de pago». Agencia se vende fuera de
+Stripe (no tiene precio self-serve, PRICING-TRUTH-1), así que la cuenta que más
+paga era la que leía que no pagaba. Ahora hay cuatro estados y cada uno dice lo
+que es cierto de él.
+
+Al mirar las capturas del piloto en verde apareció **una tercera instancia del
+mismo defecto**: la tarjeta «¿Gestionas varios clientes? El plan Agencia es para
+ti» se le mostraba a una cuenta que ya está en Agencia. El patrón que deja esta
+fase escrito: **un bloque que le dice algo al cliente sobre un plan tiene que
+mirar antes en qué plan está**. Aparecía tres veces en la misma pantalla.
+
+**Dos hallazgos arreglados de paso, ambos en facturación:**
+
+- `plan-billing-section.tsx` pintaba sus dos avisos con cuatro hexes escritos a
+  mano (`#f0c36d`, `#fdf6e8`, `#92600a`, `#6b4b09`) que se saltaban los tokens
+  `--warn`/`--warn-soft`/`--warn-ink`. Era una **regresión de BRAND-4 hallazgo 2
+  en el mismo fichero que BRAND-4 arregló**. Matiz importante para el futuro: lo
+  prohibido no es el ámbar de aviso, que tiene familia de tokens legítima, sino
+  `--brand-warm` (#FFB020), que es sólo el punto del logo.
+- **Agencia era un callejón sin salida** en el modal de cambiar de plan: un
+  radio seleccionable que apagaba «Continuar» y mostraba dos mensajes distintos
+  para el mismo estado. Peor aún, el botón «Comparar planes» abría el modal
+  **con Agencia ya preseleccionada**, así que el callejón se alcanzaba desde el
+  camino por defecto. Ahora ocupa la misma celda pero sin radio, con enlace a
+  ventas.
+
+**Hueco de verificación que esta fase cierra.** No existía ninguna journey de
+piloto para `/dashboard/settings`: la pasada del PR #357 barrió 44 pantallas en
+tres viewports y Ajustes no estaba en ninguna fila. Sin `tests/pilot/journeys/
+settings.spec.ts` esta pantalla se habría implementado sin que ningún piloto la
+viera nunca — el mismo fallo que el incidente de Auditoría web del 2026-08-02,
+por otra puerta.
+
+**Lo que costó aprender, y la regla que deja.** El primer intento se desplegó y
+el piloto lo tumbó en los tres viewports: *«An error occurred in the Server
+Components render»*, la pantalla entera sustituida por «Algo ha ido mal». La
+causa: `buildSettingsIndex` estaba exportada desde `settings-index.tsx`, que es
+`"use client"`, y la llamaba el Server Component de la página. **Todo lo que
+exporta un módulo de frontera de cliente se convierte en una referencia de
+cliente**; invocarla durante el render del servidor lanza.
+
+Ni el build ni el test podían cogerlo: `tsc` ve una función normal y Vitest no
+respeta la directiva `"use client"`. La regla que queda es estructural, no de
+cuidado: **una función que llama un Server Component nunca vive en un fichero
+`"use client"`.** Vive en `lib/` (aquí, `lib/settings/index-entries.ts`) y el
+componente de cliente importa de ahí. Lo único que lo detectó fue la journey de
+piloto que esta misma fase tuvo que crear.
+
+**Tres ajustes finales tras la segunda revisión (2026-08-06):**
+
+- **Un solo «Guardar» en la tarjeta de Cuenta.** Los dos acordeones tenían el
+  suyo, así que escribir en «Datos de empresa» y pulsar el botón de la tarjeta
+  descartaba el cambio en silencio. Era una regresión introducida por esta misma
+  fase: antes Organización era pantalla propia con un único guardado y no había
+  ambigüedad. Ahora `saveAccount` escribe nombre, empresa y facturación en una
+  sola llamada y los acordeones son presentacionales.
+- **Fuera «Motores de IA» del uso del ciclo.** Todos los planes de pago llevan
+  los tres motores que existen, así que la fila vivía en 3/3 y levantaba «Cerca
+  del límite del plan» para un límite sin nada por encima a lo que subir.
+- **El bloque final pasa a soporte genérico.** Describía el estado de pago de
+  cuatro maneras distintas —de ahí que le dijera a una cuenta Agencia que no
+  tenía plan— y ahora dice lo único que es cierto siempre: escríbenos si tienes
+  una incidencia. **El acceso a facturas de Stripe no desapareció con él**: el
+  botón sube junto a «Cambiar de plan», visible para cualquier cuenta con
+  cliente de Stripe. Quitarlo sin más habría sido una regresión peor que la que
+  se arreglaba.
+
+**Pendiente / roto conocido:**
+
+- **Fase B, sin aprobar:** los otros cuatro hallazgos del modal de plan — un
+  camino avisa antes de salir a Stripe y el otro no; el bloque de archivar
+  dominios duplicado en los pasos `confirm` y `overage`; el distintivo «Bajada
+  de plan» fijo con un `.cp-confirm-badge.up` muerto en CSS; y el icono `grid`
+  de la cabecera. Necesita su propio Task Intake: es un flujo de pago.
+- **La sección Plan sólo está cubierta por test en su entrada de índice**
+  (`buildSettingsIndex`), no en su renderizado: el repo no tiene infraestructura
+  de test de componentes. Con equipos ocultos no hay no-admins reales, pero la
+  cobertura es parcial y conviene saberlo.
+- **`org_tax_info` sigue en `user_metadata`** de las cuentas que lo tuvieran, a
+  propósito: es la fuente de reserva de Razón social hasta que su dueño guarde.
+- **`updateProfileName` queda sin usar** en `profile/actions.ts` tras el guardado
+  único. No se retira aquí para no ensanchar el PR; una server action huérfana
+  sigue siendo un endpoint invocable, así que conviene borrarla en la fase
+  siguiente.
+- **La sesión del piloto se cae a mitad de pasada, y no es de esta zona.** En
+  la pasada de `cfe77eb`, móvil completó las 44 pantallas —las cinco de Ajustes
+  con contenido real y cero errores de consola— y a partir de
+  `tablet notifications-bell` todo rebotó a `/login`. El `storageState` de
+  `.pilot/auth.json` lo comparten los tres proyectos de viewport; cuando el
+  token rota durante la primera pasada, las dos siguientes arrancan con una
+  sesión ya inválida. Es intermitente (la pasada anterior, con las mismas
+  pantallas, fue verde) y afecta a **todas** las journeys, no a Ajustes.
+  Arreglarlo toca `tests/pilot/support/auth.setup.ts` —re-autenticar por
+  proyecto en vez de reutilizar el fichero— y merece fase propia.
+- **Replanteo pendiente de la sección Plan.** Las cuatro pegas de la revisión
+  del fundador caían todas ahí, no en Cuenta ni en Avisos: jerarquía duplicada
+  («Plan» → «Tu plan» → «Uso de este ciclo»), y «Facturación mensual» junto a un
+  plan «a medida». Va con la Fase B del modal, que es su misma zona.
+
+---
+
+## 39. La alerta de escaneo incompleto deja de ser un email sin marca (EMAIL-OPS-ALERT-BRAND-1, 2026-08-07)
+
+**El problema, reportado por el fundador con captura propia.** El aviso de
+`sendScanHealthAlertEmail` (`lib/scan/scan-health-alert.ts` →
+`lib/email/transactional.ts`) —el que llega a `OPS_ALERT_EMAIL` cuando un
+escaneo se queda sin datos de un motor— se renderizaba como HTML suelto sin
+cabecera, sin paleta v3 y sin el sistema `wrap()`/`eyebrow()`/`heading()` que
+ya usan los otros ocho emails de Resend. Al lado del resto de la bandeja
+parecía un email roto, no uno de GenScore.
+
+**Por qué estaba así a propósito.** El comentario del código lo decía en dos
+sitios: "Deliberately plain and dense rather than brand-wrapped: the reader
+is debugging." La decisión original (EXTRACTION-RELIABILITY-1 Fase B,
+`docs/adr/0029`) priorizaba densidad de datos sobre identidad — este email
+nunca lo ve un cliente, solo el operador diagnosticando un fallo real.
+
+**Lo que cambia.** Se repinta con el mismo sistema v3 (`docs/brand/
+email-design-proposal.md`) que ya llevan los ocho emails de Resend: cabecera
+de marca, eyebrow rojo `#D23B48` ("Alerta operativa · sólo equipo GenScore"),
+titular y detalle con los componentes compartidos. **Ningún dato de
+diagnóstico se pierde** — motor, causa, filas afectadas, dominio, proyecto,
+escaneo y fecha de detección siguen todos presentes, ahora en una tabla de
+filas con los valores en monoespaciada (`JetBrains Mono`, la fuente de datos
+de la marca) en vez de la tabla suelta anterior. El pie deja claro que es un
+aviso interno, no algo que vea un cliente.
+
+**Qué no se toca.** `sendWebAuditFailedAlertEmail` (el aviso gemelo de
+auditoría web fallida) mantiene el mismo patrón "deliberadamente plano" — el
+fundador pidió rediseñar el email de la captura, que era este, no el otro.
+Si se decide unificar también ese, es una fase propia de una línea: mismo
+cambio, mismo archivo, otra función.
+
+**Fuera de alcance original.** `docs/brand/email-design-proposal.md` (BRAND-5c)
+catalogaba los diez emails de cliente/auth y marcaba "cualquier email nuevo"
+como fuera de alcance; los dos avisos de operador ni siquiera estaban en su
+tabla porque no son emails de cliente. Esta entrada es la que los trae al
+mismo sistema de marca, no una ampliación de BRAND-5c.
+
 ---
 
 ## Cómo mantener este documento
