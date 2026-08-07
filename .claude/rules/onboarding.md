@@ -59,6 +59,13 @@ obedecerá igual.
 - **El «ya visto» va en `localStorage`, no en el esquema.** Una migración está
   prohibida sin aprobación explícita del fundador (CLAUDE.md). El coste
   asumido y declarado: el popup reaparece en un navegador nuevo.
+- **El popup no se abre en `/dashboard`.** Es una ruta puente: su página no
+  pinta nada, sólo redirige al proyecto más reciente. Abrir ahí montaba el
+  popup, escribía la marca de «visto» y la redirección se lo llevaba por
+  delante — y como el primer login aterriza justo en `/dashboard`, el efecto
+  era que **el tour no salía nunca** en el único momento para el que se hizo
+  (log §33). La pasada del piloto entra por `/dashboard` a propósito: entrar
+  por la pantalla final ocultaría este fallo.
 - **La marca de «visto» se escribe AL MOSTRARLO, nunca al cerrarlo.** Escribirla
   al cerrar convierte «salta en el primer acceso» en «salta en cada carga hasta
   que lo cierres»: quien lo mira y navega o recarga se lo vuelve a encontrar

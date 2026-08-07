@@ -144,6 +144,35 @@ export function ProductTour({
   const stageRef = useRef<HTMLDivElement>(null);
   const [stepIdx, setStepIdx] = useState(0);
 
+  /**
+   * La pista del botón «Siguiente» (fundador, 2026-08-07).
+   *
+   * El tour se detiene al acabar el primer paso y ese silencio deja una
+   * pregunta sin responder: ¿y ahora qué? El problema no es que el botón sea
+   * poco visible —es azul, sólido y está solo en su esquina— sino que la
+   * mirada está arriba, en el lienzo que acaba de pararse, y hay que bajarla.
+   * De ahí las dos mitades: el halo trae la mirada, la flecha dice hacia dónde.
+   *
+   *   "idle" → aún no toca (el paso 1 sigue corriendo)
+   *   "on"   → animando, tres ciclos y se acaba sola
+   *   "rest" → anillo fino permanente, sin movimiento
+   *   "done" → el usuario ya ha tocado algo; no vuelve en toda la sesión
+   */
+  const [hint, setHint] = useState<"idle" | "on" | "rest" | "done">("idle");
+  const hintRef = useRef<"idle" | "on" | "rest" | "done">("idle");
+
+  const setHintState = useCallback((next: "idle" | "on" | "rest" | "done") => {
+    hintRef.current = next;
+    setHint(next);
+  }, []);
+
+  /** Gasta la pista. Idempotente: una vez apagada no se vuelve a encender. */
+  const endHint = useCallback(() => {
+    if (hintRef.current === "done") return;
+    hintRef.current = "done";
+    setHint("done");
+  }, []);
+
   // Estado de reproducción fuera de React: lo lee y escribe el bucle.
   //
   // La reproducción automática se detiene al acabar el primer paso: encadenar
@@ -179,8 +208,9 @@ export function ProductTour({
     // volver a entrar en pantalla no debe reiniciar nada.
     hasStarted.current = true;
     pausedByScroll.current = false;
+    endHint();
     setStepIdx(idx);
-  }, []);
+  }, [endHint]);
 
   /** Congela un paso donde su animación ya se ha desarrollado. */
   const freezeStep = useCallback((i: number) => {
@@ -190,8 +220,9 @@ export function ProductTour({
     firedClick.current = clock.current.t;
     hasStarted.current = true;
     pausedByScroll.current = false;
+    endHint();
     setStepIdx(i);
-  }, []);
+  }, [endHint]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -517,9 +548,14 @@ export function ProductTour({
         // tanto el primero (automático) como los que trae «Siguiente».
         if (c.holdAt !== null && c.t >= c.holdAt) {
           const wasLast = c.holdAt >= holdTimeFor(TOUR_STEPS.length - 1);
+          const wasAutoplay = c.holdAt === holdTimeFor(AUTOPLAY_THROUGH_STEP_INDEX);
           c.t = c.holdAt;
           c.playing = false;
           c.holdAt = null;
+          // El momento exacto en que el tour se calla es cuando la pista tiene
+          // que hablar. Sólo tras la reproducción automática: si el usuario ya
+          // ha navegado a mano, sabe de sobra cómo se avanza.
+          if (wasAutoplay && hintRef.current === "idle") setHintState("on");
           if (wasLast) onFinish?.();
         }
         if (c.t >= TOUR_DURATION_MS) {
@@ -592,7 +628,7 @@ export function ProductTour({
       io?.disconnect();
       window.removeEventListener("resize", onResize);
     };
-  }, [variant, onFinish]);
+  }, [variant, onFinish, setHintState]);
 
   const rootClass = `ptour ptour--${variant}`;
 
@@ -1073,8 +1109,20 @@ export function ProductTour({
         ) : (
           <button
             type="button"
-            className="pt-btn pt-primary"
+            className={`pt-btn pt-primary${hint === "on" ? " pt-hint" : ""}${hint === "rest" ? " pt-hint-rest" : ""}`}
+            // La pista se gasta al primer contacto, sea del tipo que sea. Ya ha
+            // cumplido: quien pasa el ratón o llega con el tabulador ya ha
+            // encontrado el botón, y seguir insistiendo lo convierte en un
+            // incordio.
+            onPointerEnter={endHint}
+            onFocus={endHint}
+            onAnimationEnd={(e) => {
+              // Sólo la del halo: la de la flecha corre en un hijo y burbujea
+              // hasta aquí, así que sin filtrar esto se dispararía dos veces.
+              if (e.animationName === "ptHintHalo" && hintRef.current === "on") setHintState("rest");
+            }}
             onClick={() => {
+              endHint();
               if (isLast) {
                 onClose?.();
                 return;
@@ -1082,7 +1130,13 @@ export function ProductTour({
               goToStep(stepIdx + 1);
             }}
           >
-            {isLast ? "Ir a mi panel" : "Siguiente →"}
+            {isLast ? (
+              "Ir a mi panel"
+            ) : (
+              <>
+                Siguiente <span className="pt-arrow">→</span>
+              </>
+            )}
           </button>
         )}
       </div>

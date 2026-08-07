@@ -3269,6 +3269,51 @@ comprobar sin salir de la misma sesión.
 Cierra el hueco que llevaba dos días declarado en este PR: el popup de la
 consola nunca se había visto sobre el preview con sesión real.
 
+### La pista del botón, el recorte de altura y la ruta puente (2026-08-07)
+
+**Altura.** El fundador: *«sobra mucho espacio arriba y abajo... así también
+damos más visibilidad a los botones»*. Medido antes de tocar nada, el grueso no
+estaba en los márgenes sino en el lienzo: a 375 px se llevaba 466 de 690. Se
+aprieta su proporción (2/1 → 2,3/1 en escritorio, 4/5 → 1/1 en móvil) y se
+recortan subtítulo, pie y márgenes. Resultado medido: **690 → 594** a 375,
+**568 → 511** a 768, **614 → 551** a 1280, sin recortar contenido en ninguno de
+los ocho pasos. El límite lo puso el contenido, no una cifra elegida a ojo.
+
+**La pista del botón.** El tour se detiene al acabar el paso 1 y ese silencio
+dejaba una pregunta sin responder. Se propusieron seis animaciones en un
+artefacto y el fundador eligió la sexta: **halo + flecha**. El razonamiento que
+la sostiene, por si alguien la quiere cambiar: el problema no era que el botón
+fuese poco visible —es azul, sólido y está solo en su esquina— sino que la
+mirada está arriba, en el lienzo que acaba de pararse. El halo la baja; la
+flecha dice hacia dónde. Descartadas: la flecha sola (demasiado callada para
+tirar de la mirada desde otra zona), el barrido (es el gesto de «cargando», y
+este producto carga cosas de verdad), y el latido y el rebote (mueven el
+control, y un control que se mueve se lee como impaciencia).
+
+Tres reglas van con ella y no son decorativas: **finita** (tres ciclos, 4,8 s, y
+queda un anillo fino permanente), **se gasta al primer contacto** (ratón, foco o
+clic; no vuelve en toda la sesión) y **sólo tras la reproducción automática**
+(si el usuario ya ha navegado a mano, sabe cómo se avanza). Con
+`prefers-reduced-motion` el tour entero está quieto, así que la pista no puede
+depender del movimiento: el anillo estático dice lo mismo.
+
+**Y un fallo que salió al hacerlo, éste grave.** El popup **no salía nunca en el
+primer login**. `/dashboard` es una ruta puente —no pinta nada, sólo redirige al
+proyecto más reciente— y el popup se montaba ahí, escribía la marca de «visto» y
+la redirección se lo llevaba por delante. Como el primer login aterriza justo en
+`/dashboard`, el único momento para el que se hizo el tour era precisamente el
+único en el que no aparecía. Lo cazó el `ux-pilot`: veía el popup en Prompts,
+Competidores o Páginas citadas, y jamás en Visión general — 27 pasadas con
+popup, ninguna en esas dos. Ahora el provider no abre en `/dashboard` y espera
+al destino real. La pasada del piloto entra por `/dashboard` a propósito:
+entrar por la pantalla final habría ocultado el fallo.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies y a 375/768/1280 px (15 comprobaciones): la pista aparece al
+detenerse el paso 1, se apaga al primer contacto, altura constante en los ocho
+pasos, sin recortes dentro del lienzo, sin desbordamiento y sin errores de
+consola.
+
 ### Pendiente / roto conocido
 
 - **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una

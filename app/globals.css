@@ -6778,7 +6778,7 @@ select.set-field {
 }
 
 /* --- Cabecera: título fijo, subtítulo que explica lo de abajo ------------- */
-.pt-head { padding: 17px 22px 0; }
+.pt-head { padding: 13px 22px 0; }
 .pt-eyebrow {
   display: inline-flex; align-items: center; gap: 7px;
   font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
@@ -6796,7 +6796,7 @@ select.set-field {
    siempre la del más alto — sin medir nada en JS y correcto a cualquier ancho,
    con cualquier tipografía y en cualquier idioma. */
 .pt-sub {
-  margin: 0; padding: 6px 22px 12px;
+  margin: 0; padding: 4px 22px 10px;
   font-size: 13px; line-height: 1.45; color: var(--ink-3);
   display: grid;
 }
@@ -6805,10 +6805,15 @@ select.set-field {
 .pt-sub b { color: var(--ink-2); font-weight: 700; }
 
 /* --- Lienzo -------------------------------------------------------------- */
+/* La proporción del lienzo es el grueso de la altura del tour: a 375 px se
+   llevaba 466 de 690 (fundador, 2026-08-07: «sobra mucho espacio arriba y
+   abajo... damos más visibilidad a los botones»). Se aprieta hasta donde el
+   contenido aguanta sin recortarse — comprobado en los ocho pasos y a
+   375/768/1280 px, que es la única forma de saberlo. */
 .pt-stage {
   position: relative;
   margin: 0 22px;
-  aspect-ratio: 2 / 1;
+  aspect-ratio: 2.3 / 1;
   background: var(--pt-canvas);
   border: 1px solid var(--pt-line);
   border-radius: var(--r-lg);
@@ -7058,7 +7063,7 @@ select.set-field {
 /* --- Pie: puntos + ¿Qué es el GEO? + Atrás / Siguiente ------------------- */
 .pt-foot {
   display: flex; align-items: center; gap: 9px;
-  padding: 13px 22px 16px; margin-top: 13px; border-top: 1px solid var(--line-soft);
+  padding: 10px 22px 12px; margin-top: 8px; border-top: 1px solid var(--line-soft);
 }
 .ptour--hero .pt-foot { border-top: none; margin-top: 9px; }
 .pt-dots { display: flex; gap: 5px; }
@@ -7086,6 +7091,35 @@ select.set-field {
 .pt-btn:disabled { opacity: .4; cursor: default; }
 .pt-btn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
 .pt-btn.pt-primary:hover { background: #1d4fd0; color: #fff; }
+.pt-arrow { display: inline-block; }
+
+/* Pista del paso 1 (fundador, 2026-08-07; log §33).
+   El halo trae la mirada desde el lienzo que acaba de pararse; la flecha dice
+   hacia dónde. Tres ciclos y se acaba: una pista que no termina deja de ser
+   una pista y pasa a ser un incordio. Después queda el anillo fino, que marca
+   el botón sin mover nada, y desaparece en cuanto el usuario toca algo. */
+.pt-btn.pt-primary.pt-hint { animation: ptHintHalo 1.6s ease-out 3; }
+.pt-btn.pt-primary.pt-hint .pt-arrow { animation: ptHintArrow 1.6s ease-in-out 3; }
+.pt-btn.pt-primary.pt-hint-rest { box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+
+@keyframes ptHintHalo {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45); }
+  70%  { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+@keyframes ptHintArrow {
+  0%, 60%, 100% { transform: translateX(0); }
+  30%           { transform: translateX(5px); }
+}
+
+/* Con el movimiento desactivado el tour entero se queda quieto — es el
+   contrato, no una degradación —, así que la pista no puede depender de
+   moverse. El anillo estático dice lo mismo: éste es el siguiente paso. */
+@media (prefers-reduced-motion: reduce) {
+  .pt-btn.pt-primary.pt-hint,
+  .pt-btn.pt-primary.pt-hint .pt-arrow { animation: none; }
+  .pt-btn.pt-primary.pt-hint { box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+}
 .pt-lnk:focus-visible, .pt-btn:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; border-radius: 6px; }
 
 /* --- Variante hero: dentro del .browserframe de la landing --------------- */
@@ -7146,7 +7180,7 @@ select.set-field {
    deja de señalar el menú y señala el título de cada pantalla. */
 @media (max-width: 560px) {
   .pt-side { display: none; }
-  .pt-stage { aspect-ratio: 4 / 5; }
+  .pt-stage { aspect-ratio: 1 / 1; }
   .pt-2col { grid-template-columns: 1fr; gap: 6px; }
   .pt-hero { flex-direction: column; align-items: stretch; gap: 9px; }
   .pt-gwrap { align-self: center; }
@@ -7158,7 +7192,7 @@ select.set-field {
      (medido a 375px). Los puntos bajan a su propia línea. */
   .pt-foot { flex-wrap: wrap; justify-content: flex-end; }
   .pt-sp { display: none; }
-  .pt-dots { order: 3; width: 100%; justify-content: center; margin-top: 11px; }
+  .pt-dots { order: 3; width: 100%; justify-content: center; margin-top: 8px; }
   .pt-btn { padding: 0 12px; }
   /* Con los puntos en su propia línea, el enlace se va al extremo izquierdo de
      la fila de botones — que es donde el fundador lo marcó. */

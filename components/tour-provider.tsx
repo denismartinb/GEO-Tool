@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { ProductTour } from "@/components/product-tour";
@@ -53,11 +54,22 @@ export function TourProvider({ children }: { children: ReactNode }) {
   // El coste asumido: si alguien recarga en el primer segundo y se lo pierde,
   // ya no vuelve solo. Para eso está «¿Qué es el GEO?» en el menú lateral, que
   // es justo la puerta de vuelta que el fundador pidió.
+  //
+  // Y no se abre en `/dashboard`, que es una ruta puente: su página no pinta
+  // nada, sólo redirige al proyecto más reciente. Abrir ahí gastaba el tour sin
+  // que nadie lo viera — el popup se montaba, escribía la marca, y la redirección
+  // se lo llevaba por delante. Como el primer login aterriza justo en
+  // `/dashboard`, el efecto era que **el tour no salía nunca** en el momento
+  // para el que se hizo. Lo cazó el `ux-pilot` el 2026-08-07: veía el popup en
+  // Prompts, Competidores o Páginas citadas, y jamás en Visión general.
+  const pathname = usePathname();
+
   useEffect(() => {
+    if (pathname === "/dashboard") return;
     if (hasSeenTour(window.localStorage)) return;
     markTourSeen(window.localStorage);
     setIsOpen(true);
-  }, []);
+  }, [pathname]);
 
   // Escape cierra, y mientras está abierto el fondo no hace scroll.
   useEffect(() => {

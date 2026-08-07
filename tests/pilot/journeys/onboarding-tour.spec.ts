@@ -27,11 +27,14 @@ import { WELCOME_TOUR_SCRIM, captureInteraction, dismissWelcomeTour } from "../s
 const TITLE = "Aprende cómo funciona";
 
 test("el tour de bienvenida sale solo, se lee, se cierra y no vuelve", async ({ page }, testInfo) => {
-  // Navegador nuevo en cada pasada —`auth.setup` limpia la marca de «visto»
-  // antes de guardar el estado—, así que el popup del primer acceso salta aquí
-  // igual que le saltaría a alguien que estrena cuenta.
+  // Se entra por `/dashboard` A PROPÓSITO, que es donde aterriza un primer
+  // login de verdad. Esa ruta no pinta nada: redirige al proyecto más reciente.
+  // Justo ahí se rompía (2026-08-07): el popup se montaba en la ruta puente,
+  // escribía la marca de «visto», y la redirección se lo llevaba por delante,
+  // de modo que el tour no salía nunca en el único momento para el que se hizo.
+  // Entrar por la pantalla final ocultaría exactamente ese fallo.
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(1_500);
+  await page.waitForTimeout(2_500);
 
   const scrim = page.locator(WELCOME_TOUR_SCRIM);
   await expect(scrim, "el popup de bienvenida no salió solo en el primer acceso").toBeVisible({
