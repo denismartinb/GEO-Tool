@@ -3609,12 +3609,49 @@ servidor.
 6. **Efecto colateral que era un problema declarado desde 2026-07-23:** el
    navegador del usuario deja de contarle a Google qué cuenta está mirando.
 
-**Lo que NO se hizo y por qué.** La 3b —pedir `https://<dominio>/apple-touch-icon.png`
-para conseguir 180 px reales— sigue sin hacer. Es la única parte que implica
-fetch saliente a dominios de terceros, roza la línea «crawler» de la lista de
-prohibidos y necesita guardia anti-SSRF propia. Sin ella, **un icono que Google
-tiene en baja resolución seguirá viéndose regular** (mahou.es es el caso). La
-3a no lo arregla y no debe venderse como que lo hace.
+**Fase 3b, aprobada por el fundador el mismo día** (*"empieza con 3b"*, tras
+haberla planteado por separado por tocar la lista de prohibidos). Pide
+`https://<dominio>/apple-touch-icon.png` —180 px reales— antes de conformarse
+con lo que tenga Google. Es lo único que arregla mahou.es.
+
+1. **No es un crawler, y la distinción es la que autoriza la fase.** Se piden
+   dos rutas fijas conocidas (`/apple-touch-icon.png` y su variante
+   `-precomposed`). **No se parsea HTML, no se siguen enlaces, no se descubren
+   URLs.** El día que alguien quiera leer el `<link rel="apple-touch-icon">`
+   para cubrir a los sitios que no usan la ruta convencional, eso **sí** es
+   rastrear y necesita su propia aprobación.
+2. **La guardia SSRF es la pieza central, no un accesorio**
+   (`lib/domains/public-host.ts`). El dominio lo escribe el usuario al dar de
+   alta un proyecto o un competidor, así que sin ella `/api/favicon` convierte
+   el servidor en un ariete contra la red interna y, como la respuesta vuelve al
+   navegador, en un canal de exfiltración. Sólo https; se rechaza toda IP
+   literal; se resuelve el host y **todas** sus direcciones deben ser públicas
+   —no la primera, que un host con un registro público y otro privado pasaría el
+   filtro y luego conectaría al segundo—; y se bloquean privadas, loopback,
+   link-local (`169.254.169.254`, el objetivo clásico en la nube), CGNAT,
+   multicast y sus equivalentes IPv6, mirando dentro de las IPv4 mapeadas.
+3. **Las redirecciones se siguen a mano, revalidando cada salto.** Con
+   `redirect: "follow"` se validaría el primer host y se confiaría en el resto —
+   un dominio público que redirige a `169.254.169.254` entraría por la puerta.
+   Prohibirlas del todo tampoco valía: casi todo dominio raíz redirige a `www`,
+   así que la 3b no habría servido justo donde hacía falta.
+4. **El tipo de imagen se deriva de los bytes, no de la cabecera.** El
+   `Content-Type` y la extensión los controla el otro extremo. **SVG se rechaza
+   a propósito** aunque sea el formato más nítido: puede llevar script y lo
+   serviríamos desde nuestro propio origen. Nitidez no vale un XSS.
+5. **Presupuesto total, no por llamada.** Dos rutas por hasta cuatro saltos con
+   5 s cada uno son 40 s antes siquiera de preguntarle a Google. Se calcula un
+   instante absoluto al entrar y se reparte; lo que no quepa no se intenta y S2
+   sigue detrás. Mismo criterio que `.claude/rules/scan.md`.
+
+**Lo que la 3b NO cubre, dicho antes de que alguien lo asuma.** **DNS
+rebinding**: se valida la IP antes de cada petición, pero entre esa comprobación
+y el socket real hay una ventana en la que el DNS puede cambiar de respuesta.
+Cerrarla exige fijar la IP en el socket, que `fetch` no permite. El daño
+residual queda acotado por lo demás —sólo https, sólo respuestas con firma de
+imagen ráster, tope de tamaño—, pero **no está cerrado**, y quien toque esto
+debe saberlo. Tampoco cubre a los sitios que publican su icono sólo en el HTML:
+ésos siguen cayendo a Google.
 
 **Límite de verificación, otra vez y peor.** El contenedor donde se implementó
 tiene bloqueado todo dominio externo, así que `/api/favicon` **nunca ha hablado
