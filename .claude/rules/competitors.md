@@ -42,6 +42,21 @@ limpio (log §11).
 
 ## Métricas
 
+- **El puesto del último escaneo se calcula en un solo sitio:
+  `rankLatestPositions` (`lib/competitors/latest-positions.ts`).** Lo llaman las
+  dos pantallas que lo publican — la lista de Competidores y la panorámica
+  competitiva de Visión general. Cuando cada una ordenaba por su cuenta, la
+  misma marca salía 1ª en una y 2ª en la otra sobre el mismo escaneo
+  (PANORAMA-PARITY-1, log §36). Se le pasan **entidades activas**, no filas del
+  ranking persistido: un competidor desactivado tras el escaneo sigue dentro del
+  ranking y así desaparece de las dos a la vez. La marca se casa por `is_brand`,
+  nunca por nombre.
+- **Las dos listas publican la misma cifra: la tasa de mención del último
+  escaneo.** La panorámica enseñaba cuota de voz sin etiquetar y se leía como si
+  fuera la mención de la otra pantalla (37% contra 48% para la misma marca, log
+  §36). La cuota de voz sigue viva y visible en el **pódium** de Competidores,
+  donde está etiquetada como tal y calculada sobre todos los escaneos. Un número
+  sin etiqueta hereda el significado del número parecido que el usuario ya vio.
 - **La lista muestra un ranking 1..N sin repetidos, no la media en crudo.** El
   dato de fondo sigue siendo `avg_position_when_mentioned`, pero una media casi
   nunca vale 1,00, así que enseñarla hacía que la lista pareciera no tener a

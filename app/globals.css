@@ -1471,7 +1471,22 @@ a {
 .ov2-cmp-row { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid var(--line-soft); }
 .ov2-cmp-row:last-child { border-bottom: none; }
 .ov2-cmp-row.you { background: var(--brand-blue-soft); }
-.ov2-cmp-n { width: 16px; font-size: 12px; font-weight: 750; color: var(--ink-3); text-align: center; flex: 0 0 auto; }
+/* PANORAMA-PARITY-1. The leading `.ov2-cmp-n` rank digit is gone: the standing
+   now sits at the end of the row as an ordinal, the same shape Competidores
+   reached after the founder twice failed to see it on the left (log §15).
+   Header columns reuse the value classes so their widths track the rows'
+   automatically at both breakpoints; only the type is overridden. */
+.ov2-cmp-hd {
+  display: flex; align-items: flex-end; gap: 11px; padding: 11px 15px 7px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.ov2-cmp-hd-nm { flex: 1; min-width: 0; }
+.ov2-cmp-hd .ov2-cmp-sov,
+.ov2-cmp-hd .ov2-cmp-sc {
+  font: inherit; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4); text-align: right;
+}
 .ov2-cmp-fav {
   width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
   object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);

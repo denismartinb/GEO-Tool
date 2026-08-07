@@ -3442,6 +3442,84 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 
 **Pendiente / roto conocido.** Ninguno nuevo. Sigue pendiente lo ya anotado en
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
+
+---
+
+## 36. La panorámica competitiva y la lista de Competidores dejan de contradecirse (PANORAMA-PARITY-1, 2026-08-06)
+
+> Numeración: la entrada anterior está rotulada "33" por error de una fusión
+> (hay dos §33 y dos §10 en la historia de este fichero). Esta fase toma **36**,
+> el siguiente número realmente libre después de §35.
+
+**El problema, reportado por el fundador con dos capturas del mismo proyecto y
+el mismo escaneo.** «Panorámica competitiva» (Visión general) y «Puesto en el
+último escaneo» (Competidores) describían lo mismo con cinco lógicas distintas:
+
+| | Visión general | Competidores |
+|---|---|---|
+| Orden | índice de `normalizeRanking` (sólo posición) | posición → **mención** → nombre |
+| Puesto | `i + 1`, dígito gris a la izquierda, sin etiqueta | 1..N, ordinal `5º`, a la derecha |
+| Cifra % | **cuota de voz** | **tasa de mención** |
+| Columna extra | media en crudo `1.50º` | ninguna |
+| Población | ranking persistido, top 5 | marca + competidores **activos** |
+
+Sobre Mozilla eso salía a la pantalla así: Proton VPN 1º en una y 2º en la otra
+(empata con Amazon a 1,00 y sólo una de las dos desempataba), y Mozilla 37%
+aquí contra 48% allí. `.claude/rules/competitors.md` ya llamaba a esto fallo,
+no matiz: *"dos números con el mismo significado y distinto valor es un fallo"*
+(ADR 0018). Y la media en crudo seguía publicada en la panorámica **catorce
+días después** de que §15 la retirara de la otra pantalla por ilegible.
+
+**Lo que se decidió.** Un solo cálculo, `lib/competitors/latest-positions.ts`,
+que las dos pantallas llaman. No es lógica nueva: es exactamente el
+ordenamiento que la lista de Competidores ya hacía, extraído del componente
+para que un segundo lector no pueda derivar de él. La panorámica pasa a
+`marca · mención % · puesto ordinal`, con una etiqueta por columna.
+
+**Por qué mención y no cuota de voz.** Eran dos métricas distintas
+presentadas como si fueran la misma pregunta ("¿cuánto salgo?"), y ninguna de
+las dos estaba etiquetada en la panorámica. Al elegir, mención gana por tres
+razones: es la cifra de la lista con la que se compara, es la que ya usa el
+resto de la Visión general (`X de N respuestas`), y es la que desempata el
+propio ranking — enseñarla hace visible el criterio de orden en vez de dejarlo
+implícito. El fundador confirmó la lectura al aprobar: *"quise decir Mención en
+lugar de Cuota de voz"*. **La cuota de voz no se retira del producto**: sigue
+en el pódium de Competidores, etiquetada como lo que es y calculada sobre todos
+los escaneos completados. Lo que desaparece es su cálculo en la Visión general,
+que ya no alimentaba nada.
+
+**Detalles que no son cosméticos.**
+
+1. **Se pasan entidades, no filas del ranking.** Un competidor desactivado
+   después del escaneo sigue dentro del ranking persistido; al pasar la lista
+   de entidades activas, las dos pantallas lo dejan de mostrar en el mismo
+   render en vez de que una conserve una fila que la otra ya no tiene.
+2. **La marca se casa por `is_brand`, nunca por nombre.** El nombre guardado es
+   el que hubiera al puntuar el run: una marca renombrada desde entonces
+   dejaría de encontrarse a sí misma en silencio.
+3. **`X / N` sale del mismo listado que las filas.** Antes el denominador se
+   contaba sobre el ranking persistido y las filas sobre otra población, así
+   que titular y lista podían discrepar sin que nada fallara.
+4. **El respaldo sin datos de puesto también muestra mención**, no cuota de
+   voz: un escaneo anterior a geo-score-v3 no tiene posición para nadie
+   (ADR 0026, sin backfill) y la lista cae a mención sola — misma métrica,
+   menos el puesto, en vez de cambiar de métrica al quedarse sin una.
+
+**Lección transferible, y es la segunda vez que aparece.** §15 dejó escrito que
+una etiqueta mal anclada empieza a mentir en cuanto cambia el dato que hay
+debajo. Aquí el fallo fue el grado anterior: **una columna sin ninguna etiqueta
+hereda el significado de la columna equivalente de otra pantalla**. El lector
+—el fundador— asumió que un porcentaje sin nombre al lado de un ranking era el
+mismo porcentaje que ve en Competidores, porque no había nada que dijera lo
+contrario. Un número sin etiqueta no es neutro: toma prestado el significado
+del vecino más parecido que el usuario haya visto.
+
+**Pendiente / roto conocido.** Ninguno nuevo. Queda anotado, sin decidir, que
+la cuota de voz del pódium de Competidores es **acumulada** mientras la mención
+de estas dos listas es **del último escaneo** — es deliberado (regla de ruta,
+"Poblaciones de datos") y ahora está etiquetado en las dos pantallas, pero es
+la próxima pregunta que hará alguien que compare las dos cifras.
+
 ---
 
 ## Cómo mantener este documento
