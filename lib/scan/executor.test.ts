@@ -1748,7 +1748,18 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
     expect(finalizeJob.status).toBe("pending");
   });
 
-  it("does NOT schedule an after() continuation when scheduleContinuation is false (foreground driver loops the batches itself)", async () => {
+  /**
+   * Regression: the 2026-08-07 genscore.es failure (docs/adr/0037). Two runs
+   * of 31 prompts, 50 real answers generated, both `Fallido` — and every
+   * unfinished job left `pending`, not `running`. Nothing had crashed; nobody
+   * had asked for the next batch. The only driver was the foreground loop in
+   * a phone's browser, and the phone locked its screen.
+   *
+   * So the hand-off must not be conditional on who is driving: an invocation
+   * that claims work and leaves work behind always schedules the background
+   * continuation too.
+   */
+  it("always schedules a background continuation when work remains, whoever is driving", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ ok: true }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -1757,21 +1768,215 @@ describe("executePendingScan — multi-batch campaigns (SCAN-CHAIN-1)", () => {
 
     const { MAX_REAL_SCAN_PROMPTS } = await import("./constants");
     const { executePendingScan } = await import("./executor");
-    await executePendingScan({
-      projectId: PROJECT_ID,
-      runId: CAMPAIGN_RUN_ID,
-      supabase,
-      scheduleContinuation: false
-    });
+    await executePendingScan({ projectId: PROJECT_ID, runId: CAMPAIGN_RUN_ID, supabase });
 
-    // The batch still ran and prompts remain (same as the default-continuation
-    // test above), but no self-fetch continuation is scheduled — the caller
-    // (autoExecutePendingScan) drives the next batch directly.
     const completed = jobsTable.jobs.filter((j) => j.job_type === "scan_prompt" && j.status === "completed");
     expect(completed).toHaveLength(MAX_REAL_SCAN_PROMPTS);
     expect(state.status).toBe("running");
-    expect(afterMock).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+
+    // The campaign can now finish without the browser: the next batch is
+    // dispatched server-side regardless of the foreground driver.
+    expect(afterMock).toHaveBeenCalledTimes(1);
+    await afterMock.mock.calls[0][0]();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("/api/scan/continue");
+  });
+});
+
+/**
+ * Regression, second half of the 2026-08-07 failure (docs/adr/0037): a prompt
+ * batch is long enough to be killed mid-flight, and a killed invocation cannot
+ * release the jobs it claimed. `reconcileStuckScanRuns` never touches `jobs`,
+ * so without a lease those rows stay `running` forever, the campaign can never
+ * see every prompt job terminal, and finalize is unreachable — the same corpse
+ * problem `scan_finalize` already had a lease for (docs/adr/0029).
+ */
+describe("executePendingScan — an abandoned prompt claim is recoverable", () => {
+  const LEASED_RUN_ID = "77777777-7777-7777-7777-777777777777";
+
+  function buildLeaseClients({ lockedAt, attemptCount }: { lockedAt: string | null; attemptCount: number }) {
+    const state = {
+      id: LEASED_RUN_ID,
+      project_id: PROJECT_ID,
+      status: "running",
+      total_prompts: 1,
+      successful_prompts: 0,
+      failed_prompts: 0
+    };
+
+    const jobsTable = makeJobsTable([
+      {
+        id: "lease-start-job",
+        project_id: PROJECT_ID,
+        run_id: LEASED_RUN_ID,
+        job_type: "scan_start",
+        status: "completed",
+        attempt_count: 1,
+        max_attempts: 3,
+        payload_json: {},
+        last_error: null,
+        created_at: "2026-08-07T09:59:59.000Z"
+      },
+      {
+        // The corpse: claimed by an invocation that never came back.
+        id: "lease-prompt-job",
+        project_id: PROJECT_ID,
+        run_id: LEASED_RUN_ID,
+        job_type: "scan_prompt",
+        status: "running",
+        attempt_count: attemptCount,
+        max_attempts: 3,
+        payload_json: { prompt_id: PROMPT_ID, prompt_text: "¿Cuál es la mejor herramienta GEO?" },
+        last_error: null,
+        created_at: "2026-08-07T10:00:00.000Z",
+        locked_at: lockedAt,
+        locked_by: "gemini-executor"
+      },
+      {
+        id: "lease-finalize-job",
+        project_id: PROJECT_ID,
+        run_id: LEASED_RUN_ID,
+        job_type: "scan_finalize",
+        status: "pending",
+        attempt_count: 0,
+        max_attempts: 3,
+        payload_json: {},
+        last_error: null,
+        created_at: "2026-08-07T10:59:59.000Z"
+      }
+    ]);
+
+    const scanRunsTable = makeCampaignScanRunsTableForLease(state);
+    const scanPromptResultsTable = makeScanPromptResultsTable();
+
+    const service = {
+      from(table: string) {
+        if (table === "jobs") return jobsTable.table;
+        if (table === "scan_runs") return scanRunsTable;
+        if (table === "scan_prompt_results") return scanPromptResultsTable.table;
+        if (table === "recommendations") return makeRecommendationsTable().table;
+        return noopTable();
+      }
+    } as unknown as ServiceClient;
+
+    const supabase = {
+      from(table: string) {
+        if (table === "scan_runs") {
+          return {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({
+                  single: () => Promise.resolve({ data: { ...state }, error: null })
+                })
+              })
+            })
+          };
+        }
+        if (table === "projects") {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: { id: PROJECT_ID, domain: "genscore.es", brand: "Genscore", country: "ES", language: "es" },
+                    error: null
+                  })
+              })
+            })
+          };
+        }
+        if (table === "project_competitors") {
+          return {
+            select: () => ({ eq: () => ({ eq: () => ({ order: () => Promise.resolve({ data: [], error: null }) }) }) })
+          };
+        }
+        return noopTable();
+      }
+    } as unknown as SupabaseClient;
+
+    return { service, supabase, jobsTable };
+  }
+
+  // Minimal stateful scan_runs fake — the lease tests only need the run to
+  // read back as `running` and to accept status writes.
+  function makeCampaignScanRunsTableForLease(state: Record<string, unknown>) {
+    let sawNeq = false;
+    const builder: Record<string, unknown> = {
+      eq: () => builder,
+      neq: () => {
+        sawNeq = true;
+        return builder;
+      },
+      order: () => builder,
+      limit: () => builder,
+      update: (patch: Record<string, unknown>) => {
+        Object.assign(state, patch);
+        return builder;
+      },
+      select: () => builder,
+      maybeSingle: () => {
+        const wasNeq = sawNeq;
+        sawNeq = false;
+        return Promise.resolve(wasNeq ? { data: null, error: null } : { data: { id: state.id }, error: null });
+      },
+      then: (resolve: (value: { data: unknown[]; error: null }) => unknown) =>
+        Promise.resolve({ data: [], error: null }).then(resolve)
+    };
+    return builder;
+  }
+
+  beforeEach(() => {
+    generateGeminiVisibilityAnswer.mockReset();
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    vi.mocked(countUnprocessedExtractionRows).mockResolvedValue(0);
+    vi.mocked(generateRecommendationsForRun).mockClear().mockReturnValue([]);
+  });
+
+  it("reclaims a prompt job whose lock lease has expired, and the campaign finishes", async () => {
+    const { PROMPT_LOCK_LEASE_MS } = await import("./constants");
+    const staleLock = new Date(Date.now() - PROMPT_LOCK_LEASE_MS - 60_000).toISOString();
+    const { service, supabase, jobsTable } = buildLeaseClients({ lockedAt: staleLock, attemptCount: 1 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: LEASED_RUN_ID, supabase });
+
+    // The job was re-run rather than left as an unreachable corpse...
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(jobsTable.jobs.find((j) => j.id === "lease-prompt-job")!.status).toBe("completed");
+    // ...and with every prompt job terminal, finalize is reachable again.
+    expect(jobsTable.jobs.find((j) => j.id === "lease-finalize-job")!.status).toBe("completed");
+  });
+
+  it("leaves a prompt job alone while a live invocation still holds it", async () => {
+    const freshLock = new Date(Date.now() - 5_000).toISOString();
+    const { service, supabase, jobsTable } = buildLeaseClients({ lockedAt: freshLock, attemptCount: 1 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: LEASED_RUN_ID, supabase });
+
+    // Stealing it would double-call the provider and write a duplicate row.
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    expect(jobsTable.jobs.find((j) => j.id === "lease-prompt-job")!.status).toBe("running");
+    expect(jobsTable.jobs.find((j) => j.id === "lease-finalize-job")!.status).toBe("pending");
+  });
+
+  it("fails — rather than endlessly reclaiming — a stale job with no attempts left", async () => {
+    const { PROMPT_LOCK_LEASE_MS } = await import("./constants");
+    const staleLock = new Date(Date.now() - PROMPT_LOCK_LEASE_MS - 60_000).toISOString();
+    const { service, supabase, jobsTable } = buildLeaseClients({ lockedAt: staleLock, attemptCount: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: LEASED_RUN_ID, supabase }).catch(() => {});
+
+    // A job that reliably kills its invocation must not be retried forever:
+    // it becomes terminal so the campaign can move on with a truthful count.
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    const promptJob = jobsTable.jobs.find((j) => j.id === "lease-prompt-job")!;
+    expect(promptJob.status).toBe("failed");
+    expect(promptJob.last_error).toBeTruthy();
   });
 });
 
