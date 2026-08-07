@@ -21,15 +21,31 @@ import { assertPageIsHealthy, visitAsUser } from "../support/journey";
 
 const SITE_URL = "https://www.genscore.es";
 
-const BLOG_POSTS = [
-  "que-es-el-geo-score",
-  "que-es-geo-generative-engine-optimization",
-  "como-elegir-prompts-monitorizar-marca-ia",
-  "como-elegir-competidores-analisis-geo",
-  "genscore-vs-herramientas-geo",
-  "llms-txt-guia-practica",
-  "como-conseguir-que-chatgpt-te-cite"
-] as const;
+// Slug -> cluster. Esta lista se mantiene a mano (el spec de Playwright no
+// importa código de la app a propósito), así que **al publicar un artículo hay
+// que añadirlo aquí**: si no, ese artículo no se pilota y nadie se entera.
+// GROWTH-3 lo demostró — `geo-para-ecommerce` se publicó y esta lista se quedó
+// atrás.
+//
+// El cluster va al lado del slug para que "¿está vacío este cluster?" se
+// DERIVE de los datos en vez de escribirse aparte. Esa duplicación es la que
+// hizo fallar al pilot el 2026-08-05 en las tres viewports.
+const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
+  "que-es-el-geo-score": "medicion",
+  "que-es-geo-generative-engine-optimization": "fundamentos",
+  "como-elegir-prompts-monitorizar-marca-ia": "medicion",
+  "como-elegir-competidores-analisis-geo": "medicion",
+  "genscore-vs-herramientas-geo": "fundamentos",
+  "llms-txt-guia-practica": "playbooks",
+  "como-conseguir-que-chatgpt-te-cite": "playbooks",
+  "geo-para-ecommerce": "sectores",
+  "geo-para-saas-b2b": "sectores",
+  "geo-para-agencias": "sectores"
+};
+
+const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
+
+const BLOG_CLUSTERS = ["fundamentos", "medicion", "playbooks", "sectores"] as const;
 
 /** Asserts the page's own <link rel="canonical"> matches its expected, absolute URL exactly (no trailing slash, no query string). */
 async function assertCanonical(page: Page, expectedPath: string): Promise<void> {
@@ -59,10 +75,14 @@ test("blog index renders and has its own canonical", async ({ page }, testInfo) 
   }
 });
 
-// GROWTH-2 Fase 2.9 (B1b): pillar pages for the 3 populated clusters — not
-// "sectores", which has zero posts and is deliberately excluded from the
-// sitemap (see app/sitemap.ts), though the route itself still exists.
-const BLOG_PILLAR_CLUSTERS = ["fundamentos", "medicion", "playbooks"] as const;
+// GROWTH-2 Fase 2.9 (B1b), corregido en GROWTH-3: la lista de clusters
+// poblados estaba escrita a mano y excluía "sectores" porque tenía cero
+// artículos. Cuando el primer artículo de `sectores` se publicó (2026-08-05),
+// esta lista quedó desactualizada y el pilot falló en las tres viewports por
+// una aserción que ya no describía la realidad — el tercer test que caducó ese
+// día por la misma causa. Ahora se deriva de los datos, así que no puede
+// volver a desincronizarse.
+const BLOG_PILLAR_CLUSTERS = BLOG_CLUSTERS;
 
 for (const cluster of BLOG_PILLAR_CLUSTERS) {
   test(`blog cluster pillar page renders and has its own canonical: ${cluster}`, async ({ page }, testInfo) => {
@@ -72,19 +92,28 @@ for (const cluster of BLOG_PILLAR_CLUSTERS) {
   });
 }
 
-// GROWTH-2 Fase 2.9: "sectores" carries the honesty burden of this slice
-// (zero posts — it must show a real "no hay artículos" state, never a
-// fabricated one) and QA flagged it as the page most worth a pilot eyeball,
-// so it gets its own dedicated check rather than riding along with the
-// populated clusters above.
-test("blog cluster pillar page for an empty cluster shows an honest placeholder, not fake content: sectores", async ({
-  page
-}, testInfo) => {
-  const findings = await visitAsUser(page, testInfo, "/blog/sectores", "blog-pillar-sectores");
-  assertPageIsHealthy(findings);
-  await assertCanonical(page, "/blog/sectores");
-  await expect(page.getByText(/todavía no hay artículos/i)).toBeVisible();
-});
+// La carga de honestidad de este slice: un cluster SIN artículos debe mostrar
+// un estado vacío real, nunca contenido fabricado. Esa garantía sigue viva,
+// pero ya no se ancla a "sectores" — se decide mirando los datos.
+//
+// Hasta GROWTH-3 este test iba clavado a `sectores` porque era el único
+// cluster vacío. Al publicarse su primer artículo la aserción pasó a exigir un
+// placeholder que, correctamente, ya no existe. La lección es la misma que dejó
+// GROWTH-3 en `lib/blog/posts.test.ts`: un test que codifica un ESTADO caduca;
+// uno que codifica la REGLA, no.
+for (const cluster of BLOG_CLUSTERS) {
+  const isEmpty = !Object.values(BLOG_POSTS_BY_CLUSTER).includes(cluster);
+  if (!isEmpty) continue;
+
+  test(`blog cluster pillar page for an empty cluster shows an honest placeholder, not fake content: ${cluster}`, async ({
+    page
+  }, testInfo) => {
+    const findings = await visitAsUser(page, testInfo, `/blog/${cluster}`, `blog-pillar-${cluster}`);
+    assertPageIsHealthy(findings);
+    await assertCanonical(page, `/blog/${cluster}`);
+    await expect(page.getByText(/todavía no hay artículos/i)).toBeVisible();
+  });
+}
 
 for (const slug of BLOG_POSTS) {
   test(`blog post renders and has its own canonical: ${slug}`, async ({ page }, testInfo) => {

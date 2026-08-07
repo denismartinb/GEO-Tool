@@ -99,7 +99,7 @@ fidelidad, no una interpretación:
 ## Estado
 
 **Fase A implementada** (2026-08-06, mismo PR). Cierre documental en
-`docs/brand/design-decisions-log.md` §33.
+`docs/brand/design-decisions-log.md` §38.
 
 La foto de perfil y el icono de dominio editable quedaron **descartados** por el
 fundador el 2026-08-06 («de momento nos quedamos con las iniciales»); el icono

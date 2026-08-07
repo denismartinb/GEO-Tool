@@ -56,9 +56,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     lastModified: new Date(GLOSSARY_LAST_MODIFIED)
   }));
 
-  // Only clusters with a real pillarIntro (i.e. real posts to synthesize) —
-  // "sectores" has zero posts today, so its stub page exists for direct
-  // navigation but isn't submitted to crawlers as if it were real content.
+  // Only clusters with a real pillarIntro (i.e. real posts to synthesize). A
+  // cluster with no posts keeps a stub page for direct navigation, but is not
+  // submitted to crawlers as if it were real content. The filter is the whole
+  // mechanism: a cluster enters the sitemap the moment it stops being empty and
+  // earns a pillarIntro — "sectores" did exactly that on 2026-08-05 with its
+  // first article, and nothing here had to change for it to happen.
   const pillarRoutes = BLOG_CLUSTERS.filter((c) => c.pillarIntro).map((c) => ({
     url: `${SITE_URL}/blog/${c.key}`,
     lastModified: new Date(PILLAR_LAST_MODIFIED)

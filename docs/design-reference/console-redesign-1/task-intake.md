@@ -144,7 +144,7 @@ sobre rama propia partiendo de `main` una vez mergeada la A.
 | `app/dashboard/settings/billing/actions.test.ts` | ampliar: la sección Plan no se renderiza para un no-admin |
 | `tests/pilot/journeys/settings.spec.ts` | *(nuevo)* **la journey no existe hoy** — ver punto 9 |
 | `docs/design-reference/console-redesign-1/` | maqueta aprobada + este intake |
-| `docs/brand/design-decisions-log.md` | entrada §33 de cierre de fase |
+| `docs/brand/design-decisions-log.md` | entrada §38 de cierre de fase |
 | `docs/brand/brand-guidelines.md` | regla de forma: redondo = persona, squircle = dominio |
 | `CLAUDE.md` | fila nueva en el mapa de zonas: «Ajustes de cuenta» |
 
@@ -262,7 +262,7 @@ salida vivo mientras se toca esa misma pantalla sería raro.
 > índice no se renderizan. Cúbrela con test, junto al reparto de
 > `org_tax_info`.
 >
-> Cierra la fase en el mismo PR: maqueta aprobada commiteada, entrada §33 en
+> Cierra la fase en el mismo PR: maqueta aprobada commiteada, entrada §38 en
 > `docs/brand/design-decisions-log.md`, la regla de forma en
 > `docs/brand/brand-guidelines.md`, y la fila «Ajustes de cuenta» en el mapa de
 > zonas de `CLAUDE.md`.

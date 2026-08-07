@@ -3114,9 +3114,383 @@ mayor, pedido explícito propio si algún día hace falta.
   `pantalla-debug.html`, sin implementar.
 - `/runs` queda como redirección a `/debug`; `/runs/[runId]` (detalle de
   escaneo) sigue donde estaba.
+
+## 33. GEO para SaaS B2B — el segundo artículo semanal, y el primero apilado (GROWTH-3, W2, 2026-08-05)
+
+**Estado: implementada.** Segunda pieza de la cola semanal autónoma
+(`docs/content-calendar.md`, W2), en el cluster `sectores` que W1 abrió el
+mismo día. Slug `geo-para-saas-b2b`, keyword primaria "geo para saas b2b".
+
+**Se apila sobre la rama de W1, no sobre `main`, y eso fue una decisión.** W1
+(PR #342) no sólo publicó un artículo: le dio a `sectores` su `pillarIntro`,
+metió el cluster en el sitemap, y reescribió tres aserciones que codificaban
+"sectores está vacío" (`lib/blog/posts.test.ts` y
+`tests/pilot/journeys/public-pages.spec.ts`). Desde `main`, un segundo
+artículo del mismo cluster **vuelve a necesitar exactamente esos cambios**, así
+que partir de `main` habría significado escribirlos dos veces y colisionar con
+#342 en el merge. La rama de W2 mergea la de W1 y añade encima su artículo;
+cuando #342 entre en `main`, este PR se queda sólo con lo suyo. La regla
+general que deja: **un artículo que abre un cluster crea una dependencia
+estructural, y el siguiente artículo de ese cluster se apila, no se rehace.**
+
+**Verificación de fuentes, que es donde falló W1.** W1 atribuyó a Capital One
+Shopping Research una cifra que era del *2026 Retail Report* de Alchemer, y lo
+encontró el subagente `qa`. `Stat` exige `source`, pero el tipo protege contra
+la **ausencia** de fuente, no contra la fuente **equivocada** — no hay test
+posible para eso. Aquí las tres cifras se cruzaron contra varias búsquedas
+independientes antes de escribirlas, y una candidata se descartó por eso mismo:
+el "44,2% de las citas sale del primer 30% del contenido" circula atribuido al
+*AI Search Insight Report* de G2 y en realidad es de Growth Memo (Kevin Indig).
+No está en el artículo.
+
+**Dos límites del entorno, dichos porque afectan a lo que se puede afirmar.**
+La política de egress de la sesión bloquea `g2.com`, `6sense.com`,
+`businesswire.com` y `prnewswire.com`, así que **las cifras se verificaron por
+búsqueda cruzada, no abriendo el informe primario**. Y las dos son de estudios
+distintos con muestras distintas: G2 (1.076 responsables de compra, marzo de
+2026) y 6sense (más de 4.000 compradores, noviembre de 2025). El artículo lo
+dice en prosa, debajo del `StatGrid`, en vez de dejar que tres tarjetas
+seguidas parezcan un solo estudio.
+
+**Lo que el artículo declara que no sabe**, además de lo habitual: que no hay
+dato de compradores en castellano, que "publicar el precio aumenta las
+menciones" es deducción y no medición, y que **los dos estudios los publican
+empresas con interés comercial en que esos números sean altos**. Esa última
+línea no la exige ninguna regla; está porque callarla sería el mismo tipo de
+omisión que la atribución mal puesta de W1.
+
+**Un matiz que se cuenta en contra de la tesis.** El 61% del recorrido
+completado antes del primer contacto **había sido un 69%** el año anterior: los
+compradores contactan algo antes que hace un año, no más tarde. Se dice en el
+texto en vez de coger sólo la mitad que conviene.
+
+**Sin portada, en rojo a propósito.** `lib/blog/covers.test.ts` deja dos tests
+rojos (`declara coverImage` y `el fichero de portada existe`) hasta que el
+fundador deje `public/blog/geo-para-saas-b2b/cover.png` y se declare
+`coverImage` en `lib/blog/posts.ts`. Es el diseño de §14 y de
+`docs/agentic-weekly-post.md` §4: un check rojo es una pregunta visible; un
+degradado con icono es un defecto invisible.
+
+**Roto conocido, heredado de W1 y no arreglado aquí:** la `Figure` de
+`geo-para-ecommerce` no pasa `label`, que es obligatorio en el tipo, así que su
+pie renderiza un `<b>` vacío. El MDX no se comprueba con TypeScript, por eso no
+lo para nada. La `Figure` de W2 sí lo pasa. Arreglarlo toca el artículo de otro
+PR abierto y se deja para #342.
+
 ---
 
-## 33. Ajustes de cuenta: cuatro pantallas pasan a una (CONSOLE-REDESIGN-1 Fase A, 2026-08-06)
+## 34. GEO para agencias — el cluster `sectores` cerrado, y la primera prueba de la cadena autónoma (GROWTH-3, W3, 2026-08-05)
+
+**Estado: implementada.** Tercera y última pieza de la cola semanal en el
+cluster `sectores`. Slug `geo-para-agencias`, keyword primaria "geo para
+agencias". Con ella el cluster deja de tener huecos: ecommerce y SaaS B2B miran
+al comprador; este mira a **quien vende el servicio**, que es un lector
+distinto y por eso el artículo tiene una sección de "lo que NO puedes vender"
+que los otros dos no necesitan.
+
+**El ángulo salió del dato, no al revés.** Conductor mide que el tráfico de
+referencia desde chats de IA es el **1,08%** de las visitas de una web, y a la
+vez que el **25,11%** de las búsquedas de Google ya devuelven un AI Overview.
+Pocos clics y presencia en todas partes, simultáneamente. Eso hace inviable la
+propuesta comercial obvia ("vas a recibir visitas desde ChatGPT") y obliga a
+vender otra cosa: presencia medida en la respuesta. El artículo se construyó
+sobre esa tensión en vez de esquivarla.
+
+**Dos estudios que parecen contradecirse y no se contradicen.** Conductor dice
+que ChatGPT es el 87,4% del tráfico de referencia de IA; Similarweb dice que
+ChatGPT cayó del ~76% al ~53% de las **visitas** a plataformas de IA entre junio
+de 2025 y mayo de 2026. Miden cosas distintas —clics que salen frente a gente
+que entra— y el artículo lo explica en lugar de elegir la mitad que conviene.
+Es el mismo criterio que W2 aplicó a G2 y 6sense.
+
+**Verificación de fuentes: dos atribuciones corregidas, y una la cazó QA.** La
+primera búsqueda devolvió el 1,08% atribuido a "Similarweb y Semrush"; una
+búsqueda dirigida lo desmintió (es de **Conductor**, noviembre de 2025). Se
+descartó además el peso de ChatGPT en el tráfico de referencia por
+inconsistente entre fuentes secundarias (87,4% frente a 92,4%): se publica sólo
+el que casa con la metodología descrita por Conductor.
+
+**Y aun así se coló una tercera, que bloqueó QA.** El artículo publicó un
+`Stat` de "25% — cuota que sigue llegando desde búsqueda orgánica clásica"
+atribuido a Conductor. La cifra existe en ese informe, pero **mide otra cosa**:
+es el **25,11% de las búsquedas de Google que devuelven un AI Overview** (21,9
+millones de búsquedas en EE. UU., 15-sep a 12-oct de 2025). QA lo bloqueó tras
+cinco búsquedas cruzadas, ninguna de las cuales sostenía la lectura publicada.
+
+Es **exactamente** el fallo de W1 (Capital One / Alchemer): una cifra real, del
+informe correcto, pegada a la métrica equivocada. La lección que deja, y que
+conviene no olvidar porque ya van dos: **el resumen de un buscador funde con
+frecuencia dos hechos en una sola frase**, y leerlo entero no basta — hay que
+buscar cada cifra *por separado y por lo que mide*, no por el titular que la
+acompaña. Ningún tipo puede comprobar esto: `Stat` exige que haya `source`, no
+que la etiqueta describa lo que la fuente midió.
+
+Al corregirlo, el hueco no se rellenó con otra cifra cómoda: el artículo
+**declara en prosa que no pudo sostener** la comparación "1,08% frente a 25% de
+orgánico" que circula por ahí, y que los desgloses de orgánico por sector van
+del ~18% al ~42% sin media limpia que enseñar.
+
+**Qué se declara no saber:** que no hay encuesta pública fiable de tarifas GEO
+en el mercado español (las cifras que circulan son de agencias anunciándose, no
+de un estudio), que no está medido el tiempo hasta ver efecto, y que nadie sabe
+si el 1% seguirá siendo el 1%. Más el apunte de conflicto de interés que ya
+estrenó W2: Conductor vende software de visibilidad en IA y Similarweb vende
+datos de tráfico; a los dos les conviene que el canal parezca grande.
+
+### Lo que esta pieza probó además del artículo
+
+W3 se escribió como **prueba real de la cadena de publicación semanal**, a
+petición del fundador. Resultado, sin adornos:
+
+**Lo que quedó demostrado:** redactar → validar → empujar → `weekly-post-pr.yml`
+abre el PR y pide revisión → aviso a GitHub y push al móvil. La cadena funciona
+de punta a punta.
+
+**Lo que NO quedó demostrado, y es lo que importaba:** esta pasada corrió
+**dentro de una sesión ya abierta**, que ya tenía el repositorio. La duda de
+`docs/agentic-weekly-post.md` §9 —si una sesión disparada arranca con el
+repositorio clonado— **sigue abierta**. Se intentó resolverla con un trigger de
+sesión nueva y la llamada fue rechazada dos veces con `requires approval`: el
+mismo muro que el §9 documenta. El sustituto usado (`CronCreate`) es
+**de sesión y muere con ella**, así que no sirve para los lunes.
+
+**Consecuencia para quien retome esto:** la automatización semanal sigue sin
+estar cerrada, y lo que falta no es código de este repositorio — es aprobar una
+vez el permiso de creación de rutinas. No lo des por resuelto porque haya tres
+artículos publicados.
+
+**Tres PRs apilados a la vez.** W2 sobre W1 y W3 sobre W2. Funciona y evita
+duplicar el trabajo estructural, pero el orden de merge deja de ser opcional:
+#342 → #346 → #349. Con esto hay **6 PRs abiertos** y `CLAUDE.md` fija el
+máximo en 3 — se hizo porque el fundador pidió la prueba explícitamente, y
+queda dicho aquí para que conste que fue una excepción consciente y no un
+descuido.
+
+---
+
+## 35. Las portadas dejan de ser una dependencia manual (GROWTH-3, 2026-08-05)
+
+**Estado: implementada.** Los tres artículos del cluster `sectores` pasan a
+tener portada propia, dibujada en SVG en este repositorio:
+`public/blog/<slug>/cover.svg`. Con eso `lib/blog/covers.test.ts` queda **en
+verde entero** y desaparece el aviso que §4 de `docs/agentic-weekly-post.md`
+daba por inevitable en cada artículo semanal.
+
+**No contradice ADR 0028, lo aplica.** Ese ADR eligió como fuente principal la
+**opción 4 — maquetas construidas en SVG/CSS**, y rechazó la ilustración
+generada por IA y el stock. Una portada dibujada a mano en SVG dentro del repo
+es exactamente la opción adoptada: no es una imagen generada ni licenciada, es
+un activo del proyecto, versionado, legible en el diff y editable.
+
+**Y siguen siendo evidencia, no decoración**, que es la regla dura de ADR 0028.
+Cada portada dibuja la tesis de su artículo:
+
+- `geo-para-ecommerce`: una respuesta con tres huecos, dos ocupados y el
+  tercero vacío y punteado — "o sales, o no existes", sin segunda página.
+- `geo-para-saas-b2b`: cuatro preguntas anónimas encadenadas que desembocan en
+  el botón de demo, con la línea de "aquí te enteras tú" al final del todo.
+- `geo-para-agencias`: una capa de respuesta ancha frente a un hilo de clics
+  mínimo que llega a la web del cliente.
+
+**QA bloqueó la primera versión de `geo-para-agencias`, y tenía razón —
+distinto ADR, mismo tipo de error que el de las cifras.** La primera versión
+del SVG llevaba texto real incrustado: "1,08%" y "1 de cada 4 búsquedas ya se
+responde antes del clic". La enmienda de 2026-08-04 a ADR 0028 dice, literal:
+*"Una portada puede ser generada o de stock, pero no puede representar una
+interfaz de producto, un gráfico, un panel ni una métrica. Si la portada
+enseña algo que parece un dato de Genscore, ese dato tiene que existir — y
+entonces ya no es una portada, es una figura, y le aplica la regla del
+cuerpo."* Una cifra citable no basta: una portada no tiene pie de figura donde
+colgar la fuente, así que una cifra ahí queda huérfana de cita aunque sea
+verdadera. Corregido quitando las dos cifras y dejando sólo la forma —la
+franja ancha frente al hilo fino— con dos frases sin números ("La respuesta
+está en todas partes. La visita, casi en ninguna."). El número exacto sigue
+viviendo donde tiene que vivir: en el `StatGrid` del cuerpo, con su fuente.
+
+La rejilla de 21 bloques de opacidad variable no cuenta como "un gráfico" en el
+sentido de la enmienda: no traza ningún valor medido a lo largo de un eje, es
+textura decorativa del mismo tipo que las tarjetas de respuesta de los otros
+dos SVG. La tarjeta "la web del cliente" tampoco cuenta como "un panel" de
+producto: son barras grises genéricas sin texto real, el mismo lenguaje visual
+que ya usan las otras dos portadas para "una respuesta genérica".
+
+**Un detalle técnico que no es cosmético.** `next/image` **se niega a servir
+SVG** salvo que se active `dangerouslyAllowSVG`, y ese flag es **global**:
+afectaría a todas las imágenes del sitio, incluidas futuras remotas, y un SVG
+puede llevar script dentro. En vez de eso, `components/blog/blog-cover.tsx`
+marca `unoptimized` sólo cuando la ruta acaba en `.svg`. El permiso queda
+acotado a ficheros estáticos escritos en este repo, y un SVG no gana nada
+pasando por el optimizador porque ya es vectorial.
+
+**Lo que queda pendiente y con dueño.** Los tres artículos de la deuda
+congelada (`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`) siguen sin portada y siguen exentos por
+`COVER_DEBT`. Ahora que existe una vía para producirlas, esa deuda **puede
+encogerse hasta cero** en una fase propia — el test ya está construido para
+eso: la lista sólo puede menguar. Y `docs/agentic-weekly-post.md` §4, que
+describe la ausencia de portada como inevitable, **queda desactualizado**: hay
+que reescribirlo cuando esta vía se dé por buena.
+
+### Segundo hallazgo, del `ux-pilot`: el lienzo no cabía en su propio marco
+
+La primera versión de las tres portadas usaba un `viewBox` de 1200×630 — un
+lienzo casi cuadrado — dentro de un contenedor real que mide **1124×96px** en
+la portada compacta del artículo en desktop (`.blog-cover-compact`, CSS línea
+~4873). Con `object-fit: cover` centrado, el navegador escala hasta cubrir el
+ancho y recorta el resto en vertical: en ese caso concreto sólo sobrevive el
+**16% central** del lienzo (y≈264–366 de 630).
+
+El `ux-pilot` lo detectó comparando el SVG fuente contra las capturas reales,
+no a ojo: la fila 3 de `ecommerce` (el hueco vacío, la tesis explícita del
+artículo), la etiqueta "Aquí te enteras tú" de `saas-b2b`, y el título y las
+frases de `agencias` **no aparecían en ninguna captura de escritorio ni de
+tablet** — sólo en móvil, donde el contenedor es proporcionalmente más
+parecido al lienzo y por eso recorta menos. Verificado de forma independiente
+con la propia matemática del CSS antes de aceptar el hallazgo: el número
+coincide.
+
+**Corregido cambiando la proporción del lienzo, no sólo su contenido.** Las
+tres portadas pasan de `viewBox="0 0 1200 630"` a `viewBox="0 0 1200 300"`, con
+todo el contenido con valor recolocado dentro de la franja y≈100–200 —la única
+que sobrevive al recorte real del peor caso (escritorio)—, dejando el resto del
+lienzo para el resplandor decorativo, que no pierde nada al recortarse. Se
+verificó recortando programáticamente cada SVG a la ventana exacta que vería
+un navegador en el peor caso (1124×96px) antes de dar el fix por bueno — las
+tres muestran su contenido completo en esa ventana.
+
+**La lección, para la próxima portada que se dibuje**: diseñar contra la
+ventana de recorte real del contenedor CSS, no contra el lienzo completo. El
+propio SVG lo deja escrito en un comentario a partir de ahora.
+
+### Tercer hallazgo, del `ux-pilot` otra vez: había una CUARTA ventana, más agresiva que la probada
+
+La verificación anterior sólo probó **una** ventana de recorte (la del
+artículo en escritorio, 1124×96). Existen otras cuatro contenedores reales, y
+el `ux-pilot` encontró que la más agresiva de todas — la **tarjeta de `/blog`
+y `/blog/sectores` en móvil, 319×170px** — recorta mucho más que la probada:
+sólo sobreviven **563px centrados** del lienzo de 1200, frente a los 1200px
+completos que sobrevivían en el caso ya arreglado. El texto alineado a la
+izquierda de las tres portadas —que empezaba en x≈90— perdía ahí su mitad
+izquierda: "Aquí te enteras tú" se leía "rta ya está hecha".
+
+**Verificado con las cinco ventanas reales, no una sola, antes de aceptar el
+segundo fix:**
+
+| Ventana | Contenedor | Recorte |
+|---|---|---|
+| Artículo, escritorio | 1124×96 | vertical, x completo |
+| Artículo, tablet | 712×96 | vertical, x completo |
+| Artículo, móvil | 319×96 | horizontal, ±102px |
+| Tarjeta, escritorio | 1124×170 | vertical, x completo |
+| Tarjeta, tablet | 712×170 | vertical, x completo |
+| **Tarjeta, móvil** | **319×170** | **horizontal, ±318px — la que manda** |
+
+**Corregido quitando el texto de las tres portadas, no ajustando su posición
+otra vez.** El patrón de "recolocar el mismo contenido dentro de una franja
+más pequeña" ya había fallado dos veces (fila 630→300, ahora la ventana
+horizontal). En vez de perseguir una quinta ventana con texto cada vez más
+frágil, las tres portadas pasan a ser **sólo forma**: el elemento con más
+significado (el hueco vacío punteado en ámbar, el botón sólido, el hilo hacia
+la tarjeta del cliente) va centrado en (600,150) — el único punto que
+sobrevive a las seis combinaciones—, y los elementos decorativos se abren
+hacia los bordes, donde pueden recortarse sin perder nada porque no llevan
+información, sólo ambiente.
+
+**Esto resuelve dos hallazgos a la vez.** Sin texto no hay palabra que cortar
+a la mitad en ningún recorte futuro — el motivo de las dos rondas anteriores
+desaparece por diseño, no por ajuste fino. Y de paso responde a la duda
+abierta sobre la enmienda de ADR 0028 ("¿parece un panel de producto?"): un
+botón sin la palabra "Demo" y unas cajas numeradas sin números leen como pura
+forma abstracta, no como una maqueta de interfaz — el `ux-pilot` había
+marcado el botón como "el elemento más próximo a un CTA real de producto"
+precisamente por su etiqueta de texto, que ya no existe.
+
+Verificado recortando programáticamente las tres portadas contra las **seis**
+ventanas antes de empujar: el motivo central se ve completo en todas.
+
+---
+
+## 33. `/debug` sigue al dominio que la consola tiene abierto, no al más reciente (DEBUG-ACTIVE-PROJECT-1, 2026-08-06)
+
+**El problema, reportado por el fundador.** El atajo `/debug` (§32) resolvía
+"el proyecto" con el mismo criterio de reserva que la barra lateral fuera de
+una ruta de proyecto: el más reciente por `created_at`. En la práctica eso
+fijaba `/debug` al último dominio creado en la cuenta — que en beta suele ser
+`mozilla.org`, el proyecto reservado del piloto de escritura (ver CLAUDE.md,
+"Pilot write scope") — en vez de al dominio que el fundador tenía realmente
+abierto en la consola.
+
+**Por qué esto sí es el "pedido explícito propio" que §32 dejó pendiente.**
+Esa misma fase documentó, deliberadamente, que la barra lateral NO se entera
+de una selección hecha en Dominios porque unificar ambas cosas exigiría "una
+noción de 'dominio seleccionado' a nivel de cuenta, persistida más allá de
+una URL — alcance mayor, pedido explícito propio si algún día hace falta".
+Esta fase es exactamente esa petición, y deliberadamente acotada a `/debug`:
+el bloque de la barra lateral (`proj-switch`) y la portada de Dominios siguen
+sin tocarse.
+
+**Implementación.** `middleware.ts` ya corre en cada request (refresco de
+sesión de Supabase); ahora además escribe un cookie httpOnly
+(`geo_active_project`, `lib/active-project-cookie.ts`) con el `projectId`
+cada vez que la ruta visitada es `/dashboard/projects/[projectId]/...` — la
+misma señal que ya usa `components/sidebar.tsx` para decidir qué dominio está
+"activo". `/debug` lo lee y redirige ahí si el proyecto sigue existiendo y no
+está archivado; si no, cae al criterio anterior (el más reciente), igual que
+si el cookie no existiera. El cookie nunca autoriza nada por sí mismo — sólo
+decide a qué URL redirige un atajo; `requireActiveProject` vuelve a
+comprobar propiedad vía RLS en la página de destino, como siempre.
+
+**Pendiente / roto conocido.** Ninguno nuevo. Sigue pendiente lo ya anotado en
+§32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
+---
+
+## 37. La rama de evidencia del piloto deja de fingir ser un deploy (PILOT-EVIDENCE-IGNORE-1, 2026-08-07)
+
+**El problema, reportado por el fundador:** correos de Vercel de *"Failed
+preview deployment"* llegando de todas las sesiones a la vez, sin relación
+aparente con ningún cambio de producto.
+
+**Causa.** Cada pasada de `ux-pilot.yml` publica sus capturas force-pusheando
+una rama `pilot-evidence/pr-<N>` (paso "Publish screenshots to an evidence
+branch"). Esa rama contiene sólo `screens/`, `output/`, los `.jsonl` y un
+`README.md` — nunca `package.json` ni `vercel.json`. Vercel construye *toda*
+rama que se empuja al repo por defecto; sin manifiesto de Next.js que
+construir, cada pasada del piloto de cualquier PR generaba un deploy
+condenado a fallar, y un correo por pasada. Con 76 ramas `pilot-evidence/*`
+vivas en el momento del reporte — una por cada PR que hubiera corrido el
+piloto alguna vez — y varias sesiones trabajando en paralelo, el goteo se
+leía como ruido de fondo permanente.
+
+**Por qué importa más que el spam en sí.** Un canal de alerta que falla
+constantemente por un motivo sin relación con el producto es un canal que
+deja de mirarse — el mismo patrón que dejó cuatro días de 429 de OpenAI sin
+que nadie los viera (`docs/adr/0029`, Fase B). El día que un deploy de
+verdad falle, se leerá como uno más.
+
+**Arreglo.** El paso que publica la evidencia escribe también un
+`vercel.json` estático dentro de la rama:
+
+```json
+{ "ignoreCommand": "exit 0" }
+```
+
+Contrato de Vercel: salida 0 significa "no construyas". A diferencia de
+`scripts/vercel-should-build.sh` (que decide caso por caso y falla abierto
+hacia construir), aquí no hace falta ningún script — esta rama nunca es
+otra cosa que evidencia, así que la respuesta es siempre la misma. El deploy
+pasa a `Canceled by Ignored Build Step`, que Vercel cuenta como éxito: cero
+build, cero correo, la evidencia se sigue publicando igual porque el `push`
+ocurre antes de que Vercel decida si construye.
+
+**Pendiente / roto conocido.** Las 76 ramas ya existentes no llevan el
+`vercel.json` hasta que se les haga otra pasada de piloto encima; hasta
+entonces pueden seguir generando un correo aislado si alguien reabre esos
+PRs. No se ha hecho limpieza retroactiva de esas ramas — force-pushear
+`vercel.json` a 76 ramas por separado es una operación aparte, y esta fase
+sólo cierra la fuente del problema hacia delante.
+---
+
+## 38. Ajustes de cuenta: cuatro pantallas pasan a una (CONSOLE-REDESIGN-1 Fase A, 2026-08-06)
 
 **Estado: implementado.** Diseño aprobado y navegable en
 `docs/design-reference/console-redesign-1/`; Task Intake en esa misma carpeta.
@@ -3299,3 +3673,5 @@ tipografía o patrones de navegación:
 3. Enlazar el PR/ADR real cuando exista, en vez de reexplicar el detalle
    técnico aquí (este documento es "qué se decidió", no "cómo se
    implementó").
+
+---

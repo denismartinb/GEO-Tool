@@ -166,10 +166,41 @@ nuestro producto, no.
 - Faltan 3: `que-es-el-geo-score`, `llms-txt-guia-practica` y
   `como-conseguir-que-chatgpt-te-cite`. Hasta que existan, esos artículos
   caen en el degradado con icono, que es justo lo que se ha rechazado.
-- El agente que redacta **no puede generar imágenes**: no hay herramienta de
-  generación en el entorno de trabajo, y el stock exige una licencia. La
-  producción de la portada es, hoy, un paso humano. Mientras siga siéndolo,
-  la publicación semanal autónoma tiene aquí una dependencia manual — hay que
-  tenerlo en cuenta al planificar esa fase.
+- ~~El agente que redacta **no puede generar imágenes**~~ — **superado el
+  2026-08-06** (ver §Segunda enmienda, abajo). El agente no puede generar mapas
+  de bits, pero **sí puede escribir un SVG**, que es texto: la portada dejó de
+  ser un paso humano y la publicación semanal ya no tiene aquí una dependencia
+  manual.
 - `lib/blog/covers.test.ts` impide que la deuda de portadas crezca: un
   artículo nuevo nace con portada.
+
+---
+
+## Segunda enmienda (2026-08-06) — la portada la dibuja el agente
+
+La enmienda de 2026-08-04 asumía que producir una portada era trabajo humano
+porque «el agente no puede generar imágenes». Es cierto para un PNG generado o
+de stock; **no lo es para un SVG**, que es texto y el agente escribe igual que
+escribe código.
+
+Eso convierte la portada en **la opción 4 de la decisión original** —maquetas
+construidas en SVG/CSS, versionadas, legibles en el diff— en vez de una
+excepción a ella. No hay que relajar nada: la política se cumple mejor así que
+con stock.
+
+**Qué sigue igual, y es lo que importa:** una portada no puede representar una
+interfaz de producto, un gráfico, un panel ni una métrica. Esa restricción se
+mantiene entera, y el 2026-08-05 bloqueó una primera versión que incrustaba un
+«1,08%» real — cierto y citado en el artículo, pero huérfano de fuente en una
+portada, que no tiene pie de figura.
+
+**Consecuencia práctica:** las tres portadas del cluster `sectores` existen
+como SVG en el repo, `lib/blog/covers.test.ts` está en verde entero, y el
+procedimiento (proporción del lienzo, zona segura, verificación contra las seis
+ventanas de recorte) vive en `docs/agentic-weekly-post.md` §4.
+
+**Lo que queda pendiente:** los tres artículos de `COVER_DEBT`
+(`que-es-el-geo-score`, `llms-txt-guia-practica`,
+`como-conseguir-que-chatgpt-te-cite`) siguen sin portada y siguen exentos.
+Ahora que existe una vía para producirlas, esa deuda puede bajar a cero en su
+propia fase — el test ya está construido para que la lista sólo pueda menguar.
