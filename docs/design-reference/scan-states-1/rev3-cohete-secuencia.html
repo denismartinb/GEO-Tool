@@ -131,7 +131,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     Tenías razón con el reparto, y encima es el que hace el pipeline de verdad:
     <strong>el escaneo mira hacia fuera</strong> —lo que las IA dicen de ti, ahí arriba— y
     cuando acaba, <strong>la auditoría mira hacia dentro</strong>, tu propia web. Eso es
-    exactamente subir, traer la carga y reentrar. Siete momentos, siete frases cortas, el
+    exactamente subir, traer la carga y reentrar. Ocho momentos, ocho frases cortas, el
     cielo que se oscurece al subir para que las estrellas vuelvan donde tocan, y la carga
     que se descarga punto a punto hasta formar tu puntuación.
     <br><br>
@@ -146,7 +146,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
   <p class="sec-note">
     Arrastra la barra por toda la misión o salta por capítulos. Cada frase de la pantalla
     sale de un dato: si un motor no ha contestado no se enciende su tobera, y cada punto del
-    anillo de la órbita es una respuesta que ya hemos leído. Los siete momentos van siempre
+    anillo de la órbita es una respuesta que ya hemos leído. Los ocho momentos van siempre
     completos — la auditoría web queda activa en el producto final.
   </p>
 
@@ -266,7 +266,8 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
           <span class="tel-row"><span>respuestas</span><b data-out="resp">0 / 90</b></span>
           <span class="tel-row"><span>analizadas</span><b data-out="anal">0 / 90</b></span>
           <span class="tel-row"><span>motores</span><b data-out="eng">0 de 3</b></span>
-          <span class="tel-row"><span>páginas auditadas</span><b data-out="pages">—</b></span>
+          <span class="tel-row"><span>temas verificados</span><b data-out="topics">—</b></span>
+          <span class="tel-row"><span>páginas revisadas</span><b data-out="pages">—</b></span>
           <span class="tel-row"><span>fase</span><b data-out="phase" class="on">rampa</b></span>
         </div>
         <div class="note win">
@@ -288,7 +289,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
 <!-- ══════════════════════ EL GUION ══════════════════════ -->
 <section id="guion">
-  <h2>Los siete momentos</h2>
+  <h2>Los ocho momentos</h2>
   <p class="sec-note">
     Poco texto, y ninguna frase que no pueda demostrarse con una fila de la base de datos.
     El chiste va siempre en la tercera línea, en gris, donde no estorba a quien sólo quiere
@@ -359,7 +360,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <span class="beat-n">3 · ASCENSO</span>
         <span class="beat-h">38 de 90 a bordo</span>
         <span class="beat-s">Quedan unos 3 minutos.</span>
-        <span class="beat-j">Puedes cerrar la pestaña. Esto no se cae.</span>
+        <span class="beat-j">Puedes irte. Seguimos sin ti.</span>
         <span class="beat-r">altura = respuestas escritas / total</span>
       </div>
     </div>
@@ -401,7 +402,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <span class="beat-n">5 · CARGA ENTREGADA</span>
         <span class="beat-h">43 puntos</span>
         <span class="beat-s">Sales en 41 de 90 respuestas.</span>
-        <span class="beat-j">Ya podrías irte. No hemos terminado.</span>
+        <span class="beat-j">Ya podrías irte. Aún queda la vuelta.</span>
         <span class="beat-r">puntuación GEO · menciones verificadas</span>
       </div>
     </div>
@@ -425,9 +426,9 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <div class="beat-txt">
         <span class="beat-n">6 · REENTRADA</span>
         <span class="beat-h">Volvemos a tu suelo</span>
-        <span class="beat-s">Revisando genscore.es: 18 de 40 páginas.</span>
+        <span class="beat-s">Comprobando 12 de 30 temas en tu web.</span>
         <span class="beat-j">Ya sabemos qué dicen de ti. Ahora, qué dices tú.</span>
-        <span class="beat-r">auditoría web encolada al completar el escaneo</span>
+        <span class="beat-r">4 temas por lote encadenado · ~4 min en tu caso</span>
       </div>
     </div>
 
@@ -474,7 +475,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
   <div class="cols">
     <div class="note win">
-      <b>Por qué siete y no tres</b>
+      <b>Por qué ocho y no tres</b>
       Porque la espera es larga de verdad (5–7 min en tu caso, 15–20 en un Pro lleno) y un
       estado que no cambia en cinco minutos se lee como colgado. Siete momentos son un
       cambio cada minuto y medio, y <em>ninguno es decorativo</em>: cada uno se corresponde
@@ -483,7 +484,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     <div class="note">
       <b>La reentrada no es opcional</b>
       Decidido: en el producto final <strong>la auditoría web va siempre activa</strong>, así
-      que los siete momentos son siempre siete. El interruptor
+      que los ocho momentos son siempre ocho. El interruptor
       <code>auto_web_audit_enabled</code> se queda como lo que es —un freno de coste de la
       fase de pruebas—, no como una variante de producto que la pantalla tenga que
       contemplar. Un guion con una escena opcional es un guion que nadie recuerda.
@@ -505,11 +506,12 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       <tbody>
         <tr><td>1 · Rampa</td><td>En la rampa</td><td>90 respuestas por traer</td><td>Tú no tienes que hacer nada.</td></tr>
         <tr><td>2 · Ignición</td><td>Motores a toda potencia</td><td>Gemini, ChatGPT y Claude, encendidos</td><td>Los tres a la vez. Sí, se puede.</td></tr>
-        <tr><td>3 · Ascenso</td><td>38 de 90 a bordo</td><td>Quedan unos 3 minutos</td><td>Puedes cerrar la pestaña. Esto no se cae.</td></tr>
+        <tr><td>3 · Ascenso</td><td>38 de 90 a bordo</td><td>Quedan unos 3 minutos de subida</td><td>Puedes irte. Seguimos sin ti.</td></tr>
         <tr><td>4 · Órbita</td><td>Abriendo la carga</td><td>64 de 90 leídas · un punto por respuesta</td><td>Traerlas era la mitad del viaje.</td></tr>
-        <tr><td>5 · Entrega</td><td>43 puntos</td><td>Sales en 41 de 90 respuestas</td><td>Ya podrías irte. No hemos terminado.</td></tr>
-        <tr><td>6 · Reentrada</td><td>Volvemos a tu suelo</td><td>18 de 40 páginas revisadas</td><td>Ya sabemos qué dicen de ti. Ahora, qué dices tú.</td></tr>
-        <tr><td>7 · Aterrizaje</td><td>Todo listo</td><td>43 puntos y 6 acciones</td><td>Repetimos mañana. Tú a lo tuyo.</td></tr>
+        <tr><td>5 · Entrega</td><td>43 puntos</td><td>Sales en 41 de 90 · queda la vuelta</td><td>Ya podrías irte. Aún queda la vuelta.</td></tr>
+        <tr><td>6 · Reentrada</td><td>Volvemos a tu suelo</td><td>12 de 30 temas comprobados</td><td>Ya sabemos qué dicen de ti. Ahora, qué dices tú.</td></tr>
+        <tr><td>7 · Aproximación</td><td>Revisando tu web</td><td>18 de 40 páginas</td><td>Lo técnico, que es lo que sí puedes arreglar.</td></tr>
+        <tr><td>8 · Aterrizaje</td><td>Todo listo</td><td>43 puntos y 6 acciones</td><td>Repetimos mañana. Tú a lo tuyo.</td></tr>
         <tr><td>Incompleto</td><td>Misión incompleta</td><td>82 de 90 · ChatGPT no contestó</td><td>— (aquí no hay chiste)</td></tr>
       </tbody>
     </table>
@@ -545,12 +547,117 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
   </div>
 </section>
 
+
+<!-- ══════════════════════ DURACIÓN Y PERSISTENCIA ══════════════════════ -->
+<section id="duracion">
+  <h2>La vuelta dura tanto como la ida</h2>
+  <p class="sec-note">
+    Lo apuntaste y fui a medirlo: la auditoría procesa <strong>4 temas por lote</strong>
+    (<code>BATCH_TOPICS_PER_CALL</code>) con 30 s de presupuesto por lote, encadenando
+    invocaciones. Para tus 30 preguntas son 8 lotes, más el pase técnico. Es decir
+    <strong>la reentrada no es un epílogo: es media misión</strong>, y por eso ocupa casi
+    tanto guion como el ascenso.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Escenario</th><th>Ida (escaneo)</th><th>Vuelta (auditoría)</th><th>Misión completa</th></tr></thead>
+      <tbody>
+        <tr><td>Free · 10 preguntas</td><td>3–5 min</td><td>~2 min</td><td>5–7 min</td></tr>
+        <tr><td>Starter · 25</td><td>4–6 min</td><td>~4 min</td><td>8–10 min</td></tr>
+        <tr><td><strong>Tu caso</strong> · 30</td><td>5–7 min</td><td><strong>~4 min</strong></td><td><strong>9–13 min</strong></td></tr>
+        <tr><td>Pro lleno · 100</td><td>15–20 min</td><td>~12 min</td><td>26–35 min</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="cols">
+    <div class="note win">
+      <b>Lo que cambia en el diseño</b>
+      La reentrada necesita <em>su propio contador</em>, no una animación de diez segundos:
+      temas comprobados durante la cobertura, páginas durante el pase técnico. El descenso
+      del cohete se mueve con ese número, igual que la subida se movía con las respuestas.
+      La altura siempre es un dato.
+    </div>
+    <div class="note cost">
+      <b>Y lo que confirma</b>
+      Nadie mira trece minutos, y menos veintiséis. <strong>El aviso por email deja de ser
+      la fase 2 y pasa a ser parte de la fase 1</strong> — esta pantalla no se sostiene sin
+      él. Lo digo aunque ya lo habíamos ordenado al revés: los números lo han cambiado.
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ RECARGA ══════════════════════ -->
+<section id="recarga">
+  <h2>Qué pasa si recargas</h2>
+  <p class="sec-note">
+    Fui a mirarlo al código y la respuesta tiene dos mitades: una es de diseño y la otra es
+    un <strong>problema de producto que hay que arreglar antes de que esta pantalla exista</strong>.
+  </p>
+
+  <div class="cols">
+    <div class="note win">
+      <b>Recargar · resuelto por diseño</b>
+      La misión <strong>no es una línea de tiempo, es una función del estado</strong>. El
+      momento se calcula de los contadores del run, así que al recargar la pantalla aparece
+      <em>donde estaba</em>: si ibas por la órbita, sale la órbita. Regla que queda escrita:
+      <strong>nunca se reproduce el despegue</strong>. El cohete se coloca a su altura sin
+      animación y sigue desde ahí. Una cuenta atrás que se reinicia cada F5 convertiría la
+      espera en un bucle.
+    </div>
+    <div class="note cost">
+      <b>Cerrar la pestaña · hoy NO es seguro</b>
+      Quien conduce el escaneo es <strong>la propia pestaña</strong>:
+      <code>AutoExecuteScan</code> es un componente cliente que llama a
+      <code>autoExecutePendingScan</code> en bucle, y esa llamada pasa
+      <code>scheduleContinuation: false</code> a propósito. Al recargar se vuelve a montar y
+      sigue; <strong>al cerrar, no queda nadie empujando</strong>: el run se queda parado,
+      <code>reconcileStuckScanRuns</code> lo marca caducado a los 120 s, gasta su único
+      reintento automático… y ese reintento tampoco tiene quien lo conduzca hasta el cron
+      diario.
+    </div>
+  </div>
+
+  <div class="note cost" style="margin-top:16px">
+    <b>Lo que eso significa para esta pantalla</b>
+    <p style="margin:0 0 10px">
+      «Puedes cerrar esta página, seguimos trabajando» aparece en <strong>todas las maquetas
+      que te he enseñado</strong>, incluidas las tres opciones de la rev. 1. Y hoy sería
+      mentira. No es un matiz: con una misión de trece minutos, la mitad de la gente va a
+      cerrar la pestaña — es lo que uno hace cuando le dicen que tardará diez minutos.
+    </p>
+    <p style="margin:0">
+      <strong>El arreglo es pequeño y ya está construido:</strong> el ejecutor sabe
+      auto-encadenarse (<code>scheduleContinuation: true</code>, ADR 0014, el camino que usa
+      el cron), y los lotes se reclaman con un <code>UPDATE</code> atómico, así que dos
+      conductores a la vez son seguros por construcción. La razón de que el primer plano lo
+      desactive está escrita en el código: el endpoint de continuación va con secreto y
+      <em>un preview de Vercel puede no alcanzarlo</em>. O sea que en producción funciona y
+      en preview hay que probarlo aparte. <strong>Eso entra en la fase 1 o la pantalla no
+      puede prometer lo que promete.</strong>
+    </p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Situación</th><th>Qué ve el cliente</th><th>Qué pasa por detrás</th></tr></thead>
+      <tbody>
+        <tr><td>Recarga (F5)</td><td>La misión sigue donde estaba, sin repetir el despegue</td><td>El componente se vuelve a montar y sigue conduciendo</td></tr>
+        <tr><td>Cambia de pestaña</td><td>Al volver, la misión al día</td><td>El bucle sigue: el navegador no lo mata por estar en segundo plano</td></tr>
+        <tr><td>Cierra la pestaña · <em>hoy</em></td><td>Al volver, «escaneo incompleto»</td><td><strong>Nadie empuja. Caduca a los 120 s.</strong></td></tr>
+        <tr><td>Cierra la pestaña · <em>arreglado</em></td><td>Al volver, hecho — o el email avisando</td><td>Cada lote encadena el siguiente en el servidor</td></tr>
+        <tr><td>Vuelve al día siguiente</td><td>Su puntuación, sin rastro de la misión</td><td>Esta pantalla es de onboarding: no se repite</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
 <section id="siguiente">
   <div class="rec">
     <h3>Qué haría ahora</h3>
     <ol>
       <li><strong>Fase 1 — la secuencia sin desglose.</strong> Los siete momentos con lo que ya viaja hoy en <code>/scan-status</code>: total, hechas, analizadas, estado del run. La reentrada usa el estado del job de auditoría, que también existe. Cero backend nuevo.</li>
-      <li><strong>Fase 2 — el aviso por email</strong>, sin cambios respecto a la rev. 1. Con un Pro de 15–20 minutos, es lo que hace la espera aceptable.</li>
+      <li><strong>Fase 1b — que la pestaña deje de ser el motor.</strong> <code>scheduleContinuation: true</code> también en el camino de primer plano, verificado en preview. Sin esto, la frase «puedes irte» no se puede escribir.</li>
+      <li><strong>Fase 2 — el aviso por email.</strong> Con la misión completa en 9–13 min (26–35 en Pro), esto ya no es un extra: es la única forma de que el cliente recupere el resultado sin quedarse mirando.</li>
       <li><strong>Fase 3 — las toberas por motor.</strong> Es lo único que pide lectura nueva (respuestas agrupadas por motor en un endpoint que se sondea cada 4 s). Hasta entonces, las tres encienden juntas al llegar la primera respuesta — menos gracioso, igual de honesto.</li>
     </ol>
     <p style="margin-top:14px;font-size:14.5px;color:var(--d-ink-2)">
@@ -577,20 +684,26 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
 <script>
 (function () {
-  var TOTAL = 90, SCORE = 43, PAGES = 40;
+  var TOTAL = 90, SCORE = 43, PAGES = 40, TOPICS = 30;
 
   // Guion: cada tramo de la misión con su copia. `to` es el final del tramo en
   // fracción de misión. Los textos viven aquí y no en el DOM para que cambiar
   // una frase no obligue a tocar el dibujo.
+  // El reparto NO es estético: sale de medir las dos mitades. Un escaneo de 30
+  // preguntas son ~5 min y su auditoría ~4 (8 lotes de 4 temas encadenados,
+  // BATCH_TOPICS_PER_CALL = 4, 30s de presupuesto por lote). La vuelta pesa casi
+  // tanto como la ida, así que ocupa casi tanto guion.
   var BEATS = [
-    { to: .05, key: "rampa", label: "rampa",     k: "T–5 MIN",           h: "En la rampa",            j: "Tú no tienes que hacer nada." },
-    { to: .12, key: "ignicion", label: "ignición",  k: "IGNICIÓN",          h: "Motores a toda potencia", j: "Los tres a la vez. Sí, se puede." },
-    { to: .52, key: "ascenso", label: "ascenso",   k: "ASCENSO",           h: null,                      j: "Puedes cerrar la pestaña. Esto no se cae." },
-    { to: .70, key: "orbita", label: "órbita",    k: "EN ÓRBITA",         h: "Abriendo la carga",       j: "Traerlas era la mitad del viaje." },
-    { to: .76, key: "entrega", label: "entrega",   k: "CARGA ENTREGADA",   h: SCORE + " puntos",         j: "Ya podrías irte. No hemos terminado." },
-    { to: .93, key: "reentrada", label: "reentrada", k: "REENTRADA",         h: "Volvemos a tu suelo",     j: "Ya sabemos qué dicen de ti. Ahora, qué dices tú." },
-    { to: 1.01, key: "aterrizaje", label: "aterrizaje", k: "ATERRIZAJE",      h: "Todo listo",              j: "Repetimos mañana. Tú a lo tuyo." }
+    { to: .02, key: "rampa", label: "rampa", k: "T–9 MIN", h: "En la rampa", j: "Tú no tienes que hacer nada." },
+    { to: .06, key: "ignicion", label: "ignición", k: "IGNICIÓN", h: "Motores a toda potencia", j: "Los tres a la vez. Sí, se puede." },
+    { to: .40, key: "ascenso", label: "ascenso", k: "ASCENSO", h: null, j: "Puedes irte. Seguimos sin ti." },
+    { to: .52, key: "orbita", label: "órbita", k: "EN ÓRBITA", h: "Abriendo la carga", j: "Traerlas era la mitad del viaje." },
+    { to: .56, key: "entrega", label: "entrega", k: "CARGA ENTREGADA", h: SCORE + " puntos", j: "Ya podrías irte. Aún queda la vuelta." },
+    { to: .86, key: "reentrada", label: "reentrada", k: "REENTRADA", h: "Volvemos a tu suelo", j: "Ya sabemos qué dicen de ti. Ahora, qué dices tú." },
+    { to: .96, key: "aproximacion", label: "aproximación", k: "APROXIMACIÓN FINAL", h: "Revisando tu web", j: "Lo técnico, que es lo que sí puedes arreglar." },
+    { to: 1.01, key: "aterrizaje", label: "aterrizaje", k: "ATERRIZAJE", h: "Todo listo", j: "Repetimos mañana. Tú a lo tuyo." }
   ];
+
 
   var $ = function (s) { return document.querySelector(s); };
   function out(n, t) { var e = $('[data-out="' + n + '"]'); if (e) e.textContent = t; }
@@ -659,16 +772,16 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
 
     // Alturas: sube en el ascenso, se queda arriba en órbita y entrega, baja en
     // la reentrada. Nada de esto es libre: cada tramo es un paso del pipeline.
-    var climb = seg(f, .05, .52), fall = seg(f, .76, .93);
+    var climb = seg(f, .06, .40), fall = seg(f, .56, .96);
     var alt = climb * (1 - fall);
     var rocket = $("[data-rocket]");
         // Balanceo suave sólo en órbita: un cohete perfectamente quieto durante
     // dos minutos parece una imagen congelada, que es justo lo que esta
     // pantalla existe para no ser.
-    var sway = (f > .52 && f < .78) ? Math.sin(f * 90) * 2.2 : 0;
+    var sway = (f > .40 && f < .58) ? Math.sin(f * 90) * 2.2 : 0;
     // Deriva lateral al entrar en órbita: es lo que despeja el titular, y de
     // paso hace que el cohete "se coloque" en vez de quedarse clavado.
-    var drift = 86 * seg(f, .50, .60) * (1 - fall);
+    var drift = 86 * seg(f, .38, .46) * (1 - fall);
     rocket.setAttribute("transform",
       "translate(" + drift.toFixed(1) + "," + (-200 * alt).toFixed(1) + ") rotate(" + sway.toFixed(2) + " 310 266)");
 
@@ -684,7 +797,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     $("[data-hull]").setAttribute("fill", night ? "#F7F8FB" : "#0B1426");
     $("[data-hull2]").setAttribute("fill", night ? "#E4E9F2" : "#1B2B45");
     $("[data-win]").setAttribute("fill", night ? "#0B1426" : "#F7F8FB");
-    $("[data-bay]").setAttribute("fill", f > .52 && f < .76 ? "#2563EB" : (night ? "#22344F" : "#3B4759"));
+    $("[data-bay]").setAttribute("fill", f > .40 && f < .56 ? "#2563EB" : (night ? "#22344F" : "#3B4759"));
     ["-k", "-h", "-s", "-j"].forEach(function (t, i) {
       var e = $("[data" + t + "]");
       e.setAttribute("fill", night
@@ -692,22 +805,23 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         : (i === 0 ? "#2563EB" : i === 1 ? "#0B1426" : i === 2 ? "#5B6B82" : "#8C97A8"));
     });
 
-    var responses = Math.round(TOTAL * seg(f, .05, .52));
-    var analysed = Math.round(TOTAL * seg(f, .52, .70));
-    var pages = Math.round(PAGES * seg(f, .76, .93));
+    var responses = Math.round(TOTAL * seg(f, .06, .40));
+    var analysed = Math.round(TOTAL * seg(f, .40, .52));
+    var topics = Math.round(TOPICS * seg(f, .56, .86));
+    var pages = Math.round(PAGES * seg(f, .86, .96));
     var gem = Math.round(responses * .42), oai = Math.round(responses * .34), cla = responses - gem - oai;
     var lit = (gem > 0 ? 1 : 0) + (oai > 0 ? 1 : 0) + (cla > 0 ? 1 : 0);
 
     // Llamas sólo mientras se sube; en la reentrada es retro-frenado, no ascenso.
-    var burning = f > .05 && f < .52;
+    var burning = f > .02 && f < .40;
     [["gemini", gem], ["openai", oai], ["claude", cla]].forEach(function (p) {
       document.querySelector('[data-flame="' + p[0] + '"]').setAttribute("opacity", burning && p[1] > 0 ? "1" : "0");
     });
     $("[data-plume]").setAttribute("opacity", burning && alt < .5 ? "1" : "0");
-    $("[data-retro]").setAttribute("opacity", (f > .76 && f < .94) ? "1" : "0");
+    $("[data-retro]").setAttribute("opacity", (f > .56 && f < .97) ? "1" : "0");
 
     // El anillo vive desde que se abre la bodega hasta que empieza la reentrada.
-    var showRing = f > .52 && f < .80;
+    var showRing = f > .40 && f < .60;
     $("[data-analysis]").setAttribute("opacity", showRing ? "1" : "0");
     if (showRing) {
       var readDots = analysed;
@@ -723,22 +837,23 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
       var beam = $("[data-beam]");
       beam.setAttribute("x1", (310 + drift).toFixed(1)); beam.setAttribute("y1", (92 + (1 - alt) * 200).toFixed(1));
       beam.setAttribute("x2", bx.toFixed(1)); beam.setAttribute("y2", by.toFixed(1));
-      beam.setAttribute("opacity", f < .70 ? ".7" : "0");
-      var done = f >= .70;
+      beam.setAttribute("opacity", f < .52 ? ".7" : "0");
+      var done = f >= .52;
       $("[data-coretxt]").textContent = done ? SCORE : analysed;
       $("[data-coretxt]").setAttribute("font-size", done ? "34" : "26");
       $("[data-corecap]").textContent = done ? "PUNTUACIÓN GEO" : "RESPUESTAS LEÍDAS";
       $("[data-core]").setAttribute("r", done ? "38" : "34");
     }
-    $("[data-ground-label]").textContent = (f > .76 && f < .94) ? "genscore.es · auditando" : "genscore.es";
+    $("[data-ground-label]").textContent = (f > .56 && f < .97) ? "genscore.es · auditando" : "genscore.es";
 
     var sub =
-      B.key === "rampa" ? TOTAL + " respuestas por traer" :
+      B.key === "rampa" ? TOTAL + " respuestas por traer · unos 9 minutos en total" :
       B.key === "ignicion" ? "Gemini, ChatGPT y Claude, encendidos" :
-      B.key === "ascenso" ? "quedan ~" + Math.max(1, Math.ceil((1 - seg(f, .05, .52)) * 4)) + " min" :
+      B.key === "ascenso" ? "quedan ~" + Math.max(1, Math.ceil((1 - seg(f, .06, .40)) * 4)) + " min de subida" :
       B.key === "orbita" ? analysed + " de " + TOTAL + " respuestas leídas" :
-      B.key === "entrega" ? "sales en 41 de " + TOTAL + " respuestas" :
-      B.key === "reentrada" ? "revisando genscore.es · " + pages + " de " + PAGES + " páginas" :
+      B.key === "entrega" ? "sales en 41 de " + TOTAL + " respuestas · queda la vuelta" :
+      B.key === "reentrada" ? "comprobando " + topics + " de " + TOPICS + " temas en tu web" :
+      B.key === "aproximacion" ? pages + " de " + PAGES + " páginas revisadas" :
       "43 puntos y 6 acciones esperándote";
 
     $("[data-k]").textContent = B.k;
@@ -750,7 +865,8 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
     out("resp", responses + " / " + TOTAL);
     out("anal", analysed + " / " + TOTAL);
     out("eng", lit + " de 3" + (lit === 3 ? " · a tope" : lit === 0 ? " · fríos" : ""));
-    out("pages", f > .76 ? pages + " / " + PAGES : "—");
+    out("pages", f > .86 ? pages + " / " + PAGES : f > .56 ? "tras la cobertura" : "—");
+    out("topics", f > .56 ? topics + " / " + TOPICS : "—");
     out("phase", B.label);
 
     document.querySelectorAll(".chap").forEach(function (el, i) { el.classList.toggle("on", i === beatIdx); });
