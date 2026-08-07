@@ -1,0 +1,1543 @@
+<title>SCAN-STATES-1 · Tres opciones para las pantallas de espera</title>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="grad-gem" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4285F4"/><stop offset=".5" stop-color="#9B72CB"/><stop offset="1" stop-color="#D96570"/>
+    </linearGradient>
+    <symbol id="eg-gemini" viewBox="0 0 24 24">
+      <path d="M12 1 Q13 11 23 12 Q13 13 12 23 Q11 13 1 12 Q11 11 12 1 Z" fill="url(#grad-gem)"/>
+    </symbol>
+    <symbol id="eg-openai" viewBox="0 0 24 24">
+      <g fill="none" stroke="#10a37f" stroke-width="1.5">
+        <circle cx="12" cy="7.5" r="4.2"/><circle cx="15.9" cy="9.75" r="4.2"/><circle cx="15.9" cy="14.25" r="4.2"/>
+        <circle cx="12" cy="16.5" r="4.2"/><circle cx="8.1" cy="14.25" r="4.2"/><circle cx="8.1" cy="9.75" r="4.2"/>
+      </g>
+    </symbol>
+    <symbol id="eg-claude" viewBox="0 0 24 24">
+      <g stroke="#d97757" stroke-width="1.9" stroke-linecap="round">
+        <path d="M12 3.4v6.2"/><path d="M12 14.4v6.2"/><path d="M4.5 7.7l5.4 3.1"/>
+        <path d="M14.1 13.2l5.4 3.1"/><path d="M4.5 16.3l5.4-3.1"/><path d="M14.1 10.8l5.4-3.1"/>
+      </g>
+    </symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24">
+      <path d="M4.5 12.5l5 5 10-11" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="ic-arrow" viewBox="0 0 24 24">
+      <path d="M5 12h13m-5.5-6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<style>
+/* ============================================================================
+   TOKENS
+   Dos juegos, a propósito:
+   · --p-*  = paleta de PRODUCTO (marca v3, valores fijos). El producto es
+              modo claro (`color-scheme: light`), así que las maquetas se pintan
+              siempre en claro, en los dos temas del visor. No son literales
+              inventados: son los tokens de docs/brand/brand-guidelines.md §2.
+   · --d-*  = paleta del DOCUMENTO (esta página). Sí se adapta al tema del
+              visor, usando --brand-canvas-dark/--brand-surface-dark, que ya
+              existen en la guía aunque el producto todavía no los use.
+   ========================================================================== */
+:root {
+  color-scheme: light dark;
+
+  --p-ink:#0B1426; --p-ink-2:#3B4759; --p-ink-3:#5B6B82; --p-ink-4:#98A2B3;
+  --p-blue:#2563EB; --p-blue-2:#4F7BFF; --p-cyan:#09C5D6;
+  --p-blue-soft:rgba(37,99,235,.10); --p-blue-soft-2:rgba(37,99,235,.18);
+  --p-canvas:#F7F8FB; --p-surface:#FFFFFF; --p-sunk:#F4F6FA;
+  --p-line:#E7EAF0; --p-line-soft:#EEF1F6;
+  --p-pos:#15915A; --p-pos-soft:#E7F6EE;
+  --p-neg:#D23B48; --p-neg-soft:#FDECEE;
+  --p-amber:#FFB020;              /* SÓLO el punto del logo. Nunca UI. */
+  --p-navy:#081223; --p-navy-2:#0F1C33;
+  --p-shadow:0 1px 2px rgba(11,20,38,.04),0 6px 18px rgba(11,20,38,.05);
+
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+
+  /* documento — claro */
+  --d-bg:#ECEFF4; --d-surface:#FFFFFF; --d-surface-2:#F7F8FB;
+  --d-ink:#0B1426; --d-ink-2:#3B4759; --d-ink-3:#5B6B82; --d-ink-4:#8C97A8;
+  --d-line:#DEE3EC; --d-line-soft:#E9EDF3;
+  --d-accent:#2563EB; --d-accent-soft:rgba(37,99,235,.10);
+  --d-warn:#B3541E; --d-warn-soft:rgba(179,84,30,.10);
+  --d-shadow:0 1px 2px rgba(11,20,38,.05),0 10px 30px rgba(11,20,38,.07);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --d-bg:#081223; --d-surface:#0F1C33; --d-surface-2:#0B1729;
+    --d-ink:#F7F8FB; --d-ink-2:#C6D0DE; --d-ink-3:#95A3B6; --d-ink-4:#6F7F94;
+    --d-line:#1D2C46; --d-line-soft:#16233A;
+    --d-accent:#7FA2FF; --d-accent-soft:rgba(127,162,255,.14);
+    --d-warn:#E8A56B; --d-warn-soft:rgba(232,165,107,.13);
+    --d-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"] {
+  --d-bg:#081223; --d-surface:#0F1C33; --d-surface-2:#0B1729;
+  --d-ink:#F7F8FB; --d-ink-2:#C6D0DE; --d-ink-3:#95A3B6; --d-ink-4:#6F7F94;
+  --d-line:#1D2C46; --d-line-soft:#16233A;
+  --d-accent:#7FA2FF; --d-accent-soft:rgba(127,162,255,.14);
+  --d-warn:#E8A56B; --d-warn-soft:rgba(232,165,107,.13);
+  --d-shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--d-bg); color:var(--d-ink);
+  font-family:var(--body); font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+:focus-visible{outline:2px solid var(--d-accent);outline-offset:3px;border-radius:6px}
+.tnum{font-variant-numeric:tabular-nums}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 24px 96px}
+@media (max-width:640px){.wrap{padding:0 16px 72px}}
+
+/* ---------- cabecera del documento ---------- */
+.doc-head{padding:56px 0 34px;border-bottom:1px solid var(--d-line)}
+.eyebrow{
+  font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--d-ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.eyebrow .sep{width:22px;height:1px;background:var(--d-line);display:inline-block}
+h1{
+  font-family:var(--display);font-weight:800;letter-spacing:-.04em;line-height:1.02;
+  font-size:clamp(34px,6vw,58px);margin:16px 0 0;text-wrap:balance;max-width:16ch;
+}
+.lede{font-size:clamp(16px,2.1vw,19px);line-height:1.6;color:var(--d-ink-2);max-width:62ch;margin:18px 0 0}
+.doc-meta{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.tag{
+  font-size:11.5px;font-weight:600;color:var(--d-ink-3);background:var(--d-surface);
+  border:1px solid var(--d-line);border-radius:999px;padding:5px 11px;
+}
+.tag.mono{font-family:var(--mono);font-size:11px}
+
+/* ---------- secciones ---------- */
+section{padding-top:56px}
+.sec-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:8px}
+h2{
+  font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:1.08;
+  font-size:clamp(24px,3.4vw,34px);margin:0;text-wrap:balance;
+}
+h3{font-family:var(--display);font-weight:800;letter-spacing:-.02em;font-size:17px;margin:0 0 6px}
+.sec-note{font-size:15px;color:var(--d-ink-2);max-width:70ch;margin:10px 0 0}
+p{margin:0 0 12px}
+p:last-child{margin-bottom:0}
+strong{font-weight:700;color:var(--d-ink)}
+code{font-family:var(--mono);font-size:.87em;background:var(--d-surface-2);border:1px solid var(--d-line-soft);border-radius:5px;padding:1px 5px}
+
+/* ---------- reglas ---------- */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:26px}
+.rule{
+  background:var(--d-surface);border:1px solid var(--d-line);border-radius:14px;
+  padding:18px 18px 20px;box-shadow:var(--d-shadow);display:flex;flex-direction:column;gap:7px;
+}
+.rule-k{font-size:10.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--d-accent)}
+.rule-t{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-.02em;line-height:1.2}
+.rule-b{font-size:13.5px;line-height:1.5;color:var(--d-ink-3)}
+.rule-src{font-family:var(--mono);font-size:10.5px;color:var(--d-ink-4);margin-top:auto;padding-top:6px}
+
+/* ---------- cabecera de opción ---------- */
+.opt-head{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:start;
+  border-top:1px solid var(--d-line);padding-top:34px;
+}
+@media (min-width:900px){.opt-head{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:44px}}
+.opt-letter{
+  font-family:var(--display);font-weight:800;font-size:13px;letter-spacing:.02em;
+  width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+  background:var(--d-accent-soft);color:var(--d-accent);flex:0 0 auto;
+}
+.opt-thesis{font-size:17px;line-height:1.55;color:var(--d-ink-2);max-width:56ch}
+.opt-thesis em{font-style:normal;color:var(--d-ink);font-weight:600}
+.opt-cols{display:grid;gap:16px}
+@media (min-width:560px){.opt-cols{grid-template-columns:1fr 1fr}}
+.note{
+  background:var(--d-surface);border:1px solid var(--d-line);border-left:3px solid var(--d-line);
+  border-radius:12px;padding:14px 16px;font-size:13.5px;line-height:1.55;color:var(--d-ink-3);
+}
+.note b{display:block;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--d-ink-4);margin-bottom:5px}
+.note.win{border-left-color:var(--d-accent)}
+.note.cost{border-left-color:var(--d-warn)}
+.note.cost b{color:var(--d-warn)}
+
+/* ---------- tira de maquetas ---------- */
+.strip{
+  display:flex;gap:18px;overflow-x:auto;padding:28px 4px 22px;
+  scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;
+}
+.strip::-webkit-scrollbar{height:9px}
+.strip::-webkit-scrollbar-thumb{background:var(--d-line);border-radius:99px}
+figure{margin:0;flex:0 0 auto;width:296px;scroll-snap-align:start}
+figcaption{margin-top:12px;font-size:12.5px;line-height:1.5;color:var(--d-ink-3)}
+figcaption b{display:block;color:var(--d-ink);font-weight:700;font-size:13px;margin-bottom:3px}
+figcaption .real{
+  display:block;margin-top:7px;font-family:var(--mono);font-size:10.5px;line-height:1.5;
+  color:var(--d-ink-4);border-top:1px dashed var(--d-line);padding-top:7px;
+}
+
+/* ============================================================================
+   CHROME DEL MÓVIL — replica el shell real (barra de app + sticky-header)
+   ========================================================================== */
+.dev{
+  width:296px;border-radius:30px;background:var(--p-canvas);overflow:hidden;
+  border:1px solid var(--p-line);box-shadow:0 2px 4px rgba(11,20,38,.10),0 20px 44px rgba(11,20,38,.22);
+  font-family:var(--body);color:var(--p-ink);line-height:1.5;
+  display:flex;flex-direction:column;min-height:520px;
+}
+.dev-top{
+  display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+  background:var(--p-surface);border-bottom:1px solid var(--p-line);
+}
+.dev-burger{display:grid;gap:3.5px;width:17px}
+.dev-burger i{height:2px;background:var(--p-ink-2);border-radius:2px;display:block}
+.dev-logo{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.03em;display:flex;align-items:center;gap:5px}
+.dev-mark{
+  width:19px;height:19px;border-radius:6px;background:var(--p-ink);color:#fff;
+  display:grid;place-items:center;font-size:11px;position:relative;
+}
+.dev-mark::after{content:"";position:absolute;right:1.5px;top:1.5px;width:3.5px;height:3.5px;border-radius:99px;background:var(--p-amber)}
+.dev-logo .blue{color:var(--p-blue)}
+.dev-bell{width:17px;height:17px;border-radius:5px;border:1px solid var(--p-line);background:var(--p-sunk)}
+.dev-sub{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:8px;
+  padding:11px 14px 12px;background:var(--p-surface);border-bottom:1px solid var(--p-line);
+}
+.dev-kicker{font-size:11px;color:var(--p-ink-4);font-weight:500}
+.dev-titlerow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:1px}
+.dev-title{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.03em}
+.dev-dom{font-family:var(--mono);font-size:9.5px;background:var(--p-sunk);border-radius:5px;padding:2px 5px;color:var(--p-ink-3)}
+.dev-loc{font-size:10px;color:var(--p-ink-4)}
+.dev-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:12px}
+
+/* átomos compartidos de producto */
+.pill{
+  display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:700;
+  border-radius:999px;padding:5px 9px;white-space:nowrap;flex:0 0 auto;
+}
+.pill-run{background:var(--p-blue-soft);color:var(--p-blue)}
+.pill-ok{background:var(--p-pos-soft);color:var(--p-pos)}
+.pill-neg{background:var(--p-neg-soft);color:var(--p-neg)}
+.pill-mute{background:var(--p-sunk);color:var(--p-ink-3)}
+.pill .dot{width:6px;height:6px;border-radius:99px;background:currentColor;animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.banner{
+  display:flex;gap:9px;background:var(--p-pos-soft);border:1px solid rgba(21,145,90,.18);
+  border-radius:11px;padding:11px 12px;font-size:12px;line-height:1.45;color:#0E6A43;
+}
+.banner svg{width:14px;height:14px;flex:0 0 auto;margin-top:1px;color:var(--p-pos)}
+
+.bar{height:5px;border-radius:99px;background:var(--p-sunk);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--p-blue);transition:width .5s ease}
+.bar.thin{height:3px}
+.bar.warm i{background:var(--p-blue-2)}
+.meta{font-family:var(--mono);font-size:10px;color:var(--p-ink-4);letter-spacing:-.01em}
+
+.card{background:var(--p-surface);border:1px solid var(--p-line);border-radius:14px;box-shadow:var(--p-shadow);padding:14px}
+.cta{
+  display:flex;align-items:center;justify-content:center;gap:8px;position:relative;
+  background:var(--p-blue);color:#fff;border-radius:11px;padding:12px 16px;
+  font-size:13.5px;font-weight:700;letter-spacing:-.01em;
+}
+.cta svg{width:15px;height:15px;position:absolute;right:14px}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+
+/* ============================================================================
+   OPCIÓN A — SALA DE MOTORES
+   ========================================================================== */
+.a-hero{
+  background:var(--p-surface);border:1px solid var(--p-line);border-radius:16px;
+  box-shadow:var(--p-shadow);padding:16px 16px 15px;
+}
+.a-lab{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--p-blue)}
+.a-num{font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:-.05em;line-height:1;margin-top:7px}
+.a-num small{font-size:19px;color:var(--p-ink-4);letter-spacing:-.03em;margin-left:2px}
+.a-num-cap{font-size:12px;color:var(--p-ink-3);margin-top:3px}
+.a-hero .bar{margin-top:13px}
+.a-hero .meta{margin-top:8px}
+
+.a-eng{display:flex;flex-direction:column;gap:9px}
+.a-eng-h{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--p-ink-4)}
+.a-eng-row{display:flex;align-items:center;gap:9px}
+.a-eng-ic{width:20px;height:20px;flex:0 0 auto;display:grid;place-items:center}
+.a-eng-ic svg{width:16px;height:16px}
+.a-eng-n{font-size:12.5px;font-weight:600;width:56px;flex:0 0 auto}
+.a-eng-bar{flex:1;height:4px;border-radius:99px;background:var(--p-sunk);overflow:hidden}
+.a-eng-bar i{display:block;height:100%;border-radius:99px;background:var(--p-blue)}
+.a-eng-c{font-family:var(--mono);font-size:10px;color:var(--p-ink-3);width:38px;text-align:right;flex:0 0 auto}
+.a-eng-row.idle .a-eng-n,.a-eng-row.idle .a-eng-c{color:var(--p-ink-4)}
+.a-eng-row.idle .a-eng-ic{opacity:.35}
+.a-eng-row.done .a-eng-c{color:var(--p-pos)}
+
+.a-feed{display:flex;flex-direction:column;gap:0}
+.a-feed-h{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--p-ink-4);
+  padding-bottom:8px;
+}
+.a-item{
+  display:flex;gap:9px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--p-line-soft);
+}
+.a-item-ic{width:16px;height:16px;flex:0 0 auto;margin-top:1px}
+.a-item-ic svg{width:100%;height:100%}
+.a-item-q{font-size:11.5px;line-height:1.4;color:var(--p-ink-2)}
+.a-item-m{font-family:var(--mono);font-size:9.5px;color:var(--p-ink-4);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.a-item-m .hit{color:var(--p-pos);font-weight:700}
+.a-item-m .miss{color:var(--p-ink-4)}
+.a-item.new{animation:slidein .5s ease both}
+@keyframes slidein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.a-item.pend .a-item-q{color:var(--p-ink-4)}
+.a-skel{height:9px;border-radius:99px;background:linear-gradient(90deg,var(--p-sunk),var(--p-line-soft),var(--p-sunk));background-size:200% 100%;animation:shimmer 1.6s linear infinite}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+
+/* ============================================================================
+   OPCIÓN B — ANILLO DE EVIDENCIA
+   ========================================================================== */
+.b-stage{display:grid;place-items:center;padding:14px 0 4px;position:relative}
+.b-ring{width:186px;height:186px;display:block}
+.b-center{position:absolute;inset:0;display:grid;place-items:center;text-align:center;pointer-events:none}
+.b-center-in{display:flex;flex-direction:column;align-items:center;gap:3px}
+.b-glyph{
+  width:44px;height:44px;border-radius:13px;background:var(--p-ink);color:#fff;
+  display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:24px;position:relative;
+}
+.b-glyph::after{content:"";position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:99px;background:var(--p-amber)}
+.b-pct{font-family:var(--display);font-weight:800;font-size:38px;letter-spacing:-.05em;line-height:1}
+.b-pct small{font-size:16px;color:var(--p-ink-4);margin-left:1px}
+.b-cap{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--p-ink-4);max-width:96px;line-height:1.3}
+.b-title{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.03em;text-align:center;line-height:1.2}
+.b-body{font-size:12.5px;line-height:1.55;color:var(--p-ink-3);text-align:center;margin-top:6px}
+.b-legend{display:flex;flex-direction:column;gap:7px;margin-top:2px}
+.b-leg{display:flex;align-items:center;gap:9px;font-size:11.5px}
+.b-leg-k{width:16px;height:3px;border-radius:99px;flex:0 0 auto}
+.b-leg-k.out{background:var(--p-blue)}
+.b-leg-k.in{background:var(--p-cyan)}
+.b-leg-k.off{background:var(--p-line)}
+.b-leg-t{color:var(--p-ink-2);font-weight:600}
+.b-leg-c{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--p-ink-3)}
+.b-seg-on{animation:segpop .45s ease both}
+@keyframes segpop{from{opacity:.2}to{opacity:1}}
+.b-scan{animation:scanspin 3.4s linear infinite;transform-origin:93px 93px}
+@keyframes scanspin{to{transform:rotate(360deg)}}
+
+/* ============================================================================
+   OPCIÓN C — PUESTA EN MARCHA (navy)
+   ========================================================================== */
+.c-body{background:var(--p-navy);color:#F7F8FB;gap:0;padding:0}
+.c-rail{height:3px;background:rgba(255,255,255,.10)}
+.c-rail i{display:block;height:100%;background:linear-gradient(90deg,var(--p-blue),var(--p-cyan))}
+.c-pad{padding:20px 16px 16px;display:flex;flex-direction:column;gap:14px;flex:1}
+.c-eyebrow{
+  display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:#8FB0FF;
+}
+.c-eyebrow .dot{width:5px;height:5px;border-radius:99px;background:#8FB0FF;animation:pulse 1.6s ease-in-out infinite}
+.c-h{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.045em;line-height:1.08;text-wrap:balance}
+.c-h .fade{color:#7C8DA8}
+.c-tel{
+  font-family:var(--mono);font-size:10.5px;color:#9FB0C8;display:flex;flex-direction:column;gap:5px;
+  border-top:1px solid rgba(255,255,255,.10);border-bottom:1px solid rgba(255,255,255,.10);padding:11px 0;
+}
+.c-tel-row{display:flex;justify-content:space-between;gap:10px}
+.c-tel-row b{color:#F7F8FB;font-weight:600}
+.c-tel-row .on{color:#7FE3EC}
+.c-engs{display:flex;gap:7px;flex-wrap:wrap}
+.c-eng{
+  display:inline-flex;align-items:center;gap:6px;font-size:10.5px;font-weight:600;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);
+  border-radius:999px;padding:5px 10px;color:#D6DFEC;
+}
+.c-eng svg{width:12px;height:12px}
+.c-eng.on{border-color:rgba(127,162,255,.55);background:rgba(37,99,235,.20);color:#fff}
+.c-eng .tick{color:#7FE3EC;font-family:var(--mono);font-size:9.5px}
+.c-teach{
+  margin-top:auto;background:var(--p-navy-2);border:1px solid rgba(255,255,255,.09);
+  border-radius:14px;padding:14px;
+}
+.c-teach-k{font-size:9.5px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:#7C8DA8}
+.c-teach-t{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.02em;margin-top:6px;line-height:1.25}
+.c-teach-b{font-size:11.5px;line-height:1.55;color:#A9B7C9;margin-top:6px}
+.c-teach-nav{display:flex;gap:5px;margin-top:11px}
+.c-teach-nav i{height:3px;flex:1;border-radius:99px;background:rgba(255,255,255,.14)}
+.c-teach-nav i.on{background:#7FA2FF}
+.c-done{background:var(--p-canvas);color:var(--p-ink)}
+.c-flash{
+  background:linear-gradient(180deg,rgba(37,99,235,.10),rgba(37,99,235,.02));
+  border:1px solid var(--p-blue-soft-2);border-radius:14px;padding:15px;
+}
+
+/* gauge compartido para los estados "listo" */
+.g-wrap{display:flex;align-items:center;gap:14px}
+.g-ring{position:relative;width:78px;height:78px;flex:0 0 auto}
+.g-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.g-num{
+  position:absolute;inset:0;display:grid;place-items:center;
+  font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-.04em;
+}
+.g-copy{font-size:12.5px;line-height:1.5;color:var(--p-ink-3)}
+.g-copy b{display:block;font-family:var(--display);font-size:15px;letter-spacing:-.02em;color:var(--p-ink);margin-bottom:3px}
+
+/* ---------- tabla comparativa ---------- */
+.table-wrap{overflow-x:auto;margin-top:26px;border:1px solid var(--d-line);border-radius:14px;background:var(--d-surface);box-shadow:var(--d-shadow)}
+table{border-collapse:collapse;width:100%;min-width:660px;font-size:13.5px}
+th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--d-line-soft);vertical-align:top}
+thead th{
+  font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--d-ink-4);
+  background:var(--d-surface-2);border-bottom:1px solid var(--d-line);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
+.dots{display:inline-flex;gap:3px;align-items:center}
+.dots i{width:7px;height:7px;border-radius:99px;background:var(--d-line);display:block}
+.dots i.on{background:var(--d-accent)}
+
+/* ---------- recomendación ---------- */
+.rec{
+  margin-top:30px;background:var(--d-surface);border:1px solid var(--d-line);
+  border-top:3px solid var(--d-accent);border-radius:14px;padding:24px;box-shadow:var(--d-shadow);
+}
+.rec h3{font-size:20px}
+.rec ol{margin:14px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:9px;font-size:14.5px;color:var(--d-ink-2)}
+.rec .ask{
+  margin-top:20px;padding-top:16px;border-top:1px solid var(--d-line-soft);
+  font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-.02em;color:var(--d-ink);
+}
+.foot{margin-top:44px;padding-top:20px;border-top:1px solid var(--d-line);font-size:12.5px;color:var(--d-ink-4);line-height:1.6}
+</style>
+
+<div class="wrap">
+
+<header class="doc-head">
+  <div class="eyebrow">SCAN-STATES-1<span class="sep"></span>Propuesta de diseño<span class="sep"></span>7 ago 2026</div>
+  <h1>Los tres minutos en los que no tenemos nada que enseñar</h1>
+  <p class="lede">
+    El primer escaneo es el primer aterrizaje de un cliente: paga con su atención antes de
+    recibir un solo dato. Hoy esa pantalla es un cuadrado violeta con un spinner dentro,
+    heredado del prototipo y sin repintar a la identidad v3. Aquí van tres direcciones para
+    convertir la espera en la primera demostración de qué hace el producto — y, aplicadas
+    después, al resto de estados que hacen esperar.
+  </p>
+  <div class="doc-meta">
+    <span class="tag">Marca v3 · azul/navy</span>
+    <span class="tag mono">--brand-blue #2563EB</span>
+    <span class="tag">Móvil primero · 296 px</span>
+    <span class="tag">Continuidad con onboarding y Dominios</span>
+  </div>
+</header>
+
+<section id="reglas">
+  <div class="sec-head"><h2>Lo que ninguna de las tres puede saltarse</h2></div>
+  <p class="sec-note">
+    No son preferencias: son invariantes ya escritos en el repo. Cualquier opción que los
+    rompa está descartada antes de gustar o no gustar.
+  </p>
+  <div class="rules">
+    <div class="rule">
+      <span class="rule-k">Regla 1</span>
+      <span class="rule-t">Ningún número inventado</span>
+      <span class="rule-b">
+        El prototipo simulaba seis pasos con <code>setTimeout</code>. Cada cifra que se pinte
+        aquí sale de filas reales, y la barra no llega al 100&nbsp;% mientras quede trabajo.
+      </span>
+      <span class="rule-src">CLAUDE.md · scan-in-progress.tsx</span>
+    </div>
+    <div class="rule">
+      <span class="rule-k">Regla 2</span>
+      <span class="rule-t">El ámbar no es color de interfaz</span>
+      <span class="rule-b">
+        <code>#FFB020</code> es el punto del logo y nada más. Ninguna de las tres lo usa para
+        avisar, cargar ni destacar — ya se corrigió una vez y no se reintroduce.
+      </span>
+      <span class="rule-src">brand-guidelines §1 · auditoría BRAND-4 #2</span>
+    </div>
+    <div class="rule">
+      <span class="rule-k">Regla 3</span>
+      <span class="rule-t">El estado se ve en móvil</span>
+      <span class="rule-b">
+        La pastilla del sticky-header lleva el estado (<em>Escaneando…</em> /
+        <em>Analizando…</em>) y sale del mismo cálculo que la pantalla completa, para que las
+        dos superficies no puedan discrepar.
+      </span>
+      <span class="rule-src">log §26 · ScanStatePill</span>
+    </div>
+    <div class="rule">
+      <span class="rule-k">Regla 4</span>
+      <span class="rule-t">Ningún control nuevo</span>
+      <span class="rule-b">
+        La pantalla de espera informa, no ofrece botones de escanear ni de auditar. Mismo
+        criterio que Dominios y que la retirada de «Auditar ahora».
+      </span>
+      <span class="rule-src">log §25 · §32 punto 2</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ OPCIÓN A ══════════════════════════════ -->
+<section id="opcion-a">
+  <div class="opt-head">
+    <div>
+      <div class="sec-head">
+        <span class="opt-letter">A</span>
+        <h2>Sala de motores</h2>
+      </div>
+      <p class="opt-thesis">
+        La espera deja de ser una barra y pasa a ser <em>una retransmisión</em>. Se ve a qué
+        motores estamos preguntando, cuántas respuestas lleva cada uno y —lo que produce el
+        efecto— <em>las preguntas reales</em> apareciendo una a una según se contestan, con su
+        veredicto: te mencionó, no te mencionó. A los quince segundos el cliente ya ha
+        entendido qué compró.
+      </p>
+    </div>
+    <div class="opt-cols">
+      <div class="note win">
+        <b>Por qué funciona</b>
+        Es la única de las tres en la que el contenido de la espera <em>es</em> el producto.
+        Nadie mira un spinner dos minutos; una lista que crece con las preguntas de tu
+        sector sí se mira. Y explica sola por qué tarda: son 31 conversaciones, no una carga.
+      </div>
+      <div class="note cost">
+        <b>Lo que cuesta</b>
+        Es la más cara. <code>/scan-status</code> hoy devuelve sólo los contadores agregados
+        del <code>scan_run</code>; el desglose por motor y las últimas respuestas contestadas
+        son dos lecturas más, en un endpoint que se sondea cada 4&nbsp;s. Hay que acotarlas
+        (últimas 5, por índice) o se paga en cada poll de cada cliente.
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+
+    <!-- A1 · aterrizaje -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Preparando</span>
+        </div>
+        <div class="dev-body">
+          <div class="banner">
+            <svg aria-hidden="true"><use href="#ic-check"/></svg>
+            <span>Dominio creado. Tu primera medición está arrancando.</span>
+          </div>
+          <div class="a-hero">
+            <span class="a-lab">Preparando el escaneo</span>
+            <div class="a-num">31<small> lanzamientos</small></div>
+            <div class="a-num-cap">10 prompts · 3 motores de IA</div>
+            <div class="bar"><i style="width:3%"></i></div>
+            <div class="meta">colocando la cola de trabajo…</div>
+          </div>
+          <div class="a-eng">
+            <span class="a-eng-h">Motores</span>
+            <div class="a-eng-row idle">
+              <span class="a-eng-ic"><svg><use href="#eg-gemini"/></svg></span>
+              <span class="a-eng-n">Gemini</span>
+              <span class="a-eng-bar"><i style="width:0"></i></span>
+              <span class="a-eng-c">0/11</span>
+            </div>
+            <div class="a-eng-row idle">
+              <span class="a-eng-ic"><svg><use href="#eg-openai"/></svg></span>
+              <span class="a-eng-n">ChatGPT</span>
+              <span class="a-eng-bar"><i style="width:0"></i></span>
+              <span class="a-eng-c">0/10</span>
+            </div>
+            <div class="a-eng-row idle">
+              <span class="a-eng-ic"><svg><use href="#eg-claude"/></svg></span>
+              <span class="a-eng-n">Claude</span>
+              <span class="a-eng-bar"><i style="width:0"></i></span>
+              <span class="a-eng-c">0/10</span>
+            </div>
+          </div>
+          <div class="a-feed">
+            <div class="a-feed-h"><span>Respuestas</span></div>
+            <div class="a-item pend"><span class="a-item-ic"></span><span style="flex:1"><span class="a-skel" style="display:block;width:88%"></span><span class="a-skel" style="display:block;width:52%;margin-top:6px;height:7px"></span></span></div>
+            <div class="a-item pend"><span class="a-item-ic"></span><span style="flex:1"><span class="a-skel" style="display:block;width:74%"></span><span class="a-skel" style="display:block;width:44%;margin-top:6px;height:7px"></span></span></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>1 · Aterrizaje</b>
+        Sustituye al mensaje verde suelto de hoy: la confirmación entra en la pantalla, no
+        encima. El «31» aparece ya, porque se conoce antes de empezar.
+        <span class="real">real: total_prompts · nº de prompts · motores activos</span>
+      </figcaption>
+    </figure>
+
+    <!-- A2 · generando -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Escaneando…</span>
+        </div>
+        <div class="dev-body">
+          <div class="a-hero">
+            <span class="a-lab">Consultando motores</span>
+            <div class="a-num">14<small>/31</small></div>
+            <div class="a-num-cap">respuestas recibidas</div>
+            <div class="bar"><i style="width:45%"></i></div>
+            <div class="meta">45 % · quedan ~1 min</div>
+          </div>
+          <div class="a-eng">
+            <span class="a-eng-h">Motores</span>
+            <div class="a-eng-row">
+              <span class="a-eng-ic"><svg><use href="#eg-gemini"/></svg></span>
+              <span class="a-eng-n">Gemini</span>
+              <span class="a-eng-bar"><i style="width:73%"></i></span>
+              <span class="a-eng-c">8/11</span>
+            </div>
+            <div class="a-eng-row">
+              <span class="a-eng-ic"><svg><use href="#eg-openai"/></svg></span>
+              <span class="a-eng-n">ChatGPT</span>
+              <span class="a-eng-bar"><i style="width:40%"></i></span>
+              <span class="a-eng-c">4/10</span>
+            </div>
+            <div class="a-eng-row">
+              <span class="a-eng-ic"><svg><use href="#eg-claude"/></svg></span>
+              <span class="a-eng-n">Claude</span>
+              <span class="a-eng-bar"><i style="width:20%"></i></span>
+              <span class="a-eng-c">2/10</span>
+            </div>
+          </div>
+          <div class="a-feed">
+            <div class="a-feed-h"><span>Últimas respuestas</span><span class="meta">14</span></div>
+            <div class="a-item new">
+              <span class="a-item-ic"><svg><use href="#eg-gemini"/></svg></span>
+              <span>
+                <span class="a-item-q">«mejores herramientas para medir visibilidad en IA»</span>
+                <span class="a-item-m"><span class="hit">Te menciona</span> · posición 3 · 2 citas</span>
+              </span>
+            </div>
+            <div class="a-item new">
+              <span class="a-item-ic"><svg><use href="#eg-openai"/></svg></span>
+              <span>
+                <span class="a-item-q">«qué es GEO y en qué se diferencia del SEO»</span>
+                <span class="a-item-m"><span class="miss">Sin mención</span> · 4 marcas citadas</span>
+              </span>
+            </div>
+            <div class="a-item new">
+              <span class="a-item-ic"><svg><use href="#eg-claude"/></svg></span>
+              <span>
+                <span class="a-item-q">«software para monitorizar marca en ChatGPT»</span>
+                <span class="a-item-m"><span class="hit">Te menciona</span> · posición 1 · 1 cita</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>2 · Consultando motores</b>
+        El feed es el efecto wow y a la vez la prueba de que no hay progreso falso: cada
+        línea existe porque una fila se ha escrito.
+        <span class="real">real: successful+failed / total · prompt · engine · menciones</span>
+      </figcaption>
+    </figure>
+
+    <!-- A3 · analizando -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Analizando…</span>
+        </div>
+        <div class="dev-body">
+          <div class="a-hero">
+            <span class="a-lab" style="color:var(--p-cyan)">Analizando respuestas</span>
+            <div class="a-num">24<small>/31</small></div>
+            <div class="a-num-cap">respuestas leídas</div>
+            <div class="bar warm"><i style="width:88%"></i></div>
+            <div class="meta">extrayendo menciones, posiciones y citas</div>
+          </div>
+          <div class="a-eng">
+            <span class="a-eng-h">Motores</span>
+            <div class="a-eng-row done">
+              <span class="a-eng-ic"><svg><use href="#eg-gemini"/></svg></span>
+              <span class="a-eng-n">Gemini</span>
+              <span class="a-eng-bar"><i style="width:100%;background:var(--p-pos)"></i></span>
+              <span class="a-eng-c">11/11</span>
+            </div>
+            <div class="a-eng-row done">
+              <span class="a-eng-ic"><svg><use href="#eg-openai"/></svg></span>
+              <span class="a-eng-n">ChatGPT</span>
+              <span class="a-eng-bar"><i style="width:100%;background:var(--p-pos)"></i></span>
+              <span class="a-eng-c">10/10</span>
+            </div>
+            <div class="a-eng-row done">
+              <span class="a-eng-ic"><svg><use href="#eg-claude"/></svg></span>
+              <span class="a-eng-n">Claude</span>
+              <span class="a-eng-bar"><i style="width:100%;background:var(--p-pos)"></i></span>
+              <span class="a-eng-c">10/10</span>
+            </div>
+          </div>
+          <div class="card" style="padding:13px">
+            <div class="a-feed-h" style="padding-bottom:9px"><span>Lo que llevamos</span></div>
+            <div style="display:flex;gap:14px">
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">17</span><span style="font-size:11px;color:var(--p-ink-3);display:block">menciones tuyas</span></span>
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">9</span><span style="font-size:11px;color:var(--p-ink-3);display:block">competidores</span></span>
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">28</span><span style="font-size:11px;color:var(--p-ink-3);display:block">citas</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>3 · Analizando respuestas</b>
+        Segunda etapa con su propio contador, no un 100&nbsp;% clavado. El feed se
+        transforma en el primer recuento: la espera empieza a devolver resultado.
+        <span class="real">real: responses_processed / responses_total · recuentos extraídos</span>
+      </figcaption>
+    </figure>
+
+    <!-- A4 · listo -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-ok">Escaneado hoy</span>
+        </div>
+        <div class="dev-body">
+          <div class="card" style="border-color:var(--p-blue-soft-2);background:linear-gradient(180deg,rgba(37,99,235,.06),rgba(37,99,235,.015))">
+            <span class="a-lab">Tu primera medición</span>
+            <div class="g-wrap" style="margin-top:12px">
+              <span class="g-ring">
+                <svg viewBox="0 0 78 78" aria-hidden="true">
+                  <circle cx="39" cy="39" r="33" fill="none" stroke="#E7EAF0" stroke-width="8"/>
+                  <circle cx="39" cy="39" r="33" fill="none" stroke="#2563EB" stroke-width="8"
+                          stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="118.2"/>
+                </svg>
+                <span class="g-num">43</span>
+              </span>
+              <span class="g-copy">
+                <b>Puntuación GEO</b>
+                Sales en 17 de 31 respuestas. Tienes 6 acciones priorizadas esperando.
+              </span>
+            </div>
+          </div>
+          <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          <div class="a-feed">
+            <div class="a-feed-h"><span>Escaneo completado</span><span class="meta">2 min 14 s</span></div>
+            <div class="a-item">
+              <span class="a-item-ic" style="color:var(--p-pos)"><svg><use href="#ic-check"/></svg></span>
+              <span><span class="a-item-q">31 respuestas recibidas y analizadas</span>
+              <span class="a-item-m">3 motores · 10 prompts</span></span>
+            </div>
+            <div class="a-item">
+              <span class="a-item-ic" style="color:var(--p-pos)"><svg><use href="#ic-check"/></svg></span>
+              <span><span class="a-item-q">Auditoría técnica de genscore.es en cola</span>
+              <span class="a-item-m">arranca sola al terminar el escaneo</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>4 · Listo</b>
+        El remate: la espera no desaparece de golpe, entrega. El gauge es el mismo componente
+        de Visión general, así que la transición es continua.
+        <span class="real">real: puntuación GEO · duración del run · recomendaciones activas</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════ OPCIÓN B ══════════════════════════════ -->
+<section id="opcion-b">
+  <div class="opt-head">
+    <div>
+      <div class="sec-head">
+        <span class="opt-letter">B</span>
+        <h2>El anillo de evidencia</h2>
+      </div>
+      <p class="opt-thesis">
+        El símbolo de la marca <em>es</em> el instrumento. El anillo segmentado del logo —cada
+        segmento, una señal— se convierte en el medidor: <em>31 segmentos para 31
+        lanzamientos</em>, y cada uno se enciende cuando llega su respuesta. Al acabar la
+        generación, un segundo anillo interior mide el análisis. Cuando ambos cierran, el
+        centro deja de ser la G y pasa a ser tu puntuación.
+      </p>
+    </div>
+    <div class="opt-cols">
+      <div class="note win">
+        <b>Por qué funciona</b>
+        Dos anillos, dos etapas, cada una midiendo lo suyo: <em>elimina el reparto 50/50</em>,
+        que hoy es una convención de presentación reconocida como deuda en el log §26. El
+        wow es de marca, no de espectáculo: quien espera reconoce el logo animándose y el
+        número final nace justo donde estaba la G.
+      </div>
+      <div class="note cost">
+        <b>Lo que cuesta</b>
+        Es la más silenciosa: quien no mire de cerca sigue viendo «un círculo girando». Y
+        necesita <code>total_prompts</code> desde el primer frame para dibujar los segmentos
+        —si llegara a cero, el anillo tendría que degradar a indeterminado en vez de mentir
+        con un número de segmentos inventado.
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+
+    <!-- B1 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Preparando</span>
+        </div>
+        <div class="dev-body">
+          <div class="banner">
+            <svg aria-hidden="true"><use href="#ic-check"/></svg>
+            <span>Dominio creado. Tu primera medición está arrancando.</span>
+          </div>
+          <div class="b-stage">
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="0" data-inner="0" data-inner-total="0" aria-hidden="true"></svg>
+            <span class="b-center"><span class="b-center-in">
+              <span class="b-glyph">G</span>
+              <span class="b-cap">31 señales</span>
+            </span></span>
+          </div>
+          <div>
+            <div class="b-title">Preparando tu medición</div>
+            <div class="b-body">Un segmento por cada pregunta que vamos a hacer. Se encienden según llegan las respuestas.</div>
+          </div>
+          <div class="b-legend">
+            <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Preguntas a los motores</span><span class="b-leg-c">0 / 31</span></span>
+            <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">—</span></span>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>1 · Aterrizaje</b>
+        El anillo se dibuja completo pero apagado: la magnitud del trabajo se ve antes de
+        empezar, que es lo que hace tolerable la espera.
+        <span class="real">real: total_prompts → nº de segmentos</span>
+      </figcaption>
+    </figure>
+
+    <!-- B2 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Escaneando…</span>
+        </div>
+        <div class="dev-body">
+          <div class="b-stage">
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="14" data-inner="0" data-inner-total="0" data-sweep="1" aria-hidden="true"></svg>
+            <span class="b-center"><span class="b-center-in">
+              <span class="b-pct">14<small>/31</small></span>
+              <span class="b-cap">respuestas</span>
+            </span></span>
+          </div>
+          <div>
+            <div class="b-title">Preguntando a las IA por ti</div>
+            <div class="b-body">Puedes salir de esta página — seguimos trabajando y te avisamos al terminar.</div>
+          </div>
+          <div class="b-legend">
+            <span class="b-leg"><i class="b-leg-k out"></i><span class="b-leg-t">Preguntas a los motores</span><span class="b-leg-c">14 / 31</span></span>
+            <span class="b-leg"><i class="b-leg-k off"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">en espera</span></span>
+          </div>
+          <div class="c-engs" style="margin-top:2px">
+            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick" style="color:var(--p-blue)">8</span></span>
+            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick" style="color:var(--p-blue)">4</span></span>
+            <span class="c-eng on" style="background:var(--p-blue-soft);border-color:var(--p-blue-soft-2);color:var(--p-blue)"><svg><use href="#eg-claude"/></svg>Claude<span class="tick" style="color:var(--p-blue)">2</span></span>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>2 · Consultando motores</b>
+        La aguja que barre es decorativa y no dice nada; los segmentos encendidos sí.
+        Distinguirlo es la diferencia entre ambiente y progreso falso.
+        <span class="real">real: segmentos encendidos = respuestas escritas</span>
+      </figcaption>
+    </figure>
+
+    <!-- B3 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Analizando…</span>
+        </div>
+        <div class="dev-body">
+          <div class="b-stage">
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="31" data-inner="24" data-inner-total="31" aria-hidden="true"></svg>
+            <span class="b-center"><span class="b-center-in">
+              <span class="b-pct">24<small>/31</small></span>
+              <span class="b-cap">analizadas</span>
+            </span></span>
+          </div>
+          <div>
+            <div class="b-title">Leyendo lo que han contestado</div>
+            <div class="b-body">Extraemos de cada respuesta las menciones, las posiciones y las citas.</div>
+          </div>
+          <div class="b-legend">
+            <span class="b-leg"><i class="b-leg-k out"></i><span class="b-leg-t">Preguntas a los motores</span><span class="b-leg-c" style="color:var(--p-pos)">31 / 31</span></span>
+            <span class="b-leg"><i class="b-leg-k in"></i><span class="b-leg-t">Análisis de respuestas</span><span class="b-leg-c">24 / 31</span></span>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>3 · Analizando respuestas</b>
+        El anillo exterior queda lleno y aparece el interior. Cada etapa mide lo suyo:
+        aquí muere el reparto 50/50.
+        <span class="real">real: dos pares de contadores independientes</span>
+      </figcaption>
+    </figure>
+
+    <!-- B4 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-ok">Escaneado hoy</span>
+        </div>
+        <div class="dev-body">
+          <div class="b-stage">
+            <svg class="b-ring" viewBox="0 0 186 186" data-ring data-total="31" data-done="31" data-inner="31" data-inner-total="31" aria-hidden="true"></svg>
+            <span class="b-center"><span class="b-center-in">
+              <span class="b-pct" style="font-size:46px">43</span>
+              <span class="b-cap">Puntuación GEO</span>
+            </span></span>
+          </div>
+          <div>
+            <div class="b-title">Tu primera medición está lista</div>
+            <div class="b-body">Sales en 17 de 31 respuestas. Hay 6 acciones priorizadas esperándote.</div>
+          </div>
+          <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          <div class="meta" style="text-align:center">31 respuestas · 3 motores · 2 min 14 s</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>4 · Listo</b>
+        El instrumento se convierte en el gauge de Visión general sin cortar: mismo anillo,
+        mismo centro, número en vez de G.
+        <span class="real">real: puntuación GEO · menciones · duración</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ══════════════════════════════ OPCIÓN C ══════════════════════════════ -->
+<section id="opcion-c">
+  <div class="opt-head">
+    <div>
+      <div class="sec-head">
+        <span class="opt-letter">C</span>
+        <h2>Puesta en marcha</h2>
+      </div>
+      <p class="opt-thesis">
+        La única pantalla oscura del producto, <em>y precisamente por eso</em>: no es un sitio
+        al que se vuelve, es un momento que se atraviesa. Navy a sangre, un titular grande en
+        Bricolage, una línea de telemetría en monoespaciada y, abajo, una tarjeta que
+        aprovecha los dos minutos para explicar qué va a contener tu puntuación. Al terminar,
+        la pantalla se aclara: la vuelta a la luz <em>es</em> la recompensa.
+      </p>
+    </div>
+    <div class="opt-cols">
+      <div class="note win">
+        <b>Por qué funciona</b>
+        Es la que más «producto con criterio» transmite y la única que convierte la espera en
+        <em>onboarding real</em>: el cliente sale sabiendo qué mide el número que va a ver.
+        Corta también con la sensación de «app cargando», porque no se parece a una carga.
+      </div>
+      <div class="note cost">
+        <b>Lo que cuesta</b>
+        Mete una superficie oscura en un producto que hoy es <code>color-scheme: light</code>
+        y cuyo modo oscuro (BRAND-5d) está sin abordar: hay que fijar tokens de texto sobre
+        navy que hoy no existen. Y las tarjetas didácticas son contenido: si no salen de la
+        metodología real, se convierten en relleno.
+      </div>
+    </div>
+  </div>
+
+  <div class="strip">
+
+    <!-- C1 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-body c-body">
+          <div class="c-rail"><i style="width:4%"></i></div>
+          <div class="c-pad">
+            <span class="c-eyebrow"><span class="dot"></span>genscore.es · ES/es</span>
+            <div class="c-h">Dominio creado.<br><span class="fade">Empezamos a preguntar por ti.</span></div>
+            <div class="c-tel">
+              <span class="c-tel-row"><span>prompts</span><b>10</b></span>
+              <span class="c-tel-row"><span>lanzamientos</span><b>31</b></span>
+              <span class="c-tel-row"><span>estado</span><b class="on">preparando cola</b></span>
+            </div>
+            <div class="c-engs">
+              <span class="c-eng"><svg><use href="#eg-gemini"/></svg>Gemini</span>
+              <span class="c-eng"><svg><use href="#eg-openai"/></svg>ChatGPT</span>
+              <span class="c-eng"><svg><use href="#eg-claude"/></svg>Claude</span>
+            </div>
+            <div class="c-teach">
+              <span class="c-teach-k">Mientras esperamos · 1 de 3</span>
+              <div class="c-teach-t">Qué es una mención</div>
+              <div class="c-teach-b">
+                Cada vez que una IA responde a una de tus preguntas, miramos si te nombra, en
+                qué posición y a qué páginas enlaza. De ahí sale todo lo demás.
+              </div>
+              <div class="c-teach-nav"><i class="on"></i><i></i><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>1 · Aterrizaje</b>
+        Sin sticky-header: la pantalla es a sangre para que se lea como un momento. El
+        contexto del dominio va en la línea superior.
+        <span class="real">real: dominio · prompts · lanzamientos · estado del run</span>
+      </figcaption>
+    </figure>
+
+    <!-- C2 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-body c-body">
+          <div class="c-rail"><i style="width:45%"></i></div>
+          <div class="c-pad">
+            <span class="c-eyebrow"><span class="dot"></span>consultando motores</span>
+            <div class="c-h">14 de 31<br><span class="fade">respuestas recibidas.</span></div>
+            <div class="c-tel">
+              <span class="c-tel-row"><span>última</span><b>«software para medir marca en IA»</b></span>
+              <span class="c-tel-row"><span>motor</span><b class="on">Claude</b></span>
+              <span class="c-tel-row"><span>menciones hasta ahora</span><b>8</b></span>
+            </div>
+            <div class="c-engs">
+              <span class="c-eng on"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick">8/11</span></span>
+              <span class="c-eng on"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick">4/10</span></span>
+              <span class="c-eng on"><svg><use href="#eg-claude"/></svg>Claude<span class="tick">2/10</span></span>
+            </div>
+            <div class="c-teach">
+              <span class="c-teach-k">Mientras esperamos · 2 de 3</span>
+              <div class="c-teach-t">Por qué preguntamos tres veces</div>
+              <div class="c-teach-b">
+                Las IA no contestan igual dos veces. Repetimos cada pregunta en varios motores
+                para que tu puntuación mida una tendencia y no una casualidad.
+              </div>
+              <div class="c-teach-nav"><i></i><i class="on"></i><i></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>2 · Consultando motores</b>
+        La telemetría hace el trabajo del feed de la opción A, pero en una línea: menos
+        superficie que construir, menos espectáculo.
+        <span class="real">real: contadores por motor · última respuesta escrita</span>
+      </figcaption>
+    </figure>
+
+    <!-- C3 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-body c-body">
+          <div class="c-rail"><i style="width:88%;background:linear-gradient(90deg,var(--p-cyan),#7FE3EC)"></i></div>
+          <div class="c-pad">
+            <span class="c-eyebrow" style="color:#7FE3EC"><span class="dot" style="background:#7FE3EC"></span>analizando respuestas</span>
+            <div class="c-h">Ya las tenemos todas.<br><span class="fade">Ahora las leemos.</span></div>
+            <div class="c-tel">
+              <span class="c-tel-row"><span>analizadas</span><b>24 / 31</b></span>
+              <span class="c-tel-row"><span>menciones tuyas</span><b class="on">17</b></span>
+              <span class="c-tel-row"><span>competidores detectados</span><b>9</b></span>
+            </div>
+            <div class="c-engs">
+              <span class="c-eng on"><svg><use href="#eg-gemini"/></svg>Gemini<span class="tick">11/11</span></span>
+              <span class="c-eng on"><svg><use href="#eg-openai"/></svg>ChatGPT<span class="tick">10/10</span></span>
+              <span class="c-eng on"><svg><use href="#eg-claude"/></svg>Claude<span class="tick">10/10</span></span>
+            </div>
+            <div class="c-teach">
+              <span class="c-teach-k">Mientras esperamos · 3 de 3</span>
+              <div class="c-teach-t">Qué hay dentro de tu puntuación</div>
+              <div class="c-teach-b">
+                Cuánto te nombran, en qué puesto, a quién nombran en tu lugar, qué páginas
+                tuyas citan y si tu web se lo pone fácil a los rastreadores.
+              </div>
+              <div class="c-teach-nav"><i></i><i></i><i class="on"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>3 · Analizando respuestas</b>
+        El acento pasa de azul a cian: mismo lenguaje que la etapa 2 de la opción B, sin
+        tocar el ámbar reservado.
+        <span class="real">real: responses_processed · menciones · competidores</span>
+      </figcaption>
+    </figure>
+
+    <!-- C4 -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-ok">Escaneado hoy</span>
+        </div>
+        <div class="dev-body c-done">
+          <div class="c-flash">
+            <span class="a-lab">Listo en 2 min 14 s</span>
+            <div style="font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.035em;line-height:1.15;margin-top:8px">
+              Ya sabemos cómo te ven las IA
+            </div>
+            <div class="g-wrap" style="margin-top:14px">
+              <span class="g-ring">
+                <svg viewBox="0 0 78 78" aria-hidden="true">
+                  <circle cx="39" cy="39" r="33" fill="none" stroke="#E7EAF0" stroke-width="8"/>
+                  <circle cx="39" cy="39" r="33" fill="none" stroke="#2563EB" stroke-width="8"
+                          stroke-linecap="round" stroke-dasharray="207.3" stroke-dashoffset="118.2"/>
+                </svg>
+                <span class="g-num">43</span>
+              </span>
+              <span class="g-copy">
+                <b>Puntuación GEO</b>
+                Sales en 17 de 31 respuestas, casi siempre por detrás de dos competidores.
+              </span>
+            </div>
+          </div>
+          <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          <div class="meta" style="text-align:center">La auditoría técnica de tu web arranca sola a continuación.</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>4 · Listo</b>
+        La vuelta al lienzo claro es el premio, y devuelve al cliente al shell normal del
+        producto: la pantalla oscura no deja rastro.
+        <span class="real">real: duración · puntuación · menciones · auditoría encolada</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ═════════════════════════ ESTADOS HERMANOS ═════════════════════════ -->
+<section id="hermanos">
+  <div class="sec-head"><h2>Los otros estados que hacen esperar</h2></div>
+  <p class="sec-note">
+    La pantalla de escaneo no está sola: el producto tiene hoy cinco momentos de espera y dos
+    de ellos ya se ven <em>antes</em> del escaneo, dentro del onboarding. Van dibujados en la
+    opción A porque es la que recomiendo, pero la estructura —cabecera, cifra real,
+    contexto, sin controles— es idéntica en las tres. Sólo cambia el instrumento.
+  </p>
+
+  <div class="strip">
+
+    <!-- H1 · onboarding: sugerencias -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-body" style="justify-content:center">
+          <div class="a-hero">
+            <span class="a-lab">Paso 1 de 3</span>
+            <div style="font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.035em;line-height:1.15;margin-top:8px">Analizando tu dominio</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-3);margin-top:7px">
+              Leemos genscore.es y proponemos competidores y preguntas. Hasta 15 segundos —
+              no cierres esta pestaña.
+            </div>
+            <div class="bar indeterminate" style="margin-top:14px"><i style="width:38%;animation:indet 1.5s ease-in-out infinite"></i></div>
+          </div>
+          <div class="a-feed">
+            <div class="a-item">
+              <span class="a-item-ic" style="color:var(--p-pos)"><svg><use href="#ic-check"/></svg></span>
+              <span><span class="a-item-q">Hemos leído tu página de inicio</span></span>
+            </div>
+            <div class="a-item">
+              <span class="a-item-ic"><span class="a-skel" style="display:block;width:14px;height:14px;border-radius:99px"></span></span>
+              <span><span class="a-item-q">Buscando marcas que compiten contigo</span></span>
+            </div>
+            <div class="a-item pend">
+              <span class="a-item-ic"></span>
+              <span><span class="a-item-q">Escribiendo las preguntas de tu sector</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>Onboarding · sugerencias</b>
+        <code>suggestAction</code> es una llamada opaca a Gemini: no hay progreso que medir,
+        así que barra indeterminada y checklist declarado como orientativo. Honesto por
+        omisión de número, no por inventarlo.
+        <span class="real">real: nada numérico — y por eso no se pinta ninguna cifra</span>
+      </figcaption>
+    </figure>
+
+    <!-- H2 · onboarding: creando -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-body" style="justify-content:center">
+          <div class="a-hero">
+            <span class="a-lab">Paso 3 de 3</span>
+            <div style="font-family:var(--display);font-weight:800;font-size:21px;letter-spacing:-.035em;line-height:1.15;margin-top:8px">Creando tu dominio</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-3);margin-top:7px">
+              Guardamos tus 10 prompts y tus 6 competidores. En unos segundos verás el primer
+              escaneo en curso.
+            </div>
+            <div class="bar" style="margin-top:14px"><i style="width:38%;animation:indet 1.5s ease-in-out infinite"></i></div>
+          </div>
+          <div class="a-feed">
+            <div class="a-item">
+              <span class="a-item-ic" style="color:var(--p-pos)"><svg><use href="#ic-check"/></svg></span>
+              <span><span class="a-item-q">Dominio y configuración guardados</span></span>
+            </div>
+            <div class="a-item">
+              <span class="a-item-ic"><span class="a-skel" style="display:block;width:14px;height:14px;border-radius:99px"></span></span>
+              <span><span class="a-item-q">Creando prompts y competidores</span></span>
+            </div>
+            <div class="a-item pend">
+              <span class="a-item-ic"></span>
+              <span><span class="a-item-q">Lanzando el primer escaneo</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <b>Onboarding · creación</b>
+        Encadena directamente con el estado 1 del escaneo: mismo bloque, mismo tipo de
+        titular, misma tipografía. El cliente no percibe dos pantallas, percibe una cuenta
+        atrás continua.
+        <span class="real">real: recuentos de prompts y competidores elegidos</span>
+      </figcaption>
+    </figure>
+
+    <!-- H3 · auditoría -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Auditoría web</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span></div>
+          </div>
+          <span class="pill pill-run"><i class="dot"></i>Auditando…</span>
+        </div>
+        <div class="dev-body">
+          <div class="a-hero">
+            <span class="a-lab">Revisando tu web</span>
+            <div class="a-num">18<small>/40</small></div>
+            <div class="a-num-cap">páginas revisadas</div>
+            <div class="bar"><i style="width:45%"></i></div>
+            <div class="meta">arrancó sola al terminar el escaneo</div>
+          </div>
+          <div class="card" style="padding:13px">
+            <div class="a-feed-h" style="padding-bottom:9px"><span>Hallazgos hasta ahora</span></div>
+            <div style="display:flex;gap:14px">
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em;color:var(--p-neg)">3</span><span style="font-size:11px;color:var(--p-ink-3);display:block">críticos</span></span>
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em">7</span><span style="font-size:11px;color:var(--p-ink-3);display:block">avisos</span></span>
+              <span><span style="font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.04em;color:var(--p-pos)">12</span><span style="font-size:11px;color:var(--p-ink-3);display:block">correctos</span></span>
+            </div>
+          </div>
+          <div class="meta" style="text-align:center">Puedes salir — te avisamos si algo empeora.</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>Auditoría web en curso</b>
+        Misma familia, distinta unidad: páginas en vez de respuestas. Sin botón «Auditar
+        ahora» — se retiró a propósito y esta pantalla no lo reintroduce.
+        <span class="real">real: páginas rastreadas · hallazgos por severidad</span>
+      </figcaption>
+    </figure>
+
+    <!-- H4 · fallo -->
+    <figure>
+      <div class="dev">
+        <div class="dev-top">
+          <span class="dev-burger"><i></i><i></i><i></i></span>
+          <span class="dev-logo"><span class="dev-mark">G</span>en<span class="blue">score</span></span>
+          <span class="dev-bell"></span>
+        </div>
+        <div class="dev-sub">
+          <div>
+            <div class="dev-kicker">Visión general</div>
+            <div class="dev-titlerow"><span class="dev-title">Genscore</span><span class="dev-dom">genscore.es</span><span class="dev-loc">ES/es</span></div>
+          </div>
+          <span class="pill pill-neg">Incompleto</span>
+        </div>
+        <div class="dev-body">
+          <div class="a-hero" style="border-color:rgba(210,59,72,.22)">
+            <span class="a-lab" style="color:var(--p-neg)">Escaneo incompleto</span>
+            <div class="a-num">27<small>/31</small></div>
+            <div class="a-num-cap">respuestas recibidas</div>
+            <div class="bar"><i style="width:87%;background:var(--p-neg)"></i></div>
+            <div class="meta">4 lanzamientos sin respuesta · ChatGPT no contestó</div>
+          </div>
+          <div class="card" style="padding:13px">
+            <div style="font-size:12.5px;line-height:1.55;color:var(--p-ink-2)">
+              Tu puntuación está calculada con lo que sí llegó. Volveremos a intentar los
+              cuatro que faltan en el próximo escaneo diario.
+            </div>
+          </div>
+          <div class="cta">Ver la visión general <svg aria-hidden="true"><use href="#ic-arrow"/></svg></div>
+          <div class="meta" style="text-align:center">No hace falta que hagas nada.</div>
+        </div>
+      </div>
+      <figcaption>
+        <b>Escaneo incompleto</b>
+        El estado que hoy no existe como diseño. La regla: decir qué falta, qué se hizo con
+        lo que hay y quién lo arregla — nunca un mensaje de proveedor en crudo.
+        <span class="real">real: failed_prompts · motor afectado · categoría del error</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ═════════════════════════ COMPARATIVA ═════════════════════════ -->
+<section id="comparativa">
+  <div class="sec-head"><h2>Cómo se comparan</h2></div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Criterio</th>
+          <th>A · Sala de motores</th>
+          <th>B · Anillo de evidencia</th>
+          <th>C · Puesta en marcha</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Efecto wow</td>
+          <td><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><br>Ves el producto trabajando</td>
+          <td><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span><br>Elegante, más silencioso</td>
+          <td><span class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></span><br>Cinematográfico</td>
+        </tr>
+        <tr>
+          <td>Enseña qué compró</td>
+          <td>Sí — las preguntas reales</td>
+          <td>Poco — magnitud, no contenido</td>
+          <td>Sí — pero explicado, no demostrado</td>
+        </tr>
+        <tr>
+          <td>Coste de backend</td>
+          <td>Alto: 2 lecturas nuevas en un endpoint que se sondea cada 4 s</td>
+          <td>Bajo: sólo los contadores que ya viajan</td>
+          <td>Medio: la última respuesta escrita</td>
+        </tr>
+        <tr>
+          <td>Deuda que paga</td>
+          <td>Repinta la pantalla a v3</td>
+          <td>Mata el reparto 50/50 (log §26)</td>
+          <td>Repinta a v3</td>
+        </tr>
+        <tr>
+          <td>Deuda que abre</td>
+          <td>Superficie de datos nueva que mantener</td>
+          <td>Ninguna</td>
+          <td>Tokens de texto sobre navy sin BRAND-5d</td>
+        </tr>
+        <tr>
+          <td>Reutilizable en los otros estados</td>
+          <td>Directa: cambia la unidad</td>
+          <td>Necesita un total conocido — la auditoría y el onboarding no lo tienen</td>
+          <td>Directa, pero cada estado necesita su tarjeta didáctica escrita</td>
+        </tr>
+        <tr>
+          <td>Riesgo</td>
+          <td>Feed vacío si un escaneo va lento al arrancar</td>
+          <td>Se lee como «otro spinner» en un vistazo rápido</td>
+          <td>Introduce oscuro en un producto sin modo oscuro</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rec">
+    <h3>Mi recomendación: A, con el anillo doble de B dentro</h3>
+    <p>
+      A es la única que aprovecha el momento más valioso del ciclo de vida —los dos minutos
+      en los que el cliente mira sin que le pidas nada— para <strong>demostrar</strong> el
+      producto en vez de describirlo. C consigue un efecto parecido contándolo, pero cuenta
+      lo que A enseña, y encima abre la puerta del modo oscuro.
+    </p>
+    <p>
+      De B me llevaría la idea que no es estética: <strong>dos etapas, dos medidores</strong>.
+      Cabe dentro de A sin rediseñar nada (el bloque héroe pasa de una barra a dos) y
+      cancela una deuda ya reconocida en el log. Es la mejora más barata de las tres.
+    </p>
+    <ol>
+      <li><strong>Fase 1 — repintado y honestidad.</strong> Estados 1–4 de A sin desglose por motor ni feed: héroe v3, dos medidores, copy nuevo, estado «incompleto». Cero backend nuevo.</li>
+      <li><strong>Fase 2 — la retransmisión.</strong> Desglose por motor y últimas respuestas, con el coste del <em>poll</em> acotado y medido antes de mergear.</li>
+      <li><strong>Fase 3 — los hermanos.</strong> Onboarding, auditoría y estados vacíos migrados a la misma familia.</li>
+    </ol>
+    <p class="ask">¿Cuál de las tres quieres que lleve a Task Intake? No implemento nada hasta que lo confirmes.</p>
+  </div>
+</section>
+
+<p class="foot">
+  <strong>Desviaciones declaradas de esta maqueta</strong>, en el mismo formato que
+  <code>docs/design-reference/domains-redesign-1/</code>: tipografía de sistema en vez de
+  Bricolage Grotesque + Figtree (esta página no puede cargar fuentes externas); glifos de
+  motor no literales, iguales que <code>EngineGlyph</code>; datos de ejemplo inventados
+  <em>en los valores</em> —cada cifra está anotada con la fila real de la que saldría—;
+  maquetas fijadas a 296 px y a la paleta clara porque el producto es
+  <code>color-scheme: light</code>, mientras que el documento sí sigue el tema del visor.
+  El ámbar <code>#FFB020</code> aparece una sola vez por maqueta: el punto del logo en la
+  barra superior.
+</p>
+
+</div>
+
+<script>
+/* Anillos de la opción B — se generan aquí en vez de escribir 62 segmentos a mano.
+   Cada tick es una unidad real de trabajo: exterior = un lanzamiento, interior = una
+   respuesta analizada. Sin `total`, no habría anillo que dibujar (degradaría a
+   indeterminado), que es justo la razón de generarlos desde datos y no de decorar. */
+(function () {
+  var NS = "http://www.w3.org/2000/svg";
+  var CX = 93, CY = 93;
+
+  function tick(angle, r1, r2, color, width, on, i) {
+    var a = (angle - 90) * Math.PI / 180;
+    var l = document.createElementNS(NS, "line");
+    l.setAttribute("x1", (CX + r1 * Math.cos(a)).toFixed(2));
+    l.setAttribute("y1", (CY + r1 * Math.sin(a)).toFixed(2));
+    l.setAttribute("x2", (CX + r2 * Math.cos(a)).toFixed(2));
+    l.setAttribute("y2", (CY + r2 * Math.sin(a)).toFixed(2));
+    l.setAttribute("stroke", color);
+    l.setAttribute("stroke-width", width);
+    l.setAttribute("stroke-linecap", "round");
+    if (on) {
+      l.setAttribute("class", "b-seg-on");
+      l.style.animationDelay = (i * 22) + "ms";
+    }
+    return l;
+  }
+
+  function ring(svg, total, done, r1, r2, colorOn, width) {
+    if (!total) return;
+    var gap = 26;                     /* apertura arriba: la misma del símbolo */
+    var span = 360 - gap;
+    for (var i = 0; i < total; i++) {
+      var angle = gap / 2 + (span / total) * i + (span / total) / 2;
+      svg.appendChild(tick(angle, r1, r2, i < done ? colorOn : "#E7EAF0", width, i < done, i));
+    }
+  }
+
+  document.querySelectorAll("[data-ring]").forEach(function (svg) {
+    ring(svg, +svg.dataset.total, +svg.dataset.done, 74, 88, "#2563EB", 5);
+    ring(svg, +svg.dataset.innerTotal, +svg.dataset.inner, 58, 68, "#09C5D6", 4);
+    if (svg.dataset.sweep) {
+      var s = document.createElementNS(NS, "path");
+      s.setAttribute("d", "M93 12 A81 81 0 0 1 158 45");
+      s.setAttribute("fill", "none");
+      s.setAttribute("stroke", "rgba(37,99,235,.22)");
+      s.setAttribute("stroke-width", "3");
+      s.setAttribute("stroke-linecap", "round");
+      s.setAttribute("class", "b-scan");
+      svg.appendChild(s);
+    }
+  });
+})();
+</script>
+
+<style>
+@keyframes indet{0%{transform:translateX(-40%)}50%{transform:translateX(120%)}100%{transform:translateX(-40%)}}
+.bar i[style*="indet"]{will-change:transform}
+</style>
