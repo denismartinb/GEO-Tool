@@ -11,7 +11,7 @@
  *
  * Only ever talks to the fixed host below. The user-supplied domain travels as
  * a query parameter and never determines where the request goes — see
- * `docs/brand/design-decisions-log.md` §36 for why fetching the site's own
+ * `docs/brand/design-decisions-log.md` §39 for why fetching the site's own
  * `apple-touch-icon` was built, measured and then reverted.
  */
 

@@ -389,11 +389,12 @@ fase" (ver "Cierre de fase" más abajo).
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
 | Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
 | Escaneo (pipeline) | `scan.md` | EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029 |
-| Dominios y depuración | — *(sin regla propia todavía)* | **FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06)** · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36 · `docs/design-reference/domains-redesign-1/` |
+| Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-ACTIVE-COOKIE-1 (2026-08-07)** · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39 · `docs/design-reference/domains-redesign-1/` |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
+| Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
 | Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PILOT-EVIDENCE-IGNORE-1 (2026-08-07)** · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37 · "Presupuesto de builds" arriba |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se

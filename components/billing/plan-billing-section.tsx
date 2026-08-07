@@ -131,12 +131,17 @@ export function PlanBillingSection({
 
   return (
     <>
+      {/* CONSOLE-REDESIGN-1: these two banners used four hand-written hexes
+          (#f0c36d, #fdf6e8, #92600a, #6b4b09) that bypassed the token system —
+          a regression of BRAND-4 finding 2 in the very file BRAND-4 fixed.
+          Now on --warn/--warn-soft/--warn-ink. The brand amber (--brand-warm,
+          #FFB020) stays banned from UI: it belongs to the logo dot only. */}
       {trialDaysLeft !== null && (
-        <div className="flex flex-col gap-3 rounded-[14px] border border-[#f0c36d] bg-[#fdf6e8] p-4 sm:flex-row sm:items-center sm:gap-4">
-          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[#92600a]">
+        <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--warn)] bg-[var(--warn-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
+          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--warn-ink)]">
             <Icon name="clock" size={18} />
           </div>
-          <p className="order-2 flex-1 text-sm font-medium text-[#6b4b09]">
+          <p className="order-2 flex-1 text-sm font-medium text-[var(--warn-ink)]">
             Estás probando <b>Pro</b> gratis — te quedan <b>{trialDaysLeft} día{trialDaysLeft === 1 ? "" : "s"}</b>.
             Cuando termine, bajarás a Free si no contratas antes.
           </p>
@@ -151,11 +156,11 @@ export function PlanBillingSection({
       )}
 
       {isOverCapacity && (
-        <div className="flex flex-col gap-3 rounded-[14px] border border-[#f0c36d] bg-[#fdf6e8] p-4 sm:flex-row sm:items-center sm:gap-4">
-          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[#92600a]">
+        <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--warn)] bg-[var(--warn-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
+          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--warn-ink)]">
             <Icon name="alertCircle" size={18} />
           </div>
-          <p className="order-2 flex-1 text-sm text-[#6b4b09]">
+          <p className="order-2 flex-1 text-sm text-[var(--warn-ink)]">
             Tienes <b>{projects.length}</b> dominios activos y tu plan {current.name} permite{" "}
             <b>{current.caps.projects}</b>. Elige cuáles mantener activos.
           </p>
@@ -225,11 +230,21 @@ export function PlanBillingSection({
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-2 border-t border-[var(--line-soft)] pt-4">
+              <div className="flex flex-wrap gap-2 border-t border-[var(--line-soft)] pt-4">
                 <Button type="button" onClick={() => setModal({})}>
                   <Icon name="arrUp" size={14} />
                   Cambiar de plan
                 </Button>
+                {/* Moved here from the block at the foot of the section, which
+                    became generic support (founder, 2026-08-06). Without this
+                    an account with a Stripe customer would have lost its only
+                    route to invoices and payment method. */}
+                {usage.hasStripeCustomer && (
+                  <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleManageBilling}>
+                    <Icon name="card" size={14} />
+                    {isPortalPending ? "Abriendo…" : "Facturas y pago"}
+                  </Button>
+                )}
                 {usage.hasStripeSubscription && (
                   <Button type="button" variant="outline" disabled={isPortalPending} onClick={handleCancelSubscription}>
                     {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
@@ -245,12 +260,21 @@ export function PlanBillingSection({
         <h2 className="text-lg font-semibold text-[var(--ink)]">Uso de este ciclo</h2>
         <Card>
           <CardContent className="space-y-4">
+            {/* "Motores de IA" removed (founder, 2026-08-06). Every plan above
+                Free carries all three engines that exist, so the row sat at
+                3/3 and raised "Cerca del límite del plan" for a limit with
+                nothing above it to move to. */}
             <UsageRow icon="prompts" label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
             <UsageRow icon="globe" label="Dominios" value={usage.projectCount} cap={usage.projectCap} />
-            <UsageRow icon="layers" label="Motores de IA" value={usage.engineCount} cap={usage.engineCap} />
           </CardContent>
         </Card>
 
+        {/* Not shown to an account already on Agencia — it was pitching the
+            plan they are already paying for ("El plan Agencia es para ti"),
+            the same defect the founder caught in the payment block below
+            (2026-08-06): a block that does not check the current plan before
+            telling the customer something about it. */}
+        {planId !== agencyPlanId && (
         <Card className="bg-[var(--surface-2)]">
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
@@ -263,16 +287,18 @@ export function PlanBillingSection({
               Dominios y prompts a medida (~300 de referencia), los mismos motores de IA que Pro, onboarding
               acompañado. Precio a medida — hablamos contigo y lo ajustamos a tu cartera.
             </p>
-            <Button
-              type="button"
-              className="w-full justify-center"
-              onClick={() => setModal({ initialTargetId: agencyPlan.id })}
-            >
+            {/* CONSOLE-REDESIGN-1: this used to preselect Agencia in the
+                modal, which opened it with "Continuar" already disabled —
+                the dead end reached from the default path. Agencia is no
+                longer a selectable radio there (it has its own sales cell),
+                so the button just opens the comparison it promises. */}
+            <Button type="button" className="w-full justify-center" onClick={() => setModal({})}>
               Comparar planes
               <Icon name="arrRight" size={14} />
             </Button>
           </CardContent>
         </Card>
+        )}
       </section>
 
       {modal && (

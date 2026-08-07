@@ -4,7 +4,7 @@
  * `./favicon-source`, behind `/api/favicon`.
  *
  * Two decisions are baked in here, both from FAVICON-QUALITY-1
- * (`docs/brand/design-decisions-log.md` §36):
+ * (`docs/brand/design-decisions-log.md` §39):
  *
  * 1. **The requested size is derived from the CSS size times the device pixel
  *    ratio, never fixed.** A hardcoded `sz=64` was being upscaled by the
