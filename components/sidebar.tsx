@@ -6,6 +6,7 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
+import { useTour } from "@/components/tour-provider";
 import { FaviconImg } from "@/components/ui/favicon-img";
 
 type WorkspaceProject = {
@@ -67,6 +68,7 @@ export function Sidebar({
   // fully disabled whenever the account isn't currently inside a project.
   const project = projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? null;
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
+  const { open: openTour } = useTour();
   const asideRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -216,16 +218,23 @@ export function Sidebar({
       </div>
 
       <div className="sb-foot">
-        <a
-          href="/geo"
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* ONBOARDING-TOUR-1: tras el primer acceso, ésta es la puerta de
+            vuelta al tour (fundador, 2026-08-06: «luego estará en el menú, en
+            qué es el GEO»). La página /geo no se pierde: el propio tour la
+            enlaza en su pie. Se cierra el cajón móvil al abrirlo, o el popup
+            saldría detrás del menú. */}
+        <button
+          type="button"
           className="nav-item"
-          style={{ fontSize: 12, marginBottom: 2 }}
+          style={{ fontSize: 12, marginBottom: 2, width: "100%", textAlign: "left" }}
+          onClick={() => {
+            handleNavSelect();
+            openTour();
+          }}
         >
           <Icon name="info" size={15} />
           <span className="hide-collapsed">¿Qué es el GEO?</span>
-        </a>
+        </button>
         <Link href="/dashboard/settings" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>
           <div className="hide-collapsed" style={{ minWidth: 0 }}>

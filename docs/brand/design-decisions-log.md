@@ -4029,6 +4029,248 @@ mismo sistema de marca, no una ampliación de BRAND-5c.
 
 ---
 
+## 40. El tour «Aprende cómo funciona» (ONBOARDING-TOUR-1, 2026-08-06)
+
+**Estado: implementado y en las dos superficies.**
+
+Una misma pieza —`components/product-tour.tsx`— en dos sitios:
+
+- **Landing**: sustituye la captura estática del hero (`.lp-shot`), dentro del
+  mismo `.browserframe` que §1 ya daba por aprobado. El marco no cambia; lo que
+  cambia es que el producto se mueve.
+- **Consola**: popup de bienvenida que salta solo en el primer acceso, y que
+  después se reabre desde «¿Qué es el GEO?» del menú lateral.
+
+Ocho pasos, 50 s: dominio y sugerencias → escaneo → GeoScore → evolución →
+recomendaciones → generar la solución → auditoría web → el siguiente escaneo.
+Los subtítulos son literalmente los del fundador.
+
+### Decisiones y por qué
+
+- **Tour filmado, no *coach marks*.** El patrón habitual —globitos sobre los
+  elementos reales de la pantalla— no sirve aquí: en el instante en que el
+  popup aparece, el escaneo está en `pending` y la Visión general no tiene
+  datos, así que los globitos apuntarían a pantallas vacías. Un tour filmado
+  funciona con independencia del estado de los datos y además enseña lo que
+  está a punto de aparecer.
+- **El montaje se lleva 8,3 s de 50.** Dominio, competidores, prompts y
+  escaneo son lo que menos importa; el 83% del metraje va a la puntuación, la
+  tendencia, generar una recomendación de principio a fin y la auditoría. El
+  paso de generar es el más largo del tour a propósito: es el único que enseña
+  que el producto no se limita a señalar el problema.
+- **Cabecera fija, subtítulo variable.** Título «Aprende cómo funciona» y una
+  única línea que cambia por paso explicando lo que se ve. Sustituye a la banda
+  de rótulos bajo el lienzo que tenían las versiones previas del prototipo.
+- **Todos los pasos miden lo mismo de alto.** Los ocho subtítulos se apilan en
+  la misma celda de rejilla con sólo uno visible, así que el contenedor mide
+  siempre lo que el más alto — sin medir nada en JS, correcto a cualquier
+  ancho, tipografía o idioma. Sin esto la pieza pega un salto en cada paso.
+- **`ProductShot` se retira.** Quedó sin uso al sustituir el hero, y con
+  `prefers-reduced-motion` el tour se queda quieto en su último fotograma (la
+  Visión general con su gauge y su curva), que es exactamente la captura que
+  `ProductShot` daba. Se elimina en vez de dejarla muerta.
+- **El marco del hero se acota a 860 px.** El tour tiene una densidad fija
+  pensada para un lienzo de ~715 px; a los 1060 px del `.lp-shot` el
+  mini-producto se veía diminuto y flotando. Se acota el marco en vez de
+  reescalar cuarenta tamaños de letra.
+- **«¿Qué es el GEO?» del menú lateral pasa de enlace a botón que abre el
+  tour** (fundador: «luego estará en el menú, en qué es el GEO»). La página
+  `/geo` no se pierde: el propio popup la enlaza en su pie, abajo a la
+  izquierda, donde el fundador la marcó. El coste, dicho: llegar a `/geo`
+  desde el menú pasa de un clic a dos.
+
+### Lo que el tour afirma, y por qué se puede afirmar
+
+Tres textos hacen afirmaciones sobre el producto y las tres se comprobaron
+antes de escribirlas:
+
+- «Se escanea continuamente» → `lib/scan/cron.ts` reescanea a diario en
+  free/pro/agency y semanalmente en starter. **Si esa cadencia cambia, el
+  texto cambia con ella.**
+- La auditoría del paso 7 usa las comprobaciones y pesos reales del diseño
+  aprobado en §17 (`docs/design-reference/web-audit-issues-1/`): datos
+  estructurados 15 pt/página, metadatos 5, formato respuesta-primero 5.
+- **El salto de 48 a 71 es ilustrativo, no una promesa.** Enseña el mecanismo
+  —cada escaneo recalcula la puntuación—, y el subtítulo está escrito con esas
+  palabras a propósito. Convertirlo en «+23 puntos garantizados» lo volvería
+  una promesa que el producto no puede cumplir.
+
+### El tour se lee, no se mira pasar (2026-08-07)
+
+Corrección del fundador tras probarlo en el preview desde el móvil. Dos cambios,
+los dos sobre **cuándo** corre el reloj, ninguno sobre lo que se ve:
+
+1. **Sólo el primer paso se reproduce solo.** Los otros siete los trae
+   «Siguiente». El motivo es el que el fundador dio y conviene no perder: *«en
+   caso contrario, no hay tiempo suficiente para leer toda la información»*.
+   Encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a
+   leer el subtítulo — el tour se convierte en algo que se mira pasar. Un paso
+   por clic lo convierte en algo que se lee. Sustituye a la reproducción
+   continua de 50 s que describía este mismo §40: los 50 s siguen siendo la
+   longitud del reloj, pero ya nadie los consume del tirón salvo que pulse
+   siete veces. La mecánica no era nueva —Atrás/Siguiente ya reproducían un
+   paso y paraban—, sólo se extiende al arranque.
+2. **En la landing no arranca hasta que el lienzo se ve entero.** Antes bastaba
+   con que asomara un 25 %, así que quien bajaba hasta el hero se lo encontraba
+   con el paso 1 empezado o terminado. Ahora espera a verlo completo, con la
+   salvedad de que si el lienzo es más alto que la ventana se conforma con que
+   cubra el 90 % de ella: un `intersectionRatio >= 0.98` a secas no se cumple
+   jamás en una pantalla corta y el tour no arrancaría nunca.
+
+Efecto en la landing que conviene tener presente: **el hero ya no se
+autodemuestra entero.** Un visitante que no pulse nada ve el paso 1 y ahí se
+queda. Es exactamente lo pedido, y el intercambio está aceptado: se prefiere un
+paso que se lee a ocho que se pierden.
+
+`AUTOPLAY_THROUGH_STEP_INDEX` y `holdTimeFor()` viven en
+`lib/onboarding/tour-steps.ts` con tests, no en el componente, por la misma
+razón que el resto de la línea de tiempo.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies y a 375/768/1280 px (52 comprobaciones): no arranca sin verse
+entero, arranca al verse entero, se detiene al acabar el paso 1 y sigue quieto
+trece segundos después, los ocho pasos se recorren uno por clic sin encadenarse,
+altura constante, sin desbordamiento ni errores de consola, y
+`prefers-reduced-motion` sigue aterrizando en el último fotograma.
+
+### El popup salía en cada carga, no en el primer acceso (2026-08-07)
+
+Lo encontró el `ux-pilot`, que es exactamente para lo que existe. Tumbó seis
+pruebas —el tooltip de Páginas citadas y la campana de notificaciones, en las
+tres anchuras— con `Timeout exceeded` contra elementos que estaban
+perfectamente sanos. La captura del fallo lo explicó de un vistazo: el popup de
+bienvenida abierto encima de Páginas citadas, tapándolo todo.
+
+**El fallo real, y no era del piloto.** La marca de «ya visto» se escribía **al
+cerrar** el popup, no al mostrarlo. Así que «salta solo en el primer acceso» era
+en realidad «salta en cada carga hasta que lo cierres»: quien lo miraba y
+pinchaba en el menú, o recargaba, se lo volvía a encontrar encima,
+indefinidamente. El piloto no cierra nada, así que se comió el caso extremo de
+ese comportamiento y lo dejó a la vista. Ahora la marca se escribe al mostrarlo.
+Coste asumido: quien recargue en el primer segundo se lo pierde, y vuelve por
+«¿Qué es el GEO?» del menú, que es justo la puerta que el fundador pidió.
+
+**Y dos arreglos en el propio piloto**, porque un modal de bienvenida es algo
+que el harness tiene que saber sortear:
+
+- `visitAsUser` cierra el popup si está abierto, con su propia X, y lo anota en
+  `dismissedWelcomeTour` en vez de silenciarlo. Un modal que tapa la pantalla
+  bloquea cualquier hover o clic detrás; sortearlo es lo que hace una persona.
+- `auth.setup` **quita la marca de «visto» del estado compartido**.
+  `storageState()` de Playwright persiste el `localStorage`, y el login aterriza
+  en /dashboard, donde el tour salta y se marca: sin quitarlo, ese estado habría
+  llegado a todas las pasadas diciendo «este navegador ya lo vio» y el popup no
+  habría vuelto a salir jamás. Es decir, el piloto no habría podido verlo nunca
+  — la misma trampa del 2026-08-02, por otra puerta.
+
+  El primer intento lo hizo con un `removeItem` sobre la página y **perdió la
+  carrera**: `waitForURL` resuelve al navegar, antes de que React hidrate, así
+  que el borrado se adelantó al efecto que escribe la marca y el efecto la
+  repuso justo a tiempo de que `storageState()` la capturara. El piloto lo dijo
+  en la misma tarde: el popup no salió en ninguna de las tres anchuras y la
+  consola se veía impecable detrás. Ahora se filtra del objeto ya capturado,
+  que no depende de ningún instante.
+
+**Y una pasada que sí lo mira**: `tests/pilot/journeys/onboarding-tour.spec.ts`.
+Comprueba que sale solo en el primer acceso, que trae contenido real y no un
+lienzo en blanco, que se detiene al acabar el paso 1, que «Siguiente» avanza de
+verdad, que conserva el enlace a `/geo`, que se cierra con su X, que **no vuelve
+a saltar tras recargar** y que el menú lo reabre. Va todo en una sola prueba
+porque Playwright estrena contexto por `test` y «ya no vuelve» sólo se puede
+comprobar sin salir de la misma sesión.
+
+Cierra el hueco que llevaba dos días declarado en este PR: el popup de la
+consola nunca se había visto sobre el preview con sesión real.
+
+### La pista del botón, el recorte de altura y la ruta puente (2026-08-07)
+
+**Altura.** El fundador: *«sobra mucho espacio arriba y abajo... así también
+damos más visibilidad a los botones»*. Medido antes de tocar nada, el grueso no
+estaba en los márgenes sino en el lienzo: a 375 px se llevaba 466 de 690. Se
+aprieta su proporción (2/1 → 2,3/1 en escritorio, 4/5 → 1/1 en móvil) y se
+recortan subtítulo, pie y márgenes. Resultado medido: **690 → 594** a 375,
+**568 → 511** a 768, **614 → 551** a 1280, sin recortar contenido en ninguno de
+los ocho pasos. El límite lo puso el contenido, no una cifra elegida a ojo.
+
+**La pista del botón.** El tour se detiene al acabar el paso 1 y ese silencio
+dejaba una pregunta sin responder. Se propusieron seis animaciones en un
+artefacto y el fundador eligió la sexta: **halo + flecha**. El razonamiento que
+la sostiene, por si alguien la quiere cambiar: el problema no era que el botón
+fuese poco visible —es azul, sólido y está solo en su esquina— sino que la
+mirada está arriba, en el lienzo que acaba de pararse. El halo la baja; la
+flecha dice hacia dónde. Descartadas: la flecha sola (demasiado callada para
+tirar de la mirada desde otra zona), el barrido (es el gesto de «cargando», y
+este producto carga cosas de verdad), y el latido y el rebote (mueven el
+control, y un control que se mueve se lee como impaciencia).
+
+Tres reglas van con ella y no son decorativas: **finita** (tres ciclos, 4,8 s, y
+queda un anillo fino permanente), **se gasta al primer contacto** (ratón, foco o
+clic; no vuelve en toda la sesión) y **sólo tras la reproducción automática**
+(si el usuario ya ha navegado a mano, sabe cómo se avanza). Con
+`prefers-reduced-motion` el tour entero está quieto, así que la pista no puede
+depender del movimiento: el anillo estático dice lo mismo.
+
+**Y un fallo que salió al hacerlo, éste grave.** El popup **no salía nunca en el
+primer login**. `/dashboard` es una ruta puente —no pinta nada, sólo redirige al
+proyecto más reciente— y el popup se montaba ahí, escribía la marca de «visto» y
+la redirección se lo llevaba por delante. Como el primer login aterriza justo en
+`/dashboard`, el único momento para el que se hizo el tour era precisamente el
+único en el que no aparecía. Lo cazó el `ux-pilot`: veía el popup en Prompts,
+Competidores o Páginas citadas, y jamás en Visión general — 27 pasadas con
+popup, ninguna en esas dos. Ahora el provider no abre en `/dashboard` y espera
+al destino real. La pasada del piloto entra por `/dashboard` a propósito:
+entrar por la pantalla final habría ocultado el fallo.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies y a 375/768/1280 px: la pista aparece al detenerse el paso 1,
+altura constante en los ocho pasos, sin recortes dentro del lienzo, sin
+desbordamiento y sin errores de consola.
+
+**Dos ajustes del fundador el mismo día, ya sobre el preview:**
+
+- **La pista va en bucle hasta el clic**, no tres ciclos. Yo había propuesto que
+  se apagara al primer contacto —ratón, foco o clic— por no volverla un
+  incordio; el fundador lo corrigió y tiene razón en el fondo: la pista existe
+  para conseguir ese clic, así que mientras no llegue no ha cumplido. Ahora ni
+  el hover ni el foco la cortan. Es la única animación del tour que no se
+  detiene sola, y la excepción está declarada en la regla de ruta.
+- **En móvil el marco se estrecha hasta alinearse con el párrafo del hero.**
+  Iba a sangre (0→375) mientras `.lp-lead` respiraba 24 px a cada lado, así que
+  el tour se leía «pegado» a los bordes. Alinearlo se lleva además otros 28 px
+  de alto: **594 → 566 px** a 375.
+
+### Y un tercero, un día después: la pista arranca con el paso 1 (2026-08-08)
+
+La pista sólo se encendía al **detenerse** la reproducción automática, es
+decir, cuatro segundos y medio después de que el paso 1 empezara. El fundador
+lo corrigió: tiene que arrancar en el mismo instante que el paso 1, no después.
+Ahora se enciende a la vez que el reloj empieza a correr —al montar el popup, o
+al verse entero el lienzo en la landing— y sigue puesta durante toda la
+reproducción del paso 1 y después, hasta el clic. La regla de «en bucle hasta
+el clic» del ajuste anterior no cambia; sólo cambia el instante en que arranca
+el bucle.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies: la pista está puesta a los 0,5 s de arrancar el reloj —antes de
+que el dominio del paso 1 empiece siquiera a teclearse—, sigue puesta cuando el
+paso 1 se detiene, y el clic la apaga. Repetidas también las comprobaciones de
+altura constante, sin recortes, sin desbordamiento y `prefers-reduced-motion`
+en las tres anchuras: sin regresión.
+
+### Pendiente / roto conocido
+
+- **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una
+  migración de esquema está prohibida sin aprobación explícita. Consecuencia
+  asumida: el popup reaparece en un navegador nuevo o tras limpiar el
+  almacenamiento. Convertirlo en columna sería una fase con su propio Task
+  Intake.
+- **No se pudo ver la referencia de Semrush** que el fundador citó: el proxy
+  del entorno devuelve 403 y su web bloquea peticiones automáticas. La versión
+  de landing está construida sobre los componentes ya aprobados de este repo,
+  no sobre un análisis de la suya.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
