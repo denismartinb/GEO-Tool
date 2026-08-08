@@ -139,6 +139,58 @@ de Escaneos como «En curso» por un trabajo que jamás produciría su propia
 auditoría (2026-08-05, visto leyendo la captura del pilot de la PR #333, no por
 ninguna aserción).
 
+### Ninguna pestaña de navegador es el motor de una auditoría
+
+El bucle de cliente que reanuda una campaña de cobertura es un **acelerador**,
+nunca el motor: iOS Safari suspende el JavaScript de una pestaña en segundo
+plano, y la campaña se para con su fila en `running` y nadie que la reanude
+(ADR 0038 — 13 minutos de campaña, ~8 lotes, parada en seco al bloquearse el
+móvil). Todo trabajo que continúe después de enviar una respuesta se despacha
+desde el servidor.
+
+Consecuencias, y son reglas, no matices:
+
+- **Un despacho está entregado sólo si la respuesta lo dice.** `fetch` se
+  resuelve con 401/404/500 y sólo rechaza ante fallo de transporte, así que un
+  `await fetch(...)` sin comprobar informa de un worker inalcanzable igual que
+  de uno sano. Comprobar `response.ok` y registrar estado y URL (ADR 0038;
+  mismo invariante que `.claude/rules/scan.md`).
+- **Un preview no tiene crons.** Vercel sólo los ejecuta contra producción, así
+  que allí no corre el barrido diario, ni el backfill, ni el rescate de locks.
+  Una prueba de auditoría en preview hay que leerla sabiendo que la red de
+  seguridad no está puesta.
+- **Abrir la pantalla despierta lo vencido.** Si hay un job `web_audit` vencido
+  o abandonado, el render despacha una pasada del worker. Es seguro porque el
+  claim es un UPDATE atómico condicional: un despacho duplicado es un no-op.
+  El job se lee con el cliente de usuario (RLS `jobs_select_owner`), no con
+  service-role — un render no necesita más privilegio del que ya tiene.
+
+### Una etiqueta de estado se mide contra el reloj
+
+«Auditando…» derivado de `status='running'` sin antigüedad es una afirmación
+que no caduca nunca, y una fila de campaña sólo la limpia una campaña que
+termina — así que cualquier forma de fallar quedaba presentada como trabajo en
+curso eterno (ADR 0038). `deriveAuditPillState`
+(`lib/web-audit/audit-liveness.ts`) es el único sitio donde se decide.
+
+- Movimiento reciente (`AUDIT_CAMPAIGN_STALE_MS`) → «Auditando…»; cualquier
+  otra cosa viva → «Auditoría pendiente».
+- **Un job en `retrying` nunca es «Auditando…»**, por fresca que esté la fila de
+  campaña: el backoff llega a 10 h. Misma lección que AUDIT-IN-RUNS-1 aprendió
+  para la tabla de Escaneos.
+- `AUDIT_CAMPAIGN_STALE_MS` y `WEB_AUDIT_STALE_LOCK_MS` responden preguntas
+  distintas (qué dice una etiqueta / cuándo es seguro robar un job) y no deben
+  colapsarse en una constante compartida.
+
+### Un fallo del driver tiene que llegar a la pantalla
+
+`WebAuditProvider` guardó un `error` que nadie leía durante toda una fase,
+porque los botones que lo consumían se retiraron en AUDIT-NO-BUTTON-1 y el
+estado quedó huérfano (ADR 0038). Cualquier estado de error que esta zona
+escriba necesita un consumidor que lo pinte, o no existe. `WebAuditDriveNotice`
+es ese consumidor; no renderiza nada cuando no hay error, porque es el canal de
+fallo y no un segundo indicador de estado.
+
 ### Un aviso de regresión es una transición, nunca un estado
 
 `lib/web-audit/regressions.ts` (WEB-AUDIT-ALERTS-1, log §27) compara la

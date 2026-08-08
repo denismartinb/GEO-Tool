@@ -40,15 +40,29 @@ export async function triggerWebAuditRun({ chainIndex = 0 }: { chainIndex?: numb
     return;
   }
 
+  const url = `${getSiteUrl()}/api/cron/run-audit`;
+
   try {
-    await fetch(`${getSiteUrl()}/api/cron/run-audit`, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({ chainIndex })
     });
+
+    // WEB-AUDIT-DRIVE-1: `fetch` only rejects on a transport failure. A 401
+    // from Vercel's deployment protection, a 404 from a stale `getSiteUrl()`,
+    // a 500 — all resolve, and without this check every one of them reads
+    // exactly like a dispatch that landed. That is what made a preview deploy
+    // look like it had a working audit worker when nothing was ever reachable
+    // (2026-08-07). Logged, never thrown: the row is still the contract and
+    // the daily sweep still recovers it.
+    if (!response.ok) {
+      console.error(`${LOG_PREFIX} worker dispatch was rejected`, { chainIndex, status: response.status, url });
+    }
   } catch (error) {
     console.error(`${LOG_PREFIX} failed to dispatch worker`, {
       chainIndex,
+      url,
       message: error instanceof Error ? error.message : String(error)
     });
   }

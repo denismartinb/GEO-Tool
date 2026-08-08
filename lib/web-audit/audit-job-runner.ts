@@ -8,7 +8,8 @@ import {
   nextAuditJobState,
   retryWindowMinutes,
   WEB_AUDIT_JOB_TYPE,
-  WEB_AUDIT_MAX_ATTEMPTS
+  WEB_AUDIT_MAX_ATTEMPTS,
+  WEB_AUDIT_STALE_LOCK_MS
 } from "@/lib/web-audit/audit-job";
 import { sendWebAuditFailedAlertEmail } from "@/lib/email/transactional";
 import { type createServiceClient } from "@/lib/supabase/service";
@@ -164,22 +165,11 @@ const MIN_JOB_BUDGET_MS = 34_000;
 const TECHNICAL_RESERVE_MS = TECH_AUDIT_TOTAL_BUDGET_MS + REGRESSION_ALERTS_BUDGET_MS + 2_000;
 
 /**
- * After this long, a job still marked 'running' is considered abandoned and
- * reclaimable.
- *
- * Without this the queue has a permanent leak: an invocation killed by the
- * platform mid-batch never gets to write the row back, so the job stays
- * 'running' with a stale `locked_by` — and a claim that only looks at
- * 'pending'/'retrying' would never touch it again. The audit would silently
- * never happen, which is the exact failure this phase exists to remove, just
- * moved one layer down.
- *
- * 10 minutes is comfortably above the route's own maxDuration=60 (ADR-0003),
- * so a healthy in-flight job is never stolen from itself. Migration 0001
- * already ships `jobs_locked_idx on (locked_at) where status in
- * ('running','retrying')` — the schema anticipated exactly this sweep.
+ * Re-exported from `audit-job.ts`, where it moved in WEB-AUDIT-DRIVE-1 so the
+ * web-audit page can reuse it without importing this module's whole dependency
+ * graph. See its doc comment there for why 10 minutes.
  */
-const STALE_LOCK_MS = 10 * 60_000;
+const STALE_LOCK_MS = WEB_AUDIT_STALE_LOCK_MS;
 
 /**
  * Hard backstop on how many times the worker route may self-dispatch in one

@@ -17,6 +17,27 @@
 export const WEB_AUDIT_JOB_TYPE = "web_audit" as const;
 
 /**
+ * After this long, a job still marked 'running' is considered abandoned and
+ * reclaimable.
+ *
+ * Without this the queue has a permanent leak: an invocation killed by the
+ * platform mid-batch never gets to write the row back, so the job stays
+ * 'running' with a stale `locked_by` — and a claim that only looks at
+ * 'pending'/'retrying' would never touch it again.
+ *
+ * 10 minutes is comfortably above the route's own maxDuration=60 (ADR-0003),
+ * so a healthy in-flight job is never stolen from itself. Migration 0001
+ * already ships `jobs_locked_idx on (locked_at) where status in
+ * ('running','retrying')` — the schema anticipated exactly this sweep.
+ *
+ * Lives here rather than in `audit-job-runner.ts` (WEB-AUDIT-DRIVE-1) so the
+ * web-audit page can ask "is this job due?" without importing the runner —
+ * which would drag Gemini coverage, the technical audit and the email client
+ * into a render path.
+ */
+export const WEB_AUDIT_STALE_LOCK_MS = 10 * 60_000;
+
+/**
  * Six attempts, not the table's default of three. The failure modes here are
  * dominated by transient upstream trouble — a slow LLM call, a site that
  * times out once, a cold function — and the whole point of the phase is that
