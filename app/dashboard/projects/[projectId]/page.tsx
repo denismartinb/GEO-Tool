@@ -11,9 +11,12 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
+import { ScanMissionRocket } from "@/components/scan-mission-rocket";
+import { ScanMissionBand } from "@/components/scan-mission-band";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
+import { WEB_AUDIT_JOB_TYPE } from "@/lib/web-audit/audit-job";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import {
   computeJointPotentialPoints,
@@ -222,31 +225,45 @@ export default async function ProjectDetailPage({
   // Reconciliation itself is decided from the already-fetched `runs` below
   // instead of running unconditionally on every render
   // (docs/architecture-audit-2026-07.md, finding 1.3 / PERF-3a).
-  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, domain, brand, country, language, created_at")
-      .eq("id", projectId)
-      .eq("is_archived", false)
-      .single(),
-    supabase
-      .from("project_prompts")
-      .select("id, prompt_text, category, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("project_competitors")
-      .select("id, name, domain, is_active")
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_runs")
-      .select(RUNS_SELECT)
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-  ]);
+  const [{ data: project }, { data: prompts }, { data: competitors }, { data: runsData }, { count: activeAuditJobCount }] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name, domain, brand, country, language, created_at")
+        .eq("id", projectId)
+        .eq("is_archived", false)
+        .single(),
+      supabase
+        .from("project_prompts")
+        .select("id, prompt_text, category, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("project_competitors")
+        .select("id, name, domain, is_active")
+        .eq("project_id", projectId)
+        .eq("is_active", true)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("scan_runs")
+        .select(RUNS_SELECT)
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false }),
+      // ONBOARDING-ROCKET-1: existence-only check, no progress detail — the
+      // coverage-map read that produces a real "N de M temas" count lives in
+      // the web-audit page and stays there for this phase (see
+      // components/scan-mission-band.tsx). Same signal both `ScanStatePill`
+      // (below) and `ScanMissionBand` need, read once via the user's own RLS
+      // (`jobs_select_owner`), not service-role.
+      supabase
+        .from("jobs")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", projectId)
+        .eq("job_type", WEB_AUDIT_JOB_TYPE)
+        .in("status", ["pending", "running", "retrying"])
+    ]);
+  const hasActiveAuditJob = (activeAuditJobCount ?? 0) > 0;
 
   if (!project) notFound();
 
@@ -270,6 +287,12 @@ export default async function ProjectDetailPage({
   const latestRun = runs?.[0];
   const latestCompletedRun = runs?.find((r) => r.status === "completed");
   const completedRunsCount = runs?.filter((r) => r.status === "completed").length ?? 0;
+  // ONBOARDING-ROCKET-1: the mission is a first-impression, not a product
+  // state — it spends itself once per domain. Zero completed runs is exactly
+  // the condition `hasData` already gates the whole empty-state overlay on
+  // (see `hasData` below), so this needs no new column: a project's second
+  // scan onward always falls straight to `ScanInProgressLive`.
+  const isFirstScan = completedRunsCount === 0;
   const latestFailedRun = latestRun?.status === "failed" ? latestRun : null;
   const rawActiveRun = runs?.find((r) => r.status === "pending" || r.status === "running");
   // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
@@ -791,6 +814,7 @@ export default async function ProjectDetailPage({
                     .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
                 : null
             }
+            auditing={hasActiveAuditJob}
           />
         </div>
       </div>
@@ -821,6 +845,11 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
+          {/* ONBOARDING-ROCKET-1 traspaso: the compact half of the first-scan
+              mission takes over the instant this branch renders — it never
+              overlaps with `ScanMissionRocket` below, which only renders
+              inside the `!hasData` branch. */}
+          {isFirstScan && hasActiveAuditJob && <ScanMissionBand projectId={projectId} />}
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
@@ -1387,8 +1416,14 @@ export default async function ProjectDetailPage({
       ) : (
         /* ===== EMPTY STATE ===== */
         activeRun ? (
-          /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
-          <ScanInProgressLive projectId={projectId} initial={activeRun} />
+          isFirstScan ? (
+            /* ONBOARDING-ROCKET-1 — spent once per domain; every scan after
+               this project's first falls to the plain shared bar below. */
+            <ScanMissionRocket projectId={projectId} initial={activeRun} />
+          ) : (
+            /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
+            <ScanInProgressLive projectId={projectId} initial={activeRun} />
+          )
         ) : prompts?.length ? (
           /* Estado B — Listo para lanzar */
           <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>

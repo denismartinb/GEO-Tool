@@ -4330,6 +4330,62 @@ a.notif-row:hover {
 }
 
 /* ============================================================
+   ONBOARDING-ROCKET-1 — first-scan mission (components/scan-mission-rocket.tsx,
+   components/scan-mission-band.tsx). Reference:
+   docs/design-reference/scan-states-1/rev3-cohete-secuencia.html.
+   Only altitude (.mrk-glide's transform) and the órbita ring are bound to a
+   real fraction; everything else here (marks, flame flicker, plume) is
+   ambient and is switched off entirely under reduced motion below.
+   ============================================================ */
+.mrk-wrap { display: grid; place-items: center; min-height: 70vh; padding: 40px 20px; text-align: center; }
+.mrk-stage { width: 100%; max-width: 420px; }
+.mrk-sky { display: block; width: 100%; height: auto; overflow: visible; }
+.mrk-marks { stroke: var(--brand-line); stroke-width: 1; stroke-dasharray: 2 6; }
+.mrk-pad { fill: var(--brand-line-soft); }
+.mrk-pad-line { fill: var(--brand-line); }
+.mrk-tower { fill: var(--brand-line); }
+.mrk-glide { transition: transform .6s cubic-bezier(.22, .8, .28, 1); }
+.mrk-hull { fill: var(--brand-ink); }
+.mrk-hull-shade { fill: var(--brand-ink-2); }
+.mrk-window { fill: var(--brand-canvas); }
+.mrk-fin { fill: var(--brand-blue); }
+.mrk-nozzle { fill: var(--brand-ink-2); }
+.mrk-plume { opacity: 0; transition: opacity .3s ease; }
+.mrk-plume.on { opacity: 1; }
+.mrk-flame { opacity: 0; transition: opacity .2s ease; }
+.mrk-flame.on { opacity: 1; }
+.mrk-flame-a, .mrk-flame-b { fill: var(--brand-blue-2); transform-origin: center top; animation: mrkFlick .16s steps(2, end) infinite alternate; }
+.mrk-flame-b { fill: var(--brand-cyan); animation-duration: .13s; }
+@keyframes mrkFlick { from { transform: scaleY(.86) scaleX(1.04); } to { transform: scaleY(1.1) scaleX(.94); } }
+.mrk-ring-track { stroke: var(--brand-line); }
+.mrk-ring-fill { stroke: var(--brand-blue); stroke-linecap: round; transition: stroke-dashoffset .5s ease-out; }
+.mrk-copy { max-width: 420px; margin-top: 28px; }
+.mrk-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--brand-blue); }
+.mrk-title { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -.03em; margin: 8px 0 0; }
+.mrk-sub { font-size: 14px; line-height: 1.6; color: var(--ink-3); margin: 8px 0 0; }
+.mrk-joke { font-size: 12.5px; color: var(--ink-4); font-style: italic; margin: 10px 0 0; }
+@media (prefers-reduced-motion: reduce) {
+  .mrk-glide, .mrk-plume, .mrk-flame, .mrk-ring-fill { transition: none; }
+  .mrk-flame-a, .mrk-flame-b { animation: none; }
+}
+
+/* The compact half of the mission — Visión general only, post-traspaso. */
+.mba-band {
+  display: flex; align-items: center; gap: 11px; margin-bottom: 16px; padding: 12px 14px;
+  background: var(--brand-blue-soft); border: 1px solid var(--brand-blue-soft-2); border-radius: var(--r-lg);
+  text-decoration: none; color: inherit;
+}
+.mba-band:hover { border-color: var(--brand-blue); }
+.mba-ico { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; background: var(--brand-surface); color: var(--brand-blue); display: grid; place-items: center; }
+.mba-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.mba-t { font-size: 13px; font-weight: 700; color: var(--ink); }
+.mba-s { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.mba-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 999px; background: var(--brand-blue); animation: pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .mba-dot { animation: none; }
+}
+
+/* ============================================================
    Scan in progress — pixel-perfect "LoadingState" container
    (copied literally from design reference styles.css lines 471-490,
    /tmp/geo_design/geo-suite/project/styles.css — see components/scan-in-progress.tsx)

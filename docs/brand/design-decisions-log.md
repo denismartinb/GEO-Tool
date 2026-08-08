@@ -3444,6 +3444,95 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
 ---
 
+## 36. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
+
+**Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
+diseño en `docs/design-reference/scan-states-1/` (tres opciones, rev.2 y
+rev.3 — la última es la aprobada). Task Intake aprobado por el fundador en
+sesión el mismo día.
+
+**El problema.** `ScanInProgress`/`ScanInProgressLive` es el estado del
+prototipo sin repintar a la identidad v3, y es el primer aterrizaje real de
+un cliente nuevo. El fundador midió un escaneo propio de 30 preguntas en más
+de 5 minutos contra una copia que promete "un par de minutos".
+
+**Qué se decidió.**
+
+1. **Sólo el primer escaneo de cada dominio** lleva la experiencia nueva
+   (`ScanMissionRocket`) — la señal es `completedRunsCount === 0`, que ya
+   existía en la página; no se añadió ninguna columna para distinguirlo. A
+   partir del segundo escaneo, el proyecto vuelve al `ScanInProgressLive`
+   compartido de siempre, sin cambios.
+2. **La misión suelta la pantalla en cuanto hay datos que enseñar.**
+   `ScanMissionRocket` sólo vive dentro de la rama `!hasData` (igual que el
+   componente al que sustituye); en el instante en que `hasData` se vuelve
+   cierto, la Visión general real se dibuja y una banda compacta
+   (`ScanMissionBand`) sustituye al cohete a pantalla completa mientras la
+   auditoría sigue en marcha. Nunca hay una ventana en la que la misión tape
+   datos ya disponibles — es literalmente el mismo defecto que el log §26
+   corrigió en Recomendaciones, y se decidió no reintroducirlo.
+3. **Cinco momentos, no ocho.** La fase 1 implementa rampa / ignición /
+   ascenso / órbita / entrega — los que se derivan de `computeScanStage`
+   (sin cambios) sin ninguna lectura nueva. Los momentos de vuelta
+   (reentrada / aproximación / aterrizaje) del guion explorado en la rev.3
+   se simplifican a la banda de una sola línea: mostrar "12 de 30 temas" en
+   tiempo real exige el mismo análisis de `generated_solutions` que ya hace
+   la página de Auditoría web (`parseCoverageMap`), y traerlo aquí también
+   habría sido una segunda lectura pesada — deliberadamente fuera de esta
+   fase.
+4. **Ninguna cifra que la fase no pudiera respaldar.** Dos ajustes respecto
+   al guion explorado, los dos porque el dato real no sostenía la copia:
+   - `total_prompts` cuenta lanzamientos (jobs), no respuestas
+     (SAMPLING-1, ADR 0030) — el guion decía "90 respuestas" asumiendo
+     `prompts × motores`; sostenerlo de verdad habría exigido el plan
+     resuelto del proyecto (lectura nueva) o el env global
+     `LLM_SCAN_PROVIDERS` (puede sobrecontar por debajo del cap del plan).
+     El beat `ascenso` se quedó en la misma unidad sin nombrar que ya usa
+     `ScanInProgress` hoy. El beat `órbita` sí dice "respuestas" porque
+     `responses_total`/`responses_processed` cuentan filas reales de
+     `scan_prompt_results` — una por motor, ya contadas, sin multiplicar
+     nada.
+   - El beat `entrega` (todas las respuestas con salida terminal de
+     extracción) **no muestra ninguna puntuación**. Ese momento ocurre
+     antes de que el finalize del run persista el score — mostrar un
+     número ahí habría sido inventarlo. El score real sólo aparece cuando
+     `ScanProgressPoller` (ya montado) detecta el run en estado terminal y
+     refresca la página entera.
+5. **Hallazgo suelto, corregido de paso.** La pastilla de Visión general
+   (`ScanStatePill`) nunca recibía `auditing` — nunca decía "Auditando…" en
+   la pantalla insignia, aunque Dominios y Auditoría web sí lo hacen. La
+   única señal nueva de esta fase (¿hay un job `web_audit` vivo?, existencia
+   por RLS de usuario, sin service-role) alimenta la pastilla y la banda a
+   la vez, así que quedan alineadas sin coste extra.
+
+**Pendiente / roto conocido.**
+
+- **La banda no lleva contador real** ("12 de 30 temas") — dice "revisando
+  tu web" sin cifra. Cuando se traiga ese dato, `scan-mission-band.tsx` es
+  el único fichero que cambia.
+- **No hay aviso por email.** La banda no promete ninguno porque no existe
+  todavía backend para él (SCAN-STATES-1 rev.1, fase 2 — columna de
+  preferencia, envío, plantilla; necesita su propia aprobación por llevar
+  migración).
+- **Sin desglose por motor.** El cohete no enciende sus toberas
+  individualmente por Gemini/ChatGPT/Claude — necesitaría una lectura nueva
+  agrupando `scan_prompt_results` por motor durante el run activo. Fase 3
+  de SCAN-STATES-1.
+- **La G reconstruida con arcos** (rev.2 de la exploración, 93% de solape
+  medido contra el SVG calcado real de `public/brand/genscore-mark.svg`) no
+  se usa en esta fase — el fundador eligió el cohete. El hallazgo de que el
+  asset de marca está calcado (170 rectas, cero curvas) sigue sin
+  resolverse en `public/brand/*.svg`; queda anotado como fase de marca
+  propia (BRAND-6), fuera de este PR.
+- **Sin verificación visual real.** Este repo no tiene arnés de DOM para
+  componentes de servidor (mismo límite que documentó WEB-AUDIT-DRIVE-1);
+  la lógica que decide qué mostrar sale entera a `lib/scan/mission-beats.ts`
+  con 9 tests, pero el render en pantalla —incluida la sincronía real entre
+  el traspaso y `hasActiveAuditJob`— no lo ha visto nadie en un navegador
+  contra datos reales. Pendiente del piloto o de una prueba manual del
+  fundador contra un proyecto nuevo de verdad.
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
