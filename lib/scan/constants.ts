@@ -72,6 +72,35 @@ export const EXTRACTION_RETRY_MAX_DELAY_MS = 8_000;
 export const SCAN_INVOCATION_WORK_BUDGET_MS = 45_000;
 
 /**
+ * What one `executePendingScan` call may cost its caller in the worst case:
+ * the work budget above, plus the bookkeeping that is deliberately outside it
+ * (the finalize claim, scoring, recommendations, the run's own status write).
+ *
+ * Only the foreground driver needs this. `autoExecutePendingScan` loops
+ * batches inside a single server action, and it used to decide whether to keep
+ * going by checking elapsed time *after* an iteration
+ * (`do { ... } while (elapsed < budget)`). That asks the wrong question: an
+ * iteration starting at 39s looks fine by a 40s budget and can still spend
+ * another 45s, putting the action ~24s past the 60s `maxDuration`. Vercel then
+ * kills it mid-batch — and before PROMPT_LOCK_LEASE_MS existed, the jobs that
+ * invocation had claimed were stranded `running` for good.
+ *
+ * This is the same mistake, in the same pipeline, that `docs/adr/0029`'s
+ * Addendum documented one level down ("budget new work against the invocation,
+ * not against itself"); the driver above it was never re-checked.
+ */
+export const SCAN_INVOCATION_WORST_CASE_MS = 50_000;
+
+/**
+ * How far into its `maxDuration=60s` budget the foreground driver may still
+ * *start* another `executePendingScan` call. The 5s below the ceiling covers
+ * the driver's own tail (the run-status read, `revalidatePath`, serializing
+ * the response) so that returning "running" to the client is itself never the
+ * thing that overruns.
+ */
+export const AUTO_EXECUTE_SAFE_CEILING_MS = 55_000;
+
+/**
  * How long a claimed `scan_finalize` job may stay `running` before another
  * invocation is allowed to take it over.
  *
@@ -91,6 +120,27 @@ export const SCAN_INVOCATION_WORK_BUDGET_MS = 45_000;
  * expire on an invocation that is genuinely gone.
  */
 export const FINALIZE_LOCK_LEASE_MS = 90_000;
+
+/**
+ * How long a claimed `scan_prompt` job may stay `running` before another
+ * invocation is allowed to take it over (SCAN-DRIVE-1).
+ *
+ * The same argument that gave `scan_finalize` a lease applies here and was
+ * simply never extended to the prompt batches: a batch spends tens of seconds
+ * on concurrent provider calls, so the invocation holding it is long enough to
+ * be killed by Vercel's `maxDuration`, and a killed invocation cannot release
+ * the jobs it claimed. `reconcileStuckScanRuns` only ever touches `scan_runs`,
+ * never `jobs`, so without a lease those rows stay `running` forever: every
+ * later invocation's claim (`WHERE status = 'pending'`) skips them, the
+ * campaign can never reach "every prompt job terminal", and finalize is
+ * unreachable even though the run looks alive.
+ *
+ * 90s matches FINALIZE_LOCK_LEASE_MS and is comfortably longer than any live
+ * invocation (capped at SCAN_INVOCATION_WORK_BUDGET_MS of work), so a lease
+ * can only expire on an invocation that is genuinely gone.
+ */
+export const PROMPT_LOCK_LEASE_MS = 90_000;
+
 /**
  * "grounded-position-v1" — extraction runs with Google Search grounding
  * enabled on the Gemini visibility call

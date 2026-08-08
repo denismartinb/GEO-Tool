@@ -40,7 +40,10 @@ export function DeleteAccountButton({ email }: { email: string }) {
 
   return (
     <>
-      <Button type="button" variant="destructive" onClick={openModal}>
+      {/* CONSOLE-REDESIGN-1: an outline button, not a filled red one. This
+          block is the quiet foot of the page now, not a "Zona de peligro"
+          card — the confirmation modal is where the weight belongs. */}
+      <Button type="button" variant="outline" className="set-end-btn" onClick={openModal}>
         <Icon name="trash" size={14} />
         Eliminar cuenta
       </Button>
@@ -52,7 +55,7 @@ export function DeleteAccountButton({ email }: { email: string }) {
               Eliminar cuenta
             </h2>
             <p className="modal-body">
-              Esta acción no se puede deshacer. Se eliminarán tu cuenta, todos tus proyectos, escaneos,
+              Esta acción es irreversible. Se eliminarán tu cuenta, todos tus proyectos, escaneos,
               prompts, competidores y recomendaciones.
             </p>
 

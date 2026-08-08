@@ -1,7 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import type { CompetitorRowData } from "./page";
 
 export function PodiumRow({
@@ -21,7 +21,6 @@ export function PodiumRow({
     window.location.href = `/dashboard/projects/${projectId}/prompts?competitor=${encodeURIComponent(row.name)}`;
   }
 
-  const favicon = faviconUrl(row.domain);
 
   return (
     <div
@@ -38,14 +37,16 @@ export function PodiumRow({
       }}
     >
       <span className="cm2-rank-n">{rank}</span>
-      {favicon ? (
-        // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as Overview's panorama)
-        <img src={favicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
-      ) : (
-        <span className="cm2-rank-fav" style={{ background: row.favColor }}>
-          {row.initial}
-        </span>
-      )}
+      <FaviconImg
+        domain={row.domain}
+        cssSize={26}
+        className="cm2-rank-fav-img"
+        fallback={
+          <span className="cm2-rank-fav" style={{ background: row.favColor }}>
+            {row.initial}
+          </span>
+        }
+      />
       <div className="cm2-rank-main">
         <div className="cm2-rank-nm">
           <span className="cm2-rank-nm-txt">{row.name}</span>

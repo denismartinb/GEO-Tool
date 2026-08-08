@@ -80,25 +80,40 @@ terminal, atomically claims the run's `scan_finalize` job as a single-owner
 gate and runs structured extraction, scoring, and recommendations exactly
 once, then marks the run `completed`.
 
-There are **two ways the remaining batches get driven**, chosen by
-`executePendingScan`'s `scheduleContinuation` flag:
+The remaining batches are driven **two ways at once**, and this is deliberate
+(SCAN-DRIVE-1, `docs/adr/0037`):
 
-- **Foreground (default for the manual "Lanzar escaneo" / onboarding path):**
-  the `autoExecutePendingScan` server action loops `executePendingScan`
-  (`scheduleContinuation: false`) batch after batch within one request's
-  ~40s budget, then returns the run's status; the `AutoExecuteScan` client
-  component re-invokes it until the run is terminal. This drives the whole
-  campaign through the **authenticated user session**, so it needs neither the
-  continuation secret nor a reachable self-URL — it works on preview deploys
-  and behind Vercel deployment protection, where a server-to-server self-fetch
-  would be blocked.
-- **Background (the daily cron / a browser-closed continuation):**
-  `executePendingScan` (default `scheduleContinuation: true`) schedules, via
-  Next.js's `after()` (fire-and-forget), a POST to `/api/scan/continue` that
-  runs the next batch in its own fresh invocation. This requires
-  `SCAN_CONTINUE_SECRET` and a reachable deployment URL (see
-  `docs/environment-contract.md`); if that dispatch is lost, the run simply
-  stalls until the timeout + auto-retry below picks it up.
+- **Background (always on):** every `executePendingScan` invocation that claims
+  work and leaves work behind schedules, via Next.js's `after()`
+  (fire-and-forget), a POST to `/api/scan/continue` that runs the next batch in
+  its own fresh invocation. This requires `SCAN_CONTINUE_SECRET` and a
+  reachable deployment URL (see `docs/environment-contract.md`); if that
+  dispatch is lost, the run stalls until the timeout + auto-retry below picks
+  it up.
+- **Foreground (an accelerator, not the engine):** on the manual "Lanzar
+  escaneo" / onboarding path the `autoExecutePendingScan` server action also
+  loops `executePendingScan` batch after batch for as long as a whole
+  worst-case invocation still fits in the request (`canStartAnotherScanInvocation`,
+  `lib/scan/drive-budget.ts`), then returns the run's status; the
+  `AutoExecuteScan` client component re-invokes it until the run is terminal.
+  It goes through the **authenticated user session**, so it needs neither the
+  continuation secret nor a reachable self-URL — it still works on preview
+  deploys and behind Vercel deployment protection, where a server-to-server
+  self-fetch is blocked.
+
+**The background chain used to be suppressed on the foreground path** (the
+flag `scheduleContinuation: false`), on the reasoning that the driver loops the
+batches itself. That made a browser tab the only thing in the system asking for
+the next batch — and a phone that locks its screen suspends it. On 2026-08-07 a
+31-prompt scan of genscore.es failed twice that way, 50 real answers generated
+and discarded, every unfinished job left `pending` with nothing able to claim
+it. Two drivers racing is safe by construction: the claim below is atomic, so a
+job is only ever processed by whichever invocation's UPDATE commits first.
+Never re-introduce a mode where the only driver lives in a browser.
+
+A batch is long enough to be killed mid-flight, so a claimed `scan_prompt` job
+is held under a lease (`PROMPT_LOCK_LEASE_MS`, 90s) exactly like the finalize
+job — see "Lock leases" below.
 
 See `docs/adr/0014-batched-self-chaining-scan-execution.md` for the full
 design and its rationale (why this, instead of an async worker or raising
@@ -218,6 +233,21 @@ else recovers a `jobs` row — `reconcileStuckScanRuns` only touches
 same atomic claim the prompt batches use. Without this, one killed invocation
 stranded the campaign permanently.
 
+### Lock leases (both job kinds)
+
+The same argument applies to `scan_prompt` jobs and was simply never extended
+to them until SCAN-DRIVE-1 (`docs/adr/0037`): a batch spends tens of seconds on
+concurrent provider calls, so its invocation is the *most* likely one to be
+killed, and an abandoned `running` job means the campaign can never observe
+"every prompt job terminal" — finalize becomes unreachable while the run still
+looks alive. A `scan_prompt` job whose `locked_at` is older than
+`PROMPT_LOCK_LEASE_MS` (90s) may therefore be reclaimed by another invocation.
+
+Reclaiming is bounded: a stale job with no attempts left
+(`attempt_count >= max_attempts`) is marked `failed` with a self-authored error
+rather than reclaimed, so a job that reliably kills its invocation becomes
+terminal instead of being retried forever.
+
 **Per-call retries.** Every extraction call goes through
 `fetchExtractionWithRetry` (`lib/llm/extraction-fetch.ts`):
 `EXTRACTION_CALL_TIMEOUT_MS` (20s) per attempt, `EXTRACTION_MAX_ATTEMPTS` (3)
@@ -304,8 +334,11 @@ becomes terminal (`failed`) on the next pass instead of remaining
 timeout, `reconcileStuckScanRuns` counts prior timeout-failed runs for the
 same project within `SCAN_TIMEOUT_RETRY_LOOKBACK_HOURS` (24h). If that count
 is below `SCAN_TIMEOUT_AUTO_RETRY_CAP` (1), a fresh `pending` run is created
-automatically (`trigger_source: "cron"`) — the user doesn't need to retry
-manually. If the cap is reached, the row is marked with a
+automatically (`trigger_source: "cron"`) **and started** — a continuation is
+dispatched for it, because nothing else on the server executes a `pending` run
+and leaving it for "whatever drives scans" meant leaving it for a browser tab
+that had already stopped (SCAN-DRIVE-1, `docs/adr/0037`). A retry nobody starts
+is not a retry. If the cap is reached, the row is marked with a
 `"scan_timeout_retry_exhausted"` / `"scan_pending_timeout_retry_exhausted"`
 `error_summary` instead, and the user sees a calmer message inviting a
 manual retry, without entering an unbounded auto-retry loop.
