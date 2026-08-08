@@ -103,6 +103,33 @@ code{font-family:var(--mono);font-size:.87em;background:var(--d-surface-2);borde
 .beat-j{font-size:12px;line-height:1.5;color:var(--d-ink-4);font-style:italic}
 .beat-r{margin-top:auto;padding-top:9px;font-family:var(--mono);font-size:10px;line-height:1.5;color:var(--d-ink-4);border-top:1px dashed var(--d-line)}
 
+/* ---------- maquetas de movil para el traspaso ---------- */
+.hand{display:grid;gap:18px;margin-top:24px}
+@media (min-width:820px){.hand{grid-template-columns:296px 296px minmax(0,1fr);align-items:start}}
+.dev{width:100%;max-width:296px;border-radius:28px;background:#F7F8FB;overflow:hidden;border:1px solid #E7EAF0;
+  box-shadow:0 2px 4px rgba(11,20,38,.10),0 18px 40px rgba(11,20,38,.20);color:#0B1426;line-height:1.5}
+.dev-top{display:flex;align-items:center;justify-content:space-between;padding:11px 13px;background:#fff;border-bottom:1px solid #E7EAF0}
+.dev-burger{display:grid;gap:3.5px;width:16px}
+.dev-burger i{height:2px;background:#3B4759;border-radius:2px;display:block}
+.dev-logo{font-weight:800;font-size:14px;letter-spacing:-.03em;display:flex;align-items:center;gap:5px}
+.dev-mark{width:18px;height:18px;border-radius:6px;background:#0B1426;color:#fff;display:grid;place-items:center;font-size:10.5px;position:relative}
+.dev-mark::after{content:"";position:absolute;right:1.5px;top:1.5px;width:3.5px;height:3.5px;border-radius:99px;background:#FFB020}
+.dev-sub{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:10px 13px 11px;background:#fff;border-bottom:1px solid #E7EAF0}
+.dev-kick{font-size:10.5px;color:#98A2B3}
+.dev-title{font-weight:800;font-size:14.5px;letter-spacing:-.03em}
+.dev-body{padding:13px;display:flex;flex-direction:column;gap:11px}
+.dpill{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;border-radius:999px;padding:4px 8px;white-space:nowrap;flex:0 0 auto}
+.dpill.run{background:rgba(37,99,235,.10);color:#2563EB}
+.dpill.wait{background:#F4F6FA;color:#5B6B82}
+.dpill i{width:5px;height:5px;border-radius:99px;background:currentColor}
+.dband{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid rgba(37,99,235,.18);border-radius:12px;padding:11px 12px}
+.dband-t{font-size:11.5px;font-weight:700;line-height:1.3}
+.dband-s{font-size:10.5px;color:#5B6B82;margin-top:2px}
+.dband-bar{height:3px;border-radius:99px;background:#F4F6FA;overflow:hidden;margin-top:7px}
+.dband-bar i{display:block;height:100%;width:40%;border-radius:99px;background:#2563EB}
+.dcard{background:#fff;border:1px solid #E7EAF0;border-radius:12px;padding:12px;box-shadow:0 1px 2px rgba(11,20,38,.04)}
+.dskel{height:8px;border-radius:99px;background:#F4F6FA}
+
 .table-wrap{overflow-x:auto;margin-top:22px;border:1px solid var(--d-line);border-radius:14px;background:var(--d-surface);box-shadow:var(--d-shadow)}
 table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
 th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--d-line-soft);vertical-align:top}
@@ -424,11 +451,40 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         </g>
       </svg>
       <div class="beat-txt">
-        <span class="beat-n">6 · REENTRADA</span>
+        <span class="beat-n">6 · REENTRADA · EN PEQUEÑO</span>
         <span class="beat-h">Volvemos a tu suelo</span>
         <span class="beat-s">Comprobando 12 de 30 temas en tu web.</span>
         <span class="beat-j">Ya sabemos qué dicen de ti. Ahora, qué dices tú.</span>
         <span class="beat-r">4 temas por lote encadenado · ~13 min medidos</span>
+      </div>
+    </div>
+
+    <div class="beat">
+      <svg class="beat-art" viewBox="0 0 280 130">
+        <defs><linearGradient id="approach" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8FB3E4"/><stop offset="1" stop-color="#E8EFFC"/></linearGradient></defs>
+        <rect width="280" height="130" fill="url(#approach)"/>
+        <rect x="0" y="104" width="280" height="26" fill="#DCE5F5"/><rect x="0" y="103" width="280" height="1.2" fill="#B9C7DF"/>
+        <g opacity=".5">
+          <rect x="30" y="86" width="26" height="17" rx="2" fill="#C3D0E5"/>
+          <rect x="64" y="92" width="22" height="11" rx="2" fill="#C3D0E5"/>
+          <rect x="196" y="88" width="30" height="15" rx="2" fill="#C3D0E5"/>
+          <rect x="234" y="94" width="18" height="9" rx="2" fill="#C3D0E5"/>
+        </g>
+        <ellipse cx="144" cy="86" rx="20" ry="24" fill="rgba(255,176,32,.28)"/>
+        <g transform="translate(0,16)">
+          <rect x="128" y="66" width="8" height="7" rx="2" fill="#3B4759"/><rect x="140" y="66" width="8" height="8" rx="2" fill="#3B4759"/><rect x="152" y="66" width="8" height="7" rx="2" fill="#3B4759"/>
+          <path d="M128 50 L118 70 L128 66 Z" fill="#2563EB"/><path d="M160 50 L170 70 L160 66 Z" fill="#2563EB"/>
+          <path d="M144 14 q16 16 16 39 v13 h-32 v-13 q0 -23 16 -39 Z" fill="#0B1426"/>
+          <circle cx="144" cy="46" r="6" fill="#F7F8FB"/><circle cx="144" cy="46" r="3.6" fill="#2563EB"/>
+        </g>
+      </svg>
+      <div class="beat-txt">
+        <span class="beat-n">7 · APROXIMACIÓN FINAL · EN PEQUEÑO</span>
+        <span class="beat-h">Revisando tu web</span>
+        <span class="beat-s">18 de 40 páginas.</span>
+        <span class="beat-j">Lo técnico, que es lo que sí puedes arreglar.</span>
+        <span class="beat-r">pase técnico · alimenta el componente técnico del score</span>
       </div>
     </div>
 
@@ -444,7 +500,7 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
         <text x="214" y="70" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="19" fill="#0B1426">43</text>
       </svg>
       <div class="beat-txt">
-        <span class="beat-n">7 · ATERRIZAJE</span>
+        <span class="beat-n">8 · ATERRIZAJE · EN PEQUEÑO</span>
         <span class="beat-h">Todo listo</span>
         <span class="beat-s">43 puntos y 6 acciones esperándote.</span>
         <span class="beat-j">Repetimos mañana. Tú a lo tuyo.</span>
@@ -677,11 +733,127 @@ td:first-child{font-weight:700;color:var(--d-ink);white-space:nowrap}
   </div>
 </section>
 
+
+<!-- ══════════════════════ EL TRASPASO ══════════════════════ -->
+<section id="traspaso">
+  <h2>La misión suelta la pantalla a mitad</h2>
+  <p class="sec-note">
+    Buena pregunta, y me pilló en un error. Tal como lo había dibujado, la misión ocupaba la
+    pantalla entera <strong>los veinte minutos</strong> — incluidos los trece de la vuelta,
+    cuando la puntuación ya existe. Eso sería una regresión: hoy el overlay sólo se monta
+    <em>si no hay nada que enseñar</em> (<code>hasData</code>), y en cuanto el escaneo termina
+    puedes irte a Visión general, Prompts o Competidores mientras la auditoría sigue detrás de
+    una pastilla. Es literalmente el fallo que el log §26 corrigió en Recomendaciones.
+  </p>
+
+  <div class="note win" style="margin-top:18px">
+    <b>La regla</b>
+    <strong>En cuanto hay un dato que enseñar, enseñarlo gana a animarlo.</strong> La misión
+    ocupa la pantalla completa hasta la <em>carga entregada</em> —momento 5, que es
+    exactamente cuando <code>hasData</code> se vuelve cierto— y ahí <strong>hace el
+    traspaso</strong>: la Visión general aparece con sus datos y la vuelta continúa en
+    pequeño, sin bloquear nada. El cohete no aterriza en la pantalla: aterriza en la
+    cabecera.
+  </div>
+
+  <div class="hand">
+    <div class="dev">
+      <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span>
+        <span class="dev-logo"><span class="dev-mark">G</span>enscore</span><span style="width:16px"></span></div>
+      <div class="dev-sub">
+        <div><div class="dev-kick">Visión general</div><div class="dev-title">Genscore</div></div>
+        <span class="dpill run"><i></i>Auditando…</span>
+      </div>
+      <div class="dev-body">
+        <div class="dband">
+          <svg viewBox="0 0 34 34" width="30" height="30" aria-hidden="true">
+            <circle cx="17" cy="17" r="16" fill="rgba(37,99,235,.08)"/>
+            <g transform="translate(0,1)">
+              <path d="M17 6 q5 5 5 12 v5 h-10 v-5 q0 -7 5 -12 Z" fill="#0B1426"/>
+              <path d="M12 18 L9 25 L12 23 Z" fill="#2563EB"/><path d="M22 18 L25 25 L22 23 Z" fill="#2563EB"/>
+              <circle cx="17" cy="16" r="2.4" fill="#F7F8FB"/>
+              <ellipse cx="17" cy="27" rx="5" ry="3" fill="rgba(255,176,32,.35)"/>
+            </g>
+          </svg>
+          <span style="flex:1">
+            <span class="dband-t">Volviendo a tu suelo</span>
+            <span class="dband-s">12 de 30 temas · te avisamos al aterrizar</span>
+            <span class="dband-bar"><i></i></span>
+          </span>
+        </div>
+        <div class="dcard">
+          <div style="display:flex;align-items:center;gap:12px">
+            <svg viewBox="0 0 60 60" width="56" height="56" aria-hidden="true">
+              <circle cx="30" cy="30" r="25" fill="none" stroke="#E7EAF0" stroke-width="7"/>
+              <circle cx="30" cy="30" r="25" fill="none" stroke="#2563EB" stroke-width="7" stroke-linecap="round"
+                      stroke-dasharray="157" stroke-dashoffset="89" transform="rotate(-90 30 30)"/>
+              <text x="30" y="36" text-anchor="middle" font-weight="800" font-size="18" fill="#0B1426">43</text>
+            </svg>
+            <span style="font-size:11.5px;line-height:1.45;color:#5B6B82">
+              <b style="display:block;font-size:13px;color:#0B1426">Puntuación GEO</b>
+              Sales en 41 de 90 respuestas.
+            </span>
+          </div>
+        </div>
+        <div class="dcard"><span class="dskel" style="display:block;width:60%"></span>
+          <span class="dskel" style="display:block;width:88%;margin-top:8px"></span>
+          <span class="dskel" style="display:block;width:74%;margin-top:8px"></span></div>
+      </div>
+    </div>
+
+    <div class="dev">
+      <div class="dev-top"><span class="dev-burger"><i></i><i></i><i></i></span>
+        <span class="dev-logo"><span class="dev-mark">G</span>enscore</span><span style="width:16px"></span></div>
+      <div class="dev-sub">
+        <div><div class="dev-kick">Prompts</div><div class="dev-title">30 preguntas</div></div>
+        <span class="dpill wait"><i></i>Auditoría pendiente</span>
+      </div>
+      <div class="dev-body">
+        <div class="dcard" style="border-color:rgba(37,99,235,.18)">
+          <span style="font-size:11px;font-weight:700;color:#2563EB;letter-spacing:.08em">REENTRADA EN ESPERA</span>
+          <div style="font-size:11.5px;line-height:1.5;color:#5B6B82;margin-top:6px">
+            La vuelta se ha retrasado. Nada se pierde: seguimos en órbita y la retomamos sola.
+          </div>
+        </div>
+        <div class="dcard"><span class="dskel" style="display:block;width:52%"></span>
+          <span class="dskel" style="display:block;width:80%;margin-top:8px"></span></div>
+        <div class="dcard"><span class="dskel" style="display:block;width:66%"></span>
+          <span class="dskel" style="display:block;width:44%;margin-top:8px"></span></div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="note">
+        <b>Qué se lleva la versión pequeña</b>
+        La banda vive en Visión general —donde aterriza el onboarding— con el cohete
+        descendiendo, el contador real y la promesa del email. En el resto de pantallas basta
+        la pastilla que <strong>#365 acaba de hacer honesta</strong>: «Auditando…» cuando
+        avanza, «Auditoría pendiente» cuando lleva 5 minutos parada. La rama de la órbita en
+        espera es esa misma pastilla, contada en voz de misión.
+      </div>
+      <div class="note">
+        <b>Y el aterrizaje, ¿dónde ocurre?</b>
+        En una notificación, no en un secuestro de pantalla. Cuando la auditoría acaba, la
+        banda se cierra sola con «Aterrizaje completado · tu salud técnica ya cuenta en la
+        puntuación». Si el cliente no está, se lo cuenta el email. Un cohete que te tapa la
+        Visión general para decirte que ha terminado es un cohete maleducado.
+      </div>
+      <div class="note cost">
+        <b>Lo que esto le quita al guion, dicho claro</b>
+        Los momentos 6, 7 y 8 <strong>casi nadie los va a ver a pantalla completa</strong>, y
+        está bien: son trece de los veinte minutos, y son justo los que el cliente debería
+        pasar mirando <em>sus datos</em>, no un dibujo. El cohete se gana la pantalla mientras
+        no hay nada mejor que enseñar, y la suelta en cuanto lo hay.
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="siguiente">
   <div class="rec">
     <h3>Qué haría ahora</h3>
     <ol>
-      <li><strong>Fase 1 — la secuencia sin desglose.</strong> Los siete momentos con lo que ya viaja hoy en <code>/scan-status</code>: total, hechas, analizadas, estado del run. La reentrada usa el estado del job de auditoría, que también existe. Cero backend nuevo.</li>
+      <li><strong>Fase 1 — la secuencia, con el traspaso dentro.</strong> Momentos 1–5 a pantalla completa con lo que ya viaja en <code>/scan-status</code> (total, hechas, analizadas, estado del run), y momentos 6–8 como banda compacta en Visión general más la pastilla que ya existe. El traspaso ocurre donde <code>hasData</code> se vuelve cierto, que es la condición que el producto ya usa: no hay que inventar ninguna. Cero backend nuevo.</li>
       <li><strong>Fase 1b — ya hecha por otra sesión.</strong> #363 (mergeado) y #365 (abierto) quitan la pestaña del camino crítico. Esta pantalla <em>depende</em> de los dos: sin ellos no puede escribir «vete tranquilo». Al implementar, verificar que #365 está dentro.</li>
       <li><strong>Fase 2 — el aviso por email, ahora obligatorio.</strong> Con la misión completa en 18–20 min (una hora en Pro), es lo único que convierte la espera en algo que se puede abandonar. Sin esto, el guion es un adorno sobre un problema sin resolver.</li>
       <li><strong>Fase 3 — las toberas por motor.</strong> Es lo único que pide lectura nueva (respuestas agrupadas por motor en un endpoint que se sondea cada 4 s). Hasta entonces, las tres encienden juntas al llegar la primera respuesta — menos gracioso, igual de honesto.</li>
