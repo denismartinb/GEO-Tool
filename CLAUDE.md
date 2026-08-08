@@ -383,7 +383,7 @@ fase" (ver "Cierre de fase" más abajo).
 
 | Zona | Regla de ruta (automática) | Última fase cerrada | Histórico |
 |---|---|---|---|
-| Competidores | `competitors.md` | TREND-WINDOW-1 (2026-08-04) | log §10, §11, §15 · ADR 0011/0018/0020/0022 |
+| Competidores | `competitors.md` | **PANORAMA-EMPTY-1 (2026-08-07)** | log §10, §11, §15, §36 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
 | Auditoría web | `web-audit.md` | **WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038)** · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |

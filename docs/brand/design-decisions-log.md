@@ -3442,6 +3442,160 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 
 **Pendiente / roto conocido.** Ninguno nuevo. Sigue pendiente lo ya anotado en
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
+
+---
+
+## 36. La panorámica competitiva y la lista de Competidores dejan de contradecirse (PANORAMA-PARITY-1, 2026-08-06)
+
+> Numeración: la entrada anterior está rotulada "33" por error de una fusión
+> (hay dos §33 y dos §10 en la historia de este fichero). Esta fase toma **36**,
+> el siguiente número realmente libre después de §35.
+
+**El problema, reportado por el fundador con dos capturas del mismo proyecto y
+el mismo escaneo.** «Panorámica competitiva» (Visión general) y «Puesto en el
+último escaneo» (Competidores) describían lo mismo con cinco lógicas distintas:
+
+| | Visión general | Competidores |
+|---|---|---|
+| Orden | índice de `normalizeRanking` (sólo posición) | posición → **mención** → nombre |
+| Puesto | `i + 1`, dígito gris a la izquierda, sin etiqueta | 1..N, ordinal `5º`, a la derecha |
+| Cifra % | **cuota de voz** | **tasa de mención** |
+| Columna extra | media en crudo `1.50º` | ninguna |
+| Población | ranking persistido, top 5 | marca + competidores **activos** |
+
+Sobre Mozilla eso salía a la pantalla así: Proton VPN 1º en una y 2º en la otra
+(empata con Amazon a 1,00 y sólo una de las dos desempataba), y Mozilla 37%
+aquí contra 48% allí. `.claude/rules/competitors.md` ya llamaba a esto fallo,
+no matiz: *"dos números con el mismo significado y distinto valor es un fallo"*
+(ADR 0018). Y la media en crudo seguía publicada en la panorámica **catorce
+días después** de que §15 la retirara de la otra pantalla por ilegible.
+
+**Lo que se decidió.** Un solo cálculo, `lib/competitors/latest-positions.ts`,
+que las dos pantallas llaman. No es lógica nueva: es exactamente el
+ordenamiento que la lista de Competidores ya hacía, extraído del componente
+para que un segundo lector no pueda derivar de él. La panorámica pasa a
+`marca · mención % · puesto ordinal`, con una etiqueta por columna.
+
+**Por qué mención y no cuota de voz.** Eran dos métricas distintas
+presentadas como si fueran la misma pregunta ("¿cuánto salgo?"), y ninguna de
+las dos estaba etiquetada en la panorámica. Al elegir, mención gana por tres
+razones: es la cifra de la lista con la que se compara, es la que ya usa el
+resto de la Visión general (`X de N respuestas`), y es la que desempata el
+propio ranking — enseñarla hace visible el criterio de orden en vez de dejarlo
+implícito. El fundador confirmó la lectura al aprobar: *"quise decir Mención en
+lugar de Cuota de voz"*. **La cuota de voz no se retira del producto**: sigue
+en el pódium de Competidores, etiquetada como lo que es y calculada sobre todos
+los escaneos completados. Lo que desaparece es su cálculo en la Visión general,
+que ya no alimentaba nada.
+
+**Detalles que no son cosméticos.**
+
+1. **Se pasan entidades, no filas del ranking.** Un competidor desactivado
+   después del escaneo sigue dentro del ranking persistido; al pasar la lista
+   de entidades activas, las dos pantallas lo dejan de mostrar en el mismo
+   render en vez de que una conserve una fila que la otra ya no tiene.
+2. **La marca se casa por `is_brand`, nunca por nombre.** El nombre guardado es
+   el que hubiera al puntuar el run: una marca renombrada desde entonces
+   dejaría de encontrarse a sí misma en silencio.
+3. **`X / N` sale del mismo listado que las filas.** Antes el denominador se
+   contaba sobre el ranking persistido y las filas sobre otra población, así
+   que titular y lista podían discrepar sin que nada fallara.
+4. **El respaldo sin datos de puesto también muestra mención**, no cuota de
+   voz: un escaneo anterior a geo-score-v3 no tiene posición para nadie
+   (ADR 0026, sin backfill) y la lista cae a mención sola — misma métrica,
+   menos el puesto, en vez de cambiar de métrica al quedarse sin una.
+
+**Lección transferible, y es la segunda vez que aparece.** §15 dejó escrito que
+una etiqueta mal anclada empieza a mentir en cuanto cambia el dato que hay
+debajo. Aquí el fallo fue el grado anterior: **una columna sin ninguna etiqueta
+hereda el significado de la columna equivalente de otra pantalla**. El lector
+—el fundador— asumió que un porcentaje sin nombre al lado de un ranking era el
+mismo porcentaje que ve en Competidores, porque no había nada que dijera lo
+contrario. Un número sin etiqueta no es neutro: toma prestado el significado
+del vecino más parecido que el usuario haya visto.
+
+**Pendiente / roto conocido, al cerrar PANORAMA-PARITY-1.** Ninguno nuevo.
+Queda anotado, sin decidir, que la cuota de voz del pódium de Competidores es
+**acumulada** mientras la mención de estas dos listas es **del último
+escaneo** — es deliberado (regla de ruta, "Poblaciones de datos") y ahora está
+etiquetado en las dos pantallas, pero es la próxima pregunta que hará alguien
+que compare las dos cifras.
+
+### Addendum — el bloque tenía un solo diseño para cuatro estados reales (PANORAMA-EMPTY-1, 2026-08-07)
+
+Revisando el PR con el fundador, dos capturas más destaparon que
+`PanoramaRow`/`posbarsData` sólo modelaban bien el estado feliz —marca dentro
+del top 5 con datos de puesto— y trataban los otros tres como variaciones de
+ese mismo caso en vez de estados propios:
+
+1. **Pregunta del fundador, antes de ver el bug real:** *"imagina que
+   estuviéramos en la posición 7. ¿Qué saldría?"* Trazado en el código: la
+   tabla añadía tu fila al final (correcto), pero las barras se calculaban
+   sólo sobre `topPanoramaRows.slice(0, 5)` — **sin tu fila**. La tarjeta
+   titulada «Tu puesto cuando apareces», con un `7 / 7` encima, habría
+   dibujado cinco barras y ninguna azul. Contradicción entre el titular y el
+   propio bloque que lo ilustra.
+2. **El caso real, con una captura del propio proyecto genscore.es del
+   fundador (escaneado 2026-08-07):** ningún motor nombró a la marca ni a
+   ninguno de sus 5 competidores. La panorámica dibujaba **seis filas de
+   `0%`** sin columna de puesto y sin ningún gráfico — un muro de ceros sin
+   explicación, en la primera pantalla que ve cualquier cliente nuevo cuyo
+   dominio aún no aparece en respuestas de IA. Este es el estado normal de un
+   primer escaneo, no un caso raro.
+
+**Lo que se decidió: nombrar los cuatro estados y dejar que cada uno decida su
+propio render**, en vez de un único fallback que a veces acierta. Extraído a
+`lib/competitors/panorama-state.ts` (`computePanoramaState`, 8 tests), que
+`app/dashboard/projects/[projectId]/page.tsx` consulta en vez de derivar el
+estado inline:
+
+- **`empty`** — nadie (ni la marca ni ningún competidor activo) fue
+  mencionado en el escaneo. Se detecta por `mentionRate`, no por el ranking:
+  tiene que dispararse tanto si hay datos de posición (extracción correcta,
+  cero menciones — el caso genscore.es) como si no los hay (escaneo
+  pre-geo-score-v3 con cero menciones), porque las dos son la misma pregunta
+  del usuario. Sustituye la tabla entera por un bloque honesto —"Ninguna
+  marca apareció en este escaneo", con el número real de competidores y de
+  respuestas— y un enlace a revisar los prompts. Sin gráfico, sin tabla de
+  ceros.
+- **`unranked`** — sin cambios de comportamiento: escaneo anterior a
+  geo-score-v3 con menciones reales. Sigue siendo la lista sólo-mención que
+  ya existía; no confundir con `empty`, que es una pregunta distinta ("¿hay
+  puesto?" contra "¿hubo alguien?").
+- **`ranked`, dentro del top 5** — sin cambios de comportamiento; es el caso
+  que ya validó el piloto.
+- **`ranked`, fuera del top 5 o sin mención** — dos correcciones:
+  - **Las barras dejan de fingir que incluyen tu marca.** `topRows` es
+    siempre el top 5 real, nunca rellenado con tu fila para que "tus barras"
+    lo sean de verdad. Etiquetadas **"Top 5 posiciones"** para que el titular
+    grande (tu puesto) y las barras (quién es el top 5 real) no se lean como
+    la misma afirmación — son dos preguntas distintas y ahora lo dicen.
+  - **La tabla marca el salto en vez de dejar un hueco sin explicar.** Cuando
+    tu fila se añade tras el top 5, un separador de tres puntos (`.ov2-cmp-gap`)
+    se dibuja entre la 5ª fila y la tuya, para que el hueco en la numeración
+    se lea como un salto deliberado y no como una fila que falta.
+  - **Decisión explícita del fundador sobre el cuarto caso** (marca sin
+    mención mientras otros competidores sí tienen puesto): el titular pasa de
+    `— / N` —con la explicación escondida en un `title` que nadie abre en
+    móvil— a la frase **"No apareciste en este escaneo"**, y **no se añade
+    fila de la marca al final de la tabla**. Propuse mantener la fila con la
+    posición en blanco; el fundador cortó explícitamente: *"En el D que lo
+    diga el titular. No hace falta la fila al final"*. La lógica ya lo hacía
+    así de forma natural —`rankLatestPositions` excluye del ranking a
+    cualquier entidad sin puesto, así que la marca nunca entra en `rows`
+    cuando no fue nombrada— así que el cambio real fue sólo el titular.
+
+**Validación declarada, no inflada.** La cuenta piloto no tiene ningún
+proyecto en los estados `empty` o `ranked`-fuera-de-top-5: los tres estados
+nuevos están cubiertos por los 8 tests del helper (incluida la integración
+completa con `rankLatestPositions`, un competidor desactivado que no debe
+aparecer, y el empate marca-nunca-mencionada) pero **no por ninguna captura
+del piloto**. La verificación visual del estado `empty` se hizo a mano contra
+el propio proyecto genscore.es del fundador en el preview, por ser el único
+proyecto real conocido en ese estado.
+
+**Pendiente / roto conocido.** Ninguno nuevo.
+
 ---
 
 ## 39. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1 y 3a, 2026-08-06)
