@@ -568,8 +568,11 @@ export async function sendWebAuditFailedAlertEmail(input: {
  * leads with the engine and the reason precisely so the inbox itself
  * answers "what do I have to go fix".
  *
- * Deliberately plain and dense rather than brand-wrapped: the reader is
- * debugging.
+ * Brand-wrapped (BRAND-5c system) since 2026-08-07: the reader is still
+ * debugging, so every field from the plain version stays, but the same
+ * `wrap()`/`eyebrow()`/`heading()` shell as the other transactional emails
+ * replaces the ad-hoc bare-bones HTML — this one landed in the founder's own
+ * inbox looking unbranded next to the other eight.
  */
 export async function sendScanHealthAlertEmail(input: {
   engine: string;
@@ -586,30 +589,43 @@ export async function sendScanHealthAlertEmail(input: {
   const to = getOpsAlertAddress();
   if (!to) return;
 
-  const row = (label: string, value: string) =>
-    `<tr><td style="padding:4px 12px 4px 0;color:#5B6B82;font-size:13px;white-space:nowrap;">${label}</td>` +
-    `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const rowsHtml = [
+    dataRow("Motor", input.engine),
+    dataRow("Causa", input.reason),
+    input.totalRows > 0
+      ? dataRow("Filas afectadas", `${input.affectedRows} de ${input.totalRows}`)
+      : dataRow("Filas", "ninguna: el motor no llegó a responder"),
+    dataRow("Dominio", input.domain),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Escaneo", input.runId),
+    dataRow("Detectado", input.detectedAt.toISOString())
+  ].join("");
 
   await sendEmail(
     to,
     `[GenScore] Escaneo incompleto — ${input.engine}: ${input.reason}`,
-    `<!doctype html><html><head><meta charset="utf-8"></head>
-     <body style="margin:0;padding:24px;background:#FFFFFF;font-family:${FONT_STACK};color:#0B1426;">
-       <h1 style="margin:0 0 6px;font-size:17px;">${escapeHtml(input.headline)}</h1>
-       <p style="margin:0 0 18px;font-size:13.5px;color:#5B6B82;">${escapeHtml(input.detail)}</p>
-       <table role="presentation" cellpadding="0" cellspacing="0">
-         ${row("Motor", input.engine)}
-         ${row("Causa", input.reason)}
-         ${input.totalRows > 0 ? row("Filas afectadas", `${input.affectedRows} de ${input.totalRows}`) : row("Filas", "ninguna: el motor no llegó a responder")}
-         ${row("Dominio", input.domain)}
-         ${row("Proyecto", input.projectId)}
-         ${row("Escaneo", input.runId)}
-         ${row("Detectado", input.detectedAt.toISOString())}
-       </table>
-       <p style="margin:18px 0 0;font-size:12.5px;color:#5B6B82;">
-         Sólo se envía un aviso por motor y causa cada 24 h, aunque el problema afecte a varios proyectos.
-         El resto queda registrado en <code>scan_prompt_results.extraction_error</code>.
-       </p>
-     </body></html>`
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading(input.headline)}
+      ${paragraph(input.detail)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext(
+        "Sólo se envía un aviso por motor y causa cada 24 h, aunque el problema afecte a varios proyectos. El resto queda registrado en <code>scan_prompt_results.extraction_error</code>."
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: input.headline
+      }
+    )
   );
 }

@@ -1292,7 +1292,12 @@ a {
    (none of which are edited here) automatically repaint in v3 colors
    for any instance rendered inside this wrapper, while every other
    page keeps reading the unmodified `:root` values. */
-.ov2-scope {
+/* CONSOLE-REDESIGN-1 reuses this remap for Ajustes (`.set-scope`) rather than
+   inventing a second mechanism, as the design log §2 requires. The two share
+   the token block below; only `.ov2-scope` gets Overview's 460px column, which
+   is why the width rule stays on its own selector further down. */
+.ov2-scope,
+.set-scope {
   font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --ink: var(--brand-ink);
   --ink-2: var(--brand-ink-2);
@@ -1312,7 +1317,8 @@ a {
 .ov2-scope .card,
 .ov2-scope .ov2-insight,
 .ov2-scope .ov2-kpi,
-.ov2-scope .ov2-opps {
+.ov2-scope .ov2-opps,
+.set-scope .card {
   box-shadow: var(--brand-shadow-card);
 }
 /* Gauge component's inner number is a shared component (not an ov2 class), so
@@ -1460,6 +1466,25 @@ a {
   margin: 3px 0 6px;
 }
 .ov2-pm-val small { font-size: 14px; color: var(--ink-4); font-weight: 700; }
+/* PANORAMA-EMPTY-1. "No apareciste en este escaneo" replaces the number in
+   this same slot when the brand itself was never named — the sentence must
+   not inherit the giant display-font digit styling meant for "5 / 7", or it
+   renders as an oversized, badly-wrapped headline. */
+.ov2-pm-val-text {
+  display: block;
+  font-family: var(--font-body), "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: normal;
+  color: var(--ink-3);
+}
+/* The bars are always the true top 5, not "your" top 5 — this caption keeps
+   the headline number above (your standing) and the bars below (who's
+   actually top 5) from being read as the same claim (founder, 2026-08-07). */
+.ov2-pm-bars-lbl {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4); margin: 10px 0 4px;
+}
 .ov2-posbars { display: flex; align-items: flex-end; gap: 9px; height: 60px; padding: 0 2px; margin: 6px 0 26px; }
 .ov2-posbars .b { flex: 1; border-radius: 6px 6px 0 0; position: relative; background: var(--line); min-height: 6px; }
 .ov2-posbars .b.you { background: var(--brand-blue); }
@@ -1471,7 +1496,28 @@ a {
 .ov2-cmp-row { display: flex; align-items: center; gap: 11px; padding: 13px 15px; border-bottom: 1px solid var(--line-soft); }
 .ov2-cmp-row:last-child { border-bottom: none; }
 .ov2-cmp-row.you { background: var(--brand-blue-soft); }
-.ov2-cmp-n { width: 16px; font-size: 12px; font-weight: 750; color: var(--ink-3); text-align: center; flex: 0 0 auto; }
+/* PANORAMA-EMPTY-1. When the brand falls outside the real top 5, its row is
+   still appended so "dónde estoy" never disappears — but an unexplained gap
+   at rank 6 reads as a missing row, not a skip (founder, 2026-08-07). Three
+   dots mark it as a deliberate break, not a broken list. */
+.ov2-cmp-gap { display: flex; justify-content: center; align-items: center; gap: 4px; padding: 7px 0; }
+.ov2-cmp-gap span { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-4); }
+/* PANORAMA-PARITY-1. The leading `.ov2-cmp-n` rank digit is gone: the standing
+   now sits at the end of the row as an ordinal, the same shape Competidores
+   reached after the founder twice failed to see it on the left (log §15).
+   Header columns reuse the value classes so their widths track the rows'
+   automatically at both breakpoints; only the type is overridden. */
+.ov2-cmp-hd {
+  display: flex; align-items: flex-end; gap: 11px; padding: 11px 15px 7px;
+  border-bottom: 1px solid var(--line-soft);
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-4);
+}
+.ov2-cmp-hd-nm { flex: 1; min-width: 0; }
+.ov2-cmp-hd .ov2-cmp-sov,
+.ov2-cmp-hd .ov2-cmp-sc {
+  font: inherit; font-size: 9.5px; letter-spacing: .08em; color: var(--ink-4); text-align: right;
+}
 .ov2-cmp-fav {
   width: 26px; height: 26px; border-radius: 8px; flex: 0 0 auto;
   object-fit: cover; background: var(--surface); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .06);
@@ -1491,7 +1537,11 @@ a {
   font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
   font-size: 13px; font-weight: 800; flex: 0 0 auto; width: 52px; text-align: right; color: var(--ink);
 }
-.ov2-cmp-sc small { font-size: 9.5px; color: var(--ink-4); font-weight: 700; }
+/* The ordinal's "º" is NOT a <small>: at 9.5px and --ink-4 it floated off the
+   digit and read as a degree sign or a stray dot ("1°"), which is exactly the
+   "a bullet, not a standing" failure §15 spent two rounds on. It carries the
+   digit's own size and weight, as on Competidores. The old `.ov2-cmp-sc small`
+   rule existed for the raw mean's superscript and left with it. */
 
 /* 6 · Oportunidades (light card, matches prototype) */
 .ov2-opps { overflow: hidden; }
@@ -1624,6 +1674,7 @@ a {
   .ov2-posbars { height: 86px; margin: 10px 0 30px; gap: 12px; }
   .ov2-posbars .b span { font-size: 10.5px; }
   .ov2-pm-val { font-size: 26px; }
+  .ov2-pm-val-text { font-size: 17px; }
   .ov2-cmp-row { padding: 14px 18px; gap: 14px; }
   .ov2-cmp-fav, .ov2-cmp-row .fav { width: 30px !important; height: 30px !important; border-radius: 9px; }
   .ov2-cmp-nm .t { font-size: 13.5px; }
@@ -5374,61 +5425,121 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 }
 
 /* ============================================================
-   Ajustes de cuenta — tabs, formularios, equipo, switch
+   Ajustes de cuenta — CONSOLE-REDESIGN-1: one page, three sections.
+   The tab bar (.set-tabs/.set-tab) was removed with the four routes it
+   navigated between. Approved design:
+   docs/design-reference/console-redesign-1/.
    ============================================================ */
-.set-tabs {
-  display: flex;
-  gap: 4px;
-  border-bottom: 1px solid var(--line);
-  margin: 4px 0 22px;
-  overflow-x: auto;
+.set-page { max-width: 900px; }
+.set-pane { display: flex; flex-direction: column; gap: 12px; }
+
+/* Cabecera de pantalla de CUENTA — mismo patrón que Dominios (log §32):
+   kicker + titular grande + pastilla de estado. */
+.set-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap; margin-bottom: 20px;
+}
+.set-kicker { font-size: 12.5px; font-weight: 500; color: var(--ink-4); margin: 0 0 2px; }
+.set-title {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-weight: 800; font-size: 26px; letter-spacing: -.035em; line-height: 1.1; margin: 0;
+}
+.set-pill {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--accent-soft); border-radius: 999px; padding: 6px 12px; margin-top: 5px;
 }
 
-.set-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 40px;
-  padding: 0 14px;
-  border: none;
-  background: none;
-  font-size: 13.5px;
-  font-weight: 650;
-  color: var(--ink-3);
-  cursor: pointer;
-  white-space: nowrap;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  transition: color .14s;
+.set-two { display: grid; grid-template-columns: 186px 1fr; gap: 34px; align-items: start; }
+.set-col { min-width: 0; }
+
+/* El índice lleva estado, no sólo enlaces — con tres entradas, una columna que
+   sólo navegase no se ganaría su sitio. */
+.set-idx { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; }
+.set-ie { display: block; padding: 9px 12px; border-left: 2px solid var(--line); line-height: 1.25; }
+.set-ie b { display: block; font-size: 12.5px; font-weight: 650; color: var(--ink-3); }
+.set-ie span {
+  display: block; font-size: 11px; color: var(--ink-4); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.set-ie:hover b { color: var(--ink); }
+.set-ie.on { border-left-color: var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; }
+.set-ie.on b { color: var(--accent); }
+
+.set-sech {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-size: 16px; font-weight: 750; letter-spacing: -.022em; margin: 0 0 10px;
+  scroll-margin-top: 18px;
+}
+.set-sech.sp { margin-top: 30px; }
+
+.set-idrow {
+  display: flex; align-items: center; gap: 14px;
+  padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line-soft);
+}
+.set-idname { font-size: 15px; font-weight: 700; letter-spacing: -.015em; }
+.set-idmail {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 11.5px; color: var(--ink-4); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis;
 }
 
-.set-tab .ico { color: var(--ink-4); }
-.set-tab:hover { color: var(--ink); }
-.set-tab.on { color: var(--accent-ink); border-bottom-color: var(--accent); }
-.set-tab.on .ico { color: var(--accent); }
-
-.set-pane { display: flex; flex-direction: column; gap: 14px; max-width: 920px; }
-
-.set-profile-head {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--line-soft);
-}
-
+/* REGLA DE FORMA (docs/brand/brand-guidelines.md): redondo es una persona,
+   squircle es un dominio. Tinta plana, sin degradado — hallazgo de BRAND-4. */
 .set-avatar-lg {
-  width: 58px; height: 58px; border-radius: 999px;
-  background: linear-gradient(135deg, #8b8df5, #4f46e5); color: #fff;
-  display: grid; place-items: center; font-weight: 750; font-size: 21px; flex: 0 0 auto;
+  width: 44px; height: 44px; border-radius: 999px;
+  background: var(--accent-ring); color: var(--accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 15px; flex: 0 0 auto;
 }
 
-.set-org-logo {
-  width: 58px; height: 58px; border-radius: var(--r-lg);
-  background: linear-gradient(135deg, #34507a, #0f1729); color: #fff;
-  display: grid; place-items: center; font-weight: 800; font-size: 24px; flex: 0 0 auto;
+/* Plegable de empresa — cerrado por defecto. */
+.set-fold { border: 1px solid var(--line); border-radius: 11px; margin-top: 16px; overflow: hidden; }
+.set-fold-h {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 12px 14px; font-size: 13px; background: none; border: 0;
+  font-family: inherit; text-align: left; cursor: pointer; color: inherit;
 }
+.set-fold-h:hover { background: var(--surface-sunk); }
+.set-caret {
+  width: 0; height: 0; flex: 0 0 auto;
+  border-left: 5px solid var(--ink-4); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+.set-caret.open {
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 5px solid var(--accent); border-bottom: 0;
+}
+.set-fold-t { font-weight: 650; color: var(--ink); }
+.set-fold-d { color: var(--ink-4); font-size: 12px; margin-left: auto; }
+.set-fold-b { padding: 14px; border-top: 1px solid var(--line-soft); }
+
+/* Los dos acordeones gemelos («empresa» y «facturación») van juntos y con su
+   propio aire respecto al formulario de arriba. */
+.set-folds { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+.set-folds .set-fold { margin-top: 0; }
+
+/* La caja de seguridad iba ahogada: una fila de una línea dentro del padding
+   por defecto (fundador, 2026-08-06, «da más aire a la caja de seguridad»). */
+.set-col > .card { margin-bottom: 12px; }
+.set-security .card-body { padding: 24px 20px; }
+.set-security .set-row { padding: 2px 0; }
+.set-security .set-password-form { padding-top: 20px; margin-top: 18px; border-top: 1px solid var(--line-soft); }
+
+.set-quiet {
+  font-size: 12px; color: var(--ink-4); line-height: 1.5;
+  margin: 14px 0 0; padding-top: 13px; border-top: 1px solid var(--line-soft);
+}
+
+
+/* Borrado de cuenta: último bloque de la página, fuera del índice y en tono
+   bajo. A una acción irreversible se llega bajando, no de un clic. */
+.set-end {
+  margin-top: 44px; padding-top: 20px; border-top: 1px solid var(--line);
+  display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap;
+}
+.set-end-t { font-size: 13.5px; font-weight: 650; color: var(--ink-2); }
+.set-end-d { font-size: 12.5px; color: var(--ink-4); margin-top: 3px; line-height: 1.5; max-width: 46ch; }
+.set-end-btn { color: var(--neg-ink); border-color: rgba(210, 59, 72, .25); }
+.set-end-btn:hover { background: var(--neg-soft); }
 
 .set-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 18px; }
 .set-form-grid .field-label { font-size: 13px; color: var(--ink-2); }
@@ -5456,12 +5567,6 @@ select.set-field {
 .set-hint b { color: var(--ink-3); font-weight: 700; }
 .set-actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
 
-.set-role-pill {
-  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px;
-  border-radius: var(--r-pill); font-size: 12px; font-weight: 700;
-  background: var(--accent-soft); color: var(--accent-ink);
-}
-.set-role-pill.ghost { background: var(--surface-sunk); color: var(--ink-3); }
 
 .set-row { display: flex; align-items: center; gap: 20px; padding: 16px 0; border-bottom: 1px solid var(--line-soft); }
 .set-row.last { border-bottom: none; }
@@ -5528,6 +5633,19 @@ select.set-field {
   .set-invite-bar { width: 100%; }
 }
 
+/* CONSOLE-REDESIGN-1 — móvil es un solo scroll. El índice desaparece entero:
+   ni pastillas, ni pestañas, ni ningún elemento pegajoso propio de la página.
+   El argumento de esta pantalla es «una página», y meter navegación por
+   secciones en el viewport más pequeño la contradice (fundador, 2026-08-06).
+   Se corta en el mismo 899px que el shell, no en 720. */
+@media (max-width: 899px) {
+  .set-two { grid-template-columns: 1fr; gap: 0; }
+  .set-idx { display: none; }
+  .set-title { font-size: 24px; }
+  .set-end { flex-direction: column; gap: 14px; }
+  .set-end .btn { width: 100%; }
+}
+
 /* --- Chip de plan elegido en el registro --- */
 .signup-plan-chip { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; padding: 8px 8px 8px 12px;
   border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 600; }
@@ -5575,6 +5693,22 @@ select.set-field {
 .cp-flag.cur { background: var(--ink); color: #fff; }
 .cp-flag.rec { background: var(--accent); color: #fff; }
 .cp-plan.has-flag { margin-top: 4px; }
+
+/* CONSOLE-REDESIGN-1: Agencia ocupa la misma celda de la rejilla que un plan,
+   pero no es un radio — no tiene precio self-serve en Stripe, así que se le da
+   una salida real en vez de una selección que apagaba «Continuar». */
+.cp-sales {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  padding: 15px 16px; border-radius: var(--r-lg);
+  border: 1.5px dashed var(--line-strong); background: var(--surface-2);
+}
+.cp-sales-t { font-size: 15px; font-weight: 800; letter-spacing: -.01em; }
+.cp-sales-d { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 4px; line-height: 1.4; }
+.cp-sales-cta {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--accent);
+}
+.cp-sales-cta:hover { text-decoration: underline; }
 
 .cp-confirm-head { display: flex; align-items: center; gap: 12px; padding: 4px 0 18px; }
 .cp-confirm-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 11px; border-radius: 999px; font-size: 12px; font-weight: 750; }
@@ -6798,3 +6932,472 @@ select.set-field {
 .dbg-switch-txt b { font-size: 13px; font-weight: 750; color: var(--ink); display: block; }
 .dbg-switch-txt small { font-size: 11.5px; color: var(--ink-3); }
 .switch-toggle:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ============================================================================
+   ONBOARDING-TOUR-1 — tour «Aprende cómo funciona»
+   (components/product-tour.tsx · docs/design-reference/onboarding-tour-1/)
+
+   Dos variantes de la MISMA pieza, intercambiadas por modificador:
+   `.ptour--hero`  → integrado en el hero de la landing, dentro de
+                     `.browserframe` (reutiliza el cromo ya aprobado, log §1).
+   `.ptour--modal` → popup de bienvenida en la consola.
+
+   Todo va prefijado `pt-` y anidado bajo `.ptour` a propósito: el prototipo
+   usaba nombres genéricos (.card, .badge, .nav, .dot, .chip, .field…) que ya
+   existen en este fichero y se pisarían en ambos sentidos.
+
+   La animación no vive aquí. Se deriva de un único reloj en JS y se escribe
+   por refs sobre el DOM; este bloque sólo define el aspecto y las
+   transiciones de estado. Ver el README de la referencia de diseño.
+   ============================================================================ */
+
+.ptour {
+  --pt-canvas: var(--canvas);
+  --pt-surface: var(--surface);
+  --pt-line: var(--line);
+  --pt-blue: var(--brand-blue);
+  --pt-blue-2: var(--brand-blue-2);
+  --pt-blue-soft: var(--brand-blue-soft);
+  --pt-warn-soft: #fff4e0;
+  --pt-warn-ink: #93610b;
+  color: var(--ink);
+  /* El hero de la landing centra su texto y el tour lo heredaba: el
+     mini-producto entero salía centrado, títulos de pantalla incluidos.
+     La consola no tiene ese problema, pero la regla vale para las dos. */
+  text-align: left;
+}
+
+/* --- Cabecera: título fijo, subtítulo que explica lo de abajo ------------- */
+.pt-head { padding: 13px 22px 0; }
+.pt-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--pt-blue); background: var(--pt-blue-soft);
+  padding: 3px 9px; border-radius: 999px; margin-bottom: 9px;
+}
+.pt-title {
+  font-size: 19px; font-weight: 800; letter-spacing: -.025em; margin: 0; color: var(--ink);
+  text-wrap: balance;
+}
+/* El subtítulo es la única línea que cambia entre pasos, y sus ocho textos
+   tienen longitudes muy distintas: si el contenedor creciera con cada uno, la
+   pieza daría un salto de altura al avanzar. Los ocho se apilan en la misma
+   celda de rejilla y sólo uno es visible, así que la altura del contenedor es
+   siempre la del más alto — sin medir nada en JS y correcto a cualquier ancho,
+   con cualquier tipografía y en cualquier idioma. */
+.pt-sub {
+  margin: 0; padding: 4px 22px 10px;
+  font-size: 13px; line-height: 1.45; color: var(--ink-3);
+  display: grid;
+}
+.pt-sub > span { grid-area: 1 / 1; }
+.pt-sub > span[aria-hidden="true"] { visibility: hidden; pointer-events: none; }
+.pt-sub b { color: var(--ink-2); font-weight: 700; }
+
+/* --- Lienzo -------------------------------------------------------------- */
+/* La proporción del lienzo es el grueso de la altura del tour: a 375 px se
+   llevaba 466 de 690 (fundador, 2026-08-07: «sobra mucho espacio arriba y
+   abajo... damos más visibilidad a los botones»). Se aprieta hasta donde el
+   contenido aguanta sin recortarse — comprobado en los ocho pasos y a
+   375/768/1280 px, que es la única forma de saberlo. */
+.pt-stage {
+  position: relative;
+  margin: 0 22px;
+  aspect-ratio: 2.3 / 1;
+  background: var(--pt-canvas);
+  border: 1px solid var(--pt-line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  user-select: none;
+}
+.ptour--hero .pt-stage { margin: 0; border: none; border-radius: 0; }
+
+.pt-side {
+  width: 23%; min-width: 118px; flex: 0 0 auto;
+  background: var(--pt-surface); border-right: 1px solid var(--pt-line);
+  padding: 8px 7px; display: flex; flex-direction: column; gap: 1px;
+}
+.pt-sbrand {
+  display: flex; align-items: center; gap: 6px;
+  padding: 2px 6px 8px; font-size: 11px; font-weight: 800; letter-spacing: -.02em;
+}
+.pt-sdot {
+  width: 13px; height: 13px; border-radius: 4px; flex: 0 0 auto;
+  background: linear-gradient(135deg, var(--pt-blue-2), var(--pt-blue));
+}
+.pt-slabel {
+  font-size: 8.5px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-4); padding: 6px 6px 3px;
+}
+.pt-nav {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 6px; border-radius: var(--r-sm);
+  font-size: 10px; font-weight: 600; color: var(--ink-2);
+  transition: background .18s, color .18s;
+}
+.pt-nav i { width: 10px; height: 10px; flex: 0 0 auto; border-radius: 3px; background: currentColor; opacity: .36; }
+.pt-nav.is-on { background: var(--pt-blue-soft); color: var(--pt-blue); font-weight: 750; }
+.pt-nav.is-on i { opacity: .85; }
+
+.pt-main { flex: 1 1 auto; position: relative; min-width: 0; }
+/* El contenido llena el lienzo: una tarjeta pequeña flotando en un lienzo
+   medio vacío se lee como una maqueta a medio hacer, no como una pantalla. */
+.pt-act {
+  position: absolute; inset: 0; padding: 11px 13px; opacity: 0;
+  transition: opacity .26s ease;
+  display: flex; flex-direction: column;
+}
+.pt-act.is-on { opacity: 1; }
+.pt-card { background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: var(--r-md); padding: 9px 10px; }
+.pt-card.pt-fill { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.pt-card.pt-fill.pt-center { justify-content: center; }
+.pt-recs.pt-fill { flex: 1 1 auto; justify-content: center; }
+.pt-genstack { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+
+.pt-h { font-size: 11.5px; font-weight: 800; letter-spacing: -.015em; color: var(--ink); margin: 0 0 1px; }
+.pt-hsub { font-size: 9.5px; color: var(--ink-4); margin: 0 0 9px; }
+
+.pt-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 999px; display: inline-flex; align-items: center; gap: 4px; }
+.pt-badge-pos { background: var(--pos-soft); color: var(--pos); }
+.pt-badge-mid { background: var(--pt-blue-soft); color: var(--pt-blue); }
+.pt-badge-warn { background: var(--pt-warn-soft); color: var(--pt-warn-ink); }
+
+/* ---------- Paso 1 — dominio, competidores y prompts ---------- */
+.pt-field {
+  height: 28px; border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+  background: var(--pt-surface); display: flex; align-items: center; gap: 7px; padding: 0 10px;
+  font-size: 11px; color: var(--ink); transition: border-color .2s, box-shadow .2s;
+}
+.pt-field.is-focus { border-color: var(--pt-blue); box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+.pt-fico { width: 11px; height: 11px; border-radius: 999px; border: 1.5px solid var(--ink-4); flex: 0 0 auto; }
+.pt-caret { display: inline-block; width: 1.5px; height: 12px; background: var(--pt-blue); vertical-align: -2px; }
+.pt-load {
+  display: flex; align-items: center; gap: 7px; margin-top: 8px;
+  font-size: 9.5px; font-weight: 650; color: var(--ink-3); transition: color .25s;
+}
+.pt-load.is-done { color: var(--pos); }
+.pt-load .pt-ok { display: none; }
+.pt-load.is-done .pt-ok { display: inline; }
+.pt-load.is-done .pt-spin { display: none; }
+
+/* Los prompts pesan más que los competidores: son la parte que el usuario no
+   sabe escribir y la que explica de dónde sale todo lo demás. */
+.pt-2col { display: grid; grid-template-columns: 0.78fr 1.22fr; gap: 8px; margin-top: 8px; flex: 1 1 auto; min-height: 0; align-items: start; }
+.pt-collabel { font-size: 8px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 4px; }
+.pt-chip {
+  font-size: 9px; font-weight: 650; padding: 2px 7px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--pt-line); color: var(--ink-3);
+  display: inline-block; margin: 0 3px 3px 0;
+}
+.pt-prompts {
+  background: var(--pt-blue-soft); border: 1px solid rgba(37, 99, 235, .20);
+  border-radius: var(--r-sm); padding: 6px 8px;
+}
+.pt-prompts .pt-collabel { color: var(--pt-blue); }
+.pt-pline {
+  font-size: 9.5px; font-weight: 600; color: var(--ink-2);
+  padding: 2px 0 2px 12px; position: relative;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pt-pline::before {
+  content: ""; position: absolute; left: 2px; top: 8px;
+  width: 4px; height: 4px; border-radius: 999px; background: var(--pt-blue);
+}
+.pt-pmore { font-size: 8.5px; font-weight: 650; color: var(--pt-blue); padding: 3px 0 0 12px; opacity: .85; }
+
+/* ---------- Paso 2 — escaneo ---------- */
+.pt-engines { display: flex; gap: 6px; }
+.pt-eng {
+  flex: 1; display: flex; align-items: center; gap: 5px; padding: 6px 7px;
+  border: 1px solid var(--pt-line); border-radius: var(--r-sm); background: var(--pt-surface);
+  font-size: 9.5px; font-weight: 700; color: var(--ink-2);
+  transition: border-color .25s, background .25s;
+}
+.pt-bulb { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 auto; }
+.pt-tick { margin-left: auto; color: var(--pos); opacity: 0; transition: opacity .25s; }
+.pt-eng.is-done { border-color: rgba(21, 145, 90, .35); background: rgba(21, 145, 90, .05); }
+.pt-eng.is-done .pt-tick { opacity: 1; }
+.pt-bar { height: 6px; border-radius: 999px; background: var(--pt-canvas); overflow: hidden; margin-top: 11px; }
+.pt-bar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--pt-blue-2), var(--pt-blue)); }
+.pt-barcap { display: flex; justify-content: space-between; font-size: 9.5px; color: var(--ink-4); margin-top: 5px; font-variant-numeric: tabular-nums; }
+
+/* ---------- Pasos 3 y 8 — el gauge ---------- */
+.pt-hero { display: flex; gap: 13px; align-items: center; }
+.pt-gwrap { position: relative; flex: 0 0 auto; }
+.pt-gcenter { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.pt-gnum { font-size: 20px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1; }
+.pt-gcap { font-size: 8.5px; color: var(--ink-4); font-weight: 650; margin-top: 2px; }
+.pt-compose { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.pt-ctop { display: flex; justify-content: space-between; font-size: 9.5px; }
+.pt-cl { color: var(--ink-3); font-weight: 600; }
+.pt-cv { color: var(--ink); font-weight: 750; font-variant-numeric: tabular-nums; }
+.pt-sov { height: 5px; border-radius: 999px; background: var(--pt-canvas); overflow: hidden; margin-top: 3px; }
+.pt-sovfill { display: block; height: 100%; border-radius: 999px; }
+.pt-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 11px; }
+.pt-kpi { border: 1px solid var(--pt-line); border-radius: var(--r-sm); padding: 6px 8px; }
+.pt-kpil { font-size: 8px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-4); }
+.pt-kpiv { font-size: 15px; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.pt-kpiv span { font-size: 10px; font-weight: 700; color: var(--ink-3); }
+
+/* ---------- Pasos 4 y 8 — la gráfica de tendencia ---------- */
+.pt-chartwrap { position: relative; }
+.pt-chartbox { flex: 1 1 auto; min-height: 64px; position: relative; }
+.pt-chartbox > svg { display: block; width: 100%; height: 100%; }
+.pt-chartfoot { display: flex; justify-content: space-between; font-size: 8.5px; color: var(--ink-4); margin-top: 4px; }
+.pt-charttip {
+  position: absolute; z-index: 6; background: var(--ink); color: #fff;
+  font-size: 9.5px; font-weight: 650; padding: 4px 8px; border-radius: 6px; white-space: nowrap;
+  transform: translate(-50%, -150%); pointer-events: none;
+  opacity: 0; transition: opacity .2s;
+}
+.pt-charttip.is-on { opacity: 1; }
+.pt-trendhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.pt-trendv { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.pt-trendv span { font-size: 11px; font-weight: 700; color: var(--ink-4); margin-left: 2px; }
+.pt-trendl { font-size: 8.5px; font-weight: 750; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-4); margin-top: 3px; }
+.pt-deltarow { display: flex; align-items: center; gap: 7px; margin-top: 8px; flex-wrap: wrap; }
+
+/* ---------- Pasos 5 y 6 — recomendaciones ---------- */
+.pt-recs { display: flex; flex-direction: column; gap: 6px; }
+.pt-rec {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--pt-surface); border: 1px solid var(--pt-line); border-radius: var(--r-md);
+  padding: 7px 9px;
+  transition: transform .35s cubic-bezier(.2, .8, .3, 1), box-shadow .35s, opacity .35s, border-color .35s;
+}
+.pt-rec.is-focus { transform: scale(1.025); border-color: rgba(37, 99, 235, .42); box-shadow: 0 6px 20px rgba(37, 99, 235, .14); }
+.pt-rec.is-dim { opacity: .38; transform: scale(.985); }
+.pt-recpri {
+  width: 22px; height: 22px; flex: 0 0 auto; border-radius: 6px;
+  display: grid; place-items: center; font-size: 10px; font-weight: 800;
+  background: var(--pt-blue-soft); color: var(--pt-blue);
+}
+.pt-recbody { flex: 1 1 auto; min-width: 0; }
+.pt-rect { display: block; font-size: 10.5px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.pt-recd { display: block; font-size: 9px; color: var(--ink-4); margin-top: 1px; }
+.pt-recd b { color: var(--pt-blue); font-weight: 750; }
+.pt-reccta {
+  margin-left: auto; flex: 0 0 auto;
+  font-size: 9.5px; font-weight: 700; color: #fff; background: var(--pt-blue);
+  border: 1px solid var(--pt-blue); border-radius: 999px; padding: 4px 11px;
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.pt-reccta.pt-ghost { background: var(--pt-surface); color: var(--pt-blue); }
+.pt-reccta.is-press { transform: scale(.94); }
+.pt-reccta.is-busy { background: var(--pt-surface); color: var(--ink-4); border-color: var(--line-strong); }
+.pt-spin {
+  width: 9px; height: 9px; border-radius: 999px; flex: 0 0 auto; display: inline-block;
+  border: 1.5px solid var(--line-strong); border-right-color: var(--pt-blue);
+  animation: ptSpin .8s linear infinite;
+}
+@keyframes ptSpin { to { transform: rotate(360deg); } }
+
+.pt-gen { margin-top: 8px; border: 1px solid var(--pt-line); border-radius: var(--r-md); background: var(--pt-surface); overflow: hidden; }
+.pt-genhead {
+  display: flex; align-items: center; gap: 7px; padding: 5px 9px;
+  border-bottom: 1px solid var(--line-soft); background: var(--surface-2);
+  font-size: 8.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-4);
+}
+.pt-genbody { padding: 7px 9px; display: flex; flex-direction: column; gap: 5px; transition: filter .3s; }
+.pt-qaq { font-size: 9.5px; font-weight: 750; color: var(--ink); }
+.pt-qaa { font-size: 9px; color: var(--ink-3); line-height: 1.4; }
+.pt-genfoot { display: flex; align-items: center; gap: 6px; padding: 0 9px 7px; }
+.pt-minibtn {
+  font-size: 9.5px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
+  border: 1px solid var(--line-strong); background: var(--pt-surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: transform .16s, background .2s, color .2s, border-color .2s;
+}
+.pt-minibtn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
+.pt-minibtn.is-press { transform: scale(.94); }
+.pt-minibtn.is-done { background: var(--pos-soft); border-color: transparent; color: var(--pos); }
+
+/* ---------- Paso 7 — auditoría técnica ---------- */
+.pt-audittop { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+.pt-auditlist { display: flex; flex-direction: column; gap: 5px; }
+.pt-auditrow {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--pt-line); border-radius: var(--r-sm); padding: 5px 8px;
+  background: var(--pt-surface); transition: border-color .3s, box-shadow .3s;
+}
+.pt-auditrow.is-focus { border-color: rgba(255, 176, 32, .55); box-shadow: 0 4px 14px rgba(255, 176, 32, .16); }
+.pt-auditico {
+  width: 16px; height: 16px; flex: 0 0 auto; border-radius: 5px;
+  display: grid; place-items: center; font-size: 9px; font-weight: 800;
+  background: var(--pt-warn-soft); color: var(--pt-warn-ink);
+}
+.pt-auditbody { flex: 1 1 auto; min-width: 0; }
+.pt-auditt { display: block; font-size: 9.5px; font-weight: 700; color: var(--ink); }
+.pt-auditd { display: block; font-size: 8.5px; color: var(--ink-4); }
+.pt-auditpt { margin-left: auto; flex: 0 0 auto; font-size: 9.5px; font-weight: 800; color: var(--pos); font-variant-numeric: tabular-nums; }
+
+/* --- Cursor -------------------------------------------------------------- */
+.pt-cursor {
+  position: absolute; z-index: 20; width: 20px; height: 20px;
+  margin: -2px 0 0 -2px; pointer-events: none;
+  filter: drop-shadow(0 3px 6px rgba(16, 24, 40, .32));
+  will-change: transform;
+}
+.pt-ripple {
+  position: absolute; z-index: 19; width: 15px; height: 15px; margin: -7.5px 0 0 -7.5px;
+  border-radius: 999px; border: 2px solid var(--pt-blue); opacity: 0; pointer-events: none;
+}
+.pt-ripple.is-go { animation: ptRipple .45s cubic-bezier(.2, .8, .3, 1); }
+@keyframes ptRipple {
+  from { opacity: .9; transform: scale(.35); }
+  to { opacity: 0; transform: scale(2.4); }
+}
+
+/* --- Pie: puntos + ¿Qué es el GEO? + Atrás / Siguiente ------------------- */
+.pt-foot {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px 22px 12px; margin-top: 8px; border-top: 1px solid var(--line-soft);
+}
+.ptour--hero .pt-foot { border-top: none; margin-top: 9px; }
+.pt-dots { display: flex; gap: 5px; }
+.pt-dot {
+  width: 15px; height: 4px; border-radius: 999px; background: var(--line-strong);
+  border: none; padding: 0; cursor: pointer; transition: background .2s, width .25s;
+}
+.pt-dot:hover { background: var(--ink-4); }
+.pt-dot.is-on { background: var(--pt-blue); width: 24px; }
+.pt-dot:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 3px; }
+.pt-sp { margin-left: auto; }
+.pt-lnk {
+  background: none; border: none; font: inherit; font-size: 12.5px; font-weight: 650;
+  color: var(--ink-4); cursor: pointer; padding: 7px 4px; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pt-lnk:hover { color: var(--ink-2); }
+.pt-btn {
+  height: 32px; padding: 0 14px; border-radius: var(--r-sm); font: inherit;
+  font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--line-strong); background: var(--pt-surface); color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.pt-btn:hover:not(:disabled) { background: var(--surface-2); color: var(--ink); }
+.pt-btn:disabled { opacity: .4; cursor: default; }
+.pt-btn.pt-primary { background: var(--pt-blue); border-color: var(--pt-blue); color: #fff; }
+.pt-btn.pt-primary:hover { background: #1d4fd0; color: #fff; }
+.pt-arrow { display: inline-block; }
+
+/* Pista del paso 1 (fundador, 2026-08-07; log §33).
+   El halo trae la mirada desde el lienzo que acaba de pararse; la flecha dice
+   hacia dónde. En bucle hasta que se pulsa el botón, no un número fijo de
+   ciclos (fundador, 2026-08-07): la pista existe para conseguir ese clic, así
+   que mientras no llegue no ha terminado su trabajo. Ni el ratón por encima ni
+   el foco la apagan — sólo el clic. */
+.pt-btn.pt-primary.pt-hint { animation: ptHintHalo 1.6s ease-out infinite; }
+.pt-btn.pt-primary.pt-hint .pt-arrow { animation: ptHintArrow 1.6s ease-in-out infinite; }
+
+@keyframes ptHintHalo {
+  0%   { box-shadow: 0 0 0 0 rgba(37, 99, 235, .45); }
+  70%  { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+}
+@keyframes ptHintArrow {
+  0%, 60%, 100% { transform: translateX(0); }
+  30%           { transform: translateX(5px); }
+}
+
+/* Con el movimiento desactivado el tour entero se queda quieto — es el
+   contrato, no una degradación —, así que la pista no puede depender de
+   moverse. El anillo estático dice lo mismo: éste es el siguiente paso. */
+@media (prefers-reduced-motion: reduce) {
+  .pt-btn.pt-primary.pt-hint,
+  .pt-btn.pt-primary.pt-hint .pt-arrow { animation: none; }
+  .pt-btn.pt-primary.pt-hint { box-shadow: 0 0 0 3px var(--pt-blue-soft); }
+}
+.pt-lnk:focus-visible, .pt-btn:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; border-radius: 6px; }
+
+/* --- Variante hero: dentro del .browserframe de la landing --------------- */
+/* El tour está dibujado a una densidad fija, pensada para un lienzo de ~715px
+   (el ancho del popup). El `.lp-shot` de la landing mide 1060px, y a ese ancho
+   el mini-producto se ve diminuto y flotando en su tarjeta. Se acota el marco
+   en vez de reescalar cuarenta tamaños de letra: mantiene la densidad exacta
+   del diseño aprobado y sigue leyéndose como un hero. */
+.ptour--hero .pt-frame { max-width: 860px; margin-inline: auto; }
+.ptour--hero .pt-head { display: none; }
+.ptour--hero .pt-sub {
+  text-align: center; max-width: 62ch; margin: 0 auto; padding: 0 22px 14px;
+  font-size: 14px;
+}
+
+/* --- Variante popup: el modal de la consola ------------------------------ */
+.ptour-scrim {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(15, 23, 41, .58);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px 16px; overflow-y: auto;
+  animation: ptScrimIn .2s ease;
+}
+@keyframes ptScrimIn { from { opacity: 0; } to { opacity: 1; } }
+.ptour--modal {
+  width: 100%; max-width: 760px; margin: auto;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--r-xl); box-shadow: var(--sh-pop);
+  overflow: hidden; position: relative;
+  animation: ptModalIn .26s cubic-bezier(.2, .8, .3, 1);
+}
+@keyframes ptModalIn {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+.pt-close {
+  position: absolute; top: 12px; right: 12px; z-index: 5;
+  width: 30px; height: 30px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+  display: grid; place-items: center; cursor: pointer;
+}
+.pt-close:hover { background: var(--surface-2); color: var(--ink); }
+.pt-close:focus-visible { outline: 2px solid var(--pt-blue); outline-offset: 2px; }
+
+@media (max-width: 640px) {
+  .pt-head { padding: 14px 14px 0; }
+  .pt-sub { padding: 6px 14px 10px; }
+  .ptour--hero .pt-sub { padding: 0 14px 12px; }
+  .pt-stage { margin: 0 14px; }
+  .pt-foot { padding: 12px 14px 14px; }
+  .pt-title { font-size: 17px; }
+  .ptour-scrim { padding: 10px 8px; }
+}
+
+/* Por debajo de 560px el mini-menú no cabe: encogerlo deja el contenido
+   ilegible. Se retira y el lienzo se hace más alto — que es además la forma
+   real de la consola en móvil, donde el sidebar vive en un cajón. El cursor
+   deja de señalar el menú y señala el título de cada pantalla. */
+@media (max-width: 560px) {
+  /* El marco iba a sangre mientras el párrafo del hero respira 24 px a cada
+     lado, así que el tour parecía «pegado» a los bordes (fundador, 2026-08-07:
+     «un pelín más estrecho... alineado con el párrafo de texto»). Se alinea con
+     `.lp-lead`, que es el texto justo encima. */
+  .lp-shot { padding-inline: 24px; }
+
+  .pt-side { display: none; }
+  .pt-stage { aspect-ratio: 1 / 1; }
+  .pt-2col { grid-template-columns: 1fr; gap: 6px; }
+  .pt-hero { flex-direction: column; align-items: stretch; gap: 9px; }
+  .pt-gwrap { align-self: center; }
+  .pt-kpis { display: none; }
+  .pt-engines { flex-wrap: wrap; }
+  .pt-eng { flex: 1 1 44%; }
+  .pt-audittop { justify-content: center; }
+  /* Puntos + enlace + Atrás + Siguiente en una fila desbordaban el viewport
+     (medido a 375px). Los puntos bajan a su propia línea. */
+  .pt-foot { flex-wrap: wrap; justify-content: flex-end; }
+  .pt-sp { display: none; }
+  .pt-dots { order: 3; width: 100%; justify-content: center; margin-top: 8px; }
+  .pt-btn { padding: 0 12px; }
+  /* Con los puntos en su propia línea, el enlace se va al extremo izquierdo de
+     la fila de botones — que es donde el fundador lo marcó. */
+  .pt-lnk { font-size: 12px; padding: 7px 0; margin-right: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-spin { animation: none; }
+  .pt-ripple.is-go { animation: none; }
+  .pt-rec, .pt-auditrow { transition: none; }
+  .ptour-scrim, .ptour--modal { animation: none; }
+}

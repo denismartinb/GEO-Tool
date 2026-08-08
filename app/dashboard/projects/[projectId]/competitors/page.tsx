@@ -19,8 +19,9 @@ import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
 import { MIN_TREND_POINTS, selectTrendWindow } from "@/lib/competitors/trend-window";
+import { rankLatestPositions } from "@/lib/competitors/latest-positions";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { FaviconImg } from "@/components/ui/favicon-img";
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 
@@ -438,7 +439,6 @@ export default async function CompetitorsPage({
   const maxTrendPosition = trendPositionValues.length > 0 ? Math.ceil(Math.max(...trendPositionValues)) : 1;
 
   const hasCompetitiveData = activeCompetitors.length > 0 && completedRuns.length > 0;
-  const brandFavicon = faviconUrl(project.domain);
 
   // Engine columns worth showing — see filterComparableEngines
   // (lib/competitors/engine-share.ts) for the rule and its tests.
@@ -447,72 +447,23 @@ export default async function CompetitorsPage({
     competitorBreakdowns: competitorRows.map((c) => c.engineBreakdown)
   });
 
-  // Latest avg position per entity, read from the same run_scores ranking the
+  // Latest standing per entity, read from the same run_scores ranking the
   // trend chart plots — surfaced as a compact ranked list beside the chart so
   // the current standing is legible without reading a line's endpoint.
   //
-  // Two things this number is NOT, both of which read as bugs otherwise
-  // (founder caught both on real data):
-  //  - It is not a 1..N leaderboard slot. It is a mean over prompts where a
-  //    prompt that never mentioned the entity contributes a penalty of
-  //    (total entities + 1) — docs/adr/0005 + computeBrandPosition in
-  //    lib/scoring/run-scoring.ts. On a project mentioned in few prompts the
-  //    best value is legitimately ~4, never 1.
-  //  - It is not guaranteed distinct. Several entities genuinely tie, so
-  //    ranks use standard competition ranking (1, 2, 2, 2, 5) instead of a
-  //    running counter that would print 2/3/4 next to three identical values.
-  const latestTrendPoint = trendData.length > 0 ? trendData[trendData.length - 1] : null;
-  // Appearance rate for the latest scan, keyed the same way as the trend
-  // series. Shown beside the rank because the two answer different questions
-  // and one without the other is what made the old single figure misleading
-  // (geo-score-v3, docs/adr/0026): a rank of 1.2 means little until you know
-  // whether it came from 90% of answers or from one.
+  // The ordering and the 1..N ranking live in `rankLatestPositions`
+  // (PANORAMA-PARITY-1): the Overview's panorama shows this same list, and
+  // when each screen ordered it for itself they disagreed on ties. Everything
+  // this block used to explain about ties, means and mention rate now lives in
+  // that module's header, next to the code it justifies.
   const latestRunRanking = latestCompletedRun ? (rankingByRun.get(latestCompletedRun.id) ?? []) : [];
-  const mentionRateFor = (label: string): number | null => {
-    const entry = latestRunRanking.find((r) => normKey(r.name) === normKey(label));
-    return entry?.mention_rate ?? null;
-  };
-
-  const latestPositions = (() => {
-    if (!latestTrendPoint) return [];
-    const sorted = [
-      {
-        key: "brand",
-        label: project.brand,
-        isBrand: true,
-        position: latestTrendPoint.values.brand ?? null,
-        mentionRate: mentionRateFor(project.brand)
-      },
-      ...competitorRows.map((c) => ({
-        key: c.id,
-        label: c.name,
-        isBrand: false,
-        position: latestTrendPoint.values[c.id] ?? null,
-        mentionRate: mentionRateFor(c.name)
-      }))
-    ]
-      .filter((entry): entry is typeof entry & { position: number } => entry.position != null)
-      /* Ranked 1..N with no repeats, so the column reads as an order rather
-         than a measurement (founder, 2026-08-04). The underlying number is a
-         mean rank — "2,18º" — which is exactly what made it confusing: a mean
-         is almost never 1,00, so the list looked like nobody was in first
-         place. The order it produces is still the honest signal; the decimal
-         behind it is not what the user is asking this list.
-
-         Ties broken by mention rate: at the same mean rank, the brand the AI
-         names in more answers is genuinely ahead, and that number is already
-         on screen beside the name, so the tiebreak is visible rather than
-         arbitrary. Name last, purely so the order is stable between renders
-         instead of depending on array order. */
-      .sort(
-        (a, b) =>
-          a.position - b.position ||
-          (b.mentionRate ?? -1) - (a.mentionRate ?? -1) ||
-          a.label.localeCompare(b.label, "es")
-      );
-
-    return sorted.map((entry, index) => ({ ...entry, rank: index + 1 }));
-  })();
+  const latestPositions = rankLatestPositions({
+    entities: [
+      { key: "brand", label: project.brand, isBrand: true },
+      ...competitorRows.map((c) => ({ key: c.id, label: c.name, isBrand: false }))
+    ],
+    ranking: latestRunRanking
+  });
 
   // COMPETITOR-SUGGESTIONS-1: unlike the emerging-brands block it replaced,
   // this is unconditional — it derives from the business profile, not from
@@ -760,14 +711,16 @@ export default async function CompetitorsPage({
               <div className="card">
                 <div className="cm2-rank you">
                   <span className="cm2-rank-n">1</span>
-                  {brandFavicon ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset (same pattern as Overview's panorama)
-                    <img src={brandFavicon} alt="" className="cm2-rank-fav-img" width={26} height={26} loading="lazy" />
-                  ) : (
-                    <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
-                      {getInitial(project.brand)}
-                    </span>
-                  )}
+                  <FaviconImg
+                    domain={project.domain}
+                    cssSize={26}
+                    className="cm2-rank-fav-img"
+                    fallback={
+                      <span className="cm2-rank-fav" style={{ background: "var(--brand-blue)" }}>
+                        {getInitial(project.brand)}
+                      </span>
+                    }
+                  />
                   <div className="cm2-rank-main">
                     <div className="cm2-rank-nm">
                       <span className="cm2-rank-nm-txt">{project.brand}</span>

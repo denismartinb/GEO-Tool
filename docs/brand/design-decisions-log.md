@@ -3442,9 +3442,990 @@ comprobar propiedad vía RLS en la página de destino, como siempre.
 
 **Pendiente / roto conocido.** Ninguno nuevo. Sigue pendiente lo ya anotado en
 §32 (proteger `/debug` antes de publicar la web; Fase B de bloques nuevos).
+
 ---
 
-## 36. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
+## 36. La panorámica competitiva y la lista de Competidores dejan de contradecirse (PANORAMA-PARITY-1, 2026-08-06)
+
+> Numeración: la entrada anterior está rotulada "33" por error de una fusión
+> (hay dos §33 y dos §10 en la historia de este fichero). Esta fase toma **36**,
+> el siguiente número realmente libre después de §35.
+
+**El problema, reportado por el fundador con dos capturas del mismo proyecto y
+el mismo escaneo.** «Panorámica competitiva» (Visión general) y «Puesto en el
+último escaneo» (Competidores) describían lo mismo con cinco lógicas distintas:
+
+| | Visión general | Competidores |
+|---|---|---|
+| Orden | índice de `normalizeRanking` (sólo posición) | posición → **mención** → nombre |
+| Puesto | `i + 1`, dígito gris a la izquierda, sin etiqueta | 1..N, ordinal `5º`, a la derecha |
+| Cifra % | **cuota de voz** | **tasa de mención** |
+| Columna extra | media en crudo `1.50º` | ninguna |
+| Población | ranking persistido, top 5 | marca + competidores **activos** |
+
+Sobre Mozilla eso salía a la pantalla así: Proton VPN 1º en una y 2º en la otra
+(empata con Amazon a 1,00 y sólo una de las dos desempataba), y Mozilla 37%
+aquí contra 48% allí. `.claude/rules/competitors.md` ya llamaba a esto fallo,
+no matiz: *"dos números con el mismo significado y distinto valor es un fallo"*
+(ADR 0018). Y la media en crudo seguía publicada en la panorámica **catorce
+días después** de que §15 la retirara de la otra pantalla por ilegible.
+
+**Lo que se decidió.** Un solo cálculo, `lib/competitors/latest-positions.ts`,
+que las dos pantallas llaman. No es lógica nueva: es exactamente el
+ordenamiento que la lista de Competidores ya hacía, extraído del componente
+para que un segundo lector no pueda derivar de él. La panorámica pasa a
+`marca · mención % · puesto ordinal`, con una etiqueta por columna.
+
+**Por qué mención y no cuota de voz.** Eran dos métricas distintas
+presentadas como si fueran la misma pregunta ("¿cuánto salgo?"), y ninguna de
+las dos estaba etiquetada en la panorámica. Al elegir, mención gana por tres
+razones: es la cifra de la lista con la que se compara, es la que ya usa el
+resto de la Visión general (`X de N respuestas`), y es la que desempata el
+propio ranking — enseñarla hace visible el criterio de orden en vez de dejarlo
+implícito. El fundador confirmó la lectura al aprobar: *"quise decir Mención en
+lugar de Cuota de voz"*. **La cuota de voz no se retira del producto**: sigue
+en el pódium de Competidores, etiquetada como lo que es y calculada sobre todos
+los escaneos completados. Lo que desaparece es su cálculo en la Visión general,
+que ya no alimentaba nada.
+
+**Detalles que no son cosméticos.**
+
+1. **Se pasan entidades, no filas del ranking.** Un competidor desactivado
+   después del escaneo sigue dentro del ranking persistido; al pasar la lista
+   de entidades activas, las dos pantallas lo dejan de mostrar en el mismo
+   render en vez de que una conserve una fila que la otra ya no tiene.
+2. **La marca se casa por `is_brand`, nunca por nombre.** El nombre guardado es
+   el que hubiera al puntuar el run: una marca renombrada desde entonces
+   dejaría de encontrarse a sí misma en silencio.
+3. **`X / N` sale del mismo listado que las filas.** Antes el denominador se
+   contaba sobre el ranking persistido y las filas sobre otra población, así
+   que titular y lista podían discrepar sin que nada fallara.
+4. **El respaldo sin datos de puesto también muestra mención**, no cuota de
+   voz: un escaneo anterior a geo-score-v3 no tiene posición para nadie
+   (ADR 0026, sin backfill) y la lista cae a mención sola — misma métrica,
+   menos el puesto, en vez de cambiar de métrica al quedarse sin una.
+
+**Lección transferible, y es la segunda vez que aparece.** §15 dejó escrito que
+una etiqueta mal anclada empieza a mentir en cuanto cambia el dato que hay
+debajo. Aquí el fallo fue el grado anterior: **una columna sin ninguna etiqueta
+hereda el significado de la columna equivalente de otra pantalla**. El lector
+—el fundador— asumió que un porcentaje sin nombre al lado de un ranking era el
+mismo porcentaje que ve en Competidores, porque no había nada que dijera lo
+contrario. Un número sin etiqueta no es neutro: toma prestado el significado
+del vecino más parecido que el usuario haya visto.
+
+**Pendiente / roto conocido, al cerrar PANORAMA-PARITY-1.** Ninguno nuevo.
+Queda anotado, sin decidir, que la cuota de voz del pódium de Competidores es
+**acumulada** mientras la mención de estas dos listas es **del último
+escaneo** — es deliberado (regla de ruta, "Poblaciones de datos") y ahora está
+etiquetado en las dos pantallas, pero es la próxima pregunta que hará alguien
+que compare las dos cifras.
+
+### Addendum — el bloque tenía un solo diseño para cuatro estados reales (PANORAMA-EMPTY-1, 2026-08-07)
+
+Revisando el PR con el fundador, dos capturas más destaparon que
+`PanoramaRow`/`posbarsData` sólo modelaban bien el estado feliz —marca dentro
+del top 5 con datos de puesto— y trataban los otros tres como variaciones de
+ese mismo caso en vez de estados propios:
+
+1. **Pregunta del fundador, antes de ver el bug real:** *"imagina que
+   estuviéramos en la posición 7. ¿Qué saldría?"* Trazado en el código: la
+   tabla añadía tu fila al final (correcto), pero las barras se calculaban
+   sólo sobre `topPanoramaRows.slice(0, 5)` — **sin tu fila**. La tarjeta
+   titulada «Tu puesto cuando apareces», con un `7 / 7` encima, habría
+   dibujado cinco barras y ninguna azul. Contradicción entre el titular y el
+   propio bloque que lo ilustra.
+2. **El caso real, con una captura del propio proyecto genscore.es del
+   fundador (escaneado 2026-08-07):** ningún motor nombró a la marca ni a
+   ninguno de sus 5 competidores. La panorámica dibujaba **seis filas de
+   `0%`** sin columna de puesto y sin ningún gráfico — un muro de ceros sin
+   explicación, en la primera pantalla que ve cualquier cliente nuevo cuyo
+   dominio aún no aparece en respuestas de IA. Este es el estado normal de un
+   primer escaneo, no un caso raro.
+
+**Lo que se decidió: nombrar los cuatro estados y dejar que cada uno decida su
+propio render**, en vez de un único fallback que a veces acierta. Extraído a
+`lib/competitors/panorama-state.ts` (`computePanoramaState`, 8 tests), que
+`app/dashboard/projects/[projectId]/page.tsx` consulta en vez de derivar el
+estado inline:
+
+- **`empty`** — nadie (ni la marca ni ningún competidor activo) fue
+  mencionado en el escaneo. Se detecta por `mentionRate`, no por el ranking:
+  tiene que dispararse tanto si hay datos de posición (extracción correcta,
+  cero menciones — el caso genscore.es) como si no los hay (escaneo
+  pre-geo-score-v3 con cero menciones), porque las dos son la misma pregunta
+  del usuario. Sustituye la tabla entera por un bloque honesto —"Ninguna
+  marca apareció en este escaneo", con el número real de competidores y de
+  respuestas— y un enlace a revisar los prompts. Sin gráfico, sin tabla de
+  ceros.
+- **`unranked`** — sin cambios de comportamiento: escaneo anterior a
+  geo-score-v3 con menciones reales. Sigue siendo la lista sólo-mención que
+  ya existía; no confundir con `empty`, que es una pregunta distinta ("¿hay
+  puesto?" contra "¿hubo alguien?").
+- **`ranked`, dentro del top 5** — sin cambios de comportamiento; es el caso
+  que ya validó el piloto.
+- **`ranked`, fuera del top 5 o sin mención** — dos correcciones:
+  - **Las barras dejan de fingir que incluyen tu marca.** `topRows` es
+    siempre el top 5 real, nunca rellenado con tu fila para que "tus barras"
+    lo sean de verdad. Etiquetadas **"Top 5 posiciones"** para que el titular
+    grande (tu puesto) y las barras (quién es el top 5 real) no se lean como
+    la misma afirmación — son dos preguntas distintas y ahora lo dicen.
+  - **La tabla marca el salto en vez de dejar un hueco sin explicar.** Cuando
+    tu fila se añade tras el top 5, un separador de tres puntos (`.ov2-cmp-gap`)
+    se dibuja entre la 5ª fila y la tuya, para que el hueco en la numeración
+    se lea como un salto deliberado y no como una fila que falta.
+  - **Decisión explícita del fundador sobre el cuarto caso** (marca sin
+    mención mientras otros competidores sí tienen puesto): el titular pasa de
+    `— / N` —con la explicación escondida en un `title` que nadie abre en
+    móvil— a la frase **"No apareciste en este escaneo"**, y **no se añade
+    fila de la marca al final de la tabla**. Propuse mantener la fila con la
+    posición en blanco; el fundador cortó explícitamente: *"En el D que lo
+    diga el titular. No hace falta la fila al final"*. La lógica ya lo hacía
+    así de forma natural —`rankLatestPositions` excluye del ranking a
+    cualquier entidad sin puesto, así que la marca nunca entra en `rows`
+    cuando no fue nombrada— así que el cambio real fue sólo el titular.
+
+**Validación declarada, no inflada.** La cuenta piloto no tiene ningún
+proyecto en los estados `empty` o `ranked`-fuera-de-top-5: los tres estados
+nuevos están cubiertos por los 8 tests del helper (incluida la integración
+completa con `rankLatestPositions`, un competidor desactivado que no debe
+aparecer, y el empate marca-nunca-mencionada) pero **no por ninguna captura
+del piloto**. La verificación visual del estado `empty` se hizo a mano contra
+el propio proyecto genscore.es del fundador en el preview, por ser el único
+proyecto real conocido en ese estado.
+
+**Pendiente / roto conocido.** Ninguno nuevo.
+
+---
+
+## 39. Los favicons dejan de pedirse a ojo (FAVICON-QUALITY-1 Fases 1 y 3a, 2026-08-06)
+
+**Estado: implementadas las Fases 1 y 3a. La 2 nunca existió y la 3b se
+revirtió.**
+
+- **Fase 1** — el tamaño pedido se deriva del tamaño CSS por la densidad de
+  pantalla, más dos bugs que salieron de mirar el producto de verdad.
+- **Fase 2** — **no se implementó y ya no existe**: era detectar el globo desde
+  el cliente, y resultó imposible porque Google responde 200 con él. La 3a
+  absorbió su objetivo.
+- **Fase 3a** — proxy propio que mira los bytes y responde 204 cuando no hay
+  icono, que es lo que hace posible la caída a iniciales.
+- **Fase 3b** — pedir el icono al propio sitio. **Construida, medida y
+  revertida el mismo día**; el apartado se conserva más abajo porque la
+  medición es el valor que dejó.
+
+Lo que sigue sin hacer, y necesita aprobación propia por ser rastrear de
+verdad, es leer el `<link rel="apple-touch-icon">` del HTML.
+
+Esta entrada se lee de arriba abajo como una cronología: la Fase 1 primero, los
+dos fallos que aparecieron al mirar el producto, y luego 3a y 3b. **Los
+apartados "Pendiente" de cada fase valen sólo para su momento**; el estado real
+es este párrafo.
+
+Task Intake aprobado por el
+fundador el 2026-08-06 ("Sí, entero el plan con todas las fases"), a partir de
+la observación de que los iconos de dominio *"salen pixelados la mayoría"*.
+
+**El problema, que eran dos problemas.** `lib/domains/favicon.ts` pedía siempre
+`sz=64` a Google S2, un número fijo escrito una vez y nunca revisado cuando las
+pantallas que lo usan crecieron. Al comparar ese 64 con lo que de verdad se
+pinta, la mitad de los sitios se quedaban cortos en cuanto la pantalla es
+Retina:
+
+| Sitio | Tamaño CSS | Píxeles reales @2x | ¿Cubría `sz=64`? |
+|---|---|---|---|
+| Portada del dominio activo (Dominios) | 56 px | 112 | no, upscale ×1,75 |
+| Rejilla de dominios | 38 px | 76 | no |
+| Panorama de Visión general (≥ breakpoint) | 30 px | 60 | justo, y a 3x no |
+| Sidebar y ranking de Competidores | 26 px | 52 | sí |
+
+Esa es la **causa A**, nuestra y gratuita. La **causa B** es que S2 devuelve un
+lienzo del tamaño pedido relleno con la mejor fuente que Google tenga, que para
+muchos dominios es un `favicon.ico` de 16 o 32 px: ahí el borroso viene de
+origen y subir `sz` no arregla nada. Separarlas importa porque sólo la primera
+se arregla sin tocar la fuente de los iconos.
+
+**Qué se decidió (Fase 1 — sólo la causa A).**
+
+1. **El tamaño se deriva del tamaño CSS por la densidad de pantalla, nunca es
+   fijo.** `faviconImgProps(domain, cssSize)` devuelve `src` + `srcSet` con
+   candidatos 1x/2x/3x. El navegador elige por `devicePixelRatio`, así que una
+   pantalla no-Retina sigue descargando el icono pequeño: esto no cuesta bytes
+   a quien no los necesita.
+2. **Los tamaños se redondean a lo que el servicio sirve de verdad** (16/32/64/
+   128/256) en vez de mandar cualquier número y dejar que S2 redondee por su
+   cuenta. La URL dice lo que vuelve.
+3. **Candidatos duplicados colapsados.** A 38 px, 2x y 3x caen los dos en 128;
+   ofrecer el mismo fichero dos veces hace al navegador decidir sobre una
+   distinción que no existe.
+4. **`src` es el candidato 1x**, no el mayor, para que un navegador que ignore
+   `srcSet` no se trague el de 256.
+
+**Por qué no se tocó el `object-fit: cover`** de `.ov2-cmp-fav` y
+`.cm2-rank-fav-img`, que sí es discutible en un icono no cuadrado: es un cambio
+visual independiente de la nitidez y habría mezclado dos concernidos en un PR.
+Queda anotado, no hecho.
+
+**Pendiente / roto conocido.**
+
+- **La causa B sigue entera.** Un dominio cuyo mejor icono conocido por Google
+  sea de 16 px se seguirá viendo borroso en la portada de 56 px, y esta fase no
+  lo puede evitar. Es lo que atacan las fases 2 y 3.
+- **Fase 2 pendiente** *(escrito antes de saber que era imposible; la resolvió
+  la 3a — ver abajo)*: detectar el icono degenerado (el globo genérico de S2)
+  y caer al avatar de letra determinista que ya existe en `citations-client.tsx`
+  en vez de enseñar un borrón.
+- **Fase 3 pendiente** *(hecha después, 3a y 3b)*: proxy propio con caché de edge que prefiera el
+  `apple-touch-icon` del sitio. Resuelve la causa B y de paso el problema de
+  privacidad que `favicon.ts` lleva documentado desde 2026-07-23 — hoy mandamos
+  el dominio de cada cliente a Google en cada carga de página.
+- **No verificado con bytes reales.** El contenedor donde se implementó tiene
+  `www.google.com` bloqueado por política de red, así que la tabla de arriba es
+  aritmética sobre el código, no una medición de los PNG. Lo que lo cierra es
+  el piloto mirando capturas a `deviceScaleFactor: 2` — **que el arnés no sabe
+  hacer**: `playwright.config.ts` monta los viewports sin `deviceScaleFactor` y
+  el valor por defecto de Playwright es 1. El fundador decidió no tocar el arnés
+  (2026-08-06), así que la nitidez la verificó su ojo sobre el preview y no
+  queda capturada como evidencia. **La próxima sesión que toque favicons
+  arrancará igual de ciega**; si eso molesta, el arreglo es un `PILOT_DPR`
+  opcional con valor por defecto 1, que no cambiaría el comportamiento de
+  ningún PR existente.
+
+**Addendum del mismo día: dos fallos que sólo aparecieron al mirar el producto
+de verdad.** Ninguno de los dos lo habría encontrado la aritmética; los dos
+salieron de una captura del fundador en un iPhone.
+
+1. **La portada de Dominios se quedaba con el icono del dominio anterior.** El
+   `<img>` de la portada no llevaba `key`, así que al cambiar de dominio React
+   reutilizaba el mismo nodo y sólo le cambiaba el `src`: el navegador seguía
+   pintando la imagen ya decodificada hasta que llegaba la nueva. En la captura,
+   una farmacia con el logo de Mozilla. **El bug era anterior, pero la Fase 1 lo
+   agravó**: al derivar el tamaño del tamaño CSS, la portada (56 px → 256 a
+   densidad 3) y la rejilla (38 px → 128) dejaron de compartir URL, y la portada
+   perdió el acierto de caché que antes la tapaba. Arreglado con `key={domain}`
+   en la portada y en el conmutador de la barra lateral. Se acepta un hueco
+   vacío durante la carga: **enseñar la marca equivocada es peor que no enseñar
+   nada**, porque el hueco se lee como "cargando" y el logo ajeno se lee como un
+   dato.
+2. **genscore.es salía con el globo genérico en nuestro propio producto.** No
+   servíamos nada en `/favicon.ico` ni en `/apple-touch-icon.png`: todos los
+   iconos vivían bajo `/brand/`, descubribles sólo parseando las `<link>` del
+   HTML. Los recolectores de terceros prueban primero las rutas convencionales,
+   y por eso mahou.es y vodafone.es sí tenían icono y nosotros no. Añadidos
+   `public/favicon.ico` y `public/apple-touch-icon.png`. **No arregla la consola
+   al instante**: el índice de Google S2 se puebla por rastreo, así que hasta
+   que vuelva a pasar por genscore.es seguirá devolviendo el globo. Es condición
+   necesaria, no suficiente — y refuerza el caso de la Fase 3a, que al servir
+   los iconos por proxy propio deja de depender de cuándo le apetezca a Google
+   rastrearnos.
+3. **Y por eso nuestro dominio dejó de preguntarle a Google.** Corolario del
+   punto anterior: teníamos el icono auténtico en el repo y aun así
+   enseñábamos un globo, porque preguntábamos por él a un tercero que no lo
+   conocía. `faviconImgProps` devuelve `/brand/genscore-tile.svg` para
+   `genscore.es`. Es vectorial, así que no necesita `srcSet` — de ahí que el
+   campo pasara a opcional. Arregla uno de los dos globos **al instante**, sin
+   esperar a ningún rastreo ni a la Fase 3a. Regla que deja: **del único
+   dominio del que tenemos el icono de verdad, no se adivina.**
+
+**Lo que el piloto midió y yo había estado estimando.** La captura de Dominios
+del run sobre `c7aa69b` da la primera cifra real: **de 10 dominios, 8 traían
+icono de marca y 2 salían con el globo genérico** (alberdiderma.es y
+genscore.es). Ese 20% es el tamaño verdadero de la causa B en esta cuenta, y
+sustituye a la mano alzada con la que abrí la fase.
+
+**Tercer modo de fallo, que no había nombrado nadie.** farmaciamunozpereira.com
+tiene icono real y de resolución suficiente, pero es un **logotipo con texto**:
+a 38 px es una mancha ilegible. No lo arregla la Fase 1 (no es resolución) ni
+la 3 (no es la fuente). Si algún día molesta, lo único que funciona es no
+enseñar la marca a ese tamaño y usar el avatar de letra, y eso exige distinguir
+un logotipo de un símbolo, que no es detectable de forma fiable. Queda anotado
+como límite conocido, no como pendiente.
+
+**Fase 3a, pedida por el fundador el mismo día** (*"siempre que una web no
+devuelva favicon en lugar de mostrar icono mostramos las iniciales como
+antes"*). Lo que suena a cambio de icono es un cambio de arquitectura, porque
+**Google responde 200 con el globo, no un 404**: desde el navegador no hay forma
+de distinguir "este es su icono" de "no tengo ni idea", y por eso la Fase 2 que
+yo había planteado en cliente no era implementable. Hay que mirar los bytes en
+servidor.
+
+1. **`/api/favicon` (`app/api/favicon/route.ts`).** Trae el icono de S2 desde el
+   servidor y devuelve **204 sin cuerpo cuando es el comodín**. Un `<img>` con
+   cuerpo vacío no puede decodificar nada y dispara `onError`, que es lo único
+   que el cliente necesita para pintar iniciales.
+
+   **Se implementó con 404 y el piloto lo tumbó** (`PILOT FAIL` sobre `ffcbe51`,
+   Dominios y p2-overview en los tres viewports). El 404 hacía exactamente lo
+   que se le pedía —de hecho el detector acertó de pleno: las dos peticiones
+   marcadas eran `alberdiderma.es` y `damm.com`, los dos únicos dominios sin
+   icono— pero **un 4xx para un estado normal y esperado le miente a todo lo que
+   mire el tráfico**. El piloto lo leyó como pantalla rota, y detrás habrían
+   venido la consola del navegador y Sentry. Que un dominio no tenga favicon no
+   es fallo de nadie. Hay un test de regresión que fija el 204
+   (`app/api/favicon/route.test.ts`). **Regla que deja: el código de estado
+   describe qué pasó, no qué quieres que haga el cliente.**
+2. **La detección se autocalibra; no hay ningún hash incrustado.** Se pide el
+   icono de `no-such-site.invalid` —`.invalid` está reservado por el RFC 2606 y
+   no puede existir, así que lo que devuelva S2 para él *es* el comodín— y se
+   compara por SHA-256. El día que Google redibuje el globo, sigue funcionando.
+   Se calibra **por tamaño** (el globo no es el mismo dibujo a 32 que a 256) y se
+   memoiza **por promesa**, para que un arranque en frío con veinte iconos en
+   pantalla no dispare veinte calibraciones.
+3. **Falla abierto, a propósito.** Sin calibración disponible se sirve el icono
+   tal cual en vez de arriesgarse a esconder uno bueno: enseñar un globo de más
+   es feo, ocultar la marca real de un competidor es información perdida. Mismo
+   criterio que `scripts/vercel-should-build.sh`.
+4. **Caché de edge escalonada por significado**, no un número al azar: una
+   semana para un icono (no cambian), un día para un 204 de "no hay icono" (un
+   dominio sin icono hoy puede tener uno mañana y no queremos que ese "no hay" se
+   quede pegado), un minuto para un fallo transitorio.
+5. **`components/ui/favicon-img.tsx`** centraliza el comportamiento y **no la
+   apariencia**: recibe el avatar de iniciales ya renderizado como `fallback`.
+   Cada pantalla conserva su clase y su color determinista — unificarlos habría
+   sido un rediseño encubierto colado en un PR de infraestructura.
+6. **Efecto colateral que era un problema declarado desde 2026-07-23:** el
+   navegador del usuario deja de contarle a Google qué cuenta está mirando.
+
+### Fase 3b — construida, medida y **revertida el mismo día**
+
+> **Estado: revertida.** El código no está en el producto. Se conserva este
+> apartado entero, y no se borra, porque el valor que dejó no es el código sino
+> la medición: **es la prueba de que la causa B no se arregla por esta vía**, y
+> sin ella la próxima sesión que vea a Mahou borroso volverá a proponer
+> exactamente lo mismo. Lo implementado vive en el historial del PR #354
+> (`1f80df8`, `a2bb385`).
+>
+> **Por qué se revirtió, con los números delante.** De los 10 dominios de la
+> cuenta del fundador, la 3b cambió **uno**: movistar.es. Los otros nueve
+> quedaron idénticos píxel a píxel — comparación de regiones sobre las capturas
+> del piloto, no impresión visual. **Mahou, que era la razón entera de la fase,
+> ni se inmutó**: no publica `/apple-touch-icon.png` en la ruta convencional.
+> Y el único que sí cambió quedó **peor**: un `apple-touch-icon` está diseñado
+> para un tile de pantalla de inicio, con márgenes generosos porque iOS aplica
+> su propia máscara, así que a 38 px la marca se ve más pequeña y más débil que
+> la versión recortada de Google. La fase cambiaba resolución por peso visual,
+> y a tamaños pequeños perdía.
+>
+> **Lo que costaba mantener, a cambio de eso:** una ruta pública sin autenticar
+> haciendo peticiones salientes a dominios que escribe el usuario, una guardia
+> SSRF entera (`lib/domains/public-host.ts`) que había que entender y mantener
+> para siempre, un hueco de DNS rebinding declarado y no cerrado, y hasta 3 s
+> extra en la primera petición de cada dominio.
+>
+> **Lo que quedó sin resolver.** No pude distinguir dos explicaciones del 1 de
+> 10: o esos sitios no publican el icono en la ruta convencional, o el
+> presupuesto de 3 s era demasiado corto y sólo llegó el más rápido. Apple,
+> Vodafone y Ryanair casi seguro que sí lo publican, lo que apunta a lo segundo.
+> **Quien retome esto debe medir eso primero** — y aun resolviéndolo, seguiría
+> teniendo encima el problema del margen, que es de diseño y no de red.
+
+Lo que sigue es el diseño tal como se implementó, conservado como registro:
+
+**Fase 3b, aprobada por el fundador el mismo día** (*"empieza con 3b"*, tras
+haberla planteado por separado por tocar la lista de prohibidos). Pide
+`https://<dominio>/apple-touch-icon.png` —180 px reales— antes de conformarse
+con lo que tenga Google. Es lo único que arregla mahou.es.
+
+1. **No es un crawler, y la distinción es la que autoriza la fase.** Se piden
+   dos rutas fijas conocidas (`/apple-touch-icon.png` y su variante
+   `-precomposed`). **No se parsea HTML, no se siguen enlaces, no se descubren
+   URLs.** El día que alguien quiera leer el `<link rel="apple-touch-icon">`
+   para cubrir a los sitios que no usan la ruta convencional, eso **sí** es
+   rastrear y necesita su propia aprobación.
+2. **La guardia SSRF es la pieza central, no un accesorio**
+   (`lib/domains/public-host.ts`). El dominio lo escribe el usuario al dar de
+   alta un proyecto o un competidor, así que sin ella `/api/favicon` convierte
+   el servidor en un ariete contra la red interna y, como la respuesta vuelve al
+   navegador, en un canal de exfiltración. Sólo https; se rechaza toda IP
+   literal; se resuelve el host y **todas** sus direcciones deben ser públicas
+   —no la primera, que un host con un registro público y otro privado pasaría el
+   filtro y luego conectaría al segundo—; y se bloquean privadas, loopback,
+   link-local (`169.254.169.254`, el objetivo clásico en la nube), CGNAT,
+   multicast y sus equivalentes IPv6, mirando dentro de las IPv4 mapeadas.
+3. **Las redirecciones se siguen a mano, revalidando cada salto.** Con
+   `redirect: "follow"` se validaría el primer host y se confiaría en el resto —
+   un dominio público que redirige a `169.254.169.254` entraría por la puerta.
+   Prohibirlas del todo tampoco valía: casi todo dominio raíz redirige a `www`,
+   así que la 3b no habría servido justo donde hacía falta.
+4. **El tipo de imagen se deriva de los bytes, no de la cabecera.** El
+   `Content-Type` y la extensión los controla el otro extremo. **SVG se rechaza
+   a propósito** aunque sea el formato más nítido: puede llevar script y lo
+   serviríamos desde nuestro propio origen. Nitidez no vale un XSS.
+5. **Presupuesto total, no por llamada.** Dos rutas por hasta cuatro saltos con
+   5 s cada uno son 40 s antes siquiera de preguntarle a Google. Se calcula un
+   instante absoluto al entrar y se reparte; lo que no quepa no se intenta y S2
+   sigue detrás. Mismo criterio que `.claude/rules/scan.md`.
+
+**Revisión de seguridad dedicada (2026-08-06): cero hallazgos.** La QA había
+corrido sobre el commit anterior y no llegó a ver la 3b, así que se pasó una
+revisión aparte sobre la ruta. Confirmó lo que la fase pretendía: no hay control
+del host ni del protocolo (`isPlausibleDomain` sólo admite etiquetas
+`[a-z0-9-]`, así que la URL no puede crecer credenciales, puerto, otro host ni
+ruta), las codificaciones alternativas de IP no burlan nada porque se juzga la
+dirección **resuelta** y no el texto del host, cada salto de redirección se
+revalida, y el `Content-Type` nunca sale del servidor remoto. Señaló dos formas
+IPv6 obsoletas que el clasificador daba por públicas —«IPv4-compatible»
+(`::7f00:1`) y 6to4 (`2002::/16`)— y las descartó por no enrutables hoy;
+**se cerraron igual**, porque un clasificador que devuelve `true` por accidente
+es el que falla el día que cambia el entorno.
+
+**Lo que la 3b NO cubre, dicho antes de que alguien lo asuma.** **DNS
+rebinding**: se valida la IP antes de cada petición, pero entre esa comprobación
+y el socket real hay una ventana en la que el DNS puede cambiar de respuesta.
+Cerrarla exige fijar la IP en el socket, que `fetch` no permite. El daño
+residual queda acotado por lo demás —sólo https, sólo respuestas con firma de
+imagen ráster, tope de tamaño—, pero **no está cerrado**, y quien toque esto
+debe saberlo. Tampoco cubre a los sitios que publican su icono sólo en el HTML:
+ésos siguen cayendo a Google.
+
+**Límite de verificación, otra vez y peor.** El contenedor donde se implementó
+tiene bloqueado todo dominio externo, así que `/api/favicon` **nunca ha hablado
+con Google**. La lógica está cubierta con `fetch` simulado (10 casos: comodín,
+icono real, fallo de calibración, cuerpo vacío, red caída, memoización por
+promesa y por tamaño), pero el camino real sólo se ejercita en el preview. Si
+algo va a fallar aquí, fallará ahí y no en los tests.
+## 36. La portada de Dominios sigue al dominio abierto, no al más reciente (DOMAINS-ACTIVE-COOKIE-1, 2026-08-07)
+
+**El problema, reportado por el fundador.** Seleccionar un dominio en Dominios
+y navegar a Visión general, Prompts o cualquier otra pantalla de proyecto
+funcionaba bien — la URL lleva el `projectId`. Pero volver a Dominios (por la
+barra lateral, sin el parámetro `?active=<id>` de la rejilla) siempre volvía a
+mostrar el mismo dominio en la card grande: el más reciente por `created_at`,
+que en beta suele ser `mozilla.org`, el proyecto reservado del piloto de
+escritura (ver CLAUDE.md, "Pilot write scope"). §32 ya documentó esta caída
+como criterio de reserva deliberado, y §33 dejó dicho explícitamente que "el
+bloque de la barra lateral (`proj-switch`) y la portada de Dominios siguen sin
+tocarse" al resolver el mismo problema para `/debug`. Este reporte es
+justamente el pedido explícito que ambas fases dejaron pendiente.
+
+**La solución reutiliza, no inventa.** DEBUG-ACTIVE-PROJECT-1 (§33) ya
+construyó la única pieza que faltaba: el cookie httpOnly `geo_active_project`
+(`lib/active-project-cookie.ts`), que `middleware.ts` escribe en cada visita a
+`/dashboard/projects/[projectId]/...`. `app/dashboard/domains/page.tsx` ahora
+lo lee con `cookies()` y resuelve la card principal con la misma prioridad que
+`/debug`: `?active=<id>` explícito (clic en una tarjeta de la rejilla) → el
+cookie (el proyecto que la consola tenía realmente abierto) → el más reciente,
+como último recurso si ninguno de los dos casa con un dominio de la cuenta. La
+resolución se extrajo a una función pura y testeada,
+`resolveSelectedProject` (mismo módulo, `lib/active-project-cookie.test.ts`),
+en vez de quedar en línea dentro del Server Component. El cookie sigue sin
+autorizar nada por sí mismo: `projects` ya viene acotado por RLS y filtrado de
+archivados desde `getWorkspaceCounters`, así que un id obsoleto, borrado o
+ajeno simplemente no aparece en la lista y cae al criterio siguiente — misma
+propiedad de seguridad que ya tenía `/debug`.
+
+**Deliberadamente fuera de esta fase.** Elegir un dominio en la rejilla de
+Dominios (`?active=<id>`) sin llegar a entrar en el proyecto (sin pulsar "Ver
+visión general") no actualiza el cookie — sólo se escribe al visitar
+`/dashboard/projects/[projectId]/...`. Si en ese estado intermedio el usuario
+sale por otro camino y vuelve a Dominios sin el parámetro, verá el dominio
+recordado por el cookie, no el que acababa de tocar en la rejilla. No es el
+caso reportado (el fundador describe navegar primero a Visión general/Prompts,
+que sí escribe el cookie) y ampliar la escritura del cookie a la propia
+pantalla de Dominios es un cambio de superficie distinto — se deja para si
+algún día se reporta.
+
+**Pendiente / roto conocido.** Ninguno nuevo.
+
+---
+
+## 37. La rama de evidencia del piloto deja de fingir ser un deploy (PILOT-EVIDENCE-IGNORE-1, 2026-08-07)
+
+**El problema, reportado por el fundador:** correos de Vercel de *"Failed
+preview deployment"* llegando de todas las sesiones a la vez, sin relación
+aparente con ningún cambio de producto.
+
+**Causa.** Cada pasada de `ux-pilot.yml` publica sus capturas force-pusheando
+una rama `pilot-evidence/pr-<N>` (paso "Publish screenshots to an evidence
+branch"). Esa rama contiene sólo `screens/`, `output/`, los `.jsonl` y un
+`README.md` — nunca `package.json` ni `vercel.json`. Vercel construye *toda*
+rama que se empuja al repo por defecto; sin manifiesto de Next.js que
+construir, cada pasada del piloto de cualquier PR generaba un deploy
+condenado a fallar, y un correo por pasada. Con 76 ramas `pilot-evidence/*`
+vivas en el momento del reporte — una por cada PR que hubiera corrido el
+piloto alguna vez — y varias sesiones trabajando en paralelo, el goteo se
+leía como ruido de fondo permanente.
+
+**Por qué importa más que el spam en sí.** Un canal de alerta que falla
+constantemente por un motivo sin relación con el producto es un canal que
+deja de mirarse — el mismo patrón que dejó cuatro días de 429 de OpenAI sin
+que nadie los viera (`docs/adr/0029`, Fase B). El día que un deploy de
+verdad falle, se leerá como uno más.
+
+**Arreglo.** El paso que publica la evidencia escribe también un
+`vercel.json` estático dentro de la rama:
+
+```json
+{ "ignoreCommand": "exit 0" }
+```
+
+Contrato de Vercel: salida 0 significa "no construyas". A diferencia de
+`scripts/vercel-should-build.sh` (que decide caso por caso y falla abierto
+hacia construir), aquí no hace falta ningún script — esta rama nunca es
+otra cosa que evidencia, así que la respuesta es siempre la misma. El deploy
+pasa a `Canceled by Ignored Build Step`, que Vercel cuenta como éxito: cero
+build, cero correo, la evidencia se sigue publicando igual porque el `push`
+ocurre antes de que Vercel decida si construye.
+
+**Pendiente / roto conocido.** Las 76 ramas ya existentes no llevan el
+`vercel.json` hasta que se les haga otra pasada de piloto encima; hasta
+entonces pueden seguir generando un correo aislado si alguien reabre esos
+PRs. No se ha hecho limpieza retroactiva de esas ramas — force-pushear
+`vercel.json` a 76 ramas por separado es una operación aparte, y esta fase
+sólo cierra la fuente del problema hacia delante.
+---
+
+## 38. Ajustes de cuenta: cuatro pantallas pasan a una (CONSOLE-REDESIGN-1 Fase A, 2026-08-06)
+
+**Estado: implementado.** Diseño aprobado y navegable en
+`docs/design-reference/console-redesign-1/`; Task Intake en esa misma carpeta.
+
+**El problema no era que sobrase una pestaña.** Las cuatro pantallas —Perfil,
+Organización, Notificaciones, Plan y facturación— estaban organizadas por
+*tema*. Ordenadas por el trabajo que alguien viene a hacer salen tres: quién soy
+y cómo entro, qué me llega al correo, y qué pago. Y la mitad de los controles no
+estaban conectados a nada.
+
+Se exploraron tres opciones estructurales (pestañas, página única, sacar el plan
+de Ajustes) y el fundador eligió **la página única**. Las otras dos quedan
+descartadas con motivo: las pestañas no arreglaban que lo más consultado
+siguiera a dos clics; sacar el plan al menú contradice el §3 punto 5 y hoy son
+dos barras de progreso — se deja anotado para cuando Plan gane peso.
+
+Decisiones finales:
+
+1. **Una sola ruta**, `/dashboard/settings`, con tres secciones en orden
+   Cuenta → Avisos → Plan. La más pesada y la que más va a crecer va la última,
+   para que al crecer no empuje nada.
+2. **El índice lleva estado, no sólo enlaces** — nombre, avisos activos, plan.
+   Con tres entradas, una columna de 186 px que sólo navegase no se ganaría su
+   sitio; llevar estado es lo que hace que la página única gane a las pestañas.
+3. **Las cuatro rutas viejas son redirects PERMANENTES**, no transitorios.
+   Cuatro emails de `lib/email/transactional.ts` y los enlaces que genera
+   `lib/notifications/render.ts` apuntan a ellas y están en bandejas que no
+   podemos reescribir. Por eso esta fase no toca los emails.
+4. **Móvil es un solo scroll.** La primera propuesta llevaba pastillas de
+   sección pegajosas; el fundador las descartó (2026-08-06) porque contradicen
+   el argumento entero de la opción elegida. Se corta en 899 px, el mismo
+   breakpoint del shell.
+5. **«Eliminar cuenta» cierra la página y no está en el índice**, tras una línea
+   y 44 px de aire, en gris y con botón de contorno en vez del bloque rojo
+   relleno. A una acción irreversible se llega bajando, no de un clic (fundador,
+   2026-08-06). Copy suyo: «Esta acción es irreversible. Se borrará el historial
+   y todos los datos asociados a tu cuenta.»
+6. **Fuera cuatro controles muertos**: Idioma y Zona horaria (guardaban estado
+   de React que se perdía al recargar), Cambiar foto (sin backend y **habilitado**,
+   así que aparentaba funcionar) y Activar 2FA (sin backend). También la
+   pastilla de rol «Administrador/Miembro»: sin equipos, toda cuenta es admin de
+   sí misma. La foto se descartó explícitamente — el avatar se queda en
+   iniciales (fundador, 2026-08-06).
+7. **Organización no tiene pantalla: dos acordeones gemelos en Cuenta.**
+   «Datos de empresa» (nombre, sitio web, sector) y, justo debajo y con la misma
+   forma, «Datos de facturación» (razón social, NIF). La primera implementación
+   mandó los fiscales a la sección Plan, junto a la factura, con el argumento de
+   que un NIF se rellena cuando vas a pagar; **el fundador lo corrigió el
+   2026-08-06** — los dos bloques son «datos que rellenas una vez» y se leen
+   mejor emparejados. El botón de logo desaparece: un botón deshabilitado que
+   promete «Próximamente» sigue siendo un control que no hace nada.
+8. **Las cuatro filas «Próximamente» de Notificaciones** pasan a una línea de
+   texto al pie. Seis filas con cuatro apagadas se leían como hoja de ruta.
+9. **Repintado a marca v3 con `.set-scope`**, que comparte bloque de tokens con
+   `.ov2-scope` (§2) en vez de inventar un mecanismo por zona. El import de
+   Hanken Grotesk **no se retira**: sigue siendo el `body` de las zonas sin
+   migrar. Ajustes era la última zona de consola pendiente.
+10. **Regla de forma nueva**: redondo es una persona, squircle es un dominio.
+    Ver `docs/brand/brand-guidelines.md` §2b.
+
+**Tres correcciones tras la primera revisión del fundador (2026-08-06):** aire
+en la caja de seguridad, que iba ahogada con una fila de una línea dentro del
+padding por defecto; los datos de facturación a acordeón gemelo en Cuenta; y el
+bloque de pago, que le decía «todavía no tienes ningún plan de pago activo»
+**siendo una cuenta Agencia**. Ese último era un error de fondo, no de copy:
+`hasStripeCustomer` significa «ha tenido alguna vez ficha de cliente en Stripe»,
+y el texto lo confundía con «no tiene plan de pago». Agencia se vende fuera de
+Stripe (no tiene precio self-serve, PRICING-TRUTH-1), así que la cuenta que más
+paga era la que leía que no pagaba. Ahora hay cuatro estados y cada uno dice lo
+que es cierto de él.
+
+Al mirar las capturas del piloto en verde apareció **una tercera instancia del
+mismo defecto**: la tarjeta «¿Gestionas varios clientes? El plan Agencia es para
+ti» se le mostraba a una cuenta que ya está en Agencia. El patrón que deja esta
+fase escrito: **un bloque que le dice algo al cliente sobre un plan tiene que
+mirar antes en qué plan está**. Aparecía tres veces en la misma pantalla.
+
+**Dos hallazgos arreglados de paso, ambos en facturación:**
+
+- `plan-billing-section.tsx` pintaba sus dos avisos con cuatro hexes escritos a
+  mano (`#f0c36d`, `#fdf6e8`, `#92600a`, `#6b4b09`) que se saltaban los tokens
+  `--warn`/`--warn-soft`/`--warn-ink`. Era una **regresión de BRAND-4 hallazgo 2
+  en el mismo fichero que BRAND-4 arregló**. Matiz importante para el futuro: lo
+  prohibido no es el ámbar de aviso, que tiene familia de tokens legítima, sino
+  `--brand-warm` (#FFB020), que es sólo el punto del logo.
+- **Agencia era un callejón sin salida** en el modal de cambiar de plan: un
+  radio seleccionable que apagaba «Continuar» y mostraba dos mensajes distintos
+  para el mismo estado. Peor aún, el botón «Comparar planes» abría el modal
+  **con Agencia ya preseleccionada**, así que el callejón se alcanzaba desde el
+  camino por defecto. Ahora ocupa la misma celda pero sin radio, con enlace a
+  ventas.
+
+**Hueco de verificación que esta fase cierra.** No existía ninguna journey de
+piloto para `/dashboard/settings`: la pasada del PR #357 barrió 44 pantallas en
+tres viewports y Ajustes no estaba en ninguna fila. Sin `tests/pilot/journeys/
+settings.spec.ts` esta pantalla se habría implementado sin que ningún piloto la
+viera nunca — el mismo fallo que el incidente de Auditoría web del 2026-08-02,
+por otra puerta.
+
+**Lo que costó aprender, y la regla que deja.** El primer intento se desplegó y
+el piloto lo tumbó en los tres viewports: *«An error occurred in the Server
+Components render»*, la pantalla entera sustituida por «Algo ha ido mal». La
+causa: `buildSettingsIndex` estaba exportada desde `settings-index.tsx`, que es
+`"use client"`, y la llamaba el Server Component de la página. **Todo lo que
+exporta un módulo de frontera de cliente se convierte en una referencia de
+cliente**; invocarla durante el render del servidor lanza.
+
+Ni el build ni el test podían cogerlo: `tsc` ve una función normal y Vitest no
+respeta la directiva `"use client"`. La regla que queda es estructural, no de
+cuidado: **una función que llama un Server Component nunca vive en un fichero
+`"use client"`.** Vive en `lib/` (aquí, `lib/settings/index-entries.ts`) y el
+componente de cliente importa de ahí. Lo único que lo detectó fue la journey de
+piloto que esta misma fase tuvo que crear.
+
+**Tres ajustes finales tras la segunda revisión (2026-08-06):**
+
+- **Un solo «Guardar» en la tarjeta de Cuenta.** Los dos acordeones tenían el
+  suyo, así que escribir en «Datos de empresa» y pulsar el botón de la tarjeta
+  descartaba el cambio en silencio. Era una regresión introducida por esta misma
+  fase: antes Organización era pantalla propia con un único guardado y no había
+  ambigüedad. Ahora `saveAccount` escribe nombre, empresa y facturación en una
+  sola llamada y los acordeones son presentacionales.
+- **Fuera «Motores de IA» del uso del ciclo.** Todos los planes de pago llevan
+  los tres motores que existen, así que la fila vivía en 3/3 y levantaba «Cerca
+  del límite del plan» para un límite sin nada por encima a lo que subir.
+- **El bloque final pasa a soporte genérico.** Describía el estado de pago de
+  cuatro maneras distintas —de ahí que le dijera a una cuenta Agencia que no
+  tenía plan— y ahora dice lo único que es cierto siempre: escríbenos si tienes
+  una incidencia. **El acceso a facturas de Stripe no desapareció con él**: el
+  botón sube junto a «Cambiar de plan», visible para cualquier cuenta con
+  cliente de Stripe. Quitarlo sin más habría sido una regresión peor que la que
+  se arreglaba.
+
+**Pendiente / roto conocido:**
+
+- **Fase B, sin aprobar:** los otros cuatro hallazgos del modal de plan — un
+  camino avisa antes de salir a Stripe y el otro no; el bloque de archivar
+  dominios duplicado en los pasos `confirm` y `overage`; el distintivo «Bajada
+  de plan» fijo con un `.cp-confirm-badge.up` muerto en CSS; y el icono `grid`
+  de la cabecera. Necesita su propio Task Intake: es un flujo de pago.
+- **La sección Plan sólo está cubierta por test en su entrada de índice**
+  (`buildSettingsIndex`), no en su renderizado: el repo no tiene infraestructura
+  de test de componentes. Con equipos ocultos no hay no-admins reales, pero la
+  cobertura es parcial y conviene saberlo.
+- **`org_tax_info` sigue en `user_metadata`** de las cuentas que lo tuvieran, a
+  propósito: es la fuente de reserva de Razón social hasta que su dueño guarde.
+- **`updateProfileName` queda sin usar** en `profile/actions.ts` tras el guardado
+  único. No se retira aquí para no ensanchar el PR; una server action huérfana
+  sigue siendo un endpoint invocable, así que conviene borrarla en la fase
+  siguiente.
+- **La sesión del piloto se cae a mitad de pasada, y no es de esta zona.** En
+  la pasada de `cfe77eb`, móvil completó las 44 pantallas —las cinco de Ajustes
+  con contenido real y cero errores de consola— y a partir de
+  `tablet notifications-bell` todo rebotó a `/login`. El `storageState` de
+  `.pilot/auth.json` lo comparten los tres proyectos de viewport; cuando el
+  token rota durante la primera pasada, las dos siguientes arrancan con una
+  sesión ya inválida. Es intermitente (la pasada anterior, con las mismas
+  pantallas, fue verde) y afecta a **todas** las journeys, no a Ajustes.
+  Arreglarlo toca `tests/pilot/support/auth.setup.ts` —re-autenticar por
+  proyecto en vez de reutilizar el fichero— y merece fase propia.
+- **Replanteo pendiente de la sección Plan.** Las cuatro pegas de la revisión
+  del fundador caían todas ahí, no en Cuenta ni en Avisos: jerarquía duplicada
+  («Plan» → «Tu plan» → «Uso de este ciclo»), y «Facturación mensual» junto a un
+  plan «a medida». Va con la Fase B del modal, que es su misma zona.
+
+---
+
+## 39. La alerta de escaneo incompleto deja de ser un email sin marca (EMAIL-OPS-ALERT-BRAND-1, 2026-08-07)
+
+**El problema, reportado por el fundador con captura propia.** El aviso de
+`sendScanHealthAlertEmail` (`lib/scan/scan-health-alert.ts` →
+`lib/email/transactional.ts`) —el que llega a `OPS_ALERT_EMAIL` cuando un
+escaneo se queda sin datos de un motor— se renderizaba como HTML suelto sin
+cabecera, sin paleta v3 y sin el sistema `wrap()`/`eyebrow()`/`heading()` que
+ya usan los otros ocho emails de Resend. Al lado del resto de la bandeja
+parecía un email roto, no uno de GenScore.
+
+**Por qué estaba así a propósito.** El comentario del código lo decía en dos
+sitios: "Deliberately plain and dense rather than brand-wrapped: the reader
+is debugging." La decisión original (EXTRACTION-RELIABILITY-1 Fase B,
+`docs/adr/0029`) priorizaba densidad de datos sobre identidad — este email
+nunca lo ve un cliente, solo el operador diagnosticando un fallo real.
+
+**Lo que cambia.** Se repinta con el mismo sistema v3 (`docs/brand/
+email-design-proposal.md`) que ya llevan los ocho emails de Resend: cabecera
+de marca, eyebrow rojo `#D23B48` ("Alerta operativa · sólo equipo GenScore"),
+titular y detalle con los componentes compartidos. **Ningún dato de
+diagnóstico se pierde** — motor, causa, filas afectadas, dominio, proyecto,
+escaneo y fecha de detección siguen todos presentes, ahora en una tabla de
+filas con los valores en monoespaciada (`JetBrains Mono`, la fuente de datos
+de la marca) en vez de la tabla suelta anterior. El pie deja claro que es un
+aviso interno, no algo que vea un cliente.
+
+**Qué no se toca.** `sendWebAuditFailedAlertEmail` (el aviso gemelo de
+auditoría web fallida) mantiene el mismo patrón "deliberadamente plano" — el
+fundador pidió rediseñar el email de la captura, que era este, no el otro.
+Si se decide unificar también ese, es una fase propia de una línea: mismo
+cambio, mismo archivo, otra función.
+
+**Fuera de alcance original.** `docs/brand/email-design-proposal.md` (BRAND-5c)
+catalogaba los diez emails de cliente/auth y marcaba "cualquier email nuevo"
+como fuera de alcance; los dos avisos de operador ni siquiera estaban en su
+tabla porque no son emails de cliente. Esta entrada es la que los trae al
+mismo sistema de marca, no una ampliación de BRAND-5c.
+
+---
+
+## 40. El tour «Aprende cómo funciona» (ONBOARDING-TOUR-1, 2026-08-06)
+
+**Estado: implementado y en las dos superficies.**
+
+Una misma pieza —`components/product-tour.tsx`— en dos sitios:
+
+- **Landing**: sustituye la captura estática del hero (`.lp-shot`), dentro del
+  mismo `.browserframe` que §1 ya daba por aprobado. El marco no cambia; lo que
+  cambia es que el producto se mueve.
+- **Consola**: popup de bienvenida que salta solo en el primer acceso, y que
+  después se reabre desde «¿Qué es el GEO?» del menú lateral.
+
+Ocho pasos, 50 s: dominio y sugerencias → escaneo → GeoScore → evolución →
+recomendaciones → generar la solución → auditoría web → el siguiente escaneo.
+Los subtítulos son literalmente los del fundador.
+
+### Decisiones y por qué
+
+- **Tour filmado, no *coach marks*.** El patrón habitual —globitos sobre los
+  elementos reales de la pantalla— no sirve aquí: en el instante en que el
+  popup aparece, el escaneo está en `pending` y la Visión general no tiene
+  datos, así que los globitos apuntarían a pantallas vacías. Un tour filmado
+  funciona con independencia del estado de los datos y además enseña lo que
+  está a punto de aparecer.
+- **El montaje se lleva 8,3 s de 50.** Dominio, competidores, prompts y
+  escaneo son lo que menos importa; el 83% del metraje va a la puntuación, la
+  tendencia, generar una recomendación de principio a fin y la auditoría. El
+  paso de generar es el más largo del tour a propósito: es el único que enseña
+  que el producto no se limita a señalar el problema.
+- **Cabecera fija, subtítulo variable.** Título «Aprende cómo funciona» y una
+  única línea que cambia por paso explicando lo que se ve. Sustituye a la banda
+  de rótulos bajo el lienzo que tenían las versiones previas del prototipo.
+- **Todos los pasos miden lo mismo de alto.** Los ocho subtítulos se apilan en
+  la misma celda de rejilla con sólo uno visible, así que el contenedor mide
+  siempre lo que el más alto — sin medir nada en JS, correcto a cualquier
+  ancho, tipografía o idioma. Sin esto la pieza pega un salto en cada paso.
+- **`ProductShot` se retira.** Quedó sin uso al sustituir el hero, y con
+  `prefers-reduced-motion` el tour se queda quieto en su último fotograma (la
+  Visión general con su gauge y su curva), que es exactamente la captura que
+  `ProductShot` daba. Se elimina en vez de dejarla muerta.
+- **El marco del hero se acota a 860 px.** El tour tiene una densidad fija
+  pensada para un lienzo de ~715 px; a los 1060 px del `.lp-shot` el
+  mini-producto se veía diminuto y flotando. Se acota el marco en vez de
+  reescalar cuarenta tamaños de letra.
+- **«¿Qué es el GEO?» del menú lateral pasa de enlace a botón que abre el
+  tour** (fundador: «luego estará en el menú, en qué es el GEO»). La página
+  `/geo` no se pierde: el propio popup la enlaza en su pie, abajo a la
+  izquierda, donde el fundador la marcó. El coste, dicho: llegar a `/geo`
+  desde el menú pasa de un clic a dos.
+
+### Lo que el tour afirma, y por qué se puede afirmar
+
+Tres textos hacen afirmaciones sobre el producto y las tres se comprobaron
+antes de escribirlas:
+
+- «Se escanea continuamente» → `lib/scan/cron.ts` reescanea a diario en
+  free/pro/agency y semanalmente en starter. **Si esa cadencia cambia, el
+  texto cambia con ella.**
+- La auditoría del paso 7 usa las comprobaciones y pesos reales del diseño
+  aprobado en §17 (`docs/design-reference/web-audit-issues-1/`): datos
+  estructurados 15 pt/página, metadatos 5, formato respuesta-primero 5.
+- **El salto de 48 a 71 es ilustrativo, no una promesa.** Enseña el mecanismo
+  —cada escaneo recalcula la puntuación—, y el subtítulo está escrito con esas
+  palabras a propósito. Convertirlo en «+23 puntos garantizados» lo volvería
+  una promesa que el producto no puede cumplir.
+
+### El tour se lee, no se mira pasar (2026-08-07)
+
+Corrección del fundador tras probarlo en el preview desde el móvil. Dos cambios,
+los dos sobre **cuándo** corre el reloj, ninguno sobre lo que se ve:
+
+1. **Sólo el primer paso se reproduce solo.** Los otros siete los trae
+   «Siguiente». El motivo es el que el fundador dio y conviene no perder: *«en
+   caso contrario, no hay tiempo suficiente para leer toda la información»*.
+   Encadenados, los ocho pasos cambian de pantalla antes de que dé tiempo a
+   leer el subtítulo — el tour se convierte en algo que se mira pasar. Un paso
+   por clic lo convierte en algo que se lee. Sustituye a la reproducción
+   continua de 50 s que describía este mismo §40: los 50 s siguen siendo la
+   longitud del reloj, pero ya nadie los consume del tirón salvo que pulse
+   siete veces. La mecánica no era nueva —Atrás/Siguiente ya reproducían un
+   paso y paraban—, sólo se extiende al arranque.
+2. **En la landing no arranca hasta que el lienzo se ve entero.** Antes bastaba
+   con que asomara un 25 %, así que quien bajaba hasta el hero se lo encontraba
+   con el paso 1 empezado o terminado. Ahora espera a verlo completo, con la
+   salvedad de que si el lienzo es más alto que la ventana se conforma con que
+   cubra el 90 % de ella: un `intersectionRatio >= 0.98` a secas no se cumple
+   jamás en una pantalla corta y el tour no arrancaría nunca.
+
+Efecto en la landing que conviene tener presente: **el hero ya no se
+autodemuestra entero.** Un visitante que no pulse nada ve el paso 1 y ahí se
+queda. Es exactamente lo pedido, y el intercambio está aceptado: se prefiere un
+paso que se lee a ocho que se pierden.
+
+`AUTOPLAY_THROUGH_STEP_INDEX` y `holdTimeFor()` viven en
+`lib/onboarding/tour-steps.ts` con tests, no en el componente, por la misma
+razón que el resto de la línea de tiempo.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies y a 375/768/1280 px (52 comprobaciones): no arranca sin verse
+entero, arranca al verse entero, se detiene al acabar el paso 1 y sigue quieto
+trece segundos después, los ocho pasos se recorren uno por clic sin encadenarse,
+altura constante, sin desbordamiento ni errores de consola, y
+`prefers-reduced-motion` sigue aterrizando en el último fotograma.
+
+### El popup salía en cada carga, no en el primer acceso (2026-08-07)
+
+Lo encontró el `ux-pilot`, que es exactamente para lo que existe. Tumbó seis
+pruebas —el tooltip de Páginas citadas y la campana de notificaciones, en las
+tres anchuras— con `Timeout exceeded` contra elementos que estaban
+perfectamente sanos. La captura del fallo lo explicó de un vistazo: el popup de
+bienvenida abierto encima de Páginas citadas, tapándolo todo.
+
+**El fallo real, y no era del piloto.** La marca de «ya visto» se escribía **al
+cerrar** el popup, no al mostrarlo. Así que «salta solo en el primer acceso» era
+en realidad «salta en cada carga hasta que lo cierres»: quien lo miraba y
+pinchaba en el menú, o recargaba, se lo volvía a encontrar encima,
+indefinidamente. El piloto no cierra nada, así que se comió el caso extremo de
+ese comportamiento y lo dejó a la vista. Ahora la marca se escribe al mostrarlo.
+Coste asumido: quien recargue en el primer segundo se lo pierde, y vuelve por
+«¿Qué es el GEO?» del menú, que es justo la puerta que el fundador pidió.
+
+**Y dos arreglos en el propio piloto**, porque un modal de bienvenida es algo
+que el harness tiene que saber sortear:
+
+- `visitAsUser` cierra el popup si está abierto, con su propia X, y lo anota en
+  `dismissedWelcomeTour` en vez de silenciarlo. Un modal que tapa la pantalla
+  bloquea cualquier hover o clic detrás; sortearlo es lo que hace una persona.
+- `auth.setup` **quita la marca de «visto» del estado compartido**.
+  `storageState()` de Playwright persiste el `localStorage`, y el login aterriza
+  en /dashboard, donde el tour salta y se marca: sin quitarlo, ese estado habría
+  llegado a todas las pasadas diciendo «este navegador ya lo vio» y el popup no
+  habría vuelto a salir jamás. Es decir, el piloto no habría podido verlo nunca
+  — la misma trampa del 2026-08-02, por otra puerta.
+
+  El primer intento lo hizo con un `removeItem` sobre la página y **perdió la
+  carrera**: `waitForURL` resuelve al navegar, antes de que React hidrate, así
+  que el borrado se adelantó al efecto que escribe la marca y el efecto la
+  repuso justo a tiempo de que `storageState()` la capturara. El piloto lo dijo
+  en la misma tarde: el popup no salió en ninguna de las tres anchuras y la
+  consola se veía impecable detrás. Ahora se filtra del objeto ya capturado,
+  que no depende de ningún instante.
+
+**Y una pasada que sí lo mira**: `tests/pilot/journeys/onboarding-tour.spec.ts`.
+Comprueba que sale solo en el primer acceso, que trae contenido real y no un
+lienzo en blanco, que se detiene al acabar el paso 1, que «Siguiente» avanza de
+verdad, que conserva el enlace a `/geo`, que se cierra con su X, que **no vuelve
+a saltar tras recargar** y que el menú lo reabre. Va todo en una sola prueba
+porque Playwright estrena contexto por `test` y «ya no vuelve» sólo se puede
+comprobar sin salir de la misma sesión.
+
+Cierra el hueco que llevaba dos días declarado en este PR: el popup de la
+consola nunca se había visto sobre el preview con sesión real.
+
+### La pista del botón, el recorte de altura y la ruta puente (2026-08-07)
+
+**Altura.** El fundador: *«sobra mucho espacio arriba y abajo... así también
+damos más visibilidad a los botones»*. Medido antes de tocar nada, el grueso no
+estaba en los márgenes sino en el lienzo: a 375 px se llevaba 466 de 690. Se
+aprieta su proporción (2/1 → 2,3/1 en escritorio, 4/5 → 1/1 en móvil) y se
+recortan subtítulo, pie y márgenes. Resultado medido: **690 → 594** a 375,
+**568 → 511** a 768, **614 → 551** a 1280, sin recortar contenido en ninguno de
+los ocho pasos. El límite lo puso el contenido, no una cifra elegida a ojo.
+
+**La pista del botón.** El tour se detiene al acabar el paso 1 y ese silencio
+dejaba una pregunta sin responder. Se propusieron seis animaciones en un
+artefacto y el fundador eligió la sexta: **halo + flecha**. El razonamiento que
+la sostiene, por si alguien la quiere cambiar: el problema no era que el botón
+fuese poco visible —es azul, sólido y está solo en su esquina— sino que la
+mirada está arriba, en el lienzo que acaba de pararse. El halo la baja; la
+flecha dice hacia dónde. Descartadas: la flecha sola (demasiado callada para
+tirar de la mirada desde otra zona), el barrido (es el gesto de «cargando», y
+este producto carga cosas de verdad), y el latido y el rebote (mueven el
+control, y un control que se mueve se lee como impaciencia).
+
+Tres reglas van con ella y no son decorativas: **finita** (tres ciclos, 4,8 s, y
+queda un anillo fino permanente), **se gasta al primer contacto** (ratón, foco o
+clic; no vuelve en toda la sesión) y **sólo tras la reproducción automática**
+(si el usuario ya ha navegado a mano, sabe cómo se avanza). Con
+`prefers-reduced-motion` el tour entero está quieto, así que la pista no puede
+depender del movimiento: el anillo estático dice lo mismo.
+
+**Y un fallo que salió al hacerlo, éste grave.** El popup **no salía nunca en el
+primer login**. `/dashboard` es una ruta puente —no pinta nada, sólo redirige al
+proyecto más reciente— y el popup se montaba ahí, escribía la marca de «visto» y
+la redirección se lo llevaba por delante. Como el primer login aterriza justo en
+`/dashboard`, el único momento para el que se hizo el tour era precisamente el
+único en el que no aparecía. Lo cazó el `ux-pilot`: veía el popup en Prompts,
+Competidores o Páginas citadas, y jamás en Visión general — 27 pasadas con
+popup, ninguna en esas dos. Ahora el provider no abre en `/dashboard` y espera
+al destino real. La pasada del piloto entra por `/dashboard` a propósito:
+entrar por la pantalla final habría ocultado el fallo.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies y a 375/768/1280 px: la pista aparece al detenerse el paso 1,
+altura constante en los ocho pasos, sin recortes dentro del lienzo, sin
+desbordamiento y sin errores de consola.
+
+**Dos ajustes del fundador el mismo día, ya sobre el preview:**
+
+- **La pista va en bucle hasta el clic**, no tres ciclos. Yo había propuesto que
+  se apagara al primer contacto —ratón, foco o clic— por no volverla un
+  incordio; el fundador lo corrigió y tiene razón en el fondo: la pista existe
+  para conseguir ese clic, así que mientras no llegue no ha cumplido. Ahora ni
+  el hover ni el foco la cortan. Es la única animación del tour que no se
+  detiene sola, y la excepción está declarada en la regla de ruta.
+- **En móvil el marco se estrecha hasta alinearse con el párrafo del hero.**
+  Iba a sangre (0→375) mientras `.lp-lead` respiraba 24 px a cada lado, así que
+  el tour se leía «pegado» a los bordes. Alinearlo se lleva además otros 28 px
+  de alto: **594 → 566 px** a 375.
+
+### Y un tercero, un día después: la pista arranca con el paso 1 (2026-08-08)
+
+La pista sólo se encendía al **detenerse** la reproducción automática, es
+decir, cuatro segundos y medio después de que el paso 1 empezara. El fundador
+lo corrigió: tiene que arrancar en el mismo instante que el paso 1, no después.
+Ahora se enciende a la vez que el reloj empieza a correr —al montar el popup, o
+al verse entero el lienzo en la landing— y sigue puesta durante toda la
+reproducción del paso 1 y después, hasta el clic. La regla de «en bucle hasta
+el clic» del ajuste anterior no cambia; sólo cambia el instante en que arranca
+el bucle.
+
+Verificado con Playwright sobre el build de producción en local, en las dos
+superficies: la pista está puesta a los 0,5 s de arrancar el reloj —antes de
+que el dominio del paso 1 empiece siquiera a teclearse—, sigue puesta cuando el
+paso 1 se detiene, y el clic la apaga. Repetidas también las comprobaciones de
+altura constante, sin recortes, sin desbordamiento y `prefers-reduced-motion`
+en las tres anchuras: sin regresión.
+
+### Pendiente / roto conocido
+
+- **El «ya visto» vive en `localStorage`**, no en una columna de usuario: una
+  migración de esquema está prohibida sin aprobación explícita. Consecuencia
+  asumida: el popup reaparece en un navegador nuevo o tras limpiar el
+  almacenamiento. Convertirlo en columna sería una fase con su propio Task
+  Intake.
+- **No se pudo ver la referencia de Semrush** que el fundador citó: el proxy
+  del entorno devuelve 403 y su web bloquea peticiones automáticas. La versión
+  de landing está construida sobre los componentes ya aprobados de este repo,
+  no sobre un análisis de la suya.
+
+---
+
+## 41. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
 
 **Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
 diseño en `docs/design-reference/scan-states-1/` (tres opciones, rev.2 y

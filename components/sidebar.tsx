@@ -6,7 +6,8 @@ import { useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { useMobileShell } from "@/components/mobile-shell";
-import { faviconUrl } from "@/lib/domains/favicon";
+import { useTour } from "@/components/tour-provider";
+import { FaviconImg } from "@/components/ui/favicon-img";
 
 type WorkspaceProject = {
   id: string;
@@ -67,6 +68,7 @@ export function Sidebar({
   // fully disabled whenever the account isn't currently inside a project.
   const project = projects.find((item) => item.id === activeProjectId) ?? projects[0] ?? null;
   const { mobileNavOpen, closeAll, navTriggerRef } = useMobileShell();
+  const { open: openTour } = useTour();
   const asideRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -117,12 +119,15 @@ export function Sidebar({
           title="Cambiar de dominio"
           onClick={handleNavSelect}
         >
-          {faviconUrl(project.domain) ? (
-            // eslint-disable-next-line @next/next/no-img-element -- external favicon service, not a static asset
-            <img src={faviconUrl(project.domain)!} alt="" className="proj-favicon" width={26} height={26} loading="lazy" />
-          ) : (
-            <div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>
-          )}
+          {/* key por dominio: sin él el conmutador se queda con el icono del
+              proyecto anterior mientras carga el nuevo. */}
+          <FaviconImg
+            key={project.domain}
+            domain={project.domain}
+            cssSize={26}
+            className="proj-favicon"
+            fallback={<div className="proj-favicon">{project.name.slice(0, 1).toUpperCase()}</div>}
+          />
           <div className="proj-meta">
             <div className="proj-name">{project.name}</div>
             <div className="proj-dom">{project.domain}</div>
@@ -213,17 +218,24 @@ export function Sidebar({
       </div>
 
       <div className="sb-foot">
-        <a
-          href="/geo"
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* ONBOARDING-TOUR-1: tras el primer acceso, ésta es la puerta de
+            vuelta al tour (fundador, 2026-08-06: «luego estará en el menú, en
+            qué es el GEO»). La página /geo no se pierde: el propio tour la
+            enlaza en su pie. Se cierra el cajón móvil al abrirlo, o el popup
+            saldría detrás del menú. */}
+        <button
+          type="button"
           className="nav-item"
-          style={{ fontSize: 12, marginBottom: 2 }}
+          style={{ fontSize: 12, marginBottom: 2, width: "100%", textAlign: "left" }}
+          onClick={() => {
+            handleNavSelect();
+            openTour();
+          }}
         >
           <Icon name="info" size={15} />
           <span className="hide-collapsed">¿Qué es el GEO?</span>
-        </a>
-        <Link href="/dashboard/settings/profile" className="user-chip" onClick={handleNavSelect}>
+        </button>
+        <Link href="/dashboard/settings" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>
           <div className="hide-collapsed" style={{ minWidth: 0 }}>
             <div

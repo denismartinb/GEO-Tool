@@ -43,6 +43,12 @@ export type JobRow = {
   attempt_count: number;
   max_attempts: number;
   payload_json: Record<string, unknown>;
+  /**
+   * When the current holder claimed this job. Read by the lock leases
+   * (PROMPT_LOCK_LEASE_MS / FINALIZE_LOCK_LEASE_MS) to tell a job a live
+   * invocation is working on from one whose invocation was killed.
+   */
+  locked_at?: string | null;
 };
 
 export type ScanPromptResultRow = {

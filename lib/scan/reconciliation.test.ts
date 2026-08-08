@@ -35,6 +35,16 @@ vi.mock("@/lib/scan/run-creation", () => ({
 }));
 
 /**
+ * SCAN-DRIVE-1: the auto-retry now also *starts* the run it creates. Mocked
+ * because the real one schedules an `after()` callback and self-fetches an
+ * internal route — neither of which exists under Vitest.
+ */
+const scheduleScanContinuation = vi.fn();
+vi.mock("@/lib/scan/continuation", () => ({
+  scheduleScanContinuation: (...args: unknown[]) => scheduleScanContinuation(...args)
+}));
+
+/**
  * Minimal in-memory `scan_runs` table backing a fake service client. Supports
  * exactly the query shapes reconciliation.ts issues:
  *   - select(...).eq(...).eq(...).lt(...)                       -> array
@@ -141,6 +151,8 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
   beforeEach(() => {
     createPendingScanRunCore.mockReset();
     createPendingScanRunCore.mockResolvedValue("new-run-id");
+    scheduleScanContinuation.mockReset();
+    scheduleScanContinuation.mockResolvedValue(undefined);
     // Every test in this block seeds rows with fixed 2026-06-13 timestamps
     // and reasons about staleness/lookback windows relative to "now" (the
     // pending/running timeout cutoffs, the 24h auto-retry lookback). Pinning
@@ -180,6 +192,60 @@ describe("reconcileStuckScanRuns — SCAN-ROBUST-1 generalized auto-retry", () =
     // The failed run's error_summary is left as the non-exhausted, "retrying"
     // value — getDisplayErrorSummary maps this to a calm notice.
     expect(rows[0].error_summary).toBe(SCAN_NO_RESULTS_ERROR_SUMMARY);
+  });
+
+  /**
+   * Regression: the 2026-08-07 genscore.es failure (docs/adr/0037). The
+   * auto-retry created run #2 and stopped there. Nothing on the server
+   * executes a `pending` run, so it only advanced while the founder happened
+   * to have a project screen open on his phone — and when he didn't, it aged
+   * out into a second timeout, this time with the retry cap spent. A retry
+   * that nobody starts is not a retry.
+   */
+  it("starts the run its auto-retry just created, instead of leaving it pending", async () => {
+    const { service } = fakeServiceClient([
+      {
+        id: "run-1",
+        project_id: PROJECT_ID,
+        status: "failed",
+        error_summary: SCAN_NO_RESULTS_ERROR_SUMMARY,
+        started_at: "2026-06-13T10:00:00.000Z",
+        created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:01:00.000Z",
+        finished_at: "2026-06-13T10:01:00.000Z"
+      }
+    ]);
+
+    const { reconcileStuckScanRuns } = await import("./reconciliation");
+    await reconcileStuckScanRuns({ projectId: PROJECT_ID, service });
+
+    expect(scheduleScanContinuation).toHaveBeenCalledTimes(1);
+    expect(scheduleScanContinuation).toHaveBeenCalledWith({ projectId: PROJECT_ID, runId: "new-run-id" });
+  });
+
+  it("a failed hand-off never sinks the reconciliation itself", async () => {
+    scheduleScanContinuation.mockRejectedValue(new Error("no request context"));
+
+    const { service, rows } = fakeServiceClient([
+      {
+        id: "run-1",
+        project_id: PROJECT_ID,
+        status: "running",
+        error_summary: null,
+        started_at: "2026-06-13T10:00:00.000Z",
+        created_at: "2026-06-13T10:00:00.000Z",
+        updated_at: "2026-06-13T10:00:30.000Z",
+        finished_at: null
+      }
+    ]);
+
+    const { reconcileStuckScanRuns } = await import("./reconciliation");
+    await reconcileStuckScanRuns({ projectId: PROJECT_ID, service });
+
+    // The stuck run was still corrected — that is the part that unblocks
+    // `active_run_exists` and must not depend on an optional hand-off.
+    expect(rows[0].status).toBe("failed");
+    expect(rows[0].error_summary).toBe(SCAN_TIMEOUT_ERROR_SUMMARY);
   });
 
   it("does not retry a zero-results run if a newer run already exists for the project", async () => {

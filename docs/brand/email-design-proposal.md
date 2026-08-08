@@ -8,6 +8,14 @@
 > diseño; la maqueta de exploración previa a la implementación está en
 > `docs/brand/email-preview/index.html`.
 >
+> **Adenda 2026-08-07 (EMAIL-OPS-ALERT-BRAND-1):** los dos avisos de
+> operador (`sendScanHealthAlertEmail`, `sendWebAuditFailedAlertEmail` en
+> `lib/email/transactional.ts`) no formaban parte de la tabla de §1 — nunca
+> los ve un cliente, así que quedaron fuera de esta propuesta. A petición del
+> fundador, `sendScanHealthAlertEmail` pasó al mismo sistema `wrap()` que el
+> resto (ver `docs/brand/design-decisions-log.md` §39). `sendWebAuditFailedAlertEmail`
+> sigue con el HTML plano original — no se tocó.
+>
 > **Dos hallazgos durante la implementación, no previstos en la propuesta:**
 > 1. El activo de cabecera anterior (`genscore-logo-white-email.png`, v2) no
 >    solo tenía la paleta antigua — sus píxeles ya venían recortados: 958×164

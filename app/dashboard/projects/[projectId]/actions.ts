@@ -31,6 +31,7 @@ import {
   executePendingScan,
   getActionErrorCode
 } from "@/lib/scan/scan-runner";
+import { canStartAnotherScanInvocation } from "@/lib/scan/drive-budget";
 import {
   createCompetitorCore,
   createCompetitorInputSchema,
@@ -418,14 +419,6 @@ export async function setAutoWebAudit(formData: FormData) {
 
 export type AutoExecuteScanStatus = "idle" | "running" | "done";
 
-// How long this server action keeps processing batches before returning to let
-// the client re-drive. Kept safely under the page's maxDuration=60s budget
-// (docs/adr/0003) so the function is never killed mid-batch: a batch of
-// MAX_REAL_SCAN_PROMPTS takes up to ~20s, so stopping at ~40s leaves margin for
-// one more batch to finish. A campaign that fits in one or two batches (e.g. a
-// 20-prompt scan) therefore completes in a single call.
-const AUTO_EXECUTE_TIME_BUDGET_MS = 40_000;
-
 /**
  * Executes a pending scan run that was created without sync execution
  * (e.g. right after onboarding). Called from a client component on the
@@ -434,15 +427,21 @@ const AUTO_EXECUTE_TIME_BUDGET_MS = 40_000;
  * "scan in progress" UI. Does not redirect — the caller refreshes the page.
  *
  * SCAN-CHAIN-1 foreground driver: rather than processing a single batch and
- * relying on the secret-gated `/api/scan/continue` self-fetch (which a preview
- * deploy or a browser with an active session can't necessarily reach — see
- * docs/adr/0014), this loops `executePendingScan` (with `scheduleContinuation:
- * false`) directly, batch after batch, until the run is terminal or this
- * request's time budget is nearly spent. It returns the run's resulting status
- * so the client (`AutoExecuteScan`) can call again for the next window when a
- * large campaign needs more than one request to finish. This path goes through
- * the authenticated user session, so it works regardless of the continuation
- * secret or Vercel deployment protection.
+ * relying only on the secret-gated `/api/scan/continue` self-fetch (which a
+ * preview deploy or a browser with an active session can't necessarily reach —
+ * see docs/adr/0014), this loops `executePendingScan` directly, batch after
+ * batch, until the run is terminal or there is no longer room in this request
+ * for another batch's worst case. It returns the run's resulting status so the
+ * client (`AutoExecuteScan`) can call again for the next window when a large
+ * campaign needs more than one request to finish. This path goes through the
+ * authenticated user session, so it works regardless of the continuation secret
+ * or Vercel deployment protection.
+ *
+ * It is no longer the *only* driver, and must not be treated as one
+ * (SCAN-DRIVE-1, docs/adr/0037): it runs in the user's browser, so a locked
+ * phone or a backgrounded tab stops it mid-campaign. `executePendingScan` now
+ * always schedules a background continuation as well, and the atomic per-batch
+ * claim is what makes the two drivers safe to run at once.
  */
 export async function autoExecutePendingScan(input: {
   projectId: string;
@@ -463,11 +462,18 @@ export async function autoExecutePendingScan(input: {
   // claims one batch of still-pending prompt jobs per call (atomically, so a
   // duplicate/racing driver is a safe no-op) and finalizes the run once none
   // remain.
-  do {
+  //
+  // The budget is checked BEFORE each iteration, against that iteration's
+  // worst case — `canStartAnotherScanInvocation`. Checking it afterwards (the
+  // `do { ... } while (elapsed < budget)` this replaces) let an iteration start
+  // at 39s and run for another 45, pushing the action well past its 60s
+  // `maxDuration` and getting it killed mid-batch. See
+  // SCAN_INVOCATION_WORST_CASE_MS.
+  while (canStartAnotherScanInvocation({ elapsedMs: Date.now() - startedAt })) {
     const iterationStart = Date.now();
 
     try {
-      await executePendingScan({ projectId, runId, supabase, scheduleContinuation: false });
+      await executePendingScan({ projectId, runId, supabase });
     } catch {
       // executePendingScan persists any real failure state on the run itself;
       // stop looping and report whatever the run's status now is.
@@ -494,7 +500,7 @@ export async function autoExecutePendingScan(input: {
     if (Date.now() - iterationStart < 1_000) {
       break;
     }
-  } while (Date.now() - startedAt < AUTO_EXECUTE_TIME_BUDGET_MS);
+  }
 
   revalidatePath(`/dashboard/projects/${projectId}`);
   revalidatePath(`/dashboard/projects/${projectId}/debug`);

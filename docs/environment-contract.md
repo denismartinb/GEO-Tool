@@ -203,17 +203,27 @@ toggle at `/dashboard/settings/notifications`).
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
-| `SCAN_CONTINUE_SECRET` | Yes, for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
+| `SCAN_CONTINUE_SECRET` | **Yes** for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` — including every manual "Lanzar escaneo" | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
 | `NEXT_PUBLIC_SITE_URL` | No (falls back to `https://${VERCEL_URL}`, then `http://localhost:3000`) | Vercel | `https://<production-domain>` — set explicitly on Preview deploys if self-continuation needs to target the deploy's own URL rather than a stale `VERCEL_URL` |
 
 A project whose plan allows more active prompts than fit in one execution
 batch (`MAX_REAL_SCAN_PROMPTS=10`) has its scan split across multiple
 batches, each its own `executePendingScan` invocation. Without
 `SCAN_CONTINUE_SECRET` set, the first batch still runs (and its results are
-real), but the campaign stalls after it — no continuation can be dispatched,
-and the run only progresses further once `reconcileStuckScanRuns` notices no
-progress and auto-retries (docs/scan-lifecycle.md). See
+real), but no continuation can be dispatched — the campaign then advances only
+while a browser tab is awake on one of the project's screens, and stalls the
+moment that stops, until `reconcileStuckScanRuns` fails it as stuck
+(docs/scan-lifecycle.md). See
 `docs/adr/0014-batched-self-chaining-scan-execution.md`.
+
+**This variable got materially more load-bearing in SCAN-DRIVE-1**
+(`docs/adr/0037`). It used to matter only for the cron/browser-closed path,
+because the manual path drove its own batches from the client and deliberately
+skipped the continuation. That client loop turned out to be a browser tab a
+locked phone suspends, which failed a real 31-prompt scan twice. The background
+chain is now always scheduled, so on production this secret is what stands
+between "the scan finishes on its own" and "the scan finishes only if the user
+keeps looking at it".
 
 ### Google sign-in (AUTH-GOOGLE-1)
 
