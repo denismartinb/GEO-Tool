@@ -629,3 +629,70 @@ export async function sendScanHealthAlertEmail(input: {
     )
   );
 }
+
+/**
+ * LLM-RESILIENCE-1: an actionable LLM failure that happened OUTSIDE a scan run
+ * — the onboarding wizard, the web audit's content call, a recommendation
+ * rewrite. `sendScanHealthAlertEmail` cannot cover these: it reports on a
+ * finished run's rows, and these paths produce none.
+ *
+ * Operator address, never the customer's, same rule as every other alert here:
+ * the customer cannot top up our Gemini account.
+ *
+ * The dedupe note in the footer says "por instancia" on purpose rather than
+ * borrowing the scan alert's flat "sólo se envía un aviso cada 24h" — the
+ * store behind it is per-process (see `lib/llm/llm-incident.ts`), so promising
+ * global deduplication in the email itself would be a claim the code does not
+ * keep.
+ */
+export async function sendLlmIncidentAlertEmail(input: {
+  surfaceLabel: string;
+  provider: string;
+  category: string;
+  headline: string;
+  detail: string;
+  domain: string;
+  projectId: string;
+  dedupeMinutes: number;
+  detectedAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const rowsHtml = [
+    dataRow("Proceso", input.surfaceLabel),
+    dataRow("Motor", input.provider),
+    dataRow("Causa", input.category),
+    dataRow("Dominio", input.domain),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Detectado", input.detectedAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] Fallo de ${input.provider} fuera del escaneo — ${input.category}`,
+    wrap(
+      `
+      ${eyebrow("Alerta operativa · sólo equipo GenScore", "#D23B48")}
+      ${heading(input.headline)}
+      ${paragraph(input.detail)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext(
+        `Se envía como máximo un aviso por proceso, motor y causa cada ${input.dedupeMinutes} min y por instancia de servidor, así que un apagón amplio puede repetirlo. A diferencia del aviso de escaneo, este fallo no deja fila en la base de datos: el email es el único registro.`
+      )}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: input.headline
+      }
+    )
+  );
+}

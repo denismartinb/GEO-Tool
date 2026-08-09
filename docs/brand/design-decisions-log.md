@@ -4469,6 +4469,121 @@ sin cambios.
 
 ---
 
+## 42. Un fallo de LLM fuera del escaneo deja de ser invisible (LLM-RESILIENCE-1, 2026-08-09)
+
+**Estado: implementada** (Fases A y B del plan; C y D siguen sin aprobar).
+Task Intake aprobado por el fundador el mismo día ("Si"), con dos decisiones
+explícitas suyas: opción **(i)** para el dedupe y **PR único** para las tres
+mitades.
+
+**El problema, con la evidencia que lo cerró.** El 2026-08-09 el fundador
+añadió tres dominios (amazon.es, google.com, hostinger.com) y el asistente de
+alta le devolvió cero competidores. En hostinger.com no vio ni un mensaje de
+error. En paralelo llegó una alerta de `engine_no_response` de Gemini y se
+descubrió que varios dominios con escaneo diario no se lanzaban desde el 2 de
+agosto. La investigación (sin tocar código, a petición suya: *"Prefiero que lo
+investigues bien para que estemos seguros"*) separó **cuatro** causas, no una:
+
+1. **Pico real de 429 de Gemini** el 9-08 a las 06:00: 20 errores en
+   `job_logs` en ~54 s, con Claude y OpenAI completando en la misma pasada.
+2. **~70 errores más sin registro alguno.** Google AI Studio mostraba ~90
+   errores 429 contra los 20 nuestros. La diferencia venía de rutas que no
+   escriben en ningún sitio.
+3. **Dominios sin escanear:** dos causas distintas — la mayoría nunca se dio
+   de alta en `recurring_scans_enabled` (nace `false`, sólo lo activa el toggle
+   manual de `/debug`), y un proyecto (`5255a45c`) está congelado por el
+   cortacircuitos de 3 fallos seguidos, que no tiene salida en el código.
+4. **RPM/TPM/RPD descartados como causa** con los propios paneles de Google:
+   uso casi a cero contra el límite. La hipótesis viva es una cuota propia del
+   *grounding* con Búsqueda de Google, sin confirmar.
+
+Esta fase ataca (1) y (2). (3) sigue pendiente como fases C y D.
+
+**Los tres hallazgos de código que cambiaron el diagnóstico.**
+
+1. **No todas las llamadas a Gemini usan grounding.** Sólo tres: la generación
+   del escaneo, la auditoría de contenido y `suggestCompetitors`. `suggestPrompts`
+   y `inferBusinessProfile` no. Encaja con el síntoma: lo que se vaciaba era la
+   lista de competidores (grounded) mientras los prompts (sin grounding)
+   sobrevivían.
+2. **Sólo la generación del escaneo reintentaba un 429** — y con una espera
+   fija de 1500 ms. `auditDomainContent`, `generateGeminiJson` y
+   `generateGroundedGeminiJson` no tenían reintento ninguno: el primer 429 era
+   terminal. Es exactamente la asimetría que ADR 0029 encontró entre generación
+   y extracción, una capa más arriba, y explica por qué el asistente caía a la
+   primera mientras el escaneo de la misma minuto aguantaba.
+3. **`ok: competitors.length > 0 || prompts.length > 0`.** Con los prompts
+   funcionando y los competidores no, `ok` era `true`, el asistente avanzaba, y
+   la pantalla de competidores salía vacía sin nada que leer. Y el único
+   mensaje de error que existía (`suggestError`) **se pintaba sólo en el paso
+   0**, mientras el camino de fallo hacía `setStep(1)` en la misma
+   actualización — el aviso se escribía en una pantalla de la que al usuario se
+   le estaba sacando en ese mismo instante.
+
+**Qué se decidió.**
+
+1. **Reintento acotado para toda llamada Gemini interactiva.** Reutiliza la
+   máquina que ya existía para extracción (`fetchExtractionWithRetry`):
+   intentos limitados, backoff exponencial con jitter total y `Retry-After`
+   respetado pero acotado. Presupuesto más corto que el de extracción a
+   propósito (3 intentos, 600 ms base, tope de 3 s) porque **hay una persona
+   esperando**, no una pasada de fondo. Un 400/401/403 sigue fallando al primer
+   intento: reintentar un id de modelo mal puesto da lo mismo tres veces.
+2. **Los `catch {}` mudos pasan a reportar.** Los dos que se tragaban la causa
+   entera (`inferBusinessProfile` → `null`, `suggestCompetitors` → `[]`)
+   mantienen su contrato — siguen devolviendo lo mismo, nadie aguas abajo
+   cambia — pero antes categorizan el fallo y avisan al operador.
+3. **Alerta de operador para fallos LLM sin `run`** (`lib/llm/llm-incident.ts`).
+   `scan-health-alert.ts` no podía cubrir esto: está construido sobre
+   `scan_prompt_results` y `job_logs`, y ambos exigen un job y un run que el
+   asistente de alta no tiene. Alerta sólo en `quota` y `config` — el mismo
+   umbral que el aviso de escaneo, y por la misma razón: avisar del ruido del
+   modelo es enseñar a ignorar el aviso.
+4. **El dedupe es en memoria del proceso, y se dice.** `job_logs.job_id` es
+   `not null` con FK compuesta a `jobs`, así que una ruta sin job no puede
+   escribir ahí. Las opciones eran tabla nueva (migración: área prohibida sin
+   aprobación propia) o memoria. El fundador eligió memoria. **El coste, escrito
+   y no disimulado:** un apagón amplio puede mandar un email por instancia
+   caliente y un arranque en frío olvida la ventana. Es tolerable *aquí* porque
+   las superficies cubiertas las dispara una persona haciendo clic; si esto se
+   conecta alguna vez a una ruta programada, ese razonamiento caduca y el
+   dedupe necesita almacén de verdad. El propio email lo dice ("por instancia")
+   en vez de copiar el "una vez cada 24 h" del aviso de escaneo, que sí es
+   global.
+5. **El asistente avisa en el paso que está vacío.** `ProjectSetupSuggestion`
+   gana `failed: Array<"competitors" | "prompts">` y cada paso pinta su propio
+   aviso cuando le toca. **El texto no inventa la causa**: desde el navegador no
+   se distingue un apagón del proveedor de un dominio del que el modelo no sabe
+   nada, así que dice lo que sí es cierto — no se pudo sugerir, añádelos a mano,
+   el escaneo funciona igual. La causa real va al operador por email.
+6. **El lote de prompts deja de salir todo en el mismo instante.** Un lote
+   despachaba hasta `MAX_REAL_SCAN_PROMPTS` trabajos a la vez y cada uno llama a
+   un motor por proveedor: hasta 10 peticiones simultáneas a Gemini desde parado,
+   por dos proyectos en la pasada del cron. La auditoría ya se autolimitaba y
+   `EXTRACTION_CONCURRENCY` existe justo por esto. Ahora se escalonan **los
+   arranques** (las llamadas siguen solapándose), con dos topes que lo mantienen
+   honesto frente a `.claude/rules/scan.md`: el reparto total está acotado a 2 s
+   pase lo que pase, y por debajo de 20 s de presupuesto restante se desactiva
+   entero. Acabar el lote dentro de `maxDuration` manda sobre el ritmo.
+
+**Lo que esta fase NO arregla, dicho explícitamente.** No elimina el límite de
+Gemini: lo aguanta. Si la causa es una cuota de grounding, los fallos bajan
+mucho pero pueden reaparecer bajo carga — la diferencia es que ahora se sabe el
+mismo día en vez de a los cuatro. Y no toca ninguna de las dos causas de los
+dominios sin escanear.
+
+**Pendiente (fases propuestas, sin aprobar).** **C — SCAN-STREAK-EXIT-1:** darle
+salida al cortacircuitos de `FAILURE_STREAK_LIMIT` y descongelar `5255a45c`.
+**D — ONBOARDING-RECURRING-1:** alta automática en escaneo recurrente; se dejó
+la última a propósito, porque multiplica el volumen diario contra la misma
+cuota que acaba de morder. Y sigue abierta la pista de la cuota de grounding en
+la consola de Google, que no bloquea nada de lo anterior.
+
+**Conocido y no resuelto:** los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`),
+detectados durante esta investigación y sin tocar.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

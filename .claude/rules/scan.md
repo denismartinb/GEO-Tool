@@ -15,6 +15,15 @@ worse than no rule, because a future session will obey it anyway.
   answer nothing has tried to extract. Either extracted data or a categorized
   `extraction_error` — never a silent gap (`docs/scan-lifecycle.md`,
   Invariants §4; `docs/adr/0029`).
+- **Never dispatch a whole batch on the same tick.** Bounding concurrency is
+  not the same as spreading the starts: a batch that claims N prompt jobs and
+  fires them simultaneously puts N calls per engine on a provider from a
+  standing start, which is a good way to manufacture the 429 that then kills
+  the batch. `EXTRACTION_CONCURRENCY` exists for exactly this shape one stage
+  later; generation went without it until LLM-RESILIENCE-1
+  (`lib/scan/pacing.ts`, log §42). The stagger is bounded in both directions —
+  a hard ceiling on the total spread, and dropped entirely when the invocation
+  is short on budget, because finishing inside `maxDuration` outranks pacing.
 - **Every outbound provider call needs a timeout and a bounded retry.** If you
   add a call, it goes through a retrying helper. The extraction path lacked
   both while generation had both, which is why every provider outage killed

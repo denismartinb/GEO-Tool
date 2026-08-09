@@ -9,8 +9,12 @@ import {
   EXTRACTION_CALL_TIMEOUT_MS,
   EXTRACTION_MAX_ATTEMPTS,
   EXTRACTION_RETRY_BASE_DELAY_MS,
-  EXTRACTION_RETRY_MAX_DELAY_MS
+  EXTRACTION_RETRY_MAX_DELAY_MS,
+  LLM_CALL_MAX_ATTEMPTS,
+  LLM_CALL_RETRY_BASE_DELAY_MS,
+  LLM_CALL_RETRY_MAX_DELAY_MS
 } from "@/lib/scan/constants";
+import { reportLlmIncident } from "@/lib/llm/llm-incident";
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 // Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
@@ -85,6 +89,60 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
  * cannot help, so callers should treat this as fatal for the whole run.
  */
 export class GeminiConfigError extends Error {}
+
+/**
+ * LLM-RESILIENCE-1: the retrying HTTP path for every Gemini call that is NOT
+ * the scan's per-prompt generation.
+ *
+ * Those calls — the wizard's suggestions, the web audit's grounded content
+ * call, the recommendation rewrite — used a bare `fetchWithTimeout` and threw
+ * on the first non-OK response. Only `generateGeminiVisibilityAnswer` retried,
+ * and only once, on a fixed 1.5s wait. That asymmetry is why the 2026-08-09
+ * Gemini 429 spike emptied the onboarding wizard on the first click while the
+ * scan running at the same time survived it: same provider, same minute, one
+ * of them backed off and the other did not. It is the same shape of gap
+ * `docs/adr/0029` found between generation and extraction, one layer up, and
+ * the fix is the same machinery — bounded attempts, exponential backoff with
+ * full jitter, and a provider-sent `Retry-After` honored but clamped.
+ *
+ * Throws a categorized `ExtractionError`, which is what lets a caller tell
+ * "out of quota" (worth alerting the operator about) apart from "the model
+ * returned nonsense" (noise). `categorizeHttpStatus` already treats 400/401/403
+ * as `config` and never retries them, so a wrong model id still fails fast.
+ */
+async function fetchGeminiWithRetry(endpoint: string, requestBody: string): Promise<Response> {
+  return fetchExtractionWithRetry(
+    endpoint,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: requestBody
+    },
+    {
+      timeoutMs: GEMINI_CALL_TIMEOUT_MS,
+      maxAttempts: LLM_CALL_MAX_ATTEMPTS,
+      baseDelayMs: LLM_CALL_RETRY_BASE_DELAY_MS,
+      maxDelayMs: LLM_CALL_RETRY_MAX_DELAY_MS,
+      describeStatus: getGeminiApiError,
+      timeoutMessage: "Gemini API request timed out.",
+      transportMessage: "Gemini request failed before reaching the provider."
+    }
+  );
+}
+
+/**
+ * Normalizes anything thrown on a Gemini path into the categorized error
+ * `reportLlmIncident` can read.
+ *
+ * `GeminiConfigError` predates the category vocabulary and is thrown for a
+ * missing key or an invalid model id — exactly what `config` means — so it is
+ * mapped rather than falling through to `unknown` and silently never alerting.
+ */
+function toIncidentError(error: unknown): unknown {
+  if (error instanceof GeminiConfigError) return new ExtractionError("config", error.message);
+  if (error instanceof GeminiTimeoutError) return new ExtractionError("timeout", error.message);
+  return error;
+}
 
 function getGeminiModel() {
   const configuredValue = process.env.GEMINI_MODEL;
@@ -303,14 +361,21 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
     generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
   });
 
-  const response = await fetchWithTimeout(
-    endpoint,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: requestBody },
-    GEMINI_CALL_TIMEOUT_MS
-  );
-
-  if (!response.ok) {
-    throw new Error(getGeminiApiError(response.status));
+  // LLM-RESILIENCE-1: was a bare `fetchWithTimeout` that died on the first
+  // non-OK status. The audit fires one of these per topic, so a rate-limited
+  // minute took out whole topics one by one with nothing to distinguish "no
+  // content found on this domain" from "we never got to ask".
+  let response: Response;
+  try {
+    response = await fetchGeminiWithRetry(endpoint, requestBody);
+  } catch (error) {
+    await reportLlmIncident({
+      surface: "web_audit",
+      provider: "gemini",
+      error: toIncidentError(error),
+      domain: input.domain
+    });
+    throw error;
   }
 
   const data = (await response.json()) as {
@@ -323,7 +388,7 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
 
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
   if (!text) {
-    throw new Error("Gemini returned an empty response.");
+    throw new ExtractionError("empty", "Gemini returned an empty response.");
   }
 
   const groundingChunks = (data.candidates?.[0]?.groundingMetadata?.groundingChunks ?? [])
@@ -463,28 +528,19 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
 async function generateGeminiJson(promptBlock: string): Promise<unknown> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Missing GEMINI_API_KEY");
+  if (!apiKey) throw new ExtractionError("config", "Missing GEMINI_API_KEY");
 
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
-  const response = await fetchWithTimeout(
+  const response = await fetchGeminiWithRetry(
     endpoint,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptBlock }] }],
-        // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-        generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
-      })
-    },
-    GEMINI_CALL_TIMEOUT_MS
+    JSON.stringify({
+      contents: [{ parts: [{ text: promptBlock }] }],
+      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
+      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+    })
   );
-
-  if (!response.ok) {
-    throw new Error(getGeminiApiError(response.status));
-  }
 
   const data = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -492,13 +548,13 @@ async function generateGeminiJson(promptBlock: string): Promise<unknown> {
 
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
   if (!text) {
-    throw new Error("Gemini suggestion returned empty JSON.");
+    throw new ExtractionError("empty", "Gemini suggestion returned empty JSON.");
   }
 
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error("Gemini suggestion returned invalid JSON.");
+    throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
   }
 }
 
@@ -539,23 +595,14 @@ async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown>
   const model = getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
-  const response = await fetchWithTimeout(
+  const response = await fetchGeminiWithRetry(
     endpoint,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptBlock }] }],
-        tools: [{ google_search: {} }],
-        generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
-      })
-    },
-    GEMINI_CALL_TIMEOUT_MS
+    JSON.stringify({
+      contents: [{ parts: [{ text: promptBlock }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+    })
   );
-
-  if (!response.ok) {
-    throw new Error(getGeminiApiError(response.status));
-  }
 
   const data = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
@@ -563,13 +610,13 @@ async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown>
 
   const text = data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
   if (!text) {
-    throw new Error("Gemini suggestion returned empty JSON.");
+    throw new ExtractionError("empty", "Gemini suggestion returned empty JSON.");
   }
 
   try {
     return parseLenientJson(text);
   } catch {
-    throw new Error("Gemini suggestion returned invalid JSON.");
+    throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
   }
 }
 
@@ -644,7 +691,17 @@ export async function inferBusinessProfile(input: {
   let raw: unknown;
   try {
     raw = await generateGeminiJson(promptBlock);
-  } catch {
+  } catch (error) {
+    // Returning null stays the contract — callers must treat it as "could not
+    // identify the business", never as a reason to guess. What changes is that
+    // the reason no longer dies here: this `catch {}` is one of the two that
+    // made the 2026-08-09 wizard failure produce zero evidence anywhere.
+    await reportLlmIncident({
+      surface: "onboarding_suggestions",
+      provider: "gemini",
+      error: toIncidentError(error),
+      domain: input.domain
+    });
     return null;
   }
 
@@ -778,7 +835,16 @@ export async function suggestCompetitors(input: {
   let raw: unknown;
   try {
     raw = await generateGroundedGeminiJson(promptBlock);
-  } catch {
+  } catch (error) {
+    // The other silent `catch`. This is the grounded call — the exact one that
+    // returned 429 on 2026-08-09 — and an empty competitor list is
+    // indistinguishable to the user from "we found no competitors".
+    await reportLlmIncident({
+      surface: "onboarding_suggestions",
+      provider: "gemini",
+      error: toIncidentError(error),
+      domain: input.domain
+    });
     return [];
   }
   const parsed = competitorsResponseSchema.safeParse(raw);

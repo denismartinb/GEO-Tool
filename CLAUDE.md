@@ -396,6 +396,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-08)** | log §40 · `docs/design-reference/onboarding-tour-1/` |
 | Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
+| Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **LLM-RESILIENCE-1 Fases A+B (2026-08-09)** | log §42 · ADR 0029 |
 | Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PILOT-EVIDENCE-IGNORE-1 (2026-08-07)** · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37 · "Presupuesto de builds" arriba |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se

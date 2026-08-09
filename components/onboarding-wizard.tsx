@@ -267,6 +267,27 @@ function SuggestionsLoadingOverlay({ domain }: { domain: string }) {
   );
 }
 
+/**
+ * LLM-RESILIENCE-1: shown on the step whose automatic suggestion came back
+ * empty, at the moment the user is looking at that empty step.
+ *
+ * Says only what is known. The server can tell that the suggestion did not
+ * produce anything, but from here we cannot tell a provider outage apart from
+ * a domain the model genuinely had nothing to say about — so the copy claims
+ * neither. The operator gets the real cause by email
+ * (`lib/llm/llm-incident.ts`); the user gets the way forward.
+ */
+function SuggestionGapNotice({ kind }: { kind: "competitors" | "prompts" }) {
+  const what = kind === "competitors" ? "competidores" : "prompts";
+  return (
+    <div className="add-hint" role="status" style={{ marginBottom: 12 }}>
+      <Icon name="alertCircle" size={13} />
+      No hemos podido sugerir {what} automáticamente para este dominio. Añádelos a mano — el escaneo funciona igual y
+      podrás cambiarlos cuando quieras.
+    </div>
+  );
+}
+
 type OnboardingWizardProps = {
   errorMessage: string | null;
   atLimit?: boolean;
@@ -300,6 +321,19 @@ export function OnboardingWizard({
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [prompts, setPrompts] = useState<Array<{ text: string; category: PromptCategory | null }>>([]);
   const [suggestError, setSuggestError] = useState<string | null>(null);
+  /**
+   * LLM-RESILIENCE-1: which halves of the automatic suggestion came back
+   * empty, so the step that is actually empty can say so.
+   *
+   * `suggestError` alone could not do this job. It is rendered inside the
+   * `step === 0` block, and the failure path calls `setStep(1)` in the same
+   * update — so the one message the wizard had was written onto a screen the
+   * user was being navigated away from at that instant. Worse, the common case
+   * on 2026-08-09 never set it at all: competitors failed while prompts
+   * succeeded, so `ok` was true and the user landed on an empty competitors
+   * step with nothing to read.
+   */
+  const [suggestFailed, setSuggestFailed] = useState<Array<"competitors" | "prompts">>([]);
   const [isPending, startTransition] = useTransition();
   const [isDomainFocused, setIsDomainFocused] = useState(false);
   const [showDomainErr, setShowDomainErr] = useState(false);
@@ -347,12 +381,14 @@ export function OnboardingWizard({
     }
     setShowDomainErr(false);
     setSuggestError(null);
+    setSuggestFailed([]);
     startTransition(async () => {
       const result = await suggestAction({ domain, country });
       if (!result.ok) {
         setSuggestError(
           "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
         );
+        setSuggestFailed(result.failed.length ? result.failed : ["competitors", "prompts"]);
         setCompetitors([{ name: "", domain: "" }]);
         setPrompts([{ text: "", category: null }]);
         setLanguage((current) => result.language || current);
@@ -360,6 +396,7 @@ export function OnboardingWizard({
         return;
       }
       setLanguage(result.language || language);
+      setSuggestFailed(result.failed);
       setCompetitors(result.competitors.length ? result.competitors : [{ name: "", domain: "" }]);
       setPrompts(result.prompts.length ? result.prompts : [{ text: "", category: null }]);
       setStep(1);
@@ -559,6 +596,7 @@ export function OnboardingWizard({
           </div>
 
           {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
+          {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" /> : null}
 
           <div className="space-y-2">
             {competitors.map((row, index) => (
@@ -634,6 +672,7 @@ export function OnboardingWizard({
         </div>
 
         {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
+        {suggestFailed.includes("prompts") ? <SuggestionGapNotice kind="prompts" /> : null}
 
         <div className="space-y-2">
           {prompts.map((row, index) => (
