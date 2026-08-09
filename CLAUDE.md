@@ -505,8 +505,9 @@ es lo que publica el comentario de las dos líneas de arriba.
 a propósito — lo hace Vercel en cada preview y duplicarlo sólo dobla el paso
 más lento. El self-check del piloto **no** está en ese workflow: excedió 25
 minutos dos veces, así que vive en `.github/workflows/pilot-selfcheck.yml` con
-`workflow_dispatch` + `schedule` semanal (log §42). Todavía no se sabe si pasa;
-no lo presentes como garantía activa hasta que una pasada semanal lo confirme.
+`workflow_dispatch` + `schedule` semanal (log §42). **Su primera pasada real
+(2026-08-09) tardó 14 min y FALLÓ**, y sigue rojo: no es una garantía activa
+todavía. Detalle y diagnóstico en log §44.
 
 ---
 

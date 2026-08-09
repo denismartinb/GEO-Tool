@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
 import { resolveMaxSweepChainInvocations, runDailyCronScan } from "@/lib/scan/cron";
+import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -33,9 +34,8 @@ function bodySchema() {
  */
 export async function POST(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedInternalRequest(request, cronSecret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

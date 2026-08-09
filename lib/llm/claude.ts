@@ -9,6 +9,7 @@ import {
   EXTRACTION_RETRY_MAX_DELAY_MS
 } from "@/lib/scan/constants";
 import { otherBrandsRelevanceHint, type BusinessProfile, type GeminiVisibilityResponse, type GeminiStructuredExtractionResponse } from "@/lib/llm/gemini";
+import { delay, fetchWithTimeout } from "@/lib/llm/http";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_API_VERSION = "2023-06-01";
@@ -30,21 +31,6 @@ export class ClaudeTimeoutError extends Error {
 
 export class ClaudeConfigError extends Error {}
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new ClaudeTimeoutError();
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
 function getClaudeModel(): string {
   return process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_CLAUDE_MODEL;
 }
@@ -54,10 +40,6 @@ function getClaudeApiError(status: number): string {
   if (status === 429) return "Claude API quota or rate limit reached.";
   if (status === 400) return "Claude API rejected the request. Check ANTHROPIC_MODEL and request configuration.";
   return `Claude API request failed with status ${status}.`;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildHeaders(apiKey: string): Record<string, string> {
@@ -132,7 +114,8 @@ export async function generateClaudeVisibilityAnswer(input: {
   let response = await fetchWithTimeout(
     ANTHROPIC_API_URL,
     { method: "POST", headers, body: requestBody },
-    CLAUDE_CALL_TIMEOUT_MS
+    CLAUDE_CALL_TIMEOUT_MS,
+    () => new ClaudeTimeoutError()
   );
 
   if (response.status === 429) {
@@ -140,8 +123,9 @@ export async function generateClaudeVisibilityAnswer(input: {
     response = await fetchWithTimeout(
       ANTHROPIC_API_URL,
       { method: "POST", headers, body: requestBody },
-      CLAUDE_CALL_TIMEOUT_MS
-    );
+      CLAUDE_CALL_TIMEOUT_MS,
+    () => new ClaudeTimeoutError()
+  );
   }
 
   if (!response.ok) {
