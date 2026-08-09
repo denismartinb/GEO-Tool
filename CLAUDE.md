@@ -545,6 +545,7 @@ workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
 | `content-calendar.md` | GROWTH-2 content ledger — one row per piece, updated in the same PR that ships it |
 | `environment-contract.md` | All env vars, Vercel config, smoke checklist |
 | `scan-lifecycle.md` | Scan state machine and invariants |
+| `llm-cost-analysis-2026-08.md` | **Coste real de LLM por motor y por escaneo** — medido, con las queries. Decisiones tomadas sobre reparto de muestras y por qué OpenAI no se recorta. Leer antes de tocar pricing, `sampling.ts` o el conjunto de motores |
 | `adr/0001-record-architecture-decisions.md` | ADR process |
 | `adr/0002-gemini-model-pinning.md` | Gemini model pinned to versioned id |
 | `adr/0003-sync-scan-execution-and-maxduration.md` | Sync scans + maxDuration=60 |
