@@ -396,7 +396,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-08)** | log §40 · `docs/design-reference/onboarding-tour-1/` |
 | Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
-| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PILOT-EVIDENCE-IGNORE-1 (2026-08-07)** · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37 · "Presupuesto de builds" arriba |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase 0 (2026-08-09)** · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
@@ -492,8 +492,21 @@ Every PR must contain or trigger:
 
 **QA execution model:** Claude QA is run by the `qa` specialist subagent
 (`.claude/agents/qa.md`) invoked by the Director. It does NOT use GitHub
-Actions or the Anthropic API key. The `.github/workflows/claude-qa.yml`
-workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
+Actions or the Anthropic API key. `.github/workflows/claude-qa.yml` and
+`scripts/run-claude-qa.py` **fueron borrados** en PRELAUNCH-HARDENING-1 Fase 0
+(2026-08-09): llevaban meses declarados superseded aquí mismo y seguían
+armados con `pull_request_target` y una ruta que consumía `ANTHROPIC_API_KEY`.
+El *handoff* sí sigue vivo y sigue siendo obligatorio
+(`claude-qa-handoff.yml` + `scripts/{generate,post}-claude-qa-handoff.sh`):
+es lo que publica el comentario de las dos líneas de arriba.
+
+**CI (desde 2026-08-09):** `.github/workflows/ci.yml` ejecuta `pnpm test`,
+`pnpm run typecheck` y `pnpm run lint` en cada PR. No ejecuta `next build`
+a propósito — lo hace Vercel en cada preview y duplicarlo sólo dobla el paso
+más lento. El self-check del piloto **no** está en ese workflow: excedió 25
+minutos dos veces, así que vive en `.github/workflows/pilot-selfcheck.yml` con
+`workflow_dispatch` + `schedule` semanal (log §42). Todavía no se sabe si pasa;
+no lo presentes como garantía activa hasta que una pasada semanal lo confirme.
 
 ---
 

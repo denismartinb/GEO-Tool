@@ -4469,6 +4469,106 @@ sin cambios.
 
 ---
 
+## 42. Los tests dejan de ser opcionales (PRELAUNCH-HARDENING-1 Fase 0, 2026-08-09)
+
+**Contexto.** El fundador pidió, antes de lanzar, un plan de refactorización y
+revisión de arquitectura más una batería de pruebas E2E. El plan completo vive
+en `docs/prelaunch-hardening-plan.md` (aprobado 2026-08-09). Esta es su Fase 0,
+la única con urgencia absoluta.
+
+**El hallazgo que la motiva.** Ningún workflow del repo ejecutaba `pnpm test`,
+`pnpm run typecheck` ni `pnpm run lint`. Un grep de `vitest|typecheck|lint|
+build` sobre `.github/workflows/**` daba cero resultados. Con 130 ficheros de
+test y ~1.788 casos, **la suite entera era consultiva**: un PR que los rompiera
+todos mostraba el mismo tick verde que uno que no rompiera ninguno, y podía
+llegar al Human Gate sin que nadie lo supiera. Las dos únicas señales
+automáticas por PR eran el build de Vercel (que no ejecuta un solo test
+unitario) y el piloto agéntico (que mira pantallas, no invariantes).
+
+**Arreglo.** `.github/workflows/ci.yml`, en cada PR y en cada push a `main`:
+tests, typecheck y lint, como tres pasos separados para que el nombre del paso
+rojo ya diga cuál de los tres se rompió sin abrir el log.
+
+**Lo que deliberadamente NO hace: `next build`.** `pnpm run validate` es
+`build && typecheck && lint`, pero Vercel ya construye un preview en cada push
+que toca código de producto, así que un segundo `next build` en Actions
+doblaría el paso más lento de CI sin señal nueva. Se comprobó que el hueco no
+existe: las rutas que `scripts/vercel-should-build.sh` salta (`docs/`,
+`.claude/`, `.github/`, `tests/` salvo `tests/pilot/`, `agents/`, prosa de
+raíz) son todas incapaces de romper un build de Next. Y `tsc --noEmit` es
+**más** amplio que la comprobación del build, porque tsconfig incluye los
+ficheros de test que `next build` nunca compila.
+
+**Self-check del piloto: primero en CI, luego fuera — y por qué.**
+`pnpm pilot:selfcheck` (lo que demuestra que el arnés puede fallar además de
+pasar) tampoco corría en ningún sitio. El primer intento fue meterlo en
+`ci.yml` condicionado a que cambiara el arnés, con el propio `ci.yml` en la
+lista de rutas para que editarlo ejercitase su mitad cara en vez de shipearla
+a ciegas. **Ese diseño se probó y se descartó el mismo día:** en dos runs
+consecutivos superó los 25 minutos sin completarse, y tampoco se pudo medir en
+local (el sandbox de la sesión no tiene Chromium para esta versión de
+Playwright). Una comprobación bloqueante de duración desconocida y
+demostradamente >25 min o atasca cada PR del arnés o enseña a ignorarla; y
+BUILD-BUDGET-1 cuenta los minutos de Actions como presupuesto real.
+
+Vive ahora en `.github/workflows/pilot-selfcheck.yml`, con `workflow_dispatch`
+y un `schedule` semanal (lunes 06:00 UTC), timeout de 60 minutos a propósito
+—el objetivo de esas pasadas es averiguar cuánto tarda de verdad, y un timeout
+que corta la respuesta las inutiliza— y subida de `.pilot/` como artefacto para
+poder ver cuál de los cuatro modos rompió. **El coste asumido, dicho y no
+disimulado:** una regresión del arnés puede pasar hasta una semana sin
+detectarse, en vez de saltar en el PR que la causó. Volver a promoverlo a
+puerta de PR es trabajo de la Fase Q5 y su condición previa es tener medido lo
+que cuesta — que es justo lo que darán las pasadas semanales.
+
+**Retirada del QA superseded.** `.github/workflows/claude-qa.yml` y
+`scripts/run-claude-qa.py` se borran. CLAUDE.md los declaraba superseded desde
+hacía meses ("should not be used") y seguían armados: `pull_request_target`
+con `issues: write`/`pull-requests: write` y un paso que consumía
+`ANTHROPIC_API_KEY`. Código muerto con permisos de escritura y una ruta a un
+secreto no es deuda cosmética justo antes de exponerse a tráfico público.
+
+**Corrección al plan aprobado, encontrada al ejecutarlo.** El plan proponía
+borrar también `claude-qa-handoff.yml` y los dos `*-claude-qa-handoff.sh`.
+**Es incorrecto y no se hizo**: CLAUDE.md sólo declara superseded el workflow
+de ejecución y el script de Python, mientras el comentario
+`<!-- agentic:claude-qa-handoff -->` sigue siendo obligatorio en todo PR — son
+justo esos scripts los que lo publican. Además, la razón que el plan daba
+("superficie de supply-chain viva") estaba sobredimensionada: ambos workflows
+hacen checkout de la base de confianza y nunca ejecutan código del head. El
+motivo real y suficiente para borrarlos es que estaban muertos y armados, no
+que fueran explotables. `docs/agentic-claude-qa-readiness.md` queda marcado
+como documento histórico.
+
+**Qué queda pendiente / roto conocido.**
+
+- El self-check del piloto **sigue sin estar verificado**: no se pudo medir en
+  local (sin Chromium) y en CI excedió 25 minutos dos veces sin completarse.
+  Se sabe que arranca y descarga Chromium en ~20-30 s; **no se sabe si pasa**.
+  La primera pasada semanal es la que lo dirá, y hasta entonces no debe
+  presentarse como una garantía activa.
+- **El piloto perdió la sesión en la última anchura, una vez, y no se
+  reprodujo.** En la primera pasada de este PR (docs-only, imposible que el
+  diff lo causara) dio `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0
+  de 53 y **desktop 7 de 44** — toda pantalla autenticada a partir de
+  `recommendations` aterrizó en `/login`, mientras las públicas seguían bien,
+  sin un solo error de red ni de consola (el redirect venía limpio del
+  middleware). **Se relanzó sobre el mismo commit exacto y pasó; una tercera
+  pasada sobre el commit siguiente también pasó.** Dos verdes contra un rojo
+  sobre el mismo código: es un flake intermitente, **no** un fallo de producto
+  ni un defecto sistemático del arnés, y la primera redacción de esta entrada
+  —que lo daba por sistemático— quedó corregida al tener la segunda medición.
+  La sospecha sigue siendo el `storageState` único que comparten las tres
+  anchuras corriendo en secuencia (desktop la última), pero **es una hipótesis
+  sin probar** y por eso no se ha tocado nada. Importa igualmente: con
+  `retries: 0` deliberado ("un flake es un hallazgo"), un rojo espurio en la
+  puerta enseña a ignorar los rojos. Anotado en la Fase Q5.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase 0; CLAUDE.md
+§"GitHub / Agentic Reporting"; `docs/director-strategy.md` §QA execution model.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
