@@ -1,7 +1,9 @@
 # PRELAUNCH-HARDENING-1 — Plan de refactorización, revisión de arquitectura y verificación E2E
 
-**Estado: PROPUESTA — pendiente de aprobación del fundador. Nada de este plan
-se implementa hasta que se apruebe (fase a fase).**
+**Estado: APROBADO por el fundador (2026-08-09).** Se ejecuta fase a fase, cada
+una con su Human Gate. Progreso: **Fase 0 ✅ hecha** (log §41) · Fases R/Q/P/A
+pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando su aprobación propia de
+excepción de escritura del piloto, como UX-PILOT-2/3.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al
 mercado, plantear (1) un plan de refactorización y revisión de arquitectura
@@ -85,14 +87,27 @@ no toca producto, y multiplica la seguridad de todo lo demás.
   typecheck` + `pnpm run lint` (el `next build` ya lo hace Vercel; no
   duplicarlo en Actions ahorra los minutos que preocupan a BUILD-BUDGET-1).
   Check obligatorio antes del Human Gate.
-- **0b · Retirar el QA superseded**: borrar `.github/workflows/claude-qa.yml`,
-  `claude-qa-handoff.yml`, `scripts/run-claude-qa.py`,
-  `scripts/generate-claude-qa-handoff.sh`, `scripts/post-claude-qa-handoff.sh`.
-  CLAUDE.md ya los declara muertos; un `pull_request_target` armado y sin
-  dueño es riesgo puro antes de exponerse a tráfico público.
+- **0b · Retirar el QA superseded**: borrar `.github/workflows/claude-qa.yml` y
+  `scripts/run-claude-qa.py`. CLAUDE.md ya los declara muertos y seguían
+  armados con permisos de escritura y una ruta que consumía
+  `ANTHROPIC_API_KEY`.
+
+  > **Corrección al escribir esto (2026-08-09), ya aplicada.** La versión
+  > original de este punto añadía `claude-qa-handoff.yml` y los dos
+  > `*-claude-qa-handoff.sh`. Era un error: CLAUDE.md sólo declara superseded
+  > el workflow de ejecución y el script de Python, y el comentario
+  > `<!-- agentic:claude-qa-handoff -->` sigue siendo obligatorio en todo PR —
+  > lo publican exactamente esos scripts. Borrarlos habría roto un requisito
+  > vigente. También estaba sobredimensionada la razón ("supply-chain viva"):
+  > ambos workflows hacen checkout de la base de confianza y nunca ejecutan
+  > código del head.
 - **0c · `pnpm pilot:selfcheck` en CI** (corre contra fixtures locales, no
   gasta preview): hoy no corre en ningún sitio, así que una regresión del
   arnés del piloto solo se descubriría cuando un PASS deje de ser creíble.
+  Implementado **con condición de rutas** (`tests/pilot/**`, `scripts/pilot*`,
+  `playwright.config.ts`, dependencias y el propio `ci.yml`): descarga
+  Chromium, y correrlo en cada PR gastaría minutos de Actions —
+  BUILD-BUDGET-1— para reprobar algo que sólo cambia cuando cambia el arnés.
 
 *Criterio de salida: un PR con un test roto no puede llegar al Human Gate en
 verde.*
@@ -166,7 +181,14 @@ forma medible.*
 - **Q5 · Arreglos del arnés del piloto** (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
-  (bug de coerción 289→"289.0").
+  (bug de coerción 289→"289.0"); y **la sesión compartida que no sobrevive a
+  las tres anchuras** — hallazgo real del 2026-08-09 (log §41): las tres
+  anchuras comparten un `storageState` capturado una sola vez y corren en
+  secuencia, y en la última (desktop) toda pantalla autenticada rebota a
+  `/login`. Un gate que cae por su propio arnés enseña a ignorar los rojos,
+  que es exactamente lo que la Fase 0 intenta evitar. Requiere reproducir
+  antes de arreglar: la hipótesis (rotación del refresh token de Supabase
+  entre contextos) no está probada.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 

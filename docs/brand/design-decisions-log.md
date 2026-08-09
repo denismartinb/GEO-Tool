@@ -4425,6 +4425,90 @@ en las tres anchuras: sin regresión.
 
 ---
 
+## 41. Los tests dejan de ser opcionales (PRELAUNCH-HARDENING-1 Fase 0, 2026-08-09)
+
+**Contexto.** El fundador pidió, antes de lanzar, un plan de refactorización y
+revisión de arquitectura más una batería de pruebas E2E. El plan completo vive
+en `docs/prelaunch-hardening-plan.md` (aprobado 2026-08-09). Esta es su Fase 0,
+la única con urgencia absoluta.
+
+**El hallazgo que la motiva.** Ningún workflow del repo ejecutaba `pnpm test`,
+`pnpm run typecheck` ni `pnpm run lint`. Un grep de `vitest|typecheck|lint|
+build` sobre `.github/workflows/**` daba cero resultados. Con 130 ficheros de
+test y ~1.788 casos, **la suite entera era consultiva**: un PR que los rompiera
+todos mostraba el mismo tick verde que uno que no rompiera ninguno, y podía
+llegar al Human Gate sin que nadie lo supiera. Las dos únicas señales
+automáticas por PR eran el build de Vercel (que no ejecuta un solo test
+unitario) y el piloto agéntico (que mira pantallas, no invariantes).
+
+**Arreglo.** `.github/workflows/ci.yml`, en cada PR y en cada push a `main`:
+tests, typecheck y lint, como tres pasos separados para que el nombre del paso
+rojo ya diga cuál de los tres se rompió sin abrir el log.
+
+**Lo que deliberadamente NO hace: `next build`.** `pnpm run validate` es
+`build && typecheck && lint`, pero Vercel ya construye un preview en cada push
+que toca código de producto, así que un segundo `next build` en Actions
+doblaría el paso más lento de CI sin señal nueva. Se comprobó que el hueco no
+existe: las rutas que `scripts/vercel-should-build.sh` salta (`docs/`,
+`.claude/`, `.github/`, `tests/` salvo `tests/pilot/`, `agents/`, prosa de
+raíz) son todas incapaces de romper un build de Next. Y `tsc --noEmit` es
+**más** amplio que la comprobación del build, porque tsconfig incluye los
+ficheros de test que `next build` nunca compila.
+
+**Self-check del piloto, con condición.** `pnpm pilot:selfcheck` (que
+demuestra que el arnés puede fallar además de pasar) tampoco corría en ningún
+sitio. Ahora corre en el mismo workflow, pero sólo cuando cambia el arnés o
+algo de lo que depende: `tests/pilot/**`, `scripts/pilot*`,
+`playwright.config.ts`, `package.json`/`pnpm-lock.yaml` y **el propio
+`ci.yml`**. Ese último no es un capricho: hace que editar la definición de CI
+ejercite su mitad cara en vez de shipearla sin haberla visto correr — que es
+exactamente lo que pasó aquí, porque el sandbox de la sesión no tiene Chromium
+y el self-check no se pudo verificar en local. La condición existe por
+BUILD-BUDGET-1: el self-check descarga Chromium (~30 s en el runner) y correrlo
+en cada PR gastaría minutos en reprobar algo que sólo cambia cuando cambia el
+arnés.
+
+**Retirada del QA superseded.** `.github/workflows/claude-qa.yml` y
+`scripts/run-claude-qa.py` se borran. CLAUDE.md los declaraba superseded desde
+hacía meses ("should not be used") y seguían armados: `pull_request_target`
+con `issues: write`/`pull-requests: write` y un paso que consumía
+`ANTHROPIC_API_KEY`. Código muerto con permisos de escritura y una ruta a un
+secreto no es deuda cosmética justo antes de exponerse a tráfico público.
+
+**Corrección al plan aprobado, encontrada al ejecutarlo.** El plan proponía
+borrar también `claude-qa-handoff.yml` y los dos `*-claude-qa-handoff.sh`.
+**Es incorrecto y no se hizo**: CLAUDE.md sólo declara superseded el workflow
+de ejecución y el script de Python, mientras el comentario
+`<!-- agentic:claude-qa-handoff -->` sigue siendo obligatorio en todo PR — son
+justo esos scripts los que lo publican. Además, la razón que el plan daba
+("superficie de supply-chain viva") estaba sobredimensionada: ambos workflows
+hacen checkout de la base de confianza y nunca ejecutan código del head. El
+motivo real y suficiente para borrarlos es que estaban muertos y armados, no
+que fueran explotables. `docs/agentic-claude-qa-readiness.md` queda marcado
+como documento histórico.
+
+**Qué queda pendiente / roto conocido.**
+
+- El self-check del piloto **no se ha podido verificar en local** (sin Chromium
+  en el entorno de sesión). Su primera ejecución real es la de este PR, que
+  toca `ci.yml` a propósito para forzarla.
+- **La sesión del piloto no sobrevive a las tres anchuras.** En la primera
+  pasada de este PR (docs-only, imposible que el diff lo causara) el piloto dio
+  `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0 de 53, y **desktop 7
+  de 44** — todas las pantallas autenticadas a partir de `recommendations`
+  aterrizaron en `/login`, mientras las públicas seguían bien. Los 14 runs
+  anteriores del piloto habían pasado, así que no es un flake crónico. Las tres
+  anchuras comparten un único `storageState` capturado una vez en
+  `auth.setup.ts` y corren en secuencia (desktop la última), lo que apunta a
+  invalidación/rotación de la sesión de Supabase entre contextos — **hipótesis,
+  no diagnóstico probado**. Queda anotado como trabajo de la Fase Q5 del plan;
+  no se ha "arreglado" a ciegas.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase 0; CLAUDE.md
+§"GitHub / Agentic Reporting"; `docs/director-strategy.md` §QA execution model.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
