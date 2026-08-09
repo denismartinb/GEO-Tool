@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
@@ -108,8 +109,24 @@ export function isProOrAbove(rawCurrentPlan: string | null | undefined): boolean
  * Fetches the caller's real plan (for limit-enforcement checks in server
  * actions that already hold an authenticated `supabase`/`user` from
  * `requireUser()` — avoids a second auth round trip).
+ *
+ * Memoizado con `React.cache()` por petición (PRELAUNCH-HARDENING-1 Fase V,
+ * V8). Dos motivos, y el segundo no es de rendimiento:
+ *
+ *  1. El layout del dashboard y alguna página (p. ej. Auditoría web) piden el
+ *     plan en el mismo render, y eran dos lecturas de `profiles` idénticas.
+ *  2. `applyTrialExpiry` **tiene efectos**: degrada el plan y manda el email
+ *     de "trial terminado". Dos llamadas concurrentes dentro del mismo render
+ *     podían leer la fila antes de la actualización y mandar ese email dos
+ *     veces al mismo cliente. Con una sola ejecución por petición, ese camino
+ *     corre una vez.
+ *
+ * La clave incluye el cliente `supabase`; como `requireUser()` ya está
+ * memoizado, todas las pantallas comparten la misma referencia y el acierto es
+ * real. Un llamador que construya su propio cliente simplemente no acierta —
+ * mismo comportamiento que hoy, nunca peor.
  */
-export async function getPlanForUser(
+export const getPlanForUser = cache(async function getPlanForUser(
   supabase: AuthenticatedContext["supabase"],
   userId: string
 ): Promise<Plan> {
@@ -120,7 +137,7 @@ export async function getPlanForUser(
     .maybeSingle();
   const effectivePlanId = await applyTrialExpiry(userId, data);
   return resolvePlan(effectivePlanId as Plan["id"] | undefined);
-}
+});
 
 /**
  * Real usage counters and current plan for the "Plan y facturación" page.

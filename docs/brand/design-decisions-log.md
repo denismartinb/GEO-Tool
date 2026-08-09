@@ -4425,7 +4425,367 @@ en las tres anchuras: sin regresión.
 
 ---
 
-## 41. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
+## 41. Dominios recupera el borrado del dominio activo (DOMAINS-CLIENT-DELETE-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Si").
+
+**El problema.** §32 (DOMAINS-REDESIGN-1 Fase A) había retirado a propósito
+todo control de la pantalla de cliente `/dashboard/domains`, incluido el
+borrado duro del dominio (DATA-MGMT-1), dejándolo únicamente en `/debug` — con
+una nota explícita: *"Es reversible y está aquí escrito para que se note si
+algún día molesta"*. El fundador pidió el 2026-08-09 recuperar un botón de
+papelera en la tarjeta del dominio activo: exactamente el caso que esa nota
+anticipaba.
+
+**Qué se decidió.**
+
+1. **Sólo la portada (dominio activo), no la rejilla inferior.** La rejilla de
+   los demás dominios sigue sin controles — la porción más pequeña que resuelve
+   la petición.
+2. **Reutiliza el componente y el server action ya existentes.**
+   `DeleteDomainButton` (`app/dashboard/projects/[projectId]/debug/
+   delete-domain-button.tsx`) y `deleteProject` (`app/dashboard/projects/
+   actions.ts`) no cambian: la portada de Dominios sólo importa el mismo
+   componente que ya usaba `/debug`, con `isCurrentProject={false}` porque
+   aquí no estamos dentro de la ruta del proyecto — tras borrar basta
+   `router.refresh()`, y `resolveSelectedProject` (DOMAINS-ACTIVE-COOKIE-1, §36)
+   ya cae al siguiente dominio o al estado vacío cuando el id activo deja de
+   existir, sin código nuevo para ese caso.
+3. **Los otros dos invariantes de §32 no se tocan.** Sigue sin haber botón de
+   escanear ni de auditar en esta pantalla — el borrado no es un control de
+   automatización, es una acción de cuenta.
+4. **Hueco reservado para que el botón no se pise con la píldora de estado.**
+   `.dm2-hero` pasa a `position: relative` y `.dm2-flags` («En progreso» /
+   «Auditando») gana `margin-right` para no quedar bajo el botón, que ocupa la
+   esquina superior derecha de la tarjeta — colisión real sólo cuando hay un
+   escaneo o auditoría en curso a la vez que se pulsa el botón, pero visible en
+   ese estado si no se reserva el hueco.
+
+**§32 queda superseded en este único punto** (cero controles en la pantalla de
+cliente): el resto de esa decisión — «Escenario», raíl/rejilla de cambio,
+sólo puntuación GEO y su delta, estado de cabecera agregado — sigue vigente
+sin cambios.
+
+---
+
+## 42. Los tests dejan de ser opcionales (PRELAUNCH-HARDENING-1 Fase 0, 2026-08-09)
+
+**Contexto.** El fundador pidió, antes de lanzar, un plan de refactorización y
+revisión de arquitectura más una batería de pruebas E2E. El plan completo vive
+en `docs/prelaunch-hardening-plan.md` (aprobado 2026-08-09). Esta es su Fase 0,
+la única con urgencia absoluta.
+
+**El hallazgo que la motiva.** Ningún workflow del repo ejecutaba `pnpm test`,
+`pnpm run typecheck` ni `pnpm run lint`. Un grep de `vitest|typecheck|lint|
+build` sobre `.github/workflows/**` daba cero resultados. Con 130 ficheros de
+test y ~1.788 casos, **la suite entera era consultiva**: un PR que los rompiera
+todos mostraba el mismo tick verde que uno que no rompiera ninguno, y podía
+llegar al Human Gate sin que nadie lo supiera. Las dos únicas señales
+automáticas por PR eran el build de Vercel (que no ejecuta un solo test
+unitario) y el piloto agéntico (que mira pantallas, no invariantes).
+
+**Arreglo.** `.github/workflows/ci.yml`, en cada PR y en cada push a `main`:
+tests, typecheck y lint, como tres pasos separados para que el nombre del paso
+rojo ya diga cuál de los tres se rompió sin abrir el log.
+
+**Lo que deliberadamente NO hace: `next build`.** `pnpm run validate` es
+`build && typecheck && lint`, pero Vercel ya construye un preview en cada push
+que toca código de producto, así que un segundo `next build` en Actions
+doblaría el paso más lento de CI sin señal nueva. Se comprobó que el hueco no
+existe: las rutas que `scripts/vercel-should-build.sh` salta (`docs/`,
+`.claude/`, `.github/`, `tests/` salvo `tests/pilot/`, `agents/`, prosa de
+raíz) son todas incapaces de romper un build de Next. Y `tsc --noEmit` es
+**más** amplio que la comprobación del build, porque tsconfig incluye los
+ficheros de test que `next build` nunca compila.
+
+**Self-check del piloto: primero en CI, luego fuera — y por qué.**
+`pnpm pilot:selfcheck` (lo que demuestra que el arnés puede fallar además de
+pasar) tampoco corría en ningún sitio. El primer intento fue meterlo en
+`ci.yml` condicionado a que cambiara el arnés, con el propio `ci.yml` en la
+lista de rutas para que editarlo ejercitase su mitad cara en vez de shipearla
+a ciegas. **Ese diseño se probó y se descartó el mismo día:** en dos runs
+consecutivos superó los 25 minutos sin completarse, y tampoco se pudo medir en
+local (el sandbox de la sesión no tiene Chromium para esta versión de
+Playwright). Una comprobación bloqueante de duración desconocida y
+demostradamente >25 min o atasca cada PR del arnés o enseña a ignorarla; y
+BUILD-BUDGET-1 cuenta los minutos de Actions como presupuesto real.
+
+Vive ahora en `.github/workflows/pilot-selfcheck.yml`, con `workflow_dispatch`
+y un `schedule` semanal (lunes 06:00 UTC), timeout de 60 minutos a propósito
+—el objetivo de esas pasadas es averiguar cuánto tarda de verdad, y un timeout
+que corta la respuesta las inutiliza— y subida de `.pilot/` como artefacto para
+poder ver cuál de los cuatro modos rompió. **El coste asumido, dicho y no
+disimulado:** una regresión del arnés puede pasar hasta una semana sin
+detectarse, en vez de saltar en el PR que la causó. Volver a promoverlo a
+puerta de PR es trabajo de la Fase Q5 y su condición previa es tener medido lo
+que cuesta — que es justo lo que darán las pasadas semanales.
+
+**Retirada del QA superseded.** `.github/workflows/claude-qa.yml` y
+`scripts/run-claude-qa.py` se borran. CLAUDE.md los declaraba superseded desde
+hacía meses ("should not be used") y seguían armados: `pull_request_target`
+con `issues: write`/`pull-requests: write` y un paso que consumía
+`ANTHROPIC_API_KEY`. Código muerto con permisos de escritura y una ruta a un
+secreto no es deuda cosmética justo antes de exponerse a tráfico público.
+
+**Corrección al plan aprobado, encontrada al ejecutarlo.** El plan proponía
+borrar también `claude-qa-handoff.yml` y los dos `*-claude-qa-handoff.sh`.
+**Es incorrecto y no se hizo**: CLAUDE.md sólo declara superseded el workflow
+de ejecución y el script de Python, mientras el comentario
+`<!-- agentic:claude-qa-handoff -->` sigue siendo obligatorio en todo PR — son
+justo esos scripts los que lo publican. Además, la razón que el plan daba
+("superficie de supply-chain viva") estaba sobredimensionada: ambos workflows
+hacen checkout de la base de confianza y nunca ejecutan código del head. El
+motivo real y suficiente para borrarlos es que estaban muertos y armados, no
+que fueran explotables. `docs/agentic-claude-qa-readiness.md` queda marcado
+como documento histórico.
+
+**Qué queda pendiente / roto conocido.**
+
+- El self-check del piloto **quedó sin verificar en este PR** y su primera
+  pasada real llegó justo después de mergearlo: **14 minutos y FALLA**. Ver
+  §44, que es donde vive el diagnóstico.
+- **El piloto perdió la sesión en la última anchura, una vez, y no se
+  reprodujo.** En la primera pasada de este PR (docs-only, imposible que el
+  diff lo causara) dio `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0
+  de 53 y **desktop 7 de 44** — toda pantalla autenticada a partir de
+  `recommendations` aterrizó en `/login`, mientras las públicas seguían bien,
+  sin un solo error de red ni de consola (el redirect venía limpio del
+  middleware). **Se relanzó sobre el mismo commit exacto y pasó; una tercera
+  pasada sobre el commit siguiente también pasó.** Dos verdes contra un rojo
+  sobre el mismo código: es un flake intermitente, **no** un fallo de producto
+  ni un defecto sistemático del arnés, y la primera redacción de esta entrada
+  —que lo daba por sistemático— quedó corregida al tener la segunda medición.
+  La sospecha sigue siendo el `storageState` único que comparten las tres
+  anchuras corriendo en secuencia (desktop la última), pero **es una hipótesis
+  sin probar** y por eso no se ha tocado nada. Importa igualmente: con
+  `retries: 0` deliberado ("un flake es un hallazgo"), un rojo espurio en la
+  puerta enseña a ignorar los rojos. Anotado en la Fase Q5.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase 0; CLAUDE.md
+§"GitHub / Agentic Reporting"; `docs/director-strategy.md` §QA execution model.
+
+---
+
+## 43. Los helpers duplicados dejan de ser tres (PRELAUNCH-HARDENING-1 Fase R, R1+R2, 2026-08-09)
+
+Primeros dos slices de la Fase R del plan (`docs/prelaunch-hardening-plan.md`).
+Refactor puro: **comportamiento idéntico**, con los tests existentes como red.
+
+**`sanitizeField` existía tres veces, byte a byte.** En
+`lib/web-audit/technical-audit.ts`, `lib/recommendations/domain-coverage.ts` y
+`lib/recommendations/rewrite-recommendation.ts`. No es un helper cualquiera: es
+el saneador de texto no confiable (salida de LLM y HTML traído de la web) que
+las reglas de ruta de ambas zonas exigen **en singular** — «el patrón existente
+(`sanitizeField`)». Una mejora futura del escapado habría aterrizado en una
+copia y fallado en silencio en las otras dos. Ahora vive en
+`lib/text/sanitize.ts` y esa regla es literalmente cierta.
+
+**La autenticación de las cinco rutas internas estaba escrita a mano cinco
+veces** (`weekly-scans`, `weekly-digest`, `sweep-continue`, `run-audit`,
+`scan/continue`), comparando la cabecera contra `Bearer <secreto>` con `!==`.
+Pasa a `lib/api/internal-auth.ts`, y de paso deja de ser una comparación que
+filtra: una comparación de cadenas corta en el primer byte distinto, así que el
+tiempo de respuesta revela cuántos caracteres del secreto son correctos, y
+estos endpoints son públicos y sin límite de intentos. Se compara sobre el
+SHA-256 de cada lado —`timingSafeEqual` exige búferes del mismo tamaño, y
+comparar longitudes filtraría la longitud del secreto—. **Fail-closed
+explícito**: sin variable de entorno no entra nadie. Verificado que ninguna
+ruta declara `runtime = "edge"`, así que `node:crypto` está disponible.
+
+**El transporte de los tres proveedores de LLM.** `fetchWithTimeout` y `delay`
+estaban triplicadas, y las de OpenAI y Claude diferían **en una sola línea**:
+la clase de error del timeout. Unificadas en `lib/llm/http.ts`, con la fábrica
+de error como parámetro para que cada proveedor conserve su tipo propio — aguas
+abajo se distinguen por tipo para categorizar el fallo. Importa de cara al
+roadmap: Perplexity heredaría hoy la copia en vez del arreglo.
+
+**Lo que deliberadamente NO se unificó.** Los mensajes de error por proveedor
+(`getGeminiApiError` y compañía) parecen el mismo patrón, pero **Gemini no
+tiene rama para 401** y los otros dos sí. Un builder común o le añade a Gemini
+un mensaje que hoy no emite, o lleva un parámetro para fingir que no lo tiene.
+Esos textos se persisten como el error categorizado de un escaneo
+(`.claude/rules/scan.md`), así que cambiarlos no es refactor: es cambiar un
+dato que el operador lee. Si algún día Gemini debe distinguir el 401, es una
+decisión con su propia entrada, no un efecto colateral de una limpieza.
+
+**Pendiente de la Fase R:** R3 (tipos generados de Supabase), R4 (`lib/env.ts`
+validado), R5 (trocear `gemini.ts`), R6 (descargar `executor.ts` y mover el
+vocabulario compartido fuera de `lib/scan`), R7 (páginas) y R8 (muertos).
+
+---
+
+## 44. El self-check del piloto corre por fin, y está rojo (2026-08-09)
+
+**Primera ejecución real de `pnpm pilot:selfcheck` desde que existe.** No había
+corrido nunca en ningún sitio; la Fase 0 lo sacó a un workflow propio
+(`pilot-selfcheck.yml`) y se disparó a mano en cuanto el merge de #366 lo
+registró en GitHub — un `schedule`/`workflow_dispatch` sólo existe para GitHub
+desde la rama por defecto, así que antes del merge era literalmente imposible
+ejecutarlo.
+
+**Los dos datos que faltaban:**
+
+- **Tarda 14 minutos** (13 min 47 s de reloj en el paso, más ~40 s de descarga
+  de Chromium). Los ">25 minutos sin completarse" de §42 eran ejecuciones que
+  se cancelaron o compitieron por recursos, no su coste real.
+- **FALLA.**
+
+**Qué falla exactamente, que no es lo que parece.** Los tres casos que
+*deben* fallar los detecta correctamente —overflow, estado vacío y recorte
+dentro de `.dash-content`, `expected exit 1, got 1` los tres—, y las dos
+comprobaciones estructurales pasan (profundidad de captura: 54 páginas a altura
+completa; bloqueo de escaneos: 0 journeys de escaneo en 105 páginas). **Lo que
+falla es el caso sano**: el fixture "healthy" ya no está sano y devuelve
+`PILOT FAIL` cuando se espera `PASS`.
+
+Sus fallos, todos de la misma familia: `first-party requests failed` en las
+cinco pantallas de Ajustes (las tres anchuras), en `landing-hero-tour`, y en
+`blog-geo-para-ecommerce`; más «el popup de bienvenida no salió solo».
+
+**Es deriva del fixture, no un fallo del producto.** Los journeys crecieron
+—CONSOLE-REDESIGN-1 rehízo Ajustes, ONBOARDING-TOUR-1 añadió el tour, las
+portadas del blog cambiaron— y `tests/pilot/fixtures/server.mjs` no se
+mantuvo al día, así que hoy no sirve todo lo que esas pasadas piden. La
+capacidad de detectar fallos del arnés está intacta; lo que está roto es su
+línea base.
+
+**Y es exactamente la deuda que la Fase 0 existía para destapar:** llevaba
+roto quién sabe cuánto, y nadie podía saberlo porque no se ejecutaba en ningún
+sitio. Un self-check que no corre no es una red de seguridad, es una creencia.
+
+**Segundo hallazgo, más pequeño y también mío:** el paso «Upload self-check
+output» del workflow no capturó nada (`No files were found with the provided
+path: .pilot/`). El self-check limpia `.pilot/` entre casos, así que al
+terminar no queda nada que subir. La evidencia que ese paso prometía no existe;
+hay que hacer que cada caso conserve su salida antes de que el siguiente la
+borre.
+
+**Pendiente (Fase Q5 del plan):** poner al día el fixture hasta que el caso
+sano vuelva a pasar, arreglar la captura de evidencia, y sólo entonces
+plantear devolver el self-check a puerta de PR — con 14 minutos medidos, esa
+conversación ya se puede tener con un número encima de la mesa.
+
+---
+
+## 45. Un fallo de LLM fuera del escaneo deja de ser invisible (LLM-RESILIENCE-1, 2026-08-09)
+
+**Estado: implementada** (Fases A y B del plan; C y D siguen sin aprobar).
+Task Intake aprobado por el fundador el mismo día ("Si"), con dos decisiones
+explícitas suyas: opción **(i)** para el dedupe y **PR único** para las tres
+mitades.
+
+**El problema, con la evidencia que lo cerró.** El 2026-08-09 el fundador
+añadió tres dominios (amazon.es, google.com, hostinger.com) y el asistente de
+alta le devolvió cero competidores. En hostinger.com no vio ni un mensaje de
+error. En paralelo llegó una alerta de `engine_no_response` de Gemini y se
+descubrió que varios dominios con escaneo diario no se lanzaban desde el 2 de
+agosto. La investigación (sin tocar código, a petición suya: *"Prefiero que lo
+investigues bien para que estemos seguros"*) separó **cuatro** causas, no una:
+
+1. **Pico real de 429 de Gemini** el 9-08 a las 06:00: 20 errores en
+   `job_logs` en ~54 s, con Claude y OpenAI completando en la misma pasada.
+2. **~70 errores más sin registro alguno.** Google AI Studio mostraba ~90
+   errores 429 contra los 20 nuestros. La diferencia venía de rutas que no
+   escriben en ningún sitio.
+3. **Dominios sin escanear:** dos causas distintas — la mayoría nunca se dio
+   de alta en `recurring_scans_enabled` (nace `false`, sólo lo activa el toggle
+   manual de `/debug`), y un proyecto (`5255a45c`) está congelado por el
+   cortacircuitos de 3 fallos seguidos, que no tiene salida en el código.
+4. **RPM/TPM/RPD descartados como causa** con los propios paneles de Google:
+   uso casi a cero contra el límite. La hipótesis viva es una cuota propia del
+   *grounding* con Búsqueda de Google, sin confirmar.
+
+Esta fase ataca (1) y (2). (3) sigue pendiente como fases C y D.
+
+**Los tres hallazgos de código que cambiaron el diagnóstico.**
+
+1. **No todas las llamadas a Gemini usan grounding.** Sólo tres: la generación
+   del escaneo, la auditoría de contenido y `suggestCompetitors`. `suggestPrompts`
+   y `inferBusinessProfile` no. Encaja con el síntoma: lo que se vaciaba era la
+   lista de competidores (grounded) mientras los prompts (sin grounding)
+   sobrevivían.
+2. **Sólo la generación del escaneo reintentaba un 429** — y con una espera
+   fija de 1500 ms. `auditDomainContent`, `generateGeminiJson` y
+   `generateGroundedGeminiJson` no tenían reintento ninguno: el primer 429 era
+   terminal. Es exactamente la asimetría que ADR 0029 encontró entre generación
+   y extracción, una capa más arriba, y explica por qué el asistente caía a la
+   primera mientras el escaneo de la misma minuto aguantaba.
+3. **`ok: competitors.length > 0 || prompts.length > 0`.** Con los prompts
+   funcionando y los competidores no, `ok` era `true`, el asistente avanzaba, y
+   la pantalla de competidores salía vacía sin nada que leer. Y el único
+   mensaje de error que existía (`suggestError`) **se pintaba sólo en el paso
+   0**, mientras el camino de fallo hacía `setStep(1)` en la misma
+   actualización — el aviso se escribía en una pantalla de la que al usuario se
+   le estaba sacando en ese mismo instante.
+
+**Qué se decidió.**
+
+1. **Reintento acotado para toda llamada Gemini interactiva.** Reutiliza la
+   máquina que ya existía para extracción (`fetchExtractionWithRetry`):
+   intentos limitados, backoff exponencial con jitter total y `Retry-After`
+   respetado pero acotado. Presupuesto más corto que el de extracción a
+   propósito (3 intentos, 600 ms base, tope de 3 s) porque **hay una persona
+   esperando**, no una pasada de fondo. Un 400/401/403 sigue fallando al primer
+   intento: reintentar un id de modelo mal puesto da lo mismo tres veces.
+2. **Los `catch {}` mudos pasan a reportar.** Los dos que se tragaban la causa
+   entera (`inferBusinessProfile` → `null`, `suggestCompetitors` → `[]`)
+   mantienen su contrato — siguen devolviendo lo mismo, nadie aguas abajo
+   cambia — pero antes categorizan el fallo y avisan al operador.
+3. **Alerta de operador para fallos LLM sin `run`** (`lib/llm/llm-incident.ts`).
+   `scan-health-alert.ts` no podía cubrir esto: está construido sobre
+   `scan_prompt_results` y `job_logs`, y ambos exigen un job y un run que el
+   asistente de alta no tiene. Alerta sólo en `quota` y `config` — el mismo
+   umbral que el aviso de escaneo, y por la misma razón: avisar del ruido del
+   modelo es enseñar a ignorar el aviso.
+4. **El dedupe es en memoria del proceso, y se dice.** `job_logs.job_id` es
+   `not null` con FK compuesta a `jobs`, así que una ruta sin job no puede
+   escribir ahí. Las opciones eran tabla nueva (migración: área prohibida sin
+   aprobación propia) o memoria. El fundador eligió memoria. **El coste, escrito
+   y no disimulado:** un apagón amplio puede mandar un email por instancia
+   caliente y un arranque en frío olvida la ventana. Es tolerable *aquí* porque
+   las superficies cubiertas las dispara una persona haciendo clic; si esto se
+   conecta alguna vez a una ruta programada, ese razonamiento caduca y el
+   dedupe necesita almacén de verdad. El propio email lo dice ("por instancia")
+   en vez de copiar el "una vez cada 24 h" del aviso de escaneo, que sí es
+   global.
+5. **El asistente avisa en el paso que está vacío.** `ProjectSetupSuggestion`
+   gana `failed: Array<"competitors" | "prompts">` y cada paso pinta su propio
+   aviso cuando le toca. **El texto no inventa la causa**: desde el navegador no
+   se distingue un apagón del proveedor de un dominio del que el modelo no sabe
+   nada, así que dice lo que sí es cierto — no se pudo sugerir, añádelos a mano,
+   el escaneo funciona igual. La causa real va al operador por email.
+6. **El lote de prompts deja de salir todo en el mismo instante.** Un lote
+   despachaba hasta `MAX_REAL_SCAN_PROMPTS` trabajos a la vez y cada uno llama a
+   un motor por proveedor: hasta 10 peticiones simultáneas a Gemini desde parado,
+   por dos proyectos en la pasada del cron. La auditoría ya se autolimitaba y
+   `EXTRACTION_CONCURRENCY` existe justo por esto. Ahora se escalonan **los
+   arranques** (las llamadas siguen solapándose), con dos topes que lo mantienen
+   honesto frente a `.claude/rules/scan.md`: el reparto total está acotado a 2 s
+   pase lo que pase, y por debajo de 20 s de presupuesto restante se desactiva
+   entero. Acabar el lote dentro de `maxDuration` manda sobre el ritmo.
+
+**Lo que esta fase NO arregla, dicho explícitamente.** No elimina el límite de
+Gemini: lo aguanta. Si la causa es una cuota de grounding, los fallos bajan
+mucho pero pueden reaparecer bajo carga — la diferencia es que ahora se sabe el
+mismo día en vez de a los cuatro. Y no toca ninguna de las dos causas de los
+dominios sin escanear.
+
+**Pendiente (fases propuestas, sin aprobar).** **C — SCAN-STREAK-EXIT-1:** darle
+salida al cortacircuitos de `FAILURE_STREAK_LIMIT` y descongelar `5255a45c`.
+**D — ONBOARDING-RECURRING-1:** alta automática en escaneo recurrente; se dejó
+la última a propósito, porque multiplica el volumen diario contra la misma
+cuota que acaba de morder. Y sigue abierta la pista de la cuota de grounding en
+la consola de Google, que no bloquea nada de lo anterior.
+
+**Conocido y no resuelto:** los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`),
+detectados durante esta investigación y sin tocar.
+
+---
+
+---
+
+## 46. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
 
 **Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
 diseño en `docs/design-reference/scan-states-1/` (tres opciones, rev.2 y
@@ -4512,6 +4872,9 @@ de 5 minutos contra una copia que promete "un par de minutos".
   el traspaso y `hasActiveAuditJob`— no lo ha visto nadie en un navegador
   contra datos reales. Pendiente del piloto o de una prueba manual del
   fundador contra un proyecto nuevo de verdad.
+
+---
+
 ---
 
 ## Cómo mantener este documento

@@ -50,38 +50,53 @@ export default async function RecommendationsPage({
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
-  // Latest completed run
-  const { data: latestCompletedRun } = await supabase
-    .from("scan_runs")
-    .select("id, status, created_at, finished_at")
-    .eq("project_id", projectId)
-    .eq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Dos lecturas de `scan_runs` en paralelo, no tres en fila
+  // (PRELAUNCH-HARDENING-1 Fase V, V7). Eran tres `await` encadenados contra
+  // la misma tabla y el mismo `project_id`, sin ninguna dependencia entre
+  // ellos: el usuario pagaba la suma de tres viajes en vez del más lento.
+  //
+  // Y la tercera sobraba del todo: pedía "el último run de cualquier estado"
+  // con `order(created_at desc).limit(1)`, que es exactamente la primera fila
+  // de esta lista de 5 ordenada igual. Se deriva abajo en vez de volver a
+  // preguntarlo.
+  const [{ data: latestCompletedRun }, { data: recentRuns }] = await Promise.all([
+    // Latest completed run
+    supabase
+      .from("scan_runs")
+      .select("id, status, created_at, finished_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    // Recent runs to detect an in-progress scan (pending|running)
+    supabase
+      .from("scan_runs")
+      .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(5)
+  ]);
 
-  // Also fetch latest run of any status for "failed" banner
-  const { data: latestRun } = await supabase
-    .from("scan_runs")
-    .select("id, status, created_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  // Recent runs to detect an in-progress scan (pending|running)
-  const { data: recentRuns } = await supabase
-    .from("scan_runs")
-    .select("id, status, total_prompts, successful_prompts, failed_prompts, started_at")
-    .eq("project_id", projectId)
-    .order("created_at", { ascending: false })
-    .limit(5);
+  // El run más reciente sea cual sea su estado — para el aviso de "el último
+  // escaneo falló". Misma fila que devolvía la consulta eliminada.
+  const latestRun = recentRuns?.[0];
 
   const rawActiveRun = recentRuns?.find((r) => r.status === "pending" || r.status === "running");
   // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
   // the progress bar keeps moving once generation is done instead of pinning
   // at 100% while extraction is still working.
-  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
+  //
+  // Se lanza aquí y se espera después del lote de recomendaciones
+  // (PRELAUNCH-HARDENING-1 Fase V, V7): ninguno de los dos consume el
+  // resultado del otro, así que esperarla en esta línea añadía una ronda
+  // serializada más a cada render. Dejarla suelta es seguro porque
+  // `withAnalysisProgress` captura sus propios errores y degrada al contador
+  // de generación (lib/scan/active-run-progress.ts) — no puede rechazar, así
+  // que no hay promesa sin manejar.
+  const activeRunPromise = rawActiveRun
+    ? withAnalysisProgress(supabase, projectId, rawActiveRun)
+    : Promise.resolve(rawActiveRun);
 
   const [{ data: recommendations }, { data: resolvedRecommendations }, { data: history }] = latestCompletedRun
     ? await Promise.all([
@@ -119,6 +134,8 @@ export default async function RecommendationsPage({
           .limit(30),
       ])
     : [{ data: null }, { data: null }, { data: null }];
+
+  const activeRun = await activeRunPromise;
 
   const baseRecs = (recommendations ?? []) as Recommendation[];
 

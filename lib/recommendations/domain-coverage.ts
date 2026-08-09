@@ -9,6 +9,7 @@ import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import { type createServiceClient } from "@/lib/supabase/service";
 import { type AuthenticatedContext } from "@/lib/scan/types";
+import { sanitizeField } from "@/lib/text/sanitize";
 import {
   parseCoverageMap,
   NOT_COVERED_NOTE,
@@ -239,19 +240,6 @@ function extractDomain(url: string): string | null {
   } catch {
     return null;
   }
-}
-
-function sanitizeField(input: string, maxLen: number): string {
-  let stripped = "";
-  for (const ch of input) {
-    const code = ch.codePointAt(0) ?? 0;
-    stripped += code < 0x20 || code === 0x7f ? " " : ch;
-  }
-  return stripped
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLen);
 }
 
 type ProjectRow = { id: string; brand: string; domain: string; language: string; is_archived: boolean };

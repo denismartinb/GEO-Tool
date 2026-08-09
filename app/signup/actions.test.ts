@@ -35,7 +35,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow("REDIRECT:/dashboard");
 
     expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
@@ -51,7 +51,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow("REDIRECT:/signup/confirm?email=new%40example.com");
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
@@ -63,7 +63,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow();
 
     expect(signUp).toHaveBeenCalledWith(
@@ -76,7 +76,7 @@ describe("signup", () => {
     const { signup } = await import("./actions");
 
     await expect(
-      signup(formData({ email: "new@example.com", password: "supersecret" }))
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
     ).rejects.toThrow(/^REDIRECT:\/signup\?error=/);
 
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe("signup", () => {
 
     let redirectUrl = "";
     try {
-      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }));
     } catch (e) {
       redirectUrl = (e as Error).message.replace("REDIRECT:", "");
     }
@@ -110,11 +110,35 @@ describe("signup", () => {
 
     let redirectUrl = "";
     try {
-      await signup(formData({ email: "new@example.com", password: "supersecret" }));
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }));
     } catch (e) {
       redirectUrl = (e as Error).message.replace("REDIRECT:", "");
     }
 
     expect(decodeURIComponent(redirectUrl)).toContain("already registered");
+  });
+
+  it("rejects mismatched passwords without calling Supabase", async () => {
+    const { signup } = await import("./actions");
+
+    let redirectUrl = "";
+    try {
+      await signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "different" }));
+    } catch (e) {
+      redirectUrl = (e as Error).message.replace("REDIRECT:", "");
+    }
+
+    expect(decodeURIComponent(redirectUrl)).toBe("/signup?error=Las contraseñas no coinciden.");
+    expect(signUp).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid email without calling Supabase", async () => {
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(formData({ email: "not-an-email", password: "supersecret", confirmPassword: "supersecret" }))
+    ).rejects.toThrow(/^REDIRECT:\/signup\?error=/);
+
+    expect(signUp).not.toHaveBeenCalled();
   });
 });
