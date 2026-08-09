@@ -4425,6 +4425,75 @@ en las tres anchuras: sin regresión.
 
 ---
 
+## 41. Banco de pruebas offline para el modelo de extracción (EXTRACTION-COST-BENCH-1, 2026-08-09)
+
+**Estado: herramienta construida y verificada; ejecución con datos reales
+pendiente — este sesión no tenía credenciales de Supabase/Gemini/OpenAI.**
+
+Nace de la conversación de desglose de coste de LLM: la extracción estructurada
+(`lib/scan/extraction.ts`) usa siempre el mismo proveedor que generó la
+respuesta, sin ninguna razón técnica — el input es `raw_response_text`, ya
+persistido, así que cualquier extractor puede parsearlo venga de donde venga.
+Es además ~50% de todas las llamadas LLM del pipeline y la que mete más input
+(esquema completo + la respuesta cruda entera), y no registra tokens ni coste
+en ningún sitio. `scripts/extraction-bench.ts` (`pnpm bench:extraction
+--limit N`) reextrae filas históricas con modelos candidatos más baratos
+(`gemini-2.5-flash-lite`, `gpt-4o-mini`, y `gemini-2.5-flash` como referencia
+de control) y compara el resultado contra lo ya persistido, sin tocar una fila
+de producción.
+
+### Decisiones y por qué
+
+- **Reutiliza las funciones reales de extracción y verificación**
+  (`extractGeminiStructuredData`, `extractOpenAIStructuredData`,
+  `verifyExtractedMentions`, `reconcileExtractedCompetitors`), no una copia. El
+  modelo candidato se selecciona sobreescribiendo `GEMINI_MODEL`/`OPENAI_MODEL`
+  justo antes de cada llamada y restaurando el valor previo después — la única
+  forma de variar el modelo sin tocar `lib/llm/**` (prohibido en el Task
+  Intake aprobado), porque esas funciones no aceptan un `model` explícito.
+- **`citations_count`/`citation_found` quedan fuera de la comparación a
+  propósito.** Se calculan desde `raw_response_json.grounding_chunks`, que es
+  metadata congelada en el momento de GENERACIÓN — ningún modelo de extracción,
+  barato o no, puede cambiarlos. Compararlos aquí mediría ruido, no señal.
+- **El coste es estimado, no medido.** Ninguna de las tres funciones de
+  extracción devuelve `usage` del proveedor — ese hueco es precisamente lo que
+  esta herramienta sirve para detectar, no para resolver; resolverlo exigiría
+  tocar `lib/llm/**`, fuera del alcance aprobado. La estimación usa una
+  heurística caracteres/4 contra tarifas públicas por token — válida para una
+  decisión de sí/no, no para fijar pricing con precisión.
+- **`import "server-only"` no resuelve fuera de `next build`/`next dev`.**
+  Todos los módulos de `lib/**` que este script reutiliza abren con ese
+  import; el paquete `server-only` solo resuelve a un no-op bajo la condición
+  de exports `react-server`, que el bundler de Next fija internamente. El
+  script se invoca con `NODE_OPTIONS=--conditions=react-server` para
+  reproducir esa misma condición fuera del bundler — mecanismo de Node de
+  primera clase, sin loader personalizado ni tocar ningún fichero de `lib/`.
+  Tuvo que añadirse `server-only` como devDependency real (antes solo lo
+  resolvía el bundler de Next vía alias interno) y `tsx` para poder ejecutar
+  TypeScript con imports de proyecto fuera de Next.
+- **Guardado de solo lectura, verificado por test, no por convención.**
+  `scripts/extraction-bench.test.ts` falla si el fichero contiene
+  `.update(`/`.insert(`/`.upsert(`/`.delete(`. El propio `main()` solo se
+  ejecuta cuando el fichero es el punto de entrada directo (`import.meta.url
+  === file://${process.argv[1]}`) — sin ese guard, importar el módulo para sus
+  funciones puras desde el test también disparaba una llamada real a Supabase.
+
+### Pendiente / roto conocido
+
+- **No hay resultados reales todavía.** Esta sesión no tenía
+  `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`GEMINI_API_KEY`/
+  `OPENAI_API_KEY` — se verificó que la herramienta compila, pasa sus tests
+  (18, todos sobre las funciones puras) y falla limpiamente al llegar al
+  punto que necesita credenciales. Ejecutar `pnpm bench:extraction --limit
+  50` con credenciales reales, y decidir el cambio de modelo de extracción con
+  esos resultados, es la fase siguiente — no esta.
+- **El coste estimado seguirá siendo una aproximación** hasta que una fase
+  posterior (fuera de este alcance) exponga `usage` desde
+  `extractGeminiStructuredData`/`extractClaudeStructuredData`/
+  `extractOpenAIStructuredData`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
