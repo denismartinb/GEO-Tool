@@ -4542,11 +4542,9 @@ como documento histórico.
 
 **Qué queda pendiente / roto conocido.**
 
-- El self-check del piloto **sigue sin estar verificado**: no se pudo medir en
-  local (sin Chromium) y en CI excedió 25 minutos dos veces sin completarse.
-  Se sabe que arranca y descarga Chromium en ~20-30 s; **no se sabe si pasa**.
-  La primera pasada semanal es la que lo dirá, y hasta entonces no debe
-  presentarse como una garantía activa.
+- El self-check del piloto **quedó sin verificar en este PR** y su primera
+  pasada real llegó justo después de mergearlo: **14 minutos y FALLA**. Ver
+  §44, que es donde vive el diagnóstico.
 - **El piloto perdió la sesión en la última anchura, una vez, y no se
   reprodujo.** En la primera pasada de este PR (docs-only, imposible que el
   diff lo causara) dio `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0
@@ -4614,6 +4612,59 @@ decisión con su propia entrada, no un efecto colateral de una limpieza.
 **Pendiente de la Fase R:** R3 (tipos generados de Supabase), R4 (`lib/env.ts`
 validado), R5 (trocear `gemini.ts`), R6 (descargar `executor.ts` y mover el
 vocabulario compartido fuera de `lib/scan`), R7 (páginas) y R8 (muertos).
+
+---
+
+## 44. El self-check del piloto corre por fin, y está rojo (2026-08-09)
+
+**Primera ejecución real de `pnpm pilot:selfcheck` desde que existe.** No había
+corrido nunca en ningún sitio; la Fase 0 lo sacó a un workflow propio
+(`pilot-selfcheck.yml`) y se disparó a mano en cuanto el merge de #366 lo
+registró en GitHub — un `schedule`/`workflow_dispatch` sólo existe para GitHub
+desde la rama por defecto, así que antes del merge era literalmente imposible
+ejecutarlo.
+
+**Los dos datos que faltaban:**
+
+- **Tarda 14 minutos** (13 min 47 s de reloj en el paso, más ~40 s de descarga
+  de Chromium). Los ">25 minutos sin completarse" de §42 eran ejecuciones que
+  se cancelaron o compitieron por recursos, no su coste real.
+- **FALLA.**
+
+**Qué falla exactamente, que no es lo que parece.** Los tres casos que
+*deben* fallar los detecta correctamente —overflow, estado vacío y recorte
+dentro de `.dash-content`, `expected exit 1, got 1` los tres—, y las dos
+comprobaciones estructurales pasan (profundidad de captura: 54 páginas a altura
+completa; bloqueo de escaneos: 0 journeys de escaneo en 105 páginas). **Lo que
+falla es el caso sano**: el fixture "healthy" ya no está sano y devuelve
+`PILOT FAIL` cuando se espera `PASS`.
+
+Sus fallos, todos de la misma familia: `first-party requests failed` en las
+cinco pantallas de Ajustes (las tres anchuras), en `landing-hero-tour`, y en
+`blog-geo-para-ecommerce`; más «el popup de bienvenida no salió solo».
+
+**Es deriva del fixture, no un fallo del producto.** Los journeys crecieron
+—CONSOLE-REDESIGN-1 rehízo Ajustes, ONBOARDING-TOUR-1 añadió el tour, las
+portadas del blog cambiaron— y `tests/pilot/fixtures/server.mjs` no se
+mantuvo al día, así que hoy no sirve todo lo que esas pasadas piden. La
+capacidad de detectar fallos del arnés está intacta; lo que está roto es su
+línea base.
+
+**Y es exactamente la deuda que la Fase 0 existía para destapar:** llevaba
+roto quién sabe cuánto, y nadie podía saberlo porque no se ejecutaba en ningún
+sitio. Un self-check que no corre no es una red de seguridad, es una creencia.
+
+**Segundo hallazgo, más pequeño y también mío:** el paso «Upload self-check
+output» del workflow no capturó nada (`No files were found with the provided
+path: .pilot/`). El self-check limpia `.pilot/` entre casos, así que al
+terminar no queda nada que subir. La evidencia que ese paso prometía no existe;
+hay que hacer que cada caso conserve su salida antes de que el siguiente la
+borre.
+
+**Pendiente (Fase Q5 del plan):** poner al día el fixture hasta que el caso
+sano vuelva a pasar, arreglar la captura de evidencia, y sólo entonces
+plantear devolver el self-check a puerta de PR — con 14 minutos medidos, esa
+conversación ya se puede tener con un número encima de la mesa.
 
 ---
 

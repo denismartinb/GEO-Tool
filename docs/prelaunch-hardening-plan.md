@@ -200,9 +200,15 @@ forma medible.*
   deliberado, un rojo espurio en la puerta enseña a ignorar los rojos. La
   hipótesis (el `storageState` único compartido por las tres anchuras
   secuenciales) no está probada, así que lo primero es instrumentar, no
-  parchear; y **medir y re-promover el self-check del piloto a puerta de PR**,
-  que hoy vive en un workflow semanal porque excedió 25 minutos dos veces sin
-  que se sepa aún si pasa.
+  parchear; y **arreglar el self-check del piloto, que está ROJO** (log §44):
+  su primera pasada real —2026-08-09, ya medida: **14 minutos**— detecta
+  correctamente los tres fixtures rotos, pero el fixture *sano* ya no lo está
+  (`first-party requests failed` en Ajustes, el tour del hero y un post del
+  blog). Es deriva de `tests/pilot/fixtures/server.mjs` frente a unos journeys
+  que crecieron, no un fallo de producto. Hasta que ese caso vuelva a pasar, el
+  self-check no es una garantía de nada. Sub-tarea: el paso que sube su
+  evidencia no captura nada, porque el propio self-check limpia `.pilot/` entre
+  casos.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 
