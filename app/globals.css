@@ -2957,14 +2957,18 @@ a {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: var(--r-xs);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--ink-4);
+  /* --ink-3, no --ink-4: en .dm2-hero (fondo con tinte azul claro) el gris más
+     claro quedaba casi invisible sin hover — hallazgo del ux-pilot en
+     DOMAINS-CLIENT-DELETE-1. 32px de lado (antes 28) da algo más de área de
+     toque en móvil. */
+  color: var(--ink-3);
   transition: background .13s, color .13s, border-color .13s;
 }
 .dom-delete-btn:hover {
@@ -6544,6 +6548,7 @@ select.set-field {
 /* ---- Portada del dominio seleccionado ---- */
 .dm2-hero {
   display: block;
+  position: relative;
   border: 2px solid var(--brand-blue);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(37, 99, 235, .05), rgba(37, 99, 235, .015));
@@ -6599,7 +6604,10 @@ select.set-field {
    el texto sólo repetía lo que la forma ya decía — y quitarla acorta la
    tarjeta sin perder información. Sólo queda «En progreso»/«Auditando»,
    condicionada a que haya algo corriendo. */
-.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; }
+/* margin-right deja hueco al botón de borrar (.dom-delete-btn, esquina
+   superior derecha de .dm2-hero) para que la píldora "En progreso"/
+   "Auditando" nunca se le meta debajo (DOMAINS-CLIENT-DELETE-1). */
+.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; margin-right: 38px; }
 .dm2-flag {
   display: inline-flex;
   align-items: center;
@@ -6814,7 +6822,12 @@ select.set-field {
   /* Las píldoras bajan a su propia fila: compartiendo fila con la identidad le
      robaban el ancho — el dominio salía «xataka.co…» y «Último escaneo» partía
      en tres líneas (capturas del piloto a 375px). */
-  .dm2-flags { flex-direction: row; order: 3; width: 100%; justify-content: flex-start; margin-top: 3px; }
+  /* margin-right:0 — en desktop reserva hueco para .dom-delete-btn (esquina
+     superior derecha de .dm2-hero), pero aquí las píldoras ya bajan a su
+     propia fila a width:100%, así que ese margen las desbordaba 34px fuera
+     de la tarjeta cada vez que había un escaneo/auditoría en curso a esta
+     anchura (QA, DOMAINS-CLIENT-DELETE-1). */
+  .dm2-flags { flex-direction: row; order: 3; width: 100%; justify-content: flex-start; margin-top: 3px; margin-right: 0; }
   .dm2-flag { font-size: 11.5px; padding: 6px 11px; }
   .dm2-score { gap: 14px; margin: 20px 0 22px; }
   .dm2-score-copy { font-size: 12.5px; min-width: 130px; }

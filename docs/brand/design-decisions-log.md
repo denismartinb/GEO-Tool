@@ -4425,7 +4425,51 @@ en las tres anchuras: sin regresión.
 
 ---
 
-## 41. Los tests dejan de ser opcionales (PRELAUNCH-HARDENING-1 Fase 0, 2026-08-09)
+## 41. Dominios recupera el borrado del dominio activo (DOMAINS-CLIENT-DELETE-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Si").
+
+**El problema.** §32 (DOMAINS-REDESIGN-1 Fase A) había retirado a propósito
+todo control de la pantalla de cliente `/dashboard/domains`, incluido el
+borrado duro del dominio (DATA-MGMT-1), dejándolo únicamente en `/debug` — con
+una nota explícita: *"Es reversible y está aquí escrito para que se note si
+algún día molesta"*. El fundador pidió el 2026-08-09 recuperar un botón de
+papelera en la tarjeta del dominio activo: exactamente el caso que esa nota
+anticipaba.
+
+**Qué se decidió.**
+
+1. **Sólo la portada (dominio activo), no la rejilla inferior.** La rejilla de
+   los demás dominios sigue sin controles — la porción más pequeña que resuelve
+   la petición.
+2. **Reutiliza el componente y el server action ya existentes.**
+   `DeleteDomainButton` (`app/dashboard/projects/[projectId]/debug/
+   delete-domain-button.tsx`) y `deleteProject` (`app/dashboard/projects/
+   actions.ts`) no cambian: la portada de Dominios sólo importa el mismo
+   componente que ya usaba `/debug`, con `isCurrentProject={false}` porque
+   aquí no estamos dentro de la ruta del proyecto — tras borrar basta
+   `router.refresh()`, y `resolveSelectedProject` (DOMAINS-ACTIVE-COOKIE-1, §36)
+   ya cae al siguiente dominio o al estado vacío cuando el id activo deja de
+   existir, sin código nuevo para ese caso.
+3. **Los otros dos invariantes de §32 no se tocan.** Sigue sin haber botón de
+   escanear ni de auditar en esta pantalla — el borrado no es un control de
+   automatización, es una acción de cuenta.
+4. **Hueco reservado para que el botón no se pise con la píldora de estado.**
+   `.dm2-hero` pasa a `position: relative` y `.dm2-flags` («En progreso» /
+   «Auditando») gana `margin-right` para no quedar bajo el botón, que ocupa la
+   esquina superior derecha de la tarjeta — colisión real sólo cuando hay un
+   escaneo o auditoría en curso a la vez que se pulsa el botón, pero visible en
+   ese estado si no se reserva el hueco.
+
+**§32 queda superseded en este único punto** (cero controles en la pantalla de
+cliente): el resto de esa decisión — «Escenario», raíl/rejilla de cambio,
+sólo puntuación GEO y su delta, estado de cabecera agregado — sigue vigente
+sin cambios.
+
+---
+
+## 42. Los tests dejan de ser opcionales (PRELAUNCH-HARDENING-1 Fase 0, 2026-08-09)
 
 **Contexto.** El fundador pidió, antes de lanzar, un plan de refactorización y
 revisión de arquitectura más una batería de pruebas E2E. El plan completo vive

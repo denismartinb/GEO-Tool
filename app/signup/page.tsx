@@ -40,6 +40,17 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
             <Label htmlFor="password">Contraseña</Label>
             <Input id="password" name="password" type="password" required minLength={8} className="auth-input-v3" />
           </div>
+          <div>
+            <Label htmlFor="confirmPassword">Repite la contraseña</Label>
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              minLength={8}
+              className="auth-input-v3"
+            />
+          </div>
           {params.error ? <p className="feedback error">{params.error}</p> : null}
           <Button type="submit" className="w-full auth-btn-v3">
             Crear cuenta gratis

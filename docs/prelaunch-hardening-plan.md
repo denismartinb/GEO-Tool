@@ -1,7 +1,7 @@
 # PRELAUNCH-HARDENING-1 — Plan de refactorización, revisión de arquitectura y verificación E2E
 
 **Estado: APROBADO por el fundador (2026-08-09).** Se ejecuta fase a fase, cada
-una con su Human Gate. Progreso: **Fase 0 ✅ hecha** (log §41) · Fases R/Q/P/A
+una con su Human Gate. Progreso: **Fase 0 ✅ hecha** (log §42) · Fases R/Q/P/A
 pendientes · **Fase V (velocidad) añadida a petición del fundador el
 2026-08-09, pendiente de aprobación**. La Fase P1 (UX-PILOT-4) sigue
 necesitando su aprobación propia de excepción de escritura del piloto, como
@@ -189,7 +189,7 @@ forma medible.*
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
   (bug de coerción 289→"289.0"); **la pérdida intermitente de sesión en la
   última anchura** — visto una vez el 2026-08-09 y **no reproducido en dos
-  pasadas posteriores** sobre el mismo código (log §41): con `retries: 0`
+  pasadas posteriores** sobre el mismo código (log §42): con `retries: 0`
   deliberado, un rojo espurio en la puerta enseña a ignorar los rojos. La
   hipótesis (el `storageState` único compartido por las tres anchuras
   secuenciales) no está probada, así que lo primero es instrumentar, no
