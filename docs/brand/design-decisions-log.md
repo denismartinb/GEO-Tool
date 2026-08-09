@@ -4569,6 +4569,54 @@ como documento histórico.
 
 ---
 
+## 43. Los helpers duplicados dejan de ser tres (PRELAUNCH-HARDENING-1 Fase R, R1+R2, 2026-08-09)
+
+Primeros dos slices de la Fase R del plan (`docs/prelaunch-hardening-plan.md`).
+Refactor puro: **comportamiento idéntico**, con los tests existentes como red.
+
+**`sanitizeField` existía tres veces, byte a byte.** En
+`lib/web-audit/technical-audit.ts`, `lib/recommendations/domain-coverage.ts` y
+`lib/recommendations/rewrite-recommendation.ts`. No es un helper cualquiera: es
+el saneador de texto no confiable (salida de LLM y HTML traído de la web) que
+las reglas de ruta de ambas zonas exigen **en singular** — «el patrón existente
+(`sanitizeField`)». Una mejora futura del escapado habría aterrizado en una
+copia y fallado en silencio en las otras dos. Ahora vive en
+`lib/text/sanitize.ts` y esa regla es literalmente cierta.
+
+**La autenticación de las cinco rutas internas estaba escrita a mano cinco
+veces** (`weekly-scans`, `weekly-digest`, `sweep-continue`, `run-audit`,
+`scan/continue`), comparando la cabecera contra `Bearer <secreto>` con `!==`.
+Pasa a `lib/api/internal-auth.ts`, y de paso deja de ser una comparación que
+filtra: una comparación de cadenas corta en el primer byte distinto, así que el
+tiempo de respuesta revela cuántos caracteres del secreto son correctos, y
+estos endpoints son públicos y sin límite de intentos. Se compara sobre el
+SHA-256 de cada lado —`timingSafeEqual` exige búferes del mismo tamaño, y
+comparar longitudes filtraría la longitud del secreto—. **Fail-closed
+explícito**: sin variable de entorno no entra nadie. Verificado que ninguna
+ruta declara `runtime = "edge"`, así que `node:crypto` está disponible.
+
+**El transporte de los tres proveedores de LLM.** `fetchWithTimeout` y `delay`
+estaban triplicadas, y las de OpenAI y Claude diferían **en una sola línea**:
+la clase de error del timeout. Unificadas en `lib/llm/http.ts`, con la fábrica
+de error como parámetro para que cada proveedor conserve su tipo propio — aguas
+abajo se distinguen por tipo para categorizar el fallo. Importa de cara al
+roadmap: Perplexity heredaría hoy la copia en vez del arreglo.
+
+**Lo que deliberadamente NO se unificó.** Los mensajes de error por proveedor
+(`getGeminiApiError` y compañía) parecen el mismo patrón, pero **Gemini no
+tiene rama para 401** y los otros dos sí. Un builder común o le añade a Gemini
+un mensaje que hoy no emite, o lleva un parámetro para fingir que no lo tiene.
+Esos textos se persisten como el error categorizado de un escaneo
+(`.claude/rules/scan.md`), así que cambiarlos no es refactor: es cambiar un
+dato que el operador lee. Si algún día Gemini debe distinguir el 401, es una
+decisión con su propia entrada, no un efecto colateral de una limpieza.
+
+**Pendiente de la Fase R:** R3 (tipos generados de Supabase), R4 (`lib/env.ts`
+validado), R5 (trocear `gemini.ts`), R6 (descargar `executor.ts` y mover el
+vocabulario compartido fuera de `lib/scan`), R7 (páginas) y R8 (muertos).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
