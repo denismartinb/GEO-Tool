@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
@@ -22,8 +23,14 @@ export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
  * No es hipotético: DOMAINS-REDESIGN-1 añadió aquí `auto_web_audit_enabled` y
  * el piloto encontró exactamente eso en el preview (PR #345, 2026-08-05). Una
  * columna nueva se lee donde se usa, con tolerancia a que todavía no exista.
+ *
+ * Memoizado con `React.cache()` por petición (PRELAUNCH-HARDENING-1 Fase V,
+ * V8), igual que `requireUser`: el layout y la página piden el mismo proyecto
+ * en el mismo render, y sin esto eran dos viajes a Supabase para la misma
+ * fila. La clave es `projectId`, así que dos proyectos distintos siguen
+ * siendo dos consultas.
  */
-export async function requireActiveProject(projectId: string) {
+export const requireActiveProject = cache(async function requireActiveProject(projectId: string) {
   const { supabase } = await requireUser();
   const { data: project } = await supabase
     .from("projects")
@@ -35,7 +42,7 @@ export async function requireActiveProject(projectId: string) {
   if (!project) notFound();
 
   return project;
-}
+});
 
 export type WorkspaceProjectSummary = {
   id: string;
