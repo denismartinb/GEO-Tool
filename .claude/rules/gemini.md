@@ -26,7 +26,7 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   rewrite threw on the first non-OK response. On 2026-08-09 that meant one
   rate-limited minute emptied the onboarding wizard while the scan running in
   the same minute rode it out — same provider, same error, different outcome
-  purely because one path backed off (log §42; the same asymmetry as
+  purely because one path backed off (log §45; the same asymmetry as
   `docs/adr/0029` between generation and extraction). New call site → it goes
   through a retrying helper.
 - **A `catch` that discards the cause is a bug, not a style.** Returning `null`
@@ -34,7 +34,7 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   it is never. Categorize it and report it before you degrade
   (`lib/llm/llm-incident.ts`). Two silent `catch {}` in `lib/llm/gemini.ts` are
   why a real incident produced ~70 errors in Google's console and zero traces
-  in ours (log §42).
+  in ours (log §45).
 - **An LLM failure the operator can fix must reach the operator, wherever it
   happened.** `lib/scan/scan-health-alert.ts` only covers paths with a `run`
   and a `job` — everything else goes through `reportLlmIncident`. Alert on
@@ -43,7 +43,7 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
 - **Never tell the user a cause the code cannot know.** A failed suggestion
   looks identical from the browser whether the provider was down or the domain
   is one the model knows nothing about. User-facing copy says what is certain
-  and what to do next; the diagnosis goes to the operator (log §42).
+  and what to do next; the diagnosis goes to the operator (log §45).
 - **Scans must complete or fail safely.** A run must never hang silently; honor
   the lifecycle state machine in `docs/scan-lifecycle.md` and the timeout
   decision in `docs/adr/0003-sync-scan-execution-and-maxduration.md`.

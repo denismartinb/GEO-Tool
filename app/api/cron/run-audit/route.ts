@@ -8,6 +8,7 @@ import {
   processDueWebAuditJobs
 } from "@/lib/web-audit/audit-job-runner";
 import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
+import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
 
 /**
  * `chainIndex` counts self-dispatches within one chain. Absent (or 0) on the
@@ -68,9 +69,8 @@ export async function GET(request: Request) {
 
 function rejectUnauthorized(request: Request): NextResponse | null {
   const cronSecret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!isAuthorizedInternalRequest(request, cronSecret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   return null;

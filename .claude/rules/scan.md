@@ -21,7 +21,7 @@ worse than no rule, because a future session will obey it anyway.
   standing start, which is a good way to manufacture the 429 that then kills
   the batch. `EXTRACTION_CONCURRENCY` exists for exactly this shape one stage
   later; generation went without it until LLM-RESILIENCE-1
-  (`lib/scan/pacing.ts`, log §42). The stagger is bounded in both directions —
+  (`lib/scan/pacing.ts`, log §45). The stagger is bounded in both directions —
   a hard ceiling on the total spread, and dropped entirely when the invocation
   is short on budget, because finishing inside `maxDuration` outranks pacing.
 - **Every outbound provider call needs a timeout and a bounded retry.** If you

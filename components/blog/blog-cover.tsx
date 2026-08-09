@@ -11,12 +11,27 @@ export function BlogCover({
   icon,
   image,
   alt,
-  compact = false
+  compact = false,
+  priority = false
 }: {
   icon: string;
   image?: string;
   alt?: string;
   compact?: boolean;
+  /**
+   * Marks this cover as the page's LCP element: `next/image` then emits a
+   * `<link rel="preload">` and `fetchpriority="high"` for it.
+   *
+   * Explicit and defaulting to false on purpose. It used to be derived as
+   * `priority={!compact}`, which got it exactly backwards in both directions:
+   * article pages pass `compact`, so the one cover that IS the LCP element was
+   * the only one *not* preloaded — while /blog and /blog/[cluster] pass no
+   * `compact` at all, so every card in the list preloaded at high priority,
+   * ~10 images racing each other, the fonts and the real LCP element
+   * (PRELAUNCH-HARDENING-1 Fase V, V2). Only ever pass this for a cover that
+   * is above the fold; a list of them is never that.
+   */
+  priority?: boolean;
 }) {
   if (image) {
     // `next/image` se niega a optimizar SVG salvo que se active

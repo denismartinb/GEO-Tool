@@ -873,36 +873,75 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // available on every plan: GEO-SCORE-V4 (docs/adr/0033) made
   // `readiness_score` a real .20 GEO Score component, so gating it made the
   // headline metric measure a different number of signals depending on plan.
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("current_plan")
-    .eq("id", user.id)
-    .maybeSingle();
-  const canAuditCoverage = isProOrAbove(profileRow?.current_plan as string | undefined);
+
   // Always true today. Kept as a named capability rather than inlining
   // `true` at every call site so a future plan tier ever needs to gate it
-  // again, there is one place to flip.
+  // again, there is one place to flip. Declarado aquí arriba (antes iba junto
+  // a `canAuditCoverage`) porque el lote de abajo lo necesita y, a diferencia
+  // de aquél, no depende de `profileRow`.
   const canAuditTechnical = true;
 
-  const { data: latestRunRow } = await supabase
-    .from("scan_runs")
-    .select("id, finished_at, created_at")
-    .eq("project_id", projectId)
-    .eq("status", "completed")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  // Las cinco lecturas independientes de esta pantalla, en paralelo
+  // (PRELAUNCH-HARDENING-1 Fase V, V7). Estaban encadenadas una tras otra
+  // aunque ninguna consume el resultado de la anterior: el usuario pagaba la
+  // suma de cinco viajes a Supabase en vez del más lento de los cinco. Lo que
+  // sí depende de algo (el `jobs` de abajo necesita `latestRunRow`) sigue
+  // detrás, que es exactamente donde tiene que estar.
+  const [
+    { data: profileRow },
+    { data: latestRunRow },
+    { data: historyRows },
+    { data: technicalHistoryRows },
+    { data: activeCampaignRow }
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("current_plan")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("scan_runs")
+      .select("id, finished_at, created_at")
+      .eq("project_id", projectId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("generated_solutions")
+      .select("sanitized_content, created_at")
+      .eq("project_id", projectId)
+      .eq("generation_type", "domain_coverage")
+      .is("recommendation_id", null)
+      .eq("status", "completed")
+      .eq("is_sanitized", true)
+      .order("created_at", { ascending: false })
+      .limit(12),
+    canAuditTechnical
+    ? supabase
+        .from("web_audit_snapshots")
+        .select("readiness_score, pages, bots, created_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(8)
+    : { data: [] },
+    supabase
+      .from("generated_solutions")
+      .select("sanitized_content, updated_at")
+      .eq("project_id", projectId)
+      .eq("generation_type", "domain_coverage")
+      .is("recommendation_id", null)
+      .eq("status", "running")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+  ]);
 
-  const { data: historyRows } = await supabase
-    .from("generated_solutions")
-    .select("sanitized_content, created_at")
-    .eq("project_id", projectId)
-    .eq("generation_type", "domain_coverage")
-    .is("recommendation_id", null)
-    .eq("status", "completed")
-    .eq("is_sanitized", true)
-    .order("created_at", { ascending: false })
-    .limit(12);
+  const canAuditCoverage = isProOrAbove(profileRow?.current_plan as string | undefined);
+
+
+
+
 
   // WEB-AUDIT-2: technical-audit snapshots, most recent first. Rendered
   // as-is — this page never re-triggers the audit itself, only the button
@@ -918,14 +957,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // a non-Pro project's technical snapshot null by construction even on a
   // project that had one. `canAuditTechnical` is always true; the ternary
   // stays so a future gate has one line to change, not this query's shape.
-  const { data: technicalHistoryRows } = canAuditTechnical
-    ? await supabase
-        .from("web_audit_snapshots")
-        .select("readiness_score, pages, bots, created_at")
-        .eq("project_id", projectId)
-        .order("created_at", { ascending: false })
-        .limit(8)
-    : { data: [] };
+
   const technicalHistory = (technicalHistoryRows ?? []) as Array<{
     readiness_score: number | null;
     pages: PageAuditEntry[];
@@ -957,16 +989,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
   // resume driving it automatically — same shape as AutoExecuteScan resuming
   // a pending/running scan_run on Escaneos. Read server-side, not from any
   // client-only state, so it survives a full page reload.
-  const { data: activeCampaignRow } = await supabase
-    .from("generated_solutions")
-    .select("sanitized_content, updated_at")
-    .eq("project_id", projectId)
-    .eq("generation_type", "domain_coverage")
-    .is("recommendation_id", null)
-    .eq("status", "running")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+
   const activeCampaignMap = parseCoverageMap(activeCampaignRow?.sanitized_content ?? null);
   const hasActiveCampaign = Boolean(
     activeCampaignMap && latestRunRow && activeCampaignMap.scanId === latestRunRow.id
