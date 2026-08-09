@@ -106,10 +106,14 @@ no toca producto, y multiplica la seguridad de todo lo demás.
 - **0c · `pnpm pilot:selfcheck` en CI** (corre contra fixtures locales, no
   gasta preview): hoy no corre en ningún sitio, así que una regresión del
   arnés del piloto solo se descubriría cuando un PASS deje de ser creíble.
-  Implementado **con condición de rutas** (`tests/pilot/**`, `scripts/pilot*`,
-  `playwright.config.ts`, dependencias y el propio `ci.yml`): descarga
-  Chromium, y correrlo en cada PR gastaría minutos de Actions —
-  BUILD-BUDGET-1— para reprobar algo que sólo cambia cuando cambia el arnés.
+  Implementado, pero **fuera de `ci.yml`**: el primer diseño lo condicionaba a
+  las rutas del arnés dentro del CI, y en dos runs seguidos superó los 25
+  minutos sin completarse (y no se pudo medir en local, sin Chromium en el
+  entorno). Vive en `.github/workflows/pilot-selfcheck.yml` con
+  `workflow_dispatch` + `schedule` semanal y timeout de 60 min. Coste asumido:
+  una regresión del arnés puede tardar hasta una semana en verse. Volver a
+  hacerlo puerta de PR es Fase Q5, y su condición previa es tener medido lo que
+  cuesta.
 
 *Criterio de salida: un PR con un test roto no puede llegar al Human Gate en
 verde.*
@@ -183,14 +187,15 @@ forma medible.*
 - **Q5 · Arreglos del arnés del piloto** (baratos, de alto retorno):
   `ContentExpectation` en `second-project.spec.ts` (hoy pasa sobre proyectos
   vacíos); el input `pr_number` de `ux-pilot-write.yml` tipado como string
-  (bug de coerción 289→"289.0"); y **la sesión compartida que no sobrevive a
-  las tres anchuras** — hallazgo real del 2026-08-09 (log §41): las tres
-  anchuras comparten un `storageState` capturado una sola vez y corren en
-  secuencia, y en la última (desktop) toda pantalla autenticada rebota a
-  `/login`. Un gate que cae por su propio arnés enseña a ignorar los rojos,
-  que es exactamente lo que la Fase 0 intenta evitar. Requiere reproducir
-  antes de arreglar: la hipótesis (rotación del refresh token de Supabase
-  entre contextos) no está probada.
+  (bug de coerción 289→"289.0"); **la pérdida intermitente de sesión en la
+  última anchura** — visto una vez el 2026-08-09 y **no reproducido en dos
+  pasadas posteriores** sobre el mismo código (log §41): con `retries: 0`
+  deliberado, un rojo espurio en la puerta enseña a ignorar los rojos. La
+  hipótesis (el `storageState` único compartido por las tres anchuras
+  secuenciales) no está probada, así que lo primero es instrumentar, no
+  parchear; y **medir y re-promover el self-check del piloto a puerta de PR**,
+  que hoy vive en un workflow semanal porque excedió 25 minutos dos veces sin
+  que se sepa aún si pasa.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 

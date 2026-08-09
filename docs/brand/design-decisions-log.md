@@ -4455,18 +4455,27 @@ raíz) son todas incapaces de romper un build de Next. Y `tsc --noEmit` es
 **más** amplio que la comprobación del build, porque tsconfig incluye los
 ficheros de test que `next build` nunca compila.
 
-**Self-check del piloto, con condición.** `pnpm pilot:selfcheck` (que
-demuestra que el arnés puede fallar además de pasar) tampoco corría en ningún
-sitio. Ahora corre en el mismo workflow, pero sólo cuando cambia el arnés o
-algo de lo que depende: `tests/pilot/**`, `scripts/pilot*`,
-`playwright.config.ts`, `package.json`/`pnpm-lock.yaml` y **el propio
-`ci.yml`**. Ese último no es un capricho: hace que editar la definición de CI
-ejercite su mitad cara en vez de shipearla sin haberla visto correr — que es
-exactamente lo que pasó aquí, porque el sandbox de la sesión no tiene Chromium
-y el self-check no se pudo verificar en local. La condición existe por
-BUILD-BUDGET-1: el self-check descarga Chromium (~30 s en el runner) y correrlo
-en cada PR gastaría minutos en reprobar algo que sólo cambia cuando cambia el
-arnés.
+**Self-check del piloto: primero en CI, luego fuera — y por qué.**
+`pnpm pilot:selfcheck` (lo que demuestra que el arnés puede fallar además de
+pasar) tampoco corría en ningún sitio. El primer intento fue meterlo en
+`ci.yml` condicionado a que cambiara el arnés, con el propio `ci.yml` en la
+lista de rutas para que editarlo ejercitase su mitad cara en vez de shipearla
+a ciegas. **Ese diseño se probó y se descartó el mismo día:** en dos runs
+consecutivos superó los 25 minutos sin completarse, y tampoco se pudo medir en
+local (el sandbox de la sesión no tiene Chromium para esta versión de
+Playwright). Una comprobación bloqueante de duración desconocida y
+demostradamente >25 min o atasca cada PR del arnés o enseña a ignorarla; y
+BUILD-BUDGET-1 cuenta los minutos de Actions como presupuesto real.
+
+Vive ahora en `.github/workflows/pilot-selfcheck.yml`, con `workflow_dispatch`
+y un `schedule` semanal (lunes 06:00 UTC), timeout de 60 minutos a propósito
+—el objetivo de esas pasadas es averiguar cuánto tarda de verdad, y un timeout
+que corta la respuesta las inutiliza— y subida de `.pilot/` como artefacto para
+poder ver cuál de los cuatro modos rompió. **El coste asumido, dicho y no
+disimulado:** una regresión del arnés puede pasar hasta una semana sin
+detectarse, en vez de saltar en el PR que la causó. Volver a promoverlo a
+puerta de PR es trabajo de la Fase Q5 y su condición previa es tener medido lo
+que cuesta — que es justo lo que darán las pasadas semanales.
 
 **Retirada del QA superseded.** `.github/workflows/claude-qa.yml` y
 `scripts/run-claude-qa.py` se borran. CLAUDE.md los declaraba superseded desde
@@ -4489,20 +4498,27 @@ como documento histórico.
 
 **Qué queda pendiente / roto conocido.**
 
-- El self-check del piloto **no se ha podido verificar en local** (sin Chromium
-  en el entorno de sesión). Su primera ejecución real es la de este PR, que
-  toca `ci.yml` a propósito para forzarla.
-- **La sesión del piloto no sobrevive a las tres anchuras.** En la primera
-  pasada de este PR (docs-only, imposible que el diff lo causara) el piloto dio
-  `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0 de 53, y **desktop 7
-  de 44** — todas las pantallas autenticadas a partir de `recommendations`
-  aterrizaron en `/login`, mientras las públicas seguían bien. Los 14 runs
-  anteriores del piloto habían pasado, así que no es un flake crónico. Las tres
-  anchuras comparten un único `storageState` capturado una vez en
-  `auth.setup.ts` y corren en secuencia (desktop la última), lo que apunta a
-  invalidación/rotación de la sesión de Supabase entre contextos — **hipótesis,
-  no diagnóstico probado**. Queda anotado como trabajo de la Fase Q5 del plan;
-  no se ha "arreglado" a ciegas.
+- El self-check del piloto **sigue sin estar verificado**: no se pudo medir en
+  local (sin Chromium) y en CI excedió 25 minutos dos veces sin completarse.
+  Se sabe que arranca y descarga Chromium en ~20-30 s; **no se sabe si pasa**.
+  La primera pasada semanal es la que lo dirá, y hasta entonces no debe
+  presentarse como una garantía activa.
+- **El piloto perdió la sesión en la última anchura, una vez, y no se
+  reprodujo.** En la primera pasada de este PR (docs-only, imposible que el
+  diff lo causara) dio `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0
+  de 53 y **desktop 7 de 44** — toda pantalla autenticada a partir de
+  `recommendations` aterrizó en `/login`, mientras las públicas seguían bien,
+  sin un solo error de red ni de consola (el redirect venía limpio del
+  middleware). **Se relanzó sobre el mismo commit exacto y pasó; una tercera
+  pasada sobre el commit siguiente también pasó.** Dos verdes contra un rojo
+  sobre el mismo código: es un flake intermitente, **no** un fallo de producto
+  ni un defecto sistemático del arnés, y la primera redacción de esta entrada
+  —que lo daba por sistemático— quedó corregida al tener la segunda medición.
+  La sospecha sigue siendo el `storageState` único que comparten las tres
+  anchuras corriendo en secuencia (desktop la última), pero **es una hipótesis
+  sin probar** y por eso no se ha tocado nada. Importa igualmente: con
+  `retries: 0` deliberado ("un flake es un hallazgo"), un rojo espurio en la
+  puerta enseña a ignorar los rojos. Anotado en la Fase Q5.
 
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase 0; CLAUDE.md
 §"GitHub / Agentic Reporting"; `docs/director-strategy.md` §QA execution model.

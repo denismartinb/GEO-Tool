@@ -503,9 +503,10 @@ es lo que publica el comentario de las dos líneas de arriba.
 **CI (desde 2026-08-09):** `.github/workflows/ci.yml` ejecuta `pnpm test`,
 `pnpm run typecheck` y `pnpm run lint` en cada PR. No ejecuta `next build`
 a propósito — lo hace Vercel en cada preview y duplicarlo sólo dobla el paso
-más lento. El self-check del piloto corre en el mismo workflow, pero sólo
-cuando cambia el arnés (`tests/pilot/**`, `scripts/pilot*`,
-`playwright.config.ts`, dependencias o el propio `ci.yml`).
+más lento. El self-check del piloto **no** está en ese workflow: excedió 25
+minutos dos veces, así que vive en `.github/workflows/pilot-selfcheck.yml` con
+`workflow_dispatch` + `schedule` semanal (log §41). Todavía no se sabe si pasa;
+no lo presentes como garantía activa hasta que una pasada semanal lo confirme.
 
 ---
 
