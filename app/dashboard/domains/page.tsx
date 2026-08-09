@@ -10,6 +10,7 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { requireUser } from "@/lib/auth";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { ACTIVE_PROJECT_COOKIE, resolveSelectedProject } from "@/lib/active-project-cookie";
+import { DeleteDomainButton } from "@/app/dashboard/projects/[projectId]/debug/delete-domain-button";
 
 /**
  * DOMAINS-REDESIGN-1 — «Dominios».
@@ -32,6 +33,13 @@ import { ACTIVE_PROJECT_COOKIE, resolveSelectedProject } from "@/lib/active-proj
  *    contradicen — y la que miente es siempre la que nadie está mirando.
  *
  * Esta pantalla observa; no conduce. `AutoExecuteScan` vive en Visión general.
+ *
+ * **Excepción aprobada (DOMAINS-CLIENT-DELETE-1, 2026-08-09):** el borrado
+ * duro del dominio SÍ tiene control aquí, sólo en la portada (el dominio
+ * activo). §32 lo había retirado a `/debug` a propósito ("cero controles en
+ * la pantalla de cliente") dejando escrito que se notaría si algún día
+ * molestaba — el fundador pidió recuperarlo el 2026-08-09. Sigue sin ser un
+ * control de escaneo/auditoría: los dos invariantes de arriba no cambian.
  */
 
 /** Colores de la ficha de dominio cuando el favicon real no carga. Mismo criterio determinista que Páginas citadas. */
@@ -243,6 +251,13 @@ export default async function DomainsPage({
 
         {/* ---- Portada del dominio seleccionado ---- */}
         <Link href={`/dashboard/projects/${active.id}`} className="dm2-hero">
+          {/* Único control de borrado de la pantalla (DOMAINS-CLIENT-DELETE-1):
+              reutiliza el mismo componente y server action que `/debug`.
+              `isCurrentProject={false}`: aquí no estamos dentro de la ruta del
+              proyecto, así que tras borrar basta con refrescar esta misma
+              página — `resolveSelectedProject` ya cae al siguiente dominio (o
+              al estado vacío) cuando el id activo deja de existir. */}
+          <DeleteDomainButton projectId={active.id} domainName={active.domain || active.name} isCurrentProject={false} />
           <div className="dm2-hero-top">
             {/* `key` por dominio, no por estética: sin él React reutiliza el
                 mismo <img> al cambiar de dominio y sólo le cambia el src, así
