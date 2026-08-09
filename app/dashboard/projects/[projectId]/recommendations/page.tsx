@@ -86,7 +86,17 @@ export default async function RecommendationsPage({
   // EXTRACTION-RELIABILITY-1 Fase C: carries the analysis-stage counters, so
   // the progress bar keeps moving once generation is done instead of pinning
   // at 100% while extraction is still working.
-  const activeRun = rawActiveRun ? await withAnalysisProgress(supabase, projectId, rawActiveRun) : rawActiveRun;
+  //
+  // Se lanza aquí y se espera después del lote de recomendaciones
+  // (PRELAUNCH-HARDENING-1 Fase V, V7): ninguno de los dos consume el
+  // resultado del otro, así que esperarla en esta línea añadía una ronda
+  // serializada más a cada render. Dejarla suelta es seguro porque
+  // `withAnalysisProgress` captura sus propios errores y degrada al contador
+  // de generación (lib/scan/active-run-progress.ts) — no puede rechazar, así
+  // que no hay promesa sin manejar.
+  const activeRunPromise = rawActiveRun
+    ? withAnalysisProgress(supabase, projectId, rawActiveRun)
+    : Promise.resolve(rawActiveRun);
 
   const [{ data: recommendations }, { data: resolvedRecommendations }, { data: history }] = latestCompletedRun
     ? await Promise.all([
@@ -124,6 +134,8 @@ export default async function RecommendationsPage({
           .limit(30),
       ])
     : [{ data: null }, { data: null }, { data: null }];
+
+  const activeRun = await activeRunPromise;
 
   const baseRecs = (recommendations ?? []) as Recommendation[];
 
