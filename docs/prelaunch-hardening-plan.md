@@ -2,8 +2,10 @@
 
 **Estado: APROBADO por el fundador (2026-08-09).** Se ejecuta fase a fase, cada
 una con su Human Gate. Progreso: **Fase 0 ✅ hecha** (log §41) · Fases R/Q/P/A
-pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando su aprobación propia de
-excepción de escritura del piloto, como UX-PILOT-2/3.
+pendientes · **Fase V (velocidad) añadida a petición del fundador el
+2026-08-09, pendiente de aprobación**. La Fase P1 (UX-PILOT-4) sigue
+necesitando su aprobación propia de excepción de escritura del piloto, como
+UX-PILOT-2/3; dentro de la Fase V, los puntos V9/V10/V11 también.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al
 mercado, plantear (1) un plan de refactorización y revisión de arquitectura
@@ -267,6 +269,152 @@ Los listo con recomendación para que decidas cuáles entran:
    de "número equivocado publicado con confianza". Es feature, no refactor —
    fuera de este plan, pero es mi candidato #1 para justo después.
 
+### Fase V — VELOCIDAD (rendimiento: UX + posicionamiento)
+
+**Añadida a petición del fundador (2026-08-09), pendiente de aprobación.**
+Auditada el mismo día sobre el código real (dos barridos de solo-lectura), no
+sobre buenas prácticas genéricas.
+
+**Lo primero, el encuadre: son dos problemas distintos con métricas distintas,
+y mezclarlos es la forma habitual de no arreglar ninguno.**
+
+- **Páginas públicas** (`/`, `/blog/**`, `/docs/**`, `/glosario`,
+  `/comparativas`, `/pricing`, `/geo`): aquí mandan Lighthouse y los Core Web
+  Vitals. Son estáticas (verificado: cero `cookies()`/`headers()`/`supabase` en
+  esos directorios, `generateStaticParams` en blog y glosario), así que el
+  margen está en bytes y en trabajo del hilo principal, no en el servidor.
+- **Consola autenticada**: Lighthouse aquí no la mira nadie. Lo que duele es el
+  **TTFB**, y se mide en *rondas serializadas* a Supabase, no en número de
+  consultas.
+
+**Honestidad sobre el "posicionamiento":** los CWV son señal de ranking, pero
+menor y de desempate — no compensan contenido peor. El retorno SEO real de esta
+fase es doble e indirecto: `/blog` es el motor de adquisición de GROWTH-2 y hoy
+sirve **8,3 MB en cuatro PNG**, lo que castiga a móvil y consume presupuesto de
+rastreo. Prometer "subiremos de posición por mejorar el LCP" sería exactamente
+el tipo de promesa que este repo no hace.
+
+#### Lo que ya está hecho (no rehacer)
+
+La auditoría de julio (`docs/architecture-audit-2026-07.md`, PERF-1…4) ya dejó
+shipeado: `requireUser` memoizado con `React.cache()` (`lib/auth.ts:13`, una
+sola llamada `getUser` por request), `getWorkspaceCounters` como un único
+`Promise.all` de 11, Overview batcheado en 2 olas, `getClaims()` en vez de
+`getUser()` en middleware, `regions: ["dub1"]` y `loading.tsx` en 6 rutas.
+**Cero `select("*")` en todo el repo.** No hay ningún `next/script`, ni GTM, ni
+píxeles. El punto de partida es mejor de lo que suele ser.
+
+#### V0 · Medir primero (bloqueante del resto)
+
+Hoy **no existe ninguna medición de rendimiento**: ni Lighthouse, ni
+`useReportWebVitals`, ni `web-vitals` en `package.json`, ni Speed Insights, y
+PostHog no captura rendimiento. Sin línea base, "mejorar drásticamente" no se
+puede demostrar ni defender. Primero: Lighthouse CI con **presupuestos** sobre
+4 rutas públicas (`/`, `/blog`, un artículo con portada, `/pricing`) enganchado
+al `ci.yml` de la Fase 0, más marcas de tiempo de servidor en la consola. El
+presupuesto es lo que impide que el próximo PNG de 2 MB entre sin que nadie se
+entere.
+
+#### Páginas públicas (CWV)
+
+- **V1 · Las cuatro portadas del blog** — 2,6 MB + 2,5 MB + 1,7 MB + 1,6 MB =
+  **8,3 MB, el 95% de todo `public/`** (8,7 MB). A WebP/AVIF redimensionado,
+  objetivo <150 KB cada una. Es el mayor golpe de la fase y no toca ni una
+  línea de código. Las portadas nuevas ya son SVG de ~2 KB: el patrón bueno ya
+  existe.
+- **V2 · El bug de `priority`** — `blog-cover.tsx:38` hace
+  `priority={!compact}`, y las dos listas (`app/blog/page.tsx:41`,
+  `app/blog/[cluster]/page.tsx:73`) llaman sin `compact`: **cada tarjeta del
+  índice se precarga con `fetchpriority=high`**, unas diez a la vez, compitiendo
+  con el LCP real y con los preloads de fuentes. Una línea.
+- **V3 · Terceros que se envían sin usarse** — `instrumentation-client.ts:1`
+  importa Sentry estáticamente y `posthog-provider.tsx:5` importa `posthog-js`
+  estático dentro del layout raíz. **Ninguno de los dos está configurado hoy**
+  (no hay DSN ni key), así que no hacen ni una petición… pero sus bundles
+  viajan a todas las páginas públicas y se parsean. El servidor ya hace lo
+  correcto (`instrumentation.ts:24-31` importa Sentry perezosamente tras
+  comprobar el DSN): replicar ese patrón en cliente.
+- **V4 · La landing es 100% cliente** — `app/page.tsx:1` es `"use client"` con
+  319 líneas de las que ~85% es markup estático, y arrastra `Icon`, `BrandLogo`,
+  `Gauge`, `Sparkline` al bundle. Además monta `ProductTour` (1.142 líneas,
+  `app/page.tsx:147`) **dentro del hero**, con un bucle `requestAnimationFrame`
+  a 60 fps arrancando durante la hidratación — en la ventana crítica del LCP.
+  Pasar la landing a server component con una isla cliente para el formulario, y
+  diferir el tour. `/pricing` (311 líneas cliente) es el mismo caso, menor
+  tráfico. **Ojo:** el tour tiene reglas de ruta propias (`onboarding.md`) —
+  diferir su montaje no puede romper "en la landing no arranca hasta que el
+  lienzo se ve entero" ni la pista del botón.
+- **V5 · `app/globals.css` son 7.347 líneas / 303 KB** servidas a toda página,
+  y la mayoría son selectores exclusivos de consola (`.cit2-`/`.pr2-` 281
+  líneas, `.ov2-` 142, `.rec` 44…). Quien entra a `/blog` descarga y parsea las
+  tablas de citas y los cajones de prompts. Separar el bloque de consola a una
+  hoja importada desde `app/dashboard/layout.tsx`.
+- **V6 · Fuentes: 4 familias × 13 pesos** precargadas en todas las páginas.
+  `var(--font-sans)` se usa **0 veces** en el CSS (Hanken se alcanza por su
+  nombre literal en `globals.css:88`), y `var(--font-mono)` una sola vez porque
+  el CSS usa otra variable, `--mono` (`globals.css:3711`), 18 veces. De paso, el
+  `TODO(BRAND-5b)` de `app/layout.tsx:7` está **obsoleto y dice lo contrario de
+  la realidad** en ambas direcciones: hay que corregirlo o alguien decidirá mal.
+
+#### Consola (TTFB)
+
+- **V7 · Aplanar las cascadas** (mecánico, sin cambio de comportamiento):
+  - `web-audit/page.tsx` encadena **cinco `await` independientes** (`:876`,
+    `:887`, `:896`, `:921`, `:960`) que nadie consume hasta después: seis
+    rondas serializadas colapsan a una.
+  - `recommendations/page.tsx` hace **tres consultas seguidas a `scan_runs`**
+    (`:54`, `:64`, `:73`) sin dependencia entre ellas — y la de `:64`
+    (`latestRun`) es literalmente `recentRuns[0]` de la de `:73`: se **borra**,
+    no se paraleliza.
+  - `withAnalysisProgress` se llama en su propia línea en las **cinco** páginas,
+    siempre entre dos lotes de los que no depende: una ronda gratis por página.
+- **V8 · Memoizar lo que ya se pidió** — envolver `requireActiveProject` y
+  `getPlanForUser` en `React.cache()`, el mismo patrón ya probado en
+  `lib/auth.ts:13`. Hoy la fila de `projects` se pide dos veces por render y la
+  de `profiles` también. (Matiz medido: el duplicado de
+  `competitors/page.tsx:156` está dentro de un `Promise.all`, así que cuesta una
+  consulta extra pero **no** una ronda serial más — no lo vendamos como lo que
+  no es.)
+- **V9 · El coste que crece con los clientes** ⚠️ — las seis consultas de
+  `getWorkspaceCounters` (`lib/project-workspace.ts:237-276`) leen sin filtro de
+  proyecto con `limit(1000)`, y la política RLS
+  (`is_project_owner`, `0002_v0_rls.sql`) es una función `SECURITY DEFINER` que
+  Postgres **no puede inlinear**: se ejecuta por fila candidata. El propio
+  código ya lo llama "un apaño, no el arreglo". La solución (agregado en
+  Postgres vía RPC/vista) **requiere migración → aprobación explícita tuya y
+  revisión de `data-guardian`**. No entra sin eso.
+- **V10 · Lecturas sin techo** ⚠️ — `competitors/page.tsx:138-143` lee *todos*
+  los runs completados de siempre y con ellos hace un `.in()` sobre
+  `scan_prompt_results` con `extracted_json`: coste O(escaneos totales), sin
+  tope. Es la consulta que peor envejece. Pero `.claude/rules/competitors.md`
+  **exige** que la cuota de voz se acumule sobre todos los escaneos: poner un
+  `.limit()` a ciegas cambiaría una cifra publicada. **Necesita decisión de
+  producto (ventana), no un parche.** Igual con `raw_response_text` (respuestas
+  completas del LLM) que hoy viaja en el SSR de `citations` y `prompts` para
+  pintarse solo dentro de un cajón desplegado.
+- **V11 · Matcher del middleware** ⚠️ — corre en toda ruta que no sea estática,
+  incluidas marketing, `/api/**`, `robots.txt` y `/feed.xml`. Para un visitante
+  anónimo sin cookie el camino corta pronto, así que el coste se concentra en
+  usuarios logueados navegando marketing y en cada llamada de API. Estrecharlo
+  es sensato pero es **superficie de auth → revisión de `data-guardian`**.
+
+#### Orden y criterio de salida
+
+```
+V0 (medir) ──► V1+V2 (imágenes, 1 PR, riesgo cero) ──► V3 (terceros perezosos)
+   ──► V4 (landing server + tour diferido) ──► V5 (CSS) ──► V6 (fuentes)
+   ──► V7+V8 (TTFB mecánico, 1–2 PRs)
+   ──► V9/V10/V11 sólo con tu aprobación explícita (migración / decisión de
+       producto / auth)
+```
+
+Criterio de salida: presupuestos de Lighthouse verdes en las 4 rutas públicas y
+**mejora demostrada contra la línea base de V0** (no "se ve más rápido");
+profundidad de rondas serializadas de `web-audit` y `recommendations` reducida
+a la mitad, medida; y ninguna cifra publicada alterada — si una optimización
+cambia un número que el usuario ve, no es una optimización, es un cambio de
+producto y va por otra vía.
+
 ### Qué NO incluye este plan (para que nadie lo estire)
 
 Sin su propia aprobación explícita, aquí no entra: migraciones de esquema ni
@@ -287,6 +435,8 @@ Fase Q (2–3 PRs, puede solaparse con R desde R3)
 Fase P (2 PRs de código + 1 ronda de ejecución; P1 necesita su Task
         Intake de excepción de escritura — puede aprobarse con este plan)
 Fase A (los puntos que apruebes, 1 PR pequeño cada uno)
+Fase V (velocidad): V0 primero; V1+V2 pueden ir en paralelo a R desde el
+        principio — son assets y una línea, no comparten ficheros con nada
 ```
 
 Total estimado: **13–17 PRs pequeños**, ninguno mezclando concerns,
@@ -309,6 +459,10 @@ es una tirada de dados que ya no hace falta tirar.
    INCONCLUSIVE justificado pantalla a pantalla) antes de cada Human Gate.
 7. Cierre documental en cada PR que toque un invariante (histórico, regla de
    ruta, mapa de zonas), como manda CLAUDE.md.
+8. **Rendimiento medido, no opinado**: existe línea base (V0) y cada PR de la
+   Fase V la mueve de forma demostrable; `public/` no vuelve a superar ~1 MB sin
+   una decisión explícita; ninguna cifra que ve el usuario cambia por una
+   optimización.
 
 ---
 
