@@ -5,6 +5,7 @@ import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-ca
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import { ExtractionError } from "@/lib/llm/extraction-errors";
 import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
+import { delay, fetchWithTimeout } from "@/lib/llm/http";
 import {
   EXTRACTION_CALL_TIMEOUT_MS,
   EXTRACTION_MAX_ATTEMPTS,
@@ -63,21 +64,6 @@ export class GeminiTimeoutError extends Error {
  * instead of letting the call hang for the rest of the run budget or
  * surfacing a raw `AbortError`.
  */
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new GeminiTimeoutError();
-    }
-    throw error;
-  } finally {
-    clearTimeout(timer);
-  }
-}
 
 /**
  * Thrown for misconfiguration (missing API key, invalid model id) that
@@ -102,10 +88,6 @@ function getGeminiApiError(status: number) {
   if (status === 429) return "Gemini API quota or rate limit reached.";
   if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";
   return `Gemini API request failed with status ${status}.`;
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export type GeminiVisibilityResponse = {
@@ -180,7 +162,8 @@ export async function generateGeminiVisibilityAnswer(input: {
       headers: { "Content-Type": "application/json" },
       body: requestBody
     },
-    GEMINI_CALL_TIMEOUT_MS
+    GEMINI_CALL_TIMEOUT_MS,
+    () => new GeminiTimeoutError()
   );
 
   if (response.status === 429) {
@@ -192,8 +175,9 @@ export async function generateGeminiVisibilityAnswer(input: {
         headers: { "Content-Type": "application/json" },
         body: requestBody
       },
-      GEMINI_CALL_TIMEOUT_MS
-    );
+      GEMINI_CALL_TIMEOUT_MS,
+    () => new GeminiTimeoutError()
+  );
   }
 
   if (!response.ok) {
@@ -306,7 +290,8 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
   const response = await fetchWithTimeout(
     endpoint,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: requestBody },
-    GEMINI_CALL_TIMEOUT_MS
+    GEMINI_CALL_TIMEOUT_MS,
+    () => new GeminiTimeoutError()
   );
 
   if (!response.ok) {
@@ -479,7 +464,8 @@ async function generateGeminiJson(promptBlock: string): Promise<unknown> {
         generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
       })
     },
-    GEMINI_CALL_TIMEOUT_MS
+    GEMINI_CALL_TIMEOUT_MS,
+    () => new GeminiTimeoutError()
   );
 
   if (!response.ok) {
@@ -550,7 +536,8 @@ async function generateGroundedGeminiJson(promptBlock: string): Promise<unknown>
         generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
       })
     },
-    GEMINI_CALL_TIMEOUT_MS
+    GEMINI_CALL_TIMEOUT_MS,
+    () => new GeminiTimeoutError()
   );
 
   if (!response.ok) {
