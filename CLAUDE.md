@@ -387,7 +387,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
 | Auditoría web | `web-audit.md` | **WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038)** · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
-| Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
+| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase T-a (2026-08-09)** · GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19, §42 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
 | Escaneo (pipeline) | `scan.md` | **SCAN-DRIVE-1 (2026-08-07, ADR 0037)** · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |

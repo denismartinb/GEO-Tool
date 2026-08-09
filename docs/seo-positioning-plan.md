@@ -179,10 +179,11 @@ Fase T en paralelo.
 
 ### Fase T — Deuda técnica SEO (agentes, 2-3 PRs pequeños)
 
-**PR T-a (P0):** T1 (metadata real en home y `/pricing` — split
-server/client), T3 (bloque "Recursos" en los footers de los 4 shells con
-`/blog`, `/docs`, `/glosario`, `/comparativas`), T16 (sincronizar ledger de
-capa A en `content-calendar.md`).
+**PR T-a (P0) — ✅ hecho (2026-08-09, este PR).** T1 (metadata + canonical
+reales en home y `/pricing` vía split servidor/cliente; verificado en el HTML
+del build), T3 (las 4 superficies de contenido en los 5 pies de marketing,
+desde una lista compartida), T16 (ledger de capa A sincronizado). 20 tests
+nuevos, 1810/1810 en verde, `pnpm run validate` limpio. Detalle: log §42.
 
 **PR T-b (P1):** T5 (OG/Twitter por página reutilizando portadas existentes),
 T6 (`llms.txt` generado desde las SSOT + test anti-drift), T7 (`not-found.tsx`

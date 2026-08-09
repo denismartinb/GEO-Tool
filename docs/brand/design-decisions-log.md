@@ -4469,6 +4469,59 @@ sin cambios.
 
 ---
 
+## 42. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
+
+**Origen.** El fundador pidió un plan de posicionamiento SEO extremo a extremo
+tras la salida a producción. La auditoría técnica que abrió ese trabajo
+(`docs/seo-positioning-plan.md`, PR #370) encontró 16 huecos; esta entrada
+cierra los tres P0. El plan completo, con la base de keywords y las fases
+siguientes, vive en ese documento y no se repite aquí.
+
+**Qué se decidió.**
+
+1. **La home y `/pricing` tienen metadata propia.** Ambas eran componentes
+   cliente enteros (`"use client"` en la primera línea), y en el App Router eso
+   impide exportar `metadata`: las dos URLs comerciales más valiosas del sitio
+   se servían con el título genérico «Genscore» heredado del layout raíz, sin
+   descripción propia y **sin canonical**, mientras el sitemap las publicaba.
+   Cada una pasa a ser una página de servidor de tres líneas que aporta la
+   metadata y monta el mismo árbol de cliente de siempre, ahora en
+   `components/landing/landing-page.tsx` y `components/pricing/pricing-page.tsx`.
+   Cero cambios visuales: el piloto debe ver exactamente las mismas pantallas.
+2. **Keyword primaria «posicionamiento GEO»** en el título de la home, decidida
+   con la investigación de mercado del plan (§3.1): en castellano ese es el
+   término que gana, «AEO» está capturado por HubSpot y «LLMO» es residual.
+3. **Los motores que se nombran en metadata son los tres reales** (Gemini,
+   Claude, ChatGPT). Nombrar Perplexity o AI Overviews en un `<title>` sería
+   reintroducir por la puerta de atrás el reclamo falso que PRICING-TRUTH-1
+   limpió del resto del producto — y un test lo impide ahora.
+4. **Las cuatro superficies de contenido entran en todos los pies de página.**
+   `/glosario` y `/comparativas` se publicaron en GROWTH-2 2.4 sin enlazarse
+   desde ninguna navegación: 21 URLs alcanzables solo por sitemap y `llms.txt`,
+   es decir sin un solo enlace entrante desde el propio sitio. `/docs` solo se
+   enlazaba a sí misma. Ahora los cinco shells de marketing renderizan la misma
+   lista compartida (`components/marketing-content-links.ts`).
+
+**Por qué aditivo y no un rediseño del pie.** Se añaden enlaces; no se quita ni
+se renombra ninguno de los que ya había (la landing conserva
+«Recomendaciones», el shell legal conserva su orden). Un pie reordenado sin
+diseño aprobado es `PILOT FAIL` por definición, y el objetivo aquí era el flujo
+de enlazado interno, no el aspecto.
+
+**Lo que queda pendiente, a propósito.** Los P1 de la auditoría (Open Graph por
+página, `llms.txt` generado desde las SSOT, 404 propia, `noindex` en las
+pantallas de acceso, `FAQPage` en `/pricing`, `dateUpdated` en los artículos,
+RSS descubrible) son las fases T-b y T-c del plan, en PRs aparte: el fundador
+aprobó el plan, no una fusión de todos sus huecos en una sola entrega. Los dos
+hallazgos de rendimiento (middleware corriendo en rutas públicas de contenido,
+landing enteramente cliente) están transferidos a la sesión de performance.
+
+**Efecto colateral que conviene registrar:** tras el corte, `/` y `/pricing`
+siguen prerenderizándose como estáticas en el build — el split no las volvió
+dinámicas.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -64,3 +64,24 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - Actualizar `docs/content-calendar.md` **en el mismo PR** que publica la pieza
   (una fila por pieza). El calendario es el libro mayor: una pieza publicada que
   no aparece ahí queda invisible para la siguiente sesión.
+
+## Enlazado de las superficies de contenido
+
+- **Toda superficie de contenido publicada se enlaza desde los pies de
+  marketing, y desde la lista compartida.** Las cinco shells
+  (`landing-page`, `pricing-page`, `blog-page-shell`, `docs-page-shell`,
+  `legal-page-shell`) renderizan `components/marketing-content-links.ts`; no se
+  añade un `<Link>` a mano en un pie. `/glosario` y `/comparativas` se
+  publicaron sin enlazar y pasaron meses con 21 URLs sin un solo enlace
+  entrante del propio sitio, porque el test de enlaces comprueba que los
+  enlaces que existen resuelvan, no que lo publicado esté enlazado (log §42;
+  `components/marketing-content-links.test.ts`).
+- **Una página de marketing nunca es `"use client"` en su raíz.** Eso impide
+  exportar `metadata`, y la página se queda sin título, sin descripción y sin
+  canonical propios sin que nada falle: es exactamente lo que les pasó a la
+  home y a `/pricing`. El patrón es página de servidor con la metadata +
+  componente cliente aparte (log §42; `app/pricing/pricing-metadata.test.ts`).
+- **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
+  Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
+  reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
+  donde más se ve (log §42).

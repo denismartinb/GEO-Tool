@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
 const LEGAL_NAV_LINKS = [
   { href: "/privacidad", label: "Privacidad" },
@@ -67,6 +68,11 @@ export function LegalPageShell({
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
               <Link href="/pricing">Precios</Link>
+              {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </div>
