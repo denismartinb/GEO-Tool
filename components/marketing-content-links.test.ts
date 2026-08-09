@@ -85,3 +85,27 @@ describe("pies de página de marketing", () => {
     });
   }
 });
+
+/**
+ * SEO-POS-1 (T11). El enlace al feed se publicó una primera vez dentro del
+ * párrafo descriptivo del blog y era invisible: la regla global es
+ * `a { color: inherit; text-decoration: none }` y `.legal-updated` pinta en
+ * `--ink-4`, así que el enlace salía del mismo gris que la frase que lo rodeaba
+ * (lo reportó el fundador, 2026-08-09). Un enlace que existe en el HTML pero
+ * que nadie distingue del texto no está publicado.
+ */
+describe("descubrimiento del feed RSS", () => {
+  const source = readFileSync(join(ROOT, "app/blog/page.tsx"), "utf8");
+
+  it("el índice del blog enlaza /feed.xml", () => {
+    expect(source).toContain('href="/feed.xml"');
+  });
+
+  it("el enlace lleva una clase de enlace, no el color heredado del texto", () => {
+    const anchor = source.slice(source.indexOf('href="/feed.xml"'));
+    expect(
+      anchor.slice(0, 120).includes("link-mini"),
+      "el enlace al feed no usa .link-mini y heredaría el color del contenedor"
+    ).toBe(true);
+  });
+});
