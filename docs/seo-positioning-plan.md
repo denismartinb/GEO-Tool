@@ -185,9 +185,17 @@ del build), T3 (las 4 superficies de contenido en los 5 pies de marketing,
 desde una lista compartida), T16 (ledger de capa A sincronizado). 20 tests
 nuevos, 1810/1810 en verde, `pnpm run validate` limpio. Detalle: log §42.
 
-**PR T-b (P1):** T5 (OG/Twitter por página reutilizando portadas existentes),
-T6 (`llms.txt` generado desde las SSOT + test anti-drift), T7 (`not-found.tsx`
-global), T10 (`noindex` en auth pages), T11 (RSS descubrible).
+**PR T-b (P1) — ✅ hecho (2026-08-09, este PR).** T5 (OG/Twitter por página
+desde un constructor único, `lib/seo/metadata.ts`), T6 (`llms.txt` generado
+desde las SSOT + test anti-drift; el estático listaba la mitad del contenido),
+T7 (`not-found.tsx` global), T10 (`noindex` en las 4 pantallas de acceso), T11
+(RSS descubrible y enlazado). 19 tests nuevos, 1829/1829 en verde.
+
+Tres fallos reales encontrados al implementarlo, todos verificados sobre el
+HTML del build y no sobre el código: el `openGraph` de una página **reemplaza**
+el del layout raíz (T-a había dejado sin `og:image` a la home y a `/pricing`),
+un `og:image` en SVG da tarjeta en blanco (3 portadas lo son), y las portadas
+PNG reales son cuadradas de 1254×1254, no 1200×630. Detalle: log §43.
 
 **PR T-c (P1, pequeño):** T8 (`FAQPage` en `/pricing` y `/geo`), T9
 (`dateUpdated` en `BlogPost` → schema y meta visible), T15 (3 `Article.image`

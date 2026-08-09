@@ -4,6 +4,20 @@ import { createClient } from "@/lib/supabase/server";
 import { PassField } from "@/components/ui/pass-field";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { login, signInWithGoogle } from "./actions";
+import type { Metadata } from "next";
+
+/**
+ * SEO-POS-1 (T10). Pantalla de acceso: contenido fino, sin valor de búsqueda y
+ * duplicada en título con el resto del sitio. `robots.ts` solo excluía
+ * /dashboard, /api y /auth, así que estas eran rastreables e indexables pese a
+ * estar enlazadas desde todos los shells de marketing. `follow: true` porque
+ * los enlaces de la página sí deben seguir repartiendo autoridad.
+ */
+export const metadata: Metadata = {
+  title: "Iniciar sesión — Genscore",
+  robots: { index: false, follow: true }
+};
+
 
 export default async function LoginPage({
   searchParams

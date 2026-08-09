@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPageShell } from "@/components/legal-page-shell";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Política de Privacidad — GenScore",
-  alternates: { canonical: "https://www.genscore.es/privacidad" }
-};
+  description:
+    "Cómo trata GenScore tus datos personales: responsable, base jurídica, encargados del tratamiento, transferencias internacionales y cómo ejercer tus derechos.",
+  path: "/privacidad"
+});
 
 export default function PrivacidadPage() {
   return (

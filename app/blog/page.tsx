@@ -4,12 +4,15 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { BLOG_CLUSTERS, BLOG_POSTS, getPostsByCluster } from "@/lib/blog/posts";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Blog — Genscore",
-  description: "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
-  alternates: { canonical: "https://www.genscore.es/blog" }
-};
+  description:
+    "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
+  path: "/blog",
+  rss: true
+});
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
@@ -24,7 +27,11 @@ export default function BlogIndexPage() {
       />
       <h1 className="lp-h2">Blog</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        GEO (Generative Engine Optimization): metodología, guías y análisis, organizados por tema.
+        GEO (Generative Engine Optimization): metodología, guías y análisis, organizados por tema.{" "}
+        {/* SEO-POS-1 (T11): el feed existía desde GROWTH-2 2.1 pero nada lo
+            enlazaba ni lo declaraba, así que ni una persona ni un lector de
+            feeds podía descubrirlo. */}
+        <a href="/feed.xml">Suscríbete por RSS</a>.
       </p>
       {BLOG_CLUSTERS.map((cluster) => {
         const posts = getPostsByCluster(cluster.key);

@@ -4522,6 +4522,48 @@ dinámicas.
 
 ---
 
+## 43. Cada página se comparte con su propia cara, y `llms.txt` deja de mentir por omisión (SEO-POS-1 Fase T-b, 2026-08-09)
+
+**Qué se decidió.** Los P1 de la auditoría del plan SEO, en un solo barrido
+porque todos son la misma clase de deuda: señales que el sitio ya podía emitir
+y no emitía.
+
+1. **Open Graph y Twitter por página** (T5), desde un constructor único
+   (`lib/seo/metadata.ts`). Antes, los 10 artículos, las 4 comparativas, los 5
+   docs y las 16 páginas de glosario se compartían todos con el título
+   «Genscore» y la misma imagen genérica.
+2. **`llms.txt` generado desde las SSOT** (T6). Era estático y había derivado
+   hasta listar 5 de 10 artículos, 1 de 3 comparativas y ninguna de las 15
+   páginas de glosario. Es el fichero sobre el que el producto publica una
+   guía: que estuviera rancio era un problema de credibilidad, no solo de
+   cobertura.
+3. **404 propia** (T7), **`noindex` en las cuatro pantallas de acceso** (T10) y
+   **RSS descubrible** (T11) — el feed existía desde 2.1 y nada lo enlazaba.
+
+**Tres fallos reales encontrados durante la implementación, los tres del mismo
+tipo: cambios que parecían mejoras y empeoraban la tarjeta.**
+
+- **El `openGraph` de una página REEMPLAZA el del layout raíz en Next; no se
+  fusiona campo a campo.** La Fase T-a había añadido `openGraph: { title,
+  description, url }` a la home y a `/pricing`, y con eso les quitó
+  `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter enteras —
+  sin ningún error, y dejando las dos páginas más compartidas peor que antes.
+  Se descubrió leyendo el HTML del build, no el código. Por eso el constructor
+  emite siempre el objeto completo: nadie debería tener que recordar esa regla.
+- **Un `og:image` en SVG da una tarjeta en blanco.** Ninguna red social
+  renderiza SVG, y tres portadas del blog lo son. Ahora una portada solo se usa
+  si es rasterizada; si no, cae a la imagen de marca.
+- **Las portadas PNG reales son cuadradas de 1254×1254**, no 1200×630. El
+  constructor declaraba 1200×630 para toda imagen. Se declaran medidas solo
+  para la imagen de marca, cuyo tamaño sí se conoce; para una portada se omiten
+  y el rastreador la mide.
+
+**Lo que queda.** T-c (`FAQPage` en `/pricing` y `/geo`, `dateUpdated` en los
+artículos, las 3 portadas que faltan en `Article.image`, la fecha rancia del
+pilar `sectores`) y la Fase C de contenido.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

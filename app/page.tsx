@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LandingPage } from "@/components/landing/landing-page";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 /**
  * SEO-POS-1 (T1). La home era un componente cliente entero, así que no podía
@@ -14,18 +15,12 @@ import { LandingPage } from "@/components/landing/landing-page";
  * nombrar Perplexity aquí repetiría el reclamo falso que PRICING-TRUTH-1
  * limpió del resto del producto.
  */
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Posicionamiento GEO: mide si la IA cita tu marca — GenScore",
   description:
     "GenScore mide si ChatGPT, Gemini y Claude mencionan y citan tu marca al responder en tu mercado, te compara con tus competidores y convierte cada hallazgo en acciones priorizadas. Primer escaneo gratis, sin tarjeta.",
-  alternates: { canonical: "https://www.genscore.es" },
-  openGraph: {
-    title: "Posicionamiento GEO: mide si la IA cita tu marca — GenScore",
-    description:
-      "Mide si ChatGPT, Gemini y Claude mencionan y citan tu marca al responder en tu mercado, y qué hacer para mejorarlo.",
-    url: "https://www.genscore.es"
-  }
-};
+  path: ""
+});
 
 export default function Page() {
   return <LandingPage />;

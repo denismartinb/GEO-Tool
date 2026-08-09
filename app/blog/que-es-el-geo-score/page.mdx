@@ -14,15 +14,11 @@ import {
   Figure,
   ProductMock
 } from "@/components/blog/article";
-import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-el-geo-score");
 
-export const metadata = {
-  title: `${getSeoTitle(post)} — Genscore`,
-  description: getMetaDescription(post),
-  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
-};
+export const metadata = blogPostMetadata(post);
 
 export const mockRows = [
   { label: "Presencia", hint: "¿La IA nombra tu marca?", value: 78, tone: "blue" },

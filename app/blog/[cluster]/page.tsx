@@ -5,6 +5,7 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { BLOG_CLUSTERS, getBlogCluster, getPostsByCluster } from "@/lib/blog/posts";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
 
@@ -23,9 +24,12 @@ export async function generateMetadata({
   const cluster = getBlogCluster(key as (typeof BLOG_CLUSTERS)[number]["key"]);
   if (!cluster) return {};
   return {
-    title: `${cluster.title} — Blog — Genscore`,
-    description: cluster.description,
-    alternates: { canonical: `${SITE_URL}/blog/${cluster.key}` }
+    ...contentMetadata({
+      title: `${cluster.title} — Blog — Genscore`,
+      description: cluster.description,
+      path: `/blog/${cluster.key}`,
+      rss: true
+    })
   };
 }
 

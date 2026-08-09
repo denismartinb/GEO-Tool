@@ -85,3 +85,26 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
   donde más se ve (log §42).
+
+## Metadata y señales de las páginas públicas
+
+- **Toda página pública construye su metadata con `contentMetadata()`**
+  (`lib/seo/metadata.ts`), nunca a mano. La razón no es estilo: en Next el
+  `openGraph` de una página **reemplaza** el del layout raíz en vez de
+  fusionarse campo a campo, así que declarar solo `title`/`description` le quita
+  a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
+  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §43).
+- **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
+  renderiza SVG: la tarjeta sale en blanco. Tres portadas del blog son SVG y por
+  eso `ogImageFor()` cae a la imagen de marca en vez de usarlas (log §43).
+- **No se declaran medidas de una imagen cuyo tamaño no se conoce.** Las
+  portadas reales son cuadradas de 1254×1254; anunciarlas como 1200×630 describe
+  mal el activo. `width`/`height` solo para la imagen de marca (log §43).
+- **`llms.txt` y el sitemap se generan de las SSOT, nunca a mano.** El estático
+  derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
+  es el fichero sobre el que el producto publica una guía
+  (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §43).
+- **Una pantalla sin valor de búsqueda lleva `robots: { index: false, follow:
+  true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
+  indexar, y estas pantallas están enlazadas desde todos los shells de
+  marketing (log §43).
