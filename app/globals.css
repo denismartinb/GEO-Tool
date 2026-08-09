@@ -6544,6 +6544,7 @@ select.set-field {
 /* ---- Portada del dominio seleccionado ---- */
 .dm2-hero {
   display: block;
+  position: relative;
   border: 2px solid var(--brand-blue);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(37, 99, 235, .05), rgba(37, 99, 235, .015));
@@ -6599,7 +6600,10 @@ select.set-field {
    el texto sólo repetía lo que la forma ya decía — y quitarla acorta la
    tarjeta sin perder información. Sólo queda «En progreso»/«Auditando»,
    condicionada a que haya algo corriendo. */
-.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; }
+/* margin-right deja hueco al botón de borrar (.dom-delete-btn, esquina
+   superior derecha de .dm2-hero) para que la píldora "En progreso"/
+   "Auditando" nunca se le meta debajo (DOMAINS-CLIENT-DELETE-1). */
+.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; margin-right: 34px; }
 .dm2-flag {
   display: inline-flex;
   align-items: center;
