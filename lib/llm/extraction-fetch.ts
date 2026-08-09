@@ -43,6 +43,16 @@ export type ExtractionFetchOptions = {
   describeStatus: (status: number) => string;
   /** Message for the timeout/abort case. */
   timeoutMessage: string;
+  /**
+   * Message for a failure that never reached the provider (DNS, TLS, socket)
+   * and for the unclassified fallback. Defaults to the extraction wording this
+   * helper was written for; LLM-RESILIENCE-1 reuses the same retry machinery
+   * for the interactive Gemini calls, where "Extraction failed" would name the
+   * wrong half of the pipeline in an operator's alert. Never carries the
+   * upstream message — the URL can be embedded in it (`.claude/rules/gemini.md`,
+   * "Sanitize all errors").
+   */
+  transportMessage?: string;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -77,7 +87,15 @@ export function computeRetryDelayMs(input: {
   return Math.round(random() * exponential);
 }
 
-async function fetchOnce(url: string, init: RequestInit, timeoutMs: number, timeoutMessage: string): Promise<Response> {
+const DEFAULT_TRANSPORT_MESSAGE = "Extraction request failed before reaching the provider.";
+
+async function fetchOnce(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutMessage: string,
+  transportMessage: string
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -87,7 +105,7 @@ async function fetchOnce(url: string, init: RequestInit, timeoutMs: number, time
     // A network-level failure carries no message we are willing to persist
     // (it can embed the URL) — categorize it as retryable transport and let
     // formatExtractionError flatten it if it ends up terminal.
-    throw new ExtractionError("http", "Extraction request failed before reaching the provider.");
+    throw new ExtractionError("http", transportMessage);
   } finally {
     clearTimeout(timer);
   }
@@ -103,7 +121,8 @@ export async function fetchExtractionWithRetry(
   init: RequestInit,
   options: ExtractionFetchOptions
 ): Promise<Response> {
-  let lastError: ExtractionError = new ExtractionError("unknown", "Extraction failed.");
+  const transportMessage = options.transportMessage ?? DEFAULT_TRANSPORT_MESSAGE;
+  let lastError: ExtractionError = new ExtractionError("unknown", transportMessage);
 
   for (let attempt = 1; attempt <= options.maxAttempts; attempt += 1) {
     if (options.deadlineAt !== undefined && Date.now() >= options.deadlineAt) {
@@ -112,9 +131,9 @@ export async function fetchExtractionWithRetry(
 
     let response: Response | null = null;
     try {
-      response = await fetchOnce(url, init, options.timeoutMs, options.timeoutMessage);
+      response = await fetchOnce(url, init, options.timeoutMs, options.timeoutMessage, transportMessage);
     } catch (error) {
-      lastError = error instanceof ExtractionError ? error : new ExtractionError("unknown", "Extraction failed.");
+      lastError = error instanceof ExtractionError ? error : new ExtractionError("unknown", transportMessage);
       if (!isRetryableExtractionCategory(lastError.category) || attempt === options.maxAttempts) throw lastError;
     }
 

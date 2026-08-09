@@ -30,6 +30,7 @@ import {
   PROMPT_VERSION,
   SCAN_INVOCATION_WORK_BUDGET_MS
 } from "@/lib/scan/constants";
+import { computeStaggerDelaysMs } from "@/lib/scan/pacing";
 import { triggerScanContinuation } from "@/lib/scan/continuation";
 import { ProjectActionError, type AuthenticatedContext, type JobRow } from "@/lib/scan/types";
 import { getSanitizedScanError } from "@/lib/scan/errors";
@@ -753,9 +754,22 @@ export async function executePendingScan({
       // (docs/adr/0003-sync-scan-execution-and-maxduration.md). A campaign
       // larger than MAX_REAL_SCAN_PROMPTS spans multiple such batches,
       // chained below (docs/adr/0014-batched-self-chaining-scan-execution.md).
+      // LLM-RESILIENCE-1: spread the starts. Every job below fires one call
+      // per engine, so dispatching the whole batch on the same tick puts up to
+      // MAX_REAL_SCAN_PROMPTS simultaneous requests on each provider from a
+      // standing start — the burst shape that `EXTRACTION_CONCURRENCY` already
+      // exists to avoid one stage later. Bounded and budget-aware; see
+      // computeStaggerDelaysMs.
+      const staggerDelays = computeStaggerDelaysMs({
+        count: claimedJobs.length,
+        remainingBudgetMs: workDeadlineAt - Date.now()
+      });
+
       const promptJobResults = await Promise.allSettled(
-        claimedJobs.map((job) =>
-          processPromptJob({
+        claimedJobs.map(async (job, index) => {
+          const wait = staggerDelays[index] ?? 0;
+          if (wait > 0) await delay(wait);
+          return processPromptJob({
             service,
             projectId,
             runId,
@@ -763,8 +777,8 @@ export async function executePendingScan({
             project,
             competitors: (competitors ?? []).map((c) => ({ name: c.name, domain: c.domain })),
             providers
-          })
-        )
+          });
+        })
       );
 
       let configError: Error | null = null;
