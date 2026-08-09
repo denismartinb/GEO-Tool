@@ -496,9 +496,184 @@ function isAuthenticated(request) {
   return (request.headers.cookie ?? "").includes(`${SESSION_COOKIE}=1`);
 }
 
+
+// ---------------------------------------------------------------------------
+// Páginas que el caso SANO del self-check necesita (log §44). Sin ellas el
+// fixture devolvía 404 y el caso que DEBE pasar fallaba, dejando el self-check
+// rojo por deriva y no por un fallo real del arnés.
+//
+// Sólo llevan lo que los journeys miran, y con COMPORTAMIENTO real donde lo
+// comprueban: un plegable que no abre de verdad, o un «Siguiente» que no
+// avanza, harían pasar la aserción y mentirían sobre lo que el arnés sabe ver.
+// ---------------------------------------------------------------------------
+
+/**
+ * El tour, compartido por el popup de bienvenida y por el hero de la landing.
+ *
+ * Reglas que replica de `.claude/rules/onboarding.md`, porque los journeys las
+ * comprueban: sólo el paso 1 se reproduce solo (nunca encadena), la pista del
+ * botón «Siguiente» se queda puesta hasta el clic, y cada clic avanza un paso.
+ */
+function tourWidget({ hero }) {
+  const dots = [0, 1, 2, 3]
+    .map((i) => `<span class="pt-dot${i === 0 ? " is-on" : ""}"></span>`)
+    .join("");
+  return `<div class="ptour${hero ? " ptour--hero" : ""}">
+    <div class="pt-stage" style="min-height:180px;border:1px solid #ddd;padding:12px">
+      <span data-pt="typed"></span>
+    </div>
+    <div class="pt-dots">${dots}</div>
+    <div class="pt-foot">
+      <a href="/geo">¿Qué es el GEO?</a>
+      <button type="button" class="pt-primary pt-hint">Siguiente</button>
+    </div>
+  </div>`;
+}
+
+const TOUR_SCRIPT = `
+(function () {
+  document.querySelectorAll(".ptour").forEach(function (tour) {
+    var typed = tour.querySelector("[data-pt=typed]");
+    // El paso 1 se reproduce solo: teclea el dominio y SE PARA ahí.
+    setTimeout(function () { if (typed) typed.textContent = "fixture.example"; }, 300);
+
+    var next = tour.querySelector(".pt-primary");
+    if (!next) return;
+    next.addEventListener("click", function () {
+      var dots = Array.prototype.slice.call(tour.querySelectorAll(".pt-dot"));
+      var current = dots.findIndex(function (d) { return d.classList.contains("is-on"); });
+      var target = Math.min(current + 1, dots.length - 1);
+      dots.forEach(function (d) { d.classList.remove("is-on"); });
+      dots[target].classList.add("is-on");
+    });
+  });
+})();
+`;
+
+/**
+ * Popup de bienvenida. La marca de «visto» se escribe AL MOSTRARLO, nunca al
+ * cerrarlo (regla de ruta de onboarding): escribirla al cerrar convierte «sale
+ * en el primer acceso» en «sale en cada carga hasta que lo cierres».
+ */
+const WELCOME_POPUP_SCRIPT = `
+(function () {
+  var KEY = "genscore.onboarding-tour.seen.v1";
+  var scrim = document.querySelector(".ptour-scrim");
+  if (!scrim) return;
+  try {
+    if (window.localStorage.getItem(KEY) === "1") { scrim.remove(); return; }
+    window.localStorage.setItem(KEY, "1");
+  } catch (e) { /* almacenamiento no disponible: se muestra igual */ }
+  scrim.style.display = "block";
+  var close = scrim.querySelector(".pt-close");
+  if (close) close.addEventListener("click", function () { scrim.style.display = "none"; });
+})();
+`;
+
+function welcomeTourPopup() {
+  return `<div class="ptour-scrim" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50">
+    <div role="dialog" aria-label="Aprende cómo funciona" style="background:#fff;margin:24px auto;max-width:520px;padding:16px">
+      <h2>Aprende cómo funciona</h2>
+      <button type="button" class="pt-close" aria-label="Cerrar">×</button>
+      ${tourWidget({ hero: false })}
+    </div>
+  </div>`;
+}
+
+function landingPage() {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/">
+<title>Genscore — visibilidad de marca en motores de IA</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}.pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin:2px}.pt-dot.is-on{background:#333}</style>
+</head><body>
+<h1>Mide cómo te ve la IA</h1>
+<div class="lp-shot">${tourWidget({ hero: true })}</div>
+${overflow}
+<script>${TOUR_SCRIPT}</script>
+</body></html>`;
+}
+
+/**
+ * Ajustes en una sola página (CONSOLE-REDESIGN-1). Los cinco journeys de
+ * `settings.spec.ts` miran: el titular, el email real, las tres secciones en
+ * orden, los dos plegables gemelos —que nacen cerrados y cuyo cuerpo NO existe
+ * en el DOM hasta abrirlo—, el bloque de eliminar cuenta al final y fuera del
+ * índice, y que en móvil no quede nada fijado dentro de `.page`.
+ */
+function settingsPage() {
+  return `<div class="page">
+    <h1 class="set-title">Ajustes</h1>
+    <nav class="set-idx" style="position:sticky;top:0">
+      <a href="#cuenta">Cuenta</a>
+      <a href="#avisos">Avisos</a>
+      <a href="#plan">Plan</a>
+    </nav>
+
+    <h2 class="set-sech" id="cuenta">Cuenta</h2>
+    <p class="set-idmail">piloto@fixture.example</p>
+    <label for="profile-email">Email</label>
+    <input id="profile-email" value="piloto@fixture.example">
+
+    <button type="button" class="set-fold-h" aria-controls="company-fold-body" aria-expanded="false">
+      Datos de empresa
+    </button>
+    <div data-fold-slot="company-fold-body"></div>
+
+    <button type="button" class="set-fold-h" aria-controls="billing-fold-body" aria-expanded="false">
+      Datos de facturación
+    </button>
+    <div data-fold-slot="billing-fold-body"></div>
+
+    <h2 class="set-sech" id="avisos">Avisos</h2>
+    <p>Preferencias de notificación</p>
+
+    <h2 class="set-sech" id="plan">Plan</h2>
+    <p>Plan actual: Pro</p>
+
+    <div class="set-end">
+      <h3>Eliminar cuenta</h3>
+      <button type="button" class="set-end-d">Eliminar cuenta</button>
+    </div>
+  </div>
+  <style>
+    /* El índice desaparece por debajo de 900px: en móvil la página es un solo
+       scroll y nada suyo queda fijado (settings.spec.ts). */
+    @media (max-width: 899px) { .set-idx { display: none } }
+  </style>
+  <script>
+  (function () {
+    var BODIES = {
+      "company-fold-body": '<div id="company-fold-body"><label for="company-name">Nombre</label><input id="company-name" value="Fixture SL"></div>',
+      "billing-fold-body": '<div id="billing-fold-body"><label for="billing-legal-name">Razón social</label><input id="billing-legal-name" value="Fixture SL"></div>'
+    };
+    document.querySelectorAll("[aria-controls]").forEach(function (trigger) {
+      var id = trigger.getAttribute("aria-controls");
+      if (!BODIES[id]) return;
+      var slot = document.querySelector('[data-fold-slot="' + id + '"]');
+      trigger.addEventListener("click", function () {
+        var open = trigger.getAttribute("aria-expanded") === "true";
+        trigger.setAttribute("aria-expanded", open ? "false" : "true");
+        // El cuerpo NO existe en el DOM mientras está cerrado: el journey
+        // comprueba toHaveCount(0), no sólo que esté oculto.
+        slot.innerHTML = open ? "" : BODIES[id];
+      });
+    });
+  })();
+  </script>`;
+}
+
 const server = createServer((request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const path = url.pathname;
+
+  if (path === "/") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(landingPage());
+    return;
+  }
 
   if (path === "/login" && request.method === "POST") {
     // Accept any credentials: the fixture verifies harness plumbing, not auth.
@@ -564,6 +739,17 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (path === "/dashboard/settings") {
+    if (!isAuthenticated(request)) {
+      response.writeHead(303, { Location: "/login" });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(html("Ajustes", settingsPage()));
+    return;
+  }
+
   const citationsPath = `/dashboard/projects/${PROJECT_ID}/citations`;
   if (path === citationsPath) {
     if (!isAuthenticated(request)) {
@@ -583,10 +769,17 @@ const server = createServer((request, response) => {
       return;
     }
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    // El popup de bienvenida sólo en /dashboard, que es donde aterriza un
+    // primer login de verdad y donde el journey lo busca — entrar por la
+    // pantalla final ocultaría el fallo que ese journey existe para cazar.
+    const welcome =
+      path === "/dashboard"
+        ? `${welcomeTourPopup()}<script>${TOUR_SCRIPT}</script><script>${WELCOME_POPUP_SCRIPT}</script>`
+        : "";
     response.end(
       path === "/dashboard/projects"
         ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", screenBody(path))
+        : html(AUTHED_PAGES.get(path) ?? "", screenBody(path) + welcome)
     );
     return;
   }
