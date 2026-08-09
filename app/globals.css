@@ -2957,14 +2957,18 @@ a {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: var(--r-xs);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--ink-4);
+  /* --ink-3, no --ink-4: en .dm2-hero (fondo con tinte azul claro) el gris más
+     claro quedaba casi invisible sin hover — hallazgo del ux-pilot en
+     DOMAINS-CLIENT-DELETE-1. 32px de lado (antes 28) da algo más de área de
+     toque en móvil. */
+  color: var(--ink-3);
   transition: background .13s, color .13s, border-color .13s;
 }
 .dom-delete-btn:hover {
@@ -6603,7 +6607,7 @@ select.set-field {
 /* margin-right deja hueco al botón de borrar (.dom-delete-btn, esquina
    superior derecha de .dm2-hero) para que la píldora "En progreso"/
    "Auditando" nunca se le meta debajo (DOMAINS-CLIENT-DELETE-1). */
-.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; margin-right: 34px; }
+.dm2-flags { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; flex: 0 0 auto; margin-right: 38px; }
 .dm2-flag {
   display: inline-flex;
   align-items: center;
