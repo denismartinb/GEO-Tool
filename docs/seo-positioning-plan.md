@@ -197,9 +197,16 @@ el del layout raíz (T-a había dejado sin `og:image` a la home y a `/pricing`),
 un `og:image` en SVG da tarjeta en blanco (3 portadas lo son), y las portadas
 PNG reales son cuadradas de 1254×1254, no 1200×630. Detalle: log §47.
 
-**PR T-c (P1, pequeño):** T8 (`FAQPage` en `/pricing` y `/geo`), T9
-(`dateUpdated` en `BlogPost` → schema y meta visible), T15 (3 `Article.image`
-que faltan + fecha rancia del pilar sectores en sitemap).
+**PR T-c (P1, pequeño) — ✅ hecho (2026-08-10).** T8 (`FAQPage` solo en
+`/pricing`, reusando `PLAN_FAQ` real; `/geo` se queda fuera a propósito, no
+tiene ningún FAQ real que marcar), T9 (`dateUpdated` opcional en `BlogPost` →
+`ArticleSchema.dateModified` + `openGraph.modifiedTime` + componente
+`PostMeta` visible; ningún post tiene fecha de refresco todavía, es la
+tubería), T15 (3 portadas nuevas — diseñadas como evidencia real del artículo,
+no decoración — para `que-es-el-geo-score`, `llms-txt-guia-practica` y
+`como-conseguir-que-chatgpt-te-cite`; fecha de sitemap de `sectores`
+independizada de los otros tres pilares). 33 tests nuevos, 1885/1885 en
+verde. Detalle: log §48.
 
 T12 y T13 se transfieren a la sesión de performance (nota abajo).
 

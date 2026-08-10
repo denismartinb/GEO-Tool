@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { PricingPage } from "@/components/pricing/pricing-page";
 import { contentMetadata } from "@/lib/seo/metadata";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { PLAN_FAQ } from "./plans-data";
 
 /**
  * SEO-POS-1 (T1). Mismo caso que la home: `/pricing` era cliente entero, sin
@@ -19,6 +21,20 @@ export const metadata: Metadata = contentMetadata({
   path: "/pricing"
 });
 
+/**
+ * SEO-POS-1 (T8). `PLAN_FAQ` es la única lista de preguntas que la página
+ * renderiza de verdad (`components/pricing/pricing-page.tsx`, acordeón de
+ * "Lo que suelen preguntarnos") — el schema reusa exactamente esas mismas
+ * preguntas y respuestas, nunca una lista aparte. `/geo` se queda fuera de
+ * esta fase a propósito: no tiene ningún bloque de preguntas y respuestas
+ * real, y `FaqPageSchema` existe para marcar contenido que ya está en la
+ * página, no para fabricarlo (content-strategy.md §4.3).
+ */
 export default function Page() {
-  return <PricingPage />;
+  return (
+    <>
+      <FaqPageSchema items={PLAN_FAQ.map((f) => ({ question: f.q, answer: f.a }))} />
+      <PricingPage />
+    </>
+  );
 }

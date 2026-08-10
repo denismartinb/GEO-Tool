@@ -55,6 +55,8 @@ export type ContentMetadataInput = {
   type?: "website" | "article";
   /** ISO date; solo se emite en `type: "article"`. */
   publishedTime?: string;
+  /** ISO date de la última actualización real (SEO-POS-1, T9). Solo se emite en `type: "article"`. */
+  modifiedTime?: string;
   /** Declara el RSS del blog como alternativa descubrible (T11). */
   rss?: boolean;
 };
@@ -66,7 +68,7 @@ export function absoluteUrl(path: string): string {
 }
 
 export function contentMetadata(input: ContentMetadataInput): Metadata {
-  const { title, description, path, image, type = "website", publishedTime, rss } = input;
+  const { title, description, path, image, type = "website", publishedTime, modifiedTime, rss } = input;
   const url = absoluteUrl(path);
   const ogImage = ogImageFor(image);
 
@@ -87,7 +89,8 @@ export function contentMetadata(input: ContentMetadataInput): Metadata {
       images: [ogImage],
       locale: "es_ES",
       type,
-      ...(type === "article" && publishedTime ? { publishedTime } : {})
+      ...(type === "article" && publishedTime ? { publishedTime } : {}),
+      ...(type === "article" && modifiedTime ? { modifiedTime } : {})
     },
     twitter: {
       card: "summary_large_image",

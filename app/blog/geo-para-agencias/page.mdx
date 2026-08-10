@@ -11,7 +11,8 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  ShareOfVoice
+  ShareOfVoice,
+  PostMeta
 } from "@/components/blog/article";
 import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
@@ -19,7 +20,7 @@ export const post = getBlogPost("geo-para-agencias");
 
 export const metadata = blogPostMetadata(post);
 
-<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
 
@@ -29,7 +30,7 @@ export const metadata = blogPostMetadata(post);
 
 # {post.title}
 
-<p className="blog-post-meta">5 de agosto de 2026</p>
+<PostMeta post={post} />
 
 <div className="blog-body">
 

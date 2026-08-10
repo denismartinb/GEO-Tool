@@ -12,7 +12,8 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  PromptSet
+  PromptSet,
+  PostMeta
 } from "@/components/blog/article";
 import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
@@ -27,7 +28,7 @@ export const promptExamples = [
   { text: "¿Cuál es el mejor software de gestión documental para una pyme?", intent: "Decisión" }
 ];
 
-<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
 
 <BreadcrumbSchema items={[{ name: "Inicio", url: "https://www.genscore.es" }, { name: "Blog", url: "https://www.genscore.es/blog" }, { name: post.title, url: `https://www.genscore.es/blog/${post.slug}` }]} />
 
@@ -37,7 +38,7 @@ export const promptExamples = [
 
 # {post.title}
 
-<p className="blog-post-meta">13 de julio de 2026</p>
+<PostMeta post={post} />
 
 <div className="blog-body">
 
