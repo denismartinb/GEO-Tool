@@ -11,7 +11,10 @@ una con su Human Gate.
   del producto y necesitan su propia pasada de piloto. V9/V10/V11 siguen
   fuera (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
-- **Fases Q, P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
+- **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
+  evidencia se sube de verdad (log §49). El resto de Q5 y las demás Q siguen
+  pendientes.
+- **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
   su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
 
 **Origen:** petición del fundador (2026-08-09): antes de lanzar GenScore al
@@ -209,6 +212,12 @@ forma medible.*
   self-check no es una garantía de nada. Sub-tarea: el paso que sube su
   evidencia no captura nada, porque el propio self-check limpia `.pilot/` entre
   casos.
+
+  **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
+  (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
+  `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
+  pérdida intermitente de sesión, y la conversación de devolverlo a puerta
+  de PR.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 

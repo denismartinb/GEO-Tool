@@ -11,6 +11,9 @@ Documentacion/
 # Agentic user pilot evidence: screenshots, auth session, findings, reports.
 # Contains a live Supabase session — must never be committed.
 .pilot/
+# La copia por caso que archiva `pnpm pilot:selfcheck` para poder subirla como
+# artefacto. Es la misma evidencia, sólo que en un directorio no oculto.
+/pilot-selfcheck-output/
 # The same evidence as it is laid out on the `pilot-evidence/pr-<n>` branches.
 # An agent fetching that branch to read the captures lands these at the repo
 # root, where `git add -A` will happily stage a few hundred PNGs of a live
