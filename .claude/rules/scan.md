@@ -90,3 +90,13 @@ worse than no rule, because a future session will obey it anyway.
 - **A constant sized for one execution model must be re-checked when the model
   changes.** SCAN-CHAIN-1 (`docs/adr/0014`) turned a run into many batches and
   the extraction cap was never revisited — that gap is the whole of ADR 0029.
+- **A column read on the scan-creation critical path needs its own query, and
+  its own fail-safe direction.** `createPendingScanRunCore`'s project select is
+  on the path of every scan the product creates; a column PostgREST doesn't
+  know about (a migration not yet applied) fails that select ENTIRELY, not
+  just the one field. `sampling_enabled` (SAMPLING-DEBUG-TOGGLE-1, migration
+  0032) is read in its own separate query for exactly this reason, and reads
+  toward the current shipped behaviour (sampling ON) on any failure — the
+  opposite fail direction from the web-audit halves (migration 0031), which
+  read toward OFF because failing there only skips one audit, never a scan
+  (`docs/brand/design-decisions-log.md` §44).

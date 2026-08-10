@@ -27,7 +27,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
-import { setAutoAuditHalf, setRecurringScans } from "../actions";
+import { setAutoAuditHalf, setRecurringScans, setSamplingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
@@ -200,6 +200,23 @@ export default async function RunsPage({
   const autoCoverageState: AuditHalfState = auditFlagError
     ? "unavailable"
     : auditFlagRow?.auto_coverage_audit_enabled === true
+    ? "on"
+    : "off";
+
+  /* SAMPLING-DEBUG-TOGGLE-1 — same "own query, own migration guard" shape as
+     auditFlagRow above and for the same reason: `sampling_enabled` arrives in
+     migration 0032, applied by hand, and this column must never join the
+     shared select `requireActiveProject` uses for six other screens. */
+  const { data: samplingFlagRow, error: samplingFlagError } = await supabase
+    .from("projects")
+    .select("sampling_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  type SamplingState = "on" | "off" | "unavailable";
+  const samplingState: SamplingState = samplingFlagError
+    ? "unavailable"
+    : samplingFlagRow?.sampling_enabled === true
     ? "on"
     : "off";
 
@@ -624,6 +641,50 @@ export default async function RunsPage({
               role="switch"
               aria-checked={autoTechnicalState === "on"}
               aria-label="Auditoría técnica tras cada escaneo"
+            />
+          </form>
+        )}
+      </div>
+
+      {/* SAMPLING-DEBUG-TOGGLE-1 — el suelo de respuestas (SAMPLING-1, ADR 0030)
+          repite el set de prompts hasta 5 veces para llegar a 50 respuestas.
+          Bien para un dominio real, carísimo para una prueba interna de 2-3
+          prompts. Apagado por defecto para poder lanzar esas pruebas sin
+          forzar el gasto — pendiente revisar qué pasa cuando lleguen clientes
+          reales de pago (docs/brand/design-decisions-log.md §44). */}
+      <div className="card dbg-switch">
+        <div className="dbg-switch-ico" data-on={samplingState === "on" ? "true" : "false"}>
+          <Icon name="layers" size={17} />
+        </div>
+        <div className="dbg-switch-txt">
+          <b>Suelo de muestreo en escaneos</b>
+          <small>
+            {samplingState === "unavailable" ? (
+              <>
+                Falta aplicar la migración <code>0032_project_sampling_enabled.sql</code> en Supabase.
+                Hasta entonces el suelo sigue encendido en todos los dominios.
+              </>
+            ) : (
+              <>
+                Repite el set de prompts (hasta 5 veces) para llegar a 50 respuestas por escaneo.
+                Apagarlo aquí deja cada escaneo en una sola pasada — útil para pruebas internas
+                con pocos prompts, no para un dominio real.
+              </>
+            )}
+          </small>
+        </div>
+        {samplingState === "unavailable" ? (
+          <span className="badge badge-neutral">Sin migrar</span>
+        ) : (
+          <form action={setSamplingEnabled}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="enabled" value={samplingState === "on" ? "false" : "true"} />
+            <button
+              type="submit"
+              className={`switch-toggle ${samplingState === "on" ? "on" : ""}`}
+              role="switch"
+              aria-checked={samplingState === "on"}
+              aria-label="Suelo de muestreo en escaneos"
             />
           </form>
         )}

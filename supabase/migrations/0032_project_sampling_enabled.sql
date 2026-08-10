@@ -1,0 +1,51 @@
+-- 0032_project_sampling_enabled.sql
+--
+-- Phase: SAMPLING-DEBUG-TOGGLE-1 (founder-approved 2026-08-09)
+--
+-- Purpose: a per-project switch that lets the response floor
+-- (SAMPLING-1, lib/scan/sampling.ts, ADR 0030) be turned off, so internal
+-- test scans with 2-3 prompts do not force MIN_RESPONSES_PER_RUN (50) worth
+-- of LLM calls.
+--
+-- Why default FALSE. Same founder decision as 0031's two audit switches: the
+-- stated need is cheap prelaunch testing, and the product has no paying
+-- customers yet whose score reliability this could silently degrade
+-- (docs/brand/design-decisions-log.md §44) — that question stays open,
+-- deliberately unsolved here, for whenever real customers arrive.
+--
+-- Unlike 0031, THE READ FAILS OPEN, not closed — and that asymmetry is
+-- deliberate, not an inconsistency. 0031's columns are read inside
+-- `enqueueWebAuditJob`/`runWebAuditJob`, functions whose only job is
+-- deciding whether to spend on an audit — failing toward "don't spend" costs
+-- nothing else. This column is read inside `createPendingScanRunCore`,
+-- which is on the critical path of every scan in the product (H1, CLAUDE.md).
+-- Failing this column CLOSED (undefined -> disabled) would make a slow
+-- Supabase read, or this migration simply not being applied yet, quietly
+-- shrink every affected run's sample size and degrade score reliability
+-- product-wide — the exact harm this whole feature exists to keep opt-in.
+-- So `lib/scan/run-creation.ts` reads it in its OWN isolated query, separate
+-- from the project's core select, and only an explicit `sampling_enabled =
+-- false` is ever passed down as `samplingEnabled: false`; anything else
+-- (`true`, `null`, a failed read, the column not existing yet) reaches
+-- `computeSampleCount` as `undefined`, which its own default keeps as
+-- sampling ON — the current shipped behaviour. See the long comment on
+-- `computeSampleCount`'s `samplingEnabled` parameter in lib/scan/sampling.ts.
+--
+-- This is deliberately NOT a fourth exemption tier alongside plan/domain in
+-- sampling.ts: those are permanent product decisions, this is a per-project
+-- debug override expected to need revisiting once real paying customers
+-- exist — noted as a pending question, not solved here.
+--
+-- Enforcement point: `lib/scan/run-creation.ts` reads this column in its own
+-- query (an extra read, on purpose — see above), the one place
+-- `computeSampleCount` is called from.
+--
+-- No RLS policy changes: `projects` RLS is already keyed off ownership, and
+-- this column is read through the existing project fetch and written
+-- through an owner-scoped server action, exactly like
+-- `auto_technical_audit_enabled` / `auto_coverage_audit_enabled` (0031).
+--
+-- Apply manually in the Supabase SQL editor, in order, after 0031.
+
+alter table public.projects
+  add column if not exists sampling_enabled boolean not null default false;

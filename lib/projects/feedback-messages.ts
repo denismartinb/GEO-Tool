@@ -22,6 +22,9 @@ export const feedbackErrorMessages: Record<string, string> = {
   // qué hay que hacer y quién puede hacerlo.
   auto_audit_migration_pending:
     "La auditoría automática todavía no se puede configurar por mitades: falta aplicar la migración 0031 en Supabase.",
+  sampling_update_failed: "No se ha podido actualizar el suelo de muestreo. Vuelve a intentarlo.",
+  sampling_migration_pending:
+    "El suelo de muestreo todavía no se puede desactivar: falta aplicar la migración 0032 en Supabase.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
   unauthorized: "No tienes permisos para realizar esta acción.",
@@ -47,5 +50,9 @@ export const feedbackSuccessMessages: Record<string, string> = {
   audit_technical_enabled:
     "Auditoría técnica activada. Se revisará la salud técnica de la web tras cada escaneo (no gasta IA).",
   audit_technical_disabled:
-    "Auditoría técnica desactivada. Deja de actualizarse su componente del GeoScore en los próximos escaneos."
+    "Auditoría técnica desactivada. Deja de actualizarse su componente del GeoScore en los próximos escaneos.",
+  // SAMPLING-DEBUG-TOGGLE-1: apagarlo deja el próximo escaneo en una sola
+  // pasada por su set de prompts, sin intentar llegar a 50 respuestas.
+  sampling_enabled: "Suelo de muestreo activado. Los próximos escaneos repetirán su set de prompts hasta llegar a 50 respuestas.",
+  sampling_disabled: "Suelo de muestreo desactivado. Los próximos escaneos harán una sola pasada por su set de prompts."
 };

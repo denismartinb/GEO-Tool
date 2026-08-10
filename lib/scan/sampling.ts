@@ -92,6 +92,8 @@ function normalizeDomain(domain: string): string {
 export type SamplingReason =
   /** No prompts or no engines — there is nothing to size. */
   | "no_work"
+  /** The project's owner switched sampling off (SAMPLING-DEBUG-TOGGLE-1). */
+  | "manually_disabled"
   /** This domain is exempt from the floor (see SAMPLING_EXEMPT_DOMAINS). */
   | "domain_exempt"
   /** This plan is excluded from the floor (see SAMPLING_EXCLUDED_PLAN_IDS). */
@@ -131,6 +133,23 @@ export function computeSampleCount(input: {
   planId: string;
   /** `projects.domain`, used only for the pilot exemption. */
   domain?: string | null;
+  /**
+   * `projects.sampling_enabled` (SAMPLING-DEBUG-TOGGLE-1, migration 0032).
+   * Defaults to `true` — the response floor stays on unless a caller reads
+   * the column and explicitly says otherwise. This is NOT the column's own
+   * default (that is `false`, so new projects are cheap to test against by
+   * default): the one real caller, `run-creation.ts`, always passes the
+   * column's actual value, so this default only protects a caller that
+   * forgets to — which must fail toward the CURRENT shipped behaviour
+   * (floor on), not toward silently degrading every score's reliability.
+   *
+   * Debug-only cost control, not a fourth exemption tier alongside plan/domain:
+   * unlike those two, which are permanent product decisions, this is a
+   * per-project override meant for prelaunch testing and is expected to need
+   * revisiting once real paying customers exist (docs/brand/
+   * design-decisions-log.md §44).
+   */
+  samplingEnabled?: boolean;
 }): SamplingDecision {
   const promptCount = Math.max(0, Math.floor(input.promptCount));
   const engineCount = Math.max(0, Math.floor(input.engineCount));
@@ -138,6 +157,10 @@ export function computeSampleCount(input: {
 
   if (baseline <= 0) {
     return { samples: 1, projectedResponses: 0, reason: "no_work" };
+  }
+
+  if (input.samplingEnabled === false) {
+    return { samples: 1, projectedResponses: baseline, reason: "manually_disabled" };
   }
 
   if (input.domain && SAMPLING_EXEMPT_DOMAINS.includes(normalizeDomain(input.domain))) {

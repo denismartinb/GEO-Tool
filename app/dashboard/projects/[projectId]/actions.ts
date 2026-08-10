@@ -434,6 +434,58 @@ export async function setAutoAuditHalf(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}/debug?success=audit_${half}_${enabled ? "enabled" : "disabled"}`);
 }
 
+/**
+ * SAMPLING-DEBUG-TOGGLE-1 — per-project override for the response floor
+ * (SAMPLING-1, `lib/scan/sampling.ts`). Same shape as `setRecurringScans` and
+ * `setAutoAuditHalf` above, and the same reason: one control, validated the
+ * same way, redirecting to the same screen.
+ *
+ * No "requires a completed scan" precondition, same as the audit switches:
+ * sampling has nothing to depend on, it just sizes the next run.
+ *
+ * Writing `false` here does not touch a run already in progress — the next
+ * one created reads the column fresh (`run-creation.ts`), same re-read-at-use
+ * pattern as the audit halves.
+ */
+export async function setSamplingEnabled(formData: FormData) {
+  const parsed = recurringScansSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ sampling_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    // Same two PostgREST codes as `setAutoAuditHalf`, same reason: "vuelve a
+    // intentarlo" would send the operator to retry something that cannot
+    // succeed without the migration being applied first.
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "sampling_migration_pending" : "sampling_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=sampling_${enabled ? "enabled" : "disabled"}`);
+}
+
 export type AutoExecuteScanStatus = "idle" | "running" | "done";
 
 /**

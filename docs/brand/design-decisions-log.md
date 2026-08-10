@@ -4608,6 +4608,84 @@ por el límite de 5/día que sí protege el botón manual.
 
 ---
 
+## 44. Un tercer interruptor apaga el suelo de muestreo por proyecto (SAMPLING-DEBUG-TOGGLE-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Si"), incluyendo dejar explícitamente pendiente la pregunta de qué hacer
+cuando lleguen clientes reales de pago, en vez de resolverla ahora con un flag
+por plan.
+
+**El problema.** El suelo de respuestas (SAMPLING-1, ADR 0030) repite el set de
+prompts de un proyecto hasta 5 veces para llegar a 50 respuestas por escaneo.
+Correcto para un dominio real; carísimo para una prueba interna de 2-3
+prompts, donde forzaba 15 llamadas de LLM por escaneo sin que hubiera nada que
+medir con esa precisión. El fundador, tras confirmar los dos interruptores de
+la fase anterior (WEB-AUDIT-AUTO-SPLIT-1, entrada 43), pidió uno más de la
+misma familia.
+
+### Decisiones y por qué
+
+- **Interruptor tercero de la misma familia, mismo patrón que las dos mitades
+  de la 43: por defecto apagado.** Migración 0032, columna
+  `sampling_enabled boolean not null default false`. Mismo argumento que la
+  43: no hay clientes de pago todavía cuya fiabilidad de score dependa de
+  esto, así que el coste de apagarlo por defecto es cero hoy y la pregunta de
+  qué pasa cuando los haya queda anotada como pendiente, no resuelta.
+- **No es una cuarta capa de exención junto a plan/dominio en `sampling.ts`.**
+  Esas dos son decisiones de producto permanentes; ésta es un override de
+  depuración pensado para pruebas prelanzamiento. `computeSampleCount` le da
+  su propio `SamplingReason` (`manually_disabled`), comprobado justo después
+  de `no_work` y antes de dominio/plan, para que el diagnóstico distinga «se
+  apagó a mano» de «no aplicaba por dominio o plan» — ambos producen
+  `samples: 1`, y sin el motivo separado serían indistinguibles.
+- **La lectura falla ABIERTO, al revés que las dos mitades de auditoría, y la
+  asimetría es a propósito, no una inconsistencia.** Los flags de la 0031 se
+  leen dentro de funciones cuyo único trabajo es decidir si gastar en una
+  auditoría — fallar hacia «no gastar» no cuesta nada más. Esta columna se lee
+  dentro de `createPendingScanRunCore`, que está en el camino crítico de todo
+  escaneo del producto (H1, CLAUDE.md). Fallar CERRADO aquí (columna ausente →
+  desactivado) convertiría una lectura lenta, o simplemente esta migración sin
+  aplicar todavía, en una degradación silenciosa de la fiabilidad de score en
+  todo el producto — el daño exacto que esta función existe para mantener
+  opt-in. Por eso `run-creation.ts` lee esta columna en **su propia consulta**,
+  separada del select del proyecto, y sólo un `sampling_enabled = false`
+  explícito llega a `computeSampleCount` como `samplingEnabled: false`;
+  cualquier otra cosa (columna ausente, lectura fallida, `true`) llega como
+  `undefined`, que el propio default de la función mantiene en «muestreo
+  activado» — el comportamiento ya desplegado.
+- **Por qué una consulta aparte y no añadir la columna al select ya existente
+  del proyecto.** Ese select comprado ya lleva la lección escrita en
+  `/debug/page.tsx` para los flags de auditoría de la 0031: una columna que
+  PostgREST no conoce hace fallar el select ENTERO, no sólo ese campo. Ese
+  select en `requireActiveProject` alimenta seis pantallas; el de
+  `createPendingScanRunCore` es el que crea cada `scan_runs` del producto.
+  Fusionar la columna ahí habría hecho que la migración 0032 sin aplicar
+  rompiera la creación de escaneos para todo el mundo, no sólo la fiabilidad
+  del muestreo — la fase 43 evitó exactamente este error separando su propia
+  consulta en `/debug`; aquí el riesgo era mayor porque el select comparte
+  camino con el flujo núcleo (H1), no con una pantalla de operación.
+- **Tercer switch en `/debug`, mismo patrón visual que los dos de la 43.**
+  Consulta propia con su propio guardián de migración (`sampling_enabled`
+  ausente → «Sin migrar», nunca un interruptor que parece operable y no puede
+  funcionar — misma lección de la 0030 que ya evitó la 43).
+
+### Pendiente / roto conocido
+
+- **La migración 0032 hay que aplicarla a mano** en Supabase, después de la
+  0031. Hasta entonces `/debug` pinta «Sin migrar» y el backend mantiene el
+  suelo de muestreo activado en todos los dominios (comportamiento actual, sin
+  cambio).
+- **Qué hacer cuando lleguen clientes reales de pago queda sin resolver a
+  propósito.** El fundador aprobó dejarlo así: hoy no hay ninguno cuya
+  fiabilidad de score dependa de este interruptor, así que no hace falta un
+  flag por plan todavía — pero antes de vender el producto, alguien tiene que
+  decidir si este control sigue existiendo tal cual, se oculta del cliente, o
+  se retira.
+- **Sin piloto agéntico todavía**: mismo estado que la 43 — el interruptor
+  vive en `/debug` y esta fase no se ha visto en un preview.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
