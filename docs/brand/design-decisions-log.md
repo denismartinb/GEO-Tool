@@ -5002,6 +5002,54 @@ esto cierra); §42 (el flake de sesión, aún abierto).
 
 ---
 
+
+---
+
+## 50. Primera pieza de la Fase C, y una corrección al propio plan antes de escribirla (SEO-POS-1, S1, 2026-08-10)
+
+**Origen.** Primera pieza de la cola de contenido priorizada por
+`docs/seo-positioning-plan.md` §4 (Fase C) — el fundador aprobó seguir "en
+modo loop" tras cerrar las tres fases técnicas (T-a/T-b/T-c, log §46-48).
+
+**Hallazgo antes de escribir una sola línea: el propio título propuesto en el
+plan mentía.** La fila S1/C1 del plan decía "Cómo saber si tu marca aparece
+en ChatGPT (y en Gemini y Perplexity)" — pero Perplexity **no es un motor
+soportado por Genscore hoy** (`docs/launch-plan.md` Fase 8/ENGINES-2: Gemini,
+Claude y ChatGPT; Perplexity "sin fecha, fuera de alcance"). Publicar ese
+título habría sido exactamente el mismo reclamo falso que PRICING-TRUTH-1
+retiró del resto del producto — solo que en la primera pieza de contenido
+nueva que produce este plan, y en la propia investigación de mercado que lo
+sustenta. Corregido a "…en ChatGPT, Gemini y Claude" antes de escribir el
+artículo. La lección para las 9 piezas que quedan en la cola: el título de
+una fila del plan es una propuesta de la investigación, no un hecho verificado
+contra el código — se re-verifica al escribir, no se copia.
+
+**La pieza** (`/blog/como-saber-si-tu-marca-aparece-en-chatgpt`, cluster
+`playbooks`): tres formas reales de comprobar si un motor menciona tu marca,
+de menos a más fiable — preguntar tú mismo con varios prompts repetidos
+(ilustrado con una `Figure`/`AnswerPair` mostrando cómo un prompt casi
+idéntico da un resultado distinto), revisar la analítica propia por si
+diferencia tráfico de asistentes de IA, y usar una herramienta sistemática
+como Genscore. La comparativa por motor que describe (mención, citación,
+sentimiento) se verificó contra el código real de la tarjeta de Overview
+(`app/dashboard/projects/[projectId]/page.tsx`, ENGINES-VALUE-1) — la
+primera redacción decía además "en qué posición", campo que esa tarjeta no
+expone por motor, y se corrigió antes de publicar. Una cifra sin fuente
+("80% de las veces… 10%…") que se había colado en el borrador del FAQ se
+sustituyó por lenguaje cualitativo — no había ningún dato real detrás.
+`FAQPage` con 3 preguntas reales, portada nueva (tres motores con veredicto
+distinto: citado, mencionado sin cita, ausente — evidencia del hallazgo
+central del artículo, no decoración).
+
+**Fixture del piloto actualizado en el mismo PR** (`tests/pilot/fixtures/
+server.mjs`): `fixture-drift.test.ts` (log §44) exige que cada post nuevo
+entre en la lista, o su journey recibe un 404 y tumba el caso sano del
+self-check — funcionó exactamente como debía, cazándolo antes de mergear.
+
+**Validación:** 1892/1892 tests, `pnpm run validate` limpio. Verificado sobre
+el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
+índice de `/blog`, en el pilar `playbooks` y en el sitemap.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

@@ -117,6 +117,44 @@ mergear #342 primero, el PR de W2 se queda solo con su artículo.
 
 ---
 
+## Cola de la Fase C de SEO-POS-1 (prioridad por ventana de oportunidad)
+
+Cola distinta de la "Capa C — Páginas de decisión" de arriba (esa numeración
+C1/C2/C3 ya está tomada por comparativas). Esta viene de
+`docs/seo-positioning-plan.md` §4, Fase C: 10 piezas priorizadas por dónde el
+mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
+"Sx" para no chocar con las Cx de comparativas ni las Wx de la cola semanal.
+
+| # | Pieza | Cluster kw del plan | Cluster blog | Estado | PR |
+|---|---|---|---|---|---|
+| S1 | Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude | 1 — Verificación | `playbooks` | ✅ Publicado | #(este) |
+| S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
+| S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
+| S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Trendsights, Mentio) | 3 — Herramientas | `comparativas` | 🔲 Pendiente | — |
+| S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | 🔲 Pendiente | — |
+| S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | 🔲 Pendiente | — |
+| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
+| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
+| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
+| S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
+
+**S1 — hecho (2026-08-10).** Título corregido respecto al que proponía
+`seo-positioning-plan.md` §4: el borrador original decía "…en ChatGPT, Gemini
+y Perplexity", pero Perplexity **no es un motor soportado hoy**
+(`docs/launch-plan.md` Fase 8: Gemini, Claude y ChatGPT vía ENGINES-2;
+Perplexity "sin fecha, fuera de alcance"). Publicarlo así habría sido el mismo
+reclamo falso que PRICING-TRUTH-1 retiró del resto del producto, solo que en
+la primera pieza nueva de contenido del plan. Corregido a "…en ChatGPT, Gemini
+y Claude" antes de escribir una sola línea. Tres formas reales de comprobar la
+mención (manual con prompts repetidos, analítica, herramienta sistemática),
+`FAQPage` con 3 preguntas reales, figura ilustrativa de la variabilidad
+entre ejecuciones, CTA al escaneo gratuito real. Portada nueva (evidencia:
+tres motores con veredicto distinto — citado, mencionado sin cita, ausente).
+Añadido al fixture del piloto en el mismo PR (`tests/pilot/fixtures/
+server.mjs`) — lo exige `fixture-drift.test.ts`.
+
+---
+
 ## Capa E — Observatorio
 
 Requiere Task Intake y aprobación propia (coste de escaneos + metodología

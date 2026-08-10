@@ -58,7 +58,9 @@ const BLOG_SLUGS = [
   // próxima pieza de contenido repita la historia.
   "geo-para-ecommerce",
   "geo-para-saas-b2b",
-  "geo-para-agencias"
+  "geo-para-agencias",
+  // SEO-POS-1 Fase C, C1 (2026-08-10).
+  "como-saber-si-tu-marca-aparece-en-chatgpt"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

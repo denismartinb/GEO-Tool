@@ -178,6 +178,17 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "playbooks"
   },
   {
+    slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
+    title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
+    description:
+      "Tres formas reales de comprobarlo, de la manual y gratuita a la sistemática: qué prompts probar tú mismo, qué mirar en tu analítica, y cuándo hace falta una herramienta de monitorización.",
+    datePublished: "2026-08-10",
+    coverIcon: "search",
+    coverImage: "/blog/como-saber-si-tu-marca-aparece-en-chatgpt/cover.webp",
+    primaryKeyword: "cómo saber si mi marca aparece en chatgpt",
+    cluster: "playbooks"
+  },
+  {
     slug: "geo-para-ecommerce",
     title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
     description:
