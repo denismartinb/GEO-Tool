@@ -53,22 +53,44 @@ export async function FirstScanTakeover({
    * `getPlanForUser` is wrapped in React's `cache()`, so several sections
    * asking for it inside one request resolve a single query.
    */
-  const plan = user ? await getPlanForUser(supabase, user.id) : null;
-  const engines = plan ? resolveScanProvidersForPlan(plan).length : null;
-  const promptsTotal = activeRun.total_prompts ?? null;
+  const [plan, { count: promptCount }] = await Promise.all([
+    user ? getPlanForUser(supabase, user.id) : Promise.resolve(null),
+    supabase
+      .from("project_prompts")
+      .select("id", { count: "exact", head: true })
+      .eq("project_id", projectId)
+      .eq("is_active", true)
+  ]);
 
-  // `total_prompts` counts lanzamientos, one per prompt (SAMPLING-1, ADR 0030),
-  // and `scan_prompt_results` holds one row per engine per prompt (migration
-  // 0009) — so this product is the real expected row count, not an estimate.
-  // Null whenever either half is unknown: the rail then simply omits it.
-  const expectedResponses = promptsTotal !== null && engines !== null ? promptsTotal * engines : null;
+  const engines = plan ? resolveScanProvidersForPlan(plan).length : null;
+
+  /**
+   * `total_prompts` counts LANZAMIENTOS, not prompts, and the difference is
+   * not pedantry — it is the bug the founder caught on 2026-08-10.
+   *
+   * A 12-prompt project on 3 engines yields 36 responses, under SAMPLING-1's
+   * floor of `MIN_RESPONSES_PER_RUN` (50), so the run repeats the whole prompt
+   * set twice (ADR 0030). `total_prompts` then reads 24. Labelling that "24
+   * prompts" is incomprehensible to someone who typed 12 on the previous
+   * screen — his words: "si son doce, son doce".
+   *
+   * So the rail reports the three real quantities separately and lets the
+   * arithmetic be visible: 12 prompts x 2 pasadas x 3 motores = 72 respuestas.
+   * Every one of those is read, never assumed; any that cannot be resolved
+   * drops its own segment rather than being filled in.
+   */
+  const launches = activeRun.total_prompts ?? null;
+  const prompts = promptCount ?? null;
+  const samples = prompts !== null && prompts > 0 && launches !== null ? Math.round(launches / prompts) : null;
+  const expectedResponses = launches !== null && engines !== null ? launches * engines : null;
 
   return (
     <ScanMissionRocket
       projectId={projectId}
       initial={activeRun}
       domain={domain}
-      promptsTotal={promptsTotal}
+      prompts={prompts}
+      samples={samples}
       engines={engines}
       expectedResponses={expectedResponses}
     />

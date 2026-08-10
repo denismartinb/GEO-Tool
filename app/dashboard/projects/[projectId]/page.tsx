@@ -302,7 +302,17 @@ export default async function ProjectDetailPage({
   const feedbackErrorMessage = feedback.error
     ? feedbackErrorMessages[feedback.error] ?? feedbackErrorMessages.unexpected_error
     : null;
-  const successMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+  const rawSuccessMessage = feedback.success ? feedbackSuccessMessages[feedback.success] ?? null : null;
+  /**
+   * SCAN-STATES-2: `scan_started` is suppressed while the first-scan mission
+   * owns the screen. Its text ("Dominio creado. Tu primer escaneo se está
+   * ejecutando — sigue el progreso aquí") is the mission's own rail said
+   * twice, stacked above a full-bleed scene as a second surface — which is
+   * exactly the "banner flotando encima" the founder asked to remove
+   * (2026-08-10). Every other feedback message still shows: this drops one
+   * redundant sentence, not the mechanism.
+   */
+  const successMessage = rawSuccessMessage && !(feedback.success === "scan_started" && isFirstScan && activeRun) ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
   const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =

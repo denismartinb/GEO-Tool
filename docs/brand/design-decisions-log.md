@@ -5007,6 +5007,49 @@ los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
 verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
 historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
 
+
+**Addendum (2026-08-10, misma tarde) — tres correcciones tras la primera prueba
+real en producción.** El fundador escaneó `genscore.es` desde el móvil y
+encontró tres cosas. Las tres eran ciertas.
+
+1. **«Cuando el motor está parado, ahí se veían bordes.»** La plataforma eran
+   dos `rect` dibujados DENTRO del SVG, que conserva su proporción 400×280 y
+   queda centrado — así que el suelo se cortaba antes del borde de la pantalla
+   y dejaba dos franjas grises. En ignición se notaba menos porque el humo tapa
+   las esquinas. El suelo pasa a ser una banda CSS (`.mrk-ground`) fuera del
+   SVG, y el `viewBox` de las escenas de rampa se acorta a 400×228 para acabar
+   justo en la línea del suelo. **Lo verdaderamente malo de este fallo es que
+   estaba en una captura que yo mismo tomé y no llegué a abrir**: verificar no
+   es fotografiar, es mirar. El arreglo se comprobó midiendo el rectángulo en
+   el DOM (`x: 0`, `width: 375`) además de a ojo, porque el primer intento
+   *parecía* arreglado y no lo estaba — el centrado con `translateX(-50%)` se
+   anulaba solo, ya que el envoltorio venía desplazado 16 px por el relleno de
+   `.mrk-scene-slot`.
+2. **El banner verde seguía apareciendo.** No era el raíl: es el mensaje
+   `scan_started` de `lib/projects/feedback-messages.ts`, que se pinta desde un
+   searchParam. Se suprime **sólo** cuando la misión ocupa la pantalla, porque
+   su texto es lo que el raíl ya dice, apilado encima como segunda superficie.
+   Los demás mensajes de feedback no se tocan.
+3. **«Dice 24 prompts y yo puse 12.»** El número era correcto y la etiqueta
+   mentía. Con 12 prompts y 3 motores salen 36 respuestas, por debajo del suelo
+   de 50 de SAMPLING-1 (ADR 0030), así que el run **repite el set dos veces**:
+   24 lanzamientos, 72 respuestas. `total_prompts` cuenta lanzamientos, no
+   prompts. El raíl pasa a enseñar la multiplicación entera —
+   `12 prompts · 2 pasadas · 3 motores · 72 respuestas` — leyendo el recuento
+   real de `project_prompts`, y el compás de ascenso deja de decir «prompts
+   lanzados» para decir «lanzamientos», que además es la palabra correcta para
+   un cohete. Las «pasadas» desaparecen del raíl cuando el run hace una sola.
+
+**Pendiente, planteado por el fundador y sin implementar:** que la misión
+mencione la auditoría web —«es un coste relevante y una funcionalidad
+importante del producto»— y que la misma animación se use en Auditoría web
+mientras corre su proceso. La forma natural es un sexto compás de **reentrada**,
+que ya estaba en el concepto original de rev.3 («reentrada en la atmósfera =
+auditoría web») y que se descartó entonces por alcance. Necesita su propia
+fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
+continuar más allá de `entrega`, y eso cambia el contrato de
+`computeMissionBeat`, no sólo el copy.
+
 ---
 
 ## Cómo mantener este documento

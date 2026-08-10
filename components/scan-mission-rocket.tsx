@@ -39,14 +39,16 @@ export function ScanMissionRocket({
   projectId,
   initial,
   domain,
-  promptsTotal,
+  prompts,
+  samples,
   engines,
   expectedResponses
 }: {
   projectId: string;
   initial: LiveRun;
   domain: string;
-  promptsTotal: number | null;
+  prompts: number | null;
+  samples: number | null;
   engines: number | null;
   expectedResponses: number | null;
 }) {
@@ -96,7 +98,8 @@ export function ScanMissionRocket({
     <section className={`mrk-full${night ? " night" : ""}`} aria-live="polite">
       <MissionRail
         domain={domain}
-        promptsTotal={promptsTotal}
+        prompts={prompts}
+        samples={samples}
         engines={engines}
         expectedResponses={expectedResponses}
       />
@@ -126,17 +129,24 @@ export function ScanMissionRocket({
  */
 function MissionRail({
   domain,
-  promptsTotal,
+  prompts,
+  samples,
   engines,
   expectedResponses
 }: {
   domain: string;
-  promptsTotal: number | null;
+  prompts: number | null;
+  samples: number | null;
   engines: number | null;
   expectedResponses: number | null;
 }) {
+  // Reads as the multiplication it is — 12 prompts x 2 pasadas x 3 motores =
+  // 72 respuestas — so the response count never looks conjured. "Pasadas" is
+  // dropped when the run does a single pass, which is the common case above
+  // ~17 prompts (SAMPLING-1's floor divided by three engines).
   const facts = [
-    promptsTotal !== null ? `${promptsTotal} prompts` : null,
+    prompts !== null ? `${prompts} ${prompts === 1 ? "prompt" : "prompts"}` : null,
+    samples !== null && samples > 1 ? `${samples} pasadas` : null,
     engines !== null ? `${engines} ${engines === 1 ? "motor" : "motores"}` : null,
     expectedResponses !== null ? `${expectedResponses} respuestas` : null
   ].filter(Boolean) as string[];
@@ -197,7 +207,11 @@ function titleFor(beat: MissionBeat): string {
  * `scan_prompt_results`.
  */
 function unitFor(beat: MissionBeat): string {
-  if (beat.key === "ascenso") return beat.total === 1 ? "prompt lanzado" : "prompts lanzados";
+  // NOT "prompts": `total_prompts` counts launches, and a repeated prompt set
+  // makes those two numbers differ (12 prompts, 24 lanzamientos). Calling them
+  // prompts contradicted the count the user typed one screen earlier. The word
+  // also happens to be the right one for a rocket.
+  if (beat.key === "ascenso") return beat.total === 1 ? "lanzamiento" : "lanzamientos";
   if (beat.key === "orbita" && beat.total !== null) return "respuestas leídas";
   return "";
 }
@@ -306,7 +320,8 @@ function Flames({ tall = false }: { tall?: boolean }) {
 function PadScene({ lit }: { lit: boolean }) {
   const p = lit ? "ig" : "ra";
   return (
-    <svg className="mrk-sky mrk-scene" viewBox="0 0 400 280" role="img" aria-hidden="true">
+    <div className={`mrk-pad-wrap${lit ? " lit" : ""}`}>
+    <svg className="mrk-sky mrk-scene" viewBox="0 0 400 228" role="img" aria-hidden="true">
       <defs>
         <linearGradient id={`${p}-plume`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="rgba(37,99,235,.30)" />
@@ -317,7 +332,7 @@ function PadScene({ lit }: { lit: boolean }) {
           <stop offset="1" stopColor="rgba(79,123,255,0)" />
         </radialGradient>
         <clipPath id={`${p}-clip`}>
-          <rect width="400" height="280" />
+          <rect width="400" height="228" />
         </clipPath>
       </defs>
       <g clipPath={`url(#${p}-clip)`}>
@@ -351,8 +366,6 @@ function PadScene({ lit }: { lit: boolean }) {
           <path className="mrk-tw s3" d="M296 160 l1.1 3.2 3.2 1.1 -3.2 1.1 -1.1 3.2 -1.1 -3.2 -3.2 -1.1 3.2 -1.1z" />
         </g>
 
-        <rect x="0" y="228" width="400" height="52" fill={lit ? "#C4D3EA" : "#D3DEF0"} />
-        <rect x="0" y="227" width="400" height="1.4" fill={lit ? "#A2B5D3" : "#B3C2DC"} />
         <rect x="150" y="202" width="6" height="26" fill={lit ? "#AFC0DB" : "#C3D0E5"} />
         <rect x="244" y="202" width="6" height="26" fill={lit ? "#AFC0DB" : "#C3D0E5"} />
         {!lit && (
@@ -423,6 +436,13 @@ function PadScene({ lit }: { lit: boolean }) {
         </g>
       </g>
     </svg>
+    {/* The ground, drawn OUTSIDE the SVG on purpose. Inside it, it inherited
+        the scene's locked 400x228 ratio, so on a wide viewport it stopped
+        short of the edges and left two grey borders — reported from
+        production, 2026-08-10 ("cuando el motor está parado, ahí se veían
+        bordes"). As a CSS band it spans the full bleed at every width. */}
+    <div className="mrk-ground" aria-hidden="true" />
+    </div>
   );
 }
 
