@@ -242,7 +242,33 @@ function shellWrap(body) {
       ? '<div style="width:2200px" id="shell-clip-wide-marker">ancho atrapado dentro de .dash-content</div>'
       : "";
   return `<div class="shell" style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
-  <header style="padding:8px 16px">cabecera</header>
+  <header class="topbar" style="padding:8px 16px;display:flex;gap:12px;align-items:center">
+    <span>cabecera</span>
+    <button type="button" class="header-bell" aria-label="Notificaciones">campana</button>
+    <div class="notif-panel" style="display:none;position:absolute;top:40px;right:8px;background:#fff;border:1px solid #ddd;padding:8px;max-width:320px">
+      <p class="notif-row">Sin novedades</p>
+    </div>
+    <button type="button" class="side-geo">¿Qué es el GEO?</button>
+  </header>
+  <script>
+  (function () {
+    var bell = document.querySelector(".header-bell");
+    var panel = document.querySelector(".notif-panel");
+    if (bell && panel) {
+      bell.addEventListener("click", function () {
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
+      });
+    }
+    // Reabrir el tour desde el menú: el journey lo pulsa tras cerrar el popup.
+    var reopen = document.querySelector(".side-geo");
+    if (reopen) {
+      reopen.addEventListener("click", function () {
+        var scrim = document.querySelector(".ptour-scrim");
+        if (scrim) scrim.style.display = "block";
+      });
+    }
+  })();
+  </script>
   <div class="dash-main" style="flex:1;min-height:0;display:flex;flex-direction:column">
     <main class="dash-content" style="flex:1;overflow-y:auto;padding:16px">
       ${body}
@@ -635,7 +661,7 @@ function settingsPage() {
 
     <div class="set-end">
       <h3>Eliminar cuenta</h3>
-      <button type="button" class="set-end-d">Eliminar cuenta</button>
+      <button type="button" class="set-end-d">Eliminar cuenta — esta acción es irreversible</button>
     </div>
   </div>
   <style>
