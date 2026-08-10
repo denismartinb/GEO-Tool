@@ -217,11 +217,12 @@ forma medible.*
   evidencia no captura nada, porque el propio self-check limpia `.pilot/` entre
   casos.
 
-  **Nuevo, 2026-08-10:** `ci.yml` **no se disparó en los `push` a un PR ya
-  abierto** (log §54, sección final). Se le añadió `workflow_dispatch` para
-  poder reponerlo a mano, pero falta entender por qué se pierden esos eventos
-  `synchronize` — sin eso, la puerta de la Fase 0 sólo cubre el primer commit
-  de cada PR.
+  **Nuevo, 2026-08-10:** `ci.yml` **se dispara de forma intermitente en los
+  `push` a un PR ya abierto** — tres pushes sin y dos con, misma rama y misma
+  tarde (log §54, sección final). Se le añadió `workflow_dispatch` para poder
+  reponerlo a mano, pero falta entender por qué se pierden esos eventos
+  `synchronize`. Intermitente es peor que roto: deja creer que la puerta está
+  puesta cuando la mitad de las veces no lo está.
 
   **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
   (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en

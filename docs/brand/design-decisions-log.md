@@ -5400,18 +5400,34 @@ son dos canales: es el mismo buzón. Pasa a `lib/support.ts`.
 ### Y un agujero en la puerta que montó la Fase 0
 
 Al comprobar el estado del PR apareció que **`ci.yml` no corrió sobre la cabeza
-de la rama**. Se disparó con el `opened` del PR (`f8b6148`) y **no** con los dos
-`push` siguientes (`3bdc8ae`, `47b2d39`), mientras otras ramas la ejecutaban con
-normalidad esos mismos minutos. Es decir: los commits que empujas a un PR ya
-abierto pueden llegar al Human Gate **sin puerta y sin que nada lo diga** —
-justo la forma de fallo que la Fase 0 existía para eliminar, sólo que un nivel
-más arriba.
+de la rama**. Se disparó con el `opened` del PR (`f8b6148`) y **no** con los
+`push` siguientes, mientras otras ramas la ejecutaban con normalidad esos mismos
+minutos. Es decir: los commits que empujas a un PR ya abierto pueden llegar al
+Human Gate **sin puerta y sin que nada lo diga** — justo la forma de fallo que
+la Fase 0 existía para eliminar, sólo que un nivel más arriba.
 
-No está diagnosticada la causa (los eventos `synchronize` de esta rama
-sencillamente no aparecen en el historial de Actions). Lo que sí se ha hecho es
-que sea **recuperable**: `ci.yml` acepta ahora `workflow_dispatch`, y con él se
-verificó la cabeza real (run 29, verde). Un evento perdido se puede reponer a
-mano; una puerta que sólo puede dispararla ese evento perdido, no.
+**Corrección, unas horas después.** La primera versión de esta entrada decía que
+los eventos `synchronize` de esta rama «sencillamente no aparecen». Es falso, y
+la forma real es peor: **es intermitente**. En la misma rama y la misma tarde,
+tres pushes (`3bdc8ae`, `47b2d39`, `1257700`) no dispararon nada y dos
+(`bf95b9b`, `fda1a2b`) sí. Un fallo sistemático se nota y se arregla; uno
+intermitente deja creer que la puerta está puesta cuando la mitad de las veces
+no lo está.
+
+La causa sigue sin diagnosticar. Lo que sí se ha hecho es que sea
+**recuperable**: `ci.yml` acepta ahora `workflow_dispatch`, y con él se verificó
+la cabeza real. Un evento perdido se puede reponer a mano; una puerta que sólo
+puede dispararla ese evento perdido, no.
+
+**Regalo de esa duplicidad**: `bf95b9b` corrió dos veces —una por
+`pull_request`, otra por el dispatch— y salió **verde una y roja la otra**. El
+mismo commit. Era el flake de `lib/llm/extraction-fetch.test.ts`: el backoff usa
+*full jitter* (`Math.random() * 10.000`) y el caso del plazo afirma que la
+espera no cabe en 50 ms, cosa que una de cada ~200 veces no se cumple. Se fija
+el sorteo en ese test. Los casos vecinos de `computeRetryDelayMs` ya inyectaban
+`random: () => 1`; ése se había quedado sin hacerlo porque llama al helper de
+más arriba, que no expone ese punto de inyección. Un rojo espurio en la puerta
+enseña a ignorar los rojos.
 
 Queda anotado como pendiente de la Fase Q: entender por qué se pierden esos
 eventos, y si hace falta, dejar de depender de ellos.
