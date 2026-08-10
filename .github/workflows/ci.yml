@@ -22,6 +22,12 @@ on:
   push:
     branches:
       - main
+  # A demanda. No es comodidad: el 2026-08-10 un push a la rama de
+  # PRELAUNCH-HARDENING-1 (`3bdc8ae`) **no disparó esta comprobación** pese a
+  # que otras ramas la ejecutaron con normalidad esos mismos minutos, así que
+  # la cabeza del PR llegó al Human Gate sin puerta. Un evento perdido es
+  # recuperable; una puerta que sólo puede dispararla un evento perdido, no.
+  workflow_dispatch:
 
 permissions:
   contents: read
