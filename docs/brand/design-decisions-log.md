@@ -4668,6 +4668,63 @@ conversación ya se puede tener con un número encima de la mesa.
 
 ---
 
+## 45. El self-check vuelve a verde, y la lección no es el fixture (PRELAUNCH-HARDENING-1 Fase Q5, 2026-08-10)
+
+Cierra el rojo de §44. **El producto no se toca en toda esta entrada**: lo roto
+era la línea base del arnés, no la aplicación.
+
+**Lo que había que poner al día en `tests/pilot/fixtures/server.mjs`.** Tres
+pantallas que los journeys ya pedían y el fixture aún no servía —Ajustes
+rediseñada (CONSOLE-REDESIGN-1), el tour en `/dashboard` y en el hero de la
+landing (ONBOARDING-TOUR-1), la campana y la pantalla de notificaciones— más
+tres posts de blog nuevos. Nada de eso es interesante por sí mismo. Lo
+interesante son las dos formas en que un fixture puede mentir, que aparecieron
+las dos:
+
+- **Colisión de selectores por orden del DOM.** El panel de la cabecera usaba
+  `.notif-row`, que es justo el selector con el que la pantalla de
+  notificaciones demuestra que trae contenido real. Como ese panel vive oculto
+  en la cabecera de *todas* las páginas, la primera coincidencia del DOM era
+  invisible y la pantalla se reportaba como estado vacío. Mismo patrón, otra
+  vez, en la pestaña «No leídas»: las filas se **eliminan** al cambiar de
+  pestaña en vez de ocultarse, porque el journey mira
+  `.notif-row, .notif-page-empty` y toma la primera del DOM.
+- **Ocultar no es cerrar.** El popup de bienvenida se ocultaba (`display:none`)
+  al recargarse ya visto, y el journey comprueba `toHaveCount(0)` — porque la
+  regresión real que persigue (2026-08-07) era un popup que reaparecía en cada
+  carga. Pero eliminarlo sin más deja sin nada que abrir al botón «¿Qué es el
+  GEO?» del menú. Se resuelve como lo resuelve el producto: se elimina, y
+  reabrirlo es **reconstruirlo** desde su propio markup.
+
+**La evidencia que no existía.** El paso «Upload self-check output» subía
+`.pilot/`, y eso no podía funcionar por dos motivos a la vez: `pilot.mjs` borra
+ese directorio al arrancar cada caso, así que sólo sobrevivía el último —y el
+que hay que mirar es casi siempre el primero, el sano—; y empieza por punto, y
+`actions/upload-artifact` ignora los ocultos salvo que se le diga. Ahora cada
+caso se archiva en `pilot-selfcheck-output/<caso>/` según termina, en el
+`finally`, pase lo que pase con él.
+
+**Lo que de verdad costó dinero, dicho sin adornos.** El comentario de
+`pilot-selfcheck.yml` afirmaba que el sandbox del agente no tenía un Chromium
+funcional para esta versión de Playwright, y esa creencia justificaba medirlo
+sólo en CI. **Era falsa**: Chromium está preinstalado y el self-check entero
+corre en local. Cuatro iteraciones del fixture se hicieron a base de esperar
+pasadas de CI de ~22 minutos cada una, con el diagnóstico llegando en trozos
+por el `tail` del log, cuando las mismas dos pruebas tardan **47 segundos**
+ejecutadas aquí. La corrección está escrita en el propio workflow, no sólo
+aquí, porque es donde la leerá quien vuelva a caer.
+
+**Qué queda de Q5**, sin empezar: `ContentExpectation` en
+`second-project.spec.ts`, el `pr_number` de `ux-pilot-write.yml`, la pérdida
+intermitente de sesión en la última anchura (§42 — instrumentar antes que
+parchear), y plantear devolver el self-check a puerta de PR ahora que su coste
+está medido.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q5; §44 (el rojo que
+esto cierra); §42 (el flake de sesión, aún abierto).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

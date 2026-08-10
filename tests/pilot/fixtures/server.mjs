@@ -266,9 +266,16 @@ function shellWrap(body) {
       });
     }
     // Reabrir el tour desde el menú: el journey lo pulsa tras cerrar el popup.
+    // El popup se ELIMINA del DOM al cerrarse y al recargar cuando ya se ha
+    // visto, así que reabrirlo es reconstruirlo con __pilotShowWelcome, no
+    // des-ocultar un nodo que ya no existe.
     var reopen = document.querySelector(".side-geo");
     if (reopen) {
       reopen.addEventListener("click", function () {
+        if (typeof window.__pilotShowWelcome === "function") {
+          window.__pilotShowWelcome();
+          return;
+        }
         var scrim = document.querySelector(".ptour-scrim");
         if (scrim) scrim.style.display = "block";
       });
@@ -592,19 +599,40 @@ const WELCOME_POPUP_SCRIPT = `
   var KEY = "genscore.onboarding-tour.seen.v1";
   var scrim = document.querySelector(".ptour-scrim");
   if (!scrim) return;
+
+  // El markup se guarda ANTES de tocar nada. El popup no puede limitarse a
+  // ocultarse —el journey comprueba tras recargar que NO EXISTA
+  // (\`toHaveCount(0)\`), porque la regresión que persigue es un popup que
+  // reaparecía en cada carga— y tampoco puede desaparecer para siempre, porque
+  // el botón del menú lo reabre. Así que se elimina y se reconstruye.
+  var markup = scrim.outerHTML;
+  var parent = scrim.parentNode;
+
+  function bindClose(node) {
+    var close = node.querySelector(".pt-close");
+    if (close) close.addEventListener("click", function () { node.remove(); });
+  }
+
+  window.__pilotShowWelcome = function () {
+    if (document.querySelector(".ptour-scrim")) return;
+    var wrap = document.createElement("div");
+    wrap.innerHTML = markup;
+    var node = wrap.firstElementChild;
+    node.style.display = "block";
+    parent.appendChild(node);
+    bindClose(node);
+    // El reloj del tour ya corrió en el nodo original; el reconstruido nace
+    // con el paso 1 ya tecleado en vez de con el lienzo en blanco.
+    var typed = node.querySelector("[data-pt=typed]");
+    if (typed) typed.textContent = "fixture.example";
+  };
+
   try {
-    // Se OCULTA, nunca se elimina: el journey cierra el popup, recarga, y
-    // luego lo reabre desde el menú. Si aquí se quitara del DOM, ese botón no
-    // tendría nada que mostrar — que es justo como falló la 3ª pasada.
-    if (window.localStorage.getItem(KEY) === "1") { scrim.style.display = "none"; return; }
+    if (window.localStorage.getItem(KEY) === "1") { scrim.remove(); return; }
     window.localStorage.setItem(KEY, "1");
   } catch (e) { /* almacenamiento no disponible: se muestra igual */ }
   scrim.style.display = "block";
-  var close = scrim.querySelector(".pt-close");
-  // La X ELIMINA el popup, no lo oculta: el journey comprueba después de
-  // recargar que no exista (toHaveCount(0)), porque la regresión que persigue
-  // era un popup que reaparecía en cada carga.
-  if (close) close.addEventListener("click", function () { scrim.remove(); });
+  bindClose(scrim);
 })();
 `;
 
@@ -632,6 +660,49 @@ function landingPage() {
 ${overflow}
 <script>${TOUR_SCRIPT}</script>
 </body></html>`;
+}
+
+/**
+ * Pantalla de notificaciones (NOTIF-AUTOREAD-1). El journey mira tres cosas:
+ * que haya filas reales —no el vacío, que no probaría nada—, que NO exista ya
+ * un control de «marcar como leídas», y que la pestaña «No leídas» resuelva a
+ * filas o a un vacío legible.
+ *
+ * Las filas se ELIMINAN al cambiar de pestaña en vez de ocultarse: el journey
+ * mira `.notif-row, .notif-page-empty` y toma la PRIMERA del DOM. Con las
+ * filas escondidas, esa primera coincidencia sería una fila invisible y la
+ * comprobación fallaría aunque el vacío se pintase perfectamente — el mismo
+ * fallo por orden del DOM que ya costó una pasada con `.notif-row` en la
+ * cabecera.
+ */
+function notificationsPage() {
+  const rows = `
+    <article class="notif-row"><h3>Escaneo completado</h3><p>Tu dominio se escaneó hace 2 horas.</p></article>
+    <article class="notif-row"><h3>Nueva recomendación</h3><p>Hay una acción nueva en tu backlog.</p></article>`;
+  return `<div class="notif-page">
+    <div class="notif-tabs" role="group">
+      <button type="button" class="notif-tab is-on" data-tab="all">Todas</button>
+      <button type="button" class="notif-tab" data-tab="unread">No leídas</button>
+    </div>
+    <div class="notif-list">${rows}</div>
+    <script>
+    (function () {
+      var list = document.querySelector(".notif-list");
+      var all = ${JSON.stringify(rows)};
+      var empty = '<p class="notif-page-empty">No tienes notificaciones sin leer. ' +
+        'Se marcan solas al abrirlas.</p>';
+      document.querySelectorAll(".notif-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          document.querySelectorAll(".notif-tab").forEach(function (t) {
+            t.classList.remove("is-on");
+          });
+          tab.classList.add("is-on");
+          list.innerHTML = tab.dataset.tab === "unread" ? empty : all;
+        });
+      });
+    })();
+    </script>
+  </div>`;
 }
 
 /**
@@ -816,10 +887,7 @@ const server = createServer((request, response) => {
         : "";
     const body =
       path === "/dashboard/notifications"
-        ? `<div class="notif-list">
-             <article class="notif-row"><h3>Escaneo completado</h3><p>Tu dominio se escaneó hace 2 horas.</p></article>
-             <article class="notif-row"><h3>Nueva recomendación</h3><p>Hay una acción nueva en tu backlog.</p></article>
-           </div>`
+        ? notificationsPage()
         : screenBody(path) + welcome;
     response.end(
       path === "/dashboard/projects"
