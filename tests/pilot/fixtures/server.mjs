@@ -247,7 +247,12 @@ function shellWrap(body) {
     <span>cabecera</span>
     <button type="button" class="header-bell" aria-label="Notificaciones">campana</button>
     <div class="notif-panel" style="display:none;position:absolute;top:40px;right:8px;background:#fff;border:1px solid #ddd;padding:8px;max-width:320px">
-      <p class="notif-row">Sin novedades</p>
+      <!-- Clase propia, NO .notif-row: ese selector es el que la pantalla de
+           notificaciones usa como prueba de contenido real, y este panel vive
+           oculto en la cabecera de TODAS las páginas. Reutilizarlo hacía que
+           la primera coincidencia del DOM fuera invisible y la pantalla se
+           reportara como estado vacío (5ª pasada del self-check). -->
+      <p class="notif-panel-row">Sin novedades</p>
     </div>
     <button type="button" class="side-geo">¿Qué es el GEO?</button>
   </header>
