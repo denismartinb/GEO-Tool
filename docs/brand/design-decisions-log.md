@@ -4879,6 +4879,72 @@ pilar `sectores`) y la Fase C de contenido.
 
 ---
 
+---
+
+## 48. Los últimos P1 técnicos del plan SEO: preguntas reales marcadas, tres portadas que faltaban, y un pilar que dejó de mentir sobre su edad (SEO-POS-1 Fase T-c, 2026-08-10)
+
+**Qué se decidió.** Cierra los tres P1 menores que quedaban abiertos del plan
+(`docs/seo-positioning-plan.md`): T8, T9 y T15.
+
+1. **`FAQPage` solo en `/pricing`, no en `/geo`.** `PLAN_FAQ` ya se renderiza
+   de verdad en un acordeón (`components/pricing/pricing-page.tsx`), así que
+   el schema reusa exactamente esas preguntas y respuestas. `/geo` se queda
+   fuera **a propósito**: no tiene ningún bloque de preguntas y respuestas
+   real, y `FaqPageSchema` existe para marcar contenido que ya está en la
+   página, nunca para fabricarlo (`content-strategy.md` §4.3, y el propio
+   comentario del componente: "nunca inventar o duplicar preguntas que el
+   contenido visible no responde"). Añadir un FAQ real a `/geo` es trabajo de
+   contenido, no una tarea técnica de esta fase.
+2. **`dateUpdated` opcional en `BlogPost`**, propagado a `ArticleSchema.
+   dateModified`, a `openGraph.modifiedTime` (`lib/seo/metadata.ts`) y a un
+   componente nuevo, `PostMeta` (`components/blog/article/blocks.tsx`), que
+   sustituye la fecha en prosa suelta que cada uno de los 10 MDX escribía a
+   mano (`<p className="blog-post-meta">12 de julio de 2026</p>`). Derivarla
+   de `post.datePublished`/`dateUpdated` en vez de teclearla es lo que impide
+   que se desincronice del dato real que ya usan el schema y el sitemap.
+   **Ningún post tiene `dateUpdated` todavía** — es la tubería, no un refresco
+   inventado; un test (`lib/blog/posts.test.ts`) falla si alguien pone una
+   fecha ahí sin que el cuerpo del artículo cambie de verdad, precisamente la
+   regla de `content-strategy.md` §4.4 ("nunca solo la fecha").
+3. **Las 3 portadas que faltaban.** `que-es-el-geo-score`,
+   `llms-txt-guia-practica` y `como-conseguir-que-chatgpt-te-cite` no tenían
+   `coverImage`, así que ni su `Article.image` ni su `og:image` tenían nada
+   real que mostrar (caían al genérico de marca). Se diseñaron tres portadas
+   nuevas siguiendo la convención visual ya establecida (fondo oscuro con dos
+   manchas de brillo, composición centrada en (600,150) para sobrevivir a la
+   tarjeta de `/blog` en móvil, sin texto) — y cada una es evidencia real del
+   artículo, no decoración (ADR 0026): las cuatro barras de
+   `que-es-el-geo-score` son los pesos reales del GEO Score (40/25/20/15 %,
+   ADR-0015, el mismo dato del `StatGrid` del cuerpo); el fichero de
+   `llms-txt-guia-practica` reproduce su estructura real de secciones, con
+   `robots.txt`/`sitemap.xml` atenuados a los lados porque el artículo los
+   compara explícitamente; los tres círculos crecientes de
+   `como-conseguir-que-chatgpt-te-cite` son los tres puntos reales del
+   "Checklist práctico" en su mismo orden de esfuerzo. Diseñadas en SVG y
+   **rasterizadas a WebP** (vía `sharp`, ya presente como dependencia
+   transitiva) — el SVG de origen no se conserva en el repo, igual que las
+   cuatro portadas que ya habían pasado por esa conversión en
+   PRELAUNCH-HARDENING-1 Fase V no dejan un `.png` huérfano detrás. La razón
+   de rasterizar y no dejarlas en SVG: ninguna red social ni el validador de
+   datos estructurados de Google aceptan SVG de forma fiable, así que un
+   `Article.image`/`og:image` en SVG no cierra el hueco — simplemente cambia
+   de forma de estar roto.
+4. **`sectores` deja de compartir fecha con los otros tres pilares.**
+   `PILLAR_LAST_MODIFIED` era una única constante aplicada a los cuatro
+   `/blog/<cluster>`, pero `fundamentos`/`medicion`/`playbooks` ganaron su
+   `pillarIntro` el 2026-08-03 y `sectores` no la tuvo hasta su primer
+   artículo, dos días después. Eso dejaba a `sectores` rancio desde el mismo
+   momento en que entró en el sitemap. Pasa a ser un mapa por cluster
+   (`app/sitemap.ts`), con la fecha real de cada uno.
+
+**Validación:** 1885/1885 tests (33 nuevos: `PLAN_FAQ` fijado al schema,
+`dateModified`/`modifiedTime` con y sin `dateUpdated`, `PostMeta` con y sin
+"Actualizado el…", `sectores` con su propia fecha de sitemap, presupuesto de
+assets con las tres portadas nuevas dentro de tope). `pnpm run validate`
+limpio. Verificado sobre el HTML del build, no solo sobre el código: las tres
+portadas sirven a la vez en `Article.image` y `og:image`; `/pricing` emite
+`FAQPage`; `sectores` y `fundamentos` llevan fechas distintas en el sitemap.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

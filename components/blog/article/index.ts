@@ -21,7 +21,8 @@ export {
   Pill,
   CodeBlock,
   AuthorBio,
-  ArticleCta
+  ArticleCta,
+  PostMeta
 } from "./blocks";
 
 export { Figure, ProductMock, ShareOfVoice, PromptSet, AnswerSample, AnswerPair, RecommendationSample, type MockRow } from "./figure";

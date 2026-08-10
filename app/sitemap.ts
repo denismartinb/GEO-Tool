@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { BLOG_CLUSTERS, BLOG_POSTS } from "@/lib/blog/posts";
+import { BLOG_CLUSTERS, BLOG_POSTS, type BlogCluster } from "@/lib/blog/posts";
 import { DOCS_NAV } from "@/lib/docs/nav";
 import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 
@@ -7,8 +7,20 @@ const SITE_URL = "https://www.genscore.es";
 const DOCS_LAST_MODIFIED = "2026-08-02";
 /** GROWTH-2 Fase 2.6b: date each /glosario/<termino> page was added. */
 const GLOSSARY_LAST_MODIFIED = "2026-08-02";
-/** GROWTH-2 Fase 2.9: date each /blog/<cluster> pillar page was added. */
-const PILLAR_LAST_MODIFIED = "2026-08-03";
+/**
+ * GROWTH-2 Fase 2.9: date each `/blog/<cluster>` pillar page got its real
+ * `pillarIntro` and started shipping to the sitemap. Per cluster, not a
+ * single shared date: `fundamentos`/`medicion`/`playbooks` earned theirs
+ * together on 2026-08-03, but `sectores` stayed empty until its first article
+ * on 2026-08-05 — a single constant left `sectores` two days stale from the
+ * moment it entered the sitemap (SEO-POS-1, T15).
+ */
+const PILLAR_LAST_MODIFIED: Record<BlogCluster["key"], string> = {
+  fundamentos: "2026-08-03",
+  medicion: "2026-08-03",
+  playbooks: "2026-08-03",
+  sectores: "2026-08-05"
+};
 
 /**
  * Real last-meaningful-change date per static route (GROWTH-2 Fase 2.1) —
@@ -64,7 +76,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // first article, and nothing here had to change for it to happen.
   const pillarRoutes = BLOG_CLUSTERS.filter((c) => c.pillarIntro).map((c) => ({
     url: `${SITE_URL}/blog/${c.key}`,
-    lastModified: new Date(PILLAR_LAST_MODIFIED)
+    lastModified: new Date(PILLAR_LAST_MODIFIED[c.key])
   }));
 
   return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes, ...pillarRoutes];
