@@ -13,6 +13,7 @@ import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robots";
 import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
+import { sanitizeField } from "@/lib/text/sanitize";
 
 /**
  * "Auditar salud técnica GEO" (WEB-AUDIT-2): a deterministic
@@ -129,19 +130,6 @@ function normalizeDomain(value: string): string {
     .replace(/^https?:\/\//, "")
     .replace(/^www\./, "")
     .replace(/\/.*$/, "");
-}
-
-function sanitizeField(input: string, maxLen: number): string {
-  let stripped = "";
-  for (const ch of input) {
-    const code = ch.codePointAt(0) ?? 0;
-    stripped += code < 0x20 || code === 0x7f ? " " : ch;
-  }
-  return stripped
-    .replace(/<[^>]*>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLen);
 }
 
 /** Strips hash and query so `/pricing`, `/pricing?utm=x`, and `/pricing#top` dedupe to one candidate. */

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { executePendingScan } from "@/lib/scan/scan-runner";
 import { createServiceClient } from "@/lib/supabase/service";
+import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -25,9 +26,8 @@ const bodySchema = z.object({
  */
 export async function POST(request: Request) {
   const secret = process.env.SCAN_CONTINUE_SECRET;
-  const authHeader = request.headers.get("authorization");
 
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!isAuthorizedInternalRequest(request, secret)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

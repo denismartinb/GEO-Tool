@@ -5,9 +5,31 @@ import { PostHogProvider } from "@/components/posthog-provider";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 
 // TODO(BRAND-5b): Hanken Grotesk is the outgoing UI typeface (BRAND-5,
-// docs/brand/brand-guidelines.md) — still loaded and wired to --font-sans so
-// the current UI keeps rendering unchanged until 5b repaints it onto
-// Figtree/Bricolage and this import is dropped.
+// docs/brand/brand-guidelines.md). It stays until 5b repaints the UI onto
+// Figtree/Bricolage.
+//
+// Corrected 2026-08-09 (PRELAUNCH-HARDENING-1 Fase V) — the previous version
+// of this comment was wrong in both directions, and a future session would
+// have made the wrong call from it:
+//   - it said Hanken was "wired to --font-sans". `var(--font-sans)` is read
+//     **zero** times in app/globals.css. Hanken is reached by its literal
+//     family name instead (`body` at globals.css:88, plus 15 fallback-chain
+//     mentions). That works because next/font/google registers Google fonts
+//     under their real family name here, not a hashed one — verified against
+//     the built CSS, where the @font-face is literally `font-family:Hanken
+//     Grotesk`. So dropping this import is NOT a free perf win: it would
+//     change how the whole product renders, which is 5b's job, not a
+//     refactor's.
+//   - it said Bricolage/Figtree were "not yet wired into any CSS". They are:
+//     `var(--font-display)` is used 45 times and `var(--font-body)` 13.
+//
+// Open question for BRAND-5b, measured while auditing performance: the CSS
+// asks for weights 450/550/650/750 (650 alone 54 times, 750 58 times), but
+// only the static instances listed below are loaded, so the browser snaps
+// those to the nearest one — they are not rendering as written today.
+// Switching these families to their variable versions would fix that AND load
+// one file per family instead of 5+3+2, but it changes how text looks, so it
+// needs a design decision and a pilot pass, not a silent optimisation.
 const sans = Hanken_Grotesk({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
@@ -17,7 +39,8 @@ const sans = Hanken_Grotesk({
 
 // Brand typography (BRAND-5a): Bricolage Grotesque for headings and the
 // hero score number, Figtree for body/UI text and small tabular numbers.
-// Not yet wired into any CSS — 5b applies them across the app.
+// Both ARE wired into app/globals.css (see the note above); 5b is about
+// finishing the migration off Hanken, not about starting to use these.
 const display = Bricolage_Grotesque({
   subsets: ["latin"],
   weight: ["700", "800"],

@@ -3,15 +3,16 @@ import Link from "next/link";
 import { DocsPageShell } from "@/components/docs/docs-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { getDocPage } from "@/lib/docs/nav";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SLUG = "empezar/primer-escaneo";
 const page = getDocPage(SLUG)!;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: `${page.title} — Genscore`,
   description: page.description,
-  alternates: { canonical: `https://www.genscore.es/docs/${SLUG}` }
-};
+  path: `/docs/${SLUG}`
+});
 
 export default function PrimerEscaneoPage() {
   return (

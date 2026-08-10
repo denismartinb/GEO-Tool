@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { DocsPageShell } from "@/components/docs/docs-page-shell";
 import { DOCS_NAV } from "@/lib/docs/nav";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Documentación — Genscore",
   description:
     "Cómo funciona Genscore: primer escaneo, qué muestra cada informe, cómo se calcula el GEO Score, y qué incluye cada plan.",
-  alternates: { canonical: "https://www.genscore.es/docs" }
-};
+  path: "/docs"
+});
 
 export default function DocsIndexPage() {
   return (

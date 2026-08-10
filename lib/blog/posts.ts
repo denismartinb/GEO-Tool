@@ -1,3 +1,5 @@
+import { contentMetadata } from "@/lib/seo/metadata";
+
 /**
  * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b, SEO
  * fields added in GROWTH-2 Fase 2.1) — used by the index page, the sitemap,
@@ -64,8 +66,26 @@ export type BlogPost = {
   datePublished: string; // ISO date, e.g. "2026-07-12"
   /** Icon name (components/ui/icon.tsx) shown on the post's abstract gradient cover (components/blog/blog-cover.tsx) when there's no coverImage. */
   coverIcon: string;
-  /** Path under /public to a real cover image (public/blog/<slug>/cover.png). When set, BlogCover renders this instead of the icon+gradient fallback. */
+  /**
+   * Path under /public to a real cover image (public/blog/<slug>/cover.webp
+   * for raster illustrations, cover.svg for vector ones). When set, BlogCover
+   * renders this instead of the icon+gradient fallback.
+   *
+   * Raster covers are WebP, never PNG: the four original PNGs weighed 8,2 MB
+   * between them — 95 % of everything under public/ — and re-encoding them at
+   * quality 90 gave 256 KB total (PSNR 41-43 dB, i.e. no visible loss).
+   * tests/asset-budget.test.ts keeps that from creeping back.
+   */
   coverImage?: string;
+  /**
+   * ISO date of the last real refresh (SEO-POS-1, T9). Unset means "never
+   * refreshed" — `dateModified` in Article schema then falls back to
+   * `datePublished`, exactly as before this field existed, and no "Actualizado
+   * el…" line renders. Only ever set when a refresh actually changed a fact,
+   * an example or a section (content-strategy.md §4.4: "nunca solo la
+   * fecha") — never bump this on its own.
+   */
+  dateUpdated?: string;
   /** Optional <title> override for search engines when it should differ from the on-page `title` (e.g. shorter, keyword-first). Falls back to `title` via getSeoTitle(). */
   seoTitle?: string;
   /** Optional meta description override, kept under ~160 chars for SERP snippets. Falls back to `description` via getMetaDescription(). */
@@ -84,6 +104,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
     coverIcon: "trendUp",
+    coverImage: "/blog/que-es-el-geo-score/cover.webp",
     primaryKeyword: "geo score",
     cluster: "medicion"
   },
@@ -94,7 +115,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Descubre qué es el GEO, cómo funciona y por qué las marcas necesitan optimizar su presencia en ChatGPT, Gemini y Claude.",
     datePublished: "2026-07-13",
     coverIcon: "compass",
-    coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.png",
+    coverImage: "/blog/que-es-geo-generative-engine-optimization/cover.webp",
     // Not "qué es geo" — /geo (app/geo/page.tsx) already owns that keyword as
     // the commercial landing page. This post's real differentiator, and the
     // bulk of its body, is the SEO-vs-GEO comparison (GROWTH-2 Fase 2.6a).
@@ -108,7 +129,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Aprende una metodología práctica para seleccionar los prompts que realmente reflejan cómo tus clientes preguntan a ChatGPT y Gemini.",
     datePublished: "2026-07-13",
     coverIcon: "target",
-    coverImage: "/blog/como-elegir-prompts-monitorizar-marca-ia/cover.png",
+    coverImage: "/blog/como-elegir-prompts-monitorizar-marca-ia/cover.webp",
     primaryKeyword: "prompts para monitorizar marca en ia",
     cluster: "medicion"
   },
@@ -119,7 +140,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Elegir mal a tus competidores puede distorsionar todo tu análisis GEO. Aprende una metodología para compararte con las marcas correctas.",
     datePublished: "2026-07-13",
     coverIcon: "layers",
-    coverImage: "/blog/como-elegir-competidores-analisis-geo/cover.png",
+    coverImage: "/blog/como-elegir-competidores-analisis-geo/cover.webp",
     primaryKeyword: "competidores análisis geo",
     cluster: "medicion"
   },
@@ -130,7 +151,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Muchas herramientas GEO muestran qué ocurre. GenScore busca ayudarte a decidir qué hacer después. Descubre en qué se diferencian.",
     datePublished: "2026-07-13",
     coverIcon: "refresh",
-    coverImage: "/blog/genscore-vs-herramientas-geo/cover.png",
+    coverImage: "/blog/genscore-vs-herramientas-geo/cover.webp",
     primaryKeyword: "herramientas geo",
     cluster: "fundamentos"
   },
@@ -141,6 +162,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Qué es llms.txt, cómo crear el tuyo paso a paso, y una respuesta honesta a la pregunta que importa: ¿mejora realmente cuánto te citan los motores de IA?",
     datePublished: "2026-08-03",
     coverIcon: "fileText",
+    coverImage: "/blog/llms-txt-guia-practica/cover.webp",
     primaryKeyword: "llms.txt guía práctica",
     cluster: "playbooks"
   },
@@ -151,7 +173,19 @@ export const BLOG_POSTS: BlogPost[] = [
       "Checklist práctico de lo que de verdad influye en si un motor generativo cita tu contenido como fuente: estructura, datos estructurados, autoridad y grounding.",
     datePublished: "2026-08-03",
     coverIcon: "cite",
+    coverImage: "/blog/como-conseguir-que-chatgpt-te-cite/cover.webp",
     primaryKeyword: "cómo conseguir que chatgpt te cite",
+    cluster: "playbooks"
+  },
+  {
+    slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
+    title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
+    description:
+      "Tres formas reales de comprobarlo, de la manual y gratuita a la sistemática: qué prompts probar tú mismo, qué mirar en tu analítica, y cuándo hace falta una herramienta de monitorización.",
+    datePublished: "2026-08-10",
+    coverIcon: "search",
+    coverImage: "/blog/como-saber-si-tu-marca-aparece-en-chatgpt/cover.webp",
+    primaryKeyword: "cómo saber si mi marca aparece en chatgpt",
     cluster: "playbooks"
   },
   {
@@ -210,4 +244,23 @@ export function getSeoTitle(post: BlogPost): string {
 /** Meta description for search engines: `metaDescription` when set, otherwise `description`. */
 export function getMetaDescription(post: BlogPost): string {
   return post.metaDescription ?? post.description;
+}
+
+/**
+ * Metadata completa de un artículo, con Open Graph y Twitter propios
+ * (SEO-POS-1, T5). Los 10 MDX la construían a mano y ninguno declaraba OG, así
+ * que todos se compartían con el título y la imagen genéricos del layout raíz.
+ * Un solo sitio donde arreglarlo, y las portadas reales ya existentes pasan a
+ * ser la imagen de la tarjeta.
+ */
+export function blogPostMetadata(post: BlogPost) {
+  return contentMetadata({
+    title: `${getSeoTitle(post)} — Genscore`,
+    description: getMetaDescription(post),
+    path: `/blog/${post.slug}`,
+    image: post.coverImage,
+    type: "article",
+    publishedTime: post.datePublished,
+    modifiedTime: post.dateUpdated
+  });
 }

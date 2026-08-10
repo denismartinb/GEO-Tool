@@ -4469,7 +4469,591 @@ sin cambios.
 
 ---
 
-## 42. Banco de pruebas offline para el modelo de extracción (EXTRACTION-COST-BENCH-1, 2026-08-09)
+## 42. Los tests dejan de ser opcionales (PRELAUNCH-HARDENING-1 Fase 0, 2026-08-09)
+
+**Contexto.** El fundador pidió, antes de lanzar, un plan de refactorización y
+revisión de arquitectura más una batería de pruebas E2E. El plan completo vive
+en `docs/prelaunch-hardening-plan.md` (aprobado 2026-08-09). Esta es su Fase 0,
+la única con urgencia absoluta.
+
+**El hallazgo que la motiva.** Ningún workflow del repo ejecutaba `pnpm test`,
+`pnpm run typecheck` ni `pnpm run lint`. Un grep de `vitest|typecheck|lint|
+build` sobre `.github/workflows/**` daba cero resultados. Con 130 ficheros de
+test y ~1.788 casos, **la suite entera era consultiva**: un PR que los rompiera
+todos mostraba el mismo tick verde que uno que no rompiera ninguno, y podía
+llegar al Human Gate sin que nadie lo supiera. Las dos únicas señales
+automáticas por PR eran el build de Vercel (que no ejecuta un solo test
+unitario) y el piloto agéntico (que mira pantallas, no invariantes).
+
+**Arreglo.** `.github/workflows/ci.yml`, en cada PR y en cada push a `main`:
+tests, typecheck y lint, como tres pasos separados para que el nombre del paso
+rojo ya diga cuál de los tres se rompió sin abrir el log.
+
+**Lo que deliberadamente NO hace: `next build`.** `pnpm run validate` es
+`build && typecheck && lint`, pero Vercel ya construye un preview en cada push
+que toca código de producto, así que un segundo `next build` en Actions
+doblaría el paso más lento de CI sin señal nueva. Se comprobó que el hueco no
+existe: las rutas que `scripts/vercel-should-build.sh` salta (`docs/`,
+`.claude/`, `.github/`, `tests/` salvo `tests/pilot/`, `agents/`, prosa de
+raíz) son todas incapaces de romper un build de Next. Y `tsc --noEmit` es
+**más** amplio que la comprobación del build, porque tsconfig incluye los
+ficheros de test que `next build` nunca compila.
+
+**Self-check del piloto: primero en CI, luego fuera — y por qué.**
+`pnpm pilot:selfcheck` (lo que demuestra que el arnés puede fallar además de
+pasar) tampoco corría en ningún sitio. El primer intento fue meterlo en
+`ci.yml` condicionado a que cambiara el arnés, con el propio `ci.yml` en la
+lista de rutas para que editarlo ejercitase su mitad cara en vez de shipearla
+a ciegas. **Ese diseño se probó y se descartó el mismo día:** en dos runs
+consecutivos superó los 25 minutos sin completarse, y tampoco se pudo medir en
+local (el sandbox de la sesión no tiene Chromium para esta versión de
+Playwright). Una comprobación bloqueante de duración desconocida y
+demostradamente >25 min o atasca cada PR del arnés o enseña a ignorarla; y
+BUILD-BUDGET-1 cuenta los minutos de Actions como presupuesto real.
+
+Vive ahora en `.github/workflows/pilot-selfcheck.yml`, con `workflow_dispatch`
+y un `schedule` semanal (lunes 06:00 UTC), timeout de 60 minutos a propósito
+—el objetivo de esas pasadas es averiguar cuánto tarda de verdad, y un timeout
+que corta la respuesta las inutiliza— y subida de `.pilot/` como artefacto para
+poder ver cuál de los cuatro modos rompió. **El coste asumido, dicho y no
+disimulado:** una regresión del arnés puede pasar hasta una semana sin
+detectarse, en vez de saltar en el PR que la causó. Volver a promoverlo a
+puerta de PR es trabajo de la Fase Q5 y su condición previa es tener medido lo
+que cuesta — que es justo lo que darán las pasadas semanales.
+
+**Retirada del QA superseded.** `.github/workflows/claude-qa.yml` y
+`scripts/run-claude-qa.py` se borran. CLAUDE.md los declaraba superseded desde
+hacía meses ("should not be used") y seguían armados: `pull_request_target`
+con `issues: write`/`pull-requests: write` y un paso que consumía
+`ANTHROPIC_API_KEY`. Código muerto con permisos de escritura y una ruta a un
+secreto no es deuda cosmética justo antes de exponerse a tráfico público.
+
+**Corrección al plan aprobado, encontrada al ejecutarlo.** El plan proponía
+borrar también `claude-qa-handoff.yml` y los dos `*-claude-qa-handoff.sh`.
+**Es incorrecto y no se hizo**: CLAUDE.md sólo declara superseded el workflow
+de ejecución y el script de Python, mientras el comentario
+`<!-- agentic:claude-qa-handoff -->` sigue siendo obligatorio en todo PR — son
+justo esos scripts los que lo publican. Además, la razón que el plan daba
+("superficie de supply-chain viva") estaba sobredimensionada: ambos workflows
+hacen checkout de la base de confianza y nunca ejecutan código del head. El
+motivo real y suficiente para borrarlos es que estaban muertos y armados, no
+que fueran explotables. `docs/agentic-claude-qa-readiness.md` queda marcado
+como documento histórico.
+
+**Qué queda pendiente / roto conocido.**
+
+- El self-check del piloto **quedó sin verificar en este PR** y su primera
+  pasada real llegó justo después de mergearlo: **14 minutos y FALLA**. Ver
+  §44, que es donde vive el diagnóstico.
+- **El piloto perdió la sesión en la última anchura, una vez, y no se
+  reprodujo.** En la primera pasada de este PR (docs-only, imposible que el
+  diff lo causara) dio `PILOT FAIL`: mobile 0 rebotes de 55 visitas, tablet 0
+  de 53 y **desktop 7 de 44** — toda pantalla autenticada a partir de
+  `recommendations` aterrizó en `/login`, mientras las públicas seguían bien,
+  sin un solo error de red ni de consola (el redirect venía limpio del
+  middleware). **Se relanzó sobre el mismo commit exacto y pasó; una tercera
+  pasada sobre el commit siguiente también pasó.** Dos verdes contra un rojo
+  sobre el mismo código: es un flake intermitente, **no** un fallo de producto
+  ni un defecto sistemático del arnés, y la primera redacción de esta entrada
+  —que lo daba por sistemático— quedó corregida al tener la segunda medición.
+  La sospecha sigue siendo el `storageState` único que comparten las tres
+  anchuras corriendo en secuencia (desktop la última), pero **es una hipótesis
+  sin probar** y por eso no se ha tocado nada. Importa igualmente: con
+  `retries: 0` deliberado ("un flake es un hallazgo"), un rojo espurio en la
+  puerta enseña a ignorar los rojos. Anotado en la Fase Q5.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase 0; CLAUDE.md
+§"GitHub / Agentic Reporting"; `docs/director-strategy.md` §QA execution model.
+
+---
+
+## 43. Los helpers duplicados dejan de ser tres (PRELAUNCH-HARDENING-1 Fase R, R1+R2, 2026-08-09)
+
+Primeros dos slices de la Fase R del plan (`docs/prelaunch-hardening-plan.md`).
+Refactor puro: **comportamiento idéntico**, con los tests existentes como red.
+
+**`sanitizeField` existía tres veces, byte a byte.** En
+`lib/web-audit/technical-audit.ts`, `lib/recommendations/domain-coverage.ts` y
+`lib/recommendations/rewrite-recommendation.ts`. No es un helper cualquiera: es
+el saneador de texto no confiable (salida de LLM y HTML traído de la web) que
+las reglas de ruta de ambas zonas exigen **en singular** — «el patrón existente
+(`sanitizeField`)». Una mejora futura del escapado habría aterrizado en una
+copia y fallado en silencio en las otras dos. Ahora vive en
+`lib/text/sanitize.ts` y esa regla es literalmente cierta.
+
+**La autenticación de las cinco rutas internas estaba escrita a mano cinco
+veces** (`weekly-scans`, `weekly-digest`, `sweep-continue`, `run-audit`,
+`scan/continue`), comparando la cabecera contra `Bearer <secreto>` con `!==`.
+Pasa a `lib/api/internal-auth.ts`, y de paso deja de ser una comparación que
+filtra: una comparación de cadenas corta en el primer byte distinto, así que el
+tiempo de respuesta revela cuántos caracteres del secreto son correctos, y
+estos endpoints son públicos y sin límite de intentos. Se compara sobre el
+SHA-256 de cada lado —`timingSafeEqual` exige búferes del mismo tamaño, y
+comparar longitudes filtraría la longitud del secreto—. **Fail-closed
+explícito**: sin variable de entorno no entra nadie. Verificado que ninguna
+ruta declara `runtime = "edge"`, así que `node:crypto` está disponible.
+
+**El transporte de los tres proveedores de LLM.** `fetchWithTimeout` y `delay`
+estaban triplicadas, y las de OpenAI y Claude diferían **en una sola línea**:
+la clase de error del timeout. Unificadas en `lib/llm/http.ts`, con la fábrica
+de error como parámetro para que cada proveedor conserve su tipo propio — aguas
+abajo se distinguen por tipo para categorizar el fallo. Importa de cara al
+roadmap: Perplexity heredaría hoy la copia en vez del arreglo.
+
+**Lo que deliberadamente NO se unificó.** Los mensajes de error por proveedor
+(`getGeminiApiError` y compañía) parecen el mismo patrón, pero **Gemini no
+tiene rama para 401** y los otros dos sí. Un builder común o le añade a Gemini
+un mensaje que hoy no emite, o lleva un parámetro para fingir que no lo tiene.
+Esos textos se persisten como el error categorizado de un escaneo
+(`.claude/rules/scan.md`), así que cambiarlos no es refactor: es cambiar un
+dato que el operador lee. Si algún día Gemini debe distinguir el 401, es una
+decisión con su propia entrada, no un efecto colateral de una limpieza.
+
+**Pendiente de la Fase R:** R3 (tipos generados de Supabase), R4 (`lib/env.ts`
+validado), R5 (trocear `gemini.ts`), R6 (descargar `executor.ts` y mover el
+vocabulario compartido fuera de `lib/scan`), R7 (páginas) y R8 (muertos).
+
+---
+
+## 44. El self-check del piloto corre por fin, y está rojo (2026-08-09)
+
+**Primera ejecución real de `pnpm pilot:selfcheck` desde que existe.** No había
+corrido nunca en ningún sitio; la Fase 0 lo sacó a un workflow propio
+(`pilot-selfcheck.yml`) y se disparó a mano en cuanto el merge de #366 lo
+registró en GitHub — un `schedule`/`workflow_dispatch` sólo existe para GitHub
+desde la rama por defecto, así que antes del merge era literalmente imposible
+ejecutarlo.
+
+**Los dos datos que faltaban:**
+
+- **Tarda 14 minutos** (13 min 47 s de reloj en el paso, más ~40 s de descarga
+  de Chromium). Los ">25 minutos sin completarse" de §42 eran ejecuciones que
+  se cancelaron o compitieron por recursos, no su coste real.
+- **FALLA.**
+
+**Qué falla exactamente, que no es lo que parece.** Los tres casos que
+*deben* fallar los detecta correctamente —overflow, estado vacío y recorte
+dentro de `.dash-content`, `expected exit 1, got 1` los tres—, y las dos
+comprobaciones estructurales pasan (profundidad de captura: 54 páginas a altura
+completa; bloqueo de escaneos: 0 journeys de escaneo en 105 páginas). **Lo que
+falla es el caso sano**: el fixture "healthy" ya no está sano y devuelve
+`PILOT FAIL` cuando se espera `PASS`.
+
+Sus fallos, todos de la misma familia: `first-party requests failed` en las
+cinco pantallas de Ajustes (las tres anchuras), en `landing-hero-tour`, y en
+`blog-geo-para-ecommerce`; más «el popup de bienvenida no salió solo».
+
+**Es deriva del fixture, no un fallo del producto.** Los journeys crecieron
+—CONSOLE-REDESIGN-1 rehízo Ajustes, ONBOARDING-TOUR-1 añadió el tour, las
+portadas del blog cambiaron— y `tests/pilot/fixtures/server.mjs` no se
+mantuvo al día, así que hoy no sirve todo lo que esas pasadas piden. La
+capacidad de detectar fallos del arnés está intacta; lo que está roto es su
+línea base.
+
+**Y es exactamente la deuda que la Fase 0 existía para destapar:** llevaba
+roto quién sabe cuánto, y nadie podía saberlo porque no se ejecutaba en ningún
+sitio. Un self-check que no corre no es una red de seguridad, es una creencia.
+
+**Segundo hallazgo, más pequeño y también mío:** el paso «Upload self-check
+output» del workflow no capturó nada (`No files were found with the provided
+path: .pilot/`). El self-check limpia `.pilot/` entre casos, así que al
+terminar no queda nada que subir. La evidencia que ese paso prometía no existe;
+hay que hacer que cada caso conserve su salida antes de que el siguiente la
+borre.
+
+**Pendiente (Fase Q5 del plan):** poner al día el fixture hasta que el caso
+sano vuelva a pasar, arreglar la captura de evidencia, y sólo entonces
+plantear devolver el self-check a puerta de PR — con 14 minutos medidos, esa
+conversación ya se puede tener con un número encima de la mesa.
+
+---
+
+## 45. Un fallo de LLM fuera del escaneo deja de ser invisible (LLM-RESILIENCE-1, 2026-08-09)
+
+**Estado: implementada** (Fases A y B del plan; C y D siguen sin aprobar).
+Task Intake aprobado por el fundador el mismo día ("Si"), con dos decisiones
+explícitas suyas: opción **(i)** para el dedupe y **PR único** para las tres
+mitades.
+
+**El problema, con la evidencia que lo cerró.** El 2026-08-09 el fundador
+añadió tres dominios (amazon.es, google.com, hostinger.com) y el asistente de
+alta le devolvió cero competidores. En hostinger.com no vio ni un mensaje de
+error. En paralelo llegó una alerta de `engine_no_response` de Gemini y se
+descubrió que varios dominios con escaneo diario no se lanzaban desde el 2 de
+agosto. La investigación (sin tocar código, a petición suya: *"Prefiero que lo
+investigues bien para que estemos seguros"*) separó **cuatro** causas, no una:
+
+1. **Pico real de 429 de Gemini** el 9-08 a las 06:00: 20 errores en
+   `job_logs` en ~54 s, con Claude y OpenAI completando en la misma pasada.
+2. **~70 errores más sin registro alguno.** Google AI Studio mostraba ~90
+   errores 429 contra los 20 nuestros. La diferencia venía de rutas que no
+   escriben en ningún sitio.
+3. **Dominios sin escanear:** dos causas distintas — la mayoría nunca se dio
+   de alta en `recurring_scans_enabled` (nace `false`, sólo lo activa el toggle
+   manual de `/debug`), y un proyecto (`5255a45c`) está congelado por el
+   cortacircuitos de 3 fallos seguidos, que no tiene salida en el código.
+4. **RPM/TPM/RPD descartados como causa** con los propios paneles de Google:
+   uso casi a cero contra el límite. La hipótesis viva es una cuota propia del
+   *grounding* con Búsqueda de Google, sin confirmar.
+
+Esta fase ataca (1) y (2). (3) sigue pendiente como fases C y D.
+
+**Los tres hallazgos de código que cambiaron el diagnóstico.**
+
+1. **No todas las llamadas a Gemini usan grounding.** Sólo tres: la generación
+   del escaneo, la auditoría de contenido y `suggestCompetitors`. `suggestPrompts`
+   y `inferBusinessProfile` no. Encaja con el síntoma: lo que se vaciaba era la
+   lista de competidores (grounded) mientras los prompts (sin grounding)
+   sobrevivían.
+2. **Sólo la generación del escaneo reintentaba un 429** — y con una espera
+   fija de 1500 ms. `auditDomainContent`, `generateGeminiJson` y
+   `generateGroundedGeminiJson` no tenían reintento ninguno: el primer 429 era
+   terminal. Es exactamente la asimetría que ADR 0029 encontró entre generación
+   y extracción, una capa más arriba, y explica por qué el asistente caía a la
+   primera mientras el escaneo de la misma minuto aguantaba.
+3. **`ok: competitors.length > 0 || prompts.length > 0`.** Con los prompts
+   funcionando y los competidores no, `ok` era `true`, el asistente avanzaba, y
+   la pantalla de competidores salía vacía sin nada que leer. Y el único
+   mensaje de error que existía (`suggestError`) **se pintaba sólo en el paso
+   0**, mientras el camino de fallo hacía `setStep(1)` en la misma
+   actualización — el aviso se escribía en una pantalla de la que al usuario se
+   le estaba sacando en ese mismo instante.
+
+**Qué se decidió.**
+
+1. **Reintento acotado para toda llamada Gemini interactiva.** Reutiliza la
+   máquina que ya existía para extracción (`fetchExtractionWithRetry`):
+   intentos limitados, backoff exponencial con jitter total y `Retry-After`
+   respetado pero acotado. Presupuesto más corto que el de extracción a
+   propósito (3 intentos, 600 ms base, tope de 3 s) porque **hay una persona
+   esperando**, no una pasada de fondo. Un 400/401/403 sigue fallando al primer
+   intento: reintentar un id de modelo mal puesto da lo mismo tres veces.
+2. **Los `catch {}` mudos pasan a reportar.** Los dos que se tragaban la causa
+   entera (`inferBusinessProfile` → `null`, `suggestCompetitors` → `[]`)
+   mantienen su contrato — siguen devolviendo lo mismo, nadie aguas abajo
+   cambia — pero antes categorizan el fallo y avisan al operador.
+3. **Alerta de operador para fallos LLM sin `run`** (`lib/llm/llm-incident.ts`).
+   `scan-health-alert.ts` no podía cubrir esto: está construido sobre
+   `scan_prompt_results` y `job_logs`, y ambos exigen un job y un run que el
+   asistente de alta no tiene. Alerta sólo en `quota` y `config` — el mismo
+   umbral que el aviso de escaneo, y por la misma razón: avisar del ruido del
+   modelo es enseñar a ignorar el aviso.
+4. **El dedupe es en memoria del proceso, y se dice.** `job_logs.job_id` es
+   `not null` con FK compuesta a `jobs`, así que una ruta sin job no puede
+   escribir ahí. Las opciones eran tabla nueva (migración: área prohibida sin
+   aprobación propia) o memoria. El fundador eligió memoria. **El coste, escrito
+   y no disimulado:** un apagón amplio puede mandar un email por instancia
+   caliente y un arranque en frío olvida la ventana. Es tolerable *aquí* porque
+   las superficies cubiertas las dispara una persona haciendo clic; si esto se
+   conecta alguna vez a una ruta programada, ese razonamiento caduca y el
+   dedupe necesita almacén de verdad. El propio email lo dice ("por instancia")
+   en vez de copiar el "una vez cada 24 h" del aviso de escaneo, que sí es
+   global.
+5. **El asistente avisa en el paso que está vacío.** `ProjectSetupSuggestion`
+   gana `failed: Array<"competitors" | "prompts">` y cada paso pinta su propio
+   aviso cuando le toca. **El texto no inventa la causa**: desde el navegador no
+   se distingue un apagón del proveedor de un dominio del que el modelo no sabe
+   nada, así que dice lo que sí es cierto — no se pudo sugerir, añádelos a mano,
+   el escaneo funciona igual. La causa real va al operador por email.
+6. **El lote de prompts deja de salir todo en el mismo instante.** Un lote
+   despachaba hasta `MAX_REAL_SCAN_PROMPTS` trabajos a la vez y cada uno llama a
+   un motor por proveedor: hasta 10 peticiones simultáneas a Gemini desde parado,
+   por dos proyectos en la pasada del cron. La auditoría ya se autolimitaba y
+   `EXTRACTION_CONCURRENCY` existe justo por esto. Ahora se escalonan **los
+   arranques** (las llamadas siguen solapándose), con dos topes que lo mantienen
+   honesto frente a `.claude/rules/scan.md`: el reparto total está acotado a 2 s
+   pase lo que pase, y por debajo de 20 s de presupuesto restante se desactiva
+   entero. Acabar el lote dentro de `maxDuration` manda sobre el ritmo.
+
+**Lo que esta fase NO arregla, dicho explícitamente.** No elimina el límite de
+Gemini: lo aguanta. Si la causa es una cuota de grounding, los fallos bajan
+mucho pero pueden reaparecer bajo carga — la diferencia es que ahora se sabe el
+mismo día en vez de a los cuatro. Y no toca ninguna de las dos causas de los
+dominios sin escanear.
+
+**Pendiente (fases propuestas, sin aprobar).** **C — SCAN-STREAK-EXIT-1:** darle
+salida al cortacircuitos de `FAILURE_STREAK_LIMIT` y descongelar `5255a45c`.
+**D — ONBOARDING-RECURRING-1:** alta automática en escaneo recurrente; se dejó
+la última a propósito, porque multiplica el volumen diario contra la misma
+cuota que acaba de morder. Y sigue abierta la pista de la cuota de grounding en
+la consola de Google, que no bloquea nada de lo anterior.
+
+**Conocido y no resuelto:** los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`),
+detectados durante esta investigación y sin tocar.
+
+---
+
+
+## 46. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
+
+**Origen.** El fundador pidió un plan de posicionamiento SEO extremo a extremo
+tras la salida a producción. La auditoría técnica que abrió ese trabajo
+(`docs/seo-positioning-plan.md`, PR #370) encontró 16 huecos; esta entrada
+cierra los tres P0. El plan completo, con la base de keywords y las fases
+siguientes, vive en ese documento y no se repite aquí.
+
+**Qué se decidió.**
+
+1. **La home y `/pricing` tienen metadata propia.** Ambas eran componentes
+   cliente enteros (`"use client"` en la primera línea), y en el App Router eso
+   impide exportar `metadata`: las dos URLs comerciales más valiosas del sitio
+   se servían con el título genérico «Genscore» heredado del layout raíz, sin
+   descripción propia y **sin canonical**, mientras el sitemap las publicaba.
+   Cada una pasa a ser una página de servidor de tres líneas que aporta la
+   metadata y monta el mismo árbol de cliente de siempre, ahora en
+   `components/landing/landing-page.tsx` y `components/pricing/pricing-page.tsx`.
+   Cero cambios visuales: el piloto debe ver exactamente las mismas pantallas.
+2. **Keyword primaria «posicionamiento GEO»** en el título de la home, decidida
+   con la investigación de mercado del plan (§3.1): en castellano ese es el
+   término que gana, «AEO» está capturado por HubSpot y «LLMO» es residual.
+3. **Los motores que se nombran en metadata son los tres reales** (Gemini,
+   Claude, ChatGPT). Nombrar Perplexity o AI Overviews en un `<title>` sería
+   reintroducir por la puerta de atrás el reclamo falso que PRICING-TRUTH-1
+   limpió del resto del producto — y un test lo impide ahora.
+4. **Las cuatro superficies de contenido entran en todos los pies de página.**
+   `/glosario` y `/comparativas` se publicaron en GROWTH-2 2.4 sin enlazarse
+   desde ninguna navegación: 21 URLs alcanzables solo por sitemap y `llms.txt`,
+   es decir sin un solo enlace entrante desde el propio sitio. `/docs` solo se
+   enlazaba a sí misma. Ahora los cinco shells de marketing renderizan la misma
+   lista compartida (`components/marketing-content-links.ts`).
+
+**Por qué aditivo y no un rediseño del pie.** Se añaden enlaces; no se quita ni
+se renombra ninguno de los que ya había (la landing conserva
+«Recomendaciones», el shell legal conserva su orden). Un pie reordenado sin
+diseño aprobado es `PILOT FAIL` por definición, y el objetivo aquí era el flujo
+de enlazado interno, no el aspecto.
+
+**Lo que queda pendiente, a propósito.** Los P1 de la auditoría (Open Graph por
+página, `llms.txt` generado desde las SSOT, 404 propia, `noindex` en las
+pantallas de acceso, `FAQPage` en `/pricing`, `dateUpdated` en los artículos,
+RSS descubrible) son las fases T-b y T-c del plan, en PRs aparte: el fundador
+aprobó el plan, no una fusión de todos sus huecos en una sola entrega. Los dos
+hallazgos de rendimiento (middleware corriendo en rutas públicas de contenido,
+landing enteramente cliente) están transferidos a la sesión de performance.
+
+**Efecto colateral que conviene registrar:** tras el corte, `/` y `/pricing`
+siguen prerenderizándose como estáticas en el build — el split no las volvió
+dinámicas.
+
+---
+
+## 47. Cada página se comparte con su propia cara, y `llms.txt` deja de mentir por omisión (SEO-POS-1 Fase T-b, 2026-08-09)
+
+**Qué se decidió.** Los P1 de la auditoría del plan SEO, en un solo barrido
+porque todos son la misma clase de deuda: señales que el sitio ya podía emitir
+y no emitía.
+
+1. **Open Graph y Twitter por página** (T5), desde un constructor único
+   (`lib/seo/metadata.ts`). Antes, los 10 artículos, las 4 comparativas, los 5
+   docs y las 16 páginas de glosario se compartían todos con el título
+   «Genscore» y la misma imagen genérica.
+2. **`llms.txt` generado desde las SSOT** (T6). Era estático y había derivado
+   hasta listar 5 de 10 artículos, 1 de 3 comparativas y ninguna de las 15
+   páginas de glosario. Es el fichero sobre el que el producto publica una
+   guía: que estuviera rancio era un problema de credibilidad, no solo de
+   cobertura.
+3. **404 propia** (T7), **`noindex` en las cuatro pantallas de acceso** (T10) y
+   **RSS descubrible** (T11) — el feed existía desde 2.1 y nada lo enlazaba.
+
+**Tres fallos reales encontrados durante la implementación, los tres del mismo
+tipo: cambios que parecían mejoras y empeoraban la tarjeta.**
+
+- **El `openGraph` de una página REEMPLAZA el del layout raíz en Next; no se
+  fusiona campo a campo.** La Fase T-a había añadido `openGraph: { title,
+  description, url }` a la home y a `/pricing`, y con eso les quitó
+  `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter enteras —
+  sin ningún error, y dejando las dos páginas más compartidas peor que antes.
+  Se descubrió leyendo el HTML del build, no el código. Por eso el constructor
+  emite siempre el objeto completo: nadie debería tener que recordar esa regla.
+- **Un `og:image` en SVG da una tarjeta en blanco.** Ninguna red social
+  renderiza SVG, y tres portadas del blog lo son. Ahora una portada solo se usa
+  si es rasterizada; si no, cae a la imagen de marca.
+- **Las portadas PNG reales son cuadradas de 1254×1254**, no 1200×630. El
+  constructor declaraba 1200×630 para toda imagen. Se declaran medidas solo
+  para la imagen de marca, cuyo tamaño sí se conoce; para una portada se omiten
+  y el rastreador la mide.
+
+**Lo que queda.** T-c (`FAQPage` en `/pricing` y `/geo`, `dateUpdated` en los
+artículos, las 3 portadas que faltan en `Article.image`, la fecha rancia del
+pilar `sectores`) y la Fase C de contenido.
+
+---
+
+---
+
+## 48. Los últimos P1 técnicos del plan SEO: preguntas reales marcadas, tres portadas que faltaban, y un pilar que dejó de mentir sobre su edad (SEO-POS-1 Fase T-c, 2026-08-10)
+
+**Qué se decidió.** Cierra los tres P1 menores que quedaban abiertos del plan
+(`docs/seo-positioning-plan.md`): T8, T9 y T15.
+
+1. **`FAQPage` solo en `/pricing`, no en `/geo`.** `PLAN_FAQ` ya se renderiza
+   de verdad en un acordeón (`components/pricing/pricing-page.tsx`), así que
+   el schema reusa exactamente esas preguntas y respuestas. `/geo` se queda
+   fuera **a propósito**: no tiene ningún bloque de preguntas y respuestas
+   real, y `FaqPageSchema` existe para marcar contenido que ya está en la
+   página, nunca para fabricarlo (`content-strategy.md` §4.3, y el propio
+   comentario del componente: "nunca inventar o duplicar preguntas que el
+   contenido visible no responde"). Añadir un FAQ real a `/geo` es trabajo de
+   contenido, no una tarea técnica de esta fase.
+2. **`dateUpdated` opcional en `BlogPost`**, propagado a `ArticleSchema.
+   dateModified`, a `openGraph.modifiedTime` (`lib/seo/metadata.ts`) y a un
+   componente nuevo, `PostMeta` (`components/blog/article/blocks.tsx`), que
+   sustituye la fecha en prosa suelta que cada uno de los 10 MDX escribía a
+   mano (`<p className="blog-post-meta">12 de julio de 2026</p>`). Derivarla
+   de `post.datePublished`/`dateUpdated` en vez de teclearla es lo que impide
+   que se desincronice del dato real que ya usan el schema y el sitemap.
+   **Ningún post tiene `dateUpdated` todavía** — es la tubería, no un refresco
+   inventado; un test (`lib/blog/posts.test.ts`) falla si alguien pone una
+   fecha ahí sin que el cuerpo del artículo cambie de verdad, precisamente la
+   regla de `content-strategy.md` §4.4 ("nunca solo la fecha").
+3. **Las 3 portadas que faltaban.** `que-es-el-geo-score`,
+   `llms-txt-guia-practica` y `como-conseguir-que-chatgpt-te-cite` no tenían
+   `coverImage`, así que ni su `Article.image` ni su `og:image` tenían nada
+   real que mostrar (caían al genérico de marca). Se diseñaron tres portadas
+   nuevas siguiendo la convención visual ya establecida (fondo oscuro con dos
+   manchas de brillo, composición centrada en (600,150) para sobrevivir a la
+   tarjeta de `/blog` en móvil, sin texto) — y cada una es evidencia real del
+   artículo, no decoración (ADR 0026): las cuatro barras de
+   `que-es-el-geo-score` son los pesos reales del GEO Score (40/25/20/15 %,
+   ADR-0015, el mismo dato del `StatGrid` del cuerpo); el fichero de
+   `llms-txt-guia-practica` reproduce su estructura real de secciones, con
+   `robots.txt`/`sitemap.xml` atenuados a los lados porque el artículo los
+   compara explícitamente; los tres círculos crecientes de
+   `como-conseguir-que-chatgpt-te-cite` son los tres puntos reales del
+   "Checklist práctico" en su mismo orden de esfuerzo. Diseñadas en SVG y
+   **rasterizadas a WebP** (vía `sharp`, ya presente como dependencia
+   transitiva) — el SVG de origen no se conserva en el repo, igual que las
+   cuatro portadas que ya habían pasado por esa conversión en
+   PRELAUNCH-HARDENING-1 Fase V no dejan un `.png` huérfano detrás. La razón
+   de rasterizar y no dejarlas en SVG: ninguna red social ni el validador de
+   datos estructurados de Google aceptan SVG de forma fiable, así que un
+   `Article.image`/`og:image` en SVG no cierra el hueco — simplemente cambia
+   de forma de estar roto.
+4. **`sectores` deja de compartir fecha con los otros tres pilares.**
+   `PILLAR_LAST_MODIFIED` era una única constante aplicada a los cuatro
+   `/blog/<cluster>`, pero `fundamentos`/`medicion`/`playbooks` ganaron su
+   `pillarIntro` el 2026-08-03 y `sectores` no la tuvo hasta su primer
+   artículo, dos días después. Eso dejaba a `sectores` rancio desde el mismo
+   momento en que entró en el sitemap. Pasa a ser un mapa por cluster
+   (`app/sitemap.ts`), con la fecha real de cada uno.
+
+**Validación:** 1885/1885 tests (33 nuevos: `PLAN_FAQ` fijado al schema,
+`dateModified`/`modifiedTime` con y sin `dateUpdated`, `PostMeta` con y sin
+"Actualizado el…", `sectores` con su propia fecha de sitemap, presupuesto de
+assets con las tres portadas nuevas dentro de tope). `pnpm run validate`
+limpio. Verificado sobre el HTML del build, no solo sobre el código: las tres
+portadas sirven a la vez en `Article.image` y `og:image`; `/pricing` emite
+`FAQPage`; `sectores` y `fundamentos` llevan fechas distintas en el sitemap.
+
+## 49. El self-check vuelve a verde, y la lección no es el fixture (PRELAUNCH-HARDENING-1 Fase Q5, 2026-08-10)
+
+Cierra el rojo de §44. **El producto no se toca en toda esta entrada**: lo roto
+era la línea base del arnés, no la aplicación.
+
+**Lo que había que poner al día en `tests/pilot/fixtures/server.mjs`.** Tres
+pantallas que los journeys ya pedían y el fixture aún no servía —Ajustes
+rediseñada (CONSOLE-REDESIGN-1), el tour en `/dashboard` y en el hero de la
+landing (ONBOARDING-TOUR-1), la campana y la pantalla de notificaciones— más
+tres posts de blog nuevos. Nada de eso es interesante por sí mismo. Lo
+interesante son las dos formas en que un fixture puede mentir, que aparecieron
+las dos:
+
+- **Colisión de selectores por orden del DOM.** El panel de la cabecera usaba
+  `.notif-row`, que es justo el selector con el que la pantalla de
+  notificaciones demuestra que trae contenido real. Como ese panel vive oculto
+  en la cabecera de *todas* las páginas, la primera coincidencia del DOM era
+  invisible y la pantalla se reportaba como estado vacío. Mismo patrón, otra
+  vez, en la pestaña «No leídas»: las filas se **eliminan** al cambiar de
+  pestaña en vez de ocultarse, porque el journey mira
+  `.notif-row, .notif-page-empty` y toma la primera del DOM.
+- **Ocultar no es cerrar.** El popup de bienvenida se ocultaba (`display:none`)
+  al recargarse ya visto, y el journey comprueba `toHaveCount(0)` — porque la
+  regresión real que persigue (2026-08-07) era un popup que reaparecía en cada
+  carga. Pero eliminarlo sin más deja sin nada que abrir al botón «¿Qué es el
+  GEO?» del menú. Se resuelve como lo resuelve el producto: se elimina, y
+  reabrirlo es **reconstruirlo** desde su propio markup.
+
+**La evidencia que no existía.** El paso «Upload self-check output» subía
+`.pilot/`, y eso no podía funcionar por dos motivos a la vez: `pilot.mjs` borra
+ese directorio al arrancar cada caso, así que sólo sobrevivía el último —y el
+que hay que mirar es casi siempre el primero, el sano—; y empieza por punto, y
+`actions/upload-artifact` ignora los ocultos salvo que se le diga. Ahora cada
+caso se archiva en `pilot-selfcheck-output/<caso>/` según termina, en el
+`finally`, pase lo que pase con él.
+
+**Lo que de verdad costó dinero, dicho sin adornos.** El comentario de
+`pilot-selfcheck.yml` afirmaba que el sandbox del agente no tenía un Chromium
+funcional para esta versión de Playwright, y esa creencia justificaba medirlo
+sólo en CI. **Era falsa**: Chromium está preinstalado y el self-check entero
+corre en local. Cuatro iteraciones del fixture se hicieron a base de esperar
+pasadas de CI de ~22 minutos cada una, con el diagnóstico llegando en trozos
+por el `tail` del log, cuando las mismas dos pruebas tardan **47 segundos**
+ejecutadas aquí. La corrección está escrita en el propio workflow, no sólo
+aquí, porque es donde la leerá quien vuelva a caer.
+
+**Qué queda de Q5**, sin empezar: `ContentExpectation` en
+`second-project.spec.ts`, el `pr_number` de `ux-pilot-write.yml`, la pérdida
+intermitente de sesión en la última anchura (§42 — instrumentar antes que
+parchear), y plantear devolver el self-check a puerta de PR ahora que su coste
+está medido.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase Q5; §44 (el rojo que
+esto cierra); §42 (el flake de sesión, aún abierto).
+
+---
+
+
+---
+
+## 50. Primera pieza de la Fase C, y una corrección al propio plan antes de escribirla (SEO-POS-1, S1, 2026-08-10)
+
+**Origen.** Primera pieza de la cola de contenido priorizada por
+`docs/seo-positioning-plan.md` §4 (Fase C) — el fundador aprobó seguir "en
+modo loop" tras cerrar las tres fases técnicas (T-a/T-b/T-c, log §46-48).
+
+**Hallazgo antes de escribir una sola línea: el propio título propuesto en el
+plan mentía.** La fila S1/C1 del plan decía "Cómo saber si tu marca aparece
+en ChatGPT (y en Gemini y Perplexity)" — pero Perplexity **no es un motor
+soportado por Genscore hoy** (`docs/launch-plan.md` Fase 8/ENGINES-2: Gemini,
+Claude y ChatGPT; Perplexity "sin fecha, fuera de alcance"). Publicar ese
+título habría sido exactamente el mismo reclamo falso que PRICING-TRUTH-1
+retiró del resto del producto — solo que en la primera pieza de contenido
+nueva que produce este plan, y en la propia investigación de mercado que lo
+sustenta. Corregido a "…en ChatGPT, Gemini y Claude" antes de escribir el
+artículo. La lección para las 9 piezas que quedan en la cola: el título de
+una fila del plan es una propuesta de la investigación, no un hecho verificado
+contra el código — se re-verifica al escribir, no se copia.
+
+**La pieza** (`/blog/como-saber-si-tu-marca-aparece-en-chatgpt`, cluster
+`playbooks`): tres formas reales de comprobar si un motor menciona tu marca,
+de menos a más fiable — preguntar tú mismo con varios prompts repetidos
+(ilustrado con una `Figure`/`AnswerPair` mostrando cómo un prompt casi
+idéntico da un resultado distinto), revisar la analítica propia por si
+diferencia tráfico de asistentes de IA, y usar una herramienta sistemática
+como Genscore. La comparativa por motor que describe (mención, citación,
+sentimiento) se verificó contra el código real de la tarjeta de Overview
+(`app/dashboard/projects/[projectId]/page.tsx`, ENGINES-VALUE-1) — la
+primera redacción decía además "en qué posición", campo que esa tarjeta no
+expone por motor, y se corrigió antes de publicar. Una cifra sin fuente
+("80% de las veces… 10%…") que se había colado en el borrador del FAQ se
+sustituyó por lenguaje cualitativo — no había ningún dato real detrás.
+`FAQPage` con 3 preguntas reales, portada nueva (tres motores con veredicto
+distinto: citado, mencionado sin cita, ausente — evidencia del hallazgo
+central del artículo, no decoración).
+
+**Fixture del piloto actualizado en el mismo PR** (`tests/pilot/fixtures/
+server.mjs`): `fixture-drift.test.ts` (log §44) exige que cada post nuevo
+entre en la lista, o su journey recibe un 404 y tumba el caso sano del
+self-check — funcionó exactamente como debía, cazándolo antes de mergear.
+
+**Validación:** 1892/1892 tests, `pnpm run validate` limpio. Verificado sobre
+el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
+índice de `/blog`, en el pilar `playbooks` y en el sitemap.
+
+
+---
+
+## 51. Banco de pruebas offline para el modelo de extracción (EXTRACTION-COST-BENCH-1, 2026-08-09)
 
 **Estado: herramienta construida y verificada; ejecución con datos reales
 pendiente — este sesión no tenía credenciales de Supabase/Gemini/OpenAI.**
@@ -4538,7 +5122,7 @@ de producción.
 
 ---
 
-## 43. La auditoría automática se parte en dos interruptores, ambos apagados (WEB-AUDIT-AUTO-SPLIT-1, 2026-08-09)
+## 52. La auditoría automática se parte en dos interruptores, ambos apagados (WEB-AUDIT-AUTO-SPLIT-1, 2026-08-09)
 
 **Estado: implementada.** Task Intake aprobado por el fundador el mismo día
 ("Aprobado").
@@ -4608,7 +5192,7 @@ por el límite de 5/día que sí protege el botón manual.
 
 ---
 
-## 44. Un tercer interruptor apaga el suelo de muestreo por proyecto (SAMPLING-DEBUG-TOGGLE-1, 2026-08-09)
+## 53. Un tercer interruptor apaga el suelo de muestreo por proyecto (SAMPLING-DEBUG-TOGGLE-1, 2026-08-09)
 
 **Estado: implementada.** Task Intake aprobado por el fundador el mismo día
 ("Si"), incluyendo dejar explícitamente pendiente la pregunta de qué hacer
@@ -4620,15 +5204,15 @@ prompts de un proyecto hasta 5 veces para llegar a 50 respuestas por escaneo.
 Correcto para un dominio real; carísimo para una prueba interna de 2-3
 prompts, donde forzaba 15 llamadas de LLM por escaneo sin que hubiera nada que
 medir con esa precisión. El fundador, tras confirmar los dos interruptores de
-la fase anterior (WEB-AUDIT-AUTO-SPLIT-1, entrada 43), pidió uno más de la
+la fase anterior (WEB-AUDIT-AUTO-SPLIT-1, entrada 52), pidió uno más de la
 misma familia.
 
 ### Decisiones y por qué
 
 - **Interruptor tercero de la misma familia, mismo patrón que las dos mitades
-  de la 43: por defecto apagado.** Migración 0032, columna
+  de la 52: por defecto apagado.** Migración 0032, columna
   `sampling_enabled boolean not null default false`. Mismo argumento que la
-  43: no hay clientes de pago todavía cuya fiabilidad de score dependa de
+  52: no hay clientes de pago todavía cuya fiabilidad de score dependa de
   esto, así que el coste de apagarlo por defecto es cero hoy y la pregunta de
   qué pasa cuando los haya queda anotada como pendiente, no resuelta.
 - **No es una cuarta capa de exención junto a plan/dominio en `sampling.ts`.**
@@ -4661,13 +5245,13 @@ misma familia.
   `createPendingScanRunCore` es el que crea cada `scan_runs` del producto.
   Fusionar la columna ahí habría hecho que la migración 0032 sin aplicar
   rompiera la creación de escaneos para todo el mundo, no sólo la fiabilidad
-  del muestreo — la fase 43 evitó exactamente este error separando su propia
+  del muestreo — la fase 52 evitó exactamente este error separando su propia
   consulta en `/debug`; aquí el riesgo era mayor porque el select comparte
   camino con el flujo núcleo (H1), no con una pantalla de operación.
-- **Tercer switch en `/debug`, mismo patrón visual que los dos de la 43.**
+- **Tercer switch en `/debug`, mismo patrón visual que los dos de la 52.**
   Consulta propia con su propio guardián de migración (`sampling_enabled`
   ausente → «Sin migrar», nunca un interruptor que parece operable y no puede
-  funcionar — misma lección de la 0030 que ya evitó la 43).
+  funcionar — misma lección de la 0030 que ya evitó la 52).
 
 ### Pendiente / roto conocido
 
@@ -4681,7 +5265,7 @@ misma familia.
   flag por plan todavía — pero antes de vender el producto, alguien tiene que
   decidir si este control sigue existiendo tal cual, se oculta del cliente, o
   se retira.
-- **Sin piloto agéntico todavía**: mismo estado que la 43 — el interruptor
+- **Sin piloto agéntico todavía**: mismo estado que la 52 — el interruptor
   vive en `/debug` y esta fase no se ha visto en un preview.
 
 ---

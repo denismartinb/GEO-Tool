@@ -10,7 +10,7 @@
 -- Why default FALSE. Same founder decision as 0031's two audit switches: the
 -- stated need is cheap prelaunch testing, and the product has no paying
 -- customers yet whose score reliability this could silently degrade
--- (docs/brand/design-decisions-log.md §44) — that question stays open,
+-- (docs/brand/design-decisions-log.md §53) — that question stays open,
 -- deliberately unsolved here, for whenever real customers arrive.
 --
 -- Unlike 0031, THE READ FAILS OPEN, not closed — and that asymmetry is

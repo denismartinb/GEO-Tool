@@ -147,7 +147,7 @@ export function computeSampleCount(input: {
    * unlike those two, which are permanent product decisions, this is a
    * per-project override meant for prelaunch testing and is expected to need
    * revisiting once real paying customers exist (docs/brand/
-   * design-decisions-log.md §44).
+   * design-decisions-log.md §53).
    */
   samplingEnabled?: boolean;
 }): SamplingDecision {

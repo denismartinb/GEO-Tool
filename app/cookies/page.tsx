@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPageShell } from "@/components/legal-page-shell";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Política de Cookies — GenScore",
-  alternates: { canonical: "https://www.genscore.es/cookies" }
-};
+  description:
+    "Qué cookies usa GenScore: solo la cookie técnica de sesión, sin cookies de analítica ni publicitarias, y por eso sin banner de consentimiento.",
+  path: "/cookies"
+});
 
 export default function CookiesPage() {
   return (

@@ -385,10 +385,10 @@ fase" (ver "Cierre de fase" más abajo).
 |---|---|---|---|
 | Competidores | `competitors.md` | **PANORAMA-EMPTY-1 (2026-08-07)** | log §10, §11, §15, §36 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
-| Auditoría web | `web-audit.md` | **WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09)** · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §43 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
+| Auditoría web | `web-audit.md` | **WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09)** · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
-| Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
-| Escaneo (pipeline) | `scan.md` | **SAMPLING-DEBUG-TOGGLE-1 (2026-08-09)** · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §44 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
+| Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase T-b (2026-08-09)** · GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19, §46, §47 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
+| Escaneo (pipeline) | `scan.md` | **SAMPLING-DEBUG-TOGGLE-1 (2026-08-09)** · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
 | Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
@@ -396,7 +396,8 @@ fase" (ver "Cierre de fase" más abajo).
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
 | Onboarding (tour) | `onboarding.md` | **ONBOARDING-TOUR-1 Fase A (2026-08-08)** | log §40 · `docs/design-reference/onboarding-tour-1/` |
 | Ajustes de cuenta | — *(sin regla propia todavía)* | **CONSOLE-REDESIGN-1 Fase A (2026-08-06)** | log §38 · `docs/design-reference/console-redesign-1/` |
-| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PILOT-EVIDENCE-IGNORE-1 (2026-08-07)** · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37 · "Presupuesto de builds" arriba |
+| Fiabilidad LLM (reintentos y alertas) | `gemini.md` · `scan.md` | **LLM-RESILIENCE-1 Fases A+B (2026-08-09)** | log §45 · ADR 0029 |
+| Proceso agéntico (builds/CI) | — *(sin regla propia todavía)* | **PRELAUNCH-HARDENING-1 Fase 0 (2026-08-09)** · PILOT-EVIDENCE-IGNORE-1 (2026-08-07) · BUILD-BUDGET-1 Fase 1 (2026-08-04) | log §21, §37, §42 · "Presupuesto de builds" arriba · `docs/prelaunch-hardening-plan.md` |
 
 `log §N` = `docs/brand/design-decisions-log.md`. Las zonas sin regla propia se
 irán cubriendo; mientras tanto, su histórico sigue siendo de lectura
@@ -492,8 +493,22 @@ Every PR must contain or trigger:
 
 **QA execution model:** Claude QA is run by the `qa` specialist subagent
 (`.claude/agents/qa.md`) invoked by the Director. It does NOT use GitHub
-Actions or the Anthropic API key. The `.github/workflows/claude-qa.yml`
-workflow and `scripts/run-claude-qa.py` are superseded and should not be used.
+Actions or the Anthropic API key. `.github/workflows/claude-qa.yml` and
+`scripts/run-claude-qa.py` **fueron borrados** en PRELAUNCH-HARDENING-1 Fase 0
+(2026-08-09): llevaban meses declarados superseded aquí mismo y seguían
+armados con `pull_request_target` y una ruta que consumía `ANTHROPIC_API_KEY`.
+El *handoff* sí sigue vivo y sigue siendo obligatorio
+(`claude-qa-handoff.yml` + `scripts/{generate,post}-claude-qa-handoff.sh`):
+es lo que publica el comentario de las dos líneas de arriba.
+
+**CI (desde 2026-08-09):** `.github/workflows/ci.yml` ejecuta `pnpm test`,
+`pnpm run typecheck` y `pnpm run lint` en cada PR. No ejecuta `next build`
+a propósito — lo hace Vercel en cada preview y duplicarlo sólo dobla el paso
+más lento. El self-check del piloto **no** está en ese workflow: excedió 25
+minutos dos veces, así que vive en `.github/workflows/pilot-selfcheck.yml` con
+`workflow_dispatch` + `schedule` semanal (log §42). **Su primera pasada real
+(2026-08-09) tardó 14 min y FALLÓ**, y sigue rojo: no es una garantía activa
+todavía. Detalle y diagnóstico en log §44.
 
 ---
 

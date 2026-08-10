@@ -1,7 +1,7 @@
 # Banco de pruebas de extracción — EXTRACTION-COST-BENCH-1 (2026-08)
 
 **Estado: herramienta construida, verificada, sin ejecutar contra datos
-reales.** Esta fase (ver `docs/brand/design-decisions-log.md` §41) construyó y
+reales.** Esta fase (ver `docs/brand/design-decisions-log.md` §51) construyó y
 validó `scripts/extraction-bench.ts`. La sesión que la construyó no tenía
 credenciales de Supabase ni de los proveedores LLM, así que este documento no
 contiene resultados — contiene la metodología, cómo ejecutarla, y cómo leer lo

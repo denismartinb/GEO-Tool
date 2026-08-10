@@ -4,12 +4,15 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { BLOG_CLUSTERS, BLOG_POSTS, getPostsByCluster } from "@/lib/blog/posts";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Blog — Genscore",
-  description: "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
-  alternates: { canonical: "https://www.genscore.es/blog" }
-};
+  description:
+    "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
+  path: "/blog",
+  rss: true
+});
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
@@ -23,8 +26,20 @@ export default function BlogIndexPage() {
         ]}
       />
       <h1 className="lp-h2">Blog</h1>
-      <p className="legal-updated" style={{ marginBottom: 32 }}>
+      <p className="legal-updated">
         GEO (Generative Engine Optimization): metodología, guías y análisis, organizados por tema.
+      </p>
+      {/* SEO-POS-1 (T11): el feed existía desde GROWTH-2 2.1 y nada lo
+          enlazaba. En su primera versión el enlace iba dentro del párrafo de
+          arriba, y el fundador no lo encontró: `a { color: inherit }` es la
+          regla global, y `.legal-updated` pinta su texto en `--ink-4`, así que
+          el enlace salía del mismo gris que la frase y sin subrayado. Va
+          aparte y con `.link-mini`, que es el estilo de enlace pequeño que ya
+          usa el resto del producto. */}
+      <p style={{ margin: "10px 0 32px" }}>
+        <a href="/feed.xml" className="link-mini">
+          Suscríbete por RSS
+        </a>
       </p>
       {BLOG_CLUSTERS.map((cluster) => {
         const posts = getPostsByCluster(cluster.key);
