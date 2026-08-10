@@ -4875,6 +4875,62 @@ de 5 minutos contra una copia que promete "un par de minutos".
 
 ---
 
+
+**Addendum rev.4 (2026-08-10) — la animación, rehecha.** La primera pasada por
+producción del fundador, en el móvil y sobre la fase de órbita, fue lapidaria:
+*«queda muy cutre… el cohete está parado, da la sensación de que la página está
+parada»*. El diagnóstico correcto no era el cohete: **un cohete en órbita se
+mueve, lo que estaba congelada era la cámara**. rev.3 dibujaba una escena
+correcta y quieta, y una pantalla que se queda abierta dos o cuatro minutos
+durante el primer escaneo —la primera impresión del producto— leída como
+colgada.
+
+rev.4 (`docs/design-reference/scan-states-1/rev4-cohete-vivo.html`) no toca ni
+los cinco beats, ni el copy, ni los datos. Cambia la puesta en escena: cada
+beat tiene ahora movimiento ambiental continuo y el viaje entero recorre un
+arco de día a noche, de modo que la escena, y no el vehículo, es lo que vende
+el movimiento.
+
+- **rampa** — vapor venteando en las toberas, dos capas de nubes cruzando a
+  distinta velocidad, balizas de torre parpadeando desfasadas, chequeo de
+  sistemas en la ventanilla. El cohete es lo único quieto, que es lo que lo
+  hace leer como *retenido* y no como congelado.
+- **ignición** — humo rodando por la plataforma hacia ambos lados, resplandor
+  pulsante bajo las toberas, chispas y medio píxel de vibración del fuselaje.
+- **ascenso** — la velocidad la venden dos capas de nubes cayendo en paralaje
+  (la cercana pasa POR DELANTE del cohete, que es lo que hace legible el
+  paralaje) más líneas de aire.
+- **órbita** — el truco de cámara: el cohete sólo cabecea y suelta micro-impulsos
+  de maniobra mientras se mueve **el entorno** — estrellas en paralaje, la Tierra
+  girando debajo, una estrella fugaz cada 13 s — y los paquetes de datos fluyen
+  de la bodega abierta al anillo.
+- **entrega** — el anillo completo respira mientras chispas convergen al núcleo.
+
+**La regla de datos no se movió ni un milímetro, y es lo que hace legítimo todo
+lo anterior:** sólo la altitud del ascenso y la fracción del anillo codifican
+información real. Estrellas, nubes, humo, vapor, chispas, paquetes y Tierra son
+decorado y corren a ritmo constante, sin estado de inicio ni de fin,
+precisamente para que ninguno pueda leerse como progreso. Sin total conocido el
+anillo pasa a arco indeterminado girando en vez de inventar una posición — el
+único sitio donde un spinner es honesto, porque el progreso de verdad se
+desconoce.
+
+Decisiones técnicas que conviene no deshacer: una escena por beat en vez de una
+escena que muta (el cielo cambia de día a noche a lo largo de la misión y una
+sola escena no puede expresarlo), con remontado por `key` y fundido de entrada;
+sólo `transform`/`opacity` (composición en GPU, sin layout ni filtros animados)
+porque esto vive minutos en un móvil; y bajo `prefers-reduced-motion` cada
+escena descansa en un fotograma quieto **y completo** — lo que sólo existe en
+vuelo (vapor, chispas, paquetes, impulsos) se oculta en vez de congelarse, que
+es lo que evita que el fotograma parezca un fallo de renderizado.
+
+Verificado con Chromium contra el componente real montado en una ruta temporal
+de Next: las cinco escenas más la variante indeterminada a 375 y 1280 px, y
+pares de fotogramas de la órbita separados 4 s que demuestran el desplazamiento
+de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
+por la razón de siempre: el proyecto piloto tiene historial, así que
+`isFirstScan` es `false` y el cohete no llega a montarse nunca.
+
 ---
 
 ## Cómo mantener este documento

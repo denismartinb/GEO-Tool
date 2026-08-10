@@ -4387,41 +4387,132 @@ a.notif-row:hover {
 /* ============================================================
    ONBOARDING-ROCKET-1 — first-scan mission (components/scan-mission-rocket.tsx,
    components/scan-mission-band.tsx). Reference:
-   docs/design-reference/scan-states-1/rev3-cohete-secuencia.html.
-   Only altitude (.mrk-glide's transform) and the órbita ring are bound to a
-   real fraction; everything else here (marks, flame flicker, plume) is
-   ambient and is switched off entirely under reduced motion below.
+   docs/design-reference/scan-states-1/rev4-cohete-vivo.html.
+
+   rev.4 (2026-08-10) replaced rev.3's staging after the founder saw it in
+   production on a phone: "el cohete está parado, da la sensación de que la
+   página está parada". The rocket was never the problem — the frozen
+   environment was. A rocket in orbit moves; it is the camera that makes it
+   look still. So every beat now carries continuous ambient motion, and the
+   scene, not the vehicle, is what sells it.
+
+   THE DATA RULE, unchanged and load-bearing: only the ascent altitude
+   (`.mrk-glide`'s transform) and the órbita ring fraction encode real data.
+   Stars, clouds, smoke, steam, packets and Earth are decoration and must
+   never read as progress — an invented indicator is exactly the fake
+   progress CLAUDE.md forbids.
+
+   Everything animates on transform/opacity only (compositor-friendly, no
+   layout, no animated filters) because this screen stays open for minutes on
+   a phone. Under `prefers-reduced-motion` every scene rests on a calm,
+   COMPLETE still: elements that only exist mid-flight (steam, sparks,
+   packets, thruster blips) are hidden rather than frozen mid-air, which is
+   what stops the still from looking broken.
    ============================================================ */
 .mrk-wrap { display: grid; place-items: center; min-height: 70vh; padding: 40px 20px; text-align: center; }
 .mrk-stage { width: 100%; max-width: 420px; }
-.mrk-sky { display: block; width: 100%; height: auto; overflow: visible; }
-.mrk-marks { stroke: var(--brand-line); stroke-width: 1; stroke-dasharray: 2 6; }
-.mrk-pad { fill: var(--brand-line-soft); }
-.mrk-pad-line { fill: var(--brand-line); }
-.mrk-tower { fill: var(--brand-line); }
-.mrk-glide { transition: transform .6s cubic-bezier(.22, .8, .28, 1); }
+.mrk-sky { display: block; width: 100%; height: auto; }
+.mrk-copy { max-width: 420px; margin-top: 28px; }
+.mrk-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--brand-blue); }
+.mrk-title { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -.03em; margin: 8px 0 0; line-height: 1.15; }
+.mrk-sub { font-size: 14px; line-height: 1.6; color: var(--ink-3); margin: 8px 0 0; }
+.mrk-joke { font-size: 12.5px; color: var(--ink-4); font-style: italic; margin: 10px 0 0; }
+
+/* A beat change swaps the whole scene (the sky itself travels from day to
+   night across the mission), so the new one fades in rather than hard-cutting. */
+.mrk-scene { animation: mrkSceneIn .5s ease-out both; }
+
+/* ---- motion system. Seamless wraps duplicate their content at exactly
+   +400px (x) or −280px (y), which is the viewBox span in that axis. ---- */
+@keyframes mrkSceneIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mrkDriftX { to { transform: translateX(-400px); } }
+@keyframes mrkFall { to { transform: translateY(280px); } }
+@keyframes mrkTwinkle { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes mrkFlick { from { transform: scaleY(.86) scaleX(1.04); } to { transform: scaleY(1.1) scaleX(.94); } }
+@keyframes mrkPuff { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 14% { opacity: .55; } 100% { transform: translate(-10px, -30px) scale(1.5); opacity: 0; } }
+@keyframes mrkSmokeL { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 10% { opacity: .75; } 100% { transform: translate(-52px, -12px) scale(1.9); opacity: 0; } }
+@keyframes mrkSmokeR { 0% { transform: translate(0, 0) scale(.4); opacity: 0; } 10% { opacity: .75; } 100% { transform: translate(52px, -12px) scale(1.9); opacity: 0; } }
+@keyframes mrkShake { 0% { transform: translate(0, 0); } 25% { transform: translate(.6px, -.4px); } 50% { transform: translate(-.5px, .4px); } 75% { transform: translate(.4px, .5px); } 100% { transform: translate(0, 0); } }
+@keyframes mrkGlow { 0%, 100% { opacity: .4; } 50% { opacity: .9; } }
+@keyframes mrkSpark { 0% { transform: translate(0, 0); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes mrkBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mrkSway { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+@keyframes mrkPacket { 0% { transform: translateX(0); opacity: 0; } 10% { opacity: 1; } 82% { opacity: 1; } 100% { transform: translateX(112px); opacity: 0; } }
+@keyframes mrkThrust { 0%, 84%, 100% { opacity: 0; } 88%, 93% { opacity: .85; } }
+@keyframes mrkShoot { 0%, 86% { opacity: 0; transform: translate(0, 0); } 88% { opacity: .9; } 93%, 100% { opacity: 0; transform: translate(130px, 64px); } }
+@keyframes mrkBreathe { 0%, 100% { transform: scale(1); opacity: .3; } 50% { transform: scale(1.06); opacity: .75; } }
+@keyframes mrkConverge { 0% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; } 18% { opacity: .9; } 100% { transform: translate(0, 0) scale(.3); opacity: 0; } }
+@keyframes mrkSpin { to { transform: rotate(360deg); } }
+@keyframes mrkBeacon { 0%, 68%, 100% { opacity: .15; } 76%, 86% { opacity: 1; } }
+@keyframes mrkWinPulse { 0%, 100% { opacity: 0; } 50% { opacity: .55; } }
+@keyframes mrkRingPop { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+
+/* shared */
+.mrk-tw { animation: mrkTwinkle 3.4s ease-in-out infinite; }
+.mrk-tw.s2 { animation-duration: 4.6s; animation-delay: -1.2s; }
+.mrk-tw.s3 { animation-duration: 2.8s; animation-delay: -2s; }
+.mrk-flame { transform-origin: center top; transform-box: fill-box; animation: mrkFlick .16s steps(2, end) infinite alternate; fill: var(--brand-blue-2); }
+.mrk-flame.f2 { animation-duration: .13s; fill: var(--brand-cyan); }
+.mrk-flame.f3 { animation-duration: .19s; }
 .mrk-hull { fill: var(--brand-ink); }
-.mrk-hull-shade { fill: var(--brand-ink-2); }
+.mrk-hull-shade { fill: #1B2B45; }
+.mrk-hull-dark { fill: #122036; }
+.mrk-hull-dark-shade { fill: #22385A; }
 .mrk-window { fill: var(--brand-canvas); }
 .mrk-fin { fill: var(--brand-blue); }
 .mrk-nozzle { fill: var(--brand-ink-2); }
-.mrk-plume { opacity: 0; transition: opacity .3s ease; }
-.mrk-plume.on { opacity: 1; }
-.mrk-flame { opacity: 0; transition: opacity .2s ease; }
-.mrk-flame.on { opacity: 1; }
-.mrk-flame-a, .mrk-flame-b { fill: var(--brand-blue-2); transform-origin: center top; animation: mrkFlick .16s steps(2, end) infinite alternate; }
-.mrk-flame-b { fill: var(--brand-cyan); animation-duration: .13s; }
-@keyframes mrkFlick { from { transform: scaleY(.86) scaleX(1.04); } to { transform: scaleY(1.1) scaleX(.94); } }
-.mrk-ring-track { stroke: var(--brand-line); }
-.mrk-ring-fill { stroke: var(--brand-blue); stroke-linecap: round; transition: stroke-dashoffset .5s ease-out; }
-.mrk-copy { max-width: 420px; margin-top: 28px; }
-.mrk-eyebrow { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--brand-blue); }
-.mrk-title { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -.03em; margin: 8px 0 0; }
-.mrk-sub { font-size: 14px; line-height: 1.6; color: var(--ink-3); margin: 8px 0 0; }
-.mrk-joke { font-size: 12.5px; color: var(--ink-4); font-style: italic; margin: 10px 0 0; }
+.mrk-beacon { animation: mrkBeacon 3.8s linear infinite; }
+.mrk-winpulse { animation: mrkWinPulse 3.6s ease-in-out infinite; }
+
+/* rampa */
+.mrk-clouds-slow { animation: mrkDriftX 74s linear infinite; }
+.mrk-clouds-slower { animation: mrkDriftX 118s linear infinite; }
+.mrk-puff { transform-box: fill-box; transform-origin: center; animation: mrkPuff 5.2s ease-out infinite; }
+
+/* ignición */
+.mrk-shake { animation: mrkShake .18s steps(2, end) infinite; }
+.mrk-glow { animation: mrkGlow .5s steps(2, end) infinite; }
+.mrk-smoke-l { transform-box: fill-box; transform-origin: center; animation: mrkSmokeL 2.8s ease-out infinite; }
+.mrk-smoke-r { transform-box: fill-box; transform-origin: center; animation: mrkSmokeR 2.8s ease-out infinite; }
+.mrk-spark { animation: mrkSpark 1.3s ease-out infinite; }
+
+/* ascenso — .mrk-glide is the ONLY altitude carrier and stays bound to done/total */
+.mrk-glide { transition: transform .6s cubic-bezier(.22, .8, .28, 1); }
+.mrk-fall-near { animation: mrkFall 3.4s linear infinite; }
+.mrk-fall-far { animation: mrkFall 7.5s linear infinite; }
+.mrk-fall-lines { animation: mrkFall 1.15s linear infinite; }
+.mrk-sway { transform-box: fill-box; transform-origin: center; animation: mrkSway 5.2s ease-in-out infinite; }
+
+/* órbita */
+.mrk-stars-1 { animation: mrkDriftX 70s linear infinite; }
+.mrk-stars-2 { animation: mrkDriftX 115s linear infinite; }
+.mrk-earthspin { animation: mrkDriftX 130s linear infinite; }
+.mrk-bob { animation: mrkBob 6s ease-in-out infinite; }
+.mrk-bob.d2 { animation-duration: 7s; animation-delay: -2.4s; }
+.mrk-packet { animation: mrkPacket 2.6s linear infinite; }
+.mrk-packet.p2 { animation-delay: .85s; }
+.mrk-packet.p3 { animation-delay: 1.7s; }
+.mrk-thrust { animation: mrkThrust 6.5s linear infinite; }
+.mrk-thrust.t2 { animation-delay: -3.1s; }
+.mrk-shoot { animation: mrkShoot 13s linear infinite; }
+.mrk-spin { transform-box: fill-box; transform-origin: center; animation: mrkSpin 1.4s linear infinite; }
+.mrk-ring-track { stroke: #22395C; }
+.mrk-ring-fill { stroke: var(--brand-blue-2); stroke-linecap: round; transition: stroke-dashoffset .5s ease-out; }
+.mrk-ringpop { animation: mrkRingPop 3.2s ease-in-out infinite; }
+
+/* entrega */
+.mrk-breathe { transform-box: fill-box; transform-origin: center; animation: mrkBreathe 3.2s ease-in-out infinite; }
+.mrk-converge { animation: mrkConverge 2.4s ease-in infinite; }
+.mrk-converge.c2 { animation-delay: .6s; }
+.mrk-converge.c3 { animation-delay: 1.2s; }
+.mrk-converge.c4 { animation-delay: 1.8s; }
+
 @media (prefers-reduced-motion: reduce) {
-  .mrk-glide, .mrk-plume, .mrk-flame, .mrk-ring-fill { transition: none; }
-  .mrk-flame-a, .mrk-flame-b { animation: none; }
+  .mrk-wrap *, .mrk-wrap { animation: none !important; transition: none !important; }
+  /* Hidden, not frozen: these only exist mid-flight, so a stopped frame of
+     them reads as a rendering bug rather than as a still scene. */
+  .mrk-puff, .mrk-spark, .mrk-shoot, .mrk-thrust, .mrk-converge,
+  .mrk-packet.p2, .mrk-packet.p3 { opacity: 0 !important; }
 }
 
 /* The compact half of the mission — Visión general only, post-traspaso. */
