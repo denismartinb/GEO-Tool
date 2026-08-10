@@ -108,4 +108,11 @@ worse than no rule, because a future session will obey it anyway.
   toward the current shipped behaviour (sampling ON) on any failure — the
   opposite fail direction from the web-audit halves (migration 0031), which
   read toward OFF because failing there only skips one audit, never a scan
-  (`docs/brand/design-decisions-log.md` §53).
+  (`docs/brand/design-decisions-log.md` §53). The per-engine switches
+  (ENGINE-DEBUG-TOGGLE-1, migration 0033) read the same way, in `executor.ts`
+  as well as `run-creation.ts`, for the same reason — but unlike sampling,
+  the empty result is also a correctness bug, not just an imprecise score:
+  zero engines is zero LLM calls and a `total_prompts` stuck at 0, the exact
+  fake-scan shape "no mute rows" already forbids. Both call sites reject
+  outright (`no_engines_enabled`) rather than create or run that scan
+  (`docs/brand/design-decisions-log.md` §54).

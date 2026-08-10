@@ -607,9 +607,46 @@ export async function executePendingScan({
     .eq("id", project.owner_user_id as string)
     .maybeSingle();
   const plan = resolvePlan(ownerProfile?.current_plan as string | undefined);
-  const providers = resolveScanProvidersForPlan(plan);
+
+  /**
+   * `engine_{gemini,claude,openai}_enabled` (ENGINE-DEBUG-TOGGLE-1, migration
+   * 0033), re-read HERE rather than carried in `run` from creation time — same
+   * "re-read at execution, don't freeze at enqueue" rule WEB-AUDIT-AUTO-SPLIT-1
+   * established for its audit-half switches: a batch executed later than
+   * creation must see whatever the founder's switches say NOW, not what they
+   * said when the run was created. Isolated query for the same reason as
+   * `run-creation.ts`'s: the select above (`project`) is on the execution
+   * critical path, and a column PostgREST doesn't know about must not fail it.
+   */
+  const { data: engineFlagsRow } = await service
+    .from("projects")
+    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  const enabledEngines: LLMScanProvider[] | undefined = engineFlagsRow
+    ? (
+        [
+          engineFlagsRow.engine_gemini_enabled !== false ? "gemini" : null,
+          engineFlagsRow.engine_claude_enabled !== false ? "claude" : null,
+          engineFlagsRow.engine_openai_enabled !== false ? "openai" : null
+        ].filter(Boolean) as LLMScanProvider[]
+      )
+    : undefined;
+
+  const providers = resolveScanProvidersForPlan(plan, enabledEngines);
 
   try {
+    // Same fake-scan guard as `createPendingScanRunCore` — see its comment.
+    // Reachable here only if every engine was switched off strictly between
+    // this run's creation and this batch executing. Thrown INSIDE this `try`,
+    // not before it, so the `catch` below marks the run `failed` with a real
+    // `error_summary` instead of leaving it `pending`/`running` for
+    // `reconcileStuckScanRuns` to notice only once its timeout elapses.
+    if (providers.length === 0) {
+      throw new ProjectActionError("no_engines_enabled");
+    }
+
     if (isFirstBatch && startJob) {
       await service
         .from("jobs")

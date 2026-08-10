@@ -63,7 +63,20 @@ export function getLLMScanProviders(): LLMScanProvider[] {
  * `createPendingScanRunCore` (which sizes the sampling) resolve the engine
  * set through this one function, so the count the repetitions were computed
  * from cannot drift from the count actually executed.
+ *
+ * `enabledEngines` (ENGINE-DEBUG-TOGGLE-1, migration 0033) narrows the set
+ * further, before the plan cap is applied — never widens it. Filtering first
+ * matters: a Free project (cap 1) that only enabled Claude/OpenAI must land
+ * on Claude, not on an empty set from capping the unfiltered list down to
+ * Gemini before the filter ever saw it. `undefined` means "no project
+ * override was read" and changes nothing, so every existing call site keeps
+ * today's behaviour without passing the new argument.
  */
-export function resolveScanProvidersForPlan(plan: Plan): LLMScanProvider[] {
-  return getLLMScanProviders().slice(0, plan.caps.engines);
+export function resolveScanProvidersForPlan(
+  plan: Plan,
+  enabledEngines?: readonly LLMScanProvider[]
+): LLMScanProvider[] {
+  const configured = getLLMScanProviders();
+  const filtered = enabledEngines ? configured.filter((p) => enabledEngines.includes(p)) : configured;
+  return filtered.slice(0, plan.caps.engines);
 }

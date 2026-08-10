@@ -25,7 +25,16 @@ export const feedbackErrorMessages: Record<string, string> = {
   sampling_update_failed: "No se ha podido actualizar el suelo de muestreo. Vuelve a intentarlo.",
   sampling_migration_pending:
     "El suelo de muestreo todavía no se puede desactivar: falta aplicar la migración 0032 en Supabase.",
+  engine_toggle_update_failed: "No se ha podido actualizar el motor. Vuelve a intentarlo.",
+  engine_toggle_migration_pending:
+    "Los motores todavía no se pueden activar/desactivar por separado: falta aplicar la migración 0033 en Supabase.",
+  // Sin "vuelve a intentarlo": no es un fallo transitorio, es la única
+  // combinación que este control rechaza a propósito — un escaneo sin ningún
+  // motor no es más barato, es un escaneo vacío (CLAUDE.md, "no fake scans").
+  engine_toggle_requires_one_active:
+    "No puedes apagar el último motor activo. Al menos uno tiene que quedar encendido para poder escanear.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
+  no_engines_enabled: "Este dominio no tiene ningún motor de IA activado. Activa al menos uno en /debug antes de escanear.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
   unauthorized: "No tienes permisos para realizar esta acción.",
   unexpected_error: "Ha ocurrido un error inesperado. Vuelve a intentarlo."
@@ -54,5 +63,14 @@ export const feedbackSuccessMessages: Record<string, string> = {
   // SAMPLING-DEBUG-TOGGLE-1: apagarlo deja el próximo escaneo en una sola
   // pasada por su set de prompts, sin intentar llegar a 50 respuestas.
   sampling_enabled: "Suelo de muestreo activado. Los próximos escaneos repetirán su set de prompts hasta llegar a 50 respuestas.",
-  sampling_disabled: "Suelo de muestreo desactivado. Los próximos escaneos harán una sola pasada por su set de prompts."
+  sampling_disabled: "Suelo de muestreo desactivado. Los próximos escaneos harán una sola pasada por su set de prompts.",
+  // ENGINE-DEBUG-TOGGLE-1: una clave por motor, igual que las dos mitades de
+  // auditoría — el fundador necesita saber cuál tocó, no solo que "un motor"
+  // cambió.
+  engine_gemini_enabled: "Gemini activado. Los próximos escaneos volverán a incluirlo.",
+  engine_gemini_disabled: "Gemini desactivado. Los próximos escaneos no lo usarán.",
+  engine_claude_enabled: "Claude activado. Los próximos escaneos volverán a incluirlo.",
+  engine_claude_disabled: "Claude desactivado. Los próximos escaneos no lo usarán.",
+  engine_openai_enabled: "OpenAI activado. Los próximos escaneos volverán a incluirlo.",
+  engine_openai_disabled: "OpenAI desactivado. Los próximos escaneos no lo usarán."
 };
