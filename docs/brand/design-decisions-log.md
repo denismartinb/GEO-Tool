@@ -5270,6 +5270,92 @@ misma familia.
 
 ---
 
+## 54. Un interruptor por motor, para escanear barato con uno solo (ENGINE-DEBUG-TOGGLE-1, 2026-08-10)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Dale al task intake").
+
+**El problema.** Un escaneo real reparte cada prompt entre los motores que el
+plan permite (hasta 3: Gemini, Claude, OpenAI) — comparar la visibilidad de
+una marca entre motores es el valor central del producto, no un extra. Pero
+para una prueba interna de 2-3 prompts eso significa 3 llamadas de LLM por
+prompt cuando bastaría con una, exactamente la misma clase de gasto evitable
+que ya resolvieron WEB-AUDIT-AUTO-SPLIT-1 (52) y SAMPLING-DEBUG-TOGGLE-1 (53)
+para la auditoría y el muestreo. El fundador pidió el mismo control para los
+motores: *"si quiero hacer pruebas económicas, puedo escanear dos o tres
+prompts, por ejemplo, solo en Gemini"*.
+
+### Decisiones y por qué
+
+- **Tres booleanos, por defecto `true` — al revés que la 52 y la 53, y a
+  propósito.** Migración 0033: `engine_gemini_enabled`,
+  `engine_claude_enabled`, `engine_openai_enabled`, todos `default true`. Las
+  dos fases anteriores defaultearon `false` porque el error caro era «gastar
+  una campaña no deseada» en un prelanzamiento sin clientes de pago. Aquí el
+  error caro es el contrario: comparar motores es la propuesta de valor real
+  del producto, así que un proyecto nuevo o existente que perdiera motores en
+  silencio sería una regresión, no un ahorro. `true` reproduce exactamente el
+  comportamiento ya desplegado — esta migración no cambia nada hasta que el
+  dueño de un proyecto apaga algo a mano.
+- **Filtrar antes de topar por plan, nunca al revés.** `resolveScanProvidersForPlan`
+  ahora acepta un segundo argumento opcional (el subconjunto habilitado) y
+  filtra la lista configurada por él ANTES de aplicar `plan.caps.engines`.
+  Si el orden fuera el inverso, un proyecto Free (tope 1) que sólo hubiera
+  habilitado Claude y OpenAI vería el tope quedarse con Gemini —el primero de
+  la lista sin filtrar— y el filtro lo vaciaría después a `[]`, dejando
+  habilitados dos motores que nunca se usan. `providers.test.ts` fija este
+  orden con un caso explícito.
+- **Las dos lecturas (creación y ejecución) van en consulta propia, fallan
+  ABIERTO, y por la misma razón que la 53.** `run-creation.ts` (dimensiona el
+  run) y `executor.ts` (lo ejecuta) leen las tres columnas cada uno en su
+  propia consulta, nunca fusionada en el select crítico que ya hacían — la
+  migración sin aplicar no puede romper la creación ni la ejecución de
+  ningún escaneo. `undefined` (columna ausente, lectura fallida, o
+  simplemente no leída) llega a `resolveScanProvidersForPlan` como «sin
+  anulación de proyecto», que es el comportamiento ya desplegado.
+- **`executor.ts` relee al ejecutar, no hereda lo que se leyó al crear** —
+  mismo invariante que la 52 estableció para las mitades de auditoría: un
+  run puede ejecutarse en un batch posterior a su creación, y tiene que ver
+  lo que diga el interruptor AHORA, no lo que decía cuando se creó.
+- **Aquí sí existe una combinación que rompe el producto, y es la novedad
+  frente a las dos fases anteriores: los tres motores apagados a la vez.**
+  Un escaneo sin ningún motor no es más barato, es un escaneo vacío —
+  `total_prompts` en 0, ningún `scan_prompt` job, exactamente la forma de
+  escaneo falso que `.claude/rules/scan.md` («no mute rows») y CLAUDE.md
+  («no fake scans») prohíben. Dos guardas, no una:
+  - **`setEngineEnabled` es la guarda primaria**: lee los otros dos flags
+    antes de escribir y rechaza apagar el último motor encendido con un
+    error específico (`engine_toggle_requires_one_active`), nunca «vuelve a
+    intentarlo» — apagar el mismo motor no cambiaría el resultado.
+  - **`run-creation.ts`/`executor.ts` son la defensa en profundidad**: si el
+    conjunto resuelto queda vacío de todos modos (dos pestañas apagando
+    motores distintos a la vez, o una migración aplicada sin este guardián),
+    ambos rechazan con `no_engines_enabled` en vez de crear o ejecutar un
+    run vacío. En `executor.ts` el rechazo ocurre DENTRO del `try` que ya
+    marca el run `failed` con un `error_summary` real — nunca antes, donde
+    el `catch` no lo vería y el run quedaría en `pending`/`running` hasta que
+    `reconcileStuckScanRuns` lo notara por timeout.
+  - El propio switch de `/debug` se deshabilita visualmente cuando es el
+    último encendido, para no ofrecer una acción que el servidor va a
+    rechazar igualmente — pero el guardián real es el servidor, no el
+    disabled del botón.
+- **Tres switches, no un array/jsonb.** `LLMScanProvider` es una unión cerrada
+  de exactamente tres motores conocidos — misma forma que los dos booleanos
+  de la 52. Un boolean por motor mantiene cada lectura en un `=== true`/
+  `!== false` plano, sin parsear JSON en el camino que además tiene que
+  fallar abierto.
+
+### Pendiente / roto conocido
+
+- **La migración 0033 hay que aplicarla a mano** en Supabase, después de la
+  0032. Hasta entonces `/debug` pinta «Sin migrar» y el backend mantiene los
+  tres motores activados en todos los dominios (comportamiento actual, sin
+  cambio).
+- **Sin piloto agéntico todavía**: mismo estado que la 52 y la 53 — los tres
+  interruptores viven en `/debug` y esta fase no se ha visto en un preview.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

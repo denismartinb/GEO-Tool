@@ -27,7 +27,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
-import { setAutoAuditHalf, setRecurringScans, setSamplingEnabled } from "../actions";
+import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
@@ -219,6 +219,40 @@ export default async function RunsPage({
     : samplingFlagRow?.sampling_enabled === true
     ? "on"
     : "off";
+
+  /* ENGINE-DEBUG-TOGGLE-1 — same "own query, own migration guard" shape as
+     auditFlagRow/samplingFlagRow above, for the same reason: migration 0033
+     is applied by hand and must never join the shared select.
+
+     Read direction is inverted from the two above, on purpose: those two
+     default OFF (`=== true` means "on"), these three default ON — so here
+     it's `!== false` that means "on", matching the fail-open reads in
+     run-creation.ts/executor.ts. */
+  const { data: engineFlagRow, error: engineFlagError } = await supabase
+    .from("projects")
+    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  type EngineState = "on" | "off" | "unavailable";
+  const engineGeminiState: EngineState = engineFlagError
+    ? "unavailable"
+    : engineFlagRow?.engine_gemini_enabled !== false
+    ? "on"
+    : "off";
+  const engineClaudeState: EngineState = engineFlagError
+    ? "unavailable"
+    : engineFlagRow?.engine_claude_enabled !== false
+    ? "on"
+    : "off";
+  const engineOpenaiState: EngineState = engineFlagError
+    ? "unavailable"
+    : engineFlagRow?.engine_openai_enabled !== false
+    ? "on"
+    : "off";
+  const enabledEngineCount = [engineGeminiState, engineClaudeState, engineOpenaiState].filter(
+    (s) => s === "on"
+  ).length;
 
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, sample_count, successful_prompts, failed_prompts, created_at, started_at, finished_at";
@@ -651,7 +685,7 @@ export default async function RunsPage({
           Bien para un dominio real, carísimo para una prueba interna de 2-3
           prompts. Apagado por defecto para poder lanzar esas pruebas sin
           forzar el gasto — pendiente revisar qué pasa cuando lleguen clientes
-          reales de pago (docs/brand/design-decisions-log.md §44). */}
+          reales de pago (docs/brand/design-decisions-log.md §53). */}
       <div className="card dbg-switch">
         <div className="dbg-switch-ico" data-on={samplingState === "on" ? "true" : "false"}>
           <Icon name="layers" size={17} />
@@ -689,6 +723,68 @@ export default async function RunsPage({
           </form>
         )}
       </div>
+
+      {/* ENGINE-DEBUG-TOGGLE-1 — un interruptor por motor (Gemini/Claude/
+          OpenAI), para poder lanzar un escaneo de prueba usando solo uno y
+          abaratarlo. Al revés que los tres switches de arriba, aquí SÍ existe
+          una combinación que rompe el producto: los tres apagados a la vez
+          dejarían un escaneo sin ningún motor que llamar. El guardián real
+          vive en `setEngineEnabled` (rechaza apagar el último activo) y en
+          `run-creation.ts`/`executor.ts` (rechazan crear/ejecutar un escaneo
+          sin motores); aquí sólo se deshabilita visualmente el último
+          interruptor encendido para no ofrecer una acción que el servidor va
+          a rechazar igualmente (docs/brand/design-decisions-log.md §54). */}
+      {(
+        [
+          { id: "gemini" as const, state: engineGeminiState, label: "Gemini" },
+          { id: "claude" as const, state: engineClaudeState, label: "Claude" },
+          { id: "openai" as const, state: engineOpenaiState, label: "OpenAI" }
+        ]
+      ).map(({ id, state, label }) => (
+        <div className="card dbg-switch" key={id}>
+          <div className="dbg-switch-ico" data-on={state === "on" ? "true" : "false"}>
+            <Icon name="bolt" size={17} />
+          </div>
+          <div className="dbg-switch-txt">
+            <b>Motor: {label}</b>
+            <small>
+              {state === "unavailable" ? (
+                <>
+                  Falta aplicar la migración <code>0033_project_engine_toggles.sql</code> en Supabase.
+                  Hasta entonces {label} sigue encendido en todos los dominios.
+                </>
+              ) : (
+                <>
+                  Si está apagado, los próximos escaneos de este dominio no llamarán a {label}. Al
+                  menos un motor tiene que quedar encendido.
+                </>
+              )}
+            </small>
+          </div>
+          {state === "unavailable" ? (
+            <span className="badge badge-neutral">Sin migrar</span>
+          ) : (
+            <form action={setEngineEnabled}>
+              <input type="hidden" name="projectId" value={projectId} />
+              <input type="hidden" name="engine" value={id} />
+              <input type="hidden" name="enabled" value={state === "on" ? "false" : "true"} />
+              <button
+                type="submit"
+                className={`switch-toggle ${state === "on" ? "on" : ""}`}
+                role="switch"
+                aria-checked={state === "on"}
+                aria-label={`Motor: ${label}`}
+                disabled={state === "on" && enabledEngineCount <= 1}
+                title={
+                  state === "on" && enabledEngineCount <= 1
+                    ? "Al menos un motor tiene que quedar encendido"
+                    : undefined
+                }
+              />
+            </form>
+          )}
+        </div>
+      ))}
 
       {/* DOMAINS-REDESIGN-1: el borrado duro del dominio (DATA-MGMT-1) vivía en
           cada tarjeta de la rejilla de Escaneos. La rejilla se fue a Dominios,

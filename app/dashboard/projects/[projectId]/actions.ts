@@ -486,6 +486,99 @@ export async function setSamplingEnabled(formData: FormData) {
   redirect(`/dashboard/projects/${projectId}/debug?success=sampling_${enabled ? "enabled" : "disabled"}`);
 }
 
+/**
+ * ENGINE-DEBUG-TOGGLE-1 — per-project, per-engine switch (Gemini/Claude/
+ * OpenAI) so a test scan can be restricted to a subset of engines. Same
+ * validated-form shape as the switches above.
+ *
+ * One asymmetry from every other switch on this page, and it is the whole
+ * point of this guard: this is the only one of the four debug switches whose
+ * "off" position can make a scan produce nothing. Recurring scans and the two
+ * audit halves can all be off simultaneously and the product just does less
+ * work; zero engines enabled makes `createPendingScanRunCore` and
+ * `executePendingScan` reject outright (`no_engines_enabled`,
+ * `lib/scan/run-creation.ts`) rather than create or run an empty scan. This
+ * action is the primary guard that keeps that state from ever being reached
+ * by the UI: it reads the other two flags before writing, and refuses to turn
+ * off the last engine still on.
+ */
+const engineToggleSchema = recurringScansSchema.extend({
+  engine: z.enum(["gemini", "claude", "openai"])
+});
+
+const ENGINE_TOGGLE_COLUMN = {
+  gemini: "engine_gemini_enabled",
+  claude: "engine_claude_enabled",
+  openai: "engine_openai_enabled"
+} as const;
+
+export async function setEngineEnabled(formData: FormData) {
+  const parsed = engineToggleSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled"),
+    engine: formData.get("engine")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId, engine } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  if (!enabled) {
+    const { data: currentFlags, error: readError } = await supabase
+      .from("projects")
+      .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+      .eq("id", projectId)
+      .eq("owner_user_id", user.id)
+      .maybeSingle();
+
+    if (readError) {
+      const missingColumn = readError.code === "42703" || readError.code === "PGRST204";
+      redirect(
+        `/dashboard/projects/${projectId}/debug?error=${
+          missingColumn ? "engine_toggle_migration_pending" : "engine_toggle_update_failed"
+        }`
+      );
+    }
+
+    // Fail-open reading (undefined -> `!== false` -> counted as enabled),
+    // same as every read of these columns elsewhere: a project this action
+    // cannot even see yet (columns not migrated) must not be told it is
+    // trying to turn off "the last engine" when it might not be.
+    const otherEnginesStillOn = (["gemini", "claude", "openai"] as const)
+      .filter((id) => id !== engine)
+      .some((id) => currentFlags?.[ENGINE_TOGGLE_COLUMN[id]] !== false);
+
+    if (!otherEnginesStillOn) {
+      redirect(`/dashboard/projects/${projectId}/debug?error=engine_toggle_requires_one_active`);
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ [ENGINE_TOGGLE_COLUMN[engine]]: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "engine_toggle_migration_pending" : "engine_toggle_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=engine_${engine}_${enabled ? "enabled" : "disabled"}`);
+}
+
 export type AutoExecuteScanStatus = "idle" | "running" | "done";
 
 /**
