@@ -35,11 +35,16 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   corre en **todos los planes** porque no gasta LLM y porque su nota es un
   componente del GeoScore (ADR 0033): gatearla hacía que el número principal
   midiera distinto número de componentes según el plan.
-- **Un plan sin cobertura no está «Parcial».** Cualquier superficie que informe
-  del estado de una auditoría tiene que distinguir *falta una mitad* de *esa
-  mitad no está en tu plan* (`coverageIncludedInPlan`,
-  `lib/web-audit/run-audit-status.ts`). Etiquetar lo segundo como lo primero
-  marca un defecto permanente donde no falta nada.
+- **Una mitad que no se esperaba no deja la auditoría «Parcial».** Cualquier
+  superficie que informe del estado de una auditoría tiene que distinguir
+  *falta una mitad* de *esa mitad no se pidió* (`coverageExpected` /
+  `technicalExpected`, `lib/web-audit/run-audit-status.ts`). Etiquetar lo
+  segundo como lo primero marca un defecto permanente donde no falta nada. Dos
+  motivos, y a esa función le da igual cuál: el plan no incluye la cobertura
+  (ADR 0035) o el dueño apagó esa mitad (WEB-AUDIT-AUTO-SPLIT-1, migración
+  0031). Los llamadores los combinan con AND. El parámetro se llamó
+  `coverageIncludedInPlan` hasta que apareció el segundo motivo y el nombre
+  dejó de describir la pregunta.
 - **Los límites son gasto real**: 5/día/proyecto para cobertura, presupuesto
   propio y separado para la auditoría técnica.
 - **Presupuesto ADR 0003**: todo corre síncrono bajo `maxDuration = 60`.
@@ -50,6 +55,37 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   almacena ni se renderiza jamás.
 - **RLS**: lecturas con el cliente de usuario; cualquier escritura con
   service-role prueba propiedad antes con el cliente de usuario.
+
+### Las dos mitades tienen interruptor propio, y por defecto están apagadas
+
+WEB-AUDIT-AUTO-SPLIT-1 (migración 0031) sustituye el interruptor único de la
+0030 por uno por mitad: `auto_coverage_audit_enabled` y
+`auto_technical_audit_enabled`, los dos `default false`. Un control único
+obligaba a elegir entre *pagar grounding en este dominio* y *perder un
+componente del GeoScore*, que no son la misma decisión (coste medido:
+`docs/llm-cost-analysis-2026-08.md`).
+
+Consecuencias, y son reglas:
+
+- **Leer los flags falla CERRADO**, al revés que la 0030. Con defecto `true`,
+  una lectura fallida tenía que significar «córrelo» o un error transitorio
+  paraba todas las auditorías de forma invisible. Con defecto `false` el error
+  caro es el contrario: gastar una campaña que el fundador apagó. Comparar con
+  `=== true`, nunca con `!== false` — es lo que hace que una migración sin
+  aplicar (columna ausente → `undefined`) caiga en «apagado».
+- **Los flags se releen al ejecutar, no se llevan en `payload_json`.** Un job
+  puede esperar un ciclo de backoff entero, y un control que dice «detiene la
+  próxima auditoría» tiene que cumplirlo. Viajan en la misma fila que
+  `loadProjectContext` ya carga para `owner_user_id`/`domain`, así que no
+  cuestan consulta.
+- **Una mitad apagada nunca aparca una continuación.** No hay nada a lo que
+  volver: aparcar re-despacharía el job hasta el tope de continuaciones sin
+  lograr nada — la misma trampa que ADR 0035 documentó para la cobertura sin
+  plan. Por eso el interruptor técnico se comprueba **antes** del reserve de
+  presupuesto, no después.
+- **`auto_web_audit_enabled` (0030) sigue en el esquema y ya no lo lee nadie.**
+  No es un respaldo: no reintroducir lecturas. Se dejó porque tirar una columna
+  es un cambio destructivo con su propia aprobación.
 
 ## Excepción registrada: la auditoría automática tras escaneo
 

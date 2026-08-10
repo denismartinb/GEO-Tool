@@ -21,7 +21,7 @@ export const feedbackErrorMessages: Record<string, string> = {
   // Sin "vuelve a intentarlo" a propósito: reintentar no crea una columna. Dice
   // qué hay que hacer y quién puede hacerlo.
   auto_audit_migration_pending:
-    "La auditoría automática todavía no se puede configurar por dominio: falta aplicar la migración 0030 en Supabase.",
+    "La auditoría automática todavía no se puede configurar por mitades: falta aplicar la migración 0031 en Supabase.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
   unauthorized: "No tienes permisos para realizar esta acción.",
@@ -35,9 +35,17 @@ export const feedbackSuccessMessages: Record<string, string> = {
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno.",
   recurring_enabled: "Escaneo automático diario activado. Este dominio se escaneará cada día.",
   recurring_disabled: "Escaneo automático diario desactivado.",
-  auto_audit_enabled: "Auditoría automática activada. Este dominio se auditará tras cada escaneo.",
-  // Says "los próximos", not "las auditorías": a job already queued still runs
-  // (see setAutoWebAudit) and promising otherwise would be a lie the user could
-  // catch on the very next page load.
-  auto_audit_disabled: "Auditoría automática desactivada. No se auditarán los próximos escaneos de este dominio."
+  // WEB-AUDIT-AUTO-SPLIT-1: una clave por mitad. Cada texto dice qué mitad y
+  // qué cuesta, porque el fundador las apaga por coste y las dos no cuestan lo
+  // mismo: la cobertura son llamadas a Gemini, la técnica no gasta LLM.
+  audit_coverage_enabled:
+    "Cobertura por IA activada. Tras cada escaneo se consultará a Gemini por cada prompt de este dominio.",
+  // Dice "los próximos", no "las auditorías": una mitad ya en vuelo dentro de
+  // una invocación viva termina, y prometer lo contrario sería una mentira que
+  // el usuario puede cazar en la siguiente carga de página.
+  audit_coverage_disabled: "Cobertura por IA desactivada. No se consultará a Gemini en los próximos escaneos.",
+  audit_technical_enabled:
+    "Auditoría técnica activada. Se revisará la salud técnica de la web tras cada escaneo (no gasta IA).",
+  audit_technical_disabled:
+    "Auditoría técnica desactivada. Deja de actualizarse su componente del GeoScore en los próximos escaneos."
 };

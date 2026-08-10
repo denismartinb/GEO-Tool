@@ -4538,6 +4538,76 @@ de producción.
 
 ---
 
+## 43. La auditoría automática se parte en dos interruptores, ambos apagados (WEB-AUDIT-AUTO-SPLIT-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Aprobado").
+
+**El problema.** La 0030 dio un interruptor único por dominio para la auditoría
+automática tras escaneo. Pero esa auditoría son dos mitades con coste opuesto
+(ADR 0035): la **cobertura** son llamadas de grounding a Gemini, una por prompt
+activo, sólo Pro/Agencia; la **técnica** no gasta LLM y su nota es un
+componente del GeoScore (ADR 0033). Con un control único, apagar el gasto
+obligaba a perder también la nota — dos decisiones distintas que nunca
+debieron compartir interruptor. Salió al desglosar el coste real de LLM
+(`docs/llm-cost-analysis-2026-08.md`), donde la auditoría automática apareció
+como gasto de grounding que se dispara tras **cada** escaneo en Pro+ sin pasar
+por el límite de 5/día que sí protege el botón manual.
+
+### Decisiones y por qué
+
+- **Por defecto apagadas las dos, invirtiendo la 0030.** La 0030 puso `default
+  true` precisamente para que aplicarla no apagara auditorías en silencio; ese
+  razonamiento era correcto entonces y no aplica ahora. El fundador pidió las
+  dos apagadas por defecto y ese mismo día apagó los 44 proyectos existentes a
+  mano por SQL. `false` no es un cambio de comportamiento aquí: es el estado en
+  el que ya está producción, hecho duradero para los proyectos que se creen a
+  partir de ahora. Con el `default true` anterior, **cada proyecto nuevo volvía
+  a armar la auditoría en silencio** — que es exactamente el agujero que dejaba
+  la barrida por SQL.
+- **No se hereda el valor de la columna vieja.** Por lo mismo: el valor honesto
+  de cada fila hoy es «apagado», que es lo que da el `default`. Heredar habría
+  reactivado los proyectos que no se hubieran barrido.
+- **Leer falla CERRADO**, al revés que la 0030. Con defecto `false`, «no pude
+  leer los flags» y «los flags están apagados» significan lo mismo en la
+  práctica, y el error caro pasa a ser el otro. Coste asumido y dicho: un fallo
+  transitorio de lectura se salta una auditoría, que recuperan el siguiente
+  escaneo o el backfill diario.
+- **Los flags se releen al ejecutar el job, no se congelan al encolarlo.** Un
+  job puede esperar un ciclo de backoff entero; un control que promete «detiene
+  la próxima auditoría» tiene que cumplirlo. No cuesta consulta: viajan en la
+  fila que `loadProjectContext` ya cargaba.
+- **El interruptor técnico se comprueba antes del reserve de presupuesto.** Al
+  revés, un job con la técnica apagada se aparcaría esperando hueco para algo
+  que nunca va a correr, re-despachándose hasta el tope de continuaciones — la
+  trampa que ADR 0035 ya documentó para la cobertura sin plan.
+- **`deriveRunAuditStatus` pasa de una pregunta a dos.** `coverageIncludedInPlan`
+  se renombra a `coverageExpected` y aparece `technicalExpected`: una mitad
+  apagada a mano no deja la auditoría «Parcial», igual que no la dejaba una
+  cobertura fuera de plan. El renombrado es deliberado —el nombre viejo había
+  dejado de describir la pregunta— y el typecheck obligó a revisar cada
+  llamador, que era el objetivo.
+- **`setAutoWebAudit` se elimina, no se deja al lado.** Escribía la columna que
+  esta fase retira; un control que sigue escribiendo algo que nadie lee es peor
+  que ningún control. Lo sustituye `setAutoAuditHalf`, parametrizado por mitad.
+- **Copy por mitad, no genérico.** Cada texto dice qué mitad y qué cuesta,
+  porque el fundador las apaga por coste y las dos no cuestan lo mismo.
+
+### Pendiente / roto conocido
+
+- **La migración 0031 hay que aplicarla a mano** en Supabase, como todas las de
+  este repo. Hasta entonces `/debug` pinta «Sin migrar» en vez de ofrecer un
+  interruptor que no puede funcionar (lección de la 0030, reportada por el
+  fundador desde el móvil el 2026-08-05), y el backend no audita nada.
+- **`auto_web_audit_enabled` queda en el esquema sin lector.** Tirarla es un
+  cambio destructivo con su propia aprobación; una fase futura puede hacerlo
+  cuando ésta lleve tiempo en producción.
+- **Sin piloto agéntico todavía**: los interruptores viven en `/debug` y esta
+  fase no se ha visto en un preview. Antes del Human Gate hay que mirarlos en
+  las tres anchuras.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

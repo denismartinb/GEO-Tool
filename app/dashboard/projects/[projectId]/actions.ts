@@ -359,9 +359,15 @@ export async function setRecurringScans(formData: FormData) {
 }
 
 /**
- * DOMAINS-REDESIGN-1 — the per-project automatic-audit switch, mirror image of
- * `setRecurringScans` above and deliberately so: the two live side by side on
- * /debug, and a user reading them should not have to learn two behaviours.
+ * WEB-AUDIT-AUTO-SPLIT-1 — the per-project automatic-audit switches, one per
+ * half. Supersedes `setAutoWebAudit` (DOMAINS-REDESIGN-1), which wrote the
+ * single `auto_web_audit_enabled` column that migration 0031 retired: it was
+ * removed rather than left in place, because a control still writing a column
+ * nothing reads is worse than no control.
+ *
+ * Still a mirror image of `setRecurringScans` above, deliberately: the switches
+ * live side by side on /debug and a user reading them should not have to learn
+ * three behaviours.
  *
  * One asymmetry, and it is not an oversight: this has no "requires a completed
  * scan" precondition. Recurring scans need one because a recurring scan repeats
@@ -369,29 +375,40 @@ export async function setRecurringScans(formData: FormData) {
  * run until there is a completed scan to audit, and enabling it early is
  * harmless.
  *
- * Writing `false` here does not cancel work already queued. A `web_audit` job
- * that is already `pending` will still run: the flag is checked at enqueue
- * time (`enqueueWebAuditJob`), not at execution time. That is the honest
- * boundary — switching this off stops the NEXT audit, not the one already in
- * flight — and cancelling live jobs would be its own phase.
+ * Writing `false` here does not cancel work already queued, but it does stop
+ * that half from running: `runWebAuditJob` re-reads both switches when it picks
+ * a job up (migration 0031), so a job queued while the half was on and executed
+ * after it was turned off skips that half. What it cannot stop is a half
+ * already mid-flight in a live invocation.
  */
-export async function setAutoWebAudit(formData: FormData) {
-  const parsed = recurringScansSchema.safeParse({
+const auditHalfSchema = recurringScansSchema.extend({
+  half: z.enum(["technical", "coverage"])
+});
+
+/** Which column each half writes, and which copy the redirect announces. */
+const AUDIT_HALF_COLUMN = {
+  technical: "auto_technical_audit_enabled",
+  coverage: "auto_coverage_audit_enabled"
+} as const;
+
+export async function setAutoAuditHalf(formData: FormData) {
+  const parsed = auditHalfSchema.safeParse({
     projectId: formData.get("projectId"),
-    enabled: formData.get("enabled")
+    enabled: formData.get("enabled"),
+    half: formData.get("half")
   });
 
   if (!parsed.success) {
     redirect("/dashboard/projects?error=invalid_project_id");
   }
 
-  const { projectId } = parsed.data;
+  const { projectId, half } = parsed.data;
   const enabled = parsed.data.enabled === "true";
   const { supabase, user } = await requireUser();
 
   const { data, error } = await supabase
     .from("projects")
-    .update({ auto_web_audit_enabled: enabled })
+    .update({ [AUDIT_HALF_COLUMN[half]]: enabled })
     .eq("id", projectId)
     .eq("owner_user_id", user.id)
     .eq("is_archived", false)
@@ -414,7 +431,7 @@ export async function setAutoWebAudit(formData: FormData) {
 
   revalidatePath(`/dashboard/projects/${projectId}/debug`);
   revalidatePath(`/dashboard/projects/${projectId}/web-audit`);
-  redirect(`/dashboard/projects/${projectId}/debug?success=${enabled ? "auto_audit_enabled" : "auto_audit_disabled"}`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=audit_${half}_${enabled ? "enabled" : "disabled"}`);
 }
 
 export type AutoExecuteScanStatus = "idle" | "running" | "done";
