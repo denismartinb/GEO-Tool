@@ -45,3 +45,38 @@ export function computeMissionBeat(run: ActiveScanRun): MissionBeat {
   if (stage.done >= stage.total) return { key: "entrega" };
   return { key: "orbita", done: stage.done, total: stage.total, ringFrac: stage.done / stage.total };
 }
+
+/**
+ * How long the lift-off shot holds before the mission moves on to the ascent,
+ * regardless of what the counters say (SCAN-STATES-2).
+ *
+ * `ignicion` is `stage.done === 0`, and `done` does not move until an entire
+ * batch of up to `MAX_REAL_SCAN_PROMPTS` prompts closes — so on a 15-prompt
+ * project the beat with the least to show held for the whole first batch,
+ * roughly a minute of a rocket sitting on the pad with nothing changing. That
+ * is what the founder saw and reported as "el cohete está parado, da la
+ * sensación de que la página está parada" (2026-08-10). The ascent that
+ * follows then flashed past in two discrete jumps (10/15, 15/15) and he never
+ * saw it at all.
+ */
+export const IGNITION_HOLD_MS = 5_500;
+
+/**
+ * Which beat to *draw*, once the lift-off shot has had its seconds.
+ *
+ * This is a presentation decision and nothing else, which is the whole reason
+ * it is allowed to be driven by a clock. It swaps which SCENE is on screen; it
+ * does not touch a single number. The ascent it hands back reports
+ * `done: 0` and `climb: 0` — both literally true while the first batch runs —
+ * so the screen says "0 de 15" and keeps the rocket on the ground for exactly
+ * as long as that is the truth. Nothing is interpolated, accelerated or
+ * invented (CLAUDE.md, "no fake product behavior").
+ *
+ * What the user gains is that the waiting looks alive: the ascent scene's
+ * clouds fall continuously, and ambient motion carries no information by
+ * construction, so it can run before the first counter ever moves.
+ */
+export function resolveDisplayBeat(beat: MissionBeat, ignitionElapsed: boolean): MissionBeat {
+  if (beat.key !== "ignicion" || !ignitionElapsed) return beat;
+  return { key: "ascenso", done: 0, total: beat.total, climb: 0 };
+}

@@ -11,7 +11,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
-import { ScanMissionRocket } from "@/components/scan-mission-rocket";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanMissionBand } from "@/components/scan-mission-band";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
@@ -1430,8 +1430,10 @@ export default async function ProjectDetailPage({
         activeRun ? (
           isFirstScan ? (
             /* ONBOARDING-ROCKET-1 — spent once per domain; every scan after
-               this project's first falls to the plain shared bar below. */
-            <ScanMissionRocket projectId={projectId} initial={activeRun} />
+               this project's first falls to the plain shared bar below.
+               SCAN-STATES-2 routes it through FirstScanTakeover so the rail's
+               figures are resolved the same way here as in every section. */
+            <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
           ) : (
             /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
             <ScanInProgressLive projectId={projectId} initial={activeRun} />

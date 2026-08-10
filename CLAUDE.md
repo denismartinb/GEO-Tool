@@ -390,7 +390,7 @@ fase" (ver "Cierre de fase" más abajo).
 | Blog y contenido | `growth-content.md` | GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19 · `content-strategy.md` · `agentic-weekly-post.md` |
 | Escaneo (pipeline) | `scan.md` | **SCAN-DRIVE-1 (2026-08-07, ADR 0037)** · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
-| Visión general | — *(sin regla propia todavía)* | **ONBOARDING-ROCKET-1 Fase 1 (2026-08-08)** | log §4, §6, §8b, §46 |
+| Visión general | — *(sin regla propia todavía)* | **SCAN-STATES-2 (2026-08-10)** · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §46, §47 |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |

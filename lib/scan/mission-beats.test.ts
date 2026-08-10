@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeMissionBeat } from "./mission-beats";
+import { computeMissionBeat, resolveDisplayBeat } from "./mission-beats";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
 
 function run(overrides: Partial<ActiveScanRun> = {}): ActiveScanRun {
@@ -92,5 +92,43 @@ describe("computeMissionBeat", () => {
     // this codebase, but the beat must not silently render past 100% if it
     // ever did — entrega is the only state past the ring filling completely.
     expect(orbita.key).toBe("entrega");
+  });
+});
+
+describe("resolveDisplayBeat (SCAN-STATES-2)", () => {
+  it("keeps the lift-off shot while its hold has not elapsed", () => {
+    const beat = computeMissionBeat(run({ total_prompts: 15, successful_prompts: 0, failed_prompts: 0 }));
+    expect(beat.key).toBe("ignicion");
+    expect(resolveDisplayBeat(beat, false)).toEqual(beat);
+  });
+
+  it("moves to the ascent once the hold elapses, reporting a truthful 0 of N", () => {
+    // The whole point: the SCENE changes, the NUMBERS do not. `done` is still
+    // 0 because the first batch has not closed, and the rocket is still on the
+    // ground because climb is 0. Nothing is accelerated.
+    const beat = computeMissionBeat(run({ total_prompts: 15, successful_prompts: 0, failed_prompts: 0 }));
+    expect(resolveDisplayBeat(beat, true)).toEqual({ key: "ascenso", done: 0, total: 15, climb: 0 });
+  });
+
+  it("never invents altitude for the elapsed lift-off", () => {
+    const beat = computeMissionBeat(run({ total_prompts: 30, successful_prompts: 0, failed_prompts: 0 }));
+    const shown = resolveDisplayBeat(beat, true);
+    expect(shown.key === "ascenso" && shown.climb).toBe(0);
+  });
+
+  it("leaves every other beat untouched, elapsed or not", () => {
+    const cases = [
+      run({ total_prompts: 0, successful_prompts: 0, failed_prompts: 0 }),
+      run({ total_prompts: 15, successful_prompts: 10, failed_prompts: 0 }),
+      run({ total_prompts: 15, successful_prompts: 15, failed_prompts: 0, responses_total: 45, responses_processed: 28 }),
+      run({ total_prompts: 15, successful_prompts: 15, failed_prompts: 0, responses_total: 45, responses_processed: 45 })
+    ];
+
+    for (const r of cases) {
+      const beat = computeMissionBeat(r);
+      expect(beat.key).not.toBe("ignicion");
+      expect(resolveDisplayBeat(beat, true)).toEqual(beat);
+      expect(resolveDisplayBeat(beat, false)).toEqual(beat);
+    }
   });
 });

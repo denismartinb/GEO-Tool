@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { computeMissionBeat, type MissionBeat } from "@/lib/scan/mission-beats";
+import { computeMissionBeat, resolveDisplayBeat, IGNITION_HOLD_MS, type MissionBeat } from "@/lib/scan/mission-beats";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
 
 type LiveRun = ActiveScanRun & { id: string };
@@ -9,13 +9,17 @@ type LiveRun = ActiveScanRun & { id: string };
 const POLL_INTERVAL_MS = 3000;
 
 /**
- * ONBOARDING-ROCKET-1 — full-screen first-scan experience
- * (`docs/design-reference/scan-states-1/rev4-cohete-vivo.html`).
+ * ONBOARDING-ROCKET-1 / SCAN-STATES-2 — the first-scan experience, full bleed.
  *
- * Only mounted for the very first scan of a project (`page.tsx` decides that
- * from `completedRunsCount === 0`, computed server-side — no new signal). A
- * project's daily scans keep the plain `ScanInProgress` bar; this component
- * spends a first impression only once per domain.
+ * Scenes and motion are rev.4
+ * (`docs/design-reference/scan-states-1/rev4-cohete-vivo.html`); the shell
+ * around them is rev.5
+ * (`docs/design-reference/scan-states-1/rev5-pantalla-completa.html`).
+ *
+ * Mounted by `FirstScanTakeover` on every section during a project's first
+ * scan — `page.tsx` and the four section pages each decide that from their own
+ * "no completed run yet" condition. A project's later scans keep the plain
+ * `ScanInProgress` bar; this spends a first impression once per domain.
  *
  * Polling mirrors `ScanInProgressLive` exactly (same endpoint, same interval,
  * same "ignore a superseded run id" guard) rather than sharing code with it —
@@ -23,18 +27,31 @@ const POLL_INTERVAL_MS = 3000;
  * (`computeScanStage`) already lives one level down, inside
  * `computeMissionBeat`.
  *
- * Deliberately does NOT render a "carga entregada · N puntos" beat with a
- * number. `entrega` (see mission-beats.ts) fires once every response has a
- * terminal extraction outcome, which is BEFORE the run's finalize step
- * persists the score — this component has no score to show at that instant.
- * The real reveal is `ScanProgressPoller` (already mounted by the parent)
- * calling `router.refresh()` once `scan_runs.status` goes terminal, which
- * swaps this whole component out for the real dashboard server-side. Showing
- * a placeholder score here to "keep pace" with the design reference would be
+ * Deliberately does NOT render a score at `entrega`. That beat fires once
+ * every response has a terminal extraction outcome, which is BEFORE the run's
+ * finalize step persists the score — this component has no score to show at
+ * that instant. The real reveal is `ScanProgressPoller` (mounted by the
+ * parent) calling `router.refresh()` once `scan_runs.status` goes terminal.
+ * A placeholder number here to "keep pace" with the design reference would be
  * exactly the fake progress CLAUDE.md forbids.
  */
-export function ScanMissionRocket({ projectId, initial }: { projectId: string; initial: LiveRun }) {
+export function ScanMissionRocket({
+  projectId,
+  initial,
+  domain,
+  promptsTotal,
+  engines,
+  expectedResponses
+}: {
+  projectId: string;
+  initial: LiveRun;
+  domain: string;
+  promptsTotal: number | null;
+  engines: number | null;
+  expectedResponses: number | null;
+}) {
   const [run, setRun] = useState<LiveRun>(initial);
+  const [ignitionElapsed, setIgnitionElapsed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,19 +79,79 @@ export function ScanMissionRocket({ projectId, initial }: { projectId: string; i
     };
   }, [projectId, initial.id]);
 
-  const beat = computeMissionBeat(run);
+  /**
+   * The lift-off shot gets its seconds and then hands over, whatever the
+   * counters are doing. See `resolveDisplayBeat` for why a clock is allowed to
+   * decide this and a number never is.
+   */
+  useEffect(() => {
+    const t = setTimeout(() => setIgnitionElapsed(true), IGNITION_HOLD_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  const beat = resolveDisplayBeat(computeMissionBeat(run), ignitionElapsed);
+  const night = beat.key === "orbita" || beat.key === "entrega";
 
   return (
-    <div className="mrk-wrap fade-in">
-      <div className="mrk-stage">
-        <RocketScene beat={beat} />
+    <section className={`mrk-full${night ? " night" : ""}`} aria-live="polite">
+      <MissionRail
+        domain={domain}
+        promptsTotal={promptsTotal}
+        engines={engines}
+        expectedResponses={expectedResponses}
+      />
+      <div className="mrk-canvas">
+        <div className="mrk-scene-slot">
+          <RocketScene beat={beat} />
+        </div>
+        <div className="mrk-copy">
+          <span className="mrk-eyebrow">{eyebrowFor(beat)}</span>
+          <h2 className="mrk-title">{titleFor(beat)}</h2>
+          {unitFor(beat) && <p className="mrk-unit">{unitFor(beat)}</p>}
+          {subtitleFor(beat) && <p className="mrk-sub">{subtitleFor(beat)}</p>}
+          {beat.key !== "entrega" && <p className="mrk-joke">{jokeFor(beat)}</p>}
+        </div>
       </div>
-      <div className="mrk-copy">
-        <span className="mrk-eyebrow">{eyebrowFor(beat)}</span>
-        <h2 className="mrk-title">{titleFor(beat)}</h2>
-        <p className="mrk-sub">{subtitleFor(beat)}</p>
-        {beat.key !== "entrega" && <p className="mrk-joke">{jokeFor(beat)}</p>}
-      </div>
+    </section>
+  );
+}
+
+/**
+ * The rail that replaced rev.3's stacked green banner.
+ *
+ * It carries what is TRUE for the whole mission — the domain exists now, and
+ * that does not change while the beats do — so it belongs on the one element
+ * that never moves. Every figure is real or absent: a null count drops its
+ * own segment instead of being filled in with a plausible number.
+ */
+function MissionRail({
+  domain,
+  promptsTotal,
+  engines,
+  expectedResponses
+}: {
+  domain: string;
+  promptsTotal: number | null;
+  engines: number | null;
+  expectedResponses: number | null;
+}) {
+  const facts = [
+    promptsTotal !== null ? `${promptsTotal} prompts` : null,
+    engines !== null ? `${engines} ${engines === 1 ? "motor" : "motores"}` : null,
+    expectedResponses !== null ? `${expectedResponses} respuestas` : null
+  ].filter(Boolean) as string[];
+
+  return (
+    <div className="mrk-rail">
+      <span className="mrk-rail-left">
+        <span className="mrk-rail-tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="11" height="11">
+            <path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <b>{domain}</b> dado de alta
+      </span>
+      {facts.length > 0 && <span className="mrk-rail-right">{facts.join(" · ")}</span>}
     </div>
   );
 }
@@ -103,10 +180,26 @@ function titleFor(beat: MissionBeat): string {
     case "ascenso":
       return `${beat.done} de ${beat.total}`;
     case "orbita":
-      return beat.total === null ? "Abriendo la carga" : `${beat.done} de ${beat.total} respuestas leídas`;
+      return beat.total === null ? "Abriendo la carga" : `${beat.done} de ${beat.total}`;
     case "entrega":
       return "Casi está";
   }
+}
+
+/**
+ * The unit that hangs under a numeric title, so the figure itself can be set
+ * huge without the words shrinking with it. Empty for the beats whose title is
+ * a sentence rather than a count.
+ *
+ * `ascenso` says "prompts lanzados", not "respuestas": `total_prompts` counts
+ * lanzamientos (SAMPLING-1, ADR 0030), and one lanzamiento produces one row
+ * per engine. Only `orbita` reads a real response count, straight from
+ * `scan_prompt_results`.
+ */
+function unitFor(beat: MissionBeat): string {
+  if (beat.key === "ascenso") return beat.total === 1 ? "prompt lanzado" : "prompts lanzados";
+  if (beat.key === "orbita" && beat.total !== null) return "respuestas leídas";
+  return "";
 }
 
 function subtitleFor(beat: MissionBeat): string {
@@ -215,10 +308,6 @@ function PadScene({ lit }: { lit: boolean }) {
   return (
     <svg className="mrk-sky mrk-scene" viewBox="0 0 400 280" role="img" aria-hidden="true">
       <defs>
-        <linearGradient id={`${p}-sky`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={lit ? "#F5F9FF" : "#FDFEFF"} />
-          <stop offset="1" stopColor={lit ? "#CFDEF6" : "#E7EEFA"} />
-        </linearGradient>
         <linearGradient id={`${p}-plume`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="rgba(37,99,235,.30)" />
           <stop offset="1" stopColor="rgba(37,99,235,0)" />
@@ -228,12 +317,10 @@ function PadScene({ lit }: { lit: boolean }) {
           <stop offset="1" stopColor="rgba(79,123,255,0)" />
         </radialGradient>
         <clipPath id={`${p}-clip`}>
-          <rect width="400" height="280" rx="20" />
+          <rect width="400" height="280" />
         </clipPath>
       </defs>
       <g clipPath={`url(#${p}-clip)`}>
-        <rect width="400" height="280" fill={`url(#${p}-sky)`} />
-
         {!lit && (
           <>
             {/* Two parallax cloud layers. Content is duplicated at +400 (the
@@ -352,21 +439,15 @@ function ClimbScene({ climb }: { climb: number }) {
   return (
     <svg className="mrk-sky mrk-scene" viewBox="0 0 400 280" role="img" aria-hidden="true">
       <defs>
-        <linearGradient id="as-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#8FB0E2" />
-          <stop offset=".55" stopColor="#BCD0EF" />
-          <stop offset="1" stopColor="#E1EAF9" />
-        </linearGradient>
         <linearGradient id="as-plume" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="rgba(37,99,235,.26)" />
           <stop offset="1" stopColor="rgba(37,99,235,0)" />
         </linearGradient>
         <clipPath id="as-clip">
-          <rect width="400" height="280" rx="20" />
+          <rect width="400" height="280" />
         </clipPath>
       </defs>
       <g clipPath="url(#as-clip)">
-        <rect width="400" height="280" fill="url(#as-sky)" />
 
         {/* First stars, where the sky is already darkening. */}
         <g fill="#F2F7FF">
@@ -517,11 +598,6 @@ function OrbitScene({ ringFrac }: { ringFrac: number | null }) {
   return (
     <svg className="mrk-sky mrk-scene" viewBox="0 0 400 280" role="img" aria-hidden="true">
       <defs>
-        <linearGradient id="or-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#04070F" />
-          <stop offset=".6" stopColor="#0A1526" />
-          <stop offset="1" stopColor="#14293F" />
-        </linearGradient>
         <linearGradient id="or-earth" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#1B4A7A" />
           <stop offset="1" stopColor="#0C1D33" />
@@ -531,14 +607,13 @@ function OrbitScene({ ringFrac }: { ringFrac: number | null }) {
           <stop offset="1" stopColor="#CFE0FF" />
         </linearGradient>
         <clipPath id="or-clip">
-          <rect width="400" height="280" rx="20" />
+          <rect width="400" height="280" />
         </clipPath>
         <clipPath id="or-earthclip">
           <circle cx="200" cy="600" r="372" />
         </clipPath>
       </defs>
       <g clipPath="url(#or-clip)">
-        <rect width="400" height="280" fill="url(#or-sky)" />
         <StarField />
 
         <g className="mrk-shoot">
@@ -609,24 +684,18 @@ function DeliveryScene() {
   return (
     <svg className="mrk-sky mrk-scene" viewBox="0 0 400 280" role="img" aria-hidden="true">
       <defs>
-        <linearGradient id="en-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#04070F" />
-          <stop offset=".6" stopColor="#0A1526" />
-          <stop offset="1" stopColor="#182F4B" />
-        </linearGradient>
         <linearGradient id="en-earth" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#1E5387" />
           <stop offset="1" stopColor="#0C1D33" />
         </linearGradient>
         <clipPath id="en-clip">
-          <rect width="400" height="280" rx="20" />
+          <rect width="400" height="280" />
         </clipPath>
         <clipPath id="en-earthclip">
           <circle cx="200" cy="600" r="372" />
         </clipPath>
       </defs>
       <g clipPath="url(#en-clip)">
-        <rect width="400" height="280" fill="url(#en-sky)" />
         <StarField />
         <EarthLimb prefix="en" bright />
 

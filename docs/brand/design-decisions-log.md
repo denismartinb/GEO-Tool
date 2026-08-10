@@ -4931,6 +4931,82 @@ de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
 por la razón de siempre: el proyecto piloto tiene historial, así que
 `isFirstScan` es `false` y el cohete no llega a montarse nunca.
 
+
+## 47. La misión ocupa la pantalla entera, y el encendido deja de durar un minuto (SCAN-STATES-2, 2026-08-10)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día,
+después de pedir ver una maqueta antes de aprobar (`rev5-pantalla-completa.html`,
+PR #378). Tres decisiones suyas, todas explícitas.
+
+**El problema.** El fundador probó rev.4 en producción, en el móvil, con un
+dominio nuevo, y reportó tres cosas distintas: la animación era «un pequeño
+marco, dejando mucho espacio a los lados»; el mensaje verde de «Dominio creado»
+flotaba encima como si fuera de otra pantalla; y había tenido que **recargar
+para ver la fase siguiente**.
+
+**El tercer punto no era lo que parecía, y merece quedar escrito.** El sondeo
+del cohete es byte a byte idéntico al de `ScanInProgressLive`, que sí funciona.
+Lo que falla es el reparto de tiempos: `refreshRunProgressCounters` sólo escribe
+los contadores **al cerrar un lote** de hasta `MAX_REAL_SCAN_PROMPTS` prompts,
+y el compás `ignicion` es literalmente `stage.done === 0`. En un proyecto de 15
+prompts eso significa que el compás con menos que enseñar se quedaba puesto
+durante todo el primer lote —del orden de un minuto sin que cambiara un número—
+y después `ascenso` pasaba en dos saltos (10/15, 15/15) en segundos. El fundador
+nunca llegó a ver el ascenso.
+
+**Qué se decidió.**
+
+1. **Lienzo a sangre.** `.mrk-full` sale del contenedor con
+   `margin-inline: calc(50% - 50vw)` y las escenas dejan de pintar su propio
+   fondo redondeado: **el degradado de la página ES el cielo**, y viaja de día
+   a noche con la misión. En ≥960 px la composición se parte —copy a la
+   izquierda, escena ocupando todo el lienzo por detrás— porque lo que compra
+   el ancho es más cielo, y la curvatura de la Tierra sólo funciona a esa
+   escala.
+2. **El aviso verde desaparece como bloque** y su contenido pasa a `.mrk-rail`,
+   soldado a la costura entre el marco del producto y el cielo. El argumento:
+   el dominio recién creado es cierto durante los cuatro compases mientras el
+   compás cambia, así que va en la pieza que no se mueve.
+3. **El encendido se temporiza** (`IGNITION_HOLD_MS`, 5,5 s) y `resolveDisplayBeat`
+   pasa a la escena de vuelo. **Es una decisión de presentación y por eso se le
+   permite un reloj:** cambia qué escena se ve y no toca un solo número. El
+   ascenso que devuelve reporta `done: 0` y `climb: 0` —las dos cosas ciertas
+   mientras corre el primer lote—, así que la pantalla dice «0 de 15» y el
+   cohete sigue en el suelo exactamente mientras eso sea verdad. Lo que se gana
+   es que la espera **se ve viva**, porque el movimiento ambiental no cuenta
+   nada y puede correr antes de que se mueva el primer contador.
+4. **Pantalla completa en todas las secciones** durante el primer escaneo
+   (Visión general, Prompts, Competidores, Recomendaciones, Páginas citadas).
+   La objeción que se planteó y quedó respondida por el propio código: Prompts
+   y Competidores **sí** tienen contenido real en ese momento
+   (`createProject` inserta `project_prompts` y `project_competitors` antes de
+   arrancar el escaneo), pero **cada una de esas páginas ya sustituía su cuerpo
+   entero por `ScanInProgress`** con exactamente esta condición. Así que esto
+   cambia un takeover por otro mejor, no oculta nada que antes se pudiera leer.
+5. **Las cifras del raíl son reales o no están.** El fundador propuso primero
+   una cifra aproximada («no me importa que no sean datos reales», siendo un
+   momento guau). Lo que zanjó el asunto no fue la regla sino la aritmética:
+   dos compases después, en **esa misma pantalla**, órbita imprime el recuento
+   verdadero leído de `scan_prompt_results`. Una cifra inventada en el raíl
+   quedaría desmentida por el propio producto, en la misma sesión, delante del
+   usuario al que pretendía impresionar. Se resuelve leyendo el plan
+   (`resolveScanProvidersForPlan`), y `getPlanForUser` está envuelto en
+   `cache()` de React, así que varias secciones pidiéndolo en una petición
+   resuelven una sola consulta. Un contador nulo **borra su segmento** en vez de
+   rellenarse.
+
+**Verificado** con Chromium contra el componente real montado en una ruta
+temporal de Next (retirada): los cinco compases a 375 y 1280 px, el relevo del
+encendido comprobado antes y después del temporizador, y cero desbordamiento
+horizontal en ambas anchuras.
+
+**Conocido y sin cerrar:** en escritorio la Tierra no cruza el ancho completo
+como en la maqueta — la escena conserva su proporción 400×280 y queda
+enmarcada. Alcanzar la paridad exige separar el fondo ambiental (estirable) de
+los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
+verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
+historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
+
 ---
 
 ## Cómo mantener este documento
