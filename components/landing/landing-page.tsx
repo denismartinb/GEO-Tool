@@ -1,18 +1,11 @@
-"use client";
-
-import { useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { DotMeter } from "@/components/ui/dot-meter";
-import { Gauge } from "@/components/ui/gauge";
-import { Sparkline } from "@/components/ui/sparkline";
-import { Delta } from "@/components/ui/delta";
-import { InfoTip } from "@/components/ui/info-tip";
-import { useTypewriter } from "@/components/ui/use-typewriter";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { ProductTour } from "@/components/product-tour";
+import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
 const FEATURES: Array<{ icon: string; t: string; d: string }> = [
@@ -45,17 +38,25 @@ function Badge({ tone, icon, children }: { tone: "pos" | "neg" | "neutral"; icon
   );
 }
 
-const HERO_DOMAIN_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
-
+/**
+ * La landing es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
+ * V4). Lo era todo de cliente por un solo campo con estado, y con ello se
+ * llevaba al navegador seis secciones de markup que no cambian nunca.
+ *
+ * Lo que queda de cliente, y por qué:
+ * - `HeroDomainField` — el campo del hero: estado y marcador tecleado.
+ * - `MarketingMobileNav` — el cajón de navegación en móvil: abre y cierra.
+ * - `ProductTour` — el tour del hero, que es una animación.
+ *
+ * Todo lo demás navega con `<Link>` en vez de con `router.push`, que es lo que
+ * obligaba a que la página entera fuera de cliente. El aspecto no cambia: las
+ * clases (`.lp-cta`, `.lp-nav-btn`, `.btn`) son todas de clase y declaran su
+ * propio `display: inline-flex`, y `a { text-decoration: none }` es global —
+ * de hecho `.lp-cta-soft` ya se usaba sobre un `<a>` en este mismo hero.
+ * Se gana además lo que un botón no daba: abrir en pestaña nueva y ver el
+ * destino al pasar por encima.
+ */
 export function LandingPage() {
-  const router = useRouter();
-  const [domain, setDomain] = useState("");
-  const [isDomainFocused, setIsDomainFocused] = useState(false);
-  const typedPlaceholder = useTypewriter(HERO_DOMAIN_SAMPLES, !isDomainFocused && domain === "");
-
-  const goToSignup = () => router.push("/signup");
-  const goToLogin = () => router.push("/login");
-
   const NAV_LINKS = [
     { href: "#producto", label: "Producto" },
     { href: "#como", label: "Cómo funciona" },
@@ -84,8 +85,8 @@ export function LandingPage() {
             <Link href="/blog">Blog</Link>
           </div>
           <div className="lp-nav-right">
-            <button className="lp-nav-btn" onClick={goToLogin}>Iniciar sesión</button>
-            <button className="lp-nav-btn lp-nav-btn--primary" onClick={goToSignup}>Prueba gratis</button>
+            <Link className="lp-nav-btn" href="/login">Iniciar sesión</Link>
+            <Link className="lp-nav-btn lp-nav-btn--primary" href="/signup">Prueba gratis</Link>
           </div>
           <MarketingMobileNav
             links={NAV_LINKS}
@@ -93,8 +94,8 @@ export function LandingPage() {
             fromRight
             ctas={
               <>
-                <button type="button" className="lp-cta-soft" onClick={goToLogin}>Iniciar sesión</button>
-                <button type="button" className="lp-cta" onClick={goToSignup}>Prueba gratis</button>
+                <Link className="lp-cta-soft" href="/login">Iniciar sesión</Link>
+                <Link className="lp-cta" href="/signup">Prueba gratis</Link>
               </>
             }
           />
@@ -109,29 +110,11 @@ export function LandingPage() {
             qué cambiar primero. Análisis claro, acciones que puedes ejecutar.
           </p>
           <div className="lp-hero-form">
-            <div className="lp-field">
-              <Icon name="globe" size={18} className="lp-field-ico" />
-              <input
-                className="lp-field-input"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && goToSignup()}
-                onFocus={() => setIsDomainFocused(true)}
-                onBlur={() => setIsDomainFocused(false)}
-                placeholder={isDomainFocused || domain ? "Escribe tu sitio web" : ""}
-                spellCheck={false}
-              />
-              {!isDomainFocused && !domain && (
-                <span className="lp-field-ghost" aria-hidden="true">
-                  {typedPlaceholder}
-                  <span className="type-caret" />
-                </span>
-              )}
-            </div>
+            <HeroDomainField />
             <div className="lp-hero-actions">
-              <button className="lp-cta" onClick={goToSignup}>
+              <Link className="lp-cta" href="/signup">
                 Analiza gratis <Icon name="arrRight" size={16} />
-              </button>
+              </Link>
               <a className="lp-cta-soft" href="#como">Ver cómo funciona</a>
             </div>
           </div>
@@ -217,9 +200,9 @@ export function LandingPage() {
                   </div>
                 ))}
               </div>
-              <button className="btn btn-primary mt24" onClick={goToSignup}>
+              <Link className="btn btn-primary mt24" href="/signup">
                 Empieza gratis <Icon name="arrRight" size={15} />
-              </button>
+              </Link>
             </div>
 
             {/* mock rec card */}
@@ -284,10 +267,10 @@ export function LandingPage() {
               <h2>Descubre tu visibilidad en IA hoy</h2>
               <p>Introduce tu dominio y obtén tu primer informe en minutos. Gratis.</p>
               <div className="row">
-                <button className="btn btn-white btn-lg" onClick={goToSignup}>
+                <Link className="btn btn-white btn-lg" href="/signup">
                   Prueba gratis <Icon name="arrRight" size={16} />
-                </button>
-                <button className="btn btn-onaccent btn-lg" onClick={goToLogin}>Iniciar sesión</button>
+                </Link>
+                <Link className="btn btn-onaccent btn-lg" href="/login">Iniciar sesión</Link>
               </div>
             </div>
           </div>

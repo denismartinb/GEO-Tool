@@ -1,13 +1,11 @@
-"use client";
-
-import { Fragment, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
-import { PLANS, PLAN_MATRIX, PLAN_FAQ, type Plan, type PlanCell } from "@/app/pricing/plans-data";
+import { PricingFaq } from "@/components/pricing/pricing-faq";
+import { PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 
 const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }> = [
   { icon: "prompts", t: "Prompts", d: "Cuántas preguntas monitorizamos en tu mercado, de 10 a 300.", scale: ["10", "25", "100", "300"] },
@@ -15,7 +13,7 @@ const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }
   { icon: "refresh", t: "Frecuencia", d: "De un escaneo puntual a refresco diario con tendencia y alertas.", scale: ["Puntual", "Semanal", "Diario", "Diario"] }
 ];
 
-function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: (planId: string) => void }) {
+function PlanCard({ plan }: { plan: Plan }) {
   const isRec = !!plan.recommended;
   const ctaClass = "btn btn-" + (plan.ctaStyle === "primary" ? "primary" : "ghost") + " btn-lg price-cta";
 
@@ -49,10 +47,10 @@ function PlanCard({ plan, onSignup }: { plan: Plan; onSignup: (planId: string) =
           {plan.cta}
         </button>
       ) : (
-        <button type="button" className={ctaClass} onClick={() => onSignup(plan.id)}>
+        <Link className={ctaClass} href={`/signup?plan=${plan.id}`}>
           {plan.cta}
           {plan.ctaStyle === "primary" ? <Icon name="arrRight" size={15} /> : null}
-        </button>
+        </Link>
       )}
       <ul className="price-feats">
         {plan.highlights.map((h) => (
@@ -119,14 +117,16 @@ function PlanMatrix() {
   );
 }
 
+/**
+ * `/pricing` es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
+ * V4), mismo caso que la landing: era cliente entera por el acordeón de
+ * preguntas, que ahora vive aislado en `PricingFaq`.
+ *
+ * De paso, el logo deja de ser un `<div onClick>` con `cursor: pointer`. Eso
+ * no era un enlace: no se podía abrir en otra pestaña, no salía el destino al
+ * pasar por encima y el teclado no lo alcanzaba.
+ */
 export function PricingPage() {
-  const router = useRouter();
-  const [openFaq, setOpenFaq] = useState(0);
-
-  const goToSignup = (planId?: string) => router.push(planId ? `/signup?plan=${planId}` : "/signup");
-  const goToLogin = () => router.push("/login");
-  const goToHome = () => router.push("/");
-
   return (
     <div className="lp">
       {/* NAV */}
@@ -140,9 +140,9 @@ export function PricingPage() {
               { href: "/blog", label: "Blog" }
             ]}
           />
-          <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
+          <Link className="lp-logo" href="/" aria-label="Inicio de GenScore">
             <BrandLogo size={22} />
-          </div>
+          </Link>
           <div className="lp-nav-links">
             <Link href="/#producto">Producto</Link>
             <Link href="/#como">Cómo funciona</Link>
@@ -150,8 +150,8 @@ export function PricingPage() {
             <Link href="/blog">Blog</Link>
           </div>
           <div className="lp-nav-right">
-            <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
-            <button className="btn btn-primary btn-sm" onClick={() => goToSignup("free")}>Prueba gratis</button>
+            <Link className="btn btn-ghost btn-sm" href="/login">Iniciar sesión</Link>
+            <Link className="btn btn-primary btn-sm" href="/signup?plan=free">Prueba gratis</Link>
           </div>
         </nav>
       </div>
@@ -184,7 +184,7 @@ export function PricingPage() {
         <div className="lp-inner">
           <div className="price-cards">
             {PLANS.map((p) => (
-              <PlanCard key={p.id} plan={p} onSignup={goToSignup} />
+              <PlanCard key={p.id} plan={p} />
             ))}
           </div>
         </div>
@@ -254,17 +254,7 @@ export function PricingPage() {
             <div className="lp-kicker">Preguntas frecuentes</div>
             <h2 className="lp-h2">Lo que suelen preguntarnos</h2>
           </div>
-          <div className="price-faq">
-            {PLAN_FAQ.map((f, i) => (
-              <div className={"price-faq-item" + (openFaq === i ? " open" : "")} key={f.q}>
-                <button type="button" className="price-faq-q" onClick={() => setOpenFaq((o) => (o === i ? -1 : i))}>
-                  <span>{f.q}</span>
-                  <Icon name={openFaq === i ? "chevDown" : "chevRight"} size={16} className="price-faq-chev" />
-                </button>
-                <div className="price-faq-a"><p>{f.a}</p></div>
-              </div>
-            ))}
-          </div>
+          <PricingFaq />
         </div>
       </section>
 
@@ -277,9 +267,9 @@ export function PricingPage() {
               <h2>Empieza con un escaneo gratis</h2>
               <p>Mira tu GEO Score y tus 3 primeras acciones en minutos. Sin tarjeta.</p>
               <div className="row">
-                <button className="btn btn-white btn-lg" onClick={() => goToSignup("free")}>
+                <Link className="btn btn-white btn-lg" href="/signup?plan=free">
                   Escanear gratis <Icon name="arrRight" size={16} />
-                </button>
+                </Link>
                 <button type="button" className="btn btn-onaccent btn-lg">Hablar con ventas</button>
               </div>
             </div>
@@ -291,9 +281,9 @@ export function PricingPage() {
       <footer className="lp-footer">
         <div className="lp-inner">
           <div className="row1">
-            <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
+            <Link className="lp-logo" href="/" aria-label="Inicio de GenScore">
               <BrandLogo size={19} />
-            </div>
+            </Link>
             <div className="links">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
