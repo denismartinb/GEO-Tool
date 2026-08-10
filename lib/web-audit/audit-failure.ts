@@ -24,11 +24,19 @@
  *   - `project_archived`   archived projects are intentionally inert
  *   - `plan_required`      a commercial boundary, not a transient error
  *   - `no_prompts`         nothing to audit until the user adds prompts
+ *   - `audit_disabled`     both halves switched off for this project
  *
  * TRANSIENT — the same request can succeed later:
  *   - `no_scan`            no completed run yet (a race right after a scan)
  *   - `rate_limited`       today's budget is spent; tomorrow's is not
  *   - `generic`            anything unexpected, including upstream failures
+ *
+ * `audit_disabled` is the one reason no core ever returns: it is decided by
+ * the job runner from the project's switches (WEB-AUDIT-AUTO-SPLIT-1,
+ * migration 0031), not by a core failing. It lives here anyway because this
+ * type answers "why could this audit not run", and the runner needs a stable
+ * code to write into `jobs.last_error` like every other outcome. Terminal for
+ * the obvious reason: retrying cannot flip a switch.
  */
 export type AuditFailureReason =
   | "project_not_found"
@@ -36,6 +44,7 @@ export type AuditFailureReason =
   | "plan_required"
   | "no_scan"
   | "no_prompts"
+  | "audit_disabled"
   | "rate_limited"
   | "generic";
 
@@ -43,7 +52,8 @@ const TERMINAL: ReadonlySet<AuditFailureReason> = new Set<AuditFailureReason>([
   "project_not_found",
   "project_archived",
   "plan_required",
-  "no_prompts"
+  "no_prompts",
+  "audit_disabled"
 ]);
 
 /** True when no amount of retrying could change the outcome. */

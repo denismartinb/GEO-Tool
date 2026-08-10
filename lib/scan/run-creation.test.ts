@@ -501,6 +501,75 @@ describe("createPendingScanRunCore", () => {
   });
 });
 
+describe("createPendingScanRunCore — sampling override (SAMPLING-DEBUG-TOGGLE-1)", () => {
+  beforeEach(() => {
+    nextId = 1;
+  });
+
+  it("keeps the response floor on when sampling_enabled is missing (pre-migration / unread)", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const prompts = Array.from({ length: 10 }, (_, i) => ({
+      id: `prompt-${i}`,
+      project_id: PROJECT_ID,
+      prompt_text: `Prompt ${i}`,
+      is_active: true,
+      created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+    }));
+
+    // baseTables' project row carries no sampling_enabled field at all,
+    // simulating migration 0032 not yet applied.
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }));
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // 10 prompts x 1 engine = 10 responses, under the floor of 50 -> repeats
+    // to MAX_PROMPT_SAMPLES (5 x 10 = 50), same as if the column were absent.
+    const scanRun = tables.scan_runs.find((r) => r.id === runId);
+    expect(scanRun?.sample_count).toBe(MAX_PROMPT_SAMPLES);
+  });
+
+  it("stops repeating the prompt set when sampling_enabled is explicitly false", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const prompts = Array.from({ length: 10 }, (_, i) => ({
+      id: `prompt-${i}`,
+      project_id: PROJECT_ID,
+      prompt_text: `Prompt ${i}`,
+      is_active: true,
+      created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+    }));
+
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: prompts,
+        projects: [{ id: PROJECT_ID, is_archived: false, owner_user_id: OWNER_ID, sampling_enabled: false }]
+      })
+    );
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // Same 10 prompts x 1 engine, but the owner switched sampling off: a
+    // single pass, no repetition, exactly the "2-3 prompts, no forced 50
+    // calls" case this phase exists for.
+    const scanRun = tables.scan_runs.find((r) => r.id === runId);
+    expect(scanRun?.sample_count).toBe(1);
+    expect(scanRun?.total_prompts).toBe(10);
+  });
+});
+
 describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", () => {
   beforeEach(() => {
     nextId = 1;

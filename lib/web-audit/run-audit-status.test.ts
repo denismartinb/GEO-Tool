@@ -90,7 +90,7 @@ describe("deriveRunAuditStatus — planes sin cobertura (WEB-AUDIT-TECH-ALL-PLAN
     // "Parcial" means work stopped halfway and something is still missing. On
     // a plan without coverage nothing is missing, and the label would invite
     // the user to wait for something that is never coming.
-    const status = deriveRunAuditStatus({ ...base, coverageIncludedInPlan: false });
+    const status = deriveRunAuditStatus({ ...base, coverageExpected: false });
 
     expect(status.kind).toBe("audited");
     expect(status.kind === "audited" && status.readinessScore).toBe(62);
@@ -98,7 +98,7 @@ describe("deriveRunAuditStatus — planes sin cobertura (WEB-AUDIT-TECH-ALL-PLAN
 
   it("still calls it PARTIAL when the plan does include coverage", () => {
     // Same data, different plan: here the coverage half really is missing.
-    const status = deriveRunAuditStatus({ ...base, coverageIncludedInPlan: true });
+    const status = deriveRunAuditStatus({ ...base, coverageExpected: true });
 
     expect(status.kind).toBe("partial");
   });
@@ -111,7 +111,7 @@ describe("deriveRunAuditStatus — planes sin cobertura (WEB-AUDIT-TECH-ALL-PLAN
     const status = deriveRunAuditStatus({
       ...base,
       readinessByScanId: new Map(),
-      coverageIncludedInPlan: false
+      coverageExpected: false
     });
 
     expect(status.kind).toBe("none");
@@ -121,7 +121,80 @@ describe("deriveRunAuditStatus — planes sin cobertura (WEB-AUDIT-TECH-ALL-PLAN
     const status = deriveRunAuditStatus({
       ...base,
       jobStatusByRunId: new Map([["run-1", "running"]]),
-      coverageIncludedInPlan: false
+      coverageExpected: false
+    });
+
+    expect(status.kind).toBe("in_progress");
+  });
+});
+
+describe("deriveRunAuditStatus — mitades apagadas a mano (WEB-AUDIT-AUTO-SPLIT-1)", () => {
+  /**
+   * El mismo argumento que la puerta de plan, ahora por interruptor: una mitad
+   * que el dueño apagó no falta, no se pidió. La diferencia es que ésta es
+   * simétrica — antes sólo la cobertura podía no esperarse, porque era la única
+   * con puerta; ahora cualquiera de las dos puede estar apagada.
+   */
+  const coverageOnly = {
+    runId: "run-1",
+    coverageScanIds: new Set<string>(["run-1"]),
+    readinessByScanId: new Map<string, number | null>(),
+    jobStatusByRunId: new Map<string, string>()
+  };
+
+  it("llama AUDITADA a una ejecución con sólo cobertura cuando la técnica está apagada", () => {
+    const status = deriveRunAuditStatus({ ...coverageOnly, technicalExpected: false });
+
+    expect(status.kind).toBe("audited");
+    // Sin mitad técnica no hay nota que enseñar, y eso NO es lo mismo que un 0.
+    expect(status.kind === "audited" && status.readinessScore).toBeNull();
+  });
+
+  it("la sigue llamando PARCIAL cuando la técnica sí se esperaba", () => {
+    expect(deriveRunAuditStatus({ ...coverageOnly, technicalExpected: true }).kind).toBe("partial");
+  });
+
+  it("por defecto mantiene el significado anterior si no se pasa el flag", () => {
+    expect(deriveRunAuditStatus(coverageOnly).kind).toBe("partial");
+  });
+
+  it("con las dos mitades apagadas y nada persistido no inventa una auditoría", () => {
+    const status = deriveRunAuditStatus({
+      runId: "run-1",
+      coverageScanIds: new Set<string>(),
+      readinessByScanId: new Map<string, number | null>(),
+      jobStatusByRunId: new Map<string, string>(),
+      coverageExpected: false,
+      technicalExpected: false
+    });
+
+    // Nada esperado y nada hecho es "none", no "audited": no hubo auditoría
+    // alguna que reportar, y decir "auditada" sería exactamente el número
+    // inventado que .claude/rules/web-audit.md prohíbe.
+    expect(status.kind).toBe("none");
+  });
+
+  it("una ejecución con las dos mitades sigue siendo AUDITADA aunque ahora estén apagadas", () => {
+    // Datos de antes de apagarlas: lo persistido manda sobre el estado actual
+    // del interruptor, porque describe lo que de verdad pasó ese día.
+    const status = deriveRunAuditStatus({
+      runId: "run-1",
+      coverageScanIds: new Set<string>(["run-1"]),
+      readinessByScanId: new Map<string, number | null>([["run-1", 71]]),
+      jobStatusByRunId: new Map<string, string>(),
+      coverageExpected: false,
+      technicalExpected: false
+    });
+
+    expect(status.kind).toBe("audited");
+    expect(status.kind === "audited" && status.readinessScore).toBe(71);
+  });
+
+  it("un job activo gana también sobre el atajo de interruptor", () => {
+    const status = deriveRunAuditStatus({
+      ...coverageOnly,
+      jobStatusByRunId: new Map([["run-1", "running"]]),
+      technicalExpected: false
     });
 
     expect(status.kind).toBe("in_progress");

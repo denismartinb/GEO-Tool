@@ -57,7 +57,8 @@ export function deriveRunAuditStatus({
   coverageScanIds,
   readinessByScanId,
   jobStatusByRunId,
-  coverageIncludedInPlan = true
+  coverageExpected = true,
+  technicalExpected = true
 }: {
   runId: string;
   /** Scan ids that have a persisted coverage map. */
@@ -67,17 +68,31 @@ export function deriveRunAuditStatus({
   /** run_id → `jobs.status` for the web_audit job, when one exists. */
   jobStatusByRunId: Map<string, string>;
   /**
-   * Whether this project's plan includes the coverage half at all
-   * (WEB-AUDIT-TECH-ALL-PLANS-1, docs/adr/0035). Defaults to true so every
-   * existing caller and test keeps its current meaning.
+   * Whether the coverage half was supposed to happen for this run at all.
    *
-   * Load-bearing: without it, a plan that gets the technical half and never
+   * Two independent reasons it might not have been, and this function does not
+   * care which: the plan does not include coverage
+   * (WEB-AUDIT-TECH-ALL-PLANS-1, docs/adr/0035), or the owner switched that
+   * half off (WEB-AUDIT-AUTO-SPLIT-1, migration 0031). Callers AND them
+   * together — was renamed from `coverageIncludedInPlan` when the second
+   * reason appeared, because the old name had stopped describing the question.
+   *
+   * Load-bearing: without it, a project that gets the technical half and never
    * the coverage half would read "Parcial" on every run it will ever have.
    * "Parcial" means work stopped halfway and something is missing — it invites
    * the user to wait for or retry something that is never coming. Nothing is
-   * missing there: the audit is complete for what the plan includes.
+   * missing there: the audit is complete for what was expected of it.
    */
-  coverageIncludedInPlan?: boolean;
+  coverageExpected?: boolean;
+  /**
+   * Whether the technical half was supposed to happen for this run
+   * (WEB-AUDIT-AUTO-SPLIT-1). No plan gate exists on this half — it runs on
+   * every plan by docs/adr/0035 — so the only reason is the owner's switch.
+   *
+   * Same argument as above, mirrored: a project auditing coverage only would
+   * otherwise be permanently "Parcial".
+   */
+  technicalExpected?: boolean;
 }): RunAuditStatus {
   const jobStatus = jobStatusByRunId.get(runId);
 
@@ -101,9 +116,10 @@ export function deriveRunAuditStatus({
 
   if (hasCoverage && hasTechnical) return { kind: "audited", readinessScore };
 
-  // On a plan without coverage, the technical half alone IS the complete
-  // audit. See `coverageIncludedInPlan` above for why this is not cosmetic.
-  if (hasTechnical && !coverageIncludedInPlan) return { kind: "audited", readinessScore };
+  // When only one half was ever expected, that half alone IS the complete
+  // audit. See the two `*Expected` docs above for why this is not cosmetic.
+  if (hasTechnical && !coverageExpected) return { kind: "audited", readinessScore };
+  if (hasCoverage && !technicalExpected) return { kind: "audited", readinessScore };
 
   if (hasCoverage || hasTechnical) return { kind: "partial", readinessScore };
   return { kind: "none" };
