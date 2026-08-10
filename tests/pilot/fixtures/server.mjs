@@ -35,6 +35,7 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
   ["/dashboard/domains", "Dominios"],
+  ["/dashboard/notifications", "Notificaciones"],
   [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
 
@@ -587,7 +588,10 @@ const WELCOME_POPUP_SCRIPT = `
   var scrim = document.querySelector(".ptour-scrim");
   if (!scrim) return;
   try {
-    if (window.localStorage.getItem(KEY) === "1") { scrim.remove(); return; }
+    // Se OCULTA, nunca se elimina: el journey cierra el popup, recarga, y
+    // luego lo reabre desde el menú. Si aquí se quitara del DOM, ese botón no
+    // tendría nada que mostrar — que es justo como falló la 3ª pasada.
+    if (window.localStorage.getItem(KEY) === "1") { scrim.style.display = "none"; return; }
     window.localStorage.setItem(KEY, "1");
   } catch (e) { /* almacenamiento no disponible: se muestra igual */ }
   scrim.style.display = "block";
@@ -802,10 +806,17 @@ const server = createServer((request, response) => {
       path === "/dashboard"
         ? `${welcomeTourPopup()}<script>${TOUR_SCRIPT}</script><script>${WELCOME_POPUP_SCRIPT}</script>`
         : "";
+    const body =
+      path === "/dashboard/notifications"
+        ? `<div class="notif-list">
+             <article class="notif-row"><h3>Escaneo completado</h3><p>Tu dominio se escaneó hace 2 horas.</p></article>
+             <article class="notif-row"><h3>Nueva recomendación</h3><p>Hay una acción nueva en tu backlog.</p></article>
+           </div>`
+        : screenBody(path) + welcome;
     response.end(
       path === "/dashboard/projects"
         ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", screenBody(path) + welcome)
+        : html(AUTHED_PAGES.get(path) ?? "", body)
     );
     return;
   }
