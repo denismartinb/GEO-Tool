@@ -601,7 +601,10 @@ const WELCOME_POPUP_SCRIPT = `
   } catch (e) { /* almacenamiento no disponible: se muestra igual */ }
   scrim.style.display = "block";
   var close = scrim.querySelector(".pt-close");
-  if (close) close.addEventListener("click", function () { scrim.style.display = "none"; });
+  // La X ELIMINA el popup, no lo oculta: el journey comprueba después de
+  // recargar que no exista (toHaveCount(0)), porque la regresión que persigue
+  // era un popup que reaparecía en cada carga.
+  if (close) close.addEventListener("click", function () { scrim.remove(); });
 })();
 `;
 
