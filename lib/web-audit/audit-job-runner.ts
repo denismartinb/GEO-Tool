@@ -214,14 +214,19 @@ function readContinuations(payload: Record<string, unknown>): number {
  * inherently tied to the run it audits — which is also exactly the dedupe
  * key we want.
  *
- * DOMAINS-REDESIGN-1: this is also where the per-project opt-out
- * (`projects.auto_web_audit_enabled`, migration 0030) is enforced, and that
- * placement is deliberate rather than convenient. Two paths enqueue audits —
- * the executor's inline call after a run completes, and
+ * DOMAINS-REDESIGN-1: this is also where the per-project opt-out is enforced,
+ * and that placement is deliberate rather than convenient. Two paths enqueue
+ * audits — the executor's inline call after a run completes, and
  * `backfillMissingWebAuditJobs` on the daily cron — so a check at the executor
  * alone would be undone hours later by the backfill queueing the very audit the
  * founder had switched off. Gating the single function both go through makes
  * that impossible, and makes a future third caller safe by construction.
+ *
+ * WEB-AUDIT-AUTO-SPLIT-1 (migration 0031): the opt-out is now two flags, one
+ * per half. A job is created when EITHER half is on — which half actually runs
+ * is decided again at execution time in `runWebAuditJob`, because the switch
+ * can be flipped in between and re-reading costs nothing (the row is already
+ * loaded there for `owner_user_id`/`domain`).
  *
  * The check costs one indexed read per call. The backfill calls this in a loop
  * bounded to `BACKFILL_LIMIT`, so the worst case is ten tiny reads on a daily
@@ -238,21 +243,26 @@ export async function enqueueWebAuditJob({
   runId: string;
 }): Promise<"enqueued" | "already_queued" | "disabled" | "error"> {
   try {
-    // Read the flag before the dedupe query: when a project has audits off,
-    // this returns without touching `jobs` at all.
-    const { data: projectRow, error: projectError } = await service
+    // Read the flags before the dedupe query: when a project has both halves
+    // off, this returns without touching `jobs` at all.
+    const { data: projectRow } = await service
       .from("projects")
-      .select("auto_web_audit_enabled")
+      .select("auto_technical_audit_enabled, auto_coverage_audit_enabled")
       .eq("id", projectId)
       .maybeSingle();
 
-    // Fail OPEN, on purpose. A read failure here must not silently stop audits
-    // for every project — the same reasoning as `isAutoWebAuditEnabled`
-    // defaulting to on. A missing column (migration 0030 not yet applied) and a
-    // transient error are indistinguishable at this layer, and of the two
-    // possible mistakes, "audited something the founder had switched off" costs
-    // one Gemini campaign while "stopped auditing everything" is invisible.
-    if (!projectError && projectRow && projectRow.auto_web_audit_enabled === false) {
+    // Fail CLOSED, inverting 0030's fail-open — see 0031's header for the full
+    // argument. In short: with a FALSE default, "I could not read the flags"
+    // and "the flags are off" mean the same thing in practice, and the
+    // expensive mistake is now the other one (spending a Gemini campaign the
+    // founder switched off). `=== true` rather than `!== false` is what makes
+    // an unapplied migration (column absent → `undefined`) land on "off"
+    // instead of "on". A skipped audit is recovered by the next scan's enqueue
+    // or by the daily backfill; a spent campaign is not recoverable.
+    const technicalEnabled = projectRow?.auto_technical_audit_enabled === true;
+    const coverageEnabled = projectRow?.auto_coverage_audit_enabled === true;
+
+    if (!technicalEnabled && !coverageEnabled) {
       return "disabled";
     }
 
@@ -545,22 +555,42 @@ export async function claimDueWebAuditJobs({
 }
 
 /**
- * Resolve the project's real owner and domain. The owner id is what the audit
- * cores use to prove ownership, so it is read from the database here and
- * never passed in from a caller.
+ * Resolve the project's real owner, domain and per-half audit switches. The
+ * owner id is what the audit cores use to prove ownership, so it is read from
+ * the database here and never passed in from a caller.
+ *
+ * The switches ride along on this same row (WEB-AUDIT-AUTO-SPLIT-1) rather
+ * than being carried in `payload_json` from enqueue time. That is not just
+ * frugality about queries: a job can sit `pending` for a whole backoff cycle,
+ * and honouring a switch flipped in the meantime is the behaviour the founder
+ * expects from a control labelled "stops the next audit". Same fail-closed
+ * reading as the enqueue gate — see migration 0031's header.
  */
 async function loadProjectContext(
   service: ServiceClient,
   projectId: string
-): Promise<{ ownerUserId: string; domain: string } | null> {
+): Promise<{ ownerUserId: string; domain: string; technicalEnabled: boolean; coverageEnabled: boolean } | null> {
   const { data } = await service
     .from("projects")
-    .select("owner_user_id, domain")
+    .select("owner_user_id, domain, auto_technical_audit_enabled, auto_coverage_audit_enabled")
     .eq("id", projectId)
     .maybeSingle();
 
-  const row = data as { owner_user_id: string; domain: string } | null;
-  return row ? { ownerUserId: row.owner_user_id, domain: row.domain } : null;
+  const row = data as {
+    owner_user_id: string;
+    domain: string;
+    auto_technical_audit_enabled?: boolean;
+    auto_coverage_audit_enabled?: boolean;
+  } | null;
+
+  return row
+    ? {
+        ownerUserId: row.owner_user_id,
+        domain: row.domain,
+        technicalEnabled: row.auto_technical_audit_enabled === true,
+        coverageEnabled: row.auto_coverage_audit_enabled === true
+      }
+    : null;
 }
 
 /**
@@ -623,6 +653,15 @@ export async function runWebAuditJob({
     return finishCancelled(service, job, "project_not_found");
   }
 
+  // WEB-AUDIT-AUTO-SPLIT-1: both halves switched off since this job was
+  // enqueued. Cancel rather than continue — there is nothing to come back for,
+  // and parking it as a continuation would re-dispatch until the continuation
+  // cap stopped it, exactly the trap docs/adr/0035 documented for a coverage
+  // skipped by plan. Runs BEFORE any core call, so it costs nothing.
+  if (!project.technicalEnabled && !project.coverageEnabled) {
+    return finishCancelled(service, job, "audit_disabled");
+  }
+
   // The service client stands in for the user-context client here; see the
   // "Service role" note in this file's header for why that does not weaken
   // ownership. `user` is narrowed to `{ id }` by both cores.
@@ -643,16 +682,27 @@ export async function runWebAuditJob({
     // and the chain would dispatch forever achieving nothing until the
     // continuation cap stopped it.
     let coverageDone = false;
-    /** True when coverage was skipped because the plan does not include it (docs/adr/0035). */
-    let coverageSkippedForPlan = false;
+    /**
+     * True when coverage will not run at all for this job, so there is nothing
+     * to park a continuation for. Two causes, deliberately collapsed into one
+     * flag because the runner's behaviour is identical for both: the plan does
+     * not include coverage (docs/adr/0035), or the owner switched that half off
+     * (WEB-AUDIT-AUTO-SPLIT-1). The two are told apart where it matters — on
+     * screen, by `deriveRunAuditStatus` — not here.
+     */
+    let coverageSkipped = !project.coverageEnabled;
     let batches = 0;
     let topicsBefore = -1;
 
-    do {
-      const coverage = await auditDomainCoverageCore(coreArgs);
-      batches += 1;
+    // Wrapped rather than folded into the loop condition: the do/while below
+    // has to keep guaranteeing one batch, so "run no batches at all" is a
+    // decision that belongs outside it.
+    if (!coverageSkipped) {
+      do {
+        const coverage = await auditDomainCoverageCore(coreArgs);
+        batches += 1;
 
-      if (!coverage.success) {
+        if (!coverage.success) {
         // WEB-AUDIT-TECH-ALL-PLANS-1 (docs/adr/0035): `plan_required` from
         // COVERAGE is no longer terminal for the whole job. Coverage stays
         // Pro-only, but the technical half now runs on every plan, so
@@ -663,34 +713,36 @@ export async function runWebAuditJob({
         // from coverage. Every other terminal reason (project_not_found,
         // project_archived, no_prompts) still cancels, because those mean
         // there is nothing to audit at all — not "this half isn't yours".
-        if (coverage.reason === "plan_required") {
-          coverageSkippedForPlan = true;
+          if (coverage.reason === "plan_required") {
+            coverageSkipped = true;
+            break;
+          }
+          if (isTerminalAuditFailure(coverage.reason)) {
+            return finishCancelled(service, job, coverage.reason);
+          }
+          return finishAttempt(service, job, `coverage: ${coverage.reason}`, now);
+        }
+
+        if (coverage.status === "completed") {
+          coverageDone = true;
           break;
         }
-        if (isTerminalAuditFailure(coverage.reason)) {
-          return finishCancelled(service, job, coverage.reason);
-        }
-        return finishAttempt(service, job, `coverage: ${coverage.reason}`, now);
-      }
 
-      if (coverage.status === "completed") {
-        coverageDone = true;
-        break;
-      }
+        // No new topic covered means this batch achieved nothing; looping again
+        // in the same invocation would just repeat it. Park instead — the
+        // continuation cap then bounds how long a genuinely stuck campaign can
+        // keep re-dispatching.
+        const topicsAfter = coverage.coverage.topics.length;
+        if (topicsAfter <= topicsBefore) break;
+        topicsBefore = topicsAfter;
+      } while (batches < MAX_BATCHES_PER_INVOCATION && Date.now() - startedAt < batchStartCutoffMs);
+    }
 
-      // No new topic covered means this batch achieved nothing; looping again
-      // in the same invocation would just repeat it. Park instead — the
-      // continuation cap then bounds how long a genuinely stuck campaign can
-      // keep re-dispatching.
-      const topicsAfter = coverage.coverage.topics.length;
-      if (topicsAfter <= topicsBefore) break;
-      topicsBefore = topicsAfter;
-    } while (batches < MAX_BATCHES_PER_INVOCATION && Date.now() - startedAt < batchStartCutoffMs);
-
-    // A plan without coverage is not an unfinished campaign: there is nothing
-    // to come back for, so parking as a continuation would re-dispatch this
-    // job until the continuation cap stopped it, achieving nothing each time.
-    if (!coverageDone && !coverageSkippedForPlan) {
+    // Coverage that will never run is not an unfinished campaign: there is
+    // nothing to come back for, so parking as a continuation would re-dispatch
+    // this job until the continuation cap stopped it, achieving nothing each
+    // time.
+    if (!coverageDone && !coverageSkipped) {
       return finishContinuation(service, job, continuations + 1, now);
     }
 
@@ -699,17 +751,23 @@ export async function runWebAuditJob({
     // Only if it genuinely fits. Coverage is already durable at this point,
     // so parking here loses nothing: the next invocation's coverage call is a
     // cache hit and the technical audit gets a full clock.
-    if (Date.now() - startedAt > budgetMs - TECHNICAL_RESERVE_MS) {
-      return finishContinuation(service, job, continuations + 1, now);
-    }
-
-    const technical = await runTechnicalAuditCore(coreArgs);
-
-    if (!technical.success) {
-      if (isTerminalAuditFailure(technical.reason)) {
-        return finishCancelled(service, job, technical.reason);
+    //
+    // The switch is checked before the budget reserve, not after
+    // (WEB-AUDIT-AUTO-SPLIT-1): a job whose technical half is off must never
+    // park itself waiting for room to run something it is never going to run.
+    if (project.technicalEnabled) {
+      if (Date.now() - startedAt > budgetMs - TECHNICAL_RESERVE_MS) {
+        return finishContinuation(service, job, continuations + 1, now);
       }
-      return finishAttempt(service, job, `technical: ${technical.reason}`, now);
+
+      const technical = await runTechnicalAuditCore(coreArgs);
+
+      if (!technical.success) {
+        if (isTerminalAuditFailure(technical.reason)) {
+          return finishCancelled(service, job, technical.reason);
+        }
+        return finishAttempt(service, job, `technical: ${technical.reason}`, now);
+      }
     }
 
     await service

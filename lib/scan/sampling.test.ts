@@ -117,6 +117,55 @@ describe("computeSampleCount", () => {
   });
 });
 
+describe("the debug sampling override (SAMPLING-DEBUG-TOGGLE-1)", () => {
+  it("stays on by default, matching current shipped behaviour", () => {
+    // No caller passes samplingEnabled -> the function's own default must
+    // NOT change any existing test's outcome.
+    expect(computeSampleCount({ promptCount: 10, engineCount: 3, planId: PAID })).toEqual({
+      samples: 2,
+      projectedResponses: 60,
+      reason: "repeated"
+    });
+  });
+
+  it("turns sampling off only on an explicit false, never on undefined or true", () => {
+    for (const samplingEnabled of [undefined, true]) {
+      expect(computeSampleCount({ promptCount: 10, engineCount: 3, planId: PAID, samplingEnabled }).reason).toBe(
+        "repeated"
+      );
+    }
+
+    expect(
+      computeSampleCount({ promptCount: 10, engineCount: 3, planId: PAID, samplingEnabled: false })
+    ).toEqual({ samples: 1, projectedResponses: 30, reason: "manually_disabled" });
+  });
+
+  it("short-circuits before the domain and plan checks, but not before no_work", () => {
+    // A project with no work still reports no_work even if sampling is
+    // disabled - there is nothing to size either way.
+    expect(computeSampleCount({ promptCount: 0, engineCount: 3, planId: PAID, samplingEnabled: false }).reason).toBe(
+      "no_work"
+    );
+
+    // Disabled wins over the pilot's domain exemption and over the Free plan
+    // exclusion: both of those reasons would also produce samples: 1, so the
+    // only way to tell them apart is which `reason` is reported.
+    expect(
+      computeSampleCount({
+        promptCount: 1,
+        engineCount: 3,
+        planId: PAID,
+        domain: "mozilla.org",
+        samplingEnabled: false
+      }).reason
+    ).toBe("manually_disabled");
+
+    expect(
+      computeSampleCount({ promptCount: 10, engineCount: 1, planId: "free", samplingEnabled: false }).reason
+    ).toBe("manually_disabled");
+  });
+});
+
 describe("the pilot exemption cannot drift from the pilot", () => {
   it("names exactly the domain tests/pilot reserves for its write journeys", () => {
     // Read as text rather than imported: tests/pilot/support/write-guard.ts

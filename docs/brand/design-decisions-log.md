@@ -5002,7 +5002,272 @@ esto cierra); §42 (el flake de sesión, aún abierto).
 
 ---
 
-## 50. La landing deja de ser una aplicación y el CSS de consola deja de viajar a /blog (PRELAUNCH-HARDENING-1 Fase V, V4+V5, 2026-08-10)
+
+---
+
+## 50. Primera pieza de la Fase C, y una corrección al propio plan antes de escribirla (SEO-POS-1, S1, 2026-08-10)
+
+**Origen.** Primera pieza de la cola de contenido priorizada por
+`docs/seo-positioning-plan.md` §4 (Fase C) — el fundador aprobó seguir "en
+modo loop" tras cerrar las tres fases técnicas (T-a/T-b/T-c, log §46-48).
+
+**Hallazgo antes de escribir una sola línea: el propio título propuesto en el
+plan mentía.** La fila S1/C1 del plan decía "Cómo saber si tu marca aparece
+en ChatGPT (y en Gemini y Perplexity)" — pero Perplexity **no es un motor
+soportado por Genscore hoy** (`docs/launch-plan.md` Fase 8/ENGINES-2: Gemini,
+Claude y ChatGPT; Perplexity "sin fecha, fuera de alcance"). Publicar ese
+título habría sido exactamente el mismo reclamo falso que PRICING-TRUTH-1
+retiró del resto del producto — solo que en la primera pieza de contenido
+nueva que produce este plan, y en la propia investigación de mercado que lo
+sustenta. Corregido a "…en ChatGPT, Gemini y Claude" antes de escribir el
+artículo. La lección para las 9 piezas que quedan en la cola: el título de
+una fila del plan es una propuesta de la investigación, no un hecho verificado
+contra el código — se re-verifica al escribir, no se copia.
+
+**La pieza** (`/blog/como-saber-si-tu-marca-aparece-en-chatgpt`, cluster
+`playbooks`): tres formas reales de comprobar si un motor menciona tu marca,
+de menos a más fiable — preguntar tú mismo con varios prompts repetidos
+(ilustrado con una `Figure`/`AnswerPair` mostrando cómo un prompt casi
+idéntico da un resultado distinto), revisar la analítica propia por si
+diferencia tráfico de asistentes de IA, y usar una herramienta sistemática
+como Genscore. La comparativa por motor que describe (mención, citación,
+sentimiento) se verificó contra el código real de la tarjeta de Overview
+(`app/dashboard/projects/[projectId]/page.tsx`, ENGINES-VALUE-1) — la
+primera redacción decía además "en qué posición", campo que esa tarjeta no
+expone por motor, y se corrigió antes de publicar. Una cifra sin fuente
+("80% de las veces… 10%…") que se había colado en el borrador del FAQ se
+sustituyó por lenguaje cualitativo — no había ningún dato real detrás.
+`FAQPage` con 3 preguntas reales, portada nueva (tres motores con veredicto
+distinto: citado, mencionado sin cita, ausente — evidencia del hallazgo
+central del artículo, no decoración).
+
+**Fixture del piloto actualizado en el mismo PR** (`tests/pilot/fixtures/
+server.mjs`): `fixture-drift.test.ts` (log §44) exige que cada post nuevo
+entre en la lista, o su journey recibe un 404 y tumba el caso sano del
+self-check — funcionó exactamente como debía, cazándolo antes de mergear.
+
+**Validación:** 1892/1892 tests, `pnpm run validate` limpio. Verificado sobre
+el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
+índice de `/blog`, en el pilar `playbooks` y en el sitemap.
+
+
+---
+
+## 51. Banco de pruebas offline para el modelo de extracción (EXTRACTION-COST-BENCH-1, 2026-08-09)
+
+**Estado: herramienta construida y verificada; ejecución con datos reales
+pendiente — este sesión no tenía credenciales de Supabase/Gemini/OpenAI.**
+
+Nace de la conversación de desglose de coste de LLM: la extracción estructurada
+(`lib/scan/extraction.ts`) usa siempre el mismo proveedor que generó la
+respuesta, sin ninguna razón técnica — el input es `raw_response_text`, ya
+persistido, así que cualquier extractor puede parsearlo venga de donde venga.
+Es además ~50% de todas las llamadas LLM del pipeline y la que mete más input
+(esquema completo + la respuesta cruda entera), y no registra tokens ni coste
+en ningún sitio. `scripts/extraction-bench.ts` (`pnpm bench:extraction
+--limit N`) reextrae filas históricas con modelos candidatos más baratos
+(`gemini-2.5-flash-lite`, `gpt-4o-mini`, y `gemini-2.5-flash` como referencia
+de control) y compara el resultado contra lo ya persistido, sin tocar una fila
+de producción.
+
+### Decisiones y por qué
+
+- **Reutiliza las funciones reales de extracción y verificación**
+  (`extractGeminiStructuredData`, `extractOpenAIStructuredData`,
+  `verifyExtractedMentions`, `reconcileExtractedCompetitors`), no una copia. El
+  modelo candidato se selecciona sobreescribiendo `GEMINI_MODEL`/`OPENAI_MODEL`
+  justo antes de cada llamada y restaurando el valor previo después — la única
+  forma de variar el modelo sin tocar `lib/llm/**` (prohibido en el Task
+  Intake aprobado), porque esas funciones no aceptan un `model` explícito.
+- **`citations_count`/`citation_found` quedan fuera de la comparación a
+  propósito.** Se calculan desde `raw_response_json.grounding_chunks`, que es
+  metadata congelada en el momento de GENERACIÓN — ningún modelo de extracción,
+  barato o no, puede cambiarlos. Compararlos aquí mediría ruido, no señal.
+- **El coste es estimado, no medido.** Ninguna de las tres funciones de
+  extracción devuelve `usage` del proveedor — ese hueco es precisamente lo que
+  esta herramienta sirve para detectar, no para resolver; resolverlo exigiría
+  tocar `lib/llm/**`, fuera del alcance aprobado. La estimación usa una
+  heurística caracteres/4 contra tarifas públicas por token — válida para una
+  decisión de sí/no, no para fijar pricing con precisión.
+- **`import "server-only"` no resuelve fuera de `next build`/`next dev`.**
+  Todos los módulos de `lib/**` que este script reutiliza abren con ese
+  import; el paquete `server-only` solo resuelve a un no-op bajo la condición
+  de exports `react-server`, que el bundler de Next fija internamente. El
+  script se invoca con `NODE_OPTIONS=--conditions=react-server` para
+  reproducir esa misma condición fuera del bundler — mecanismo de Node de
+  primera clase, sin loader personalizado ni tocar ningún fichero de `lib/`.
+  Tuvo que añadirse `server-only` como devDependency real (antes solo lo
+  resolvía el bundler de Next vía alias interno) y `tsx` para poder ejecutar
+  TypeScript con imports de proyecto fuera de Next.
+- **Guardado de solo lectura, verificado por test, no por convención.**
+  `scripts/extraction-bench.test.ts` falla si el fichero contiene
+  `.update(`/`.insert(`/`.upsert(`/`.delete(`. El propio `main()` solo se
+  ejecuta cuando el fichero es el punto de entrada directo (`import.meta.url
+  === file://${process.argv[1]}`) — sin ese guard, importar el módulo para sus
+  funciones puras desde el test también disparaba una llamada real a Supabase.
+
+### Pendiente / roto conocido
+
+- **No hay resultados reales todavía.** Esta sesión no tenía
+  `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`GEMINI_API_KEY`/
+  `OPENAI_API_KEY` — se verificó que la herramienta compila, pasa sus tests
+  (18, todos sobre las funciones puras) y falla limpiamente al llegar al
+  punto que necesita credenciales. Ejecutar `pnpm bench:extraction --limit
+  50` con credenciales reales, y decidir el cambio de modelo de extracción con
+  esos resultados, es la fase siguiente — no esta.
+- **El coste estimado seguirá siendo una aproximación** hasta que una fase
+  posterior (fuera de este alcance) exponga `usage` desde
+  `extractGeminiStructuredData`/`extractClaudeStructuredData`/
+  `extractOpenAIStructuredData`.
+
+---
+
+## 52. La auditoría automática se parte en dos interruptores, ambos apagados (WEB-AUDIT-AUTO-SPLIT-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Aprobado").
+
+**El problema.** La 0030 dio un interruptor único por dominio para la auditoría
+automática tras escaneo. Pero esa auditoría son dos mitades con coste opuesto
+(ADR 0035): la **cobertura** son llamadas de grounding a Gemini, una por prompt
+activo, sólo Pro/Agencia; la **técnica** no gasta LLM y su nota es un
+componente del GeoScore (ADR 0033). Con un control único, apagar el gasto
+obligaba a perder también la nota — dos decisiones distintas que nunca
+debieron compartir interruptor. Salió al desglosar el coste real de LLM
+(`docs/llm-cost-analysis-2026-08.md`), donde la auditoría automática apareció
+como gasto de grounding que se dispara tras **cada** escaneo en Pro+ sin pasar
+por el límite de 5/día que sí protege el botón manual.
+
+### Decisiones y por qué
+
+- **Por defecto apagadas las dos, invirtiendo la 0030.** La 0030 puso `default
+  true` precisamente para que aplicarla no apagara auditorías en silencio; ese
+  razonamiento era correcto entonces y no aplica ahora. El fundador pidió las
+  dos apagadas por defecto y ese mismo día apagó los 44 proyectos existentes a
+  mano por SQL. `false` no es un cambio de comportamiento aquí: es el estado en
+  el que ya está producción, hecho duradero para los proyectos que se creen a
+  partir de ahora. Con el `default true` anterior, **cada proyecto nuevo volvía
+  a armar la auditoría en silencio** — que es exactamente el agujero que dejaba
+  la barrida por SQL.
+- **No se hereda el valor de la columna vieja.** Por lo mismo: el valor honesto
+  de cada fila hoy es «apagado», que es lo que da el `default`. Heredar habría
+  reactivado los proyectos que no se hubieran barrido.
+- **Leer falla CERRADO**, al revés que la 0030. Con defecto `false`, «no pude
+  leer los flags» y «los flags están apagados» significan lo mismo en la
+  práctica, y el error caro pasa a ser el otro. Coste asumido y dicho: un fallo
+  transitorio de lectura se salta una auditoría, que recuperan el siguiente
+  escaneo o el backfill diario.
+- **Los flags se releen al ejecutar el job, no se congelan al encolarlo.** Un
+  job puede esperar un ciclo de backoff entero; un control que promete «detiene
+  la próxima auditoría» tiene que cumplirlo. No cuesta consulta: viajan en la
+  fila que `loadProjectContext` ya cargaba.
+- **El interruptor técnico se comprueba antes del reserve de presupuesto.** Al
+  revés, un job con la técnica apagada se aparcaría esperando hueco para algo
+  que nunca va a correr, re-despachándose hasta el tope de continuaciones — la
+  trampa que ADR 0035 ya documentó para la cobertura sin plan.
+- **`deriveRunAuditStatus` pasa de una pregunta a dos.** `coverageIncludedInPlan`
+  se renombra a `coverageExpected` y aparece `technicalExpected`: una mitad
+  apagada a mano no deja la auditoría «Parcial», igual que no la dejaba una
+  cobertura fuera de plan. El renombrado es deliberado —el nombre viejo había
+  dejado de describir la pregunta— y el typecheck obligó a revisar cada
+  llamador, que era el objetivo.
+- **`setAutoWebAudit` se elimina, no se deja al lado.** Escribía la columna que
+  esta fase retira; un control que sigue escribiendo algo que nadie lee es peor
+  que ningún control. Lo sustituye `setAutoAuditHalf`, parametrizado por mitad.
+- **Copy por mitad, no genérico.** Cada texto dice qué mitad y qué cuesta,
+  porque el fundador las apaga por coste y las dos no cuestan lo mismo.
+
+### Pendiente / roto conocido
+
+- **La migración 0031 hay que aplicarla a mano** en Supabase, como todas las de
+  este repo. Hasta entonces `/debug` pinta «Sin migrar» en vez de ofrecer un
+  interruptor que no puede funcionar (lección de la 0030, reportada por el
+  fundador desde el móvil el 2026-08-05), y el backend no audita nada.
+- **`auto_web_audit_enabled` queda en el esquema sin lector.** Tirarla es un
+  cambio destructivo con su propia aprobación; una fase futura puede hacerlo
+  cuando ésta lleve tiempo en producción.
+- **Sin piloto agéntico todavía**: los interruptores viven en `/debug` y esta
+  fase no se ha visto en un preview. Antes del Human Gate hay que mirarlos en
+  las tres anchuras.
+
+---
+
+## 53. Un tercer interruptor apaga el suelo de muestreo por proyecto (SAMPLING-DEBUG-TOGGLE-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Si"), incluyendo dejar explícitamente pendiente la pregunta de qué hacer
+cuando lleguen clientes reales de pago, en vez de resolverla ahora con un flag
+por plan.
+
+**El problema.** El suelo de respuestas (SAMPLING-1, ADR 0030) repite el set de
+prompts de un proyecto hasta 5 veces para llegar a 50 respuestas por escaneo.
+Correcto para un dominio real; carísimo para una prueba interna de 2-3
+prompts, donde forzaba 15 llamadas de LLM por escaneo sin que hubiera nada que
+medir con esa precisión. El fundador, tras confirmar los dos interruptores de
+la fase anterior (WEB-AUDIT-AUTO-SPLIT-1, entrada 52), pidió uno más de la
+misma familia.
+
+### Decisiones y por qué
+
+- **Interruptor tercero de la misma familia, mismo patrón que las dos mitades
+  de la 52: por defecto apagado.** Migración 0032, columna
+  `sampling_enabled boolean not null default false`. Mismo argumento que la
+  52: no hay clientes de pago todavía cuya fiabilidad de score dependa de
+  esto, así que el coste de apagarlo por defecto es cero hoy y la pregunta de
+  qué pasa cuando los haya queda anotada como pendiente, no resuelta.
+- **No es una cuarta capa de exención junto a plan/dominio en `sampling.ts`.**
+  Esas dos son decisiones de producto permanentes; ésta es un override de
+  depuración pensado para pruebas prelanzamiento. `computeSampleCount` le da
+  su propio `SamplingReason` (`manually_disabled`), comprobado justo después
+  de `no_work` y antes de dominio/plan, para que el diagnóstico distinga «se
+  apagó a mano» de «no aplicaba por dominio o plan» — ambos producen
+  `samples: 1`, y sin el motivo separado serían indistinguibles.
+- **La lectura falla ABIERTO, al revés que las dos mitades de auditoría, y la
+  asimetría es a propósito, no una inconsistencia.** Los flags de la 0031 se
+  leen dentro de funciones cuyo único trabajo es decidir si gastar en una
+  auditoría — fallar hacia «no gastar» no cuesta nada más. Esta columna se lee
+  dentro de `createPendingScanRunCore`, que está en el camino crítico de todo
+  escaneo del producto (H1, CLAUDE.md). Fallar CERRADO aquí (columna ausente →
+  desactivado) convertiría una lectura lenta, o simplemente esta migración sin
+  aplicar todavía, en una degradación silenciosa de la fiabilidad de score en
+  todo el producto — el daño exacto que esta función existe para mantener
+  opt-in. Por eso `run-creation.ts` lee esta columna en **su propia consulta**,
+  separada del select del proyecto, y sólo un `sampling_enabled = false`
+  explícito llega a `computeSampleCount` como `samplingEnabled: false`;
+  cualquier otra cosa (columna ausente, lectura fallida, `true`) llega como
+  `undefined`, que el propio default de la función mantiene en «muestreo
+  activado» — el comportamiento ya desplegado.
+- **Por qué una consulta aparte y no añadir la columna al select ya existente
+  del proyecto.** Ese select comprado ya lleva la lección escrita en
+  `/debug/page.tsx` para los flags de auditoría de la 0031: una columna que
+  PostgREST no conoce hace fallar el select ENTERO, no sólo ese campo. Ese
+  select en `requireActiveProject` alimenta seis pantallas; el de
+  `createPendingScanRunCore` es el que crea cada `scan_runs` del producto.
+  Fusionar la columna ahí habría hecho que la migración 0032 sin aplicar
+  rompiera la creación de escaneos para todo el mundo, no sólo la fiabilidad
+  del muestreo — la fase 52 evitó exactamente este error separando su propia
+  consulta en `/debug`; aquí el riesgo era mayor porque el select comparte
+  camino con el flujo núcleo (H1), no con una pantalla de operación.
+- **Tercer switch en `/debug`, mismo patrón visual que los dos de la 52.**
+  Consulta propia con su propio guardián de migración (`sampling_enabled`
+  ausente → «Sin migrar», nunca un interruptor que parece operable y no puede
+  funcionar — misma lección de la 0030 que ya evitó la 52).
+
+### Pendiente / roto conocido
+
+- **La migración 0032 hay que aplicarla a mano** en Supabase, después de la
+  0031. Hasta entonces `/debug` pinta «Sin migrar» y el backend mantiene el
+  suelo de muestreo activado en todos los dominios (comportamiento actual, sin
+  cambio).
+- **Qué hacer cuando lleguen clientes reales de pago queda sin resolver a
+  propósito.** El fundador aprobó dejarlo así: hoy no hay ninguno cuya
+  fiabilidad de score dependa de este interruptor, así que no hace falta un
+  flag por plan todavía — pero antes de vender el producto, alguien tiene que
+  decidir si este control sigue existiendo tal cual, se oculta del cliente, o
+  se retira.
+- **Sin piloto agéntico todavía**: mismo estado que la 52 — el interruptor
+  vive en `/debug` y esta fase no se ha visto en un preview.
+## 54. La landing deja de ser una aplicación y el CSS de consola deja de viajar a /blog (PRELAUNCH-HARDENING-1 Fase V, V4+V5, 2026-08-10)
 
 Los dos únicos slices de la Fase V que cambian aspecto, y por eso iban aparte
 con su propia pasada de piloto. Medido, no estimado.

@@ -181,6 +181,25 @@ export async function createPendingScanRunCore({
     throw new ProjectActionError("project_archived");
   }
 
+  /**
+   * `sampling_enabled` (SAMPLING-DEBUG-TOGGLE-1, migration 0032) is read in
+   * its OWN query rather than merged into the select above, on purpose:
+   * this select above is on the critical path of every scan creation, and a
+   * column PostgREST doesn't know about fails the WHOLE select, not just
+   * this field — exactly the incident already documented on the /debug page
+   * for `auto_technical_audit_enabled`/`auto_coverage_audit_enabled` (see
+   * `app/dashboard/projects/[projectId]/debug/page.tsx`). Isolating the read
+   * means a migration not yet applied breaks nothing here: `samplingEnabled`
+   * below falls back to `undefined`, which `computeSampleCount` treats as
+   * sampling ON — the current shipped behaviour, not a new failure mode on
+   * every scan in the product.
+   */
+  const { data: samplingRow } = await readClient
+    .from("projects")
+    .select("sampling_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
   // Read via the service client (not readClient) so this resolves correctly
   // for every caller — the cron path and reconciliation's auto-retry path
   // have no authenticated user/RLS-scoped session to read `profiles` through.
@@ -300,7 +319,8 @@ export async function createPendingScanRunCore({
     promptCount,
     engineCount: resolveScanProvidersForPlan(plan).length,
     planId: plan.id,
-    domain: project.domain as string | null | undefined
+    domain: project.domain as string | null | undefined,
+    samplingEnabled: samplingRow?.sampling_enabled as boolean | undefined
   });
 
   // Counts scan_prompt JOBS, not distinct prompts — every progress bar
