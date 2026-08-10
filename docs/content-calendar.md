@@ -19,11 +19,17 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| A1 | `/docs` (índice) | — | 🔲 Pendiente | — |
-| A2 | `/docs/empezar/primer-escaneo` | primer escaneo genscore | 🔲 Pendiente | — |
-| A3 | `/docs/informes/overview` | informe overview genscore | 🔲 Pendiente | — |
-| A4 | `/docs/metodologia/geo-score` | geo score metodología | 🔲 Pendiente | — |
-| A5 | `/docs/planes-y-limites` | planes genscore límites | 🔲 Pendiente | — |
+| A1 | `/docs` (índice) | — | ✅ Publicado | #291 |
+| A2 | `/docs/empezar/primer-escaneo` | primer escaneo genscore | ✅ Publicado | #291 |
+| A3 | `/docs/informes/overview` | informe overview genscore | ✅ Publicado | #291 |
+| A4 | `/docs/metodologia/geo-score` | geo score metodología | ✅ Publicado | #291 |
+| A5 | `/docs/planes-y-limites` | planes genscore límites | ✅ Publicado | #291 |
+
+**Corregido el 2026-08-09 (SEO-POS-1, T16):** estas cinco filas seguían
+marcadas 🔲 Pendiente aunque las páginas existen en el repo desde la Fase 2.3
+(PR #291, `app/docs/**` + `lib/docs/nav.ts`) y el sitemap ya las publica. Un
+ledger que dice "pendiente" de algo shipeado hace que la siguiente sesión
+reescriba lo que ya existe.
 
 ## Capa C — Páginas de decisión (Fase 2.4 / 2.6c / 2.8)
 

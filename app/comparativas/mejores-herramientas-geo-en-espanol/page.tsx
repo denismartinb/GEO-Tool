@@ -4,16 +4,17 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { TOOLS, PILLAR_RESEARCH_DATE } from "@/lib/comparativas/mejores-herramientas-geo";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/mejores-herramientas-geo-en-espanol`;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Las mejores herramientas GEO en 2026 (y cuál elegir según tu caso) — Genscore",
   description:
     "Genscore, Otterly, Peec AI, Profound, Scrunch AI y AthenaHQ comparadas de forma honesta: qué hace cada una, para quién es, y qué priorizar según tu presupuesto e idioma.",
-  alternates: { canonical: PAGE_URL }
-};
+  path: "/comparativas/mejores-herramientas-geo-en-espanol"
+});
 
 const faqItems = [
   {

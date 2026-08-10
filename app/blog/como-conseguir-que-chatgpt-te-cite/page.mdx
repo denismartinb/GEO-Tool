@@ -15,15 +15,11 @@ import {
   AnswerSample,
   AnswerPair
 } from "@/components/blog/article";
-import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-conseguir-que-chatgpt-te-cite");
 
-export const metadata = {
-  title: `${getSeoTitle(post)} — Genscore`,
-  description: getMetaDescription(post),
-  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
-};
+export const metadata = blogPostMetadata(post);
 
 export const faqItems = [
   {

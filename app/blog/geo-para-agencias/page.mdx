@@ -13,15 +13,11 @@ import {
   Figure,
   ShareOfVoice
 } from "@/components/blog/article";
-import { getBlogPost, getSeoTitle, getMetaDescription } from "@/lib/blog/posts";
+import { getBlogPost, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("geo-para-agencias");
 
-export const metadata = {
-  title: `${getSeoTitle(post)} — Genscore`,
-  description: getMetaDescription(post),
-  alternates: { canonical: `https://www.genscore.es/blog/${post.slug}` }
-};
+export const metadata = blogPostMetadata(post);
 
 <ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} coverImage={post.coverImage} />
 

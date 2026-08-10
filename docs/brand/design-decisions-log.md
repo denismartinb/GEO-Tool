@@ -4784,6 +4784,99 @@ detectados durante esta investigación y sin tocar.
 ---
 
 
+## 46. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
+
+**Origen.** El fundador pidió un plan de posicionamiento SEO extremo a extremo
+tras la salida a producción. La auditoría técnica que abrió ese trabajo
+(`docs/seo-positioning-plan.md`, PR #370) encontró 16 huecos; esta entrada
+cierra los tres P0. El plan completo, con la base de keywords y las fases
+siguientes, vive en ese documento y no se repite aquí.
+
+**Qué se decidió.**
+
+1. **La home y `/pricing` tienen metadata propia.** Ambas eran componentes
+   cliente enteros (`"use client"` en la primera línea), y en el App Router eso
+   impide exportar `metadata`: las dos URLs comerciales más valiosas del sitio
+   se servían con el título genérico «Genscore» heredado del layout raíz, sin
+   descripción propia y **sin canonical**, mientras el sitemap las publicaba.
+   Cada una pasa a ser una página de servidor de tres líneas que aporta la
+   metadata y monta el mismo árbol de cliente de siempre, ahora en
+   `components/landing/landing-page.tsx` y `components/pricing/pricing-page.tsx`.
+   Cero cambios visuales: el piloto debe ver exactamente las mismas pantallas.
+2. **Keyword primaria «posicionamiento GEO»** en el título de la home, decidida
+   con la investigación de mercado del plan (§3.1): en castellano ese es el
+   término que gana, «AEO» está capturado por HubSpot y «LLMO» es residual.
+3. **Los motores que se nombran en metadata son los tres reales** (Gemini,
+   Claude, ChatGPT). Nombrar Perplexity o AI Overviews en un `<title>` sería
+   reintroducir por la puerta de atrás el reclamo falso que PRICING-TRUTH-1
+   limpió del resto del producto — y un test lo impide ahora.
+4. **Las cuatro superficies de contenido entran en todos los pies de página.**
+   `/glosario` y `/comparativas` se publicaron en GROWTH-2 2.4 sin enlazarse
+   desde ninguna navegación: 21 URLs alcanzables solo por sitemap y `llms.txt`,
+   es decir sin un solo enlace entrante desde el propio sitio. `/docs` solo se
+   enlazaba a sí misma. Ahora los cinco shells de marketing renderizan la misma
+   lista compartida (`components/marketing-content-links.ts`).
+
+**Por qué aditivo y no un rediseño del pie.** Se añaden enlaces; no se quita ni
+se renombra ninguno de los que ya había (la landing conserva
+«Recomendaciones», el shell legal conserva su orden). Un pie reordenado sin
+diseño aprobado es `PILOT FAIL` por definición, y el objetivo aquí era el flujo
+de enlazado interno, no el aspecto.
+
+**Lo que queda pendiente, a propósito.** Los P1 de la auditoría (Open Graph por
+página, `llms.txt` generado desde las SSOT, 404 propia, `noindex` en las
+pantallas de acceso, `FAQPage` en `/pricing`, `dateUpdated` en los artículos,
+RSS descubrible) son las fases T-b y T-c del plan, en PRs aparte: el fundador
+aprobó el plan, no una fusión de todos sus huecos en una sola entrega. Los dos
+hallazgos de rendimiento (middleware corriendo en rutas públicas de contenido,
+landing enteramente cliente) están transferidos a la sesión de performance.
+
+**Efecto colateral que conviene registrar:** tras el corte, `/` y `/pricing`
+siguen prerenderizándose como estáticas en el build — el split no las volvió
+dinámicas.
+
+---
+
+## 47. Cada página se comparte con su propia cara, y `llms.txt` deja de mentir por omisión (SEO-POS-1 Fase T-b, 2026-08-09)
+
+**Qué se decidió.** Los P1 de la auditoría del plan SEO, en un solo barrido
+porque todos son la misma clase de deuda: señales que el sitio ya podía emitir
+y no emitía.
+
+1. **Open Graph y Twitter por página** (T5), desde un constructor único
+   (`lib/seo/metadata.ts`). Antes, los 10 artículos, las 4 comparativas, los 5
+   docs y las 16 páginas de glosario se compartían todos con el título
+   «Genscore» y la misma imagen genérica.
+2. **`llms.txt` generado desde las SSOT** (T6). Era estático y había derivado
+   hasta listar 5 de 10 artículos, 1 de 3 comparativas y ninguna de las 15
+   páginas de glosario. Es el fichero sobre el que el producto publica una
+   guía: que estuviera rancio era un problema de credibilidad, no solo de
+   cobertura.
+3. **404 propia** (T7), **`noindex` en las cuatro pantallas de acceso** (T10) y
+   **RSS descubrible** (T11) — el feed existía desde 2.1 y nada lo enlazaba.
+
+**Tres fallos reales encontrados durante la implementación, los tres del mismo
+tipo: cambios que parecían mejoras y empeoraban la tarjeta.**
+
+- **El `openGraph` de una página REEMPLAZA el del layout raíz en Next; no se
+  fusiona campo a campo.** La Fase T-a había añadido `openGraph: { title,
+  description, url }` a la home y a `/pricing`, y con eso les quitó
+  `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter enteras —
+  sin ningún error, y dejando las dos páginas más compartidas peor que antes.
+  Se descubrió leyendo el HTML del build, no el código. Por eso el constructor
+  emite siempre el objeto completo: nadie debería tener que recordar esa regla.
+- **Un `og:image` en SVG da una tarjeta en blanco.** Ninguna red social
+  renderiza SVG, y tres portadas del blog lo son. Ahora una portada solo se usa
+  si es rasterizada; si no, cae a la imagen de marca.
+- **Las portadas PNG reales son cuadradas de 1254×1254**, no 1200×630. El
+  constructor declaraba 1200×630 para toda imagen. Se declaran medidas solo
+  para la imagen de marca, cuyo tamaño sí se conoce; para una portada se omiten
+  y el rastreador la mide.
+
+**Lo que queda.** T-c (`FAQPage` en `/pricing` y `/geo`, `dateUpdated` en los
+artículos, las 3 portadas que faltan en `Article.image`, la fecha rancia del
+pilar `sectores`) y la Fase C de contenido.
+
 ---
 
 ## Cómo mantener este documento

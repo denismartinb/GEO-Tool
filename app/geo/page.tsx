@@ -4,13 +4,14 @@ import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { ProcessFlow } from "@/components/blog/process-flow";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "¿Qué es el GEO? Guía visual de Generative Engine Optimization — GenScore",
   description:
     "Qué es el GEO (Generative Engine Optimization), en qué se diferencia del SEO y cómo se mide la visibilidad de tu marca en respuestas de IA: GEO Score, tasa de mención, cuota de citas y más, explicados con ejemplos de GenScore.",
-  alternates: { canonical: "https://www.genscore.es/geo" }
-};
+  path: "/geo"
+});
 
 const NAV_LINKS = [
   { href: "/geo", label: "Qué es GEO" },

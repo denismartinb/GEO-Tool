@@ -1,3 +1,5 @@
+import { contentMetadata } from "@/lib/seo/metadata";
+
 /**
  * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b, SEO
  * fields added in GROWTH-2 Fase 2.1) — used by the index page, the sitemap,
@@ -219,4 +221,22 @@ export function getSeoTitle(post: BlogPost): string {
 /** Meta description for search engines: `metaDescription` when set, otherwise `description`. */
 export function getMetaDescription(post: BlogPost): string {
   return post.metaDescription ?? post.description;
+}
+
+/**
+ * Metadata completa de un artículo, con Open Graph y Twitter propios
+ * (SEO-POS-1, T5). Los 10 MDX la construían a mano y ninguno declaraba OG, así
+ * que todos se compartían con el título y la imagen genéricos del layout raíz.
+ * Un solo sitio donde arreglarlo, y las portadas reales ya existentes pasan a
+ * ser la imagen de la tarjeta.
+ */
+export function blogPostMetadata(post: BlogPost) {
+  return contentMetadata({
+    title: `${getSeoTitle(post)} — Genscore`,
+    description: getMetaDescription(post),
+    path: `/blog/${post.slug}`,
+    image: post.coverImage,
+    type: "article",
+    publishedTime: post.datePublished
+  });
 }
