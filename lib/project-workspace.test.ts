@@ -109,7 +109,12 @@ describe("requireActiveProject", () => {
     const { join } = await import("node:path");
     const source = readFileSync(join(process.cwd(), "lib", "project-workspace.ts"), "utf8");
 
-    const body = source.slice(source.indexOf("export async function requireActiveProject"));
+    // Anclado a `function requireActiveProject`, no a `export async function
+    // …`: la forma de la declaración cambió al memoizarla con `React.cache()`
+    // (PRELAUNCH-HARDENING-1 Fase V, V8) y este test se cayó por el anclaje,
+    // no por lo que comprueba. Con este ancla vale tanto para la función
+    // suelta como para la envuelta.
+    const body = source.slice(source.indexOf("function requireActiveProject"));
     const select = body.match(/\.select\("([^"]+)"\)/)?.[1];
 
     expect(select, "no se encontró el .select() de requireActiveProject").toBeDefined();

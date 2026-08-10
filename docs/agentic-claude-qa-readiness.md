@@ -1,5 +1,16 @@
 # AGENTIC-5A Claude QA Auto-run Readiness
 
+> **Documento histórico (2026-08-09).** El camino que describe —ejecutar Claude
+> QA dentro de GitHub Actions vía la Messages API— quedó superseded por el
+> modelo real (el subagente `qa` invocado por el Director, ver CLAUDE.md), y en
+> PRELAUNCH-HARDENING-1 Fase 0 se borraron las dos piezas que lo
+> implementaban: `.github/workflows/claude-qa.yml` y
+> `scripts/run-claude-qa.py`. Todo lo que este documento dice sobre ellas
+> describe algo que ya no existe en el repo. Lo que **sí** sigue vivo y
+> obligatorio es el *handoff*: `claude-qa-handoff.yml` y los scripts
+> `generate-claude-qa-handoff.sh` / `post-claude-qa-handoff.sh`. Se conserva
+> por trazabilidad de la decisión, no como guía de uso.
+
 ## Current status
 
 **Classification after AGENTIC-5B: `REAL_CLAUDE_EXECUTION_CONFIGURED`.**

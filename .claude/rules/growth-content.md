@@ -74,17 +74,17 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   añade un `<Link>` a mano en un pie. `/glosario` y `/comparativas` se
   publicaron sin enlazar y pasaron meses con 21 URLs sin un solo enlace
   entrante del propio sitio, porque el test de enlaces comprueba que los
-  enlaces que existen resuelvan, no que lo publicado esté enlazado (log §42;
+  enlaces que existen resuelvan, no que lo publicado esté enlazado (log §46;
   `components/marketing-content-links.test.ts`).
 - **Una página de marketing nunca es `"use client"` en su raíz.** Eso impide
   exportar `metadata`, y la página se queda sin título, sin descripción y sin
   canonical propios sin que nada falle: es exactamente lo que les pasó a la
   home y a `/pricing`. El patrón es página de servidor con la metadata +
-  componente cliente aparte (log §42; `app/pricing/pricing-metadata.test.ts`).
+  componente cliente aparte (log §46; `app/pricing/pricing-metadata.test.ts`).
 - **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
   Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
-  donde más se ve (log §42).
+  donde más se ve (log §46).
 
 ## Metadata y señales de las páginas públicas
 
@@ -93,18 +93,18 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `openGraph` de una página **reemplaza** el del layout raíz en vez de
   fusionarse campo a campo, así que declarar solo `title`/`description` le quita
   a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
-  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §43).
+  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §47).
 - **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
   renderiza SVG: la tarjeta sale en blanco. Tres portadas del blog son SVG y por
-  eso `ogImageFor()` cae a la imagen de marca en vez de usarlas (log §43).
+  eso `ogImageFor()` cae a la imagen de marca en vez de usarlas (log §47).
 - **No se declaran medidas de una imagen cuyo tamaño no se conoce.** Las
   portadas reales son cuadradas de 1254×1254; anunciarlas como 1200×630 describe
-  mal el activo. `width`/`height` solo para la imagen de marca (log §43).
+  mal el activo. `width`/`height` solo para la imagen de marca (log §47).
 - **`llms.txt` y el sitemap se generan de las SSOT, nunca a mano.** El estático
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
-  (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §43).
+  (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
 - **Una pantalla sin valor de búsqueda lleva `robots: { index: false, follow:
   true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
-  marketing (log §43).
+  marketing (log §47).

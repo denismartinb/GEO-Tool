@@ -1,0 +1,82 @@
+name: Pilot harness self-check
+
+# `pnpm pilot:selfcheck` drives the real pilot against a local fixture app in
+# four modes and asserts it BOTH passes on a healthy one AND fails on each
+# broken one (overflow, empty state, clipped shell). It is what stops the
+# harness from degrading into a machine that reports a comfortable PASS
+# forever — the failure mode CLAUDE.md documents from 2026-08-02.
+#
+# Until PRELAUNCH-HARDENING-1 Fase 0 it ran nowhere at all. It now runs here.
+#
+# WHY IT IS NOT A PER-PR GATE, stated plainly rather than glossed:
+# it was first wired into `ci.yml`, conditioned on the pilot harness changing.
+# In two consecutive CI runs (2026-08-09) it exceeded 25 minutes without
+# completing, and it could not be measured locally either — the agent sandbox
+# has no working Chromium for this Playwright version. A blocking check whose
+# runtime is unknown and demonstrably over 25 minutes would either stall every
+# harness PR or, worse, train everyone to ignore it. BUILD-BUDGET-1 also
+# counts Actions minutes as a real budget (~350-380 min/day at its peak).
+#
+# So it runs on a schedule and on demand. THE COST OF THAT, ALSO STATED: a
+# harness regression can now sit unnoticed for up to a week instead of being
+# caught on the PR that caused it. Re-promoting this to a PR gate is tracked
+# as Fase Q5 in `docs/prelaunch-hardening-plan.md`, and the precondition is
+# measuring what it actually costs — which is what the weekly runs will
+# finally provide.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:00 UTC — before the week's work starts, after the weekend's
+    # dependency updates would have landed.
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pilot-selfcheck
+  cancel-in-progress: false
+
+jobs:
+  selfcheck:
+    runs-on: ubuntu-latest
+    # Deliberately generous: the point of these runs is to find out how long
+    # this actually takes, so a timeout that truncates the answer defeats them.
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run the pilot harness self-check
+        run: pnpm pilot:selfcheck
+
+      # The self-check writes its fixture runs under .pilot/; when it fails,
+      # this is the only way to see which of the four modes broke, since the
+      # job log alone rarely says which assertion moved.
+      - name: Upload self-check output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pilot-selfcheck-output
+          path: .pilot/
+          retention-days: 7
+          if-no-files-found: ignore

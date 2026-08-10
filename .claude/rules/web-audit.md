@@ -45,9 +45,13 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
 - **Presupuesto ADR 0003**: todo corre síncrono bajo `maxDuration = 60`.
   Cualquier función con varias llamadas de red lleva un presupuesto total de
   reloj holgadamente por debajo, y **degrada parcialmente en vez de morir**.
-- **Contenido no confiable**: todo HTML traído de la web se sanea con el patrón
-  existente (`sanitizeField`) antes de persistir o renderizar. HTML crudo no se
-  almacena ni se renderiza jamás.
+- **Contenido no confiable**: todo HTML traído de la web se sanea con
+  `sanitizeField` antes de persistir o renderizar. HTML crudo no se almacena ni
+  se renderiza jamás. Desde PRELAUNCH-HARDENING-1 Fase R (log §43) esa función
+  vive **sólo** en `lib/text/sanitize.ts`: hasta entonces había tres copias
+  idénticas y esta regla, que ya decía "el patrón existente" en singular, no
+  era cierta. No vuelvas a copiarla — un arreglo del escapado tiene que llegar
+  a todos los llamadores a la vez.
 - **RLS**: lecturas con el cliente de usuario; cualquier escritura con
   service-role prueba propiedad antes con el cliente de usuario.
 

@@ -183,7 +183,7 @@ Fase T en paralelo.
 reales en home y `/pricing` vía split servidor/cliente; verificado en el HTML
 del build), T3 (las 4 superficies de contenido en los 5 pies de marketing,
 desde una lista compartida), T16 (ledger de capa A sincronizado). 20 tests
-nuevos, 1810/1810 en verde, `pnpm run validate` limpio. Detalle: log §42.
+nuevos, 1810/1810 en verde, `pnpm run validate` limpio. Detalle: log §46.
 
 **PR T-b (P1) — ✅ hecho (2026-08-09, este PR).** T5 (OG/Twitter por página
 desde un constructor único, `lib/seo/metadata.ts`), T6 (`llms.txt` generado
@@ -195,7 +195,7 @@ Tres fallos reales encontrados al implementarlo, todos verificados sobre el
 HTML del build y no sobre el código: el `openGraph` de una página **reemplaza**
 el del layout raíz (T-a había dejado sin `og:image` a la home y a `/pricing`),
 un `og:image` en SVG da tarjeta en blanco (3 portadas lo son), y las portadas
-PNG reales son cuadradas de 1254×1254, no 1200×630. Detalle: log §43.
+PNG reales son cuadradas de 1254×1254, no 1200×630. Detalle: log §47.
 
 **PR T-c (P1, pequeño):** T8 (`FAQPage` en `/pricing` y `/geo`), T9
 (`dateUpdated` en `BlogPost` → schema y meta visible), T15 (3 `Article.image`

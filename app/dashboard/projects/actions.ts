@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { generateAddedPrompts, suggestCompetitors, suggestPrompts, type BusinessProfile } from "@/lib/llm/gemini";
+import { reportLlmIncident } from "@/lib/llm/llm-incident";
 import { deriveBrandAliases, resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { createPendingScanRun, ENABLE_SYNC_SCAN_EXECUTION, getActionErrorCode } from "@/lib/scan/scan-runner";
@@ -25,6 +26,19 @@ export type ProjectSetupSuggestion = {
   language: string;
   competitors: Array<{ name: string; domain: string }>;
   prompts: Array<{ text: string; category: PromptCategory }>;
+  /**
+   * LLM-RESILIENCE-1: which halves of the suggestion actually failed, as
+   * opposed to succeeding with nothing to say.
+   *
+   * `ok` alone could not tell those apart, and the gap was visible in
+   * production: on 2026-08-09 the grounded competitor call hit Gemini's 429
+   * while the ungrounded prompt call went through, so `ok` was true (prompts
+   * existed), the wizard advanced, and the user was shown an empty competitor
+   * list with no explanation. An empty list caused by a provider outage and an
+   * empty list caused by a niche domain look identical on screen unless the
+   * server says which one happened.
+   */
+  failed: Array<"competitors" | "prompts">;
 };
 
 /**
@@ -45,7 +59,7 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
 
   const domain = cleanDomain(String(input.domain ?? ""));
   const country = String(input.country ?? "").trim();
-  const empty: ProjectSetupSuggestion = { ok: false, brand: "", language: "", competitors: [], prompts: [] };
+  const empty: ProjectSetupSuggestion = { ok: false, brand: "", language: "", competitors: [], prompts: [], failed: [] };
 
   if (!isValidDomain(domain) || country.length < 2) {
     return empty;
@@ -64,22 +78,44 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   );
 
   if (context.status === "unidentified") {
-    return { ok: false, brand, language, competitors: [], prompts: [] };
+    // Both halves are unreachable without a profile, so both count as failed —
+    // `resolveBusinessContext` has already reported the incident if the cause
+    // was the provider rather than a genuinely unidentifiable site.
+    return { ok: false, brand, language, competitors: [], prompts: [], failed: ["competitors", "prompts"] };
   }
 
+  const failed: Array<"competitors" | "prompts"> = [];
+
   const [competitors, prompts] = await Promise.all([
+    // suggestCompetitors reports its own incident (it is the grounded call and
+    // owns the error) and answers [] either way, so the flag here records that
+    // the half failed, not why.
     suggestCompetitors({ brand, domain, country, language, profile: context.profile, limit: MAX_INITIAL_COMPETITORS }).catch(
-      () => []
+      () => {
+        failed.push("competitors");
+        return [];
+      }
     ),
-    suggestPrompts({ brand, domain, country, language, profile: context.profile, limit: promptLimit }).catch(() => [])
+    suggestPrompts({ brand, domain, country, language, profile: context.profile, limit: promptLimit }).catch(async (error) => {
+      failed.push("prompts");
+      await reportLlmIncident({ surface: "onboarding_suggestions", provider: "gemini", error, domain });
+      return [];
+    })
   ]);
+
+  // A half that threw is a failure; a half that answered nothing is a failure
+  // too, from the user's side — the screen is empty either way and the honest
+  // thing is to say we could not fill it, not to leave them guessing.
+  if (!failed.includes("competitors") && competitors.length === 0) failed.push("competitors");
+  if (!failed.includes("prompts") && prompts.length === 0) failed.push("prompts");
 
   return {
     ok: competitors.length > 0 || prompts.length > 0,
     brand,
     language,
     competitors,
-    prompts
+    prompts,
+    failed
   };
 }
 
@@ -143,7 +179,8 @@ export async function generateMorePrompts(input: {
       ok: true,
       prompts: candidates.map((candidate) => ({ text: candidate.text, category: candidate.category as PromptCategory }))
     };
-  } catch {
+  } catch (error) {
+    await reportLlmIncident({ surface: "prompt_generation", provider: "gemini", error, domain });
     return { ok: false };
   }
 }

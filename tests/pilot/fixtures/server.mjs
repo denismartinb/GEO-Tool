@@ -50,7 +50,14 @@ const BLOG_SLUGS = [
   "como-elegir-competidores-analisis-geo",
   "genscore-vs-herramientas-geo",
   "llms-txt-guia-practica",
-  "como-conseguir-que-chatgpt-te-cite"
+  "como-conseguir-que-chatgpt-te-cite",
+  // Cluster "sectores" (GROWTH-2). Faltaban aquí desde que se publicaron, así
+  // que sus journeys recibían un 404 y tumbaban el caso SANO del self-check
+  // — el que debe pasar (log §44). `fixture-drift.test.ts` impide que la
+  // próxima pieza de contenido repita la historia.
+  "geo-para-ecommerce",
+  "geo-para-saas-b2b",
+  "geo-para-agencias"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
