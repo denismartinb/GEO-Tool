@@ -5132,10 +5132,30 @@ La dirección de soporte estaba escrita a mano en cinco sitios, dos de ellos con
 nombres distintos para la misma cadena (`SUPPORT_EMAIL` y `SALES_EMAIL`). No
 son dos canales: es el mismo buzón. Pasa a `lib/support.ts`.
 
+### Y un agujero en la puerta que montó la Fase 0
+
+Al comprobar el estado del PR apareció que **`ci.yml` no corrió sobre la cabeza
+de la rama**. Se disparó con el `opened` del PR (`f8b6148`) y **no** con los dos
+`push` siguientes (`3bdc8ae`, `47b2d39`), mientras otras ramas la ejecutaban con
+normalidad esos mismos minutos. Es decir: los commits que empujas a un PR ya
+abierto pueden llegar al Human Gate **sin puerta y sin que nada lo diga** —
+justo la forma de fallo que la Fase 0 existía para eliminar, sólo que un nivel
+más arriba.
+
+No está diagnosticada la causa (los eventos `synchronize` de esta rama
+sencillamente no aparecen en el historial de Actions). Lo que sí se ha hecho es
+que sea **recuperable**: `ci.yml` acepta ahora `workflow_dispatch`, y con él se
+verificó la cabeza real (run 29, verde). Un evento perdido se puede reponer a
+mano; una puerta que sólo puede dispararla ese evento perdido, no.
+
+Queda anotado como pendiente de la Fase Q: entender por qué se pierden esos
+eventos, y si hace falta, dejar de depender de ellos.
+
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase V; regla de ruta
 nueva `.claude/rules/styles.md`; invariante nuevo en
-`.claude/rules/onboarding.md`; §40 (el tour del hero y sus invariantes); §43
-(los duplicados de la Fase R, de los que éste es el tercero).
+`.claude/rules/onboarding.md`; §40 (el tour del hero y sus invariantes); §42
+(la Fase 0, que montó esta puerta); §43 (los duplicados de la Fase R, de los
+que éste es el tercero).
 
 ---
 

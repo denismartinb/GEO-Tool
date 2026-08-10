@@ -217,6 +217,12 @@ forma medible.*
   evidencia no captura nada, porque el propio self-check limpia `.pilot/` entre
   casos.
 
+  **Nuevo, 2026-08-10:** `ci.yml` **no se disparó en los `push` a un PR ya
+  abierto** (log §50, sección final). Se le añadió `workflow_dispatch` para
+  poder reponerlo a mano, pero falta entender por qué se pierden esos eventos
+  `synchronize` — sin eso, la puerta de la Fase 0 sólo cubre el primer commit
+  de cada PR.
+
   **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
   (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
   `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
