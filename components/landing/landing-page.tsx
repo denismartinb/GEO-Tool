@@ -230,9 +230,15 @@ export function LandingPage() {
                 </div>
                 <div className="ev-quote">…las opciones más recomendadas son <span className="mk">Orbit</span> y <span className="mk">Quanta</span>, con onboarding sólido…</div>
               </div>
-              <button className="btn btn-soft btn-sm mt12" style={{ width: "100%" }}>
+              {/* Es el dibujo de un botón dentro de una tarjeta de ejemplo, no
+                  un control: la recomendación que ilustra es inventada, así que
+                  no hay nada que generar. Se pinta como `<span>` para que un
+                  lector de pantalla no lo anuncie como pulsable y el teclado no
+                  se pare en él. El aspecto no cambia: `.btn` declara su propio
+                  `display: inline-flex`. */}
+              <span className="btn btn-soft btn-sm mt12" style={{ width: "100%" }} aria-hidden="true">
                 <Icon name="sparkles" size={13} />Generar solución
-              </button>
+              </span>
             </div>
           </div>
         </div>

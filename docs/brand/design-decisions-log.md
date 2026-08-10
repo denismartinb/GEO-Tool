@@ -5093,8 +5093,49 @@ lo mismo que antes.
 de especificidad, no una limpieza — su propia fase, con su propia pasada de
 piloto.
 
+### Y de camino, cuatro controles que mentían
+
+Salieron de la propia revisión del PR y el fundador pidió arreglarlos. No son
+rendimiento: son cosas que la interfaz decía y el producto no cumplía.
+
+**El campo del hero tiraba lo que escribías.** La portada te invita a escribir
+tu dominio, pulsabas «Analiza gratis», y llegabas al registro sin rastro de él;
+después el asistente te lo volvía a pedir. Un campo que no sirve para nada es
+teatro. Ahora se guarda en `localStorage` y el asistente lo recoge y lo
+consume. `localStorage` y no la URL porque entre el hero y el asistente hay una
+confirmación por correo: el dato tiene que sobrevivir a salir del navegador y
+volver. Coste declarado: si escribes en el móvil y confirmas en el portátil, se
+pierde — igual que antes.
+
+Al hacerlo apareció **un tercer duplicado del mismo tipo que R1**: había dos
+`isValidDomain`, una en `onboarding-wizard.tsx` y otra en
+`lib/projects/project-form.ts`, **y no eran la misma función** — la del
+asistente es un regex estricto, la del servidor es laxa a propósito
+(«rechaza lo absurdo, deja pasar lo raro»). Si el hero hubiera usado la laxa,
+guardaría dominios que el asistente rechaza acto seguido. Ahora la estricta
+vive una sola vez como `isWellFormedDomain`, con la diferencia entre ambas
+escrita al lado para que nadie las fusione por parecerse.
+
+**Tres botones que no hacían nada:**
+
+- «Generar solución», en la tarjeta de ejemplo de la landing: la recomendación
+  que ilustra es inventada, así que no hay nada que generar. Pasa a `<span>`
+  con `aria-hidden`: es el dibujo de un botón y ahora lo es también para un
+  lector de pantalla.
+- «Hablar con ventas» y el CTA del **plan Agencia** en `/pricing`: éstos sí
+  debían llevar a algún sitio. El propio producto ya dice a dónde
+  (`billing/actions.ts`: *«Este plan no se contrata online. Escríbenos a
+  soporte@genscore.es»*), así que el único plan que **exige** hablar con
+  alguien era el único sin forma de hacerlo. Ahora son `mailto:` con asunto.
+
+La dirección de soporte estaba escrita a mano en cinco sitios, dos de ellos con
+nombres distintos para la misma cadena (`SUPPORT_EMAIL` y `SALES_EMAIL`). No
+son dos canales: es el mismo buzón. Pasa a `lib/support.ts`.
+
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase V; regla de ruta
-nueva `.claude/rules/styles.md`; §40 (el tour del hero y sus invariantes).
+nueva `.claude/rules/styles.md`; invariante nuevo en
+`.claude/rules/onboarding.md`; §40 (el tour del hero y sus invariantes); §43
+(los duplicados de la Fase R, de los que éste es el tercero).
 
 ---
 

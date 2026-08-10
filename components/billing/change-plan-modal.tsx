@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PLANS, type Plan } from "@/app/pricing/plans-data";
@@ -115,8 +116,7 @@ export function ChangePlanModal({
   // different explanations on screen ("Disponible muy pronto" at the foot,
   // "escríbenos a soporte" in the note) — a dead end that let someone choose
   // something they could not have. It now renders as its own cell with a real
-  // way out (SALES_EMAIL), and `sel` can never hold it.
-  const SALES_EMAIL = "soporte@genscore.es";
+  // way out (SUPPORT_EMAIL), and `sel` can never hold it.
   const agencyPlan = PLANS.find((p) => p.id === "agency")!;
   const selectablePlans = PLANS.filter((p) => p.id !== "agency");
 
@@ -276,7 +276,7 @@ export function ChangePlanModal({
                     <div className="cp-sales-d">{agencyPlan.tagline}</div>
                     <PlanMeterChips plan={agencyPlan} />
                   </div>
-                  <a className="cp-sales-cta" href={`mailto:${SALES_EMAIL}?subject=${encodeURIComponent("Plan Agencia")}`}>
+                  <a className="cp-sales-cta" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Plan Agencia")}`}>
                     Hablar con ventas
                     <Icon name="arrRight" size={14} />
                   </a>

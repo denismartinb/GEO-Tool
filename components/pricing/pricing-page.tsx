@@ -5,6 +5,7 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
+import { supportMailto } from "@/lib/support";
 import { PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 
 const METER_ITEMS: Array<{ icon: string; t: string; d: string; scale: string[] }> = [
@@ -43,9 +44,15 @@ function PlanCard({ plan }: { plan: Plan }) {
       </div>
       <div className="price-who">{plan.who}</div>
       {plan.id === "agency" ? (
-        <button type="button" className={ctaClass}>
+        // El plan Agencia no se contrata online — lo dice el propio producto
+        // (`app/dashboard/settings/billing/actions.ts`: "Este plan no se
+        // contrata online. Escríbenos a soporte@genscore.es"). Hasta ahora
+        // esta tarjeta terminaba en un botón que no hacía nada, así que el
+        // único plan que EXIGE hablar con alguien era el único sin forma de
+        // hacerlo. Mismo destino que ya usa el modal de cambio de plan.
+        <a className={ctaClass} href={supportMailto("Plan Agencia")}>
           {plan.cta}
-        </button>
+        </a>
       ) : (
         <Link className={ctaClass} href={`/signup?plan=${plan.id}`}>
           {plan.cta}
@@ -270,7 +277,9 @@ export function PricingPage() {
                 <Link className="btn btn-white btn-lg" href="/signup?plan=free">
                   Escanear gratis <Icon name="arrRight" size={16} />
                 </Link>
-                <button type="button" className="btn btn-onaccent btn-lg">Hablar con ventas</button>
+                <a className="btn btn-onaccent btn-lg" href={supportMailto("Hablar con ventas")}>
+                  Hablar con ventas
+                </a>
               </div>
             </div>
           </div>
