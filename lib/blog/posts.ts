@@ -1,3 +1,5 @@
+import { contentMetadata } from "@/lib/seo/metadata";
+
 /**
  * Single source of truth for blog post metadata (GROWTH-1 Fase 7a/7b, SEO
  * fields added in GROWTH-2 Fase 2.1) — used by the index page, the sitemap,
@@ -75,6 +77,15 @@ export type BlogPost = {
    * tests/asset-budget.test.ts keeps that from creeping back.
    */
   coverImage?: string;
+  /**
+   * ISO date of the last real refresh (SEO-POS-1, T9). Unset means "never
+   * refreshed" — `dateModified` in Article schema then falls back to
+   * `datePublished`, exactly as before this field existed, and no "Actualizado
+   * el…" line renders. Only ever set when a refresh actually changed a fact,
+   * an example or a section (content-strategy.md §4.4: "nunca solo la
+   * fecha") — never bump this on its own.
+   */
+  dateUpdated?: string;
   /** Optional <title> override for search engines when it should differ from the on-page `title` (e.g. shorter, keyword-first). Falls back to `title` via getSeoTitle(). */
   seoTitle?: string;
   /** Optional meta description override, kept under ~160 chars for SERP snippets. Falls back to `description` via getMetaDescription(). */
@@ -93,6 +104,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "La metodología detrás del GEO Score de GenScore: qué mide, cómo se combina presencia, prominencia, posición competitiva y autoridad, y por qué importa para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
     coverIcon: "trendUp",
+    coverImage: "/blog/que-es-el-geo-score/cover.webp",
     primaryKeyword: "geo score",
     cluster: "medicion"
   },
@@ -150,6 +162,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Qué es llms.txt, cómo crear el tuyo paso a paso, y una respuesta honesta a la pregunta que importa: ¿mejora realmente cuánto te citan los motores de IA?",
     datePublished: "2026-08-03",
     coverIcon: "fileText",
+    coverImage: "/blog/llms-txt-guia-practica/cover.webp",
     primaryKeyword: "llms.txt guía práctica",
     cluster: "playbooks"
   },
@@ -160,6 +173,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Checklist práctico de lo que de verdad influye en si un motor generativo cita tu contenido como fuente: estructura, datos estructurados, autoridad y grounding.",
     datePublished: "2026-08-03",
     coverIcon: "cite",
+    coverImage: "/blog/como-conseguir-que-chatgpt-te-cite/cover.webp",
     primaryKeyword: "cómo conseguir que chatgpt te cite",
     cluster: "playbooks"
   },
@@ -219,4 +233,23 @@ export function getSeoTitle(post: BlogPost): string {
 /** Meta description for search engines: `metaDescription` when set, otherwise `description`. */
 export function getMetaDescription(post: BlogPost): string {
   return post.metaDescription ?? post.description;
+}
+
+/**
+ * Metadata completa de un artículo, con Open Graph y Twitter propios
+ * (SEO-POS-1, T5). Los 10 MDX la construían a mano y ninguno declaraba OG, así
+ * que todos se compartían con el título y la imagen genéricos del layout raíz.
+ * Un solo sitio donde arreglarlo, y las portadas reales ya existentes pasan a
+ * ser la imagen de la tarjeta.
+ */
+export function blogPostMetadata(post: BlogPost) {
+  return contentMetadata({
+    title: `${getSeoTitle(post)} — Genscore`,
+    description: getMetaDescription(post),
+    path: `/blog/${post.slug}`,
+    image: post.coverImage,
+    type: "article",
+    publishedTime: post.datePublished,
+    modifiedTime: post.dateUpdated
+  });
 }

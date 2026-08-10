@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BLOG_CLUSTERS,
   BLOG_POSTS,
+  blogPostMetadata,
   getBlogCluster,
   getBlogPost,
   getMetaDescription,
@@ -112,5 +113,28 @@ describe("BLOG_CLUSTERS pillarIntro (GROWTH-2 Fase 2.9, B1b)", () => {
     // vigilada por el test de arriba: un cluster con posts reales necesita
     // pilar; uno vacío no debe fingir que lo tiene.
     expect(getBlogCluster("sectores")?.pillarIntro).toBeTruthy();
+  });
+});
+
+describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
+  it("sin dateUpdated, no declara modifiedTime — igual que antes de que el campo existiera", () => {
+    const og = blogPostMetadata(basePost).openGraph as { modifiedTime?: string } | undefined;
+    expect(og?.modifiedTime).toBeUndefined();
+  });
+
+  it("con dateUpdated, lo propaga como modifiedTime del artículo", () => {
+    const post = { ...basePost, dateUpdated: "2026-08-10" };
+    const og = blogPostMetadata(post).openGraph as { modifiedTime?: string } | undefined;
+    expect(og?.modifiedTime).toBe("2026-08-10");
+  });
+
+  it("ningún post real inventa un dateUpdated sin un refresco de verdad", () => {
+    // No hay todavía ningún refresco real (content-strategy.md §4.4: "nunca
+    // solo la fecha") — este test documenta el estado esperado hoy y falla en
+    // cuanto alguien ponga una fecha ahí sin que el cuerpo del artículo
+    // también cambie, porque entonces habría que revisarlo a mano.
+    for (const post of BLOG_POSTS) {
+      expect(post.dateUpdated, `${post.slug} tiene dateUpdated sin refresco conocido`).toBeUndefined();
+    }
   });
 });

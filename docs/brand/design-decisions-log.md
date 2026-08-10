@@ -4668,7 +4668,284 @@ conversación ya se puede tener con un número encima de la mesa.
 
 ---
 
-## 45. El self-check vuelve a verde, y la lección no es el fixture (PRELAUNCH-HARDENING-1 Fase Q5, 2026-08-10)
+## 45. Un fallo de LLM fuera del escaneo deja de ser invisible (LLM-RESILIENCE-1, 2026-08-09)
+
+**Estado: implementada** (Fases A y B del plan; C y D siguen sin aprobar).
+Task Intake aprobado por el fundador el mismo día ("Si"), con dos decisiones
+explícitas suyas: opción **(i)** para el dedupe y **PR único** para las tres
+mitades.
+
+**El problema, con la evidencia que lo cerró.** El 2026-08-09 el fundador
+añadió tres dominios (amazon.es, google.com, hostinger.com) y el asistente de
+alta le devolvió cero competidores. En hostinger.com no vio ni un mensaje de
+error. En paralelo llegó una alerta de `engine_no_response` de Gemini y se
+descubrió que varios dominios con escaneo diario no se lanzaban desde el 2 de
+agosto. La investigación (sin tocar código, a petición suya: *"Prefiero que lo
+investigues bien para que estemos seguros"*) separó **cuatro** causas, no una:
+
+1. **Pico real de 429 de Gemini** el 9-08 a las 06:00: 20 errores en
+   `job_logs` en ~54 s, con Claude y OpenAI completando en la misma pasada.
+2. **~70 errores más sin registro alguno.** Google AI Studio mostraba ~90
+   errores 429 contra los 20 nuestros. La diferencia venía de rutas que no
+   escriben en ningún sitio.
+3. **Dominios sin escanear:** dos causas distintas — la mayoría nunca se dio
+   de alta en `recurring_scans_enabled` (nace `false`, sólo lo activa el toggle
+   manual de `/debug`), y un proyecto (`5255a45c`) está congelado por el
+   cortacircuitos de 3 fallos seguidos, que no tiene salida en el código.
+4. **RPM/TPM/RPD descartados como causa** con los propios paneles de Google:
+   uso casi a cero contra el límite. La hipótesis viva es una cuota propia del
+   *grounding* con Búsqueda de Google, sin confirmar.
+
+Esta fase ataca (1) y (2). (3) sigue pendiente como fases C y D.
+
+**Los tres hallazgos de código que cambiaron el diagnóstico.**
+
+1. **No todas las llamadas a Gemini usan grounding.** Sólo tres: la generación
+   del escaneo, la auditoría de contenido y `suggestCompetitors`. `suggestPrompts`
+   y `inferBusinessProfile` no. Encaja con el síntoma: lo que se vaciaba era la
+   lista de competidores (grounded) mientras los prompts (sin grounding)
+   sobrevivían.
+2. **Sólo la generación del escaneo reintentaba un 429** — y con una espera
+   fija de 1500 ms. `auditDomainContent`, `generateGeminiJson` y
+   `generateGroundedGeminiJson` no tenían reintento ninguno: el primer 429 era
+   terminal. Es exactamente la asimetría que ADR 0029 encontró entre generación
+   y extracción, una capa más arriba, y explica por qué el asistente caía a la
+   primera mientras el escaneo de la misma minuto aguantaba.
+3. **`ok: competitors.length > 0 || prompts.length > 0`.** Con los prompts
+   funcionando y los competidores no, `ok` era `true`, el asistente avanzaba, y
+   la pantalla de competidores salía vacía sin nada que leer. Y el único
+   mensaje de error que existía (`suggestError`) **se pintaba sólo en el paso
+   0**, mientras el camino de fallo hacía `setStep(1)` en la misma
+   actualización — el aviso se escribía en una pantalla de la que al usuario se
+   le estaba sacando en ese mismo instante.
+
+**Qué se decidió.**
+
+1. **Reintento acotado para toda llamada Gemini interactiva.** Reutiliza la
+   máquina que ya existía para extracción (`fetchExtractionWithRetry`):
+   intentos limitados, backoff exponencial con jitter total y `Retry-After`
+   respetado pero acotado. Presupuesto más corto que el de extracción a
+   propósito (3 intentos, 600 ms base, tope de 3 s) porque **hay una persona
+   esperando**, no una pasada de fondo. Un 400/401/403 sigue fallando al primer
+   intento: reintentar un id de modelo mal puesto da lo mismo tres veces.
+2. **Los `catch {}` mudos pasan a reportar.** Los dos que se tragaban la causa
+   entera (`inferBusinessProfile` → `null`, `suggestCompetitors` → `[]`)
+   mantienen su contrato — siguen devolviendo lo mismo, nadie aguas abajo
+   cambia — pero antes categorizan el fallo y avisan al operador.
+3. **Alerta de operador para fallos LLM sin `run`** (`lib/llm/llm-incident.ts`).
+   `scan-health-alert.ts` no podía cubrir esto: está construido sobre
+   `scan_prompt_results` y `job_logs`, y ambos exigen un job y un run que el
+   asistente de alta no tiene. Alerta sólo en `quota` y `config` — el mismo
+   umbral que el aviso de escaneo, y por la misma razón: avisar del ruido del
+   modelo es enseñar a ignorar el aviso.
+4. **El dedupe es en memoria del proceso, y se dice.** `job_logs.job_id` es
+   `not null` con FK compuesta a `jobs`, así que una ruta sin job no puede
+   escribir ahí. Las opciones eran tabla nueva (migración: área prohibida sin
+   aprobación propia) o memoria. El fundador eligió memoria. **El coste, escrito
+   y no disimulado:** un apagón amplio puede mandar un email por instancia
+   caliente y un arranque en frío olvida la ventana. Es tolerable *aquí* porque
+   las superficies cubiertas las dispara una persona haciendo clic; si esto se
+   conecta alguna vez a una ruta programada, ese razonamiento caduca y el
+   dedupe necesita almacén de verdad. El propio email lo dice ("por instancia")
+   en vez de copiar el "una vez cada 24 h" del aviso de escaneo, que sí es
+   global.
+5. **El asistente avisa en el paso que está vacío.** `ProjectSetupSuggestion`
+   gana `failed: Array<"competitors" | "prompts">` y cada paso pinta su propio
+   aviso cuando le toca. **El texto no inventa la causa**: desde el navegador no
+   se distingue un apagón del proveedor de un dominio del que el modelo no sabe
+   nada, así que dice lo que sí es cierto — no se pudo sugerir, añádelos a mano,
+   el escaneo funciona igual. La causa real va al operador por email.
+6. **El lote de prompts deja de salir todo en el mismo instante.** Un lote
+   despachaba hasta `MAX_REAL_SCAN_PROMPTS` trabajos a la vez y cada uno llama a
+   un motor por proveedor: hasta 10 peticiones simultáneas a Gemini desde parado,
+   por dos proyectos en la pasada del cron. La auditoría ya se autolimitaba y
+   `EXTRACTION_CONCURRENCY` existe justo por esto. Ahora se escalonan **los
+   arranques** (las llamadas siguen solapándose), con dos topes que lo mantienen
+   honesto frente a `.claude/rules/scan.md`: el reparto total está acotado a 2 s
+   pase lo que pase, y por debajo de 20 s de presupuesto restante se desactiva
+   entero. Acabar el lote dentro de `maxDuration` manda sobre el ritmo.
+
+**Lo que esta fase NO arregla, dicho explícitamente.** No elimina el límite de
+Gemini: lo aguanta. Si la causa es una cuota de grounding, los fallos bajan
+mucho pero pueden reaparecer bajo carga — la diferencia es que ahora se sabe el
+mismo día en vez de a los cuatro. Y no toca ninguna de las dos causas de los
+dominios sin escanear.
+
+**Pendiente (fases propuestas, sin aprobar).** **C — SCAN-STREAK-EXIT-1:** darle
+salida al cortacircuitos de `FAILURE_STREAK_LIMIT` y descongelar `5255a45c`.
+**D — ONBOARDING-RECURRING-1:** alta automática en escaneo recurrente; se dejó
+la última a propósito, porque multiplica el volumen diario contra la misma
+cuota que acaba de morder. Y sigue abierta la pista de la cuota de grounding en
+la consola de Google, que no bloquea nada de lo anterior.
+
+**Conocido y no resuelto:** los 400 de OpenAI del 5-08 (`Check OPENAI_MODEL`),
+detectados durante esta investigación y sin tocar.
+
+---
+
+
+## 46. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
+
+**Origen.** El fundador pidió un plan de posicionamiento SEO extremo a extremo
+tras la salida a producción. La auditoría técnica que abrió ese trabajo
+(`docs/seo-positioning-plan.md`, PR #370) encontró 16 huecos; esta entrada
+cierra los tres P0. El plan completo, con la base de keywords y las fases
+siguientes, vive en ese documento y no se repite aquí.
+
+**Qué se decidió.**
+
+1. **La home y `/pricing` tienen metadata propia.** Ambas eran componentes
+   cliente enteros (`"use client"` en la primera línea), y en el App Router eso
+   impide exportar `metadata`: las dos URLs comerciales más valiosas del sitio
+   se servían con el título genérico «Genscore» heredado del layout raíz, sin
+   descripción propia y **sin canonical**, mientras el sitemap las publicaba.
+   Cada una pasa a ser una página de servidor de tres líneas que aporta la
+   metadata y monta el mismo árbol de cliente de siempre, ahora en
+   `components/landing/landing-page.tsx` y `components/pricing/pricing-page.tsx`.
+   Cero cambios visuales: el piloto debe ver exactamente las mismas pantallas.
+2. **Keyword primaria «posicionamiento GEO»** en el título de la home, decidida
+   con la investigación de mercado del plan (§3.1): en castellano ese es el
+   término que gana, «AEO» está capturado por HubSpot y «LLMO» es residual.
+3. **Los motores que se nombran en metadata son los tres reales** (Gemini,
+   Claude, ChatGPT). Nombrar Perplexity o AI Overviews en un `<title>` sería
+   reintroducir por la puerta de atrás el reclamo falso que PRICING-TRUTH-1
+   limpió del resto del producto — y un test lo impide ahora.
+4. **Las cuatro superficies de contenido entran en todos los pies de página.**
+   `/glosario` y `/comparativas` se publicaron en GROWTH-2 2.4 sin enlazarse
+   desde ninguna navegación: 21 URLs alcanzables solo por sitemap y `llms.txt`,
+   es decir sin un solo enlace entrante desde el propio sitio. `/docs` solo se
+   enlazaba a sí misma. Ahora los cinco shells de marketing renderizan la misma
+   lista compartida (`components/marketing-content-links.ts`).
+
+**Por qué aditivo y no un rediseño del pie.** Se añaden enlaces; no se quita ni
+se renombra ninguno de los que ya había (la landing conserva
+«Recomendaciones», el shell legal conserva su orden). Un pie reordenado sin
+diseño aprobado es `PILOT FAIL` por definición, y el objetivo aquí era el flujo
+de enlazado interno, no el aspecto.
+
+**Lo que queda pendiente, a propósito.** Los P1 de la auditoría (Open Graph por
+página, `llms.txt` generado desde las SSOT, 404 propia, `noindex` en las
+pantallas de acceso, `FAQPage` en `/pricing`, `dateUpdated` en los artículos,
+RSS descubrible) son las fases T-b y T-c del plan, en PRs aparte: el fundador
+aprobó el plan, no una fusión de todos sus huecos en una sola entrega. Los dos
+hallazgos de rendimiento (middleware corriendo en rutas públicas de contenido,
+landing enteramente cliente) están transferidos a la sesión de performance.
+
+**Efecto colateral que conviene registrar:** tras el corte, `/` y `/pricing`
+siguen prerenderizándose como estáticas en el build — el split no las volvió
+dinámicas.
+
+---
+
+## 47. Cada página se comparte con su propia cara, y `llms.txt` deja de mentir por omisión (SEO-POS-1 Fase T-b, 2026-08-09)
+
+**Qué se decidió.** Los P1 de la auditoría del plan SEO, en un solo barrido
+porque todos son la misma clase de deuda: señales que el sitio ya podía emitir
+y no emitía.
+
+1. **Open Graph y Twitter por página** (T5), desde un constructor único
+   (`lib/seo/metadata.ts`). Antes, los 10 artículos, las 4 comparativas, los 5
+   docs y las 16 páginas de glosario se compartían todos con el título
+   «Genscore» y la misma imagen genérica.
+2. **`llms.txt` generado desde las SSOT** (T6). Era estático y había derivado
+   hasta listar 5 de 10 artículos, 1 de 3 comparativas y ninguna de las 15
+   páginas de glosario. Es el fichero sobre el que el producto publica una
+   guía: que estuviera rancio era un problema de credibilidad, no solo de
+   cobertura.
+3. **404 propia** (T7), **`noindex` en las cuatro pantallas de acceso** (T10) y
+   **RSS descubrible** (T11) — el feed existía desde 2.1 y nada lo enlazaba.
+
+**Tres fallos reales encontrados durante la implementación, los tres del mismo
+tipo: cambios que parecían mejoras y empeoraban la tarjeta.**
+
+- **El `openGraph` de una página REEMPLAZA el del layout raíz en Next; no se
+  fusiona campo a campo.** La Fase T-a había añadido `openGraph: { title,
+  description, url }` a la home y a `/pricing`, y con eso les quitó
+  `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter enteras —
+  sin ningún error, y dejando las dos páginas más compartidas peor que antes.
+  Se descubrió leyendo el HTML del build, no el código. Por eso el constructor
+  emite siempre el objeto completo: nadie debería tener que recordar esa regla.
+- **Un `og:image` en SVG da una tarjeta en blanco.** Ninguna red social
+  renderiza SVG, y tres portadas del blog lo son. Ahora una portada solo se usa
+  si es rasterizada; si no, cae a la imagen de marca.
+- **Las portadas PNG reales son cuadradas de 1254×1254**, no 1200×630. El
+  constructor declaraba 1200×630 para toda imagen. Se declaran medidas solo
+  para la imagen de marca, cuyo tamaño sí se conoce; para una portada se omiten
+  y el rastreador la mide.
+
+**Lo que queda.** T-c (`FAQPage` en `/pricing` y `/geo`, `dateUpdated` en los
+artículos, las 3 portadas que faltan en `Article.image`, la fecha rancia del
+pilar `sectores`) y la Fase C de contenido.
+
+---
+
+---
+
+## 48. Los últimos P1 técnicos del plan SEO: preguntas reales marcadas, tres portadas que faltaban, y un pilar que dejó de mentir sobre su edad (SEO-POS-1 Fase T-c, 2026-08-10)
+
+**Qué se decidió.** Cierra los tres P1 menores que quedaban abiertos del plan
+(`docs/seo-positioning-plan.md`): T8, T9 y T15.
+
+1. **`FAQPage` solo en `/pricing`, no en `/geo`.** `PLAN_FAQ` ya se renderiza
+   de verdad en un acordeón (`components/pricing/pricing-page.tsx`), así que
+   el schema reusa exactamente esas preguntas y respuestas. `/geo` se queda
+   fuera **a propósito**: no tiene ningún bloque de preguntas y respuestas
+   real, y `FaqPageSchema` existe para marcar contenido que ya está en la
+   página, nunca para fabricarlo (`content-strategy.md` §4.3, y el propio
+   comentario del componente: "nunca inventar o duplicar preguntas que el
+   contenido visible no responde"). Añadir un FAQ real a `/geo` es trabajo de
+   contenido, no una tarea técnica de esta fase.
+2. **`dateUpdated` opcional en `BlogPost`**, propagado a `ArticleSchema.
+   dateModified`, a `openGraph.modifiedTime` (`lib/seo/metadata.ts`) y a un
+   componente nuevo, `PostMeta` (`components/blog/article/blocks.tsx`), que
+   sustituye la fecha en prosa suelta que cada uno de los 10 MDX escribía a
+   mano (`<p className="blog-post-meta">12 de julio de 2026</p>`). Derivarla
+   de `post.datePublished`/`dateUpdated` en vez de teclearla es lo que impide
+   que se desincronice del dato real que ya usan el schema y el sitemap.
+   **Ningún post tiene `dateUpdated` todavía** — es la tubería, no un refresco
+   inventado; un test (`lib/blog/posts.test.ts`) falla si alguien pone una
+   fecha ahí sin que el cuerpo del artículo cambie de verdad, precisamente la
+   regla de `content-strategy.md` §4.4 ("nunca solo la fecha").
+3. **Las 3 portadas que faltaban.** `que-es-el-geo-score`,
+   `llms-txt-guia-practica` y `como-conseguir-que-chatgpt-te-cite` no tenían
+   `coverImage`, así que ni su `Article.image` ni su `og:image` tenían nada
+   real que mostrar (caían al genérico de marca). Se diseñaron tres portadas
+   nuevas siguiendo la convención visual ya establecida (fondo oscuro con dos
+   manchas de brillo, composición centrada en (600,150) para sobrevivir a la
+   tarjeta de `/blog` en móvil, sin texto) — y cada una es evidencia real del
+   artículo, no decoración (ADR 0026): las cuatro barras de
+   `que-es-el-geo-score` son los pesos reales del GEO Score (40/25/20/15 %,
+   ADR-0015, el mismo dato del `StatGrid` del cuerpo); el fichero de
+   `llms-txt-guia-practica` reproduce su estructura real de secciones, con
+   `robots.txt`/`sitemap.xml` atenuados a los lados porque el artículo los
+   compara explícitamente; los tres círculos crecientes de
+   `como-conseguir-que-chatgpt-te-cite` son los tres puntos reales del
+   "Checklist práctico" en su mismo orden de esfuerzo. Diseñadas en SVG y
+   **rasterizadas a WebP** (vía `sharp`, ya presente como dependencia
+   transitiva) — el SVG de origen no se conserva en el repo, igual que las
+   cuatro portadas que ya habían pasado por esa conversión en
+   PRELAUNCH-HARDENING-1 Fase V no dejan un `.png` huérfano detrás. La razón
+   de rasterizar y no dejarlas en SVG: ninguna red social ni el validador de
+   datos estructurados de Google aceptan SVG de forma fiable, así que un
+   `Article.image`/`og:image` en SVG no cierra el hueco — simplemente cambia
+   de forma de estar roto.
+4. **`sectores` deja de compartir fecha con los otros tres pilares.**
+   `PILLAR_LAST_MODIFIED` era una única constante aplicada a los cuatro
+   `/blog/<cluster>`, pero `fundamentos`/`medicion`/`playbooks` ganaron su
+   `pillarIntro` el 2026-08-03 y `sectores` no la tuvo hasta su primer
+   artículo, dos días después. Eso dejaba a `sectores` rancio desde el mismo
+   momento en que entró en el sitemap. Pasa a ser un mapa por cluster
+   (`app/sitemap.ts`), con la fecha real de cada uno.
+
+**Validación:** 1885/1885 tests (33 nuevos: `PLAN_FAQ` fijado al schema,
+`dateModified`/`modifiedTime` con y sin `dateUpdated`, `PostMeta` con y sin
+"Actualizado el…", `sectores` con su propia fecha de sitemap, presupuesto de
+assets con las tres portadas nuevas dentro de tope). `pnpm run validate`
+limpio. Verificado sobre el HTML del build, no solo sobre el código: las tres
+portadas sirven a la vez en `Article.image` y `og:image`; `/pricing` emite
+`FAQPage`; `sectores` y `fundamentos` llevan fechas distintas en el sitemap.
+
+## 49. El self-check vuelve a verde, y la lección no es el fixture (PRELAUNCH-HARDENING-1 Fase Q5, 2026-08-10)
 
 Cierra el rojo de §44. **El producto no se toca en toda esta entrada**: lo roto
 era la línea base del arnés, no la aplicación.

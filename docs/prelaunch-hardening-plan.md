@@ -12,7 +12,7 @@ una con su Human Gate.
   fuera (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §45). El resto de Q5 y las demás Q siguen
+  evidencia se sube de verdad (log §49). El resto de Q5 y las demás Q siguen
   pendientes.
 - **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
   su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
@@ -214,7 +214,7 @@ forma medible.*
   casos.
 
   **Estado (2026-08-10): el caso sano vuelve a pasar y la evidencia se sube**
-  (log §45). Quedan de Q5, sin empezar: `ContentExpectation` en
+  (log §49). Quedan de Q5, sin empezar: `ContentExpectation` en
   `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
   pérdida intermitente de sesión, y la conversación de devolverlo a puerta
   de PR.

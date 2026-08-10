@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { COMPARISON_ROWS, PEEC_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-peec-ai";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/genscore-vs-peec-ai`;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Genscore vs Peec AI: comparativa de herramientas de visibilidad en IA — Genscore",
   description:
     "Genscore frente a Peec AI: precio de entrada, coste de motores adicionales, cobertura multi-país, usuarios de equipo y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
-  alternates: { canonical: PAGE_URL }
-};
+  path: "/comparativas/genscore-vs-peec-ai"
+});
 
 function itemListSchema() {
   const json = {

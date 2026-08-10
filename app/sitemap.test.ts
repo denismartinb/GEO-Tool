@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import sitemap from "./sitemap";
-import { BLOG_POSTS } from "@/lib/blog/posts";
+import { BLOG_POSTS, BLOG_CLUSTERS } from "@/lib/blog/posts";
 import { DOCS_NAV } from "@/lib/docs/nav";
 
 describe("sitemap", () => {
@@ -40,6 +40,31 @@ describe("sitemap", () => {
       for (const docPage of section.pages) {
         expect(urls.has(`https://www.genscore.es/docs/${docPage.slug}`)).toBe(true);
       }
+    }
+  });
+
+  it("gives 'sectores' its own pillar date, not the one shared by the other clusters (SEO-POS-1, T15)", () => {
+    // Regresión concreta: fundamentos/medicion/playbooks ganaron su
+    // pillarIntro el mismo día (2026-08-03); sectores no tuvo la suya hasta
+    // su primer artículo, dos días después (2026-08-05). Una sola constante
+    // compartida dejaba a sectores dos días rancio desde el momento en que
+    // entró en el sitemap.
+    const entries = sitemap();
+    const sectoresEntry = entries.find((e) => e.url === "https://www.genscore.es/blog/sectores");
+    const fundamentosEntry = entries.find((e) => e.url === "https://www.genscore.es/blog/fundamentos");
+    expect(sectoresEntry).toBeDefined();
+    expect(fundamentosEntry).toBeDefined();
+    expect((sectoresEntry!.lastModified as Date).toISOString().slice(0, 10)).toBe("2026-08-05");
+    expect((fundamentosEntry!.lastModified as Date).toISOString().slice(0, 10)).toBe("2026-08-03");
+  });
+
+  it("every cluster with a real pillarIntro has its own sitemap date", () => {
+    const entries = sitemap();
+    const urls = new Set(entries.map((e) => e.url));
+    for (const cluster of BLOG_CLUSTERS.filter((c) => c.pillarIntro)) {
+      expect(urls.has(`https://www.genscore.es/blog/${cluster.key}`), `falta ${cluster.key} en el sitemap`).toBe(
+        true
+      );
     }
   });
 

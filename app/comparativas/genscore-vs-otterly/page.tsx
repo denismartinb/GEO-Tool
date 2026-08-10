@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { COMPARISON_ROWS, OTTERLY_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-otterly";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/genscore-vs-otterly`;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Genscore vs Otterly: comparativa de herramientas de visibilidad en IA — Genscore",
   description:
     "Genscore frente a Otterly: precio de entrada, motores de IA cubiertos, cobertura multi-país, idioma y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
-  alternates: { canonical: PAGE_URL }
-};
+  path: "/comparativas/genscore-vs-otterly"
+});
 
 function itemListSchema() {
   const json = {

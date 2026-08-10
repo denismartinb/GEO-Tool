@@ -393,3 +393,74 @@ export const SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE = "scan_health_alert_un
  * to ignore it, which is worse than not sending it.
  */
 export const SCAN_HEALTH_ALERT_DEDUPE_HOURS = 24;
+
+/**
+ * LLM-RESILIENCE-1 — bounded retry for the Gemini calls OUTSIDE the scan's
+ * generation path: the onboarding wizard's suggestions, the web audit's
+ * grounded content call, and the recommendation rewrite.
+ *
+ * Those three had no retry at all. Only `generateGeminiVisibilityAnswer` ever
+ * retried a 429 (one fixed 1.5s wait), so the first rate-limited response
+ * anywhere else was terminal — which is why the 2026-08-09 spike emptied the
+ * wizard's competitor list on the first click while the scan itself rode it
+ * out. Same asymmetry `docs/adr/0029` found between generation and extraction,
+ * one layer up.
+ *
+ * Deliberately shorter than the extraction budget: these calls sit in a
+ * request a human is waiting on, not in a background pass. Two attempts with a
+ * sub-second first backoff keeps the worst case near the existing 20s per-call
+ * timeout rather than doubling the wizard's perceived latency.
+ */
+export const LLM_CALL_MAX_ATTEMPTS = 3;
+
+/** First backoff between attempts of an interactive Gemini call; doubles, with full jitter. */
+export const LLM_CALL_RETRY_BASE_DELAY_MS = 600;
+
+/**
+ * Ceiling for one interactive backoff, including a provider-sent `Retry-After`.
+ * Low on purpose: a human is waiting, and a provider asking us to come back in
+ * a minute is a failure to report, not a wait to sit through.
+ */
+export const LLM_CALL_RETRY_MAX_DELAY_MS = 3_000;
+
+/**
+ * How long one (surface, provider, category) LLM incident stays deduped in a
+ * single server instance before it may alert again.
+ *
+ * Read the honest limitation in `lib/llm/llm-incident.ts`: this window is
+ * per-process, not global, because the persistent store the scan-health alert
+ * uses (`job_logs`) is unreachable from a path with no job row — `job_id` is
+ * `not null` with a composite FK to `jobs`. Founder-approved trade-off
+ * (option (i), Task Intake LLM-RESILIENCE-1, 2026-08-09): duplicates across
+ * warm instances are acceptable; a schema migration for a dedupe table is not,
+ * being a forbidden area without its own approval.
+ */
+export const LLM_INCIDENT_DEDUPE_MINUTES = 60;
+
+/**
+ * Longest the scan may spend staggering one batch's prompt jobs, and the gap
+ * between two consecutive starts inside that ceiling.
+ *
+ * A batch used to dispatch up to `MAX_REAL_SCAN_PROMPTS` jobs at the very same
+ * instant, each firing one call per engine — up to 10 simultaneous Gemini
+ * requests from a standing start, times `BATCH_CONCURRENCY` projects in a cron
+ * sweep. The web audit already paces its own Gemini calls (700ms); generation
+ * did not, and manufacturing a burst is a good way to manufacture the 429 that
+ * kills it (same reasoning as `EXTRACTION_CONCURRENCY`).
+ *
+ * The ceiling is what keeps this honest against `.claude/rules/scan.md`'s
+ * "budget new work against the invocation": 2s of a 45s work budget, spent
+ * once per batch, and skipped entirely when the deadline is close — see
+ * `computeStaggerDelaysMs`. The calls still overlap; only their starts are
+ * spread.
+ */
+export const PROMPT_JOB_STAGGER_MS = 250;
+
+/** Hard ceiling on the total stagger of a single batch. */
+export const PROMPT_JOB_STAGGER_TOTAL_MAX_MS = 2_000;
+
+/**
+ * Below this much remaining invocation budget the stagger is dropped
+ * altogether. Pacing is a nicety; finishing the batch is not.
+ */
+export const PROMPT_JOB_STAGGER_MIN_REMAINING_MS = 20_000;

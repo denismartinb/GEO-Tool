@@ -4,15 +4,16 @@ import { DocsPageShell } from "@/components/docs/docs-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { getDocPage } from "@/lib/docs/nav";
 import { PLANS } from "@/app/pricing/plans-data";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SLUG = "planes-y-limites";
 const page = getDocPage(SLUG)!;
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: `${page.title} — Genscore`,
   description: page.description,
-  alternates: { canonical: `https://www.genscore.es/docs/${SLUG}` }
-};
+  path: `/docs/${SLUG}`
+});
 
 export default function PlanesYLimitesPage() {
   return (
