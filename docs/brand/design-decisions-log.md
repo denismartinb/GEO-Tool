@@ -5002,6 +5002,102 @@ esto cierra); §42 (el flake de sesión, aún abierto).
 
 ---
 
+## 50. La landing deja de ser una aplicación y el CSS de consola deja de viajar a /blog (PRELAUNCH-HARDENING-1 Fase V, V4+V5, 2026-08-10)
+
+Los dos únicos slices de la Fase V que cambian aspecto, y por eso iban aparte
+con su propia pasada de piloto. Medido, no estimado.
+
+### V4 — la landing y `/pricing` pasan a servidor
+
+Las dos páginas comerciales eran `"use client"` **enteras** por muy poco: la
+landing por un campo con estado y su marcador tecleado; `/pricing` por el
+acordeón de preguntas. A cuenta de eso viajaban al navegador seis secciones de
+markup que no cambian nunca, las tres tarjetas de plan y la matriz de
+comparación.
+
+Lo que sostenía el `"use client"` no era el estado, era `router.push`: nueve
+botones que sólo navegaban. Ahora son `<Link>`. El aspecto no cambia —las
+clases (`.lp-cta`, `.lp-nav-btn`, `.btn`) declaran su propio
+`display: inline-flex`, `a { text-decoration: none }` es global, y `.lp-cta-soft`
+ya se usaba sobre un `<a>` en ese mismo hero— y se gana lo que un botón no
+daba: abrir en pestaña nueva, ver el destino al pasar por encima y, en el logo
+de `/pricing`, existir para el teclado (era un `<div onClick>` con
+`cursor: pointer`).
+
+Queda de cliente lo que de verdad reacciona: `HeroDomainField`, `PricingFaq`,
+el cajón de navegación en móvil y el tour.
+
+**Hallazgo de propina:** la landing importaba `Gauge`, `Sparkline`, `Delta` e
+`InfoTip` y **no usaba ninguno**. Dos de ellos son componentes de cliente, así
+que se empaquetaban y se enviaban para nada. Sobraban desde que el tour
+sustituyó a la captura estática del hero (§40) y el linter no los ve porque son
+imports usados… en el sentido de que TypeScript los da por consumidos hasta que
+no lo están.
+
+**Medido:** el JS de cliente de toda la aplicación baja de **1.974.481 a
+1.879.500 bytes (−93 KB, −4,8 %)**, y el texto de la landing —«Recomendaciones
+que se convierten en trabajo hecho», la cita de Beltway, las preguntas de
+precios— desaparece de los chunks de cliente: ahora sólo existe en el HTML que
+sirve el servidor.
+
+**Lo que NO se hizo, y por qué**, porque el slice aprobado decía «landing
+server + tour diferido»: el tour **no** se difiere. Diferirlo de verdad exige
+`ssr: false`, y eso cambia cuatro cosas a la vez: mete salto de layout donde
+hoy no lo hay, retrasa el LCP en vez de adelantarlo (el lienzo del hero *es* el
+elemento grande), deja al piloto sin su prueba de contenido
+(`.ptour--hero .pt-stage` dejaría de existir en el HTML) y toca una zona con
+invariantes propios (`.claude/rules/onboarding.md`: no arranca hasta verse
+entero, la pista del botón, altura constante). Cambiar el aspecto para ganar
+algo sin medir es justo lo contrario de esta fase. Queda propuesto como slice
+propio.
+
+### V5 — `app/console.css`
+
+`globals.css` eran 303 KB servidos en toda página, la mayoría selectores que
+sólo pinta la consola. Ahora hay una segunda hoja que importa
+`app/dashboard/layout.tsx`.
+
+**Se movieron 16 secciones, no las 25 que el análisis marcó como de consola.**
+Las nueve que faltan no se quedaron por prudencia vaga sino por una razón
+concreta: `console.css` se carga *después* de `globals.css`, y `globals.css` no
+está por capas. Hay secciones posteriores que sobrescriben a propósito reglas
+de consola anteriores —MOBILE-1, el layout de consola en móvil, es el caso
+gordo—; traerse las de arriba las pondría por delante de quien debía ganarles.
+Se detectaron **16 solapes** de ese tipo y sus secciones se quedaron donde
+estaban.
+
+**Dos veces se equivocó el clasificador, y las dos importan:**
+
+1. Siguiendo el cierre de imports desde las rutas públicas dio por «sólo
+   consola» el **sistema de artículos del blog** (`.art-*`) — sus clases se
+   aplican desde `lib/` y desde imports relativos que no seguía. Un error hacia
+   el lado peligroso: habría dejado el blog sin estilo.
+2. Corregido con una regla tosca —«si la clase aparece en cualquier fichero
+   fuera de `app/dashboard/**`, se queda»—, esa regla deja fuera cosas que sí
+   son de consola: la pantalla de notificaciones y la campana, cuyas clases se
+   escriben desde `components/`. Se aceptó perder esos ~4 KB. Un guardián que
+   puede quitarle el estilo a una página pública no vale aunque acierte casi
+   siempre, y la versión fina es exactamente la que ya falló.
+
+La regla tosca vive ahora en `tests/console-css-scope.test.ts`, que además
+comprueba que la consola siga importando la hoja. Sin eso, el ahorro se evapora
+en el primer PR que escriba una clase compartida ahí y nadie se entera: no
+falla nada, la página simplemente se ve mal.
+
+**Medido:** el CSS de las páginas públicas baja de **211.298 a 198.514 bytes**
+minificado. Los 12.784 bytes se mueven exactos a la hoja de consola, que carga
+lo mismo que antes.
+
+**Pendiente:** los ~33 KB restantes exigen ordenar la cascada primero
+(`@layer`, o mover MOBILE-1 entero). Es un cambio de quién gana en cada empate
+de especificidad, no una limpieza — su propia fase, con su propia pasada de
+piloto.
+
+**Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase V; regla de ruta
+nueva `.claude/rules/styles.md`; §40 (el tour del hero y sus invariantes).
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

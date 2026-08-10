@@ -6,10 +6,14 @@ una con su Human Gate.
 **Progreso (2026-08-09):**
 
 - **Fase 0 ✅ hecha** — log §42, mergeada en #366.
-- **Fase V 🟡 parcial** — V0a, V1, V2, V3, V6, V7 y V8 hechos y mergeados en
-  #366. **V4 y V5 sin empezar**: son los únicos slices que cambian el aspecto
-  del producto y necesitan su propia pasada de piloto. V9/V10/V11 siguen
-  fuera (migración, cifra publicada, superficie de auth).
+- **Fase V 🟢 completa (V0–V8)** — V0a, V1, V2, V3, V6, V7 y V8 en #366;
+  **V4 y V5 hechos** (log §50): la landing y `/pricing` pasan a servidor
+  (−93 KB de JS de cliente) y nace `app/console.css` (−12,8 KB de CSS en toda
+  página pública). Dos cosas quedaron fuera **a propósito y documentadas**: el
+  tour NO se difiere (ver §50: `ssr: false` mete salto de layout, retrasa el
+  LCP y choca con `.claude/rules/onboarding.md`) y quedan ~33 KB de CSS de
+  consola sin mover hasta ordenar la cascada. V9/V10/V11 siguen fuera
+  (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
   evidencia se sube de verdad (log §49). El resto de Q5 y las demás Q siguen
