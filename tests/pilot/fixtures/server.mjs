@@ -35,6 +35,7 @@ const AUTHED_PAGES = new Map([
   [`/dashboard/projects/${PROJECT_ID}/competitors`, "Competidores"],
   [`/dashboard/projects/${PROJECT_ID}/recommendations`, "Recomendaciones"],
   ["/dashboard/domains", "Dominios"],
+  ["/dashboard/notifications", "Notificaciones"],
   [`/dashboard/projects/${PROJECT_ID}/web-audit`, "Auditoría web"]
 ]);
 
@@ -242,7 +243,45 @@ function shellWrap(body) {
       ? '<div style="width:2200px" id="shell-clip-wide-marker">ancho atrapado dentro de .dash-content</div>'
       : "";
   return `<div class="shell" style="height:100dvh;overflow:hidden;display:flex;flex-direction:column">
-  <header style="padding:8px 16px">cabecera</header>
+  <header class="topbar" style="padding:8px 16px;display:flex;gap:12px;align-items:center">
+    <span>cabecera</span>
+    <button type="button" class="header-bell" aria-label="Notificaciones">campana</button>
+    <div class="notif-panel" style="display:none;position:absolute;top:40px;right:8px;background:#fff;border:1px solid #ddd;padding:8px;max-width:320px">
+      <!-- Clase propia, NO .notif-row: ese selector es el que la pantalla de
+           notificaciones usa como prueba de contenido real, y este panel vive
+           oculto en la cabecera de TODAS las páginas. Reutilizarlo hacía que
+           la primera coincidencia del DOM fuera invisible y la pantalla se
+           reportara como estado vacío (5ª pasada del self-check). -->
+      <p class="notif-panel-row">Sin novedades</p>
+    </div>
+    <button type="button" class="side-geo">¿Qué es el GEO?</button>
+  </header>
+  <script>
+  (function () {
+    var bell = document.querySelector(".header-bell");
+    var panel = document.querySelector(".notif-panel");
+    if (bell && panel) {
+      bell.addEventListener("click", function () {
+        panel.style.display = panel.style.display === "block" ? "none" : "block";
+      });
+    }
+    // Reabrir el tour desde el menú: el journey lo pulsa tras cerrar el popup.
+    // El popup se ELIMINA del DOM al cerrarse y al recargar cuando ya se ha
+    // visto, así que reabrirlo es reconstruirlo con __pilotShowWelcome, no
+    // des-ocultar un nodo que ya no existe.
+    var reopen = document.querySelector(".side-geo");
+    if (reopen) {
+      reopen.addEventListener("click", function () {
+        if (typeof window.__pilotShowWelcome === "function") {
+          window.__pilotShowWelcome();
+          return;
+        }
+        var scrim = document.querySelector(".ptour-scrim");
+        if (scrim) scrim.style.display = "block";
+      });
+    }
+  })();
+  </script>
   <div class="dash-main" style="flex:1;min-height:0;display:flex;flex-direction:column">
     <main class="dash-content" style="flex:1;overflow-y:auto;padding:16px">
       ${body}
@@ -496,9 +535,254 @@ function isAuthenticated(request) {
   return (request.headers.cookie ?? "").includes(`${SESSION_COOKIE}=1`);
 }
 
+
+// ---------------------------------------------------------------------------
+// Páginas que el caso SANO del self-check necesita (log §44). Sin ellas el
+// fixture devolvía 404 y el caso que DEBE pasar fallaba, dejando el self-check
+// rojo por deriva y no por un fallo real del arnés.
+//
+// Sólo llevan lo que los journeys miran, y con COMPORTAMIENTO real donde lo
+// comprueban: un plegable que no abre de verdad, o un «Siguiente» que no
+// avanza, harían pasar la aserción y mentirían sobre lo que el arnés sabe ver.
+// ---------------------------------------------------------------------------
+
+/**
+ * El tour, compartido por el popup de bienvenida y por el hero de la landing.
+ *
+ * Reglas que replica de `.claude/rules/onboarding.md`, porque los journeys las
+ * comprueban: sólo el paso 1 se reproduce solo (nunca encadena), la pista del
+ * botón «Siguiente» se queda puesta hasta el clic, y cada clic avanza un paso.
+ */
+function tourWidget({ hero }) {
+  const dots = [0, 1, 2, 3]
+    .map((i) => `<span class="pt-dot${i === 0 ? " is-on" : ""}"></span>`)
+    .join("");
+  return `<div class="ptour${hero ? " ptour--hero" : ""}">
+    <div class="pt-stage" style="min-height:180px;border:1px solid #ddd;padding:12px">
+      <span data-pt="typed"></span>
+    </div>
+    <div class="pt-dots">${dots}</div>
+    <div class="pt-foot">
+      <a href="/geo">¿Qué es el GEO?</a>
+      <button type="button" class="pt-primary pt-hint">Siguiente</button>
+    </div>
+  </div>`;
+}
+
+const TOUR_SCRIPT = `
+(function () {
+  document.querySelectorAll(".ptour").forEach(function (tour) {
+    var typed = tour.querySelector("[data-pt=typed]");
+    // El paso 1 se reproduce solo: teclea el dominio y SE PARA ahí.
+    setTimeout(function () { if (typed) typed.textContent = "fixture.example"; }, 300);
+
+    var next = tour.querySelector(".pt-primary");
+    if (!next) return;
+    next.addEventListener("click", function () {
+      var dots = Array.prototype.slice.call(tour.querySelectorAll(".pt-dot"));
+      var current = dots.findIndex(function (d) { return d.classList.contains("is-on"); });
+      var target = Math.min(current + 1, dots.length - 1);
+      dots.forEach(function (d) { d.classList.remove("is-on"); });
+      dots[target].classList.add("is-on");
+    });
+  });
+})();
+`;
+
+/**
+ * Popup de bienvenida. La marca de «visto» se escribe AL MOSTRARLO, nunca al
+ * cerrarlo (regla de ruta de onboarding): escribirla al cerrar convierte «sale
+ * en el primer acceso» en «sale en cada carga hasta que lo cierres».
+ */
+const WELCOME_POPUP_SCRIPT = `
+(function () {
+  var KEY = "genscore.onboarding-tour.seen.v1";
+  var scrim = document.querySelector(".ptour-scrim");
+  if (!scrim) return;
+
+  // El markup se guarda ANTES de tocar nada. El popup no puede limitarse a
+  // ocultarse —el journey comprueba tras recargar que NO EXISTA
+  // (\`toHaveCount(0)\`), porque la regresión que persigue es un popup que
+  // reaparecía en cada carga— y tampoco puede desaparecer para siempre, porque
+  // el botón del menú lo reabre. Así que se elimina y se reconstruye.
+  var markup = scrim.outerHTML;
+  var parent = scrim.parentNode;
+
+  function bindClose(node) {
+    var close = node.querySelector(".pt-close");
+    if (close) close.addEventListener("click", function () { node.remove(); });
+  }
+
+  window.__pilotShowWelcome = function () {
+    if (document.querySelector(".ptour-scrim")) return;
+    var wrap = document.createElement("div");
+    wrap.innerHTML = markup;
+    var node = wrap.firstElementChild;
+    node.style.display = "block";
+    parent.appendChild(node);
+    bindClose(node);
+    // El reloj del tour ya corrió en el nodo original; el reconstruido nace
+    // con el paso 1 ya tecleado en vez de con el lienzo en blanco.
+    var typed = node.querySelector("[data-pt=typed]");
+    if (typed) typed.textContent = "fixture.example";
+  };
+
+  try {
+    if (window.localStorage.getItem(KEY) === "1") { scrim.remove(); return; }
+    window.localStorage.setItem(KEY, "1");
+  } catch (e) { /* almacenamiento no disponible: se muestra igual */ }
+  scrim.style.display = "block";
+  bindClose(scrim);
+})();
+`;
+
+function welcomeTourPopup() {
+  return `<div class="ptour-scrim" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50">
+    <div role="dialog" aria-label="Aprende cómo funciona" style="background:#fff;margin:24px auto;max-width:520px;padding:16px">
+      <h2>Aprende cómo funciona</h2>
+      <button type="button" class="pt-close" aria-label="Cerrar">×</button>
+      ${tourWidget({ hero: false })}
+    </div>
+  </div>`;
+}
+
+function landingPage() {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/">
+<title>Genscore — visibilidad de marca en motores de IA</title>
+<style>body{margin:0;font-family:system-ui;padding:16px}.pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin:2px}.pt-dot.is-on{background:#333}</style>
+</head><body>
+<h1>Mide cómo te ve la IA</h1>
+<div class="lp-shot">${tourWidget({ hero: true })}</div>
+${overflow}
+<script>${TOUR_SCRIPT}</script>
+</body></html>`;
+}
+
+/**
+ * Pantalla de notificaciones (NOTIF-AUTOREAD-1). El journey mira tres cosas:
+ * que haya filas reales —no el vacío, que no probaría nada—, que NO exista ya
+ * un control de «marcar como leídas», y que la pestaña «No leídas» resuelva a
+ * filas o a un vacío legible.
+ *
+ * Las filas se ELIMINAN al cambiar de pestaña en vez de ocultarse: el journey
+ * mira `.notif-row, .notif-page-empty` y toma la PRIMERA del DOM. Con las
+ * filas escondidas, esa primera coincidencia sería una fila invisible y la
+ * comprobación fallaría aunque el vacío se pintase perfectamente — el mismo
+ * fallo por orden del DOM que ya costó una pasada con `.notif-row` en la
+ * cabecera.
+ */
+function notificationsPage() {
+  const rows = `
+    <article class="notif-row"><h3>Escaneo completado</h3><p>Tu dominio se escaneó hace 2 horas.</p></article>
+    <article class="notif-row"><h3>Nueva recomendación</h3><p>Hay una acción nueva en tu backlog.</p></article>`;
+  return `<div class="notif-page">
+    <div class="notif-tabs" role="group">
+      <button type="button" class="notif-tab is-on" data-tab="all">Todas</button>
+      <button type="button" class="notif-tab" data-tab="unread">No leídas</button>
+    </div>
+    <div class="notif-list">${rows}</div>
+    <script>
+    (function () {
+      var list = document.querySelector(".notif-list");
+      var all = ${JSON.stringify(rows)};
+      var empty = '<p class="notif-page-empty">No tienes notificaciones sin leer. ' +
+        'Se marcan solas al abrirlas.</p>';
+      document.querySelectorAll(".notif-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          document.querySelectorAll(".notif-tab").forEach(function (t) {
+            t.classList.remove("is-on");
+          });
+          tab.classList.add("is-on");
+          list.innerHTML = tab.dataset.tab === "unread" ? empty : all;
+        });
+      });
+    })();
+    </script>
+  </div>`;
+}
+
+/**
+ * Ajustes en una sola página (CONSOLE-REDESIGN-1). Los cinco journeys de
+ * `settings.spec.ts` miran: el titular, el email real, las tres secciones en
+ * orden, los dos plegables gemelos —que nacen cerrados y cuyo cuerpo NO existe
+ * en el DOM hasta abrirlo—, el bloque de eliminar cuenta al final y fuera del
+ * índice, y que en móvil no quede nada fijado dentro de `.page`.
+ */
+function settingsPage() {
+  return `<div class="page">
+    <h1 class="set-title">Ajustes</h1>
+    <nav class="set-idx" style="position:sticky;top:0">
+      <a href="#cuenta">Cuenta</a>
+      <a href="#avisos">Avisos</a>
+      <a href="#plan">Plan</a>
+    </nav>
+
+    <h2 class="set-sech" id="cuenta">Cuenta</h2>
+    <p class="set-idmail">piloto@fixture.example</p>
+    <label for="profile-email">Email</label>
+    <input id="profile-email" value="piloto@fixture.example">
+
+    <button type="button" class="set-fold-h" aria-controls="company-fold-body" aria-expanded="false">
+      Datos de empresa
+    </button>
+    <div data-fold-slot="company-fold-body"></div>
+
+    <button type="button" class="set-fold-h" aria-controls="billing-fold-body" aria-expanded="false">
+      Datos de facturación
+    </button>
+    <div data-fold-slot="billing-fold-body"></div>
+
+    <h2 class="set-sech" id="avisos">Avisos</h2>
+    <p>Preferencias de notificación</p>
+
+    <h2 class="set-sech" id="plan">Plan</h2>
+    <p>Plan actual: Pro</p>
+
+    <div class="set-end">
+      <h3>Eliminar cuenta</h3>
+      <button type="button" class="set-end-d">Eliminar cuenta — esta acción es irreversible</button>
+    </div>
+  </div>
+  <style>
+    /* El índice desaparece por debajo de 900px: en móvil la página es un solo
+       scroll y nada suyo queda fijado (settings.spec.ts). */
+    @media (max-width: 899px) { .set-idx { display: none } }
+  </style>
+  <script>
+  (function () {
+    var BODIES = {
+      "company-fold-body": '<div id="company-fold-body"><label for="company-name">Nombre</label><input id="company-name" value="Fixture SL"></div>',
+      "billing-fold-body": '<div id="billing-fold-body"><label for="billing-legal-name">Razón social</label><input id="billing-legal-name" value="Fixture SL"></div>'
+    };
+    document.querySelectorAll("[aria-controls]").forEach(function (trigger) {
+      var id = trigger.getAttribute("aria-controls");
+      if (!BODIES[id]) return;
+      var slot = document.querySelector('[data-fold-slot="' + id + '"]');
+      trigger.addEventListener("click", function () {
+        var open = trigger.getAttribute("aria-expanded") === "true";
+        trigger.setAttribute("aria-expanded", open ? "false" : "true");
+        // El cuerpo NO existe en el DOM mientras está cerrado: el journey
+        // comprueba toHaveCount(0), no sólo que esté oculto.
+        slot.innerHTML = open ? "" : BODIES[id];
+      });
+    });
+  })();
+  </script>`;
+}
+
 const server = createServer((request, response) => {
   const url = new URL(request.url ?? "/", "http://localhost");
   const path = url.pathname;
+
+  if (path === "/") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(landingPage());
+    return;
+  }
 
   if (path === "/login" && request.method === "POST") {
     // Accept any credentials: the fixture verifies harness plumbing, not auth.
@@ -564,6 +848,17 @@ const server = createServer((request, response) => {
     return;
   }
 
+  if (path === "/dashboard/settings") {
+    if (!isAuthenticated(request)) {
+      response.writeHead(303, { Location: "/login" });
+      response.end();
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(html("Ajustes", settingsPage()));
+    return;
+  }
+
   const citationsPath = `/dashboard/projects/${PROJECT_ID}/citations`;
   if (path === citationsPath) {
     if (!isAuthenticated(request)) {
@@ -583,10 +878,21 @@ const server = createServer((request, response) => {
       return;
     }
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    // El popup de bienvenida sólo en /dashboard, que es donde aterriza un
+    // primer login de verdad y donde el journey lo busca — entrar por la
+    // pantalla final ocultaría el fallo que ese journey existe para cazar.
+    const welcome =
+      path === "/dashboard"
+        ? `${welcomeTourPopup()}<script>${TOUR_SCRIPT}</script><script>${WELCOME_POPUP_SCRIPT}</script>`
+        : "";
+    const body =
+      path === "/dashboard/notifications"
+        ? notificationsPage()
+        : screenBody(path) + welcome;
     response.end(
       path === "/dashboard/projects"
         ? projectsPage()
-        : html(AUTHED_PAGES.get(path) ?? "", screenBody(path))
+        : html(AUTHED_PAGES.get(path) ?? "", body)
     );
     return;
   }

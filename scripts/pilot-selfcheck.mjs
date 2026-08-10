@@ -13,12 +13,33 @@
  */
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { setTimeout as delay } from "node:timers/promises";
 import { checkCaptureDepth, checkScanLockout, pngHeightFrom } from "./pilot-selfcheck-checks.mjs";
 
 const PORT = process.env.PILOT_FIXTURE_PORT ?? "4321";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+
+/**
+ * Cada caso se archiva aquí en cuanto termina.
+ *
+ * Dos motivos, los dos observados: `pilot.mjs` borra `.pilot/` al arrancar, así
+ * que al acabar la tanda sólo sobrevive el ÚLTIMO caso — y el que interesa
+ * mirar cuando algo falla es casi siempre el sano, el primero. Y el directorio
+ * empieza por punto: `actions/upload-artifact` ignora los ocultos salvo que se
+ * le diga lo contrario, de modo que la pasada del 2026-08-09 subió un artefacto
+ * vacío («No files were found with the provided path: .pilot/») justo cuando
+ * hacía falta para diagnosticarla. Una evidencia que sólo existe cuando no se
+ * necesita no es evidencia.
+ */
+const ARCHIVE_DIR = "pilot-selfcheck-output";
+
+function archiveCase(label) {
+  if (!existsSync(".pilot")) return;
+  const slug = label.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+  mkdirSync(ARCHIVE_DIR, { recursive: true });
+  cpSync(".pilot", `${ARCHIVE_DIR}/${slug}`, { recursive: true });
+}
 
 async function waitForServer(timeoutMs = 10_000) {
   const deadline = Date.now() + timeoutMs;
@@ -110,6 +131,9 @@ async function runCase({ label, breakMode, expectedExit }) {
     return ok;
   } finally {
     server.kill();
+    // Antes de que el siguiente caso borre `.pilot/`, y pase lo que pase con
+    // este: el caso que hay que mirar es justamente el que ha fallado.
+    archiveCase(label);
   }
 }
 
@@ -158,6 +182,8 @@ function verifyDeployRunCannotScan() {
   if (!findings) return report("scan lockout", { ok: false, message: "no findings.jsonl to inspect" });
   return report("scan lockout", checkScanLockout(findings));
 }
+
+rmSync(ARCHIVE_DIR, { recursive: true, force: true });
 
 const results = [];
 results.push(
