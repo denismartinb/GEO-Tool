@@ -212,7 +212,14 @@ export async function generateMorePrompts(input: {
  *   a third.
  */
 function previewTestingDefaults(): Record<string, boolean> {
-  if (process.env.VERCEL_ENV === "production") return {};
+  // Allow-list, not a deny-list, and the direction matters. Written as "if
+  // production, do nothing" it failed OPEN: an unset or renamed `VERCEL_ENV`
+  // would have handed production the cheap defaults — the one environment the
+  // founder was explicit about ("en main nada de lo de probar barato",
+  // 2026-08-11). Now anything that is not demonstrably a preview or a local
+  // dev server behaves exactly like production.
+  const env = process.env.VERCEL_ENV;
+  if (env !== "preview" && env !== "development") return {};
 
   return {
     auto_technical_audit_enabled: true,
