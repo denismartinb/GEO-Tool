@@ -5076,6 +5076,60 @@ un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
 historial, `isFirstScan` falso— y ningún test cubría la expresión porque
 estaba en línea dentro del JSX.
 
+
+## 48. La reentrada: la auditoría web entra en la misión (SCAN-STATES-3, 2026-08-11)
+
+**Estado: implementada.** Maqueta `rev6-reentrada.html` aprobada por el fundador
+el 2026-08-10 («Apruebo la maqueta de la auditoría técnica»), implementación
+pedida el 11 («implementa también la maqueta de auditoría»).
+
+**Qué resuelve.** Dos peticiones suyas: que la misión ponga en valor lo que hace
+la auditoría web —«es un coste relevante y una funcionalidad importante del
+producto»— y que la misma animación se use en Auditoría web mientras corre.
+Cierra el viaje que rev.3 ya insinuaba y descartó por alcance: «reentrada en la
+atmósfera = auditoría web».
+
+**La cinta es lo importante, y su garantía es un test, no un comentario.** El
+riesgo que venía gratis con «ponlo en valor, con jerga espacial» era inventar
+capacidad: la voz de misión hace que cualquier cosa suene impresionante,
+incluidas las que el producto no hace. Así que las dieciséis líneas llevan cada
+una su `IssueCheckKey`, y `audit-ticker.test.ts` las valida **leyendo
+`issues.ts` del propio fichero**, no contra una copia. Añadir una línea para una
+comprobación inexistente pone la suite en rojo; borrar una comprobación del
+producto también, hasta que se borre su línea. Sobrevive a un autor que no lea
+los comentarios, que es más de lo que puede decir un comentario.
+
+Las dos líneas de cobertura quedan fuera: son Pro, y un proyecto Free vería o
+trabajo que no se está haciendo, o candados — que convierten una espera en un
+anuncio.
+
+**Dónde sale, y por qué más estrecho que la maqueta.** La maqueta pedía la
+reentrada a pantalla completa en Auditoría web «mientras dure». Comprobado
+contra el código: esa página **no se apodera hoy de la pantalla** — un proyecto
+con auditoría previa sigue leyendo sus datos con una píldora «Auditando…». Así
+que sale **sólo cuando no hay nada que tapar**: sin resumen de cobertura y sin
+snapshot técnico, es decir la primera auditoría del dominio. Misma regla que el
+cohete con `isFirstScan`, y mismo error evitado — esconder contenido real detrás
+de una animación, que es justo lo que el fundador cazó esa misma tarde.
+
+**Ningún elemento de la escena lleva datos.** Reutilizar el anillo de órbita
+insinuaría una fracción de «la auditoría», y nada mide la auditoría entera: la
+mitad técnica no publica progreso hasta terminar. La única cifra real que
+existe (cobertura) no se lee aquí, así que este compás **no enseña ningún
+número** en vez de enseñar uno plausible.
+
+**Detalle deliberado:** `auditIsRunning` se lee de la fila de job que la página
+ya consulta —sin consulta nueva— y **no** de `auditPillState`, que está
+condicionado a `canAuditCoverage`. La mitad técnica corre en todos los planes,
+así que la primera auditoría de un proyecto Free es trabajo real y merece el
+compás igual que la de uno Pro.
+
+**Conocido y sin cerrar:** el amerizaje (el cierre corto al terminar la
+auditoría) está definido en la maqueta pero no implementado; la cinta es un
+carrusel de alcance, no un registro en vivo, porque el progreso por
+comprobación no se persiste; y esta pantalla **el piloto tampoco puede verla**,
+por la misma razón que el cohete.
+
 ---
 
 ## Cómo mantener este documento

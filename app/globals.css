@@ -4624,6 +4624,37 @@ a.notif-row:hover {
 .mrk-ring-fill { stroke: var(--brand-blue-2); stroke-linecap: round; transition: stroke-dashoffset .5s ease-out; }
 .mrk-ringpop { animation: mrkRingPop 3.2s ease-in-out infinite; }
 
+/* ---- SCAN-STATES-3: reentrada (components/reentry-mission.tsx) ----
+   Reuses the mission shell (.mrk-full/.mrk-canvas/.mrk-rail) — same beat, same
+   language. Only the scene and the ticker are new. */
+@keyframes rntFall { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
+@keyframes rntHeat { 0%, 100% { opacity: .55; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes rntEmber { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(-74px); opacity: 0; } }
+@keyframes rntShield { 0%, 100% { opacity: .5; } 50% { opacity: .95; } }
+@keyframes rntTickIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* The craft drifts rather than plummets: a fall fast enough to read as a fall
+   would loop visibly every second across a beat that lasts minutes. */
+.rnt-craft { animation: rntFall 7s ease-in-out infinite; }
+.rnt-glow { transform-box: fill-box; transform-origin: center; animation: rntHeat 2.4s ease-in-out infinite; }
+.rnt-shield { animation: rntShield 1.8s ease-in-out infinite; }
+.rnt-trail { opacity: .8; }
+.rnt-embers circle { animation: rntEmber 2.8s linear infinite; }
+
+/* The ticker is the only element that changes on a human timescale, so it is
+   the one that keeps a multi-minute wait from reading as frozen. */
+.rnt-tick { margin: 14px 0 0; animation: rntTickIn .45s ease-out both; }
+.rnt-tick-t { font-size: clamp(17px, 4.4vw, 21px); font-weight: 800; letter-spacing: -.02em; color: #EAF1FF; margin: 0; }
+.rnt-tick-d { font-size: 13.5px; line-height: 1.55; color: #9DB2CE; margin: 5px 0 0; }
+@media (min-width: 960px) {
+  .rnt-tick-t { font-size: 24px; }
+  .rnt-tick-d { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Embers only exist mid-flight; frozen they read as stray dots. */
+  .rnt-embers circle { opacity: 0 !important; }
+}
+
 /* entrega */
 .mrk-breathe { transform-box: fill-box; transform-origin: center; animation: mrkBreathe 3.2s ease-in-out infinite; }
 .mrk-converge { animation: mrkConverge 2.4s ease-in infinite; }
