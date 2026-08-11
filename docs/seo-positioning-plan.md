@@ -60,9 +60,9 @@ por DNS). Queda enviar el sitemap; ver Fase M.
 | # | Gap | Evidencia | Arreglo |
 |---|-----|-----------|---------|
 | T1 | Home y `/pricing` sin metadata (título "Genscore", sin canonical, sin descripción) | `app/page.tsx:1` y `app/pricing/page.tsx:1` son `"use client"` | Dividir en page server + componente cliente; título/descripción con la keyword primaria de cada una |
-| T2 | Verificar Search Console y enviar sitemap | Runbook en `docs/environment-contract.md` | 🟡 **Propiedad verificada el 2026-08-11** (tipo Dominio, por DNS — `GOOGLE_SITE_VERIFICATION` resultó innecesaria). Queda enviar el sitemap. Ver Fase M |
+| T2 | Verificar Search Console y enviar sitemap | Runbook en `docs/environment-contract.md` | ✅ **Hecho (2026-08-11).** Propiedad verificada (tipo Dominio, por DNS — `GOOGLE_SITE_VERIFICATION` resultó innecesaria) + sitemap enviado y leído: «Correcto», 47 páginas descubiertas |
 | T3 | `/glosario`, `/comparativas` y `/docs` huérfanas de nav/footer | `app/page.tsx:78-83,304-311`, `blog-page-shell.tsx`, `docs-page-shell.tsx` | Añadir un bloque "Recursos" al footer de los 4 shells (landing, blog, docs, legal) con las 4 superficies de contenido |
-| T4 | www/apex sin redirect verificable en el repo | Sin `redirects()` en `next.config.ts` ni en `vercel.json` | Verificar en Vercel que `genscore.es` → 308 → `www.genscore.es`; documentar el resultado en `environment-contract.md` |
+| T4 | www/apex sin redirect verificable en el repo | Sin `redirects()` en `next.config.ts` ni en `vercel.json` — se resuelve en la configuración de Vercel, no en código | ✅ **Confirmado por el fundador (2026-08-11):** `genscore.es` redirige a `www.genscore.es` |
 
 ### 2.3 Gaps P1 — pierden CTR, señales o PageRank
 
@@ -173,15 +173,19 @@ siempre. Un push por iteración pilotable (BUILD-BUDGET-1).
       `www`** ni la variable `GOOGLE_SITE_VERIFICATION` (esa solo sirve para el
       método de etiqueta HTML). Detalle y cómo distinguir el tipo de propiedad:
       `docs/environment-contract.md`. **T2 parcialmente cerrado.**
-- [ ] Enviar `sitemap.xml` desde Search Console → Indexación → Sitemaps
-      (`https://www.genscore.es/sitemap.xml`, ~47 URLs). Resto de **T2**.
+- [x] **Sitemap enviado y leído (2026-08-11).** Estado «Correcto» en Search
+      Console, **47 páginas descubiertas** — coincide con lo que genera
+      `app/sitemap.ts`, así que Google está viendo el inventario completo, no
+      un subconjunto. **T2 cerrado.**
+- [x] **Redirect apex → www confirmado (2026-08-11)** por el fundador en el
+      navegador. **T4 cerrado.** No es verificable desde el entorno de los
+      agentes: el proxy de salida bloquea genscore.es (comprobado el mismo
+      día), así que esta comprobación es siempre manual — una sesión no puede
+      cerrarla por su cuenta ni dar por hecho el resultado.
 - [ ] Alta en **Bing Webmaster Tools** (importa la propiedad de GSC en 2
       clics) y enviar el mismo sitemap — es el índice que usa ChatGPT, así que
       para el objetivo GEO pesa tanto como Google, no es un extra opcional.
-- [ ] Comprobar que `genscore.es` redirige a `www.genscore.es`. **T4** — no
-      verificable desde el entorno de los agentes: el proxy de salida bloquea
-      genscore.es (comprobado 2026-08-11), así que es comprobación manual del
-      fundador, no algo que una sesión pueda cerrar por su cuenta.
+      **Es lo único que queda de la Fase M.**
 - [ ] (Ya disponible) Panel PostHog: canal de adquisición organic/referral
       para tener la línea base de tráfico único antes del plan.
 

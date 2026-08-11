@@ -294,6 +294,17 @@ runbook original de abajo y por eso se anotan aquí arriba:
 - **Cómo distinguir el tipo de un vistazo** en el selector de propiedades: las
   de tipo Dominio salen sin protocolo (`genscore.es`); las de prefijo salen
   con él (`https://…/`).
+- **Sitemap enviado y leído el mismo día:** estado «Correcto», **47 páginas
+  descubiertas**, que es exactamente lo que genera `app/sitemap.ts` — o sea que
+  Google ve el inventario completo, no un subconjunto. Si algún día esa cifra
+  baja sin que se hayan retirado URLs, es señal de que algo del sitemap se ha
+  roto.
+- **Redirect apex → www confirmado el mismo día** (`genscore.es` →
+  `www.genscore.es`). Se resuelve en la configuración de Vercel, no en código:
+  no hay `redirects()` en `next.config.ts` ni en `vercel.json`, y no debería
+  añadirse uno. **No es verificable desde el entorno de los agentes** — el
+  proxy de salida bloquea genscore.es — así que es comprobación manual y una
+  sesión no puede darla por hecha.
 
 **Runbook histórico — dar de alta la propiedad por prefijo de URL.** Se
 conserva porque describe el método de etiqueta HTML, que es el que usa
