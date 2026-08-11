@@ -64,7 +64,15 @@ export default function GenscoreVsOtterlyPage() {
               {COMPARISON_ROWS.map((row) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
-                  <td>{row.genscore}</td>
+                  <td>
+                    {row.genscoreWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.genscore}
+                      </>
+                    ) : (
+                      row.genscore
+                    )}
+                  </td>
                   <td>
                     {row.otterlyWins ? (
                       <>

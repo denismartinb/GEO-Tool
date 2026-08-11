@@ -5238,6 +5238,58 @@ envuelve blog, glosario y las propias comparativas. La nav del hero de la
 landing se deja intacta: es una superficie de conversión con su propio diseño
 aprobado, y no es donde está el lector de contenido.
 
+---
+
+## 54. La tabla comparativa solo reconocía las victorias del competidor (COMPARATIVAS-DESIGN-1, segunda revisión, 2026-08-11)
+
+**Origen.** El fundador, tras el reequilibrio de §53: *"yo veo que en la
+comparativa siguen saliendo mejor parados los competidores"*. Tenía razón otra
+vez, y §53 no había tocado la causa principal.
+
+**La causa real, que §53 pasó por alto.** La insignia "Gana aquí" solo se
+pintaba en la columna del competidor. Las filas donde gana Genscore —precio de
+entrada, idioma del producto, bucle de acción, coste de añadir motores— no
+llevaban ninguna marca. Al escanear la tabla, **las únicas insignias visibles
+estaban todas en la columna del competidor**, así que la página se leía como
+si perdiéramos en todo aunque el reparto real de filas estuviera equilibrado o
+a nuestro favor:
+
+| Comparativa | Filas que gana Genscore | Filas que gana el competidor |
+|---|---|---|
+| Otterly | 3 | 3 |
+| Peec AI | 4 | 2 |
+| Profound | 4 | 3 |
+
+Es decir: el dato ya era favorable o parejo, y la presentación decía lo
+contrario. §53 arregló la asimetría de los bloques de texto pero dejó intacta
+la de la tabla, que es la parte que la gente escanea primero.
+
+**Arreglo.** Campo `genscoreWins` en las tres fuentes de datos, y la insignia
+se pinta en las dos columnas. Ninguna victoria nueva es inventada: las cuatro
+marcadas ya estaban descritas en el texto de su propia celda. Dos tests nuevos
+por comparativa lo fijan — que haya victorias marcadas **en los dos lados**, y
+que ninguna fila esté marcada para ambos a la vez.
+
+**Del mismo mensaje del fundador, dos cosas más en el índice de `/blog`:**
+
+1. **Comparativas pasa a ser una sección visible del índice, no solo un enlace
+   de navegación.** §53 la añadió a `NAV_LINKS`, pero en móvil la nav se
+   pliega tras el menú de hamburguesa — así que quedaba invisible justo en la
+   anchura donde más se lee, y el fundador seguía sin verla ("no puede ser una
+   sección más normal?"). Ahora es una sección propia, arriba, antes de los
+   clusters: es el contenido con más intención de compra del portfolio y no
+   debería exigir bajar por toda la lista de artículos.
+2. **Retirado el "N artículos publicados" del final del índice.** Petición
+   directa del fundador. Era una cifra que sólo puede jugar en contra: con
+   pocos artículos subraya lo pequeño que es el catálogo, y con muchos no
+   aporta nada a quien está eligiendo qué leer.
+
+**Lección para futuras comparativas, ya escrita en la regla de ruta:** una
+tabla que solo marca un lado no es más honesta, es sesgada en la dirección
+contraria a la que uno pretendía. Si se destacan las concesiones, hay que
+destacar también las ventajas — con el mismo criterio de que sean beneficios
+reales para quien compra.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

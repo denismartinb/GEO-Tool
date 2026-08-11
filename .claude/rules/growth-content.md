@@ -137,3 +137,12 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   que no es un punto (log §53). Las victorias legítimas son capacidades que el
   comprador nota: cobertura multi-país, usuarios incluidos, número de motores,
   reseñas públicas acumuladas.
+- **La tabla comparativa marca las victorias de los DOS lados.** Marcar solo
+  las del competidor no es más honesto: hace que la página se lea como si
+  Genscore perdiera en todo aunque el reparto real de filas esté a nuestro
+  favor, porque las únicas insignias visibles al escanear están en su columna
+  (fundador, 2026-08-11; log §54). Lo fijan dos tests por comparativa: que
+  haya victorias en ambos lados y que ninguna fila esté marcada para los dos.
+- **El índice del blog no publica un recuento de artículos.** Con pocos
+  subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
+  leer (fundador, 2026-08-11; log §54).
