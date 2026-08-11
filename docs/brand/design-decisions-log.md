@@ -5942,6 +5942,47 @@ contraria a la que uno pretendía. Si se destacan las concesiones, hay que
 destacar también las ventajas — con el mismo criterio de que sean beneficios
 reales para quien compra.
 
+---
+
+## 62. El piloto llevaba dos PRs aprobando una página que no había abierto nunca (COMPARATIVAS-DESIGN-1, cierre, 2026-08-11)
+
+**Cómo apareció.** Leyendo la tabla del `PILOT PASS` de este mismo PR antes de
+mergearlo. 52 pantallas en verde a tres anchuras, y entre las comparativas
+estaban `otterly`, `peec-ai`, el índice y `mejores-herramientas` — pero no
+`genscore-vs-profound`. Es decir: la fase entera nació de que el fundador se
+quejó de cómo se veía esa página, el rediseño la tocó, y el piloto dio PASS sin
+haberla abierto.
+
+**Desde cuándo.** Desde que se publicó, en SEO-POS-1 S2 (§58). Su PR (#382)
+también salió con el piloto en verde. Dos PRs consecutivos con una pantalla
+nueva que nadie miró.
+
+**Por qué las comparativas y no el blog.** Los posts del blog se pilotan con un
+bucle sobre una lista, y `fixture-drift.test.ts` ya obligaba a que esa lista
+siguiera a `BLOG_POSTS`. Las comparativas son cuatro `page.tsx` a mano y cuatro
+`test(...)` a mano, sin bucle y sin guardián: publicar la página y olvidar el
+journey no rompe absolutamente nada visible. Peor todavía, el fixture del
+self-check tampoco la servía, así que el journey que faltaba habría dado 404 de
+haberse escrito sin tocar el fixture.
+
+**Lo que no se hizo, y por qué.** No se convirtió el spec en un bucle sobre la
+SSOT. El spec de Playwright **no importa código de la app a propósito** (está
+escrito en su cabecera): si el journey se deriva de la misma lista que el
+producto, una ruta que desaparece de la SSOT deja de pilotarse *y* deja de
+fallar, que es exactamente el fallo silencioso que se estaba arreglando.
+
+**Lo que se hizo.** El journey y la entrada de fixture que faltaban, y dos
+tests en `fixture-drift.test.ts` que comprueban por texto que cada ruta de
+`COMPARATIVAS` (`lib/seo/llms-txt.ts`, la SSOT que ya alimenta `llms.txt`)
+aparezca tanto en el spec como en el fixture. Se verificó que fallan en la
+dirección correcta borrando la ruta del spec y viendo el test nombrarla.
+
+**La lección, que es más general que las comparativas:** un `PILOT PASS` es una
+lista de lo que el piloto vio, no una afirmación sobre lo que el PR cambió.
+Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
+piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
+si cada pantalla que toca el diff aparece en la tabla.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

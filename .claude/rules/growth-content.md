@@ -146,3 +146,15 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **El índice del blog no publica un recuento de artículos.** Con pocos
   subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
   leer (fundador, 2026-08-11; log §61).
+- **Publicar una comparativa incluye su journey de piloto y su entrada de
+  fixture, en el mismo PR.** A diferencia del blog, las comparativas no se
+  pilotan con un bucle: cada una es una página a mano y un `test(...)` a mano,
+  así que olvidar la mitad no rompe nada visible. `genscore-vs-profound` se
+  publicó sin ninguna de las dos y acumuló **dos `PILOT PASS` sin que el
+  piloto llegara a abrirla** — incluido el del PR que la rediseñaba (log §62).
+  Lo fijan los dos tests de `tests/pilot/fixtures/fixture-drift.test.ts` que
+  contrastan `COMPARATIVAS` contra el spec y contra el fixture.
+- **Un `PILOT PASS` es la lista de lo que el piloto vio, no una afirmación
+  sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
+  tabla con las pantallas que toca el diff es trabajo del Director y no lo
+  hace nadie más (log §62).
