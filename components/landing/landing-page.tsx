@@ -11,7 +11,7 @@ import { Sparkline } from "@/components/ui/sparkline";
 import { Delta } from "@/components/ui/delta";
 import { InfoTip } from "@/components/ui/info-tip";
 import { useTypewriter } from "@/components/ui/use-typewriter";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { ProductTour } from "@/components/product-tour";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
@@ -56,49 +56,13 @@ export function LandingPage() {
   const goToSignup = () => router.push("/signup");
   const goToLogin = () => router.push("/login");
 
-  const NAV_LINKS = [
-    { href: "#producto", label: "Producto" },
-    { href: "#como", label: "Cómo funciona" },
-    { href: "#recomendaciones", label: "Recomendaciones" },
-    { href: "/geo", label: "Qué es GEO" },
-    { href: "/pricing", label: "Precios" },
-    { href: "/blog", label: "Blog" }
-  ];
-
   return (
     <div className="lp">
       {/* HERO — nav + promo strip integrated into the same gradient ground
           (v3 rebrand, founder-approved design session: "estilo Semrush"). */}
       <header className="lp-hero lp-hero--home" id="producto">
         <div className="lp-promo">7 días de Pro · Sin tarjeta</div>
-        <nav className="lp-nav lp-nav--hero">
-          <div className="lp-logo">
-            <BrandLogo size={22} />
-          </div>
-          <div className="lp-nav-links">
-            <a href="#producto">Producto</a>
-            <a href="#como">Cómo funciona</a>
-            <a href="#recomendaciones">Recomendaciones</a>
-            <Link href="/geo">Qué es GEO</Link>
-            <Link href="/pricing">Precios</Link>
-            <Link href="/blog">Blog</Link>
-          </div>
-          <div className="lp-nav-right">
-            <button className="lp-nav-btn" onClick={goToLogin}>Iniciar sesión</button>
-            <button className="lp-nav-btn lp-nav-btn--primary" onClick={goToSignup}>Prueba gratis</button>
-          </div>
-          <MarketingMobileNav
-            links={NAV_LINKS}
-            twoLine
-            fromRight
-            ctas={
-              <>
-                <button type="button" className="lp-cta-soft" onClick={goToLogin}>Iniciar sesión</button>
-                <button type="button" className="lp-cta" onClick={goToSignup}>Prueba gratis</button>
-              </>
-            }
-          />
-        </nav>
+        <PublicHeader hero />
 
         <div className="lp-hero-content">
           <h1 className="lp-h1">

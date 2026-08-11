@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 import { PLANS, PLAN_MATRIX, PLAN_FAQ, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 
@@ -124,36 +124,13 @@ export function PricingPage() {
   const [openFaq, setOpenFaq] = useState(0);
 
   const goToSignup = (planId?: string) => router.push(planId ? `/signup?plan=${planId}` : "/signup");
-  const goToLogin = () => router.push("/login");
   const goToHome = () => router.push("/");
 
   return (
     <div className="lp">
       {/* NAV */}
       <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav
-            links={[
-              { href: "/#producto", label: "Producto" },
-              { href: "/#como", label: "Cómo funciona" },
-              { href: "/pricing", label: "Precios" },
-              { href: "/blog", label: "Blog" }
-            ]}
-          />
-          <div className="lp-logo" onClick={goToHome} style={{ cursor: "pointer" }}>
-            <BrandLogo size={22} />
-          </div>
-          <div className="lp-nav-links">
-            <Link href="/#producto">Producto</Link>
-            <Link href="/#como">Cómo funciona</Link>
-            <Link className="active" href="/pricing">Precios</Link>
-            <Link href="/blog">Blog</Link>
-          </div>
-          <div className="lp-nav-right">
-            <button className="btn btn-ghost btn-sm" onClick={goToLogin}>Iniciar sesión</button>
-            <button className="btn btn-primary btn-sm" onClick={() => goToSignup("free")}>Prueba gratis</button>
-          </div>
-        </nav>
+        <PublicHeader activeHref="/pricing" />
       </div>
 
       {/* HERO */}

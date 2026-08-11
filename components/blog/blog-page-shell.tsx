@@ -1,14 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
-import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { PublicHeader } from "@/components/marketing/public-header";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
-
-const NAV_LINKS = [
-  { href: "/geo", label: "Qué es GEO" },
-  { href: "/blog", label: "Blog" },
-  { href: "/pricing", label: "Precios" }
-];
 
 /**
  * GROWTH-1 blog shell — deliberately mirrors components/legal-page-shell.tsx
@@ -20,27 +14,7 @@ export function BlogPageShell({ children }: { children: ReactNode }) {
   return (
     <div className="lp">
       <div className="lp-nav-wrap">
-        <nav className="lp-nav">
-          <MarketingMobileNav links={[{ href: "/", label: "Inicio" }, ...NAV_LINKS]} />
-          <Link href="/" className="lp-logo">
-            <BrandLogo size={22} />
-          </Link>
-          <div className="lp-nav-links">
-            {NAV_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} className={l.href === "/blog" ? "active" : ""}>
-                {l.label}
-              </Link>
-            ))}
-          </div>
-          <div className="lp-nav-right">
-            <Link href="/login" className="btn btn-ghost btn-sm">
-              Iniciar sesión
-            </Link>
-            <Link href="/signup" className="btn btn-primary btn-sm">
-              Prueba gratis
-            </Link>
-          </div>
-        </nav>
+        <PublicHeader activeHref="/blog" />
       </div>
 
       <section className="lp-section">

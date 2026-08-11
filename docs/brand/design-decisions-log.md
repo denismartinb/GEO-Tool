@@ -5702,6 +5702,66 @@ prompts, por ejemplo, solo en Gemini"*.
 
 ---
 
+## 58. Una sola cabecera pública, no cinco copias (GENSCORE-HEADER-1, 2026-08-11)
+
+**Estado: implementada.** Pedido por el fundador tras notar que la cabecera del
+blog «está desactualizada» frente a la de la home; aprobado ampliando el
+alcance en el mismo turno: «hacemos que la única cabecera sea esta,
+unificando todos los enlaces».
+
+**El problema real no era estético, era que no existía un componente
+compartido.** La cabecera (logo + nav + CTAs + menú móvil) estaba copiada a
+mano en cinco sitios — `landing-page.tsx`, `pricing-page.tsx`, `app/geo/page.tsx`,
+`blog-page-shell.tsx`, `docs-page-shell.tsx` — cada uno con su propio array de
+enlaces. La divergencia concreta que se leía como «desactualizado»: solo la
+home pasaba `ctas` a `MarketingMobileNav`, así que el resto de superficies
+mostraba el menú móvil **sin** los botones de Iniciar sesión/Prueba gratis; y
+el destino de «Prueba gratis» variaba entre `/signup` y `/signup?plan=free`
+según la superficie.
+
+**Decisiones finales:**
+- `components/marketing/public-header.tsx` es ahora la única fuente de los
+  seis enlaces del nav público (Producto, Cómo funciona, Recomendaciones, Qué
+  es GEO, Precios, Blog) y del CTA `/signup`, usada por las seis superficies.
+  Un `activeHref` opcional marca el enlace activo; los tres primeros son
+  anclas de la home (`#producto`/`#como`/`#recomendaciones` en `/`, resueltas
+  a `/#producto` etc. fuera de ella mirando `usePathname()`) — nunca un
+  ancla rota fuera de la home.
+- **La unificación es de contenido y de comportamiento del menú móvil, no del
+  fondo del hero.** `hero` (solo `true` en home) controla el burger de dos
+  líneas + drawer desde la derecha + nav transparente (`.lp-nav--hero`); el
+  resto conserva su `.lp-nav-wrap` (barra blanca pegajosa) y burger estándar.
+  Ese fondo transparente-sobre-degradado es un rediseño de hero deliberadamente
+  acotado a la home (BRAND-5b, ver comentario en `app/globals.css` junto a
+  `.lp-nav--hero`: "/geo (.gx-hero) y /pricing (.price-hero) keep the original
+  .lp-hero look untouched") — extenderlo habría contradicho esa decisión ya
+  documentada sin que el fundador lo pidiera explícitamente; lo que sí pidió
+  (mismos enlaces, mismos CTAs en el drawer) queda resuelto sin tocarlo.
+- **`/docs` pierde su enlace "Docs" propio del nav principal** (no está en el
+  set unificado de seis) — sigue alcanzable por `MARKETING_CONTENT_LINKS` en
+  el pie de cada shell y por el propio sidebar de `/docs`.
+- **Las páginas legales (`/privacidad`, `/cookies`, `/terminos`) pierden su
+  nav propio de tres enlaces en la cabecera**, sustituido por el mismo
+  `PublicHeader` que el resto. Como `/cookies` no tenía (y sigue sin tener)
+  enlace en ningún pie de página de esas tres superficies, se añadió un
+  `.legal-subnav` ligero (clase `.link-mini` ya existente, sin CSS nueva de
+  peso) justo bajo el título, para no dejar `/cookies` sin ruta de vuelta
+  desde dentro de las páginas legales mismas.
+- CTA "Prueba gratis" unificado a `/signup` (destino de la home) en las
+  superficies que antes usaban `/signup?plan=free` (`docs`, `legal`,
+  `pricing`) — mismo criterio de "un solo enlace, no cinco copias".
+
+**Pendiente / roto conocido:**
+- El pie de página de `blog-page-shell.tsx`, `docs-page-shell.tsx` y
+  `app/geo/page.tsx` sigue sin enlazar `/cookies` (solo Privacidad/Términos) —
+  preexistente a esta fase, fuera de alcance porque es el pie, no la
+  cabecera; sigue alcanzable desde los pies de home/pricing y desde el
+  `.legal-subnav` nuevo de las propias páginas legales.
+- Sin piloto agéntico todavía sobre esta fase — pendiente antes del Human
+  Gate, recorriendo las seis superficies en 375/768/1280px.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
