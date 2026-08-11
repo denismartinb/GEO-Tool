@@ -5604,7 +5604,30 @@ claro, y los tres siguen el precedente que ya estaba escrito en el propio
 | `.seg button` (filtros de Recomendaciones) | `--ink-3` | **4,44:1** | `--ink-2` | 7,50:1 |
 | `.notif-tab` (pestaña inactiva de Notificaciones) | `--brand-ink-4` | 2,58:1 | `--brand-ink-3` | 5,43:1 |
 
-El del medio deja una lección propia: `--ink-3` pasa AA sobre blanco (4,76:1)
+**Y el cuarto, en la segunda pasada: la misma familia otra vez.** Con esos tres
+arreglados, el piloto bajó de 12 fallos a 3, y los 3 eran un único control:
+`<a class="btn btn-primary">Prueba gratis</a>` al final de
+`/blog/como-elegir-competidores-analisis-geo`, en **1,58:1** — índigo oscuro
+(`--accent-ink`) sobre índigo (`--accent`). El botón no se leía.
+
+La causa es *literalmente* la de la regresión del cajón móvil que abre esta
+sección: `.blog-body a` tiene especificidad (0,1,1) y `.btn-primary` (0,1,0),
+así que la regla del ancestro le impone a un botón el color de un enlace de
+prosa. La regla se escribió cuando dentro de un artículo sólo había enlaces —
+igual que `.lp-mobnav a`. Dos instancias distintas de un mismo patrón, en dos
+zonas que no se parecen en nada, encontradas con una semana de diferencia: eso
+es lo que convierte el invariante de `.claude/rules/styles.md` en algo que hay
+que barrer, no en la anécdota de un PR.
+
+Arreglado excluyendo los botones —`.blog-body a:not(.btn)` y
+`.legal-body a:not(.btn)`— en vez de parchear cada variante. Es lo que la regla
+siempre quiso decir (va de enlaces de prosa) y deja cubiertas las variantes que
+todavía no existen. La misma trampa estaba armada en
+`/comparativas/mejores-herramientas-geo-en-espanol`, que tiene otro
+`.btn.btn-primary` dentro de un `.legal-body`; el arreglo estructural la
+desactiva de paso.
+
+El de los filtros deja una lección propia: `--ink-3` pasa AA sobre blanco (4,76:1)
 y **no** pasa sobre `--surface-sunk` (4,44:1). Un token que aprueba sobre un
 fondo no aprueba sobre otro, y a ojo esos 6 centésimos no existen. Es
 exactamente el tipo de fallo que una persona no encuentra mirando una captura.

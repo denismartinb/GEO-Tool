@@ -52,7 +52,14 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   construcción» era incompleto: cubría los estilos propios del elemento, no las
   reglas que sólo se activan al cambiar de etiqueta (log §54, corrección del
   2026-08-11). El barrido correcto es
-  `grep -n "^\.<zona>[a-z0-9-]* .*a[ ,{:]" app/globals.css`. Desde Q5b el
+  `grep -n "^\.<zona>[a-z0-9-]* .*a[ ,{:]" app/globals.css`. **No es la anécdota
+  de un PR: hay al menos dos instancias del mismo patrón en zonas que no se
+  parecen en nada.** La segunda la encontró el piloto al día siguiente —
+  `.blog-body a` (0,1,1) contra `.btn-primary` (0,1,0), que dejaba el CTA de un
+  artículo en índigo oscuro sobre índigo, 1,58:1 (log §55). Se arregla
+  **excluyendo los botones de la regla del ancestro** (`a:not(.btn)`), no
+  parcheando cada variante: es lo que esas reglas siempre quisieron decir —van
+  de enlaces de prosa— y cubre las variantes que aún no existen. Desde Q5b el
   piloto calcula el contraste de todo control visible y falla por debajo de AA
   (`tests/pilot/support/page-audit.ts`, log §55), así que este caso concreto ya
   no depende de que alguien mire la captura — pero el barrido sigue haciendo

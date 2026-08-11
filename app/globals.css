@@ -4393,7 +4393,18 @@ a.notif-row:hover {
   .cmp-table-wrap::before { content: "Desliza para ver todas las columnas →"; display: block; font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
 }
 .legal-body strong { color: var(--ink); font-weight: 650; }
-.legal-body a { color: var(--accent-ink); font-weight: 600; }
+/* `:not(.btn)` no es cosmético. Esta regla —especificidad (0,1,1)— le gana a
+   `.btn-primary` (0,1,0), así que a un `<a class="btn btn-primary">` metido en
+   el cuerpo de un artículo le imponía el color de enlace de prosa: `--accent-ink`
+   (#3730a3) SOBRE `--accent` (#4f46e5), o sea 1.58:1. Índigo oscuro sobre
+   índigo: el CTA no se leía. Lo cogió el chequeo de contraste del piloto en
+   `/blog/como-elegir-competidores-analisis-geo` (log §55) y es la MISMA familia
+   que `.lp-mobnav a` contra `.lp-cta` (ver `.claude/rules/styles.md`): una
+   regla `.ancestro a` escrita cuando ahí dentro sólo había enlaces.
+   Se excluyen los botones en vez de parchear cada variante, que es lo que la
+   regla siempre quiso decir —esto va de enlaces de prosa— y deja cubiertas las
+   variantes que aún no existen. */
+.legal-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 
 .blog-body { max-width: 760px; }
 .blog-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
@@ -4404,7 +4415,8 @@ a.notif-row:hover {
 .blog-body ol { list-style: decimal outside; margin: 0 0 16px; padding-left: 20px; }
 .blog-body li { font-size: 15px; line-height: 1.75; color: var(--ink-2); margin-bottom: 8px; }
 .blog-body strong { color: var(--ink); font-weight: 650; }
-.blog-body a { color: var(--accent-ink); font-weight: 600; }
+/* Mismo caso y mismo motivo que `.legal-body a:not(.btn)` arriba. */
+.blog-body a:not(.btn) { color: var(--accent-ink); font-weight: 600; }
 .blog-body blockquote { border-left: 3px solid var(--line); padding-left: 16px; margin: 0 0 16px; color: var(--ink-3); font-style: italic; }
 .blog-body pre { overflow-x: auto; margin: 0 0 16px; padding: 14px 16px; border-radius: var(--r-md); background: var(--surface-2); font-size: 13px; line-height: 1.6; }
 .blog-body pre code { background: none; padding: 0; }
