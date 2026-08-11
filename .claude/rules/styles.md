@@ -34,3 +34,14 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
 - **Ampliar el corte pasa por ordenar la cascada primero.** `@layer`, o mover
   MOBILE-1 entero. No es una limpieza: cambia quién gana en cada empate de
   especificidad, así que va en su propia fase con su propia pasada de piloto.
+- **Convertir un `<button>` en `<a>` NO es neutro, aunque la clase declare su
+  propio `display`.** Antes de cambiar el elemento hay que buscar reglas de
+  tipo `.ancestro a { … }`: existen precisamente porque ahí dentro sólo había
+  enlaces, y una de ellas —`.lp-mobnav a`, especificidad `(0,1,1)`— le gana a
+  la clase del botón —`.lp-cta`, `(0,1,0)`—, así que le impone su color, su
+  tamaño y su relleno. En V4 eso dejó «Prueba gratis» con el texto gris sobre
+  fondo azul en el cajón móvil, y el razonamiento de que serían «idénticos por
+  construcción» era incompleto: cubría los estilos propios del elemento, no las
+  reglas que sólo se activan al cambiar de etiqueta (log §54, corrección del
+  2026-08-11). El barrido correcto es
+  `grep -n "^\.<zona>[a-z0-9-]* .*a[ ,{:]" app/globals.css`.

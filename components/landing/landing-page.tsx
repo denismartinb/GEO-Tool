@@ -109,14 +109,13 @@ export function LandingPage() {
             Descubre si los motores de IA mencionan tu marca, frente a quién pierdes y exactamente
             qué cambiar primero. Análisis claro, acciones que puedes ejecutar.
           </p>
+          {/* Las llamadas a la acción viven DENTRO de `HeroDomainField`, no
+              aquí: «Analiza gratis» tiene que guardar el dominio escrito antes
+              de navegar, y eso sólo puede hacerlo la isla de cliente. Tenerlas
+              también aquí las pintaba dos veces (hallazgo del fundador sobre el
+              preview de #379, 2026-08-11). */}
           <div className="lp-hero-form">
             <HeroDomainField />
-            <div className="lp-hero-actions">
-              <Link className="lp-cta" href="/signup">
-                Analiza gratis <Icon name="arrRight" size={16} />
-              </Link>
-              <a className="lp-cta-soft" href="#como">Ver cómo funciona</a>
-            </div>
           </div>
         </div>
 

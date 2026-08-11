@@ -5432,6 +5432,38 @@ enseña a ignorar los rojos.
 Queda anotado como pendiente de la Fase Q: entender por qué se pierden esos
 eventos, y si hace falta, dejar de depender de ellos.
 
+### Dos regresiones visibles que el piloto no podía ver (2026-08-11)
+
+Las encontró el fundador mirando el preview en el móvil. Las dos son de V4 y
+las dos son mías; ninguna la podía cazar el piloto, y eso es lo instructivo.
+
+**Los botones del hero salían por duplicado.** Al mover «Analiza gratis» dentro
+de `HeroDomainField` —tenía que guardar el dominio escrito antes de navegar, y
+eso sólo puede hacerlo la isla de cliente— no borré el bloque
+`.lp-hero-actions` que se había quedado en `landing-page.tsx`. Dos pares de
+botones idénticos, uno debajo del otro. El piloto no lo vio porque su
+`ContentExpectation` comprueba que el contenido esté, no que esté **una sola
+vez**; y ningún aserto mide cuántos `.lp-cta` hay.
+
+**Los CTA del cajón móvil perdieron su color.** «Prueba gratis» quedó con el
+texto gris sobre su fondo azul. La causa es más interesante que el síntoma:
+esos dos controles pasaron de `<button onClick={router.push}>` a `<Link>`, y
+`.lp-mobnav a` —escrita cuando dentro del cajón sólo había enlaces de
+navegación— tiene especificidad `(0,1,1)` y le gana a `.lp-cta` `(0,1,0)`. Le
+imponía color, tamaño y relleno.
+
+**La corrección que importa no es el CSS, es el razonamiento.** El cuerpo del
+PR afirmaba que los nueve botones convertidos serían «visualmente idénticos por
+construcción, porque todas las clases declaran su propio `display`». Eso cubría
+los estilos **propios** del elemento y pasaba por alto los que **sólo se
+activan al cambiar de etiqueta**: una regla `.ancestro a` no existía para ese
+botón hasta que el botón se volvió un enlace. Queda como invariante en
+`.claude/rules/styles.md`, con el barrido concreto que había que haber hecho.
+
+Se revisaron de paso los otros ocho enlaces convertidos: sólo el cajón móvil
+tiene una regla de ese tipo (`.lp-nav-links a` y `.lp-footer .links a` alcanzan
+únicamente a enlaces que ya lo eran, y `/pricing` no tiene ninguna).
+
 **Trazabilidad.** `docs/prelaunch-hardening-plan.md` §Fase V; regla de ruta
 nueva `.claude/rules/styles.md`; invariante nuevo en
 `.claude/rules/onboarding.md`; §40 (el tour del hero y sus invariantes); §42
