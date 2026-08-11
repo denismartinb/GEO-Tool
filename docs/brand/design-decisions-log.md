@@ -5704,7 +5704,7 @@ prompts, por ejemplo, solo en Gemini"*.
 
 ---
 
-## 55. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
+## 58. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
 
 **Origen.** Segunda pieza de la cola de contenido de la Fase C
 (`docs/seo-positioning-plan.md` §4) — "alternativas a Profound en español".
@@ -5759,9 +5759,9 @@ Añadida a las tres SSOT que la hacen descubrible: índice de `/comparativas`,
 
 ---
 
-## 56. Comparativas deja de ser una página legal disfrazada (COMPARATIVAS-DESIGN-1, 2026-08-11)
+## 59. Comparativas deja de ser una página legal disfrazada (COMPARATIVAS-DESIGN-1, 2026-08-11)
 
-**Origen.** El fundador, revisando el preview de S2 (log §51), preguntó por
+**Origen.** El fundador, revisando el preview de S2 (log §58), preguntó por
 qué `/comparativas/genscore-vs-profound` se veía "más plana" que el resto del
 sitio. Task Intake completo antes de tocar código (el fundador lo aprobó "en
 loop") porque tocaba 4 pantallas a la vez — criterio explícito de
@@ -5829,13 +5829,13 @@ no una repetición real).
 
 ---
 
-## 57. La comparativa dejaba a Genscore por debajo incluso donde no perdía (COMPARATIVAS-DESIGN-1, revisión, 2026-08-11)
+## 60. La comparativa dejaba a Genscore por debajo incluso donde no perdía (COMPARATIVAS-DESIGN-1, revisión, 2026-08-11)
 
-**Origen.** El fundador, revisando el preview del rediseño (log §56): *"en
+**Origen.** El fundador, revisando el preview del rediseño (log §59): *"en
 ocasiones quizás dejan demasiado por debajo a Genscore"*, citando el bloque
 "Cuándo elegir Profound". Tenía razón, y las dos causas eran mías.
 
-**Causa 1 — asimetría tipográfica que introdujo el propio §52.** El rediseño
+**Causa 1 — asimetría tipográfica que introdujo el propio §59.** El rediseño
 puso `Verdict` (bloque destacado, con etiqueta) en "Cuándo elegir
 [competidor]" y dejó "Cuándo elegir Genscore" como `<h2>` + `<p>` plano. La
 regla que escribí para justificarlo decía que `Verdict` era para admisiones
@@ -5892,13 +5892,13 @@ aprobado, y no es donde está el lector de contenido.
 
 ---
 
-## 58. La tabla comparativa solo reconocía las victorias del competidor (COMPARATIVAS-DESIGN-1, segunda revisión, 2026-08-11)
+## 61. La tabla comparativa solo reconocía las victorias del competidor (COMPARATIVAS-DESIGN-1, segunda revisión, 2026-08-11)
 
-**Origen.** El fundador, tras el reequilibrio de §57: *"yo veo que en la
+**Origen.** El fundador, tras el reequilibrio de §60: *"yo veo que en la
 comparativa siguen saliendo mejor parados los competidores"*. Tenía razón otra
-vez, y §57 no había tocado la causa principal.
+vez, y §60 no había tocado la causa principal.
 
-**La causa real, que §57 pasó por alto.** La insignia "Gana aquí" solo se
+**La causa real, que §60 pasó por alto.** La insignia "Gana aquí" solo se
 pintaba en la columna del competidor. Las filas donde gana Genscore —precio de
 entrada, idioma del producto, bucle de acción, coste de añadir motores— no
 llevaban ninguna marca. Al escanear la tabla, **las únicas insignias visibles
@@ -5913,7 +5913,7 @@ a nuestro favor:
 | Profound | 4 | 3 |
 
 Es decir: el dato ya era favorable o parejo, y la presentación decía lo
-contrario. §57 arregló la asimetría de los bloques de texto pero dejó intacta
+contrario. §60 arregló la asimetría de los bloques de texto pero dejó intacta
 la de la tabla, que es la parte que la gente escanea primero.
 
 **Arreglo.** Campo `genscoreWins` en las tres fuentes de datos, y la insignia
@@ -5925,7 +5925,7 @@ que ninguna fila esté marcada para ambos a la vez.
 **Del mismo mensaje del fundador, dos cosas más en el índice de `/blog`:**
 
 1. **Comparativas pasa a ser una sección visible del índice, no solo un enlace
-   de navegación.** §57 la añadió a `NAV_LINKS`, pero en móvil la nav se
+   de navegación.** §60 la añadió a `NAV_LINKS`, pero en móvil la nav se
    pliega tras el menú de hamburguesa — así que quedaba invisible justo en la
    anchura donde más se lee, y el fundador seguía sin verla ("no puede ser una
    sección más normal?"). Ahora es una sección propia, arriba, antes de los

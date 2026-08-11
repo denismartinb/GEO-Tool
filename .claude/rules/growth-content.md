@@ -117,32 +117,32 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   2.4), construida antes de que existiera el sistema de bloques del blog
   (GROWTH-3 Fase 3.1) — cuatro páginas arrastrando la misma clase que usan
   `/privacidad`/`/terminos`/`/cookies` sin que nadie lo hubiera decidido así
-  (log §56). `KeyTakeaway` para el resumen, `CompareTable`+`Pill` para la
+  (log §59). `KeyTakeaway` para el resumen, `CompareTable`+`Pill` para la
   tabla ("Gana aquí" en la celda donde gana el competidor — mismo patrón que
   `llms-txt-guia-practica.mdx`), `ArticleCta` real al final.
 - **Las dos secciones "Cuándo elegir X" llevan el mismo peso visual.** Ambas
-  van en `Verdict`, con su propia etiqueta. La primera versión (log §56) puso
+  van en `Verdict`, con su propia etiqueta. La primera versión (log §59) puso
   `Verdict` solo en la del competidor y dejó la de Genscore como `<h2>`+`<p>`,
   razonando que `Verdict` era para admisiones honestas y no para argumentos de
   venta. El efecto real fue el contrario del buscado: el caso del competidor
   quedaba destacado en bloque y el nuestro en texto plano, así que la página
   se leía como si Genscore perdiera incluso donde no perdía (fundador,
-  2026-08-11; log §57). La honestidad la sostienen la tabla —con su "Gana
+  2026-08-11; log §60). La honestidad la sostienen la tabla —con su "Gana
   aquí" en las filas reales— y el propio texto, no la asimetría tipográfica.
 - **Una fila solo se marca como victoria del competidor si es un beneficio
   para quien compra.** Levantar más dinero no lo es: no mejora ningún
   resultado del cliente y corta en las dos direcciones (respaldo, pero también
   presión por rentabilizar la ronda). La fila de financiación de
   `genscore-vs-profound` estaba marcada como victoria y era conceder un punto
-  que no es un punto (log §57). Las victorias legítimas son capacidades que el
+  que no es un punto (log §60). Las victorias legítimas son capacidades que el
   comprador nota: cobertura multi-país, usuarios incluidos, número de motores,
   reseñas públicas acumuladas.
 - **La tabla comparativa marca las victorias de los DOS lados.** Marcar solo
   las del competidor no es más honesto: hace que la página se lea como si
   Genscore perdiera en todo aunque el reparto real de filas esté a nuestro
   favor, porque las únicas insignias visibles al escanear están en su columna
-  (fundador, 2026-08-11; log §58). Lo fijan dos tests por comparativa: que
+  (fundador, 2026-08-11; log §61). Lo fijan dos tests por comparativa: que
   haya victorias en ambos lados y que ninguna fila esté marcada para los dos.
 - **El índice del blog no publica un recuento de artículos.** Con pocos
   subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
-  leer (fundador, 2026-08-11; log §58).
+  leer (fundador, 2026-08-11; log §61).
