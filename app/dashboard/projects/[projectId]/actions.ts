@@ -359,9 +359,15 @@ export async function setRecurringScans(formData: FormData) {
 }
 
 /**
- * DOMAINS-REDESIGN-1 — the per-project automatic-audit switch, mirror image of
- * `setRecurringScans` above and deliberately so: the two live side by side on
- * /debug, and a user reading them should not have to learn two behaviours.
+ * WEB-AUDIT-AUTO-SPLIT-1 — the per-project automatic-audit switches, one per
+ * half. Supersedes `setAutoWebAudit` (DOMAINS-REDESIGN-1), which wrote the
+ * single `auto_web_audit_enabled` column that migration 0031 retired: it was
+ * removed rather than left in place, because a control still writing a column
+ * nothing reads is worse than no control.
+ *
+ * Still a mirror image of `setRecurringScans` above, deliberately: the switches
+ * live side by side on /debug and a user reading them should not have to learn
+ * three behaviours.
  *
  * One asymmetry, and it is not an oversight: this has no "requires a completed
  * scan" precondition. Recurring scans need one because a recurring scan repeats
@@ -369,29 +375,40 @@ export async function setRecurringScans(formData: FormData) {
  * run until there is a completed scan to audit, and enabling it early is
  * harmless.
  *
- * Writing `false` here does not cancel work already queued. A `web_audit` job
- * that is already `pending` will still run: the flag is checked at enqueue
- * time (`enqueueWebAuditJob`), not at execution time. That is the honest
- * boundary — switching this off stops the NEXT audit, not the one already in
- * flight — and cancelling live jobs would be its own phase.
+ * Writing `false` here does not cancel work already queued, but it does stop
+ * that half from running: `runWebAuditJob` re-reads both switches when it picks
+ * a job up (migration 0031), so a job queued while the half was on and executed
+ * after it was turned off skips that half. What it cannot stop is a half
+ * already mid-flight in a live invocation.
  */
-export async function setAutoWebAudit(formData: FormData) {
-  const parsed = recurringScansSchema.safeParse({
+const auditHalfSchema = recurringScansSchema.extend({
+  half: z.enum(["technical", "coverage"])
+});
+
+/** Which column each half writes, and which copy the redirect announces. */
+const AUDIT_HALF_COLUMN = {
+  technical: "auto_technical_audit_enabled",
+  coverage: "auto_coverage_audit_enabled"
+} as const;
+
+export async function setAutoAuditHalf(formData: FormData) {
+  const parsed = auditHalfSchema.safeParse({
     projectId: formData.get("projectId"),
-    enabled: formData.get("enabled")
+    enabled: formData.get("enabled"),
+    half: formData.get("half")
   });
 
   if (!parsed.success) {
     redirect("/dashboard/projects?error=invalid_project_id");
   }
 
-  const { projectId } = parsed.data;
+  const { projectId, half } = parsed.data;
   const enabled = parsed.data.enabled === "true";
   const { supabase, user } = await requireUser();
 
   const { data, error } = await supabase
     .from("projects")
-    .update({ auto_web_audit_enabled: enabled })
+    .update({ [AUDIT_HALF_COLUMN[half]]: enabled })
     .eq("id", projectId)
     .eq("owner_user_id", user.id)
     .eq("is_archived", false)
@@ -414,7 +431,152 @@ export async function setAutoWebAudit(formData: FormData) {
 
   revalidatePath(`/dashboard/projects/${projectId}/debug`);
   revalidatePath(`/dashboard/projects/${projectId}/web-audit`);
-  redirect(`/dashboard/projects/${projectId}/debug?success=${enabled ? "auto_audit_enabled" : "auto_audit_disabled"}`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=audit_${half}_${enabled ? "enabled" : "disabled"}`);
+}
+
+/**
+ * SAMPLING-DEBUG-TOGGLE-1 — per-project override for the response floor
+ * (SAMPLING-1, `lib/scan/sampling.ts`). Same shape as `setRecurringScans` and
+ * `setAutoAuditHalf` above, and the same reason: one control, validated the
+ * same way, redirecting to the same screen.
+ *
+ * No "requires a completed scan" precondition, same as the audit switches:
+ * sampling has nothing to depend on, it just sizes the next run.
+ *
+ * Writing `false` here does not touch a run already in progress — the next
+ * one created reads the column fresh (`run-creation.ts`), same re-read-at-use
+ * pattern as the audit halves.
+ */
+export async function setSamplingEnabled(formData: FormData) {
+  const parsed = recurringScansSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ sampling_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    // Same two PostgREST codes as `setAutoAuditHalf`, same reason: "vuelve a
+    // intentarlo" would send the operator to retry something that cannot
+    // succeed without the migration being applied first.
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "sampling_migration_pending" : "sampling_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=sampling_${enabled ? "enabled" : "disabled"}`);
+}
+
+/**
+ * ENGINE-DEBUG-TOGGLE-1 — per-project, per-engine switch (Gemini/Claude/
+ * OpenAI) so a test scan can be restricted to a subset of engines. Same
+ * validated-form shape as the switches above.
+ *
+ * One asymmetry from every other switch on this page, and it is the whole
+ * point of this guard: this is the only one of the four debug switches whose
+ * "off" position can make a scan produce nothing. Recurring scans and the two
+ * audit halves can all be off simultaneously and the product just does less
+ * work; zero engines enabled makes `createPendingScanRunCore` and
+ * `executePendingScan` reject outright (`no_engines_enabled`,
+ * `lib/scan/run-creation.ts`) rather than create or run an empty scan. This
+ * action is the primary guard that keeps that state from ever being reached
+ * by the UI: it reads the other two flags before writing, and refuses to turn
+ * off the last engine still on.
+ */
+const engineToggleSchema = recurringScansSchema.extend({
+  engine: z.enum(["gemini", "claude", "openai"])
+});
+
+const ENGINE_TOGGLE_COLUMN = {
+  gemini: "engine_gemini_enabled",
+  claude: "engine_claude_enabled",
+  openai: "engine_openai_enabled"
+} as const;
+
+export async function setEngineEnabled(formData: FormData) {
+  const parsed = engineToggleSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled"),
+    engine: formData.get("engine")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId, engine } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  if (!enabled) {
+    const { data: currentFlags, error: readError } = await supabase
+      .from("projects")
+      .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+      .eq("id", projectId)
+      .eq("owner_user_id", user.id)
+      .maybeSingle();
+
+    if (readError) {
+      const missingColumn = readError.code === "42703" || readError.code === "PGRST204";
+      redirect(
+        `/dashboard/projects/${projectId}/debug?error=${
+          missingColumn ? "engine_toggle_migration_pending" : "engine_toggle_update_failed"
+        }`
+      );
+    }
+
+    // Fail-open reading (undefined -> `!== false` -> counted as enabled),
+    // same as every read of these columns elsewhere: a project this action
+    // cannot even see yet (columns not migrated) must not be told it is
+    // trying to turn off "the last engine" when it might not be.
+    const otherEnginesStillOn = (["gemini", "claude", "openai"] as const)
+      .filter((id) => id !== engine)
+      .some((id) => currentFlags?.[ENGINE_TOGGLE_COLUMN[id]] !== false);
+
+    if (!otherEnginesStillOn) {
+      redirect(`/dashboard/projects/${projectId}/debug?error=engine_toggle_requires_one_active`);
+    }
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ [ENGINE_TOGGLE_COLUMN[engine]]: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "engine_toggle_migration_pending" : "engine_toggle_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=engine_${engine}_${enabled ? "enabled" : "disabled"}`);
 }
 
 export type AutoExecuteScanStatus = "idle" | "running" | "done";

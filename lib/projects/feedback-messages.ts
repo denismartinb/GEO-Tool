@@ -21,8 +21,20 @@ export const feedbackErrorMessages: Record<string, string> = {
   // Sin "vuelve a intentarlo" a propósito: reintentar no crea una columna. Dice
   // qué hay que hacer y quién puede hacerlo.
   auto_audit_migration_pending:
-    "La auditoría automática todavía no se puede configurar por dominio: falta aplicar la migración 0030 en Supabase.",
+    "La auditoría automática todavía no se puede configurar por mitades: falta aplicar la migración 0031 en Supabase.",
+  sampling_update_failed: "No se ha podido actualizar el suelo de muestreo. Vuelve a intentarlo.",
+  sampling_migration_pending:
+    "El suelo de muestreo todavía no se puede desactivar: falta aplicar la migración 0032 en Supabase.",
+  engine_toggle_update_failed: "No se ha podido actualizar el motor. Vuelve a intentarlo.",
+  engine_toggle_migration_pending:
+    "Los motores todavía no se pueden activar/desactivar por separado: falta aplicar la migración 0033 en Supabase.",
+  // Sin "vuelve a intentarlo": no es un fallo transitorio, es la única
+  // combinación que este control rechaza a propósito — un escaneo sin ningún
+  // motor no es más barato, es un escaneo vacío (CLAUDE.md, "no fake scans").
+  engine_toggle_requires_one_active:
+    "No puedes apagar el último motor activo. Al menos uno tiene que quedar encendido para poder escanear.",
   scan_failed: "No se ha podido completar la preparación o ejecución del escaneo.",
+  no_engines_enabled: "Este dominio no tiene ningún motor de IA activado. Activa al menos uno en /debug antes de escanear.",
   scan_unavailable: "La ejecución automática del escaneo todavía no está disponible en este entorno.",
   unauthorized: "No tienes permisos para realizar esta acción.",
   unexpected_error: "Ha ocurrido un error inesperado. Vuelve a intentarlo."
@@ -35,9 +47,30 @@ export const feedbackSuccessMessages: Record<string, string> = {
   scan_pending: "Escaneo preparado. La ejecución automática todavía no está activada en este entorno.",
   recurring_enabled: "Escaneo automático diario activado. Este dominio se escaneará cada día.",
   recurring_disabled: "Escaneo automático diario desactivado.",
-  auto_audit_enabled: "Auditoría automática activada. Este dominio se auditará tras cada escaneo.",
-  // Says "los próximos", not "las auditorías": a job already queued still runs
-  // (see setAutoWebAudit) and promising otherwise would be a lie the user could
-  // catch on the very next page load.
-  auto_audit_disabled: "Auditoría automática desactivada. No se auditarán los próximos escaneos de este dominio."
+  // WEB-AUDIT-AUTO-SPLIT-1: una clave por mitad. Cada texto dice qué mitad y
+  // qué cuesta, porque el fundador las apaga por coste y las dos no cuestan lo
+  // mismo: la cobertura son llamadas a Gemini, la técnica no gasta LLM.
+  audit_coverage_enabled:
+    "Cobertura por IA activada. Tras cada escaneo se consultará a Gemini por cada prompt de este dominio.",
+  // Dice "los próximos", no "las auditorías": una mitad ya en vuelo dentro de
+  // una invocación viva termina, y prometer lo contrario sería una mentira que
+  // el usuario puede cazar en la siguiente carga de página.
+  audit_coverage_disabled: "Cobertura por IA desactivada. No se consultará a Gemini en los próximos escaneos.",
+  audit_technical_enabled:
+    "Auditoría técnica activada. Se revisará la salud técnica de la web tras cada escaneo (no gasta IA).",
+  audit_technical_disabled:
+    "Auditoría técnica desactivada. Deja de actualizarse su componente del GeoScore en los próximos escaneos.",
+  // SAMPLING-DEBUG-TOGGLE-1: apagarlo deja el próximo escaneo en una sola
+  // pasada por su set de prompts, sin intentar llegar a 50 respuestas.
+  sampling_enabled: "Suelo de muestreo activado. Los próximos escaneos repetirán su set de prompts hasta llegar a 50 respuestas.",
+  sampling_disabled: "Suelo de muestreo desactivado. Los próximos escaneos harán una sola pasada por su set de prompts.",
+  // ENGINE-DEBUG-TOGGLE-1: una clave por motor, igual que las dos mitades de
+  // auditoría — el fundador necesita saber cuál tocó, no solo que "un motor"
+  // cambió.
+  engine_gemini_enabled: "Gemini activado. Los próximos escaneos volverán a incluirlo.",
+  engine_gemini_disabled: "Gemini desactivado. Los próximos escaneos no lo usarán.",
+  engine_claude_enabled: "Claude activado. Los próximos escaneos volverán a incluirlo.",
+  engine_claude_disabled: "Claude desactivado. Los próximos escaneos no lo usarán.",
+  engine_openai_enabled: "OpenAI activado. Los próximos escaneos volverán a incluirlo.",
+  engine_openai_disabled: "OpenAI desactivado. Los próximos escaneos no lo usarán."
 };

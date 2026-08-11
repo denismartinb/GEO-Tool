@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
 const NAV_LINKS = [
   { href: "/geo", label: "Qué es GEO" },
@@ -56,7 +57,11 @@ export function BlogPageShell({ children }: { children: ReactNode }) {
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
               <Link href="/pricing">Precios</Link>
-              <Link href="/blog">Blog</Link>
+              {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </div>

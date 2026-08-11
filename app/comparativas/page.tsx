@@ -2,14 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Comparativas — Genscore",
   description: "Genscore frente a otras herramientas de visibilidad en IA, comparado de forma honesta.",
-  alternates: { canonical: `${SITE_URL}/comparativas` }
-};
+  path: "/comparativas"
+});
 
 /**
  * GROWTH-2 Fase 2.8 — índice de /comparativas. Hasta ahora esta URL no

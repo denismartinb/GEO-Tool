@@ -19,11 +19,17 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 
 | # | Ruta | Keyword primaria | Estado | PR |
 |---|---|---|---|---|
-| A1 | `/docs` (índice) | — | 🔲 Pendiente | — |
-| A2 | `/docs/empezar/primer-escaneo` | primer escaneo genscore | 🔲 Pendiente | — |
-| A3 | `/docs/informes/overview` | informe overview genscore | 🔲 Pendiente | — |
-| A4 | `/docs/metodologia/geo-score` | geo score metodología | 🔲 Pendiente | — |
-| A5 | `/docs/planes-y-limites` | planes genscore límites | 🔲 Pendiente | — |
+| A1 | `/docs` (índice) | — | ✅ Publicado | #291 |
+| A2 | `/docs/empezar/primer-escaneo` | primer escaneo genscore | ✅ Publicado | #291 |
+| A3 | `/docs/informes/overview` | informe overview genscore | ✅ Publicado | #291 |
+| A4 | `/docs/metodologia/geo-score` | geo score metodología | ✅ Publicado | #291 |
+| A5 | `/docs/planes-y-limites` | planes genscore límites | ✅ Publicado | #291 |
+
+**Corregido el 2026-08-09 (SEO-POS-1, T16):** estas cinco filas seguían
+marcadas 🔲 Pendiente aunque las páginas existen en el repo desde la Fase 2.3
+(PR #291, `app/docs/**` + `lib/docs/nav.ts`) y el sitemap ya las publica. Un
+ledger que dice "pendiente" de algo shipeado hace que la siguiente sesión
+reescriba lo que ya existe.
 
 ## Capa C — Páginas de decisión (Fase 2.4 / 2.6c / 2.8)
 
@@ -108,6 +114,44 @@ del cluster que W1 abrió, así que depende de su trabajo estructural (el
 tests que dejaron de codificar "sectores está vacío"). Rehacerlo desde `main`
 habría duplicado esos cambios y garantizado un conflicto contra la PR #342. Al
 mergear #342 primero, el PR de W2 se queda solo con su artículo.
+
+---
+
+## Cola de la Fase C de SEO-POS-1 (prioridad por ventana de oportunidad)
+
+Cola distinta de la "Capa C — Páginas de decisión" de arriba (esa numeración
+C1/C2/C3 ya está tomada por comparativas). Esta viene de
+`docs/seo-positioning-plan.md` §4, Fase C: 10 piezas priorizadas por dónde el
+mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
+"Sx" para no chocar con las Cx de comparativas ni las Wx de la cola semanal.
+
+| # | Pieza | Cluster kw del plan | Cluster blog | Estado | PR |
+|---|---|---|---|---|---|
+| S1 | Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude | 1 — Verificación | `playbooks` | ✅ Publicado | #(este) |
+| S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
+| S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
+| S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Trendsights, Mentio) | 3 — Herramientas | `comparativas` | 🔲 Pendiente | — |
+| S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | 🔲 Pendiente | — |
+| S6 | Métricas GEO: qué medir y qué no | 6 — Métricas | `medicion` | 🔲 Pendiente | — |
+| S7 | Cómo aparecer en Perplexity | 7 — Motor a motor | `playbooks` | 🔲 Pendiente | — |
+| S8 | Cómo medir en GA4 el tráfico que llega desde ChatGPT | 8 — Analítica | `medicion` | 🔲 Pendiente | — |
+| S9 | Cómo hacer que ChatGPT recomiende tu negocio (pyme) | 4 — Pyme/local | `playbooks` | 🔲 Pendiente | — |
+| S10 | Glosario: +5 términos de la capa de medición | 6/9 — Métricas/Definiciones | `glosario` | 🔲 Pendiente | — |
+
+**S1 — hecho (2026-08-10).** Título corregido respecto al que proponía
+`seo-positioning-plan.md` §4: el borrador original decía "…en ChatGPT, Gemini
+y Perplexity", pero Perplexity **no es un motor soportado hoy**
+(`docs/launch-plan.md` Fase 8: Gemini, Claude y ChatGPT vía ENGINES-2;
+Perplexity "sin fecha, fuera de alcance"). Publicarlo así habría sido el mismo
+reclamo falso que PRICING-TRUTH-1 retiró del resto del producto, solo que en
+la primera pieza nueva de contenido del plan. Corregido a "…en ChatGPT, Gemini
+y Claude" antes de escribir una sola línea. Tres formas reales de comprobar la
+mención (manual con prompts repetidos, analítica, herramienta sistemática),
+`FAQPage` con 3 preguntas reales, figura ilustrativa de la variabilidad
+entre ejecuciones, CTA al escaneo gratuito real. Portada nueva (evidencia:
+tres motores con veredicto distinto — citado, mencionado sin cita, ausente).
+Añadido al fixture del piloto en el mismo PR (`tests/pilot/fixtures/
+server.mjs`) — lo exige `fixture-drift.test.ts`.
 
 ---
 

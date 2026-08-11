@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageShell } from "@/components/legal-page-shell";
+import { contentMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Términos del Servicio — GenScore",
-  alternates: { canonical: "https://www.genscore.es/terminos" }
-};
+  description:
+    "Condiciones de uso de GenScore: objeto del servicio, planes, derecho de desistimiento, limitación de responsabilidad y cancelación.",
+  path: "/terminos"
+});
 
 export default function TerminosPage() {
   return (

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
+import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { DOCS_NAV } from "@/lib/docs/nav";
 
@@ -96,9 +97,12 @@ export function DocsPageShell({
             <div className="links">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/docs">Docs</Link>
               <Link href="/pricing">Precios</Link>
-              <Link href="/blog">Blog</Link>
+              {MARKETING_CONTENT_LINKS.map((l) => (
+                <Link key={l.href} href={l.href}>
+                  {l.label}
+                </Link>
+              ))}
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>
             </div>

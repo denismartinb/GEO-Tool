@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import type { BlogPost } from "@/lib/blog/posts";
+
+const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
 
 /**
  * GROWTH-3 Fase 3.1 — bloques de composición de artículo.
@@ -234,5 +237,22 @@ export function ArticleCta({
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * Fecha visible de publicación, y de actualización cuando el post la tiene
+ * (SEO-POS-1, T9). Sustituye a la fecha en prosa suelta que cada MDX escribía
+ * a mano (`<p className="blog-post-meta">12 de julio de 2026</p>`): al
+ * derivarla de `post.datePublished`/`dateUpdated` en vez de teclearla, no
+ * puede desincronizarse del dato real que ya usan el schema y el sitemap.
+ */
+export function PostMeta({ post }: { post: BlogPost }) {
+  const published = dateFormatter.format(new Date(post.datePublished));
+  return (
+    <p className="blog-post-meta">
+      {published}
+      {post.dateUpdated ? ` · Actualizado el ${dateFormatter.format(new Date(post.dateUpdated))}` : null}
+    </p>
   );
 }

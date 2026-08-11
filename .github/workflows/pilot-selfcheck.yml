@@ -11,18 +11,22 @@ name: Pilot harness self-check
 # WHY IT IS NOT A PER-PR GATE, stated plainly rather than glossed:
 # it was first wired into `ci.yml`, conditioned on the pilot harness changing.
 # In two consecutive CI runs (2026-08-09) it exceeded 25 minutes without
-# completing, and it could not be measured locally either — the agent sandbox
-# has no working Chromium for this Playwright version. A blocking check whose
-# runtime is unknown and demonstrably over 25 minutes would either stall every
-# harness PR or, worse, train everyone to ignore it. BUILD-BUDGET-1 also
+# completing. Its real cost is now measured — ~14 min in CI, ~20 min on a
+# sandbox — but a check of that size on the critical path of every harness PR
+# would either stall the PR or train everyone to ignore it, and BUILD-BUDGET-1
 # counts Actions minutes as a real budget (~350-380 min/day at its peak).
 #
 # So it runs on a schedule and on demand. THE COST OF THAT, ALSO STATED: a
 # harness regression can now sit unnoticed for up to a week instead of being
 # caught on the PR that caused it. Re-promoting this to a PR gate is tracked
-# as Fase Q5 in `docs/prelaunch-hardening-plan.md`, and the precondition is
-# measuring what it actually costs — which is what the weekly runs will
-# finally provide.
+# as Fase Q5 in `docs/prelaunch-hardening-plan.md`.
+#
+# Correction (2026-08-10): an earlier version of this comment claimed the
+# agent sandbox had no working Chromium for this Playwright version, and used
+# that to explain why the runtime could not be measured locally. It was wrong
+# — Chromium is preinstalled and the whole self-check runs there. It is worth
+# leaving stated: that belief turned every fixture fix into a 22-minute CI
+# round-trip, and the four rounds it cost were unnecessary. Iterate locally.
 
 on:
   workflow_dispatch:
@@ -69,14 +73,17 @@ jobs:
       - name: Run the pilot harness self-check
         run: pnpm pilot:selfcheck
 
-      # The self-check writes its fixture runs under .pilot/; when it fails,
-      # this is the only way to see which of the four modes broke, since the
-      # job log alone rarely says which assertion moved.
+      # One directory per case, archived by the script as each one ends. It
+      # does NOT upload `.pilot/` directly: that directory is wiped at the
+      # start of every pilot run, so only the last case would survive, and its
+      # leading dot makes upload-artifact skip it entirely — which is how the
+      # 2026-08-09 run produced an empty artifact for the failure it was
+      # supposed to explain.
       - name: Upload self-check output
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: pilot-selfcheck-output
-          path: .pilot/
+          path: pilot-selfcheck-output/
           retention-days: 7
           if-no-files-found: ignore

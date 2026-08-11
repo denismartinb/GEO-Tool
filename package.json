@@ -11,6 +11,7 @@
     "test": "vitest run",
     "pilot": "node scripts/pilot.mjs",
     "pilot:selfcheck": "node scripts/pilot-selfcheck.mjs",
+    "bench:extraction": "NODE_OPTIONS=--conditions=react-server tsx scripts/extraction-bench.ts",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run lint"
   },
   "dependencies": {
@@ -40,7 +41,9 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.6",
     "postcss": "^8.5.3",
+    "server-only": "^0.0.1",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.23.11",
     "typescript": "^5.8.3",
     "vitest": "^3.2.6"
   }

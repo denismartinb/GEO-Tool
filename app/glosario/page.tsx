@@ -4,15 +4,16 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { DefinedTermSetSchema } from "@/components/seo/defined-term-set-schema";
 import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
+import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = contentMetadata({
   title: "Glosario GEO — Genscore",
   description:
     "Los términos clave de GEO (Generative Engine Optimization) explicados en una frase: GEO, AEO, GEO Score, cuota de voz en IA, llms.txt, grounding y más.",
-  alternates: { canonical: `${SITE_URL}/glosario` }
-};
+  path: "/glosario"
+});
 
 export default function GlosarioPage() {
   const sortedTerms = [...GLOSSARY_TERMS].sort((a, b) => a.term.localeCompare(b.term, "es"));
