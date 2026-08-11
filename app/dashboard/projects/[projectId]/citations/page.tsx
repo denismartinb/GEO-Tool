@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { CitationsClient } from "./citations-client";
 import {
@@ -171,7 +172,7 @@ export default async function CitationsPage({
       </div>
 
       {activeRun && !latestRun ? (
-        <ScanInProgress activeRun={activeRun} />
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
       ) : !latestRun ? (
         <div className="section-empty" style={{ marginTop: 20 }}>
           <div className="section-empty-title">Todavía no hay datos de citas</div>

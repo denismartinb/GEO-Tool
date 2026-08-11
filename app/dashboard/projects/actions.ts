@@ -185,6 +185,51 @@ export async function generateMorePrompts(input: {
   }
 }
 
+/**
+ * Column defaults applied ONLY outside production, so the founder can exercise
+ * the first-scan mission end to end on a preview without paying for it.
+ *
+ * Why this exists: the mission's audit half (the band, and the re-entry beat
+ * on Auditoría web) needs a `web_audit` job, and `enqueueWebAuditJob` only
+ * creates one when the project has the audit switched on. WEB-AUDIT-AUTO-SPLIT-1
+ * (log §52) made both halves default to `false` — a deliberate cost decision —
+ * so every new domain is born unable to show that half of the mission. And the
+ * switch lives in `/debug`, which cannot be reached before the project exists:
+ * by the time it can be flipped, the scan has finished and the auto-audit
+ * moment has passed. The founder burned several real scans on that loop
+ * (2026-08-11) before we found it.
+ *
+ * Gated on `VERCEL_ENV` rather than a comment asking someone to remember: this
+ * CANNOT reach production even if the branch merges, which is the only version
+ * of "temporary" that is actually true. Production keeps the founder's
+ * defaults exactly as WEB-AUDIT-AUTO-SPLIT-1 set them.
+ *
+ * - **Technical audit on, coverage off.** The technical half spends no LLM at
+ *   all (ADR 0035) and is what the re-entry beat narrates — the sixteen checks.
+ *   Coverage is grounded Gemini calls, one per active prompt, so it stays off:
+ *   the point of this is to make testing cheap, not to move the bill.
+ * - **Gemini only.** One engine instead of three cuts a test scan's LLM cost to
+ *   a third.
+ */
+function previewTestingDefaults(): Record<string, boolean> {
+  // Allow-list, not a deny-list, and the direction matters. Written as "if
+  // production, do nothing" it failed OPEN: an unset or renamed `VERCEL_ENV`
+  // would have handed production the cheap defaults — the one environment the
+  // founder was explicit about ("en main nada de lo de probar barato",
+  // 2026-08-11). Now anything that is not demonstrably a preview or a local
+  // dev server behaves exactly like production.
+  const env = process.env.VERCEL_ENV;
+  if (env !== "preview" && env !== "development") return {};
+
+  return {
+    auto_technical_audit_enabled: true,
+    auto_coverage_audit_enabled: false,
+    engine_gemini_enabled: true,
+    engine_claude_enabled: false,
+    engine_openai_enabled: false
+  };
+}
+
 export async function createProject(formData: FormData) {
   const { supabase, user } = await requireUser();
   const plan = await getPlanForUser(supabase, user.id);
@@ -313,7 +358,8 @@ export async function createProject(formData: FormData) {
       country,
       language,
       business_profile: resolvedBusinessProfile,
-      brand_aliases: derivedBrandAliases
+      brand_aliases: derivedBrandAliases,
+      ...previewTestingDefaults()
     })
     .select("id")
     .single();

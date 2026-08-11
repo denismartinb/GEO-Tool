@@ -24,7 +24,7 @@ describe("COMPARISON_ROWS (genscore-vs-peec-ai)", () => {
    * visibles estaban en su columna y la página se leía como si Peec AI ganara
    * en todo — aunque el reparto real de filas estuviera equilibrado. Ahora
    * ambos lados se marcan, y este test impide volver a publicar una tabla que
-   * solo reconozca las victorias de un lado (log §53).
+   * solo reconozca las victorias de un lado (log §58).
    */
   it("marca victorias en los dos lados, no solo las del competidor", () => {
     expect(COMPARISON_ROWS.some((row) => row.genscoreWins)).toBe(true);

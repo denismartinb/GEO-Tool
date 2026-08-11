@@ -440,7 +440,8 @@ function buildClients(
     previousRecommendationRows = [],
     ownerPlan,
     notificationsBehavior = "ok",
-    promptJobSampleIndex
+    promptJobSampleIndex,
+    engineFlags
   }: {
     promptJobMaxAttempts: number;
     /** SAMPLING-1: the repetition this prompt job belongs to. Omitted -> no
@@ -455,6 +456,15 @@ function buildClients(
      *  every test written before this option existed. */
     ownerPlan?: string;
     notificationsBehavior?: "ok" | "error" | "throws";
+    /**
+     * ENGINE-DEBUG-TOGGLE-1: `projects.engine_{gemini,claude,openai}_enabled`
+     * as `executePendingScan`'s own isolated query would read them. Omitted
+     * -> `service.from("projects")` falls through to `noopTable()` (data:
+     * null), the same "migration not applied / unread" shape every test
+     * written before this option existed already exercises without knowing
+     * it — resolving to "no project override" (all engines stay enabled).
+     */
+    engineFlags?: { gemini?: boolean; claude?: boolean; openai?: boolean };
   },
   existingProviders: string[] | Record<number, string[]> = []
 ) {
@@ -520,6 +530,23 @@ function buildClients(
               maybeSingle: () =>
                 Promise.resolve({
                   data: ownerPlan ? { current_plan: ownerPlan } : null,
+                  error: null
+                })
+            })
+          })
+        };
+      }
+      if (table === "projects" && engineFlags) {
+        return {
+          select: () => ({
+            eq: () => ({
+              maybeSingle: () =>
+                Promise.resolve({
+                  data: {
+                    engine_gemini_enabled: engineFlags.gemini,
+                    engine_claude_enabled: engineFlags.claude,
+                    engine_openai_enabled: engineFlags.openai
+                  },
                   error: null
                 })
             })
@@ -779,6 +806,61 @@ describe("executePendingScan — multi-engine execution", () => {
 
     expect(generateOpenAIVisibilityAnswer).toHaveBeenCalledTimes(1);
     expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini", "openai"]);
+  });
+
+  it("ENGINE-DEBUG-TOGGLE-1: narrows execution to just the enabled engine when the others are disabled", async () => {
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    generateOpenAIVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+
+    const { service, supabase, scanPromptResultsTable } = buildClients({
+      promptJobMaxAttempts: 3,
+      engineFlags: { gemini: true, claude: false, openai: false }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(generateGeminiVisibilityAnswer).toHaveBeenCalledTimes(1);
+    expect(generateClaudeVisibilityAnswer).not.toHaveBeenCalled();
+    expect(generateOpenAIVisibilityAnswer).not.toHaveBeenCalled();
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider)).toEqual(["gemini"]);
+  });
+
+  it("ENGINE-DEBUG-TOGGLE-1: runs every configured engine when the columns are missing (pre-migration / unread)", async () => {
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+    generateGeminiVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+    generateClaudeVisibilityAnswer.mockResolvedValue(CLAUDE_SUCCESS_RESPONSE);
+    generateOpenAIVisibilityAnswer.mockResolvedValue(SUCCESS_RESPONSE);
+
+    // No `engineFlags` passed -> service.from("projects") falls through to
+    // noopTable() -> the isolated read resolves to no project override.
+    const { service, supabase, scanPromptResultsTable } = buildClients({ promptJobMaxAttempts: 3 });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    await executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase });
+
+    expect(scanPromptResultsTable.inserted.map((row) => row.provider).sort()).toEqual(["claude", "gemini", "openai"]);
+  });
+
+  it("ENGINE-DEBUG-TOGGLE-1: fails the run with no_engines_enabled instead of executing with zero engines", async () => {
+    const { service, supabase } = buildClients({
+      promptJobMaxAttempts: 3,
+      engineFlags: { gemini: false, claude: false, openai: false }
+    });
+    serviceClientHolder.current = service;
+
+    const { executePendingScan } = await import("./executor");
+    // Same run-level-abort shape as "aborts the run when every active engine
+    // is config-errored" above: thrown from inside the `try`, caught by the
+    // same block that marks scan_runs failed with a real error_summary.
+    await expect(executePendingScan({ projectId: PROJECT_ID, runId: RUN_ID, supabase })).rejects.toThrow();
+
+    expect(generateGeminiVisibilityAnswer).not.toHaveBeenCalled();
+    expect(generateClaudeVisibilityAnswer).not.toHaveBeenCalled();
   });
 
   it("completes the run even when recommendation generation throws (fail-soft)", async () => {

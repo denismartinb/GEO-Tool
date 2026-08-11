@@ -23,6 +23,8 @@ export function getSanitizedScanError(error: unknown) {
         return "El dominio está archivado y no puede ejecutarse.";
       case "scan_failed_no_results":
         return SCAN_NO_RESULTS_ERROR_SUMMARY;
+      case "no_engines_enabled":
+        return "Este dominio no tiene ningún motor de IA activado. Activa al menos uno en /debug antes de escanear.";
       default:
         return "No se pudo completar la ejecución del escaneo.";
     }

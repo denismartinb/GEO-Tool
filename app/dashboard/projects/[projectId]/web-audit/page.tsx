@@ -22,6 +22,7 @@ import { buildCoverageTrend } from "@/lib/web-audit/trend";
 import { buildGlobalScore } from "@/lib/web-audit/global-score";
 import { isDeltaTrustworthy, SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
 import { WEB_AUDIT_JOB_TYPE, WEB_AUDIT_STALE_LOCK_MS } from "@/lib/web-audit/audit-job";
+import { ReentryMission } from "@/components/reentry-mission";
 import { deriveAuditPillState, isWebAuditJobDue } from "@/lib/web-audit/audit-liveness";
 import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { WebAuditProvider } from "./web-audit-context";
@@ -1012,6 +1013,13 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         .maybeSingle()
     : { data: null };
 
+  /* SCAN-STATES-3: is an audit actually moving right now? Read off the job
+     row this page already fetches — no extra query. Deliberately NOT
+     `auditPillState`, which is gated on `canAuditCoverage`: the technical
+     half runs on every plan, so a Free project's first audit is real work
+     and deserves the beat as much as a Pro one's. */
+  const auditIsRunning = ["pending", "running", "retrying"].includes(String(auditJobRow?.status ?? ""));
+
   const auditPillState = deriveAuditPillState({
     campaignUpdatedAt: hasActiveCampaign ? activeCampaignRow?.updated_at : null,
     jobStatus: auditJobRow?.status
@@ -1359,6 +1367,12 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             Ir a la visión general
           </Link>
         </div>
+      ) : !summary && !technicalSnapshot && auditIsRunning ? (
+        /* SCAN-STATES-3: the mission's sixth beat. Only here, and only when
+           there is nothing to hide — this page does NOT take the screen over
+           while a re-audit runs, so a project with previous results keeps
+           reading them. First audit only, same rule the rocket follows. */
+        <ReentryMission domain={project.domain} />
       ) : !summary && !technicalSnapshot ? (
         // Neither signal exists yet for THIS account — true empty state,
         // reachable on any plan (e.g. right after a scan finishes, before
