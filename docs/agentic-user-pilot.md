@@ -262,8 +262,10 @@ unitarios en los dos sentidos.
   destino, dentro de un mismo `section`/`nav`/`header`/`main`/`dialog`. Se
   agrupa por landmark y **no por padre común**: las dos copias del hero vivían
   en contenedores hermanos. Exentas las repeticiones dentro de listas y tablas,
-  o de tres o más hermanos con la misma forma — el fallo real tenía dos copias,
-  así que el umbral de tres lo sigue cogiendo.
+  o de **dos o más hermanos con la misma forma**. Lo que separa una lista de una
+  duplicación no es cuántas copias hay sino si sus contenedores coinciden: el
+  fallo real eran los mismos botones dentro de envoltorios distintos
+  (`.lp-hero-form` junto a `.lp-hero-actions`), así que sigue saltando.
 - **Contraste.** 4.5:1, o 3:1 en texto grande (≥24px, o ≥18.66px en negrita).
   **Se salta lo que no puede juzgar honestamente** en vez de adivinar: control
   desactivado, degradado o imagen de fondo, y cualquier semitransparencia.

@@ -34,6 +34,14 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
 - **Ampliar el corte pasa por ordenar la cascada primero.** `@layer`, o mover
   MOBILE-1 entero. No es una limpieza: cambia quién gana en cada empate de
   especificidad, así que va en su propia fase con su propia pasada de piloto.
+- **Un token de tinta que aprueba AA sobre blanco no lo aprueba sobre un fondo
+  hundido.** `--ink-3` (#6b7385) da 4,76:1 sobre `#fff` y **4,44:1** sobre
+  `--surface-sunk` (#f6f7f9) — por debajo del 4,5:1, por seis centésimas que a
+  ojo no existen. Lo cogió el chequeo de contraste del piloto en los filtros de
+  Recomendaciones (log §55). Antes de reutilizar un token de texto sobre una
+  superficie distinta de aquella donde ya se usaba, se recalcula; y la
+  jerarquía entre pestaña activa e inactiva se sostiene en el fondo y la
+  sombra del estado activo, no en aclarar la inactiva hasta que no se lee.
 - **Convertir un `<button>` en `<a>` NO es neutro, aunque la clase declare su
   propio `display`.** Antes de cambiar el elemento hay que buscar reglas de
   tipo `.ancestro a { … }`: existen precisamente porque ahí dentro sólo había

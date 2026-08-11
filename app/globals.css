@@ -3594,7 +3594,11 @@ textarea.add-prompts-text-input {
   border: none;
   font-size: 12px;
   font-weight: 700;
-  color: var(--brand-ink-4);
+  /* `--brand-ink-4` (#98a2b3) da 2.58:1 sobre blanco; `--brand-ink-3` da
+     5.43:1. La pestaña activa se sigue distinguiendo por `.active`, que pone
+     azul de marca y fondo (chequeo de contraste del piloto, Fase Q5b,
+     log §55). */
+  color: var(--brand-ink-3);
   padding: 5px 10px;
   border-radius: 999px;
   cursor: pointer;
@@ -4352,7 +4356,11 @@ a.notif-row:hover {
 .lp-footer .links a:hover { color: var(--ink); }
 .lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
 
-.legal-updated { font-size: 13px; color: var(--ink-4); margin-top: 8px; }
+/* Mismo caso y misma corrección que `.blog-post-meta` abajo: `--ink-4`
+   (#98a0b0) da 2.63:1 sobre blanco, `--ink-3` da 4.76:1. Aquí lo cogió el
+   chequeo de contraste del piloto (Fase Q5b, log §55) sobre el enlace «Blog»
+   de las páginas pilar del blog, que usa esta clase. */
+.legal-updated { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
 .legal-body { max-width: 760px; }
 .legal-body h2 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin: 36px 0 12px; }
 .legal-body h2:first-child { margin-top: 0; }
@@ -5075,7 +5083,13 @@ select.set-field {
 .set-member .seg button { height: 26px; font-size: 12px; }
 
 .seg { display: inline-flex; background: var(--surface-sunk); border-radius: var(--r-sm); padding: 3px; gap: 2px; }
-.seg button { height: 28px; padding: 0 12px; border-radius: var(--r-xs); border: none; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--ink-3); cursor: pointer; white-space: nowrap; }
+/* `--ink-3` sobre blanco da 4.76:1, pero estas pastillas van sobre
+   `--surface-sunk` (#f6f7f9) y ahí se quedan en 4.44:1 — por debajo de AA por
+   un pelo. `--ink-2` da 7.50:1. La jerarquía frente a la pestaña activa la
+   sigue marcando `.on`, que además del color pone fondo blanco y sombra
+   (chequeo de contraste del piloto, Fase Q5b, log §55). Un token que pasa
+   sobre blanco no pasa automáticamente sobre un fondo hundido. */
+.seg button { height: 28px; padding: 0 12px; border-radius: var(--r-xs); border: none; background: transparent; font-size: 12.5px; font-weight: 600; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
 .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--sh-1); }
 .filters { overflow-x: auto; }
 

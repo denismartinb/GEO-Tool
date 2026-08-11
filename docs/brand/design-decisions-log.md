@@ -5526,9 +5526,10 @@ cada captura:
   Se agrupa por el `section`/`nav`/`header` más cercano, **no por padre común**:
   las dos copias del hero vivían en contenedores hermanos, así que una regla de
   «mismo padre» habría pasado por encima del único fallo para el que existe.
-  Quedan exentas las repeticiones dentro de listas y tablas (o de tres o más
-  hermanos con la misma forma), que son tablas, no duplicados — el fallo real
-  tenía exactamente dos copias, así que el umbral de tres lo sigue cogiendo.
+  Quedan exentas las repeticiones dentro de listas y tablas, o de **dos o más
+  hermanos con la misma forma**: eso es una lista, no un duplicado (el umbral
+  empezó en tres y estaba mal — ver «Lo que encontró la primera pasada real»
+  más abajo).
 - **Contraste.** Texto de un control por debajo de AA (4.5:1, o 3:1 en texto
   grande) contra su propio fondo. Se **salta lo que no puede juzgar con
   honestidad** en vez de adivinar: un control desactivado (ahí el poco contraste
@@ -5570,6 +5571,45 @@ Y, porque una puerta que no puede fallar no es una puerta, el self-check gana
 dos casos rotos más (`PILOT_FIXTURE_BREAK=duplicate` y `=contrast`, con los
 colores reales del incidente: #6b7280 sobre #2563eb, que medido da 1,07:1 — casi la misma luminancia, no los ~2,5 que sugiere el aspecto). Son seis casos
 ahora, dos de ellos con esta forma exacta.
+
+### Lo que encontró la primera pasada real, que es el punto
+
+Los chequeos corrieron contra el despliegue de verdad y devolvieron doce
+fallos. Ninguno era de la Fase V: eran deuda que llevaba ahí meses, invisible
+porque nadie la medía. Uno de los cuatro era **mío**.
+
+**El falso positivo (mío, arreglado).** El detector contó como duplicado las
+dos tarjetas `.cm2-emg` de Competidores, cada una con su botón «Seguir». Es una
+lista legítima que daba la casualidad de tener dos elementos, y mi exención
+pedía **tres** hermanos iguales. Dos es la lectura honesta: lo que separa una
+lista de una duplicación no es cuántas copias hay, sino si sus **contenedores
+coinciden**. El coste, dicho en voz alta: una duplicación que deje dos
+contenedores *idénticos* ya no se ve. El fallo del hero no tiene esa forma
+(`.lp-hero-form` junto a `.lp-hero-actions`: mismos botones, envoltorios
+distintos), y la alternativa —saltar en cada lista de dos tarjetas del
+producto— es la que consigue que el chequeo acabe en una lista blanca en una
+semana. Verificado midiendo: con el umbral en dos, la lista de dos tarjetas
+calla y la regresión del hero **sigue saltando**. Y el fixture sano lleva ahora
+una lista de dos tarjetas iguales cuyo único trabajo es no aparecer nunca en
+los hallazgos, para que la exención no se pueda romper en silencio.
+
+**Los tres defectos reales (arreglados).** Los tres eran un token demasiado
+claro, y los tres siguen el precedente que ya estaba escrito en el propio
+`globals.css` desde el PR #312 (donde el piloto encontró lo mismo en
+`.blog-post-meta`):
+
+| Dónde | Antes | Ratio | Ahora | Ratio |
+|---|---|---|---|---|
+| `.legal-updated` (enlace «Blog» de las pilares) | `--ink-4` | 2,63:1 | `--ink-3` | 4,76:1 |
+| `.seg button` (filtros de Recomendaciones) | `--ink-3` | **4,44:1** | `--ink-2` | 7,50:1 |
+| `.notif-tab` (pestaña inactiva de Notificaciones) | `--brand-ink-4` | 2,58:1 | `--brand-ink-3` | 5,43:1 |
+
+El del medio deja una lección propia: `--ink-3` pasa AA sobre blanco (4,76:1)
+y **no** pasa sobre `--surface-sunk` (4,44:1). Un token que aprueba sobre un
+fondo no aprueba sobre otro, y a ojo esos 6 centésimos no existen. Es
+exactamente el tipo de fallo que una persona no encuentra mirando una captura.
+En los dos casos de pestañas la jerarquía la sigue marcando el estado activo,
+que además del color cambia fondo (y sombra, en `.seg`).
 
 **Lo que esto NO arregla, dicho en voz alta.** Se cierran dos agujeros, no la
 clase. El motivo de abrir las capturas sigue siendo todo lo que nadie ha

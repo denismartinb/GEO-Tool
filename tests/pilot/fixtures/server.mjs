@@ -308,6 +308,25 @@ function shellWrap(body) {
  * from <button> to <a> and an ancestor rule won on specificity. The colours
  * here are the real ones: #6b7280 on #2563eb, 1.07:1 — medido, no estimado.
  */
+/**
+ * Una lista LEGÍTIMA de exactamente dos tarjetas iguales, cada una con el
+ * mismo botón. Va en el fixture SANO, y su trabajo es no aparecer nunca en los
+ * hallazgos: si el detector de duplicados vuelve a contarla como un fallo, el
+ * caso que debe pasar se pone rojo.
+ *
+ * Existe porque la primera pasada real del detector (2026-08-11) la contó como
+ * duplicado: las dos tarjetas `.cm2-emg` de Competidores, con su botón
+ * «Seguir» cada una, en una lista que daba la casualidad de tener dos
+ * elementos. El umbral era «tres hermanos iguales» y dos no llegaban.
+ */
+function legitimateTwoItemList() {
+  const card = `<div class="fx-card">
+      <span class="fx-card-name">Competidor</span>
+      <button type="button" class="fx-card-btn">Seguir</button>
+    </div>`;
+  return `<section class="fx-list">${card}${card}</section>`;
+}
+
 function brokenControls() {
   if (BREAK_MODE === "duplicate") {
     return `<section class="fx-hero">
@@ -330,7 +349,9 @@ function html(title, body) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui}</style>
-</head><body>${shellWrap(`<h1>${title}</h1>${body}${overflow}${brokenControls()}`)}</body></html>`;
+</head><body>${shellWrap(
+    `<h1>${title}</h1>${body}${overflow}${legitimateTwoItemList()}${brokenControls()}`
+  )}</body></html>`;
 }
 
 function publicHtml(path, title) {

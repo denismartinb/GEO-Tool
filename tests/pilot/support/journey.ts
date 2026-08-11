@@ -209,10 +209,21 @@ async function collectControlSnapshots(page: Page): Promise<ControlSnapshot[]> {
 
     /**
      * True when the control sits inside a list, a table row, or a run of at
-     * least three identically shaped siblings. A table of rows with one "Ver"
-     * link each is not a duplicated control, it is a table — and the bug this
-     * whole check exists for had exactly TWO copies, so the threshold of three
-     * still catches it.
+     * least TWO identically shaped siblings. A card list with one "Seguir"
+     * button per card is not a duplicated control, it is a list.
+     *
+     * The threshold was three on the first pass and it was wrong: the pilot's
+     * very first real run flagged the two `.cm2-emg` suggestion cards on
+     * Competidores, a list that happened to have exactly two items. Two is
+     * the honest reading — what separates a list from a duplication bug is
+     * not how many copies there are but whether their containers MATCH.
+     *
+     * The cost, stated rather than glossed: a duplication bug that leaves two
+     * *identically shaped* containers behind is now invisible to this check.
+     * The bug it was written for is not that shape (`.lp-hero-form` next to
+     * `.lp-hero-actions` — same buttons, different wrappers), and the
+     * alternative is firing on every two-item card list in the product, which
+     * gets the whole check allow-listed into silence inside a week.
      */
     function inRepeatedStructure(el: Element, landmark: Element | null): boolean {
       let node: Element | null = el;
@@ -230,7 +241,7 @@ async function collectControlSnapshots(page: Page): Promise<ControlSnapshot[]> {
             }`;
             if (siblingShape === shape) alike += 1;
           }
-          if (alike >= 3) return true;
+          if (alike >= 2) return true;
         }
         node = parent;
       }
