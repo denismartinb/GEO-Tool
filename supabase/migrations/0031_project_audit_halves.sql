@@ -1,0 +1,63 @@
+-- 0031_project_audit_halves.sql
+--
+-- Phase: WEB-AUDIT-AUTO-SPLIT-1 (founder-approved 2026-08-09)
+--
+-- Purpose: split the single automatic-audit switch (0030) into one per half,
+-- and make both default OFF.
+--
+-- Why split. The audit has two halves with completely different cost profiles
+-- (docs/adr/0035): the COVERAGE campaign is batched Gemini grounding calls —
+-- one per active prompt, Pro-only — while the TECHNICAL audit is pure
+-- fetch + regex with zero LLM spend and feeds a component of the GeoScore
+-- (docs/adr/0033). One switch forced an all-or-nothing choice between "pay for
+-- grounding on this domain" and "lose a GeoScore component", which are not the
+-- same decision and should never have shared a control. Measured context for
+-- why this surfaced now: docs/llm-cost-analysis-2026-08.md.
+--
+-- Why default FALSE, inverting 0030. 0030 defaulted TRUE precisely so applying
+-- it would not silently disable audits everywhere. That reasoning was correct
+-- then and does not apply now: the founder asked for both halves off by
+-- default (2026-08-09), and on the same day turned every existing project off
+-- by hand via SQL. So FALSE is not a behaviour change here — it is the state
+-- production is already in, made durable for projects created from now on.
+-- With 0030's TRUE default, every new project silently re-armed the audit.
+--
+-- Nothing is backfilled from `auto_web_audit_enabled` for that same reason:
+-- every row's honest current value is "off", which is exactly what the column
+-- default gives. Inheriting the old value would re-enable the handful of
+-- projects that had not been swept.
+--
+-- `auto_web_audit_enabled` (0030) is deliberately LEFT IN PLACE and stops
+-- being read by any code path. Dropping a column is a destructive schema
+-- change needing its own approval, and keeping it costs a byte per row. It is
+-- dead weight, not a fallback: do not reintroduce reads of it. A future phase
+-- may drop it once this one has been in production long enough to be sure.
+--
+-- Enforcement point does not move: both flags are read in `enqueueWebAuditJob`
+-- (the single function every enqueue path goes through — the executor's inline
+-- call and the daily cron's `backfillMissingWebAuditJobs`) and re-read at
+-- execution time in `runWebAuditJob`, so a switch flipped between enqueue and
+-- run is honoured. The env var `AUTO_WEB_AUDIT_ENABLED` stays as the outer
+-- account-wide kill switch and still wins over both columns.
+--
+-- Reading these columns FAILS CLOSED, unlike 0030 which failed open. With a
+-- TRUE default, a failed read had to mean "run it" or a transient error would
+-- have silently stopped every audit invisibly. With a FALSE default the
+-- inverse holds: a failed read (including this migration not yet applied)
+-- means "do not spend", which matches both the founder's intent and the
+-- state production is already in. The cost of that choice, stated: a transient
+-- read failure skips one audit. It is picked up again by the next scan's
+-- enqueue or by the daily backfill, so nothing is lost permanently.
+--
+-- No RLS policy changes: `projects` RLS is already keyed off ownership, and
+-- these columns are read through the service client by the job pipeline and
+-- written through the owner-scoped server action, exactly like
+-- `recurring_scans_enabled` (0008) and `auto_web_audit_enabled` (0030).
+--
+-- Apply manually in the Supabase SQL editor, in order, after 0030.
+
+alter table public.projects
+  add column if not exists auto_technical_audit_enabled boolean not null default false;
+
+alter table public.projects
+  add column if not exists auto_coverage_audit_enabled boolean not null default false;

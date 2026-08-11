@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { PodiumRow } from "./podium-row";
 import { ManageCompetitorsPanel } from "./manage-competitors-panel";
 import { ManageBrandAliasesPanel } from "./manage-brand-aliases-panel";
@@ -511,7 +512,7 @@ export default async function CompetitorsPage({
         </div>
 
         {activeRun && completedRuns.length === 0 ? (
-          <ScanInProgress activeRun={activeRun} />
+          <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
         ) : (
         <>
         {/* Summary / insight banner */}

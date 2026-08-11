@@ -43,7 +43,19 @@ type Recorded = { table: string; op: "update" | "insert"; payload: Record<string
  * `jobs` row — not about which internal helper was called.
  */
 function makeService(options: {
-  project?: { owner_user_id: string; domain: string } | null;
+  /**
+   * WEB-AUDIT-AUTO-SPLIT-1: the same `projects` row answers both the enqueue
+   * gate and `loadProjectContext`, so the two half-switches live here. The
+   * default has both ON — every test written before the split assumed a
+   * project whose audits run, and flipping that default would change what
+   * those tests mean rather than what they cover.
+   */
+  project?: {
+    owner_user_id: string;
+    domain: string;
+    auto_technical_audit_enabled?: boolean;
+    auto_coverage_audit_enabled?: boolean;
+  } | null;
   existingJob?: { id: string } | null;
   dueJobs?: WebAuditJobRow[];
   /** Jobs left in 'running' by a killed invocation — reclaimed via locked_at. */
@@ -67,6 +79,20 @@ function makeService(options: {
     runsWithJob = []
   } = options;
 
+  /**
+   * Both half-switches default ON, merged rather than hardcoded in the default
+   * above: a test that overrides `project` is almost always saying something
+   * about the owner or the domain, and should not have to restate audit flags
+   * it does not care about. Before this merge existed, two such tests started
+   * failing for a reason that had nothing to do with what they assert — the
+   * project came back with the flags absent, which the runner reads as OFF.
+   * A test that genuinely wants a half off still says so and wins.
+   */
+  const projectRow =
+    project === null
+      ? null
+      : { auto_technical_audit_enabled: true, auto_coverage_audit_enabled: true, ...project };
+
   function builder(table: string, op: "select" | "update" | "insert", payload?: Record<string, unknown>) {
     if (op !== "select" && payload) recorded.push({ table, op, payload });
 
@@ -83,7 +109,7 @@ function makeService(options: {
       table === "jobs" && op === "select" && filters.some((f) => f.method === "in" && f.args[0] === "run_id");
 
     const resolve = () => {
-      if (table === "projects") return { data: project, error: null };
+      if (table === "projects") return { data: projectRow, error: null };
       if (table === "scan_runs") {
         queries.push({ table, filters: [...filters] });
         return { data: completedRuns, error: null };
@@ -444,6 +470,72 @@ describe("runWebAuditJob", () => {
     expect(outcome).toEqual({ result: "cancelled", reason: "project_not_found" });
     expect(mockedCoverage).not.toHaveBeenCalled();
   });
+
+  // --- WEB-AUDIT-AUTO-SPLIT-1: una mitad por interruptor -------------------
+  //
+  // Los switches se releen AQUÍ, no se llevan en el payload del job: entre
+  // encolar y ejecutar pueden pasar horas de backoff, y un control que dice
+  // "detiene la próxima auditoría" tiene que cumplirlo.
+
+  function projectWith(halves: { technical: boolean; coverage: boolean }) {
+    return {
+      owner_user_id: "user-1",
+      domain: "acme.com",
+      auto_technical_audit_enabled: halves.technical,
+      auto_coverage_audit_enabled: halves.coverage
+    };
+  }
+
+  it("runs only the technical half when coverage is switched off", async () => {
+    mockedTechnical.mockResolvedValue({ success: true } as never);
+    const { service, recorded } = makeService({ project: projectWith({ technical: true, coverage: false }) });
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(outcome).toEqual({ result: "completed" });
+    // Lo importante no es que no se complete: es que no se gasta Gemini.
+    expect(mockedCoverage).not.toHaveBeenCalled();
+    expect(mockedTechnical).toHaveBeenCalledOnce();
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "completed" });
+  });
+
+  it("runs only coverage when the technical half is switched off", async () => {
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service, recorded } = makeService({ project: projectWith({ technical: false, coverage: true }) });
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(outcome).toEqual({ result: "completed" });
+    expect(mockedCoverage).toHaveBeenCalledOnce();
+    expect(mockedTechnical).not.toHaveBeenCalled();
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "completed" });
+  });
+
+  it("does not park a continuation waiting for room it will never use", async () => {
+    // Con la técnica apagada, el reserve de presupuesto no debe aplicarse: un
+    // job que se aparca esperando hueco para algo que no va a correr se
+    // re-despacharía hasta el tope de continuaciones sin lograr nada — la
+    // misma trampa que docs/adr/0035 documentó para la cobertura sin plan.
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service } = makeService({ project: projectWith({ technical: false, coverage: true }) });
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW, budgetMs: 1 });
+
+    expect(outcome).toEqual({ result: "completed" });
+    expect(mockedTechnical).not.toHaveBeenCalled();
+  });
+
+  it("cancels without spending anything when both halves were switched off after enqueue", async () => {
+    const { service, recorded } = makeService({ project: projectWith({ technical: false, coverage: false }) });
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(outcome).toEqual({ result: "cancelled", reason: "audit_disabled" });
+    expect(mockedCoverage).not.toHaveBeenCalled();
+    expect(mockedTechnical).not.toHaveBeenCalled();
+    // Cancelado, no aparcado: no hay nada a lo que volver.
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "cancelled", last_error: "audit_disabled" });
+  });
 });
 
 describe("enqueueWebAuditJob", () => {
@@ -469,6 +561,63 @@ describe("enqueueWebAuditJob", () => {
 
     expect(result).toBe("already_queued");
     expect(recorded.some((r) => r.op === "insert")).toBe(false);
+  });
+
+  // WEB-AUDIT-AUTO-SPLIT-1 (migración 0031).
+  it("enqueues while EITHER half is on — the split is decided at run time, not here", async () => {
+    for (const half of ["auto_technical_audit_enabled", "auto_coverage_audit_enabled"] as const) {
+      const { service, recorded } = makeService({
+        existingJob: null,
+        project: {
+          owner_user_id: "user-1",
+          domain: "acme.com",
+          auto_technical_audit_enabled: false,
+          auto_coverage_audit_enabled: false,
+          [half]: true
+        }
+      });
+
+      const result = await enqueueWebAuditJob({ service, projectId: "project-1", runId: "run-1" });
+
+      expect(result, `con ${half} encendida`).toBe("enqueued");
+      expect(recorded.some((r) => r.op === "insert")).toBe(true);
+    }
+  });
+
+  it("does not touch `jobs` at all when both halves are off", async () => {
+    const { service, recorded } = makeService({
+      existingJob: null,
+      project: {
+        owner_user_id: "user-1",
+        domain: "acme.com",
+        auto_technical_audit_enabled: false,
+        auto_coverage_audit_enabled: false
+      }
+    });
+
+    const result = await enqueueWebAuditJob({ service, projectId: "project-1", runId: "run-1" });
+
+    expect(result).toBe("disabled");
+    expect(recorded.some((r) => r.table === "jobs")).toBe(false);
+  });
+
+  it("fails CLOSED when the columns are not there yet, inverting 0030", async () => {
+    // Migración sin aplicar: la fila existe pero sin esas columnas. La 0030
+    // fallaba ABIERTA porque su defecto era TRUE y parar todas las auditorías
+    // habría sido invisible; con defecto FALSE el error caro es el contrario,
+    // gastar una campaña de Gemini que el fundador había apagado.
+    const { service, recorded } = makeService({
+      existingJob: null,
+      project: {
+        owner_user_id: "user-1",
+        domain: "acme.com",
+        auto_technical_audit_enabled: undefined,
+        auto_coverage_audit_enabled: undefined
+      }
+    });
+
+    expect(await enqueueWebAuditJob({ service, projectId: "project-1", runId: "run-1" })).toBe("disabled");
+    expect(recorded.some((r) => r.table === "jobs")).toBe(false);
   });
 });
 

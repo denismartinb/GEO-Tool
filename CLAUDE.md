@@ -385,12 +385,12 @@ fase" (ver "Cierre de fase" más abajo).
 |---|---|---|---|
 | Competidores | `competitors.md` | **PANORAMA-EMPTY-1 (2026-08-07)** | log §10, §11, §15, §36 · ADR 0011/0018/0020/0022 |
 | Recomendaciones | `recommendations.md` | RECS-POTENTIAL-1 (2026-07-23) | ADR 0017/0019 |
-| Auditoría web | `web-audit.md` | **WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038)** · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
+| Auditoría web | `web-audit.md` | **SCAN-STATES-3 (2026-08-11)** · WEB-AUDIT-AUTO-SPLIT-1 (2026-08-09) · WEB-AUDIT-DRIVE-1 (2026-08-07, ADR 0038) · WEB-AUDIT-TECH-ALL-PLANS-1 (2026-08-05, ADR 0035) | log §17, §18, §22, §25, §27, §30, §52, §57 · ADR 0027/0035/0038 · `docs/specs/web-audit/ROADMAP.md` |
 | Metodología GEO (scoring) | `scoring.md` | **SCORE-WINDOW-1 (2026-08-05, ADR 0036)** · GEO-SCORE-V4 (ADR 0033) · GEO-SCORE-CALIBRATION-1 sigue propuesta y bloqueada por datos (ADR 0031) | ADR 0008/0015/0021/0024/0026/0030/0031/0032/0033/0036 · log §8b, §20, §23, §29, §31 |
 | Blog y contenido | `growth-content.md` | **SEO-POS-1 Fase T-b (2026-08-09)** · GROWTH-3 Fase A2 (2026-08-04) | log §12, §13, §14, §19, §46, §47 · `content-strategy.md` · `seo-positioning-plan.md` · `agentic-weekly-post.md` |
-| Escaneo (pipeline) | `scan.md` | **SCAN-DRIVE-1 (2026-08-07, ADR 0037)** · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
+| Escaneo (pipeline) | `scan.md` | **ENGINE-DEBUG-TOGGLE-1 (2026-08-10)** · SAMPLING-DEBUG-TOGGLE-1 (2026-08-09) · SCAN-DRIVE-1 (2026-08-07, ADR 0037) · EXTRACTION-RELIABILITY-1 Fase C (2026-08-05) | log §53, §54 · `docs/scan-lifecycle.md` · ADR 0003/0014/0016/0029/0037 |
 | Dominios y depuración | — *(sin regla propia todavía)* | **DOMAINS-CLIENT-DELETE-1 (2026-08-09)** · DOMAINS-ACTIVE-COOKIE-1 (2026-08-07) · FAVICON-QUALITY-1 Fases 1 y 3a (2026-08-06) · DEBUG-ACTIVE-PROJECT-1 (2026-08-06) · DOMAINS-REDESIGN-1 Fase A (2026-08-05) | log §32, §33 (DEBUG), §36, §39, §41 · `docs/design-reference/domains-redesign-1/` |
-| Visión general | — *(sin regla propia todavía)* | GEO-SCORE-RELIABILITY-1 (2026-08-02) | log §4, §6, §8b |
+| Visión general | — *(sin regla propia todavía)* | **SCAN-STATES-2 (2026-08-10)** · ONBOARDING-ROCKET-1 Fase 1 (2026-08-08) | log §4, §6, §8b, §55, §56 |
 | Prompts | — *(sin regla propia todavía)* | SAMPLING-SURFACE-1 (2026-08-05) | log §5, §24 · ADR 0030 |
 | Páginas citadas | — *(sin regla propia todavía)* | CITATIONS-REDESIGN-1 (2026-08-01) | log §8 · ADR 0010/0012/0013/0023 |
 | Notificaciones | — *(sin regla propia todavía)* | NOTIF-AUTOREAD-1 (2026-08-05) | log §28 · `docs/specs/notifications/notifications-v1.md` |
@@ -560,6 +560,7 @@ todavía. Detalle y diagnóstico en log §44.
 | `content-calendar.md` | GROWTH-2 content ledger — one row per piece, updated in the same PR that ships it |
 | `environment-contract.md` | All env vars, Vercel config, smoke checklist |
 | `scan-lifecycle.md` | Scan state machine and invariants |
+| `llm-cost-analysis-2026-08.md` | **Coste real de LLM por motor y por escaneo** — medido, con las queries. Decisiones tomadas sobre reparto de muestras y por qué OpenAI no se recorta. Leer antes de tocar pricing, `sampling.ts` o el conjunto de motores |
 | `adr/0001-record-architecture-decisions.md` | ADR process |
 | `adr/0002-gemini-model-pinning.md` | Gemini model pinned to versioned id |
 | `adr/0003-sync-scan-execution-and-maxduration.md` | Sync scans + maxDuration=60 |

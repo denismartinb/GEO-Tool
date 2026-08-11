@@ -1,0 +1,1301 @@
+<title>SCAN-STATES-1 rev.5 · Pantalla completa</title>
+
+<!--
+  SCAN-STATES-1 · rev.5 — rediseño de PANTALLA COMPLETA del primer escaneo.
+
+  Qué se reutiliza sin tocar (la animación de rev.4 está aprobada):
+  los trazados SVG del cohete, del anillo y de las capas ambientales, y los
+  @keyframes de rev4-cohete-vivo.html / .mrk-* de app/globals.css. Lo que
+  cambia es la PUESTA EN PÁGINA: la escena deja de ser una caja de 420 px
+  centrada y pasa a ser el lienzo entero.
+
+  Regla de datos, intacta desde rev.3:
+  SOLO la altura del cohete (ascenso) y la fracción del anillo (órbita)
+  codifican datos reales. Nubes, estrellas, humo, vapor, paquetes y la Tierra
+  son ambiente: ritmo constante, sin estado inicial ni final, para que nada
+  de eso pueda leerse como progreso.
+
+  JavaScript: NINGUNO. La navegación entre partes son anclas y el selector de
+  beats son `input[type=radio]` + CSS. No hay ni una línea de script en este
+  fichero, ni de animación ni de previsualización.
+-->
+
+<style>
+:root{
+  --ink:#0B1426; --ink-2:#3B4759; --ink-3:#5B6B82; --ink-4:#98A2B3;
+  --blue:#2563EB; --blue-2:#4F7BFF; --cyan:#09C5D6;
+  --neg:#D23B48; --neg-soft:#FDECEE; --pos:#15915A;
+  --canvas:#F7F8FB; --surface:#FFFFFF; --sunk:#F4F6FA;
+  --line:#E7EAF0; --line-soft:#EEF1F6;
+  --shadow:0 1px 2px rgba(11,20,38,.04),0 8px 24px rgba(11,20,38,.06);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{overflow-x:hidden}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px}
+img,svg{max-width:100%}
+
+.wrap{max-width:1060px;margin:0 auto;padding:0 20px}
+@media (max-width:640px){.wrap{padding:0 14px}}
+
+/* ═══════════════ documento (notas de diseño, no es producto) ═══════════════ */
+.doc-head{padding:44px 0 26px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eyebrow .sep{width:22px;height:1px;background:var(--line)}
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.04em;line-height:1.03;font-size:clamp(30px,6vw,50px);margin:14px 0 0;text-wrap:balance}
+.lede{font-size:clamp(15px,2vw,17.5px);line-height:1.62;color:var(--ink-2);max-width:64ch;margin:16px 0 0}
+
+.notes{margin-top:24px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+.notes h2{font-family:var(--display);font-weight:800;font-size:15.5px;letter-spacing:-.02em;margin:0 0 12px}
+.notes dl{margin:0;display:grid;gap:11px}
+.notes dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--blue);font-weight:700}
+.notes dd{margin:3px 0 0;font-size:13.5px;line-height:1.58;color:var(--ink-2)}
+.notes .rule{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:12.5px;line-height:1.6;color:var(--ink-3)}
+code{font-family:var(--mono);font-size:.88em;background:var(--sunk);border:1px solid var(--line-soft);border-radius:5px;padding:1px 5px}
+
+.partnav{position:sticky;top:0;z-index:60;background:rgba(247,248,251,.94);backdrop-filter:blur(8px);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:26px}
+.partnav .in{max-width:1060px;margin:0 auto;padding:9px 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){.partnav .in{padding:9px 14px}}
+.partnav .vk{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-4);margin-right:2px}
+.partnav a{font-size:12.5px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:9px;padding:6px 11px}
+.partnav a:hover{border-color:var(--blue);color:var(--blue)}
+
+.part{padding-top:44px;scroll-margin-top:56px}
+.part-k{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.part-k b{color:var(--blue);font-weight:700}
+.part-h{font-family:var(--display);font-weight:800;letter-spacing:-.03em;font-size:clamp(22px,3.6vw,30px);margin:8px 0 0;line-height:1.12}
+.part-s{font-size:14px;line-height:1.62;color:var(--ink-3);margin:9px 0 0;max-width:70ch}
+
+.foot{margin-top:56px;padding:20px 0 72px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-4);line-height:1.65}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PARTE 1 · LA PANTALLA COMPLETA
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.mockwrap{margin-top:18px}
+.mock{
+  position:relative;width:100%;
+  height:min(100svh,860px);min-height:520px;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+}
+
+/* ── cromo de producto (simplificado pero fiel) ── */
+.ch{flex:0 0 auto;position:relative;z-index:3;background:var(--surface)}
+.ch-top{height:52px;display:flex;align-items:center;gap:10px;padding:0 clamp(14px,3vw,22px);border-bottom:1px solid var(--line)}
+.ch-mark{width:21px;height:21px;border-radius:6px;background:var(--ink);display:grid;place-items:center;flex:0 0 auto}
+.ch-mark span{font-family:var(--display);font-weight:800;font-size:12px;color:#fff;line-height:1}
+.ch-name{font-family:var(--display);font-weight:800;font-size:14.5px;letter-spacing:-.02em}
+.ch-sp{flex:1}
+.ch-ico{width:26px;height:26px;border-radius:7px;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-4);flex:0 0 auto}
+.ch-av{width:26px;height:26px;border-radius:999px;background:rgba(37,99,235,.12);color:var(--blue);font-size:10.5px;font-weight:700;display:grid;place-items:center;flex:0 0 auto}
+
+.ch-proj{display:flex;align-items:center;gap:11px;padding:11px clamp(14px,3vw,22px) 12px;border-bottom:1px solid var(--line)}
+.ch-fav{width:30px;height:30px;border-radius:9px;background:#EEF2FA;border:1px solid var(--line);display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:13px;color:var(--blue);flex:0 0 auto}
+.ch-meta{min-width:0}
+.ch-meta b{display:block;font-family:var(--display);font-weight:800;font-size:15.5px;letter-spacing:-.02em;line-height:1.15}
+.ch-meta span{display:block;font-size:11.5px;color:var(--ink-4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.ch-pill{margin-left:auto;display:flex;align-items:center;gap:7px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;font-size:11.5px;font-weight:700;color:var(--ink-2);white-space:nowrap;flex:0 0 auto}
+.ch-pill i{width:7px;height:7px;border-radius:999px;background:var(--blue);animation:rv5-pulse 1.9s ease-in-out infinite}
+
+/* ── la escena a sangre ── */
+.sc{flex:1;position:relative;overflow:hidden;min-height:0;display:none}
+.sky{position:absolute;inset:0;background:var(--sky)}
+.lay{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* Las líneas de aire conservan su grosor real a cualquier escala: sin esto, a
+   1280 px el trazo de 1,6 se multiplicaba por 3,2 y salían barras blancas. */
+.a-fall-lines line{vector-effect:non-scaling-stroke}
+.scrim{position:absolute;inset:0;background:var(--scrim);pointer-events:none}
+
+.sc-in{position:absolute;inset:0;display:grid;grid-template-rows:auto minmax(0,1fr)}
+
+/* el mensaje «dominio creado», fundido a la costura entre cromo y cielo */
+.strip{
+  display:flex;align-items:center;gap:9px;
+  padding:9px clamp(14px,3vw,22px) 10px;
+  border-bottom:1px solid var(--hair);
+  background:var(--stripbg);
+  font-size:11.5px;font-weight:650;color:var(--txt2);
+  white-space:nowrap;overflow:hidden;
+}
+.strip-ok{width:16px;height:16px;border-radius:999px;background:var(--okbg);color:var(--okink);
+  display:grid;place-items:center;font-size:10px;font-weight:800;flex:0 0 auto;line-height:1}
+.strip b{color:var(--txt);font-weight:800}
+.strip>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis}
+.strip-meta{margin-left:auto;flex:0 0 auto;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  color:var(--txt3);text-transform:uppercase;font-weight:700;white-space:nowrap}
+/* El raíl nunca puede partirse en dos líneas: cada tramo aparece sólo cuando
+   hay ancho de sobra para él. */
+.op-md,.op-lg{display:none}
+@media (min-width:560px){.op-md{display:inline}}
+@media (min-width:960px){.op-lg{display:inline}}
+
+.body{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;min-height:0}
+.stage{position:relative;z-index:1;min-height:0;--rw:clamp(112px,30vw,164px)}
+/* La capa de nubes cercanas pasa POR DELANTE del cohete (z2) y POR DETRÁS de
+   la copy (z3): es lo que vende el parallax sin comerse el texto. */
+.body>.lay{z-index:2}
+.body>.scrim{z-index:2}
+.copy{position:relative;z-index:3;padding:0 clamp(18px,5vw,26px) clamp(22px,5vh,34px);text-align:center}
+.c-eye{display:block;font-size:11px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--eye)}
+.c-title{font-family:var(--display);font-weight:800;letter-spacing:-.045em;line-height:1.02;
+  font-size:clamp(34px,10.3vw,54px);margin:8px 0 0;color:var(--txt);text-wrap:balance}
+/* Títulos largos (los que no son una cifra) bajan un escalón: a 58 px ocupaban
+   tres líneas y le robaban la pantalla a la escena. */
+.c-title.sm{font-size:clamp(27px,7.4vw,42px);letter-spacing:-.035em}
+/* «28 de 45 respuestas leídas»: misma cadena de rev.4, jerarquía nueva — la
+   cifra manda y la unidad la acompaña. */
+.c-title em{display:block;font-style:normal;font-size:.42em;font-weight:800;
+  letter-spacing:-.02em;color:var(--txt2);margin-top:.2em;line-height:1.12}
+.c-sub{font-size:clamp(13.5px,3.6vw,15.5px);line-height:1.55;color:var(--txt2);margin:10px auto 0;max-width:34ch}
+.c-joke{font-size:12.5px;font-style:italic;color:var(--txt3);margin:10px 0 0}
+
+/* el cohete y el anillo, colocados dentro de la escena */
+.rk{position:absolute;width:var(--rw);height:auto;left:50%;transform:translateX(-50%)}
+.ring{position:absolute;width:var(--ringw,clamp(112px,30vw,184px));height:auto}
+
+/* rampa: la plataforma es el SUELO de la pantalla entera, no el borde inferior
+   de una caja — por eso vive en su propia capa a inset:0 sobre la escena y no
+   dentro de .stage (ahí salía una franja gris flotando a media altura). */
+.padlayer{position:absolute;inset:0;--rw:clamp(124px,33vw,180px);--cx:50%;--gh:42%}
+.pad{position:absolute;left:0;right:0;bottom:0;height:var(--gh);
+  background:linear-gradient(180deg,#D4DFEE 0%,#E2EAF6 52%,#EDF2FA 100%);
+  border-top:1.4px solid #B3C2DC}
+.tower{position:absolute;bottom:var(--gh);width:calc(var(--rw)*.09);height:calc(var(--rw)*.38);background:#C3D0E5;border-radius:2px}
+.tower.l{left:calc(var(--cx) - var(--rw)*.735)}
+.tower.r{left:calc(var(--cx) + var(--rw)*.647)}
+.tower i{position:absolute;top:-5px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:999px;background:var(--cyan)}
+.steam{position:absolute;border-radius:999px;background:#C6D3E8;opacity:0}
+.rk-pad{bottom:var(--gh);left:var(--cx)}
+@media (min-width:560px){.padlayer{--gh:34%}}
+@media (min-width:960px){.padlayer{--gh:21%;--cx:72%}}
+
+/* Ascenso: la altura ES el dato, y el recorrido se mide sobre el espacio que
+   REALMENTE queda libre (alto del lienzo menos el alto del propio cohete:
+   2,206 = 150/68, la proporción de su viewBox). Con un porcentaje fijo, a
+   768 px el cohete se salía por arriba y `overflow:hidden` le cortaba la punta
+   en plano. La fracción sigue siendo lineal y sigue arrancando pegada al
+   suelo: climb 0 → 6 % del recorrido, climb 1 → 94 %. */
+.rk-climb{
+  bottom:calc(max(0px, 100% - 2.206 * var(--rw)) * (.06 + var(--climb,0) * .88));
+}
+/* Sin `transition: bottom`: `bottom` es una propiedad de layout y aquí sólo
+   fija la posición estática de cada compás. En producto la altura conserva el
+   contrato de rev.4 —`transform: translateY()` animada, compositor puro— y es
+   ahí donde vive la transición de 600 ms al cerrar un lote. */
+
+/* espacio: cohete + anillo, uno al lado del otro */
+.orbit{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:clamp(16px,6vw,64px);padding-bottom:6%}
+.orbit .rk{position:relative;left:auto;transform:rotate(-8deg);width:clamp(88px,23vw,134px)}
+.orbit .ring{position:relative;--ringw:clamp(134px,35vw,212px)}
+.earth{position:absolute;left:50%;top:70%;width:240vw;height:240vw;transform:translateX(-50%);
+  border-radius:50%;overflow:hidden;
+  background:linear-gradient(180deg,#1F5486 0%,#143A63 42%,#0C1D33 100%);
+  box-shadow:0 0 0 1.6px rgba(127,227,236,.6),0 0 0 11px rgba(9,197,214,.13)}
+.earth-surf{position:absolute;top:0;left:0;width:200%;height:100%;animation:rv5-earth 130s linear infinite}
+.blob{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(58,124,186,.85),rgba(58,124,186,0))}
+.packets{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:clamp(60px,16vw,120px);height:14px;display:none;overflow:hidden}
+@media (min-width:560px){.packets{display:block}}
+.packets .rail{position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(127,227,236,.2)}
+.packets i{position:absolute;top:50%;left:0;width:4px;height:4px;margin-top:-2px;border-radius:999px;background:#7FE3EC;
+  animation:rv5-packet 2.6s linear infinite}
+.packets i:nth-child(3){animation-delay:.85s;width:3px;height:3px}
+.packets i:nth-child(4){animation-delay:1.7s;background:var(--blue-2)}
+
+/* ── Campo de estrellas y destellos ──────────────────────────────────────────
+   NO son SVG estirado. Un <svg preserveAspectRatio="none"> a pantalla completa
+   convierte cada círculo en un óvalo (medido: 1,9× de deformación a 375 px), y
+   con `slice` la escena se ampliaría 2,2× y se recortaría media. Aquí cada
+   estrella es un radial-gradient dentro de un mosaico que se repite cada ancho
+   de contenedor: puntos perfectamente redondos a cualquier proporción, y
+   translateX(-50%) sobre un div del 200 % da el bucle sin costura. Sigue siendo
+   ambiente puro: ritmo constante, sin principio ni final. */
+.stars{position:absolute;inset:0;overflow:hidden}
+.starlayer{position:absolute;top:0;left:0;width:200%;height:100%;
+  background-repeat:repeat;background-size:50% 100%}
+.sl-far{opacity:.5;animation:rv5-drift50 115s linear infinite;
+  background-image:
+    radial-gradient(circle .8px at 4% 14%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .7px at 16% 35%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .8px at 27% 9%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .7px at 38% 43%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .8px at 47% 21%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .7px at 58% 52%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .8px at 68% 12%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .7px at 79% 38%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .8px at 89% 25%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .7px at 96% 48%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .7px at 11% 57%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%),
+    radial-gradient(circle .8px at 73% 60%,#CFE0FF 0 58%,rgba(207,224,255,0) 100%)}
+.sl-near{animation:rv5-drift50 70s linear infinite;
+  background-image:
+    radial-gradient(circle 1.15px at 9% 7%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1px at 21% 27%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1.15px at 33% 16%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1px at 44% 34%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1.15px at 54% 6%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1px at 63% 45%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1.15px at 76% 19%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1px at 86% 41%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1.15px at 94% 10%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1px at 5% 40%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1px at 29% 55%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%),
+    radial-gradient(circle 1.15px at 82% 58%,#EAF1FF 0 56%,rgba(234,241,255,0) 100%)}
+
+/* Los pocos puntos que sí parpadean van sueltos y con tamaño fijo en px. */
+.tw{position:absolute;border-radius:50%;background:#EAF1FF;width:3px;height:3px;
+  animation:rv5-tw 3.4s ease-in-out infinite}
+.tw.s2{animation-duration:4.6s;animation-delay:-1.2s}
+.tw.s3{animation-duration:2.8s;animation-delay:-2s;width:2.5px;height:2.5px}
+.sparkle{position:absolute;width:15px;height:15px;fill:#C3D3EC}
+
+/* ── temas por escena ── */
+.sc-rampa{
+  --sky:linear-gradient(180deg,#EEF4FD 0%,#F5F9FE 44%,#E7EEFA 100%);
+  --txt:#0B1426;--txt2:#3B4759;--txt3:#5B6B82;--eye:var(--blue);
+  --hair:rgba(11,20,38,.10);--stripbg:linear-gradient(180deg,rgba(199,216,241,.75),rgba(199,216,241,0));
+  --okbg:rgba(21,145,90,.14);--okink:#0D6B41;
+  --scrim:linear-gradient(180deg,rgba(231,238,250,0) 60%,rgba(233,239,250,.5) 100%);
+}
+.sc-ascenso{
+  --sky:linear-gradient(180deg,#7FA5DE 0%,#9BBAE8 26%,#C2D5F1 58%,#E3EDF9 84%,#EEF4FC 100%);
+  --txt:#0B1426;--txt2:#33425A;--txt3:#5B6B82;--eye:#1D4FD8;
+  --hair:rgba(11,20,38,.12);--stripbg:linear-gradient(180deg,rgba(255,255,255,.26),rgba(255,255,255,0));
+  --okbg:rgba(255,255,255,.6);--okink:#0D6B41;
+  --scrim:linear-gradient(180deg,rgba(238,244,252,0) 40%,rgba(238,244,252,.82) 72%,rgba(238,244,252,.96) 100%);
+}
+.sc-orbita,.sc-entrega{
+  --sky:linear-gradient(180deg,#04070F 0%,#080F1D 42%,#0A1526 74%,#0E1F33 100%);
+  --txt:#F7F8FB;--txt2:#B9C7DC;--txt3:#8095B0;--eye:#7FE3EC;
+  --hair:rgba(127,227,236,.16);--stripbg:linear-gradient(180deg,rgba(127,227,236,.07),rgba(127,227,236,0));
+  --okbg:rgba(21,145,90,.28);--okink:#8FE9BC;
+  --scrim:linear-gradient(180deg,rgba(5,10,20,0) 34%,rgba(6,13,26,.42) 62%,rgba(6,13,26,.74) 100%);
+}
+
+/* ── el selector de beats: radios + CSS, sin una línea de JS ── */
+.vh{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.mockwrap:has(#b-rampa:checked)   .sc-rampa,
+.mockwrap:has(#b-asc0:checked)    .sc-asc0,
+.mockwrap:has(#b-asc9:checked)    .sc-asc9,
+.mockwrap:has(#b-orbita:checked)  .sc-orbita,
+.mockwrap:has(#b-entrega:checked) .sc-entrega{display:block}
+
+.beatbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;padding:14px 0 0}
+.beatbar .vk{font-size:10px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-4);margin-right:2px}
+.beatbar label{font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);
+  border-radius:9px;padding:6px 11px;cursor:pointer;user-select:none}
+.beatbar label:hover{border-color:var(--blue);color:var(--blue)}
+.mockwrap:has(#b-rampa:checked)   label[for=b-rampa],
+.mockwrap:has(#b-asc0:checked)    label[for=b-asc0],
+.mockwrap:has(#b-asc9:checked)    label[for=b-asc9],
+.mockwrap:has(#b-orbita:checked)  label[for=b-orbita],
+.mockwrap:has(#b-entrega:checked) label[for=b-entrega]{background:var(--ink);border-color:var(--ink);color:#fff}
+
+/* ── ≥ 960 px: el ancho no se estira, se reparte ── */
+@media (min-width:960px){
+  /* El padding vive en las columnas, no en .body: así las capas ambientales
+     (inset:0 sobre el padding-box de .body) siguen llegando a los dos bordes. */
+  .body{grid-template-rows:none;grid-template-columns:minmax(0,44%) minmax(0,56%);align-items:center}
+  .copy{padding:0 24px 0 clamp(34px,6vw,96px);text-align:left;grid-column:1;grid-row:1}
+  .stage{grid-column:2;grid-row:1;align-self:stretch;padding-right:clamp(20px,4vw,72px);--rw:clamp(130px,13vw,186px)}
+  .c-title{font-size:clamp(52px,5.6vw,80px)}
+  .c-sub{margin-left:0;max-width:36ch;font-size:16px}
+  .c-eye{font-size:11.5px}
+  .sc-rampa{--scrim:linear-gradient(90deg,rgba(247,250,254,.94) 0%,rgba(247,250,254,.72) 34%,rgba(247,250,254,0) 62%)}
+  .sc-ascenso{--scrim:linear-gradient(90deg,rgba(232,240,251,.92) 0%,rgba(232,240,251,.6) 32%,rgba(232,240,251,0) 60%)}
+  .sc-orbita,.sc-entrega{--scrim:linear-gradient(90deg,rgba(4,8,16,.9) 0%,rgba(4,8,16,.6) 36%,rgba(4,8,16,0) 64%)}
+  .orbit{padding-bottom:0}
+  .earth{top:70%;width:200vw;height:200vw}
+  .c-title.sm{font-size:clamp(38px,4.1vw,56px)}
+}
+@media (min-width:1180px){
+  .copy{padding-left:clamp(48px,7vw,140px)}
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PARTE 2 · LOS COMPASES, RECRONOMETRADOS
+   ══════════════════════════════════════════════════════════════════════════ */
+.tl{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,3vw,26px);box-shadow:var(--shadow)}
+.tl-row+.tl-row{margin-top:26px;padding-top:24px;border-top:1px dashed var(--line)}
+.tl-lab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.tl-lab b{font-family:var(--display);font-weight:800;font-size:15px;letter-spacing:-.02em}
+.tl-lab .tag{font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+  border-radius:999px;padding:3px 8px}
+.tag-bad{background:var(--neg-soft);color:#A51F2C}
+.tag-good{background:rgba(21,145,90,.12);color:#0D6B41}
+.tl-bar{display:flex;height:44px;border-radius:9px;overflow:hidden;border:1px solid var(--line)}
+.seg{position:relative;min-width:3px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.seg span{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  white-space:nowrap;padding:0 6px}
+/* En móvil la etiqueta larga no cabe, pero sin NINGUNA etiqueta las dos barras
+   se distinguen sólo por el rayado: se cambia por una versión corta. */
+.seg .l-sm{display:none}
+@media (max-width:640px){.seg .l-lg{display:none}.seg .l-sm{display:inline}}
+.s-rampa{background:#DBE4F1;color:#44536B}
+.s-dead{background:repeating-linear-gradient(45deg,#F6D2D6 0 7px,#F2C4C9 7px 14px);color:#8E2531}
+.s-asc{background:#8FADFF;color:#0B1426}
+.s-orb{background:#2563EB;color:#fff}
+.s-ent{background:var(--cyan);color:#04212A}
+.tl-axis{display:flex;justify-content:space-between;margin-top:6px;font-family:var(--mono);font-size:9.5px;color:var(--ink-4);letter-spacing:.05em}
+.tl-note{margin:11px 0 0;font-size:13px;line-height:1.6;color:var(--ink-2)}
+.tl-note b{color:var(--ink)}
+.tl-note.bad{color:#8E2531}
+.tl-leg{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid var(--line-soft);
+  font-size:11.5px;color:var(--ink-3);font-weight:600}
+.tl-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.hardrule{margin-top:16px;background:#fff;border:1px solid var(--line);border-left:3px solid var(--ink);border-radius:12px;padding:14px 16px}
+.hardrule h3{font-family:var(--display);font-size:13.5px;font-weight:800;margin:0 0 6px;letter-spacing:-.01em}
+.hardrule p{margin:0;font-size:13px;line-height:1.6;color:var(--ink-2)}
+.hardrule p+p{margin-top:7px}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   PARTE 3 · LAS OTRAS SECCIONES
+   ══════════════════════════════════════════════════════════════════════════ */
+.opts{display:grid;gap:16px;margin-top:20px}
+@media (min-width:900px){.opts{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}}
+.opt{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.opt.rec{border-color:rgba(37,99,235,.45);box-shadow:0 0 0 3px rgba(37,99,235,.09),var(--shadow)}
+.opt-top{padding:14px 16px 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.opt-n{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--ink-4)}
+.opt-rec{font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  background:rgba(37,99,235,.11);color:var(--blue);border-radius:999px;padding:3px 8px}
+.opt h3{font-family:var(--display);font-size:15.5px;font-weight:800;letter-spacing:-.02em;margin:6px 16px 0}
+.opt .trade{margin:7px 16px 0;font-size:12.5px;line-height:1.55;color:var(--ink-3)}
+.opt .trade b{color:var(--ink-2)}
+/* margin-top:auto alinea las tres previsualizaciones por abajo aunque los
+   textos midan distinto: si no, la fila parece descuadrada. */
+.prev{margin:16px 14px 14px;margin-top:auto;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--sunk)}
+
+/* mini-pantalla común a las tres previsualizaciones */
+.mini{font-size:9px;line-height:1.4}
+.mini-top{display:flex;align-items:center;gap:6px;padding:6px 9px;background:#fff;border-bottom:1px solid var(--line)}
+.mini-mark{width:12px;height:12px;border-radius:4px;background:var(--ink)}
+.mini-nav{display:flex;gap:8px;font-weight:700;color:var(--ink-4);font-size:8.5px}
+.mini-nav .on{color:var(--blue)}
+.mini-body{padding:9px;background:#fff;min-height:158px}
+.mini-h{font-family:var(--display);font-weight:800;font-size:12px;letter-spacing:-.02em}
+.mini-sub{font-size:8px;color:var(--ink-4);font-weight:600;margin-top:1px}
+.mini-row{height:11px;border-radius:4px;background:var(--sunk);margin-top:6px}
+.mini-row.w1{width:88%}.mini-row.w2{width:71%}.mini-row.w3{width:80%}.mini-row.w4{width:62%}
+
+/* (i) tira de misión compacta */
+.mstrip{display:flex;align-items:center;gap:7px;margin-top:8px;padding:6px 8px;border-radius:8px;
+  background:linear-gradient(180deg,#0A1526,#0E2038);color:#EAF1FF;overflow:hidden;position:relative}
+.mstrip .msky{position:absolute;inset:0;opacity:.65}
+.mstrip .rk{position:relative;left:auto;transform:none;width:14px;flex:0 0 auto}
+.mstrip .mtxt{position:relative;font-size:8.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.mstrip .mtxt em{font-style:normal;color:#7FE3EC}
+.mstrip .mrail{position:relative;flex:1;height:3px;border-radius:999px;background:rgba(127,227,236,.22);overflow:hidden;min-width:18px}
+.mstrip .mrail i{position:absolute;inset:0 auto 0 0;width:0%;background:#4F7BFF;border-radius:999px}
+.mstrip .mring{position:relative;width:14px;height:14px;flex:0 0 auto}
+
+/* (ii) toma total */
+.take{position:relative;min-height:158px;background:linear-gradient(180deg,#04070F,#0A1526 60%,#0E1F33);
+  display:grid;place-items:center;text-align:center;padding:10px;overflow:hidden}
+.take .rk{position:relative;left:auto;transform:rotate(-8deg);width:30px;margin:0 auto}
+.take .tt{position:relative;font-family:var(--display);font-weight:800;font-size:14px;color:#F7F8FB;margin-top:6px;letter-spacing:-.02em}
+.take .ts{position:relative;font-size:8px;color:#8095B0;font-weight:600;margin-top:2px}
+.take .blocked{position:relative;margin-top:8px;font-size:8px;color:#8095B0;border:1px dashed rgba(127,227,236,.3);
+  border-radius:6px;padding:3px 7px;display:inline-block}
+
+/* (iii) hoy */
+.spin{width:20px;height:20px;border-radius:999px;border:2.5px solid var(--line);border-top-color:var(--blue);
+  margin:14px auto 0;animation:rv5-spin 1.1s linear infinite}
+.bar{height:5px;border-radius:999px;background:var(--sunk);margin:10px 14px 0;overflow:hidden}
+.bar i{display:block;height:100%;width:34%;background:var(--blue);border-radius:999px}
+.mini-c{text-align:center;font-size:8.5px;color:var(--ink-4);font-weight:600;margin-top:7px}
+
+/* ═══════════════════ MOVIMIENTO (todo transform/opacity) ═══════════════════ */
+/* Idénticos a rev.4 / .mrk-* de globals.css. Los envoltorios cambian, la
+   animación no. */
+@keyframes rv5-driftx{to{transform:translateX(-400px)}}
+@keyframes rv5-fall{to{transform:translateY(280px)}}
+@keyframes rv5-tw{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes rv5-flick{from{transform:scaleY(.86) scaleX(1.04)}to{transform:scaleY(1.1) scaleX(.94)}}
+@keyframes rv5-puff{0%{transform:translate(0,0) scale(.5);opacity:0}14%{opacity:.55}100%{transform:translate(-10px,-30px) scale(1.5);opacity:0}}
+@keyframes rv5-sway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes rv5-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes rv5-beacon{0%,68%,100%{opacity:.15}76%,86%{opacity:1}}
+@keyframes rv5-winpulse{0%,100%{opacity:0}50%{opacity:.55}}
+@keyframes rv5-ringpop{0%,100%{opacity:.5}50%{opacity:1}}
+@keyframes rv5-breathe{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.06);opacity:.75}}
+@keyframes rv5-converge{0%{transform:translate(var(--dx),var(--dy)) scale(1);opacity:0}18%{opacity:.9}100%{transform:translate(0,0) scale(.3);opacity:0}}
+@keyframes rv5-shoot{0%,86%{opacity:0;transform:translate(0,0)}88%{opacity:.9}93%{opacity:0;transform:translate(130px,64px)}100%{opacity:0;transform:translate(130px,64px)}}
+@keyframes rv5-thrust{0%,84%,100%{opacity:0}88%,93%{opacity:.85}}
+@keyframes rv5-earth{to{transform:translateX(-50%)}}
+@keyframes rv5-packet{0%{transform:translateX(0);opacity:0}12%{opacity:1}84%{opacity:1}100%{transform:translateX(var(--pw,130px));opacity:0}}
+@keyframes rv5-pulse{0%,100%{opacity:.35}50%{opacity:1}}
+@keyframes rv5-spin{to{transform:rotate(360deg)}}
+@keyframes rv5-drift50{to{transform:translateX(-50%)}}
+
+.a-tw{animation:rv5-tw 3.4s ease-in-out infinite}
+.a-tw.s2{animation-duration:4.6s;animation-delay:-1.2s}
+.a-tw.s3{animation-duration:2.8s;animation-delay:-2s}
+.a-flame{transform-origin:center top;transform-box:fill-box;animation:rv5-flick .16s steps(2,end) infinite alternate}
+.a-flame.f2{animation-duration:.13s}
+.a-flame.f3{animation-duration:.19s}
+.a-clouds-slow{animation:rv5-driftx 74s linear infinite}
+.a-clouds-slower{animation:rv5-driftx 118s linear infinite}
+.a-fall-near{animation:rv5-fall 3.4s linear infinite}
+.a-fall-far{animation:rv5-fall 7.5s linear infinite}
+.a-fall-lines{animation:rv5-fall 1.15s linear infinite}
+.a-sway{transform-box:fill-box;transform-origin:center;animation:rv5-sway 5.2s ease-in-out infinite}
+.a-bob{animation:rv5-bob 6s ease-in-out infinite}
+.a-bob.d2{animation-duration:7s;animation-delay:-2.4s}
+.a-beacon{animation:rv5-beacon 3.8s linear infinite}
+.a-winpulse{animation:rv5-winpulse 3.6s ease-in-out infinite}
+.a-ringpop{animation:rv5-ringpop 3.2s ease-in-out infinite}
+.a-breathe{transform-box:fill-box;transform-origin:center;animation:rv5-breathe 3.2s ease-in-out infinite}
+.a-converge{animation:rv5-converge 2.4s ease-in infinite}
+.a-converge.c2{animation-delay:.6s}
+.a-converge.c3{animation-delay:1.2s}
+.a-converge.c4{animation-delay:1.8s}
+.a-shoot{animation:rv5-shoot 13s linear infinite}
+.a-thrust{animation:rv5-thrust 6.5s linear infinite}
+.a-thrust.t2{animation-delay:-3.1s}
+.a-puff{animation:rv5-puff 5.2s ease-out infinite}
+
+/* Movimiento reducido: cada escena se queda en un fotograma quieto y COMPLETO.
+   Lo que sólo existe a mitad de animación (vapor, chispas, estrella fugaz,
+   propulsores, paquetes, convergencia) descansa en opacity 0, así que no se
+   ve nada congelado a medias. Las llamas quedan encendidas, las estrellas
+   puestas, el anillo donde dice el dato. */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+  .a-puff,.a-shoot,.a-thrust,.a-converge,.packets i,.ch-pill i{opacity:0 !important}
+  .ch-pill i{opacity:1 !important}
+}
+</style>
+
+<div class="wrap">
+<header class="doc-head">
+  <div class="eyebrow">SCAN-STATES-1<span class="sep"></span>rev. 5<span class="sep"></span>Pantalla completa</div>
+  <h1>El cielo es la página</h1>
+  <p class="lede">
+    rev.4 arregló el movimiento y dejó intacto el problema que se ve en cuanto lo abres en
+    un móvil: la escena vive dentro de una caja de 420&nbsp;px con aire muerto a los lados,
+    debajo de un banner verde que dice lo mismo dos veces. Esto no es una animación mal
+    hecha; es una animación bien hecha <em>mal colocada</em>. rev.5 no rediseña ni un
+    fotograma —los trazados y los <code>@keyframes</code> son literalmente los de rev.4— y
+    rediseña la pantalla entera alrededor de ellos.
+  </p>
+</header>
+</div>
+
+<nav class="partnav" aria-label="Partes del documento">
+  <div class="in">
+    <span class="vk">Ir a</span>
+    <a href="#p1">1 · Pantalla completa</a>
+    <a href="#p2">2 · Compases</a>
+    <a href="#p3">3 · Otras secciones</a>
+  </div>
+</nav>
+
+<div class="wrap">
+<div class="notes">
+  <h2>Notas de diseño</h2>
+  <dl>
+    <dt>El mensaje: de banner a raíl de control</dt>
+    <dd>
+      El banner verde («Dominio creado. Tu primer escaneo se está ejecutando — sigue el
+      progreso aquí») se elimina como bloque. Su contenido pasa a un <strong>raíl fino
+      soldado a la costura</strong> entre el cromo y el cielo: fondo transparente sobre el
+      propio degradado de la escena, hairline como única separación, y una sola línea —
+      <em>✓ hostinger.com dado de alta</em> a la izquierda, los hechos de la misión
+      (<em>misión 1 · 15 prompts · 3 motores · 45 respuestas</em>) en mono a la derecha.
+      Tres razones para esta solución y no para convertirlo en <em>eyebrow</em>: (1) el
+      <em>eyebrow</em> del beat ya existe y es otra cosa —dice en qué compás estás, no qué
+      acabas de conseguir—, meterlo ahí obliga a elegir entre los dos; (2) el alta del
+      dominio es un hecho <strong>permanente</strong> durante toda la pantalla mientras el
+      beat cambia cuatro veces, así que su sitio natural es el elemento que no se mueve;
+      (3) al no tener superficie propia deja de ser «un componente encima de otro» y se
+      convierte en el borde superior del cielo. El verde sobrevive sólo en el disco del ✓
+      —una pastilla de 16&nbsp;px—, que es toda la celebración que merece haber escrito un
+      dominio en una tabla.
+    </dd>
+
+    <dt>El lienzo a sangre, y por qué no es un SVG estirado</dt>
+    <dd>
+      La escena deja de ser <code>&lt;svg&gt;</code> de 420&nbsp;px dentro de una tarjeta y
+      pasa a ser una <strong>composición por capas</strong>. El cielo es un degradado CSS
+      sobre el <code>&lt;section&gt;</code>: a sangre siempre, sin recortes ni cajas. Las
+      nubes y las líneas de aire de rev.4 van como SVG a pantalla completa con
+      <code>preserveAspectRatio="none"</code> —son manchas blandas, estirarlas no las rompe,
+      las alarga— con dos correcciones que se vieron al mirar las capturas: relleno de
+      degradado radial en vez de blanco plano (planas parecían lentejas) y
+      <code>vector-effect: non-scaling-stroke</code> en las líneas de aire (a 1280&nbsp;px
+      su trazo se multiplicaba por 3,2 y salían barras). Las <strong>estrellas no</strong>
+      pueden ir en esa capa: estiradas se convierten en óvalos (1,9× a 375&nbsp;px), así
+      que son un mosaico de <code>radial-gradient</code> que se repite cada ancho de
+      contenedor —redondas siempre y con el mismo bucle sin costura—. Y encima de todo, el
+      cohete, el anillo y el suelo como objetos <em>colocados</em>, con tamaño propio en
+      <code>clamp()</code>. Esa separación es lo que evita el fallo obvio del «pon el SVG al
+      100&nbsp;%»: un <code>slice</code> sobre una escena de 400×280 en un móvil vertical la
+      ampliaría 2,2× y recortaría media escena; y un <code>meet</code> devolvería
+      exactamente las bandas laterales de las que venimos huyendo.
+    </dd>
+
+    <dt>375 · 768 · 1280: tres decisiones, no una escalada</dt>
+    <dd>
+      <strong>375</strong> — apilado vertical: raíl arriba, cohete en el tercio alto, copy
+      abajo sobre un velo del propio color del cielo. El título («0 de 15») a 34–44&nbsp;px:
+      la cifra es el héroe de la pantalla, no un pie de foto. En «rampa» el suelo es la
+      franja inferior de la pantalla entera y el texto va impreso sobre el hormigón — no
+      una banda gris flotando a media altura, que es lo que salía cuando la plataforma
+      colgaba del borde del lienzo en vez del de la pantalla.
+      <strong>768</strong> — la misma composición con más aire y el cohete más grande; no
+      se parte en dos porque una columna de texto de ~350&nbsp;px al lado de un cohete se
+      lee estrecha y cobarde.
+      <strong>≥960</strong> — el ancho no se estira, <em>se reparte</em>: copy alineada a la
+      izquierda en el 44&nbsp;% (título hasta 80&nbsp;px), cohete y anillo en el 56&nbsp;%
+      derecho, y el velo pasa de horizontal a vertical para que el texto tenga fondo sin
+      taparle el cielo. Lo que gana el escritorio no es un cohete más grande: es
+      <strong>más cielo</strong> —y en órbita, la curva de la Tierra cruzando los
+      1280&nbsp;px enteros, que es la única escala a la que ese plano funciona.
+    </dd>
+
+    <dt>Recronometrado (Parte 2)</dt>
+    <dd>
+      Los contadores del escaneo se escriben cuando termina un <strong>lote</strong> de
+      hasta 10 prompts (<code>MAX_REAL_SCAN_PROMPTS</code>), no cuando termina un prompt.
+      En un proyecto de 15 prompts eso significa que <code>done</code> vale 0 durante todo
+      el primer lote: «ignición» —el beat que se muestra exactamente cuando
+      <code>done === 0</code>— se come casi un minuto sin que cambie un solo número,
+      «ascenso» pasa volando en dos saltos (10/15 y 15/15) y «órbita» dura minutos. El
+      fundador vio una ignición congelada y no llegó a ver el ascenso. La propuesta:
+      <strong>fundir ignición dentro de ascenso</strong>, dejar el encendido como un
+      instante de despegue y no como un compás, y entrar en la escena de vuelo —nubes
+      cayendo, movimiento ambiental continuo— con la altura atada a la fracción real desde
+      un <strong>0 de 15 honesto</strong>. La corrección no es hacer que el número se
+      mueva: es que la espera se vea viva y siga diciendo la verdad mientras el número,
+      legítimamente, está en cero.
+    </dd>
+
+    <dt>Lo que este mockup NO propone</dt>
+    <dd>
+      No propone tocar el <em>pipeline</em> para escribir contadores más a menudo (sería
+      otra fase, con su Task Intake, y toca <code>lib/scan/**</code>). No propone una barra
+      de porcentaje ni una estimación de tiempo restante: no tenemos ese dato. Y no propone
+      número alguno en «entrega» —la puntuación aún no está persistida en ese instante,
+      igual que en rev.4.
+      <br><br>
+      <strong>Y una deuda que hay que decir en voz alta antes de aprobar nada:</strong> el
+      «3 motores · 45 respuestas» del raíl <em>no sale de ninguna consulta que esta pantalla
+      haga hoy</em>. <code>mission-beats.ts</code> lo deja escrito: <code>total_prompts</code>
+      cuenta lanzamientos, no prompts × motores, y el número de motores activos exigiría
+      leer <code>LLM_SCAN_PROVIDERS</code> (que puede sobrecontar si el plan va por debajo) o
+      el plan resuelto del dueño del proyecto (una lectura nueva). Sólo «respuestas leídas»
+      en órbita es real hoy (<code>responses_total</code>, filas de
+      <code>scan_prompt_results</code>). Así que hay dos caminos honestos y hay que elegir
+      uno: <strong>(a)</strong> el raíl se queda en <em>«misión 1 · 15 prompts»</em>, que sí
+      es dato de la página; o <strong>(b)</strong> se aprueba la lectura del plan como parte
+      de esta fase. Lo que no se puede es pintar «45 respuestas» y calcularlo a ojo.
+    </dd>
+  </dl>
+  <p class="rule">
+    Reglas duras que cumple todo el fichero: sólo <code>transform</code>/<code>opacity</code>
+    (sin filtros animados, sin animar layout) · <code>prefers-reduced-motion: reduce</code>
+    deja cada escena en un fotograma quieto y completo · <strong>cero JavaScript</strong>
+    (la navegación son anclas; el selector de beats son <code>input[type=radio]</code> + CSS)
+    · sólo la altura del cohete y la fracción del anillo llevan información; nubes,
+    estrellas, vapor, paquetes y la Tierra son ambiente · los números son los de un
+    proyecto real de tamaño Hostinger: <strong>15 prompts, 3 motores, 45 respuestas</strong>.
+  </p>
+</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     PARTE 1
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="wrap">
+  <section class="part" id="p1">
+    <div class="part-k"><b>Parte 1</b><span>la pantalla, a sangre</span></div>
+    <h2 class="part-h">Primer escaneo, pantalla completa</h2>
+    <p class="part-s">
+      Cromo real arriba (cabecera + fila de proyecto con la píldora «Escaneando…») y, a
+      partir de ahí, cielo hasta los dos bordes. Los botones de abajo cambian de compás:
+      son <code>input[type=radio]</code> + CSS, no hay JavaScript.
+    </p>
+  </section>
+</div>
+
+<div class="mockwrap">
+  <input class="vh" type="radio" name="beat" id="b-rampa">
+  <input class="vh" type="radio" name="beat" id="b-asc0" checked>
+  <input class="vh" type="radio" name="beat" id="b-asc9">
+  <input class="vh" type="radio" name="beat" id="b-orbita">
+  <input class="vh" type="radio" name="beat" id="b-entrega">
+
+  <div class="mock">
+
+    <!-- Degradado compartido de las nubes: con relleno blanco plano eran
+         lentejas; con borde blando leen como vapor a cualquier tamaño. -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <radialGradient id="cloudsoft">
+          <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+          <stop offset="52%" stop-color="#FFFFFF" stop-opacity=".9"/>
+          <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+    </svg>
+
+    <!-- ─────────── cromo de producto ─────────── -->
+    <div class="ch">
+      <div class="ch-top">
+        <span class="ch-mark"><span>G</span></span>
+        <span class="ch-name">Genscore</span>
+        <span class="ch-sp"></span>
+        <span class="ch-ico" aria-hidden="true">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        </span>
+        <span class="ch-av">DL</span>
+      </div>
+      <div class="ch-proj">
+        <span class="ch-fav">H</span>
+        <span class="ch-meta">
+          <b>Visión general</b>
+          <span>hostinger.com · ES/es</span>
+        </span>
+        <span class="ch-pill"><i></i>Escaneando…</span>
+      </div>
+    </div>
+
+    <!-- ═══════════ 1 · RAMPA ═══════════ -->
+    <section class="sc sc-rampa" aria-label="En la rampa">
+      <div class="sky"></div>
+
+      <svg class="lay" viewBox="0 0 400 280" preserveAspectRatio="none" aria-hidden="true">
+        <g class="a-clouds-slower" opacity=".62" fill="url(#cloudsoft)">
+          <ellipse cx="70" cy="52" rx="34" ry="10"/><ellipse cx="94" cy="46" rx="22" ry="8"/>
+          <ellipse cx="300" cy="90" rx="28" ry="8"/><ellipse cx="212" cy="188" rx="30" ry="9"/>
+          <ellipse cx="470" cy="52" rx="34" ry="10"/><ellipse cx="494" cy="46" rx="22" ry="8"/>
+          <ellipse cx="700" cy="90" rx="28" ry="8"/><ellipse cx="612" cy="188" rx="30" ry="9"/>
+        </g>
+        <g class="a-clouds-slow" opacity=".95" fill="url(#cloudsoft)">
+          <ellipse cx="180" cy="34" rx="40" ry="11"/><ellipse cx="212" cy="28" rx="24" ry="8"/>
+          <ellipse cx="352" cy="130" rx="30" ry="9"/><ellipse cx="60" cy="146" rx="26" ry="8"/>
+          <ellipse cx="580" cy="34" rx="40" ry="11"/><ellipse cx="612" cy="28" rx="24" ry="8"/>
+          <ellipse cx="752" cy="130" rx="30" ry="9"/><ellipse cx="460" cy="146" rx="26" ry="8"/>
+        </g>
+      </svg>
+
+      <!-- Destellos de cuatro puntas: tamaño FIJO en px y fuera de la capa
+           estirada — dentro de ella pasaban de 10 a 50 px según la ventana. -->
+      <svg class="sparkle a-tw" style="left:13%;top:26%" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0 l1.7 6.3 6.3 1.7 -6.3 1.7 -1.7 6.3 -1.7 -6.3 -6.3 -1.7 6.3 -1.7z"/></svg>
+      <svg class="sparkle a-tw s2" style="left:84%;top:17%;width:12px;height:12px" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0 l1.7 6.3 6.3 1.7 -6.3 1.7 -1.7 6.3 -1.7 -6.3 -6.3 -1.7 6.3 -1.7z"/></svg>
+      <svg class="sparkle a-tw s3" style="left:70%;top:39%;width:10px;height:10px" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0 l1.7 6.3 6.3 1.7 -6.3 1.7 -1.7 6.3 -1.7 -6.3 -6.3 -1.7 6.3 -1.7z"/></svg>
+
+      <!-- El SUELO, a sangre y a la altura de toda la pantalla -->
+      <div class="padlayer" aria-hidden="true">
+        <div class="pad"></div>
+        <div class="tower l"><i class="a-beacon"></i></div>
+        <div class="tower r"><i class="a-beacon" style="animation-delay:-1.9s"></i></div>
+        <div class="steam a-puff" style="left:calc(var(--cx) - var(--rw)*.42);bottom:calc(var(--gh) + 2px);width:calc(var(--rw)*.09);height:calc(var(--rw)*.09)"></div>
+        <div class="steam a-puff" style="left:calc(var(--cx) - var(--rw)*.52);bottom:var(--gh);width:calc(var(--rw)*.07);height:calc(var(--rw)*.07);animation-delay:-1.3s"></div>
+        <div class="steam a-puff" style="left:calc(var(--cx) + var(--rw)*.34);bottom:calc(var(--gh) + 2px);width:calc(var(--rw)*.08);height:calc(var(--rw)*.08);animation-delay:-3.1s"></div>
+        <div class="steam a-puff" style="left:calc(var(--cx) + var(--rw)*.45);bottom:var(--gh);width:calc(var(--rw)*.06);height:calc(var(--rw)*.06);animation-delay:-4.3s"></div>
+
+        <svg class="rk rk-pad" viewBox="166 128 68 96">
+          <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+          <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+          <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+          <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+          <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+          <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"/>
+          <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"/>
+          <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+          <circle cx="200" cy="176" r="4" fill="#2563EB"/>
+          <circle class="a-winpulse" cx="200" cy="176" r="4" fill="#7FE3EC"/>
+        </svg>
+      </div>
+
+      <div class="sc-in">
+        <div class="strip">
+          <span class="strip-ok" aria-hidden="true">✓</span>
+          <span><b>hostinger.com</b> dado de alta</span>
+          <span class="strip-meta"><span class="op-lg">Misión 1 · </span>15 prompts<span class="op-md"> · 3 motores</span><span class="op-lg"> · 45 respuestas</span></span>
+        </div>
+        <div class="body">
+          <div class="stage"></div>
+          <div class="copy">
+            <span class="c-eye">En la rampa</span>
+            <h3 class="c-title sm">Preparando tu primer escaneo</h3>
+            <p class="c-sub">Un momento — estamos colocando la cola de trabajo.</p>
+            <p class="c-joke">Tú no tienes que hacer nada.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 2 · ASCENSO · 0 de 15 ═══════════ -->
+    <section class="sc sc-ascenso sc-asc0" aria-label="Ascenso, 0 de 15">
+      <div class="sky"></div>
+
+      <div class="tw s2" style="left:16%;top:5%" aria-hidden="true"></div>
+      <div class="tw" style="left:80%;top:8%" aria-hidden="true"></div>
+      <div class="tw s3" style="left:59%;top:3.5%" aria-hidden="true"></div>
+      <div class="tw" style="left:35%;top:10.5%" aria-hidden="true"></div>
+
+      <svg class="lay" viewBox="0 0 400 280" preserveAspectRatio="none" aria-hidden="true">
+        <g class="a-fall-far" opacity=".55" fill="url(#cloudsoft)">
+          <ellipse cx="90" cy="40" rx="26" ry="7"/><ellipse cx="310" cy="120" rx="22" ry="6"/>
+          <ellipse cx="180" cy="210" rx="24" ry="6"/>
+          <ellipse cx="90" cy="-240" rx="26" ry="7"/><ellipse cx="310" cy="-160" rx="22" ry="6"/>
+          <ellipse cx="180" cy="-70" rx="24" ry="6"/>
+        </g>
+        <g class="a-fall-lines" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" opacity=".34">
+          <line x1="60" y1="30" x2="60" y2="58"/><line x1="128" y1="150" x2="128" y2="184"/>
+          <line x1="282" y1="90" x2="282" y2="118"/><line x1="348" y1="200" x2="348" y2="234"/>
+          <line x1="60" y1="-250" x2="60" y2="-222"/><line x1="128" y1="-130" x2="128" y2="-96"/>
+          <line x1="282" y1="-190" x2="282" y2="-162"/><line x1="348" y1="-80" x2="348" y2="-46"/>
+        </g>
+      </svg>
+
+      <div class="sc-in">
+        <div class="strip">
+          <span class="strip-ok" aria-hidden="true">✓</span>
+          <span><b>hostinger.com</b> dado de alta</span>
+          <span class="strip-meta"><span class="op-lg">Misión 1 · </span>15 prompts<span class="op-md"> · 3 motores</span><span class="op-lg"> · 45 respuestas</span></span>
+        </div>
+        <div class="body">
+          <div class="stage" style="--climb:0">
+            <svg class="rk rk-climb" viewBox="166 128 68 150" aria-hidden="true">
+              <defs>
+                <linearGradient id="pl0" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="rgba(37,99,235,.26)"/><stop offset="1" stop-color="rgba(37,99,235,0)"/>
+                </linearGradient>
+              </defs>
+              <g class="a-sway">
+                <path d="M188 220 L212 220 L220 274 L180 274 Z" fill="url(#pl0)"/>
+                <path class="a-flame" d="M190 216 q5 24 0 36 q-5 -12 0 -36 Z" fill="#4F7BFF"/>
+                <path class="a-flame f2" d="M200 217 q6 30 0 44 q-6 -14 0 -44 Z" fill="#09C5D6"/>
+                <path class="a-flame f3" d="M210 216 q5 24 0 36 q-5 -12 0 -36 Z" fill="#4F7BFF"/>
+                <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+                <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+                <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+                <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"/>
+                <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"/>
+                <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+                <circle cx="200" cy="176" r="4" fill="#2563EB"/>
+              </g>
+            </svg>
+          </div>
+
+          <!-- capa cercana: pasa POR DELANTE del cohete (z2) y por detrás de la copy -->
+          <svg class="lay" viewBox="0 0 400 280" preserveAspectRatio="none" aria-hidden="true">
+            <g class="a-fall-near" opacity=".95" fill="url(#cloudsoft)">
+              <ellipse cx="52" cy="90" rx="40" ry="11"/><ellipse cx="80" cy="84" rx="24" ry="8"/>
+              <ellipse cx="330" cy="230" rx="44" ry="12"/><ellipse cx="360" cy="224" rx="26" ry="9"/>
+              <ellipse cx="250" cy="20" rx="30" ry="9"/>
+              <ellipse cx="52" cy="-190" rx="40" ry="11"/><ellipse cx="80" cy="-196" rx="24" ry="8"/>
+              <ellipse cx="330" cy="-50" rx="44" ry="12"/><ellipse cx="360" cy="-56" rx="26" ry="9"/>
+              <ellipse cx="250" cy="-260" rx="30" ry="9"/>
+            </g>
+          </svg>
+          <div class="scrim"></div>
+
+          <div class="copy">
+            <span class="c-eye">Ascenso</span>
+            <h3 class="c-title">0 de 15</h3>
+            <p class="c-sub">Puedes irte tranquilo: seguimos trabajando aunque cierres esta pestaña.</p>
+            <p class="c-joke">Esto no se cae.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 3 · ASCENSO · 9 de 15 ═══════════ -->
+    <section class="sc sc-ascenso sc-asc9" aria-label="Ascenso, 9 de 15">
+      <div class="sky"></div>
+
+      <div class="tw s2" style="left:16%;top:5%" aria-hidden="true"></div>
+      <div class="tw" style="left:80%;top:8%" aria-hidden="true"></div>
+      <div class="tw s3" style="left:59%;top:3.5%" aria-hidden="true"></div>
+      <div class="tw" style="left:35%;top:10.5%" aria-hidden="true"></div>
+
+      <svg class="lay" viewBox="0 0 400 280" preserveAspectRatio="none" aria-hidden="true">
+        <g class="a-fall-far" opacity=".55" fill="url(#cloudsoft)">
+          <ellipse cx="90" cy="40" rx="26" ry="7"/><ellipse cx="310" cy="120" rx="22" ry="6"/>
+          <ellipse cx="180" cy="210" rx="24" ry="6"/>
+          <ellipse cx="90" cy="-240" rx="26" ry="7"/><ellipse cx="310" cy="-160" rx="22" ry="6"/>
+          <ellipse cx="180" cy="-70" rx="24" ry="6"/>
+        </g>
+        <g class="a-fall-lines" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" opacity=".34">
+          <line x1="60" y1="30" x2="60" y2="58"/><line x1="128" y1="150" x2="128" y2="184"/>
+          <line x1="282" y1="90" x2="282" y2="118"/><line x1="348" y1="200" x2="348" y2="234"/>
+          <line x1="60" y1="-250" x2="60" y2="-222"/><line x1="128" y1="-130" x2="128" y2="-96"/>
+          <line x1="282" y1="-190" x2="282" y2="-162"/><line x1="348" y1="-80" x2="348" y2="-46"/>
+        </g>
+      </svg>
+
+      <div class="sc-in">
+        <div class="strip">
+          <span class="strip-ok" aria-hidden="true">✓</span>
+          <span><b>hostinger.com</b> dado de alta</span>
+          <span class="strip-meta"><span class="op-lg">Misión 1 · </span>15 prompts<span class="op-md"> · 3 motores</span><span class="op-lg"> · 45 respuestas</span></span>
+        </div>
+        <div class="body">
+          <div class="stage" style="--climb:.6">
+            <svg class="rk rk-climb" viewBox="166 128 68 150" aria-hidden="true">
+              <defs>
+                <linearGradient id="pl9" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="rgba(37,99,235,.26)"/><stop offset="1" stop-color="rgba(37,99,235,0)"/>
+                </linearGradient>
+              </defs>
+              <g class="a-sway">
+                <path d="M188 220 L212 220 L220 274 L180 274 Z" fill="url(#pl9)"/>
+                <path class="a-flame" d="M190 216 q5 24 0 36 q-5 -12 0 -36 Z" fill="#4F7BFF"/>
+                <path class="a-flame f2" d="M200 217 q6 30 0 44 q-6 -14 0 -44 Z" fill="#09C5D6"/>
+                <path class="a-flame f3" d="M210 216 q5 24 0 36 q-5 -12 0 -36 Z" fill="#4F7BFF"/>
+                <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+                <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+                <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+                <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"/>
+                <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"/>
+                <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+                <circle cx="200" cy="176" r="4" fill="#2563EB"/>
+              </g>
+            </svg>
+          </div>
+
+          <svg class="lay" viewBox="0 0 400 280" preserveAspectRatio="none" aria-hidden="true">
+            <g class="a-fall-near" opacity=".95" fill="url(#cloudsoft)">
+              <ellipse cx="52" cy="90" rx="40" ry="11"/><ellipse cx="80" cy="84" rx="24" ry="8"/>
+              <ellipse cx="330" cy="230" rx="44" ry="12"/><ellipse cx="360" cy="224" rx="26" ry="9"/>
+              <ellipse cx="250" cy="20" rx="30" ry="9"/>
+              <ellipse cx="52" cy="-190" rx="40" ry="11"/><ellipse cx="80" cy="-196" rx="24" ry="8"/>
+              <ellipse cx="330" cy="-50" rx="44" ry="12"/><ellipse cx="360" cy="-56" rx="26" ry="9"/>
+              <ellipse cx="250" cy="-260" rx="30" ry="9"/>
+            </g>
+          </svg>
+          <div class="scrim"></div>
+
+          <div class="copy">
+            <span class="c-eye">Ascenso</span>
+            <h3 class="c-title">9 de 15</h3>
+            <p class="c-sub">Puedes irte tranquilo: seguimos trabajando aunque cierres esta pestaña.</p>
+            <p class="c-joke">Esto no se cae.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 4 · ÓRBITA ═══════════ -->
+    <section class="sc sc-orbita" aria-label="En órbita">
+      <div class="sky"></div>
+
+      <div class="stars" aria-hidden="true">
+        <div class="starlayer sl-far"></div>
+        <div class="starlayer sl-near"></div>
+      </div>
+      <div class="tw" style="left:14%;top:11%" aria-hidden="true"></div>
+      <div class="tw s2" style="left:78%;top:13%" aria-hidden="true"></div>
+      <div class="tw s3" style="left:89%;top:54%" aria-hidden="true"></div>
+
+      <svg class="lay" viewBox="0 0 400 280" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="sh4" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="rgba(207,224,255,0)"/><stop offset="1" stop-color="#CFE0FF"/>
+          </linearGradient>
+        </defs>
+        <g class="a-shoot">
+          <line x1="40" y1="34" x2="18" y2="23" stroke="url(#sh4)" stroke-width="1.4" stroke-linecap="round"/>
+        </g>
+      </svg>
+
+      <div class="earth" aria-hidden="true">
+        <div class="earth-surf">
+          <div class="blob" style="left:3%;top:2%;width:16%;height:9%"></div>
+          <div class="blob" style="left:17%;top:5%;width:12%;height:7%"></div>
+          <div class="blob" style="left:33%;top:2.5%;width:14%;height:8%"></div>
+          <div class="blob" style="left:53%;top:2%;width:16%;height:9%"></div>
+          <div class="blob" style="left:67%;top:5%;width:12%;height:7%"></div>
+          <div class="blob" style="left:83%;top:2.5%;width:14%;height:8%"></div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+
+      <div class="sc-in">
+        <div class="strip">
+          <span class="strip-ok" aria-hidden="true">✓</span>
+          <span><b>hostinger.com</b> dado de alta</span>
+          <span class="strip-meta"><span class="op-lg">Misión 1 · </span>15 prompts<span class="op-md"> · 3 motores</span><span class="op-lg"> · 45 respuestas</span></span>
+        </div>
+        <div class="body">
+          <div class="stage">
+            <div class="orbit">
+              <svg class="rk" viewBox="166 128 68 96" aria-hidden="true">
+                <g class="a-bob">
+                  <path class="a-thrust" d="M186 218 q-6 8 -10 18 q8 -4 12 -12 Z" fill="#7FE3EC"/>
+                  <path class="a-thrust t2" d="M214 218 q6 8 10 18 q-8 -4 -12 -12 Z" fill="#7FE3EC"/>
+                  <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                  <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+                  <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                  <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+                  <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+                  <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+                  <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+                  <rect x="186" y="196" width="28" height="4" rx="2" fill="#7FE3EC" opacity=".8"/>
+                  <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+                  <circle cx="200" cy="176" r="4" fill="#09C5D6"/>
+                </g>
+              </svg>
+
+              <div class="packets" aria-hidden="true">
+                <span class="rail"></span>
+                <i></i><i></i><i></i>
+              </div>
+
+              <!-- EL ANILLO — único elemento con dato en esta escena.
+                   r=46, C≈289.03, 28/45 = .6222 → dashoffset ≈ 109.2 -->
+              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle cx="60" cy="60" r="40" fill="rgba(10,21,38,.5)"/>
+                <circle class="a-ringpop" cx="60" cy="60" r="3" fill="#7FE3EC"/>
+                <circle cx="60" cy="60" r="46" fill="none" stroke="#41618C" stroke-width="5"/>
+                <circle cx="60" cy="60" r="46" fill="none" stroke="#4F7BFF" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="289.03" stroke-dashoffset="109.2" transform="rotate(-90 60 60)"/>
+              </svg>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="c-eye">En órbita</span>
+            <h3 class="c-title">28 de 45 <em>respuestas leídas</em></h3>
+            <p class="c-sub">Extraemos de cada respuesta las menciones, las posiciones y las citas.</p>
+            <p class="c-joke">Traerlas era la mitad del viaje.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ 5 · ENTREGA ═══════════ -->
+    <section class="sc sc-entrega" aria-label="Cerrando la misión">
+      <div class="sky"></div>
+
+      <div class="stars" aria-hidden="true">
+        <div class="starlayer sl-far"></div>
+        <div class="starlayer sl-near"></div>
+      </div>
+      <div class="tw" style="left:19%;top:9%" aria-hidden="true"></div>
+      <div class="tw s2" style="left:72%;top:15%" aria-hidden="true"></div>
+      <div class="tw s3" style="left:86%;top:48%" aria-hidden="true"></div>
+
+      <div class="earth" aria-hidden="true" style="box-shadow:0 -1px 0 1.6px rgba(127,227,236,.68),0 0 0 10px rgba(9,197,214,.17)">
+        <div class="earth-surf">
+          <div class="blob" style="left:6%;top:2%;width:16%;height:9%"></div>
+          <div class="blob" style="left:21%;top:5%;width:12%;height:7%"></div>
+          <div class="blob" style="left:36%;top:2.5%;width:14%;height:8%"></div>
+          <div class="blob" style="left:56%;top:2%;width:16%;height:9%"></div>
+          <div class="blob" style="left:71%;top:5%;width:12%;height:7%"></div>
+          <div class="blob" style="left:86%;top:2.5%;width:14%;height:8%"></div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+
+      <div class="sc-in">
+        <div class="strip">
+          <span class="strip-ok" aria-hidden="true">✓</span>
+          <span><b>hostinger.com</b> dado de alta</span>
+          <span class="strip-meta"><span class="op-lg">Misión 1 · </span>15 prompts<span class="op-md"> · 3 motores</span><span class="op-lg"> · 45 respuestas</span></span>
+        </div>
+        <div class="body">
+          <div class="stage">
+            <div class="orbit">
+              <svg class="rk" viewBox="166 128 68 96" aria-hidden="true">
+                <g class="a-bob d2">
+                  <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                  <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+                  <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                  <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+                  <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+                  <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+                  <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+                  <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+                  <circle cx="200" cy="176" r="4" fill="#09C5D6"/>
+                  <circle class="a-winpulse" cx="200" cy="176" r="4" fill="#7FE3EC" style="animation-duration:2.6s"/>
+                </g>
+              </svg>
+
+              <!-- anillo COMPLETO: eso sí es estado real (45 de 45 leídas) -->
+              <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="a-breathe" cx="60" cy="60" r="56" fill="none" stroke="rgba(79,123,255,.35)" stroke-width="2"/>
+                <circle cx="60" cy="60" r="40" fill="rgba(10,21,38,.5)"/>
+                <circle class="a-ringpop" cx="60" cy="60" r="4" fill="#7FE3EC"/>
+                <circle cx="60" cy="60" r="46" fill="none" stroke="#41618C" stroke-width="5"/>
+                <circle cx="60" cy="60" r="46" fill="none" stroke="#4F7BFF" stroke-width="5" stroke-linecap="round"
+                        stroke-dasharray="289.03" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+                <g fill="#7FE3EC" transform="translate(60 60)">
+                  <circle class="a-converge" r="1.8" style="--dx:-42px;--dy:-20px"/>
+                  <circle class="a-converge c2" r="1.5" style="--dx:38px;--dy:-30px"/>
+                  <circle class="a-converge c3" r="1.6" style="--dx:-30px;--dy:34px"/>
+                  <circle class="a-converge c4" r="1.4" style="--dx:44px;--dy:22px"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="copy">
+            <span class="c-eye">Cerrando la misión</span>
+            <h3 class="c-title">Casi está</h3>
+            <p class="c-sub">Estamos calculando tu puntuación GEO.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <div class="wrap">
+    <div class="beatbar" role="group" aria-label="Compás mostrado">
+      <span class="vk">Compás</span>
+      <label for="b-rampa">1 · Rampa</label>
+      <label for="b-asc0">2 · Ascenso 0/15</label>
+      <label for="b-asc9">3 · Ascenso 9/15</label>
+      <label for="b-orbita">4 · Órbita 28/45</label>
+      <label for="b-entrega">5 · Entrega</label>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     PARTE 2
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="wrap">
+  <section class="part" id="p2">
+    <div class="part-k"><b>Parte 2</b><span>los compases, recronometrados</span></div>
+    <h2 class="part-h">Un minuto sin que se mueva un número</h2>
+    <p class="part-s">
+      Proyecto de 15 prompts, dos lotes. Las proporciones de abajo son
+      <strong>ilustrativas de la forma del problema</strong>, no una medición: lo medible y
+      cierto es el mecanismo — los contadores se escriben al cerrar un lote de hasta 10
+      prompts, así que <code>done</code> se queda en 0 durante todo el primero, y el beat
+      «ignición» es literalmente <code>done === 0</code>.
+    </p>
+
+    <div class="tl">
+      <div class="tl-row">
+        <div class="tl-lab"><b>Hoy</b><span class="tag tag-bad">5 compases · desequilibrado</span></div>
+        <div class="tl-bar" role="img" aria-label="Hoy: rampa muy corta, ignición muy larga y congelada, ascenso fugaz, órbita larguísima, entrega breve">
+          <div class="seg s-rampa" style="flex:3"></div>
+          <div class="seg s-dead" style="flex:55"><span class="l-lg">Ignición · «0» congelado</span><span class="l-sm">«0» ✕</span></div>
+          <div class="seg s-asc" style="flex:8"><span class="l-lg">Asc.</span></div>
+          <div class="seg s-orb" style="flex:170"><span class="l-lg">Órbita</span><span class="l-sm">Órbita</span></div>
+          <div class="seg s-ent" style="flex:4"></div>
+        </div>
+        <div class="tl-axis"><span>0 s</span><span>1 min</span><span>2 min</span><span>3 min</span><span>4 min</span></div>
+        <p class="tl-note bad">
+          <b>El fallo:</b> el compás más largo del arranque es el único sin dato. La pantalla
+          se queda en un cohete quieto sobre la rampa, con humo, mientras el usuario espera
+          a que cambie algo que no puede cambiar. Cuando por fin cambia, «ascenso» aparece y
+          desaparece en dos saltos (10/15 y 15/15) — el fundador nunca lo vio.
+        </p>
+      </div>
+
+      <div class="tl-row">
+        <div class="tl-lab"><b>Propuesto</b><span class="tag tag-good">4 compases · ignición fundida en ascenso</span></div>
+        <div class="tl-bar" role="img" aria-label="Propuesto: rampa muy corta, ascenso largo con movimiento continuo desde 0 de 15, órbita larga, entrega breve">
+          <div class="seg s-rampa" style="flex:3"></div>
+          <div class="seg s-asc" style="flex:63"><span class="l-lg">Ascenso · 0 → 15 de 15</span><span class="l-sm">0 → 15</span></div>
+          <div class="seg s-orb" style="flex:170"><span class="l-lg">Órbita</span><span class="l-sm">Órbita</span></div>
+          <div class="seg s-ent" style="flex:4"></div>
+        </div>
+        <div class="tl-axis"><span>0 s</span><span>1 min</span><span>2 min</span><span>3 min</span><span>4 min</span></div>
+        <p class="tl-note">
+          <b>El arreglo:</b> el encendido deja de ser un compás y pasa a ser un instante —el
+          despegue— dentro de ascenso. Desde el primer segundo se ve la escena de vuelo, con
+          nubes cayendo en dos capas de parallax: <b>movimiento ambiental continuo</b>, que
+          no cuenta nada y por eso puede correr siempre. La altura del cohete queda atada a
+          la fracción real y arranca en el suelo, con un <b>«0 de 15» honesto</b> escrito en
+          grande. Cuando cierra el lote 1, el cohete sube a 10/15 con la transición de
+          600&nbsp;ms que ya existe en <code>.mrk-glide</code> —sobre <code>transform</code>,
+          no sobre <code>bottom</code>— y se ve el salto, que ahora dura lo suficiente para
+          leerse.
+        </p>
+      </div>
+
+      <div class="tl-leg">
+        <span><i style="background:#DBE4F1"></i>Rampa (<code>pending</code>)</span>
+        <span><i style="background:repeating-linear-gradient(45deg,#F6D2D6 0 4px,#F2C4C9 4px 8px)"></i>Tiempo muerto: <code>done === 0</code></span>
+        <span><i style="background:#8FADFF"></i>Ascenso (altura = <code>done/total</code>)</span>
+        <span><i style="background:#2563EB"></i>Órbita (anillo = respuestas leídas)</span>
+        <span><i style="background:#09C5D6"></i>Entrega</span>
+      </div>
+    </div>
+
+    <div class="hardrule">
+      <h3>Regla dura que esto NO rompe: nada de progreso inventado</h3>
+      <p>
+        Fundir ignición en ascenso <strong>no acelera ningún número</strong> y no interpola
+        nada. Durante el primer lote el contador sigue diciendo <strong>0 de 15</strong>,
+        porque es la verdad, y el cohete sigue a ras de suelo, porque la altura es
+        <code>done/total</code> y <code>done</code> es 0. Lo único que cambia es que la
+        espera se ve viva: las nubes, el humo, las estrellas y los paquetes corren a ritmo
+        constante, sin estado inicial ni final, precisamente para que sea imposible leerlos
+        como avance.
+      </p>
+      <p>
+        Los dos únicos elementos con información siguen siendo los de rev.3/rev.4: la
+        <strong>altura</strong> del cohete en ascenso y la <strong>fracción del anillo</strong>
+        en órbita. Sin total conocido, el anillo pasa a arco indeterminado girando —el único
+        giro de spinner permitido, porque ahí el progreso de verdad se desconoce.
+      </p>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════
+     PARTE 3
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="wrap">
+  <section class="part" id="p3">
+    <div class="part-k"><b>Parte 3</b><span>qué hacen las demás secciones</span></div>
+    <h2 class="part-h">Mientras el primer escaneo corre, el usuario puede irse a Prompts</h2>
+    <p class="part-s">
+      La pantalla completa sólo tiene sentido en Visión general. La pregunta es qué ve
+      alguien que navega a Prompts, Competidores o Escaneos durante ese primer escaneo.
+      Tres opciones, con su contrapartida.
+    </p>
+
+    <div class="opts">
+
+      <!-- (i) -->
+      <article class="opt rec">
+        <div class="opt-top">
+          <span class="opt-n">(i)</span>
+          <span class="opt-rec">Recomendada</span>
+        </div>
+        <h3>Tira de misión compacta</h3>
+        <p class="trade">
+          <b>A favor:</b> mismo lenguaje visual —escena en miniatura, misma paleta, mismo
+          anillo—, la sección sigue siendo usable y el escaneo nunca se pierde de vista.
+          <b>En contra:</b> hay que construir y mantener una segunda pieza además de la
+          pantalla completa.
+        </p>
+        <div class="prev">
+          <div class="mini">
+            <div class="mini-top">
+              <span class="mini-mark"></span>
+              <span class="mini-nav"><span>Visión</span><span class="on">Prompts</span><span>Compet.</span></span>
+            </div>
+            <div class="mini-body">
+              <div class="mini-h">Prompts</div>
+              <div class="mini-sub">15 activos · hostinger.com</div>
+              <div class="mstrip">
+                <div class="msky" style="background:linear-gradient(90deg,rgba(37,99,235,.25),rgba(9,197,214,.08))"></div>
+                <svg class="rk" viewBox="166 128 68 96" aria-hidden="true">
+                  <g class="a-bob">
+                    <rect x="184" y="208" width="9" height="8" rx="2" fill="#5B6B82"/>
+                    <rect x="196" y="208" width="9" height="9" rx="2" fill="#5B6B82"/>
+                    <rect x="208" y="208" width="9" height="8" rx="2" fill="#5B6B82"/>
+                    <path d="M184 188 L174 210 L184 206 Z" fill="#4F7BFF"/>
+                    <path d="M217 188 L227 210 L217 206 Z" fill="#4F7BFF"/>
+                    <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#E8EEF8"/>
+                    <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#C6D3E8"/>
+                    <circle cx="200" cy="176" r="5" fill="#09C5D6"/>
+                  </g>
+                </svg>
+                <span class="mtxt">Primer escaneo · <em>9 de 15</em></span>
+                <span class="mrail"><i style="width:60%"></i></span>
+                <svg class="mring" viewBox="0 0 120 120" aria-hidden="true">
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="#22395C" stroke-width="12"/>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="#4F7BFF" stroke-width="12" stroke-linecap="round"
+                          stroke-dasharray="289.03" stroke-dashoffset="116" transform="rotate(-90 60 60)"/>
+                </svg>
+              </div>
+              <div class="mini-row w1"></div>
+              <div class="mini-row w2"></div>
+              <div class="mini-row w3"></div>
+              <div class="mini-row w4"></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- (ii) -->
+      <article class="opt">
+        <div class="opt-top"><span class="opt-n">(ii)</span></div>
+        <h3>La pantalla completa toma todas las secciones</h3>
+        <p class="trade">
+          <b>A favor:</b> impacto máximo y coherencia total — el primer escaneo es un
+          acontecimiento y toda la app lo dice. <b>En contra:</b> secuestra la navegación:
+          quien entra a Prompts para leer sus prompts no puede leerlos.
+        </p>
+        <div class="prev">
+          <div class="mini">
+            <div class="mini-top">
+              <span class="mini-mark"></span>
+              <span class="mini-nav"><span>Visión</span><span class="on">Prompts</span><span>Compet.</span></span>
+            </div>
+            <div class="take">
+              <div>
+                <svg class="rk" viewBox="166 128 68 96" aria-hidden="true">
+                  <g class="a-bob">
+                    <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                    <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+                    <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                    <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+                    <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+                    <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+                    <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+                    <circle cx="200" cy="176" r="5" fill="#09C5D6"/>
+                  </g>
+                </svg>
+                <div class="tt">9 de 15</div>
+                <div class="ts">Primer escaneo en marcha</div>
+                <div class="blocked">tus 15 prompts, detrás de esto</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- (iii) -->
+      <article class="opt">
+        <div class="opt-top"><span class="opt-n">(iii)</span></div>
+        <h3>Dejarlas como hoy</h3>
+        <p class="trade">
+          <b>A favor:</b> cero trabajo y cero riesgo. <b>En contra:</b> es exactamente la
+          incoherencia de la que salió esta fase — cohete en una pantalla, spinner genérico
+          en la de al lado.
+        </p>
+        <div class="prev">
+          <div class="mini">
+            <div class="mini-top">
+              <span class="mini-mark"></span>
+              <span class="mini-nav"><span>Visión</span><span class="on">Prompts</span><span>Compet.</span></span>
+            </div>
+            <div class="mini-body">
+              <div class="mini-h">Prompts</div>
+              <div class="mini-sub">15 activos · hostinger.com</div>
+              <div class="spin"></div>
+              <div class="bar"><i></i></div>
+              <div class="mini-c">Escaneando… 9 de 15</div>
+              <div class="mini-row w1" style="margin-top:12px"></div>
+              <div class="mini-row w2"></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <footer class="foot">
+    SCAN-STATES-1 · rev.5 · 2026-08-10 — rediseña la <em>puesta en página</em> de rev.4; los
+    trazados, los <code>@keyframes</code>, el copy de los beats y la regla de datos no
+    cambian. Cero JavaScript en todo el fichero. Números de ejemplo: 15 prompts, 3 motores,
+    45 respuestas — el tamaño real de un proyecto como hostinger.com. Las proporciones de la
+    Parte 2 ilustran la forma del desequilibrio, no una medición.
+  </footer>
+</div>

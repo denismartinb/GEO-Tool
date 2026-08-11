@@ -4783,6 +4783,352 @@ detectados durante esta investigación y sin tocar.
 
 ---
 
+---
+
+## 55. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
+
+**Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
+diseño en `docs/design-reference/scan-states-1/` (tres opciones, rev.2 y
+rev.3 — la última es la aprobada). Task Intake aprobado por el fundador en
+sesión el mismo día.
+
+**El problema.** `ScanInProgress`/`ScanInProgressLive` es el estado del
+prototipo sin repintar a la identidad v3, y es el primer aterrizaje real de
+un cliente nuevo. El fundador midió un escaneo propio de 30 preguntas en más
+de 5 minutos contra una copia que promete "un par de minutos".
+
+**Qué se decidió.**
+
+1. **Sólo el primer escaneo de cada dominio** lleva la experiencia nueva
+   (`ScanMissionRocket`) — la señal es `completedRunsCount === 0`, que ya
+   existía en la página; no se añadió ninguna columna para distinguirlo. A
+   partir del segundo escaneo, el proyecto vuelve al `ScanInProgressLive`
+   compartido de siempre, sin cambios.
+2. **La misión suelta la pantalla en cuanto hay datos que enseñar.**
+   `ScanMissionRocket` sólo vive dentro de la rama `!hasData` (igual que el
+   componente al que sustituye); en el instante en que `hasData` se vuelve
+   cierto, la Visión general real se dibuja y una banda compacta
+   (`ScanMissionBand`) sustituye al cohete a pantalla completa mientras la
+   auditoría sigue en marcha. Nunca hay una ventana en la que la misión tape
+   datos ya disponibles — es literalmente el mismo defecto que el log §26
+   corrigió en Recomendaciones, y se decidió no reintroducirlo.
+3. **Cinco momentos, no ocho.** La fase 1 implementa rampa / ignición /
+   ascenso / órbita / entrega — los que se derivan de `computeScanStage`
+   (sin cambios) sin ninguna lectura nueva. Los momentos de vuelta
+   (reentrada / aproximación / aterrizaje) del guion explorado en la rev.3
+   se simplifican a la banda de una sola línea: mostrar "12 de 30 temas" en
+   tiempo real exige el mismo análisis de `generated_solutions` que ya hace
+   la página de Auditoría web (`parseCoverageMap`), y traerlo aquí también
+   habría sido una segunda lectura pesada — deliberadamente fuera de esta
+   fase.
+4. **Ninguna cifra que la fase no pudiera respaldar.** Dos ajustes respecto
+   al guion explorado, los dos porque el dato real no sostenía la copia:
+   - `total_prompts` cuenta lanzamientos (jobs), no respuestas
+     (SAMPLING-1, ADR 0030) — el guion decía "90 respuestas" asumiendo
+     `prompts × motores`; sostenerlo de verdad habría exigido el plan
+     resuelto del proyecto (lectura nueva) o el env global
+     `LLM_SCAN_PROVIDERS` (puede sobrecontar por debajo del cap del plan).
+     El beat `ascenso` se quedó en la misma unidad sin nombrar que ya usa
+     `ScanInProgress` hoy. El beat `órbita` sí dice "respuestas" porque
+     `responses_total`/`responses_processed` cuentan filas reales de
+     `scan_prompt_results` — una por motor, ya contadas, sin multiplicar
+     nada.
+   - El beat `entrega` (todas las respuestas con salida terminal de
+     extracción) **no muestra ninguna puntuación**. Ese momento ocurre
+     antes de que el finalize del run persista el score — mostrar un
+     número ahí habría sido inventarlo. El score real sólo aparece cuando
+     `ScanProgressPoller` (ya montado) detecta el run en estado terminal y
+     refresca la página entera.
+5. **Hallazgo suelto, corregido de paso.** La pastilla de Visión general
+   (`ScanStatePill`) nunca recibía `auditing` — nunca decía "Auditando…" en
+   la pantalla insignia, aunque Dominios y Auditoría web sí lo hacen. La
+   única señal nueva de esta fase (¿hay un job `web_audit` vivo?, existencia
+   por RLS de usuario, sin service-role) alimenta la pastilla y la banda a
+   la vez, así que quedan alineadas sin coste extra.
+
+**Pendiente / roto conocido.**
+
+- **La banda no lleva contador real** ("12 de 30 temas") — dice "revisando
+  tu web" sin cifra. Cuando se traiga ese dato, `scan-mission-band.tsx` es
+  el único fichero que cambia.
+- **No hay aviso por email.** La banda no promete ninguno porque no existe
+  todavía backend para él (SCAN-STATES-1 rev.1, fase 2 — columna de
+  preferencia, envío, plantilla; necesita su propia aprobación por llevar
+  migración).
+- **Sin desglose por motor.** El cohete no enciende sus toberas
+  individualmente por Gemini/ChatGPT/Claude — necesitaría una lectura nueva
+  agrupando `scan_prompt_results` por motor durante el run activo. Fase 3
+  de SCAN-STATES-1.
+- **La G reconstruida con arcos** (rev.2 de la exploración, 93% de solape
+  medido contra el SVG calcado real de `public/brand/genscore-mark.svg`) no
+  se usa en esta fase — el fundador eligió el cohete. El hallazgo de que el
+  asset de marca está calcado (170 rectas, cero curvas) sigue sin
+  resolverse en `public/brand/*.svg`; queda anotado como fase de marca
+  propia (BRAND-6), fuera de este PR.
+- **Sin verificación visual real.** Este repo no tiene arnés de DOM para
+  componentes de servidor (mismo límite que documentó WEB-AUDIT-DRIVE-1);
+  la lógica que decide qué mostrar sale entera a `lib/scan/mission-beats.ts`
+  con 9 tests, pero el render en pantalla —incluida la sincronía real entre
+  el traspaso y `hasActiveAuditJob`— no lo ha visto nadie en un navegador
+  contra datos reales. Pendiente del piloto o de una prueba manual del
+  fundador contra un proyecto nuevo de verdad.
+
+---
+
+
+**Addendum rev.4 (2026-08-10) — la animación, rehecha.** La primera pasada por
+producción del fundador, en el móvil y sobre la fase de órbita, fue lapidaria:
+*«queda muy cutre… el cohete está parado, da la sensación de que la página está
+parada»*. El diagnóstico correcto no era el cohete: **un cohete en órbita se
+mueve, lo que estaba congelada era la cámara**. rev.3 dibujaba una escena
+correcta y quieta, y una pantalla que se queda abierta dos o cuatro minutos
+durante el primer escaneo —la primera impresión del producto— leída como
+colgada.
+
+rev.4 (`docs/design-reference/scan-states-1/rev4-cohete-vivo.html`) no toca ni
+los cinco beats, ni el copy, ni los datos. Cambia la puesta en escena: cada
+beat tiene ahora movimiento ambiental continuo y el viaje entero recorre un
+arco de día a noche, de modo que la escena, y no el vehículo, es lo que vende
+el movimiento.
+
+- **rampa** — vapor venteando en las toberas, dos capas de nubes cruzando a
+  distinta velocidad, balizas de torre parpadeando desfasadas, chequeo de
+  sistemas en la ventanilla. El cohete es lo único quieto, que es lo que lo
+  hace leer como *retenido* y no como congelado.
+- **ignición** — humo rodando por la plataforma hacia ambos lados, resplandor
+  pulsante bajo las toberas, chispas y medio píxel de vibración del fuselaje.
+- **ascenso** — la velocidad la venden dos capas de nubes cayendo en paralaje
+  (la cercana pasa POR DELANTE del cohete, que es lo que hace legible el
+  paralaje) más líneas de aire.
+- **órbita** — el truco de cámara: el cohete sólo cabecea y suelta micro-impulsos
+  de maniobra mientras se mueve **el entorno** — estrellas en paralaje, la Tierra
+  girando debajo, una estrella fugaz cada 13 s — y los paquetes de datos fluyen
+  de la bodega abierta al anillo.
+- **entrega** — el anillo completo respira mientras chispas convergen al núcleo.
+
+**La regla de datos no se movió ni un milímetro, y es lo que hace legítimo todo
+lo anterior:** sólo la altitud del ascenso y la fracción del anillo codifican
+información real. Estrellas, nubes, humo, vapor, chispas, paquetes y Tierra son
+decorado y corren a ritmo constante, sin estado de inicio ni de fin,
+precisamente para que ninguno pueda leerse como progreso. Sin total conocido el
+anillo pasa a arco indeterminado girando en vez de inventar una posición — el
+único sitio donde un spinner es honesto, porque el progreso de verdad se
+desconoce.
+
+Decisiones técnicas que conviene no deshacer: una escena por beat en vez de una
+escena que muta (el cielo cambia de día a noche a lo largo de la misión y una
+sola escena no puede expresarlo), con remontado por `key` y fundido de entrada;
+sólo `transform`/`opacity` (composición en GPU, sin layout ni filtros animados)
+porque esto vive minutos en un móvil; y bajo `prefers-reduced-motion` cada
+escena descansa en un fotograma quieto **y completo** — lo que sólo existe en
+vuelo (vapor, chispas, paquetes, impulsos) se oculta en vez de congelarse, que
+es lo que evita que el fotograma parezca un fallo de renderizado.
+
+Verificado con Chromium contra el componente real montado en una ruta temporal
+de Next: las cinco escenas más la variante indeterminada a 375 y 1280 px, y
+pares de fotogramas de la órbita separados 4 s que demuestran el desplazamiento
+de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
+por la razón de siempre: el proyecto piloto tiene historial, así que
+`isFirstScan` es `false` y el cohete no llega a montarse nunca.
+
+
+## 56. La misión ocupa la pantalla entera, y el encendido deja de durar un minuto (SCAN-STATES-2, 2026-08-10)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día,
+después de pedir ver una maqueta antes de aprobar (`rev5-pantalla-completa.html`,
+PR #378). Tres decisiones suyas, todas explícitas.
+
+**El problema.** El fundador probó rev.4 en producción, en el móvil, con un
+dominio nuevo, y reportó tres cosas distintas: la animación era «un pequeño
+marco, dejando mucho espacio a los lados»; el mensaje verde de «Dominio creado»
+flotaba encima como si fuera de otra pantalla; y había tenido que **recargar
+para ver la fase siguiente**.
+
+**El tercer punto no era lo que parecía, y merece quedar escrito.** El sondeo
+del cohete es byte a byte idéntico al de `ScanInProgressLive`, que sí funciona.
+Lo que falla es el reparto de tiempos: `refreshRunProgressCounters` sólo escribe
+los contadores **al cerrar un lote** de hasta `MAX_REAL_SCAN_PROMPTS` prompts,
+y el compás `ignicion` es literalmente `stage.done === 0`. En un proyecto de 15
+prompts eso significa que el compás con menos que enseñar se quedaba puesto
+durante todo el primer lote —del orden de un minuto sin que cambiara un número—
+y después `ascenso` pasaba en dos saltos (10/15, 15/15) en segundos. El fundador
+nunca llegó a ver el ascenso.
+
+**Qué se decidió.**
+
+1. **Lienzo a sangre.** `.mrk-full` sale del contenedor con
+   `margin-inline: calc(50% - 50vw)` y las escenas dejan de pintar su propio
+   fondo redondeado: **el degradado de la página ES el cielo**, y viaja de día
+   a noche con la misión. En ≥960 px la composición se parte —copy a la
+   izquierda, escena ocupando todo el lienzo por detrás— porque lo que compra
+   el ancho es más cielo, y la curvatura de la Tierra sólo funciona a esa
+   escala.
+2. **El aviso verde desaparece como bloque** y su contenido pasa a `.mrk-rail`,
+   soldado a la costura entre el marco del producto y el cielo. El argumento:
+   el dominio recién creado es cierto durante los cuatro compases mientras el
+   compás cambia, así que va en la pieza que no se mueve.
+3. **El encendido se temporiza** (`IGNITION_HOLD_MS`, 5,5 s) y `resolveDisplayBeat`
+   pasa a la escena de vuelo. **Es una decisión de presentación y por eso se le
+   permite un reloj:** cambia qué escena se ve y no toca un solo número. El
+   ascenso que devuelve reporta `done: 0` y `climb: 0` —las dos cosas ciertas
+   mientras corre el primer lote—, así que la pantalla dice «0 de 15» y el
+   cohete sigue en el suelo exactamente mientras eso sea verdad. Lo que se gana
+   es que la espera **se ve viva**, porque el movimiento ambiental no cuenta
+   nada y puede correr antes de que se mueva el primer contador.
+4. **Pantalla completa en todas las secciones** durante el primer escaneo
+   (Visión general, Prompts, Competidores, Recomendaciones, Páginas citadas).
+   La objeción que se planteó y quedó respondida por el propio código: Prompts
+   y Competidores **sí** tienen contenido real en ese momento
+   (`createProject` inserta `project_prompts` y `project_competitors` antes de
+   arrancar el escaneo), pero **cada una de esas páginas ya sustituía su cuerpo
+   entero por `ScanInProgress`** con exactamente esta condición. Así que esto
+   cambia un takeover por otro mejor, no oculta nada que antes se pudiera leer.
+5. **Las cifras del raíl son reales o no están.** El fundador propuso primero
+   una cifra aproximada («no me importa que no sean datos reales», siendo un
+   momento guau). Lo que zanjó el asunto no fue la regla sino la aritmética:
+   dos compases después, en **esa misma pantalla**, órbita imprime el recuento
+   verdadero leído de `scan_prompt_results`. Una cifra inventada en el raíl
+   quedaría desmentida por el propio producto, en la misma sesión, delante del
+   usuario al que pretendía impresionar. Se resuelve leyendo el plan
+   (`resolveScanProvidersForPlan`), y `getPlanForUser` está envuelto en
+   `cache()` de React, así que varias secciones pidiéndolo en una petición
+   resuelven una sola consulta. Un contador nulo **borra su segmento** en vez de
+   rellenarse.
+
+**Verificado** con Chromium contra el componente real montado en una ruta
+temporal de Next (retirada): los cinco compases a 375 y 1280 px, el relevo del
+encendido comprobado antes y después del temporizador, y cero desbordamiento
+horizontal en ambas anchuras.
+
+**Conocido y sin cerrar:** en escritorio la Tierra no cruza el ancho completo
+como en la maqueta — la escena conserva su proporción 400×280 y queda
+enmarcada. Alcanzar la paridad exige separar el fondo ambiental (estirable) de
+los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
+verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
+historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
+
+
+**Addendum (2026-08-10, misma tarde) — tres correcciones tras la primera prueba
+real en producción.** El fundador escaneó `genscore.es` desde el móvil y
+encontró tres cosas. Las tres eran ciertas.
+
+1. **«Cuando el motor está parado, ahí se veían bordes.»** La plataforma eran
+   dos `rect` dibujados DENTRO del SVG, que conserva su proporción 400×280 y
+   queda centrado — así que el suelo se cortaba antes del borde de la pantalla
+   y dejaba dos franjas grises. En ignición se notaba menos porque el humo tapa
+   las esquinas. El suelo pasa a ser una banda CSS (`.mrk-ground`) fuera del
+   SVG, y el `viewBox` de las escenas de rampa se acorta a 400×228 para acabar
+   justo en la línea del suelo. **Lo verdaderamente malo de este fallo es que
+   estaba en una captura que yo mismo tomé y no llegué a abrir**: verificar no
+   es fotografiar, es mirar. El arreglo se comprobó midiendo el rectángulo en
+   el DOM (`x: 0`, `width: 375`) además de a ojo, porque el primer intento
+   *parecía* arreglado y no lo estaba — el centrado con `translateX(-50%)` se
+   anulaba solo, ya que el envoltorio venía desplazado 16 px por el relleno de
+   `.mrk-scene-slot`.
+2. **El banner verde seguía apareciendo.** No era el raíl: es el mensaje
+   `scan_started` de `lib/projects/feedback-messages.ts`, que se pinta desde un
+   searchParam. Se suprime **sólo** cuando la misión ocupa la pantalla, porque
+   su texto es lo que el raíl ya dice, apilado encima como segunda superficie.
+   Los demás mensajes de feedback no se tocan.
+3. **«Dice 24 prompts y yo puse 12.»** El número era correcto y la etiqueta
+   mentía. Con 12 prompts y 3 motores salen 36 respuestas, por debajo del suelo
+   de 50 de SAMPLING-1 (ADR 0030), así que el run **repite el set dos veces**:
+   24 lanzamientos, 72 respuestas. `total_prompts` cuenta lanzamientos, no
+   prompts. El raíl pasa a enseñar la multiplicación entera —
+   `12 prompts · 2 pasadas · 3 motores · 72 respuestas` — leyendo el recuento
+   real de `project_prompts`, y el compás de ascenso deja de decir «prompts
+   lanzados» para decir «lanzamientos», que además es la palabra correcta para
+   un cohete. Las «pasadas» desaparecen del raíl cuando el run hace una sola.
+
+**Pendiente, planteado por el fundador y sin implementar:** que la misión
+mencione la auditoría web —«es un coste relevante y una funcionalidad
+importante del producto»— y que la misma animación se use en Auditoría web
+mientras corre su proceso. La forma natural es un sexto compás de **reentrada**,
+que ya estaba en el concepto original de rev.3 («reentrada en la atmósfera =
+auditoría web») y que se descartó entonces por alcance. Necesita su propia
+fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
+continuar más allá de `entrega`, y eso cambia el contrato de
+`computeMissionBeat`, no sólo el copy.
+
+
+**Addendum (2026-08-11) — la banda de auditoría nunca se mostró.** El fundador
+probó el cohete («ahora es perfecto») y añadió: *«pero no he visto la parte de
+la auditoría»*. No era percepción suya: `ScanMissionBand` era **código muerto
+desde el día que se implementó**, en ONBOARDING-ROCKET-1 Fase 1.
+
+Vivía dentro de la rama `hasData` —que exige un escaneo completado— pidiendo
+`isFirstScan`, que es `completedRunsCount === 0`. Mutuamente excluyentes: no
+se ha renderizado ni una vez. Y el comentario escrito encima razonaba que
+«nunca se solapa con el cohete, que sólo sale en la rama `!hasData`» — el
+mismo hecho que la hacía inalcanzable, usado para argumentar que era segura.
+Un razonamiento correcto sobre superposición que nunca comprobó la condición
+contraria: que fuese alcanzable.
+
+La condición correcta es el **después** del primer escaneo, no su ausencia:
+exactamente un run completado. Ahora vive en `shouldShowMissionBand`, con
+tests, porque una condición booleana enterrada en JSX es precisamente lo que
+nadie revisa — ni el piloto, que tampoco puede llegar aquí.
+
+**Lo que esto dice del proceso, y conviene no suavizarlo:** dos revisiones de
+diseño, cuatro pasadas de piloto en verde y una sesión entera de trabajo sobre
+esta pantalla no encontraron un elemento que no se dibujaba nunca. Lo encontró
+un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
+historial, `isFirstScan` falso— y ningún test cubría la expresión porque
+estaba en línea dentro del JSX.
+
+
+## 57. La reentrada: la auditoría web entra en la misión (SCAN-STATES-3, 2026-08-11)
+
+**Estado: implementada.** Maqueta `rev6-reentrada.html` aprobada por el fundador
+el 2026-08-10 («Apruebo la maqueta de la auditoría técnica»), implementación
+pedida el 11 («implementa también la maqueta de auditoría»).
+
+**Qué resuelve.** Dos peticiones suyas: que la misión ponga en valor lo que hace
+la auditoría web —«es un coste relevante y una funcionalidad importante del
+producto»— y que la misma animación se use en Auditoría web mientras corre.
+Cierra el viaje que rev.3 ya insinuaba y descartó por alcance: «reentrada en la
+atmósfera = auditoría web».
+
+**La cinta es lo importante, y su garantía es un test, no un comentario.** El
+riesgo que venía gratis con «ponlo en valor, con jerga espacial» era inventar
+capacidad: la voz de misión hace que cualquier cosa suene impresionante,
+incluidas las que el producto no hace. Así que las dieciséis líneas llevan cada
+una su `IssueCheckKey`, y `audit-ticker.test.ts` las valida **leyendo
+`issues.ts` del propio fichero**, no contra una copia. Añadir una línea para una
+comprobación inexistente pone la suite en rojo; borrar una comprobación del
+producto también, hasta que se borre su línea. Sobrevive a un autor que no lea
+los comentarios, que es más de lo que puede decir un comentario.
+
+Las dos líneas de cobertura quedan fuera: son Pro, y un proyecto Free vería o
+trabajo que no se está haciendo, o candados — que convierten una espera en un
+anuncio.
+
+**Dónde sale, y por qué más estrecho que la maqueta.** La maqueta pedía la
+reentrada a pantalla completa en Auditoría web «mientras dure». Comprobado
+contra el código: esa página **no se apodera hoy de la pantalla** — un proyecto
+con auditoría previa sigue leyendo sus datos con una píldora «Auditando…». Así
+que sale **sólo cuando no hay nada que tapar**: sin resumen de cobertura y sin
+snapshot técnico, es decir la primera auditoría del dominio. Misma regla que el
+cohete con `isFirstScan`, y mismo error evitado — esconder contenido real detrás
+de una animación, que es justo lo que el fundador cazó esa misma tarde.
+
+**Ningún elemento de la escena lleva datos.** Reutilizar el anillo de órbita
+insinuaría una fracción de «la auditoría», y nada mide la auditoría entera: la
+mitad técnica no publica progreso hasta terminar. La única cifra real que
+existe (cobertura) no se lee aquí, así que este compás **no enseña ningún
+número** en vez de enseñar uno plausible.
+
+**Detalle deliberado:** `auditIsRunning` se lee de la fila de job que la página
+ya consulta —sin consulta nueva— y **no** de `auditPillState`, que está
+condicionado a `canAuditCoverage`. La mitad técnica corre en todos los planes,
+así que la primera auditoría de un proyecto Free es trabajo real y merece el
+compás igual que la de uno Pro.
+
+**Conocido y sin cerrar:** el amerizaje (el cierre corto al terminar la
+auditoría) está definido en la maqueta pero no implementado; la cinta es un
+carrusel de alcance, no un registro en vivo, porque el progreso por
+comprobación no se persiste; y esta pantalla **el piloto tampoco puede verla**,
+por la misma razón que el cohete.
 
 ## 46. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
 
@@ -5050,9 +5396,315 @@ self-check — funcionó exactamente como debía, cazándolo antes de mergear.
 el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
 índice de `/blog`, en el pilar `playbooks` y en el sitemap.
 
+
 ---
 
-## 51. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
+## 51. Banco de pruebas offline para el modelo de extracción (EXTRACTION-COST-BENCH-1, 2026-08-09)
+
+**Estado: herramienta construida y verificada; ejecución con datos reales
+pendiente — este sesión no tenía credenciales de Supabase/Gemini/OpenAI.**
+
+Nace de la conversación de desglose de coste de LLM: la extracción estructurada
+(`lib/scan/extraction.ts`) usa siempre el mismo proveedor que generó la
+respuesta, sin ninguna razón técnica — el input es `raw_response_text`, ya
+persistido, así que cualquier extractor puede parsearlo venga de donde venga.
+Es además ~50% de todas las llamadas LLM del pipeline y la que mete más input
+(esquema completo + la respuesta cruda entera), y no registra tokens ni coste
+en ningún sitio. `scripts/extraction-bench.ts` (`pnpm bench:extraction
+--limit N`) reextrae filas históricas con modelos candidatos más baratos
+(`gemini-2.5-flash-lite`, `gpt-4o-mini`, y `gemini-2.5-flash` como referencia
+de control) y compara el resultado contra lo ya persistido, sin tocar una fila
+de producción.
+
+### Decisiones y por qué
+
+- **Reutiliza las funciones reales de extracción y verificación**
+  (`extractGeminiStructuredData`, `extractOpenAIStructuredData`,
+  `verifyExtractedMentions`, `reconcileExtractedCompetitors`), no una copia. El
+  modelo candidato se selecciona sobreescribiendo `GEMINI_MODEL`/`OPENAI_MODEL`
+  justo antes de cada llamada y restaurando el valor previo después — la única
+  forma de variar el modelo sin tocar `lib/llm/**` (prohibido en el Task
+  Intake aprobado), porque esas funciones no aceptan un `model` explícito.
+- **`citations_count`/`citation_found` quedan fuera de la comparación a
+  propósito.** Se calculan desde `raw_response_json.grounding_chunks`, que es
+  metadata congelada en el momento de GENERACIÓN — ningún modelo de extracción,
+  barato o no, puede cambiarlos. Compararlos aquí mediría ruido, no señal.
+- **El coste es estimado, no medido.** Ninguna de las tres funciones de
+  extracción devuelve `usage` del proveedor — ese hueco es precisamente lo que
+  esta herramienta sirve para detectar, no para resolver; resolverlo exigiría
+  tocar `lib/llm/**`, fuera del alcance aprobado. La estimación usa una
+  heurística caracteres/4 contra tarifas públicas por token — válida para una
+  decisión de sí/no, no para fijar pricing con precisión.
+- **`import "server-only"` no resuelve fuera de `next build`/`next dev`.**
+  Todos los módulos de `lib/**` que este script reutiliza abren con ese
+  import; el paquete `server-only` solo resuelve a un no-op bajo la condición
+  de exports `react-server`, que el bundler de Next fija internamente. El
+  script se invoca con `NODE_OPTIONS=--conditions=react-server` para
+  reproducir esa misma condición fuera del bundler — mecanismo de Node de
+  primera clase, sin loader personalizado ni tocar ningún fichero de `lib/`.
+  Tuvo que añadirse `server-only` como devDependency real (antes solo lo
+  resolvía el bundler de Next vía alias interno) y `tsx` para poder ejecutar
+  TypeScript con imports de proyecto fuera de Next.
+- **Guardado de solo lectura, verificado por test, no por convención.**
+  `scripts/extraction-bench.test.ts` falla si el fichero contiene
+  `.update(`/`.insert(`/`.upsert(`/`.delete(`. El propio `main()` solo se
+  ejecuta cuando el fichero es el punto de entrada directo (`import.meta.url
+  === file://${process.argv[1]}`) — sin ese guard, importar el módulo para sus
+  funciones puras desde el test también disparaba una llamada real a Supabase.
+
+### Pendiente / roto conocido
+
+- **No hay resultados reales todavía.** Esta sesión no tenía
+  `NEXT_PUBLIC_SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`GEMINI_API_KEY`/
+  `OPENAI_API_KEY` — se verificó que la herramienta compila, pasa sus tests
+  (18, todos sobre las funciones puras) y falla limpiamente al llegar al
+  punto que necesita credenciales. Ejecutar `pnpm bench:extraction --limit
+  50` con credenciales reales, y decidir el cambio de modelo de extracción con
+  esos resultados, es la fase siguiente — no esta.
+- **El coste estimado seguirá siendo una aproximación** hasta que una fase
+  posterior (fuera de este alcance) exponga `usage` desde
+  `extractGeminiStructuredData`/`extractClaudeStructuredData`/
+  `extractOpenAIStructuredData`.
+
+---
+
+## 52. La auditoría automática se parte en dos interruptores, ambos apagados (WEB-AUDIT-AUTO-SPLIT-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Aprobado").
+
+**El problema.** La 0030 dio un interruptor único por dominio para la auditoría
+automática tras escaneo. Pero esa auditoría son dos mitades con coste opuesto
+(ADR 0035): la **cobertura** son llamadas de grounding a Gemini, una por prompt
+activo, sólo Pro/Agencia; la **técnica** no gasta LLM y su nota es un
+componente del GeoScore (ADR 0033). Con un control único, apagar el gasto
+obligaba a perder también la nota — dos decisiones distintas que nunca
+debieron compartir interruptor. Salió al desglosar el coste real de LLM
+(`docs/llm-cost-analysis-2026-08.md`), donde la auditoría automática apareció
+como gasto de grounding que se dispara tras **cada** escaneo en Pro+ sin pasar
+por el límite de 5/día que sí protege el botón manual.
+
+### Decisiones y por qué
+
+- **Por defecto apagadas las dos, invirtiendo la 0030.** La 0030 puso `default
+  true` precisamente para que aplicarla no apagara auditorías en silencio; ese
+  razonamiento era correcto entonces y no aplica ahora. El fundador pidió las
+  dos apagadas por defecto y ese mismo día apagó los 44 proyectos existentes a
+  mano por SQL. `false` no es un cambio de comportamiento aquí: es el estado en
+  el que ya está producción, hecho duradero para los proyectos que se creen a
+  partir de ahora. Con el `default true` anterior, **cada proyecto nuevo volvía
+  a armar la auditoría en silencio** — que es exactamente el agujero que dejaba
+  la barrida por SQL.
+- **No se hereda el valor de la columna vieja.** Por lo mismo: el valor honesto
+  de cada fila hoy es «apagado», que es lo que da el `default`. Heredar habría
+  reactivado los proyectos que no se hubieran barrido.
+- **Leer falla CERRADO**, al revés que la 0030. Con defecto `false`, «no pude
+  leer los flags» y «los flags están apagados» significan lo mismo en la
+  práctica, y el error caro pasa a ser el otro. Coste asumido y dicho: un fallo
+  transitorio de lectura se salta una auditoría, que recuperan el siguiente
+  escaneo o el backfill diario.
+- **Los flags se releen al ejecutar el job, no se congelan al encolarlo.** Un
+  job puede esperar un ciclo de backoff entero; un control que promete «detiene
+  la próxima auditoría» tiene que cumplirlo. No cuesta consulta: viajan en la
+  fila que `loadProjectContext` ya cargaba.
+- **El interruptor técnico se comprueba antes del reserve de presupuesto.** Al
+  revés, un job con la técnica apagada se aparcaría esperando hueco para algo
+  que nunca va a correr, re-despachándose hasta el tope de continuaciones — la
+  trampa que ADR 0035 ya documentó para la cobertura sin plan.
+- **`deriveRunAuditStatus` pasa de una pregunta a dos.** `coverageIncludedInPlan`
+  se renombra a `coverageExpected` y aparece `technicalExpected`: una mitad
+  apagada a mano no deja la auditoría «Parcial», igual que no la dejaba una
+  cobertura fuera de plan. El renombrado es deliberado —el nombre viejo había
+  dejado de describir la pregunta— y el typecheck obligó a revisar cada
+  llamador, que era el objetivo.
+- **`setAutoWebAudit` se elimina, no se deja al lado.** Escribía la columna que
+  esta fase retira; un control que sigue escribiendo algo que nadie lee es peor
+  que ningún control. Lo sustituye `setAutoAuditHalf`, parametrizado por mitad.
+- **Copy por mitad, no genérico.** Cada texto dice qué mitad y qué cuesta,
+  porque el fundador las apaga por coste y las dos no cuestan lo mismo.
+
+### Pendiente / roto conocido
+
+- **La migración 0031 hay que aplicarla a mano** en Supabase, como todas las de
+  este repo. Hasta entonces `/debug` pinta «Sin migrar» en vez de ofrecer un
+  interruptor que no puede funcionar (lección de la 0030, reportada por el
+  fundador desde el móvil el 2026-08-05), y el backend no audita nada.
+- **`auto_web_audit_enabled` queda en el esquema sin lector.** Tirarla es un
+  cambio destructivo con su propia aprobación; una fase futura puede hacerlo
+  cuando ésta lleve tiempo en producción.
+- **Sin piloto agéntico todavía**: los interruptores viven en `/debug` y esta
+  fase no se ha visto en un preview. Antes del Human Gate hay que mirarlos en
+  las tres anchuras.
+
+---
+
+## 53. Un tercer interruptor apaga el suelo de muestreo por proyecto (SAMPLING-DEBUG-TOGGLE-1, 2026-08-09)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Si"), incluyendo dejar explícitamente pendiente la pregunta de qué hacer
+cuando lleguen clientes reales de pago, en vez de resolverla ahora con un flag
+por plan.
+
+**El problema.** El suelo de respuestas (SAMPLING-1, ADR 0030) repite el set de
+prompts de un proyecto hasta 5 veces para llegar a 50 respuestas por escaneo.
+Correcto para un dominio real; carísimo para una prueba interna de 2-3
+prompts, donde forzaba 15 llamadas de LLM por escaneo sin que hubiera nada que
+medir con esa precisión. El fundador, tras confirmar los dos interruptores de
+la fase anterior (WEB-AUDIT-AUTO-SPLIT-1, entrada 52), pidió uno más de la
+misma familia.
+
+### Decisiones y por qué
+
+- **Interruptor tercero de la misma familia, mismo patrón que las dos mitades
+  de la 52: por defecto apagado.** Migración 0032, columna
+  `sampling_enabled boolean not null default false`. Mismo argumento que la
+  52: no hay clientes de pago todavía cuya fiabilidad de score dependa de
+  esto, así que el coste de apagarlo por defecto es cero hoy y la pregunta de
+  qué pasa cuando los haya queda anotada como pendiente, no resuelta.
+- **No es una cuarta capa de exención junto a plan/dominio en `sampling.ts`.**
+  Esas dos son decisiones de producto permanentes; ésta es un override de
+  depuración pensado para pruebas prelanzamiento. `computeSampleCount` le da
+  su propio `SamplingReason` (`manually_disabled`), comprobado justo después
+  de `no_work` y antes de dominio/plan, para que el diagnóstico distinga «se
+  apagó a mano» de «no aplicaba por dominio o plan» — ambos producen
+  `samples: 1`, y sin el motivo separado serían indistinguibles.
+- **La lectura falla ABIERTO, al revés que las dos mitades de auditoría, y la
+  asimetría es a propósito, no una inconsistencia.** Los flags de la 0031 se
+  leen dentro de funciones cuyo único trabajo es decidir si gastar en una
+  auditoría — fallar hacia «no gastar» no cuesta nada más. Esta columna se lee
+  dentro de `createPendingScanRunCore`, que está en el camino crítico de todo
+  escaneo del producto (H1, CLAUDE.md). Fallar CERRADO aquí (columna ausente →
+  desactivado) convertiría una lectura lenta, o simplemente esta migración sin
+  aplicar todavía, en una degradación silenciosa de la fiabilidad de score en
+  todo el producto — el daño exacto que esta función existe para mantener
+  opt-in. Por eso `run-creation.ts` lee esta columna en **su propia consulta**,
+  separada del select del proyecto, y sólo un `sampling_enabled = false`
+  explícito llega a `computeSampleCount` como `samplingEnabled: false`;
+  cualquier otra cosa (columna ausente, lectura fallida, `true`) llega como
+  `undefined`, que el propio default de la función mantiene en «muestreo
+  activado» — el comportamiento ya desplegado.
+- **Por qué una consulta aparte y no añadir la columna al select ya existente
+  del proyecto.** Ese select comprado ya lleva la lección escrita en
+  `/debug/page.tsx` para los flags de auditoría de la 0031: una columna que
+  PostgREST no conoce hace fallar el select ENTERO, no sólo ese campo. Ese
+  select en `requireActiveProject` alimenta seis pantallas; el de
+  `createPendingScanRunCore` es el que crea cada `scan_runs` del producto.
+  Fusionar la columna ahí habría hecho que la migración 0032 sin aplicar
+  rompiera la creación de escaneos para todo el mundo, no sólo la fiabilidad
+  del muestreo — la fase 52 evitó exactamente este error separando su propia
+  consulta en `/debug`; aquí el riesgo era mayor porque el select comparte
+  camino con el flujo núcleo (H1), no con una pantalla de operación.
+- **Tercer switch en `/debug`, mismo patrón visual que los dos de la 52.**
+  Consulta propia con su propio guardián de migración (`sampling_enabled`
+  ausente → «Sin migrar», nunca un interruptor que parece operable y no puede
+  funcionar — misma lección de la 0030 que ya evitó la 52).
+
+### Pendiente / roto conocido
+
+- **La migración 0032 hay que aplicarla a mano** en Supabase, después de la
+  0031. Hasta entonces `/debug` pinta «Sin migrar» y el backend mantiene el
+  suelo de muestreo activado en todos los dominios (comportamiento actual, sin
+  cambio).
+- **Qué hacer cuando lleguen clientes reales de pago queda sin resolver a
+  propósito.** El fundador aprobó dejarlo así: hoy no hay ninguno cuya
+  fiabilidad de score dependa de este interruptor, así que no hace falta un
+  flag por plan todavía — pero antes de vender el producto, alguien tiene que
+  decidir si este control sigue existiendo tal cual, se oculta del cliente, o
+  se retira.
+- **Sin piloto agéntico todavía**: mismo estado que la 52 — el interruptor
+  vive en `/debug` y esta fase no se ha visto en un preview.
+
+---
+
+## 54. Un interruptor por motor, para escanear barato con uno solo (ENGINE-DEBUG-TOGGLE-1, 2026-08-10)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día
+("Dale al task intake").
+
+**El problema.** Un escaneo real reparte cada prompt entre los motores que el
+plan permite (hasta 3: Gemini, Claude, OpenAI) — comparar la visibilidad de
+una marca entre motores es el valor central del producto, no un extra. Pero
+para una prueba interna de 2-3 prompts eso significa 3 llamadas de LLM por
+prompt cuando bastaría con una, exactamente la misma clase de gasto evitable
+que ya resolvieron WEB-AUDIT-AUTO-SPLIT-1 (52) y SAMPLING-DEBUG-TOGGLE-1 (53)
+para la auditoría y el muestreo. El fundador pidió el mismo control para los
+motores: *"si quiero hacer pruebas económicas, puedo escanear dos o tres
+prompts, por ejemplo, solo en Gemini"*.
+
+### Decisiones y por qué
+
+- **Tres booleanos, por defecto `true` — al revés que la 52 y la 53, y a
+  propósito.** Migración 0033: `engine_gemini_enabled`,
+  `engine_claude_enabled`, `engine_openai_enabled`, todos `default true`. Las
+  dos fases anteriores defaultearon `false` porque el error caro era «gastar
+  una campaña no deseada» en un prelanzamiento sin clientes de pago. Aquí el
+  error caro es el contrario: comparar motores es la propuesta de valor real
+  del producto, así que un proyecto nuevo o existente que perdiera motores en
+  silencio sería una regresión, no un ahorro. `true` reproduce exactamente el
+  comportamiento ya desplegado — esta migración no cambia nada hasta que el
+  dueño de un proyecto apaga algo a mano.
+- **Filtrar antes de topar por plan, nunca al revés.** `resolveScanProvidersForPlan`
+  ahora acepta un segundo argumento opcional (el subconjunto habilitado) y
+  filtra la lista configurada por él ANTES de aplicar `plan.caps.engines`.
+  Si el orden fuera el inverso, un proyecto Free (tope 1) que sólo hubiera
+  habilitado Claude y OpenAI vería el tope quedarse con Gemini —el primero de
+  la lista sin filtrar— y el filtro lo vaciaría después a `[]`, dejando
+  habilitados dos motores que nunca se usan. `providers.test.ts` fija este
+  orden con un caso explícito.
+- **Las dos lecturas (creación y ejecución) van en consulta propia, fallan
+  ABIERTO, y por la misma razón que la 53.** `run-creation.ts` (dimensiona el
+  run) y `executor.ts` (lo ejecuta) leen las tres columnas cada uno en su
+  propia consulta, nunca fusionada en el select crítico que ya hacían — la
+  migración sin aplicar no puede romper la creación ni la ejecución de
+  ningún escaneo. `undefined` (columna ausente, lectura fallida, o
+  simplemente no leída) llega a `resolveScanProvidersForPlan` como «sin
+  anulación de proyecto», que es el comportamiento ya desplegado.
+- **`executor.ts` relee al ejecutar, no hereda lo que se leyó al crear** —
+  mismo invariante que la 52 estableció para las mitades de auditoría: un
+  run puede ejecutarse en un batch posterior a su creación, y tiene que ver
+  lo que diga el interruptor AHORA, no lo que decía cuando se creó.
+- **Aquí sí existe una combinación que rompe el producto, y es la novedad
+  frente a las dos fases anteriores: los tres motores apagados a la vez.**
+  Un escaneo sin ningún motor no es más barato, es un escaneo vacío —
+  `total_prompts` en 0, ningún `scan_prompt` job, exactamente la forma de
+  escaneo falso que `.claude/rules/scan.md` («no mute rows») y CLAUDE.md
+  («no fake scans») prohíben. Dos guardas, no una:
+  - **`setEngineEnabled` es la guarda primaria**: lee los otros dos flags
+    antes de escribir y rechaza apagar el último motor encendido con un
+    error específico (`engine_toggle_requires_one_active`), nunca «vuelve a
+    intentarlo» — apagar el mismo motor no cambiaría el resultado.
+  - **`run-creation.ts`/`executor.ts` son la defensa en profundidad**: si el
+    conjunto resuelto queda vacío de todos modos (dos pestañas apagando
+    motores distintos a la vez, o una migración aplicada sin este guardián),
+    ambos rechazan con `no_engines_enabled` en vez de crear o ejecutar un
+    run vacío. En `executor.ts` el rechazo ocurre DENTRO del `try` que ya
+    marca el run `failed` con un `error_summary` real — nunca antes, donde
+    el `catch` no lo vería y el run quedaría en `pending`/`running` hasta que
+    `reconcileStuckScanRuns` lo notara por timeout.
+  - El propio switch de `/debug` se deshabilita visualmente cuando es el
+    último encendido, para no ofrecer una acción que el servidor va a
+    rechazar igualmente — pero el guardián real es el servidor, no el
+    disabled del botón.
+- **Tres switches, no un array/jsonb.** `LLMScanProvider` es una unión cerrada
+  de exactamente tres motores conocidos — misma forma que los dos booleanos
+  de la 52. Un boolean por motor mantiene cada lectura en un `=== true`/
+  `!== false` plano, sin parsear JSON en el camino que además tiene que
+  fallar abierto.
+
+### Pendiente / roto conocido
+
+- **La migración 0033 hay que aplicarla a mano** en Supabase, después de la
+  0032. Hasta entonces `/debug` pinta «Sin migrar» y el backend mantiene los
+  tres motores activados en todos los dominios (comportamiento actual, sin
+  cambio).
+- **Sin piloto agéntico todavía**: mismo estado que la 52 y la 53 — los tres
+  interruptores viven en `/debug` y esta fase no se ha visto en un preview.
+
+---
+
+---
+
+## 55. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
 
 **Origen.** Segunda pieza de la cola de contenido de la Fase C
 (`docs/seo-positioning-plan.md` §4) — "alternativas a Profound en español".

@@ -21,7 +21,7 @@ worse than no rule, because a future session will obey it anyway.
   standing start, which is a good way to manufacture the 429 that then kills
   the batch. `EXTRACTION_CONCURRENCY` exists for exactly this shape one stage
   later; generation went without it until LLM-RESILIENCE-1
-  (`lib/scan/pacing.ts`, log §45). The stagger is bounded in both directions —
+  (`lib/scan/pacing.ts`, log §56). The stagger is bounded in both directions —
   a hard ceiling on the total spread, and dropped entirely when the invocation
   is short on budget, because finishing inside `maxDuration` outranks pacing.
 - **Every outbound provider call needs a timeout and a bounded retry.** If you
@@ -99,3 +99,20 @@ worse than no rule, because a future session will obey it anyway.
 - **A constant sized for one execution model must be re-checked when the model
   changes.** SCAN-CHAIN-1 (`docs/adr/0014`) turned a run into many batches and
   the extraction cap was never revisited — that gap is the whole of ADR 0029.
+- **A column read on the scan-creation critical path needs its own query, and
+  its own fail-safe direction.** `createPendingScanRunCore`'s project select is
+  on the path of every scan the product creates; a column PostgREST doesn't
+  know about (a migration not yet applied) fails that select ENTIRELY, not
+  just the one field. `sampling_enabled` (SAMPLING-DEBUG-TOGGLE-1, migration
+  0032) is read in its own separate query for exactly this reason, and reads
+  toward the current shipped behaviour (sampling ON) on any failure — the
+  opposite fail direction from the web-audit halves (migration 0031), which
+  read toward OFF because failing there only skips one audit, never a scan
+  (`docs/brand/design-decisions-log.md` §53). The per-engine switches
+  (ENGINE-DEBUG-TOGGLE-1, migration 0033) read the same way, in `executor.ts`
+  as well as `run-creation.ts`, for the same reason — but unlike sampling,
+  the empty result is also a correctness bug, not just an imprecise score:
+  zero engines is zero LLM calls and a `total_prompts` stuck at 0, the exact
+  fake-scan shape "no mute rows" already forbids. Both call sites reject
+  outright (`no_engines_enabled`) rather than create or run that scan
+  (`docs/brand/design-decisions-log.md` §54).

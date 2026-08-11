@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/scan/types";
 import { MAX_PROMPT_SAMPLES } from "@/lib/scan/sampling";
@@ -498,6 +498,189 @@ describe("createPendingScanRunCore", () => {
         onlyPromptIds: ["does-not-exist"]
       })
     ).rejects.toMatchObject({ code: "prompts_required" });
+  });
+});
+
+describe("createPendingScanRunCore — sampling override (SAMPLING-DEBUG-TOGGLE-1)", () => {
+  beforeEach(() => {
+    nextId = 1;
+  });
+
+  it("keeps the response floor on when sampling_enabled is missing (pre-migration / unread)", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const prompts = Array.from({ length: 10 }, (_, i) => ({
+      id: `prompt-${i}`,
+      project_id: PROJECT_ID,
+      prompt_text: `Prompt ${i}`,
+      is_active: true,
+      created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+    }));
+
+    // baseTables' project row carries no sampling_enabled field at all,
+    // simulating migration 0032 not yet applied.
+    const { client, tables } = makeFakeDb(baseTables({ project_prompts: prompts }));
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // 10 prompts x 1 engine = 10 responses, under the floor of 50 -> repeats
+    // to MAX_PROMPT_SAMPLES (5 x 10 = 50), same as if the column were absent.
+    const scanRun = tables.scan_runs.find((r) => r.id === runId);
+    expect(scanRun?.sample_count).toBe(MAX_PROMPT_SAMPLES);
+  });
+
+  it("stops repeating the prompt set when sampling_enabled is explicitly false", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const prompts = Array.from({ length: 10 }, (_, i) => ({
+      id: `prompt-${i}`,
+      project_id: PROJECT_ID,
+      prompt_text: `Prompt ${i}`,
+      is_active: true,
+      created_at: `2026-01-01T00:00:${String(i).padStart(2, "0")}.000Z`
+    }));
+
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: prompts,
+        projects: [{ id: PROJECT_ID, is_archived: false, owner_user_id: OWNER_ID, sampling_enabled: false }]
+      })
+    );
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // Same 10 prompts x 1 engine, but the owner switched sampling off: a
+    // single pass, no repetition, exactly the "2-3 prompts, no forced 50
+    // calls" case this phase exists for.
+    const scanRun = tables.scan_runs.find((r) => r.id === runId);
+    expect(scanRun?.sample_count).toBe(1);
+    expect(scanRun?.total_prompts).toBe(10);
+  });
+});
+
+describe("createPendingScanRunCore — engine override (ENGINE-DEBUG-TOGGLE-1)", () => {
+  const ORIGINAL_LLM_SCAN_PROVIDERS = process.env.LLM_SCAN_PROVIDERS;
+
+  beforeEach(() => {
+    nextId = 1;
+    process.env.LLM_SCAN_PROVIDERS = "gemini,claude,openai";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_LLM_SCAN_PROVIDERS === undefined) {
+      delete process.env.LLM_SCAN_PROVIDERS;
+    } else {
+      process.env.LLM_SCAN_PROVIDERS = ORIGINAL_LLM_SCAN_PROVIDERS;
+    }
+  });
+
+  const p1 = {
+    id: "p1",
+    project_id: PROJECT_ID,
+    prompt_text: "Existing prompt",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z"
+  };
+
+  it("runs all three engines when the columns are missing (pre-migration / unread)", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const { client, tables } = makeFakeDb(
+      baseTables({ project_prompts: [p1], profiles: [{ id: OWNER_ID, current_plan: "pro" }] })
+    );
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // 1 prompt x 3 engines = 3 responses -> capped repetition at
+    // MAX_PROMPT_SAMPLES, same math as any other 3-engine, 1-prompt run.
+    const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
+    expect(promptJobs).toHaveLength(MAX_PROMPT_SAMPLES);
+  });
+
+  it("narrows to just the enabled engine when the other two are explicitly disabled", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const { client, tables } = makeFakeDb(
+      baseTables({
+        project_prompts: [p1],
+        profiles: [{ id: OWNER_ID, current_plan: "pro" }],
+        projects: [
+          {
+            id: PROJECT_ID,
+            is_archived: false,
+            owner_user_id: OWNER_ID,
+            engine_claude_enabled: false,
+            engine_openai_enabled: false
+          }
+        ]
+      })
+    );
+
+    const runId = await createPendingScanRunCore({
+      projectId: PROJECT_ID,
+      readClient: client as unknown as SupabaseClient,
+      service: client as unknown as ServiceClient,
+      triggeredByUserId: "user-1",
+      triggerSource: "user"
+    });
+
+    // Same 1 prompt, but only Gemini stays enabled: 1 prompt x 1 engine,
+    // repeats to MAX_PROMPT_SAMPLES exactly like the equivalent single-engine
+    // case sized in the default-plan tests above — proving the engine count
+    // driving the sampling math really shrank from 3 to 1.
+    const scanRun = tables.scan_runs.find((r) => r.id === runId);
+    expect(scanRun?.sample_count).toBe(MAX_PROMPT_SAMPLES);
+    const promptJobs = tables.jobs.filter((j) => j.job_type === "scan_prompt" && j.run_id === runId);
+    expect(promptJobs).toHaveLength(MAX_PROMPT_SAMPLES);
+  });
+
+  it("rejects creating a run when every engine is disabled, instead of creating an empty scan", async () => {
+    const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
+
+    const { client } = makeFakeDb(
+      baseTables({
+        project_prompts: [p1],
+        profiles: [{ id: OWNER_ID, current_plan: "pro" }],
+        projects: [
+          {
+            id: PROJECT_ID,
+            is_archived: false,
+            owner_user_id: OWNER_ID,
+            engine_gemini_enabled: false,
+            engine_claude_enabled: false,
+            engine_openai_enabled: false
+          }
+        ]
+      })
+    );
+
+    await expect(
+      createPendingScanRunCore({
+        projectId: PROJECT_ID,
+        readClient: client as unknown as SupabaseClient,
+        service: client as unknown as ServiceClient,
+        triggeredByUserId: "user-1",
+        triggerSource: "user"
+      })
+    ).rejects.toMatchObject({ code: "no_engines_enabled" });
   });
 });
 

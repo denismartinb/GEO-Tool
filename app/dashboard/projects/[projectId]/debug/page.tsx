@@ -27,7 +27,7 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-audit-status";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
-import { setAutoWebAudit, setRecurringScans } from "../actions";
+import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 
 // Server Actions inherit the maxDuration of the page they're invoked from
@@ -162,20 +162,18 @@ export default async function RunsPage({
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
-  /* DOMAINS-REDESIGN-1 — el flag de auditoría automática se lee AQUÍ y no en
-     `requireActiveProject`, que es el cargador de seis pantallas.
-     `projects.auto_web_audit_enabled` llega en la migración 0030, y las
-     migraciones de este repo se aplican a mano: mientras no esté aplicada,
-     pedirla en el select compartido hace que PostgREST devuelva error y que las
-     seis den 404. Pasó, y lo cazó el piloto en el preview de este mismo PR.
+  /* DOMAINS-REDESIGN-1 — los flags de auditoría automática se leen AQUÍ y no en
+     `requireActiveProject`, que es el cargador de seis pantallas. Las columnas
+     llegan en una migración y las migraciones de este repo se aplican a mano:
+     mientras no esté aplicada, pedirlas en el select compartido hace que
+     PostgREST devuelva error y que las seis den 404. Pasó, y lo cazó el piloto
+     en el preview de la PR de la 0030.
 
-     Aquí, con su propia consulta, un error sólo significa "todavía no está la
-     columna" y el interruptor se pinta encendido — que es el comportamiento
-     real del producto sin migración aplicada (el gate de `enqueueWebAuditJob`
-     también falla abierto). Ninguna otra pantalla se entera. */
+     Aquí, con su propia consulta, un error sólo significa "todavía no están las
+     columnas". Ninguna otra pantalla se entera. */
   const { data: auditFlagRow, error: auditFlagError } = await supabase
     .from("projects")
-    .select("auto_web_audit_enabled")
+    .select("auto_technical_audit_enabled, auto_coverage_audit_enabled")
     .eq("id", projectId)
     .maybeSingle();
 
@@ -187,12 +185,74 @@ export default async function RunsPage({
      Un control que parece operable y no puede funcionar es peor que un control
      ausente: gasta un intento del operador y le miente sobre por qué falló. Si
      la lectura falla, la fila dice qué hacer — aplicar la migración — y no
-     ofrece interruptor. */
-  const autoWebAuditState: "on" | "off" | "unavailable" = auditFlagError
+     ofrece interruptor.
+
+     WEB-AUDIT-AUTO-SPLIT-1: el estado por defecto de las dos mitades es
+     APAGADO, no encendido, y eso invierte lo que hacía la 0030. Sin migración
+     aplicada el backend falla cerrado (`enqueueWebAuditJob`, migración 0031),
+     así que pintar «encendido» aquí describiría un producto que no existe. */
+  type AuditHalfState = "on" | "off" | "unavailable";
+  const autoTechnicalState: AuditHalfState = auditFlagError
     ? "unavailable"
-    : auditFlagRow?.auto_web_audit_enabled === false
-    ? "off"
-    : "on";
+    : auditFlagRow?.auto_technical_audit_enabled === true
+    ? "on"
+    : "off";
+  const autoCoverageState: AuditHalfState = auditFlagError
+    ? "unavailable"
+    : auditFlagRow?.auto_coverage_audit_enabled === true
+    ? "on"
+    : "off";
+
+  /* SAMPLING-DEBUG-TOGGLE-1 — same "own query, own migration guard" shape as
+     auditFlagRow above and for the same reason: `sampling_enabled` arrives in
+     migration 0032, applied by hand, and this column must never join the
+     shared select `requireActiveProject` uses for six other screens. */
+  const { data: samplingFlagRow, error: samplingFlagError } = await supabase
+    .from("projects")
+    .select("sampling_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  type SamplingState = "on" | "off" | "unavailable";
+  const samplingState: SamplingState = samplingFlagError
+    ? "unavailable"
+    : samplingFlagRow?.sampling_enabled === true
+    ? "on"
+    : "off";
+
+  /* ENGINE-DEBUG-TOGGLE-1 — same "own query, own migration guard" shape as
+     auditFlagRow/samplingFlagRow above, for the same reason: migration 0033
+     is applied by hand and must never join the shared select.
+
+     Read direction is inverted from the two above, on purpose: those two
+     default OFF (`=== true` means "on"), these three default ON — so here
+     it's `!== false` that means "on", matching the fail-open reads in
+     run-creation.ts/executor.ts. */
+  const { data: engineFlagRow, error: engineFlagError } = await supabase
+    .from("projects")
+    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+
+  type EngineState = "on" | "off" | "unavailable";
+  const engineGeminiState: EngineState = engineFlagError
+    ? "unavailable"
+    : engineFlagRow?.engine_gemini_enabled !== false
+    ? "on"
+    : "off";
+  const engineClaudeState: EngineState = engineFlagError
+    ? "unavailable"
+    : engineFlagRow?.engine_claude_enabled !== false
+    ? "on"
+    : "off";
+  const engineOpenaiState: EngineState = engineFlagError
+    ? "unavailable"
+    : engineFlagRow?.engine_openai_enabled !== false
+    ? "on"
+    : "off";
+  const enabledEngineCount = [engineGeminiState, engineClaudeState, engineOpenaiState].filter(
+    (s) => s === "on"
+  ).length;
 
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, sample_count, successful_prompts, failed_prompts, created_at, started_at, finished_at";
@@ -328,6 +388,14 @@ export default async function RunsPage({
     .maybeSingle();
   const coverageIncludedInPlan = isProOrAbove((planRow as { current_plan?: string } | null)?.current_plan);
 
+  /* WEB-AUDIT-AUTO-SPLIT-1: «esperada» es plan Y interruptor, no sólo plan. Una
+     mitad apagada a mano no deja la auditoría «Parcial» — no falta nada, no se
+     pidió. Con las columnas sin migrar (`unavailable`) se asume esperada: es lo
+     que la tabla histórica venía diciendo, y marcar «Parcial» retroactivamente
+     todas las filas por una migración pendiente sería peor que quedarse corto. */
+  const coverageExpected = coverageIncludedInPlan && autoCoverageState !== "off";
+  const technicalExpected = autoTechnicalState !== "off";
+
   const auditStatusByRunId = new Map<string, RunAuditStatus>(
     completedRunIds.map((runId) => [
       runId,
@@ -336,7 +404,8 @@ export default async function RunsPage({
         coverageScanIds,
         readinessByScanId,
         jobStatusByRunId: auditJobStatusByRunId,
-        coverageIncludedInPlan
+        coverageExpected,
+        technicalExpected
       })
     ])
   );
@@ -528,43 +597,194 @@ export default async function RunsPage({
         </form>
       </div>
 
+      {/* WEB-AUDIT-AUTO-SPLIT-1 — dos interruptores, no uno. Las dos mitades de
+          la auditoría tienen coste opuesto (ADR 0035): la cobertura son
+          llamadas a Gemini por prompt, la técnica no gasta LLM y alimenta un
+          componente del GeoScore (ADR 0033). Con un solo control, apagar el
+          gasto obligaba a perder también la nota. Contexto medido:
+          docs/llm-cost-analysis-2026-08.md. */}
       <div className="card dbg-switch">
-        <div className="dbg-switch-ico" data-on={autoWebAuditState === "on" ? "true" : "false"}>
+        <div className="dbg-switch-ico" data-on={autoCoverageState === "on" ? "true" : "false"}>
           <Icon name="search" size={17} />
         </div>
         <div className="dbg-switch-txt">
-          <b>Auditoría automática tras cada escaneo</b>
+          <b>Cobertura por IA tras cada escaneo</b>
           <small>
-            {autoWebAuditState === "unavailable" ? (
+            {autoCoverageState === "unavailable" ? (
               <>
-                Falta aplicar la migración <code>0030_project_auto_web_audit.sql</code> en Supabase.
-                Hasta entonces la auditoría corre para todos los dominios, que es el comportamiento
-                de siempre.
+                Falta aplicar la migración <code>0031_project_audit_halves.sql</code> en Supabase.
+                Hasta entonces esta mitad no corre en ningún dominio.
               </>
             ) : (
               <>
-                Apagarlo detiene las próximas auditorías de este dominio. Una que ya esté encolada
-                termina igual.
+                La mitad que gasta: una consulta a Gemini por cada prompt activo, tras cada escaneo.
+                Sólo Pro y Agencia. Apagarlo detiene las próximas; una ya en vuelo termina.
               </>
             )}
           </small>
         </div>
-        {autoWebAuditState === "unavailable" ? (
+        {autoCoverageState === "unavailable" ? (
           <span className="badge badge-neutral">Sin migrar</span>
         ) : (
-          <form action={setAutoWebAudit}>
+          <form action={setAutoAuditHalf}>
             <input type="hidden" name="projectId" value={projectId} />
-            <input type="hidden" name="enabled" value={autoWebAuditState === "on" ? "false" : "true"} />
+            <input type="hidden" name="half" value="coverage" />
+            <input type="hidden" name="enabled" value={autoCoverageState === "on" ? "false" : "true"} />
             <button
               type="submit"
-              className={`switch-toggle ${autoWebAuditState === "on" ? "on" : ""}`}
+              className={`switch-toggle ${autoCoverageState === "on" ? "on" : ""}`}
               role="switch"
-              aria-checked={autoWebAuditState === "on"}
-              aria-label="Auditoría automática tras cada escaneo"
+              aria-checked={autoCoverageState === "on"}
+              aria-label="Cobertura por IA tras cada escaneo"
             />
           </form>
         )}
       </div>
+
+      <div className="card dbg-switch">
+        <div className="dbg-switch-ico" data-on={autoTechnicalState === "on" ? "true" : "false"}>
+          <Icon name="check" size={17} />
+        </div>
+        <div className="dbg-switch-txt">
+          <b>Auditoría técnica tras cada escaneo</b>
+          <small>
+            {autoTechnicalState === "unavailable" ? (
+              <>
+                Falta aplicar la migración <code>0031_project_audit_halves.sql</code> en Supabase.
+                Hasta entonces esta mitad no corre en ningún dominio.
+              </>
+            ) : (
+              <>
+                No gasta IA: sólo descarga y revisa páginas del propio dominio. Su nota es un
+                componente del GeoScore, así que apagarla lo congela en el valor de la última
+                auditoría.
+              </>
+            )}
+          </small>
+        </div>
+        {autoTechnicalState === "unavailable" ? (
+          <span className="badge badge-neutral">Sin migrar</span>
+        ) : (
+          <form action={setAutoAuditHalf}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="half" value="technical" />
+            <input type="hidden" name="enabled" value={autoTechnicalState === "on" ? "false" : "true"} />
+            <button
+              type="submit"
+              className={`switch-toggle ${autoTechnicalState === "on" ? "on" : ""}`}
+              role="switch"
+              aria-checked={autoTechnicalState === "on"}
+              aria-label="Auditoría técnica tras cada escaneo"
+            />
+          </form>
+        )}
+      </div>
+
+      {/* SAMPLING-DEBUG-TOGGLE-1 — el suelo de respuestas (SAMPLING-1, ADR 0030)
+          repite el set de prompts hasta 5 veces para llegar a 50 respuestas.
+          Bien para un dominio real, carísimo para una prueba interna de 2-3
+          prompts. Apagado por defecto para poder lanzar esas pruebas sin
+          forzar el gasto — pendiente revisar qué pasa cuando lleguen clientes
+          reales de pago (docs/brand/design-decisions-log.md §53). */}
+      <div className="card dbg-switch">
+        <div className="dbg-switch-ico" data-on={samplingState === "on" ? "true" : "false"}>
+          <Icon name="layers" size={17} />
+        </div>
+        <div className="dbg-switch-txt">
+          <b>Suelo de muestreo en escaneos</b>
+          <small>
+            {samplingState === "unavailable" ? (
+              <>
+                Falta aplicar la migración <code>0032_project_sampling_enabled.sql</code> en Supabase.
+                Hasta entonces el suelo sigue encendido en todos los dominios.
+              </>
+            ) : (
+              <>
+                Repite el set de prompts (hasta 5 veces) para llegar a 50 respuestas por escaneo.
+                Apagarlo aquí deja cada escaneo en una sola pasada — útil para pruebas internas
+                con pocos prompts, no para un dominio real.
+              </>
+            )}
+          </small>
+        </div>
+        {samplingState === "unavailable" ? (
+          <span className="badge badge-neutral">Sin migrar</span>
+        ) : (
+          <form action={setSamplingEnabled}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="enabled" value={samplingState === "on" ? "false" : "true"} />
+            <button
+              type="submit"
+              className={`switch-toggle ${samplingState === "on" ? "on" : ""}`}
+              role="switch"
+              aria-checked={samplingState === "on"}
+              aria-label="Suelo de muestreo en escaneos"
+            />
+          </form>
+        )}
+      </div>
+
+      {/* ENGINE-DEBUG-TOGGLE-1 — un interruptor por motor (Gemini/Claude/
+          OpenAI), para poder lanzar un escaneo de prueba usando solo uno y
+          abaratarlo. Al revés que los tres switches de arriba, aquí SÍ existe
+          una combinación que rompe el producto: los tres apagados a la vez
+          dejarían un escaneo sin ningún motor que llamar. El guardián real
+          vive en `setEngineEnabled` (rechaza apagar el último activo) y en
+          `run-creation.ts`/`executor.ts` (rechazan crear/ejecutar un escaneo
+          sin motores); aquí sólo se deshabilita visualmente el último
+          interruptor encendido para no ofrecer una acción que el servidor va
+          a rechazar igualmente (docs/brand/design-decisions-log.md §54). */}
+      {(
+        [
+          { id: "gemini" as const, state: engineGeminiState, label: "Gemini" },
+          { id: "claude" as const, state: engineClaudeState, label: "Claude" },
+          { id: "openai" as const, state: engineOpenaiState, label: "OpenAI" }
+        ]
+      ).map(({ id, state, label }) => (
+        <div className="card dbg-switch" key={id}>
+          <div className="dbg-switch-ico" data-on={state === "on" ? "true" : "false"}>
+            <Icon name="bolt" size={17} />
+          </div>
+          <div className="dbg-switch-txt">
+            <b>Motor: {label}</b>
+            <small>
+              {state === "unavailable" ? (
+                <>
+                  Falta aplicar la migración <code>0033_project_engine_toggles.sql</code> en Supabase.
+                  Hasta entonces {label} sigue encendido en todos los dominios.
+                </>
+              ) : (
+                <>
+                  Si está apagado, los próximos escaneos de este dominio no llamarán a {label}. Al
+                  menos un motor tiene que quedar encendido.
+                </>
+              )}
+            </small>
+          </div>
+          {state === "unavailable" ? (
+            <span className="badge badge-neutral">Sin migrar</span>
+          ) : (
+            <form action={setEngineEnabled}>
+              <input type="hidden" name="projectId" value={projectId} />
+              <input type="hidden" name="engine" value={id} />
+              <input type="hidden" name="enabled" value={state === "on" ? "false" : "true"} />
+              <button
+                type="submit"
+                className={`switch-toggle ${state === "on" ? "on" : ""}`}
+                role="switch"
+                aria-checked={state === "on"}
+                aria-label={`Motor: ${label}`}
+                disabled={state === "on" && enabledEngineCount <= 1}
+                title={
+                  state === "on" && enabledEngineCount <= 1
+                    ? "Al menos un motor tiene que quedar encendido"
+                    : undefined
+                }
+              />
+            </form>
+          )}
+        </div>
+      ))}
 
       {/* DOMAINS-REDESIGN-1: el borrado duro del dominio (DATA-MGMT-1) vivía en
           cada tarjeta de la rejilla de Escaneos. La rejilla se fue a Dominios,

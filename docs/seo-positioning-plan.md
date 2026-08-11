@@ -219,7 +219,7 @@ pieza sigue siendo un PR con brief de `seo-geo-research`, redacción de
 | Orden | Pieza | Cluster kw | Capa |
 |---|---|---|---|
 | C1 | ✅ **Hecho (2026-08-10)** — "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude" (título corregido: la redacción original de esta fila decía "…y Perplexity", que no es un motor soportado hoy — se habría publicado el mismo reclamo falso que PRICING-TRUTH-1 retiró del producto). CTA al escaneo gratuito real. Detalle: `docs/content-calendar.md`, log §50 | 1 | B/playbooks |
-| C2 | ✅ **Hecho (2026-08-10)** — `/comparativas/genscore-vs-profound`. Precio de Profound sin cifra fija a propósito: su web ya no lo publica y las fuentes de terceros se contradicen. Detalle: `docs/content-calendar.md`, log §51 | 2 | C/comparativas |
+| C2 | ✅ **Hecho (2026-08-10)** — `/comparativas/genscore-vs-profound`. Precio de Profound sin cifra fija a propósito: su web ya no lo publica y las fuentes de terceros se contradicen. Detalle: `docs/content-calendar.md`, log §55 | 2 | C/comparativas |
 | C3 | "Alternativas a Otterly" (la comparativa 1:1 ya existe; esta es el formato listicle) | 2 | C/comparativas |
 | C4 | Refresco + ampliación de "Mejores herramientas GEO en español" (añadir CreceRank, Trendsights, Mentio — los rivales reales del mercado ES; honestidad como siempre: filas donde ganan ellos) | 3 | C/comparativas |
 | C5 | "Qué es una auditoría GEO (con checklist)" — enlaza la feature real de auditoría web | 5 | B/playbooks |

@@ -1,0 +1,999 @@
+<title>SCAN-STATES-1 rev.6 · Reentrada (la auditoría web)</title>
+
+<!--
+  SCAN-STATES-1 rev.6 — REENTRADA, el sexto beat de la misión del primer
+  escaneo. Propone que la auditoría web deje de ser "una banda que apunta a
+  otra sección" y pase a ser el último tramo del viaje: el vehículo volviendo
+  a atravesar la atmósfera mientras se revisa la web del cliente.
+
+  Continuidad, no rediseño:
+  · las escenas y el sistema de movimiento son los de rev.4
+    (`rev4-cohete-vivo.html` / `app/globals.css` bloque `.mrk-*`);
+  · la carcasa a sangre y el raíl soldado a la costura son los de rev.5, que
+    nunca llegó a existir como fichero: se implementó directamente en
+    SCAN-STATES-2 (`components/scan-mission-rocket.tsx` + `.mrk-full` en
+    `app/globals.css`, commit 8b6c72b). Esa implementación es la referencia
+    que se ha copiado aquí, incluida `.mrk-ground` como banda CSS fuera del SVG.
+
+  REGLAS DURAS QUE CUMPLE ESTE FICHERO
+  · Sólo `transform` y `opacity` se animan. Ningún filtro, ningún layout.
+  · CERO JavaScript. Ni siquiera de previsualización: la navegación de arriba
+    son anclas HTML y las dos composiciones (móvil / ≥960) se consiguen con
+    container queries, no con un visor.
+  · `prefers-reduced-motion: reduce` deja cada escena en un fotograma quieto y
+    completo — escudo encendido, plasma puesto, sin nada congelado a medias.
+  · Ninguna métrica inventada. Las 16 comprobaciones técnicas son exactamente
+    las 16 claves de `IssueCheckKey` en `lib/web-audit/issues.ts`; los umbrales
+    citados (15-70, 50-160, 300 palabras, 6 meses) salen de
+    `lib/web-audit/page-checks.ts`; los rastreadores salen de
+    `TRACKED_BOT_AGENTS` en `lib/web-audit/robots.ts`. Cualquier cifra de
+    ejemplo va marcada como ilustrativa en la propia pantalla.
+  · El calor de la reentrada va en CIAN, no en ámbar: `#FFB020` es exclusivo
+    del punto del logo (`docs/brand/brand-guidelines.md`, reglas de uso).
+-->
+
+<style>
+:root{
+  --ink:#0B1426; --ink-2:#3B4759; --ink-3:#5B6B82; --ink-4:#98A2B3;
+  --blue:#2563EB; --blue-2:#4F7BFF; --cyan:#09C5D6; --cyan-2:#7FE3EC;
+  --pos:#15915A; --neg:#D23B48;
+  --canvas:#F7F8FB; --surface:#FFFFFF; --sunk:#F4F6FA;
+  --line:#E7EAF0; --line-soft:#EEF1F6;
+  --shadow:0 1px 2px rgba(11,20,38,.04),0 8px 24px rgba(11,20,38,.06);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html,body{max-width:100%;overflow-x:hidden}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px}
+.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+@media (max-width:640px){.wrap{padding:0 14px}}
+
+.doc-head{padding:52px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eyebrow .sep{width:22px;height:1px;background:var(--line)}
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.04em;line-height:1.04;font-size:clamp(32px,6vw,52px);margin:14px 0 0;text-wrap:balance}
+.lede{font-size:clamp(15.5px,2vw,18px);line-height:1.6;color:var(--ink-2);max-width:62ch;margin:16px 0 0}
+.quote{margin:22px 0 0;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:12px;box-shadow:var(--shadow)}
+.quote p{margin:0;font-size:14.5px;line-height:1.6;color:var(--ink-2);font-style:italic}
+.quote p+p{margin-top:8px}
+.quote cite{display:block;margin-top:9px;font-style:normal;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);font-weight:700;font-family:var(--mono)}
+
+.tocbar{position:sticky;top:0;z-index:40;background:rgba(247,248,251,.93);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:10px 0;margin-top:26px}
+.tocbar .inner{max-width:980px;margin:0 auto;padding:0 20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){.tocbar .inner{padding:0 14px}}
+.tocbar .vk{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4)}
+.tocbar a{font-size:12.5px;font-weight:700;text-decoration:none;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:9px;padding:6px 12px}
+.tocbar a:hover{border-color:var(--blue);color:var(--blue)}
+
+.part{padding-top:46px}
+.part-k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.part-k b{color:var(--blue);font-weight:700}
+.part h2{font-family:var(--display);font-weight:800;letter-spacing:-.03em;font-size:clamp(24px,4.4vw,34px);margin:10px 0 0;line-height:1.12;text-wrap:balance}
+.part>p.intro{font-size:15px;line-height:1.62;color:var(--ink-2);max-width:64ch;margin:12px 0 0}
+
+.notes{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+.notes h3{font-family:var(--display);font-weight:800;font-size:15.5px;letter-spacing:-.02em;margin:0 0 10px}
+.notes dl{margin:0;display:grid;gap:10px}
+.notes dt{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:700}
+.notes dd{margin:2px 0 0;font-size:13.5px;line-height:1.58;color:var(--ink-2)}
+.notes .rule{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-3);line-height:1.6}
+.notes.warn{border-left-color:var(--neg)}
+.notes.warn dt{color:var(--neg)}
+code{font-family:var(--mono);font-size:.87em;background:var(--sunk);border:1px solid var(--line-soft);border-radius:5px;padding:1px 5px}
+
+/* ═════════════ CARCASA A SANGRE (rev.5, tal y como se implementó) ═════════════
+   Copiada de `.mrk-*` en app/globals.css. Dos diferencias, ambas de maqueta:
+   1) el ancho a sangre se consigue con un contenedor a 100 % fuera de `.wrap`
+      en vez de `margin-inline:calc(50% - 50vw)`, para que este documento no
+      genere scroll horizontal por la barra de scroll;
+   2) la composición partida se dispara con @container en vez de @media, para
+      poder enseñar la versión móvil y la de escritorio a la vez. En producto
+      sigue siendo el @media (min-width:960px) que ya existe. */
+.bleed{width:100%;margin-top:22px}
+.rn-shell{
+  position:relative;width:100%;overflow:hidden;
+  container-type:inline-size;
+  /* Misma noche que `.mrk-full.night` en producción. El azul de atmósfera vive
+     DENTRO de la escena, no en la carcasa: si la carcasa se aclara, el copy de
+     móvil (que va debajo de la escena, no encima) se queda sin contraste. */
+  background:linear-gradient(180deg,#04070F 0%,#0A1526 55%,#14293F 100%);
+}
+/* La atmósfera "respira": una capa más cálida sobre el mismo cielo que entra y
+   sale en 44 s con ida y vuelta. Es simétrica a propósito — no llega a ningún
+   sitio, así que no puede leerse como progreso. Sólo anima opacity, y vive
+   DENTRO del SVG: como ::before de la carcasa quedaba detrás del rect opaco del
+   cielo, sólo teñía los márgenes. */
+.rn-atmo{animation:rnAtmo 44s ease-in-out infinite alternate}
+.rn-rail{
+  position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:space-between;gap:4px 14px;flex-wrap:wrap;
+  padding:9px clamp(14px,4cqw,40px);
+  font-size:12.5px;color:#8FA6C4;border-bottom:1px solid rgba(255,255,255,.07);
+}
+.rn-rail-left{display:inline-flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rn-rail-left b{color:#EAF1FF;font-weight:700}
+.rn-rail-tick{flex:0 0 auto;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;background:#12A150;color:#fff}
+.rn-rail-right{flex:0 0 auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;opacity:.85}
+@container (max-width:600px){
+  .rn-rail-left{flex-basis:100%}
+  .rn-rail-right{font-size:10px}
+}
+.rn-canvas{position:relative;z-index:1;display:grid;grid-template-rows:1fr auto;min-height:min(78svh,620px);padding-bottom:clamp(26px,5cqw,44px)}
+.rn-scene-slot{position:relative;z-index:0;display:grid;place-items:center;padding:clamp(16px,4cqw,30px) 0 0}
+.rn-sky{display:block;width:100%;max-width:560px;height:auto;
+  -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 9%,#000 74%,rgba(0,0,0,0) 100%);
+  mask-image:linear-gradient(180deg,rgba(0,0,0,0) 0%,#000 9%,#000 74%,rgba(0,0,0,0) 100%)}
+.rn-copy{position:relative;z-index:2;text-align:center;padding:0 20px;max-width:560px;margin:0 auto}
+.rn-eyebrow{display:block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan)}
+.rn-title{font-family:var(--display);font-size:clamp(30px,8cqw,46px);font-weight:800;letter-spacing:-.04em;margin:6px 0 0;line-height:1.05;color:#FFFFFF}
+.rn-sub{font-size:14.5px;line-height:1.6;color:#9DB2CE;margin:10px 0 0}
+.rn-joke{font-size:12.5px;color:#6F86A4;font-style:italic;margin:8px 0 0}
+
+/* la cifra real, cuando existe (ver notas de Parte 3) */
+.rn-frac{display:inline-flex;align-items:center;gap:8px;margin:12px 0 0;padding:5px 11px;border:1px solid rgba(127,227,236,.28);background:rgba(9,197,214,.10);border-radius:999px;font-size:12.5px;color:#BFE9EF}
+.rn-frac b{font-family:var(--mono);font-size:12px;color:#EAF7FF;letter-spacing:.02em}
+
+/* ── la cinta de telemetría: 16 líneas rotando en la MISMA celda de rejilla ──
+   Alto fijo reservado (3 filas) para que nada salte de tamaño al cambiar. */
+.rn-tele{position:relative;margin:16px auto 0;max-width:34ch;min-height:96px;display:grid}
+.rn-tele li{grid-area:1/1;list-style:none;margin:0;opacity:0;align-self:start;animation:rnLine 64s linear infinite}
+.rn-t1{display:block;font-size:16.5px;font-weight:700;letter-spacing:-.01em;color:#EAF1FF;line-height:1.3}
+.rn-t2{display:block;font-size:13px;line-height:1.5;color:#9DB2CE;margin-top:5px}
+/* La clave de comprobación es ANOTACIÓN DE MAQUETA, no producto: existe para
+   que se pueda verificar de un vistazo que ninguna línea está inventada. */
+.rn-key{display:inline-block;margin-top:7px;font-family:var(--mono);font-size:9.5px;
+  letter-spacing:.06em;color:#5D7797;border:1px dashed rgba(93,119,151,.55);border-radius:5px;padding:1px 6px}
+.rn-tele li:nth-child(1){animation-delay:0s}
+.rn-tele li:nth-child(2){animation-delay:-60s}
+.rn-tele li:nth-child(3){animation-delay:-56s}
+.rn-tele li:nth-child(4){animation-delay:-52s}
+.rn-tele li:nth-child(5){animation-delay:-48s}
+.rn-tele li:nth-child(6){animation-delay:-44s}
+.rn-tele li:nth-child(7){animation-delay:-40s}
+.rn-tele li:nth-child(8){animation-delay:-36s}
+.rn-tele li:nth-child(9){animation-delay:-32s}
+.rn-tele li:nth-child(10){animation-delay:-28s}
+.rn-tele li:nth-child(11){animation-delay:-24s}
+.rn-tele li:nth-child(12){animation-delay:-20s}
+.rn-tele li:nth-child(13){animation-delay:-16s}
+.rn-tele li:nth-child(14){animation-delay:-12s}
+.rn-tele li:nth-child(15){animation-delay:-8s}
+.rn-tele li:nth-child(16){animation-delay:-4s}
+
+@container (min-width:960px){
+  .rn-canvas{grid-template-rows:none;grid-template-columns:44% 56%;align-items:center;min-height:min(80svh,700px);padding:0 clamp(28px,5cqw,72px) clamp(20px,3cqw,40px)}
+  /* Velo por el lado del copy. Aquí el texto va ENCIMA de la escena, y sin él
+     el subtítulo cae sobre la parte iluminada de la atmósfera y se pierde
+     (visto en la primera pasada de capturas a 1280). Es un degradado estático:
+     no anima nada y no tapa el vehículo, que vive en el 56 % derecho. */
+  .rn-canvas::before{
+    content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+    background:linear-gradient(90deg,rgba(4,7,15,.90) 0%,rgba(4,7,15,.72) 30%,rgba(4,7,15,.28) 50%,rgba(4,7,15,0) 66%);
+  }
+  .rn-scene-slot{position:absolute;inset:0;padding:0;display:grid;place-items:center;pointer-events:none}
+  /* A ≥960 la escena ocupa el lienzo entero y el copy va encima: no hay
+     costura que fundir, y una máscara aquí sólo oscurecería el borde. */
+  .rn-sky{max-width:none;width:100%;height:100%;-webkit-mask-image:none;mask-image:none}
+  .rn-copy{grid-column:1;text-align:left;margin:0;padding:0;max-width:32ch}
+  .rn-title{font-size:clamp(48px,5cqw,72px)}
+  .rn-sub{font-size:16px}
+  .rn-tele{margin-left:0;margin-right:0;max-width:36ch;min-height:104px}
+  .rn-t1{font-size:19px}
+}
+
+/* marco de teléfono, sólo maqueta: fuerza la composición móvil en escritorio */
+.phone{width:390px;max-width:100%;margin:22px auto 0;border:10px solid #10192B;border-radius:34px;overflow:hidden;box-shadow:0 24px 60px rgba(11,20,38,.22)}
+.phone .rn-canvas{min-height:560px}
+.phone-cap{text-align:center;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-top:10px}
+
+/* ═════════════════ SISTEMA DE MOVIMIENTO (transform/opacity) ═════════════════
+   Los nombres nuevos van prefijados `rn` para no pisar los `mrk*` que ya
+   existen en globals.css. Los envoltorios sin costura duplican su contenido a
+   exactamente −280 px (eje Y, alto del viewBox) o +400 px (eje X). */
+@keyframes rnAtmo{0%{opacity:0}100%{opacity:.62}}
+@keyframes rnRise{to{transform:translateY(-280px)}}
+@keyframes rnDriftX{to{transform:translateX(-400px)}}
+@keyframes rnTwinkle{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes rnFlick{from{transform:scaleY(.9) scaleX(1.05)}to{transform:scaleY(1.14) scaleX(.93)}}
+@keyframes rnShield{0%,100%{opacity:.45;transform:scale(.97)}50%{opacity:1;transform:scale(1.05)}}
+@keyframes rnEmber{0%{transform:translate(0,0) scale(1);opacity:0}12%{opacity:.95}100%{transform:translate(var(--dx),var(--dy)) scale(.3);opacity:0}}
+@keyframes rnBuffet{0%{transform:translate(0,0)}25%{transform:translate(.5px,-.4px)}50%{transform:translate(-.45px,.35px)}75%{transform:translate(.35px,.45px)}100%{transform:translate(0,0)}}
+@keyframes rnSway{0%,100%{transform:rotate(-1.3deg)}50%{transform:rotate(1.3deg)}}
+@keyframes rnBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.022)}}
+@keyframes rnHalo{0%,100%{opacity:.28}50%{opacity:.62}}
+/* Cada línea ocupa un turno de 6,25 % (4 s de un ciclo de 64 s). Las entradas y
+   salidas son cortas a propósito — 0,35 s de 4 — para que en cualquier captura
+   fija la línea esté encendida del todo y no a medio desvanecer: una línea al
+   35 % de opacidad se lee como "desactivada", no como "en transición". */
+@keyframes rnLine{
+  0%{opacity:0;transform:translateY(7px)}
+  0.55%{opacity:1;transform:translateY(0)}
+  5.7%{opacity:1;transform:translateY(0)}
+  6.25%{opacity:0;transform:translateY(-6px)}
+  100%{opacity:0;transform:translateY(-6px)}
+}
+@keyframes rnDot{0%,100%{opacity:.35}50%{opacity:1}}
+
+.rn-tw{animation:rnTwinkle 3.4s ease-in-out infinite}
+.rn-tw.s2{animation-duration:4.6s;animation-delay:-1.2s}
+.rn-tw.s3{animation-duration:2.8s;animation-delay:-2s}
+.rn-rise-far{animation:rnRise 26s linear infinite}
+.rn-rise-near{animation:rnRise 13s linear infinite}
+.rn-rise-haze{animation:rnRise 6.4s linear infinite}
+.rn-rise-haze.h2{animation-duration:4.1s}
+.rn-rise-front{animation:rnRise 2.6s linear infinite}
+.rn-earthspin{animation:rnDriftX 130s linear infinite}
+.rn-earthbreathe{transform-box:view-box;transform-origin:200px 800px;animation:rnBreathe 26s ease-in-out infinite}
+.rn-shieldglow{transform-box:fill-box;transform-origin:center;animation:rnShield 1.15s ease-in-out infinite}
+.rn-halo{animation:rnHalo 2.3s ease-in-out infinite}
+.rn-streak{transform-box:fill-box;transform-origin:center bottom;animation:rnFlick .17s steps(2,end) infinite alternate}
+.rn-streak.k2{animation-duration:.13s}
+.rn-streak.k3{animation-duration:.21s}
+.rn-streak.k4{animation-duration:.15s}
+.rn-ember{animation:rnEmber 2.1s ease-out infinite}
+.rn-buffet{animation:rnBuffet .2s steps(2,end) infinite}
+.rn-sway{transform-box:fill-box;transform-origin:center;animation:rnSway 5.6s ease-in-out infinite}
+/* El encuadre del vehículo va en CSS, no en el atributo transform, porque las
+   dos composiciones necesitan escalas distintas: con «slice» el ancho manda, y
+   a 1280 la escena se amplía 3,2x — un vehículo dimensionado para 375 px se
+   comía media pantalla. Mismo SVG, dos encuadres. */
+.rn-veh{transform-box:view-box;transform-origin:200px 180px;transform:translate(2px,-2px) rotate(22deg) scale(1.16)}
+@container (min-width:960px){
+  .rn-veh{transform:translate(66px,-54px) rotate(22deg) scale(.62)}
+}
+
+/* ═════════════ PARTE 2 — tarjetas de la cinta de telemetría ═════════════ */
+.telegrid{display:grid;gap:12px;margin-top:18px;grid-template-columns:1fr}
+@media (min-width:760px){.telegrid{grid-template-columns:1fr 1fr}}
+.tcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 15px;box-shadow:var(--shadow);position:relative}
+.tcard .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.tcard .t{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--ink-4);background:var(--sunk);border:1px solid var(--line-soft);border-radius:5px;padding:1px 6px}
+.tcard .k{font-family:var(--mono);font-size:10px;color:var(--blue);background:rgba(37,99,235,.07);border:1px solid rgba(37,99,235,.18);border-radius:5px;padding:1px 6px;word-break:break-all}
+.tcard .jerga{font-size:15.5px;font-weight:800;letter-spacing:-.015em;line-height:1.28;margin:0}
+.tcard .real{font-size:13px;line-height:1.55;color:var(--ink-3);margin:6px 0 0}
+.tcard .src{font-size:11px;line-height:1.5;color:var(--ink-4);margin:8px 0 0;font-family:var(--mono);word-break:break-word}
+.tcard.pro{border-color:rgba(9,197,214,.4);background:linear-gradient(180deg,rgba(9,197,214,.05),rgba(255,255,255,0) 60%),var(--surface)}
+.tcard .pill{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#0A6C77;background:rgba(9,197,214,.14);border:1px solid rgba(9,197,214,.35);border-radius:999px;padding:2px 8px}
+
+/* ═════════════ PARTE 3 — carriles de superficie ═════════════ */
+.lanes{margin-top:20px;display:grid;gap:12px}
+.lane{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.lane-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:13px 16px;border-bottom:1px solid var(--line-soft);background:var(--sunk)}
+.lane-h .n{width:24px;height:24px;flex:0 0 auto;border-radius:8px;display:grid;place-items:center;background:var(--ink);color:#fff;font-family:var(--mono);font-size:11px;font-weight:700}
+.lane-h h3{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:-.02em;margin:0;flex:1;min-width:0}
+.tag{font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.tag.yes{color:#0B5F3E;background:rgba(21,145,90,.12);border:1px solid rgba(21,145,90,.3)}
+.tag.no{color:#8A2530;background:rgba(210,59,72,.09);border:1px solid rgba(210,59,72,.26)}
+.tag.mid{color:#1E4FA8;background:rgba(37,99,235,.09);border:1px solid rgba(37,99,235,.24)}
+.lane-b{padding:14px 16px;display:grid;gap:10px}
+.lane-b p{margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-2)}
+.lane-b .why{font-size:12.5px;line-height:1.6;color:var(--ink-3);border-left:2px solid var(--line);padding-left:11px}
+.lane-b .why b{color:var(--ink-2)}
+
+.tl{margin-top:20px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px;overflow-x:auto}
+.tl-inner{min-width:520px}
+.tl-axis{display:grid;grid-template-columns:26% 8% 66%;gap:0;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4)}
+.tl-axis span{padding-bottom:6px}
+.tl-row{display:grid;grid-template-columns:26% 8% 66%;gap:0;align-items:center;margin-top:7px}
+.tl-row .lbl{grid-column:1/-1;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);margin:12px 0 4px;font-family:var(--mono)}
+.seg{height:34px;border-radius:9px;display:flex;align-items:center;padding:0 11px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden}
+.seg.scan{background:linear-gradient(90deg,#0B1426,#22385A);color:#EAF1FF}
+.seg.gap{background:repeating-linear-gradient(45deg,var(--sunk),var(--sunk) 5px,#EDF1F7 5px,#EDF1F7 10px);color:var(--ink-4);font-weight:600;justify-content:center;font-size:11px}
+.seg.audit{background:linear-gradient(90deg,#16324F,#2A5B90);color:#EAF7FF}
+.seg.band{background:rgba(37,99,235,.09);border:1px solid rgba(37,99,235,.24);color:#1E4FA8}
+.seg.hand{background:var(--sunk);border:1px dashed var(--line);color:var(--ink-4);font-weight:600}
+.seg.done{background:rgba(21,145,90,.12);border:1px solid rgba(21,145,90,.3);color:#0B5F3E}
+.tl-note{margin-top:12px;font-size:12px;color:var(--ink-3);line-height:1.6}
+
+/* la banda compacta que ya existe (ScanMissionBand), reproducida para comparar */
+.mba-demo{margin-top:14px;max-width:520px}
+.mba-band{display:flex;align-items:center;gap:11px;padding:12px 14px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.16);border-radius:14px;text-decoration:none;color:inherit}
+.mba-ico{flex:0 0 auto;width:30px;height:30px;border-radius:9px;background:#fff;color:var(--blue);display:grid;place-items:center}
+.mba-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.mba-t{font-size:13px;font-weight:700;color:var(--ink)}
+.mba-s{font-size:12px;color:var(--ink-3);line-height:1.4}
+.mba-dot{flex:0 0 auto;width:7px;height:7px;border-radius:999px;background:var(--blue);animation:rnDot 1.6s ease-in-out infinite}
+
+.foot{margin-top:52px;padding:18px 0 80px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-4);line-height:1.65}
+
+/* ═════════════ MOVIMIENTO REDUCIDO ═════════════
+   Todo se para en un fotograma completo: escudo encendido a plena luz, plasma
+   puesto, atmósfera en su posición base, y UNA sola línea de telemetría
+   visible (la primera). Lo que sólo existe a mitad de animación — brasas,
+   estelas frontales — descansa a opacidad 0 para que nada quede colgado. */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+  .rn-atmo{opacity:.3}
+  .rn-shieldglow{opacity:1}
+  .rn-halo{opacity:.5}
+  .rn-ember,.rn-rise-front{opacity:0 !important}
+  .rn-tele li{opacity:0}
+  .rn-tele li:first-child{opacity:1;transform:none}
+  .mba-dot{opacity:1}
+}
+</style>
+
+<div class="wrap">
+<header class="doc-head">
+  <div class="eyebrow">SCAN-STATES-1<span class="sep"></span>rev. 6<span class="sep"></span>Reentrada</div>
+  <h1>La auditoría no es lo que pasa después de la misión. Es el último tramo.</h1>
+  <p class="lede">
+    Hoy la misión entrega la puntuación y suelta la pantalla; la auditoría web —que dura
+    minutos, cuesta dinero de verdad y es una de las cabeceras del producto— se queda
+    reducida a una banda de dos líneas. rev.6 le da su propio beat, el sexto:
+    <strong>reentrada</strong>. Y asume de entrada la consecuencia que ya viste: como la
+    auditoría sobrevive al escaneo, <strong>esta animación larga sólo la verá de verdad
+    quien esté en Auditoría web</strong>. Todo lo demás de este documento parte de ahí.
+  </p>
+  <div class="quote">
+    <p>«si la animación en auditoría tiene que durar más, solo lo verá en la sección auditoría»</p>
+    <p>«enséñame qué vas a meter que ponga en valor todo lo que se hace en la auditoría»</p>
+    <cite>Fundador · 2026-08-10</cite>
+  </div>
+</header>
+</div>
+
+<nav class="tocbar" aria-label="Secciones">
+  <div class="inner">
+    <span class="vk">rev.6</span>
+    <a href="#parte1">1 · El beat</a>
+    <a href="#parte2">2 · El copy que pone en valor</a>
+    <a href="#parte3">3 · Dónde sale y dónde no</a>
+  </div>
+</nav>
+
+<div class="wrap">
+<section class="part" id="parte1">
+  <div class="part-k"><b>Parte 1</b><span>el beat de reentrada</span><span>datos ligados: ninguno en la escena</span></div>
+  <h2>Reentrada: el vehículo vuelve, y mientras vuelve se revisa tu web</h2>
+  <p class="intro">
+    Misma carcasa a sangre de rev.5 —raíl soldado a la costura, escena a sangre, composición
+    partida a partir de 960 px—, mismas primitivas de movimiento de rev.4. Lo nuevo es la
+    escena: escudo térmico encendido, plasma subiendo por los flancos, la atmósfera pasando
+    de largo y la Tierra ya muy cerca. Es <strong>el beat más largo de la misión</strong>,
+    así que la exigencia es más dura que en órbita: no puede parecer quieto <em>nunca</em>.
+  </p>
+</section>
+</div>
+
+<!-- ═══════════ el beat, a sangre: responde al ancho real de la ventana ═══════════ -->
+<div class="bleed">
+<div class="rn-shell">
+  <div class="rn-rail">
+    <span class="rn-rail-left">
+      <span class="rn-rail-tick" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="11" height="11"><path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </span>
+      <b>tudominio.com</b> ya tiene puntuación
+    </span>
+    <span class="rn-rail-right">16 comprobaciones técnicas · cobertura del dominio</span>
+  </div>
+
+  <div class="rn-canvas">
+    <div class="rn-scene-slot">
+      <svg class="rn-sky" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Reentrada: el vehículo vuelve a atravesar la atmósfera mientras se revisa la web">
+        <defs>
+          <linearGradient id="rn-sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#04070F"/><stop offset=".34" stop-color="#0A1526"/>
+            <stop offset=".68" stop-color="#173B5C"/><stop offset="1" stop-color="#2A5B90"/>
+          </linearGradient>
+          <linearGradient id="rn-warm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#060D1B"/><stop offset=".34" stop-color="#12233C"/>
+              <stop offset=".68" stop-color="#20527C"/><stop offset="1" stop-color="#3A74AE"/>
+            </linearGradient>
+            <linearGradient id="rn-earth" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#1D4E7C"/><stop offset="1" stop-color="#0C1D33"/>
+          </linearGradient>
+          <linearGradient id="rn-haze" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="rgba(127,227,236,0)"/><stop offset=".5" stop-color="rgba(127,227,236,.22)"/><stop offset="1" stop-color="rgba(127,227,236,0)"/>
+          </linearGradient>
+          <linearGradient id="rn-streak" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stop-color="rgba(234,247,255,.95)"/><stop offset=".45" stop-color="rgba(127,227,236,.55)"/><stop offset="1" stop-color="rgba(79,123,255,0)"/>
+          </linearGradient>
+          <radialGradient id="rn-wakeg">
+              <stop offset="0" stop-color="rgba(127,227,236,.5)"/><stop offset=".5" stop-color="rgba(79,123,255,.16)"/><stop offset="1" stop-color="rgba(79,123,255,0)"/>
+            </radialGradient>
+            <radialGradient id="rn-shieldg">
+            <stop offset="0" stop-color="rgba(234,247,255,.95)"/><stop offset=".45" stop-color="rgba(127,227,236,.55)"/><stop offset="1" stop-color="rgba(9,197,214,0)"/>
+          </radialGradient>
+          <clipPath id="rn-clip"><rect width="400" height="280"/></clipPath>
+          <clipPath id="rn-earthclip"><circle cx="200" cy="800" r="600"/></clipPath>
+        </defs>
+
+        <g clip-path="url(#rn-clip)">
+          <rect width="400" height="280" fill="url(#rn-sky)"/>
+            <rect class="rn-atmo" width="400" height="280" fill="url(#rn-warm)" opacity="0"/>
+
+          <!-- estrellas SUBIENDO: bajamos, así que el campo se va hacia arriba.
+               Cada capa duplica su contenido a +280 para un bucle sin costura. -->
+          <g class="rn-rise-far" fill="#CFE0FF" opacity=".5">
+            <circle cx="34" cy="44" r="1"/><circle cx="128" cy="96" r=".9"/><circle cx="214" cy="24" r="1"/>
+            <circle cx="296" cy="118" r=".8"/><circle cx="358" cy="62" r="1"/><circle cx="72" cy="150" r=".9"/>
+            <circle cx="248" cy="168" r=".8"/><circle cx="164" cy="132" r="1"/>
+            <circle cx="34" cy="324" r="1"/><circle cx="128" cy="376" r=".9"/><circle cx="214" cy="304" r="1"/>
+            <circle cx="296" cy="398" r=".8"/><circle cx="358" cy="342" r="1"/><circle cx="72" cy="430" r=".9"/>
+            <circle cx="248" cy="448" r=".8"/><circle cx="164" cy="412" r="1"/>
+          </g>
+          <g class="rn-rise-near" fill="#EAF1FF">
+            <circle class="rn-tw" cx="58" cy="28" r="1.5"/><circle cx="192" cy="70" r="1.2"/>
+            <circle class="rn-tw s2" cx="316" cy="34" r="1.4"/><circle cx="96" cy="126" r="1.1"/>
+            <circle class="rn-tw s3" cx="352" cy="146" r="1.3"/><circle cx="244" cy="106" r="1.1"/>
+            <circle class="rn-tw" cx="58" cy="308" r="1.5"/><circle cx="192" cy="350" r="1.2"/>
+            <circle class="rn-tw s3" cx="316" cy="314" r="1.4"/><circle cx="96" cy="406" r="1.1"/>
+            <circle class="rn-tw s2" cx="352" cy="426" r="1.3"/><circle cx="244" cy="386" r="1.1"/>
+          </g>
+
+          <!-- la Tierra, ya cerca: arco más plano y más alto que en órbita
+               (allí cy=600 r=372; aquí cy=742 r=555). Respira ±2,2 % en 26 s,
+               ida y vuelta, para que "acercarse" no se lea como una barra de
+               progreso: no llega nunca a ningún tamaño final. -->
+          <g class="rn-earthbreathe">
+            <circle cx="200" cy="800" r="608" fill="none" stroke="rgba(9,197,214,.12)" stroke-width="18"/>
+            <circle class="rn-halo" cx="200" cy="800" r="604" fill="none" stroke="rgba(127,227,236,.5)" stroke-width="2"/>
+            <circle cx="200" cy="800" r="600" fill="url(#rn-earth)"/>
+            <g clip-path="url(#rn-earthclip)">
+              <g class="rn-earthspin">
+                <g fill="#2E6BA8" opacity=".6">
+                  <path d="M10 214 q22 -14 52 -9 q24 5 35 19 q-35 12 -61 7 q-24 -5 -26 -17 Z"/>
+                  <path d="M158 232 q28 -18 68 -12 q30 7 40 21 l-108 0 Z"/>
+                  <path d="M300 208 q24 -12 50 -5 q19 7 24 17 q-31 10 -52 5 q-17 -5 -22 -17 Z"/>
+                  <path d="M410 214 q22 -14 52 -9 q24 5 35 19 q-35 12 -61 7 q-24 -5 -26 -17 Z"/>
+                  <path d="M558 232 q28 -18 68 -12 q30 7 40 21 l-108 0 Z"/>
+                  <path d="M700 208 q24 -12 50 -5 q19 7 24 17 q-31 10 -52 5 q-17 -5 -22 -17 Z"/>
+                </g>
+                <g fill="#FFFFFF" opacity=".05">
+                  <ellipse cx="86" cy="206" rx="40" ry="6"/><ellipse cx="248" cy="226" rx="46" ry="7"/>
+                  <ellipse cx="366" cy="204" rx="30" ry="5"/>
+                  <ellipse cx="486" cy="206" rx="40" ry="6"/><ellipse cx="648" cy="226" rx="46" ry="7"/>
+                  <ellipse cx="766" cy="204" rx="30" ry="5"/>
+                </g>
+              </g>
+            </g>
+          </g>
+
+          <!-- capas de atmósfera subiendo por detrás del vehículo -->
+          <g class="rn-rise-haze" opacity=".34">
+            <rect x="-20" y="150" width="440" height="16" rx="8" fill="url(#rn-haze)"/>
+            <rect x="-20" y="66" width="440" height="10" rx="5" fill="url(#rn-haze)"/>
+            <rect x="-20" y="430" width="440" height="16" rx="8" fill="url(#rn-haze)"/>
+            <rect x="-20" y="346" width="440" height="10" rx="5" fill="url(#rn-haze)"/>
+          </g>
+          <g class="rn-rise-haze h2" opacity=".22">
+            <rect x="-20" y="110" width="440" height="7" rx="4" fill="url(#rn-haze)"/>
+            <rect x="-20" y="222" width="440" height="9" rx="5" fill="url(#rn-haze)"/>
+            <rect x="-20" y="390" width="440" height="7" rx="4" fill="url(#rn-haze)"/>
+            <rect x="-20" y="502" width="440" height="9" rx="5" fill="url(#rn-haze)"/>
+          </g>
+
+          <!-- ═══ el vehículo: escudo por delante (abajo), plasma subiendo ═══ -->
+          <g class="rn-veh">
+            <g class="rn-sway"><g class="rn-buffet">
+
+              <!-- estelas de plasma: suben por los flancos y se pierden pasada la punta -->
+              <ellipse class="rn-shieldglow" cx="200" cy="158" rx="27" ry="64" fill="url(#rn-wakeg)" opacity=".85" style="animation-duration:2.9s"/>
+              <ellipse class="rn-shieldglow" cx="200" cy="188" rx="17" ry="38" fill="url(#rn-wakeg)" style="animation-duration:1.9s;animation-delay:-.7s"/>
+
+              <!-- resplandor del escudo -->
+              <ellipse class="rn-shieldglow" cx="200" cy="217" rx="46" ry="17" fill="url(#rn-shieldg)"/>
+
+              <!-- cuerpo (idéntico al de rev.4, librea oscura de espacio) -->
+              <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+              <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+              <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+              <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+              <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+              <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+              <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+              <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+              <circle cx="200" cy="176" r="4" fill="#09C5D6"/>
+
+              <!-- el escudo térmico propiamente dicho, incandescente -->
+              <ellipse class="rn-shieldglow" cx="200" cy="219" rx="34" ry="13" fill="url(#rn-shieldg)" style="animation-delay:-.4s"/>
+              <path d="M184 209 q16 12 32 0 q-2.5 15 -16 15 q-13.5 0 -16 -15 Z" fill="#EAF7FF"/>
+              <path class="rn-halo" d="M181 222 Q200 234 219 222" fill="none" stroke="#7FE3EC" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>
+
+              <!-- brasas desprendiéndose del escudo y subiendo -->
+              <g fill="#EAF7FF">
+                <circle class="rn-ember" cx="192" cy="220" r="1.4" style="--dx:-18px;--dy:-74px"/>
+                <circle class="rn-ember" cx="208" cy="220" r="1.2" style="--dx:20px;--dy:-86px;animation-delay:-0.55s"/>
+                <circle class="rn-ember" cx="200" cy="222" r="1.5" style="--dx:-4px;--dy:-104px;animation-delay:-1.05s"/>
+                <circle class="rn-ember" cx="186" cy="218" r="1.1" style="--dx:-30px;--dy:-58px;animation-delay:-1.45s"/>
+                <circle class="rn-ember" cx="214" cy="218" r="1.1" style="--dx:32px;--dy:-64px;animation-delay:-0.3s"/>
+                <circle class="rn-ember" cx="196" cy="221" r="0.9" style="--dx:-12px;--dy:-92px;animation-delay:-0.85s"/>
+                <circle class="rn-ember" cx="204" cy="221" r="1.3" style="--dx:14px;--dy:-70px;animation-delay:-1.25s"/>
+                <circle class="rn-ember" cx="190" cy="219" r="0.8" style="--dx:-24px;--dy:-100px;animation-delay:-0.15s"/>
+                <circle class="rn-ember" cx="210" cy="219" r="1" style="--dx:26px;--dy:-96px;animation-delay:-0.95s"/>
+                <circle class="rn-ember" cx="200" cy="218" r="0.9" style="--dx:6px;--dy:-120px;animation-delay:-1.6s"/>
+                <circle class="rn-ember" cx="182" cy="216" r="0.9" style="--dx:-38px;--dy:-46px;animation-delay:-0.7s"/>
+                <circle class="rn-ember" cx="218" cy="216" r="0.9" style="--dx:40px;--dy:-52px;animation-delay:-1.35s"/>
+              </g>
+            </g></g>
+          </g>
+
+          <!-- jirones de atmósfera pasando POR DELANTE: es lo que vende la
+               profundidad, igual que las nubes cercanas del ascenso -->
+          <g class="rn-rise-front" opacity=".26">
+            <rect x="-20" y="196" width="440" height="5" rx="3" fill="url(#rn-haze)"/>
+            <rect x="-20" y="86" width="440" height="4" rx="2" fill="url(#rn-haze)"/>
+            <rect x="-20" y="476" width="440" height="5" rx="3" fill="url(#rn-haze)"/>
+            <rect x="-20" y="366" width="440" height="4" rx="2" fill="url(#rn-haze)"/>
+          </g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="rn-copy">
+      <span class="rn-eyebrow">Reentrada</span>
+      <h2 class="rn-title">Revisando tu web</h2>
+      <span class="rn-frac">Cartografiado del dominio <b>12 de 31 temas</b></span>
+      <ul class="rn-tele">
+        <li><span class="rn-t1">Sondeando el casco</span><span class="rn-t2">Buscamos datos estructurados en tu código: Article, FAQPage, Product, Organization…</span><span class="rn-key">structured_data</span></li>
+        <li><span class="rn-t1">Un solo comandante</span><span class="rn-t2">Que cada página tenga un único H1, no cero y no cuatro.</span><span class="rn-key">single_h1</span></li>
+        <li><span class="rn-t1">Compartimentos estancos</span><span class="rn-t2">Al menos dos H2 que partan el contenido en secciones citables.</span><span class="rn-key">two_h2</span></li>
+        <li><span class="rn-t1">Respuesta en el primer contacto</span><span class="rn-t2">Que el texto responda al principio en vez de calentar motores.</span><span class="rn-key">answer_first_intro</span></li>
+        <li><span class="rn-t1">Distintivo de la nave</span><span class="rn-t2">El título, entre 15 y 70 caracteres.</span><span class="rn-key">title_length</span></li>
+        <li><span class="rn-t1">Transpondedor</span><span class="rn-t2">La meta descripción, entre 50 y 160 caracteres.</span><span class="rn-key">description_length</span></li>
+        <li><span class="rn-t1">Placa de identificación</span><span class="rn-t2">Open Graph puesto, para cuando a alguien le da por compartirte.</span><span class="rn-key">open_graph</span></li>
+        <li><span class="rn-t1">Sin zonas restringidas</span><span class="rn-t2">Que ninguna página se esté escondiendo con un noindex.</span><span class="rn-key">noindex</span></li>
+        <li><span class="rn-t1">Rumbo único</span><span class="rn-t2">Que la etiqueta canónica apunte a donde tiene que apuntar.</span><span class="rn-key">canonical</span></li>
+        <li><span class="rn-t1">Idiomas a bordo</span><span class="rn-t2">Que hreflang esté declarado si tu web habla más de un idioma.</span><span class="rn-key">hreflang</span></li>
+        <li><span class="rn-t1">Datos en formación</span><span class="rn-t2">Listas y tablas: lo que una IA arranca y cita entero.</span><span class="rn-key">list_or_table</span></li>
+        <li><span class="rn-t1">Masa suficiente</span><span class="rn-t2">Al menos 300 palabras de contenido real por página.</span><span class="rn-key">content_length</span></li>
+        <li><span class="rn-t1">Última revisión en bitácora</span><span class="rn-t2">Contenido de menos de 6 meses; a partir de 18 ya pesa.</span><span class="rn-key">freshness</span></li>
+        <li><span class="rn-t1">Control de acceso</span><span class="rn-t2">Si dejas entrar a GPTBot, ClaudeBot, PerplexityBot, Google-Extended…</span><span class="rn-key">bot_blocked</span></li>
+        <li><span class="rn-t1">Baliza para la IA</span><span class="rn-t2">Si existe tu llms.txt, el índice que los modelos leen primero.</span><span class="rn-key">llms_txt_missing</span></li>
+        <li><span class="rn-t1">Mapa estelar</span><span class="rn-t2">Si existe tu sitemap.xml y se puede leer.</span><span class="rn-key">sitemap_missing</span></li>
+      </ul>
+      <p class="rn-sub">Tarda unos minutos. Puedes irte: seguimos aunque cierres esta pestaña.</p>
+      <p class="rn-joke">Lo caro del viaje es volver entero.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="wrap">
+  <p class="phone-cap">↑ a sangre, al ancho real de esta ventana · ↓ la misma pantalla forzada a 390 px</p>
+</div>
+
+<!-- misma composición, encerrada en 390 px, para juzgar móvil y escritorio a la vez -->
+<div class="wrap">
+<div class="phone">
+  <div class="rn-shell">
+    <div class="rn-rail">
+      <span class="rn-rail-left">
+        <span class="rn-rail-tick" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="11" height="11"><path d="M5 12.5 L10 17.5 L19 7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <b>tudominio.com</b> ya tiene puntuación
+      </span>
+      <span class="rn-rail-right">16 comprobaciones técnicas</span>
+    </div>
+    <div class="rn-canvas">
+      <div class="rn-scene-slot">
+        <svg class="rn-sky" viewBox="0 0 400 280" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Reentrada, composición de móvil">
+          <defs>
+            <linearGradient id="rn2-sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#04070F"/><stop offset=".34" stop-color="#0A1526"/>
+              <stop offset=".68" stop-color="#173B5C"/><stop offset="1" stop-color="#2A5B90"/>
+            </linearGradient>
+            <linearGradient id="rn2-warm" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#060D1B"/><stop offset=".34" stop-color="#12233C"/>
+              <stop offset=".68" stop-color="#20527C"/><stop offset="1" stop-color="#3A74AE"/>
+            </linearGradient>
+            <linearGradient id="rn2-earth" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#1D4E7C"/><stop offset="1" stop-color="#0C1D33"/>
+            </linearGradient>
+            <linearGradient id="rn2-haze" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="rgba(127,227,236,0)"/><stop offset=".5" stop-color="rgba(127,227,236,.22)"/><stop offset="1" stop-color="rgba(127,227,236,0)"/>
+            </linearGradient>
+            <linearGradient id="rn2-streak" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0" stop-color="rgba(234,247,255,.95)"/><stop offset=".45" stop-color="rgba(127,227,236,.55)"/><stop offset="1" stop-color="rgba(79,123,255,0)"/>
+            </linearGradient>
+            <radialGradient id="rn2-wakeg">
+              <stop offset="0" stop-color="rgba(127,227,236,.5)"/><stop offset=".5" stop-color="rgba(79,123,255,.16)"/><stop offset="1" stop-color="rgba(79,123,255,0)"/>
+            </radialGradient>
+            <radialGradient id="rn2-shieldg">
+              <stop offset="0" stop-color="rgba(234,247,255,.95)"/><stop offset=".45" stop-color="rgba(127,227,236,.55)"/><stop offset="1" stop-color="rgba(9,197,214,0)"/>
+            </radialGradient>
+            <clipPath id="rn2-clip"><rect width="400" height="280"/></clipPath>
+            <clipPath id="rn2-earthclip"><circle cx="200" cy="800" r="600"/></clipPath>
+          </defs>
+          <g clip-path="url(#rn2-clip)">
+            <rect width="400" height="280" fill="url(#rn2-sky)"/>
+            <rect class="rn-atmo" width="400" height="280" fill="url(#rn2-warm)" opacity="0"/>
+            <g class="rn-rise-far" fill="#CFE0FF" opacity=".5">
+              <circle cx="34" cy="44" r="1"/><circle cx="128" cy="96" r=".9"/><circle cx="214" cy="24" r="1"/>
+              <circle cx="296" cy="118" r=".8"/><circle cx="358" cy="62" r="1"/><circle cx="72" cy="150" r=".9"/>
+              <circle cx="34" cy="324" r="1"/><circle cx="128" cy="376" r=".9"/><circle cx="214" cy="304" r="1"/>
+              <circle cx="296" cy="398" r=".8"/><circle cx="358" cy="342" r="1"/><circle cx="72" cy="430" r=".9"/>
+            </g>
+            <g class="rn-rise-near" fill="#EAF1FF">
+              <circle class="rn-tw" cx="58" cy="28" r="1.5"/><circle cx="192" cy="70" r="1.2"/>
+              <circle class="rn-tw s2" cx="316" cy="34" r="1.4"/><circle cx="96" cy="126" r="1.1"/>
+              <circle class="rn-tw" cx="58" cy="308" r="1.5"/><circle cx="192" cy="350" r="1.2"/>
+              <circle class="rn-tw s3" cx="316" cy="314" r="1.4"/><circle cx="96" cy="406" r="1.1"/>
+            </g>
+            <g class="rn-earthbreathe">
+              <circle cx="200" cy="800" r="608" fill="none" stroke="rgba(9,197,214,.12)" stroke-width="18"/>
+              <circle class="rn-halo" cx="200" cy="800" r="604" fill="none" stroke="rgba(127,227,236,.5)" stroke-width="2"/>
+              <circle cx="200" cy="800" r="600" fill="url(#rn2-earth)"/>
+              <g clip-path="url(#rn2-earthclip)">
+                <g class="rn-earthspin">
+                  <g fill="#2E6BA8" opacity=".6">
+                    <path d="M10 214 q22 -14 52 -9 q24 5 35 19 q-35 12 -61 7 q-24 -5 -26 -17 Z"/>
+                    <path d="M158 232 q28 -18 68 -12 q30 7 40 21 l-108 0 Z"/>
+                    <path d="M300 208 q24 -12 50 -5 q19 7 24 17 q-31 10 -52 5 q-17 -5 -22 -17 Z"/>
+                    <path d="M410 214 q22 -14 52 -9 q24 5 35 19 q-35 12 -61 7 q-24 -5 -26 -17 Z"/>
+                    <path d="M558 232 q28 -18 68 -12 q30 7 40 21 l-108 0 Z"/>
+                    <path d="M700 208 q24 -12 50 -5 q19 7 24 17 q-31 10 -52 5 q-17 -5 -22 -17 Z"/>
+                  </g>
+                  <g fill="#FFFFFF" opacity=".05">
+                    <ellipse cx="86" cy="206" rx="40" ry="6"/><ellipse cx="248" cy="226" rx="46" ry="7"/>
+                    <ellipse cx="486" cy="206" rx="40" ry="6"/><ellipse cx="648" cy="226" rx="46" ry="7"/>
+                  </g>
+                </g>
+              </g>
+            </g>
+            <g class="rn-rise-haze" opacity=".34">
+              <rect x="-20" y="150" width="440" height="16" rx="8" fill="url(#rn2-haze)"/>
+              <rect x="-20" y="66" width="440" height="10" rx="5" fill="url(#rn2-haze)"/>
+              <rect x="-20" y="430" width="440" height="16" rx="8" fill="url(#rn2-haze)"/>
+              <rect x="-20" y="346" width="440" height="10" rx="5" fill="url(#rn2-haze)"/>
+            </g>
+            <g class="rn-veh">
+              <g class="rn-sway"><g class="rn-buffet">
+                <ellipse class="rn-shieldglow" cx="200" cy="158" rx="27" ry="64" fill="url(#rn2-wakeg)" opacity=".85" style="animation-duration:2.9s"/>
+                <ellipse class="rn-shieldglow" cx="200" cy="188" rx="17" ry="38" fill="url(#rn2-wakeg)" style="animation-duration:1.9s;animation-delay:-.7s"/>
+                <ellipse class="rn-shieldglow" cx="200" cy="217" rx="46" ry="17" fill="url(#rn2-shieldg)"/>
+                <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+                <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+                <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+                <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+                <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+                <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+                <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+                <circle cx="200" cy="176" r="4" fill="#09C5D6"/>
+                <ellipse class="rn-shieldglow" cx="200" cy="219" rx="34" ry="13" fill="url(#rn2-shieldg)" style="animation-delay:-.4s"/>
+                <path d="M184 209 q16 12 32 0 q-2.5 15 -16 15 q-13.5 0 -16 -15 Z" fill="#EAF7FF"/>
+                <path class="rn-halo" d="M181 222 Q200 234 219 222" fill="none" stroke="#7FE3EC" stroke-width="2.2" stroke-linecap="round" opacity=".7"/>
+                <g fill="#EAF7FF">
+                  <circle class="rn-ember" cx="192" cy="220" r="1.4" style="--dx:-18px;--dy:-74px"/>
+                  <circle class="rn-ember" cx="208" cy="220" r="1.2" style="--dx:20px;--dy:-86px;animation-delay:-0.55s"/>
+                  <circle class="rn-ember" cx="200" cy="222" r="1.5" style="--dx:-4px;--dy:-104px;animation-delay:-1.05s"/>
+                  <circle class="rn-ember" cx="186" cy="218" r="1.1" style="--dx:-30px;--dy:-58px;animation-delay:-1.45s"/>
+                  <circle class="rn-ember" cx="214" cy="218" r="1.1" style="--dx:32px;--dy:-64px;animation-delay:-0.3s"/>
+                  <circle class="rn-ember" cx="196" cy="221" r="0.9" style="--dx:-12px;--dy:-92px;animation-delay:-0.85s"/>
+                  <circle class="rn-ember" cx="204" cy="221" r="1.3" style="--dx:14px;--dy:-70px;animation-delay:-1.25s"/>
+                  <circle class="rn-ember" cx="190" cy="219" r="0.8" style="--dx:-24px;--dy:-100px;animation-delay:-0.15s"/>
+                  <circle class="rn-ember" cx="210" cy="219" r="1" style="--dx:26px;--dy:-96px;animation-delay:-0.95s"/>
+                  <circle class="rn-ember" cx="200" cy="218" r="0.9" style="--dx:6px;--dy:-120px;animation-delay:-1.6s"/>
+                  <circle class="rn-ember" cx="182" cy="216" r="0.9" style="--dx:-38px;--dy:-46px;animation-delay:-0.7s"/>
+                  <circle class="rn-ember" cx="218" cy="216" r="0.9" style="--dx:40px;--dy:-52px;animation-delay:-1.35s"/>
+                </g>
+              </g></g>
+            </g>
+            <g class="rn-rise-front" opacity=".26">
+              <rect x="-20" y="196" width="440" height="5" rx="3" fill="url(#rn2-haze)"/>
+              <rect x="-20" y="86" width="440" height="4" rx="2" fill="url(#rn2-haze)"/>
+              <rect x="-20" y="476" width="440" height="5" rx="3" fill="url(#rn2-haze)"/>
+              <rect x="-20" y="366" width="440" height="4" rx="2" fill="url(#rn2-haze)"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+      <div class="rn-copy">
+        <span class="rn-eyebrow">Reentrada</span>
+        <h2 class="rn-title">Revisando tu web</h2>
+        <ul class="rn-tele">
+          <li><span class="rn-t1">Sondeando el casco</span><span class="rn-t2">Buscamos datos estructurados en tu código: Article, FAQPage, Product, Organization…</span><span class="rn-key">structured_data</span></li>
+          <li><span class="rn-t1">Un solo comandante</span><span class="rn-t2">Que cada página tenga un único H1, no cero y no cuatro.</span><span class="rn-key">single_h1</span></li>
+          <li><span class="rn-t1">Compartimentos estancos</span><span class="rn-t2">Al menos dos H2 que partan el contenido en secciones citables.</span><span class="rn-key">two_h2</span></li>
+          <li><span class="rn-t1">Respuesta en el primer contacto</span><span class="rn-t2">Que el texto responda al principio en vez de calentar motores.</span><span class="rn-key">answer_first_intro</span></li>
+          <li><span class="rn-t1">Distintivo de la nave</span><span class="rn-t2">El título, entre 15 y 70 caracteres.</span><span class="rn-key">title_length</span></li>
+          <li><span class="rn-t1">Transpondedor</span><span class="rn-t2">La meta descripción, entre 50 y 160 caracteres.</span><span class="rn-key">description_length</span></li>
+          <li><span class="rn-t1">Placa de identificación</span><span class="rn-t2">Open Graph puesto, para cuando a alguien le da por compartirte.</span><span class="rn-key">open_graph</span></li>
+          <li><span class="rn-t1">Sin zonas restringidas</span><span class="rn-t2">Que ninguna página se esté escondiendo con un noindex.</span><span class="rn-key">noindex</span></li>
+          <li><span class="rn-t1">Rumbo único</span><span class="rn-t2">Que la etiqueta canónica apunte a donde tiene que apuntar.</span><span class="rn-key">canonical</span></li>
+          <li><span class="rn-t1">Idiomas a bordo</span><span class="rn-t2">Que hreflang esté declarado si tu web habla más de un idioma.</span><span class="rn-key">hreflang</span></li>
+          <li><span class="rn-t1">Datos en formación</span><span class="rn-t2">Listas y tablas: lo que una IA arranca y cita entero.</span><span class="rn-key">list_or_table</span></li>
+          <li><span class="rn-t1">Masa suficiente</span><span class="rn-t2">Al menos 300 palabras de contenido real por página.</span><span class="rn-key">content_length</span></li>
+          <li><span class="rn-t1">Última revisión en bitácora</span><span class="rn-t2">Contenido de menos de 6 meses; a partir de 18 ya pesa.</span><span class="rn-key">freshness</span></li>
+          <li><span class="rn-t1">Control de acceso</span><span class="rn-t2">Si dejas entrar a GPTBot, ClaudeBot, PerplexityBot, Google-Extended…</span><span class="rn-key">bot_blocked</span></li>
+          <li><span class="rn-t1">Baliza para la IA</span><span class="rn-t2">Si existe tu llms.txt, el índice que los modelos leen primero.</span><span class="rn-key">llms_txt_missing</span></li>
+          <li><span class="rn-t1">Mapa estelar</span><span class="rn-t2">Si existe tu sitemap.xml y se puede leer.</span><span class="rn-key">sitemap_missing</span></li>
+        </ul>
+        <p class="rn-sub">Tarda unos minutos. Puedes irte: seguimos aunque cierres esta pestaña.</p>
+        <p class="rn-joke">Lo caro del viaje es volver entero.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="wrap">
+<div class="notes">
+  <h3>Qué se mueve, y por qué nada de eso puede leerse como progreso</h3>
+  <dl>
+    <dt>La cámara, no el vehículo</dt>
+    <dd>Misma lección que rev.4 aprendió en órbita: el cohete casi no se mueve —bamboleo de
+    ±1,3° y un temblor de medio píxel por el buffeting—, y lo que corre es el entorno. Dos
+    capas de estrellas <em>subiendo</em> (26 s y 13 s), tres capas de atmósfera subiendo más
+    rápido (6,4 s / 4,1 s), y jirones pasando <strong>por delante</strong> del vehículo cada
+    2,6 s: eso es lo que vende que estamos bajando.</dd>
+    <dt>El escudo</dt>
+    <dd>El disco incandescente del escudo late a 1,15 s, cinco estelas de plasma parpadean
+    entre 0,13 s y 0,21 s con pasos discretos (mismo truco que las llamas de rev.4), y cinco
+    brasas se desprenden y suben cada 1,7 s desfasadas. Con esos ritmos no hay ningún
+    instante en que la escena esté quieta: es la exigencia del beat más largo.</dd>
+    <dt>La Tierra se acerca sin llegar</dt>
+    <dd>El arco es más plano y más alto que en órbita (allí <code>cy=600 r=372</code>; aquí
+    <code>cy=742 r=555</code>) — eso es lo que dice «ya está cerca». Pero su respiración es
+    <strong>simétrica</strong>: ±2,2 % en 26 s, ida y vuelta. Un planeta que creciera de
+    forma monótona sería una barra de progreso disfrazada, y nadie sabe cuánto queda de
+    auditoría.</dd>
+    <dt>El cielo viaja en el espacio, no en el tiempo</dt>
+    <dd>El degradado va de negro arriba a azul atmósfera abajo — el viaje de vuelta está
+    <em>dentro del encuadre</em>. Encima, una segunda capa idéntica pero más cálida entra y
+    sale en 44 s con ida y vuelta (sólo <code>opacity</code>). La atmósfera respira; no
+    amanece, porque amanecer sería prometer un final.</dd>
+    <dt>La clave gris no va en producto</dt>
+    <dd>El recuadro de puntos con <code>structured_data</code> debajo de cada línea es
+    <strong>anotación de esta maqueta</strong>, no parte de la pantalla: está para que se
+    pueda comprobar de un vistazo que ninguna línea está inventada. En producto la línea son
+    dos frases y nada más.</dd>
+    <dt>El calor va en cian</dt>
+    <dd>El ámbar <code>#FFB020</code> es exclusivo del punto del logo
+    (<code>brand-guidelines.md</code>). Un plasma real de reentrada es blanco-azulado, así
+    que el cian de marca no es una concesión: es el color correcto.</dd>
+  </dl>
+  <p class="rule">
+    <strong>Ningún elemento de esta escena lleva datos.</strong> Es el único beat de la
+    misión del que se puede decir eso, y es deliberado: el anillo de rev.4 medía
+    <code>done/total</code> de respuestas y reutilizarlo aquí insinuaría una fracción de
+    «la auditoría», que hoy nada mide entera — la mitad técnica no publica ningún contador
+    en vuelo. Lo único real y disponible es la fracción de <em>cobertura</em>, y por eso va
+    en texto (la píldora «12 de 31 temas») y no en la animación: cuando no existe, se cae
+    sola sin que la escena cambie de forma. Ver Parte 3.
+  </p>
+</div>
+</div>
+
+<div class="wrap">
+<section class="part" id="parte2">
+  <div class="part-k"><b>Parte 2</b><span>el copy que pone en valor la auditoría</span><span>16 técnicas + 2 de cobertura</span></div>
+  <h2>Dieciséis comprobaciones con nombre y apellidos</h2>
+  <p class="intro">
+    Esta es la respuesta al «enséñame qué vas a meter». Una cinta de telemetría que rota una
+    línea cada 4 s: arriba la jerga de misión, debajo lo que se comprueba <em>de verdad</em>.
+    Las 16 primeras son exactamente las 16 claves de <code>IssueCheckKey</code>
+    (<code>lib/web-audit/issues.ts</code>) — ni una inventada, ni una de más. Los umbrales
+    citados salen de <code>lib/web-audit/page-checks.ts</code> y los rastreadores de
+    <code>TRACKED_BOT_AGENTS</code> (<code>lib/web-audit/robots.ts</code>). La clave de cada
+    comprobación va impresa junto a su línea, aquí y en la propia pantalla de la Parte 1,
+    para que se pueda verificar sin abrir el código.
+  </p>
+  <div class="notes warn" style="margin-top:18px">
+    <h3>Lo que esta cinta NO es</h3>
+    <dl>
+      <dt>No es un log en vivo</dt>
+      <dd>El orden de las líneas es de lectura, no el orden en que el backend ejecuta las
+      comprobaciones, y ninguna línea está atada a un evento concreto. Es un
+      <strong>carrusel de alcance</strong>: «esto es lo que estamos revisando», no «ahora
+      mismo estoy en la 7 de 16». Por eso ninguna línea lleva tick, ni contador, ni cambia
+      de estado. Si algún día quisiéramos ticks reales, harían falta eventos por
+      comprobación que hoy no se persisten — y sin ellos, un tick sería falso.</dd>
+      <dt>Se repite, y no pasa nada</dt>
+      <dd>16 líneas × 4 s = un ciclo de 64 s. Una auditoría dura minutos, así que la cinta
+      dará dos, tres o cinco vueltas. Es aceptable porque el mensaje es el alcance, no el
+      avance: la segunda vuelta sigue diciendo algo verdadero. Alternativa descartada:
+      barajar el orden — hace que el usuario no sepa si ya la vio entera, que es justo la
+      sensación que queremos evitar.</dd>
+    </dl>
+  </div>
+
+  <div class="telegrid">
+    <div class="tcard"><div class="top"><span class="t">t = 0 s</span><span class="k">structured_data</span></div><p class="jerga">Sondeando el casco</p><p class="real">Buscamos datos estructurados en tu código: Article, FAQPage, Product, Organization…</p><p class="src">STRUCTURED_DATA_TYPES · page-checks.ts · 15 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 4 s</span><span class="k">single_h1</span></div><p class="jerga">Un solo comandante</p><p class="real">Que cada página tenga un único H1, no cero y no cuatro.</p><p class="src">answerFormat.hasOneH1 · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 8 s</span><span class="k">two_h2</span></div><p class="jerga">Compartimentos estancos</p><p class="real">Al menos dos H2 que partan el contenido en secciones citables.</p><p class="src">answerFormat.hasTwoH2 · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 12 s</span><span class="k">answer_first_intro</span></div><p class="jerga">Respuesta en el primer contacto</p><p class="real">Que el texto responda al principio en vez de calentar motores.</p><p class="src">FAQPage o intro ≥ 200 caracteres · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 16 s</span><span class="k">title_length</span></div><p class="jerga">Distintivo de la nave</p><p class="real">El título, entre 15 y 70 caracteres.</p><p class="src">metadata.titleOk · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 20 s</span><span class="k">description_length</span></div><p class="jerga">Transpondedor</p><p class="real">La meta descripción, entre 50 y 160 caracteres.</p><p class="src">metadata.descriptionOk · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 24 s</span><span class="k">open_graph</span></div><p class="jerga">Placa de identificación</p><p class="real">Open Graph puesto, para cuando a alguien le da por compartirte.</p><p class="src">metadata.ogOk · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 28 s</span><span class="k">noindex</span></div><p class="jerga">Sin zonas restringidas</p><p class="real">Que ninguna página se esté escondiendo con un noindex.</p><p class="src">indexability.noindex · bloqueo duro · 10 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 32 s</span><span class="k">canonical</span></div><p class="jerga">Rumbo único</p><p class="real">Que la etiqueta canónica apunte a donde tiene que apuntar.</p><p class="src">indexability.canonicalOk · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 36 s</span><span class="k">hreflang</span></div><p class="jerga">Idiomas a bordo</p><p class="real">Que hreflang esté declarado si tu web habla más de un idioma.</p><p class="src">indexability.hreflangPresent · 5 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 40 s</span><span class="k">list_or_table</span></div><p class="jerga">Datos en formación</p><p class="real">Listas y tablas: lo que una IA arranca y cita entero.</p><p class="src">citability.hasListOrTable · 10 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 44 s</span><span class="k">content_length</span></div><p class="jerga">Masa suficiente</p><p class="real">Al menos 300 palabras de contenido real por página.</p><p class="src">MIN_SUBSTANTIVE_WORD_COUNT = 300 · 10 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 48 s</span><span class="k">freshness</span></div><p class="jerga">Última revisión en bitácora</p><p class="real">Contenido de menos de 6 meses; a partir de 18 ya pesa.</p><p class="src">≤180 d fresh · ≤540 d aging · 15 pt</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 52 s</span><span class="k">bot_blocked</span></div><p class="jerga">Control de acceso</p><p class="real">Si dejas entrar a GPTBot, ClaudeBot, PerplexityBot, Google-Extended…</p><p class="src">TRACKED_BOT_AGENTS (7) · robots.ts · sin peso</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 56 s</span><span class="k">llms_txt_missing</span></div><p class="jerga">Baliza para la IA</p><p class="real">Si existe tu llms.txt, el índice que los modelos leen primero.</p><p class="src">bots.probes.llmsTxt · sin peso</p></div>
+    <div class="tcard"><div class="top"><span class="t">t = 60 s</span><span class="k">sitemap_missing</span></div><p class="jerga">Mapa estelar</p><p class="real">Si existe tu sitemap.xml y se puede leer.</p><p class="src">bots.probes.sitemap · sin peso</p></div>
+  </div>
+
+  <div class="notes" style="margin-top:22px;border-left-color:var(--cyan)">
+    <h3>Las dos líneas de cobertura: sólo Pro y superiores</h3>
+    <dl>
+      <dt>Por qué van aparte</dt>
+      <dd>La mitad de cobertura es Gemini con grounding buscando en <em>tu propio dominio</em>
+      qué has publicado sobre cada tema del escaneo, y eso son llamadas de LLM por lotes: la
+      puerta Pro cubre la cobertura, nunca la salud técnica (ADR 0035, regla de ruta de la
+      zona). <strong>Un proyecto Free o Starter no verá estas dos líneas</strong> — y no
+      porque falten, sino porque no están en su plan. Ese matiz importa: la regla de ruta
+      prohíbe presentar «esa mitad no está en tu plan» como «falta una mitad».</dd>
+      <dt>Qué NO puede decir la cinta en Free/Starter</dt>
+      <dd>Con 16 líneas técnicas la cinta sigue teniendo 64 s de contenido verdadero, así
+      que no hay que rellenar nada. Lo que no vale es dejar las líneas Pro puestas en gris
+      con un candado dentro de la animación: convierte un momento de espera en un anuncio.
+      Si se quiere vender la cobertura, va después, en la propia pantalla de Auditoría web,
+      donde ya hay sitio para explicarla.</dd>
+    </dl>
+  </div>
+
+  <div class="telegrid">
+    <div class="tcard pro"><div class="top"><span class="t">Pro+ · t = +0 s</span><span class="pill">Cobertura</span><span class="k">coverage</span></div><p class="jerga">Barrido de superficie</p><p class="real">Buscamos en tu propio dominio qué has publicado ya sobre cada tema por el que te preguntan.</p><p class="src">domain-coverage · Gemini con grounding · 5/día/proyecto</p></div>
+    <div class="tcard pro"><div class="top"><span class="t">Pro+ · t = +4 s</span><span class="pill">Cobertura</span><span class="k">coverage · not_covered</span></div><p class="jerga">Zonas sin cartografiar</p><p class="real">Y los temas sobre los que todavía no has publicado nada. Esos son los que te cuestan menciones.</p><p class="src">NOT_COVERED_NOTE · coverage-map.ts</p></div>
+  </div>
+</section>
+</div>
+
+<div class="wrap">
+<section class="part" id="parte3">
+  <div class="part-k"><b>Parte 3</b><span>dónde sale este beat y dónde no</span><span>tres superficies</span></div>
+  <h2>La animación larga sólo la ve quien está en Auditoría web. Y está bien.</h2>
+  <p class="intro">
+    El escaneo termina y la puntuación existe; la auditoría sigue minutos más. Quien ya tiene
+    su número se va a mirarlo. Diseñar como si todo el mundo fuese a quedarse mirando la
+    reentrada sería diseñar para un usuario que no existe — así que rev.6 declara las tres
+    superficies por separado y acepta que dos de ellas <em>no</em> vean el beat.
+  </p>
+
+  <div class="tl">
+    <div class="tl-inner">
+      <div class="tl-axis"><span>escaneo</span><span></span><span>auditoría web · más larga</span></div>
+      <div class="tl-row"><span class="lbl">Lo que hace el producto</span></div>
+      <div class="tl-row">
+        <div class="seg scan">la misión · 5 beats</div>
+        <div class="seg gap">▸</div>
+        <div class="seg audit">16 comprobaciones técnicas · cobertura (Pro+)</div>
+      </div>
+      <div class="tl-row"><span class="lbl">Visión general y demás secciones</span></div>
+      <div class="tl-row">
+        <div class="seg scan">misión a pantalla completa</div>
+        <div class="seg gap">▸</div>
+        <div class="seg band">banda compacta «Revisando tu web» · sin reentrada</div>
+      </div>
+      <div class="tl-row"><span class="lbl">Auditoría web</span></div>
+      <div class="tl-row">
+        <div class="seg hand">(el usuario aún no está aquí)</div>
+        <div class="seg gap">▸</div>
+        <div class="seg audit">REENTRADA a pantalla completa, mientras dure</div>
+      </div>
+      <div class="tl-row"><span class="lbl">Al terminar</span></div>
+      <div class="tl-row">
+        <div class="seg hand"></div>
+        <div class="seg gap"></div>
+        <div class="seg done">amerizaje (≈1,6 s) → la auditoría real</div>
+      </div>
+    </div>
+    <p class="tl-note">
+      Los cinco beats de la misión son los de rev.4: rampa, ignición, ascenso, órbita y
+      entrega. El eje no lleva duraciones porque nadie las ha medido — la auditoría dura lo
+      que dure según páginas y temas. Lo único que este documento afirma es el orden.
+    </p>
+  </div>
+
+  <div class="lanes">
+    <div class="lane">
+      <div class="lane-h"><span class="n">1</span><h3>Visión general y demás secciones</h3><span class="tag no">sin reentrada</span></div>
+      <div class="lane-b">
+        <p><strong>Recomendación: mantener la banda compacta que ya existe</strong>
+        (<code>ScanMissionBand</code>), sin tocarla, y que la misión siga acabando en
+        <em>entrega</em>. Aquí la puntuación ya está en pantalla y es lo que el usuario vino
+        a ver.</p>
+        <div class="mba-demo">
+          <a class="mba-band" href="#parte3">
+            <span class="mba-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path d="M12 3q3.4 3.2 3.4 7.8v4.6h-6.8v-4.6Q8.6 6.2 12 3Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+                <path d="M8.6 15.4L6 20.4l2.6-1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15.4 15.4L18 20.4l-2.6-1.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="9.5" r="1.4" fill="currentColor"/>
+              </svg>
+            </span>
+            <span class="mba-txt"><span class="mba-t">Revisando tu web</span><span class="mba-s">La auditoría técnica sigue en marcha. No hace falta que esperes aquí.</span></span>
+            <span class="mba-dot" aria-hidden="true"></span>
+          </a>
+        </div>
+        <p class="why"><b>La alternativa que descarto, y por qué.</b> Se podría seguir
+        ocupando la pantalla entera con la reentrada hasta que la auditoría acabe. Sería
+        espectacular y sería un error: retendría la puntuación que el usuario acaba de
+        ganarse detrás de una animación que puede durar varios minutos, y convierte una
+        celebración en una sala de espera. El coste que sí acepto: la banda es discreta y
+        habrá quien no la vea. Ese es el precio de no secuestrar la pantalla.</p>
+        <p class="why"><b>Un ajuste barato que sí propongo:</b> cuando exista la fracción
+        real de cobertura, la banda puede decir «12 de 31 temas» en vez de nada — el propio
+        componente ya declara en su comentario que ése es el único fichero que habría que
+        tocar. Si no existe, sigue sin decir cifra. Nunca una inventada.</p>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-h"><span class="n">2</span><h3>Auditoría web</h3><span class="tag yes">reentrada completa</span></div>
+      <div class="lane-b">
+        <p>Es la única superficie donde la reentrada ocupa la pantalla, y corre
+        <strong>mientras dure la auditoría</strong>. Quien entra aquí durante la auditoría ha
+        pedido explícitamente ver esto; no le estamos reteniendo nada.</p>
+        <p class="why"><b>La cifra real, cuando la hay.</b> El driver de cobertura ya publica
+        <code>{ covered, total }</code> lote a lote (<code>web-audit-context.tsx</code>), y
+        ésa es una fracción real y persistida: es la que aparece en la píldora «12 de 31
+        temas» de la Parte 1 (cifras ilustrativas). <b>Cuándo NO se pinta:</b> plan sin
+        cobertura, driver no arrancado todavía, o continuación en servidor sin pestaña
+        abierta. En esos casos la píldora sencillamente no se renderiza — y como la escena no
+        depende de ella, no cambia nada más.</p>
+        <p class="why"><b>Lo que esta pantalla no debe hacer:</b> ser el motor. El bucle de
+        cliente es un acelerador; el servidor despacha la continuación (ADR 0038). Si esta
+        animación diera la sensación de que hay que quedarse, estaríamos enseñando lo
+        contrario de lo que hace el sistema — de ahí el «puedes irte» del subtítulo.</p>
+      </div>
+    </div>
+
+    <div class="lane">
+      <div class="lane-h"><span class="n">3</span><h3>La auditoría termina mientras miras</h3><span class="tag mid">amerizaje ≈1,6 s</span></div>
+      <div class="lane-b">
+        <p>El mecanismo ya existe y no hay que inventarlo: cuando la campaña acaba, el driver
+        llama a <code>router.refresh()</code> y la pantalla se re-renderiza con la auditoría
+        de verdad. La propuesta es sólo <strong>no cortar en seco</strong>: un cierre corto de
+        <strong>1,6 s</strong> —el plasma se apaga, el escudo se enfría, aparecen los
+        paracaídas— y detrás, el contenido real.</p>
+        <p class="why"><b>Regla dura del cierre:</b> el amerizaje no puede llevar ninguna
+        cifra. Al terminar la campaña de cobertura todavía se dispara la auditoría técnica
+        «de propina» en la misma acción, así que el instante del cierre <em>no</em> es el
+        instante en que la nota de salud técnica está calculada. Es exactamente el mismo
+        motivo por el que <em>entrega</em> no enseña la puntuación GEO
+        (<code>scan-mission-rocket.tsx</code>, cabecera). Enseñar un número ahí sería
+        inventarlo.</p>
+        <p class="why"><b>Si falla:</b> <code>WebAuditDriveNotice</code> es el consumidor del
+        error y ya existe. El amerizaje no se reproduce; la reentrada se detiene y cede el
+        sitio al aviso. Una animación de aterrizaje feliz encima de un fallo es peor que no
+        tener animación.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes" style="margin-top:22px">
+    <h3>Lo que este documento deja sin resolver</h3>
+    <dl>
+      <dt>La mitad técnica no tiene contador en vuelo</dt>
+      <dd>La auditoría técnica no publica progreso mientras corre: no hay «N de M páginas»
+      hasta que termina y se persiste <code>analyzedPageCount</code>. Por eso la única cifra
+      posible es la de cobertura, que es Pro. Un proyecto Free verá la reentrada
+      <strong>sin ninguna cifra</strong>, y eso es correcto, no una carencia que haya que
+      tapar.</dd>
+      <dt>No sabemos cuánto queda</dt>
+      <dd>No hay estimación de duración fiable, así que no hay barra, ni porcentaje, ni
+      «quedan 2 minutos». El subtítulo dice «unos minutos» porque es lo máximo que se puede
+      afirmar sin mentir.</dd>
+      <dt>El amerizaje aún no está dibujado</dt>
+      <dd>Esta rev. define su duración, su regla dura (sin cifras) y su condición de fallo,
+      pero no trae la escena. Si el beat se aprueba, el amerizaje es una fase aparte, con su
+      propia escena y su propio repaso.</dd>
+    </dl>
+  </div>
+</section>
+
+<footer class="foot">
+  SCAN-STATES-1 · rev.6 · 2026-08-10 — propone el sexto beat, <em>reentrada</em>, sobre las
+  escenas y el sistema de movimiento de rev.4 y la carcasa a sangre de rev.5 tal y como se
+  implementó en SCAN-STATES-2. Sólo <code>transform</code> y <code>opacity</code>; cero
+  JavaScript, ni siquiera de previsualización. Las 16 comprobaciones son las de
+  <code>lib/web-audit/issues.ts</code>; los umbrales, los de
+  <code>lib/web-audit/page-checks.ts</code>; los rastreadores, los de
+  <code>lib/web-audit/robots.ts</code>. Las cifras «12 de 31 temas» son ilustrativas y están
+  marcadas como tales.
+</footer>
+</div>
