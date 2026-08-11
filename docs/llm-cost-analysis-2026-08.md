@@ -23,6 +23,9 @@ de sus llamadas, y ese hueco es en sí mismo uno de los hallazgos.
    solapada con Gemini. Recortarlo cuesta producto, no solo coste.
 5. **La extracción es ~50% de las llamadas LLM del pipeline y no registra
    coste en ningún sitio.** Es el mayor tramo no medido.
+6. **Cerrado con cuatro interruptores por proyecto en `/debug`** (motores,
+   muestreo, y las dos mitades de auditoría) — ver §7 para la tabla
+   consolidada y qué columna controla cada línea de coste.
 
 ---
 
@@ -237,6 +240,45 @@ auditoría encendida.
 - **`cost_usd` nunca se ha calculado**, en ninguna tabla, para ningún
   proveedor. La columna existe desde la migración 0001 y se persiste como
   `null` (`lib/scan/executor.ts:330`).
+
+---
+
+## 7. Resumen consolidado, por etapa y motor (cierre, 2026-08-10)
+
+Todo lo anterior, en una tabla — por escaneo, salvo donde se indique.
+
+| Etapa | Gemini | Claude | OpenAI | Total | Estado |
+|---|---|---|---|---|---|
+| **Generación** ($/llamada) | $0,0020 | $0,0022 | $0,0117 (86% fee búsqueda) | — | Medido |
+| **Generación** ($/escaneo, ~8 llamadas) | $0,016 | $0,018 | $0,094 | **$0,128** | Medido |
+| **Extracción** ($/llamada est.) | $0,0014 | $0,0027 | $0,00036 | — | Estimado |
+| **Extracción** ($/escaneo) | $0,012 | $0,022 | $0,003 | **$0,037** | Estimado |
+| **Auditoría — cobertura IA** ($/auditoría, peor caso, ~8 prompts) | $0,28 | n/a | n/a | **$0,28** | No medido |
+| **Auditoría — técnica** ($/auditoría) | $0 | $0 | $0 | **$0** | Cero por diseño |
+
+**Por proyecto:** ~$0,16/escaneo (generación + extracción) → ~$4,70/mes a
+cadencia diaria → ~$61/mes al tope de Pro (100 prompts, ~31% de COGS) →
+~$184/mes al tope de Agencia (300 prompts, ~37% de COGS). El muestreo
+(SAMPLING-1) puede multiplicar todo esto hasta ×5 en un proyecto con pocos
+prompts activos.
+
+### Qué interruptor controla cada línea
+
+Las cuatro fases que salieron directamente de este análisis, todas en
+`/debug`, por proyecto:
+
+| Línea que afecta | Columna | Fase | Por defecto |
+|---|---|---|---|
+| Cuántos motores generan | `engine_{gemini,claude,openai}_enabled` | ENGINE-DEBUG-TOGGLE-1 (log §54) | Los tres `true` |
+| Cuántas repeticiones (muestreo) | `sampling_enabled` | SAMPLING-DEBUG-TOGGLE-1 (log §53) | `false` |
+| Si el escaneo se repite a diario | `recurring_scans_enabled` | (previo a esta serie) | `false` |
+| Auditoría — cobertura por IA | `auto_coverage_audit_enabled` | WEB-AUDIT-AUTO-SPLIT-1 (log §52) | `false` |
+| Auditoría — técnica | `auto_technical_audit_enabled` | WEB-AUDIT-AUTO-SPLIT-1 (log §52) | `false` |
+
+Versión visual de esta tabla (libro de coste con badges medido/estimado/no
+medido/cero y las cuatro cifras consolidadas como stat tiles): artefacto
+generado en la sesión del 2026-08-10 — no persistente entre sesiones: si se
+necesita de nuevo, regenerar desde esta tabla en vez de buscar el enlace.
 
 ---
 
