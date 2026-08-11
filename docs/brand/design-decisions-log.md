@@ -5050,6 +5050,32 @@ fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
 continuar más allá de `entrega`, y eso cambia el contrato de
 `computeMissionBeat`, no sólo el copy.
 
+
+**Addendum (2026-08-11) — la banda de auditoría nunca se mostró.** El fundador
+probó el cohete («ahora es perfecto») y añadió: *«pero no he visto la parte de
+la auditoría»*. No era percepción suya: `ScanMissionBand` era **código muerto
+desde el día que se implementó**, en ONBOARDING-ROCKET-1 Fase 1.
+
+Vivía dentro de la rama `hasData` —que exige un escaneo completado— pidiendo
+`isFirstScan`, que es `completedRunsCount === 0`. Mutuamente excluyentes: no
+se ha renderizado ni una vez. Y el comentario escrito encima razonaba que
+«nunca se solapa con el cohete, que sólo sale en la rama `!hasData`» — el
+mismo hecho que la hacía inalcanzable, usado para argumentar que era segura.
+Un razonamiento correcto sobre superposición que nunca comprobó la condición
+contraria: que fuese alcanzable.
+
+La condición correcta es el **después** del primer escaneo, no su ausencia:
+exactamente un run completado. Ahora vive en `shouldShowMissionBand`, con
+tests, porque una condición booleana enterrada en JSX es precisamente lo que
+nadie revisa — ni el piloto, que tampoco puede llegar aquí.
+
+**Lo que esto dice del proceso, y conviene no suavizarlo:** dos revisiones de
+diseño, cuatro pasadas de piloto en verde y una sesión entera de trabajo sobre
+esta pantalla no encontraron un elemento que no se dibujaba nunca. Lo encontró
+un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
+historial, `isFirstScan` falso— y ningún test cubría la expresión porque
+estaba en línea dentro del JSX.
+
 ---
 
 ## Cómo mantener este documento

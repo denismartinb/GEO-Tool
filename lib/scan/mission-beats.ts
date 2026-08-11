@@ -80,3 +80,26 @@ export function resolveDisplayBeat(beat: MissionBeat, ignitionElapsed: boolean):
   if (beat.key !== "ignicion" || !ignitionElapsed) return beat;
   return { key: "ascenso", done: 0, total: beat.total, climb: 0 };
 }
+
+/**
+ * Whether Visión general should show the compact "Revisando tu web" band —
+ * the half of the mission that survives after the score appears.
+ *
+ * Extracted here, with tests, because the inline version was **dead code from
+ * the day it shipped** and nobody noticed for two days: it lived inside the
+ * `hasData` branch (which requires a completed run) while asking for
+ * `isFirstScan` (which requires ZERO completed runs). Mutually exclusive. The
+ * comment above it even reasoned that it "never overlaps with the rocket,
+ * which only renders in the !hasData branch" — the same fact that makes it
+ * unreachable, used to argue it was safe.
+ *
+ * The founder found it the only way it could be found: by scanning a real
+ * domain and reporting "no he visto la parte de la auditoría" (2026-08-11).
+ *
+ * The correct condition is the scan's AFTERMATH, not its absence: exactly one
+ * completed run means the domain has just finished its first scan, which is
+ * when the first audit is running behind it.
+ */
+export function shouldShowMissionBand(input: { completedRunsCount: number; hasActiveAuditJob: boolean }): boolean {
+  return input.hasActiveAuditJob && input.completedRunsCount === 1;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeMissionBeat, resolveDisplayBeat } from "./mission-beats";
+import { computeMissionBeat, resolveDisplayBeat, shouldShowMissionBand } from "./mission-beats";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
 
 function run(overrides: Partial<ActiveScanRun> = {}): ActiveScanRun {
@@ -129,6 +129,28 @@ describe("resolveDisplayBeat (SCAN-STATES-2)", () => {
       expect(beat.key).not.toBe("ignicion");
       expect(resolveDisplayBeat(beat, true)).toEqual(beat);
       expect(resolveDisplayBeat(beat, false)).toEqual(beat);
+    }
+  });
+});
+
+describe("shouldShowMissionBand", () => {
+  it("shows right after the first scan, while its audit runs", () => {
+    expect(shouldShowMissionBand({ completedRunsCount: 1, hasActiveAuditJob: true })).toBe(true);
+  });
+
+  it("is NOT gated on zero completed runs — the bug this replaces", () => {
+    // The shipped inline version asked for `isFirstScan` (zero completed runs)
+    // from inside a branch that requires one, so it never rendered once.
+    expect(shouldShowMissionBand({ completedRunsCount: 0, hasActiveAuditJob: true })).toBe(false);
+  });
+
+  it("stays hidden with no audit running", () => {
+    expect(shouldShowMissionBand({ completedRunsCount: 1, hasActiveAuditJob: false })).toBe(false);
+  });
+
+  it("is spent once per domain: a second scan never brings it back", () => {
+    for (const count of [2, 3, 17]) {
+      expect(shouldShowMissionBand({ completedRunsCount: count, hasActiveAuditJob: true })).toBe(false);
     }
   });
 });

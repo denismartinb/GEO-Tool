@@ -13,6 +13,7 @@ import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanMissionBand } from "@/components/scan-mission-band";
+import { shouldShowMissionBand } from "@/lib/scan/mission-beats";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
@@ -798,10 +799,17 @@ export default async function ProjectDetailPage({
       {hasData ? (
         <div className="ov2-scope">
           {/* ONBOARDING-ROCKET-1 traspaso: the compact half of the first-scan
-              mission takes over the instant this branch renders — it never
-              overlaps with `ScanMissionRocket` below, which only renders
-              inside the `!hasData` branch. */}
-          {isFirstScan && hasActiveAuditJob && <ScanMissionBand projectId={projectId} />}
+              mission, shown while the first audit runs behind the score.
+
+              This asked for `isFirstScan` until 2026-08-11 and therefore NEVER
+              RENDERED: `isFirstScan` is zero completed runs, and this branch
+              requires one. The condition is the scan's aftermath, not its
+              absence — see `shouldShowMissionBand`, where it now lives with
+              tests. It still cannot overlap `ScanMissionRocket`, which only
+              renders in the `!hasData` branch. */}
+          {shouldShowMissionBand({ completedRunsCount, hasActiveAuditJob }) && (
+            <ScanMissionBand projectId={projectId} />
+          )}
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
