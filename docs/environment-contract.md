@@ -329,7 +329,10 @@ conserva porque describe el método de etiqueta HTML, que es el que usa
 7. Una vez verificado, en Search Console → Sitemaps, envía
    `https://www.genscore.es/sitemap.xml`.
 
-**Runbook — Bing Webmaster Tools (opcional, recomendado):**
+**Runbook — Bing Webmaster Tools — ✅ HECHO (2026-08-11):** propiedad dada de
+alta y sitemap enviado. Estado «Success», 47 URLs descubiertas, 0 errores, 0
+avisos — el mismo recuento que Google, así que ambos índices ven el inventario
+completo y coincidente. Pasos, por si hay que rehacerlo:
 
 1. Entra en [Bing Webmaster Tools](https://www.bing.com/webmasters) con una
    cuenta Microsoft.

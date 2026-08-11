@@ -182,17 +182,22 @@ siempre. Un push por iteración pilotable (BUILD-BUDGET-1).
       agentes: el proxy de salida bloquea genscore.es (comprobado el mismo
       día), así que esta comprobación es siempre manual — una sesión no puede
       cerrarla por su cuenta ni dar por hecho el resultado.
-- [ ] Alta en **Bing Webmaster Tools** (importa la propiedad de GSC en 2
-      clics) y enviar el mismo sitemap — es el índice que usa ChatGPT, así que
-      para el objetivo GEO pesa tanto como Google, no es un extra opcional.
-      **Es lo único que queda de la Fase M.**
+- [x] **Bing Webmaster Tools dado de alta y sitemap enviado (2026-08-11).**
+      Estado «Success», **47 URLs descubiertas, 0 errores, 0 avisos** — el
+      mismo número que Google, señal de que ambos índices ven el inventario
+      completo y coincidente. Importa porque es el índice que consulta
+      ChatGPT: para el objetivo GEO pesa tanto como Google.
 - [ ] (Ya disponible) Panel PostHog: canal de adquisición organic/referral
       para tener la línea base de tráfico único antes del plan.
 
-Sin esta fase, el resto del plan no se puede evaluar. No bloquea empezar la
-Fase T en paralelo. **Nota de expectativas:** aunque todo esté bien
-configurado, Search Console tarda días en mostrar datos — un panel vacío al
-día siguiente no significa que algo esté mal.
+**✅ FASE M CERRADA (2026-08-11).** Google y Bing verificados, ambos leyendo
+el sitemap con 47 URLs y sin errores, redirect apex→www confirmado. Ya hay
+dónde medir todo lo demás.
+
+**Nota de expectativas:** aunque todo esté bien configurado, Search Console y
+Bing tardan días en mostrar datos — un panel vacío al día siguiente no
+significa que algo esté mal. La primera lectura útil del bucle de §5 no será
+inmediata.
 
 ### Fase T — Deuda técnica SEO (agentes, 2-3 PRs pequeños)
 
