@@ -94,7 +94,7 @@ function glosarioTerminoHtml(slug) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/glosario/${slug}">
 <title>¿Qué es ${slug}? — Glosario GEO — Genscore</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>¿Qué es ${slug}?</h1><p>contenido</p><div class="glossary-related"><h2>Sigue explorando</h2><ul><li><a href="/glosario/${related}">${related}</a></li></ul></div>${overflow}</body></html>`;
 }
 
@@ -295,14 +295,42 @@ function shellWrap(body) {
 </div>`;
 }
 
+/**
+ * Reproduces, in miniature, the two regressions the founder found by eye on
+ * 2026-08-11 after the pilot had already run (log §55).
+ *
+ * `duplicate` — the landing hero shipped its CTA twice, because the block was
+ * moved into a client island and the original was left behind. The two copies
+ * lived in SIBLING containers, so this fixture puts them in sibling containers
+ * too: a same-parent detector would pass this and miss the real bug.
+ *
+ * `contrast` — the drawer CTA turned grey-on-blue when its element changed
+ * from <button> to <a> and an ancestor rule won on specificity. The colours
+ * here are the real ones: #6b7280 on #2563eb, 1.07:1 — medido, no estimado.
+ */
+function brokenControls() {
+  if (BREAK_MODE === "duplicate") {
+    return `<section class="fx-hero">
+      <div class="fx-hero-form"><a class="fx-cta" href="/dashboard">Analiza gratis</a></div>
+      <div class="fx-hero-actions"><a class="fx-cta" href="/dashboard">Analiza gratis</a></div>
+    </section>`;
+  }
+  if (BREAK_MODE === "contrast") {
+    return `<section class="fx-hero">
+      <a class="fx-cta" href="/dashboard" style="display:inline-block;padding:8px 16px;background:#2563eb;color:#6b7280">Prueba gratis</a>
+    </section>`;
+  }
+  return "";
+}
+
 function html(title, body) {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui}</style>
-</head><body>${shellWrap(`<h1>${title}</h1>${body}${overflow}`)}</body></html>`;
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui}</style>
+</head><body>${shellWrap(`<h1>${title}</h1>${body}${overflow}${brokenControls()}`)}</body></html>`;
 }
 
 function publicHtml(path, title) {
@@ -312,7 +340,7 @@ function publicHtml(path, title) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}${path}">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${title}</h1><p>contenido</p>${overflow}</body></html>`;
 }
 
@@ -326,7 +354,7 @@ function docsPage(path, title) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}${path}">
 <title>${title}</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${title}</h1><nav>${sidebar}</nav><p>contenido</p>${overflow}</body></html>`;
 }
 
@@ -351,7 +379,7 @@ function blogIndexHtml() {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog">
 <title>Blog — Genscore</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>Blog — Genscore</h1>${sections}${overflow}</body></html>`;
 }
 
@@ -369,7 +397,7 @@ function blogPostHtml(slug) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog/${slug}">
 <title>${slug} — Genscore</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${slug} — Genscore</h1><p>contenido</p>${related}${overflow}</body></html>`;
 }
 
@@ -391,7 +419,7 @@ function blogPillarHtml(key) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/blog/${key}">
 <title>${key} — Blog — Genscore</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}</style>
 </head><body><h1>${key}</h1>${body}${overflow}</body></html>`;
 }
 
@@ -648,6 +676,52 @@ function welcomeTourPopup() {
   </div>`;
 }
 
+/**
+ * El cajón de navegación móvil de las páginas comerciales
+ * (`components/marketing-mobile-nav.tsx`), reducido a lo que el journey
+ * `landing.spec.ts` necesita: un botón que abre, un `<nav class="lp-mobnav">`
+ * con enlaces y CTAs, y su propia X.
+ *
+ * Se CONSTRUYE al pulsar y se ELIMINA al cerrar, igual que el real (que lo
+ * monta con un portal). Que no exista mientras está cerrado importa: si
+ * estuviera oculto en el DOM, sus enlaces duplicarían los de la barra y el
+ * detector de controles repetidos —cuya evaluación descarta lo invisible—
+ * dejaría de estar ejercitado en un caso realista.
+ */
+const MOBNAV_MARKUP = `<nav class="lp-mobnav" aria-label="Menú">
+  <button type="button" class="lp-mobnav-close" aria-label="Cerrar menú">×</button>
+  <a href="/pricing">Precios</a>
+  <a href="/blog">Blog</a>
+  <div class="lp-mobnav-ctas">
+    <a class="lp-cta-soft" href="/login">Iniciar sesión</a>
+    <a class="lp-cta" href="/signup">Prueba gratis</a>
+  </div>
+</nav>`;
+
+const MOBNAV_STYLE = `
+  .lp-burger { background:#fff; color:#111; border:1px solid #ccc; padding:6px 10px; }
+  .lp-mobnav { position:fixed; inset:0 0 0 auto; width:80%; max-width:280px; background:#fff; color:#111; padding:16px; display:flex; flex-direction:column; gap:12px; }
+  .lp-mobnav a { color:#111; }
+  .lp-mobnav .lp-cta, .lp-mobnav .lp-cta:hover { background:#2563eb; color:#fff; padding:8px 16px; display:block; text-align:center; }
+  .lp-mobnav .lp-cta-soft { color:#2563eb; padding:8px 16px; display:block; text-align:center; }`;
+
+const MOBNAV_SCRIPT = `
+  (function () {
+    var markup = ${JSON.stringify(MOBNAV_MARKUP)};
+    var burger = document.querySelector(".lp-burger");
+    if (!burger) return;
+    burger.addEventListener("click", function () {
+      if (document.querySelector(".lp-mobnav")) return;
+      var wrap = document.createElement("div");
+      wrap.innerHTML = markup;
+      var drawer = wrap.firstElementChild;
+      document.body.appendChild(drawer);
+      drawer.querySelector(".lp-mobnav-close").addEventListener("click", function () {
+        drawer.remove();
+      });
+    });
+  })();`;
+
 function landingPage() {
   const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
   return `<!doctype html>
@@ -655,12 +729,46 @@ function landingPage() {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="canonical" href="${SITE_URL}/">
 <title>Genscore — visibilidad de marca en motores de IA</title>
-<style>body{margin:0;font-family:system-ui;padding:16px}.pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin:2px}.pt-dot.is-on{background:#333}</style>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}.pt-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ccc;margin:2px}.pt-dot.is-on{background:#333}${MOBNAV_STYLE}</style>
 </head><body>
-<h1>Mide cómo te ve la IA</h1>
+<nav class="lp-nav"><button type="button" class="lp-burger" aria-label="Abrir menú">≡</button></nav>
+<section class="lp-hero">
+  <h1>Mide cómo te ve la IA</h1>
+  <div class="lp-hero-form"><input type="text" placeholder="tudominio.com"><a class="lp-cta" href="/signup">Analiza gratis</a></div>
+</section>
 <div class="lp-shot">${tourWidget({ hero: true })}</div>
 ${overflow}
 <script>${TOUR_SCRIPT}</script>
+<script>${MOBNAV_SCRIPT}</script>
+</body></html>`;
+}
+
+/**
+ * `/pricing` (landing.spec.ts). Necesita tarjetas de plan reconocibles —el
+ * `ContentExpectation` del journey mira `.price-card`— y el mismo cajón móvil,
+ * porque las dos páginas comerciales comparten `MarketingMobileNav` y un fallo
+ * en él sale en las dos.
+ */
+function pricingPage() {
+  const overflow = BREAK_MODE === "overflow" ? '<div style="width:2000px">wide</div>' : "";
+  const cards = ["Free", "Starter", "Pro"]
+    .map(
+      (plan) =>
+        `<div class="price-card"><h2>${plan}</h2><p>Descripción del plan.</p><a class="lp-cta" href="/signup">Elegir ${plan}</a></div>`
+    )
+    .join("");
+  return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="canonical" href="${SITE_URL}/pricing">
+<title>Precios — Genscore</title>
+<style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}${MOBNAV_STYLE}</style>
+</head><body>
+<nav class="lp-nav"><button type="button" class="lp-burger" aria-label="Abrir menú">≡</button></nav>
+<h1>Precios</h1>
+<div class="price-cards">${cards}</div>
+${overflow}
+<script>${MOBNAV_SCRIPT}</script>
 </body></html>`;
 }
 
@@ -783,6 +891,12 @@ const server = createServer((request, response) => {
   if (path === "/") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(landingPage());
+    return;
+  }
+
+  if (path === "/pricing") {
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(pricingPage());
     return;
   }
 

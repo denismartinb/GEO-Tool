@@ -240,7 +240,41 @@ Per screen, per viewport (375 / 768 / 1280):
 - console errors, with the source URL attached — Chromium reports failed
   subresources as a bare `Failed to load resource: 404`, so the URL from
   `location()` is appended or the noise filters cannot match;
-- silent session loss (any authenticated route bouncing to `/login`).
+- silent session loss (any authenticated route bouncing to `/login`);
+- **the same control rendered twice inside one landmark** (see below);
+- **interactive text below WCAG AA against its own background** (see below).
+
+### Controles duplicados y contraste (Fase Q5b, 2026-08-11)
+
+Los dos chequeos más recientes, y los dos existen por el mismo incidente
+(log §55): el fundador encontró a ojo, en el despliegue de la Fase V, un CTA
+del hero que salía **dos veces** y un CTA del cajón móvil en **gris sobre
+azul**. Ninguno rompía nada, así que nada falló; la captura del primero existía
+y lo enseñaba.
+
+Los dos son mecánicos —una máquina cuenta y una máquina calcula un contraste—,
+así que dejan de depender de que alguien mire la foto. El reparto es el de
+`pilot-selfcheck-checks.mjs`: **medir** en el navegador (`journey.ts`),
+**juzgar** en funciones puras (`tests/pilot/support/page-audit.ts`) con tests
+unitarios en los dos sentidos.
+
+- **Duplicados.** Misma etiqueta, mismo nombre accesible, mismas clases, mismo
+  destino, dentro de un mismo `section`/`nav`/`header`/`main`/`dialog`. Se
+  agrupa por landmark y **no por padre común**: las dos copias del hero vivían
+  en contenedores hermanos. Exentas las repeticiones dentro de listas y tablas,
+  o de tres o más hermanos con la misma forma — el fallo real tenía dos copias,
+  así que el umbral de tres lo sigue cogiendo.
+- **Contraste.** 4.5:1, o 3:1 en texto grande (≥24px, o ≥18.66px en negrita).
+  **Se salta lo que no puede juzgar honestamente** en vez de adivinar: control
+  desactivado, degradado o imagen de fondo, y cualquier semitransparencia.
+
+Las dos listas blancas nacen vacías, y una entrada nueva va con su motivo
+escrito. `PILOT_FIXTURE_BREAK=duplicate` y `=contrast` son los dos casos del
+self-check que demuestran que los chequeos pueden fallar.
+
+Lo que esto no cierra: la clase entera. Sigue siendo obligatorio abrir las
+capturas, porque el motivo de mirarlas es todo lo que nadie ha pensado en
+afirmar todavía.
 
 ### Captures reach past the fold (UX-PILOT-1d)
 
@@ -682,11 +716,18 @@ self-check would report a false `PILOT FAIL` on every run.
 
 ## Harness self-check
 
-`pnpm pilot:selfcheck` runs the real pilot against a local fixture app twice: a
-healthy fixture that must produce `PILOT PASS`, and a deliberately overflowing
-one that must produce `PILOT FAIL`. It proves the gate can both pass and fail.
-A gate that cannot fail is not a gate — and a harness that quietly stopped
-working would otherwise report a comfortable PASS forever.
+`pnpm pilot:selfcheck` runs the real pilot against a local fixture app six
+times: once against a healthy fixture that must produce `PILOT PASS`, and five
+times against deliberately broken ones that must each produce `PILOT FAIL` —
+`overflow`, `empty`, `shell-clip`, `duplicate` and `contrast`. It proves the
+gate can both pass and fail. A gate that cannot fail is not a gate — and a
+harness that quietly stopped working would otherwise report a comfortable PASS
+forever.
+
+Each broken fixture reproduces a defect that shipped for real, so the list only
+grows when something got past: `duplicate` and `contrast` are the two the
+founder found by eye on 2026-08-11 (log §55), with the incident's own colours
+(#6b7280 sobre #2563eb: 1,07:1 medido, no los ~2,5 que parecen a ojo — los dos colores tienen casi la misma luminancia).
 
 It also asserts **capture depth**: the fixture wraps its authenticated pages in
 the same viewport-pinned shell the real app uses, and the check reads the

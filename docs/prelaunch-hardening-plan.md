@@ -16,7 +16,10 @@ una con su Human Gate.
   (migración, cifra publicada, superficie de auth).
 - **Fase R 🟡 en curso** — R1 y R2 hechos (log §43). Quedan R3–R8.
 - **Fase Q 🟡 en curso** — el self-check del piloto vuelve a estar verde y su
-  evidencia se sube de verdad (log §49). El resto de Q5 y las demás Q siguen
+  evidencia se sube de verdad (log §49), y **Q5b está hecho** (log §55): el
+  arnés detecta controles duplicados y contraste insuficiente, cubre `/` y
+  `/pricing` con el cajón móvil abierto, y el informe del piloto tiene que
+  nombrar las capturas que abrió. El resto de Q5 y las demás Q siguen
   pendientes.
 - **Fases P y A** — pendientes. La Fase P1 (UX-PILOT-4) sigue necesitando
   su aprobación propia de excepción de escritura del piloto, como UX-PILOT-2/3.
@@ -229,6 +232,27 @@ forma medible.*
   `second-project.spec.ts`, el `pr_number` del workflow de escritura, la
   pérdida intermitente de sesión, y la conversación de devolverlo a puerta
   de PR.
+
+- **Q5b · El piloto aprende a contar y a leer un color** ✅ **hecho
+  (2026-08-11, log §55).** Fase propia, abierta porque el fundador encontró a
+  ojo dos fallos visibles en el despliegue de la Fase V **después** de que el
+  piloto corriera: el CTA del hero duplicado y el CTA del cajón móvil en gris
+  sobre azul. Tres causas distintas, arregladas en tres sitios distintos:
+  1. **Proceso** — la captura del duplicado existía y nadie la abrió. El ✅ del
+     workflow no es el veredicto; `.claude/agents/ux-pilot.md` obliga ahora a
+     enumerar y **nombrar** las capturas abiertas, y la pregunta 5 del Human
+     Gate las pide.
+  2. **Cobertura** — de 560 capturas, ninguna tenía el cajón móvil abierto.
+     `tests/pilot/journeys/landing.spec.ts` cubre `/` y `/pricing` y abre el
+     cajón en la anchura móvil (saltándose ruidosamente las otras dos).
+  3. **Arnés** — `tests/pilot/support/page-audit.ts` añade detección de
+     controles duplicados y comprobación de contraste AA, con 18 tests
+     unitarios y dos casos rotos nuevos en el self-check (`duplicate`,
+     `contrast`), que pasa a tener seis.
+
+  Lo que **no** cierra, dicho en el propio log: la clase entera. Se tapan dos
+  agujeros; abrir las capturas sigue siendo obligatorio porque el motivo de
+  mirarlas es todo lo que nadie ha pensado en afirmar todavía.
 
 ### Fase P — PILOTO E2E EXTREMO A EXTREMO (lo que pediste, con nombre y guardas)
 

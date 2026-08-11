@@ -5472,6 +5472,117 @@ que éste es el tercero).
 
 ---
 
+## 55. El piloto aprende a contar y a leer un color (PRELAUNCH-HARDENING-1 Fase Q5b, 2026-08-11)
+
+El fundador abrió el despliegue de la Fase V y encontró dos fallos a simple
+vista, **después** de que el piloto hubiera corrido y de que yo reportara que
+había pasado:
+
+1. **El CTA del hero salía dos veces.** Al mover el campo de dominio a una isla
+   de cliente (`components/landing/hero-domain-field.tsx`) se llevó consigo los
+   botones, y el bloque `.lp-hero-actions` original se quedó donde estaba.
+2. **El CTA del cajón móvil salía gris sobre azul.** `.lp-mobnav a` (0,1,1) le
+   gana a `.lp-cta` (0,1,0) y le impone su color. Eso ya está escrito como
+   invariante en `.claude/rules/styles.md` desde el mismo día.
+
+Lo que importa no es que se colaran, sino **por qué el piloto no los vio**, que
+son tres causas distintas y sólo una es «mirar mejor».
+
+### Causa 1 — la captura existía y nadie la abrió
+
+La foto de `/` con los dos botones estaba en el artefacto. Yo leí la tabla de
+✅ del workflow y la di por veredicto. El CLAUDE.md ya dice que no lo es —el
+arnés sólo sabe de fallos mecánicos y el juicio es del agente—, así que esto no
+era un hueco de herramienta sino de proceso.
+
+Arreglado como proceso, que es gratis: `.claude/agents/ux-pilot.md` gana una
+sección («The workflow's green tick is NOT the verdict») que obliga a enumerar
+las pantallas que toca el PR, abrir todas sus capturas en las tres anchuras y
+**decir cuántas y cuáles** en el informe, en una línea nueva y obligatoria del
+formato («Capturas abiertas»). Sin esa línea el veredicto es INCONCLUSIVE. La
+pregunta 5 del Human Gate la pide también. Una afirmación que nadie puede
+comprobar —«miré las capturas»— se sustituye por una lista de ficheros.
+
+### Causa 2 — de 560 capturas, ninguna tenía el cajón abierto
+
+Esta no se arregla mirando más fuerte: el cajón sólo existe por debajo de
+900 px y sólo después de un clic, así que **no había nada que mirar**. Un hueco
+de cobertura, no de atención.
+
+`tests/pilot/journeys/landing.spec.ts` (nuevo) cubre `/` y `/pricing` —que
+tampoco se visitaba— y, en la anchura móvil, abre el cajón, comprueba que sus
+enlaces se ven, lo juzga abierto y lo cierra por su propia X. En tablet y
+escritorio se **salta ruidosamente** en vez de pasar en silencio: un test que no
+comprueba nada y reporta verde es exactamente lo que produjo este incidente.
+
+### Causa 3 — el arnés no contaba nada ni leía ningún color
+
+Los dos fallos son mecánicos: una máquina sabe contar y sabe calcular un
+contraste. `tests/pilot/support/page-audit.ts` (nuevo) añade dos chequeos a
+cada captura:
+
+- **Controles duplicados.** Dos controles idénticos —misma etiqueta, mismo
+  nombre accesible, mismas clases, mismo destino— dentro de un mismo *landmark*.
+  Se agrupa por el `section`/`nav`/`header` más cercano, **no por padre común**:
+  las dos copias del hero vivían en contenedores hermanos, así que una regla de
+  «mismo padre» habría pasado por encima del único fallo para el que existe.
+  Quedan exentas las repeticiones dentro de listas y tablas (o de tres o más
+  hermanos con la misma forma), que son tablas, no duplicados — el fallo real
+  tenía exactamente dos copias, así que el umbral de tres lo sigue cogiendo.
+- **Contraste.** Texto de un control por debajo de AA (4.5:1, o 3:1 en texto
+  grande) contra su propio fondo. Se **salta lo que no puede juzgar con
+  honestidad** en vez de adivinar: un control desactivado (ahí el poco contraste
+  es el mensaje), un degradado o una imagen de fondo, y cualquier
+  semitransparencia. Un chequeo que adivina acaba silenciado por lista blanca en
+  una semana.
+
+Las dos listas blancas (`DUPLICATE_ALLOW_LIST`, `CONTRAST_ALLOW_LIST`) **nacen
+vacías** a propósito: una lista blanca que empieza poblada es una lista que
+nadie auditó nunca. Y siguen vacías: los dos chequeos se corrieron contra la
+landing y `/pricing` **reales** —`next build` + `next start` en local, tres
+anchuras, con el cajón abierto en móvil— antes de subir nada, y no hay ni un
+solo hallazgo que silenciar.
+
+Esa misma pasada encontró un **falso positivo** y lo corrigió antes de que
+existiera: el punto de paso del tour (`button.pt-dot.is-on`, 8 px, sin texto
+ninguno, con `aria-label="Paso 1 de 8"`) reportaba 3,46:1 de tinta oscura sobre
+azul. Una ratio de contraste para un carácter que no se dibuja. El contraste
+mide **texto**, así que un control sin texto renderizado queda fuera: los
+iconos son territorio de WCAG 1.4.11, otra medición que este chequeo no hace y
+no va a fingir que hace.
+
+Y se comprobó que los dos chequeos **disparan contra el DOM real**, no sólo
+contra el fixture: reproduciendo las dos regresiones sobre la landing servida
+en local —clonando el bloque de acciones del hero, e inyectando el color que
+`.lp-mobnav a` imponía— saltan los dos, el duplicado con las dos copias
+localizadas y el contraste con **1,07:1**. Ese número corrige de paso lo que yo
+había escrito de memoria (~2,5:1): el gris #6b7280 y el azul #2563eb tienen
+casi la misma luminancia, así que el fallo era bastante peor de lo que parecía
+al describirlo.
+
+El reparto es el mismo que ya usa `pilot-selfcheck-checks.mjs`: **medir** en el
+navegador (`journey.ts`, que necesita estilos calculados), **juzgar** en
+funciones puras con 18 tests unitarios en los dos sentidos. Y `auditControls`
+se exporta suelta para poder correr los dos chequeos contra un estado
+*abierto*, que es donde vivía el segundo fallo.
+
+Y, porque una puerta que no puede fallar no es una puerta, el self-check gana
+dos casos rotos más (`PILOT_FIXTURE_BREAK=duplicate` y `=contrast`, con los
+colores reales del incidente: #6b7280 sobre #2563eb, que medido da 1,07:1 — casi la misma luminancia, no los ~2,5 que sugiere el aspecto). Son seis casos
+ahora, dos de ellos con esta forma exacta.
+
+**Lo que esto NO arregla, dicho en voz alta.** Se cierran dos agujeros, no la
+clase. El motivo de abrir las capturas sigue siendo todo lo que nadie ha
+pensado en afirmar todavía; por eso la causa 1 se arregla en el proceso y no se
+declara resuelta por las causas 2 y 3.
+
+**Trazabilidad.** §54 (la fase donde entraron los dos fallos); §49 (el
+self-check y por qué sus casos rotos son el contrato);
+`.claude/rules/styles.md` (la regla de `<button>` → `<a>`, escrita el mismo
+día); `docs/agentic-user-pilot.md`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

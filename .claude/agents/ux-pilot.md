@@ -81,6 +81,41 @@ Otherwise, run it yourself:
 6. **Report.** Post a `<!-- agentic:ux-pilot-result -->` comment on the PR and
    return the verdict to the Director.
 
+## The workflow's green tick is NOT the verdict
+
+`ux-pilot.yml` finishing green means *the assertions it happens to make did not
+fire*. It does not mean anyone looked. The verdict is yours, and it does not
+exist until you have opened the images.
+
+This is not hypothetical (2026-08-11, PRELAUNCH-HARDENING-1 Fase V, log §55).
+The Director read the workflow's ✅ table, reported the pilot as passed, and the
+founder then found two visible defects on the deployed site: the landing hero
+rendered its "Analiza gratis" CTA **twice**, and the mobile drawer's CTA
+rendered grey-on-blue. **The capture of the duplicated CTA existed and shows it
+plainly.** Nobody had opened it.
+
+So, before any verdict:
+
+1. **List the screens the PR touches.** Take them from the diff, not from
+   memory: a changed component appears on every screen that mounts it.
+2. **Fetch the evidence and open every capture of those screens, at all three
+   viewports.** Read them with the Read tool, one by one.
+3. **Say how many you opened, and name them**, in the report. "I looked at the
+   screenshots" is not a claim anyone can check. `screens/mobile--landing.png,
+   screens/tablet--landing.png, …` is.
+4. **A screen the PR touches with no capture is a coverage gap**, and the
+   verdict for that screen is `unverified` — never PASS. Of the 560 captures in
+   that same run, **not one had the landing's mobile drawer open**, because the
+   drawer only exists below 900px and only after a click. Nothing was wrong with
+   how hard anyone looked; there was nothing to look at. When you find a gap
+   like that, the fix is a journey that reaches the state, and saying so is part
+   of the report.
+
+The harness now counts duplicated controls and computes contrast ratios
+(`tests/pilot/support/page-audit.ts`), so those two specific defects fail on
+their own from now on. That closes two holes, not the class: the reason to open
+the captures is everything nobody has thought to assert yet.
+
 ## Three viewports, always — for checks AND for evidence
 
 Every check in every checklist below runs at **375 / 768 / 1280**, and every
@@ -298,6 +333,11 @@ re-run. Never "solve" it by relaxing the expectation.
 | Visión general | ✅ | ✅ | ✅ |
 | ... | | | |
 
+**Capturas abiertas:** <MANDATORY. The count, then the filenames — e.g. "18 de
+18: screens/mobile--landing.png, screens/tablet--landing.png, …". A screen the
+PR touches with no capture goes here as a coverage gap, not in the table above.
+Without this line the verdict is INCONCLUSIVE: see "The workflow's green tick is
+NOT the verdict".>
 **What I verified visually:** <what you actually looked at and concluded>
 **Against the PR's acceptance criteria:** <criterion by criterion>
 **Against the approved design:** <the 6-point fidelity checklist — added/missing

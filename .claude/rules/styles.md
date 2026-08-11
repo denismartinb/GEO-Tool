@@ -44,4 +44,9 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   construcción» era incompleto: cubría los estilos propios del elemento, no las
   reglas que sólo se activan al cambiar de etiqueta (log §54, corrección del
   2026-08-11). El barrido correcto es
-  `grep -n "^\.<zona>[a-z0-9-]* .*a[ ,{:]" app/globals.css`.
+  `grep -n "^\.<zona>[a-z0-9-]* .*a[ ,{:]" app/globals.css`. Desde Q5b el
+  piloto calcula el contraste de todo control visible y falla por debajo de AA
+  (`tests/pilot/support/page-audit.ts`, log §55), así que este caso concreto ya
+  no depende de que alguien mire la captura — pero el barrido sigue haciendo
+  falta: el contraste coge el color, no el tamaño ni el relleno que esa misma
+  regla también impone.
