@@ -5050,6 +5050,61 @@ self-check — funcionó exactamente como debía, cazándolo antes de mergear.
 el HTML del build: título/canonical propios, `FAQPage` presente, entra en el
 índice de `/blog`, en el pilar `playbooks` y en el sitemap.
 
+---
+
+## 51. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
+
+**Origen.** Segunda pieza de la cola de contenido de la Fase C
+(`docs/seo-positioning-plan.md` §4) — "alternativas a Profound en español".
+
+**Por qué se investigó antes de escribir.** Comparar con un competidor real
+es un riesgo distinto —y mayor— que una autoafirmación de producto: un dato
+de precio o de features equivocado sobre Profound es verificable por
+cualquier lector en dos clics, y "verificable" es justo la palabra que hace
+daño si sale mal. Se lanzó una investigación web dedicada antes de escribir
+una sola cifra.
+
+**El hallazgo real: el precio de Profound ya no es un hecho verificable.** Su
+página pública de precios ha pasado a exigir una demo — no publican ningún
+importe. Fuentes de terceros citan cifras muy distintas según su fecha (499
+$/mes "Lite" en su lanzamiento de 2025; 99 $/mes "Starter" en reseñas de
+2026), lo que apunta a que su estructura de precios ha cambiado más de una
+vez y no a que una fuente esté simplemente equivocada. La decisión: **la fila
+de precio no afirma ninguna cifra concreta de Profound**, con un test
+(`lib/comparativas/genscore-vs-profound.test.ts`) que lo impone en vez de
+confiar en que nadie la añada después. Su financiación, en cambio —155 M$
+levantados, valoración de 1.000 M$ en la Serie C de febrero de 2026— está
+bien documentada por prensa independiente (Fortune, GlobeNewswire, la propia
+Profound) y se cita tal cual.
+
+**Segundo cuidado: la ausencia de presencia en español no es lo mismo que
+"no lo soporta".** Profound anunció un selector de idioma para 30+ idiomas
+sin que la investigación pudiera confirmar si el castellano está entre ellos.
+La página dice "sin evidencia de enfoque en el mercado hispanohablante" —
+ningún cliente, caso de estudio ni presencia comercial en español encontrada
+— nunca "no soporta español", que sería una afirmación más fuerte que la
+evidencia disponible.
+
+**Tercer cuidado: no repetir el error que PRICING-TRUTH-1 ya corrigió, esta
+vez sobre el propio Genscore.** El plan Agencia de Genscore no tiene
+workspaces, roles ni paneles white-label — se retiraron esas features
+inventadas en PRICING-TRUTH-1 (`docs/launch-plan.md` Fase 2). La fila de
+"varios clientes bajo una cuenta" no reclama un panel de agencia que no
+existe: dice, con precisión, que una cuenta de Agencia sigue varios dominios
+sin credenciales separadas por cliente, y añade explícitamente que tampoco
+hay paneles white-label ni permisos por rol todavía.
+
+**Mismo formato que las dos comparativas anteriores** (tabla + "cuándo elegir
+cada una" + metodología con fecha de consulta), con al menos una fila real
+donde gana Profound (motores nominales, a quién se dirige, reputación en G2,
+financiación) — una comparativa que no cede nunca una columna deja de ser
+creíble.
+
+**Validación:** tests nuevos para `genscore-vs-profound.ts` (incluida la
+comprobación explícita de que ninguna fila afirma un precio concreto).
+Añadida a las tres SSOT que la hacen descubrible: índice de `/comparativas`,
+`lib/seo/llms-txt.ts` y `app/sitemap.ts`.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

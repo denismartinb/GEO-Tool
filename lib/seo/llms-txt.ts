@@ -32,6 +32,11 @@ export const COMPARATIVAS = [
     path: "/comparativas/genscore-vs-peec-ai",
     title: "Genscore vs Peec AI",
     note: "comparativa honesta, incluidas las filas donde gana Peec AI."
+  },
+  {
+    path: "/comparativas/genscore-vs-profound",
+    title: "Genscore vs Profound",
+    note: "comparativa honesta, incluidas las filas donde gana Profound."
   }
 ] as const;
 
