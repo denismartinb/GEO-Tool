@@ -19,7 +19,7 @@ export default function GlosarioPage() {
   const sortedTerms = [...GLOSSARY_TERMS].sort((a, b) => a.term.localeCompare(b.term, "es"));
 
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/glosario">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },

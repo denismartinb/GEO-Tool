@@ -5757,8 +5757,40 @@ según la superficie.
   preexistente a esta fase, fuera de alcance porque es el pie, no la
   cabecera; sigue alcanzable desde los pies de home/pricing y desde el
   `.legal-subnav` nuevo de las propias páginas legales.
-- Sin piloto agéntico todavía sobre esta fase — pendiente antes del Human
-  Gate, recorriendo las seis superficies en 375/768/1280px.
+
+**Addendum tras el piloto agéntico (mismo día).** El comentario automático de
+CI en el PR es un barrido de interacción, no el juicio visual que exige
+`docs/agentic-user-pilot.md` — y su tabla de journeys no incluye `/pricing`
+en absoluto (`public-pages.spec.ts` la excluye a propósito: página cliente sin
+`metadata` propia, `docs/launch-plan.md` Fase 7b — dato ya desactualizado, ver
+abajo). El `ux-pilot` real, invocado aparte para mirar las capturas, encontró
+dos cosas reales al comparar las seis superficies entre sí, corregidas en el
+mismo PR antes del Human Gate:
+- **`/comparativas` y `/glosario` marcaban «Blog» como enlace activo** —
+  heredado de que `BlogPageShell` fijaba `activeHref="/blog"` a fuego para
+  las tres superficies que comparte. Ahora acepta `activeHref` (por defecto
+  `/blog`) y las seis páginas de comparativas/glosario pasan el suyo propio
+  — ninguno coincide con los seis enlaces unificados, así que no marcan nada
+  activo, que es lo correcto.
+- **CTA duplicado en móvil en toda superficie salvo home:** el par
+  Iniciar sesión/Prueba gratis quedaba visible en la barra superior colapsada
+  *y* otra vez dentro del drawer — antes de esta fase el drawer no llevaba
+  CTAs, así que no había duplicado; al añadirlos (el objetivo mismo de esta
+  fase) apareció. `.lp-nav-right { display: none }` en el media query móvil
+  ya no está condicionado a `.lp-nav--hero`: aplica a las seis superficies
+  por igual, moviendo la hamburguesa al extremo derecho en todas — igualando
+  el propio patrón de home, no inventando uno nuevo.
+- **`/pricing` verificado manualmente, no por el piloto:** `app/pricing/page.tsx`
+  ya exporta `metadata` propia desde SEO-POS-1 (§46) — el comentario de
+  `public-pages.spec.ts` que dice lo contrario quedó desactualizado y no se
+  tocó aquí (ampliar el piloto es su propia fase). Sin acceso a la preview
+  desde este entorno, se arrancó `next start` en local con credenciales de
+  Supabase de relleno y se capturaron `/pricing`, `/blog`, `/comparativas` y
+  `/glosario` a 375/768/1280px, incluido el drawer abierto: cero errores de
+  consola, los seis enlaces presentes y consistentes, cero CTA duplicado.
+  Dar a `/pricing` (y a `/`) su propio journey de piloto queda recomendado
+  como fase aparte — es la única manera de que este hueco no dependa de que
+  alguien se acuerde de mirarlo a mano la próxima vez.
 
 ---
 

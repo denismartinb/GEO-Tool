@@ -10,11 +10,20 @@ import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
  * introducing a new layout system for what is, visually, the same marketing
  * chrome around different body content.
  */
-export function BlogPageShell({ children }: { children: ReactNode }) {
+export function BlogPageShell({
+  activeHref = "/blog",
+  children
+}: {
+  /** Which unified nav link to mark active. Defaults to Blog — pass "/comparativas"
+   * or "/glosario" from those surfaces, which share this shell but aren't
+   * themselves nav items, so they render with none highlighted. */
+  activeHref?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="lp">
       <div className="lp-nav-wrap">
-        <PublicHeader activeHref="/blog" />
+        <PublicHeader activeHref={activeHref} />
       </div>
 
       <section className="lp-section">

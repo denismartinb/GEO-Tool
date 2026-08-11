@@ -51,7 +51,7 @@ function itemListSchema() {
 
 export default function MejoresHerramientasGeoPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/comparativas">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },

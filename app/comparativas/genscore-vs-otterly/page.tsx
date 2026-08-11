@@ -29,7 +29,7 @@ function itemListSchema() {
 
 export default function GenscoreVsOtterlyPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/comparativas">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },
