@@ -276,12 +276,35 @@ Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
 `Metadata` de Next) — sin la variable, la etiqueta no se renderiza y nada se
 rompe.
 
-**Runbook — dar de alta la propiedad en Search Console (fundador, ~3 minutos):**
+**ESTADO REAL (2026-08-11): la propiedad ya está verificada, y es de tipo
+Dominio (`genscore.es`), no de prefijo de URL.** El fundador la dio de alta
+directamente así, verificándola por DNS. Consecuencias, que contradicen el
+runbook original de abajo y por eso se anotan aquí arriba:
+
+- **`GOOGLE_SITE_VERIFICATION` no hace falta y no está configurada.** Esa
+  variable solo sirve para el método de verificación por etiqueta HTML. Con
+  verificación DNS el `<meta>` no pinta nada. **No la configures "por si
+  acaso": no arregla nada y sugiere a la siguiente sesión que falta algo.**
+- **No hace falta una segunda propiedad para `www`.** Una propiedad de tipo
+  Dominio cubre el apex, `www`, cualquier subdominio y http/https a la vez —
+  así que cubre `https://www.genscore.es`, que es donde vive todo el contenido
+  (canonicals, sitemap, `robots.txt`, `llms.txt`). Esto era el riesgo real que
+  había que descartar: una propiedad de *prefijo* sobre `https://genscore.es`
+  (sin www) no habría mostrado **ningún** dato, en silencio, para siempre.
+- **Cómo distinguir el tipo de un vistazo** en el selector de propiedades: las
+  de tipo Dominio salen sin protocolo (`genscore.es`); las de prefijo salen
+  con él (`https://…/`).
+
+**Runbook histórico — dar de alta la propiedad por prefijo de URL.** Se
+conserva porque describe el método de etiqueta HTML, que es el que usa
+`GOOGLE_SITE_VERIFICATION`; **no es lo que se hizo** (ver estado real arriba).
 
 1. Entra en [Google Search Console](https://search.google.com/search-console)
    con la cuenta de Google del negocio.
-2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`
-   (no uses el tipo "dominio", que exige verificación DNS y es más lento).
+2. "Añadir propiedad" → tipo **prefijo de URL** → `https://www.genscore.es`.
+   (El runbook original desaconsejaba el tipo "dominio" por exigir DNS y ser
+   más lento. En la práctica el fundador lo hizo por dominio sin problema, y
+   el resultado es mejor: una sola propiedad cubre apex y www.)
 3. Elige el método **etiqueta HTML**. Search Console muestra algo como:
    `<meta name="google-site-verification" content="AbC123..." />`.
 4. Copia **solo el valor de `content`** (el string `AbC123...`, sin comillas).

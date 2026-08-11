@@ -35,9 +35,10 @@ de la mayoría de sitios de este tamaño. Pero la auditoría de hoy encuentra
 3. **`/glosario` y `/comparativas` están huérfanas de navegación** — 21 URLs
    sin flujo de enlazado interno desde ninguna nav ni footer.
 
-Además, **Search Console probablemente no está verificada**
-(`GOOGLE_SITE_VERIFICATION` sin configurar) — sin ella no hay medición de
-nada de lo demás.
+Además, **Search Console no estaba verificada** cuando se escribió esta
+auditoría — sin ella no hay medición de nada de lo demás. **Resuelto el
+2026-08-11:** el fundador dio de alta la propiedad (tipo Dominio, verificada
+por DNS). Queda enviar el sitemap; ver Fase M.
 
 ## 2. Auditoría técnica — estado y gaps priorizados
 
@@ -59,7 +60,7 @@ nada de lo demás.
 | # | Gap | Evidencia | Arreglo |
 |---|-----|-----------|---------|
 | T1 | Home y `/pricing` sin metadata (título "Genscore", sin canonical, sin descripción) | `app/page.tsx:1` y `app/pricing/page.tsx:1` son `"use client"` | Dividir en page server + componente cliente; título/descripción con la keyword primaria de cada una |
-| T2 | Verificar Search Console y enviar sitemap | `GOOGLE_SITE_VERIFICATION` sin configurar (`app/layout.tsx:71`); runbook pendiente en `docs/environment-contract.md:279` | Tarea del fundador (5 min): verificar propiedad URL-prefix `https://www.genscore.es` + enviar sitemap. Sin esto no se puede medir nada del resto del plan |
+| T2 | Verificar Search Console y enviar sitemap | Runbook en `docs/environment-contract.md` | 🟡 **Propiedad verificada el 2026-08-11** (tipo Dominio, por DNS — `GOOGLE_SITE_VERIFICATION` resultó innecesaria). Queda enviar el sitemap. Ver Fase M |
 | T3 | `/glosario`, `/comparativas` y `/docs` huérfanas de nav/footer | `app/page.tsx:78-83,304-311`, `blog-page-shell.tsx`, `docs-page-shell.tsx` | Añadir un bloque "Recursos" al footer de los 4 shells (landing, blog, docs, legal) con las 4 superficies de contenido |
 | T4 | www/apex sin redirect verificable en el repo | Sin `redirects()` en `next.config.ts` ni en `vercel.json` | Verificar en Vercel que `genscore.es` → 308 → `www.genscore.es`; documentar el resultado en `environment-contract.md` |
 
@@ -166,16 +167,28 @@ siempre. Un push por iteración pilotable (BUILD-BUDGET-1).
 
 ### Fase M — Medición primero (fundador, sin código, ~30 min)
 
-- [ ] Verificar Search Console (`GOOGLE_SITE_VERIFICATION`, runbook en
-      `docs/environment-contract.md`) y enviar `sitemap.xml`. **T2**
+- [x] **Search Console verificada (2026-08-11).** Propiedad de tipo **Dominio**
+      (`genscore.es`), verificada por DNS — cubre apex, `www` y cualquier
+      subdominio de una vez, así que **no hace falta una segunda propiedad para
+      `www`** ni la variable `GOOGLE_SITE_VERIFICATION` (esa solo sirve para el
+      método de etiqueta HTML). Detalle y cómo distinguir el tipo de propiedad:
+      `docs/environment-contract.md`. **T2 parcialmente cerrado.**
+- [ ] Enviar `sitemap.xml` desde Search Console → Indexación → Sitemaps
+      (`https://www.genscore.es/sitemap.xml`, ~47 URLs). Resto de **T2**.
 - [ ] Alta en **Bing Webmaster Tools** (importa la propiedad de GSC en 2
-      clics) y enviar el mismo sitemap — es el índice que usa ChatGPT.
-- [ ] Comprobar en Vercel que `genscore.es` hace 308 a `www.genscore.es`. **T4**
+      clics) y enviar el mismo sitemap — es el índice que usa ChatGPT, así que
+      para el objetivo GEO pesa tanto como Google, no es un extra opcional.
+- [ ] Comprobar que `genscore.es` redirige a `www.genscore.es`. **T4** — no
+      verificable desde el entorno de los agentes: el proxy de salida bloquea
+      genscore.es (comprobado 2026-08-11), así que es comprobación manual del
+      fundador, no algo que una sesión pueda cerrar por su cuenta.
 - [ ] (Ya disponible) Panel PostHog: canal de adquisición organic/referral
       para tener la línea base de tráfico único antes del plan.
 
 Sin esta fase, el resto del plan no se puede evaluar. No bloquea empezar la
-Fase T en paralelo.
+Fase T en paralelo. **Nota de expectativas:** aunque todo esté bien
+configurado, Search Console tarda días en mostrar datos — un panel vacío al
+día siguiente no significa que algo esté mal.
 
 ### Fase T — Deuda técnica SEO (agentes, 2-3 PRs pequeños)
 
