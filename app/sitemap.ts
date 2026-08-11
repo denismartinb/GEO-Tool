@@ -40,6 +40,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/comparativas/genscore-vs-otterly", lastModified: "2026-08-02" },
   { path: "/comparativas/genscore-vs-peec-ai", lastModified: "2026-08-03" },
   { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-08-03" },
+  { path: "/comparativas/genscore-vs-profound", lastModified: "2026-08-10" },
   { path: "/privacidad", lastModified: "2026-07-19" },
   { path: "/cookies", lastModified: "2026-07-12" },
   { path: "/terminos", lastModified: "2026-07-19" }
