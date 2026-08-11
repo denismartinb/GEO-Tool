@@ -108,3 +108,19 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
   marketing (log §47).
+
+## Comparativas y el sistema de bloques del blog
+
+- **`/comparativas/*` usa el mismo sistema de bloques que el blog, no
+  `legal-body`.** Hasta COMPARATIVAS-DESIGN-1 (2026-08-11) cada comparativa
+  nueva copiaba fielmente la primera (`genscore-vs-otterly`, GROWTH-2 Fase
+  2.4), construida antes de que existiera el sistema de bloques del blog
+  (GROWTH-3 Fase 3.1) — cuatro páginas arrastrando la misma clase que usan
+  `/privacidad`/`/terminos`/`/cookies` sin que nadie lo hubiera decidido así
+  (log §52). `KeyTakeaway` para el resumen, `CompareTable`+`Pill` para la
+  tabla ("Gana aquí" en la celda donde gana el competidor — mismo patrón que
+  `llms-txt-guia-practica.mdx`), `ArticleCta` real al final.
+- **`Verdict` es para admitir honestamente cuándo gana el competidor, no para
+  rellenar cualquier sección.** En una comparativa va en "Cuándo elegir
+  [competidor]" — es literalmente su caso de uso — nunca en "Cuándo elegir
+  Genscore", que es el argumento de venta, no una admisión (log §52).

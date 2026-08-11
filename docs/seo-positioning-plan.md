@@ -298,6 +298,18 @@ aceleran.
 
 ---
 
+## 5.1 Trabajo relacionado, fuera de las fases numeradas
+
+**COMPARATIVAS-DESIGN-1 — ✅ hecho (2026-08-11).** Task Intake propio, aprobado
+por el fundador tras revisar el preview de S2. No estaba en el plan original:
+surgió de una pregunta directa sobre por qué `/comparativas` se veía más
+plana que el resto del sitio. Las 4 páginas de comparativas migraron de
+`legal-body` (la clase de las páginas legales) al mismo sistema de bloques
+que usa el blog — `KeyTakeaway`, `CompareTable`+`Pill`, `Verdict`, `ArticleCta`
+real. Sin cambios de dato. Detalle: log §52.
+
+---
+
 ## 6. Qué se pide aprobar
 
 1. **Fase M** (fundador, 30 min) — sin riesgo, desbloquea la medición.

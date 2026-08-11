@@ -5105,6 +5105,76 @@ comprobación explícita de que ninguna fila afirma un precio concreto).
 Añadida a las tres SSOT que la hacen descubrible: índice de `/comparativas`,
 `lib/seo/llms-txt.ts` y `app/sitemap.ts`.
 
+---
+
+## 52. Comparativas deja de ser una página legal disfrazada (COMPARATIVAS-DESIGN-1, 2026-08-11)
+
+**Origen.** El fundador, revisando el preview de S2 (log §51), preguntó por
+qué `/comparativas/genscore-vs-profound` se veía "más plana" que el resto del
+sitio. Task Intake completo antes de tocar código (el fundador lo aprobó "en
+loop") porque tocaba 4 pantallas a la vez — criterio explícito de
+`CLAUDE.md` para exigir informe previo aunque la clasificación fuera P2.
+
+**La causa real: dos sistemas de diseño conviviendo sin que nadie lo hubiera
+decidido así.** El blog ganó un sistema de bloques de composición completo
+en GROWTH-3 Fase 3.1 (3 de agosto): `KeyTakeaway`, `Figure`, `StatGrid`,
+`NumberedSection`, `Checklist`, `CompareTable`+`Pill`, `Verdict`, `ArticleCta`.
+Las comparativas (`genscore-vs-otterly`, GROWTH-2 Fase 2.4) se construyeron
+**antes** de que ese sistema existiera, con la misma clase `legal-body` que
+usan `/privacidad`, `/terminos` y `/cookies` — y cada comparativa nueva desde
+entonces (`genscore-vs-peec-ai`, `mejores-herramientas-geo-en-espanol`, y la
+propia `genscore-vs-profound` de S2) copió fielmente esa plantilla antigua,
+arrastrando el hueco sin que nadie lo notara hasta ahora.
+
+**El hallazgo que redujo el riesgo de la migración a casi cero:** `CompareTable`
+y `Pill` ya existían, construidos explícitamente para "comparación multi-eje
+con veredicto codificado en color" (`docs/brand/article-design-system.md`) —
+pero solo se usaban dentro de tablas sueltas de artículos del blog, nunca en
+la propia superficie de comparativas, que es literalmente su caso de uso. No
+hubo que diseñar nada nuevo, solo cablear lo que ya estaba aprobado y
+probado.
+
+**Qué se migró en las 4 páginas** (`genscore-vs-otterly`, `genscore-vs-peec-ai`,
+`genscore-vs-profound`, `mejores-herramientas-geo-en-espanol`):
+- `legal-body` → `blog-body` (mismo wrapper que usa cualquier artículo).
+- El resumen "en dos/una frase(s)" pasa de párrafo con `<strong>` a
+  `<KeyTakeaway label="...">`, conservando la etiqueta original de cada
+  página en vez de adoptar el "Respuesta rápida" por defecto del blog.
+- La tabla pasa de `<div className="cmp-table-wrap">` a `<CompareTable>`, y
+  la celda donde gana el competidor pasa de `<strong>texto</strong>` a
+  `<Pill tone="si">Gana aquí</Pill> texto` — mismo patrón exacto que ya usa
+  `llms-txt-guia-practica.mdx` para marcar palancas confirmadas.
+- **`Verdict` se usó solo donde encaja de verdad**: la sección "Cuándo elegir
+  [competidor]" — es, literalmente, el caso para el que `Verdict` se diseñó
+  ("respuesta honesta cuando no es un sí"), porque es la página admitiendo
+  que el competidor gana en ese escenario. "Cuándo elegir Genscore" se dejó
+  como `<h2>`+`<p>` normal a propósito: es el argumento de venta, no una
+  admisión honesta, y forzar `Verdict` ahí habría sido usar el componente
+  fuera de su semántica solo por rellenar.
+- **`ArticleCta` real al final de las 4 páginas.** Las 3 comparativas 1:1 no
+  tenían ningún CTA — terminaban en seco tras "Metodología", sin invitar a
+  nada. `mejores-herramientas-geo-en-espanol` sí tenía un CTA, pero
+  implementado a mano (`<div className="blog-cta">` + `<Link>`) duplicando lo
+  que `ArticleCta` ya hace — sustituido por el componente real.
+
+**Ningún dato cambia.** Es presentación pura: mismas filas de `COMPARISON_ROWS`,
+misma fila donde gana cada competidor, misma nota de metodología con fecha.
+Fechas de sitemap de las 4 páginas actualizadas a hoy porque el cambio es
+sustancial aunque el dato comparativo sea idéntico.
+
+**Limpieza:** `.cmp-table-wrap` (la clase CSS paralela que solo usaban estas
+4 páginas) queda huérfana tras la migración y se retira de `app/globals.css`
+— la pista de scroll horizontal en móvil que llevaba ya la cubre
+`.art-tablewrap` (la clase de `CompareTable`), verificado que no se pierde
+ninguna de las dos.
+
+**Validación:** 1908/1908 tests, `pnpm run validate` limpio. Verificado sobre
+el HTML del build: las 4 páginas renderizan `art-takeaway`/`art-tablewrap`/
+`art-cta`, cero rastro de `legal-body`, y cada `Pill` aparece exactamente una
+vez por fila `*Wins: true` en el DOM visible (el recuento doblado en un grep
+ingenuo es el payload de hidratación de React que Next.js embebe en el HTML,
+no una repetición real).
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
