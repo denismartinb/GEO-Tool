@@ -5634,6 +5634,22 @@ exactamente el tipo de fallo que una persona no encuentra mirando una captura.
 En los dos casos de pestañas la jerarquía la sigue marcando el estado activo,
 que además del color cambia fondo (y sombra, en `.seg`).
 
+### Y un tercer aprendizaje que no venía en el plan: el techo de tiempo
+
+La pasada de `16a07ea` salió **`cancelled` a los 20,1 minutos**, con
+`timeout-minutes: 20`. No fue una anomalía de esta rama: mirando las pasadas de
+esos días, todas iban en **16-17 minutos**, o sea tres minutos de margen para
+cualquiera. El recorrido crece en cada fase, y ese día ganó de golpe `/` y
+`/pricing` con el cajón móvil, un tercer proyecto, y todas las pantallas que
+dejaron de estar vacías al sembrarse los datos de la cuenta piloto.
+
+Lo peligroso no es el minuto de más: **GitHub etiqueta un timeout como
+`cancelled`**, que se lee como «alguien lo paró a mano» y no como «la puerta no
+llegó a correr». Es la misma trampa que el ✅ del workflow, con otra palabra. El
+techo sube a 30 y queda escrito en el propio workflow y en los límites
+conocidos de `docs/agentic-user-pilot.md`: un piloto que no termina es
+INCONCLUSIVE, nunca un pase.
+
 **Lo que esto NO arregla, dicho en voz alta.** Se cierran dos agujeros, no la
 clase. El motivo de abrir las capturas sigue siendo todo lo que nadie ha
 pensado en afirmar todavía; por eso la causa 1 se arregla en el proceso y no se

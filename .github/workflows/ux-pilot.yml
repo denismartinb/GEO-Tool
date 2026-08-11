@@ -37,7 +37,16 @@ jobs:
       github.event.deployment_status.state == 'success' &&
       github.event.deployment.environment == 'Preview'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # 20 min se agotó el 2026-08-11 sobre `16a07ea` (log §55). No fue una
+    # anomalía de esa rama: las pasadas de esos días iban en 16-17 min, o sea
+    # tres minutos de margen para TODAS, y el recorrido crece en cada fase —
+    # ese día ganó `/` y `/pricing` con el cajón móvil, un tercer proyecto y las
+    # pantallas que dejaron de estar vacías al sembrarse los datos de la cuenta
+    # piloto. Lo peligroso no es el minuto de más: GitHub reporta un timeout
+    # como **`cancelled`**, que se lee como si alguien lo hubiera parado a mano
+    # en vez de como una puerta que no llegó a correr. Un piloto que no termina
+    # es INCONCLUSIVE, nunca un pase — y con esa etiqueta cuesta verlo.
+    timeout-minutes: 30
 
     steps:
       - name: Check out the deployed commit

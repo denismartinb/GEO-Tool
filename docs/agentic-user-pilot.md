@@ -699,6 +699,13 @@ self-check would report a false `PILOT FAIL` on every run.
   (Vercel → Settings → Deployment Protection → Protection Bypass for
   Automation) to get through; without it every run reports INCONCLUSIVE at the
   login step. Protection stays on for human visitors.
+- **Un piloto agotado por tiempo aparece como `cancelled`, no como fallo.**
+  GitHub etiqueta así los `timeout-minutes` agotados, y esa palabra se lee como
+  «alguien lo paró», no como «la puerta no llegó a correr». Pasó el 2026-08-11
+  sobre `16a07ea` (log §55). **Un piloto que no termina es INCONCLUSIVE, nunca
+  un pase.** Si ves `cancelled`, mira la duración antes de interpretarlo: si
+  coincide con `timeout-minutes`, es un timeout. El techo subió a 30 min porque
+  el recorrido crece en cada fase y las pasadas ya iban en 16-17.
 - **Single account only.** The pilot cannot prove tenant isolation; that stays
   with `data-guardian`.
 - **One project shows one shape of data.** The core-flow journey walks a single
