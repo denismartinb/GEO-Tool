@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
+import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
 
 const EMAIL_RATE_LIMIT_ERROR =
   "Se han enviado demasiados emails de confirmación en poco tiempo. Espera unos minutos e inténtalo de nuevo.";
@@ -62,6 +63,9 @@ export async function signup(formData: FormData) {
   }
 
   await sendWelcomeEmail(parsed.data.email);
+  if (data.user) {
+    await sendNewSignupOpsAlert(supabase, { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at }, "password");
+  }
 
   redirect("/dashboard");
 }

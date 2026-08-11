@@ -1,0 +1,75 @@
+---
+description: Safety invariants for the operator console (/admin, /mfa).
+paths:
+  - "app/admin/**"
+  - "app/mfa/**"
+  - "lib/admin/**"
+---
+
+# Operator Console Rules
+
+These invariants apply automatically when touching `/admin`, `/mfa/*`, or
+`lib/admin/**`. Every rule here is traceable to
+`docs/brand/design-decisions-log.md` §58 (ADMIN-CONSOLE-1). Owned by
+`data-guardian` for review, `frontend`/`core-flow` for implementation.
+
+- **The allow-list is a UUID, never an email.** `ADMIN_USER_IDS` compares
+  against `auth.users.id`, read from the caller's own verified session —
+  never against `profiles.email`, which the account holder can change
+  themselves from Ajustes. Never move this check into a database column
+  without founder approval (CLAUDE.md's schema-migration gate) — the point of
+  an env-var allow-list is that a service-role RLS bypass or SQL injection
+  cannot grant a privilege that lives in no table at all.
+- **`requireOperator()` is the only gate, and it is session + allow-list +
+  `aal2` — all three, every time.** Never add a page or server action under
+  `/admin` that skips it, and never weaken it to `requireOperatorCandidate()`
+  (session + allow-list, no `aal2`) outside `/mfa/enroll` and
+  `/mfa/challenge` — those two exist *only* because bootstrapping MFA cannot
+  itself require MFA.
+- **A server action under `/admin` or `/mfa` must call the gate itself, not
+  rely on the page or layout that rendered its form.** A server action is a
+  callable HTTP endpoint independent of the page that renders its `<form>` —
+  `.claude/rules/server-actions.md` already says this generally; here it is
+  the entire security model, not a defense-in-depth extra.
+- **A non-operator gets `notFound()` (404), never a redirect or a 403.** A
+  403 confirms the route exists and is worth attacking; a redirect to
+  `/login` reveals the same thing to someone already signed in. 404 says
+  nothing. An operator who is merely mid-setup (no `aal2` yet) is the one
+  exception — they already know `/admin` exists, so routing them to
+  `/mfa/enroll` or `/mfa/challenge` reveals nothing new.
+- **Every privileged read goes through the service-role client returned by
+  `requireOperator()`, and only that client.** `/admin` exists specifically
+  to read data an operator's own RLS-scoped session cannot see (every
+  account's `profiles` row, `last_sign_in_at` via
+  `service.auth.admin.listUsers()`). Never construct `createServiceClient()`
+  directly inside an `/admin` page or action — go through the gate so a
+  future edit can't accidentally skip it.
+- **Fase 1 is read-only. Any write beyond MFA enrollment itself (changing a
+  plan, editing a project, touching billing) needs its own Task Intake** —
+  CLAUDE.md's Task Intake Protocol applies in full to `/admin`, same as any
+  other auth/server-action surface. Do not add a mutating action here as a
+  drive-by.
+- **A TOTP secret is shown at most once.** `supabase.auth.mfa.enroll()`
+  never returns a factor's `qr_code`/`secret` a second time. A wrong code on
+  `/mfa/enroll` must re-challenge the SAME pending (`unverified`) factor —
+  never silently re-enroll, which would invalidate the secret the operator
+  already scanned into their authenticator app without telling them. Only an
+  explicit "generate a new one" action may discard a pending factor.
+- **`next` on `/mfa/challenge` is attacker-controlled and must be validated**
+  (`lib/admin/safe-next.ts`) before it ever reaches `redirect()` — it is a
+  query parameter on a link, not just the value `requireOperator()` sets. An
+  unvalidated `next` is an open redirect landing right after a real MFA
+  verification, which is a worse place for one than almost anywhere else in
+  the app.
+- **No estimated number may be presented as if it were the real one.**
+  "MRR estimado" is catalog price × accounts with a real
+  `stripe_subscription_id` — it says "estimado" because it is one, and it
+  never substitutes for what Stripe actually billed. This is the same "no
+  fake metrics" rule as the rest of CLAUDE.md, applied to a screen whose
+  entire audience already trusts every other number on it.
+- **Never cap a read by row count without saying so on screen.** Same
+  principle as `.claude/rules/scan.md`'s "never cap the work by row count":
+  `auth.admin.listUsers()`'s single-page fetch has a real ceiling
+  (`AUTH_USERS_FETCH_CAP`), and hitting it must set `authUsersTruncated` and
+  render a visible note — not silently show `lastSignInAt` as missing with no
+  explanation.

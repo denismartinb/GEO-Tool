@@ -42,6 +42,27 @@ custom SMTP provider in `Authentication → Settings → SMTP Settings` — Rese
 (already used for `lib/email/transactional.ts`) supports SMTP relay and is
 the natural choice here.
 
+### Operator console (ADMIN-CONSOLE-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `ADMIN_USER_IDS` | No (`/admin` is unreachable — 404 for everyone — until set) | Vercel (not local) | comma-separated `auth.users.id` UUIDs, e.g. `7f2a9c14-3e88-4d51-9a02-6c7f1d4ab8e1` |
+
+`/admin` and `/mfa/*` gate on this allow-list, checked against the caller's
+own verified session (`lib/admin/operator.ts`) — never against email, which a
+user can change themselves from Ajustes. Reading it requires no service role;
+the privileged reads inside `/admin` (all accounts' `profiles`, `last_sign_in_at`
+via `auth.admin.listUsers`) do, and only `requireOperator()` ever constructs
+that client.
+
+Being on this list is necessary but not sufficient: `/admin` also requires an
+`aal2` (TOTP) session, enrolled once at `/mfa/enroll` — see
+`.claude/rules/admin.md` for the full gate and
+`docs/brand/design-decisions-log.md` for why (ADMIN-CONSOLE-1). Losing the
+authenticator device locks the operator out of `/admin` until the factor is
+removed from the Supabase dashboard (`Authentication → Users → <account> →
+MFA`) — worth doing once, calmly, before this is the only way in.
+
 ### Gemini
 
 | Variable | Required | Where | Expected shape |

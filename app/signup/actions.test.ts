@@ -15,10 +15,16 @@ vi.mock("@/lib/email/transactional", () => ({
   sendWelcomeEmail: (...args: unknown[]) => sendWelcomeEmail(...args)
 }));
 
+const sendNewSignupOpsAlert = vi.fn();
+vi.mock("@/lib/admin/signup-alert", () => ({
+  sendNewSignupOpsAlert: (...args: unknown[]) => sendNewSignupOpsAlert(...args)
+}));
+
 beforeEach(() => {
   redirectMock.mockClear();
   signUp.mockReset();
   sendWelcomeEmail.mockReset();
+  sendNewSignupOpsAlert.mockReset();
   delete process.env.NEXT_PUBLIC_SITE_URL;
   delete process.env.VERCEL_URL;
 });
@@ -30,8 +36,14 @@ function formData(fields: Record<string, string>) {
 }
 
 describe("signup", () => {
-  it("sends a welcome email and redirects to the dashboard when email confirmation is off (session returned immediately)", async () => {
-    signUp.mockResolvedValue({ data: { session: { access_token: "tok" } }, error: null });
+  it("sends a welcome email and an ops alert, then redirects to the dashboard when email confirmation is off (session returned immediately)", async () => {
+    signUp.mockResolvedValue({
+      data: {
+        session: { access_token: "tok" },
+        user: { id: "user-1", email: "new@example.com", created_at: "2026-08-11T09:00:00.000Z" }
+      },
+      error: null
+    });
     const { signup } = await import("./actions");
 
     await expect(
@@ -39,6 +51,11 @@ describe("signup", () => {
     ).rejects.toThrow("REDIRECT:/dashboard");
 
     expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
+    expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: "user-1", email: "new@example.com", created_at: "2026-08-11T09:00:00.000Z" },
+      "password"
+    );
     expect(signUp).toHaveBeenCalledWith({
       email: "new@example.com",
       password: "supersecret",

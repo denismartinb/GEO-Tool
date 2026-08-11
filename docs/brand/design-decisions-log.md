@@ -5702,6 +5702,92 @@ prompts, por ejemplo, solo en Gemini"*.
 
 ---
 
+## 58. Consola de operador: aviso de alta y `/admin` de sólo lectura (ADMIN-CONSOLE-1 Fase 1, 2026-08-11)
+
+**Estado: implementada, Fase 1 de 3.** Task Intake propuesto como artefacto
+HTML, aprobado por el fundador el mismo día («Perfecto. Implementa en loop»).
+El diseño aprobado vive en `docs/design-reference/admin-console-1/`.
+
+**Qué pidió.** Un email cada vez que se registra un usuario, y una pantalla
+`/admin` «muy securizada que solo pueda acceder yo», con gestión de usuarios.
+Pidió explícitamente que se le recomendara la mejor autenticación.
+
+**El email reutiliza los dos puntos de alta reales, no inventa uno propio.**
+`sendWelcomeEmail()` ya se llama desde exactamente dos sitios —
+`app/signup/actions.ts` (alta con sesión inmediata) y
+`app/auth/callback/route.ts` (confirmación por enlace u OAuth de Google) — y
+`sendNewSignupOpsAlertEmail()` se engancha en los mismos dos, vía el helper
+compartido `lib/admin/signup-alert.ts`. Cero migraciones, cero detección de
+alta propia que mantener sincronizada con la real. Límite conocido y
+aceptado: quien nunca confirma el email nunca genera aviso (ver
+`docs/environment-contract.md`).
+
+**La autenticación: allow-list por UUID + AAL2 obligatorio, sin columna
+nueva.** `ADMIN_USER_IDS` (env var, no tabla) más una sesión `aal2` real
+(TOTP de Supabase Auth) — detalle completo y porqué de cada capa en
+`.claude/rules/admin.md`. Se descartó una columna `profiles.is_admin` por
+exigir migración sin aprobación previa y por mezclar el privilegio con la
+misma base de datos que protege; se descartó allow-list por email por atarse
+a un dato que el usuario puede cambiar él mismo desde Ajustes.
+
+**El bootstrap de MFA obligó a construir lo que no existía.** No había ni una
+línea de MFA en el repo — sin una pantalla de enrolamiento, «AAL2
+obligatorio» habría dejado `/admin` inalcanzable para siempre, incluido para
+el propio fundador. `/mfa/enroll` y `/mfa/challenge` se diseñaron
+deliberadamente **fuera** de `/admin` (si vivieran dentro, el propio gate de
+`requireOperator()` los bloquearía antes de poder usarlos) y gated con
+`requireOperatorCandidate()` — sesión + allow-list, sin exigir `aal2` todavía,
+porque exigirlo sería pedir la llave para entrar a por la llave.
+
+**El secreto TOTP no se puede volver a mostrar — el flujo de reintento lo
+respeta.** Supabase sólo devuelve el QR/secreto una vez, en `enroll()`. Un
+código erróneo NO regenera el factor (perdería el secreto que la app del
+fundador ya escaneó); reutiliza el mismo factor `unverified` pendiente. Sólo
+un «generar uno nuevo» explícito (`regenerateEnrollment`) descarta el
+pendiente y fuerza uno limpio.
+
+**Login y signup normales no se tocan.** La elevación a `aal2` no vive en
+`app/login/actions.ts` ni en el callback — viven donde ya viven, sin
+condicionales nuevos. `requireOperator()` es quien redirige a
+`/mfa/enroll`/`/mfa/challenge` cuando hace falta, sólo al intentar entrar en
+`/admin`. Así el cambio de superficie real sobre el flujo de 130+ cuentas es
+cero: unos 130 usuarios normales nunca ven MFA ni pagan su coste de
+verificación en cada login.
+
+**`/admin/users` es sólo lectura, con datos reales, no estimados donde
+importa.** `lib/admin/users.ts` cruza `profiles` (plan real, `trial_ends_at`,
+`stripe_subscription_id`) con `auth.admin.listUsers()` (único sitio que puede
+leer `last_sign_in_at`) y con `projects`/`scan_runs` agregados en memoria
+(escala de beta privada, no miles de filas). El «MRR estimado» se llama
+así porque lo es — precio de catálogo × cuentas con `stripe_subscription_id`
+real, nunca lo que Stripe ha cobrado de verdad — y no hay botón que finja
+abrir Stripe o Supabase sin un enlace real que construir.
+
+**`next` en `/mfa/challenge` se valida (`lib/admin/safe-next.ts`).** Es un
+parámetro de query atacable por un enlace manipulado, no sólo el que genera
+`requireOperator()`; sin la validación, un enlace a
+`/mfa/challenge?next=https://evil.example` redirigiría una sesión recién
+elevada a `aal2` fuera del sitio.
+
+### Pendiente / roto conocido
+
+- **Fase 2 (escritura acotada) y Fase 3 (salud de la plataforma) sin empezar**
+  — ver `docs/design-reference/admin-console-1/README.md` para el alcance
+  propuesto de cada una.
+- **Sin piloto agéntico todavía**: el piloto sólo entra con la cuenta piloto
+  de cliente, nunca con la del operador — `/admin` queda fuera de su alcance
+  por diseño (nadie más que el fundador debe poder disparar ese login). La
+  verificación de esta fase es manual.
+- **`auth.admin.listUsers` se lee en una sola página de hasta 1000 cuentas**
+  (`AUTH_USERS_FETCH_CAP` en `lib/admin/users.ts`). A escala de beta privada
+  cubre la cuenta entera; si se supera, `authUsersTruncated` lo hace visible
+  en la propia pantalla en vez de fallar en silencio.
+- **Perder el dispositivo TOTP deja fuera de `/admin` sin más salida que el
+  panel de Supabase** (retirar el factor a mano) — coste aceptado y
+  documentado en `docs/environment-contract.md`.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
