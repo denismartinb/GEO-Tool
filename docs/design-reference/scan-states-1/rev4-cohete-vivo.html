@@ -1,0 +1,762 @@
+<title>SCAN-STATES-1 rev.4 · El cohete, vivo</title>
+
+<!--
+  ONBOARDING-ROCKET-1 · rev.4 — motion redesign of the five-beat first-scan
+  screen. Every scene below is pure SVG + CSS animation (transform/opacity
+  only, compositor-friendly). The ONLY JS in this file is the preview-only
+  beat viewer at the bottom, clearly marked; the real component keeps zero
+  JS animation loops.
+
+  Data rule (unchanged from rev.3 / scan-mission-rocket.tsx):
+  only ALTITUDE (ascenso) and the RING FRACTION (órbita) encode real data.
+  Everything else — stars, clouds, smoke, packets, Earth — is ambient and
+  carries no information. Example values used here: 38/90 (climb .42) and
+  64/90 (ring .711), same as rev.3.
+-->
+
+<style>
+:root{
+  --ink:#0B1426; --ink-2:#3B4759; --ink-3:#5B6B82; --ink-4:#98A2B3;
+  --blue:#2563EB; --blue-2:#4F7BFF; --cyan:#09C5D6;
+  --canvas:#F7F8FB; --surface:#FFFFFF; --sunk:#F4F6FA;
+  --line:#E7EAF0; --line-soft:#EEF1F6;
+  --shadow:0 1px 2px rgba(11,20,38,.04),0 8px 24px rgba(11,20,38,.06);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--body);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:6px}
+.wrap{max-width:980px;margin:0 auto;padding:0 20px 96px}
+@media (max-width:640px){.wrap{padding:0 14px 72px}}
+
+.doc-head{padding:52px 0 30px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.eyebrow .sep{width:22px;height:1px;background:var(--line)}
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.04em;line-height:1.04;font-size:clamp(32px,6vw,52px);margin:14px 0 0;text-wrap:balance}
+.lede{font-size:clamp(15.5px,2vw,18px);line-height:1.6;color:var(--ink-2);max-width:62ch;margin:16px 0 0}
+
+.notes{margin-top:26px;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+.notes h2{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-.02em;margin:0 0 10px}
+.notes dl{margin:0;display:grid;gap:9px}
+.notes dt{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);font-weight:700}
+.notes dd{margin:2px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink-2)}
+.notes .rule{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink-3)}
+
+section.beat{padding-top:48px}
+.beat-k{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.beat-k b{color:var(--blue);font-weight:700}
+.beat-k .databind{margin-left:auto;font-size:10px;color:var(--ink-4);letter-spacing:.06em;text-transform:none}
+
+.frame{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:clamp(18px,4vw,40px) clamp(12px,3vw,28px);display:flex;flex-direction:column;align-items:center}
+.stage{width:100%;max-width:420px}
+.sc{display:block;width:100%;height:auto}
+.copy{max-width:420px;margin-top:24px;text-align:center}
+.c-eyebrow{display:block;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--blue)}
+.c-title{font-family:var(--display);font-size:22px;font-weight:800;letter-spacing:-.03em;margin:8px 0 0;line-height:1.15}
+.c-sub{font-size:14px;line-height:1.6;color:var(--ink-3);margin:8px 0 0}
+.c-joke{font-size:12.5px;color:var(--ink-4);font-style:italic;margin:10px 0 0}
+.frame-foot{margin-top:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.btn{font-family:var(--body);font-size:12.5px;font-weight:700;border:1px solid var(--line);background:var(--surface);color:var(--ink-2);border-radius:9px;padding:7px 13px;cursor:pointer}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+
+.aside{margin-top:14px;display:flex;gap:16px;align-items:center;background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:14px 16px}
+.aside p{margin:0;font-size:13px;line-height:1.55;color:var(--ink-3)}
+.aside p b{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-4);margin-bottom:4px;font-weight:700}
+.aside svg{flex:0 0 auto}
+
+.viewerbar{position:sticky;top:0;z-index:40;background:rgba(247,248,251,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);margin:0 -20px;padding:10px 20px;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+@media (max-width:640px){.viewerbar{margin:0 -14px;padding:10px 14px}}
+.viewerbar .vk{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin-right:4px}
+
+/* ---- full-screen product viewer (PREVIEW-ONLY, see script at bottom) ---- */
+.viewer{position:fixed;inset:0;z-index:100;background:var(--canvas);display:none;overflow:auto}
+.viewer.open{display:block}
+.viewer-inner{min-height:100vh;display:grid;place-items:center;padding:56px 20px}
+.viewer-close{position:fixed;top:14px;right:14px;z-index:101}
+.viewer .frame{border:none;box-shadow:none;background:transparent;padding:0}
+
+.foot{margin-top:52px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-4);line-height:1.6}
+
+/* ═════════════════════ MOTION SYSTEM (all transform/opacity) ═════════════════════ */
+
+/* seamless wraps: content is duplicated at +400px (x) or −280px (y) */
+@keyframes rv4-driftx{to{transform:translateX(-400px)}}
+@keyframes rv4-fall{to{transform:translateY(280px)}}
+@keyframes rv4-tw{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes rv4-flick{from{transform:scaleY(.86) scaleX(1.04)}to{transform:scaleY(1.1) scaleX(.94)}}
+@keyframes rv4-puff{0%{transform:translate(0,0) scale(.5);opacity:0}14%{opacity:.55}100%{transform:translate(-10px,-30px) scale(1.5);opacity:0}}
+@keyframes rv4-smokeL{0%{transform:translate(0,0) scale(.4);opacity:0}10%{opacity:.75}100%{transform:translate(-52px,-12px) scale(1.9);opacity:0}}
+@keyframes rv4-smokeR{0%{transform:translate(0,0) scale(.4);opacity:0}10%{opacity:.75}100%{transform:translate(52px,-12px) scale(1.9);opacity:0}}
+@keyframes rv4-shake{0%{transform:translate(0,0)}25%{transform:translate(.6px,-.4px)}50%{transform:translate(-.5px,.4px)}75%{transform:translate(.4px,.5px)}100%{transform:translate(0,0)}}
+@keyframes rv4-glowpulse{0%,100%{opacity:.4}50%{opacity:.9}}
+@keyframes rv4-spark{0%{transform:translate(0,0);opacity:1}70%{opacity:1}100%{transform:translate(var(--dx),var(--dy));opacity:0}}
+@keyframes rv4-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes rv4-sway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes rv4-packet{0%{transform:translateX(0);opacity:0}10%{opacity:1}82%{opacity:1}100%{transform:translateX(112px);opacity:0}}
+@keyframes rv4-thrust{0%,84%,100%{opacity:0}88%,93%{opacity:.85}}
+@keyframes rv4-shoot{0%,86%{opacity:0;transform:translate(0,0)}88%{opacity:.9}93%{opacity:0;transform:translate(130px,64px)}100%{opacity:0;transform:translate(130px,64px)}}
+@keyframes rv4-breathe{0%,100%{transform:scale(1);opacity:.3}50%{transform:scale(1.06);opacity:.75}}
+@keyframes rv4-converge{0%{transform:translate(var(--dx),var(--dy)) scale(1);opacity:0}18%{opacity:.9}100%{transform:translate(0,0) scale(.3);opacity:0}}
+@keyframes rv4-spin{to{transform:rotate(360deg)}}
+@keyframes rv4-beacon{0%,68%,100%{opacity:.15}76%,86%{opacity:1}}
+@keyframes rv4-winpulse{0%,100%{opacity:0}50%{opacity:.55}}
+@keyframes rv4-ringpop{0%,100%{opacity:.5}50%{opacity:1}}
+
+/* shared scene primitives */
+.a-tw{animation:rv4-tw 3.4s ease-in-out infinite}
+.a-tw.s2{animation-duration:4.6s;animation-delay:-1.2s}
+.a-tw.s3{animation-duration:2.8s;animation-delay:-2s}
+.a-flame{transform-origin:center top;transform-box:fill-box;animation:rv4-flick .16s steps(2,end) infinite alternate}
+.a-flame.f2{animation-duration:.13s}
+.a-flame.f3{animation-duration:.19s}
+
+/* rampa */
+.a-clouds-slow{animation:rv4-driftx 74s linear infinite}
+.a-clouds-slower{animation:rv4-driftx 118s linear infinite}
+.a-puff{transform-box:fill-box;transform-origin:center;animation:rv4-puff 5.2s ease-out infinite}
+.a-beacon{animation:rv4-beacon 3.8s linear infinite}
+.a-winpulse{animation:rv4-winpulse 3.6s ease-in-out infinite}
+
+/* ignición */
+.a-shake{animation:rv4-shake .18s steps(2,end) infinite}
+.a-glow{animation:rv4-glowpulse .5s steps(2,end) infinite}
+.a-smoke-l{transform-box:fill-box;transform-origin:center;animation:rv4-smokeL 2.8s ease-out infinite}
+.a-smoke-r{transform-box:fill-box;transform-origin:center;animation:rv4-smokeR 2.8s ease-out infinite}
+.a-spark{animation:rv4-spark 1.3s ease-out infinite}
+
+/* ascenso */
+.a-fall-near{animation:rv4-fall 3.4s linear infinite}
+.a-fall-far{animation:rv4-fall 7.5s linear infinite}
+.a-fall-lines{animation:rv4-fall 1.15s linear infinite}
+.a-sway{transform-box:fill-box;transform-origin:center;animation:rv4-sway 5.2s ease-in-out infinite}
+
+/* órbita */
+.a-stars-1{animation:rv4-driftx 70s linear infinite}
+.a-stars-2{animation:rv4-driftx 115s linear infinite}
+.a-earthspin{animation:rv4-driftx 130s linear infinite}
+.a-bob{animation:rv4-bob 6s ease-in-out infinite}
+.a-bob.d2{animation-duration:7s;animation-delay:-2.4s}
+.a-packet{animation:rv4-packet 2.6s linear infinite}
+.a-packet.p2{animation-delay:.85s}
+.a-packet.p3{animation-delay:1.7s}
+.a-thrust{animation:rv4-thrust 6.5s linear infinite}
+.a-thrust.t2{animation-delay:-3.1s}
+.a-shoot{animation:rv4-shoot 13s linear infinite}
+.a-spin{transform-box:fill-box;transform-origin:center;animation:rv4-spin 1.4s linear infinite}
+
+/* entrega */
+.a-breathe{transform-box:fill-box;transform-origin:center;animation:rv4-breathe 3.2s ease-in-out infinite}
+.a-converge{animation:rv4-converge 2.4s ease-in infinite}
+.a-converge.c2{animation-delay:.6s}
+.a-converge.c3{animation-delay:1.2s}
+.a-converge.c4{animation-delay:1.8s}
+.a-ringpop{animation:rv4-ringpop 3.2s ease-in-out infinite}
+
+/* Reduced motion: a calm, complete still — flames lit, stars out, ring where
+   the data says. Everything that only exists mid-animation (smoke, steam,
+   packets, sparks) rests at opacity 0 by default, so nothing looks broken. */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important;transition:none !important}
+  /* Elements that only exist mid-animation would otherwise freeze mid-air:
+     hide them so the still frame stays calm and complete. */
+  .a-puff,.a-spark,.a-shoot,.a-thrust,.a-converge,
+  .a-packet.p2,.a-packet.p3{opacity:0 !important}
+}
+</style>
+
+<div class="wrap">
+
+<header class="doc-head">
+  <div class="eyebrow">SCAN-STATES-1<span class="sep"></span>rev. 4<span class="sep"></span>El cohete, vivo</div>
+  <h1>Nada está parado ahí arriba</h1>
+  <p class="lede">
+    El fallo de producción no era el cohete: era el <strong>entorno congelado</strong>. Un
+    cohete en órbita se mueve — lo que estaba quieta era la cámara. rev.4 no toca ni los
+    cinco beats ni sus datos: mete vida ambiental continua en cada uno, con la regla de
+    siempre — <strong>solo la altitud y el anillo llevan información</strong>; todo lo demás
+    es decorado y no puede parecer progreso.
+  </p>
+</header>
+
+<div class="notes">
+  <h2>Concepto de movimiento, beat a beat</h2>
+  <dl>
+    <dt>1 · rampa</dt>
+    <dd>La plataforma respira: vapor venteando junto a las toberas, nubes cruzando el cielo,
+    balizas de las torres parpadeando, la ventanilla haciendo el chequeo de sistemas.
+    El cohete no se mueve — la base sí.</dd>
+    <dt>2 · ignición</dt>
+    <dd>Los tres motores prenden: humo rodando por la plataforma hacia los dos lados,
+    resplandor pulsante bajo las toberas, chispas, y el fuselaje vibrando medio píxel.
+    Potencia contenida, aún sin despegar.</dd>
+    <dt>3 · ascenso</dt>
+    <dd>La velocidad la venden las nubes: dos capas de parallax cayendo a distinta velocidad
+    más líneas de aire. El suelo ya no está (en producto: la plataforma baja con las nubes).
+    La altura del cohete sigue atada a <code>done/total</code> — aquí fijada al 42 % de ejemplo.</dd>
+    <dt>4 · órbita</dt>
+    <dd>El truco de cámara: el cohete cabecea suave con micro-impulsos de maniobra mientras
+    <em>todo el fondo</em> se desplaza — estrellas en parallax, la Tierra girando abajo, alguna
+    estrella fugaz. Los paquetes de datos fluyen de la bodega al anillo, que es lo único con
+    fracción real (64/90 de ejemplo). Sin total, el anillo pasa a arco indeterminado (abajo).</dd>
+    <dt>5 · entrega</dt>
+    <dd>El anillo completo respira mientras chispas convergen hacia el núcleo: la puntuación
+    montándose. La escena se serena — es el compás previo al cambio de pantalla real.</dd>
+  </dl>
+  <p class="rule">
+    Reglas duras que cumple todo lo anterior: solo <code>transform</code>/<code>opacity</code>
+    (composición en GPU, sin layout ni filtros animados) ·
+    <code>prefers-reduced-motion</code> deja cada escena en un fotograma quieto y completo ·
+    los números 38/90 y 64/90 son datos de ejemplo — en producto salen de
+    <code>computeMissionBeat</code> y nada decorativo los duplica dentro de la escena.
+  </p>
+</div>
+
+<nav class="viewerbar" aria-label="Ver cada beat a tamaño de producto">
+  <span class="vk">Vista producto</span>
+  <button class="btn" data-view="rampa">1 · Rampa</button>
+  <button class="btn" data-view="ignicion">2 · Ignición</button>
+  <button class="btn" data-view="ascenso">3 · Ascenso</button>
+  <button class="btn" data-view="orbita">4 · Órbita</button>
+  <button class="btn" data-view="entrega">5 · Entrega</button>
+</nav>
+
+<!-- ══════════════════ 1 · RAMPA ══════════════════ -->
+<section class="beat" id="beat-rampa">
+  <div class="beat-k"><b>1 · rampa</b><span>la cola se está preparando</span><span class="databind">datos: ninguno</span></div>
+  <div class="frame" data-beat="rampa">
+    <div class="stage">
+    <svg class="sc" viewBox="0 0 400 280" role="img" aria-label="En la rampa">
+      <defs>
+        <linearGradient id="g1-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#FDFEFF"/><stop offset="1" stop-color="#E7EEFA"/>
+        </linearGradient>
+        <clipPath id="g1-clip"><rect width="400" height="280" rx="20"/></clipPath>
+      </defs>
+      <g clip-path="url(#g1-clip)">
+        <rect width="400" height="280" fill="url(#g1-sky)"/>
+
+        <!-- drifting clouds, two parallax layers (content duplicated at +400 for seamless wrap) -->
+        <g class="a-clouds-slower" opacity=".55">
+          <g fill="#FFFFFF">
+            <ellipse cx="70" cy="52" rx="34" ry="10"/><ellipse cx="94" cy="46" rx="22" ry="8"/>
+            <ellipse cx="300" cy="90" rx="28" ry="8"/>
+            <ellipse cx="470" cy="52" rx="34" ry="10"/><ellipse cx="494" cy="46" rx="22" ry="8"/>
+            <ellipse cx="700" cy="90" rx="28" ry="8"/>
+          </g>
+        </g>
+        <g class="a-clouds-slow" opacity=".8">
+          <g fill="#FFFFFF">
+            <ellipse cx="180" cy="34" rx="40" ry="11"/><ellipse cx="212" cy="28" rx="24" ry="8"/>
+            <ellipse cx="352" cy="130" rx="30" ry="9"/>
+            <ellipse cx="580" cy="34" rx="40" ry="11"/><ellipse cx="612" cy="28" rx="24" ry="8"/>
+            <ellipse cx="752" cy="130" rx="30" ry="9"/>
+          </g>
+        </g>
+
+        <!-- fine four-point sparkles (the only "stars" that survive on white) -->
+        <g fill="#C3D3EC">
+          <path class="a-tw" d="M52 78 l1.5 4.3 4.3 1.5 -4.3 1.5 -1.5 4.3 -1.5 -4.3 -4.3 -1.5 4.3 -1.5z"/>
+          <path class="a-tw s2" d="M338 44 l1.3 3.7 3.7 1.3 -3.7 1.3 -1.3 3.7 -1.3 -3.7 -3.7 -1.3 3.7 -1.3z"/>
+          <path class="a-tw s3" d="M296 160 l1.1 3.2 3.2 1.1 -3.2 1.1 -1.1 3.2 -1.1 -3.2 -3.2 -1.1 3.2 -1.1z"/>
+        </g>
+
+        <!-- pad -->
+        <rect x="0" y="228" width="400" height="52" fill="#D3DEF0"/>
+        <rect x="0" y="227" width="400" height="1.4" fill="#B3C2DC"/>
+        <rect x="150" y="202" width="6" height="26" fill="#C3D0E5"/>
+        <rect x="145" y="198" width="16" height="4" rx="2" fill="#AEBED8"/>
+        <rect x="244" y="202" width="6" height="26" fill="#C3D0E5"/>
+        <rect x="239" y="198" width="16" height="4" rx="2" fill="#AEBED8"/>
+        <!-- tower beacons, blinking out of phase -->
+        <circle class="a-beacon" cx="153" cy="198" r="2" fill="#09C5D6"/>
+        <circle class="a-beacon" cx="247" cy="198" r="2" fill="#09C5D6" style="animation-delay:-1.9s"/>
+
+        <!-- venting steam near the base -->
+        <g fill="#C6D3E8">
+          <circle class="a-puff" cx="176" cy="222" r="6"/>
+          <circle class="a-puff" cx="170" cy="225" r="4.5" style="animation-delay:-1.3s"/>
+          <circle class="a-puff" cx="180" cy="226" r="5" style="animation-delay:-2.4s"/>
+          <circle class="a-puff" cx="228" cy="223" r="5.5" style="animation-delay:-3.1s"/>
+          <circle class="a-puff" cx="233" cy="226" r="4" style="animation-delay:-4.3s"/>
+          <circle class="a-puff" cx="224" cy="225" r="4.5" style="animation-delay:-.6s"/>
+        </g>
+
+        <!-- rocket, still on the pad -->
+        <g>
+          <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+          <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+          <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+          <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+          <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+          <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"/>
+          <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"/>
+          <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+          <circle cx="200" cy="176" r="4" fill="#2563EB"/>
+          <!-- systems-check glow in the window -->
+          <circle class="a-winpulse" cx="200" cy="176" r="4" fill="#7FE3EC"/>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <div class="copy">
+      <span class="c-eyebrow">En la rampa</span>
+      <h2 class="c-title">Preparando tu primer escaneo</h2>
+      <p class="c-sub">Un momento — estamos colocando la cola de trabajo.</p>
+      <p class="c-joke">Tú no tienes que hacer nada.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 2 · IGNICIÓN ══════════════════ -->
+<section class="beat" id="beat-ignicion">
+  <div class="beat-k"><b>2 · ignición</b><span>done = 0, motores encendidos</span><span class="databind">datos: ninguno aún</span></div>
+  <div class="frame" data-beat="ignicion">
+    <div class="stage">
+    <svg class="sc" viewBox="0 0 400 280" role="img" aria-label="Ignición">
+      <defs>
+        <linearGradient id="g2-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#F5F9FF"/><stop offset="1" stop-color="#CFDEF6"/>
+        </linearGradient>
+        <linearGradient id="g2-plume" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(37,99,235,.30)"/><stop offset="1" stop-color="rgba(37,99,235,0)"/>
+        </linearGradient>
+        <radialGradient id="g2-glow">
+          <stop offset="0" stop-color="rgba(79,123,255,.55)"/><stop offset="1" stop-color="rgba(79,123,255,0)"/>
+        </radialGradient>
+        <clipPath id="g2-clip"><rect width="400" height="280" rx="20"/></clipPath>
+      </defs>
+      <g clip-path="url(#g2-clip)">
+        <rect width="400" height="280" fill="url(#g2-sky)"/>
+
+        <g fill="#C3D3EC">
+          <path class="a-tw s2" d="M60 60 l1.4 4 4 1.4 -4 1.4 -1.4 4 -1.4 -4 -4 -1.4 4 -1.4z"/>
+          <path class="a-tw" d="M330 92 l1.2 3.4 3.4 1.2 -3.4 1.2 -1.2 3.4 -1.2 -3.4 -3.4 -1.2 3.4 -1.2z"/>
+        </g>
+
+        <rect x="0" y="228" width="400" height="52" fill="#C4D3EA"/>
+        <rect x="0" y="227" width="400" height="1.4" fill="#A2B5D3"/>
+        <rect x="150" y="202" width="6" height="26" fill="#AFC0DB"/>
+        <rect x="244" y="202" width="6" height="26" fill="#AFC0DB"/>
+        <circle class="a-beacon" cx="153" cy="200" r="2" fill="#09C5D6" style="animation-duration:1.6s"/>
+        <circle class="a-beacon" cx="247" cy="200" r="2" fill="#09C5D6" style="animation-duration:1.6s;animation-delay:-.8s"/>
+
+        <!-- pulsing ground glow under the engines -->
+        <ellipse class="a-glow" cx="200" cy="230" rx="52" ry="10" fill="url(#g2-glow)"/>
+
+        <!-- smoke billowing out along the pad, both directions -->
+        <g fill="#B7C6DF">
+          <circle class="a-smoke-l" cx="186" cy="224" r="11"/>
+          <circle class="a-smoke-l" cx="179" cy="228" r="8" style="animation-delay:-.9s"/>
+          <circle class="a-smoke-l" cx="190" cy="229" r="13" style="animation-delay:-1.9s"/>
+          <circle class="a-smoke-r" cx="214" cy="224" r="11" style="animation-delay:-.4s"/>
+          <circle class="a-smoke-r" cx="222" cy="228" r="8" style="animation-delay:-1.4s"/>
+          <circle class="a-smoke-r" cx="210" cy="229" r="13" style="animation-delay:-2.3s"/>
+        </g>
+
+        <!-- sparks kicked off the pad -->
+        <g fill="#7FA2FF">
+          <circle class="a-spark" cx="196" cy="224" r="1.4" style="--dx:-30px;--dy:-16px"/>
+          <circle class="a-spark" cx="204" cy="224" r="1.2" style="--dx:34px;--dy:-12px;animation-delay:-.5s"/>
+          <circle class="a-spark" cx="200" cy="226" r="1.3" style="--dx:-20px;--dy:-24px;animation-delay:-.9s"/>
+          <circle class="a-spark" cx="207" cy="225" r="1.1" style="--dx:26px;--dy:-22px;animation-delay:-1.1s"/>
+        </g>
+
+        <!-- rocket rumbling on the pad -->
+        <g class="a-shake">
+          <path d="M188 220 L212 220 L218 262 L182 262 Z" fill="url(#g2-plume)"/>
+          <g>
+            <path class="a-flame" d="M190 216 q5 20 0 30 q-5 -10 0 -30 Z" fill="#4F7BFF"/>
+            <path class="a-flame f2" d="M200 217 q6 24 0 35 q-6 -11 0 -35 Z" fill="#09C5D6"/>
+            <path class="a-flame f3" d="M210 216 q5 20 0 30 q-5 -10 0 -30 Z" fill="#4F7BFF"/>
+          </g>
+          <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+          <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+          <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+          <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+          <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+          <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"/>
+          <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"/>
+          <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+          <circle cx="200" cy="176" r="4" fill="#2563EB"/>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <div class="copy">
+      <span class="c-eyebrow">Ignición</span>
+      <h2 class="c-title">Motores encendidos</h2>
+      <p class="c-sub">Gemini, ChatGPT y Claude, preguntados a la vez.</p>
+      <p class="c-joke">Los tres a la vez. Sí, se puede.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 3 · ASCENSO ══════════════════ -->
+<section class="beat" id="beat-ascenso">
+  <div class="beat-k"><b>3 · ascenso</b><span>altura = done/total (real)</span><span class="databind">ejemplo: 38/90 → 42 %</span></div>
+  <div class="frame" data-beat="ascenso">
+    <div class="stage">
+    <svg class="sc" viewBox="0 0 400 280" role="img" aria-label="Ascenso">
+      <defs>
+        <linearGradient id="g3-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8FB0E2"/><stop offset=".55" stop-color="#BCD0EF"/><stop offset="1" stop-color="#E1EAF9"/>
+        </linearGradient>
+        <linearGradient id="g3-plume" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="rgba(37,99,235,.26)"/><stop offset="1" stop-color="rgba(37,99,235,0)"/>
+        </linearGradient>
+        <clipPath id="g3-clip"><rect width="400" height="280" rx="20"/></clipPath>
+      </defs>
+      <g clip-path="url(#g3-clip)">
+        <rect width="400" height="280" fill="url(#g3-sky)"/>
+
+        <!-- first stars, faint, up where the sky is darkest -->
+        <g fill="#F2F7FF">
+          <circle class="a-tw s2" cx="66" cy="22" r="1.2"/>
+          <circle class="a-tw" cx="322" cy="30" r="1.1"/>
+          <circle class="a-tw s3" cx="238" cy="16" r="1"/>
+        </g>
+
+        <!-- far cloud layer falling slowly (duplicated at −280 for seamless wrap) -->
+        <g class="a-fall-far" opacity=".4" fill="#FFFFFF">
+          <g>
+            <ellipse cx="90" cy="40" rx="26" ry="7"/><ellipse cx="310" cy="120" rx="22" ry="6"/>
+            <ellipse cx="180" cy="210" rx="24" ry="6"/>
+            <ellipse cx="90" cy="-240" rx="26" ry="7"/><ellipse cx="310" cy="-160" rx="22" ry="6"/>
+            <ellipse cx="180" cy="-70" rx="24" ry="6"/>
+          </g>
+        </g>
+
+        <!-- air / speed lines -->
+        <g class="a-fall-lines" stroke="#FFFFFF" stroke-width="1.6" stroke-linecap="round" opacity=".38">
+          <g>
+            <line x1="60" y1="30" x2="60" y2="58"/><line x1="128" y1="150" x2="128" y2="184"/>
+            <line x1="282" y1="90" x2="282" y2="118"/><line x1="348" y1="200" x2="348" y2="234"/>
+            <line x1="60" y1="-250" x2="60" y2="-222"/><line x1="128" y1="-130" x2="128" y2="-96"/>
+            <line x1="282" y1="-190" x2="282" y2="-162"/><line x1="348" y1="-80" x2="348" y2="-46"/>
+          </g>
+        </g>
+
+        <!-- rocket at REAL altitude: translateY(-150px × climb) — .42 here -->
+        <g style="transform:translateY(-63px)">
+          <g class="a-sway">
+            <path d="M188 220 L212 220 L220 274 L180 274 Z" fill="url(#g3-plume)"/>
+            <g>
+              <path class="a-flame" d="M190 216 q5 24 0 36 q-5 -12 0 -36 Z" fill="#4F7BFF"/>
+              <path class="a-flame f2" d="M200 217 q6 30 0 44 q-6 -14 0 -44 Z" fill="#09C5D6"/>
+              <path class="a-flame f3" d="M210 216 q5 24 0 36 q-5 -12 0 -36 Z" fill="#4F7BFF"/>
+            </g>
+            <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+            <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+            <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+            <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+            <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+            <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#0B1426"/>
+            <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#1B2B45"/>
+            <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+            <circle cx="200" cy="176" r="4" fill="#2563EB"/>
+          </g>
+        </g>
+
+        <!-- near cloud layer rushing past IN FRONT of the rocket -->
+        <g class="a-fall-near" opacity=".85" fill="#FFFFFF">
+          <g>
+            <ellipse cx="52" cy="90" rx="40" ry="11"/><ellipse cx="80" cy="84" rx="24" ry="8"/>
+            <ellipse cx="330" cy="230" rx="44" ry="12"/><ellipse cx="360" cy="224" rx="26" ry="9"/>
+            <ellipse cx="250" cy="20" rx="30" ry="9"/>
+            <ellipse cx="52" cy="-190" rx="40" ry="11"/><ellipse cx="80" cy="-196" rx="24" ry="8"/>
+            <ellipse cx="330" cy="-50" rx="44" ry="12"/><ellipse cx="360" cy="-56" rx="26" ry="9"/>
+            <ellipse cx="250" cy="-260" rx="30" ry="9"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <div class="copy">
+      <span class="c-eyebrow">Ascenso</span>
+      <h2 class="c-title">38 de 90</h2>
+      <p class="c-sub">Puedes irte tranquilo: seguimos trabajando aunque cierres esta pestaña.</p>
+      <p class="c-joke">Esto no se cae.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 4 · ÓRBITA ══════════════════ -->
+<section class="beat" id="beat-orbita">
+  <div class="beat-k"><b>4 · órbita</b><span>anillo = done/total (real) · el beat más largo</span><span class="databind">ejemplo: 64/90 → 71 %</span></div>
+  <div class="frame" data-beat="orbita">
+    <div class="stage">
+    <svg class="sc" viewBox="0 0 400 280" role="img" aria-label="En órbita">
+      <defs>
+        <linearGradient id="g4-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#04070F"/><stop offset=".6" stop-color="#0A1526"/><stop offset="1" stop-color="#14293F"/>
+        </linearGradient>
+        <linearGradient id="g4-earth" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1B4A7A"/><stop offset="1" stop-color="#0C1D33"/>
+        </linearGradient>
+        <linearGradient id="g4-shoot" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="rgba(207,224,255,0)"/><stop offset="1" stop-color="#CFE0FF"/>
+        </linearGradient>
+        <clipPath id="g4-clip"><rect width="400" height="280" rx="20"/></clipPath>
+        <clipPath id="g4-earthclip"><circle cx="200" cy="600" r="372"/></clipPath>
+      </defs>
+      <g clip-path="url(#g4-clip)">
+        <rect width="400" height="280" fill="url(#g4-sky)"/>
+
+        <!-- parallax starfield, two layers drifting at different speeds
+             (each layer duplicated at +400 for a seamless wrap) -->
+        <g class="a-stars-2" fill="#CFE0FF" opacity=".55">
+          <g>
+            <circle cx="30" cy="40" r="1"/><circle cx="120" cy="98" r=".9"/><circle cx="210" cy="26" r="1"/>
+            <circle cx="290" cy="120" r=".8"/><circle cx="360" cy="66" r="1"/><circle cx="70" cy="160" r=".9"/>
+            <circle cx="250" cy="176" r=".8"/><circle cx="160" cy="140" r="1"/>
+            <circle cx="430" cy="40" r="1"/><circle cx="520" cy="98" r=".9"/><circle cx="610" cy="26" r="1"/>
+            <circle cx="690" cy="120" r=".8"/><circle cx="760" cy="66" r="1"/><circle cx="470" cy="160" r=".9"/>
+            <circle cx="650" cy="176" r=".8"/><circle cx="560" cy="140" r="1"/>
+          </g>
+        </g>
+        <g class="a-stars-1" fill="#EAF1FF">
+          <g>
+            <circle class="a-tw" cx="56" cy="30" r="1.5"/><circle cx="188" cy="72" r="1.2"/>
+            <circle class="a-tw s2" cx="314" cy="34" r="1.4"/><circle cx="98" cy="130" r="1.1"/>
+            <circle class="a-tw s3" cx="356" cy="150" r="1.3"/><circle cx="240" cy="112" r="1.1"/>
+            <circle cx="150" cy="184" r="1.2"/>
+            <circle class="a-tw s3" cx="456" cy="30" r="1.5"/><circle cx="588" cy="72" r="1.2"/>
+            <circle class="a-tw" cx="714" cy="34" r="1.4"/><circle cx="498" cy="130" r="1.1"/>
+            <circle class="a-tw s2" cx="756" cy="150" r="1.3"/><circle cx="640" cy="112" r="1.1"/>
+            <circle cx="550" cy="184" r="1.2"/>
+          </g>
+        </g>
+
+        <!-- a shooting star, once every 13 s -->
+        <g class="a-shoot">
+          <line x1="40" y1="34" x2="18" y2="23" stroke="url(#g4-shoot)" stroke-width="1.4" stroke-linecap="round"/>
+        </g>
+
+        <!-- Earth below, slowly rotating: the surface strip drifts inside the
+             planet's clip (duplicated at +400 for a seamless wrap) -->
+        <circle cx="200" cy="600" r="376" fill="none" stroke="rgba(9,197,214,.14)" stroke-width="9"/>
+        <circle cx="200" cy="600" r="373" fill="none" stroke="rgba(127,227,236,.5)" stroke-width="1.6"/>
+        <circle cx="200" cy="600" r="372" fill="url(#g4-earth)"/>
+        <g clip-path="url(#g4-earthclip)">
+          <g class="a-earthspin">
+            <g fill="#2E6BA8" opacity=".75">
+              <path d="M20 252 q18 -12 44 -8 q20 4 30 16 q-30 10 -52 6 q-20 -4 -22 -14 Z"/>
+              <path d="M150 268 q24 -16 58 -10 q26 6 34 18 l-92 0 Z"/>
+              <path d="M290 246 q20 -10 42 -4 q16 6 20 14 q-26 8 -44 4 q-14 -4 -18 -14 Z"/>
+              <path d="M420 252 q18 -12 44 -8 q20 4 30 16 q-30 10 -52 6 q-20 -4 -22 -14 Z"/>
+              <path d="M550 268 q24 -16 58 -10 q26 6 34 18 l-92 0 Z"/>
+              <path d="M690 246 q20 -10 42 -4 q16 6 20 14 q-26 8 -44 4 q-14 -4 -18 -14 Z"/>
+            </g>
+            <g fill="#FFFFFF" opacity=".1">
+              <ellipse cx="90" cy="240" rx="34" ry="5"/><ellipse cx="240" cy="258" rx="40" ry="6"/>
+              <ellipse cx="360" cy="238" rx="26" ry="4"/>
+              <ellipse cx="490" cy="240" rx="34" ry="5"/><ellipse cx="640" cy="258" rx="40" ry="6"/>
+              <ellipse cx="760" cy="238" rx="26" ry="4"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- data packets streaming from the hold to the ring (ambient flow,
+             not a fraction: constant rate, no start/end state) -->
+        <g transform="translate(136 104) rotate(3)">
+          <line x1="6" y1="0" x2="108" y2="0" stroke="rgba(127,227,236,.18)" stroke-width="1"/>
+          <circle class="a-packet" cx="0" cy="0" r="2" fill="#7FE3EC"/>
+          <circle class="a-packet p2" cx="0" cy="0" r="1.5" fill="#7FE3EC"/>
+          <circle class="a-packet p3" cx="0" cy="0" r="1.8" fill="#4F7BFF"/>
+        </g>
+
+        <!-- the rocket: gently bobbing, tilted with the orbit, engines off,
+             attitude thrusters blipping -->
+        <g transform="rotate(-8 118 112) translate(-42 -31) scale(.8)">
+          <g class="a-bob">
+            <!-- attitude thruster micro-pulses -->
+            <path class="a-thrust" d="M186 218 q-6 8 -10 18 q8 -4 12 -12 Z" fill="#7FE3EC"/>
+            <path class="a-thrust t2" d="M214 218 q6 8 10 18 q-8 -4 -12 -12 Z" fill="#7FE3EC"/>
+            <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+            <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+            <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+            <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+            <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+            <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+            <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+            <!-- open cargo bay -->
+            <rect x="186" y="196" width="28" height="4" rx="2" fill="#7FE3EC" opacity=".8"/>
+            <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+            <circle cx="200" cy="176" r="4" fill="#09C5D6"/>
+          </g>
+        </g>
+
+        <!-- THE RING — the only data-bound element in this scene.
+             r=46, C≈289.03, frac=.711 → dashoffset≈83.5 -->
+        <g transform="translate(295 112)">
+          <circle r="40" fill="rgba(10,21,38,.55)"/>
+          <circle class="a-ringpop" r="3" fill="#7FE3EC"/>
+          <circle r="46" fill="none" stroke="#22395C" stroke-width="5"/>
+          <circle r="46" fill="none" stroke="#4F7BFF" stroke-width="5" stroke-linecap="round"
+                  stroke-dasharray="289.03" stroke-dashoffset="83.5" transform="rotate(-90)"/>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <div class="copy">
+      <span class="c-eyebrow">En órbita</span>
+      <h2 class="c-title">64 de 90 respuestas leídas</h2>
+      <p class="c-sub">Extraemos de cada respuesta las menciones, las posiciones y las citas.</p>
+      <p class="c-joke">Traerlas era la mitad del viaje.</p>
+    </div>
+  </div>
+
+  <div class="aside">
+    <svg width="72" height="72" viewBox="0 0 72 72" aria-label="Anillo indeterminado">
+      <circle cx="36" cy="36" r="26" fill="none" stroke="#E7EAF0" stroke-width="5"/>
+      <g class="a-spin">
+        <circle cx="36" cy="36" r="26" fill="none" stroke="#4F7BFF" stroke-width="5"
+                stroke-linecap="round" stroke-dasharray="38 125.4"/>
+      </g>
+    </svg>
+    <p><b>Sin total conocido</b>
+    Cuando <code>total === null</code> el anillo no puede afirmar una fracción: pasa a arco
+    indeterminado girando. Es el único giro "de spinner" permitido, porque aquí sí es el
+    indicador de progreso — indeterminado de verdad, no inventado.</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 5 · ENTREGA ══════════════════ -->
+<section class="beat" id="beat-entrega">
+  <div class="beat-k"><b>5 · entrega</b><span>todo leído, calculando puntuación</span><span class="databind">anillo completo (real)</span></div>
+  <div class="frame" data-beat="entrega">
+    <div class="stage">
+    <svg class="sc" viewBox="0 0 400 280" role="img" aria-label="Cerrando la misión">
+      <defs>
+        <linearGradient id="g5-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#04070F"/><stop offset=".6" stop-color="#0A1526"/><stop offset="1" stop-color="#182F4B"/>
+        </linearGradient>
+        <linearGradient id="g5-earth" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#1E5387"/><stop offset="1" stop-color="#0C1D33"/>
+        </linearGradient>
+        <clipPath id="g5-clip"><rect width="400" height="280" rx="20"/></clipPath>
+        <clipPath id="g5-earthclip"><circle cx="200" cy="600" r="372"/></clipPath>
+      </defs>
+      <g clip-path="url(#g5-clip)">
+        <rect width="400" height="280" fill="url(#g5-sky)"/>
+
+        <g class="a-stars-2" fill="#CFE0FF" opacity=".55">
+          <g>
+            <circle cx="44" cy="52" r="1"/><circle cx="140" cy="110" r=".9"/><circle cx="236" cy="30" r="1"/>
+            <circle cx="318" cy="132" r=".8"/><circle cx="374" cy="70" r="1"/><circle cx="90" cy="170" r=".9"/>
+            <circle cx="444" cy="52" r="1"/><circle cx="540" cy="110" r=".9"/><circle cx="636" cy="30" r="1"/>
+            <circle cx="718" cy="132" r=".8"/><circle cx="774" cy="70" r="1"/><circle cx="490" cy="170" r=".9"/>
+          </g>
+        </g>
+        <g class="a-stars-1" fill="#EAF1FF">
+          <g>
+            <circle class="a-tw" cx="70" cy="34" r="1.4"/><circle cx="206" cy="80" r="1.1"/>
+            <circle class="a-tw s2" cx="330" cy="42" r="1.3"/><circle cx="118" cy="138" r="1.1"/>
+            <circle class="a-tw s3" cx="282" cy="150" r="1.2"/>
+            <circle class="a-tw s3" cx="470" cy="34" r="1.4"/><circle cx="606" cy="80" r="1.1"/>
+            <circle class="a-tw" cx="730" cy="42" r="1.3"/><circle cx="518" cy="138" r="1.1"/>
+            <circle class="a-tw s2" cx="682" cy="150" r="1.2"/>
+          </g>
+        </g>
+
+        <!-- Earth, rim a touch brighter: dawn is coming -->
+        <circle cx="200" cy="600" r="376" fill="none" stroke="rgba(9,197,214,.18)" stroke-width="9"/>
+        <circle cx="200" cy="600" r="373" fill="none" stroke="rgba(127,227,236,.6)" stroke-width="1.6"/>
+        <circle cx="200" cy="600" r="372" fill="url(#g5-earth)"/>
+        <g clip-path="url(#g5-earthclip)">
+          <g class="a-earthspin">
+            <g fill="#2E6BA8" opacity=".75">
+              <path d="M40 256 q18 -12 44 -8 q20 4 30 16 q-30 10 -52 6 q-20 -4 -22 -14 Z"/>
+              <path d="M190 266 q24 -16 58 -10 q26 6 34 18 l-92 0 Z"/>
+              <path d="M310 250 q20 -10 42 -4 q16 6 20 14 q-26 8 -44 4 q-14 -4 -18 -14 Z"/>
+              <path d="M440 256 q18 -12 44 -8 q20 4 30 16 q-30 10 -52 6 q-20 -4 -22 -14 Z"/>
+              <path d="M590 266 q24 -16 58 -10 q26 6 34 18 l-92 0 Z"/>
+              <path d="M710 250 q20 -10 42 -4 q16 6 20 14 q-26 8 -44 4 q-14 -4 -18 -14 Z"/>
+            </g>
+            <g fill="#FFFFFF" opacity=".1">
+              <ellipse cx="110" cy="244" rx="34" ry="5"/><ellipse cx="260" cy="262" rx="40" ry="6"/>
+              <ellipse cx="380" cy="242" rx="26" ry="4"/>
+              <ellipse cx="510" cy="244" rx="34" ry="5"/><ellipse cx="660" cy="262" rx="40" ry="6"/>
+              <ellipse cx="780" cy="242" rx="26" ry="4"/>
+            </g>
+          </g>
+        </g>
+
+        <!-- the rocket, serene, bay closed again -->
+        <g transform="rotate(-6 112 128) translate(-50 -18) scale(.76)">
+          <g class="a-bob d2">
+            <rect x="184" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+            <rect x="196" y="208" width="9" height="9" rx="2" fill="#3B4759"/>
+            <rect x="208" y="208" width="9" height="8" rx="2" fill="#3B4759"/>
+            <path d="M184 188 L174 210 L184 206 Z" fill="#2563EB"/>
+            <path d="M217 188 L227 210 L217 206 Z" fill="#2563EB"/>
+            <path d="M200 138 q16 16 16 39 v30 h-32 v-30 q0 -23 16 -39 Z" fill="#122036"/>
+            <path d="M200 138 q16 16 16 39 h-32 q0 -23 16 -39 Z" fill="#22385A"/>
+            <circle cx="200" cy="176" r="6.5" fill="#F7F8FB"/>
+            <circle cx="200" cy="176" r="4" fill="#09C5D6"/>
+            <circle class="a-winpulse" cx="200" cy="176" r="4" fill="#7FE3EC" style="animation-duration:2.6s"/>
+          </g>
+        </g>
+
+        <!-- ring COMPLETE (real state), breathing while the score assembles -->
+        <g transform="translate(282 118)">
+          <circle class="a-breathe" r="58" fill="none" stroke="rgba(79,123,255,.35)" stroke-width="2"/>
+          <circle r="40" fill="rgba(10,21,38,.55)"/>
+          <circle class="a-ringpop" r="4" fill="#7FE3EC"/>
+          <circle r="46" fill="none" stroke="#22395C" stroke-width="5"/>
+          <circle r="46" fill="none" stroke="#4F7BFF" stroke-width="5" stroke-linecap="round"
+                  stroke-dasharray="289.03" stroke-dashoffset="0" transform="rotate(-90)"/>
+          <!-- sparks converging into the core: the score assembling -->
+          <g fill="#7FE3EC">
+            <circle class="a-converge" r="1.8" style="--dx:-66px;--dy:-30px"/>
+            <circle class="a-converge c2" r="1.5" style="--dx:58px;--dy:-44px"/>
+            <circle class="a-converge c3" r="1.6" style="--dx:-44px;--dy:52px"/>
+            <circle class="a-converge c4" r="1.4" style="--dx:66px;--dy:34px"/>
+          </g>
+        </g>
+      </g>
+    </svg>
+    </div>
+    <div class="copy">
+      <span class="c-eyebrow">Cerrando la misión</span>
+      <h2 class="c-title">Casi está</h2>
+      <p class="c-sub">Estamos calculando tu puntuación GEO.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="foot">
+  SCAN-STATES-1 · rev.4 · 2026-08-10 — sustituye la puesta en escena de rev.3 (los beats,
+  el copy y los datos no cambian). Solo transform/opacity; sin filtros animados, sin JS de
+  animación. El visor de abajo es JS de previsualización, no forma parte del componente.
+</footer>
+
+</div>
+
+<!-- ═════════ PREVIEW-ONLY JS — beat viewer. NOT part of the product component.
+     It only clones an already-animating scene into a full-screen overlay so the
+     founder can judge each beat at product scale. Zero animation logic here. ═════════ -->
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Vista a tamaño de producto">
+  <button class="btn viewer-close" id="viewer-close">Cerrar ✕</button>
+  <div class="viewer-inner" id="viewer-slot"></div>
+</div>
+<script>
+  // PREVIEW-ONLY: switches which beat fills the screen. The real component has no JS animation.
+  const viewer = document.getElementById('viewer');
+  const slot = document.getElementById('viewer-slot');
+  document.querySelectorAll('[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const src = document.querySelector('.frame[data-beat="' + btn.dataset.view + '"]');
+      slot.innerHTML = '';
+      slot.appendChild(src.cloneNode(true));
+      viewer.classList.add('open');
+    });
+  });
+  document.getElementById('viewer-close').addEventListener('click', () => {
+    viewer.classList.remove('open');
+    slot.innerHTML = '';
+  });
+</script>

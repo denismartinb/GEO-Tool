@@ -3,6 +3,7 @@ import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { ScanInProgress } from "@/components/scan-in-progress";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
@@ -348,7 +349,7 @@ export default async function RecommendationsPage({
           carrera con los datos, sino esta condición. Con datos, el estado del
           escaneo lo lleva la pastilla del sticky-header. */}
       {activeRun && !latestCompletedRun ? (
-        <ScanInProgress activeRun={activeRun} />
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
       ) : (
       <>
       {/* Failed run notice */}

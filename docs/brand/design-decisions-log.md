@@ -4783,6 +4783,352 @@ detectados durante esta investigación y sin tocar.
 
 ---
 
+---
+
+## 55. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
+
+**Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
+diseño en `docs/design-reference/scan-states-1/` (tres opciones, rev.2 y
+rev.3 — la última es la aprobada). Task Intake aprobado por el fundador en
+sesión el mismo día.
+
+**El problema.** `ScanInProgress`/`ScanInProgressLive` es el estado del
+prototipo sin repintar a la identidad v3, y es el primer aterrizaje real de
+un cliente nuevo. El fundador midió un escaneo propio de 30 preguntas en más
+de 5 minutos contra una copia que promete "un par de minutos".
+
+**Qué se decidió.**
+
+1. **Sólo el primer escaneo de cada dominio** lleva la experiencia nueva
+   (`ScanMissionRocket`) — la señal es `completedRunsCount === 0`, que ya
+   existía en la página; no se añadió ninguna columna para distinguirlo. A
+   partir del segundo escaneo, el proyecto vuelve al `ScanInProgressLive`
+   compartido de siempre, sin cambios.
+2. **La misión suelta la pantalla en cuanto hay datos que enseñar.**
+   `ScanMissionRocket` sólo vive dentro de la rama `!hasData` (igual que el
+   componente al que sustituye); en el instante en que `hasData` se vuelve
+   cierto, la Visión general real se dibuja y una banda compacta
+   (`ScanMissionBand`) sustituye al cohete a pantalla completa mientras la
+   auditoría sigue en marcha. Nunca hay una ventana en la que la misión tape
+   datos ya disponibles — es literalmente el mismo defecto que el log §26
+   corrigió en Recomendaciones, y se decidió no reintroducirlo.
+3. **Cinco momentos, no ocho.** La fase 1 implementa rampa / ignición /
+   ascenso / órbita / entrega — los que se derivan de `computeScanStage`
+   (sin cambios) sin ninguna lectura nueva. Los momentos de vuelta
+   (reentrada / aproximación / aterrizaje) del guion explorado en la rev.3
+   se simplifican a la banda de una sola línea: mostrar "12 de 30 temas" en
+   tiempo real exige el mismo análisis de `generated_solutions` que ya hace
+   la página de Auditoría web (`parseCoverageMap`), y traerlo aquí también
+   habría sido una segunda lectura pesada — deliberadamente fuera de esta
+   fase.
+4. **Ninguna cifra que la fase no pudiera respaldar.** Dos ajustes respecto
+   al guion explorado, los dos porque el dato real no sostenía la copia:
+   - `total_prompts` cuenta lanzamientos (jobs), no respuestas
+     (SAMPLING-1, ADR 0030) — el guion decía "90 respuestas" asumiendo
+     `prompts × motores`; sostenerlo de verdad habría exigido el plan
+     resuelto del proyecto (lectura nueva) o el env global
+     `LLM_SCAN_PROVIDERS` (puede sobrecontar por debajo del cap del plan).
+     El beat `ascenso` se quedó en la misma unidad sin nombrar que ya usa
+     `ScanInProgress` hoy. El beat `órbita` sí dice "respuestas" porque
+     `responses_total`/`responses_processed` cuentan filas reales de
+     `scan_prompt_results` — una por motor, ya contadas, sin multiplicar
+     nada.
+   - El beat `entrega` (todas las respuestas con salida terminal de
+     extracción) **no muestra ninguna puntuación**. Ese momento ocurre
+     antes de que el finalize del run persista el score — mostrar un
+     número ahí habría sido inventarlo. El score real sólo aparece cuando
+     `ScanProgressPoller` (ya montado) detecta el run en estado terminal y
+     refresca la página entera.
+5. **Hallazgo suelto, corregido de paso.** La pastilla de Visión general
+   (`ScanStatePill`) nunca recibía `auditing` — nunca decía "Auditando…" en
+   la pantalla insignia, aunque Dominios y Auditoría web sí lo hacen. La
+   única señal nueva de esta fase (¿hay un job `web_audit` vivo?, existencia
+   por RLS de usuario, sin service-role) alimenta la pastilla y la banda a
+   la vez, así que quedan alineadas sin coste extra.
+
+**Pendiente / roto conocido.**
+
+- **La banda no lleva contador real** ("12 de 30 temas") — dice "revisando
+  tu web" sin cifra. Cuando se traiga ese dato, `scan-mission-band.tsx` es
+  el único fichero que cambia.
+- **No hay aviso por email.** La banda no promete ninguno porque no existe
+  todavía backend para él (SCAN-STATES-1 rev.1, fase 2 — columna de
+  preferencia, envío, plantilla; necesita su propia aprobación por llevar
+  migración).
+- **Sin desglose por motor.** El cohete no enciende sus toberas
+  individualmente por Gemini/ChatGPT/Claude — necesitaría una lectura nueva
+  agrupando `scan_prompt_results` por motor durante el run activo. Fase 3
+  de SCAN-STATES-1.
+- **La G reconstruida con arcos** (rev.2 de la exploración, 93% de solape
+  medido contra el SVG calcado real de `public/brand/genscore-mark.svg`) no
+  se usa en esta fase — el fundador eligió el cohete. El hallazgo de que el
+  asset de marca está calcado (170 rectas, cero curvas) sigue sin
+  resolverse en `public/brand/*.svg`; queda anotado como fase de marca
+  propia (BRAND-6), fuera de este PR.
+- **Sin verificación visual real.** Este repo no tiene arnés de DOM para
+  componentes de servidor (mismo límite que documentó WEB-AUDIT-DRIVE-1);
+  la lógica que decide qué mostrar sale entera a `lib/scan/mission-beats.ts`
+  con 9 tests, pero el render en pantalla —incluida la sincronía real entre
+  el traspaso y `hasActiveAuditJob`— no lo ha visto nadie en un navegador
+  contra datos reales. Pendiente del piloto o de una prueba manual del
+  fundador contra un proyecto nuevo de verdad.
+
+---
+
+
+**Addendum rev.4 (2026-08-10) — la animación, rehecha.** La primera pasada por
+producción del fundador, en el móvil y sobre la fase de órbita, fue lapidaria:
+*«queda muy cutre… el cohete está parado, da la sensación de que la página está
+parada»*. El diagnóstico correcto no era el cohete: **un cohete en órbita se
+mueve, lo que estaba congelada era la cámara**. rev.3 dibujaba una escena
+correcta y quieta, y una pantalla que se queda abierta dos o cuatro minutos
+durante el primer escaneo —la primera impresión del producto— leída como
+colgada.
+
+rev.4 (`docs/design-reference/scan-states-1/rev4-cohete-vivo.html`) no toca ni
+los cinco beats, ni el copy, ni los datos. Cambia la puesta en escena: cada
+beat tiene ahora movimiento ambiental continuo y el viaje entero recorre un
+arco de día a noche, de modo que la escena, y no el vehículo, es lo que vende
+el movimiento.
+
+- **rampa** — vapor venteando en las toberas, dos capas de nubes cruzando a
+  distinta velocidad, balizas de torre parpadeando desfasadas, chequeo de
+  sistemas en la ventanilla. El cohete es lo único quieto, que es lo que lo
+  hace leer como *retenido* y no como congelado.
+- **ignición** — humo rodando por la plataforma hacia ambos lados, resplandor
+  pulsante bajo las toberas, chispas y medio píxel de vibración del fuselaje.
+- **ascenso** — la velocidad la venden dos capas de nubes cayendo en paralaje
+  (la cercana pasa POR DELANTE del cohete, que es lo que hace legible el
+  paralaje) más líneas de aire.
+- **órbita** — el truco de cámara: el cohete sólo cabecea y suelta micro-impulsos
+  de maniobra mientras se mueve **el entorno** — estrellas en paralaje, la Tierra
+  girando debajo, una estrella fugaz cada 13 s — y los paquetes de datos fluyen
+  de la bodega abierta al anillo.
+- **entrega** — el anillo completo respira mientras chispas convergen al núcleo.
+
+**La regla de datos no se movió ni un milímetro, y es lo que hace legítimo todo
+lo anterior:** sólo la altitud del ascenso y la fracción del anillo codifican
+información real. Estrellas, nubes, humo, vapor, chispas, paquetes y Tierra son
+decorado y corren a ritmo constante, sin estado de inicio ni de fin,
+precisamente para que ninguno pueda leerse como progreso. Sin total conocido el
+anillo pasa a arco indeterminado girando en vez de inventar una posición — el
+único sitio donde un spinner es honesto, porque el progreso de verdad se
+desconoce.
+
+Decisiones técnicas que conviene no deshacer: una escena por beat en vez de una
+escena que muta (el cielo cambia de día a noche a lo largo de la misión y una
+sola escena no puede expresarlo), con remontado por `key` y fundido de entrada;
+sólo `transform`/`opacity` (composición en GPU, sin layout ni filtros animados)
+porque esto vive minutos en un móvil; y bajo `prefers-reduced-motion` cada
+escena descansa en un fotograma quieto **y completo** — lo que sólo existe en
+vuelo (vapor, chispas, paquetes, impulsos) se oculta en vez de congelarse, que
+es lo que evita que el fotograma parezca un fallo de renderizado.
+
+Verificado con Chromium contra el componente real montado en una ruta temporal
+de Next: las cinco escenas más la variante indeterminada a 375 y 1280 px, y
+pares de fotogramas de la órbita separados 4 s que demuestran el desplazamiento
+de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
+por la razón de siempre: el proyecto piloto tiene historial, así que
+`isFirstScan` es `false` y el cohete no llega a montarse nunca.
+
+
+## 56. La misión ocupa la pantalla entera, y el encendido deja de durar un minuto (SCAN-STATES-2, 2026-08-10)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día,
+después de pedir ver una maqueta antes de aprobar (`rev5-pantalla-completa.html`,
+PR #378). Tres decisiones suyas, todas explícitas.
+
+**El problema.** El fundador probó rev.4 en producción, en el móvil, con un
+dominio nuevo, y reportó tres cosas distintas: la animación era «un pequeño
+marco, dejando mucho espacio a los lados»; el mensaje verde de «Dominio creado»
+flotaba encima como si fuera de otra pantalla; y había tenido que **recargar
+para ver la fase siguiente**.
+
+**El tercer punto no era lo que parecía, y merece quedar escrito.** El sondeo
+del cohete es byte a byte idéntico al de `ScanInProgressLive`, que sí funciona.
+Lo que falla es el reparto de tiempos: `refreshRunProgressCounters` sólo escribe
+los contadores **al cerrar un lote** de hasta `MAX_REAL_SCAN_PROMPTS` prompts,
+y el compás `ignicion` es literalmente `stage.done === 0`. En un proyecto de 15
+prompts eso significa que el compás con menos que enseñar se quedaba puesto
+durante todo el primer lote —del orden de un minuto sin que cambiara un número—
+y después `ascenso` pasaba en dos saltos (10/15, 15/15) en segundos. El fundador
+nunca llegó a ver el ascenso.
+
+**Qué se decidió.**
+
+1. **Lienzo a sangre.** `.mrk-full` sale del contenedor con
+   `margin-inline: calc(50% - 50vw)` y las escenas dejan de pintar su propio
+   fondo redondeado: **el degradado de la página ES el cielo**, y viaja de día
+   a noche con la misión. En ≥960 px la composición se parte —copy a la
+   izquierda, escena ocupando todo el lienzo por detrás— porque lo que compra
+   el ancho es más cielo, y la curvatura de la Tierra sólo funciona a esa
+   escala.
+2. **El aviso verde desaparece como bloque** y su contenido pasa a `.mrk-rail`,
+   soldado a la costura entre el marco del producto y el cielo. El argumento:
+   el dominio recién creado es cierto durante los cuatro compases mientras el
+   compás cambia, así que va en la pieza que no se mueve.
+3. **El encendido se temporiza** (`IGNITION_HOLD_MS`, 5,5 s) y `resolveDisplayBeat`
+   pasa a la escena de vuelo. **Es una decisión de presentación y por eso se le
+   permite un reloj:** cambia qué escena se ve y no toca un solo número. El
+   ascenso que devuelve reporta `done: 0` y `climb: 0` —las dos cosas ciertas
+   mientras corre el primer lote—, así que la pantalla dice «0 de 15» y el
+   cohete sigue en el suelo exactamente mientras eso sea verdad. Lo que se gana
+   es que la espera **se ve viva**, porque el movimiento ambiental no cuenta
+   nada y puede correr antes de que se mueva el primer contador.
+4. **Pantalla completa en todas las secciones** durante el primer escaneo
+   (Visión general, Prompts, Competidores, Recomendaciones, Páginas citadas).
+   La objeción que se planteó y quedó respondida por el propio código: Prompts
+   y Competidores **sí** tienen contenido real en ese momento
+   (`createProject` inserta `project_prompts` y `project_competitors` antes de
+   arrancar el escaneo), pero **cada una de esas páginas ya sustituía su cuerpo
+   entero por `ScanInProgress`** con exactamente esta condición. Así que esto
+   cambia un takeover por otro mejor, no oculta nada que antes se pudiera leer.
+5. **Las cifras del raíl son reales o no están.** El fundador propuso primero
+   una cifra aproximada («no me importa que no sean datos reales», siendo un
+   momento guau). Lo que zanjó el asunto no fue la regla sino la aritmética:
+   dos compases después, en **esa misma pantalla**, órbita imprime el recuento
+   verdadero leído de `scan_prompt_results`. Una cifra inventada en el raíl
+   quedaría desmentida por el propio producto, en la misma sesión, delante del
+   usuario al que pretendía impresionar. Se resuelve leyendo el plan
+   (`resolveScanProvidersForPlan`), y `getPlanForUser` está envuelto en
+   `cache()` de React, así que varias secciones pidiéndolo en una petición
+   resuelven una sola consulta. Un contador nulo **borra su segmento** en vez de
+   rellenarse.
+
+**Verificado** con Chromium contra el componente real montado en una ruta
+temporal de Next (retirada): los cinco compases a 375 y 1280 px, el relevo del
+encendido comprobado antes y después del temporizador, y cero desbordamiento
+horizontal en ambas anchuras.
+
+**Conocido y sin cerrar:** en escritorio la Tierra no cruza el ancho completo
+como en la maqueta — la escena conserva su proporción 400×280 y queda
+enmarcada. Alcanzar la paridad exige separar el fondo ambiental (estirable) de
+los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
+verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
+historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
+
+
+**Addendum (2026-08-10, misma tarde) — tres correcciones tras la primera prueba
+real en producción.** El fundador escaneó `genscore.es` desde el móvil y
+encontró tres cosas. Las tres eran ciertas.
+
+1. **«Cuando el motor está parado, ahí se veían bordes.»** La plataforma eran
+   dos `rect` dibujados DENTRO del SVG, que conserva su proporción 400×280 y
+   queda centrado — así que el suelo se cortaba antes del borde de la pantalla
+   y dejaba dos franjas grises. En ignición se notaba menos porque el humo tapa
+   las esquinas. El suelo pasa a ser una banda CSS (`.mrk-ground`) fuera del
+   SVG, y el `viewBox` de las escenas de rampa se acorta a 400×228 para acabar
+   justo en la línea del suelo. **Lo verdaderamente malo de este fallo es que
+   estaba en una captura que yo mismo tomé y no llegué a abrir**: verificar no
+   es fotografiar, es mirar. El arreglo se comprobó midiendo el rectángulo en
+   el DOM (`x: 0`, `width: 375`) además de a ojo, porque el primer intento
+   *parecía* arreglado y no lo estaba — el centrado con `translateX(-50%)` se
+   anulaba solo, ya que el envoltorio venía desplazado 16 px por el relleno de
+   `.mrk-scene-slot`.
+2. **El banner verde seguía apareciendo.** No era el raíl: es el mensaje
+   `scan_started` de `lib/projects/feedback-messages.ts`, que se pinta desde un
+   searchParam. Se suprime **sólo** cuando la misión ocupa la pantalla, porque
+   su texto es lo que el raíl ya dice, apilado encima como segunda superficie.
+   Los demás mensajes de feedback no se tocan.
+3. **«Dice 24 prompts y yo puse 12.»** El número era correcto y la etiqueta
+   mentía. Con 12 prompts y 3 motores salen 36 respuestas, por debajo del suelo
+   de 50 de SAMPLING-1 (ADR 0030), así que el run **repite el set dos veces**:
+   24 lanzamientos, 72 respuestas. `total_prompts` cuenta lanzamientos, no
+   prompts. El raíl pasa a enseñar la multiplicación entera —
+   `12 prompts · 2 pasadas · 3 motores · 72 respuestas` — leyendo el recuento
+   real de `project_prompts`, y el compás de ascenso deja de decir «prompts
+   lanzados» para decir «lanzamientos», que además es la palabra correcta para
+   un cohete. Las «pasadas» desaparecen del raíl cuando el run hace una sola.
+
+**Pendiente, planteado por el fundador y sin implementar:** que la misión
+mencione la auditoría web —«es un coste relevante y una funcionalidad
+importante del producto»— y que la misma animación se use en Auditoría web
+mientras corre su proceso. La forma natural es un sexto compás de **reentrada**,
+que ya estaba en el concepto original de rev.3 («reentrada en la atmósfera =
+auditoría web») y que se descartó entonces por alcance. Necesita su propia
+fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
+continuar más allá de `entrega`, y eso cambia el contrato de
+`computeMissionBeat`, no sólo el copy.
+
+
+**Addendum (2026-08-11) — la banda de auditoría nunca se mostró.** El fundador
+probó el cohete («ahora es perfecto») y añadió: *«pero no he visto la parte de
+la auditoría»*. No era percepción suya: `ScanMissionBand` era **código muerto
+desde el día que se implementó**, en ONBOARDING-ROCKET-1 Fase 1.
+
+Vivía dentro de la rama `hasData` —que exige un escaneo completado— pidiendo
+`isFirstScan`, que es `completedRunsCount === 0`. Mutuamente excluyentes: no
+se ha renderizado ni una vez. Y el comentario escrito encima razonaba que
+«nunca se solapa con el cohete, que sólo sale en la rama `!hasData`» — el
+mismo hecho que la hacía inalcanzable, usado para argumentar que era segura.
+Un razonamiento correcto sobre superposición que nunca comprobó la condición
+contraria: que fuese alcanzable.
+
+La condición correcta es el **después** del primer escaneo, no su ausencia:
+exactamente un run completado. Ahora vive en `shouldShowMissionBand`, con
+tests, porque una condición booleana enterrada en JSX es precisamente lo que
+nadie revisa — ni el piloto, que tampoco puede llegar aquí.
+
+**Lo que esto dice del proceso, y conviene no suavizarlo:** dos revisiones de
+diseño, cuatro pasadas de piloto en verde y una sesión entera de trabajo sobre
+esta pantalla no encontraron un elemento que no se dibujaba nunca. Lo encontró
+un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
+historial, `isFirstScan` falso— y ningún test cubría la expresión porque
+estaba en línea dentro del JSX.
+
+
+## 57. La reentrada: la auditoría web entra en la misión (SCAN-STATES-3, 2026-08-11)
+
+**Estado: implementada.** Maqueta `rev6-reentrada.html` aprobada por el fundador
+el 2026-08-10 («Apruebo la maqueta de la auditoría técnica»), implementación
+pedida el 11 («implementa también la maqueta de auditoría»).
+
+**Qué resuelve.** Dos peticiones suyas: que la misión ponga en valor lo que hace
+la auditoría web —«es un coste relevante y una funcionalidad importante del
+producto»— y que la misma animación se use en Auditoría web mientras corre.
+Cierra el viaje que rev.3 ya insinuaba y descartó por alcance: «reentrada en la
+atmósfera = auditoría web».
+
+**La cinta es lo importante, y su garantía es un test, no un comentario.** El
+riesgo que venía gratis con «ponlo en valor, con jerga espacial» era inventar
+capacidad: la voz de misión hace que cualquier cosa suene impresionante,
+incluidas las que el producto no hace. Así que las dieciséis líneas llevan cada
+una su `IssueCheckKey`, y `audit-ticker.test.ts` las valida **leyendo
+`issues.ts` del propio fichero**, no contra una copia. Añadir una línea para una
+comprobación inexistente pone la suite en rojo; borrar una comprobación del
+producto también, hasta que se borre su línea. Sobrevive a un autor que no lea
+los comentarios, que es más de lo que puede decir un comentario.
+
+Las dos líneas de cobertura quedan fuera: son Pro, y un proyecto Free vería o
+trabajo que no se está haciendo, o candados — que convierten una espera en un
+anuncio.
+
+**Dónde sale, y por qué más estrecho que la maqueta.** La maqueta pedía la
+reentrada a pantalla completa en Auditoría web «mientras dure». Comprobado
+contra el código: esa página **no se apodera hoy de la pantalla** — un proyecto
+con auditoría previa sigue leyendo sus datos con una píldora «Auditando…». Así
+que sale **sólo cuando no hay nada que tapar**: sin resumen de cobertura y sin
+snapshot técnico, es decir la primera auditoría del dominio. Misma regla que el
+cohete con `isFirstScan`, y mismo error evitado — esconder contenido real detrás
+de una animación, que es justo lo que el fundador cazó esa misma tarde.
+
+**Ningún elemento de la escena lleva datos.** Reutilizar el anillo de órbita
+insinuaría una fracción de «la auditoría», y nada mide la auditoría entera: la
+mitad técnica no publica progreso hasta terminar. La única cifra real que
+existe (cobertura) no se lee aquí, así que este compás **no enseña ningún
+número** en vez de enseñar uno plausible.
+
+**Detalle deliberado:** `auditIsRunning` se lee de la fila de job que la página
+ya consulta —sin consulta nueva— y **no** de `auditPillState`, que está
+condicionado a `canAuditCoverage`. La mitad técnica corre en todos los planes,
+así que la primera auditoría de un proyecto Free es trabajo real y merece el
+compás igual que la de uno Pro.
+
+**Conocido y sin cerrar:** el amerizaje (el cierre corto al terminar la
+auditoría) está definido en la maqueta pero no implementado; la cinta es un
+carrusel de alcance, no un registro en vivo, porque el progreso por
+comprobación no se persiste; y esta pantalla **el piloto tampoco puede verla**,
+por la misma razón que el cohete.
 
 ## 46. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
 
