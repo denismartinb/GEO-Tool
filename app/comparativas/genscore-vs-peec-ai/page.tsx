@@ -89,13 +89,12 @@ export default function GenscoreVsPeecAiPage() {
           entrada, Peec AI cubre ese caso mejor que Genscore hoy.
         </Verdict>
 
-        <h2>Cuándo elegir Genscore</h2>
-        <p>
+        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
           Si operas principalmente en España o LATAM y quieres el producto en tu idioma, si quieres
           empezar sin tarjeta y sin pagar un extra por los tres motores principales, o si lo que
           necesitas no es solo una lista priorizada de oportunidades sino contenido ya generado y listo
           para publicar (FAQ, schema, briefs), Genscore está construido específicamente para eso.
-        </p>
+        </Verdict>
 
         <h2>Metodología</h2>
         <p>

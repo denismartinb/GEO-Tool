@@ -58,9 +58,17 @@ export const COMPARISON_ROWS: { label: string; genscore: string; profound: strin
     profoundWins: true
   },
   {
-    label: "Financiación",
-    genscore: "Autofinanciado",
-    profound: "155 M$ levantados en total; última ronda (Serie C) valoró la empresa en 1.000 M$ (febrero de 2026)",
-    profoundWins: true
+    // Fila deliberadamente SIN `profoundWins` (revisión del fundador,
+    // 2026-08-11). Levantar más dinero no es un beneficio para quien compra la
+    // herramienta: no mejora ningún resultado suyo, y corta en las dos
+    // direcciones (respaldo y continuidad, pero también presión por rentabilizar
+    // la ronda). Marcarla como victoria del competidor era conceder un punto
+    // que no es un punto. Se mantiene la fila porque la viabilidad del
+    // proveedor sí es contexto legítimo antes de firmar con nadie.
+    label: "Respaldo y modelo de negocio",
+    genscore:
+      "Autofinanciado — sin inversores a los que devolver una ronda, y por tanto sin presión externa para subir precios o pivotar",
+    profound:
+      "155 M$ levantados en total; última ronda (Serie C) valoró la empresa en 1.000 M$ (febrero de 2026) — más músculo para invertir en producto, y también más expectativa de retorno que atender"
   }
 ];

@@ -5175,6 +5175,69 @@ vez por fila `*Wins: true` en el DOM visible (el recuento doblado en un grep
 ingenuo es el payload de hidratación de React que Next.js embebe en el HTML,
 no una repetición real).
 
+---
+
+## 53. La comparativa dejaba a Genscore por debajo incluso donde no perdía (COMPARATIVAS-DESIGN-1, revisión, 2026-08-11)
+
+**Origen.** El fundador, revisando el preview del rediseño (log §52): *"en
+ocasiones quizás dejan demasiado por debajo a Genscore"*, citando el bloque
+"Cuándo elegir Profound". Tenía razón, y las dos causas eran mías.
+
+**Causa 1 — asimetría tipográfica que introdujo el propio §52.** El rediseño
+puso `Verdict` (bloque destacado, con etiqueta) en "Cuándo elegir
+[competidor]" y dejó "Cuándo elegir Genscore" como `<h2>` + `<p>` plano. La
+regla que escribí para justificarlo decía que `Verdict` era para admisiones
+honestas y no para argumentos de venta — razonamiento defendible en
+abstracto, y equivocado en la página: las dos secciones son el mismo tipo de
+afirmación ("para quién es esto la herramienta correcta"), así que darle
+tratamiento destacado solo a una hace que el caso del competidor pese más
+visualmente en todas las comparativas, incluidas las filas donde Genscore
+gana. **Ahora ambas van en `Verdict`, con etiqueta propia.** La honestidad la
+sostienen la tabla (con su "Gana aquí" en las filas reales) y el texto, no la
+tipografía desigual.
+
+**Causa 2 — una fila marcada como victoria del competidor que no era una
+victoria.** `genscore-vs-profound` marcaba "Financiación" con `profoundWins:
+true` (155 M$ levantados, valoración de 1.000 M$). Levantar más dinero **no
+es un beneficio para quien compra la herramienta**: no mejora ningún
+resultado suyo, y corta en las dos direcciones — respaldo y continuidad, pero
+también más expectativa de retorno que atender. Y presentaba "autofinanciado"
+como si fuera el lado perdedor, cuando para un comprador es al menos
+ambivalente (sin inversores detrás no hay presión externa para subir precios
+ni pivotar). La fila **se mantiene** —la viabilidad del proveedor es contexto
+legítimo antes de firmar con nadie— pero renombrada a "Respaldo y modelo de
+negocio", sin marca de victoria y con los dos lados enunciados.
+
+**Causa 3 — el propio texto del veredicto de Profound.** Terminaba con dos
+frases seguidas de elogio ("mucho más madura en volumen de financiación y
+clientes enterprise" + "4,5/5 en G2 … por la profundidad de su analítica"),
+sin contrapeso y cerrando en su nota más fuerte. Reescrito: mantiene los dos
+hechos reales que un comprador sí usa (analítica más profunda, 4,5/5 en G2) y
+retira la referencia al volumen de financiación, que no le sirve para decidir
+nada. Se añade la contrapartida que ya estaba en la tabla — pasar por una
+demo de ventas antes de ver un precio.
+
+**Lo que NO cambia, y es deliberado:** las tres filas donde Profound gana de
+verdad siguen marcadas (motores cubiertos, a quién se dirige, reseñas
+públicas), igual que las de Otterly y Peec AI —que se revisaron en esta misma
+pasada y resultaron ser todas beneficios reales para el comprador: cobertura
+multi-país, usuarios ilimitados, número de motores—. El test que exige al
+menos una fila donde gane el competidor sigue en verde en las tres
+comparativas. Esto es un reequilibrio, no una retirada de la honestidad: se
+quita el elogio que no ayuda a decidir y la asimetría visual, no las
+concesiones ciertas.
+
+**Cuarta cosa, del mismo mensaje del fundador: `/comparativas` no estaba en la
+navegación superior.** Desde SEO-POS-1 T-a estaba en los cinco pies de página
+(log §46), lo que resolvió el enlazado interno pero no la descubribilidad:
+quien lee un artículo sobre GEO es exactamente quien querría comparar
+herramientas, y la investigación del plan sitúa las páginas de comparación
+como el contenido con más intención de compra del portfolio. Añadido a
+`NAV_LINKS` del shell de contenido (`blog-page-shell.tsx`), que es el que
+envuelve blog, glosario y las propias comparativas. La nav del hero de la
+landing se deja intacta: es una superficie de conversión con su propio diseño
+aprobado, y no es donde está el lector de contenido.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

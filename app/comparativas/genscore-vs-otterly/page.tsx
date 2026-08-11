@@ -86,14 +86,13 @@ export default function GenscoreVsOtterlyPage() {
           tenga versión en castellano, Otterly es una opción real y más madura en volumen de mercados.
         </Verdict>
 
-        <h2>Cuándo elegir Genscore</h2>
-        <p>
+        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
           Si operas en España o LATAM y quieres el producto y el soporte en tu idioma, si quieres empezar
           sin tarjeta y sin pagar por motores que no vas a usar, o si lo que necesitas no es solo saber que
           tienes un problema de visibilidad sino que te digan qué hacer al respecto (recomendaciones con
           evidencia y un generador de soluciones listas para publicar), Genscore está construido
           específicamente para eso.
-        </p>
+        </Verdict>
 
         <h2>Metodología</h2>
         <p>

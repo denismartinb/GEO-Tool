@@ -120,7 +120,20 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   (log §52). `KeyTakeaway` para el resumen, `CompareTable`+`Pill` para la
   tabla ("Gana aquí" en la celda donde gana el competidor — mismo patrón que
   `llms-txt-guia-practica.mdx`), `ArticleCta` real al final.
-- **`Verdict` es para admitir honestamente cuándo gana el competidor, no para
-  rellenar cualquier sección.** En una comparativa va en "Cuándo elegir
-  [competidor]" — es literalmente su caso de uso — nunca en "Cuándo elegir
-  Genscore", que es el argumento de venta, no una admisión (log §52).
+- **Las dos secciones "Cuándo elegir X" llevan el mismo peso visual.** Ambas
+  van en `Verdict`, con su propia etiqueta. La primera versión (log §52) puso
+  `Verdict` solo en la del competidor y dejó la de Genscore como `<h2>`+`<p>`,
+  razonando que `Verdict` era para admisiones honestas y no para argumentos de
+  venta. El efecto real fue el contrario del buscado: el caso del competidor
+  quedaba destacado en bloque y el nuestro en texto plano, así que la página
+  se leía como si Genscore perdiera incluso donde no perdía (fundador,
+  2026-08-11; log §53). La honestidad la sostienen la tabla —con su "Gana
+  aquí" en las filas reales— y el propio texto, no la asimetría tipográfica.
+- **Una fila solo se marca como victoria del competidor si es un beneficio
+  para quien compra.** Levantar más dinero no lo es: no mejora ningún
+  resultado del cliente y corta en las dos direcciones (respaldo, pero también
+  presión por rentabilizar la ronda). La fila de financiación de
+  `genscore-vs-profound` estaba marcada como victoria y era conceder un punto
+  que no es un punto (log §53). Las victorias legítimas son capacidades que el
+  comprador nota: cobertura multi-país, usuarios incluidos, número de motores,
+  reseñas públicas acumuladas.

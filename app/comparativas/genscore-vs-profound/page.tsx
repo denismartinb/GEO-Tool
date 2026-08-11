@@ -85,20 +85,18 @@ export default function GenscoreVsProfoundPage() {
         <Verdict title="Cuándo elegir Profound" badge="Cuándo elegir el competidor">
           Si eres una empresa de tamaño medio o grande con presupuesto para una herramienta enterprise,
           necesitas cobertura amplia de motores (incluido Perplexity, que Genscore no soporta hoy) y no
-          te importa operar en inglés, Profound es una opción real y mucho más madura en volumen de
-          financiación y clientes enterprise. Sus reseñas públicas —4,5/5 en G2— la valoran precisamente
-          por la profundidad de su analítica.
+          te importa operar en inglés ni pasar por una demo de ventas antes de ver un precio, Profound
+          es una opción real, con analítica más profunda y 4,5/5 en G2.
         </Verdict>
 
-        <h2>Cuándo elegir Genscore</h2>
-        <p>
+        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
           Si operas en España o LATAM y quieres el producto en tu idioma, si prefieres ver un precio
           antes de hablar con nadie y empezar gratis sin tarjeta, si gestionas varios dominios de
           cliente y no quieres crear una cuenta separada por cada uno, o si lo que necesitas no es solo
           un panel de analítica sino que te digan qué hacer al respecto (recomendaciones con evidencia y
           un generador de soluciones listas para publicar), Genscore está construido específicamente
           para eso.
-        </p>
+        </Verdict>
 
         <h2>Metodología</h2>
         <p>
