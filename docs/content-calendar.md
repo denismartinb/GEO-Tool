@@ -176,18 +176,20 @@ declarar un ganador global que no existe.
 Tres decisiones de honestidad, las tres con test
 (`alternativas-a-otterly.test.ts`):
 
-1. **La página declara en el primer bloque que la escribe un competidor.**
-   Prácticamente todos los resultados de esa búsqueda los publica una
-   herramienta rival; la nuestra también. Decirlo es lo único que permite pedir
-   después que se juzgue por si cada afirmación es comprobable.
-2. **Cada alternativa declara qué NO resuelve**, Genscore incluida, y el campo
+1. **Cada ventaja de Otterly se declara entera y con su contexto**
+   (`OTTERLY_STRENGTHS` es `{claim, context}`, con test que exige las dos
+   mitades). "Usuarios ilimitados por 29 $" seguido de "con quince prompts
+   incluidos" es la misma verdad, situada — que es distinto de recortarla.
+2. **Cada alternativa declara dónde no llega**, Genscore incluida, y el campo
    `tradeoff` es obligatorio en el tipo. El de Genscore nombra Perplexity,
-   Copilot y la falta de desglose por país — justo lo que Otterly sí hace — y
-   un test lo exige por nombre, porque es la omisión que un competidor comete
-   sin darse cuenta.
-3. **Hay una sección "cuándo NO deberías cambiar"**: cambiar de herramienta
-   reinicia el histórico, y la comparación temporal es lo que hace útil a una
-   herramienta GEO. Es la recomendación que nadie que venda esto escribe.
+   Copilot y la falta de desglose por país, y un test lo exige **por nombre**:
+   son datos que un comprador verifica en dos clics, y esconderlos es el error
+   que PRICING-TRUTH-1 obligó a retirar del producto.
+3. **El encuadre es de marketing, no de arbitraje** (revisión del fundador,
+   2026-08-12; log §65). La primera versión abría admitiendo que la escribe un
+   competidor y dedicaba un bloque destacado a "cuándo NO deberías cambiar";
+   ambas cosas concedían gratis. El hecho comprobable no se recorta, pero el
+   orden, el espacio y el contexto se deciden a favor de Genscore.
 
 **Precios: ninguno de Otterly viene de fuente primaria.** `otterly.ai/pricing`
 está bloqueado por el proxy de egress (misma limitación que tuvo Peec AI). Se

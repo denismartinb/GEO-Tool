@@ -51,10 +51,23 @@ describe("alternativas-a-otterly", () => {
     expect(genscore?.tradeoff).toMatch(/pa[íi]s/i);
   });
 
-  it("la página reconoce en qué es mejor Otterly antes de proponer nada", () => {
+  /**
+   * La ventaja del competidor se declara sin recortarla —eso es la línea de
+   * PRICING-TRUTH-1 y no se toca—, pero nunca suelta. La primera versión de
+   * esta página listaba las cuatro a pelo y el efecto era el contrario del
+   * buscado: cuatro victorias del competidor arriba del todo se leen como
+   * "Otterly gana", aunque tres de las cuatro le sean irrelevantes al lector
+   * (fundador, 2026-08-12; log §65). El test exige las dos mitades: que la
+   * ventaja siga ahí, y que lleve el contexto que dice a quién le sirve.
+   */
+  it("cada ventaja de Otterly se declara entera y con su contexto", () => {
     expect(OTTERLY_STRENGTHS.length).toBeGreaterThanOrEqual(3);
-    for (const strength of OTTERLY_STRENGTHS) {
-      expect(strength.length).toBeGreaterThan(40);
+    for (const s of OTTERLY_STRENGTHS) {
+      expect(s.claim.length, "una ventaja sin enunciar").toBeGreaterThan(20);
+      expect(
+        s.context.length,
+        `"${s.claim}" se lista sin contexto: a quién le sirve de verdad`
+      ).toBeGreaterThan(60);
     }
   });
 

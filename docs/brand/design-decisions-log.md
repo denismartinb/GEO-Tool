@@ -6041,6 +6041,66 @@ las fuentes públicas se contradicen entre sí.
 self-check. Las dos últimas ya no son opcionales: las exige el guardián que
 dejó §62.
 
+---
+
+## 65. El árbitro y el director de marketing (SEO-POS-1, S3, revisión, 2026-08-12)
+
+**Origen.** El fundador, sobre la primera versión de `alternativas-a-otterly`:
+*"El tono concede mucho. En general tienes que tener un rol de director de
+marketing de Genscore. Por tanto no nos podemos permitir que dejes a la
+competencia mejor en las comparativas. Di cosas buenas pero que en general
+transmita que casi siempre Genscore es la mejor opción."*
+
+**Tenía razón, y el diagnóstico es de rol, no de frases sueltas.** §61 corrigió
+un sesgo *contra* Genscore en la tabla de una comparativa y la lección se
+generalizó mal: pasé de "no esconder las victorias del competidor" a arbitrar
+la categoría. Una página escrita desde el arbitraje no es neutral, es
+neutral-a-nuestra-costa — el competidor no publica la suya con ese criterio, así
+que la asimetría la pagamos enteros nosotros.
+
+**Las cuatro cosas concretas que concedían, y qué se hizo:**
+
+1. **El bloque de apertura decía "esto lo escribe un competidor, no te fíes del
+   todo".** Era cierto y era un regalo: invita a descontar todo lo que viene
+   después, incluido lo verificable. Sustituido por un `KeyTakeaway` que
+   posiciona: cuáles son los cuatro límites de Otterly y cuántos resuelve
+   Genscore.
+2. **Cuatro ventajas de Otterly enumeradas a pelo, arriba del todo.** Se leía
+   como "Otterly gana" aunque tres de las cuatro le sean irrelevantes a un
+   lector español con un dominio. Ahora `OTTERLY_STRENGTHS` es
+   `{claim, context}`: la ventaja entera, y al lado a quién le sirve. "Usuarios
+   ilimitados por 29 $" seguido de "con quince prompts incluidos" es la misma
+   verdad, situada.
+3. **Un `Verdict` titulado "Cuándo NO deberías cambiar"**, con el mismo peso
+   visual que el nuestro. Publicidad del competidor pagada por nosotros. La
+   cautela real —cambiar reinicia el histórico— se mantiene, en párrafo normal
+   y girada hacia lo que de verdad implica: empieza ya donde te vas a quedar, y
+   el plan gratuito no caduca justamente para poder acumular en paralelo.
+4. **Las FAQ preguntaban "¿Es Otterly una mala herramienta?"**, que nos ponía a
+   defenderlo, y "¿por qué fiarte de un competidor?", que nos ponía a
+   desacreditarnos. Sustituidas por las búsquedas reales —"¿cuál es la mejor
+   alternativa?", "¿la más barata?", "¿puedo probar sin dejar Otterly?"— que
+   admiten respuesta verdadera y favorable.
+
+**Lo que NO se tocó, y por qué se dijo en voz alta antes de empezar.** Que hoy
+no ejecutamos Perplexity ni Copilot, y que no hay desglose por país, siguen
+escritos, con test que los exige **por nombre**. No es escrúpulo: es que un
+comprador los verifica en dos clics, y que ese es exactamente el error que
+PRICING-TRUTH-1 obligó a retirar del producto (`docs/launch-plan.md` Fase 2).
+Delante de un competidor se paga más caro que en la propia web. Lo que cambia
+es que se declaran situados —junto a los tres motores que sí cubrimos en todos
+los planes de pago— y no como titular.
+
+**La regla, ya en `.claude/rules/growth-content.md`:** el hecho comprobable no
+se recorta nunca; el orden, el espacio y el contexto son decisión de marketing
+y se toman a nuestro favor. Las dos mitades son la misma política, no un
+equilibrio entre dos.
+
+**Pendiente.** Las otras tres comparativas (`genscore-vs-otterly`,
+`genscore-vs-peec-ai`, `genscore-vs-profound`) se escribieron con el criterio
+anterior. No se tocan en este PR —son cuatro pantallas y su propio slice— pero
+quedan marcadas para una pasada con este mismo encuadre.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,

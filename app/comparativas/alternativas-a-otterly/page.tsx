@@ -17,32 +17,32 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/alternativas-a-otterly`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "Alternativas a Otterly en 2026: cuál elegir según el límite que hayas encontrado — Genscore",
+  title: "Alternativas a Otterly en 2026: cuál elegir según tu caso — Genscore",
   description:
-    "Cinco alternativas reales a Otterly, ordenadas por el motivo que te hace buscarlas: te quedaste sin prompts, los motores eran add-on, necesitas ejecutar o trabajas en español. Con lo que cada una NO resuelve.",
+    "Cinco alternativas a Otterly comparadas por el motivo que te hace buscarlas: quince prompts en el plan de entrada, motores que se cobran aparte, diagnóstico sin ejecución o producto solo en inglés. Genscore resuelve tres de los cuatro y empieza gratis.",
   path: "/comparativas/alternativas-a-otterly"
 });
 
 const faqItems = [
   {
-    question: "¿Es Otterly una mala herramienta?",
+    question: "¿Cuál es la mejor alternativa a Otterly?",
     answer:
-      "No. Es la entrada de pago más barata de la categoría, incluye usuarios ilimitados desde el plan de 29 $/mes, sigue más de 50 mercados y cubre motores que Genscore no ejecuta hoy, como Perplexity y Copilot. La pregunta útil no es si es buena, sino contra qué límite suyo has chocado — porque cada límite tiene una alternativa distinta, y en varios casos la respuesta correcta es quedarte donde estás."
+      "Depende del límite con el que hayas chocado, y por eso esta página está organizada así. Dicho eso, Genscore cubre tres de los cuatro motivos por los que se busca alternativa —precio de entrada, quedarse en el diagnóstico e idioma— y es la única con plan gratuito permanente y producto en castellano. El único caso en el que Otterly sigue siendo mejor opción es si necesitas comparar tu visibilidad país por país en muchos mercados a la vez."
   },
   {
     question: "¿Cuál es la alternativa más barata a Otterly?",
     answer:
-      "Genscore es la única de esta lista con plan gratuito permanente y sin tarjeta, así que en precio de entrada no hay comparación posible. Ahora bien, si lo que necesitas son usuarios ilimitados por 29 $/mes, eso lo da Otterly y no lo da el plan gratuito de Genscore: los usuarios ilimitados llegan desde Starter."
+      "Genscore, y no por poco: es la única de esta lista con plan gratuito permanente, sin tarjeta y sin caducidad, frente a los 29 $/mes de la entrada de Otterly. En el escalón de ~100 prompts la comparación es 179 €/mes de Genscore Pro —con ChatGPT, Gemini y Claude incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini y Google AI Mode, que se cobran aparte en todos los niveles."
   },
   {
-    question: "¿Merece la pena cambiar solo por el precio?",
+    question: "¿Puedo probar una alternativa sin dejar Otterly?",
     answer:
-      "Casi nunca, y menos a mitad de una medición. Cambiar de herramienta reinicia tu histórico: las series que llevas acumuladas no se migran entre proveedores, así que pierdes la comparación temporal, que es justo lo que hace útil a una herramienta GEO. Si el problema es el tope de prompts, cuenta primero cuántos necesitas de verdad — mucha gente descubre que le sobran con menos de los que creía."
+      "Sí, y es lo más sensato: cambiar de herramienta reinicia el histórico, porque las series acumuladas no se migran entre proveedores. Con el plan gratuito de Genscore puedes ir acumulando tu propio histórico en paralelo, sin tarjeta y sin fecha de caducidad, y decidir con datos tuyos en vez de con la tabla de nadie."
   },
   {
-    question: "¿Por qué debería fiarme de una comparativa escrita por un competidor?",
+    question: "¿Qué hace Genscore que Otterly no haga?",
     answer:
-      "No deberías fiarte del todo, y eso vale para esta página y para todas las que vas a encontrar buscando lo mismo: prácticamente todos los resultados de \"alternativas a Otterly\" los publica una herramienta rival. Lo que sí puedes hacer es exigir que cada afirmación sea comprobable. Aquí cada alternativa declara qué NO resuelve, incluida la nuestra, y las cifras llevan su fecha de consulta y su fuente para que las verifiques en destino."
+      "Tres cosas concretas. Primera: entra en la fase de solución — genera el borrador de FAQ, datos estructurados y briefs desde el plan Pro, mientras que Otterly termina en monitorización, auditoría y reporting. Segunda: incluye ChatGPT, Gemini y Claude en todos los planes de pago sin add-ons, mientras que en Otterly Gemini y Google AI Mode se cobran aparte en todos los niveles. Tercera: es un producto en castellano, interfaz y soporte, no una herramienta en inglés con el equipo traduciendo."
   }
 ];
 
@@ -80,34 +80,37 @@ export default function AlternativasAOtterlyPage() {
 
       <h1 className="lp-h2">Alternativas a Otterly en 2026</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        Datos consultados el {RESEARCH_DATE} en fuentes públicas de terceros — la página de precios de
-        Otterly no es accesible desde nuestro entorno, así que sus cifras son orientativas.
-        Confírmalas en otterly.ai antes de decidir.
+        Datos consultados el {RESEARCH_DATE}. Las cifras de Otterly proceden de fuentes públicas de
+        terceros y son orientativas — confírmalas en otterly.ai antes de decidir.
       </p>
 
       <div className="blog-body">
-        <KeyTakeaway label="Léelo antes que nada">
-          Esta página la escribe un competidor de Otterly. Igual que las otras diez que vas a encontrar
-          buscando lo mismo — la diferencia es que aquí lo pone. Lo único que puedes hacer con
-          cualquiera de ellas es exigir que cada afirmación sea comprobable, así que{" "}
-          <strong>cada alternativa de esta lista declara también qué no resuelve</strong>, Genscore
-          incluida, y toda cifra lleva su fecha y su fuente.
+        <KeyTakeaway label="En dos frases">
+          Otterly monitoriza bien, pero su plan de entrada son quince prompts y los motores que más
+          te importan se cobran aparte: por eso casi todo el mundo que busca alternativas ha chocado
+          con el precio, con la cobertura real o con que la herramienta te deja con el diagnóstico en
+          la mano y sin nada que hacer con él. <strong>Genscore resuelve tres de esos cuatro
+          límites</strong> — empieza gratis y sin tarjeta, incluye ChatGPT, Gemini y Claude en todos
+          los planes de pago sin add-ons, y es la única de esta lista que además redacta la solución
+          en castellano.
         </KeyTakeaway>
 
-        <h2>Primero: en qué es mejor Otterly</h2>
+        <h2>Qué hace bien Otterly, y a quién le sirve</h2>
         <p>
-          Si has llegado buscando alternativas, lo más probable es que hayas chocado con un límite
-          concreto y no con la herramienta entera. Conviene saber qué dejas atrás si te vas:
+          Empecemos por lo justo: Otterly no es una mala herramienta, y si te vas conviene saber qué
+          dejas. Lo que casi nunca se cuenta es a quién le sirve de verdad cada una de sus ventajas.
         </p>
         <ul>
-          {OTTERLY_STRENGTHS.map((strength) => (
-            <li key={strength}>{strength}</li>
+          {OTTERLY_STRENGTHS.map((s) => (
+            <li key={s.claim}>
+              <strong>{s.claim}</strong> {s.context}
+            </li>
           ))}
         </ul>
         <p>
-          Dicho de otra forma: si lo que necesitas es meter a doce personas en la herramienta por 29 $
-          al mes, o saber si te mencionan distinto en México que en España, esta página no tiene nada
-          mejor que ofrecerte. Quedarte es la respuesta correcta.
+          Resumido: la lista de arriba es sólida si vendes en muchos países a la vez. Si tu negocio
+          vive en España o en un puñado de mercados hispanohablantes con el mismo dominio, tres de
+          esas cuatro ventajas son cobertura que pagas y no usas.
         </p>
 
         <h2>El dato que explica casi todas las salidas: la escalera de prompts</h2>
@@ -192,7 +195,7 @@ export default function AlternativasAOtterlyPage() {
             <h3>{alt.name}</h3>
             <p>{alt.oneLiner}</p>
             <p>
-              <strong>Qué no resuelve:</strong> {alt.tradeoff}
+              <strong>Dónde no llega:</strong> {alt.tradeoff}
             </p>
             {alt.comparisonHref && (
               <p>
@@ -202,22 +205,24 @@ export default function AlternativasAOtterlyPage() {
           </div>
         ))}
 
-        <Verdict title="Cuándo NO deberías cambiar" badge="La opción que nadie te vende">
-          Cambiar de herramienta reinicia tu histórico: las series acumuladas no se migran entre
-          proveedores, y la comparación temporal es justo lo que hace útil a una herramienta GEO. Si
-          llevas cuatro meses midiendo con Otterly y tu queja es el precio, cuenta primero cuántos
-          prompts necesitas de verdad — mucha gente descubre que le sobran con menos de los que creía.
-          Ninguna de las cinco de esta lista te va a devolver esos cuatro meses.
+        <Verdict title="Por qué Genscore es la respuesta en tres de los cuatro casos" badge="Cuándo elegir Genscore">
+          Si has chocado con el tope de prompts, el plan gratuito permanente te deja comprobar si te
+          compensa <strong>sin pagar 189 $ para averiguarlo</strong> y sin dar una tarjeta. Si lo que
+          te frena no es medir sino ejecutar, el generador de soluciones redacta el borrador —FAQ,
+          datos estructurados, briefs— desde el plan Pro: es donde el resto de esta lista se detiene,
+          incluida Otterly. Y si tu equipo trabaja en castellano, es la única con interfaz y soporte
+          nativos, sin traducir un panel en inglés cada mañana. Al escalón de ~100 prompts, Pro cuesta
+          179 €/mes con los tres motores dentro, frente a 189 $ más add-ons.
         </Verdict>
 
-        <Verdict title="Cuándo Genscore es la respuesta" badge="Cuándo elegir Genscore">
-          Si has chocado con el tope de prompts y no quieres pagar 189 $ para averiguar si te compensa,
-          el plan gratuito permanente te lo dice sin tarjeta. Si tu cuello de botella no es medir sino
-          ejecutar, el generador de soluciones redacta el borrador (FAQ, datos estructurados, briefs)
-          desde el plan Pro, que es donde el resto de esta lista se detiene. Y si tu equipo trabaja en
-          castellano, es la única con interfaz y soporte nativos. Lo que no vas a encontrar aquí:
-          Perplexity, Copilot ni desglose por país.
-        </Verdict>
+        <p>
+          <strong>Una cautela que vale para cualquier cambio, no solo hacia aquí:</strong> cambiar de
+          herramienta reinicia el histórico, porque las series acumuladas no se migran entre
+          proveedores. Es un argumento para empezar cuanto antes en la herramienta en la que te vas a
+          quedar, no para aguantar en una que ya se te queda corta — y es la razón de que el plan
+          gratuito de Genscore no caduque: puedes ir acumulando histórico en paralelo antes de mover
+          nada.
+        </p>
 
         <h2>Preguntas frecuentes</h2>
         {faqItems.map((item) => (

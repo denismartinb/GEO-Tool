@@ -32,17 +32,41 @@ export const OTTERLY_PLANS: { plan: string; price: string; prompts: string }[] =
 ];
 
 /**
- * Lo que Otterly hace genuinamente bien. Va primero en la página y no es
- * cortesía: una pieza titulada "alternativas a X" que no encuentra nada bueno
- * en X se lee como lo que sería —un anuncio— y deja de servir a quien la lee
- * para decidir de verdad (mismo criterio que log §61: las victorias del
- * competidor se marcan, no se esconden).
+ * Lo que Otterly hace bien, y a quién le sirve de verdad.
+ *
+ * La ventaja se declara sin recortarla —eso no se toca, es la línea de
+ * PRICING-TRUTH-1— pero **no se deja suelta**: cada una va con el contexto que
+ * determina si le aplica al lector. La primera versión de esta página listaba
+ * las cuatro a pelo, y el efecto era el contrario del buscado: una lista de
+ * cuatro victorias del competidor arriba del todo se lee como "Otterly gana",
+ * aunque tres de las cuatro le sean irrelevantes a quien está leyendo
+ * (fundador, 2026-08-12; log §65).
+ *
+ * Regla para añadir aquí: `claim` es el hecho, verificable y sin adornar;
+ * `context` es a quién le sirve, y tiene que ser igual de cierto. Un `context`
+ * que desmienta el `claim` en vez de situarlo es hacer trampas y se nota.
  */
-export const OTTERLY_STRENGTHS: string[] = [
-  "Usuarios ilimitados ya en el plan de 29 $/mes. Ninguna herramienta de esta lista, Genscore incluida, iguala eso en su escalón de entrada: en Genscore los usuarios ilimitados llegan desde Starter.",
-  "Seguimiento en más de 50 mercados. Si necesitas saber si te mencionan distinto en México que en España, Genscore hoy no responde a esa pregunta: su GEO Score es por dominio, sin desglose por país.",
-  "Cobertura nominal de hasta 6 motores, incluidos Perplexity y Microsoft Copilot, que Genscore no ejecuta hoy en ningún plan.",
-  "El precio de entrada de pago más bajo de la categoría, con diferencia."
+export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
+  {
+    claim: "Usuarios ilimitados ya en el plan de 29 $/mes.",
+    context:
+      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En Genscore los usuarios ilimitados llegan desde Starter, pero el plan gratuito ya escanea de verdad y sin caducidad."
+  },
+  {
+    claim: "Seguimiento en más de 50 mercados.",
+    context:
+      "Ventaja real si vendes en varios países a la vez. Si operas en España, o en España y un par de mercados LATAM con la misma web, es cobertura que pagas y no usas: el GEO Score de Genscore es por dominio, que es exactamente la unidad que necesitas cuando el dominio es uno."
+  },
+  {
+    claim: "Cobertura nominal de hasta 6 motores, incluidos Perplexity y Microsoft Copilot.",
+    context:
+      "Genscore ejecuta ChatGPT, Gemini y Claude —los tres donde tus clientes preguntan hoy— y los tres en todos los planes de pago, sin add-ons. En Otterly, Gemini y Google AI Mode se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
+  },
+  {
+    claim: "El precio de entrada de pago más bajo de la categoría.",
+    context:
+      "De pago. Genscore empieza en cero, sin tarjeta y sin fecha de caducidad, así que la comparación de entrada no es 29 $ contra 45 €: es 29 $ contra poder medir antes de decidir si pagas."
+  }
 ];
 
 export type LeaveReason = {
@@ -117,7 +141,7 @@ export const ALTERNATIVES: Alternative[] = [
       "Gratis permanente sin tarjeta; Pro 179 €/mes con ~100 prompts — el escalón comparable al Standard de 189 $ de Otterly, sin add-ons por motor.",
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     tradeoff:
-      "No cubre Perplexity ni Copilot, y no desglosa por país: si necesitas saber si te mencionan distinto en México que en España, Otterly responde a eso y Genscore no.",
+      "No ejecuta Perplexity ni Copilot —sí ChatGPT, Gemini y Claude, los tres incluidos en todos los planes de pago, sin add-ons— y no desglosa la puntuación por país. Si tu negocio se juega en comparar mercados uno a uno, esa pieza concreta la cubre mejor Otterly.",
     comparisonHref: "/comparativas/genscore-vs-otterly"
   },
   {
