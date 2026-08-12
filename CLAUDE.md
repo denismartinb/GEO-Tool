@@ -152,7 +152,12 @@ deploys, no las garantías.
 (`ux-pilot.yml` se dispara con `deployment_status` y nada más), así que saltar
 el build de un cambio en el propio piloto lo deja imposible de ejercitar
 (pasó el 2026-08-05: un arreglo del barrido se desplegó «Ignored» y ningún
-piloto lo probó). Mismo argumento que ya protegía a `scripts/`. Compara contra el
+piloto lo probó). Mismo argumento que ya protegía a `scripts/`, y **desde el
+2026-08-11 también `.github/workflows/ux-pilot.yml`**, que el `.github/*`
+genérico se tragaba: el commit que subía su `timeout-minutes` no construyó, así
+que el arreglo del timeout no se pudo ejercitar — el mismo bucle un escalón más
+allá (log §55). Sólo ese workflow; los demás corren por `push`/`pull_request` y
+no necesitan preview. Compara contra el
 último deploy con éxito de la rama, no contra `HEAD^`, y **nunca salta
 producción**. Ahorra minutos de build y pasadas de piloto, no deployments: el
 tope diario se aplica al crear el deployment, aguas arriba del build (medido en

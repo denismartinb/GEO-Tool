@@ -5650,6 +5650,18 @@ techo sube a 30 y queda escrito en el propio workflow y en los límites
 conocidos de `docs/agentic-user-pilot.md`: un piloto que no termina es
 INCONCLUSIVE, nunca un pase.
 
+Y subir ese techo destapó **el mismo bucle del 2026-08-05, en el escalón de al
+lado**: el commit que lo subía sólo tocaba `.github/` y `docs/`, así que
+`vercel-should-build.sh` lo saltó —correctamente, según su lista— y no hubo
+build, ni preview, ni pasada. El arreglo del timeout no se podía ejercitar. La
+excepción de `tests/pilot/**` existía exactamente por este argumento («el
+piloto sólo corre contra un preview»), pero el **workflow** del piloto se lo
+tragaba el `.github/*` genérico. Ahora `.github/workflows/ux-pilot.yml`
+construye, y sólo ése: los demás workflows corren por `push`/`pull_request` y
+no necesitan un preview. La prueba que afirmaba lo contrario está invertida a
+propósito, con el motivo escrito dentro, porque era una suposición que costó
+una pasada.
+
 **Lo que esto NO arregla, dicho en voz alta.** Se cierran dos agujeros, no la
 clase. El motivo de abrir las capturas sigue siendo todo lo que nadie ha
 pensado en afirmar todavía; por eso la causa 1 se arregla en el proceso y no se
