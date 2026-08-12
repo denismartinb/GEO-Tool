@@ -46,6 +46,64 @@ Fases 2 (escritura acotada: ampliar prueba, cambiar plan, con motivo
 obligatorio) y 3 (salud de la plataforma agregada) siguen tal como las
 describe la sección 4 de la maqueta — sin Task Intake propio todavía.
 
+### Pedido por el fundador el 2026-08-12 (para Fase 2, sin aprobar aún)
+
+Dos peticiones. Ninguna es implementable tal cual está enunciada: las tres
+comprobaciones de abajo salen de leer el esquema y el código actuales, y
+cambian el diseño de ambas.
+
+**A. Selección múltiple de usuarios y borrado permanente desde la tabla.**
+
+- **Ya existe un borrado de cuenta y hay que reutilizarlo, no escribir otro.**
+  `deleteAccount()` en `app/dashboard/settings/profile/actions.ts` (DATA-MGMT-1)
+  tiene el desmontaje ordenado y probado: cancelar la suscripción real de
+  Stripe primero (un fallo real de Stripe aborta antes de borrar nada), luego
+  los datos, luego `auth.admin.deleteUser`. Dos caminos de borrado
+  independientes divergen — es exactamente la duplicación que persiguió
+  PRELAUNCH-HARDENING-1 Fase R. Lo correcto es extraer ese desmontaje a un
+  helper compartido y que `/admin` lo llame.
+- **El orden no es opcional, lo impone el esquema.** `projects.owner_user_id` y
+  `scan_runs.triggered_by_user_id` son `references auth.users(id) on delete
+  restrict` (migración 0001): borrar el usuario de `auth` con proyectos vivos
+  **falla**, no cascadea. Sólo `profiles.id` es `on delete cascade`.
+- **La selección múltiple multiplica el radio de daño, y eso pide límites que
+  no existen en el borrado individual.** Un clic en «seleccionar todo» borra la
+  base de clientes entera y no hay deshacer. Como mínimo: confirmación
+  escribiendo algo que no sea «sí», tope duro de filas por lote, nunca un
+  «todos» preseleccionado, aviso por email al operador *después* del hecho, y
+  decirlo en la interfaz: esto no se puede revertir.
+- Sigue estando en la lista de **prohibido sin aprobación explícita** de
+  CLAUDE.md (borrado duro). Necesita Task Intake propio.
+
+**B. Ver y modificar por usuario el escaneo y la auditoría automáticos, con su
+coste.**
+
+- **Esos interruptores son POR PROYECTO, no por usuario.**
+  `recurring_scans_enabled` (migración 0008, por defecto `false`),
+  `auto_web_audit_enabled` (0030, por defecto `true`) y las dos mitades de
+  auditoría `auto_technical_audit_enabled` / `auto_coverage_audit_enabled`
+  (0031) cuelgan de `projects`. Un usuario con cinco dominios puede tenerlos
+  mezclados. **Una sola casilla por usuario sería mentira** en cuanto dos
+  proyectos discrepen: la columna tiene que ser un agregado con regla
+  declarada (`3/5`, o tri-estado todos/algunos/ninguno) y el interruptor real
+  vivir en el detalle, por proyecto.
+- **Activar el escaneo recurrente a un usuario Free no haría nada, y parecería
+  que sí.** `runRecurringScanSweep` descarta los proyectos de plan Free
+  (`skipped_plan_ineligible`, `lib/scan/cron.ts`) y `recurring_scans_enabled`
+  en la práctica no puede llegar a `true` en Free. Desde `/admin` hay que
+  impedirlo o mostrarlo explícitamente, no dejar un interruptor que se queda
+  puesto sin efecto.
+- **El coste es medido, no inventado.** Las cifras reales por motor y por
+  escaneo están en `docs/llm-cost-analysis-2026-08.md`, y dependen del número
+  de prompts, de los motores activos (0033) y del muestreo (0032) — todo ello
+  por proyecto. Cualquier cifra por usuario es una **estimación** y se etiqueta
+  como tal, con su base a la vista (CLAUDE.md, "no fake metrics").
+- **Modificarlos desde `/admin` es escribir sobre datos de otro.** Hoy esos
+  interruptores se escriben por server actions con ámbito de dueño (ver el
+  comentario de la migración 0030); desde `/admin` sería una escritura con
+  service-role sobre el proyecto de un cliente. Eso es Fase 2 y exige su propio
+  Task Intake, con motivo obligatorio y registro, como el resto de escrituras.
+
 `/admin` queda fuera del alcance del `ux-pilot` por diseño: la cuenta piloto
 es una cuenta de cliente, nunca la del operador, y no hay forma segura de que
 el piloto complete un desafío AAL2 sin comprometer el segundo factor real del
