@@ -4,9 +4,20 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
 
+/**
+ * `/comparativas` entra en la navegación superior, no solo en el pie
+ * (revisión del fundador, 2026-08-11). Estaba únicamente en el pie desde
+ * SEO-POS-1 T-a, que resolvió el problema de enlazado interno pero no el de
+ * descubribilidad: quien está leyendo un artículo sobre GEO es exactamente
+ * quien querría comparar herramientas, y la investigación de mercado del plan
+ * sitúa las páginas de comparación como el contenido con más intención de
+ * compra de todo el portfolio. Un enlace alcanzable solo en el pie se
+ * encuentra si lo buscas; en la nav se encuentra sin buscarlo.
+ */
 const NAV_LINKS = [
   { href: "/geo", label: "Qué es GEO" },
   { href: "/blog", label: "Blog" },
+  { href: "/comparativas", label: "Comparativas" },
   { href: "/pricing", label: "Precios" }
 ];
 

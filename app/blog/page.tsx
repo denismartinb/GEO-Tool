@@ -3,7 +3,7 @@ import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BlogCover } from "@/components/blog/blog-cover";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
-import { BLOG_CLUSTERS, BLOG_POSTS, getPostsByCluster } from "@/lib/blog/posts";
+import { BLOG_CLUSTERS, getPostsByCluster } from "@/lib/blog/posts";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
@@ -41,6 +41,25 @@ export default function BlogIndexPage() {
           Suscríbete por RSS
         </a>
       </p>
+
+      {/* Comparativas como sección propia del índice, no solo como enlace de
+          navegación (fundador, 2026-08-11: "sigo sin verlo en blog, no puede
+          ser una sección más normal?"). En móvil la nav superior se pliega
+          tras el menú de hamburguesa, así que añadirla a NAV_LINKS la dejaba
+          invisible justo en la anchura donde más se lee. Va arriba, antes de
+          los clusters: es el contenido con más intención de compra del
+          portfolio y no debería exigir bajar por toda la lista de artículos. */}
+      <section className="blog-cluster">
+        <div className="blog-cluster-head">
+          <h2>Comparativas</h2>
+          <p>
+            Genscore frente a las otras herramientas de visibilidad en IA, comparado de forma honesta —
+            con las filas donde gana cada una.{" "}
+            <Link href="/comparativas">Ver las comparativas</Link>
+          </p>
+        </div>
+      </section>
+
       {BLOG_CLUSTERS.map((cluster) => {
         const posts = getPostsByCluster(cluster.key);
         return (
@@ -68,9 +87,6 @@ export default function BlogIndexPage() {
           </section>
         );
       })}
-      <p className="legal-updated" style={{ marginTop: 8 }}>
-        {BLOG_POSTS.length} artículos publicados.
-      </p>
     </BlogPageShell>
   );
 }

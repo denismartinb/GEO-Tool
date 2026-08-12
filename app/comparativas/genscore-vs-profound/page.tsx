@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
 import { COMPARISON_ROWS, PROFOUND_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-profound";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -43,18 +44,18 @@ export default function GenscoreVsProfoundPage() {
         Datos de Profound consultados el {PROFOUND_RESEARCH_DATE} en fuentes públicas de terceros —
         confírmalos en tryprofound.com antes de decidir, su página de precios ya no publica cifras.
       </p>
-      <div className="legal-body">
-        <p>
-          <strong>En dos frases:</strong> Profound es una plataforma de analítica de visibilidad en IA
-          bien financiada y dirigida a mid-market y grandes empresas, con cobertura nominal de hasta
-          nueve motores — pero sin precio público, sin producto en castellano ni presencia conocida en
-          el mercado hispanohablante. Genscore empieza gratis, sin hablar con nadie de ventas, cubre los
-          tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) y convierte lo que detecta
-          en acciones concretas, no solo en un panel de analítica.
-        </p>
+      <div className="blog-body">
+        <KeyTakeaway label="En dos frases">
+          Profound es una plataforma de analítica de visibilidad en IA bien financiada y dirigida a
+          mid-market y grandes empresas, con cobertura nominal de hasta nueve motores — pero sin precio
+          público, sin producto en castellano ni presencia conocida en el mercado hispanohablante.
+          Genscore empieza gratis, sin hablar con nadie de ventas, cubre los tres motores que de verdad
+          importan hoy (Gemini, Claude, ChatGPT) y convierte lo que detecta en acciones concretas, no
+          solo en un panel de analítica.
+        </KeyTakeaway>
 
         <h2>Comparativa</h2>
-        <div className="cmp-table-wrap">
+        <CompareTable>
           <table>
             <tbody>
               <tr>
@@ -65,32 +66,45 @@ export default function GenscoreVsProfoundPage() {
               {COMPARISON_ROWS.map((row) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
-                  <td>{row.genscore}</td>
-                  <td>{row.profoundWins ? <strong>{row.profound}</strong> : row.profound}</td>
+                  <td>
+                    {row.genscoreWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.genscore}
+                      </>
+                    ) : (
+                      row.genscore
+                    )}
+                  </td>
+                  <td>
+                    {row.profoundWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.profound}
+                      </>
+                    ) : (
+                      row.profound
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </CompareTable>
 
-        <h2>Cuándo elegir Profound</h2>
-        <p>
+        <Verdict title="Cuándo elegir Profound" badge="Cuándo elegir el competidor">
           Si eres una empresa de tamaño medio o grande con presupuesto para una herramienta enterprise,
           necesitas cobertura amplia de motores (incluido Perplexity, que Genscore no soporta hoy) y no
-          te importa operar en inglés, Profound es una opción real y mucho más madura en volumen de
-          financiación y clientes enterprise. Sus reseñas públicas —4,5/5 en G2— la valoran precisamente
-          por la profundidad de su analítica.
-        </p>
+          te importa operar en inglés ni pasar por una demo de ventas antes de ver un precio, Profound
+          es una opción real, con analítica más profunda y 4,5/5 en G2.
+        </Verdict>
 
-        <h2>Cuándo elegir Genscore</h2>
-        <p>
+        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
           Si operas en España o LATAM y quieres el producto en tu idioma, si prefieres ver un precio
           antes de hablar con nadie y empezar gratis sin tarjeta, si gestionas varios dominios de
           cliente y no quieres crear una cuenta separada por cada uno, o si lo que necesitas no es solo
           un panel de analítica sino que te digan qué hacer al respecto (recomendaciones con evidencia y
           un generador de soluciones listas para publicar), Genscore está construido específicamente
           para eso.
-        </p>
+        </Verdict>
 
         <h2>Metodología</h2>
         <p>
@@ -102,6 +116,11 @@ export default function GenscoreVsProfoundPage() {
           señal de que su estructura de precios ha cambiado más de una vez. Si detectas un dato
           desactualizado, dínoslo y lo corregimos.
         </p>
+
+        <ArticleCta
+          title="¿Cuánto te cuesta de verdad no saberlo?"
+          text="Lanza tu escaneo gratuito y compara tu visibilidad real, sin hablar con ventas. Sin tarjeta."
+        />
       </div>
     </BlogPageShell>
   );

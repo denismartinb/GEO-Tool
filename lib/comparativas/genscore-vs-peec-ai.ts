@@ -13,16 +13,24 @@
  */
 export const PEEC_RESEARCH_DATE = "3 de agosto de 2026";
 
-export const COMPARISON_ROWS: { label: string; genscore: string; peec: string; peecWins?: boolean }[] = [
+export const COMPARISON_ROWS: {
+  label: string;
+  genscore: string;
+  peec: string;
+  peecWins?: boolean;
+  genscoreWins?: boolean;
+}[] = [
   {
     label: "Precio de entrada",
     genscore: "Gratis (escaneo permanente, sin tarjeta)",
-    peec: "Desde ~95 $/mes — sin plan gratuito (cifra pública, confírmala en peec.ai antes de decidir)"
+    peec: "Desde ~95 $/mes — sin plan gratuito (cifra pública, confírmala en peec.ai antes de decidir)",
+    genscoreWins: true
   },
   {
     label: "Coste de añadir motores de IA",
     genscore: "3 motores incluidos sin coste extra desde el plan Starter (Gemini, Claude, ChatGPT)",
-    peec: "Añadir motores más allá de los incluidos en el plan tiene coste de add-on aparte — la cifra exacta varía según la fuente consultada"
+    peec: "Añadir motores más allá de los incluidos en el plan tiene coste de add-on aparte — la cifra exacta varía según la fuente consultada",
+    genscoreWins: true
   },
   {
     label: "Cobertura multi-país / multi-idioma",
@@ -39,11 +47,13 @@ export const COMPARISON_ROWS: { label: string; genscore: string; peec: string; p
   {
     label: "Bucle de acción",
     genscore: "Recomendaciones basadas en evidencia + generador de soluciones (FAQ, schema, briefs) incluido desde Pro",
-    peec: "Función \"Actions\": prioriza oportunidades y sugiere qué publicar u optimizar, pero no genera el contenido — la creación queda en tus manos"
+    peec: "Función \"Actions\": prioriza oportunidades y sugiere qué publicar u optimizar, pero no genera el contenido — la creación queda en tus manos",
+    genscoreWins: true
   },
   {
     label: "Idioma de la interfaz y del producto",
     genscore: "Castellano nativo",
-    peec: "Documentación e interfaz observadas en inglés — sin versión en castellano confirmada"
+    peec: "Documentación e interfaz observadas en inglés — sin versión en castellano confirmada",
+    genscoreWins: true
   }
 ];

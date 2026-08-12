@@ -18,11 +18,18 @@
  */
 export const PROFOUND_RESEARCH_DATE = "10 de agosto de 2026";
 
-export const COMPARISON_ROWS: { label: string; genscore: string; profound: string; profoundWins?: boolean }[] = [
+export const COMPARISON_ROWS: {
+  label: string;
+  genscore: string;
+  profound: string;
+  profoundWins?: boolean;
+  genscoreWins?: boolean;
+}[] = [
   {
     label: "Precio de entrada",
     genscore: "Gratis (escaneo permanente, sin tarjeta)",
-    profound: "Sin precio público — su web pide una demo. Terceros citan cifras muy distintas según la fecha, entre 99 y 499 $/mes"
+    profound: "Sin precio público — su web pide una demo. Terceros citan cifras muy distintas según la fecha, entre 99 y 499 $/mes",
+    genscoreWins: true
   },
   {
     label: "Motores de IA cubiertos",
@@ -39,17 +46,20 @@ export const COMPARISON_ROWS: { label: string; genscore: string; profound: strin
   {
     label: "Varios clientes/dominios bajo una cuenta",
     genscore: "Una cuenta de Agencia sigue varios dominios de cliente a la vez, sin credenciales separadas por cliente — aunque todavía sin paneles white-label ni permisos por rol",
-    profound: "Reseñas de usuarios señalan que gestionar 5 clientes exige 5 cuentas separadas, sin panel ni permisos compartidos"
+    profound: "Reseñas de usuarios señalan que gestionar 5 clientes exige 5 cuentas separadas, sin panel ni permisos compartidos",
+    genscoreWins: true
   },
   {
     label: "Idioma del producto",
     genscore: "Castellano nativo",
-    profound: "Selector de idioma anunciado para 30+ idiomas — sin confirmación pública de que el castellano esté entre ellos, y sin ningún cliente ni caso de estudio en español encontrado"
+    profound: "Selector de idioma anunciado para 30+ idiomas — sin confirmación pública de que el castellano esté entre ellos, y sin ningún cliente ni caso de estudio en español encontrado",
+    genscoreWins: true
   },
   {
     label: "Bucle de acción",
     genscore: "Recomendaciones basadas en evidencia + generador de soluciones (FAQ, schema, briefs) incluido desde Pro",
-    profound: "Centrado en analítica e insights (menciones, citas, tráfico de agentes de IA, volumen de prompts) — sin generador de acciones/soluciones documentado públicamente"
+    profound: "Centrado en analítica e insights (menciones, citas, tráfico de agentes de IA, volumen de prompts) — sin generador de acciones/soluciones documentado públicamente",
+    genscoreWins: true
   },
   {
     label: "Reputación en reseñas públicas",
@@ -58,9 +68,17 @@ export const COMPARISON_ROWS: { label: string; genscore: string; profound: strin
     profoundWins: true
   },
   {
-    label: "Financiación",
-    genscore: "Autofinanciado",
-    profound: "155 M$ levantados en total; última ronda (Serie C) valoró la empresa en 1.000 M$ (febrero de 2026)",
-    profoundWins: true
+    // Fila deliberadamente SIN `profoundWins` (revisión del fundador,
+    // 2026-08-11). Levantar más dinero no es un beneficio para quien compra la
+    // herramienta: no mejora ningún resultado suyo, y corta en las dos
+    // direcciones (respaldo y continuidad, pero también presión por rentabilizar
+    // la ronda). Marcarla como victoria del competidor era conceder un punto
+    // que no es un punto. Se mantiene la fila porque la viabilidad del
+    // proveedor sí es contexto legítimo antes de firmar con nadie.
+    label: "Respaldo y modelo de negocio",
+    genscore:
+      "Autofinanciado — sin inversores a los que devolver una ronda, y por tanto sin presión externa para subir precios o pivotar",
+    profound:
+      "155 M$ levantados en total; última ronda (Serie C) valoró la empresa en 1.000 M$ (febrero de 2026) — más músculo para invertir en producto, y también más expectativa de retorno que atender"
   }
 ];

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { BLOG_POSTS, BLOG_CLUSTERS } from "@/lib/blog/posts";
+import { COMPARATIVAS } from "@/lib/seo/llms-txt";
 
 /**
  * El fixture del self-check no puede quedarse atrás del producto.
@@ -69,5 +70,54 @@ describe("el fixture del piloto sigue al producto", () => {
         "motivo que arriba: la página pilar de un cluster que el fixture no " +
         "conoce devuelve 404."
     ).toEqual(realKeys);
+  });
+});
+
+/**
+ * COMPARATIVAS-DESIGN-1 (2026-08-11): el mismo fallo, un nivel más arriba.
+ *
+ * El bloque anterior comprueba que el **fixture** siga al producto, pero no que
+ * lo haga el **journey**. `/comparativas/genscore-vs-profound` se publicó en
+ * SEO-POS-1 S2 (log §58) sin añadir ni su journey ni su entrada de fixture, así
+ * que el piloto pasó en verde sobre su propio PR y otra vez sobre el rediseño
+ * de esta fase **sin haber visitado nunca esa página** — justo la que el
+ * fundador había señalado. Un piloto que no ve una pantalla no la aprueba, y
+ * aquí ni siquiera se sabía que no la veía.
+ *
+ * Las comparativas se prestan a esto más que el blog: cada una es un `page.tsx`
+ * a mano y un `test(...)` a mano, sin bucle sobre una lista, así que publicar
+ * una y olvidar la otra mitad no rompe nada visible.
+ *
+ * Comprobación de texto sobre el spec, no un import: el spec de Playwright no
+ * importa código de la app a propósito (ver su cabecera), y lo que interesa
+ * aquí es justo que su lista literal cubra la SSOT.
+ */
+const specSource = readFileSync(
+  join(process.cwd(), "tests", "pilot", "journeys", "public-pages.spec.ts"),
+  "utf8"
+);
+
+describe("toda comparativa publicada la pilota alguien", () => {
+  it("cada ruta de COMPARATIVAS tiene su journey en public-pages.spec.ts", () => {
+    const missing = COMPARATIVAS.map((c) => c.path).filter((path) => !specSource.includes(`"${path}"`));
+
+    expect(
+      missing,
+      "Estas comparativas están publicadas pero ningún journey las visita, así " +
+        "que el piloto puede dar PASS sin haberlas visto nunca:\n" +
+        `${missing.join("\n") || "(ninguna)"}\n\n` +
+        "Añade su test a tests/pilot/journeys/public-pages.spec.ts en este mismo PR."
+    ).toEqual([]);
+  });
+
+  it("cada ruta de COMPARATIVAS la sirve el fixture del self-check", () => {
+    const missing = COMPARATIVAS.map((c) => c.path).filter((path) => !serverSource.includes(`"${path}"`));
+
+    expect(
+      missing,
+      "PUBLIC_PAGES en tests/pilot/fixtures/server.mjs no sirve estas rutas, así " +
+        "que su journey recibe un 404 y tumba el caso SANO del self-check:\n" +
+        `${missing.join("\n") || "(ninguna)"}`
+    ).toEqual([]);
   });
 });

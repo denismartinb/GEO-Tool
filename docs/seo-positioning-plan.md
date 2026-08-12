@@ -219,7 +219,7 @@ pieza sigue siendo un PR con brief de `seo-geo-research`, redacción de
 | Orden | Pieza | Cluster kw | Capa |
 |---|---|---|---|
 | C1 | ✅ **Hecho (2026-08-10)** — "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude" (título corregido: la redacción original de esta fila decía "…y Perplexity", que no es un motor soportado hoy — se habría publicado el mismo reclamo falso que PRICING-TRUTH-1 retiró del producto). CTA al escaneo gratuito real. Detalle: `docs/content-calendar.md`, log §50 | 1 | B/playbooks |
-| C2 | ✅ **Hecho (2026-08-10)** — `/comparativas/genscore-vs-profound`. Precio de Profound sin cifra fija a propósito: su web ya no lo publica y las fuentes de terceros se contradicen. Detalle: `docs/content-calendar.md`, log §55 | 2 | C/comparativas |
+| C2 | ✅ **Hecho (2026-08-10)** — `/comparativas/genscore-vs-profound`. Precio de Profound sin cifra fija a propósito: su web ya no lo publica y las fuentes de terceros se contradicen. Detalle: `docs/content-calendar.md`, log §58 | 2 | C/comparativas |
 | C3 | "Alternativas a Otterly" (la comparativa 1:1 ya existe; esta es el formato listicle) | 2 | C/comparativas |
 | C4 | Refresco + ampliación de "Mejores herramientas GEO en español" (añadir CreceRank, Trendsights, Mentio — los rivales reales del mercado ES; honestidad como siempre: filas donde ganan ellos) | 3 | C/comparativas |
 | C5 | "Qué es una auditoría GEO (con checklist)" — enlaza la feature real de auditoría web | 5 | B/playbooks |
@@ -295,6 +295,18 @@ GSC acumule datos; el tráfico referral desde IA es hoy ~1% del total del
 mercado (aunque convierte ~4x mejor — el argumento B2B, no el de volumen); la
 ventana de los clusters 1-3 puede cerrarse antes si CreceRank/Trendsights
 aceleran.
+
+---
+
+## 5.1 Trabajo relacionado, fuera de las fases numeradas
+
+**COMPARATIVAS-DESIGN-1 — ✅ hecho (2026-08-11).** Task Intake propio, aprobado
+por el fundador tras revisar el preview de S2. No estaba en el plan original:
+surgió de una pregunta directa sobre por qué `/comparativas` se veía más
+plana que el resto del sitio. Las 4 páginas de comparativas migraron de
+`legal-body` (la clase de las páginas legales) al mismo sistema de bloques
+que usa el blog — `KeyTakeaway`, `CompareTable`+`Pill`, `Verdict`, `ArticleCta`
+real. Sin cambios de dato. Detalle: log §59.
 
 ---
 
