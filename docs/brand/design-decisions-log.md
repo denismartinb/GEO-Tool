@@ -6047,6 +6047,25 @@ aviso. El invariante duro: en el escaneo el movimiento codifica progreso real;
 en la 404 no puede haber ni barra, ni anillo, ni contador, porque no habría
 nada verdadero que contar.
 
+**Dos metas `robots`, y las dos legítimas.** La primera pasada del piloto falló
+en las tres anchuras por una aserción propia: `meta[name="robots"]` resuelve a
+**dos** elementos en esta página. Next añade la suya (`noindex`) a toda página
+`not-found` y `app/not-found.tsx` declara la nuestra (`noindex, follow`) desde
+SEO-POS-1 (T7). Es preexistente, no lo introdujo esta fase, y no se corrigió
+retirando ninguna: no se contradicen —ninguna dice `nofollow`, así que el
+resultado efectivo es `noindex, follow`—, quitar la nuestra sería un cambio de
+SEO ajeno a este PR y la de Next no está en nuestra mano. Lo que sí cambió es
+la aserción: en vez de mirar la primera meta, comprueba que **ninguna** de las
+que haya deje la página indexable. Con `.first()` el test habría pasado aunque
+una segunda dijera `index`.
+
+**Y una lección de orden, no de contenido.** `public-pages.spec.ts` corre en
+modo `serial`, así que aquel fallo de cabeceras se llevó por delante el test
+que pinta la pantalla: la 404 no apareció en la tabla del piloto **en ninguna
+anchura**. Un `PILOT FAIL` por una aserción trivial dejó la pantalla del PR sin
+mirar. El test que produce las capturas va ahora primero, para que un fallo de
+detalle no borre la evidencia visual.
+
 **Lo que queda sin cubrir, dicho en voz alta.** El repo no tiene
 testing-library ni un solo `.test.tsx`, así que esta pantalla **no tiene test
 unitario y no puede tenerlo hoy**. La verificación real es el `ux-pilot`
