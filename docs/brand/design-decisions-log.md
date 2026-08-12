@@ -5983,6 +5983,60 @@ Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
 piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
 si cada pantalla que toca el diff aparece en la tabla.
 
+---
+
+## 64. Una pasada del piloto que publicó PASS sin llegar a juzgar nada (2026-08-12)
+
+**Qué pasó.** El piloto de PR #388 publicó un `PILOT PASS` completo —53
+pantallas, tres anchuras, todo verde— y el run terminó en `cancelled`. Los dos
+hechos son ciertos a la vez, y esa combinación es peor que un fallo limpio.
+
+**La secuencia, del API de Actions:**
+
+| Paso | Resultado |
+|---|---|
+| 9. Run the pilot | éxito, **19 min 04 s** |
+| 10. Upload screenshots | éxito |
+| 11. Publish evidence branch | éxito |
+| 12. Post the verdict on the PR | **cancelado** |
+| 13. Fail the check unless the pilot passed | **saltado** |
+
+`timeout-minutes` era 20. El job arrancó a las 01:20:04 y murió a las 01:40:07:
+veinte minutos exactos. El barrido cabía por **56 segundos**.
+
+**Por qué importa más de lo que parece.** El paso 13 es el único que convierte
+un FAIL o un INCONCLUSIVE en check rojo, y GitHub lo salta en un job cancelado
+—sólo ejecuta lo que lleva `cancelled()` o `always()`—. Es decir: si el barrido
+llega a cruzar el tope, el resultado no es "el piloto falló", es **"el piloto no
+juzgó"**, y sobre la superficie de checks eso no se distingue de un verde a
+menos que alguien abra el run paso a paso. Aquí el comentario de PASS incluso
+llegó a publicarse un segundo antes de morir, así que el hilo del PR quedó
+diciendo que todo estaba bien.
+
+**El tope estaba condenado a cruzarse.** El barrido crece con cada pieza de
+contenido: cada comparativa, cada artículo y cada término de glosario añade una
+pantalla × tres anchuras. Un tope pegado al tiempo real de la última pasada no
+es un margen, es una cuenta atrás.
+
+**Arreglo, en dos partes:**
+
+1. `timeout-minutes` de 20 a 35. No es "por si acaso": el margen medido era de
+   56 segundos sobre una pasada que crece sola.
+2. Un paso nuevo con `if: cancelled()` que publica su propio comentario
+   diciendo que la pasada no llegó a juzgar y que un PASS anterior de esa misma
+   pasada no cuenta. Es la única forma de que la cancelación se vea desde el
+   hilo del PR sin abrir el run.
+
+**La regla, que ya estaba escrita para otra parte del sistema:** una garantía
+que no se puede ver fallar no es una garantía (`.claude/rules/scan.md`, sobre
+`fetch` sin comprobar `response.ok`). Valía igual para el propio piloto y
+nadie lo había aplicado ahí.
+
+**Lo que este incidente NO fue.** El barrido de #388 sí se ejecutó entero y sí
+vio la pantalla nueva; su PASS es real en cuanto al contenido. Lo que no hubo
+fue puerta. Se distingue porque los pasos 9 a 11 constan en éxito — pero eso
+hay que ir a mirarlo, que es justo el trabajo que este arreglo elimina.
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
