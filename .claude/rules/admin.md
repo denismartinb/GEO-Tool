@@ -10,7 +10,7 @@ paths:
 
 These invariants apply automatically when touching `/admin`, `/mfa/*`, or
 `lib/admin/**`. Every rule here is traceable to
-`docs/brand/design-decisions-log.md` §58 (ADMIN-CONSOLE-1). Owned by
+`docs/brand/design-decisions-log.md` §64 (ADMIN-CONSOLE-1). Owned by
 `data-guardian` for review, `frontend`/`core-flow` for implementation.
 
 - **The allow-list is a UUID, never an email.** `ADMIN_USER_IDS` compares
@@ -40,7 +40,7 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   `.claude/rules/scan.md`'s "a failure the operator can fix must reach the
   operator"; it was written into the ADMIN-CONSOLE-1 proposal, shipped
   missing, and cost an hour on the first real setup
-  (`docs/brand/design-decisions-log.md` §58).
+  (`docs/brand/design-decisions-log.md` §64).
 - **A non-operator gets `notFound()` (404), never a redirect or a 403.** A
   403 confirms the route exists and is worth attacking; a redirect to
   `/login` reveals the same thing to someone already signed in. 404 says
@@ -81,7 +81,7 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   *inside* the checked origin. Hand-rolled rules keep losing to the parser the
   browser actually runs — resolve against a fixed sentinel origin and demand
   the result still live there, on the way in and on the way out
-  (`docs/brand/design-decisions-log.md` §58).
+  (`docs/brand/design-decisions-log.md` §64).
 - **No estimated number may be presented as if it were the real one.**
   "MRR estimado" is catalog price × accounts with a real
   `stripe_subscription_id` — it says "estimado" because it is one, and it

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
 import { COMPARISON_ROWS, PEEC_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-peec-ai";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -29,7 +30,7 @@ function itemListSchema() {
 
 export default function GenscoreVsPeecAiPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/comparativas">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },
@@ -45,17 +46,17 @@ export default function GenscoreVsPeecAiPage() {
         pudieron corroborar entre fuentes independientes y no se publican aquí como hechos. Confírmalas
         en peec.ai antes de decidir.
       </p>
-      <div className="legal-body">
-        <p>
-          <strong>En dos frases:</strong> Peec AI no cobra un extra por lanzar tus prompts en distintos
-          idiomas o países, y ya incluye usuarios ilimitados en su plan de entrada. Genscore no desglosa
-          por país, pero incluye los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin
-          coste extra por añadirlos, y convierte lo que detecta en contenido generado, no solo en una
-          sugerencia priorizada de qué hacer.
-        </p>
+      <div className="blog-body">
+        <KeyTakeaway label="En dos frases">
+          Peec AI no cobra un extra por lanzar tus prompts en distintos idiomas o países, y ya incluye
+          usuarios ilimitados en su plan de entrada. Genscore no desglosa por país, pero incluye los tres
+          motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por añadirlos, y
+          convierte lo que detecta en contenido generado, no solo en una sugerencia priorizada de qué
+          hacer.
+        </KeyTakeaway>
 
         <h2>Comparativa</h2>
-        <div className="cmp-table-wrap">
+        <CompareTable>
           <table>
             <tbody>
               <tr>
@@ -66,28 +67,42 @@ export default function GenscoreVsPeecAiPage() {
               {COMPARISON_ROWS.map((row) => (
                 <tr key={row.label}>
                   <td>{row.label}</td>
-                  <td>{row.genscore}</td>
-                  <td>{row.peecWins ? <strong>{row.peec}</strong> : row.peec}</td>
+                  <td>
+                    {row.genscoreWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.genscore}
+                      </>
+                    ) : (
+                      row.genscore
+                    )}
+                  </td>
+                  <td>
+                    {row.peecWins ? (
+                      <>
+                        <Pill tone="si">Gana aquí</Pill> {row.peec}
+                      </>
+                    ) : (
+                      row.peec
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </CompareTable>
 
-        <h2>Cuándo elegir Peec AI</h2>
-        <p>
+        <Verdict title="Cuándo elegir Peec AI" badge="Cuándo elegir el competidor">
           Si monitorizas marca en varios mercados o idiomas a la vez y no quieres pagar un extra por
           cada uno, o si tu equipo es grande y valoras tener usuarios ilimitados ya en el plan de
           entrada, Peec AI cubre ese caso mejor que Genscore hoy.
-        </p>
+        </Verdict>
 
-        <h2>Cuándo elegir Genscore</h2>
-        <p>
+        <Verdict title="Cuándo elegir Genscore" badge="Cuándo elegir Genscore">
           Si operas principalmente en España o LATAM y quieres el producto en tu idioma, si quieres
           empezar sin tarjeta y sin pagar un extra por los tres motores principales, o si lo que
           necesitas no es solo una lista priorizada de oportunidades sino contenido ya generado y listo
           para publicar (FAQ, schema, briefs), Genscore está construido específicamente para eso.
-        </p>
+        </Verdict>
 
         <h2>Metodología</h2>
         <p>
@@ -98,6 +113,11 @@ export default function GenscoreVsPeecAiPage() {
           o más fuentes independientes corroboraron. Si detectas un dato desactualizado o inexacto,
           dínoslo y lo corregimos.
         </p>
+
+        <ArticleCta
+          title="¿Cuánto te cuesta de verdad no saberlo?"
+          text="Lanza tu escaneo gratuito y compara tu visibilidad real, sin pagar add-ons por idioma. Sin tarjeta."
+        />
       </div>
     </BlogPageShell>
   );

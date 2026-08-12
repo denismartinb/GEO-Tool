@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { KeyTakeaway, CompareTable, ArticleCta } from "@/components/blog/article";
 import { TOOLS, PILLAR_RESEARCH_DATE } from "@/lib/comparativas/mejores-herramientas-geo";
 import { contentMetadata } from "@/lib/seo/metadata";
 
@@ -51,7 +52,7 @@ function itemListSchema() {
 
 export default function MejoresHerramientasGeoPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/comparativas">
       <BreadcrumbSchema
         items={[
           { name: "Inicio", url: SITE_URL },
@@ -70,13 +71,13 @@ export default function MejoresHerramientasGeoPage() {
         — ver metodología al final.
       </p>
 
-      <div className="legal-body">
-        <p>
-          <strong>En una frase:</strong> todas las herramientas de esta lista miden si un motor
-          generativo menciona, posiciona o cita tu marca — la diferencia real entre ellas no es cuánto
-          miden, sino <strong>en qué punto del proceso te dejan</strong> (solo diagnóstico, o también la
-          solución) y si tu equipo puede trabajar en su idioma nativo.
-        </p>
+      <div className="blog-body">
+        <KeyTakeaway label="En una frase">
+          Todas las herramientas de esta lista miden si un motor generativo menciona, posiciona o cita
+          tu marca — la diferencia real entre ellas no es cuánto miden, sino <strong>en qué punto del
+          proceso te dejan</strong> (solo diagnóstico, o también la solución) y si tu equipo puede
+          trabajar en su idioma nativo.
+        </KeyTakeaway>
 
         <h2>¿Por qué necesitas una herramienta GEO?</h2>
         <p>
@@ -97,7 +98,7 @@ export default function MejoresHerramientasGeoPage() {
         </p>
 
         <h2>Las 6 herramientas, de un vistazo</h2>
-        <div className="cmp-table-wrap">
+        <CompareTable>
           <table>
             <tbody>
               <tr>
@@ -118,7 +119,7 @@ export default function MejoresHerramientasGeoPage() {
               ))}
             </tbody>
           </table>
-        </div>
+        </CompareTable>
 
         {TOOLS.map((t) => (
           <div className="tool-profile-card" key={t.slug}>
@@ -211,12 +212,10 @@ export default function MejoresHerramientasGeoPage() {
           en cualquiera de las seis, dínoslo y lo corregimos.
         </p>
 
-        <div className="blog-cta">
-          <p>¿Quieres ver tu GEO Score real antes de decidir?</p>
-          <Link href="/signup" className="btn btn-primary">
-            Prueba Genscore gratis
-          </Link>
-        </div>
+        <ArticleCta
+          title="¿Quieres ver tu GEO Score real antes de decidir?"
+          text="Lanza tu escaneo gratuito con Genscore y compara con datos propios, no solo con esta tabla. Sin tarjeta."
+        />
       </div>
     </BlogPageShell>
   );

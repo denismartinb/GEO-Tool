@@ -21,12 +21,13 @@ export const metadata: Metadata = contentMetadata({
 const COMPARISONS = [
   { href: "/comparativas/mejores-herramientas-geo-en-espanol", title: "Las mejores herramientas GEO en 2026" },
   { href: "/comparativas/genscore-vs-otterly", title: "Genscore vs Otterly" },
-  { href: "/comparativas/genscore-vs-peec-ai", title: "Genscore vs Peec AI" }
+  { href: "/comparativas/genscore-vs-peec-ai", title: "Genscore vs Peec AI" },
+  { href: "/comparativas/genscore-vs-profound", title: "Genscore vs Profound" }
 ];
 
 export default function ComparativasIndexPage() {
   return (
-    <BlogPageShell>
+    <BlogPageShell activeHref="/comparativas">
       <BreadcrumbSchema items={[{ name: "Inicio", url: SITE_URL }, { name: "Comparativas", url: `${SITE_URL}/comparativas` }]} />
       <h1 className="lp-h2">Comparativas</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>

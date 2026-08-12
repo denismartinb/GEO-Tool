@@ -5702,7 +5702,411 @@ prompts, por ejemplo, solo en Gemini"*.
 
 ---
 
-## 58. Consola de operador: aviso de alta y `/admin` de sólo lectura (ADMIN-CONSOLE-1 Fase 1, 2026-08-11)
+---
+
+## 58. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
+
+**Origen.** Segunda pieza de la cola de contenido de la Fase C
+(`docs/seo-positioning-plan.md` §4) — "alternativas a Profound en español".
+
+**Por qué se investigó antes de escribir.** Comparar con un competidor real
+es un riesgo distinto —y mayor— que una autoafirmación de producto: un dato
+de precio o de features equivocado sobre Profound es verificable por
+cualquier lector en dos clics, y "verificable" es justo la palabra que hace
+daño si sale mal. Se lanzó una investigación web dedicada antes de escribir
+una sola cifra.
+
+**El hallazgo real: el precio de Profound ya no es un hecho verificable.** Su
+página pública de precios ha pasado a exigir una demo — no publican ningún
+importe. Fuentes de terceros citan cifras muy distintas según su fecha (499
+$/mes "Lite" en su lanzamiento de 2025; 99 $/mes "Starter" en reseñas de
+2026), lo que apunta a que su estructura de precios ha cambiado más de una
+vez y no a que una fuente esté simplemente equivocada. La decisión: **la fila
+de precio no afirma ninguna cifra concreta de Profound**, con un test
+(`lib/comparativas/genscore-vs-profound.test.ts`) que lo impone en vez de
+confiar en que nadie la añada después. Su financiación, en cambio —155 M$
+levantados, valoración de 1.000 M$ en la Serie C de febrero de 2026— está
+bien documentada por prensa independiente (Fortune, GlobeNewswire, la propia
+Profound) y se cita tal cual.
+
+**Segundo cuidado: la ausencia de presencia en español no es lo mismo que
+"no lo soporta".** Profound anunció un selector de idioma para 30+ idiomas
+sin que la investigación pudiera confirmar si el castellano está entre ellos.
+La página dice "sin evidencia de enfoque en el mercado hispanohablante" —
+ningún cliente, caso de estudio ni presencia comercial en español encontrada
+— nunca "no soporta español", que sería una afirmación más fuerte que la
+evidencia disponible.
+
+**Tercer cuidado: no repetir el error que PRICING-TRUTH-1 ya corrigió, esta
+vez sobre el propio Genscore.** El plan Agencia de Genscore no tiene
+workspaces, roles ni paneles white-label — se retiraron esas features
+inventadas en PRICING-TRUTH-1 (`docs/launch-plan.md` Fase 2). La fila de
+"varios clientes bajo una cuenta" no reclama un panel de agencia que no
+existe: dice, con precisión, que una cuenta de Agencia sigue varios dominios
+sin credenciales separadas por cliente, y añade explícitamente que tampoco
+hay paneles white-label ni permisos por rol todavía.
+
+**Mismo formato que las dos comparativas anteriores** (tabla + "cuándo elegir
+cada una" + metodología con fecha de consulta), con al menos una fila real
+donde gana Profound (motores nominales, a quién se dirige, reputación en G2,
+financiación) — una comparativa que no cede nunca una columna deja de ser
+creíble.
+
+**Validación:** tests nuevos para `genscore-vs-profound.ts` (incluida la
+comprobación explícita de que ninguna fila afirma un precio concreto).
+Añadida a las tres SSOT que la hacen descubrible: índice de `/comparativas`,
+`lib/seo/llms-txt.ts` y `app/sitemap.ts`.
+
+---
+
+## 59. Comparativas deja de ser una página legal disfrazada (COMPARATIVAS-DESIGN-1, 2026-08-11)
+
+**Origen.** El fundador, revisando el preview de S2 (log §58), preguntó por
+qué `/comparativas/genscore-vs-profound` se veía "más plana" que el resto del
+sitio. Task Intake completo antes de tocar código (el fundador lo aprobó "en
+loop") porque tocaba 4 pantallas a la vez — criterio explícito de
+`CLAUDE.md` para exigir informe previo aunque la clasificación fuera P2.
+
+**La causa real: dos sistemas de diseño conviviendo sin que nadie lo hubiera
+decidido así.** El blog ganó un sistema de bloques de composición completo
+en GROWTH-3 Fase 3.1 (3 de agosto): `KeyTakeaway`, `Figure`, `StatGrid`,
+`NumberedSection`, `Checklist`, `CompareTable`+`Pill`, `Verdict`, `ArticleCta`.
+Las comparativas (`genscore-vs-otterly`, GROWTH-2 Fase 2.4) se construyeron
+**antes** de que ese sistema existiera, con la misma clase `legal-body` que
+usan `/privacidad`, `/terminos` y `/cookies` — y cada comparativa nueva desde
+entonces (`genscore-vs-peec-ai`, `mejores-herramientas-geo-en-espanol`, y la
+propia `genscore-vs-profound` de S2) copió fielmente esa plantilla antigua,
+arrastrando el hueco sin que nadie lo notara hasta ahora.
+
+**El hallazgo que redujo el riesgo de la migración a casi cero:** `CompareTable`
+y `Pill` ya existían, construidos explícitamente para "comparación multi-eje
+con veredicto codificado en color" (`docs/brand/article-design-system.md`) —
+pero solo se usaban dentro de tablas sueltas de artículos del blog, nunca en
+la propia superficie de comparativas, que es literalmente su caso de uso. No
+hubo que diseñar nada nuevo, solo cablear lo que ya estaba aprobado y
+probado.
+
+**Qué se migró en las 4 páginas** (`genscore-vs-otterly`, `genscore-vs-peec-ai`,
+`genscore-vs-profound`, `mejores-herramientas-geo-en-espanol`):
+- `legal-body` → `blog-body` (mismo wrapper que usa cualquier artículo).
+- El resumen "en dos/una frase(s)" pasa de párrafo con `<strong>` a
+  `<KeyTakeaway label="...">`, conservando la etiqueta original de cada
+  página en vez de adoptar el "Respuesta rápida" por defecto del blog.
+- La tabla pasa de `<div className="cmp-table-wrap">` a `<CompareTable>`, y
+  la celda donde gana el competidor pasa de `<strong>texto</strong>` a
+  `<Pill tone="si">Gana aquí</Pill> texto` — mismo patrón exacto que ya usa
+  `llms-txt-guia-practica.mdx` para marcar palancas confirmadas.
+- **`Verdict` se usó solo donde encaja de verdad**: la sección "Cuándo elegir
+  [competidor]" — es, literalmente, el caso para el que `Verdict` se diseñó
+  ("respuesta honesta cuando no es un sí"), porque es la página admitiendo
+  que el competidor gana en ese escenario. "Cuándo elegir Genscore" se dejó
+  como `<h2>`+`<p>` normal a propósito: es el argumento de venta, no una
+  admisión honesta, y forzar `Verdict` ahí habría sido usar el componente
+  fuera de su semántica solo por rellenar.
+- **`ArticleCta` real al final de las 4 páginas.** Las 3 comparativas 1:1 no
+  tenían ningún CTA — terminaban en seco tras "Metodología", sin invitar a
+  nada. `mejores-herramientas-geo-en-espanol` sí tenía un CTA, pero
+  implementado a mano (`<div className="blog-cta">` + `<Link>`) duplicando lo
+  que `ArticleCta` ya hace — sustituido por el componente real.
+
+**Ningún dato cambia.** Es presentación pura: mismas filas de `COMPARISON_ROWS`,
+misma fila donde gana cada competidor, misma nota de metodología con fecha.
+Fechas de sitemap de las 4 páginas actualizadas a hoy porque el cambio es
+sustancial aunque el dato comparativo sea idéntico.
+
+**Limpieza:** `.cmp-table-wrap` (la clase CSS paralela que solo usaban estas
+4 páginas) queda huérfana tras la migración y se retira de `app/globals.css`
+— la pista de scroll horizontal en móvil que llevaba ya la cubre
+`.art-tablewrap` (la clase de `CompareTable`), verificado que no se pierde
+ninguna de las dos.
+
+**Validación:** 1908/1908 tests, `pnpm run validate` limpio. Verificado sobre
+el HTML del build: las 4 páginas renderizan `art-takeaway`/`art-tablewrap`/
+`art-cta`, cero rastro de `legal-body`, y cada `Pill` aparece exactamente una
+vez por fila `*Wins: true` en el DOM visible (el recuento doblado en un grep
+ingenuo es el payload de hidratación de React que Next.js embebe en el HTML,
+no una repetición real).
+
+---
+
+## 60. La comparativa dejaba a Genscore por debajo incluso donde no perdía (COMPARATIVAS-DESIGN-1, revisión, 2026-08-11)
+
+**Origen.** El fundador, revisando el preview del rediseño (log §59): *"en
+ocasiones quizás dejan demasiado por debajo a Genscore"*, citando el bloque
+"Cuándo elegir Profound". Tenía razón, y las dos causas eran mías.
+
+**Causa 1 — asimetría tipográfica que introdujo el propio §59.** El rediseño
+puso `Verdict` (bloque destacado, con etiqueta) en "Cuándo elegir
+[competidor]" y dejó "Cuándo elegir Genscore" como `<h2>` + `<p>` plano. La
+regla que escribí para justificarlo decía que `Verdict` era para admisiones
+honestas y no para argumentos de venta — razonamiento defendible en
+abstracto, y equivocado en la página: las dos secciones son el mismo tipo de
+afirmación ("para quién es esto la herramienta correcta"), así que darle
+tratamiento destacado solo a una hace que el caso del competidor pese más
+visualmente en todas las comparativas, incluidas las filas donde Genscore
+gana. **Ahora ambas van en `Verdict`, con etiqueta propia.** La honestidad la
+sostienen la tabla (con su "Gana aquí" en las filas reales) y el texto, no la
+tipografía desigual.
+
+**Causa 2 — una fila marcada como victoria del competidor que no era una
+victoria.** `genscore-vs-profound` marcaba "Financiación" con `profoundWins:
+true` (155 M$ levantados, valoración de 1.000 M$). Levantar más dinero **no
+es un beneficio para quien compra la herramienta**: no mejora ningún
+resultado suyo, y corta en las dos direcciones — respaldo y continuidad, pero
+también más expectativa de retorno que atender. Y presentaba "autofinanciado"
+como si fuera el lado perdedor, cuando para un comprador es al menos
+ambivalente (sin inversores detrás no hay presión externa para subir precios
+ni pivotar). La fila **se mantiene** —la viabilidad del proveedor es contexto
+legítimo antes de firmar con nadie— pero renombrada a "Respaldo y modelo de
+negocio", sin marca de victoria y con los dos lados enunciados.
+
+**Causa 3 — el propio texto del veredicto de Profound.** Terminaba con dos
+frases seguidas de elogio ("mucho más madura en volumen de financiación y
+clientes enterprise" + "4,5/5 en G2 … por la profundidad de su analítica"),
+sin contrapeso y cerrando en su nota más fuerte. Reescrito: mantiene los dos
+hechos reales que un comprador sí usa (analítica más profunda, 4,5/5 en G2) y
+retira la referencia al volumen de financiación, que no le sirve para decidir
+nada. Se añade la contrapartida que ya estaba en la tabla — pasar por una
+demo de ventas antes de ver un precio.
+
+**Lo que NO cambia, y es deliberado:** las tres filas donde Profound gana de
+verdad siguen marcadas (motores cubiertos, a quién se dirige, reseñas
+públicas), igual que las de Otterly y Peec AI —que se revisaron en esta misma
+pasada y resultaron ser todas beneficios reales para el comprador: cobertura
+multi-país, usuarios ilimitados, número de motores—. El test que exige al
+menos una fila donde gane el competidor sigue en verde en las tres
+comparativas. Esto es un reequilibrio, no una retirada de la honestidad: se
+quita el elogio que no ayuda a decidir y la asimetría visual, no las
+concesiones ciertas.
+
+**Cuarta cosa, del mismo mensaje del fundador: `/comparativas` no estaba en la
+navegación superior.** Desde SEO-POS-1 T-a estaba en los cinco pies de página
+(log §46), lo que resolvió el enlazado interno pero no la descubribilidad:
+quien lee un artículo sobre GEO es exactamente quien querría comparar
+herramientas, y la investigación del plan sitúa las páginas de comparación
+como el contenido con más intención de compra del portfolio. Añadido a
+`NAV_LINKS` del shell de contenido (`blog-page-shell.tsx`), que es el que
+envuelve blog, glosario y las propias comparativas. La nav del hero de la
+landing se deja intacta: es una superficie de conversión con su propio diseño
+aprobado, y no es donde está el lector de contenido.
+
+---
+
+## 61. La tabla comparativa solo reconocía las victorias del competidor (COMPARATIVAS-DESIGN-1, segunda revisión, 2026-08-11)
+
+**Origen.** El fundador, tras el reequilibrio de §60: *"yo veo que en la
+comparativa siguen saliendo mejor parados los competidores"*. Tenía razón otra
+vez, y §60 no había tocado la causa principal.
+
+**La causa real, que §60 pasó por alto.** La insignia "Gana aquí" solo se
+pintaba en la columna del competidor. Las filas donde gana Genscore —precio de
+entrada, idioma del producto, bucle de acción, coste de añadir motores— no
+llevaban ninguna marca. Al escanear la tabla, **las únicas insignias visibles
+estaban todas en la columna del competidor**, así que la página se leía como
+si perdiéramos en todo aunque el reparto real de filas estuviera equilibrado o
+a nuestro favor:
+
+| Comparativa | Filas que gana Genscore | Filas que gana el competidor |
+|---|---|---|
+| Otterly | 3 | 3 |
+| Peec AI | 4 | 2 |
+| Profound | 4 | 3 |
+
+Es decir: el dato ya era favorable o parejo, y la presentación decía lo
+contrario. §60 arregló la asimetría de los bloques de texto pero dejó intacta
+la de la tabla, que es la parte que la gente escanea primero.
+
+**Arreglo.** Campo `genscoreWins` en las tres fuentes de datos, y la insignia
+se pinta en las dos columnas. Ninguna victoria nueva es inventada: las cuatro
+marcadas ya estaban descritas en el texto de su propia celda. Dos tests nuevos
+por comparativa lo fijan — que haya victorias marcadas **en los dos lados**, y
+que ninguna fila esté marcada para ambos a la vez.
+
+**Del mismo mensaje del fundador, dos cosas más en el índice de `/blog`:**
+
+1. **Comparativas pasa a ser una sección visible del índice, no solo un enlace
+   de navegación.** §60 la añadió a `NAV_LINKS`, pero en móvil la nav se
+   pliega tras el menú de hamburguesa — así que quedaba invisible justo en la
+   anchura donde más se lee, y el fundador seguía sin verla ("no puede ser una
+   sección más normal?"). Ahora es una sección propia, arriba, antes de los
+   clusters: es el contenido con más intención de compra del portfolio y no
+   debería exigir bajar por toda la lista de artículos.
+2. **Retirado el "N artículos publicados" del final del índice.** Petición
+   directa del fundador. Era una cifra que sólo puede jugar en contra: con
+   pocos artículos subraya lo pequeño que es el catálogo, y con muchos no
+   aporta nada a quien está eligiendo qué leer.
+
+**Lección para futuras comparativas, ya escrita en la regla de ruta:** una
+tabla que solo marca un lado no es más honesta, es sesgada en la dirección
+contraria a la que uno pretendía. Si se destacan las concesiones, hay que
+destacar también las ventajas — con el mismo criterio de que sean beneficios
+reales para quien compra.
+
+---
+
+## 62. El piloto llevaba dos PRs aprobando una página que no había abierto nunca (COMPARATIVAS-DESIGN-1, cierre, 2026-08-11)
+
+**Cómo apareció.** Leyendo la tabla del `PILOT PASS` de este mismo PR antes de
+mergearlo. 52 pantallas en verde a tres anchuras, y entre las comparativas
+estaban `otterly`, `peec-ai`, el índice y `mejores-herramientas` — pero no
+`genscore-vs-profound`. Es decir: la fase entera nació de que el fundador se
+quejó de cómo se veía esa página, el rediseño la tocó, y el piloto dio PASS sin
+haberla abierto.
+
+**Desde cuándo.** Desde que se publicó, en SEO-POS-1 S2 (§58). Su PR (#382)
+también salió con el piloto en verde. Dos PRs consecutivos con una pantalla
+nueva que nadie miró.
+
+**Por qué las comparativas y no el blog.** Los posts del blog se pilotan con un
+bucle sobre una lista, y `fixture-drift.test.ts` ya obligaba a que esa lista
+siguiera a `BLOG_POSTS`. Las comparativas son cuatro `page.tsx` a mano y cuatro
+`test(...)` a mano, sin bucle y sin guardián: publicar la página y olvidar el
+journey no rompe absolutamente nada visible. Peor todavía, el fixture del
+self-check tampoco la servía, así que el journey que faltaba habría dado 404 de
+haberse escrito sin tocar el fixture.
+
+**Lo que no se hizo, y por qué.** No se convirtió el spec en un bucle sobre la
+SSOT. El spec de Playwright **no importa código de la app a propósito** (está
+escrito en su cabecera): si el journey se deriva de la misma lista que el
+producto, una ruta que desaparece de la SSOT deja de pilotarse *y* deja de
+fallar, que es exactamente el fallo silencioso que se estaba arreglando.
+
+**Lo que se hizo.** El journey y la entrada de fixture que faltaban, y dos
+tests en `fixture-drift.test.ts` que comprueban por texto que cada ruta de
+`COMPARATIVAS` (`lib/seo/llms-txt.ts`, la SSOT que ya alimenta `llms.txt`)
+aparezca tanto en el spec como en el fixture. Se verificó que fallan en la
+dirección correcta borrando la ruta del spec y viendo el test nombrarla.
+
+**La lección, que es más general que las comparativas:** un `PILOT PASS` es una
+lista de lo que el piloto vio, no una afirmación sobre lo que el PR cambió.
+Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
+piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
+si cada pantalla que toca el diff aparece en la tabla.
+
+---
+
+## 63. Una sola cabecera pública, no cinco copias (GENSCORE-HEADER-1, 2026-08-11)
+
+**Estado: implementada.** Pedido por el fundador tras notar que la cabecera del
+blog «está desactualizada» frente a la de la home; aprobado ampliando el
+alcance en el mismo turno: «hacemos que la única cabecera sea esta,
+unificando todos los enlaces».
+
+**El problema real no era estético, era que no existía un componente
+compartido.** La cabecera (logo + nav + CTAs + menú móvil) estaba copiada a
+mano en cinco sitios — `landing-page.tsx`, `pricing-page.tsx`, `app/geo/page.tsx`,
+`blog-page-shell.tsx`, `docs-page-shell.tsx` — cada uno con su propio array de
+enlaces. La divergencia concreta que se leía como «desactualizado»: solo la
+home pasaba `ctas` a `MarketingMobileNav`, así que el resto de superficies
+mostraba el menú móvil **sin** los botones de Iniciar sesión/Prueba gratis; y
+el destino de «Prueba gratis» variaba entre `/signup` y `/signup?plan=free`
+según la superficie.
+
+**Decisiones finales:**
+- `components/marketing/public-header.tsx` es ahora la única fuente de los
+  seis enlaces del nav público (Producto, Cómo funciona, Recomendaciones, Qué
+  es GEO, Precios, Blog) y del CTA `/signup`, usada por las seis superficies.
+  Un `activeHref` opcional marca el enlace activo; los tres primeros son
+  anclas de la home (`#producto`/`#como`/`#recomendaciones` en `/`, resueltas
+  a `/#producto` etc. fuera de ella mirando `usePathname()`) — nunca un
+  ancla rota fuera de la home.
+- **La unificación es de contenido y de comportamiento del menú móvil, no del
+  fondo del hero.** `hero` (solo `true` en home) controla el burger de dos
+  líneas + drawer desde la derecha + nav transparente (`.lp-nav--hero`); el
+  resto conserva su `.lp-nav-wrap` (barra blanca pegajosa) y burger estándar.
+  Ese fondo transparente-sobre-degradado es un rediseño de hero deliberadamente
+  acotado a la home (BRAND-5b, ver comentario en `app/globals.css` junto a
+  `.lp-nav--hero`: "/geo (.gx-hero) y /pricing (.price-hero) keep the original
+  .lp-hero look untouched") — extenderlo habría contradicho esa decisión ya
+  documentada sin que el fundador lo pidiera explícitamente; lo que sí pidió
+  (mismos enlaces, mismos CTAs en el drawer) queda resuelto sin tocarlo.
+- **`/docs` pierde su enlace "Docs" propio del nav principal** (no está en el
+  set unificado de seis) — sigue alcanzable por `MARKETING_CONTENT_LINKS` en
+  el pie de cada shell y por el propio sidebar de `/docs`.
+- **Las páginas legales (`/privacidad`, `/cookies`, `/terminos`) pierden su
+  nav propio de tres enlaces en la cabecera**, sustituido por el mismo
+  `PublicHeader` que el resto. Como `/cookies` no tenía (y sigue sin tener)
+  enlace en ningún pie de página de esas tres superficies, se añadió un
+  `.legal-subnav` ligero (clase `.link-mini` ya existente, sin CSS nueva de
+  peso) justo bajo el título, para no dejar `/cookies` sin ruta de vuelta
+  desde dentro de las páginas legales mismas.
+- CTA "Prueba gratis" unificado a `/signup` (destino de la home) en las
+  superficies que antes usaban `/signup?plan=free` (`docs`, `legal`,
+  `pricing`) — mismo criterio de "un solo enlace, no cinco copias".
+
+**Pendiente / roto conocido:**
+- El pie de página de `blog-page-shell.tsx`, `docs-page-shell.tsx` y
+  `app/geo/page.tsx` sigue sin enlazar `/cookies` (solo Privacidad/Términos) —
+  preexistente a esta fase, fuera de alcance porque es el pie, no la
+  cabecera; sigue alcanzable desde los pies de home/pricing y desde el
+  `.legal-subnav` nuevo de las propias páginas legales.
+
+**Addendum tras el piloto agéntico (mismo día).** El comentario automático de
+CI en el PR es un barrido de interacción, no el juicio visual que exige
+`docs/agentic-user-pilot.md` — y su tabla de journeys no incluye `/pricing`
+en absoluto (`public-pages.spec.ts` la excluye a propósito: página cliente sin
+`metadata` propia, `docs/launch-plan.md` Fase 7b — dato ya desactualizado, ver
+abajo). El `ux-pilot` real, invocado aparte para mirar las capturas, encontró
+dos cosas reales al comparar las seis superficies entre sí, corregidas en el
+mismo PR antes del Human Gate:
+- **`/comparativas` y `/glosario` marcaban «Blog» como enlace activo** —
+  heredado de que `BlogPageShell` fijaba `activeHref="/blog"` a fuego para
+  las tres superficies que comparte. Ahora acepta `activeHref` (por defecto
+  `/blog`) y las seis páginas de comparativas/glosario pasan el suyo propio
+  — ninguno coincide con los seis enlaces unificados, así que no marcan nada
+  activo, que es lo correcto.
+- **CTA duplicado en móvil en toda superficie salvo home:** el par
+  Iniciar sesión/Prueba gratis quedaba visible en la barra superior colapsada
+  *y* otra vez dentro del drawer — antes de esta fase el drawer no llevaba
+  CTAs, así que no había duplicado; al añadirlos (el objetivo mismo de esta
+  fase) apareció. `.lp-nav-right { display: none }` en el media query móvil
+  ya no está condicionado a `.lp-nav--hero`: aplica a las seis superficies
+  por igual, moviendo la hamburguesa al extremo derecho en todas — igualando
+  el propio patrón de home, no inventando uno nuevo.
+- **`/pricing` verificado manualmente, no por el piloto:** `app/pricing/page.tsx`
+  ya exporta `metadata` propia desde SEO-POS-1 (§46) — el comentario de
+  `public-pages.spec.ts` que dice lo contrario quedó desactualizado y no se
+  tocó aquí (ampliar el piloto es su propia fase). Sin acceso a la preview
+  desde este entorno, se arrancó `next start` en local con credenciales de
+  Supabase de relleno y se capturaron `/pricing`, `/blog`, `/comparativas` y
+  `/glosario` a 375/768/1280px, incluido el drawer abierto: cero errores de
+  consola, los seis enlaces presentes y consistentes, cero CTA duplicado.
+  Dar a `/pricing` (y a `/`) su propio journey de piloto queda recomendado
+  como fase aparte — es la única manera de que este hueco no dependa de que
+  alguien se acuerde de mirarlo a mano la próxima vez.
+
+**Segundo addendum (fundador, 2026-08-12): «el menú tiene que salir siempre
+desde la derecha».** Hasta este punto solo la home abría el drawer desde la
+derecha (`fromRight` atado a `hero`); el resto abría desde la izquierda con
+el hamburger estándar de tres líneas — visible en la captura que el fundador
+mandó de `/pricing`. `PublicHeader` ahora pasa `fromRight` siempre, no solo
+en `hero`; el icono de dos líneas (`twoLine`) sigue atado solo a la home,
+porque no fue lo que pidió. Verificado con capturas locales del drawer
+abierto en `/`, `/pricing` y `/blog`: las tres deslizan desde la derecha con
+el mismo `lp-mobnav-close` arriba a la derecha. `.lp-mobnav` (variante
+izquierda) queda sin ningún caller real en la app — se conserva como
+comportamiento por defecto de `MarketingMobileNav` para no borrar capacidad
+del componente genérico que nadie pidió borrar.
+
+**Tercer addendum — conflicto real al mergear con `main` (2026-08-12).**
+Esta fase se numeró originalmente §58; mientras el PR estaba abierto,
+COMPARATIVAS-DESIGN-1 mergeó primero y ocupó §58–§62 (ver arriba), así que
+esta entrada se renumeró a §63 al traer `main`. No fue solo un choque de
+numeración: `BlogPageShell` en `main` había añadido un `NAV_LINKS` local con
+"Comparativas" como cuarto enlace de cabecera (§59, decisión del fundador
+del mismo 2026-08-11 — "Comparativas" pasa del pie a la navegación superior
+porque quien lee un artículo de GEO es justo quien querría comparar
+herramientas). Ese array local quedaba muerto frente al `PublicHeader`
+unificado de esta fase, así que la resolución correcta no era descartarlo:
+**"Comparativas" se añadió a `PUBLIC_NAV_ITEMS`**, el séptimo enlace del nav
+unificado en las siete superficies. El pantallazo original del fundador (§63
+arriba) mostraba seis; el séptimo no lo contradice, cierra una decisión suya
+posterior que esta rama todavía no conocía cuando se escribió el resto de la
+fase.
+
+---
+
+## 64. Consola de operador: aviso de alta y `/admin` de sólo lectura (ADMIN-CONSOLE-1 Fase 1, 2026-08-11)
 
 **Estado: implementada, Fase 1 de 3.** Task Intake propuesto como artefacto
 HTML, aprobado por el fundador el mismo día («Perfecto. Implementa en loop»).

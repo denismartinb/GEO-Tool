@@ -108,3 +108,53 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
   marketing (log §47).
+
+## Comparativas y el sistema de bloques del blog
+
+- **`/comparativas/*` usa el mismo sistema de bloques que el blog, no
+  `legal-body`.** Hasta COMPARATIVAS-DESIGN-1 (2026-08-11) cada comparativa
+  nueva copiaba fielmente la primera (`genscore-vs-otterly`, GROWTH-2 Fase
+  2.4), construida antes de que existiera el sistema de bloques del blog
+  (GROWTH-3 Fase 3.1) — cuatro páginas arrastrando la misma clase que usan
+  `/privacidad`/`/terminos`/`/cookies` sin que nadie lo hubiera decidido así
+  (log §59). `KeyTakeaway` para el resumen, `CompareTable`+`Pill` para la
+  tabla ("Gana aquí" en la celda donde gana el competidor — mismo patrón que
+  `llms-txt-guia-practica.mdx`), `ArticleCta` real al final.
+- **Las dos secciones "Cuándo elegir X" llevan el mismo peso visual.** Ambas
+  van en `Verdict`, con su propia etiqueta. La primera versión (log §59) puso
+  `Verdict` solo en la del competidor y dejó la de Genscore como `<h2>`+`<p>`,
+  razonando que `Verdict` era para admisiones honestas y no para argumentos de
+  venta. El efecto real fue el contrario del buscado: el caso del competidor
+  quedaba destacado en bloque y el nuestro en texto plano, así que la página
+  se leía como si Genscore perdiera incluso donde no perdía (fundador,
+  2026-08-11; log §60). La honestidad la sostienen la tabla —con su "Gana
+  aquí" en las filas reales— y el propio texto, no la asimetría tipográfica.
+- **Una fila solo se marca como victoria del competidor si es un beneficio
+  para quien compra.** Levantar más dinero no lo es: no mejora ningún
+  resultado del cliente y corta en las dos direcciones (respaldo, pero también
+  presión por rentabilizar la ronda). La fila de financiación de
+  `genscore-vs-profound` estaba marcada como victoria y era conceder un punto
+  que no es un punto (log §60). Las victorias legítimas son capacidades que el
+  comprador nota: cobertura multi-país, usuarios incluidos, número de motores,
+  reseñas públicas acumuladas.
+- **La tabla comparativa marca las victorias de los DOS lados.** Marcar solo
+  las del competidor no es más honesto: hace que la página se lea como si
+  Genscore perdiera en todo aunque el reparto real de filas esté a nuestro
+  favor, porque las únicas insignias visibles al escanear están en su columna
+  (fundador, 2026-08-11; log §61). Lo fijan dos tests por comparativa: que
+  haya victorias en ambos lados y que ninguna fila esté marcada para los dos.
+- **El índice del blog no publica un recuento de artículos.** Con pocos
+  subraya lo pequeño que es el catálogo y con muchos no ayuda a elegir qué
+  leer (fundador, 2026-08-11; log §61).
+- **Publicar una comparativa incluye su journey de piloto y su entrada de
+  fixture, en el mismo PR.** A diferencia del blog, las comparativas no se
+  pilotan con un bucle: cada una es una página a mano y un `test(...)` a mano,
+  así que olvidar la mitad no rompe nada visible. `genscore-vs-profound` se
+  publicó sin ninguna de las dos y acumuló **dos `PILOT PASS` sin que el
+  piloto llegara a abrirla** — incluido el del PR que la rediseñaba (log §62).
+  Lo fijan los dos tests de `tests/pilot/fixtures/fixture-drift.test.ts` que
+  contrastan `COMPARATIVAS` contra el spec y contra el fixture.
+- **Un `PILOT PASS` es la lista de lo que el piloto vio, no una afirmación
+  sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
+  tabla con las pantallas que toca el diff es trabajo del Director y no lo
+  hace nadie más (log §62).

@@ -128,7 +128,7 @@ mercado en español todavía tiene hueco, no por orden alfabético. Etiquetas
 | # | Pieza | Cluster kw del plan | Cluster blog | Estado | PR |
 |---|---|---|---|---|---|
 | S1 | Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude | 1 — Verificación | `playbooks` | ✅ Publicado | #(este) |
-| S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
+| S2 | Alternativas a Profound en español | 2 — Alternativas | `comparativas` | ✅ Publicado | #(este) |
 | S3 | Alternativas a Otterly (formato listicle) | 2 — Alternativas | `comparativas` | 🔲 Pendiente | — |
 | S4 | Refresco de "Mejores herramientas GEO en español" (+ CreceRank, Trendsights, Mentio) | 3 — Herramientas | `comparativas` | 🔲 Pendiente | — |
 | S5 | Qué es una auditoría GEO (con checklist) | 5 — Auditoría | `playbooks` | 🔲 Pendiente | — |
@@ -152,6 +152,19 @@ entre ejecuciones, CTA al escaneo gratuito real. Portada nueva (evidencia:
 tres motores con veredicto distinto — citado, mencionado sin cita, ausente).
 Añadido al fixture del piloto en el mismo PR (`tests/pilot/fixtures/
 server.mjs`) — lo exige `fixture-drift.test.ts`.
+
+**S2 — hecho (2026-08-10).** `/comparativas/genscore-vs-profound`, mismo
+formato que `genscore-vs-otterly`/`genscore-vs-peec-ai` (tabla + "cuándo
+elegir cada una" + metodología con fecha de consulta). Investigación previa a
+escribir una sola cifra: la financiación de Profound (155 M$, valoración de
+1.000 M$ en febrero de 2026) está bien documentada y se cita tal cual, pero su
+**precio ya no se publica** — su web pide una demo, y fuentes de terceros
+citan importes muy distintos según su fecha (499 $/mes en 2025, 99 $/mes en
+reseñas de 2026). La fila de precio no afirma ninguna cifra concreta de
+Profound a propósito, con test (`genscore-vs-profound.test.ts`) que lo
+impone. Presencia en el mercado hispanohablante: sin evidencia encontrada —
+redactado como "sin evidencia de…", nunca como "no soporta…", porque no se
+pudo descartar del todo que su selector de 30+ idiomas incluya castellano.
 
 ---
 
