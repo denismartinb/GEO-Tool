@@ -195,6 +195,17 @@ test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", asyn
   await assertCanonical(page, "/comparativas/genscore-vs-peec-ai");
 });
 
+test("/comparativas/genscore-vs-profound renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-profound",
+    "comparativas-genscore-vs-profound"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-profound");
+});
+
 test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/comparativas", "comparativas-index");
   assertPageIsHealthy(findings);

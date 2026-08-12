@@ -4783,6 +4783,352 @@ detectados durante esta investigación y sin tocar.
 
 ---
 
+---
+
+## 55. El primer escaneo tiene su propia pantalla, y deja de ocupar la ida completa (ONBOARDING-ROCKET-1, 2026-08-08)
+
+**Estado: implementada la fase 1 (secuencia + traspaso).** Exploración de
+diseño en `docs/design-reference/scan-states-1/` (tres opciones, rev.2 y
+rev.3 — la última es la aprobada). Task Intake aprobado por el fundador en
+sesión el mismo día.
+
+**El problema.** `ScanInProgress`/`ScanInProgressLive` es el estado del
+prototipo sin repintar a la identidad v3, y es el primer aterrizaje real de
+un cliente nuevo. El fundador midió un escaneo propio de 30 preguntas en más
+de 5 minutos contra una copia que promete "un par de minutos".
+
+**Qué se decidió.**
+
+1. **Sólo el primer escaneo de cada dominio** lleva la experiencia nueva
+   (`ScanMissionRocket`) — la señal es `completedRunsCount === 0`, que ya
+   existía en la página; no se añadió ninguna columna para distinguirlo. A
+   partir del segundo escaneo, el proyecto vuelve al `ScanInProgressLive`
+   compartido de siempre, sin cambios.
+2. **La misión suelta la pantalla en cuanto hay datos que enseñar.**
+   `ScanMissionRocket` sólo vive dentro de la rama `!hasData` (igual que el
+   componente al que sustituye); en el instante en que `hasData` se vuelve
+   cierto, la Visión general real se dibuja y una banda compacta
+   (`ScanMissionBand`) sustituye al cohete a pantalla completa mientras la
+   auditoría sigue en marcha. Nunca hay una ventana en la que la misión tape
+   datos ya disponibles — es literalmente el mismo defecto que el log §26
+   corrigió en Recomendaciones, y se decidió no reintroducirlo.
+3. **Cinco momentos, no ocho.** La fase 1 implementa rampa / ignición /
+   ascenso / órbita / entrega — los que se derivan de `computeScanStage`
+   (sin cambios) sin ninguna lectura nueva. Los momentos de vuelta
+   (reentrada / aproximación / aterrizaje) del guion explorado en la rev.3
+   se simplifican a la banda de una sola línea: mostrar "12 de 30 temas" en
+   tiempo real exige el mismo análisis de `generated_solutions` que ya hace
+   la página de Auditoría web (`parseCoverageMap`), y traerlo aquí también
+   habría sido una segunda lectura pesada — deliberadamente fuera de esta
+   fase.
+4. **Ninguna cifra que la fase no pudiera respaldar.** Dos ajustes respecto
+   al guion explorado, los dos porque el dato real no sostenía la copia:
+   - `total_prompts` cuenta lanzamientos (jobs), no respuestas
+     (SAMPLING-1, ADR 0030) — el guion decía "90 respuestas" asumiendo
+     `prompts × motores`; sostenerlo de verdad habría exigido el plan
+     resuelto del proyecto (lectura nueva) o el env global
+     `LLM_SCAN_PROVIDERS` (puede sobrecontar por debajo del cap del plan).
+     El beat `ascenso` se quedó en la misma unidad sin nombrar que ya usa
+     `ScanInProgress` hoy. El beat `órbita` sí dice "respuestas" porque
+     `responses_total`/`responses_processed` cuentan filas reales de
+     `scan_prompt_results` — una por motor, ya contadas, sin multiplicar
+     nada.
+   - El beat `entrega` (todas las respuestas con salida terminal de
+     extracción) **no muestra ninguna puntuación**. Ese momento ocurre
+     antes de que el finalize del run persista el score — mostrar un
+     número ahí habría sido inventarlo. El score real sólo aparece cuando
+     `ScanProgressPoller` (ya montado) detecta el run en estado terminal y
+     refresca la página entera.
+5. **Hallazgo suelto, corregido de paso.** La pastilla de Visión general
+   (`ScanStatePill`) nunca recibía `auditing` — nunca decía "Auditando…" en
+   la pantalla insignia, aunque Dominios y Auditoría web sí lo hacen. La
+   única señal nueva de esta fase (¿hay un job `web_audit` vivo?, existencia
+   por RLS de usuario, sin service-role) alimenta la pastilla y la banda a
+   la vez, así que quedan alineadas sin coste extra.
+
+**Pendiente / roto conocido.**
+
+- **La banda no lleva contador real** ("12 de 30 temas") — dice "revisando
+  tu web" sin cifra. Cuando se traiga ese dato, `scan-mission-band.tsx` es
+  el único fichero que cambia.
+- **No hay aviso por email.** La banda no promete ninguno porque no existe
+  todavía backend para él (SCAN-STATES-1 rev.1, fase 2 — columna de
+  preferencia, envío, plantilla; necesita su propia aprobación por llevar
+  migración).
+- **Sin desglose por motor.** El cohete no enciende sus toberas
+  individualmente por Gemini/ChatGPT/Claude — necesitaría una lectura nueva
+  agrupando `scan_prompt_results` por motor durante el run activo. Fase 3
+  de SCAN-STATES-1.
+- **La G reconstruida con arcos** (rev.2 de la exploración, 93% de solape
+  medido contra el SVG calcado real de `public/brand/genscore-mark.svg`) no
+  se usa en esta fase — el fundador eligió el cohete. El hallazgo de que el
+  asset de marca está calcado (170 rectas, cero curvas) sigue sin
+  resolverse en `public/brand/*.svg`; queda anotado como fase de marca
+  propia (BRAND-6), fuera de este PR.
+- **Sin verificación visual real.** Este repo no tiene arnés de DOM para
+  componentes de servidor (mismo límite que documentó WEB-AUDIT-DRIVE-1);
+  la lógica que decide qué mostrar sale entera a `lib/scan/mission-beats.ts`
+  con 9 tests, pero el render en pantalla —incluida la sincronía real entre
+  el traspaso y `hasActiveAuditJob`— no lo ha visto nadie en un navegador
+  contra datos reales. Pendiente del piloto o de una prueba manual del
+  fundador contra un proyecto nuevo de verdad.
+
+---
+
+
+**Addendum rev.4 (2026-08-10) — la animación, rehecha.** La primera pasada por
+producción del fundador, en el móvil y sobre la fase de órbita, fue lapidaria:
+*«queda muy cutre… el cohete está parado, da la sensación de que la página está
+parada»*. El diagnóstico correcto no era el cohete: **un cohete en órbita se
+mueve, lo que estaba congelada era la cámara**. rev.3 dibujaba una escena
+correcta y quieta, y una pantalla que se queda abierta dos o cuatro minutos
+durante el primer escaneo —la primera impresión del producto— leída como
+colgada.
+
+rev.4 (`docs/design-reference/scan-states-1/rev4-cohete-vivo.html`) no toca ni
+los cinco beats, ni el copy, ni los datos. Cambia la puesta en escena: cada
+beat tiene ahora movimiento ambiental continuo y el viaje entero recorre un
+arco de día a noche, de modo que la escena, y no el vehículo, es lo que vende
+el movimiento.
+
+- **rampa** — vapor venteando en las toberas, dos capas de nubes cruzando a
+  distinta velocidad, balizas de torre parpadeando desfasadas, chequeo de
+  sistemas en la ventanilla. El cohete es lo único quieto, que es lo que lo
+  hace leer como *retenido* y no como congelado.
+- **ignición** — humo rodando por la plataforma hacia ambos lados, resplandor
+  pulsante bajo las toberas, chispas y medio píxel de vibración del fuselaje.
+- **ascenso** — la velocidad la venden dos capas de nubes cayendo en paralaje
+  (la cercana pasa POR DELANTE del cohete, que es lo que hace legible el
+  paralaje) más líneas de aire.
+- **órbita** — el truco de cámara: el cohete sólo cabecea y suelta micro-impulsos
+  de maniobra mientras se mueve **el entorno** — estrellas en paralaje, la Tierra
+  girando debajo, una estrella fugaz cada 13 s — y los paquetes de datos fluyen
+  de la bodega abierta al anillo.
+- **entrega** — el anillo completo respira mientras chispas convergen al núcleo.
+
+**La regla de datos no se movió ni un milímetro, y es lo que hace legítimo todo
+lo anterior:** sólo la altitud del ascenso y la fracción del anillo codifican
+información real. Estrellas, nubes, humo, vapor, chispas, paquetes y Tierra son
+decorado y corren a ritmo constante, sin estado de inicio ni de fin,
+precisamente para que ninguno pueda leerse como progreso. Sin total conocido el
+anillo pasa a arco indeterminado girando en vez de inventar una posición — el
+único sitio donde un spinner es honesto, porque el progreso de verdad se
+desconoce.
+
+Decisiones técnicas que conviene no deshacer: una escena por beat en vez de una
+escena que muta (el cielo cambia de día a noche a lo largo de la misión y una
+sola escena no puede expresarlo), con remontado por `key` y fundido de entrada;
+sólo `transform`/`opacity` (composición en GPU, sin layout ni filtros animados)
+porque esto vive minutos en un móvil; y bajo `prefers-reduced-motion` cada
+escena descansa en un fotograma quieto **y completo** — lo que sólo existe en
+vuelo (vapor, chispas, paquetes, impulsos) se oculta en vez de congelarse, que
+es lo que evita que el fotograma parezca un fallo de renderizado.
+
+Verificado con Chromium contra el componente real montado en una ruta temporal
+de Next: las cinco escenas más la variante indeterminada a 375 y 1280 px, y
+pares de fotogramas de la órbita separados 4 s que demuestran el desplazamiento
+de estrellas, Tierra, cohete y paquetes. Sigue **sin verificar por el piloto**,
+por la razón de siempre: el proyecto piloto tiene historial, así que
+`isFirstScan` es `false` y el cohete no llega a montarse nunca.
+
+
+## 56. La misión ocupa la pantalla entera, y el encendido deja de durar un minuto (SCAN-STATES-2, 2026-08-10)
+
+**Estado: implementada.** Task Intake aprobado por el fundador el mismo día,
+después de pedir ver una maqueta antes de aprobar (`rev5-pantalla-completa.html`,
+PR #378). Tres decisiones suyas, todas explícitas.
+
+**El problema.** El fundador probó rev.4 en producción, en el móvil, con un
+dominio nuevo, y reportó tres cosas distintas: la animación era «un pequeño
+marco, dejando mucho espacio a los lados»; el mensaje verde de «Dominio creado»
+flotaba encima como si fuera de otra pantalla; y había tenido que **recargar
+para ver la fase siguiente**.
+
+**El tercer punto no era lo que parecía, y merece quedar escrito.** El sondeo
+del cohete es byte a byte idéntico al de `ScanInProgressLive`, que sí funciona.
+Lo que falla es el reparto de tiempos: `refreshRunProgressCounters` sólo escribe
+los contadores **al cerrar un lote** de hasta `MAX_REAL_SCAN_PROMPTS` prompts,
+y el compás `ignicion` es literalmente `stage.done === 0`. En un proyecto de 15
+prompts eso significa que el compás con menos que enseñar se quedaba puesto
+durante todo el primer lote —del orden de un minuto sin que cambiara un número—
+y después `ascenso` pasaba en dos saltos (10/15, 15/15) en segundos. El fundador
+nunca llegó a ver el ascenso.
+
+**Qué se decidió.**
+
+1. **Lienzo a sangre.** `.mrk-full` sale del contenedor con
+   `margin-inline: calc(50% - 50vw)` y las escenas dejan de pintar su propio
+   fondo redondeado: **el degradado de la página ES el cielo**, y viaja de día
+   a noche con la misión. En ≥960 px la composición se parte —copy a la
+   izquierda, escena ocupando todo el lienzo por detrás— porque lo que compra
+   el ancho es más cielo, y la curvatura de la Tierra sólo funciona a esa
+   escala.
+2. **El aviso verde desaparece como bloque** y su contenido pasa a `.mrk-rail`,
+   soldado a la costura entre el marco del producto y el cielo. El argumento:
+   el dominio recién creado es cierto durante los cuatro compases mientras el
+   compás cambia, así que va en la pieza que no se mueve.
+3. **El encendido se temporiza** (`IGNITION_HOLD_MS`, 5,5 s) y `resolveDisplayBeat`
+   pasa a la escena de vuelo. **Es una decisión de presentación y por eso se le
+   permite un reloj:** cambia qué escena se ve y no toca un solo número. El
+   ascenso que devuelve reporta `done: 0` y `climb: 0` —las dos cosas ciertas
+   mientras corre el primer lote—, así que la pantalla dice «0 de 15» y el
+   cohete sigue en el suelo exactamente mientras eso sea verdad. Lo que se gana
+   es que la espera **se ve viva**, porque el movimiento ambiental no cuenta
+   nada y puede correr antes de que se mueva el primer contador.
+4. **Pantalla completa en todas las secciones** durante el primer escaneo
+   (Visión general, Prompts, Competidores, Recomendaciones, Páginas citadas).
+   La objeción que se planteó y quedó respondida por el propio código: Prompts
+   y Competidores **sí** tienen contenido real en ese momento
+   (`createProject` inserta `project_prompts` y `project_competitors` antes de
+   arrancar el escaneo), pero **cada una de esas páginas ya sustituía su cuerpo
+   entero por `ScanInProgress`** con exactamente esta condición. Así que esto
+   cambia un takeover por otro mejor, no oculta nada que antes se pudiera leer.
+5. **Las cifras del raíl son reales o no están.** El fundador propuso primero
+   una cifra aproximada («no me importa que no sean datos reales», siendo un
+   momento guau). Lo que zanjó el asunto no fue la regla sino la aritmética:
+   dos compases después, en **esa misma pantalla**, órbita imprime el recuento
+   verdadero leído de `scan_prompt_results`. Una cifra inventada en el raíl
+   quedaría desmentida por el propio producto, en la misma sesión, delante del
+   usuario al que pretendía impresionar. Se resuelve leyendo el plan
+   (`resolveScanProvidersForPlan`), y `getPlanForUser` está envuelto en
+   `cache()` de React, así que varias secciones pidiéndolo en una petición
+   resuelven una sola consulta. Un contador nulo **borra su segmento** en vez de
+   rellenarse.
+
+**Verificado** con Chromium contra el componente real montado en una ruta
+temporal de Next (retirada): los cinco compases a 375 y 1280 px, el relevo del
+encendido comprobado antes y después del temporizador, y cero desbordamiento
+horizontal en ambas anchuras.
+
+**Conocido y sin cerrar:** en escritorio la Tierra no cruza el ancho completo
+como en la maqueta — la escena conserva su proporción 400×280 y queda
+enmarcada. Alcanzar la paridad exige separar el fondo ambiental (estirable) de
+los objetos colocados (tamaño fijo), que es lo que hace `rev5`. Y sigue **sin
+verificar por el piloto**, por la razón de siempre: el proyecto piloto tiene
+historial, así que `isFirstScan` es `false` y esta pantalla no se monta nunca.
+
+
+**Addendum (2026-08-10, misma tarde) — tres correcciones tras la primera prueba
+real en producción.** El fundador escaneó `genscore.es` desde el móvil y
+encontró tres cosas. Las tres eran ciertas.
+
+1. **«Cuando el motor está parado, ahí se veían bordes.»** La plataforma eran
+   dos `rect` dibujados DENTRO del SVG, que conserva su proporción 400×280 y
+   queda centrado — así que el suelo se cortaba antes del borde de la pantalla
+   y dejaba dos franjas grises. En ignición se notaba menos porque el humo tapa
+   las esquinas. El suelo pasa a ser una banda CSS (`.mrk-ground`) fuera del
+   SVG, y el `viewBox` de las escenas de rampa se acorta a 400×228 para acabar
+   justo en la línea del suelo. **Lo verdaderamente malo de este fallo es que
+   estaba en una captura que yo mismo tomé y no llegué a abrir**: verificar no
+   es fotografiar, es mirar. El arreglo se comprobó midiendo el rectángulo en
+   el DOM (`x: 0`, `width: 375`) además de a ojo, porque el primer intento
+   *parecía* arreglado y no lo estaba — el centrado con `translateX(-50%)` se
+   anulaba solo, ya que el envoltorio venía desplazado 16 px por el relleno de
+   `.mrk-scene-slot`.
+2. **El banner verde seguía apareciendo.** No era el raíl: es el mensaje
+   `scan_started` de `lib/projects/feedback-messages.ts`, que se pinta desde un
+   searchParam. Se suprime **sólo** cuando la misión ocupa la pantalla, porque
+   su texto es lo que el raíl ya dice, apilado encima como segunda superficie.
+   Los demás mensajes de feedback no se tocan.
+3. **«Dice 24 prompts y yo puse 12.»** El número era correcto y la etiqueta
+   mentía. Con 12 prompts y 3 motores salen 36 respuestas, por debajo del suelo
+   de 50 de SAMPLING-1 (ADR 0030), así que el run **repite el set dos veces**:
+   24 lanzamientos, 72 respuestas. `total_prompts` cuenta lanzamientos, no
+   prompts. El raíl pasa a enseñar la multiplicación entera —
+   `12 prompts · 2 pasadas · 3 motores · 72 respuestas` — leyendo el recuento
+   real de `project_prompts`, y el compás de ascenso deja de decir «prompts
+   lanzados» para decir «lanzamientos», que además es la palabra correcta para
+   un cohete. Las «pasadas» desaparecen del raíl cuando el run hace una sola.
+
+**Pendiente, planteado por el fundador y sin implementar:** que la misión
+mencione la auditoría web —«es un coste relevante y una funcionalidad
+importante del producto»— y que la misma animación se use en Auditoría web
+mientras corre su proceso. La forma natural es un sexto compás de **reentrada**,
+que ya estaba en el concepto original de rev.3 («reentrada en la atmósfera =
+auditoría web») y que se descartó entonces por alcance. Necesita su propia
+fase: la auditoría corre DESPUÉS del escaneo, así que la misión tendría que
+continuar más allá de `entrega`, y eso cambia el contrato de
+`computeMissionBeat`, no sólo el copy.
+
+
+**Addendum (2026-08-11) — la banda de auditoría nunca se mostró.** El fundador
+probó el cohete («ahora es perfecto») y añadió: *«pero no he visto la parte de
+la auditoría»*. No era percepción suya: `ScanMissionBand` era **código muerto
+desde el día que se implementó**, en ONBOARDING-ROCKET-1 Fase 1.
+
+Vivía dentro de la rama `hasData` —que exige un escaneo completado— pidiendo
+`isFirstScan`, que es `completedRunsCount === 0`. Mutuamente excluyentes: no
+se ha renderizado ni una vez. Y el comentario escrito encima razonaba que
+«nunca se solapa con el cohete, que sólo sale en la rama `!hasData`» — el
+mismo hecho que la hacía inalcanzable, usado para argumentar que era segura.
+Un razonamiento correcto sobre superposición que nunca comprobó la condición
+contraria: que fuese alcanzable.
+
+La condición correcta es el **después** del primer escaneo, no su ausencia:
+exactamente un run completado. Ahora vive en `shouldShowMissionBand`, con
+tests, porque una condición booleana enterrada en JSX es precisamente lo que
+nadie revisa — ni el piloto, que tampoco puede llegar aquí.
+
+**Lo que esto dice del proceso, y conviene no suavizarlo:** dos revisiones de
+diseño, cuatro pasadas de piloto en verde y una sesión entera de trabajo sobre
+esta pantalla no encontraron un elemento que no se dibujaba nunca. Lo encontró
+un humano escaneando un dominio real. El piloto no podía verlo —proyecto con
+historial, `isFirstScan` falso— y ningún test cubría la expresión porque
+estaba en línea dentro del JSX.
+
+
+## 57. La reentrada: la auditoría web entra en la misión (SCAN-STATES-3, 2026-08-11)
+
+**Estado: implementada.** Maqueta `rev6-reentrada.html` aprobada por el fundador
+el 2026-08-10 («Apruebo la maqueta de la auditoría técnica»), implementación
+pedida el 11 («implementa también la maqueta de auditoría»).
+
+**Qué resuelve.** Dos peticiones suyas: que la misión ponga en valor lo que hace
+la auditoría web —«es un coste relevante y una funcionalidad importante del
+producto»— y que la misma animación se use en Auditoría web mientras corre.
+Cierra el viaje que rev.3 ya insinuaba y descartó por alcance: «reentrada en la
+atmósfera = auditoría web».
+
+**La cinta es lo importante, y su garantía es un test, no un comentario.** El
+riesgo que venía gratis con «ponlo en valor, con jerga espacial» era inventar
+capacidad: la voz de misión hace que cualquier cosa suene impresionante,
+incluidas las que el producto no hace. Así que las dieciséis líneas llevan cada
+una su `IssueCheckKey`, y `audit-ticker.test.ts` las valida **leyendo
+`issues.ts` del propio fichero**, no contra una copia. Añadir una línea para una
+comprobación inexistente pone la suite en rojo; borrar una comprobación del
+producto también, hasta que se borre su línea. Sobrevive a un autor que no lea
+los comentarios, que es más de lo que puede decir un comentario.
+
+Las dos líneas de cobertura quedan fuera: son Pro, y un proyecto Free vería o
+trabajo que no se está haciendo, o candados — que convierten una espera en un
+anuncio.
+
+**Dónde sale, y por qué más estrecho que la maqueta.** La maqueta pedía la
+reentrada a pantalla completa en Auditoría web «mientras dure». Comprobado
+contra el código: esa página **no se apodera hoy de la pantalla** — un proyecto
+con auditoría previa sigue leyendo sus datos con una píldora «Auditando…». Así
+que sale **sólo cuando no hay nada que tapar**: sin resumen de cobertura y sin
+snapshot técnico, es decir la primera auditoría del dominio. Misma regla que el
+cohete con `isFirstScan`, y mismo error evitado — esconder contenido real detrás
+de una animación, que es justo lo que el fundador cazó esa misma tarde.
+
+**Ningún elemento de la escena lleva datos.** Reutilizar el anillo de órbita
+insinuaría una fracción de «la auditoría», y nada mide la auditoría entera: la
+mitad técnica no publica progreso hasta terminar. La única cifra real que
+existe (cobertura) no se lee aquí, así que este compás **no enseña ningún
+número** en vez de enseñar uno plausible.
+
+**Detalle deliberado:** `auditIsRunning` se lee de la fila de job que la página
+ya consulta —sin consulta nueva— y **no** de `auditPillState`, que está
+condicionado a `canAuditCoverage`. La mitad técnica corre en todos los planes,
+así que la primera auditoría de un proyecto Free es trabajo real y merece el
+compás igual que la de uno Pro.
+
+**Conocido y sin cerrar:** el amerizaje (el cierre corto al terminar la
+auditoría) está definido en la maqueta pero no implementado; la cinta es un
+carrusel de alcance, no un registro en vivo, porque el progreso por
+comprobación no se persiste; y esta pantalla **el piloto tampoco puede verla**,
+por la misma razón que el cohete.
 
 ## 46. La home y `/pricing` recuperan su identidad en el buscador, y las cuatro capas de contenido dejan de estar huérfanas (SEO-POS-1 Fase T-a, 2026-08-09)
 
@@ -5355,6 +5701,287 @@ prompts, por ejemplo, solo en Gemini"*.
   interruptores viven en `/debug` y esta fase no se ha visto en un preview.
 
 ---
+
+---
+
+## 58. Una comparativa cuyo dato más importante es que el competidor dejó de publicarlo (SEO-POS-1, S2, 2026-08-10)
+
+**Origen.** Segunda pieza de la cola de contenido de la Fase C
+(`docs/seo-positioning-plan.md` §4) — "alternativas a Profound en español".
+
+**Por qué se investigó antes de escribir.** Comparar con un competidor real
+es un riesgo distinto —y mayor— que una autoafirmación de producto: un dato
+de precio o de features equivocado sobre Profound es verificable por
+cualquier lector en dos clics, y "verificable" es justo la palabra que hace
+daño si sale mal. Se lanzó una investigación web dedicada antes de escribir
+una sola cifra.
+
+**El hallazgo real: el precio de Profound ya no es un hecho verificable.** Su
+página pública de precios ha pasado a exigir una demo — no publican ningún
+importe. Fuentes de terceros citan cifras muy distintas según su fecha (499
+$/mes "Lite" en su lanzamiento de 2025; 99 $/mes "Starter" en reseñas de
+2026), lo que apunta a que su estructura de precios ha cambiado más de una
+vez y no a que una fuente esté simplemente equivocada. La decisión: **la fila
+de precio no afirma ninguna cifra concreta de Profound**, con un test
+(`lib/comparativas/genscore-vs-profound.test.ts`) que lo impone en vez de
+confiar en que nadie la añada después. Su financiación, en cambio —155 M$
+levantados, valoración de 1.000 M$ en la Serie C de febrero de 2026— está
+bien documentada por prensa independiente (Fortune, GlobeNewswire, la propia
+Profound) y se cita tal cual.
+
+**Segundo cuidado: la ausencia de presencia en español no es lo mismo que
+"no lo soporta".** Profound anunció un selector de idioma para 30+ idiomas
+sin que la investigación pudiera confirmar si el castellano está entre ellos.
+La página dice "sin evidencia de enfoque en el mercado hispanohablante" —
+ningún cliente, caso de estudio ni presencia comercial en español encontrada
+— nunca "no soporta español", que sería una afirmación más fuerte que la
+evidencia disponible.
+
+**Tercer cuidado: no repetir el error que PRICING-TRUTH-1 ya corrigió, esta
+vez sobre el propio Genscore.** El plan Agencia de Genscore no tiene
+workspaces, roles ni paneles white-label — se retiraron esas features
+inventadas en PRICING-TRUTH-1 (`docs/launch-plan.md` Fase 2). La fila de
+"varios clientes bajo una cuenta" no reclama un panel de agencia que no
+existe: dice, con precisión, que una cuenta de Agencia sigue varios dominios
+sin credenciales separadas por cliente, y añade explícitamente que tampoco
+hay paneles white-label ni permisos por rol todavía.
+
+**Mismo formato que las dos comparativas anteriores** (tabla + "cuándo elegir
+cada una" + metodología con fecha de consulta), con al menos una fila real
+donde gana Profound (motores nominales, a quién se dirige, reputación en G2,
+financiación) — una comparativa que no cede nunca una columna deja de ser
+creíble.
+
+**Validación:** tests nuevos para `genscore-vs-profound.ts` (incluida la
+comprobación explícita de que ninguna fila afirma un precio concreto).
+Añadida a las tres SSOT que la hacen descubrible: índice de `/comparativas`,
+`lib/seo/llms-txt.ts` y `app/sitemap.ts`.
+
+---
+
+## 59. Comparativas deja de ser una página legal disfrazada (COMPARATIVAS-DESIGN-1, 2026-08-11)
+
+**Origen.** El fundador, revisando el preview de S2 (log §58), preguntó por
+qué `/comparativas/genscore-vs-profound` se veía "más plana" que el resto del
+sitio. Task Intake completo antes de tocar código (el fundador lo aprobó "en
+loop") porque tocaba 4 pantallas a la vez — criterio explícito de
+`CLAUDE.md` para exigir informe previo aunque la clasificación fuera P2.
+
+**La causa real: dos sistemas de diseño conviviendo sin que nadie lo hubiera
+decidido así.** El blog ganó un sistema de bloques de composición completo
+en GROWTH-3 Fase 3.1 (3 de agosto): `KeyTakeaway`, `Figure`, `StatGrid`,
+`NumberedSection`, `Checklist`, `CompareTable`+`Pill`, `Verdict`, `ArticleCta`.
+Las comparativas (`genscore-vs-otterly`, GROWTH-2 Fase 2.4) se construyeron
+**antes** de que ese sistema existiera, con la misma clase `legal-body` que
+usan `/privacidad`, `/terminos` y `/cookies` — y cada comparativa nueva desde
+entonces (`genscore-vs-peec-ai`, `mejores-herramientas-geo-en-espanol`, y la
+propia `genscore-vs-profound` de S2) copió fielmente esa plantilla antigua,
+arrastrando el hueco sin que nadie lo notara hasta ahora.
+
+**El hallazgo que redujo el riesgo de la migración a casi cero:** `CompareTable`
+y `Pill` ya existían, construidos explícitamente para "comparación multi-eje
+con veredicto codificado en color" (`docs/brand/article-design-system.md`) —
+pero solo se usaban dentro de tablas sueltas de artículos del blog, nunca en
+la propia superficie de comparativas, que es literalmente su caso de uso. No
+hubo que diseñar nada nuevo, solo cablear lo que ya estaba aprobado y
+probado.
+
+**Qué se migró en las 4 páginas** (`genscore-vs-otterly`, `genscore-vs-peec-ai`,
+`genscore-vs-profound`, `mejores-herramientas-geo-en-espanol`):
+- `legal-body` → `blog-body` (mismo wrapper que usa cualquier artículo).
+- El resumen "en dos/una frase(s)" pasa de párrafo con `<strong>` a
+  `<KeyTakeaway label="...">`, conservando la etiqueta original de cada
+  página en vez de adoptar el "Respuesta rápida" por defecto del blog.
+- La tabla pasa de `<div className="cmp-table-wrap">` a `<CompareTable>`, y
+  la celda donde gana el competidor pasa de `<strong>texto</strong>` a
+  `<Pill tone="si">Gana aquí</Pill> texto` — mismo patrón exacto que ya usa
+  `llms-txt-guia-practica.mdx` para marcar palancas confirmadas.
+- **`Verdict` se usó solo donde encaja de verdad**: la sección "Cuándo elegir
+  [competidor]" — es, literalmente, el caso para el que `Verdict` se diseñó
+  ("respuesta honesta cuando no es un sí"), porque es la página admitiendo
+  que el competidor gana en ese escenario. "Cuándo elegir Genscore" se dejó
+  como `<h2>`+`<p>` normal a propósito: es el argumento de venta, no una
+  admisión honesta, y forzar `Verdict` ahí habría sido usar el componente
+  fuera de su semántica solo por rellenar.
+- **`ArticleCta` real al final de las 4 páginas.** Las 3 comparativas 1:1 no
+  tenían ningún CTA — terminaban en seco tras "Metodología", sin invitar a
+  nada. `mejores-herramientas-geo-en-espanol` sí tenía un CTA, pero
+  implementado a mano (`<div className="blog-cta">` + `<Link>`) duplicando lo
+  que `ArticleCta` ya hace — sustituido por el componente real.
+
+**Ningún dato cambia.** Es presentación pura: mismas filas de `COMPARISON_ROWS`,
+misma fila donde gana cada competidor, misma nota de metodología con fecha.
+Fechas de sitemap de las 4 páginas actualizadas a hoy porque el cambio es
+sustancial aunque el dato comparativo sea idéntico.
+
+**Limpieza:** `.cmp-table-wrap` (la clase CSS paralela que solo usaban estas
+4 páginas) queda huérfana tras la migración y se retira de `app/globals.css`
+— la pista de scroll horizontal en móvil que llevaba ya la cubre
+`.art-tablewrap` (la clase de `CompareTable`), verificado que no se pierde
+ninguna de las dos.
+
+**Validación:** 1908/1908 tests, `pnpm run validate` limpio. Verificado sobre
+el HTML del build: las 4 páginas renderizan `art-takeaway`/`art-tablewrap`/
+`art-cta`, cero rastro de `legal-body`, y cada `Pill` aparece exactamente una
+vez por fila `*Wins: true` en el DOM visible (el recuento doblado en un grep
+ingenuo es el payload de hidratación de React que Next.js embebe en el HTML,
+no una repetición real).
+
+---
+
+## 60. La comparativa dejaba a Genscore por debajo incluso donde no perdía (COMPARATIVAS-DESIGN-1, revisión, 2026-08-11)
+
+**Origen.** El fundador, revisando el preview del rediseño (log §59): *"en
+ocasiones quizás dejan demasiado por debajo a Genscore"*, citando el bloque
+"Cuándo elegir Profound". Tenía razón, y las dos causas eran mías.
+
+**Causa 1 — asimetría tipográfica que introdujo el propio §59.** El rediseño
+puso `Verdict` (bloque destacado, con etiqueta) en "Cuándo elegir
+[competidor]" y dejó "Cuándo elegir Genscore" como `<h2>` + `<p>` plano. La
+regla que escribí para justificarlo decía que `Verdict` era para admisiones
+honestas y no para argumentos de venta — razonamiento defendible en
+abstracto, y equivocado en la página: las dos secciones son el mismo tipo de
+afirmación ("para quién es esto la herramienta correcta"), así que darle
+tratamiento destacado solo a una hace que el caso del competidor pese más
+visualmente en todas las comparativas, incluidas las filas donde Genscore
+gana. **Ahora ambas van en `Verdict`, con etiqueta propia.** La honestidad la
+sostienen la tabla (con su "Gana aquí" en las filas reales) y el texto, no la
+tipografía desigual.
+
+**Causa 2 — una fila marcada como victoria del competidor que no era una
+victoria.** `genscore-vs-profound` marcaba "Financiación" con `profoundWins:
+true` (155 M$ levantados, valoración de 1.000 M$). Levantar más dinero **no
+es un beneficio para quien compra la herramienta**: no mejora ningún
+resultado suyo, y corta en las dos direcciones — respaldo y continuidad, pero
+también más expectativa de retorno que atender. Y presentaba "autofinanciado"
+como si fuera el lado perdedor, cuando para un comprador es al menos
+ambivalente (sin inversores detrás no hay presión externa para subir precios
+ni pivotar). La fila **se mantiene** —la viabilidad del proveedor es contexto
+legítimo antes de firmar con nadie— pero renombrada a "Respaldo y modelo de
+negocio", sin marca de victoria y con los dos lados enunciados.
+
+**Causa 3 — el propio texto del veredicto de Profound.** Terminaba con dos
+frases seguidas de elogio ("mucho más madura en volumen de financiación y
+clientes enterprise" + "4,5/5 en G2 … por la profundidad de su analítica"),
+sin contrapeso y cerrando en su nota más fuerte. Reescrito: mantiene los dos
+hechos reales que un comprador sí usa (analítica más profunda, 4,5/5 en G2) y
+retira la referencia al volumen de financiación, que no le sirve para decidir
+nada. Se añade la contrapartida que ya estaba en la tabla — pasar por una
+demo de ventas antes de ver un precio.
+
+**Lo que NO cambia, y es deliberado:** las tres filas donde Profound gana de
+verdad siguen marcadas (motores cubiertos, a quién se dirige, reseñas
+públicas), igual que las de Otterly y Peec AI —que se revisaron en esta misma
+pasada y resultaron ser todas beneficios reales para el comprador: cobertura
+multi-país, usuarios ilimitados, número de motores—. El test que exige al
+menos una fila donde gane el competidor sigue en verde en las tres
+comparativas. Esto es un reequilibrio, no una retirada de la honestidad: se
+quita el elogio que no ayuda a decidir y la asimetría visual, no las
+concesiones ciertas.
+
+**Cuarta cosa, del mismo mensaje del fundador: `/comparativas` no estaba en la
+navegación superior.** Desde SEO-POS-1 T-a estaba en los cinco pies de página
+(log §46), lo que resolvió el enlazado interno pero no la descubribilidad:
+quien lee un artículo sobre GEO es exactamente quien querría comparar
+herramientas, y la investigación del plan sitúa las páginas de comparación
+como el contenido con más intención de compra del portfolio. Añadido a
+`NAV_LINKS` del shell de contenido (`blog-page-shell.tsx`), que es el que
+envuelve blog, glosario y las propias comparativas. La nav del hero de la
+landing se deja intacta: es una superficie de conversión con su propio diseño
+aprobado, y no es donde está el lector de contenido.
+
+---
+
+## 61. La tabla comparativa solo reconocía las victorias del competidor (COMPARATIVAS-DESIGN-1, segunda revisión, 2026-08-11)
+
+**Origen.** El fundador, tras el reequilibrio de §60: *"yo veo que en la
+comparativa siguen saliendo mejor parados los competidores"*. Tenía razón otra
+vez, y §60 no había tocado la causa principal.
+
+**La causa real, que §60 pasó por alto.** La insignia "Gana aquí" solo se
+pintaba en la columna del competidor. Las filas donde gana Genscore —precio de
+entrada, idioma del producto, bucle de acción, coste de añadir motores— no
+llevaban ninguna marca. Al escanear la tabla, **las únicas insignias visibles
+estaban todas en la columna del competidor**, así que la página se leía como
+si perdiéramos en todo aunque el reparto real de filas estuviera equilibrado o
+a nuestro favor:
+
+| Comparativa | Filas que gana Genscore | Filas que gana el competidor |
+|---|---|---|
+| Otterly | 3 | 3 |
+| Peec AI | 4 | 2 |
+| Profound | 4 | 3 |
+
+Es decir: el dato ya era favorable o parejo, y la presentación decía lo
+contrario. §60 arregló la asimetría de los bloques de texto pero dejó intacta
+la de la tabla, que es la parte que la gente escanea primero.
+
+**Arreglo.** Campo `genscoreWins` en las tres fuentes de datos, y la insignia
+se pinta en las dos columnas. Ninguna victoria nueva es inventada: las cuatro
+marcadas ya estaban descritas en el texto de su propia celda. Dos tests nuevos
+por comparativa lo fijan — que haya victorias marcadas **en los dos lados**, y
+que ninguna fila esté marcada para ambos a la vez.
+
+**Del mismo mensaje del fundador, dos cosas más en el índice de `/blog`:**
+
+1. **Comparativas pasa a ser una sección visible del índice, no solo un enlace
+   de navegación.** §60 la añadió a `NAV_LINKS`, pero en móvil la nav se
+   pliega tras el menú de hamburguesa — así que quedaba invisible justo en la
+   anchura donde más se lee, y el fundador seguía sin verla ("no puede ser una
+   sección más normal?"). Ahora es una sección propia, arriba, antes de los
+   clusters: es el contenido con más intención de compra del portfolio y no
+   debería exigir bajar por toda la lista de artículos.
+2. **Retirado el "N artículos publicados" del final del índice.** Petición
+   directa del fundador. Era una cifra que sólo puede jugar en contra: con
+   pocos artículos subraya lo pequeño que es el catálogo, y con muchos no
+   aporta nada a quien está eligiendo qué leer.
+
+**Lección para futuras comparativas, ya escrita en la regla de ruta:** una
+tabla que solo marca un lado no es más honesta, es sesgada en la dirección
+contraria a la que uno pretendía. Si se destacan las concesiones, hay que
+destacar también las ventajas — con el mismo criterio de que sean beneficios
+reales para quien compra.
+
+---
+
+## 62. El piloto llevaba dos PRs aprobando una página que no había abierto nunca (COMPARATIVAS-DESIGN-1, cierre, 2026-08-11)
+
+**Cómo apareció.** Leyendo la tabla del `PILOT PASS` de este mismo PR antes de
+mergearlo. 52 pantallas en verde a tres anchuras, y entre las comparativas
+estaban `otterly`, `peec-ai`, el índice y `mejores-herramientas` — pero no
+`genscore-vs-profound`. Es decir: la fase entera nació de que el fundador se
+quejó de cómo se veía esa página, el rediseño la tocó, y el piloto dio PASS sin
+haberla abierto.
+
+**Desde cuándo.** Desde que se publicó, en SEO-POS-1 S2 (§58). Su PR (#382)
+también salió con el piloto en verde. Dos PRs consecutivos con una pantalla
+nueva que nadie miró.
+
+**Por qué las comparativas y no el blog.** Los posts del blog se pilotan con un
+bucle sobre una lista, y `fixture-drift.test.ts` ya obligaba a que esa lista
+siguiera a `BLOG_POSTS`. Las comparativas son cuatro `page.tsx` a mano y cuatro
+`test(...)` a mano, sin bucle y sin guardián: publicar la página y olvidar el
+journey no rompe absolutamente nada visible. Peor todavía, el fixture del
+self-check tampoco la servía, así que el journey que faltaba habría dado 404 de
+haberse escrito sin tocar el fixture.
+
+**Lo que no se hizo, y por qué.** No se convirtió el spec en un bucle sobre la
+SSOT. El spec de Playwright **no importa código de la app a propósito** (está
+escrito en su cabecera): si el journey se deriva de la misma lista que el
+producto, una ruta que desaparece de la SSOT deja de pilotarse *y* deja de
+fallar, que es exactamente el fallo silencioso que se estaba arreglando.
+
+**Lo que se hizo.** El journey y la entrada de fixture que faltaban, y dos
+tests en `fixture-drift.test.ts` que comprueban por texto que cada ruta de
+`COMPARATIVAS` (`lib/seo/llms-txt.ts`, la SSOT que ya alimenta `llms.txt`)
+aparezca tanto en el spec como en el fixture. Se verificó que fallan en la
+dirección correcta borrando la ruta del spec y viendo el test nombrarla.
+
+**La lección, que es más general que las comparativas:** un `PILOT PASS` es una
+lista de lo que el piloto vio, no una afirmación sobre lo que el PR cambió.
+Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
+piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
+si cada pantalla que toca el diff aparece en la tabla.
 
 ## Cómo mantener este documento
 
