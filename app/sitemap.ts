@@ -37,9 +37,10 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/docs", lastModified: DOCS_LAST_MODIFIED },
   { path: "/glosario", lastModified: "2026-08-02" },
   { path: "/comparativas", lastModified: "2026-08-03" },
-  { path: "/comparativas/genscore-vs-otterly", lastModified: "2026-08-02" },
-  { path: "/comparativas/genscore-vs-peec-ai", lastModified: "2026-08-03" },
-  { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-08-03" },
+  { path: "/comparativas/genscore-vs-otterly", lastModified: "2026-08-11" },
+  { path: "/comparativas/genscore-vs-peec-ai", lastModified: "2026-08-11" },
+  { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-08-11" },
+  { path: "/comparativas/genscore-vs-profound", lastModified: "2026-08-11" },
   { path: "/privacidad", lastModified: "2026-07-19" },
   { path: "/cookies", lastModified: "2026-07-12" },
   { path: "/terminos", lastModified: "2026-07-19" }

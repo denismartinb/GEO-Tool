@@ -5168,30 +5168,12 @@ a.notif-row:hover {
 .legal-body ul { margin: 0 0 14px; padding-left: 20px; }
 .legal-body li { font-size: 14.5px; line-height: 1.7; color: var(--ink-2); margin-bottom: 6px; }
 
-/* GROWTH-2 Fase 2.4: comparison table on /comparativas/*. Self-contained
-   (not reused from .docs-table-wrap/.tbl-wrap) — this branch predates the
-   /docs sidebar CSS from Fase 2.3, and .tbl-wrap pairs with a .tbl class
-   this table doesn't use. QA (PR #292) caught the table rendering with zero
-   styling and no horizontal-scroll safety net before this was added. */
-.cmp-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 0 24px; }
-.cmp-table-wrap table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
-.cmp-table-wrap th, .cmp-table-wrap td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
-.cmp-table-wrap th { font-weight: 700; color: var(--ink); background: var(--surface-2); }
 /* GROWTH-2 Fase 2.8: without card boundaries, 6 consecutive tool profiles
    (h3 + 2-3 paragraphs each) read as one continuous wall of prose instead of
    6 distinct entities (pilot finding on the tools pillar). */
 .tool-profile-card { padding: 18px 20px; margin: 0 0 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
 .tool-profile-card h3 { margin: 0 0 10px; font-size: 17px; font-weight: 700; }
 .tool-profile-card p:last-child { margin-bottom: 0; }
-/* Below ~640px the table's 560px min-width forces horizontal scroll — without
-   a hint, the pilot found columns just read as cut off mid-word rather than
-   "scroll for more" (Fase 2.8, PILOT FAIL on the 4-column tools pillar).
-   CSS-only so it applies to every .cmp-table-wrap, not just the page that
-   surfaced it. */
-@media (max-width: 640px) {
-  .cmp-table-wrap { position: relative; }
-  .cmp-table-wrap::before { content: "Desliza para ver todas las columnas →"; display: block; font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
-}
 .legal-body strong { color: var(--ink); font-weight: 650; }
 .legal-body a { color: var(--accent-ink); font-weight: 600; }
 
@@ -6404,8 +6386,11 @@ select.set-field {
 }
 .art-tablewrap tbody tr:last-child td { border-bottom: 0; }
 .art-tablewrap td strong { color: var(--ink); }
-/* Misma pista de scroll que .cmp-table-wrap: sin ella, en móvil las columnas
-   se leen como cortadas en vez de como deslizables (PILOT FAIL, PR #306). */
+/* Sin esta pista, en móvil las columnas se leen como cortadas en vez de
+   como deslizables (PILOT FAIL, PR #306). COMPARATIVAS-DESIGN-1 (2026-08-11)
+   retiró la variante paralela .cmp-table-wrap que /comparativas/* usaba
+   antes de migrar a este mismo componente — la pista ya la cubre esta
+   regla, no hacía falta una segunda. */
 @media (max-width: 640px) {
   .art-tablewrap { position: relative; }
   .art-tablewrap::before {
