@@ -5983,6 +5983,129 @@ Contrastar las dos listas es trabajo del Director y no lo hace nadie más — el
 piloto no sabe qué prometía el PR. Antes de dar por verificada una fase, mirar
 si cada pantalla que toca el diff aparece en la tabla.
 
+---
+
+## 63. Una sola cabecera pública, no cinco copias (GENSCORE-HEADER-1, 2026-08-11)
+
+**Estado: implementada.** Pedido por el fundador tras notar que la cabecera del
+blog «está desactualizada» frente a la de la home; aprobado ampliando el
+alcance en el mismo turno: «hacemos que la única cabecera sea esta,
+unificando todos los enlaces».
+
+**El problema real no era estético, era que no existía un componente
+compartido.** La cabecera (logo + nav + CTAs + menú móvil) estaba copiada a
+mano en cinco sitios — `landing-page.tsx`, `pricing-page.tsx`, `app/geo/page.tsx`,
+`blog-page-shell.tsx`, `docs-page-shell.tsx` — cada uno con su propio array de
+enlaces. La divergencia concreta que se leía como «desactualizado»: solo la
+home pasaba `ctas` a `MarketingMobileNav`, así que el resto de superficies
+mostraba el menú móvil **sin** los botones de Iniciar sesión/Prueba gratis; y
+el destino de «Prueba gratis» variaba entre `/signup` y `/signup?plan=free`
+según la superficie.
+
+**Decisiones finales:**
+- `components/marketing/public-header.tsx` es ahora la única fuente de los
+  seis enlaces del nav público (Producto, Cómo funciona, Recomendaciones, Qué
+  es GEO, Precios, Blog) y del CTA `/signup`, usada por las seis superficies.
+  Un `activeHref` opcional marca el enlace activo; los tres primeros son
+  anclas de la home (`#producto`/`#como`/`#recomendaciones` en `/`, resueltas
+  a `/#producto` etc. fuera de ella mirando `usePathname()`) — nunca un
+  ancla rota fuera de la home.
+- **La unificación es de contenido y de comportamiento del menú móvil, no del
+  fondo del hero.** `hero` (solo `true` en home) controla el burger de dos
+  líneas + drawer desde la derecha + nav transparente (`.lp-nav--hero`); el
+  resto conserva su `.lp-nav-wrap` (barra blanca pegajosa) y burger estándar.
+  Ese fondo transparente-sobre-degradado es un rediseño de hero deliberadamente
+  acotado a la home (BRAND-5b, ver comentario en `app/globals.css` junto a
+  `.lp-nav--hero`: "/geo (.gx-hero) y /pricing (.price-hero) keep the original
+  .lp-hero look untouched") — extenderlo habría contradicho esa decisión ya
+  documentada sin que el fundador lo pidiera explícitamente; lo que sí pidió
+  (mismos enlaces, mismos CTAs en el drawer) queda resuelto sin tocarlo.
+- **`/docs` pierde su enlace "Docs" propio del nav principal** (no está en el
+  set unificado de seis) — sigue alcanzable por `MARKETING_CONTENT_LINKS` en
+  el pie de cada shell y por el propio sidebar de `/docs`.
+- **Las páginas legales (`/privacidad`, `/cookies`, `/terminos`) pierden su
+  nav propio de tres enlaces en la cabecera**, sustituido por el mismo
+  `PublicHeader` que el resto. Como `/cookies` no tenía (y sigue sin tener)
+  enlace en ningún pie de página de esas tres superficies, se añadió un
+  `.legal-subnav` ligero (clase `.link-mini` ya existente, sin CSS nueva de
+  peso) justo bajo el título, para no dejar `/cookies` sin ruta de vuelta
+  desde dentro de las páginas legales mismas.
+- CTA "Prueba gratis" unificado a `/signup` (destino de la home) en las
+  superficies que antes usaban `/signup?plan=free` (`docs`, `legal`,
+  `pricing`) — mismo criterio de "un solo enlace, no cinco copias".
+
+**Pendiente / roto conocido:**
+- El pie de página de `blog-page-shell.tsx`, `docs-page-shell.tsx` y
+  `app/geo/page.tsx` sigue sin enlazar `/cookies` (solo Privacidad/Términos) —
+  preexistente a esta fase, fuera de alcance porque es el pie, no la
+  cabecera; sigue alcanzable desde los pies de home/pricing y desde el
+  `.legal-subnav` nuevo de las propias páginas legales.
+
+**Addendum tras el piloto agéntico (mismo día).** El comentario automático de
+CI en el PR es un barrido de interacción, no el juicio visual que exige
+`docs/agentic-user-pilot.md` — y su tabla de journeys no incluye `/pricing`
+en absoluto (`public-pages.spec.ts` la excluye a propósito: página cliente sin
+`metadata` propia, `docs/launch-plan.md` Fase 7b — dato ya desactualizado, ver
+abajo). El `ux-pilot` real, invocado aparte para mirar las capturas, encontró
+dos cosas reales al comparar las seis superficies entre sí, corregidas en el
+mismo PR antes del Human Gate:
+- **`/comparativas` y `/glosario` marcaban «Blog» como enlace activo** —
+  heredado de que `BlogPageShell` fijaba `activeHref="/blog"` a fuego para
+  las tres superficies que comparte. Ahora acepta `activeHref` (por defecto
+  `/blog`) y las seis páginas de comparativas/glosario pasan el suyo propio
+  — ninguno coincide con los seis enlaces unificados, así que no marcan nada
+  activo, que es lo correcto.
+- **CTA duplicado en móvil en toda superficie salvo home:** el par
+  Iniciar sesión/Prueba gratis quedaba visible en la barra superior colapsada
+  *y* otra vez dentro del drawer — antes de esta fase el drawer no llevaba
+  CTAs, así que no había duplicado; al añadirlos (el objetivo mismo de esta
+  fase) apareció. `.lp-nav-right { display: none }` en el media query móvil
+  ya no está condicionado a `.lp-nav--hero`: aplica a las seis superficies
+  por igual, moviendo la hamburguesa al extremo derecho en todas — igualando
+  el propio patrón de home, no inventando uno nuevo.
+- **`/pricing` verificado manualmente, no por el piloto:** `app/pricing/page.tsx`
+  ya exporta `metadata` propia desde SEO-POS-1 (§46) — el comentario de
+  `public-pages.spec.ts` que dice lo contrario quedó desactualizado y no se
+  tocó aquí (ampliar el piloto es su propia fase). Sin acceso a la preview
+  desde este entorno, se arrancó `next start` en local con credenciales de
+  Supabase de relleno y se capturaron `/pricing`, `/blog`, `/comparativas` y
+  `/glosario` a 375/768/1280px, incluido el drawer abierto: cero errores de
+  consola, los seis enlaces presentes y consistentes, cero CTA duplicado.
+  Dar a `/pricing` (y a `/`) su propio journey de piloto queda recomendado
+  como fase aparte — es la única manera de que este hueco no dependa de que
+  alguien se acuerde de mirarlo a mano la próxima vez.
+
+**Segundo addendum (fundador, 2026-08-12): «el menú tiene que salir siempre
+desde la derecha».** Hasta este punto solo la home abría el drawer desde la
+derecha (`fromRight` atado a `hero`); el resto abría desde la izquierda con
+el hamburger estándar de tres líneas — visible en la captura que el fundador
+mandó de `/pricing`. `PublicHeader` ahora pasa `fromRight` siempre, no solo
+en `hero`; el icono de dos líneas (`twoLine`) sigue atado solo a la home,
+porque no fue lo que pidió. Verificado con capturas locales del drawer
+abierto en `/`, `/pricing` y `/blog`: las tres deslizan desde la derecha con
+el mismo `lp-mobnav-close` arriba a la derecha. `.lp-mobnav` (variante
+izquierda) queda sin ningún caller real en la app — se conserva como
+comportamiento por defecto de `MarketingMobileNav` para no borrar capacidad
+del componente genérico que nadie pidió borrar.
+
+**Tercer addendum — conflicto real al mergear con `main` (2026-08-12).**
+Esta fase se numeró originalmente §58; mientras el PR estaba abierto,
+COMPARATIVAS-DESIGN-1 mergeó primero y ocupó §58–§62 (ver arriba), así que
+esta entrada se renumeró a §63 al traer `main`. No fue solo un choque de
+numeración: `BlogPageShell` en `main` había añadido un `NAV_LINKS` local con
+"Comparativas" como cuarto enlace de cabecera (§59, decisión del fundador
+del mismo 2026-08-11 — "Comparativas" pasa del pie a la navegación superior
+porque quien lee un artículo de GEO es justo quien querría comparar
+herramientas). Ese array local quedaba muerto frente al `PublicHeader`
+unificado de esta fase, así que la resolución correcta no era descartarlo:
+**"Comparativas" se añadió a `PUBLIC_NAV_ITEMS`**, el séptimo enlace del nav
+unificado en las siete superficies. El pantallazo original del fundador (§63
+arriba) mostraba seis; el séptimo no lo contradice, cierra una decisión suya
+posterior que esta rama todavía no conocía cuando se escribió el resto de la
+fase.
+
+---
+
 ## Cómo mantener este documento
 
 Cuando una sesión futura cierre una fase de diseño (nueva zona repintada,
