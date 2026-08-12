@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard", "/api", "/auth"]
+      disallow: ["/dashboard", "/api", "/auth", "/admin", "/mfa"]
     },
     sitemap: "https://www.genscore.es/sitemap.xml"
   };

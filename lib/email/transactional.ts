@@ -696,3 +696,70 @@ export async function sendLlmIncidentAlertEmail(input: {
     )
   );
 }
+
+/**
+ * ADMIN-CONSOLE-1: informational alert to the operator every time a new
+ * account becomes usable — a password signup with an immediate session
+ * (`app/signup/actions.ts`), a password signup confirmed via the email link,
+ * or a Google OAuth signup (both land in `app/auth/callback/route.ts`,
+ * which is also `sendWelcomeEmail`'s second call site — same "new account,
+ * real session" definition, no separate detection logic to keep in sync).
+ *
+ * Goes to the OPERATOR (`OPS_ALERT_EMAIL`), never re-uses a customer-facing
+ * template: this is about the account, not for the account.
+ *
+ * Known gap, stated rather than hidden: a signup that requires email
+ * confirmation and never confirms never reaches either call site, so it
+ * never generates this alert either — seeing those would need a Supabase
+ * database webhook on `auth.users`, which is infrastructure outside this
+ * repo and its own Task Intake.
+ */
+export async function sendNewSignupOpsAlertEmail(input: {
+  email: string;
+  userId: string;
+  method: "password" | "google";
+  planId: string;
+  trialEndsAt: string | null;
+  createdAt: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const methodLabel = input.method === "google" ? "Google OAuth" : "Email y contraseña";
+  const planLabel = input.trialEndsAt
+    ? `${input.planId} · prueba hasta ${new Date(input.trialEndsAt).toISOString().slice(0, 10)}`
+    : input.planId;
+
+  const rowsHtml = [
+    dataRow("Email", input.email),
+    dataRow("user_id", input.userId),
+    dataRow("Método", methodLabel),
+    dataRow("Plan", planLabel),
+    dataRow("Alta", input.createdAt.toISOString())
+  ].join("");
+
+  await sendEmail(
+    to,
+    `[GenScore] Alta nueva — ${input.email}`,
+    wrap(
+      `
+      ${eyebrow("Alta nueva · sólo equipo GenScore")}
+      ${heading("Nueva cuenta activa")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext("Aviso automático por cada cuenta que llega a tener una sesión real — no cubre altas que nunca confirman el email.")}
+    `,
+      {
+        footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `Nueva cuenta: ${input.email}`
+      }
+    )
+  );
+}
